@@ -1,0 +1,15 @@
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  .card-login {
+    max-width: 900px;
+    min-width: 600px;
+    padding: 20px;
+    .form-login {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+}

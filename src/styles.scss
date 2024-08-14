@@ -1,1 +1,9 @@
-/* You can add global styles to this file, and also import other style files */
+@import "primeng/resources/primeng.css";
+@import "./theme-firemd/theme.scss";
+@import "primeicons/primeicons.css";
+
+.dark-button {
+  background-color: $primaryDarkColor;
+  border-color: $primaryDarkColor;
+  color: $primaryTextColor;
+}
