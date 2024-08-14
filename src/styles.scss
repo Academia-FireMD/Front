@@ -1,9 +1,23 @@
 @import "primeng/resources/primeng.css";
 @import "./theme-firemd/theme.scss";
 @import "primeicons/primeicons.css";
-
+@import "../node_modules/primeflex/primeflex.scss";
+@import 'ngx-toastr/toastr';
 .dark-button {
   background-color: $primaryDarkColor;
   border-color: $primaryDarkColor;
   color: $primaryTextColor;
+}
+
+body {
+  height: 98vh;
+}
+
+input,
+button {
+  border-radius: 10px;
+}
+
+button:disabled{
+  opacity: 0.8;
 }

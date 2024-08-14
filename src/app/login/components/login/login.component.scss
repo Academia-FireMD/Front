@@ -1,15 +1,45 @@
-.wrapper {
-  display: flex;
-  align-items: center;
+.center-flex {
   justify-content: center;
-  .card-login {
-    max-width: 900px;
-    min-width: 600px;
-    padding: 20px;
-    .form-login {
+  align-items: center;
+  display: flex;
+}
+p-floatlabel {
+  width: 100%;
+}
+
+.card-login {
+  @extend .center-flex;
+}
+
+.wrapper {
+  height: 100%;
+  @extend .center-flex;
+  > .grid {
+    @extend .center-flex;
+    width: 100%;
+  }
+
+  .form-login {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    align-items: center;
+    width: 100%;
+    max-width: 320px;
+    button {
+      width: 100%;
+      text-align: center;
+    }
+    .imagen {
+      img {
+        max-width: 158px;
+      }
+    }
+    .link-text {
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
     }
   }
 }

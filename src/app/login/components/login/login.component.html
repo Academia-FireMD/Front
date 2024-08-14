@@ -1,20 +1,83 @@
 <div class="wrapper">
-  <div class="card-login">
-    <p-card>
-      <div class="form-login" [formGroup]="formGroup">
-        <div class="imagen">
-          Lorem, ipsum dolor sit amet consectetur adipisicing elit. Dolor
-          aliquid maiores quod neque exercitationem quia. Facilis soluta labore,
-          aperiam aliquam eum iusto reiciendis commodi consequatur sit,
-          consectetur, nisi ullam. Pariatur.
-        </div>
-        <input type="email" pInputText formControlName="email" />
-        <input type="password" pInputText formControlName="contrasenya" />
-        <button pButton type="button" class="p-button dark-button">
-          Acceder
-        </button>
-        <div class="link-text">
-          Crear cuenta <i class="pi pi-angle-right"></i>
+  <div class="grid">
+    <p-card class="col-12 md:col-6 lg:col-3">
+      <div class="card-login py-4">
+        <div class="form-login" [formGroup]="formGroup">
+          <div class="imagen">
+            <img src="black_logo.png" alt="Logo" />
+          </div>
+
+          <!-- Campo de email -->
+          <p-floatLabel>
+            <input
+              type="email"
+              pInputText
+              formControlName="email"
+              class="w-full"
+            />
+            <label for="email">Email</label>
+          </p-floatLabel>
+          <!-- Error: formato de email inválido -->
+          <div
+            *ngIf="
+              formGroup.get('email')?.hasError('email') &&
+              formGroup.get('email')?.touched
+            "
+            class="error-message"
+          >
+            <small class="p-error">El formato del email no es válido.</small>
+          </div>
+          <!-- Error: email requerido -->
+          <div
+            *ngIf="
+              formGroup.get('email')?.hasError('required') &&
+              formGroup.get('email')?.touched
+            "
+            class="error-message"
+          >
+            <small class="p-error">El email es requerido.</small>
+          </div>
+
+          <!-- Campo de contraseña -->
+          <p-floatLabel>
+            <input
+              id="contrasenya"
+              type="password"
+              class="w-full"
+              pInputText
+              formControlName="contrasenya"
+            />
+            <label for="contrasenya">Contraseña</label>
+          </p-floatLabel>
+          <!-- Error: contraseña requerida -->
+          <div
+            *ngIf="
+              formGroup.get('contrasenya')?.hasError('required') &&
+              formGroup.get('contrasenya')?.touched
+            "
+            class="error-message"
+          >
+            <small class="p-error">La contraseña es requerida.</small>
+          </div>
+
+          <!-- Botón de acceso -->
+          <button
+            pButton
+            type="submit"
+            [disabled]="formGroup.invalid"
+            class="p-button dark-button p-button-raised"
+          >
+            <span class="w-full">Acceder</span>
+          </button>
+
+          <!-- Enlace a registro -->
+          <a
+            [routerLink]="['/auth/registro']"
+            routerLinkActive="router-link-active"
+            class="link-text"
+          >
+            <span>Crear cuenta</span> <i class="pi pi-angle-right mt-1"></i>
+          </a>
         </div>
       </div>
     </p-card>
