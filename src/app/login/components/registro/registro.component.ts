@@ -1,6 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { passwordMatchValidator } from '../../../utils/validators';
+import {
+  passwordMatchValidator,
+  passwordStrengthValidator,
+} from '../../../utils/validators';
 import { AuthService } from '../../../services/auth.service';
 import { firstValueFrom } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
@@ -17,7 +20,7 @@ export class RegistroComponent {
   formGroup = this.fb.group(
     {
       email: ['', [Validators.email, Validators.required]],
-      contrasenya: ['', [Validators.required]],
+      contrasenya: ['', [Validators.required, passwordStrengthValidator()]],
       repetirContrasenya: ['', [Validators.required]],
     },
     { validators: passwordMatchValidator }
@@ -39,6 +42,8 @@ export class RegistroComponent {
           ' ha inicializado la petición de creación de cuenta.'
       );
       this.showingInfoCard = true;
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
   }
 }

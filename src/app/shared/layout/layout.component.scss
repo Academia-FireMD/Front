@@ -1,0 +1,43 @@
+@import "../../../theme-firemd/variables";
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bar {
+  background-color: $primaryDarkColor;
+  height: fit-content;
+  position: relative;
+}
+.p-button-icon-only {
+  background-color: transparent;
+  border: none;
+  outline: none;
+  color: white; // O el color que prefieras para el ícono
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.p-menuitem-link {
+  color: #fff;
+}
+.mobile-expanded {
+  width: 102%;
+  padding: 0px;
+  margin-top: -10px;
+  margin-left: -1px;
+}
+
+@media (max-width: 575.98px) {
+  // En PrimeNG, "xs" es para pantallas menores de 576px
+  .p-menu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 999;
+  }
+}

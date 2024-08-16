@@ -1,0 +1,72 @@
+<p-confirmDialog />
+<div class="grid">
+  <div class="col-12">
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search" />
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar por email"
+        style="min-width: 30vw;"
+        (input)="valueChanged($event)"
+      />
+    </p-iconField>
+  </div>
+  <div class="col-12 list-users">
+    <p-dataView #dv [value]="(getPendingUsers$() | async)?.data ?? []">
+      <ng-template pTemplate="list" let-products>
+        <div class="grid grid-nogutter">
+          <div class="col-12" *ngFor="let item of products; let first = first">
+            <div class="flex flex-row align-items-between">
+              <div class="flex flex-column py-2" style="width: 250px">
+                <span class="font-medium text-secondary text-sm hora-solicitud"
+                  >Solicitado el dia {{ item.createdAt | date : "short" }}</span
+                >
+                <div class="text-lg font-medium text-900">
+                  {{ item.email }}
+                </div>
+              </div>
+              <div class="right-side w-full">
+                <div
+                  class="flex flex-row align-items-center justify-content-end gap-2"
+                >
+                  <p-button
+                    [link]="true"
+                    label="{{
+                      viewportService.screenWidth == 'xs'
+                        ? undefined
+                        : 'Denegar'
+                    }}"
+                    icon="pi pi-times"
+                    (click)="denegar(item.id, $event)"
+                  />
+                  <p-button
+                    icon="pi pi-check"
+                    label="{{
+                      viewportService.screenWidth == 'xs'
+                        ? undefined
+                        : 'Permitir'
+                    }}"
+                    raised="true"
+                    (click)="permitir(item.id)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </p-dataView>
+  </div>
+  <div class="col-12">
+    <div class="card flex justify-content-end">
+      <p-paginator
+        (onPageChange)="onPageChange($event)"
+        [first]="pagination().skip"
+        [rows]="pagination().take"
+        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
+        [showPageLinks]="viewportService.screenWidth != 'xs'"
+      />
+    </div>
+  </div>
+</div>

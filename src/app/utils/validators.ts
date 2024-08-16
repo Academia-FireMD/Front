@@ -8,3 +8,28 @@ export const passwordMatchValidator: ValidatorFn = (
 
   return password === confirmPassword ? null : { passwordsDontMatch: true };
 };
+
+export function passwordStrengthValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const value = control.value;
+
+    if (!value) {
+      return null;
+    }
+
+    const hasUpperCase = /[A-Z]/.test(value);
+    const hasLowerCase = /[a-z]/.test(value);
+    const hasNumeric = /[0-9]/.test(value);
+    const hasSpecialCharacter = /[@$!%*?&]/.test(value);
+    const isValidLength = value.length >= 8;
+
+    const passwordValid =
+      hasUpperCase &&
+      hasLowerCase &&
+      hasNumeric &&
+      hasSpecialCharacter &&
+      isValidLength;
+
+    return !passwordValid ? { passwordStrength: true } : null;
+  };
+}

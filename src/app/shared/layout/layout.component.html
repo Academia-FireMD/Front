@@ -1,0 +1,47 @@
+<div class="grid h-full">
+  <div class="bar w-full mb-2" *ngIf="viewportService.screenWidth === 'xs'">
+    <button
+      class="p-button p-button-text p-button-icon-only"
+      (click)="toggleMenu()"
+    >
+      <i class="pi pi-bars"></i>
+    </button>
+  </div>
+
+  <div
+    class="col-2 py-0 pl-0"
+    [ngClass]="{'mobile-expanded': viewportService.screenWidth == 'xs' && isMenuVisible}"
+    *ngIf="viewportService.screenWidth !== 'xs' || isMenuVisible"
+  >
+    <p-menu [model]="items" styleClass="w-full h-full">
+      <ng-template pTemplate="start">
+        <div class="image-container py-3">
+          <img src="white_logo.png" alt="Logo" style="max-width: 160px" />
+        </div>
+      </ng-template>
+      <ng-template pTemplate="submenuheader" let-item>
+        <span class="text-primary font-bold">{{ item.label }}</span>
+      </ng-template>
+      <ng-template pTemplate="item" let-item>
+        <a
+          pRipple
+          class="flex align-items-center p-menuitem-link"
+          [routerLink]="item.routerLink"
+          routerLinkActive="router-link-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <span [class]="item.icon"></span>
+          <span class="ml-2">{{ item.label }}</span>
+        </a>
+      </ng-template>
+    </p-menu>
+  </div>
+
+  <div
+    class="h-full col-{{
+      viewportService.screenWidth === 'xs' || isMenuVisible ? 12 : 10
+    }} "
+  >
+    <router-outlet></router-outlet>
+  </div>
+</div>

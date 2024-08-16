@@ -2,15 +2,16 @@
 @import "./theme-firemd/theme.scss";
 @import "primeicons/primeicons.css";
 @import "../node_modules/primeflex/primeflex.scss";
-@import 'ngx-toastr/toastr';
+@import "ngx-toastr/toastr";
 .dark-button {
   background-color: $primaryDarkColor;
   border-color: $primaryDarkColor;
   color: $primaryTextColor;
 }
 
-body {
-  height: 98vh;
+body,
+html {
+  height: 100%;
 }
 
 input,
@@ -18,6 +19,34 @@ button {
   border-radius: 10px;
 }
 
-button:disabled{
+button:disabled {
   opacity: 0.8;
+}
+
+app-layout {
+  .p-menu {
+    background-color: $primaryDarkColor;
+    color: white;
+  }
+  .p-menuitem {
+    span {
+      color: white;
+    }
+    &:hover {
+      span {
+        color: $primaryDarkColor;
+      }
+    }
+  }
+  .p-focus {
+    .p-menuitem-content {
+      background-color: lighten($color: $primaryDarkColor, $amount: 30);
+    }
+  }
+  .router-link-active {
+    background-color: lighten($color: $primaryDarkColor, $amount: 30);
+  }
+  .p-submenu-header {
+    background-color: $primaryDarkColor;
+  }
 }

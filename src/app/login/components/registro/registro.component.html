@@ -7,6 +7,7 @@
             <img src="black_logo.png" alt="Logo" />
           </div>
 
+          <!-- Info Card -->
           @if (showingInfoCard) {
           <div class="info">
             <div class="info-card">
@@ -84,6 +85,19 @@
             class="error-message"
           >
             <small class="p-error">La contraseña es requerida.</small>
+          </div>
+          <!-- Error: contraseña no segura -->
+          <div
+            *ngIf="
+              formGroup.get('contrasenya')?.hasError('passwordStrength') &&
+              formGroup.get('contrasenya')?.touched
+            "
+            class="error-message"
+          >
+            <small class="p-error">
+              La contraseña debe tener al menos 8 caracteres, una mayúscula, una
+              minúscula, un número y un carácter especial.
+            </small>
           </div>
 
           <!-- Campo de repetir contraseña -->
