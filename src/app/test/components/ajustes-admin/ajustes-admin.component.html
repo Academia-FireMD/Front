@@ -1,0 +1,24 @@
+<div class="grid">
+  <div class="col-12">
+    <p-card>
+      <div class="grid" [formGroup]="factors">
+        <div class="col-12">
+          <p-floatLabel>
+            <input
+              type="number"
+              pInputText
+              class="w-full"
+              formControlName="preguntasFallidasPivote"
+            />
+            <label for="preguntasFallidasPivote"
+              >Numero de preguntas fallidas pivote</label
+            >
+          </p-floatLabel>
+        </div>
+      </div>
+    </p-card>
+  </div>
+  <div class="col-12 footer flex justify-content-end w-full">
+    <p-button label="Actualizar" (click)="actualizarAjustes()" />
+  </div>
+</div>

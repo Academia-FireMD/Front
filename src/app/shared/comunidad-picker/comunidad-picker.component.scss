@@ -1,0 +1,20 @@
+.contenedor-comunidades {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+}
+
+.img-flag {
+  width: 30px;
+  @media (max-width: 768px) {
+    width: 20px;
+  }
+}
+
+.list {
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+  }
+}
+

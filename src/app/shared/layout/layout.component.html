@@ -1,4 +1,4 @@
-<div class="grid h-full">
+<div class="grid h-full" style="overflow: hidden">
   <div class="bar w-full mb-2" *ngIf="viewportService.screenWidth === 'xs'">
     <button
       class="p-button p-button-text p-button-icon-only"
@@ -10,7 +10,9 @@
 
   <div
     class="col-2 py-0 pl-0"
-    [ngClass]="{'mobile-expanded': viewportService.screenWidth == 'xs' && isMenuVisible}"
+    [ngClass]="{
+      'mobile-expanded': viewportService.screenWidth == 'xs' && isMenuVisible
+    }"
     *ngIf="viewportService.screenWidth !== 'xs' || isMenuVisible"
   >
     <p-menu [model]="items" styleClass="w-full h-full">
@@ -20,13 +22,14 @@
         </div>
       </ng-template>
       <ng-template pTemplate="submenuheader" let-item>
-        <span class="text-primary font-bold">{{ item.label }}</span>
+        <span class="font-bold">{{ item.label }}</span>
       </ng-template>
       <ng-template pTemplate="item" let-item>
         <a
           pRipple
           class="flex align-items-center p-menuitem-link"
           [routerLink]="item.routerLink"
+          (click)="isMenuVisible = false"
           routerLinkActive="router-link-active"
           [routerLinkActiveOptions]="{ exact: true }"
         >

@@ -1,6 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
+import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
+import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
 import { RealizarTestComponent } from './components/realizar-test/realizar-test.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
@@ -10,11 +12,26 @@ const routes: Routes = [
     path: 'user',
     component: UserDashboardComponent,
     canActivate: [roleGuard],
-    data: { expectedRole: 'ADMIN' },
+    title: 'Usuarios',
+    data: { expectedRole: 'ADMIN', title: 'Usuarios' },
   },
   {
     path: 'preguntas',
     component: PreguntasDashboardAdminComponent,
+    canActivate: [roleGuard],
+    title: 'Preguntas',
+    data: { expectedRole: 'ADMIN', title: 'Preguntas' },
+  },
+  {
+    path: 'preguntas/:id',
+    component: PreguntasDashboardAdminDetailviewComponent,
+    canActivate: [roleGuard],
+    title: 'Preguntas',
+    data: { expectedRole: 'ADMIN', title: 'Preguntas' },
+  },
+  {
+    path: 'ajustes',
+    component: AjustesAdminComponent,
     canActivate: [roleGuard],
     data: { expectedRole: 'ADMIN' },
   },

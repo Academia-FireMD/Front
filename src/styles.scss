@@ -15,7 +15,9 @@ html {
 }
 
 input,
-button {
+button,
+textarea,
+.p-dropdown {
   border-radius: 10px;
 }
 
@@ -25,7 +27,7 @@ button:disabled {
 
 app-layout {
   .p-menu {
-    background-color: $primaryDarkColor;
+    background-color: $primaryColor;
     color: white;
   }
   .p-menuitem {
@@ -34,7 +36,7 @@ app-layout {
     }
     &:hover {
       span {
-        color: $primaryDarkColor;
+        color: darken($color: $primaryColor, $amount: 20);
       }
     }
   }
@@ -44,9 +46,49 @@ app-layout {
     }
   }
   .router-link-active {
-    background-color: lighten($color: $primaryDarkColor, $amount: 30);
+    background-color: lighten($color: $primaryColor, $amount: 30);
   }
   .p-submenu-header {
-    background-color: $primaryDarkColor;
+    background-color: darken($color: $primaryColor, $amount: 20);
+    color: white;
+  }
+}
+
+.item-container {
+  background-color: #f5f5f5; /* Fondo grisáceo sutil */
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1); /* Sombra ligera */
+  margin-bottom: 15px; /* Separación entre elementos */
+  padding: 10px; /* Espaciado interno del elemento */
+  border-radius: 5px; /* Bordes ligeramente redondeados */
+}
+
+.list-generic {
+  overflow: auto;
+  @media (max-width: 768px) {
+    max-height: 77vh;
+  }
+}
+app-preguntas-dashboard-admin-detailview {
+  @media (max-width: 768px) {
+    .p-card-body {
+      max-height: 77vh;
+      overflow: auto;
+    }
+  }
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.comunidad-picker-listbox {
+  .p-listbox {
+    border: 0px;
+  }
+}
+.respuestas-list {
+  .p-inputgroup-addon {
+    background-color: transparent;
+    border: 0px;
   }
 }

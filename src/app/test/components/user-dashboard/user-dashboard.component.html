@@ -12,13 +12,13 @@
       />
     </p-iconField>
   </div>
-  <div class="col-12 list-users">
-    <p-dataView #dv [value]="(getPendingUsers$() | async)?.data ?? []">
+  <div class="col-12 list-generic">
+    <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
       <ng-template pTemplate="list" let-products>
         <div class="grid grid-nogutter">
-          <div class="col-12" *ngFor="let item of products; let first = first">
-            <div class="flex flex-row align-items-between">
-              <div class="flex flex-column py-2" style="width: 250px">
+          <div class="col-12 item-container" *ngFor="let item of products; let first = first">
+            <div class="flex flex-row align-items-center">
+              <div class="flex flex-column p-2" style="width: 250px">
                 <span class="font-medium text-secondary text-sm hora-solicitud"
                   >Solicitado el dia {{ item.createdAt | date : "short" }}</span
                 >

@@ -1,0 +1,154 @@
+<div class="grid" [formGroup]="formGroup">
+  <div class="col-12 content">
+    <p-card>
+      <div class="grid">
+        <div
+          class="col-12 header flex justify-content-between align-items-center pb-3"
+        >
+          <div class="identificador">
+            @if (getId() !== 'new' ) { Identificador:
+            <strong>{{ formGroup.value.identificador }}</strong>
+            }@else {
+            <p-floatLabel>
+              <input
+                type="identificador"
+                pInputText
+                class="w-full"
+                formControlName="identificador"
+              />
+              <label for="identificador">Identificador</label>
+            </p-floatLabel>
+            }
+          </div>
+          <div class="relevancia">
+            <app-comunidad-picker
+              [allowAdd]="true"
+              [comunidades]="relevancia.value"
+              (updateSelection)="updateCommunitySelection($event)"
+            ></app-comunidad-picker>
+          </div>
+        </div>
+        <div class="col-12 py-3">
+          <p-floatLabel>
+            <textarea
+              class="w-full"
+              id="float-input"
+              rows="5"
+              cols="30"
+              pInputTextarea
+              formControlName="descripcion"
+            >
+            </textarea>
+            <label for="float-input">Descripción</label>
+          </p-floatLabel>
+        </div>
+        <div class="col-6">
+          <p-dropdown
+            class="w-full"
+            [style]="{ width: '100%' }"
+            [options]="getAllTemas"
+            [filter]="true"
+            filterBy="label"
+            formControlName="tema"
+            optionLabel="label"
+            optionValue="code"
+            placeholder="Selecciona un tema"
+          />
+        </div>
+        <div class="col-6">
+          <p-dropdown
+            class="w-full"
+            [style]="{ width: '100%', height: '100%' }"
+            [options]="getAllDifficultades"
+            formControlName="dificultad"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecciona una dificultad"
+          >
+            <ng-template let-item pTemplate="selectedItem">
+              <div class="flex align-items-center gap-2 h-full">
+                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+                <div class="hidden md:block">{{ item.label }}</div>
+              </div>
+            </ng-template>
+            <ng-template let-item let-index pTemplate="item">
+              <div class="flex align-items-center gap-2 h-full">
+                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+                <div class="hidden md:block">{{ item.label }}</div>
+              </div>
+            </ng-template>
+          </p-dropdown>
+        </div>
+        <div
+          class="col-12 respuestas-list pointer"
+          *ngFor="let control of respuestas.controls; let i = index"
+          (click)="formGroup.patchValue({ respuestaCorrectaIndex: i })"
+          [ngClass]="{
+            'respuesta-correcta': i == formGroup.value.respuestaCorrectaIndex
+          }"
+        >
+          <p-inputGroup>
+            <p-inputGroupAddon>{{ getLetter(i) }}) </p-inputGroupAddon>
+            @if(control.enabled){
+            <input
+              type="text"
+              pInputText
+              (click)="$event.preventDefault(); $event.stopPropagation()"
+              [formControl]="parseControl(control)"
+            />
+            }@else {
+            <div
+              class="flex w-full align-items-center"
+              (dblclick)="enableAllRespuestas()"
+            >
+              <span>{{ control.value }}</span>
+            </div>
+            }
+            <p-inputGroupAddon (click)="respuestas.removeAt(i)"
+              ><i class="pi pi-trash"></i>
+            </p-inputGroupAddon>
+          </p-inputGroup>
+        </div>
+        <div class="col-12 respuestas-actions flex justify-content-end">
+          <p-button
+            label="Añadir nueva pregunta"
+            [link]="true"
+            (click)="addNewPregunta()"
+          />
+          <p-button
+            *ngIf="respuestas.dirty"
+            label="Guardar cambios"
+            (click)="disableAllRespuestas()"
+            [link]="true"
+          />
+        </div>
+      </div>
+      <div class="col-12 px-0">
+        <p-floatLabel>
+          <textarea
+            class="w-full"
+            id="float-input"
+            rows="5"
+            cols="30"
+            pInputTextarea
+            formControlName="solucion"
+          >
+          </textarea>
+          <label for="float-input">Solución (opcional)</label>
+        </p-floatLabel>
+      </div>
+    </p-card>
+  </div>
+  <div class="col-12 footer flex justify-content-end w-full">
+    <p-button
+      label="Volver atras"
+      [link]="true"
+      [routerLink]="['/app/test/preguntas']"
+    />
+    @if(getId() == 'new'){
+    <p-button label="Crear pregunta" (click)="crearPregunta()" />
+    }@else{
+    <p-button label="Actualizar pregunta" (click)="actualizarPregunta()" />
+    }
+  </div>
+</div>

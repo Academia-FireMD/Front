@@ -1,0 +1,24 @@
+.top-action-bar {
+  display: flex;
+  justify-content: space-between;
+}
+
+.descripcion {
+  text-wrap: nowrap;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.left-side {
+  @media (max-width: 768px) {
+    strong {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      text-wrap: nowrap;
+    }
+    strong.identifier {
+      max-width: 100px;
+    }
+  }
+}

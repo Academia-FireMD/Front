@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { catchError, Observable, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -7,6 +8,7 @@ import { environment } from '../../environments/environment';
 export class ApiBaseService {
   protected controllerPrefix = '';
   protected toast = inject(ToastrService);
+  private router = inject(Router);
 
   constructor(protected _http: HttpClient) {}
 
@@ -17,6 +19,18 @@ export class ApiBaseService {
   ): Observable<any> {
     return this._http
       .get(environment.apiUrl + this.controllerPrefix + endpoint, {
+        withCredentials,
+      })
+      .pipe(catchError((err) => this.handleError(err, ignoreError)));
+  }
+
+  public delete(
+    endpoint: string,
+    ignoreError?: boolean,
+    withCredentials = true
+  ): Observable<any> {
+    return this._http
+      .delete(environment.apiUrl + this.controllerPrefix + endpoint, {
         withCredentials,
       })
       .pipe(catchError((err) => this.handleError(err, ignoreError)));
@@ -34,7 +48,7 @@ export class ApiBaseService {
       .pipe(catchError((err) => this.handleError(err, ignoreError)));
   }
 
-  private handleError(
+  protected handleError(
     response: HttpErrorResponse,
     ignoreError: boolean = false
   ): Observable<Object> {
@@ -50,6 +64,9 @@ export class ApiBaseService {
 
     if (response.status !== 500 && !!message) {
       if (!ignoreError) this.toast.error(message);
+    }
+    if (response.status == 401) {
+      this.router.navigate(['/auth']);
     }
 
     return throwError(() => new Error(message));

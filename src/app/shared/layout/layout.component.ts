@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ViewportService } from '../../services/viewport.service';
 
@@ -10,6 +11,8 @@ import { ViewportService } from '../../services/viewport.service';
 export class LayoutComponent {
   viewportService = inject(ViewportService);
   authService = inject(AuthService);
+  router = inject(Router);
+  activatedRoute = inject(ActivatedRoute);
   items = [] as Array<any>;
   isMenuVisible: boolean = false;
   ngOnInit(): void {
@@ -36,6 +39,7 @@ export class LayoutComponent {
             {
               label: 'Ajustes',
               icon: 'pi pi-cog',
+              routerLink: '/app/test/ajustes',
             },
 
             {
