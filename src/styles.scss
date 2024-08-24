@@ -92,3 +92,54 @@ app-preguntas-dashboard-admin-detailview {
     border: 0px;
   }
 }
+
+.respuesta-correcta {
+  transition: 0.5s;
+  background-color: #00eb003d;
+}
+.respuesta-incorrecta {
+  transition: 0.5s;
+  background-color: #ff9c9c;
+}
+
+.top-action-bar {
+  display: flex;
+  justify-content: space-between;
+}
+
+.descripcion {
+  text-wrap: nowrap;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.left-side {
+  @media (max-width: 768px) {
+    strong {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      text-wrap: nowrap;
+    }
+    strong.identifier {
+      max-width: 100px;
+    }
+  }
+}
+
+.seguridad-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  i {
+    font-size: 22px;
+  }
+}
+
+app-test-stats {
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  display: block;
+}

@@ -1,0 +1,182 @@
+<div class="grid">
+  <ng-container *ngIf="testCargado$ | async as testCargado; else testNoCargado">
+    @if(testCargado.preguntas[indicePregunta]){
+
+    <p-card
+      class="col-12"
+      *ngIf="testCargado.preguntas[indicePregunta] as pregunta"
+    >
+      <div class="grid">
+        <div class="col-12 header justify-content-between flex">
+          <div class="identificador">
+            Identificador:
+            {{ pregunta.identificador }}
+          </div>
+          <div class="index-pregunta">
+            Pregunta
+            {{ indicePregunta + 1 }}/{{ testCargado.preguntas.length }}
+          </div>
+        </div>
+        <div class="col-12">
+          <p-panel header="Enunciado">
+            <p>
+              {{ pregunta.descripcion }}
+            </p>
+            <div
+              class="col-12 respuestas-list pointer"
+              pRipple
+              *ngFor="let respuesta of pregunta.respuestas; let i = index"
+              [ngClass]="{
+                'respuesta-correcta': i == indiceSeleccionado.getValue(),
+                'respuesta-incorrecta':
+                  i == indicePreguntaCorrecta &&
+                  i != indiceSeleccionado.getValue()
+              }"
+              (click)="
+                answeredCurrentQuestion() ? false : indiceSeleccionado.next(i)
+              "
+            >
+              <p-inputGroup>
+                <p-inputGroupAddon>{{ getLetter(i) }}) </p-inputGroupAddon>
+                <div class="flex w-full align-items-center">
+                  <span>{{ respuesta }}</span>
+                </div>
+              </p-inputGroup>
+            </div>
+            <div class="col-12" *ngIf="!answeredCurrentQuestion()">
+              <span>Seguridad al responder</span>
+              <div class="flex flex-row gap-2">
+                <p-card
+                  pRipple
+                  class="pointer"
+                  (click)="
+                    seguroDeLaPregunta.patchValue(
+                      SeguridadAlResponder.CINCUENTA_POR_CIENTO
+                    )
+                  "
+                  [ngClass]="{
+                    'lower-opacity':
+                      seguroDeLaPregunta.value !=
+                      SeguridadAlResponder.CINCUENTA_POR_CIENTO
+                  }"
+                >
+                  <div class="seguridad-box">
+                    <i class="pi pi-thumbs-down"></i>
+                    <span>50%</span>
+                  </div>
+                </p-card>
+                <p-card
+                  pRipple
+                  class="pointer"
+                  (click)="
+                    seguroDeLaPregunta.patchValue(
+                      SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
+                    )
+                  "
+                  [ngClass]="{
+                    'lower-opacity':
+                      seguroDeLaPregunta.value !=
+                      SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
+                  }"
+                >
+                  <div class="seguridad-box">
+                    <i class="pi pi-thumbs-up"></i>
+                    <span>75%</span>
+                  </div>
+                </p-card>
+                <p-card
+                  pRipple
+                  class="pointer"
+                  (click)="
+                    seguroDeLaPregunta.patchValue(
+                      SeguridadAlResponder.CIEN_POR_CIENTO
+                    )
+                  "
+                  [ngClass]="{
+                    'lower-opacity':
+                      seguroDeLaPregunta.value !=
+                      SeguridadAlResponder.CIEN_POR_CIENTO
+                  }"
+                >
+                  <div class="seguridad-box">
+                    <i class="pi pi-star"></i>
+                    <span>100%</span>
+                  </div>
+                </p-card>
+              </div>
+            </div>
+            <div
+              class="col-12 footer flex justify-content-between align-items-center"
+              *ngIf="answeredCurrentQuestion()"
+            >
+              <div class="solution">
+                @if (showSolution()) {
+                <strong>Solución:</strong>
+                <p>
+                  {{
+                    pregunta.solucion && pregunta.solucion.length > 0
+                      ? pregunta.solucion
+                      : "No hay una solución definida"
+                  }}
+                </p>
+                } @else { <strong class="respuesta-correcta">Respuesta correcta!</strong> }
+              </div>
+
+              <div class="next-button">
+                <p-button
+                  label="Continuar"
+                  [link]="true"
+                  (click)="siguiente()"
+                />
+              </div>
+            </div>
+          </p-panel>
+        </div>
+      </div>
+    </p-card>
+
+    }@else {
+    <p-card class="col-12">
+      <div class="info">
+        <div class="flex gap-2 info-card">
+          <div class="icon">
+            <i class="pi pi-info-circle"></i>
+          </div>
+          <div class="content">
+            <div class="body">
+              La pregunta que intentas visualizar no existe!
+            </div>
+          </div>
+        </div>
+        <br />
+      </div>
+    </p-card>
+    }
+  </ng-container>
+  <ng-template #testNoCargado>
+    <div class="col-12">
+      <p-card>
+        <div class="info">
+          <div class="flex gap-2 info-card">
+            <div class="icon">
+              <i class="pi pi-info-circle"></i>
+            </div>
+            <div class="content">
+              <div class="body">
+                El test no existe o no se ha podido cargar. Pruebe con otro.
+              </div>
+              <a
+                [routerLink]="['/app/test/alumno/realizar-test']"
+                class="link-text flex align-items-center"
+                style="text-decoration: none"
+              >
+                <span>Pruebe con otro</span> <i class="pi pi-angle-right"></i>
+              </a>
+            </div>
+          </div>
+          <br />
+        </div>
+      </p-card>
+    </div>
+  </ng-template>
+</div>

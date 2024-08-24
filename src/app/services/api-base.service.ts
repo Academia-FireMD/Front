@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { isArray } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { catchError, Observable, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -57,6 +58,8 @@ export class ApiBaseService {
     if (response.error?.message) {
       if (typeof response.error?.message === 'string') {
         message = response.error?.message;
+      } else if (isArray(response.error?.message)) {
+        message = response.error.message.join(' ');
       } else {
         message = response.error?.message.message;
       }

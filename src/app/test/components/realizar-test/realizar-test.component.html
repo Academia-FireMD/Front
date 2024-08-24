@@ -1,1 +1,151 @@
-<p>realizar-test works!</p>
+<p-dialog
+  header="Visualizador de fallos"
+  [modal]="true"
+  [(visible)]="displayPopupFallosTest"
+  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+  [style]="{ width: '75vw', height: '100%' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <app-popup-fallos-test
+    style="width: 100%; height: 100%; display: block"
+    class="py-2"
+  ></app-popup-fallos-test>
+</p-dialog>
+
+<p-confirmDialog />
+<div class="grid" [formGroup]="formGroup">
+  <div class="col-12 content">
+    <p-card>
+      <div class="grid">
+        <div class="col-12 md:col-4">
+          <p-dropdown
+            class="w-full"
+            [style]="{ width: '100%' }"
+            [options]="preguntas"
+            [filter]="true"
+            filterBy="label"
+            formControlName="numPreguntas"
+            optionLabel="label"
+            optionValue="code"
+            placeholder="Numero de preguntas"
+          />
+        </div>
+        <div class="col-12 md:col-4">
+          <p-dropdown
+            class="w-full"
+            [style]="{ width: '100%', height: '100%' }"
+            [options]="getAllDifficultades"
+            formControlName="dificultad"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecciona una dificultad"
+          >
+            <ng-template let-item pTemplate="selectedItem">
+              <div class="flex align-items-center gap-2 h-full">
+                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+                <div class="hidden md:block">{{ item.label }}</div>
+              </div>
+            </ng-template>
+            <ng-template let-item let-index pTemplate="item">
+              <div class="flex align-items-center gap-2 h-full">
+                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+                <div class="hidden md:block">{{ item.label }}</div>
+              </div>
+            </ng-template>
+          </p-dropdown>
+        </div>
+        <div class="col-12 md:col-4">
+          <p-multiSelect
+            class="w-full"
+            [style]="{ width: '100%' }"
+            [options]="getAllTemas"
+            formControlName="temas"
+            optionLabel="label"
+            optionValue="code"
+            placeholder="Selecciona los temas"
+          />
+        </div>
+      </div>
+
+      <div class="flex align-items-center justify-content-end w-full gap-2">
+        <ng-container *ngIf="!!(getFallosCount$ | async)">
+          <label for="switch1">Generar test de repaso</label>
+          <p-inputSwitch
+            [formControl]="formGroup.controls.generarTestDeRepaso"
+          />
+
+          <button
+            pButton
+            (click)="displayPopupFallosTest = true"
+            type="submit"
+            class="p-button p-button-raised"
+          >
+            <span class="w-full">Ver fallos</span>
+          </button>
+        </ng-container>
+
+        <button
+          pButton
+          type="submit"
+          [disabled]="formGroup.invalid && !formGroup.value.generarTestDeRepaso"
+          class="p-button dark-button p-button-raised"
+          (click)="generarTest()"
+        >
+          <span class="w-full">Generar test</span>
+        </button>
+      </div>
+      <div
+        class="grid"
+        *ngIf="getAllTestsComenzados$ | async as testsComenzados"
+      >
+        <div
+          class="col-12 md:col-6"
+          *ngFor="let testComenzado of testsComenzados"
+        >
+          <p-card>
+            <div class="info">
+              <div class="flex gap-2 info-card">
+                <div class="icon">
+                  <i class="pi pi-info-circle"></i>
+                </div>
+                <div class="content">
+                  <div class="title">
+                    <h4 class="my-0">Tienes un test pendiente</h4>
+                  </div>
+                  <div class="body">
+                    Has comenzado un test el dia
+                    <strong>{{
+                      testComenzado.createdAt | date : "shortDate"
+                    }}</strong>
+                    con {{ testComenzado.respuestasCount }} respuestas de
+                    {{ testComenzado.testPreguntasCount }} preguntas
+                    respondidas. Terminalo ahora haciendo click en el botón de
+                    "Continuar"
+                  </div>
+                </div>
+              </div>
+              <br />
+              <div class="flex w-full justify-content-end">
+                <p-button
+                  label="Abortar"
+                  [link]="true"
+                  (click)="eliminarTest(testComenzado.id, $event)"
+                />
+                <a
+                  [routerLink]="[
+                    '/app/test/alumno/realizar-test/' + testComenzado.id
+                  ]"
+                  class="link-text flex align-items-center p-button p-button-raised"
+                  style="text-decoration: none"
+                >
+                  <span>Continuar</span>
+                </a>
+              </div>
+            </div>
+          </p-card>
+        </div>
+      </div>
+    </p-card>
+  </div>
+</div>

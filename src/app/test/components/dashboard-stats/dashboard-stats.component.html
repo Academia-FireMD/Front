@@ -1,0 +1,64 @@
+<div *ngIf="getAllTestsFinalizados$ | async as testsFinalizados; else noTests">
+  <div class="grid">
+    <div
+      class="col-12 md:col-6"
+      *ngFor="let testFinalizado of testsFinalizados"
+    >
+      <p-card>
+        <div class="info">
+          <div class="flex gap-2 info-card">
+            <div class="icon">
+              <i class="pi pi-check-circle"></i>
+            </div>
+            <div class="content">
+              <div class="title">
+                <h4 class="my-0">Test Finalizado</h4>
+              </div>
+              <div class="body">
+                Completaste un test el día
+                <strong>{{
+                  testFinalizado.createdAt | date : "short"
+                }}</strong>
+                con {{ testFinalizado.respuestasCount }} respuestas de
+                {{ testFinalizado.testPreguntasCount }} preguntas respondidas.
+                Revisa los resultados haciendo click en el botón de "Ver"
+              </div>
+            </div>
+          </div>
+          <br />
+          <div class="flex w-full justify-content-end">
+            <a
+              [routerLink]="[
+                '/app/test/alumno/stats-test/' + testFinalizado.id
+              ]"
+              [queryParams]="{ goBack: true }"
+              class="link-text flex align-items-center p-button p-button-raised"
+              style="text-decoration: none"
+            >
+              <span>Ver</span>
+            </a>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+</div>
+<ng-template #noTests>
+  <div class="grid">
+    <div class="col-12">
+      <p-card>
+        <div class="info">
+          <div class="content">
+            <div class="title">
+              <h4 class="my-0">No hay tests finalizados</h4>
+            </div>
+            <div class="body">
+              Actualmente no tienes ningún test finalizado. Cuando completes un
+              test, aparecerá en esta lista.
+            </div>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+</ng-template>

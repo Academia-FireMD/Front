@@ -1,0 +1,119 @@
+<div class="grid">
+  <div class="col-12 list-generic">
+    <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
+      <ng-template pTemplate="list" let-products>
+        <div class="grid grid-nogutter">
+          <p>Haga click en cualquier respuesta para ver más detalles</p>
+          <div
+            class="list-respuestas"
+            style="max-height: 60vh; overflow: auto; width: 100%"
+          >
+            <div
+              class="col-12 item-container pointer"
+              (click)="toggleRowExpansion(item)"
+              *ngFor="let item of products; let first = first"
+            >
+              <div class="flex flex-row align-items-between">
+                <div class="flex flex-column py-2 col-9 left-side">
+                  <div
+                    class="text-small md:text-lg flex gap-2 align-items-center"
+                  >
+                    <div class="flex gap-1">
+                      <span>Identificador: </span>
+                      <span class="identifier">{{
+                        item.pregunta.identificador
+                      }}</span>
+                    </div>
+                    <!-- <div class="flex gap-2 align-items-center">
+                      <span class="hidden md:block">Dificultad: </span>
+                      <i
+                        class="pi pi-{{ star }}"
+                        *ngFor="
+                          let star of getStarsBasedOnDifficulty(
+                            item.pregunta.dificultad
+                          )
+                        "
+                      ></i>
+                    </div>
+                    <div class="flex gap-1">
+                      <span>Tema: </span>
+                      <span>{{ item.pregunta.tema }}</span>
+                    </div> -->
+                  </div>
+                  <span
+                    class="font-small text-secondary text-sm descripcion"
+                    *ngIf="!expandedItem"
+                    >Enunciado: {{ item.pregunta.descripcion }}</span
+                  >
+                </div>
+                <div
+                  class="right-side col-3 flex align-items-center justify-content-end"
+                >
+                  <div
+                    class="flex flex-row align-items-center justify-content-end gap-2"
+                  >
+                    <span class="font-medium text-secondary text-sm">
+                      {{ item.pregunta.createdAt | date : "short" }}</span
+                    >
+                  </div>
+                </div>
+              </div>
+              <div
+                class="expanded-content"
+                [ngClass]="{ 'show py-2': expandedItem === item }"
+              >
+                <p class="font-small text-secondary text-sm px-2 mt-0">
+                  Enunciado: {{ item.pregunta.descripcion }}
+                </p>
+                <div
+                  class="col-12 respuestas-list pointer"
+                  pRipple
+                  *ngFor="
+                    let respuesta of item.pregunta.respuestas;
+                    let i = index
+                  "
+                  [ngClass]="{
+                    'respuesta-correcta':
+                      i == item.pregunta.respuestaCorrectaIndex,
+                    'respuesta-incorrecta':
+                      i != item.pregunta.respuestaCorrectaIndex &&
+                      i == item.respuestaDada
+                  }"
+                >
+                  <p-inputGroup>
+                    <p-inputGroupAddon>{{ getLetter(i) }}) </p-inputGroupAddon>
+                    <div class="flex w-full align-items-center">
+                      <span>{{ respuesta }}</span>
+                    </div>
+                  </p-inputGroup>
+                </div>
+                <div class="flex flex-column gap-2 mt-2 px-2">
+                  <div class="additional-info">
+                    <strong>Solución:</strong>
+                    {{
+                      item.pregunta.solucion &&
+                      item.pregunta.solucion.length > 0
+                        ? item.pregunta.solucion
+                        : "No hay una solución definida"
+                    }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </p-dataView>
+  </div>
+  <div class="col-12">
+    <div class="card flex justify-content-end">
+      <p-paginator
+        (onPageChange)="onPageChange($event)"
+        [first]="pagination().skip"
+        [rows]="pagination().take"
+        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
+        [showPageLinks]="viewportService.screenWidth != 'xs'"
+      />
+    </div>
+  </div>
+</div>

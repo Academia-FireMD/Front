@@ -53,22 +53,23 @@ export class LayoutComponent {
     } else {
       this.items = [
         {
-          label: 'Gestión',
+          label: 'Módulo de tests',
           items: [
             {
               label: 'Realizar tests',
               icon: 'pi pi-question',
+              routerLink: '/app/test/alumno/realizar-test',
+            },
+            {
+              label: 'Estadistica',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/alumno/estadistica-dashboard',
             },
           ],
         },
         {
           label: 'Perfil',
           items: [
-            {
-              label: 'Ajustes',
-              icon: 'pi pi-cog',
-            },
-
             {
               label: 'Desconectarse',
               icon: 'pi pi-sign-out',

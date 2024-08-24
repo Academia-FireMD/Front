@@ -4,12 +4,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
+import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
 import {
-  Comunidad,
-  Dificultad,
-  Pregunta,
-} from '../../../shared/models/pregunta.model';
-import { getStarsBasedOnDifficulty } from '../../../utils/utils';
+  getAllDifficultades,
+  getAllTemas,
+  getLetter,
+  getStarsBasedOnDifficulty,
+} from '../../../utils/utils';
 
 @Component({
   selector: 'app-preguntas-dashboard-admin-detailview',
@@ -23,34 +24,9 @@ export class PreguntasDashboardAdminDetailviewComponent {
   toast = inject(ToastrService);
   router = inject(Router);
   public checked = {};
-  public getAllTemas = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((entry) => {
-    return {
-      label: 'Tema ' + entry,
-      code: entry,
-    };
-  });
-
+  public getAllTemas = getAllTemas();
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
-  public getAllDifficultades = Object.keys(Dificultad).map((entry) => {
-    const map = {
-      [Dificultad.BASICO]: {
-        label: 'Basico',
-        stars: getStarsBasedOnDifficulty(Dificultad.BASICO),
-        value: Dificultad.BASICO,
-      },
-      [Dificultad.INTERMEDIO]: {
-        label: 'Intermedio',
-        stars: getStarsBasedOnDifficulty(Dificultad.INTERMEDIO),
-        value: Dificultad.INTERMEDIO,
-      },
-      [Dificultad.DIFICIL]: {
-        label: 'Dificil',
-        stars: getStarsBasedOnDifficulty(Dificultad.DIFICIL),
-        value: Dificultad.DIFICIL,
-      },
-    } as any;
-    return map[entry];
-  });
+  public getAllDifficultades = getAllDifficultades();
 
   formGroup = this.fb.group({
     identificador: [''],
@@ -72,9 +48,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
   public parseControl = (control: any) => control as FormControl;
   public lastLoadedPregunta!: Pregunta;
-  getLetter(index: number): string {
-    return String.fromCharCode(97 + index);
-  }
+  getLetter = getLetter;
   ngOnInit(): void {
     this.loadPregunta();
   }
