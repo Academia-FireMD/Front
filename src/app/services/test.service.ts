@@ -31,6 +31,14 @@ export class TestService extends ApiBaseService {
     this.controllerPrefix = '/tests';
   }
 
+  public sendFeedback(dto: {
+    preguntaId: number;
+    dificultadPercibida: Dificultad;
+    comentario: string;
+  }) {
+    return this.post('/anyadir-feedback', dto);
+  }
+
   public generarTest(dto: {
     numPreguntas: number;
     dificultad: Dificultad;

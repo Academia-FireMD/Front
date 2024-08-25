@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { tap } from 'rxjs';
+import { Comunidad } from '../shared/models/pregunta.model';
 import { ApiBaseService } from './api-base.service';
 
 @Injectable({
@@ -12,8 +13,8 @@ export class AuthService extends ApiBaseService {
     this.controllerPrefix = '/auth';
   }
 
-  public register$(email: string, password: string) {
-    return this.post('/register', { email, password });
+  public register$(email: string, password: string, comunidad: Comunidad) {
+    return this.post('/register', { email, password, comunidad });
   }
   public login$(email: string, password: string) {
     return this.post('/login', { email, password }).pipe(

@@ -137,9 +137,19 @@ app-preguntas-dashboard-admin-detailview {
   }
 }
 
-app-test-stats {
+app-test-stats,
+app-dashboard-stats,
+app-realizar-test,
+app-completar-test {
   overflow-y: auto;
   overflow-x: hidden;
   height: 100%;
   display: block;
+}
+
+.img-flag {
+  width: 30px;
+  @media (max-width: 768px) {
+    width: 20px;
+  }
 }

@@ -1,3 +1,104 @@
+<p-dialog
+  [(visible)]="displayFeedbackDialog"
+  modal="modal"
+  header="Feedback"
+  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+  [style]="{ width: '75vw', }"
+  [closable]="false"
+>
+  <div class="flex flex-column gap-3 py-3">
+    <h4 class="m-0">Nos gustaría saber tu opinión</h4>
+    <p class="m-0">¿Cómo encontraste la dificultad de esta pregunta?</p>
+    <p-dropdown
+      class="w-full"
+      [style]="{ width: '100%', height: '100%' }"
+      [options]="getAllDifficultades"
+      [formControl]="dificultadPercibida"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Selecciona una dificultad"
+    >
+      <ng-template let-item pTemplate="selectedItem">
+        <div class="flex align-items-center gap-2 h-full">
+          <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+          <div class="hidden md:block">{{ item.label }}</div>
+        </div>
+      </ng-template>
+      <ng-template let-item let-index pTemplate="item">
+        <div class="flex align-items-center gap-2 h-full">
+          <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+          <div class="hidden md:block">{{ item.label }}</div>
+        </div>
+      </ng-template>
+    </p-dropdown>
+    <textarea
+      pInputTextarea
+      placeholder="Cualquier comentario que quieras agregar"
+      [formControl]="feedback"
+      rows="5"
+      cols="30"
+    ></textarea>
+  </div>
+  <p-footer>
+    <button
+      type="button"
+      pButton
+      label="Enviar"
+      [disabled]="feedback.invalid || dificultadPercibida.invalid"
+      (click)="submitFeedback()"
+      icon="pi pi-check"
+    ></button>
+  </p-footer>
+</p-dialog>
+
+<ng-template #seguridadPicker let-control="control">
+  <div class="flex flex-row gap-2">
+    <p-card
+      pRipple
+      class="pointer"
+      (click)="control.patchValue(SeguridadAlResponder.CINCUENTA_POR_CIENTO)"
+      [ngClass]="{
+        'lower-opacity':
+          control.value != SeguridadAlResponder.CINCUENTA_POR_CIENTO
+      }"
+    >
+      <div class="seguridad-box">
+        <i class="pi pi-thumbs-down"></i>
+        <span>50%</span>
+      </div>
+    </p-card>
+    <p-card
+      pRipple
+      class="pointer"
+      (click)="
+        control.patchValue(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO)
+      "
+      [ngClass]="{
+        'lower-opacity':
+          control.value != SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
+      }"
+    >
+      <div class="seguridad-box">
+        <i class="pi pi-thumbs-up"></i>
+        <span>75%</span>
+      </div>
+    </p-card>
+    <p-card
+      pRipple
+      class="pointer"
+      (click)="control.patchValue(SeguridadAlResponder.CIEN_POR_CIENTO)"
+      [ngClass]="{
+        'lower-opacity': control.value != SeguridadAlResponder.CIEN_POR_CIENTO
+      }"
+    >
+      <div class="seguridad-box">
+        <i class="pi pi-star"></i>
+        <span>100%</span>
+      </div>
+    </p-card>
+  </div>
+</ng-template>
+
 <div class="grid">
   <ng-container *ngIf="testCargado$ | async as testCargado; else testNoCargado">
     @if(testCargado.preguntas[indicePregunta]){
@@ -45,89 +146,42 @@
             </div>
             <div class="col-12" *ngIf="!answeredCurrentQuestion()">
               <span>Seguridad al responder</span>
-              <div class="flex flex-row gap-2">
-                <p-card
-                  pRipple
-                  class="pointer"
-                  (click)="
-                    seguroDeLaPregunta.patchValue(
-                      SeguridadAlResponder.CINCUENTA_POR_CIENTO
-                    )
-                  "
-                  [ngClass]="{
-                    'lower-opacity':
-                      seguroDeLaPregunta.value !=
-                      SeguridadAlResponder.CINCUENTA_POR_CIENTO
-                  }"
-                >
-                  <div class="seguridad-box">
-                    <i class="pi pi-thumbs-down"></i>
-                    <span>50%</span>
-                  </div>
-                </p-card>
-                <p-card
-                  pRipple
-                  class="pointer"
-                  (click)="
-                    seguroDeLaPregunta.patchValue(
-                      SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
-                    )
-                  "
-                  [ngClass]="{
-                    'lower-opacity':
-                      seguroDeLaPregunta.value !=
-                      SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
-                  }"
-                >
-                  <div class="seguridad-box">
-                    <i class="pi pi-thumbs-up"></i>
-                    <span>75%</span>
-                  </div>
-                </p-card>
-                <p-card
-                  pRipple
-                  class="pointer"
-                  (click)="
-                    seguroDeLaPregunta.patchValue(
-                      SeguridadAlResponder.CIEN_POR_CIENTO
-                    )
-                  "
-                  [ngClass]="{
-                    'lower-opacity':
-                      seguroDeLaPregunta.value !=
-                      SeguridadAlResponder.CIEN_POR_CIENTO
-                  }"
-                >
-                  <div class="seguridad-box">
-                    <i class="pi pi-star"></i>
-                    <span>100%</span>
-                  </div>
-                </p-card>
-              </div>
+              <ng-container
+                *ngTemplateOutlet="
+                  seguridadPicker;
+                  context: {
+                    control: seguroDeLaPregunta
+                  }
+                "
+              ></ng-container>
             </div>
             <div
-              class="col-12 footer flex justify-content-between align-items-center"
+              class="grid w-full footer flex justify-content-between align-items-center mt-2"
               *ngIf="answeredCurrentQuestion()"
             >
-              <div class="solution">
+              <div class="solution col-12 align-items-center flex flex-column">
                 @if (showSolution()) {
                 <strong>Solución:</strong>
-                <p>
+                <p class="m-0">
                   {{
                     pregunta.solucion && pregunta.solucion.length > 0
                       ? pregunta.solucion
                       : "No hay una solución definida"
                   }}
                 </p>
-                } @else { <strong class="respuesta-correcta">Respuesta correcta!</strong> }
+                } @else {
+                <strong class="respuesta-correcta">Respuesta correcta!</strong>
+                }
               </div>
 
-              <div class="next-button">
-                <p-button
-                  label="Continuar"
-                  [link]="true"
+              <div class="next-button col-12 w-full">
+                <button
+                  pButton
+                  class="p-button p-button-raised w-full"
                   (click)="siguiente()"
-                />
+                >
+                  <span class="w-full">Continuar</span>
+                </button>
               </div>
             </div>
           </p-panel>

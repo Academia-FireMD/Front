@@ -1,12 +1,14 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, Validators } from '@angular/forms';
+import { ToastrService } from 'ngx-toastr';
+import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../../../services/auth.service';
+import { comunidadConImagenNombreMap } from '../../../shared/comunidad-picker/comunidad-picker.component';
+import { Comunidad } from '../../../shared/models/pregunta.model';
 import {
   passwordMatchValidator,
   passwordStrengthValidator,
 } from '../../../utils/validators';
-import { AuthService } from '../../../services/auth.service';
-import { firstValueFrom } from 'rxjs';
-import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-registro',
@@ -22,9 +24,20 @@ export class RegistroComponent {
       email: ['', [Validators.email, Validators.required]],
       contrasenya: ['', [Validators.required, passwordStrengthValidator()]],
       repetirContrasenya: ['', [Validators.required]],
+      relevancia: ['', Validators.required],
     },
     { validators: passwordMatchValidator }
   );
+  public comunidades = Object.keys(Comunidad).map((entry) => {
+    return {
+      code: entry,
+      ...comunidadConImagenNombreMap[entry],
+    };
+  });
+
+  public get relevancia() {
+    return this.formGroup.get('relevancia') as FormControl;
+  }
 
   public showingInfoCard = false;
 
@@ -33,7 +46,8 @@ export class RegistroComponent {
       const res = await firstValueFrom(
         this.auth.register$(
           this.formGroup.value.email ?? '',
-          this.formGroup.value.contrasenya ?? ''
+          this.formGroup.value.contrasenya ?? '',
+          (this.formGroup.value.relevancia as Comunidad) ?? Comunidad.VALENCIA
         )
       );
       this.toast.info(
@@ -45,5 +59,9 @@ export class RegistroComponent {
     } catch (error) {
       console.error(error);
     }
+  }
+
+  public updateCommunitySelection(communities: Comunidad[]) {
+    console.log(communities);
   }
 }
