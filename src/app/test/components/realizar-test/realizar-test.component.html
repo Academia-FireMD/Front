@@ -57,14 +57,21 @@
         </div>
         <div class="col-12 md:col-4">
           <p-multiSelect
+            [options]="(getAllTemas$ | async) ?? []"
+            [group]="true"
+            [showClear]="true"
+            formControlName="temas"
+            placeholder="Selecciona los temas"
             class="w-full"
             [style]="{ width: '100%' }"
-            [options]="getAllTemas"
-            formControlName="temas"
-            optionLabel="label"
-            optionValue="code"
-            placeholder="Selecciona los temas"
-          />
+            display="chip"
+          >
+            <ng-template let-group pTemplate="group">
+              <div class="flex align-items-center">
+                <span>{{ group.label }}</span>
+              </div>
+            </ng-template>
+          </p-multiSelect>
         </div>
       </div>
 

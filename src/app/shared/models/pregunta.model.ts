@@ -5,13 +5,21 @@ export interface Pregunta {
   identificador: string;
   relevancia: Comunidad[];
   dificultad: Dificultad;
-  tema: number;
+  tema: Tema;
+  temaId: number;
   descripcion: string;
   solucion: string;
   respuestas: string[];
   respuestaCorrectaIndex: number;
   seguridad: SeguridadAlResponder;
   tests: Test[];
+}
+
+export interface Tema {
+  id: number;
+  numero: number;
+  descripcion?: string;
+  categoria?: string;
 }
 
 export enum Dificultad {

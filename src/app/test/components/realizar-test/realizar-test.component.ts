@@ -2,13 +2,14 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
+import { PreguntasService } from '../../../services/preguntas.service';
 import { TestService } from '../../../services/test.service';
 import { Dificultad } from '../../../shared/models/pregunta.model';
 import {
   getAllDifficultades,
-  getAllTemas,
   getNumeroDePreguntas,
+  groupedTemas,
 } from '../../../utils/utils';
 
 @Component({
@@ -19,6 +20,7 @@ import {
 export class RealizarTestComponent {
   fb = inject(FormBuilder);
   toast = inject(ToastrService);
+  preguntaService = inject(PreguntasService);
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
     dificultad: [Dificultad.BASICO, Validators.required],
@@ -29,7 +31,11 @@ export class RealizarTestComponent {
   testService = inject(TestService);
   public preguntas = getNumeroDePreguntas();
   public getAllDifficultades = getAllDifficultades();
-  public getAllTemas = getAllTemas();
+  public getAllTemas$ = this.preguntaService.getAllTemas$().pipe(
+    map((temas) => {
+      return groupedTemas(temas);
+    })
+  );
   public getAllTestsComenzados$ = this.testService.getAllTest();
   public getFallosCount$ = this.testService.obtenerFallosCount();
   public displayPopupFallosTest = false;

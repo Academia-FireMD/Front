@@ -1,15 +1,20 @@
 import { Component, inject } from '@angular/core';
-import { FormArray, FormBuilder, FormControl } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { firstValueFrom, tap } from 'rxjs';
+import { firstValueFrom, map, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
 import {
   getAllDifficultades,
-  getAllTemas,
   getLetter,
   getStarsBasedOnDifficulty,
+  groupedTemas,
 } from '../../../utils/utils';
 
 @Component({
@@ -24,7 +29,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
   toast = inject(ToastrService);
   router = inject(Router);
   public checked = {};
-  public getAllTemas = getAllTemas();
+  public getAllTemas$ = this.preguntasService.getAllTemas$().pipe(
+    map((temas) => {
+      return groupedTemas(temas);
+    })
+  );
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   public getAllDifficultades = getAllDifficultades();
 
@@ -32,11 +41,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
     identificador: [''],
     relevancia: this.fb.array([] as Array<Comunidad>),
     dificultad: [''],
-    tema: [0],
+    temaId: [0],
     descripcion: [''],
     solucion: [''],
     respuestas: this.fb.array([]),
-    respuestaCorrectaIndex: [0],
+    respuestaCorrectaIndex: [0, Validators.required],
     seguridad: [''],
   });
 

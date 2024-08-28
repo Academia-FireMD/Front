@@ -1,4 +1,4 @@
-import { Dificultad } from '../shared/models/pregunta.model';
+import { Dificultad, Tema } from '../shared/models/pregunta.model';
 
 export const getStarsBasedOnDifficulty = (difficulty: Dificultad) => {
   switch (difficulty) {
@@ -16,15 +16,6 @@ export const getStarsBasedOnDifficulty = (difficulty: Dificultad) => {
   }
 };
 
-export const getAllTemas = () => {
-  return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((entry) => {
-    return {
-      label: 'Tema ' + entry,
-      code: entry,
-    };
-  });
-};
-
 export const getNumeroDePreguntas = () => {
   return [20, 40, 60, 80, 100].map((entry) => {
     return {
@@ -36,6 +27,26 @@ export const getNumeroDePreguntas = () => {
 
 export const getLetter = (index: number) => {
   return String.fromCharCode(97 + index);
+};
+
+export const groupedTemas = (temas: Array<Tema>) => {
+  return Object.entries(
+    temas.reduce((acc, tema) => {
+      const categoria = tema.categoria;
+      if (!acc[categoria as any]) {
+        acc[categoria as any] = [];
+      }
+      acc[categoria as any].push({
+        label: tema.numero + ' - ' + tema.descripcion ?? '',
+        value: tema.id,
+      });
+      return acc;
+    }, {} as { [key: string]: { label: string; value: number }[] })
+  ).map(([categoria, items]) => ({
+    label: categoria,
+    value: categoria.toLowerCase(), // Puedes ajustar el valor según tus necesidades
+    items,
+  }));
 };
 
 export const getAllDifficultades = () => {
