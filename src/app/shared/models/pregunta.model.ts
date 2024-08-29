@@ -1,4 +1,5 @@
 import { Test } from './test.model';
+import { Usuario } from './user.model';
 
 export interface Pregunta {
   id: number;
@@ -13,6 +14,17 @@ export interface Pregunta {
   respuestaCorrectaIndex: number;
   seguridad: SeguridadAlResponder;
   tests: Test[];
+}
+
+export interface PreguntaFallo {
+  id: number;
+  preguntaId: number;
+  usuarioId: number;
+  descripcion: string;
+  createdAt: Date;
+  updatedAt: Date;
+  pregunta?: Pregunta; // Relación opcional con Pregunta
+  usuario?: Usuario; // Relación opcional con Usuario
 }
 
 export interface Tema {

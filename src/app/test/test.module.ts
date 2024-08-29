@@ -9,6 +9,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DataViewModule } from 'primeng/dataview';
 import { DialogModule } from 'primeng/dialog';
+import { DividerModule } from 'primeng/divider';
 import { DropdownModule } from 'primeng/dropdown';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -36,6 +37,7 @@ import { RealizarTestComponent } from './components/realizar-test/realizar-test.
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { TestRoutingModule } from './test-routing.module';
+import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
 
 @NgModule({
   declarations: [
@@ -48,6 +50,7 @@ import { TestRoutingModule } from './test-routing.module';
     PopupFallosTestComponent,
     TestStatsComponent,
     DashboardStatsComponent,
+    PreguntasFallosOverviewComponent,
   ],
   imports: [
     CommonModule,
@@ -79,6 +82,7 @@ import { TestRoutingModule } from './test-routing.module';
     PanelModule,
     DialogModule,
     InputSwitchModule,
+    DividerModule,
   ],
   providers: [ConfirmationService],
 })

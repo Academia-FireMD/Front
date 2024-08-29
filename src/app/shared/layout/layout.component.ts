@@ -26,10 +26,20 @@ export class LayoutComponent {
               icon: 'pi pi-user',
               routerLink: '/app/test/user',
             },
+          ],
+        },
+        {
+          label: 'Preguntas',
+          items: [
             {
-              label: 'Preguntas',
+              label: 'Lista',
               icon: 'pi pi-question',
               routerLink: '/app/test/preguntas',
+            },
+            {
+              label: 'Fallos reportados',
+              icon: 'pi pi-flag-fill',
+              routerLink: '/app/test/preguntas-fallos',
             },
           ],
         },

@@ -51,6 +51,37 @@
   </p-footer>
 </p-dialog>
 
+<p-dialog
+  [(visible)]="displayFalloDialog"
+  modal="modal"
+  header="Reportar Fallo"
+  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+  [style]="{ width: '75vw' }"
+  [closable]="false"
+>
+  <div class="flex flex-column gap-3 py-3">
+    <h4 class="m-0">Ayúdanos a mejorar</h4>
+    <p class="m-0">Describe el fallo que encontraste en esta pregunta:</p>
+    <textarea
+      pInputTextarea
+      placeholder="Describe aquí el fallo"
+      [formControl]="descripcionFallo"
+      rows="5"
+      cols="30"
+    ></textarea>
+  </div>
+  <p-footer>
+    <button
+      type="button"
+      pButton
+      label="Enviar"
+      [disabled]="descripcionFallo.invalid"
+      (click)="submitReporteFallo()"
+      icon="pi pi-check"
+    ></button>
+  </p-footer>
+</p-dialog>
+
 <ng-template #seguridadPicker let-control="control">
   <div class="flex flex-row gap-2">
     <p-card
@@ -119,7 +150,15 @@
           </div>
         </div>
         <div class="col-12">
-          <p-panel header="Enunciado">
+          <p-panel>
+            <ng-template pTemplate="header">
+              <div class="flex justify-content-between w-full font-bold">
+                <span>Enunciado</span>
+                <span *ngIf="!!testCargado.duration">{{
+                  testCargado.endsAt | countdown
+                }}</span>
+              </div>
+            </ng-template>
             <p>
               {{ pregunta.descripcion }}
             </p>
@@ -131,7 +170,8 @@
                 'respuesta-correcta': i == indiceSeleccionado.getValue(),
                 'respuesta-incorrecta':
                   i == indicePreguntaCorrecta &&
-                  i != indiceSeleccionado.getValue()
+                  i != indiceSeleccionado.getValue() &&
+                  !isModoExamen()
               }"
               (click)="
                 answeredCurrentQuestion() ? false : indiceSeleccionado.next(i)
@@ -145,21 +185,33 @@
               </p-inputGroup>
             </div>
             <div class="col-12" *ngIf="!answeredCurrentQuestion()">
-              <span>Seguridad al responder</span>
-              <ng-container
-                *ngTemplateOutlet="
-                  seguridadPicker;
-                  context: {
-                    control: seguroDeLaPregunta
-                  }
-                "
-              ></ng-container>
+              <div class="flex justify-content-between">
+                <div class="seguridad">
+                  <span>Seguridad al responder</span>
+                  <ng-container
+                    *ngTemplateOutlet="
+                      seguridadPicker;
+                      context: {
+                        control: seguroDeLaPregunta
+                      }
+                    "
+                  ></ng-container>
+                </div>
+                <p-button
+                  label="Reportar fallo"
+                  [link]="true"
+                  (click)="displayFalloDialog = true"
+                />
+              </div>
             </div>
             <div
               class="grid w-full footer flex justify-content-between align-items-center mt-2"
               *ngIf="answeredCurrentQuestion()"
             >
-              <div class="solution col-12 align-items-center flex flex-column">
+              <div
+                class="solution col-12 align-items-center flex flex-column"
+                *ngIf="!isModoExamen()"
+              >
                 @if (showSolution()) {
                 <strong>Solución:</strong>
                 <p class="m-0">

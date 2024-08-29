@@ -13,6 +13,9 @@ export interface Test {
   realizador: Usuario;
   preguntas: Pregunta[];
   status: TestStatus;
+  duration?: number;
+  endsAt?: Date;
+  createdAt: Date;
 }
 
 export interface Respuesta {

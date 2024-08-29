@@ -6,6 +6,7 @@ import { CompletarTestComponent } from './components/completar-test/completar-te
 import { DashboardStatsComponent } from './components/dashboard-stats/dashboard-stats.component';
 import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
+import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
 import { RealizarTestComponent } from './components/realizar-test/realizar-test.component';
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
@@ -24,6 +25,13 @@ const routes: Routes = [
     canActivate: [roleGuard],
     title: 'Preguntas',
     data: { expectedRole: 'ADMIN', title: 'Preguntas' },
+  },
+  {
+    path: 'preguntas-fallos',
+    component: PreguntasFallosOverviewComponent,
+    canActivate: [roleGuard],
+    title: 'Fallos reportados',
+    data: { expectedRole: 'ADMIN', title: 'Fallos reportados' },
   },
   {
     path: 'preguntas/:id',

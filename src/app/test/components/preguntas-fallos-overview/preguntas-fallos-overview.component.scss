@@ -1,0 +1,11 @@
+.expanded-content {
+  overflow: hidden;
+  transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+  max-height: 0;
+  opacity: 0;
+}
+
+.expanded-content.show {
+  max-height: 500px; /* Ajusta este valor según el contenido */
+  opacity: 1;
+}

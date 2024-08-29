@@ -4,11 +4,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import {
   BehaviorSubject,
-  debounceTime,
+  catchError,
   filter,
   firstValueFrom,
+  of,
   tap,
 } from 'rxjs';
+import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TestService } from '../../../services/test.service';
 import {
   Dificultad,
@@ -28,8 +30,10 @@ export class CompletarTestComponent {
   fb = inject(FormBuilder);
   toast = inject(ToastrService);
   router = inject(Router);
+  reporteFallo = inject(ReportesFalloService);
   public indicePregunta = 0;
   public displayFeedbackDialog = false;
+  public displayFalloDialog = false;
   public indiceSeleccionado = new BehaviorSubject(-1);
   public seguroDeLaPregunta = new FormControl(
     SeguridadAlResponder.CIEN_POR_CIENTO
@@ -39,6 +43,10 @@ export class CompletarTestComponent {
     Dificultad.INTERMEDIO,
     Validators.required
   );
+  public descripcionFallo = new FormControl('', [
+    Validators.required,
+    Validators.minLength(10),
+  ]);
   public feedback = new FormControl('', Validators.required);
   public SeguridadAlResponder = SeguridadAlResponder;
   public getLetter = getLetter;
@@ -53,16 +61,19 @@ export class CompletarTestComponent {
       this.lastLoadedTest = entry;
     })
   );
+  public comunicating = false;
+
+  public isModoExamen() {
+    return !!this.lastLoadedTest.duration && !!this.lastLoadedTest.endsAt;
+  }
 
   ngOnInit(): void {
     this.indiceSeleccionado
-      .pipe(
-        filter((e) => e >= 0),
-        debounceTime(500)
-      )
+      .pipe(filter((e) => e >= 0))
       .subscribe(async (data) => {
         this.answeredQuestion - 1;
         this.indicePreguntaCorrecta = -1;
+        this.comunicating = true;
         const res: {
           esCorrecta: false;
           respuestaDada: number;
@@ -77,8 +88,15 @@ export class CompletarTestComponent {
                 this.seguroDeLaPregunta.value ??
                 SeguridadAlResponder.CIEN_POR_CIENTO,
             })
-            .pipe(tap((res) => (this.lastAnsweredQuestion = res as any)))
+            .pipe(
+              catchError((err) => {
+                this.comunicating = false;
+                return of(err);
+              }),
+              tap((res) => (this.lastAnsweredQuestion = res as any))
+            )
         );
+        this.comunicating = false;
         this.indicePreguntaCorrecta = res.pregunta.respuestaCorrectaIndex;
         this.answeredQuestion = this.indiceSeleccionado.getValue();
       });
@@ -104,6 +122,20 @@ export class CompletarTestComponent {
     this.displayFeedbackDialog = false;
   }
 
+  public async submitReporteFallo() {
+    const feedback = await firstValueFrom(
+      this.reporteFallo.reportarFallo({
+        preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta].id,
+        descripcion: this.descripcionFallo.value ?? '',
+      })
+    );
+    this.toast.success(
+      'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.'
+    );
+    this.descripcionFallo.reset();
+    this.displayFalloDialog = false;
+  }
+
   public siguiente() {
     if (this.indicePregunta == this.lastLoadedTest.preguntas.length - 1) {
       //completado
@@ -113,7 +145,7 @@ export class CompletarTestComponent {
       ]);
     } else {
       this.indicePregunta++;
-      if (Math.random() < 0.05) {
+      if (Math.random() < 0.05 && !this.isModoExamen()) {
         this.showFeedbackDialog();
       }
     }
@@ -127,18 +159,24 @@ export class CompletarTestComponent {
     return (
       this.indiceSeleccionado.getValue() != this.indicePreguntaCorrecta &&
       this.indicePreguntaCorrecta >= 0 &&
-      this.answeredQuestion >= 0
+      this.answeredQuestion >= 0 &&
+      !this.comunicating
     );
   }
 
   public answeredCurrentQuestion() {
     return (
       this.answeredQuestion == this.indiceSeleccionado.getValue() &&
-      this.answeredQuestion >= 0
+      this.answeredQuestion >= 0 &&
+      !this.comunicating
     );
   }
 
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as string;
+  }
+
+  public omitirPregunta(){
+
   }
 }

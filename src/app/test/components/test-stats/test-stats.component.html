@@ -1,8 +1,11 @@
 <ng-container *ngIf="stats$ | async as stat">
-  <div class="grid">
+  <div class="grid mb-4">
     <div class="col-12" *ngIf="test$ | async as test">
-      <div class="flex align-items-center justify-content-between">
-        <span>Resultados test con id {{ test.id }}</span>
+      <div class="flex align-items-center justify-content-between topbar">
+        <span
+          >Test realizado el dia
+          {{ test.createdAt | date : "dd/MM/yyyy hh:mm" }}</span
+        >
         <p-button
           [link]="true"
           label="Volver atras"
@@ -10,42 +13,110 @@
         />
       </div>
     </div>
-  </div>
-  <div class="grid">
+    <ng-template #boxDisplayStat let-statFocus="statFocus">
+      <div
+        class="data-box"
+        *ngFor="let stat of statFocus.labels; let i = index"
+      >
+        <div
+          class="box"
+          [ngStyle]="{
+            'background-color': statFocus.datasets[0].backgroundColor[i]
+          }"
+        ></div>
+        <span
+          >{{ statFocus.datasets[0].data[i] }} {{ stat }} (<strong>{{
+            statFocus.percentages[i]
+          }}</strong
+          >%)</span
+        >
+      </div>
+    </ng-template>
+
     <div class="col-12 md:col-4">
-      <p-card>
+      <p-card
+        *ngIf="
+          getDataFromSeguridad(seguridad.CIEN_POR_CIENTO, stat) as statCien
+        "
+      >
         <div class="seguridad-box">
           <i class="pi pi-star"></i>
           <span>100%</span>
         </div>
-        <app-pie-chart
-          [data]="getDataFromSeguridad(seguridad.CIEN_POR_CIENTO, stat)"
-        ></app-pie-chart>
+        <div class="py-2">
+          <app-pie-chart [data]="statCien"></app-pie-chart>
+        </div>
+        <ng-container
+          *ngTemplateOutlet="
+            boxDisplayStat;
+            context: {
+              statFocus: statCien
+            }
+          "
+        ></ng-container>
       </p-card>
     </div>
     <div class="col-12 md:col-4">
-      <p-card>
+      <p-card
+        *ngIf="
+          getDataFromSeguridad(
+            seguridad.SETENTA_Y_CINCO_POR_CIENTO,
+            stat
+          ) as statSetentaCinco
+        "
+      >
         <div class="seguridad-box">
           <i class="pi pi-thumbs-up"></i>
           <span>75%</span>
         </div>
-        <app-pie-chart
-          [data]="
-            getDataFromSeguridad(seguridad.SETENTA_Y_CINCO_POR_CIENTO, stat)
+        <div class="py-2">
+          <app-pie-chart [data]="statSetentaCinco"></app-pie-chart>
+        </div>
+        <ng-container
+          *ngTemplateOutlet="
+            boxDisplayStat;
+            context: {
+              statFocus: statSetentaCinco
+            }
           "
-        ></app-pie-chart>
+        ></ng-container>
       </p-card>
     </div>
     <div class="col-12 md:col-4">
-      <p-card>
+      <p-card
+        *ngIf="
+          getDataFromSeguridad(
+            seguridad.CINCUENTA_POR_CIENTO,
+            stat
+          ) as cincuenta
+        "
+      >
         <div class="seguridad-box">
           <i class="pi pi-thumbs-down"></i>
           <span>50%</span>
         </div>
-        <app-pie-chart
-          [data]="getDataFromSeguridad(seguridad.CINCUENTA_POR_CIENTO, stat)"
-        ></app-pie-chart>
+        <div class="py-2">
+          <app-pie-chart [data]="cincuenta"></app-pie-chart>
+        </div>
+        <ng-container
+          *ngTemplateOutlet="
+            boxDisplayStat;
+            context: {
+              statFocus: cincuenta
+            }
+          "
+        ></ng-container>
       </p-card>
+    </div>
+    <div class="grid pb-4 w-full">
+      <div class="col-6 nota">
+        <p>Nota 100% + 50%</p>
+        <div>{{ calcular100y50().toFixed(2) }}</div>
+      </div>
+      <div class="col-6 nota">
+        <p>Nota 100% + 75% + 50%</p>
+        <div>{{ calcular100y75y50().toFixed(2) }}</div>
+      </div>
     </div>
   </div>
 </ng-container>

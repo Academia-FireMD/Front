@@ -75,7 +75,23 @@
         </div>
       </div>
 
-      <div class="flex align-items-center justify-content-end w-full gap-2">
+      <div
+        class="flex align-items-center justify-content-end w-full gap-2 mt-3"
+      >
+        <p-floatLabel *ngIf="formGroup.value.generarTestDeExamen">
+          <input
+            pInputText
+            id="tiempoLimiteEnMinutos"
+            type="number"
+            placeholder="Minutos"
+            aria-describedby="tiempoLimiteEnMinutos-help"
+            [formControl]="formGroup.controls.tiempoLimiteEnMinutos"
+          />
+          <label for="tiempoLimiteEnMinutos">Tiempo limite</label>
+        </p-floatLabel>
+        <label for="switch1">Generar test de examen</label>
+        <p-inputSwitch [formControl]="formGroup.controls.generarTestDeExamen" />
+
         <ng-container *ngIf="!!(getFallosCount$ | async)">
           <label for="switch1">Generar test de repaso</label>
           <p-inputSwitch
@@ -95,7 +111,7 @@
         <button
           pButton
           type="submit"
-          [disabled]="formGroup.invalid && !formGroup.value.generarTestDeRepaso"
+          [disabled]="formGroup.invalid"
           class="p-button dark-button p-button-raised"
           (click)="generarTest()"
         >
@@ -118,13 +134,28 @@
                 </div>
                 <div class="content">
                   <div class="title">
-                    <h4 class="my-0">Tienes un test pendiente</h4>
+                    <h4 class="my-0">
+                      Tienes un test pendiente
+                      {{
+                        !!testComenzado.duration && !!testComenzado.endsAt
+                          ? " de tipo examen"
+                          : ""
+                      }}
+                    </h4>
                   </div>
                   <div class="body">
                     Has comenzado un test el dia
                     <strong>{{
                       testComenzado.createdAt | date : "shortDate"
                     }}</strong>
+
+                    <strong
+                      *ngIf="!!testComenzado.duration && !!testComenzado.endsAt"
+                      >. Y te quedan
+                      {{ testComenzado.endsAt | countdown }} minutos para
+                      terminarlo</strong
+                    >
+
                     con {{ testComenzado.respuestasCount }} respuestas de
                     {{ testComenzado.testPreguntasCount }} preguntas
                     respondidas. Terminalo ahora haciendo click en el botón de

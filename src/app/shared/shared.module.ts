@@ -7,12 +7,14 @@ import { ListboxModule } from 'primeng/listbox';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { ComunidadPickerComponent } from './comunidad-picker/comunidad-picker.component';
 import { PieChartComponent } from './pie-chart/pie-chart.component';
+import { CountdownPipe } from './pipes/countdown.pipe';
 import { SharedGridComponent } from './shared-grid/shared-grid.component';
 @NgModule({
   declarations: [
     SharedGridComponent,
     ComunidadPickerComponent,
     PieChartComponent,
+    CountdownPipe,
   ],
   imports: [
     CommonModule,
@@ -23,6 +25,11 @@ import { SharedGridComponent } from './shared-grid/shared-grid.component';
     ListboxModule,
     ChartModule,
   ],
-  exports: [SharedGridComponent, ComunidadPickerComponent, PieChartComponent],
+  exports: [
+    SharedGridComponent,
+    ComunidadPickerComponent,
+    PieChartComponent,
+    CountdownPipe,
+  ],
 })
 export class SharedModule {}

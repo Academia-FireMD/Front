@@ -148,7 +148,7 @@
     <p-button
       label="Volver atras"
       [link]="true"
-      [routerLink]="['/app/test/preguntas']"
+      (click)="handleBackButton()"
     />
     @if(getId() == 'new'){
     <p-button label="Crear pregunta" (click)="crearPregunta()" />

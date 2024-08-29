@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import {
   FormArray,
@@ -23,6 +24,7 @@ import {
   styleUrl: './preguntas-dashboard-admin-detailview.component.scss',
 })
 export class PreguntasDashboardAdminDetailviewComponent {
+  location = inject(Location);
   activedRoute = inject(ActivatedRoute);
   preguntasService = inject(PreguntasService);
   fb = inject(FormBuilder);
@@ -34,6 +36,9 @@ export class PreguntasDashboardAdminDetailviewComponent {
       return groupedTemas(temas);
     })
   );
+  public goBack() {
+    return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
+  }
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   public getAllDifficultades = getAllDifficultades();
 
@@ -133,5 +138,13 @@ export class PreguntasDashboardAdminDetailviewComponent {
     this.toast.success('Pregunta creada con exito!', 'Creación exitosa');
     await this.router.navigate(['app/test/preguntas/' + res.id]);
     this.loadPregunta();
+  }
+
+  public handleBackButton() {
+    if (this.goBack()) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/app/test/preguntas']);
+    }
   }
 }

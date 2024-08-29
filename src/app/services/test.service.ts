@@ -11,16 +11,18 @@ import {
 } from '../shared/models/pregunta.model';
 import { Respuesta, Test } from '../shared/models/test.model';
 import { ApiBaseService } from './api-base.service';
-export interface GenerarTestDto {
-  numPreguntas: number;
-  dificultad: Dificultad;
-  temas: Array<number>;
-}
 export interface RegistrarRespuestaDto {
   testId: number;
   preguntaId: number;
   respuestaDada: number;
   seguridad?: SeguridadAlResponder;
+}
+export interface GenerarTestDto {
+  numPreguntas: number;
+  dificultad: Dificultad;
+  temas: Array<number>;
+  generarTestDeRepaso: boolean;
+  duracion: number;
 }
 @Injectable({
   providedIn: 'root',
@@ -39,12 +41,7 @@ export class TestService extends ApiBaseService {
     return this.post('/anyadir-feedback', dto);
   }
 
-  public generarTest(dto: {
-    numPreguntas: number;
-    dificultad: Dificultad;
-    temas: Array<number>;
-    generarTestDeRepaso: boolean;
-  }) {
+  public generarTest(dto: GenerarTestDto) {
     return this.post('/start', dto);
   }
   public getTestById(id: number) {

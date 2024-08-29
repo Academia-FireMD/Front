@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, map } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
-import { TestService } from '../../../services/test.service';
+import { GenerarTestDto, TestService } from '../../../services/test.service';
 import { Dificultad } from '../../../shared/models/pregunta.model';
 import {
   getAllDifficultades,
@@ -26,7 +26,33 @@ export class RealizarTestComponent {
     dificultad: [Dificultad.BASICO, Validators.required],
     temas: [[], Validators.required],
     generarTestDeRepaso: [false],
+    generarTestDeExamen: [false],
+    tiempoLimiteEnMinutos: [null],
   });
+  ngOnInit(): void {
+    const generarTestDeRepasoControl = this.formGroup.get(
+      'generarTestDeRepaso'
+    ) as FormControl;
+    const generarExamenControl = this.formGroup.get(
+      'generarTestDeExamen'
+    ) as FormControl;
+
+    generarExamenControl.valueChanges.subscribe((data) => {
+      if (!!data) {
+        generarExamenControl?.addValidators(Validators.required);
+      } else {
+        generarExamenControl.clearValidators();
+      }
+    });
+
+    generarTestDeRepasoControl.valueChanges.subscribe((data) => {
+      if (!!data) {
+        generarTestDeRepasoControl?.addValidators(Validators.required);
+      } else {
+        generarTestDeRepasoControl.clearValidators();
+      }
+    });
+  }
   confirmationService = inject(ConfirmationService);
   testService = inject(TestService);
   public preguntas = getNumeroDePreguntas();
@@ -42,9 +68,17 @@ export class RealizarTestComponent {
 
   public async generarTest() {
     try {
-      const res = await firstValueFrom(
-        this.testService.generarTest(this.formGroup.value as any)
-      );
+      const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
+      const payload = {
+        numPreguntas,
+        dificultad: this.formGroup.value.dificultad ?? Dificultad.BASICO,
+        temas: this.formGroup.value.temas ?? [],
+        generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
+        duracion: this.formGroup.value.generarTestDeExamen
+          ? this.formGroup.value.tiempoLimiteEnMinutos ?? numPreguntas
+          : undefined,
+      } as GenerarTestDto;
+      const res = await firstValueFrom(this.testService.generarTest(payload));
       this.toast.success('Test generado exitosamente!', 'Generación exitosa');
       this.getAllTestsComenzados$ = this.testService.getAllTest();
     } catch (error) {}
