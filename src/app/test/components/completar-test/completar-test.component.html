@@ -7,8 +7,8 @@
   [closable]="false"
 >
   <div class="flex flex-column gap-3 py-3">
-    <h4 class="m-0">Nos gustaría saber tu opinión</h4>
-    <p class="m-0">¿Cómo encontraste la dificultad de esta pregunta?</p>
+    <h4 class="m-0">Nos gustaría conocer tu opinión</h4>
+    <p class="m-0">¿Cómo percibiste la dificultad de esta pregunta?</p>
     <p-dropdown
       class="w-full"
       [style]="{ width: '100%', height: '100%' }"
@@ -187,7 +187,7 @@
             <div class="col-12" *ngIf="!answeredCurrentQuestion()">
               <div class="flex justify-content-between">
                 <div class="seguridad">
-                  <span>Seguridad al responder</span>
+                  <span>Confianza al responder</span>
                   <ng-container
                     *ngTemplateOutlet="
                       seguridadPicker;
@@ -218,11 +218,11 @@
                   {{
                     pregunta.solucion && pregunta.solucion.length > 0
                       ? pregunta.solucion
-                      : "No hay una solución definida"
+                      : "No hay una solución definida."
                   }}
                 </p>
                 } @else {
-                <strong class="respuesta-correcta">Respuesta correcta!</strong>
+                <strong class="respuesta-correcta">¡Respuesta correcta!</strong>
                 }
               </div>
 
@@ -250,7 +250,7 @@
           </div>
           <div class="content">
             <div class="body">
-              La pregunta que intentas visualizar no existe!
+              ¡La pregunta que intentas visualizar no existe!
             </div>
           </div>
         </div>
@@ -269,14 +269,14 @@
             </div>
             <div class="content">
               <div class="body">
-                El test no existe o no se ha podido cargar. Pruebe con otro.
+                El test no existe o no se ha podido cargar. Prueba con otro.
               </div>
               <a
                 [routerLink]="['/app/test/alumno/realizar-test']"
                 class="link-text flex align-items-center"
                 style="text-decoration: none"
               >
-                <span>Pruebe con otro</span> <i class="pi pi-angle-right"></i>
+                <span>Prueba con otro</span> <i class="pi pi-angle-right"></i>
               </a>
             </div>
           </div>

@@ -27,6 +27,7 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
   confirmationService = inject(ConfirmationService);
   router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
+
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
@@ -35,7 +36,9 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
         .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
     });
   }
+
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
+
   public navigateToDetailview = (id: number | 'new') => {
     this.router.navigate(['/app/test/preguntas/' + id]);
   };
@@ -46,7 +49,7 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
       if (input.files && input.files.length > 0) {
         const selectedFile = input.files[0];
         if (!selectedFile) {
-          this.toast.error('Por favor selecciona un archivo primero.');
+          this.toast.error('Por favor, selecciona un archivo primero.');
           return;
         }
 
@@ -68,11 +71,11 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
   public eliminarPregunta(id: number, event: Event) {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
-      message: `Vas a eliminar la pregunta con el id ${id}, estas seguro?`,
+      message: `Vas a eliminar la pregunta con el ID ${id}, ¿estás seguro?`,
       header: 'Confirmación',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',
-      acceptLabel: 'Si',
+      acceptLabel: 'Sí',
       rejectLabel: 'No',
       rejectIcon: 'none',
       rejectButtonStyleClass: 'p-button-text',

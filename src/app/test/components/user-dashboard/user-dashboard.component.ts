@@ -7,6 +7,7 @@ import { UserService } from '../../../services/user.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { Usuario } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+
 @Component({
   selector: 'app-user-dashboard',
   templateUrl: './user-dashboard.component.html',
@@ -31,11 +32,11 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
       message:
-        'Vas a eliminar la solicitud del usuario de acceso a la plataforma, estas seguro?',
+        'Vas a eliminar la solicitud del usuario de acceso a la plataforma, ¿estás seguro?',
       header: 'Confirmación',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',
-      acceptLabel: 'Si',
+      acceptLabel: 'Sí',
       rejectLabel: 'No',
       rejectIcon: 'none',
       rejectButtonStyleClass: 'p-button-text',
@@ -51,7 +52,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   public async permitir(id: number) {
     await firstValueFrom(this.userService.permitirUsuario(id));
     this.toast.info(
-      'Usuario aprovado exitosamente, ahora puede comenzar a utilizar su cuenta.'
+      'Usuario aprobado exitosamente, ahora puede comenzar a utilizar su cuenta.'
     );
     this.pagination.set(cloneDeep(this.pagination()));
   }

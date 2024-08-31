@@ -6,12 +6,12 @@
           class="col-12 header flex justify-content-between align-items-center pb-3"
         >
           <div class="identificador">
-            @if (getId() !== 'new' ) { Identificador:
+            @if (getId() !== 'new') { Identificador:
             <strong>{{ formGroup.value.identificador }}</strong>
             }@else {
             <p-floatLabel>
               <input
-                type="identificador"
+                type="text"
                 pInputText
                 class="w-full"
                 formControlName="identificador"
@@ -37,8 +37,7 @@
               cols="30"
               pInputTextarea
               formControlName="descripcion"
-            >
-            </textarea>
+            ></textarea>
             <label for="float-input">Descripción</label>
           </p-floatLabel>
         </div>
@@ -116,44 +115,46 @@
         </div>
         <div class="col-12 respuestas-actions flex justify-content-end">
           <p-button
-            label="Añadir nueva pregunta"
+            label="Añadir nueva respuesta"
             [link]="true"
             (click)="addNewPregunta()"
-          />
+          ></p-button>
           <p-button
             *ngIf="respuestas.dirty"
             label="Guardar cambios"
             (click)="disableAllRespuestas()"
             [link]="true"
-          />
+          ></p-button>
         </div>
       </div>
       <div class="col-12 px-0">
         <p-floatLabel>
           <textarea
             class="w-full"
-            id="float-input"
+            id="solucion-input"
             rows="5"
             cols="30"
             pInputTextarea
             formControlName="solucion"
-          >
-          </textarea>
-          <label for="float-input">Solución (opcional)</label>
+          ></textarea>
+          <label for="solucion-input">Solución (opcional)</label>
         </p-floatLabel>
       </div>
     </p-card>
   </div>
   <div class="col-12 footer flex justify-content-end w-full">
     <p-button
-      label="Volver atras"
+      label="Volver atrás"
       [link]="true"
       (click)="handleBackButton()"
-    />
+    ></p-button>
     @if(getId() == 'new'){
-    <p-button label="Crear pregunta" (click)="crearPregunta()" />
+    <p-button label="Crear pregunta" (click)="crearPregunta()"></p-button>
     }@else{
-    <p-button label="Actualizar pregunta" (click)="actualizarPregunta()" />
+    <p-button
+      label="Actualizar pregunta"
+      (click)="actualizarPregunta()"
+    ></p-button>
     }
   </div>
 </div>

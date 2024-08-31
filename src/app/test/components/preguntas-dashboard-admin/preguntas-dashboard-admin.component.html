@@ -1,9 +1,9 @@
-<p-confirmDialog />
+<p-confirmDialog></p-confirmDialog>
 <div class="grid">
   <div class="col-12">
     <div class="top-action-bar">
       <p-iconField iconPosition="left">
-        <p-inputIcon styleClass="pi pi-search" />
+        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
         <input
           type="text"
           pInputText
@@ -20,14 +20,14 @@
           icon="pi pi-plus"
           [link]="true"
           (click)="navigateToDetailview('new')"
-        />
+        ></p-button>
         <p-button
           label="{{
             viewportService.screenWidth == 'xs' ? undefined : 'Importar'
           }}"
           icon="pi pi-upload"
           (click)="fileInput.click()"
-        />
+        ></p-button>
         <input
           type="file"
           accept=".xlsx, .xls"
@@ -93,7 +93,7 @@
                       $event.preventDefault();
                       eliminarPregunta(item.id, $event)
                     "
-                  />
+                  ></p-button>
                 </div>
               </div>
             </div>
@@ -110,7 +110,7 @@
         [rows]="pagination().take"
         [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
         [showPageLinks]="viewportService.screenWidth != 'xs'"
-      />
+      ></p-paginator>
     </div>
   </div>
 </div>

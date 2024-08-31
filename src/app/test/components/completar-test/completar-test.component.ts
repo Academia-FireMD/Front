@@ -31,6 +31,7 @@ export class CompletarTestComponent {
   toast = inject(ToastrService);
   router = inject(Router);
   reporteFallo = inject(ReportesFalloService);
+
   public indicePregunta = 0;
   public displayFeedbackDialog = false;
   public displayFalloDialog = false;
@@ -52,8 +53,10 @@ export class CompletarTestComponent {
   public getLetter = getLetter;
   public indicePreguntaCorrecta = -1;
   public answeredQuestion = -1;
+
   private lastLoadedTest!: Test;
   private lastAnsweredQuestion!: { preguntaId: number };
+
   public testCargado$ = this.testService.getTestById(Number(this.getId())).pipe(
     tap((entry: any) => {
       const parsedTest: Test & { respuestasCount: number } = entry;
@@ -61,6 +64,7 @@ export class CompletarTestComponent {
       this.lastLoadedTest = entry;
     })
   );
+
   public comunicating = false;
 
   public isModoExamen() {
@@ -71,11 +75,11 @@ export class CompletarTestComponent {
     this.indiceSeleccionado
       .pipe(filter((e) => e >= 0))
       .subscribe(async (data) => {
-        this.answeredQuestion - 1;
+        this.answeredQuestion = -1; // Corrección en la asignación
         this.indicePreguntaCorrecta = -1;
         this.comunicating = true;
         const res: {
-          esCorrecta: false;
+          esCorrecta: boolean; // Corrección en el tipo de dato
           respuestaDada: number;
           pregunta: { respuestaCorrectaIndex: number };
         } = await firstValueFrom(
@@ -139,7 +143,7 @@ export class CompletarTestComponent {
   public siguiente() {
     if (this.indicePregunta == this.lastLoadedTest.preguntas.length - 1) {
       //completado
-      console.log('test completado!!');
+      console.log('¡Test completado!');
       this.router.navigate([
         'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
       ]);
@@ -151,7 +155,7 @@ export class CompletarTestComponent {
     }
     this.seguroDeLaPregunta.reset(SeguridadAlResponder.CIEN_POR_CIENTO);
     this.indiceSeleccionado.next(-1);
-    this.answeredQuestion - 1;
+    this.answeredQuestion = -1; // Corrección en la asignación
     this.indicePreguntaCorrecta = -1;
   }
 
@@ -176,7 +180,5 @@ export class CompletarTestComponent {
     return this.activedRoute.snapshot.paramMap.get('id') as string;
   }
 
-  public omitirPregunta(){
-
-  }
+  public omitirPregunta() {}
 }

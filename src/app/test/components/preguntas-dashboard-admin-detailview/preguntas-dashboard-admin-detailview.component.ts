@@ -10,6 +10,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom, map, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
+import { TemaService } from '../../../services/tema.service';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
 import {
   getAllDifficultades,
@@ -27,18 +28,22 @@ export class PreguntasDashboardAdminDetailviewComponent {
   location = inject(Location);
   activedRoute = inject(ActivatedRoute);
   preguntasService = inject(PreguntasService);
+  temaService = inject(TemaService);
   fb = inject(FormBuilder);
   toast = inject(ToastrService);
   router = inject(Router);
+
   public checked = {};
-  public getAllTemas$ = this.preguntasService.getAllTemas$().pipe(
+  public getAllTemas$ = this.temaService.getAllTemas$().pipe(
     map((temas) => {
       return groupedTemas(temas);
     })
   );
+
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
   }
+
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   public getAllDifficultades = getAllDifficultades();
 
@@ -57,12 +62,15 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public get relevancia() {
     return this.formGroup.get('relevancia') as FormArray;
   }
+
   public get respuestas() {
     return this.formGroup.get('respuestas') as FormArray;
   }
+
   public parseControl = (control: any) => control as FormControl;
   public lastLoadedPregunta!: Pregunta;
   getLetter = getLetter;
+
   ngOnInit(): void {
     this.loadPregunta();
   }
@@ -73,7 +81,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   private loadPregunta() {
     const itemId = this.getId();
-    if (itemId == 'new') {
+    if (itemId === 'new') {
       this.formGroup.reset();
     } else {
       firstValueFrom(
@@ -129,13 +137,13 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   public async actualizarPregunta() {
     await this.updatePregunta();
-    this.toast.success('Pregunta actualizada con exito!', 'Guardado exitoso');
+    this.toast.success('Pregunta actualizada con éxito!', 'Guardado exitoso');
     this.loadPregunta();
   }
 
   public async crearPregunta() {
     const res = await this.updatePregunta();
-    this.toast.success('Pregunta creada con exito!', 'Creación exitosa');
+    this.toast.success('Pregunta creada con éxito!', 'Creación exitosa');
     await this.router.navigate(['app/test/preguntas/' + res.id]);
     this.loadPregunta();
   }

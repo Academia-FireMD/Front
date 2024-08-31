@@ -1,0 +1,56 @@
+<div class="grid" [formGroup]="formGroup">
+  <div class="col-12 content">
+    <p-card>
+      <div class="grid">
+        <div
+          class="col-12 header flex justify-content-between align-items-center pb-3"
+        >
+          <div class="numero">
+            <p-floatLabel>
+              <input
+                type="number"
+                pInputText
+                class="w-full"
+                formControlName="numero"
+              />
+              <label for="numero">Número</label>
+            </p-floatLabel>
+          </div>
+          <div class="categoria">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                class="w-full"
+                formControlName="categoria"
+              />
+              <label for="categoria">Categoría</label>
+            </p-floatLabel>
+          </div>
+        </div>
+        <div class="col-12 py-3">
+          <p-floatLabel>
+            <textarea
+              class="w-full"
+              id="float-input"
+              rows="5"
+              cols="30"
+              pInputTextarea
+              formControlName="descripcion"
+            ></textarea>
+            <label for="float-input">Descripción</label>
+          </p-floatLabel>
+        </div>
+      </div>
+    </p-card>
+  </div>
+  <div class="col-12 footer flex justify-content-end w-full">
+    <p-button label="Volver atrás" [link]="true" (click)="handleBackButton()" />
+    <ng-container *ngIf="getId() === 'new'; else updateButton">
+      <p-button label="Crear tema" (click)="crearTema()" />
+    </ng-container>
+    <ng-template #updateButton>
+      <p-button label="Actualizar tema" (click)="actualizarTema()" />
+    </ng-template>
+  </div>
+</div>

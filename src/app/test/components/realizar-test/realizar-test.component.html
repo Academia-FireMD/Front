@@ -13,7 +13,7 @@
   ></app-popup-fallos-test>
 </p-dialog>
 
-<p-confirmDialog />
+<p-confirmDialog></p-confirmDialog>
 <div class="grid" [formGroup]="formGroup">
   <div class="col-12 content">
     <p-card>
@@ -28,8 +28,8 @@
             formControlName="numPreguntas"
             optionLabel="label"
             optionValue="code"
-            placeholder="Numero de preguntas"
-          />
+            placeholder="Número de preguntas"
+          ></p-dropdown>
         </div>
         <div class="col-12 md:col-4">
           <p-dropdown
@@ -76,7 +76,7 @@
       </div>
 
       <div
-        class="flex align-items-center justify-content-end w-full gap-2 mt-3"
+        class="flex align-items-center justify-content-end w-full gap-2 flex-wrap mt-3"
       >
         <p-floatLabel *ngIf="formGroup.value.generarTestDeExamen">
           <input
@@ -87,16 +87,18 @@
             aria-describedby="tiempoLimiteEnMinutos-help"
             [formControl]="formGroup.controls.tiempoLimiteEnMinutos"
           />
-          <label for="tiempoLimiteEnMinutos">Tiempo limite</label>
+          <label for="tiempoLimiteEnMinutos">Tiempo límite</label>
         </p-floatLabel>
         <label for="switch1">Generar test de examen</label>
-        <p-inputSwitch [formControl]="formGroup.controls.generarTestDeExamen" />
+        <p-inputSwitch
+          [formControl]="formGroup.controls.generarTestDeExamen"
+        ></p-inputSwitch>
 
         <ng-container *ngIf="!!(getFallosCount$ | async)">
           <label for="switch1">Generar test de repaso</label>
           <p-inputSwitch
             [formControl]="formGroup.controls.generarTestDeRepaso"
-          />
+          ></p-inputSwitch>
 
           <button
             pButton
@@ -144,7 +146,7 @@
                     </h4>
                   </div>
                   <div class="body">
-                    Has comenzado un test el dia
+                    Has comenzado un test el día
                     <strong>{{
                       testComenzado.createdAt | date : "shortDate"
                     }}</strong>
@@ -158,7 +160,7 @@
 
                     con {{ testComenzado.respuestasCount }} respuestas de
                     {{ testComenzado.testPreguntasCount }} preguntas
-                    respondidas. Terminalo ahora haciendo click en el botón de
+                    respondidas. Termínalo ahora haciendo clic en el botón de
                     "Continuar"
                   </div>
                 </div>
@@ -169,7 +171,7 @@
                   label="Abortar"
                   [link]="true"
                   (click)="eliminarTest(testComenzado.id, $event)"
-                />
+                ></p-button>
                 <a
                   [routerLink]="[
                     '/app/test/alumno/realizar-test/' + testComenzado.id

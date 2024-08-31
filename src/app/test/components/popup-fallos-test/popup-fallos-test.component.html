@@ -3,7 +3,7 @@
     <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
       <ng-template pTemplate="list" let-products>
         <div class="grid grid-nogutter">
-          <p>Haga click en cualquier respuesta para ver más detalles</p>
+          <p>Haga clic en cualquier respuesta para ver más detalles</p>
           <div
             class="list-respuestas"
             style="max-height: 60vh; overflow: auto; width: 100%"
@@ -79,7 +79,7 @@
                       item.pregunta.solucion &&
                       item.pregunta.solucion.length > 0
                         ? item.pregunta.solucion
-                        : "No hay una solución definida"
+                        : "No hay una solución definida."
                     }}
                   </div>
                 </div>

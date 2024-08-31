@@ -7,11 +7,21 @@
         <input
           type="text"
           pInputText
-          placeholder="Buscar por identificador"
+          placeholder="Buscar por categoría"
           style="min-width: 30vw"
           (input)="valueChanged($event)"
         />
       </p-iconField>
+      <div class="right-actions">
+        <p-button
+          label="{{
+            viewportService.screenWidth == 'xs' ? undefined : 'Crear nuevo'
+          }}"
+          icon="pi pi-plus"
+          [link]="true"
+          (click)="navigateToDetailview('new')"
+        ></p-button>
+      </div>
     </div>
   </div>
   <div class="col-12 list-generic">
@@ -20,30 +30,24 @@
         <div class="grid grid-nogutter">
           <div
             class="col-12 item-container pointer"
+            (click)="navigateToDetailview(item.id)"
             *ngFor="let item of products; let first = first"
-            (click)="toggleRowExpansion(item)"
           >
             <div class="flex flex-row align-items-between">
               <div class="flex flex-column py-2 col-9 left-side">
                 <div class="text-lg font-medium flex gap-2 align-items-center">
                   <div class="flex gap-1">
-                    <span>Identificador: </span>
-                    <strong class="identifier">
-                      {{ item.pregunta.identificador }}
-                    </strong>
+                    <span>Tema: </span>
+                    <strong>{{ item.numero }}</strong>
                   </div>
-                  <div class="hidden md:block">
-                    <div class="flex gap-1">
-                      <span>Tema: </span>
-                      <strong>{{ item.pregunta.tema.numero }}</strong>
-                    </div>
+                  <div class="flex gap-1">
+                    <span>Categoría: </span>
+                    <strong>{{ item.categoria }}</strong>
                   </div>
                 </div>
-                <span
-                  class="font-small text-secondary text-sm descripcion"
-                  *ngIf="!expandedItem"
-                  >{{ item.descripcion }}</span
-                >
+                <span class="font-small text-secondary text-sm descripcion">
+                  {{ item.descripcion }}
+                </span>
               </div>
               <div
                 class="right-side col-3 flex align-items-center justify-content-end"
@@ -54,34 +58,19 @@
                   <span
                     class="font-medium text-secondary text-sm hidden md:block"
                   >
-                    {{ item.createdAt | date : 'short' }}</span
+                    {{ item.createdAt | date : "short" }}</span
                   >
-                  <p-button
-                    [link]="true"
-                    icon="pi pi-eye"
-                    [routerLink]="['/app/test/preguntas/' + item.pregunta.id]"
-                    [queryParams]="{ goBack: true }"
-                    (click)="$event.stopPropagation(); $event.preventDefault()"
-                  ></p-button>
                   <p-button
                     [link]="true"
                     icon="pi pi-trash"
                     (click)="
                       $event.stopPropagation();
                       $event.preventDefault();
-                      eliminarFeedback(item.id, $event)
+                      eliminarTema(item.id, $event)
                     "
                   ></p-button>
                 </div>
               </div>
-            </div>
-            <div
-              class="expanded-content"
-              [ngClass]="{ 'show py-2': expandedItem === item }"
-            >
-              <p class="font-medium text-secondary text-sm px-2 mt-0">
-                Descripción completa: {{ item.descripcion }}
-              </p>
             </div>
           </div>
         </div>

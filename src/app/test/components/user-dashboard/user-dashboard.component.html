@@ -7,7 +7,7 @@
         type="text"
         pInputText
         placeholder="Buscar por email"
-        style="min-width: 30vw;"
+        style="min-width: 30vw"
         (input)="valueChanged($event)"
       />
     </p-iconField>
@@ -16,12 +16,15 @@
     <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
       <ng-template pTemplate="list" let-products>
         <div class="grid grid-nogutter">
-          <div class="col-12 item-container" *ngFor="let item of products; let first = first">
+          <div
+            class="col-12 item-container"
+            *ngFor="let item of products; let first = first"
+          >
             <div class="flex flex-row align-items-center">
               <div class="flex flex-column p-2" style="width: 250px">
-                <span class="font-medium text-secondary text-sm hora-solicitud"
-                  >Solicitado el dia {{ item.createdAt | date : "short" }}</span
-                >
+                <span class="font-medium text-secondary text-sm hora-solicitud">
+                  Solicitado el día {{ item.createdAt | date : "short" }}
+                </span>
                 <div class="text-lg font-medium text-900">
                   {{ item.email }}
                 </div>
@@ -47,7 +50,7 @@
                         ? undefined
                         : 'Permitir'
                     }}"
-                    raised="true"
+                    [raised]="true"
                     (click)="permitir(item.id)"
                   />
                 </div>

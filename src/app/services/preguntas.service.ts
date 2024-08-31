@@ -5,7 +5,7 @@ import {
   PaginatedResult,
   PaginationFilter,
 } from '../shared/models/pagination.model';
-import { Pregunta, Tema } from '../shared/models/pregunta.model';
+import { Pregunta } from '../shared/models/pregunta.model';
 import { ApiBaseService } from './api-base.service';
 
 @Injectable({
@@ -37,7 +37,5 @@ export class PreguntasService extends ApiBaseService {
     return this.delete('/' + id);
   }
 
-  public getAllTemas$() {
-    return this.get('/get-temas') as Observable<Array<Tema>>;
-  }
+
 }

@@ -22,6 +22,7 @@ export class PreguntasFallosOverviewComponent extends SharedGridComponent<Pregun
   confirmationService = inject(ConfirmationService);
   router = inject(Router);
   public expandedItem!: PreguntaFallo | null;
+
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
@@ -38,11 +39,11 @@ export class PreguntasFallosOverviewComponent extends SharedGridComponent<Pregun
   public eliminarFeedback(id: number, event: Event) {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
-      message: `Vas a eliminar el reporte de fallo, estas seguro?`,
+      message: `Vas a eliminar el reporte de fallo, ¿estás seguro?`,
       header: 'Confirmación',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',
-      acceptLabel: 'Si',
+      acceptLabel: 'Sí',
       rejectLabel: 'No',
       rejectIcon: 'none',
       rejectButtonStyleClass: 'p-button-text',

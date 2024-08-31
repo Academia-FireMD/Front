@@ -26,6 +26,11 @@ export class LayoutComponent {
               icon: 'pi pi-user',
               routerLink: '/app/test/user',
             },
+            {
+              label: 'Temas',
+              icon: 'pi pi-book',
+              routerLink: '/app/test/tema',
+            },
           ],
         },
         {

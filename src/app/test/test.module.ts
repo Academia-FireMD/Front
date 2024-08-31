@@ -38,6 +38,8 @@ import { TestStatsComponent } from './components/test-stats/test-stats.component
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { TestRoutingModule } from './test-routing.module';
 import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
+import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
+import { TemaDetailviewComponent } from './components/tema-detailview/tema-detailview.component';
 
 @NgModule({
   declarations: [
@@ -51,6 +53,8 @@ import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-
     TestStatsComponent,
     DashboardStatsComponent,
     PreguntasFallosOverviewComponent,
+    TemaOverviewComponent,
+    TemaDetailviewComponent,
   ],
   imports: [
     CommonModule,
