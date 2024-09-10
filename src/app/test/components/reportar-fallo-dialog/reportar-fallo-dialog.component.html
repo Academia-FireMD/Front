@@ -1,0 +1,33 @@
+<p-dialog
+  [(visible)]="visible"
+  modal="modal"
+  header="Reportar Fallo"
+  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+  [style]="{ width: '75vw' }"
+  [closable]="true"
+  (onHide)="onHide.emit()"
+>
+  <div class="flex flex-column gap-3 py-3">
+    <h4 class="m-0">Ayúdanos a mejorar</h4>
+    <p class="m-0">
+      Describe el fallo que encontraste en esta pregunta, minimo 10 caracteres:
+    </p>
+    <textarea
+      pInputTextarea
+      placeholder="Describe aquí el fallo"
+      [formControl]="descripcionFallo"
+      rows="5"
+      cols="30"
+    ></textarea>
+  </div>
+  <p-footer>
+    <button
+      type="button"
+      pButton
+      label="Enviar"
+      [disabled]="descripcionFallo.invalid"
+      (click)="sendReport.emit(descripcionFallo.value ?? '')"
+      icon="pi pi-check"
+    ></button>
+  </p-footer>
+</p-dialog>

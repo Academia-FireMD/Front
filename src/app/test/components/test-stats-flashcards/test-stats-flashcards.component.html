@@ -1,0 +1,52 @@
+<ng-container *ngIf="stats$ | async as stat">
+  <div class="grid mb-4">
+    <div class="col-12" *ngIf="test$ | async as test">
+      <div class="flex align-items-center justify-content-between topbar">
+        <span
+          >Test realizado el dia
+          {{ test.createdAt | date : "dd/MM/yyyy hh:mm" }}</span
+        >
+        <p-button
+          [link]="true"
+          label="Volver atras"
+          (click)="handleBackButton()"
+        />
+      </div>
+    </div>
+    <ng-template #boxDisplayStat let-statFocus="statFocus">
+      <div
+        class="data-box"
+        *ngFor="let stat of statFocus.labels; let i = index"
+      >
+        <div
+          class="box"
+          [ngStyle]="{
+            'background-color': statFocus.datasets[0].backgroundColor[i]
+          }"
+        ></div>
+        <span
+          >{{ statFocus.datasets[0].data[i] }} {{ stat }} (<strong>{{
+            statFocus.percentages[i]
+          }}</strong
+          >%)</span
+        >
+      </div>
+    </ng-template>
+
+    <div class="col-12 md:col-4">
+      <p-card *ngIf="getDataFromSeguridad(stat) as statCien">
+        <div class="py-2">
+          <app-pie-chart [data]="statCien"></app-pie-chart>
+        </div>
+        <ng-container
+          *ngTemplateOutlet="
+            boxDisplayStat;
+            context: {
+              statFocus: statCien
+            }
+          "
+        ></ng-container>
+      </p-card>
+    </div>
+  </div>
+</ng-container>

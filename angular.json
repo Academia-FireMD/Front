@@ -45,6 +45,7 @@
               }
             ],
             "styles": [
+              "node_modules/@toast-ui/editor/dist/toastui-editor.css",
               "src/styles.scss"
             ],
             "scripts": []

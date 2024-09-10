@@ -1,7 +1,7 @@
 import { Pregunta, SeguridadAlResponder } from './pregunta.model';
 import { Usuario } from './user.model';
 
-enum TestStatus {
+export enum TestStatus {
   CREADO = 'CREADO',
   EMPEZADO = 'EMPEZADO',
   FINALIZADO = 'FINALIZADO',
@@ -12,6 +12,7 @@ export interface Test {
   realizadorId: number;
   realizador: Usuario;
   preguntas: Pregunta[];
+  testPreguntasIds: number[];
   status: TestStatus;
   duration?: number;
   endsAt?: Date;

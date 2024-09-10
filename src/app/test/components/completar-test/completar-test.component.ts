@@ -44,10 +44,7 @@ export class CompletarTestComponent {
     Dificultad.INTERMEDIO,
     Validators.required
   );
-  public descripcionFallo = new FormControl('', [
-    Validators.required,
-    Validators.minLength(10),
-  ]);
+
   public feedback = new FormControl('', Validators.required);
   public SeguridadAlResponder = SeguridadAlResponder;
   public getLetter = getLetter;
@@ -75,35 +72,41 @@ export class CompletarTestComponent {
     this.indiceSeleccionado
       .pipe(filter((e) => e >= 0))
       .subscribe(async (data) => {
-        this.answeredQuestion = -1; // Corrección en la asignación
-        this.indicePreguntaCorrecta = -1;
-        this.comunicating = true;
-        const res: {
-          esCorrecta: boolean; // Corrección en el tipo de dato
-          respuestaDada: number;
-          pregunta: { respuestaCorrectaIndex: number };
-        } = await firstValueFrom(
-          this.testService
-            .actualizarProgresoTest({
-              testId: this.lastLoadedTest.id,
-              preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta].id,
-              respuestaDada: data,
-              seguridad:
-                this.seguroDeLaPregunta.value ??
-                SeguridadAlResponder.CIEN_POR_CIENTO,
-            })
-            .pipe(
-              catchError((err) => {
-                this.comunicating = false;
-                return of(err);
-              }),
-              tap((res) => (this.lastAnsweredQuestion = res as any))
-            )
-        );
-        this.comunicating = false;
-        this.indicePreguntaCorrecta = res.pregunta.respuestaCorrectaIndex;
-        this.answeredQuestion = this.indiceSeleccionado.getValue();
+        this.processAnswer(data);
       });
+  }
+
+  public async processAnswer(respuestaDada?: number, omitida = false) {
+    this.answeredQuestion = -1;
+    this.indicePreguntaCorrecta = -1;
+    this.comunicating = true;
+    const res: {
+      esCorrecta: boolean;
+      respuestaDada: number;
+      pregunta: { respuestaCorrectaIndex: number };
+    } = await firstValueFrom(
+      this.testService
+        .actualizarProgresoTest({
+          testId: this.lastLoadedTest.id,
+          preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta].id,
+          respuestaDada,
+          omitida,
+          seguridad:
+            this.seguroDeLaPregunta.value ??
+            SeguridadAlResponder.CIEN_POR_CIENTO,
+        })
+        .pipe(
+          catchError((err) => {
+            this.comunicating = false;
+            return of(err);
+          }),
+          tap((res) => (this.lastAnsweredQuestion = res as any))
+        )
+    );
+    this.comunicating = false;
+    this.indicePreguntaCorrecta = res.pregunta.respuestaCorrectaIndex;
+    this.answeredQuestion = this.indiceSeleccionado.getValue();
+    if (omitida) this.siguiente();
   }
 
   showFeedbackDialog() {
@@ -126,17 +129,16 @@ export class CompletarTestComponent {
     this.displayFeedbackDialog = false;
   }
 
-  public async submitReporteFallo() {
+  public async submitReporteFallo(reportDesc: string) {
     const feedback = await firstValueFrom(
       this.reporteFallo.reportarFallo({
         preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta].id,
-        descripcion: this.descripcionFallo.value ?? '',
+        descripcion: reportDesc ?? '',
       })
     );
     this.toast.success(
       'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.'
     );
-    this.descripcionFallo.reset();
     this.displayFalloDialog = false;
   }
 

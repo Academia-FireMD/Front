@@ -9,6 +9,7 @@ import {
 } from '@angular/common/http';
 import localeEs from '@angular/common/locales/es';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MarkdownModule } from 'ngx-markdown';
 import { ToastrModule } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -18,6 +19,7 @@ import { AppComponent } from './app.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { LayoutComponent } from './shared/layout/layout.component';
 import { SharedModule } from './shared/shared.module';
+
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [AppComponent, LayoutComponent],
@@ -28,6 +30,7 @@ registerLocaleData(localeEs);
     CardModule,
     MenuModule,
     SharedModule,
+    MarkdownModule.forRoot(),
     BrowserAnimationsModule, // required animations module
     ToastrModule.forRoot(), // ToastrModule added
   ],

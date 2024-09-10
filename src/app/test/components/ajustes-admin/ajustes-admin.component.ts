@@ -17,12 +17,16 @@ export class AjustesAdminComponent {
   getFactor$ = this.factorsService.getFactors$();
   public factors = this.fb.group({
     preguntasFallidasPivote: [0, Validators.required],
+    flashcardsMalPivote: [0, Validators.required],
+    flashcardsRepasarPivote: [0, Validators.required],
   });
   ngOnInit(): void {
     this.getFactor$.subscribe((factors) => {
       if (!factors || factors.length == 0) return;
       this.factors.patchValue({
         preguntasFallidasPivote: factors[0].value ?? 0,
+        flashcardsMalPivote: factors[1].value ?? 0,
+        flashcardsRepasarPivote: factors[2].value ?? 0,
       });
     });
   }
@@ -31,6 +35,18 @@ export class AjustesAdminComponent {
       this.factorsService.updateFactor$({
         name: FactorName.PREGUNTAS_MALAS_PIVOT,
         value: this.factors.value.preguntasFallidasPivote ?? 0,
+      })
+    );
+    await firstValueFrom(
+      this.factorsService.updateFactor$({
+        name: FactorName.FLASHCARDS_MAL_PRIVOT,
+        value: this.factors.value.flashcardsMalPivote ?? 0,
+      })
+    );
+    await firstValueFrom(
+      this.factorsService.updateFactor$({
+        name: FactorName.FLASHCARDS_REPASAR_PIVOT,
+        value: this.factors.value.flashcardsRepasarPivote ?? 0,
       })
     );
     this.toast.success('Ajustes actualizados exitosamente!');

@@ -1,18 +1,3 @@
-<p-dialog
-  header="Visualizador de fallos"
-  [modal]="true"
-  [(visible)]="displayPopupFallosTest"
-  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
-  [style]="{ width: '75vw', height: '100%' }"
-  [draggable]="false"
-  [resizable]="false"
->
-  <app-popup-fallos-test
-    style="width: 100%; height: 100%; display: block"
-    class="py-2"
-  ></app-popup-fallos-test>
-</p-dialog>
-
 <p-confirmDialog></p-confirmDialog>
 <div class="grid" [formGroup]="formGroup">
   <div class="col-12 content">
@@ -78,36 +63,11 @@
       <div
         class="flex align-items-center justify-content-end w-full gap-2 flex-wrap mt-3"
       >
-        <p-floatLabel *ngIf="formGroup.value.generarTestDeExamen">
-          <input
-            pInputText
-            id="tiempoLimiteEnMinutos"
-            type="number"
-            placeholder="Minutos"
-            aria-describedby="tiempoLimiteEnMinutos-help"
-            [formControl]="formGroup.controls.tiempoLimiteEnMinutos"
-          />
-          <label for="tiempoLimiteEnMinutos">Tiempo límite</label>
-        </p-floatLabel>
-        <label for="switch1">Generar test de examen</label>
-        <p-inputSwitch
-          [formControl]="formGroup.controls.generarTestDeExamen"
-        ></p-inputSwitch>
-
         <ng-container *ngIf="!!(getFallosCount$ | async)">
-          <label for="switch1">Generar test de repaso</label>
+          <label for="switch1">Generar test Mal / Repasar</label>
           <p-inputSwitch
             [formControl]="formGroup.controls.generarTestDeRepaso"
           ></p-inputSwitch>
-
-          <button
-            pButton
-            (click)="displayPopupFallosTest = true"
-            type="submit"
-            class="p-button p-button-raised"
-          >
-            <span class="w-full">Ver fallos</span>
-          </button>
         </ng-container>
 
         <button
@@ -153,17 +113,9 @@
                       testComenzado.createdAt | date : "shortDate"
                     }}</strong>
 
-                    <strong
-                      *ngIf="!!testComenzado.duration && !!testComenzado.endsAt"
-                      >. Y te quedan
-                      {{ testComenzado.endsAt | countdown }} minutos para
-                      terminarlo</strong
-                    >
-
-                    con {{ testComenzado.respuestasCount }} respuestas de
-                    {{ testComenzado.testPreguntasCount }} preguntas
-                    respondidas. Termínalo ahora haciendo clic en el botón de
-                    "Continuar"
+                    con {{ testComenzado.flashcardsPendientes }} respuestas de
+                    {{ testComenzado.flashcardsCount }} preguntas respondidas.
+                    Termínalo ahora haciendo clic en el botón de "Continuar"
                   </div>
                 </div>
               </div>
@@ -176,7 +128,8 @@
                 ></p-button>
                 <a
                   [routerLink]="[
-                    '/app/test/alumno/realizar-test/' + testComenzado.id
+                    '/app/test/alumno/realizar-flash-cards-test/' +
+                      testComenzado.id
                   ]"
                   class="link-text flex align-items-center p-button p-button-raised"
                   style="text-decoration: none"

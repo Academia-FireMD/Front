@@ -51,36 +51,11 @@
   </p-footer>
 </p-dialog>
 
-<p-dialog
+<app-reportar-fallo-dialog
   [(visible)]="displayFalloDialog"
-  modal="modal"
-  header="Reportar Fallo"
-  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
-  [style]="{ width: '75vw' }"
-  [closable]="false"
->
-  <div class="flex flex-column gap-3 py-3">
-    <h4 class="m-0">Ayúdanos a mejorar</h4>
-    <p class="m-0">Describe el fallo que encontraste en esta pregunta:</p>
-    <textarea
-      pInputTextarea
-      placeholder="Describe aquí el fallo"
-      [formControl]="descripcionFallo"
-      rows="5"
-      cols="30"
-    ></textarea>
-  </div>
-  <p-footer>
-    <button
-      type="button"
-      pButton
-      label="Enviar"
-      [disabled]="descripcionFallo.invalid"
-      (click)="submitReporteFallo()"
-      icon="pi pi-check"
-    ></button>
-  </p-footer>
-</p-dialog>
+  (sendReport)="submitReporteFallo($event)"
+  (onHide)="displayFalloDialog = false"
+></app-reportar-fallo-dialog>
 
 <ng-template #seguridadPicker let-control="control">
   <div class="flex flex-row gap-2">
@@ -157,6 +132,11 @@
                 <span *ngIf="!!testCargado.duration">{{
                   testCargado.endsAt | countdown
                 }}</span>
+                <p-button
+                  label="Reportar fallo"
+                  [link]="true"
+                  (click)="displayFalloDialog = true"
+                />
               </div>
             </ng-template>
             <p>
@@ -198,9 +178,9 @@
                   ></ng-container>
                 </div>
                 <p-button
-                  label="Reportar fallo"
+                  label="Omitir"
                   [link]="true"
-                  (click)="displayFalloDialog = true"
+                  (click)="processAnswer(undefined, true)"
                 />
               </div>
             </div>

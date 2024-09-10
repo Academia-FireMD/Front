@@ -2,7 +2,8 @@
   <div class="col-12">
     <p-card>
       <div class="grid" [formGroup]="factors">
-        <div class="col-12">
+        <h4 class="w-full">Módulo de tests</h4>
+        <div class="col-12 md:col-6">
           <p-floatLabel>
             <input
               type="number"
@@ -13,6 +14,29 @@
             <label for="preguntasFallidasPivote"
               >Número de preguntas fallidas pivote</label
             >
+          </p-floatLabel>
+        </div>
+        <h4 class="w-full">Módulo de flashcards</h4>
+        <div class="col-12 md:col-6">
+          <p-floatLabel>
+            <input
+              type="number"
+              pInputText
+              class="w-full"
+              formControlName="flashcardsRepasarPivote"
+            />
+            <label for="flashcardsRepasarPivote">Número de flashcards repasar</label>
+          </p-floatLabel>
+        </div>
+        <div class="col-12 md:col-6">
+          <p-floatLabel>
+            <input
+              type="number"
+              pInputText
+              class="w-full"
+              formControlName="flashcardsMalPivote"
+            />
+            <label for="flashcardsMalPivote">Número de flashcards mal</label>
           </p-floatLabel>
         </div>
       </div>

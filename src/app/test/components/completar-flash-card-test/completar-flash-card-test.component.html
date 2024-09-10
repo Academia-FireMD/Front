@@ -1,0 +1,150 @@
+<app-reportar-fallo-dialog
+  [(visible)]="displayFalloDialog"
+  (sendReport)="submitReporteFallo($event)"
+  (onHide)="displayFalloDialog = false"
+></app-reportar-fallo-dialog>
+
+<div class="grid">
+  <ng-container *ngIf="testCargado$ | async as testCargado; else testNoCargado">
+    @if(lastLoadedTest.flashcards[indicePregunta]){
+
+    <p-card
+      class="col-12"
+      *ngIf="lastLoadedTest.flashcards[indicePregunta] as pregunta"
+    >
+      <div class="grid">
+        <div class="col-12 header justify-content-between flex">
+          <div class="identificador">
+            Identificador:
+            {{ pregunta.flashcard.identificador }}
+          </div>
+          <div class="index-pregunta">
+            Flash Card
+            {{ indicePregunta + 1 }}/{{ testCargado.flashcards.length }}
+          </div>
+        </div>
+        <div class="col-12">
+          <p-panel>
+            <ng-template pTemplate="header">
+              <div class="flex justify-content-between w-full font-bold">
+                <span>Enunciado</span>
+                <p-button
+                  label="Reportar fallo"
+                  [link]="true"
+                  (click)="displayFalloDialog = true"
+                />
+              </div>
+            </ng-template>
+            <p>
+              {{ pregunta.flashcard.descripcion }}
+            </p>
+
+            <div class="next-button col-12 w-full">
+              <button
+                pButton
+                class="p-button p-button-raised w-full"
+                *ngIf="!pregunta.mostrarSolucion"
+                (click)="pregunta.mostrarSolucion = true"
+              >
+                <span class="w-full">Mostrar solución</span>
+              </button>
+            </div>
+
+            <div
+              class="grid w-full footer flex justify-content-between align-items-center mt-2"
+              *ngIf="!!pregunta.mostrarSolucion"
+            >
+              <div
+                class="solution col-12 align-items-center flex flex-column"
+                style="max-height: 40vh; overflow: auto"
+              >
+                <strong>Solución:</strong>
+                <markdown
+                  [data]="
+                    pregunta.flashcard.solucion &&
+                    pregunta.flashcard.solucion.length > 0
+                      ? pregunta.flashcard.solucion
+                      : 'No hay una solución definida.'
+                  "
+                ></markdown>
+              </div>
+              <div class="col-12 flex gap-2">
+                <button
+                  pButton
+                  [disabled]="comunicating"
+                  [severity]="'success'"
+                  class="p-button p-button-raised w-full"
+                  (click)="selectedEstado(estadoFlashcard.BIEN)"
+                >
+                  <span class="w-full">BIEN</span>
+                </button>
+                <button
+                  pButton
+                  [disabled]="comunicating"
+                  class="p-button p-button-raised w-full"
+                  [severity]="'danger'"
+                  (click)="selectedEstado(estadoFlashcard.MAL)"
+                >
+                  <span class="w-full">MAL</span>
+                </button>
+                <button
+                  pButton
+                  [disabled]="comunicating"
+                  [severity]="'warning'"
+                  (click)="selectedEstado(estadoFlashcard.REVISAR)"
+                  class="p-button p-button-raised w-full"
+                >
+                  <span class="w-full">REPASAR</span>
+                </button>
+              </div>
+            </div>
+          </p-panel>
+        </div>
+      </div>
+    </p-card>
+
+    }@else {
+    <p-card class="col-12">
+      <div class="info">
+        <div class="flex gap-2 info-card">
+          <div class="icon">
+            <i class="pi pi-info-circle"></i>
+          </div>
+          <div class="content">
+            <div class="body">
+              ¡La pregunta que intentas visualizar no existe!
+            </div>
+          </div>
+        </div>
+        <br />
+      </div>
+    </p-card>
+    }
+  </ng-container>
+  <ng-template #testNoCargado>
+    <div class="col-12">
+      <p-card>
+        <div class="info">
+          <div class="flex gap-2 info-card">
+            <div class="icon">
+              <i class="pi pi-info-circle"></i>
+            </div>
+            <div class="content">
+              <div class="body">
+                El test no existe o no se ha podido cargar. Prueba con otro.
+              </div>
+              <a
+                [routerLink]="['/app/test/alumno/realizar-flash-cards-test']"
+                class="link-text flex align-items-center"
+                style="text-decoration: none"
+              >
+                <span>Prueba con otro</span> <i class="pi pi-angle-right"></i>
+              </a>
+            </div>
+          </div>
+          <br />
+        </div>
+      </p-card>
+    </div>
+  </ng-template>
+</div>

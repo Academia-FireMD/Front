@@ -49,21 +49,21 @@ export const groupedTemas = (temas: Array<Tema>) => {
   }));
 };
 
-export const getAllDifficultades = () => {
+export const getAllDifficultades = (isFlashcards = false) => {
   return Object.keys(Dificultad).map((entry) => {
     const map = {
       [Dificultad.BASICO]: {
-        label: 'Basico',
+        label: isFlashcards ? 'Datos Básicos' : 'Basico',
         stars: getStarsBasedOnDifficulty(Dificultad.BASICO),
         value: Dificultad.BASICO,
       },
       [Dificultad.INTERMEDIO]: {
-        label: 'Intermedio',
+        label: isFlashcards ? 'Datos' : 'Intermedio',
         stars: getStarsBasedOnDifficulty(Dificultad.INTERMEDIO),
         value: Dificultad.INTERMEDIO,
       },
       [Dificultad.DIFICIL]: {
-        label: 'Dificil',
+        label: isFlashcards ? 'Tarjetas' : 'Dificil',
         stars: getStarsBasedOnDifficulty(Dificultad.DIFICIL),
         value: Dificultad.DIFICIL,
       },

@@ -14,7 +14,8 @@ import { ApiBaseService } from './api-base.service';
 export interface RegistrarRespuestaDto {
   testId: number;
   preguntaId: number;
-  respuestaDada: number;
+  respuestaDada?: number;
+  omitida?: boolean;
   seguridad?: SeguridadAlResponder;
 }
 export interface GenerarTestDto {
@@ -22,7 +23,7 @@ export interface GenerarTestDto {
   dificultad: Dificultad;
   temas: Array<number>;
   generarTestDeRepaso: boolean;
-  duracion: number;
+  duracion?: number;
 }
 @Injectable({
   providedIn: 'root',

@@ -2,14 +2,21 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
+import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
 import { CompletarTestComponent } from './components/completar-test/completar-test.component';
+import { DashboardStatsFlashcardsComponent } from './components/dashboard-stats-flashcards/dashboard-stats-flashcards.component';
 import { DashboardStatsComponent } from './components/dashboard-stats/dashboard-stats.component';
+import { FlashcardDetailviewAdminComponent } from './components/flashcard-detailview-admin/flashcard-detailview-admin.component';
+import { FlashcardOverviewAdminComponent } from './components/flashcard-overview-admin/flashcard-overview-admin.component';
 import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
+import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
 import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
+import { RealizarFlashCardTestComponent } from './components/realizar-flash-card-test/realizar-flash-card-test.component';
 import { RealizarTestComponent } from './components/realizar-test/realizar-test.component';
 import { TemaDetailviewComponent } from './components/tema-detailview/tema-detailview.component';
 import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
+import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards/test-stats-flashcards.component';
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 
@@ -43,6 +50,27 @@ const routes: Routes = [
     data: { expectedRole: 'ADMIN', title: 'Preguntas' },
   },
   {
+    path: 'preguntas/:id',
+    component: PreguntasDashboardAdminDetailviewComponent,
+    canActivate: [roleGuard],
+    title: 'Preguntas',
+    data: { expectedRole: 'ADMIN', title: 'Preguntas' },
+  },
+  {
+    path: 'flashcards',
+    component: FlashcardOverviewAdminComponent,
+    canActivate: [roleGuard],
+    title: 'Flash Cards',
+    data: { expectedRole: 'ADMIN', title: 'Flash Cards' },
+  },
+  {
+    path: 'flashcards/:id',
+    component: FlashcardDetailviewAdminComponent,
+    canActivate: [roleGuard],
+    title: 'Flash Cards',
+    data: { expectedRole: 'ADMIN', title: 'Flash Cards' },
+  },
+  {
     path: 'preguntas-fallos',
     component: PreguntasFallosOverviewComponent,
     canActivate: [roleGuard],
@@ -50,11 +78,11 @@ const routes: Routes = [
     data: { expectedRole: 'ADMIN', title: 'Fallos reportados' },
   },
   {
-    path: 'preguntas/:id',
-    component: PreguntasDashboardAdminDetailviewComponent,
+    path: 'flashcards-fallos',
+    component: PreguntasFallosFlashcardsOverviewComponent,
     canActivate: [roleGuard],
-    title: 'Preguntas',
-    data: { expectedRole: 'ADMIN', title: 'Preguntas' },
+    title: 'Fallos en flashcards reportados',
+    data: { expectedRole: 'ADMIN', title: 'Fallos en flashcards reportados' },
   },
   {
     path: 'ajustes',
@@ -84,8 +112,32 @@ const routes: Routes = [
         data: { expectedRole: 'ALUMNO' },
       },
       {
+        path: 'stats-test-flashcard/:id',
+        component: TestStatsFlashcardsComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO' },
+      },
+      {
         path: 'estadistica-dashboard',
         component: DashboardStatsComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO' },
+      },
+      {
+        path: 'realizar-flash-cards-test',
+        component: RealizarFlashCardTestComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO' },
+      },
+      {
+        path: 'realizar-flash-cards-test/:id',
+        component: CompletarFlashCardTestComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO' },
+      },
+      {
+        path: 'estadistica-flashcards-dashboard',
+        component: DashboardStatsFlashcardsComponent,
         canActivate: [roleGuard],
         data: { expectedRole: 'ALUMNO' },
       },

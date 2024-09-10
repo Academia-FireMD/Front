@@ -49,6 +49,21 @@ export class LayoutComponent {
           ],
         },
         {
+          label: 'Flash Cards',
+          items: [
+            {
+              label: 'Lista',
+              icon: 'pi pi-id-card',
+              routerLink: '/app/test/flashcards',
+            },
+            {
+              label: 'Fallos reportados',
+              icon: 'pi pi-flag-fill',
+              routerLink: '/app/test/flashcards-fallos',
+            },
+          ],
+        },
+        {
           label: 'Perfil',
           items: [
             {
@@ -79,6 +94,21 @@ export class LayoutComponent {
               label: 'Estadistica',
               icon: 'pi pi-chart-pie',
               routerLink: '/app/test/alumno/estadistica-dashboard',
+            },
+          ],
+        },
+        {
+          label: 'Módulo de Flashcards',
+          items: [
+            {
+              label: 'Realizar tests',
+              icon: 'pi pi-id-card',
+              routerLink: '/app/test/alumno/realizar-flash-cards-test',
+            },
+            {
+              label: 'Estadistica',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/alumno/estadistica-flashcards-dashboard',
             },
           ],
         },

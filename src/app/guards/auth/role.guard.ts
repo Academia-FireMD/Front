@@ -18,7 +18,6 @@ export const roleGuard: CanActivateFn = (route, state) => {
   const userRole = payload.rol;
 
   const expectedRole = route.data['expectedRole'];
-
   if (userRole === expectedRole || userRole == 'ADMIN') {
     return true;
   } else {

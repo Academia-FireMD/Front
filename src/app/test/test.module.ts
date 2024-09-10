@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MarkdownModule } from 'ngx-markdown';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -30,16 +31,24 @@ import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarTestComponent } from './components/completar-test/completar-test.component';
 import { DashboardStatsComponent } from './components/dashboard-stats/dashboard-stats.component';
+import { FlashcardDetailviewAdminComponent } from './components/flashcard-detailview-admin/flashcard-detailview-admin.component';
+import { FlashcardOverviewAdminComponent } from './components/flashcard-overview-admin/flashcard-overview-admin.component';
 import { PopupFallosTestComponent } from './components/popup-fallos-test/popup-fallos-test.component';
 import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
+import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
 import { RealizarTestComponent } from './components/realizar-test/realizar-test.component';
+import { TemaDetailviewComponent } from './components/tema-detailview/tema-detailview.component';
+import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { TestRoutingModule } from './test-routing.module';
-import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
-import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
-import { TemaDetailviewComponent } from './components/tema-detailview/tema-detailview.component';
+import { RealizarFlashCardTestComponent } from './components/realizar-flash-card-test/realizar-flash-card-test.component';
+import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
+import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards/test-stats-flashcards.component';
+import { DashboardStatsFlashcardsComponent } from './components/dashboard-stats-flashcards/dashboard-stats-flashcards.component';
+import { ReportarFalloDialogComponent } from './components/reportar-fallo-dialog/reportar-fallo-dialog.component';
+import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
 
 @NgModule({
   declarations: [
@@ -55,9 +64,18 @@ import { TemaDetailviewComponent } from './components/tema-detailview/tema-detai
     PreguntasFallosOverviewComponent,
     TemaOverviewComponent,
     TemaDetailviewComponent,
+    FlashcardOverviewAdminComponent,
+    FlashcardDetailviewAdminComponent,
+    RealizarFlashCardTestComponent,
+    CompletarFlashCardTestComponent,
+    TestStatsFlashcardsComponent,
+    DashboardStatsFlashcardsComponent,
+    ReportarFalloDialogComponent,
+    PreguntasFallosFlashcardsOverviewComponent,
   ],
   imports: [
     CommonModule,
+    MarkdownModule,
     TestRoutingModule,
     CardModule,
     DataViewModule,

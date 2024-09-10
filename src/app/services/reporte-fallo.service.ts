@@ -22,8 +22,20 @@ export class ReportesFalloService extends ApiBaseService {
     return this.post('/fallo', dto);
   }
 
+  public reportarFalloFlashcard(dto: {
+    flashcardDataId: number;
+    descripcion: string;
+  }) {
+    return this.post('/fallo-flashcard', dto);
+  }
+
   public getReporteFallos$(filter: PaginationFilter) {
     return this.post('', filter) as Observable<PaginatedResult<PreguntaFallo>>;
+  }
+  public getReporteFallosFlashcards$(filter: PaginationFilter) {
+    return this.post('/flashcards', filter) as Observable<
+      PaginatedResult<PreguntaFallo>
+    >;
   }
 
   public deleteReporteFallo$(id: number) {

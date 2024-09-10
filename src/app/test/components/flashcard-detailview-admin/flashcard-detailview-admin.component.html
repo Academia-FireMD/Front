@@ -1,0 +1,112 @@
+<div class="grid" [formGroup]="formGroup">
+  <div class="col-12 content">
+    <p-card>
+      <div class="grid">
+        <div
+          class="col-12 header flex justify-content-between align-items-center pb-3"
+        >
+          <div class="identificador">
+            @if (getId() !== 'new') { Identificador:
+            <strong>{{ formGroup.value.identificador }}</strong>
+            }@else {
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                class="w-full"
+                formControlName="identificador"
+              />
+              <label for="identificador">Identificador</label>
+            </p-floatLabel>
+            }
+          </div>
+          <div class="relevancia">
+            <app-comunidad-picker
+              [allowAdd]="true"
+              [comunidades]="relevancia.value"
+              (updateSelection)="updateCommunitySelection($event)"
+            ></app-comunidad-picker>
+          </div>
+        </div>
+        <div class="col-12 py-3">
+          <p-floatLabel>
+            <textarea
+              class="w-full"
+              id="float-input"
+              rows="5"
+              cols="30"
+              pInputTextarea
+              formControlName="descripcion"
+            ></textarea>
+            <label for="float-input">Descripción</label>
+          </p-floatLabel>
+        </div>
+        <div class="col-6">
+          <p-dropdown
+            class="w-full"
+            [style]="{ width: '100%' }"
+            [filter]="true"
+            filterBy="label"
+            [options]="(getAllTemas$ | async) ?? []"
+            formControlName="temaId"
+            placeholder="Selecciona un tema"
+            [group]="true"
+          >
+            <ng-template let-group pTemplate="group">
+              <div class="flex align-items-center">
+                <strong>{{ group.label }}</strong>
+              </div>
+            </ng-template>
+          </p-dropdown>
+        </div>
+        <div class="col-6">
+          <p-dropdown
+            class="w-full"
+            [style]="{ width: '100%', height: '100%' }"
+            [options]="getAllDifficultades"
+            formControlName="dificultad"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecciona una dificultad"
+          >
+            <ng-template let-item pTemplate="selectedItem">
+              <div class="flex align-items-center gap-2 h-full">
+                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+                <div class="hidden md:block">{{ item.label }}</div>
+              </div>
+            </ng-template>
+            <ng-template let-item let-index pTemplate="item">
+              <div class="flex align-items-center gap-2 h-full">
+                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+                <div class="hidden md:block">{{ item.label }}</div>
+              </div>
+            </ng-template>
+          </p-dropdown>
+        </div>
+      </div>
+      <div class="col-12 px-0 pt-3">
+        <div class="markdown-container">
+          <div class="editor">
+            <h3>Solución de Flashcard</h3>
+            <div id="editor"></div>
+          </div>
+        </div>
+      </div>
+    </p-card>
+  </div>
+  <div class="col-12 footer flex justify-content-end w-full">
+    <p-button
+      label="Volver atrás"
+      [link]="true"
+      (click)="handleBackButton()"
+    ></p-button>
+    @if(getId() == 'new'){
+    <p-button label="Crear Flashcard" (click)="crearFlashcard()"></p-button>
+    }@else{
+    <p-button
+      label="Actualizar Flashcard"
+      (click)="actualizarFlashcard()"
+    ></p-button>
+    }
+  </div>
+</div>
