@@ -26,6 +26,7 @@
             viewportService.screenWidth == 'xs' ? undefined : 'Importar'
           }}"
           icon="pi pi-upload"
+          [loading]="uploadingFile"
           (click)="fileInput.click()"
         ></p-button>
         <input

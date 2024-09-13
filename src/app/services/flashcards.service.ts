@@ -20,7 +20,7 @@ export interface RegistrarFlashcardRespuestaDto {
 }
 export interface GenerarFlashcardTestDto {
   numPreguntas: number;
-  dificultad: Dificultad;
+  dificultades: Dificultad[];
   temas: Array<number>;
   generarTestDeRepaso: boolean;
 }

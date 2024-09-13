@@ -3,10 +3,13 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, map } from 'rxjs';
-import { FlashcardDataService } from '../../../services/flashcards.service';
+import {
+  FlashcardDataService,
+  GenerarFlashcardTestDto,
+} from '../../../services/flashcards.service';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { TemaService } from '../../../services/tema.service';
-import { GenerarTestDto } from '../../../services/test.service';
+
 import { Dificultad } from '../../../shared/models/pregunta.model';
 import {
   getAllDifficultades,
@@ -32,7 +35,7 @@ export class RealizarFlashCardTestComponent {
 
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
-    dificultad: [Dificultad.BASICO, Validators.required],
+    dificultad: [[Dificultad.BASICO], Validators.required],
     temas: [[], Validators.required],
     generarTestDeRepaso: [false],
   });
@@ -46,10 +49,10 @@ export class RealizarFlashCardTestComponent {
       const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
       const payload = {
         numPreguntas,
-        dificultad: this.formGroup.value.dificultad ?? Dificultad.BASICO,
+        dificultades: this.formGroup.value.dificultad ?? [Dificultad.BASICO],
         temas: this.formGroup.value.temas ?? [],
         generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
-      } as GenerarTestDto;
+      } as GenerarFlashcardTestDto;
 
       const res = await firstValueFrom(
         this.flashcardService.generarTest(payload)

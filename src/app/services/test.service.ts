@@ -25,6 +25,7 @@ export interface GenerarTestDto {
   generarTestDeRepaso: boolean;
   duracion?: number;
 }
+
 @Injectable({
   providedIn: 'root',
 })

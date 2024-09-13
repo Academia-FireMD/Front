@@ -27,6 +27,7 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
   confirmationService = inject(ConfirmationService);
   router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
+  public uploadingFile = false;
 
   constructor() {
     super();
@@ -55,11 +56,21 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
 
         const formData = new FormData();
         formData.append('file', selectedFile, selectedFile.name);
+        this.uploadingFile = true;
+        try {
+          const response = await firstValueFrom(
+            this.preguntasService.importarPreguntasExcel(formData)
+          );
+          this.toast.success(
+            `Archivo importado exitosamente con ${
+              response.count ?? 0
+            } insertadas y ${response.ignoradas ?? 0} ignoradas.`
+          );
+          this.uploadingFile = false;
+        } catch (error) {
+          this.uploadingFile = false;
+        }
 
-        await firstValueFrom(
-          this.preguntasService.importarPreguntasExcel(formData)
-        );
-        this.toast.success('Archivo importado exitosamente');
         this.refresh();
         this.fileInput.nativeElement.value = '';
       }

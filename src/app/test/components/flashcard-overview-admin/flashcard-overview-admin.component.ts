@@ -27,6 +27,7 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
   flashcardService = inject(FlashcardDataService);
   router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
+  public uploadingFile = false;
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   constructor() {
     super();
@@ -49,9 +50,21 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
 
         const formData = new FormData();
         formData.append('file', selectedFile, selectedFile.name);
+        this.uploadingFile = true;
+        try {
+          const response = await firstValueFrom(
+            this.flashcardService.importarExcel(formData)
+          );
+          this.toast.success(
+            `Archivo importado exitosamente con ${
+              response.count ?? 0
+            } insertadas y ${response.ignoradas ?? 0} ignoradas.`
+          );
+          this.uploadingFile = false;
+        } catch (error) {
+          this.uploadingFile = false;
+        }
 
-        await firstValueFrom(this.flashcardService.importarExcel(formData));
-        this.toast.success('Archivo importado exitosamente');
         this.refresh();
         this.fileInput.nativeElement.value = '';
       }

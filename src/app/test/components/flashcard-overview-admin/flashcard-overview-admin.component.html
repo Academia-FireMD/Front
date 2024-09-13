@@ -27,6 +27,7 @@
           }}"
           icon="pi pi-upload"
           (click)="fileInput.click()"
+          [loading]="uploadingFile"
         ></p-button>
         <input
           type="file"
