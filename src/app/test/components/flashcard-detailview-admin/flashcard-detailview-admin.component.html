@@ -29,17 +29,12 @@
           </div>
         </div>
         <div class="col-12 py-3">
-          <p-floatLabel>
-            <textarea
-              class="w-full"
-              id="float-input"
-              rows="5"
-              cols="30"
-              pInputTextarea
-              formControlName="descripcion"
-            ></textarea>
-            <label for="float-input">Descripción</label>
-          </p-floatLabel>
+          <div class="markdown-container">
+            <div class="editor">
+              <h3>Enunciado</h3>
+              <div id="editor-enunciado"></div>
+            </div>
+          </div>
         </div>
         <div class="col-6">
           <p-dropdown

@@ -25,8 +25,9 @@ export class FlashcardDetailviewAdminComponent {
   flashCardService = inject(FlashcardDataService);
 
   editor!: any;
+  editorEnunciado!: any;
 
-  private initEditor(initialValue: string) {
+  private initEditor(initialValue: string, initialEnunciadoValue: string) {
     this.editor = new Editor({
       el: document.querySelector('#editor')!,
       height: '400px',
@@ -36,6 +37,21 @@ export class FlashcardDetailviewAdminComponent {
       events: {
         change: () => {
           this.formGroup.get('solucion')?.patchValue(this.editor.getMarkdown());
+        },
+      },
+    });
+
+    this.editorEnunciado = new Editor({
+      el: document.querySelector('#editor-enunciado')!,
+      height: '400px',
+      initialEditType: 'markdown',
+      previewStyle: 'vertical',
+      initialValue: initialEnunciadoValue || '',
+      events: {
+        change: () => {
+          this.formGroup
+            .get('descripcion')
+            ?.patchValue(this.editorEnunciado.getMarkdown());
         },
       },
     });
@@ -94,7 +110,7 @@ export class FlashcardDetailviewAdminComponent {
     const itemId = this.getId();
     if (itemId === 'new') {
       this.formGroup.reset();
-      this.initEditor('');
+      this.initEditor('', '');
     } else {
       firstValueFrom(
         this.flashCardService.getFlashcardById(itemId).pipe(
@@ -106,7 +122,10 @@ export class FlashcardDetailviewAdminComponent {
               this.relevancia.push(new FormControl(relevancia))
             );
             this.formGroup.markAsPristine();
-            this.initEditor(this.formGroup.value.solucion ?? '');
+            this.initEditor(
+              this.formGroup.value.solucion ?? '',
+              this.formGroup.value.descripcion ?? ''
+            );
           })
         )
       );
