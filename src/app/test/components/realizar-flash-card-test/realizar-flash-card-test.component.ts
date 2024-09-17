@@ -43,9 +43,11 @@ export class RealizarFlashCardTestComponent {
   public getAllTestsComenzados$ = this.flashcardService.getAllTest();
   public preguntas = getNumeroDePreguntas();
   public getAllDifficultades = getAllDifficultades(true);
+  public generandoTest = false;
 
   public async generarTest() {
     try {
+      this.generandoTest = true;
       const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
       const payload = {
         numPreguntas,
@@ -57,9 +59,11 @@ export class RealizarFlashCardTestComponent {
       const res = await firstValueFrom(
         this.flashcardService.generarTest(payload)
       );
+      this.generandoTest = false;
       this.toast.success('Test generado exitosamente!', 'Generación exitosa');
       this.getAllTestsComenzados$ = this.flashcardService.getAllTest();
     } catch (error) {
+      this.generandoTest = false;
       this.toast.error('Error al generar el test.', 'Error');
     }
   }

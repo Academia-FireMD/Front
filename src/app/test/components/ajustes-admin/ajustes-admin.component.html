@@ -3,7 +3,7 @@
     <p-card>
       <div class="grid" [formGroup]="factors">
         <h4 class="w-full">Módulo de tests</h4>
-        <div class="col-12 md:col-6">
+        <div class="col-12 md:col-6 my-2">
           <p-floatLabel>
             <input
               type="number"
@@ -17,7 +17,67 @@
           </p-floatLabel>
         </div>
         <h4 class="w-full">Módulo de flashcards</h4>
-        <div class="col-12 md:col-6">
+        <div class="col-12">
+          <span>Configuración de generación normal</span>
+        </div>
+        <div class="col-12 md:col-6 my-2">
+          <p-floatLabel>
+            <input
+              type="number"
+              pInputText
+              class="w-full"
+              formControlName="flashcardsBalanceNoRespondidas"
+            />
+            <label for="flashcardsBalanceNoRespondidas"
+              >% Balance de flashcards sin responder</label
+            >
+          </p-floatLabel>
+        </div>
+
+        <div class="col-12 md:col-6 my-2">
+          <p-floatLabel>
+            <input
+              type="number"
+              pInputText
+              class="w-full"
+              formControlName="flashcardsBalanceMal"
+            />
+            <label for="flashcardsBalanceMal"
+              >% Balance de flashcards mal</label
+            >
+          </p-floatLabel>
+        </div>
+        <div class="col-12 md:col-6 my-2">
+          <p-floatLabel>
+            <input
+              type="number"
+              pInputText
+              class="w-full"
+              formControlName="flashcardsBalanceRevisar"
+            />
+            <label for="flashcardsBalanceRevisar"
+              >% Balance de flashcards revisar</label
+            >
+          </p-floatLabel>
+        </div>
+
+        <div class="col-12 md:col-6 my-2">
+          <p-floatLabel>
+            <input
+              type="number"
+              pInputText
+              class="w-full"
+              formControlName="flashcardsBalanceBien"
+            />
+            <label for="flashcardsBalanceBien"
+              >% Balance de flashcards bien</label
+            >
+          </p-floatLabel>
+        </div>
+        <div class="col-12">
+          <span>Configuración repaso</span>
+        </div>
+        <div class="col-12 md:col-6 my-2">
           <p-floatLabel>
             <input
               type="number"
@@ -25,10 +85,12 @@
               class="w-full"
               formControlName="flashcardsRepasarPivote"
             />
-            <label for="flashcardsRepasarPivote">Número de flashcards repasar</label>
+            <label for="flashcardsRepasarPivote"
+              >Número de flashcards repasar</label
+            >
           </p-floatLabel>
         </div>
-        <div class="col-12 md:col-6">
+        <div class="col-12 md:col-6 my-2">
           <p-floatLabel>
             <input
               type="number"

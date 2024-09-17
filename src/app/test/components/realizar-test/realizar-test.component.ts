@@ -43,7 +43,7 @@ export class RealizarTestComponent {
   public getAllTestsComenzados$ = this.testService.getAllTest();
   public getFallosCount$ = this.testService.obtenerFallosCount();
   public displayPopupFallosTest = false;
-
+  public generandoTest = false;
   ngOnInit(): void {
     const generarTestDeRepasoControl = this.formGroup.get(
       'generarTestDeRepaso'
@@ -75,6 +75,7 @@ export class RealizarTestComponent {
 
   public async generarTest() {
     try {
+      this.generandoTest = true;
       const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
       const payload = {
         numPreguntas,
@@ -89,8 +90,10 @@ export class RealizarTestComponent {
       const res = await firstValueFrom(this.testService.generarTest(payload));
       this.toast.success('Test generado exitosamente!', 'Generación exitosa');
       this.getAllTestsComenzados$ = this.testService.getAllTest();
+      this.generandoTest = false;
     } catch (error) {
       this.toast.error('Error al generar el test.', 'Error');
+      this.generandoTest = false;
     }
   }
 
