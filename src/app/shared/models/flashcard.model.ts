@@ -8,6 +8,7 @@ export interface FlashcardTest {
   flashcards: FlashcardTestItem[]; // Relación con las flashcards del test
   createdAt: Date;
   updatedAt: Date;
+  esDeRepaso?: boolean;
 }
 
 export interface FlashcardTestItem {

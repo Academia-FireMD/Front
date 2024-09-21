@@ -6,6 +6,7 @@ import { tap } from 'rxjs';
 import { TestService } from '../../../services/test.service';
 import { SeguridadAlResponder } from '../../../shared/models/pregunta.model';
 import { Test } from '../../../shared/models/test.model';
+import { colorCorrectas, colorIncorretas, colorSinResponder, getStats } from '../../../utils/utils';
 @Component({
   selector: 'app-test-stats',
   templateUrl: './test-stats.component.html',
@@ -31,9 +32,7 @@ export class TestStatsComponent {
   private lastLoadedStats!: any;
   private lastLoadedTest!: Test;
   public seguridad = SeguridadAlResponder;
-  public colorCorrectas = '#00eb003d';
-  public colorIncorretas = '#ff9c9c';
-  public colorSinResponder = '#c5c5c5';
+
   @Memoize()
   getDataFromSeguridad(seguridad: SeguridadAlResponder, data: any) {
     const dataParsed = data.seguridad[seguridad] as {
@@ -66,9 +65,9 @@ export class TestStatsComponent {
             dataParsed.noRespondidas,
           ],
           backgroundColor: [
-            this.colorCorrectas,
-            this.colorIncorretas,
-            this.colorSinResponder,
+            colorCorrectas,
+            colorIncorretas,
+            colorSinResponder,
           ],
         },
       ],
@@ -80,21 +79,9 @@ export class TestStatsComponent {
     };
   }
 
-  private getStats() {
-    const stats100 =
-      this.lastLoadedStats.seguridad[SeguridadAlResponder.CIEN_POR_CIENTO];
-    const stats75 =
-      this.lastLoadedStats.seguridad[
-        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
-      ];
-    const stats50 =
-      this.lastLoadedStats.seguridad[SeguridadAlResponder.CINCUENTA_POR_CIENTO];
-    return { stats100, stats75, stats50 };
-  }
-
   public calcular100y50() {
     if (!this.lastLoadedStats || !this.lastLoadedTest) return 0;
-    const { stats100, stats75, stats50 } = this.getStats();
+    const { stats100, stats75, stats50 } = getStats(this.lastLoadedStats);
 
     return this.calcularCalificacion(
       stats100.correctas + stats50.correctas,
@@ -106,7 +93,7 @@ export class TestStatsComponent {
 
   public calcular100y75y50() {
     if (!this.lastLoadedStats || !this.lastLoadedTest) return 0;
-    const { stats100, stats75, stats50 } = this.getStats();
+    const { stats100, stats75, stats50 } = getStats(this.lastLoadedStats);
     return this.calcularCalificacion(
       stats100.correctas + stats75.correctas + stats50.correctas,
       stats100.incorrectas + stats75.incorrectas + stats50.incorrectas,

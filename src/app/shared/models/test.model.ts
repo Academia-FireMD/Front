@@ -11,12 +11,14 @@ export interface Test {
   id: number;
   realizadorId: number;
   realizador: Usuario;
+  testPreguntas?: any[];
   preguntas: Pregunta[];
   testPreguntasIds: number[];
   status: TestStatus;
   duration?: number;
   endsAt?: Date;
   createdAt: Date;
+  esDeRepaso?: boolean;
 }
 
 export interface Respuesta {

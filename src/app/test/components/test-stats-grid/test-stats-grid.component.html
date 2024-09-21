@@ -1,0 +1,131 @@
+<p-confirmDialog></p-confirmDialog>
+<div class="grid">
+  <div class="col-12">
+    <div class="top-action-bar">
+      <div class="left-actions">
+        <p-iconField iconPosition="left" *ngIf="expectedRole == 'ADMIN'">
+          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+          <input
+            type="text"
+            pInputText
+            placeholder="Buscar por email"
+            style="min-width: 30vw"
+            (input)="valueChanged($event)"
+          />
+        </p-iconField>
+        <p-calendar
+          [style]="{ minWidth: '300px' }"
+          [formControl]="selectedRangeDates"
+          selectionMode="range"
+          placeholder="Selecciona rango de fechas"
+          [readonlyInput]="true"
+          [showButtonBar]="true"
+        />
+      </div>
+      <div class="right-actions">
+        <p-button
+          [disabled]="selectedRangeDates.invalid"
+          (onClick)="generarEstadisticas()"
+          [loading]="generandoEstadistica"
+          label="Generar estadistica"
+        />
+      </div>
+    </div>
+  </div>
+  <div class="col-12 list-generic">
+    <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
+      <ng-template pTemplate="list" let-products>
+        <div class="grid grid-nogutter">
+          <div
+            class="col-12 item-container pointer"
+            *ngFor="let item of products; let first = first"
+            (click)="viewStats(item.id)"
+          >
+            <div class="flex flex-row align-items-between">
+              <div class="flex flex-column py-2 col-9 left-side">
+                <div class="text-lg font-medium flex gap-2 align-items-center">
+                  <div class="flex gap-1 text-sm">
+                    <span class="hidden md:block">Tipo de test: </span>
+                    <strong class="identifier">{{
+                      obtenerTipoDeTest(item,type)
+                    }}</strong>
+                  </div>
+
+                  <div class="flex gap-1 text-sm">
+                    <strong>{{ obtenerTemas(item) }}</strong>
+                  </div>
+                </div>
+                <span class="font-small text-secondary text-sm descripcion">
+                  Numero de items: @if(type == 'TESTS'){
+                  {{ item.testPreguntas.length }}
+                  }@else {
+                  {{ item.flashcards.length }}
+                  } @if(expectedRole == 'ADMIN'){ Realizado por
+                  {{ item.realizador.email }}
+                  }
+                </span>
+              </div>
+              <div
+                class="right-side col-3 flex align-items-center justify-content-end"
+              >
+                <div
+                  class="flex flex-row align-items-center justify-content-end gap-3"
+                >
+                  @if(type == 'TESTS'){
+                  <span class="text-sm font-small">
+                    <strong>{{
+                      calcular100y50(
+                        item.stats,
+                        item?.testPreguntas?.length ?? 0
+                      ).toFixed(2)
+                    }}</strong>
+                    (100%+50%)</span
+                  >
+                  <span class="text-sm font-small">
+                    <strong>
+                      {{
+                        calcular100y75y50(
+                          item.stats,
+                          item?.testPreguntas?.length ?? 0
+                        ).toFixed(2)
+                      }}</strong
+                    >
+                    (100%+75%+50%)</span
+                  >
+                  }
+                  <span
+                    class="font-medium text-secondary text-sm hidden md:block"
+                  >
+                    {{ item.createdAt | date : "short" }}</span
+                  >
+                  <!-- <p-button
+                    [link]="true"
+                    icon="pi pi-trash"
+                    (click)="$event.stopPropagation(); $event.preventDefault()"
+                  ></p-button> -->
+                </div>
+              </div>
+            </div>
+            <!-- <div class="flex flex-row align-items-between">
+              Lorem ipsum dolor sit amet consectetur adipisicing elit. Libero
+              consequatur fuga atque officia error quaerat, harum quia repellat
+              eum autem voluptates? Voluptatibus blanditiis repellendus
+              provident repellat quis ut quos voluptatum.
+            </div> -->
+          </div>
+        </div>
+      </ng-template>
+    </p-dataView>
+  </div>
+  <div class="col-12">
+    <div class="card flex justify-content-end">
+      <p-paginator
+        (onPageChange)="onPageChange($event)"
+        [first]="pagination().skip"
+        [rows]="pagination().take"
+        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
+        [showPageLinks]="viewportService.screenWidth != 'xs'"
+      ></p-paginator>
+    </div>
+  </div>
+</div>

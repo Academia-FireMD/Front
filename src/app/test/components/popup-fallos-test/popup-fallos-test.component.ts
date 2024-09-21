@@ -1,7 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { tap } from 'rxjs';
 import { TestService } from '../../../services/test.service';
-import { ViewportService } from '../../../services/viewport.service';
 import { Respuesta } from '../../../shared/models/test.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { getLetter, getStarsBasedOnDifficulty } from '../../../utils/utils';
@@ -13,7 +12,6 @@ import { getLetter, getStarsBasedOnDifficulty } from '../../../utils/utils';
 })
 export class PopupFallosTestComponent extends SharedGridComponent<Respuesta> {
   testService = inject(TestService);
-  viewportService = inject(ViewportService);
   getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   getLetter = getLetter;
   public expandedItem!: Respuesta | null;

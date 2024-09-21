@@ -26,6 +26,11 @@ export interface GenerarTestDto {
   duracion?: number;
 }
 
+export interface DateRangeDto {
+  from: Date; // Campo obligatorio
+  to?: Date; // Campo opcional
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -41,6 +46,18 @@ export class TestService extends ApiBaseService {
     comentario: string;
   }) {
     return this.post('/anyadir-feedback', dto);
+  }
+
+  public getTestsAlumno$(filter: PaginationFilter) {
+    return this.post('/tests-alumno', filter) as Observable<
+      PaginatedResult<Test>
+    >;
+  }
+
+  public getTestsAdmin$(filter: PaginationFilter) {
+    return this.post('/tests-admin', filter) as Observable<
+      PaginatedResult<Test>
+    >;
   }
 
   public generarTest(dto: GenerarTestDto) {
@@ -78,5 +95,12 @@ export class TestService extends ApiBaseService {
 
   public getStats(idTest: number) {
     return this.get('/test-stats/' + idTest);
+  }
+
+  public getStatsByCategory(dto: DateRangeDto) {
+    return this.post('/test-stats-by-category', dto);
+  }
+  public getStatsByCategoryAdmin(dto: DateRangeDto) {
+    return this.post('/test-stats-by-category-admin', dto);
   }
 }

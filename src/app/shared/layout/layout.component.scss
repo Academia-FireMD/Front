@@ -32,8 +32,10 @@
 .mobile-expanded {
   width: 102%;
   padding: 0px;
-  margin-top: -10px;
+  margin-top: 35px;
   margin-left: -1px;
+  height: 95%;
+  overflow: auto;
 }
 
 @media (max-width: 575.98px) {

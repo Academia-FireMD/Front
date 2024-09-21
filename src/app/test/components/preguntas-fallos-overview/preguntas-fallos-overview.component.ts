@@ -1,11 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
-import { ViewportService } from '../../../services/viewport.service';
 import { PreguntaFallo } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 
@@ -15,8 +13,6 @@ import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.com
   styleUrl: './preguntas-fallos-overview.component.scss',
 })
 export class PreguntasFallosOverviewComponent extends SharedGridComponent<PreguntaFallo> {
-  toast = inject(ToastrService);
-  viewportService = inject(ViewportService);
   preguntasService = inject(PreguntasService);
   reportesFalloService = inject(ReportesFalloService);
   confirmationService = inject(ConfirmationService);

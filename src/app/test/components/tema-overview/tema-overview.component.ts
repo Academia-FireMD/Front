@@ -1,10 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { TemaService } from '../../../services/tema.service';
-import { ViewportService } from '../../../services/viewport.service';
 import { Tema } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 
@@ -16,9 +14,7 @@ import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.com
 export class TemaOverviewComponent extends SharedGridComponent<Tema> {
   private temaService = inject(TemaService);
   private router = inject(Router);
-  viewportService = inject(ViewportService);
   confirmationService = inject(ConfirmationService);
-  toast = inject(ToastrService);
 
   constructor() {
     super();

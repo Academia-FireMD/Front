@@ -1,7 +1,9 @@
-import { Component, Input, Signal, signal } from '@angular/core';
+import { Component, inject, Input, Signal, signal } from '@angular/core';
 import { Debounce } from 'lodash-decorators';
+import { ToastrService } from 'ngx-toastr';
 import { PaginatorState } from 'primeng/paginator';
 import { Observable } from 'rxjs';
+import { ViewportService } from '../../services/viewport.service';
 import { PaginatedResult, PaginationFilter } from '../models/pagination.model';
 
 @Component({
@@ -9,6 +11,8 @@ import { PaginatedResult, PaginationFilter } from '../models/pagination.model';
   template: '',
 })
 export class SharedGridComponent<T> {
+  toast = inject(ToastrService);
+  viewportService = inject(ViewportService);
   @Input() fetchItems$!: Signal<Observable<PaginatedResult<T>>>;
   public pagination = signal<PaginationFilter>({
     skip: 0,

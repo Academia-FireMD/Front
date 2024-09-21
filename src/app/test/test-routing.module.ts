@@ -8,6 +8,7 @@ import { DashboardStatsFlashcardsComponent } from './components/dashboard-stats-
 import { DashboardStatsComponent } from './components/dashboard-stats/dashboard-stats.component';
 import { FlashcardDetailviewAdminComponent } from './components/flashcard-detailview-admin/flashcard-detailview-admin.component';
 import { FlashcardOverviewAdminComponent } from './components/flashcard-overview-admin/flashcard-overview-admin.component';
+import { FullStatsComponent } from './components/full-stats/full-stats.component';
 import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
 import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
@@ -17,6 +18,7 @@ import { RealizarTestComponent } from './components/realizar-test/realizar-test.
 import { TemaDetailviewComponent } from './components/tema-detailview/tema-detailview.component';
 import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
 import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards/test-stats-flashcards.component';
+import { TestStatsGridComponent } from './components/test-stats-grid/test-stats-grid.component';
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 
@@ -91,6 +93,42 @@ const routes: Routes = [
     data: { expectedRole: 'ADMIN' },
   },
   {
+    path: 'test-stats',
+    component: TestStatsGridComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN', type: 'TESTS' },
+  },
+  {
+    path: 'flashcard-stats',
+    component: TestStatsGridComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN', type: 'FLASHCARDS' },
+  },
+  {
+    path: 'stats-test/:id',
+    component: TestStatsComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN' },
+  },
+  {
+    path: 'stats-test-flashcard/:id',
+    component: TestStatsFlashcardsComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN' },
+  },
+  {
+    path: 'full-stats-test',
+    component: FullStatsComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN', type: 'TESTS' },
+  },
+  {
+    path: 'full-stats-flashcard',
+    component: FullStatsComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN', type: 'FLASHCARDS' },
+  },
+  {
     path: 'alumno',
     children: [
       {
@@ -140,6 +178,30 @@ const routes: Routes = [
         component: DashboardStatsFlashcardsComponent,
         canActivate: [roleGuard],
         data: { expectedRole: 'ALUMNO' },
+      },
+      {
+        path: 'test-stats',
+        component: TestStatsGridComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO', type: 'TESTS' },
+      },
+      {
+        path: 'flashcard-stats',
+        component: TestStatsGridComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO', type: 'FLASHCARDS' },
+      },
+      {
+        path: 'full-stats-test',
+        component: FullStatsComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO', type: 'TESTS' },
+      },
+      {
+        path: 'full-stats-flashcard',
+        component: FullStatsComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO', type: 'FLASHCARDS' },
       },
       {
         path: '',

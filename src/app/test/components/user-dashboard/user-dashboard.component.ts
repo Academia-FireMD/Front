@@ -1,10 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { cloneDeep } from 'lodash';
-import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { UserService } from '../../../services/user.service';
-import { ViewportService } from '../../../services/viewport.service';
 import { Usuario } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 
@@ -16,8 +14,6 @@ import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.com
 export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   userService = inject(UserService);
   confirmationService = inject(ConfirmationService);
-  toast = inject(ToastrService);
-  viewportService = inject(ViewportService);
 
   constructor() {
     super();

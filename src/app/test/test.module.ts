@@ -3,9 +3,12 @@ import { NgModule } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MarkdownModule } from 'ngx-markdown';
+import { AccordionModule } from 'primeng/accordion';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { CalendarModule } from 'primeng/calendar';
 import { CardModule } from 'primeng/card';
+import { ChartModule } from 'primeng/chart';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DataViewModule } from 'primeng/dataview';
@@ -29,27 +32,28 @@ import { RippleModule } from 'primeng/ripple';
 import { TagModule } from 'primeng/tag';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
+import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
 import { CompletarTestComponent } from './components/completar-test/completar-test.component';
+import { DashboardStatsFlashcardsComponent } from './components/dashboard-stats-flashcards/dashboard-stats-flashcards.component';
 import { DashboardStatsComponent } from './components/dashboard-stats/dashboard-stats.component';
 import { FlashcardDetailviewAdminComponent } from './components/flashcard-detailview-admin/flashcard-detailview-admin.component';
 import { FlashcardOverviewAdminComponent } from './components/flashcard-overview-admin/flashcard-overview-admin.component';
+import { FullStatsComponent } from './components/full-stats/full-stats.component';
 import { PopupFallosTestComponent } from './components/popup-fallos-test/popup-fallos-test.component';
 import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
+import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
 import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
+import { RealizarFlashCardTestComponent } from './components/realizar-flash-card-test/realizar-flash-card-test.component';
 import { RealizarTestComponent } from './components/realizar-test/realizar-test.component';
+import { ReportarFalloDialogComponent } from './components/reportar-fallo-dialog/reportar-fallo-dialog.component';
 import { TemaDetailviewComponent } from './components/tema-detailview/tema-detailview.component';
 import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
+import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards/test-stats-flashcards.component';
+import { TestStatsGridComponent } from './components/test-stats-grid/test-stats-grid.component';
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { TestRoutingModule } from './test-routing.module';
-import { RealizarFlashCardTestComponent } from './components/realizar-flash-card-test/realizar-flash-card-test.component';
-import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
-import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards/test-stats-flashcards.component';
-import { DashboardStatsFlashcardsComponent } from './components/dashboard-stats-flashcards/dashboard-stats-flashcards.component';
-import { ReportarFalloDialogComponent } from './components/reportar-fallo-dialog/reportar-fallo-dialog.component';
-import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
-
 @NgModule({
   declarations: [
     UserDashboardComponent,
@@ -72,6 +76,8 @@ import { PreguntasFallosFlashcardsOverviewComponent } from './components/pregunt
     DashboardStatsFlashcardsComponent,
     ReportarFalloDialogComponent,
     PreguntasFallosFlashcardsOverviewComponent,
+    TestStatsGridComponent,
+    FullStatsComponent,
   ],
   imports: [
     CommonModule,
@@ -94,6 +100,7 @@ import { PreguntasFallosFlashcardsOverviewComponent } from './components/pregunt
     ListboxModule,
     InputTextareaModule,
     DropdownModule,
+    CalendarModule,
     InputGroupModule,
     InputGroupAddonModule,
     RadioButtonModule,
@@ -105,6 +112,8 @@ import { PreguntasFallosFlashcardsOverviewComponent } from './components/pregunt
     DialogModule,
     InputSwitchModule,
     DividerModule,
+    AccordionModule,
+    ChartModule,
   ],
   providers: [ConfirmationService],
 })

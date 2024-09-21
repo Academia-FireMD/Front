@@ -12,4 +12,5 @@ export interface PaginationFilter {
   take: number;
   skip: number;
   searchTerm: string;
+  where?: any;
 }

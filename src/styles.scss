@@ -29,6 +29,7 @@ app-layout {
   .p-menu {
     background-color: $primaryColor;
     color: white;
+    overflow: auto;
   }
   .p-menuitem {
     span {
@@ -156,4 +157,9 @@ app-completar-test {
   @media (max-width: 768px) {
     width: 20px;
   }
+}
+
+
+.no-wrap{
+  text-wrap: nowrap;
 }

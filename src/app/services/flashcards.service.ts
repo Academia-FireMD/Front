@@ -12,6 +12,7 @@ import {
 } from '../shared/models/pagination.model';
 import { Dificultad } from '../shared/models/pregunta.model';
 import { ApiBaseService } from './api-base.service';
+import { DateRangeDto } from './test.service';
 export interface RegistrarFlashcardRespuestaDto {
   testId: number; // El ID del test de flashcards
   testItemId: number; // Relación con el ítem del test que contiene la flashcard
@@ -31,6 +32,26 @@ export class FlashcardDataService extends ApiBaseService {
   constructor(private http: HttpClient) {
     super(http);
     this.controllerPrefix = '/flashcards';
+  }
+
+  public getTestsAlumno$(filter: PaginationFilter) {
+    return this.post('/tests-alumno', filter) as Observable<
+      PaginatedResult<FlashcardTest>
+    >;
+  }
+
+  public getTestsAdmin$(filter: PaginationFilter) {
+    return this.post('/tests-admin', filter) as Observable<
+      PaginatedResult<FlashcardTest>
+    >;
+  }
+
+  public getStatsByCategory(dto: DateRangeDto) {
+    return this.post('/test-stats-by-category', dto);
+  }
+
+  public getStatsByCategoryAdmin(dto: DateRangeDto) {
+    return this.post('/test-stats-by-category-admin', dto);
   }
 
   public getFlashcards$(filter: PaginationFilter) {

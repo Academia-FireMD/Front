@@ -6,11 +6,9 @@ import {
   ViewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
-import { ViewportService } from '../../../services/viewport.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { getStarsBasedOnDifficulty } from '../../../utils/utils';
@@ -21,8 +19,6 @@ import { getStarsBasedOnDifficulty } from '../../../utils/utils';
   styleUrl: './flashcard-overview-admin.component.scss',
 })
 export class FlashcardOverviewAdminComponent extends SharedGridComponent<FlashcardData> {
-  toast = inject(ToastrService);
-  viewportService = inject(ViewportService);
   confirmationService = inject(ConfirmationService);
   flashcardService = inject(FlashcardDataService);
   router = inject(Router);

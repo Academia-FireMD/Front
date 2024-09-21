@@ -1,0 +1,11 @@
+.contenido {
+  overflow: auto;
+}
+.chart-container {
+  width: 100%;
+  overflow-x: auto; /* Asegura que haya scroll horizontal */
+}
+
+.card {
+  min-width: 1200px; /* Aumenta el ancho mínimo para permitir que el gráfico se desborde horizontalmente */
+}

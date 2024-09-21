@@ -6,11 +6,9 @@ import {
   ViewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
-import { ViewportService } from '../../../services/viewport.service';
 import { Pregunta } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { getStarsBasedOnDifficulty } from '../../../utils/utils';
@@ -21,8 +19,6 @@ import { getStarsBasedOnDifficulty } from '../../../utils/utils';
   styleUrl: './preguntas-dashboard-admin.component.scss',
 })
 export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregunta> {
-  toast = inject(ToastrService);
-  viewportService = inject(ViewportService);
   preguntasService = inject(PreguntasService);
   confirmationService = inject(ConfirmationService);
   router = inject(Router);

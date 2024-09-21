@@ -46,6 +46,11 @@ export class LayoutComponent {
               icon: 'pi pi-flag-fill',
               routerLink: '/app/test/preguntas-fallos',
             },
+            // {
+            //   label: 'Estadisticas',
+            //   icon: 'pi pi-chart-pie',
+            //   routerLink: '/app/test/test-stats',
+            // },
           ],
         },
         {
@@ -61,6 +66,11 @@ export class LayoutComponent {
               icon: 'pi pi-flag-fill',
               routerLink: '/app/test/flashcards-fallos',
             },
+            // {
+            //   label: 'Estadisticas',
+            //   icon: 'pi pi-chart-pie',
+            //   routerLink: '/app/test/flashcard-stats',
+            // },
           ],
         },
         {
@@ -93,7 +103,7 @@ export class LayoutComponent {
             {
               label: 'Estadistica',
               icon: 'pi pi-chart-pie',
-              routerLink: '/app/test/alumno/estadistica-dashboard',
+              routerLink: '/app/test/alumno/test-stats',
             },
           ],
         },
@@ -108,7 +118,7 @@ export class LayoutComponent {
             {
               label: 'Estadistica',
               icon: 'pi pi-chart-pie',
-              routerLink: '/app/test/alumno/estadistica-flashcards-dashboard',
+              routerLink: '/app/test/alumno/flashcard-stats',
             },
           ],
         },
