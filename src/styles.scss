@@ -138,6 +138,10 @@ app-preguntas-dashboard-admin-detailview {
   }
 }
 
+app-pie-chart-dashboard-security {
+  width: 100%;
+}
+
 app-test-stats,
 app-dashboard-stats,
 app-realizar-test,
@@ -145,7 +149,9 @@ app-realizar-flash-card-test,
 app-completar-flash-card-test,
 app-flashcard-detailview-admin,
 app-ajustes-admin,
-app-completar-test {
+app-pie-chart-dashboard-security,
+app-completar-test,
+app-full-stats {
   overflow-y: auto;
   overflow-x: hidden;
   height: 100%;
@@ -159,7 +165,17 @@ app-completar-test {
   }
 }
 
-
-.no-wrap{
+.no-wrap {
   text-wrap: nowrap;
+}
+
+.data-box {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  gap: 5px;
+  .box {
+    height: 20px;
+    width: 20px;
+  }
 }

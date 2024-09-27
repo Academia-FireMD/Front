@@ -9,7 +9,10 @@ import {
 } from '@angular/common/http';
 import localeEs from '@angular/common/locales/es';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import * as echarts from 'echarts';
+import { NgxEchartsModule } from 'ngx-echarts';
 import { MarkdownModule } from 'ngx-markdown';
+import { NgxSpinnerModule } from 'ngx-spinner';
 import { ToastrModule } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -17,9 +20,9 @@ import { MenuModule } from 'primeng/menu';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { AuthInterceptor } from './services/auth.interceptor';
+import { SpinnerInterceptor } from './services/spinner.interceptor';
 import { LayoutComponent } from './shared/layout/layout.component';
 import { SharedModule } from './shared/shared.module';
-
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [AppComponent, LayoutComponent],
@@ -33,12 +36,19 @@ registerLocaleData(localeEs);
     MarkdownModule.forRoot(),
     BrowserAnimationsModule, // required animations module
     ToastrModule.forRoot(), // ToastrModule added
+    NgxEchartsModule.forRoot({ echarts }),
+    NgxSpinnerModule.forRoot(),
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()),
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,
+      multi: true,
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: SpinnerInterceptor,
       multi: true,
     },
     { provide: LOCALE_ID, useValue: 'es-ES' },

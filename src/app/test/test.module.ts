@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { NgxEchartsDirective } from 'ngx-echarts';
 import { MarkdownModule } from 'ngx-markdown';
 import { AccordionModule } from 'primeng/accordion';
 import { ConfirmationService } from 'primeng/api';
@@ -51,9 +52,11 @@ import { TemaDetailviewComponent } from './components/tema-detailview/tema-detai
 import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
 import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards/test-stats-flashcards.component';
 import { TestStatsGridComponent } from './components/test-stats-grid/test-stats-grid.component';
+import { PieChartDashboardSecurityComponent } from './components/test-stats/pie-chart-dashboard-security/pie-chart-dashboard-security.component';
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { TestRoutingModule } from './test-routing.module';
+
 @NgModule({
   declarations: [
     UserDashboardComponent,
@@ -78,6 +81,7 @@ import { TestRoutingModule } from './test-routing.module';
     PreguntasFallosFlashcardsOverviewComponent,
     TestStatsGridComponent,
     FullStatsComponent,
+    PieChartDashboardSecurityComponent,
   ],
   imports: [
     CommonModule,
@@ -114,6 +118,7 @@ import { TestRoutingModule } from './test-routing.module';
     DividerModule,
     AccordionModule,
     ChartModule,
+    NgxEchartsDirective,
   ],
   providers: [ConfirmationService],
 })

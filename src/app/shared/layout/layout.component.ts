@@ -46,11 +46,11 @@ export class LayoutComponent {
               icon: 'pi pi-flag-fill',
               routerLink: '/app/test/preguntas-fallos',
             },
-            // {
-            //   label: 'Estadisticas',
-            //   icon: 'pi pi-chart-pie',
-            //   routerLink: '/app/test/test-stats',
-            // },
+            {
+              label: 'Estadisticas',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/test-stats',
+            },
           ],
         },
         {
@@ -66,11 +66,11 @@ export class LayoutComponent {
               icon: 'pi pi-flag-fill',
               routerLink: '/app/test/flashcards-fallos',
             },
-            // {
-            //   label: 'Estadisticas',
-            //   icon: 'pi pi-chart-pie',
-            //   routerLink: '/app/test/flashcard-stats',
-            // },
+            {
+              label: 'Estadisticas',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/flashcard-stats',
+            },
           ],
         },
         {
@@ -100,11 +100,11 @@ export class LayoutComponent {
               icon: 'pi pi-question',
               routerLink: '/app/test/alumno/realizar-test',
             },
-            // {
-            //   label: 'Estadistica',
-            //   icon: 'pi pi-chart-pie',
-            //   routerLink: '/app/test/alumno/test-stats',
-            // },
+            {
+              label: 'Estadistica',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/alumno/test-stats',
+            },
           ],
         },
         {
@@ -115,11 +115,11 @@ export class LayoutComponent {
               icon: 'pi pi-id-card',
               routerLink: '/app/test/alumno/realizar-flash-cards-test',
             },
-            // {
-            //   label: 'Estadistica',
-            //   icon: 'pi pi-chart-pie',
-            //   routerLink: '/app/test/alumno/flashcard-stats',
-            // },
+            {
+              label: 'Estadistica',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/alumno/flashcard-stats',
+            },
           ],
         },
         {

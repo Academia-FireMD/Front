@@ -13,6 +13,7 @@ import {
   calcular100y50,
   calcular100y75y50,
   getStats,
+  obtenerTemas,
   obtenerTipoDeTest,
 } from '../../../utils/utils';
 
@@ -160,46 +161,8 @@ export class TestStatsGridComponent extends SharedGridComponent<
   }
 
   public obtenerTipoDeTest = obtenerTipoDeTest;
+  public obtenerTemas = obtenerTemas;
 
-  public obtenerTemas(testItem: (Test & any) | FlashcardTest) {
-    if (this.type == 'TESTS') {
-      const preguntasTest = (testItem.testPreguntas ?? []) as Array<any>;
-      const temas = preguntasTest.reduce((prev, next) => {
-        const tema = next.pregunta.tema;
-        if (!prev.has(tema.numero)) {
-          prev.set(tema.numero, {
-            numero: tema.numero,
-            nombre: tema.descripcion,
-          });
-        }
-        return prev;
-      }, new Map());
-      const listaUnicaTemas = Array.from(temas.values());
-      return listaUnicaTemas.length > 3
-        ? 'Temas variados'
-        : listaUnicaTemas
-            .map((tema: any) => `Tema ${tema.numero} - ${tema.nombre}`)
-            .join(', ');
-    } else {
-      const preguntasTest = (testItem.flashcards ?? []) as Array<any>;
-      const temas = preguntasTest.reduce((prev, next) => {
-        const tema = next.flashcard.tema;
-        if (!prev.has(tema.numero)) {
-          prev.set(tema.numero, {
-            numero: tema.numero,
-            nombre: tema.descripcion,
-          });
-        }
-        return prev;
-      }, new Map());
-      const listaUnicaTemas = Array.from(temas.values());
-      return listaUnicaTemas.length > 3
-        ? 'Temas variados'
-        : listaUnicaTemas
-            .map((tema: any) => `Tema ${tema.numero} - ${tema.nombre}`)
-            .join(', ');
-    }
-  }
 
   public viewStats = (id: number | 'new') => {
     const map = {
@@ -236,7 +199,6 @@ export class TestStatsGridComponent extends SharedGridComponent<
       },
     };
     const path = (map as any)[this.expectedRole][this.type];
-    console.log(path);
     this.router.navigate([path], {
       queryParams: {
         from: from.toISOString(),

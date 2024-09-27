@@ -1,13 +1,4 @@
-.data-box {
-  display: flex;
-  align-items: center;
-  justify-content: start;
-  gap: 5px;
-  .box {
-    height: 20px;
-    width: 20px;
-  }
-}
+
 
 .topbar {
   @media (max-width: 576px) {

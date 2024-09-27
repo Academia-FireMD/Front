@@ -1,69 +1,179 @@
-<p-accordion *ngIf="fullStats$ | async as fullStats">
-  <p-accordionTab *ngFor="let key of keys(fullStats)">
-    <ng-template pTemplate="header">
-      <span
-        class="flex align-items-center justify-content-between gap-2 w-full"
-      >
-        <span class="font-bold white-space-nowrap">{{
-          toPascalCase(key)
-        }}</span>
-        @if(type == 'TESTS'){
-        <div *ngIf="calcularMediaCategoria(fullStats[key]) as mediaBloque">
-          <span class="text-sm font-small">
-            <strong> {{ mediaBloque.total10050.toFixed(2) }}</strong>
-            (100%+50%)</span
-          >
-          <span class="text-sm font-small">
-            <strong> {{ mediaBloque.total1007550.toFixed(2) }}</strong>
-            (100%+75%+50%)</span
-          >
-        </div>
-        }
-      </span>
-    </ng-template>
-
-    <div class="contenido">
-      <div class="header">
-        <div
-          class="flex justify-content-between"
-          *ngIf="calcularMediaCategoria(fullStats[key]) as mediaBloque"
-        >
-          <div class="left flex-column">
-            <div>
-              Preguntas bien respondidas:
-              {{ mediaBloque?.blockStats?.correctas ?? 0 }}
-            </div>
-            <div>
-              Incorrectas: {{ mediaBloque?.blockStats?.incorrectas ?? 0 }}
-            </div>
-            <div>
-              Sin contestar: {{ mediaBloque?.blockStats?.omitidas ?? 0 }}
-            </div>
-          </div>
-          <div class="right flex-column">
-            <div>
-              Nota media 100% + 50% =
-              {{ (mediaBloque?.total10050 ?? 0).toFixed(2) }}
-            </div>
-            <div>
-              Nota media 100% + 75% + 50% =
-              {{ (mediaBloque?.total1007550 ?? 0).toFixed(2) }}
-            </div>
-          </div>
-        </div>
+<ng-template #notaMediaTests let-tests="tests">
+  <div
+    class="flex justify-content-between"
+    *ngIf="calcularMediaCategoria(tests) as mediaBloque"
+  >
+    <div class="left flex-column">
+      <div>
+        Preguntas bien respondidas:
+        {{ mediaBloque?.blockStats?.correctas ?? 0 }}
       </div>
-      <div class="contenido">
-        <div class="card">
-          <div class="chart-container">
-            <p-chart
-              *ngIf="getBlockBarData(fullStats[key]) as blockBarData"
-              type="bar"
-              [data]="blockBarData.data"
-              [options]="blockBarData.options"
-            ></p-chart>
-          </div>
-        </div>
+      <div>Incorrectas: {{ mediaBloque?.blockStats?.incorrectas ?? 0 }}</div>
+      <div>Sin contestar: {{ mediaBloque?.blockStats?.omitidas ?? 0 }}</div>
+    </div>
+    <div class="right flex-column">
+      <div>
+        Nota media 100% + 50% =
+        {{ (mediaBloque?.total10050 ?? 0).toFixed(2) }}
+      </div>
+      <div>
+        Nota media 100% + 75% + 50% =
+        {{ (mediaBloque?.total1007550 ?? 0).toFixed(2) }}
       </div>
     </div>
-  </p-accordionTab>
-</p-accordion>
+  </div>
+</ng-template>
+
+<div class="flex-column" *ngIf="fullStats$ | async as fullStats">
+  <div class="col-12">
+    <div>
+      <strong
+        >Información global periodo {{ from | date : "dd/MM/yyyy" }} -
+        {{ to | date : "dd/MM/yyyy" }}</strong
+      >
+    </div>
+    <div class="col-12">
+      @if (type == 'TESTS') {
+      <app-pie-chart-dashboard-security
+        *ngIf="obtainSeguridadGlobal(fullStats) as globalStats"
+        [stat]="{ seguridad: globalStats }"
+      ></app-pie-chart-dashboard-security>
+      }@else {
+      <p-card *ngIf="obtainEstadoGlobal(fullStats) as globalStats">
+        <ng-container
+          *ngIf="getDataFromFlashcards({ estado: globalStats }) as statsChart"
+        >
+          <div class="flex align-items-center justify-content-center">
+            <div class="py-2 col-12 md:col-4">
+              <app-pie-chart [data]="statsChart"></app-pie-chart>
+            </div>
+          </div>
+          <div
+            class="data-box"
+            *ngFor="let stat of statsChart.labels; let i = index"
+          >
+            <div
+              class="box"
+              [ngStyle]="{
+                'background-color': statsChart.datasets[0].backgroundColor[i]
+              }"
+            ></div>
+            <span
+              >{{ statsChart.datasets[0].data[i] }} {{ stat }} (<strong>{{
+                statsChart.percentages[i]
+              }}</strong
+              >%)</span
+            >
+          </div>
+        </ng-container>
+      </p-card>
+      }
+    </div>
+    <div class="col-12" *ngIf="type == 'TESTS'">
+      <ng-container
+        *ngTemplateOutlet="
+          notaMediaTests;
+          context: {
+            tests: obtainAllTests(fullStats)
+          }
+        "
+      ></ng-container>
+    </div>
+  </div>
+  <div class="col-12">
+    <p-accordion>
+      <p-accordionTab *ngFor="let key of keys(fullStats)">
+        <ng-template pTemplate="header">
+          <span
+            class="flex align-items-center justify-content-between gap-2 w-full"
+          >
+            <span class="font-bold white-space-nowrap">{{
+              toPascalCase(key)
+            }}</span>
+            @if(type == 'TESTS'){
+            <div *ngIf="calcularMediaCategoria(fullStats[key]) as mediaBloque">
+              <span class="text-sm font-small">
+                <strong> {{ mediaBloque.total10050.toFixed(2) }}</strong>
+                (100%+50%)</span
+              >
+              <span class="text-sm font-small">
+                <strong> {{ mediaBloque.total1007550.toFixed(2) }}</strong>
+                (100%+75%+50%)</span
+              >
+            </div>
+            }
+          </span>
+        </ng-template>
+
+        <div class="contenido">
+          <div class="header">
+            <div>
+              <strong>Información del bloque</strong>
+            </div>
+
+            @if (type == 'TESTS') {
+            <ng-container
+              *ngTemplateOutlet="
+                notaMediaTests;
+                context: {
+                  tests: fullStats[key]
+                }
+              "
+            ></ng-container>
+            }@else {
+            <div
+              class="data-box"
+              *ngFor="
+                let stat of getBlockFlashcardBoxes(fullStats[key]);
+                let i = index
+              "
+            >
+              <div
+                class="box"
+                [ngStyle]="{
+                  'background-color': stat.color
+                }"
+              ></div>
+              <span
+                >{{ stat.value }} (<strong>{{
+                  stat.porcentaje.toFixed(2)
+                }}</strong
+                >%)</span
+              >
+            </div>
+            }
+          </div>
+          <div class="contenido">
+            <div class="card">
+              <div class="chart-container">
+                @if (type == 'TESTS') {
+                <ng-container
+                  *ngIf="getBlockBarData(fullStats[key]) as blockBarData"
+                >
+                  <div
+                    echarts
+                    (chartDblClick)="onChartClick($event)"
+                    [options]="blockBarData.chartOption"
+                    class="demo-chart"
+                  ></div>
+                </ng-container>
+                }@else {
+                <ng-container
+                  *ngIf="getFlashcardBarData(fullStats[key]) as blockBarData"
+                >
+                  <div
+                    echarts
+                    (chartDblClick)="onChartClick($event)"
+                    [options]="blockBarData.chartOption"
+                    class="demo-chart"
+                  ></div>
+                </ng-container>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </p-accordionTab>
+    </p-accordion>
+  </div>
+</div>

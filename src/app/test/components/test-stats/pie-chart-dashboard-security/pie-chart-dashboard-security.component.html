@@ -1,0 +1,88 @@
+<ng-template #boxDisplayStat let-statFocus="statFocus">
+  <div class="data-box" *ngFor="let stat of statFocus.labels; let i = index">
+    <div
+      class="box"
+      [ngStyle]="{
+        'background-color': statFocus.datasets[0].backgroundColor[i]
+      }"
+    ></div>
+    <span
+      >{{ statFocus.datasets[0].data[i] }} {{ stat }} (<strong>{{
+        statFocus.percentages[i]
+      }}</strong
+      >%)</span
+    >
+  </div>
+</ng-template>
+<div class="grid">
+  <div class="col-12 md:col-4">
+    <p-card
+      *ngIf="getDataFromSeguridad(seguridad.CIEN_POR_CIENTO, stat) as statCien"
+    >
+      <div class="seguridad-box">
+        <i class="pi pi-star"></i>
+        <span>100%</span>
+      </div>
+      <div class="py-2">
+        <app-pie-chart [data]="statCien"></app-pie-chart>
+      </div>
+      <ng-container
+        *ngTemplateOutlet="
+          boxDisplayStat;
+          context: {
+            statFocus: statCien
+          }
+        "
+      ></ng-container>
+    </p-card>
+  </div>
+  <div class="col-12 md:col-4">
+    <p-card
+      *ngIf="
+        getDataFromSeguridad(
+          seguridad.SETENTA_Y_CINCO_POR_CIENTO,
+          stat
+        ) as statSetentaCinco
+      "
+    >
+      <div class="seguridad-box">
+        <i class="pi pi-thumbs-up"></i>
+        <span>75%</span>
+      </div>
+      <div class="py-2">
+        <app-pie-chart [data]="statSetentaCinco"></app-pie-chart>
+      </div>
+      <ng-container
+        *ngTemplateOutlet="
+          boxDisplayStat;
+          context: {
+            statFocus: statSetentaCinco
+          }
+        "
+      ></ng-container>
+    </p-card>
+  </div>
+  <div class="col-12 md:col-4">
+    <p-card
+      *ngIf="
+        getDataFromSeguridad(seguridad.CINCUENTA_POR_CIENTO, stat) as cincuenta
+      "
+    >
+      <div class="seguridad-box">
+        <i class="pi pi-thumbs-down"></i>
+        <span>50%</span>
+      </div>
+      <div class="py-2">
+        <app-pie-chart [data]="cincuenta"></app-pie-chart>
+      </div>
+      <ng-container
+        *ngTemplateOutlet="
+          boxDisplayStat;
+          context: {
+            statFocus: cincuenta
+          }
+        "
+      ></ng-container>
+    </p-card>
+  </div>
+</div>

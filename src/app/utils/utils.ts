@@ -1,4 +1,7 @@
-import { FlashcardTest } from '../shared/models/flashcard.model';
+import {
+  EstadoFlashcard,
+  FlashcardTest,
+} from '../shared/models/flashcard.model';
 import {
   Dificultad,
   SeguridadAlResponder,
@@ -10,10 +13,96 @@ export const colorCorrectas = '#00eb003d';
 export const colorIncorretas = '#ff9c9c';
 export const colorSinResponder = '#c5c5c5';
 
+export const colorFlashcardsCorrectas = '#00eb003d';
+export const colorFlashcardsIncorretas = '#ff9c9c';
+export const colorFlashcardsRevisar = '#FFD54F';
+
 export interface StatType {
   correctas: number;
   incorrectas: number;
 }
+
+export const getDataFromFlashcards = (data: any) => {
+  const dataParsed = data as {
+    estado: any;
+  };
+  const bien = dataParsed.estado[EstadoFlashcard.BIEN].count;
+  const revisar = dataParsed.estado[EstadoFlashcard.REVISAR].count;
+  const mal = dataParsed.estado[EstadoFlashcard.MAL].count;
+  const totalRespuestas = bien + revisar + mal;
+
+  const bienPorcentaje =
+    totalRespuestas > 0 ? ((bien / totalRespuestas) * 100).toFixed(2) : '0';
+  const revisarPorcentaje =
+    totalRespuestas > 0 ? ((revisar / totalRespuestas) * 100).toFixed(2) : '0';
+  const malPorcentaje =
+    totalRespuestas > 0 ? ((mal / totalRespuestas) * 100).toFixed(2) : '0';
+
+  return {
+    labels: ['Bien', 'Repasar', 'Mal'],
+    datasets: [
+      {
+        data: [bien, revisar, mal],
+        backgroundColor: [
+          colorFlashcardsCorrectas,
+          colorFlashcardsRevisar,
+          colorFlashcardsIncorretas,
+        ],
+      },
+    ],
+    percentages: [bienPorcentaje, revisarPorcentaje, malPorcentaje],
+  };
+};
+
+export const obtenerTemas = (
+  testItem: (Test & any) | FlashcardTest,
+  type: 'TESTS' | 'FLASHCARDS',
+  simplified = false
+) => {
+  if (type == 'TESTS') {
+    const preguntasTest = (testItem.testPreguntas ?? []) as Array<any>;
+    const temas = preguntasTest.reduce((prev, next) => {
+      const tema = next.pregunta.tema;
+      if (!prev.has(tema.numero)) {
+        prev.set(tema.numero, {
+          numero: tema.numero,
+          nombre: tema.categoria,
+        });
+      }
+      return prev;
+    }, new Map());
+    const listaUnicaTemas = Array.from(temas.values());
+    return listaUnicaTemas.length > 3
+      ? 'Temas variados'
+      : listaUnicaTemas
+          .map(
+            (tema: any) =>
+              `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
+          )
+          .join(', ');
+  } else {
+    const preguntasTest = (testItem.flashcards ?? []) as Array<any>;
+    const temas = preguntasTest.reduce((prev, next) => {
+      const tema = next.flashcard.tema;
+      if (!prev.has(tema.numero)) {
+        prev.set(tema.numero, {
+          numero: tema.numero,
+          nombre: tema.categoria,
+        });
+      }
+      return prev;
+    }, new Map());
+    const listaUnicaTemas = Array.from(temas.values());
+    return listaUnicaTemas.length > 3
+      ? 'Temas variados'
+      : listaUnicaTemas
+          .map(
+            (tema: any) =>
+              `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
+          )
+          .join(', ');
+  }
+};
 
 export const obtenerTipoDeTest = (
   testItem: Test | FlashcardTest,

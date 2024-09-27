@@ -1,12 +1,11 @@
 import { Location } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Memoize } from 'lodash-decorators';
 import { tap } from 'rxjs';
 import { TestService } from '../../../services/test.service';
 import { SeguridadAlResponder } from '../../../shared/models/pregunta.model';
 import { Test } from '../../../shared/models/test.model';
-import { colorCorrectas, colorIncorretas, colorSinResponder, getStats } from '../../../utils/utils';
+import { getStats } from '../../../utils/utils';
 @Component({
   selector: 'app-test-stats',
   templateUrl: './test-stats.component.html',
@@ -33,51 +32,7 @@ export class TestStatsComponent {
   private lastLoadedTest!: Test;
   public seguridad = SeguridadAlResponder;
 
-  @Memoize()
-  getDataFromSeguridad(seguridad: SeguridadAlResponder, data: any) {
-    const dataParsed = data.seguridad[seguridad] as {
-      correctas: number;
-      incorrectas: number;
-      noRespondidas: number;
-    };
-    const totalRespuestas =
-      dataParsed.correctas + dataParsed.incorrectas + dataParsed.noRespondidas;
 
-    const correctasPorcentaje =
-      totalRespuestas > 0
-        ? ((dataParsed.correctas / totalRespuestas) * 100).toFixed(2)
-        : '0';
-    const incorrectasPorcentaje =
-      totalRespuestas > 0
-        ? ((dataParsed.incorrectas / totalRespuestas) * 100).toFixed(2)
-        : '0';
-    const noRespondidasPorcentaje =
-      totalRespuestas > 0
-        ? ((dataParsed.noRespondidas / totalRespuestas) * 100).toFixed(2)
-        : '0';
-    return {
-      labels: ['Correctas', 'Incorrectas', 'Sin Responder'],
-      datasets: [
-        {
-          data: [
-            dataParsed.correctas,
-            dataParsed.incorrectas,
-            dataParsed.noRespondidas,
-          ],
-          backgroundColor: [
-            colorCorrectas,
-            colorIncorretas,
-            colorSinResponder,
-          ],
-        },
-      ],
-      percentages: [
-        correctasPorcentaje,
-        incorrectasPorcentaje,
-        noRespondidasPorcentaje,
-      ],
-    };
-  }
 
   public calcular100y50() {
     if (!this.lastLoadedStats || !this.lastLoadedTest) return 0;
