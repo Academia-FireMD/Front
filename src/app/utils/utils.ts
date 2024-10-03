@@ -215,13 +215,14 @@ export const groupedTemas = (temas: Array<Tema>) => {
       acc[categoria as any].push({
         label: tema.numero + ' - ' + tema.descripcion ?? '',
         value: tema.id,
+        numero: tema.numero,
       });
       return acc;
-    }, {} as { [key: string]: { label: string; value: number }[] })
+    }, {} as { [key: string]: { label: string; value: number; numero: number }[] })
   ).map(([categoria, items]) => ({
     label: categoria,
     value: categoria.toLowerCase(), // Puedes ajustar el valor según tus necesidades
-    items,
+    items: items.sort((a, b) => a.numero - b.numero), // Ordenar los ítems por 'numero'
   }));
 };
 
