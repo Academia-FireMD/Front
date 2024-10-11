@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://orimapps.duckdns.org/academiafiremd',
+  apiUrl: 'https://firemd-server-1b5d93b14ed7.herokuapp.com/',
 };
