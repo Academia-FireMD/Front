@@ -179,3 +179,9 @@ app-full-stats {
     width: 20px;
   }
 }
+
+p-selectbutton {
+ > div {
+    display: flex;
+  }
+}

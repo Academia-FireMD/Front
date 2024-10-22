@@ -3,6 +3,8 @@ import { NgModule } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
+import { CheckboxModule } from 'primeng/checkbox';
+import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputTextModule } from 'primeng/inputtext';
@@ -22,6 +24,8 @@ import { LoginRoutingModule } from './login-routing.module';
     FloatLabelModule,
     SharedModule,
     DropdownModule,
+    CheckboxModule,
+    DialogModule,
   ],
   exports: [LoginComponent, RegistroComponent],
 })

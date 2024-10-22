@@ -17,10 +17,28 @@ export class UserService extends ApiBaseService {
     this.controllerPrefix = '/user';
   }
 
+  public getByEmail$(email: string) {
+    return this.post('/get-by-email', { email }) as Observable<Usuario>;
+  }
+
   public getNonVerifiedUsers$(filter: PaginationFilter) {
     return this.post('/pending', filter) as Observable<
       PaginatedResult<Usuario>
     >;
+  }
+
+  public getVerifiedUsers$(filter: PaginationFilter) {
+    return this.post('/validated', filter) as Observable<
+      PaginatedResult<Usuario>
+    >;
+  }
+
+  public getAllUsers$(filter: PaginationFilter) {
+    return this.post('/all', filter) as Observable<PaginatedResult<Usuario>>;
+  }
+
+  public getAllTutores$() {
+    return this.get('/tutores') as Observable<Usuario[]>;
   }
 
   public permitirUsuario(userId: number) {
@@ -29,5 +47,13 @@ export class UserService extends ApiBaseService {
 
   public denegarUsuario(userId: number) {
     return this.get('/deny/' + userId);
+  }
+
+  public eliminarUsuario(userId: number) {
+    return this.get('/delete/' + userId);
+  }
+
+  public updateUser(userId: number, userToUpdate: Partial<Usuario>) {
+    return this.post('/update/' + userId, userToUpdate);
   }
 }

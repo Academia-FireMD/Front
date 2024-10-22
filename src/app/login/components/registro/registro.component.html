@@ -1,3 +1,17 @@
+<p-dialog
+  [(visible)]="politicaDialogVisible"
+  header="Política de Privacidad"
+  closeOnEscape="true"
+  modal="true"
+  [style]="{ width: '50vw' }"
+  [breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
+  [closable]="true"
+>
+  <ng-template pTemplate="content">
+    <div [innerHTML]="politica$ | async"></div>
+  </ng-template>
+</p-dialog>
+
 <div class="wrapper">
   <div class="grid">
     <p-card class="col-12 md:col-6 lg:col-3">
@@ -7,33 +21,48 @@
             <img src="black_logo.png" alt="Logo" />
           </div>
 
-          <!-- Info Card -->
-          @if (showingInfoCard) {
-          <div class="info">
-            <div class="info-card">
-              <div class="icon">
-                <i class="pi pi-info-circle"></i>
-              </div>
-              <div class="content">
-                <div class="title">
-                  <h4 class="my-0">Solicitud de registro</h4>
-                </div>
-                <div class="body">
-                  Hemos recibido su solicitud de registro y la revisaremos
-                  pronto. El tiempo de revisión es de alrededor de 24 horas.
-                </div>
-              </div>
-            </div>
-            <br />
-            <a
-              [routerLink]="['/auth']"
-              routerLinkActive="router-link-active"
-              class="link-text"
-            >
-              <span>Volver al login</span> <i class="pi pi-angle-right"></i>
-            </a>
+          <!-- Campo de nombre -->
+          <p-floatLabel>
+            <input
+              type="text"
+              pInputText
+              formControlName="nombre"
+              class="w-full"
+            />
+            <label for="nombre">Nombre</label>
+          </p-floatLabel>
+          <!-- Error: nombre requerido -->
+          <div
+            *ngIf="
+              formGroup.get('nombre')?.hasError('required') &&
+              formGroup.get('nombre')?.touched
+            "
+            class="error-message"
+          >
+            <small class="p-error">El nombre es requerido.</small>
           </div>
-          } @else {
+
+          <!-- Campo de apellidos -->
+          <p-floatLabel>
+            <input
+              type="text"
+              pInputText
+              formControlName="apellidos"
+              class="w-full"
+            />
+            <label for="apellidos">Apellidos</label>
+          </p-floatLabel>
+          <!-- Error: apellidos requerido -->
+          <div
+            *ngIf="
+              formGroup.get('apellidos')?.hasError('required') &&
+              formGroup.get('apellidos')?.touched
+            "
+            class="error-message"
+          >
+            <small class="p-error">Los apellidos son requeridos.</small>
+          </div>
+
           <!-- Campo de comunidad -->
           <p-dropdown
             class="w-full"
@@ -128,10 +157,10 @@
             "
             class="error-message"
           >
-            <small class="p-error">
-              La contraseña debe tener al menos 8 caracteres, una mayúscula, una
-              minúscula, un número y un carácter especial.
-            </small>
+            <small class="p-error"
+              >La contraseña debe tener al menos 8 caracteres, una mayúscula,
+              una minúscula, un número y un carácter especial.</small
+            >
           </div>
 
           <!-- Campo de repetir contraseña -->
@@ -166,6 +195,71 @@
             <small class="p-error">Las contraseñas no coinciden.</small>
           </div>
 
+          <!-- Tutor -->
+          <p-dropdown
+            class="w-full"
+            [style]="{ width: '100%', height: '100%' }"
+            [options]="(tutores$ | async) ?? []"
+            [formControl]="tutor"
+            optionLabel="email"
+            optionValue="id"
+            placeholder="Tutor (opcional)"
+          >
+            <ng-template let-item pTemplate="selectedItem">
+              <div class="flex align-items-center gap-2 h-full">
+                <div>
+                  {{
+                    item.nombre && item.apellidos
+                      ? item.nombre + " " + item.apellidos
+                      : item.email
+                  }}
+                </div>
+              </div>
+            </ng-template>
+            <ng-template let-item let-index pTemplate="item">
+              <div class="flex align-items-center gap-2 h-full">
+                <div>
+                  {{
+                    item.nombre && item.apellidos
+                      ? item.nombre + " " + item.apellidos
+                      : item.email
+                  }}
+                </div>
+              </div>
+            </ng-template>
+          </p-dropdown>
+
+          <!-- Checkbox de política de privacidad -->
+          <div class="field-checkbox">
+            <p-checkbox
+              formControlName="politicaDePrivacidadAceptada"
+              binary="true"
+            ></p-checkbox>
+            <label>
+              He leído y acepto la
+              <strong>
+                <a
+                  href="javascript:void(0)"
+                  class="text-primary"
+                  (click)="openPoliticaDialog()"
+                >
+                  política de privacidad.</a
+                ></strong
+              >
+            </label>
+            <!-- Error: política de privacidad no aceptada -->
+            <div
+              *ngIf="
+                !formGroup.get('politicaDePrivacidadAceptada')?.value &&
+                formGroup.get('politicaDePrivacidadAceptada')?.touched
+              "
+              class="error-message"
+            >
+              <small class="p-error"
+                >Debe aceptar la política de privacidad.</small
+              >
+            </div>
+          </div>
           <!-- Botón de registro -->
           <button
             pButton
@@ -176,7 +270,6 @@
           >
             <span class="w-full">Registrarse</span>
           </button>
-          }
         </div>
       </div>
     </p-card>

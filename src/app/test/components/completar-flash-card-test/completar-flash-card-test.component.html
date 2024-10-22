@@ -29,12 +29,23 @@
               <div
                 class="flex justify-content-between w-full font-bold align-items-center"
               >
-                <span>Enunciado</span>
-                <p-button
-                  label="Reportar fallo"
-                  [link]="true"
-                  (click)="displayFalloDialog = true"
-                />
+                <span>{{
+                  pregunta.flashcard.tema?.numero +
+                    " - " +
+                    pregunta.flashcard.tema?.descripcion
+                }}</span>
+                <div class="right">
+                  <div class="keys">
+                    <img src="left.png" alt="" srcset="" />
+                    <img src="abajo.png" alt="" srcset="" />
+                    <img src="derecha.png" alt="" srcset="" />
+                  </div>
+                  <p-button
+                    label="Reportar fallo"
+                    [link]="true"
+                    (click)="displayFalloDialog = true"
+                  />
+                </div>
               </div>
             </ng-template>
             <p>
@@ -81,11 +92,11 @@
                 <button
                   pButton
                   [disabled]="comunicating"
-                  [severity]="'success'"
+                  [severity]="'warning'"
+                  (click)="selectedEstado(estadoFlashcard.REVISAR)"
                   class="p-button p-button-raised w-full"
-                  (click)="selectedEstado(estadoFlashcard.BIEN)"
                 >
-                  <span class="w-full">BIEN</span>
+                  <span class="w-full">REPASAR</span>
                 </button>
                 <button
                   pButton
@@ -99,11 +110,11 @@
                 <button
                   pButton
                   [disabled]="comunicating"
-                  [severity]="'warning'"
-                  (click)="selectedEstado(estadoFlashcard.REVISAR)"
+                  [severity]="'success'"
                   class="p-button p-button-raised w-full"
+                  (click)="selectedEstado(estadoFlashcard.BIEN)"
                 >
-                  <span class="w-full">REPASAR</span>
+                  <span class="w-full">BIEN</span>
                 </button>
               </div>
             </div>

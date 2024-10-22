@@ -127,8 +127,12 @@
         <div class="col-12">
           <p-panel>
             <ng-template pTemplate="header">
-              <div class="flex justify-content-between w-full font-bold align-items-center">
-                <span>Enunciado</span>
+              <div
+                class="flex justify-content-between w-full font-bold align-items-center"
+              >
+                <span>{{
+                  pregunta.tema.numero + " - " + pregunta.tema.descripcion
+                }}</span>
                 <span *ngIf="!!testCargado.duration">{{
                   testCargado.endsAt | countdown
                 }}</span>

@@ -21,7 +21,6 @@ $colors: (
   "secondary": $primaryDarkColor,
 );
 
-
 // Mandatory Designer Variables
 @import "./variables/general";
 @import "./variables/form";
@@ -53,6 +52,7 @@ $colors: (
     #2c2c2c,
     20%
   ); // Un tono más claro del color oscuro
+  --secondary-color: #{$primaryDarkColor};
   --primary-color: #bb292a; // Color primario personalizado
   --primary-color-text: #ffffff; // Texto sobre fondo primario
   --surface-0: #ffffff;

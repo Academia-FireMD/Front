@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
@@ -16,6 +16,27 @@ import {
   styleUrl: './completar-flash-card-test.component.scss',
 })
 export class CompletarFlashCardTestComponent {
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent) {
+    if (this.comunicating) return;
+    switch (event.key) {
+      case 'ArrowLeft':
+        this.selectedEstado(EstadoFlashcard.REVISAR);
+        break;
+      case 'ArrowRight':
+        this.selectedEstado(EstadoFlashcard.BIEN);
+        break;
+      case 'ArrowDown':
+        this.selectedEstado(EstadoFlashcard.MAL);
+        break;
+      case ' ':
+      case 'Space':
+        this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion =
+          true;
+        break;
+    }
+  }
+
   activedRoute = inject(ActivatedRoute);
   flashcardService = inject(FlashcardDataService);
   fb = inject(FormBuilder);
@@ -77,7 +98,8 @@ export class CompletarFlashCardTestComponent {
   public async submitReporteFallo(reportDesc: string) {
     const feedback = await firstValueFrom(
       this.reporteFallo.reportarFalloFlashcard({
-        flashcardDataId: this.lastLoadedTest.flashcards[this.indicePregunta].flashcardId,
+        flashcardDataId:
+          this.lastLoadedTest.flashcards[this.indicePregunta].flashcardId,
         descripcion: reportDesc ?? '',
       })
     );

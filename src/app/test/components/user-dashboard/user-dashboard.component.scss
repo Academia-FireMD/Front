@@ -1,3 +1,40 @@
 .hora-solicitud {
   text-wrap: nowrap;
 }
+
+.wrapper-top {
+  overflow: auto;
+}
+
+:host ::ng-deep {
+  p-chip {
+    > div {
+      height: 18px;
+    }
+  }
+  .verified {
+    > div {
+      background-color: palegreen;
+    }
+  }
+  .nonverified {
+    > div {
+      background-color: palegoldenrod;
+    }
+  }
+  .admin {
+    > div {
+      background-color: var(--primary-color);
+      color: white;
+    }
+  }
+  .tutor-tag {
+    > div {
+      background-color: var(--secondary-color);
+      color: white;
+    }
+  }
+  .p-chip-text {
+    font-size: 12px;
+  }
+}

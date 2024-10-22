@@ -1,0 +1,86 @@
+<p-dialog
+  [(visible)]="editDialogVisible"
+  header="Editar Usuario"
+  (onHide)="editDialogVisibleChange.emit(editDialogVisible)"
+  modal="true"
+  [closable]="true"
+  [style]="{ width: '50vw' }"
+  [breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
+>
+  <div class="p-fluid py-3" *ngIf="selectedUser">
+    <div class="field">
+      <label for="nombre">Nombre</label>
+      <input
+        type="text"
+        pInputText
+        id="nombre"
+        [(ngModel)]="selectedUser.nombre"
+      />
+    </div>
+
+    <div class="field">
+      <label for="apellidos">Apellidos</label>
+      <input
+        type="text"
+        pInputText
+        id="apellidos"
+        [(ngModel)]="selectedUser.apellidos"
+      />
+    </div>
+
+    <div class="field">
+      <label for="tutores">Tutor asignado</label>
+      <p-dropdown
+        class="w-full"
+        id="tutores"
+        [style]="{ width: '100%', height: '100%' }"
+        [options]="(tutores$ | async) ?? []"
+        [(ngModel)]="selectedUser.tutorId"
+        optionLabel="email"
+        optionValue="id"
+        placeholder="Tutor (opcional)"
+      >
+        <ng-template let-item pTemplate="selectedItem">
+          <div class="flex align-items-center gap-2 h-full">
+            <div>
+              {{
+                item.nombre && item.apellidos
+                  ? item.nombre + " " + item.apellidos
+                  : item.email
+              }}
+            </div>
+          </div>
+        </ng-template>
+        <ng-template let-item let-index pTemplate="item">
+          <div class="flex align-items-center gap-2 h-full">
+            <div>
+              {{
+                item.nombre && item.apellidos
+                  ? item.nombre + " " + item.apellidos
+                  : item.email
+              }}
+            </div>
+          </div>
+        </ng-template>
+      </p-dropdown>
+    </div>
+
+    <div class="field tutor" *ngIf="!!allowSetIsTutor">
+      <label for="esTutor">Este usuario es tutor?</label>
+      <p-toggleButton
+        id="esTutor"
+        [(ngModel)]="selectedUser.esTutor"
+        onLabel="Sí"
+        offLabel="No"
+      />
+    </div>
+
+    <div class="field flex justify-content-end">
+      <p-button
+        label="Guardar"
+        icon="pi pi-check"
+        (click)="confirmarCambios.emit(selectedUser)"
+      ></p-button>
+    </div>
+  </div>
+</p-dialog>

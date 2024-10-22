@@ -1,6 +1,12 @@
+<app-user-edit-dialog
+  [selectedUser]="selectedUser"
+  [(editDialogVisible)]="editDialogVisible"
+  (confirmarCambios)="confirmarCambios($event)"
+></app-user-edit-dialog>
+
 <p-confirmDialog />
 <div class="grid">
-  <div class="col-12">
+  <div class="col-12 flex gap-2 wrapper-top">
     <p-iconField iconPosition="left">
       <p-inputIcon styleClass="pi pi-search" />
       <input
@@ -11,6 +17,12 @@
         (input)="valueChanged($event)"
       />
     </p-iconField>
+    <p-selectButton
+      [options]="filterOptions"
+      [formControl]="formControlFilterOptions"
+      optionLabel="label"
+      optionValue="value"
+    />
   </div>
   <div class="col-12 list-generic">
     <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
@@ -20,16 +32,56 @@
             class="col-12 item-container"
             *ngFor="let item of products; let first = first"
           >
-            <div class="flex flex-row align-items-center">
-              <div class="flex flex-column p-2" style="width: 250px">
-                <span class="font-medium text-secondary text-sm hora-solicitud">
-                  Solicitado el día {{ item.createdAt | date : "short" }}
+            <div
+              class="flex flex-row align-items-center grid p-1 px-2 pointer"
+              (click)="editarUsuario(item)"
+            >
+              <div class="flex flex-column p-2 col-6">
+                <span
+                  class="font-medium text-secondary text-sm hora-solicitud flex gap-2"
+                >
+                  {{
+                    viewportService.screenWidth != "xs"
+                      ? "Solicitado el día"
+                      : ""
+                  }}
+                  {{ item.createdAt | date : "short" }}
+                  <p-chip
+                    *ngIf="filterType() == 'todos'"
+                    [ngClass]="{
+                      verified: item.validated,
+                      nonverified: !item.validated
+                    }"
+                    label="{{
+                      item.validated ? 'Verificado' : 'Sin verificar'
+                    }}"
+                  />
+                  <p-chip
+                    [ngClass]="{
+                      admin: item.rol == 'ADMIN',
+                    }"
+                    label="{{ item.rol == 'ADMIN' ? 'Admin' : 'Alumno' }}"
+                  />
+                  <p-chip
+                    *ngIf="item.esTutor"
+                    class="tutor-tag"
+                    label="Tutor"
+                  />
                 </span>
-                <div class="text-lg font-medium text-900">
+                <div class="text-md font-medium text-900 descripcion">
+                  @if (item.nombre && item.apellidos && item.nombre.length>0 &&
+                  item.apellidos.length>0 && viewportService.screenWidth!= 'xs')
+                  {
+                  {{ item.nombre + " " + item.apellidos }}
+                  <span class="font-small">{{
+                    " ( " + item.email + " ) "
+                  }}</span>
+                  } @else {
                   {{ item.email }}
+                  }
                 </div>
               </div>
-              <div class="right-side w-full">
+              <div class="right-side col-6">
                 <div
                   class="flex flex-row align-items-center justify-content-end gap-2"
                 >
@@ -41,7 +93,25 @@
                         : 'Denegar'
                     }}"
                     icon="pi pi-times"
-                    (click)="denegar(item.id, $event)"
+                    (click)="
+                      $event.preventDefault();
+                      $event.stopPropagation();
+                      denegar(item.id, $event)
+                    "
+                  />
+                  <p-button
+                    [link]="true"
+                    label="{{
+                      viewportService.screenWidth == 'xs'
+                        ? undefined
+                        : 'Eliminar'
+                    }}"
+                    icon="pi pi-trash"
+                    (click)="
+                      $event.preventDefault();
+                      $event.stopPropagation();
+                      deleteUser(item.id, $event)
+                    "
                   />
                   <p-button
                     icon="pi pi-check"
@@ -51,7 +121,14 @@
                         : 'Permitir'
                     }}"
                     [raised]="true"
-                    (click)="permitir(item.id)"
+                    [disabled]="
+                      !(filterType() == 'pendientes' || !item.validated)
+                    "
+                    (click)="
+                      $event.preventDefault();
+                      $event.stopPropagation();
+                      permitir(item.id)
+                    "
                   />
                 </div>
               </div>

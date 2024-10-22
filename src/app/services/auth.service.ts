@@ -13,8 +13,22 @@ export class AuthService extends ApiBaseService {
     this.controllerPrefix = '/auth';
   }
 
-  public register$(email: string, password: string, comunidad: Comunidad) {
-    return this.post('/register', { email, password, comunidad });
+  public register$(
+    email: string,
+    password: string,
+    comunidad: Comunidad,
+    nombre: string,
+    apellidos: string,
+    tutorId?: number
+  ) {
+    return this.post('/register', {
+      email,
+      password,
+      comunidad,
+      nombre,
+      apellidos,
+      tutorId,
+    });
   }
   public login$(email: string, password: string) {
     return this.post('/login', { email, password }).pipe(

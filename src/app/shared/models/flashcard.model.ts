@@ -1,4 +1,4 @@
-import { Comunidad, Dificultad } from './pregunta.model';
+import { Comunidad, Dificultad, Tema } from './pregunta.model';
 import { TestStatus } from './test.model';
 
 export interface FlashcardTest {
@@ -39,6 +39,7 @@ export interface FlashcardData {
   solucion: string;
   createdAt: Date;
   updatedAt: Date;
+  tema?:Tema;
 }
 
 export enum EstadoFlashcard {

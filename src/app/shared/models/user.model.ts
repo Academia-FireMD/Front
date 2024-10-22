@@ -1,4 +1,4 @@
-import { Test } from "./test.model";
+import { Test } from './test.model';
 
 export interface Usuario {
   id: number;
@@ -9,6 +9,10 @@ export interface Usuario {
   updatedAt: Date;
   validated: boolean;
   tests: Test[];
+  nombre: string;
+  apellidos: string;
+  esTutor: boolean;
+  tutorId?: number;
 }
 
 export enum Rol {

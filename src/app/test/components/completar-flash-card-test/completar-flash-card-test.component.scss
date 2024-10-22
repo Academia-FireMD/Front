@@ -1,3 +1,20 @@
 p {
   text-align: center;
 }
+
+.right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.keys {
+  display: flex;
+  align-items: center;
+  img {
+    max-width: 32px;
+    @media (max-width: 768px) {
+      max-width: 26px;
+    }
+  }
+}

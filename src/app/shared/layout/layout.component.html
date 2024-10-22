@@ -1,3 +1,9 @@
+<app-user-edit-dialog
+  [selectedUser]="selectedUser"
+  [(editDialogVisible)]="editDialogVisible"
+  [allowSetIsTutor]="decodedUser.rol == 'ADMIN'"
+  (confirmarCambios)="confirmarCambios($event)"
+></app-user-edit-dialog>
 <div class="grid h-full" style="overflow: hidden">
   <div class="bar w-full mb-2" *ngIf="viewportService.screenWidth === 'xs'">
     <button
@@ -19,6 +25,15 @@
       <ng-template pTemplate="start">
         <div class="image-container py-3">
           <img src="white_logo.png" alt="Logo" style="max-width: 160px" />
+        </div>
+        <div
+          (click)="editProfile()"
+          class="perfil p-2 flex align-items-center justify-content-center w-full gap-2 pointer"
+        >
+          <i class="pi pi-user"></i>
+          <span class="descripcion">
+            {{ decodedUser.email }}
+          </span>
         </div>
       </ng-template>
       <ng-template pTemplate="submenuheader" let-item>
