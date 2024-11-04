@@ -37,20 +37,28 @@
         </div>
       </ng-template>
       <ng-template pTemplate="submenuheader" let-item>
-        <span class="font-bold">{{ item.label }}</span>
+        <div class="menu-header" (click)="toggleCollapse(item)">
+          <span class="font-bold">{{ item.label }}</span>
+          <i
+            class="pi ml-auto"
+            [ngClass]="item.collapsed ? 'pi-angle-down' : 'pi-angle-up'"
+          ></i>
+        </div>
       </ng-template>
       <ng-template pTemplate="item" let-item>
-        <a
-          pRipple
-          class="flex align-items-center p-menuitem-link"
-          [routerLink]="item.routerLink"
-          (click)="isMenuVisible = false"
-          routerLinkActive="router-link-active"
-          [routerLinkActiveOptions]="{ exact: true }"
-        >
-          <span [class]="item.icon"></span>
-          <span class="ml-2">{{ item.label }}</span>
-        </a>
+        <div *ngIf="!isParentCollapsed(item)">
+          <a
+            pRipple
+            class="flex align-items-center p-menuitem-link"
+            [routerLink]="item.routerLink"
+            (click)="isMenuVisible = false"
+            routerLinkActive="router-link-active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            <span [class]="item.icon"></span>
+            <span class="ml-2">{{ item.label }}</span>
+          </a>
+        </div>
       </ng-template>
     </p-menu>
   </div>

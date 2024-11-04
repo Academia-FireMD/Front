@@ -1,0 +1,182 @@
+<p-dialog
+  header="Editar Sub-Bloque"
+  [(visible)]="isDialogVisible"
+  [modal]="true"
+  [style]="{ width: '50vw' }"
+>
+  <form [formGroup]="selectedSubBloqueForm">
+    <div class="grid py-5">
+      <div class="col-6">
+        <p-floatLabel>
+          <input
+            id="nombre"
+            style="width: 100%"
+            type="text"
+            pInputText
+            formControlName="nombre"
+          />
+          <label for="nombre">Nombre</label>
+        </p-floatLabel>
+      </div>
+
+      <div class="col-6">
+        <p-floatLabel>
+          <p-dropdown
+            id="duracion"
+            [style]="{ width: '100%', height: '100%' }"
+            formControlName="duracion"
+            [options]="duracionOptions"
+            appendTo="body"
+            placeholder="Seleccione la duración"
+          ></p-dropdown>
+          <label for="duracion">Duración</label>
+        </p-floatLabel>
+      </div>
+      <div class="col-12 py-3">
+        <p-floatLabel>
+          <textarea
+            id="comentarios"
+            pInputTextarea
+            style="width: 100%"
+            formControlName="comentarios"
+          ></textarea>
+          <label for="comentarios">Comentarios</label>
+        </p-floatLabel>
+      </div>
+    </div>
+  </form>
+  <p-footer>
+    <button
+      pButton
+      label="Cancelar"
+      (click)="cancelarEdicion()"
+      class="p-button-text"
+    ></button>
+    <button
+      pButton
+      label="Guardar"
+      (click)="guardarEdicion()"
+      [disabled]="selectedSubBloqueForm.invalid"
+    ></button>
+  </p-footer>
+</p-dialog>
+
+<div class="grid" [formGroup]="formGroup">
+  <div class="col-12 content">
+    <p-card>
+      <div class="grid">
+        <div
+          class="col-12 header flex justify-content-start align-items-center pb-3 gap-3"
+        >
+          <div class="identificador">
+            @if (getId() !== 'new') { Identificador:
+            <strong>{{ formGroup.value.identificador }}</strong>
+            }@else {
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                class="w-full"
+                formControlName="identificador"
+              />
+              <label for="identificador">Identificador</label>
+            </p-floatLabel>
+            }
+          </div>
+          <div class="nombre col-6">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                class="w-full"
+                formControlName="descripcion"
+              />
+              <label for="descripcion">Descripción</label>
+            </p-floatLabel>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <p-orderList
+            [value]="subBloques.value"
+            [listStyle]="{ 'max-height': '30rem' }"
+            header="Sub-bloques"
+            [dragdrop]="true"
+          >
+            <ng-template let-subBloque let-index="index" pTemplate="item">
+              <div class="flex flex-wrap p-2 align-items-center gap-3">
+                <div class="flex-1 flex flex-column gap-2">
+                  <span class="font-bold">{{
+                    subBloque.nombre && subBloque.nombre.length > 0
+                      ? subBloque.nombre
+                      : "Sin nombre"
+                  }}</span>
+                  <div class="flex align-items-center gap-2">
+                    <i class="pi pi-clock text-sm"></i>
+                    <span> {{ subBloque.duracion }} minutos </span>
+                  </div>
+                </div>
+                <span class="font-bold">
+                  {{ subBloque.comentarios || "Sin comentarios" }}
+                </span>
+                <div class="actions">
+                  <button
+                    pButton
+                    pRipple
+                    icon="pi pi-pencil"
+                    class="p-button-text p-button-icon-only"
+                    (click)="editarSubBloque(index)"
+                  ></button>
+                  <button
+                    pButton
+                    pRipple
+                    icon="pi pi-copy"
+                    class="p-button-text p-button-icon-only"
+                    (click)="clonarSubbloque(subBloque, index)"
+                  ></button>
+                  <button
+                    pButton
+                    pRipple
+                    icon="pi pi-trash"
+                    class="p-button-text p-button-icon-only"
+                    (click)="eliminarSubBloque(index)"
+                  ></button>
+                </div>
+              </div>
+            </ng-template>
+          </p-orderList>
+          <div class="flex justify-content-center align-items-center mt-3">
+            <button
+              pButton
+              pRipple
+              icon="pi pi-plus"
+              label="Añadir sub-bloque"
+              (click)="agregarSubBloque()"
+              class="p-button-outlined"
+            ></button>
+          </div>
+        </div>
+      </div>
+    </p-card>
+  </div>
+  <div class="col-12 footer flex justify-content-end w-full">
+    <p-button
+      label="Volver atrás"
+      [link]="true"
+      (click)="handleBackButton()"
+    ></p-button>
+    @if(getId() == 'new'){
+    <p-button
+      label="Crear bloque"
+      [disabled]="formGroup.invalid"
+      (click)="crear()"
+    ></p-button>
+    }@else{
+    <p-button
+      label="Actualizar bloque"
+      [disabled]="formGroup.invalid"
+      (click)="actualizar()"
+    ></p-button>
+    }
+  </div>
+</div>

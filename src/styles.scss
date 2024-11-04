@@ -21,6 +21,12 @@ textarea,
   border-radius: 10px;
 }
 
+p-calendar {
+  > span {
+    width: 100%;
+  }
+}
+
 button:disabled {
   opacity: 0.8;
 }
@@ -181,7 +187,11 @@ app-full-stats {
 }
 
 p-selectbutton {
- > div {
+  > div {
     display: flex;
   }
+}
+
+p-orderlist .p-orderlist-list .p-orderlist-item.p-highlight div button {
+  color: #ffffff;
 }

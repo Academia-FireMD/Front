@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { MenuItem } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
@@ -58,6 +59,7 @@ export class LayoutComponent {
       this.items = [
         {
           label: 'Gestión',
+          collapsed: false,
           items: [
             {
               label: 'Usuarios',
@@ -72,7 +74,28 @@ export class LayoutComponent {
           ],
         },
         {
+          label: 'Planificación',
+          items: [
+            {
+              label: 'Bloques',
+              icon: 'pi pi-th-large',
+              routerLink: '/app/planificacion/bloques',
+            },
+            {
+              label: 'Plantillas semanales',
+              icon: 'pi pi-sync',
+              routerLink: '/app/planificacion/plantillas-semanales',
+            },
+            {
+              label: 'Planificación mensual',
+              icon: 'pi pi-calendar-plus',
+              routerLink: '/app/planificacion/planificacion-mensual',
+            },
+          ],
+        },
+        {
           label: 'Preguntas',
+          collapsed: true,
           items: [
             {
               label: 'Lista',
@@ -93,6 +116,7 @@ export class LayoutComponent {
         },
         {
           label: 'Flash Cards',
+          collapsed: true,
           items: [
             {
               label: 'Lista',
@@ -174,7 +198,18 @@ export class LayoutComponent {
     }
   }
 
+  public isParentCollapsed(itemChild: MenuItem) {
+    const index = this.items.findIndex((parentItem) =>
+      (parentItem?.items as Array<MenuItem>).find((e) => e == itemChild)
+    );
+    return !!this.items[index].collapsed;
+  }
+
   toggleMenu(): void {
     this.isMenuVisible = !this.isMenuVisible; // Alterna la visibilidad del menú
+  }
+
+  toggleCollapse(item: any): void {
+    item.collapsed = !item.collapsed; // Alterna la visibilidad del submenú
   }
 }

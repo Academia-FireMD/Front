@@ -17,6 +17,7 @@ import { ToastrModule } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { MenuModule } from 'primeng/menu';
+import { PanelMenuModule } from 'primeng/panelmenu';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { AuthInterceptor } from './services/auth.interceptor';
@@ -33,6 +34,7 @@ registerLocaleData(localeEs);
     CardModule,
     MenuModule,
     SharedModule,
+    PanelMenuModule,
     MarkdownModule.forRoot(),
     BrowserAnimationsModule, // required animations module
     ToastrModule.forRoot(), // ToastrModule added

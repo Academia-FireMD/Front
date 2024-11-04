@@ -7,7 +7,7 @@
         <input
           type="text"
           pInputText
-          placeholder="Buscar por categoría"
+          placeholder="Buscar por identificador"
           style="min-width: 30vw"
           (input)="valueChanged($event)"
         />
@@ -21,6 +21,21 @@
           [link]="true"
           (click)="navigateToDetailview('new')"
         ></p-button>
+        <p-button
+          label="{{
+            viewportService.screenWidth == 'xs' ? undefined : 'Importar'
+          }}"
+          icon="pi pi-upload"
+          [loading]="uploadingFile"
+          (click)="fileInput.click()"
+        ></p-button>
+        <input
+          type="file"
+          accept=".xlsx, .xls"
+          #fileInput
+          style="display: none"
+          (change)="onFileSelected($event)"
+        />
       </div>
     </div>
   </div>
@@ -35,19 +50,21 @@
           >
             <div class="flex flex-row align-items-between">
               <div class="flex flex-column py-2 col-9 left-side">
-                <div class="font-medium text-secondary text-sm hora-solicitud flex gap-2">
+                <div
+                  class="font-medium text-secondary text-sm hora-solicitud flex gap-2"
+                >
                   <div class="flex gap-1">
-                    <span>Tema: </span>
-                    <strong>{{ item.numero }}</strong>
+                    <span class="hidden md:block">Identificador: </span>
+                    <strong class="identifier">{{ item.identificador }}</strong>
                   </div>
+                  -
                   <div class="flex gap-1">
-                    <span>Categoría: </span>
-                    <strong>{{ item.categoria }}</strong>
+                    <strong>{{ item.subBloques.length }} sub-bloques</strong>
                   </div>
                 </div>
-                <span class="font-small text-secondary text-sm descripcion">
-                  {{ item.descripcion }}
-                </span>
+                <span class="font-small text-secondary text-sm descripcion">{{
+                  item.descripcion
+                }}</span>
               </div>
               <div
                 class="right-side col-3 flex align-items-center justify-content-end"
@@ -66,7 +83,7 @@
                     (click)="
                       $event.stopPropagation();
                       $event.preventDefault();
-                      eliminarTema(item.id, $event)
+                      eliminarBloque(item.id, $event)
                     "
                   ></p-button>
                 </div>

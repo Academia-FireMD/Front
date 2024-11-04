@@ -1,0 +1,28 @@
+.subbloques-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subbloque-item {
+  padding: 15px;
+  background-color: #f7f7f7;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: move;
+  transition: background-color 0.2s ease;
+}
+
+.subbloque-item.dragging {
+  background-color: #e0e0e0;
+}
+
+.drop-zone {
+  height: 100%;
+}
+
+.actions {
+  position: relative;
+  z-index: 1000;
+}
+
