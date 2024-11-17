@@ -174,12 +174,17 @@ export class PlantillaSemanalEditComponent {
           primary: subbloque.color,
           secondary: subbloque.color,
         },
+        end: new Date(
+          new Date(this.selectedEvent.start).getTime() +
+            subbloque.duracion * 60000
+        ),
         meta: {
           ...this.selectedEvent.meta,
           subBloque: {
             ...this.selectedEvent.meta?.subBloque,
             comentarios: subbloque.comentarios,
             color: subbloque.color,
+            duracion: subbloque.duracion,
           },
         },
       };
