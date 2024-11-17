@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { Component, inject, ViewChild } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { cloneDeep, uniqueId } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
@@ -27,6 +27,7 @@ export class BloquesEditComponent {
   toast = inject(ToastrService);
   router = inject(Router);
   @ViewChild(OrderList) orderList!: OrderList;
+  private editingIndex = 0;
 
   public checked = {};
   public getAllTemas$ = this.temaService.getAllTemas$().pipe(
@@ -38,15 +39,6 @@ export class BloquesEditComponent {
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
   }
-
-  duracionOptions = [
-    { label: '1 hora', value: 60 },
-    { label: '2 horas', value: 120 },
-    { label: '3 horas', value: 180 },
-    { label: '4 horas', value: 240 },
-    { label: '5 horas', value: 300 },
-    { label: '6 horas', value: 360 },
-  ];
 
   formGroup = this.fb.group({
     identificador: ['', Validators.required],
@@ -62,7 +54,7 @@ export class BloquesEditComponent {
 
   public lastLoaded!: PlanificacionBloque;
   public isDialogVisible: boolean = false;
-  public selectedSubBloqueForm: FormGroup = this.getEmptySubBloqueForm();
+  public editSubBloqueData!: SubBloque;
 
   ngOnInit(): void {
     this.load();
@@ -70,6 +62,9 @@ export class BloquesEditComponent {
 
   public agregarSubBloque() {
     this.subBloques.push(this.getEmptySubBloqueForm());
+    setTimeout(() => {
+      this.editarSubBloque(this.subBloques.value.length - 1);
+    }, 0);
   }
 
   private getEmptySubBloqueForm() {
@@ -78,6 +73,7 @@ export class BloquesEditComponent {
       duracion: [60, [Validators.required, Validators.min(1)]],
       nombre: ['', [Validators.required]],
       comentarios: [''],
+      color: [''],
       siendoEditado: [false],
       controlId: [uniqueId()],
     });
@@ -93,26 +89,30 @@ export class BloquesEditComponent {
 
   public editarSubBloque(index: number) {
     const subBloque = this.subBloques.at(index);
-    this.selectedSubBloqueForm = subBloque;
+    this.editingIndex = index;
+    this.openDialog(subBloque.value);
+  }
+
+  private openDialog(data: SubBloque) {
+    this.editSubBloqueData = data;
     this.isDialogVisible = true;
   }
 
+  public savedSubbloqueDialog(data: SubBloque) {
+    this.subBloques.at(this.editingIndex).patchValue(data);
+    this.editingIndex = -1;
+  }
+
   public clonarSubbloque(subBloque: SubBloque, index: number) {
+    let subBloqueAClonar = cloneDeep(subBloque);
     const form = this.getEmptySubBloqueForm();
-    form.patchValue(subBloque);
+    subBloqueAClonar.id = null;
+    form.patchValue(subBloqueAClonar);
     (this.subBloques as FormArray).insert(index, form);
   }
 
   public eliminarSubBloque(index: number) {
     this.subBloques.removeAt(index);
-  }
-
-  public cancelarEdicion() {
-    this.isDialogVisible = false;
-  }
-
-  public guardarEdicion() {
-    this.isDialogVisible = false;
   }
 
   private load() {

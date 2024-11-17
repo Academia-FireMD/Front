@@ -1,0 +1,74 @@
+<p-dialog
+  header="Editar Sub-Bloque"
+  [(visible)]="isDialogVisible"
+  [modal]="true"
+  (onHide)="isDialogVisibleChange.emit(false)"
+  [style]="{ width: '50vw' }"
+>
+  <form [formGroup]="formGroup">
+    <div class="grid py-5">
+      <div class="col-4">
+        <p-floatLabel>
+          <input
+            id="nombre"
+            style="width: 100%"
+            type="text"
+            pInputText
+            formControlName="nombre"
+          />
+          <label for="nombre">Nombre</label>
+        </p-floatLabel>
+      </div>
+
+      <div class="col-4">
+        <p-floatLabel>
+          <p-dropdown
+            id="duracion"
+            [style]="{ width: '100%', height: '100%' }"
+            formControlName="duracion"
+            [options]="duracionOptions"
+            appendTo="body"
+            placeholder="Seleccione la duración"
+          ></p-dropdown>
+          <label for="duracion">Duración</label>
+        </p-floatLabel>
+      </div>
+      <div class="col-4 flex align-items-center gap-2">
+        <p-colorPicker [formControl]="color" appendTo="body" />
+        <input
+          style="width: 100%"
+          type="text"
+          pInputText
+          placeholder="Color del subbloque"
+          [value]="color.value"
+          (input)="inputColorChanged($event)"
+        />
+      </div>
+      <div class="col-12 py-3">
+        <p-floatLabel>
+          <textarea
+            id="comentarios"
+            pInputTextarea
+            style="width: 100%"
+            formControlName="comentarios"
+          ></textarea>
+          <label for="comentarios">Comentarios</label>
+        </p-floatLabel>
+      </div>
+    </div>
+  </form>
+  <p-footer>
+    <button
+      pButton
+      label="Cancelar"
+      (click)="cancelarEdicion()"
+      class="p-button-text"
+    ></button>
+    <button
+      pButton
+      label="Guardar"
+      (click)="guardarEdicion()"
+      [disabled]="formGroup.invalid"
+    ></button>
+  </p-footer>
+</p-dialog>

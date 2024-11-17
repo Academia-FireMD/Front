@@ -9,6 +9,8 @@ import {
 } from '@angular/common/http';
 import localeEs from '@angular/common/locales/es';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { CalendarModule, DateAdapter } from 'angular-calendar';
+import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
 import * as echarts from 'echarts';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { MarkdownModule } from 'ngx-markdown';
@@ -40,6 +42,10 @@ registerLocaleData(localeEs);
     ToastrModule.forRoot(), // ToastrModule added
     NgxEchartsModule.forRoot({ echarts }),
     NgxSpinnerModule.forRoot(),
+    CalendarModule.forRoot({
+      provide: DateAdapter,
+      useFactory: adapterFactory,
+    }),
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()),

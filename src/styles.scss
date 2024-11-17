@@ -3,6 +3,8 @@
 @import "primeicons/primeicons.css";
 @import "../node_modules/primeflex/primeflex.scss";
 @import "ngx-toastr/toastr";
+@import "../node_modules/angular-calendar/css/angular-calendar.css";
+@import "@fortawesome/fontawesome-free/css/all.min.css";
 .dark-button {
   background-color: $primaryDarkColor;
   border-color: $primaryDarkColor;
@@ -121,6 +123,13 @@ app-preguntas-dashboard-admin-detailview {
   overflow: hidden;
 }
 
+.event-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  @extend .descripcion;
+}
+
 .left-side {
   @media (max-width: 768px) {
     strong {
@@ -194,4 +203,10 @@ p-selectbutton {
 
 p-orderlist .p-orderlist-list .p-orderlist-item.p-highlight div button {
   color: #ffffff;
+}
+
+app-plantilla-semanal-edit {
+  display: block;
+  height: 100%;
+  overflow-y: auto;
 }

@@ -2,10 +2,17 @@
   <div class="grid">
     <p-card class="col-12 md:col-6 lg:col-3">
       <div class="card-login py-4">
-        <div class="form-login" [formGroup]="formGroup">
+        <div
+          class="form-login"
+          *ngIf="!requestSent; else confirmationMessage"
+          [formGroup]="formGroup"
+        >
           <div class="imagen">
             <img src="black_logo.png" alt="Logo" />
           </div>
+          <p class="text-center">
+            Ingresa tu email para recibir el enlace de restablecimiento.
+          </p>
 
           <!-- Campo de email -->
           <p-floatLabel>
@@ -17,6 +24,7 @@
             />
             <label for="email">Email</label>
           </p-floatLabel>
+
           <!-- Error: formato de email inválido -->
           <div
             *ngIf="
@@ -27,6 +35,7 @@
           >
             <small class="p-error">El formato del email no es válido.</small>
           </div>
+
           <!-- Error: email requerido -->
           <div
             *ngIf="
@@ -38,51 +47,38 @@
             <small class="p-error">El email es requerido.</small>
           </div>
 
-          <!-- Campo de contraseña -->
-          <p-floatLabel>
-            <input
-              id="contrasenya"
-              type="password"
-              class="w-full"
-              pInputText
-              formControlName="contrasenya"
-            />
-            <label for="contrasenya">Contraseña</label>
-          </p-floatLabel>
-          <!-- Error: contraseña requerida -->
-          <div
-            *ngIf="
-              formGroup.get('contrasenya')?.hasError('required') &&
-              formGroup.get('contrasenya')?.touched
-            "
-            class="error-message"
-          >
-            <small class="p-error">La contraseña es requerida.</small>
-          </div>
-
-          <!-- Botón de acceso -->
+          <!-- Botón de recuperación -->
           <button
             pButton
             type="submit"
             [disabled]="formGroup.invalid"
-            class="p-button dark-button p-button-raised"
-            (click)="login()"
+            class="p-button dark-button p-button-raised w-full"
+            (click)="requestPasswordReset()"
           >
-            <span class="w-full">Acceder</span>
+            <span class="w-full">Enviar enlace</span>
           </button>
 
-          <!-- Enlace a registro -->
-          <a
-            [routerLink]="['/auth/registro']"
-            routerLinkActive="router-link-active"
-            class="link-text"
-          >
-            <span>Crear cuenta</span> <i class="pi pi-angle-right mt-1"></i>
-          </a>
-          <a [routerLink]="['/auth/recuperar-contrasenya']" class="link-text">
-            <span>Recuperar contraseña</span>
+          <!-- Enlace de retorno al login -->
+          <a [routerLink]="['/auth/login']" class="link-text mt-3">
+            <i class="pi pi-angle-left mt-1"></i>
+            <span>Volver al inicio de sesión</span>
           </a>
         </div>
+
+        <!-- Mensaje de confirmación -->
+        <ng-template #confirmationMessage>
+          <div class="text-center">
+            <h3>Solicitud enviada</h3>
+            <p>
+              Si el correo coincide con alguna cuenta, recibirás un email con
+              instrucciones para restablecer tu contraseña.
+            </p>
+            <a [routerLink]="['/auth/login']" class="link-text mt-3">
+              <i class="pi pi-angle-left mt-1"></i>
+              <span>Volver al inicio de sesión</span>
+            </a>
+          </div>
+        </ng-template>
       </div>
     </p-card>
   </div>

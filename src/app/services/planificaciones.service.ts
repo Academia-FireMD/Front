@@ -5,7 +5,10 @@ import {
   PaginatedResult,
   PaginationFilter,
 } from '../shared/models/pagination.model';
-import { PlanificacionBloque } from '../shared/models/planificacion.model';
+import {
+  PlanificacionBloque,
+  PlantillaSemanal,
+} from '../shared/models/planificacion.model';
 import { ApiBaseService } from './api-base.service';
 
 @Injectable({
@@ -21,10 +24,31 @@ export class PlanificacionesService extends ApiBaseService {
     return this.get('/' + id) as Observable<PlanificacionBloque>;
   }
 
+  public getPlantillaSemanalById(id: number) {
+    return this.get(
+      '/plantillas-semanales/' + id
+    ) as Observable<PlantillaSemanal>;
+  }
+
   public getBloques$(filter: PaginationFilter) {
     return this.post('/bloques', filter) as Observable<
       PaginatedResult<PlanificacionBloque>
     >;
+  }
+
+  public getPlantillaSemanales$(filter: PaginationFilter) {
+    return this.post('/plantillas-semanales', filter) as Observable<
+      PaginatedResult<PlantillaSemanal>
+    >;
+  }
+
+  public createPlantillaSemanal$(
+    data: Partial<PlantillaSemanal>
+  ): Observable<PlantillaSemanal> {
+    return this.post(
+      '/plantilla-semanal',
+      data
+    ) as Observable<PlantillaSemanal>;
   }
 
   public updateBloque$(pregunta: Partial<PlanificacionBloque>) {
@@ -40,5 +64,9 @@ export class PlanificacionesService extends ApiBaseService {
 
   public deleteBloque$(id: number) {
     return this.delete('/' + id);
+  }
+
+  public deletePlantillaSemanal$(id: number) {
+    return this.delete('/plantilla-semanal/' + id);
   }
 }

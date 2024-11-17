@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { Comunidad } from '../shared/models/pregunta.model';
 import { ApiBaseService } from './api-base.service';
 
@@ -61,5 +61,13 @@ export class AuthService extends ApiBaseService {
 
   clearToken(): void {
     sessionStorage.removeItem(this.TOKEN_KEY);
+  }
+
+  requestPasswordReset(email: string): Observable<any> {
+    return this.post('/request-password-reset', { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<any> {
+    return this.post('/reset-password', { token, newPassword });
   }
 }

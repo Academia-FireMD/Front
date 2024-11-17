@@ -8,6 +8,7 @@ import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ChipModule } from 'primeng/chip';
+import { ColorPickerModule } from 'primeng/colorpicker';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DataViewModule } from 'primeng/dataview';
 import { DialogModule } from 'primeng/dialog';
@@ -68,6 +69,7 @@ const modules = [
   SelectButtonModule,
   OrderListModule,
   DragDropModule,
+  ColorPickerModule,
 ];
 
 @NgModule({

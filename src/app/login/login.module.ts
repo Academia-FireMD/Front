@@ -12,8 +12,10 @@ import { SharedModule } from '../shared/shared.module';
 import { LoginComponent } from './components/login/login.component';
 import { RegistroComponent } from './components/registro/registro.component';
 import { LoginRoutingModule } from './login-routing.module';
+import { RecuperarContrasenyaComponent } from './components/recuperar-contrasenya/recuperar-contrasenya.component';
+import { ChangePasswordComponent } from './components/change-password/change-password.component';
 @NgModule({
-  declarations: [LoginComponent, RegistroComponent],
+  declarations: [LoginComponent, RegistroComponent, RecuperarContrasenyaComponent, ChangePasswordComponent],
   imports: [
     CommonModule,
     LoginRoutingModule,

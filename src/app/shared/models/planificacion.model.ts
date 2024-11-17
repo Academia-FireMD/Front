@@ -2,45 +2,39 @@ import { Usuario } from './user.model';
 
 export interface PlanificacionBloque {
   id: any;
-  nombre: string;
+  identificador: string;
   descripcion?: string;
-  subBloques: SubBloque[];
+  subBloques: SubBloque[]; // Relación con SubBloques
   createdAt: Date;
   updatedAt: Date;
-  diaSemana?: DiaSemana;
-  diaSemanaId?: number;
   planificacionMensual?: PlanificacionMensual;
   planificacionMensualId?: number;
+  origenBloqueId?: number; // ID del bloque original, si es una copia
+  origenBloque?: PlanificacionBloque;
+  duplicados?: PlanificacionBloque[];
 }
 
 export interface SubBloque {
   id: any;
-  horaInicio: Date;
+  horaInicio: Date; // La fecha y hora de inicio del sub-bloque
   duracion: number;
+  color?: string;
   nombre: string;
   comentarios?: string;
-  bloqueId?: number;
-  bloque?: PlanificacionBloque;
+  bloqueId?: number; // Relación opcional con PlanificacionBloque
+  bloque?: PlanificacionBloque; // Referencia opcional al bloque
+  plantillaId?: number; // Relación con PlantillaSemanal
+  plantilla?: PlantillaSemanal; // Relación con la plantilla semanal, si aplica
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export interface PlantillaSemanal {
   id: number;
-  nombre: string;
+  identificador: string;
   descripcion?: string;
-  dias: DiaSemana[];
-  planificaciones: PlanificacionMensualPlantilla[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface DiaSemana {
-  id: number;
-  dia: string;
-  bloques: PlanificacionBloque[];
-  plantillaId: number;
-  plantilla: PlantillaSemanal;
+  subBloques: SubBloque[]; // Relación directa con los sub-bloques o eventos específicos
+  planificaciones: PlanificacionMensualPlantilla[]; // Relación con planificaciones mensuales
   createdAt: Date;
   updatedAt: Date;
 }
