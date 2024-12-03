@@ -1,1 +1,90 @@
-<p>planificacion-mensual-overview works!</p>
+<p-confirmDialog></p-confirmDialog>
+<div class="grid">
+  <div class="col-12">
+    <div class="top-action-bar">
+      <p-iconField iconPosition="left">
+        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+        <input
+          type="text"
+          pInputText
+          placeholder="Buscar por identificador"
+          style="min-width: 30vw"
+          (input)="valueChanged($event)"
+        />
+      </p-iconField>
+      <div class="right-actions">
+        <p-button
+          *ngIf="expectedRole == 'ADMIN'"
+          label="{{
+            viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
+          }}"
+          icon="pi pi-plus"
+          (click)="navigateToDetailview('new')"
+        ></p-button>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 list-generic">
+    <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
+      <ng-template pTemplate="list" let-products>
+        <div class="grid grid-nogutter">
+          <div
+            class="col-12 item-container pointer"
+            (click)="navigateToDetailview(item.id)"
+            *ngFor="let item of products; let first = first"
+          >
+            <div class="flex flex-row align-items-between">
+              <div class="flex flex-column py-2 col-9 left-side">
+                <div
+                  class="font-medium text-secondary text-sm hora-solicitud flex gap-2"
+                >
+                  <div class="flex gap-1">
+                    <span class="hidden md:block">Identificador: </span>
+                    <strong class="identifier">{{ item.identificador }}</strong>
+                  </div>
+                </div>
+                <span class="font-small text-secondary text-sm descripcion">{{
+                  item.descripcion
+                }}</span>
+              </div>
+              <div
+                class="right-side col-3 flex align-items-center justify-content-end"
+              >
+                <div
+                  class="flex flex-row align-items-center justify-content-end gap-2"
+                >
+                  <span
+                    class="font-medium text-secondary text-sm hidden md:block"
+                  >
+                    {{ item.createdAt | date : "short" }}</span
+                  >
+                  <p-button
+                    [link]="true"
+                    *ngIf="expectedRole == 'ADMIN'"
+                    icon="pi pi-trash"
+                    (click)="
+                      $event.stopPropagation();
+                      $event.preventDefault();
+                      eliminar(item.id, $event)
+                    "
+                  ></p-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </p-dataView>
+  </div>
+  <div class="col-12">
+    <div class="card flex justify-content-end">
+      <p-paginator
+        (onPageChange)="onPageChange($event)"
+        [first]="pagination().skip"
+        [rows]="pagination().take"
+        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
+        [showPageLinks]="viewportService.screenWidth != 'xs'"
+      ></p-paginator>
+    </div>
+  </div>
+</div>

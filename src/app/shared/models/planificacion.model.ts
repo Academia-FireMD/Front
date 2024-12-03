@@ -9,9 +9,6 @@ export interface PlanificacionBloque {
   updatedAt: Date;
   planificacionMensual?: PlanificacionMensual;
   planificacionMensualId?: number;
-  origenBloqueId?: number; // ID del bloque original, si es una copia
-  origenBloque?: PlanificacionBloque;
-  duplicados?: PlanificacionBloque[];
 }
 
 export interface SubBloque {
@@ -27,6 +24,8 @@ export interface SubBloque {
   plantilla?: PlantillaSemanal; // Relación con la plantilla semanal, si aplica
   createdAt?: Date;
   updatedAt?: Date;
+  realizado?: boolean;
+  comentariosAlumno?: string;
 }
 
 export interface PlantillaSemanal {
@@ -41,12 +40,11 @@ export interface PlantillaSemanal {
 
 export interface PlanificacionMensual {
   id: number;
-  nombre: string;
+  identificador: string;
   descripcion?: string;
   mes: number;
   ano: number;
-  plantillas: PlanificacionMensualPlantilla[];
-  bloques: PlanificacionBloque[];
+  subBloques: SubBloque[];
   asignaciones: AsignacionAlumno[];
   createdAt: Date;
   updatedAt: Date;

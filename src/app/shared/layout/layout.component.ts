@@ -188,6 +188,11 @@ export class LayoutComponent {
           label: 'Perfil',
           items: [
             {
+              label: 'Planificación mensual',
+              icon: 'pi pi-calendar-plus',
+              routerLink: '/app/planificacion/planificacion-mensual-alumno',
+            },
+            {
               label: 'Desconectarse',
               icon: 'pi pi-sign-out',
               routerLink: '/auth',

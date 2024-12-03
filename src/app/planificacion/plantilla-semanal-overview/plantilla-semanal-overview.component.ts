@@ -2,7 +2,10 @@ import {
   Component,
   computed,
   ElementRef,
+  EventEmitter,
   inject,
+  Input,
+  Output,
   ViewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
@@ -23,6 +26,9 @@ export class PlantillaSemanalOverviewComponent extends SharedGridComponent<Plant
   router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;
+
+  @Input() mode: 'picker' | 'overview' = 'overview';
+  @Output() picked = new EventEmitter<PlantillaSemanal>();
 
   constructor() {
     super();
@@ -49,7 +55,9 @@ export class PlantillaSemanalOverviewComponent extends SharedGridComponent<Plant
       rejectIcon: 'none',
       rejectButtonStyleClass: 'p-button-text',
       accept: async () => {
-        await firstValueFrom(this.planificacionesService.deletePlantillaSemanal$(id));
+        await firstValueFrom(
+          this.planificacionesService.deletePlantillaSemanal$(id)
+        );
         this.toast.info('Planificación semanal eliminada exitosamente');
         this.refresh();
       },

@@ -1,9 +1,3 @@
-<app-editar-sub-bloque-dialog
-  [(isDialogVisible)]="isDialogVisible"
-  [data]="editSubBloqueData"
-  (savedSubBloque)="saveEvent($event)"
-></app-editar-sub-bloque-dialog>
-
 <div class="grid" [formGroup]="formGroup">
   <div class="col-12 content">
     <div
@@ -38,103 +32,9 @@
       </div>
       <p-button (click)="guardarPlantilla()" label="Guardar cambios"></p-button>
     </div>
-    <div class="row">
-      <p-accordion>
-        <p-accordionTab header="Bloques asignables">
-          <div class="col-12">
-            <div class="top-action-bar">
-              <p-iconField iconPosition="left">
-                <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-                <input
-                  type="text"
-                  pInputText
-                  placeholder="Buscar por identificador"
-                  style="min-width: 30vw"
-                  (input)="debouncedValueChanged($event)"
-                />
-              </p-iconField>
-              <div class="right-actions"></div>
-            </div>
-          </div>
-          <div
-            class="list-bloques flex gap-2"
-            mwlDroppable
-            dragOverClass="drag-over"
-            *ngIf="getAllBloques$() | async as bloques"
-          >
-            <p *ngIf="bloques.data.length == 0"><em>No events added</em></p>
-
-            <p-card
-              *ngFor="let bloque of bloques.data"
-              mwlDraggable
-              [dropData]="{ event: bloque }"
-              [touchStartLongPress]="{ delay: 300, delta: 30 }"
-              dragActiveClass="drag-active"
-              header="{{ bloque.identificador }}"
-              class="col-12 md:col-3 drag-card"
-            >
-              <div class="content-card">
-                <div
-                  class="flex flex-wrap p-2 align-items-center gap-3"
-                  [ngStyle]="{ 'background-color': subBloque.color }"
-                  *ngFor="let subBloque of bloque.subBloques"
-                >
-                  <div class="flex-1 flex flex-column gap-2">
-                    <span class="font-bold">{{
-                      subBloque.nombre && subBloque.nombre.length > 0
-                        ? subBloque.nombre
-                        : "Sin nombre"
-                    }}</span>
-                    <div class="flex align-items-center gap-2">
-                      <i class="pi pi-clock text-sm"></i>
-                      <span> {{ subBloque.duracion }} minutos </span>
-                    </div>
-                  </div>
-                  <span class="font-bold">
-                    {{ subBloque.comentarios || "Sin comentarios" }}
-                  </span>
-                </div>
-              </div>
-            </p-card>
-          </div>
-        </p-accordionTab>
-      </p-accordion>
-
-      <div class="col-md-9">
-        <ng-template #templatePlan let-weekEvent="weekEvent">
-          <div class="wrapper" (click)="onEventClicked(weekEvent.event)">
-            <div
-              class="custom-event-template"
-              [ngStyle]="{
-                'background-color':
-                  weekEvent?.event?.color?.primary || '#e3e3e3'
-              }"
-            >
-              <div class="event-content">
-                <strong>{{ weekEvent?.event?.title || "Sin nombre" }}</strong>
-                <span class="event-comments">
-                  {{
-                    weekEvent?.event?.meta?.subBloque?.comentarios ||
-                      "Sin comentarios"
-                  }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </ng-template>
-        <mwl-calendar-week-view
-          [viewDate]="viewDate"
-          [events]="events"
-          [excludeDays]="[0, 6]"
-          [refresh]="refresh"
-          [snapDraggedEvents]="false"
-          [eventTemplate]="templatePlan"
-          (eventTimesChanged)="eventDropped($event)"
-          (eventClicked)="onEventClicked($event.event)"
-        >
-          <!-- Plantilla personalizada para los eventos -->
-        </mwl-calendar-week-view>
-      </div>
-    </div>
+    <app-vista-semanal
+      [(events)]="events"
+      [viewDate]="viewDate"
+    ></app-vista-semanal>
   </div>
 </div>

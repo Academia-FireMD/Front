@@ -1,1 +1,205 @@
-<p>planificacion-mensual-edit works!</p>
+<p-dialog
+  *ngIf="expectedRole == 'ADMIN'"
+  header="Asignar planificación mensual"
+  [(visible)]="isDialogAsignacionUsuarioVisible"
+  [modal]="true"
+  [style]="{ width: '80vw', height: '80vh' }"
+  [dismissableMask]="true"
+>
+  <div class="grid h-full">
+    <div class="col-12">
+      <div class="flex align-items-center gap-2">
+        <input
+          type="text"
+          pInputText
+          [(ngModel)]="searchTerm"
+          class="w-full mt-2"
+          placeholder="Buscar por nombre o email"
+        />
+      </div>
+    </div>
+    <div class="col-12 rejilla">
+      <p-table
+        [value]="filterUsers(allUsers$ | async)"
+        [(selection)]="usuariosSeleccionadosId"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 20, 50]"
+        [responsiveLayout]="'scroll'"
+        [paginatorDropdownAppendTo]="'body'"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 3rem">
+              <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+            </th>
+            <th>Nombre</th>
+            <th>Email</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-usuario>
+          <tr>
+            <td>
+              <p-tableCheckbox [value]="usuario.id"></p-tableCheckbox>
+            </td>
+            <td>{{ usuario.nombre ?? "Sin nombre" }}</td>
+            <td>{{ usuario.email }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+    <div class="col-12 flex justify-content-end">
+      <p-button
+        label="Confirmar selección"
+        icon="pi pi-check"
+        (click)="confirmarSeleccion()"
+      ></p-button>
+    </div>
+  </div>
+</p-dialog>
+
+<p-dialog
+  *ngIf="expectedRole == 'ADMIN'"
+  header="Selector de plantillas semanales"
+  [(visible)]="isDialogVisible"
+  [modal]="true"
+  [style]="{ width: '80vw', height: '80vh' }"
+  [dismissableMask]="true"
+>
+  <p-stepper [(activeStep)]="activeStepSeleccionPlantilla">
+    <p-stepperPanel header="Buscar plantilla">
+      <ng-template
+        pTemplate="content"
+        let-nextCallback="nextCallback"
+        let-index="index"
+      >
+        <div class="pt-2">
+          <app-plantilla-semanal-overview
+            [mode]="'picker'"
+            (picked)="pickedPlantilla($event); nextCallback.emit()"
+          ></app-plantilla-semanal-overview>
+        </div>
+      </ng-template>
+    </p-stepperPanel>
+    <p-stepperPanel header="Confirmar plantilla seleccionada">
+      <ng-template
+        pTemplate="content"
+        let-prevCallback="prevCallback"
+        let-index="index"
+      >
+        <app-vista-semanal
+          [ngStyle]="{ height: '56vh', display: 'block', overflow: 'auto' }"
+          [events]="pickedEvents"
+          [viewDate]="pickedEventsViewDate"
+          [mode]="'picker'"
+        ></app-vista-semanal>
+        <div class="flex pt-4 justify-content-between">
+          <p-button
+            label="Volver atrás"
+            icon="pi pi-arrow-left"
+            (click)="prevCallback.emit()"
+          />
+          <p-button
+            label="Utilizar esta plantilla semanal"
+            icon="pi pi-check"
+            (click)="applyEventsToCurrentWeek(pickedEvents)"
+          />
+        </div>
+      </ng-template>
+    </p-stepperPanel>
+  </p-stepper>
+</p-dialog>
+<div class="grid" [formGroup]="formGroup">
+  <div class="col-12 content">
+    <div
+      class="col-12 header flex justify-content-between align-items-center pt-4 gap-3 pb-3"
+    >
+      <div class="flex-column left gap-2">
+        <div class="identificador">
+          @if (getId() !== 'new') { @if (viewportService.screenWidth != 'xs') {
+          Identificador: }
+          <strong>{{ formGroup.value.identificador }}</strong>
+          }@else {
+          <input
+            type="text"
+            pInputText
+            class="w-full"
+            placeholder="Identificador"
+            formControlName="identificador"
+          />
+          }
+        </div>
+
+        <div class="nombre w-full" *ngIf="viewportService.screenWidth != 'xs'">
+          @if( expectedRole == 'ALUMNO' ){
+          <span>{{ formGroup.value.descripcion }}</span>
+          }@else {
+          <input
+            type="text"
+            pInputText
+            class="w-full"
+            placeholder="Descripcion"
+            formControlName="descripcion"
+          />
+          }
+        </div>
+      </div>
+      <div class="right">
+        <div class="visualizando">
+          <span>{{ viewDate | calendarDate : view + "ViewTitle" : "es" }}</span>
+        </div>
+
+        <p-button
+          icon="pi pi-calendar-plus"
+          [link]="true"
+          pTooltip="Descargar calendario"
+          class="p-button-primary"
+          (click)="exportToGoogleCalendar()"
+        ></p-button>
+
+        <p-button
+          icon="pi pi-arrow-right-arrow-left"
+          [link]="true"
+          pTooltip="Cambiar vista entre semanal/mensual"
+          class="p-button-primary"
+          (click)="alternarVista()"
+        ></p-button>
+
+        <app-calendar-header [(view)]="view" [(viewDate)]="viewDate">
+        </app-calendar-header>
+
+        <p-button
+          *ngIf="expectedRole == 'ADMIN'"
+          [disabled]="formGroup.invalid"
+          (click)="guardarCambios()"
+          label="Guardar cambios"
+        ></p-button>
+      </div>
+    </div>
+    <div class="row relative">
+      @if (view == calendarView.Week) {
+      <app-vista-semanal
+        [role]="expectedRole"
+        [mode]="expectedRole == 'ADMIN' ? 'edit' : 'picker'"
+        [(events)]="events"
+        [viewDate]="viewDate"
+        (saveChanges)="guardarCambios()"
+      ></app-vista-semanal>
+      }@else {
+      <mwl-calendar-month-view
+        [viewDate]="viewDate"
+        [events]="events"
+        (dayClicked)="onDayClicked($event)"
+      ></mwl-calendar-month-view>
+      }
+
+      <p-speedDial
+        *ngIf="expectedRole == 'ADMIN'"
+        [model]="items()"
+        direction="up"
+        transitionDelay="80"
+        [disabled]="getId() == 'new'"
+      />
+    </div>
+  </div>
+</div>

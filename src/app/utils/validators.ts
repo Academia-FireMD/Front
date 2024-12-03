@@ -1,4 +1,4 @@
-import { ValidatorFn, AbstractControl, ValidationErrors } from '@angular/forms';
+import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 export const passwordMatchValidator: ValidatorFn = (
   control: AbstractControl
@@ -20,7 +20,7 @@ export function passwordStrengthValidator(): ValidatorFn {
     const hasUpperCase = /[A-Z]/.test(value);
     const hasLowerCase = /[a-z]/.test(value);
     const hasNumeric = /[0-9]/.test(value);
-    const hasSpecialCharacter = /[@$!%*?&]/.test(value);
+    const hasSpecialCharacter = true; // backend will check
     const isValidLength = value.length >= 8;
 
     const passwordValid =

@@ -7,6 +7,7 @@ import {
 } from '../shared/models/pagination.model';
 import {
   PlanificacionBloque,
+  PlanificacionMensual,
   PlantillaSemanal,
 } from '../shared/models/planificacion.model';
 import { ApiBaseService } from './api-base.service';
@@ -30,6 +31,12 @@ export class PlanificacionesService extends ApiBaseService {
     ) as Observable<PlantillaSemanal>;
   }
 
+  public getPlanificacionMensualById$(id: number) {
+    return this.get(
+      '/planificaciones-mensuales/' + id
+    ) as Observable<PlanificacionMensual>;
+  }
+
   public getBloques$(filter: PaginationFilter) {
     return this.post('/bloques', filter) as Observable<
       PaginatedResult<PlanificacionBloque>
@@ -40,6 +47,27 @@ export class PlanificacionesService extends ApiBaseService {
     return this.post('/plantillas-semanales', filter) as Observable<
       PaginatedResult<PlantillaSemanal>
     >;
+  }
+
+  public getPlanificacionMensual$(filter: PaginationFilter) {
+    return this.post('/planificaciones-mensuales', filter) as Observable<
+      PaginatedResult<PlanificacionMensual>
+    >;
+  }
+
+  public getPlanificacionMensualAlumno$(filter: PaginationFilter) {
+    return this.post('/planificaciones-mensuales-alumno', filter) as Observable<
+      PaginatedResult<PlanificacionMensual>
+    >;
+  }
+
+  public createPlanificacionMensual$(
+    data: Partial<PlanificacionMensual>
+  ): Observable<PlanificacionMensual> {
+    return this.post(
+      '/planificacion-mensual',
+      data
+    ) as Observable<PlanificacionMensual>;
   }
 
   public createPlantillaSemanal$(
@@ -68,5 +96,19 @@ export class PlanificacionesService extends ApiBaseService {
 
   public deletePlantillaSemanal$(id: number) {
     return this.delete('/plantilla-semanal/' + id);
+  }
+
+  public deletePlanificacionMensual$(id: number) {
+    return this.delete('/planificacion-mensual/' + id);
+  }
+
+  public asignarPlanificacionMensual$(
+    planificacionId: number,
+    alumnosIds: number[]
+  ): Observable<any> {
+    return this.post('/asignar-planificacion-mensual', {
+      planificacionId,
+      alumnosIds,
+    });
   }
 }

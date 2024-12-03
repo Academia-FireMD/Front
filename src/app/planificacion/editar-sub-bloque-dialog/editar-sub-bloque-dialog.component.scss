@@ -1,0 +1,15 @@
+:host ::ng-deep {
+  .color-picker {
+    .p-buttonset > div {
+      padding: 0;
+    }
+  }
+
+  .color-box {
+    width: 32px;
+    height: 32px;
+  }
+  .p-divider {
+    height: 5px;
+  }
+}

@@ -30,15 +30,44 @@ export class AuthService extends ApiBaseService {
       tutorId,
     });
   }
-  public login$(email: string, password: string) {
+  public login$(email: string, password: string): Observable<any> {
     return this.post('/login', { email, password }).pipe(
-      tap((token) => {
-        if (token && token.access_token) this.setToken(token.access_token);
+      tap((tokens) => {
+        if (tokens) {
+          this.setToken(tokens.access_token);
+          this.setRefreshToken(tokens.refresh_token);
+        }
       })
     );
   }
+  public refreshToken$(): Observable<any> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
 
+    return this.post('/refresh', { refresh_token: refreshToken }).pipe(
+      tap((tokens) => {
+        if (tokens && tokens.access_token) {
+          this.setToken(tokens.access_token);
+        }
+      })
+    );
+  }
   private readonly TOKEN_KEY = 'authToken';
+  private readonly REFRESH_TOKEN_KEY = 'refreshToken';
+
+  setRefreshToken(token: string): void {
+    sessionStorage.setItem(this.REFRESH_TOKEN_KEY, token);
+  }
+
+  getRefreshToken(): string | null {
+    return sessionStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+
+  clearRefreshToken(): void {
+    sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
+  }
 
   setToken(token: string): void {
     sessionStorage.setItem(this.TOKEN_KEY, token);
@@ -61,6 +90,7 @@ export class AuthService extends ApiBaseService {
 
   clearToken(): void {
     sessionStorage.removeItem(this.TOKEN_KEY);
+    sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
   }
 
   requestPasswordReset(email: string): Observable<any> {

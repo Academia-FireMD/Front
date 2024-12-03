@@ -1,0 +1,81 @@
+.drag-active {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+.drag-over {
+  background-color: #eee;
+}
+
+.list-bloques {
+  overflow: auto;
+  flex-wrap: nowrap;
+}
+
+.content-card {
+  max-height: 15rem;
+  overflow: auto;
+}
+
+.drag-card {
+  cursor: grab;
+}
+
+:host ::ng-deep {
+  .cal-header {
+    span {
+      display: none;
+    }
+  }
+}
+.wrapper {
+  height: 100%;
+  padding: 0.3rem;
+}
+.custom-event-template {
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.custom-event-template:hover {
+  transform: scale(1.05);
+}
+
+.event-content {
+  width: 100%;
+  div {
+    width: 100%;
+  }
+}
+
+.event-content strong {
+  font-size: 1em;
+}
+
+.event-comments {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.event-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: end;
+}
+
+.complete-checkbox {
+  transform: scale(0.8); /* Reduce el tamaño del checkbox */
+}

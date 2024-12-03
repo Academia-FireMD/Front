@@ -14,6 +14,7 @@
       </p-iconField>
       <div class="right-actions">
         <p-button
+          *ngIf="mode == 'overview'"
           label="{{
             viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
           }}"
@@ -29,7 +30,11 @@
         <div class="grid grid-nogutter">
           <div
             class="col-12 item-container pointer"
-            (click)="navigateToDetailview(item.id)"
+            (click)="
+              mode == 'overview'
+                ? navigateToDetailview(item.id)
+                : picked.emit(item)
+            "
             *ngFor="let item of products; let first = first"
           >
             <div class="flex flex-row align-items-between">
@@ -58,6 +63,7 @@
                     {{ item.createdAt | date : "short" }}</span
                   >
                   <p-button
+                    *ngIf="mode == 'overview'"
                     [link]="true"
                     icon="pi pi-trash"
                     (click)="

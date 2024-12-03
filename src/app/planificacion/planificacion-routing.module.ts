@@ -45,11 +45,25 @@ const routes: Routes = [
     data: { expectedRole: 'ADMIN', title: 'Planificación mensual' },
   },
   {
+    path: 'planificacion-mensual-alumno',
+    component: PlanificacionMensualOverviewComponent,
+    canActivate: [roleGuard],
+    title: 'Planificación mensual',
+    data: { expectedRole: 'ALUMNO', title: 'Planificación mensual' },
+  },
+  {
     path: 'planificacion-mensual/:id',
     component: PlanificacionMensualEditComponent,
     canActivate: [roleGuard],
     title: 'Planificación mensual',
     data: { expectedRole: 'ADMIN', title: 'Planificación mensual' },
+  },
+  {
+    path: 'planificacion-mensual-alumno/:id',
+    component: PlanificacionMensualEditComponent,
+    canActivate: [roleGuard],
+    title: 'Planificación mensual',
+    data: { expectedRole: 'ALUMNO', title: 'Planificación mensual' },
   },
 ];
 

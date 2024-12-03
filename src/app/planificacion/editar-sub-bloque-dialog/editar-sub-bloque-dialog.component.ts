@@ -1,6 +1,6 @@
 import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
-import { uniqueId } from 'lodash';
+import { cloneDeep, uniqueId } from 'lodash';
 import { SubBloque } from '../../shared/models/planificacion.model';
 
 @Component({
@@ -35,14 +35,39 @@ export class EditarSubBloqueDialogComponent {
     { label: '6 horas', value: 360 },
   ];
 
+  posiblesTipos = [
+    {
+      label: 'Entrenamiento',
+      value: '#fdd6b3', // Naranja pastel
+    },
+    {
+      label: 'Específico SPEIS',
+      value: '#b8fcd1', // Verde menta
+    },
+    {
+      label: 'General',
+      value: '#b8f6fb', // Azul cielo
+    },
+    {
+      label: 'Específico',
+      value: '#fbf3c0', // Amarillo suave
+    },
+    {
+      label: 'Psicotécnico',
+      value: '#f7d794', // Amarillo más fuerte
+    },
+  ];
+
   public get color() {
     return this.formGroup.get('color') as FormControl;
   }
 
-  public inputColorChanged(event: Event) {
-    this.color.patchValue((event.target as any)['value']);
+  onColorTypeChange(event: any): void {
+    const selectedColor = event.value; // Obtén el valor seleccionado del dropdown
+    this.color.setValue(selectedColor, { emitEvent: true }); // Actualiza el control del formulario
   }
 
+  ngOnInit(): void {}
   public cancelarEdicion() {
     this.isDialogVisible = false;
     this.isDialogVisibleChange.emit(false);
@@ -51,6 +76,7 @@ export class EditarSubBloqueDialogComponent {
   public guardarEdicion() {
     this.isDialogVisible = false;
     this.isDialogVisibleChange.emit(false);
-    this.savedSubBloque.emit(this.formGroup.value as SubBloque);
+    const value = cloneDeep(this.formGroup.value);
+    this.savedSubBloque.emit(value as SubBloque);
   }
 }

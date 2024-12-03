@@ -1,4 +1,5 @@
 import { Component, inject, Input, Signal, signal } from '@angular/core';
+import { cloneDeep } from 'lodash';
 import { Debounce } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { PaginatorState } from 'primeng/paginator';
@@ -40,8 +41,10 @@ export class SharedGridComponent<T> {
   }
 
   public refresh() {
-    this.pagination.set({
-      ...this.pagination(),
-    });
+    this.pagination.set(
+      cloneDeep({
+        ...this.pagination(),
+      })
+    );
   }
 }

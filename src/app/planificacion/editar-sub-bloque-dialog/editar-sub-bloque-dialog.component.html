@@ -33,16 +33,23 @@
           <label for="duracion">Duración</label>
         </p-floatLabel>
       </div>
-      <div class="col-4 flex align-items-center gap-2">
+      <div class="col-4 flex align-items-center justify-content-end gap-2">
+        <p-floatLabel>
+          <p-dropdown
+            id="color"
+            [style]="{ width: '100%', height: '100%' }"
+            [formControl]="color"
+            (onChange)="onColorTypeChange($event)"
+            optionValue="value"
+            optionLabel="label"
+            [options]="posiblesTipos"
+            appendTo="body"
+            placeholder="Seleccione el tipo"
+          ></p-dropdown>
+          <label for="color">Tipo</label>
+        </p-floatLabel>
+        <p-divider layout="vertical" />
         <p-colorPicker [formControl]="color" appendTo="body" />
-        <input
-          style="width: 100%"
-          type="text"
-          pInputText
-          placeholder="Color del subbloque"
-          [value]="color.value"
-          (input)="inputColorChanged($event)"
-        />
       </div>
       <div class="col-12 py-3">
         <p-floatLabel>

@@ -1,0 +1,52 @@
+.header {
+  display: flex;
+  .nombre {
+    flex-grow: 1;
+  }
+}
+
+.right,
+.left {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.left {
+  justify-content: center;
+  align-items: start;
+}
+
+.right {
+  justify-content: end;
+}
+:host ::ng-deep {
+  app-vista-semanal {
+    .calendar-table {
+      max-height: 75vh;
+      overflow: auto;
+      display: block;
+    }
+  }
+  p-speeddial {
+    position: fixed;
+    bottom: 270px;
+    right: 60px;
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    button {
+      width: 3rem;
+      height: 3rem;
+    }
+  }
+  .rejilla {
+    max-height: calc(100% - 10rem);
+    overflow: auto;
+    .p-datatable {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+  }
+}
