@@ -1,6 +1,21 @@
 <div class="grid">
   <div class="col-12">
     <p-card>
+      <h4 class="w-full">Acciones</h4>
+      <div
+        class="col-12 md:col-6 flex justify-content-start flex-column md:flex-row gap-2"
+      >
+        <p-button label="Ejecutar" (click)="ejecutarAsignacionTotal()" />
+        <label for=""
+          >Asigna planificaciones por defecto a todos los alumnos en base a sus
+          preferencias de duración de planificación</label
+        >
+      </div>
+    </p-card>
+  </div>
+
+  <div class="col-12">
+    <p-card>
       <div class="grid" [formGroup]="factors">
         <h4 class="w-full">Módulo de tests</h4>
         <div class="col-12 md:col-6 my-2">

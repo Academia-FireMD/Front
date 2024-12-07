@@ -10,6 +10,7 @@ import {
   PlanificacionMensual,
   PlantillaSemanal,
 } from '../shared/models/planificacion.model';
+import { TipoDePlanificacionDeseada } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
 
 @Injectable({
@@ -47,6 +48,13 @@ export class PlanificacionesService extends ApiBaseService {
     return this.post('/plantillas-semanales', filter) as Observable<
       PaginatedResult<PlantillaSemanal>
     >;
+  }
+
+  public getComentariosAlumnos$(filter: PaginationFilter) {
+    return this.post(
+      '/comentarios-alumnos-planificacion',
+      filter
+    ) as Observable<PaginatedResult<any>>;
   }
 
   public getPlanificacionMensual$(filter: PaginationFilter) {
@@ -110,5 +118,21 @@ export class PlanificacionesService extends ApiBaseService {
       planificacionId,
       alumnosIds,
     });
+  }
+
+  public getInfoPlanificacionesAsignadas() {
+    return this.get('/count-planificationes-asignadas');
+  }
+
+  public autoAssignPlanificacionMensual(
+    tipoDePlanificacion: TipoDePlanificacionDeseada
+  ) {
+    return this.post('/auto-assign-planificacion-mensual', {
+      tipoDePlanificacion,
+    });
+  }
+
+  public autoAssignPlanificacionMensualAll() {
+    return this.post('/auto-assign-planificacion-mensual-all', {});
   }
 }

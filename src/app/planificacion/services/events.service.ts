@@ -43,4 +43,44 @@ export class EventsService {
       return event.start < earliest ? event.start : earliest;
     }, events[0]?.start || new Date());
   }
+
+  public getEventsForDay(events: CalendarEvent[], date: Date): any[] {
+    return events.filter((event) => {
+      const eventDate = new Date(event.start);
+      return (
+        eventDate.getFullYear() === date.getFullYear() &&
+        eventDate.getMonth() === date.getMonth() &&
+        eventDate.getDate() === date.getDate()
+      );
+    });
+  }
+
+  getProgressBarColor(events: CalendarEvent[], date: Date): string {
+    const percentage = this.getProgressPercentageForDay(events, date);
+
+    if (percentage === 100) {
+      return '#28a745'; // Verde (completado)
+    } else if (percentage >= 50) {
+      return '#ffc107'; // Amarillo (intermedio)
+    } else {
+      return '#dc3545'; // Rojo (bajo progreso)
+    }
+  }
+
+  getCompletedSubBlocksForDay(events: CalendarEvent[], date: Date): number {
+    const eventsForDay = this.getEventsForDay(events, date);
+    return eventsForDay.filter((event) => event.meta?.subBloque?.realizado)
+      .length;
+  }
+
+  getProgressPercentageForDay(events: CalendarEvent[], date: Date): number {
+    const eventsForDay = this.getEventsForDay(events, date);
+    const completed = this.getCompletedSubBlocksForDay(events, date);
+    return Number(
+      (eventsForDay.length > 0
+        ? (completed / eventsForDay.length) * 100
+        : 0
+      ).toFixed(2)
+    );
+  }
 }

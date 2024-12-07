@@ -3,6 +3,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom } from 'rxjs';
 import { FactorsService } from '../../../services/factors.service';
+import { PlanificacionesService } from '../../../services/planificaciones.service';
 import { FactorName } from '../../../shared/models/factor.model';
 
 @Component({
@@ -13,6 +14,7 @@ import { FactorName } from '../../../shared/models/factor.model';
 export class AjustesAdminComponent {
   private fb = inject(FormBuilder);
   private factorsService = inject(FactorsService);
+  planificacionService = inject(PlanificacionesService);
   toast = inject(ToastrService);
   getFactor$ = this.factorsService.getFactors$();
   public factors = this.fb.group({
@@ -82,5 +84,16 @@ export class AjustesAdminComponent {
       })
     );
     this.toast.success('Ajustes actualizados exitosamente!');
+  }
+
+  public async ejecutarAsignacionTotal() {
+    try {
+      const res = await firstValueFrom(
+        this.planificacionService.autoAssignPlanificacionMensualAll()
+      );
+      this.toast.success(
+        `Asignados automaticamente a ${res.length} alumnos con exito!`
+      );
+    } catch (error) {}
   }
 }

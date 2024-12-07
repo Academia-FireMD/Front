@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
 import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
+import { PlanificacionComentariosOverviewComponent } from './planificacion-comentarios-overview/planificacion-comentarios-overview.component';
 import { PlanificacionMensualEditComponent } from './planificacion-mensual-edit/planificacion-mensual-edit.component';
 import { PlanificacionMensualOverviewComponent } from './planificacion-mensual-overview/planificacion-mensual-overview.component';
 import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantilla-semanal-edit.component';
@@ -64,6 +65,13 @@ const routes: Routes = [
     canActivate: [roleGuard],
     title: 'Planificación mensual',
     data: { expectedRole: 'ALUMNO', title: 'Planificación mensual' },
+  },
+  {
+    path: 'comentarios',
+    component: PlanificacionComentariosOverviewComponent,
+    canActivate: [roleGuard],
+    title: 'Comentarios',
+    data: { expectedRole: 'ADMIN', title: 'Comentarios' },
   },
 ];
 

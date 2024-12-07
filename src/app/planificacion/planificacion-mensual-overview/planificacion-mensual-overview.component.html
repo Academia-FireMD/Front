@@ -2,17 +2,52 @@
 <div class="grid">
   <div class="col-12">
     <div class="top-action-bar">
-      <p-iconField iconPosition="left">
-        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-        <input
-          type="text"
-          pInputText
-          placeholder="Buscar por identificador"
-          style="min-width: 30vw"
-          (input)="valueChanged($event)"
-        />
-      </p-iconField>
+      <div class="left flex gap-2 flex-wrap">
+        <p-iconField iconPosition="left">
+          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+          <input
+            type="text"
+            pInputText
+            placeholder="Identificador o usuario"
+            style="min-width: 30vw"
+            (input)="valueChanged($event)"
+          />
+        </p-iconField>
+        <div class="field">
+          <p-dropdown
+            class="w-full"
+            [showClear]="true"
+            [options]="duracionesDisponibles"
+            [formControl]="valueDuracion"
+            (onChange)="updateWhere()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            placeholder="Duración"
+          >
+          </p-dropdown>
+        </div>
+        <div class="field">
+          <p-dropdown
+            class="w-full"
+            [showClear]="true"
+            [formControl]="asignadas"
+            [options]="opcionesAsignadas"
+            (onChange)="updateWhere()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            placeholder="Tipo"
+          >
+          </p-dropdown>
+        </div>
+      </div>
       <div class="right-actions">
+        <p-button
+          icon="pi pi-sync"
+          [link]="true"
+          (click)="refresh()"
+        ></p-button>
         <p-button
           *ngIf="expectedRole == 'ADMIN'"
           label="{{
@@ -41,6 +76,20 @@
                   <div class="flex gap-1">
                     <span class="hidden md:block">Identificador: </span>
                     <strong class="identifier">{{ item.identificador }}</strong>
+                    <p-chip *ngIf="item.esPorDefecto" label="Por defecto" />
+                    <p-chip
+                      label="{{ matchKeyWithLabel(item.tipoDePlanificacion) }}"
+                    />
+                    <p-chip
+                      *ngIf="item?.asignacion?.alumno"
+                      label="{{
+                        item.asignacion.alumno.nombre
+                          ? item.asignacion.alumno.nombre +
+                            ' ' +
+                            item.asignacion.alumno.apellidos
+                          : item.asignacion.alumno.email
+                      }}"
+                    />
                   </div>
                 </div>
                 <span class="font-small text-secondary text-sm descripcion">{{
@@ -53,6 +102,9 @@
                 <div
                   class="flex flex-row align-items-center justify-content-end gap-2"
                 >
+                  <app-comunidad-picker
+                    [comunidades]="item.relevancia"
+                  ></app-comunidad-picker>
                   <span
                     class="font-medium text-secondary text-sm hidden md:block"
                   >
@@ -60,7 +112,6 @@
                   >
                   <p-button
                     [link]="true"
-                    *ngIf="expectedRole == 'ADMIN'"
                     icon="pi pi-trash"
                     (click)="
                       $event.stopPropagation();

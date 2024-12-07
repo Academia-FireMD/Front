@@ -1,6 +1,7 @@
 <app-user-edit-dialog
   [selectedUser]="selectedUser"
   [(editDialogVisible)]="editDialogVisible"
+  [rol]="decodedUser.rol"
   [allowSetIsTutor]="decodedUser.rol == 'ADMIN'"
   (confirmarCambios)="confirmarCambios($event)"
 ></app-user-edit-dialog>

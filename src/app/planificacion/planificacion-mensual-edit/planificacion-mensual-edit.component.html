@@ -112,9 +112,9 @@
 <div class="grid" [formGroup]="formGroup">
   <div class="col-12 content">
     <div
-      class="col-12 mt-2 header flex justify-content-between align-items-center pt-4 gap-3 pb-3"
+      class="col-12 header flex justify-content-between align-items-center pt-4 gap-3 pb-3"
     >
-      <div class="flex-column left gap-2">
+      <div class="left gap-2">
         <div class="identificador">
           @if (getId() !== 'new') { @if (viewportService.screenWidth != 'xs') {
           Identificador: }
@@ -144,39 +144,102 @@
           }
         </div>
       </div>
-      <div class="right">
-        <div class="visualizando">
-          <span>{{ viewDate | calendarDate : view + "ViewTitle" : "es" }}</span>
+      <div class="right gap-2" *ngIf="expectedRole == 'ADMIN'">
+        <div class="duracion">
+          <p-dropdown
+            class="w-full"
+            id="tipoDePlanificacionDuracionDeseada"
+            [options]="duracionesDisponibles"
+            [formControl]="tipoDePlanificacion"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            placeholder="Seleccione una duración"
+          >
+          </p-dropdown>
         </div>
-
+        <div class="relevancia">
+          <app-comunidad-picker
+            [allowAdd]="true"
+            [comunidades]="relevancia.value"
+            (updateSelection)="updateCommunitySelection($event)"
+          ></app-comunidad-picker>
+        </div>
+        <div class="por-defecto gap-2">
+          <label for="switch1">Por defecto</label>
+          <p-inputSwitch [formControl]="esPorDefecto" />
+        </div>
         <p-button
-          icon="pi pi-calendar-plus"
-          [link]="true"
-          pTooltip="Descargar calendario"
-          class="p-button-primary"
-          (click)="exportToGoogleCalendar()"
-        ></p-button>
-
-        <p-button
-          icon="pi pi-arrow-right-arrow-left"
-          [link]="true"
-          pTooltip="Cambiar vista entre semanal/mensual"
-          class="p-button-primary"
-          (click)="alternarVista()"
-        ></p-button>
-
-        <app-calendar-header [(view)]="view" [(viewDate)]="viewDate">
-        </app-calendar-header>
-
-        <p-button
-          *ngIf="expectedRole == 'ADMIN'"
           [disabled]="formGroup.invalid"
           (click)="guardarCambios()"
           label="Guardar cambios"
         ></p-button>
       </div>
     </div>
+    <div class="col-12 calendar-info">
+      <div class="visualizando">
+        <span>{{ viewDate | calendarDate : view + "ViewTitle" : "es" }}</span>
+      </div>
+
+      <p-button
+        icon="pi pi-calendar-plus"
+        [link]="true"
+        pTooltip="Descargar calendario"
+        class="p-button-primary"
+        (click)="exportToGoogleCalendar()"
+      ></p-button>
+
+      <p-button
+        icon="pi pi-arrow-right-arrow-left"
+        [link]="true"
+        pTooltip="Cambiar vista entre semanal/mensual"
+        class="p-button-primary"
+        (click)="alternarVista()"
+      ></p-button>
+
+      <app-calendar-header [(view)]="view" [(viewDate)]="viewDate">
+      </app-calendar-header>
+    </div>
     <div class="row relative">
+      <ng-template #customCellTemplate let-day="day" let-locale="locale">
+        <div class="custom-cell">
+          <!-- Fecha del día -->
+          <div class="date-header">
+            <span>{{ day.date | date : "d" }}</span>
+          </div>
+
+          <!-- Progreso Diario -->
+          <div *ngIf="events.length > 0" class="progress-container">
+            <div class="progress-bar-background">
+              <div
+                class="progress-bar"
+                [style.width.%]="getProgressPercentageForDay(events, day.date)"
+                [style.background-color]="getProgressBarColor(events, day.date)"
+              ></div>
+            </div>
+            <small>
+              {{ getCompletedSubBlocksForDay(events, day.date) }} de
+              {{ getEventsForDay(events, day.date).length }}
+              completados
+            </small>
+          </div>
+          <div *ngIf="events.length === 0" class="no-progress">
+            <small>Sin eventos</small>
+          </div>
+
+          <!-- Bloques de colores para los eventos -->
+          <div class="event-blocks">
+            <div
+              *ngFor="let event of uniqueEventsForDay(events, day.date)"
+              class="event-block"
+              [style.background-color]="event.color?.primary"
+              [pTooltip]="event.title"
+              tooltipPosition="top"
+            ></div>
+          </div>
+        </div>
+      </ng-template>
+
       @if (view == calendarView.Week) {
       <app-vista-semanal
         [role]="expectedRole"
@@ -190,6 +253,7 @@
         [viewDate]="viewDate"
         [events]="events"
         (dayClicked)="onDayClicked($event)"
+        [cellTemplate]="customCellTemplate"
       ></mwl-calendar-month-view>
       }
 

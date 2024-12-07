@@ -79,3 +79,38 @@
 .complete-checkbox {
   transform: scale(0.8); /* Reduce el tamaño del checkbox */
 }
+
+.custom-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.progress-container {
+  margin-top: 5px;
+}
+
+small {
+  font-size: 12px;
+  color: #555;
+}
+
+/* Contenedor con fondo gris */
+.progress-bar-background {
+  background-color: #e0e0e0; /* Gris claro */
+  border-radius: 5px;
+  overflow: hidden;
+  height: 10px;
+  width: 100%;
+  margin-top: 5px;
+  position: relative;
+}
+
+/* Barra de progreso dinámica */
+.progress-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}

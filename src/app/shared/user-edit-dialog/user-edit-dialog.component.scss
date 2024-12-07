@@ -3,3 +3,27 @@
   align-items: center;
   justify-content: space-between;
 }
+
+.wrapper-name-flag {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: end;
+  .nombre {
+    width: 100%;
+  }
+  .display-flag {
+    margin-bottom: 10px;
+  }
+}
+
+:host ::ng-deep {
+  .assigned-planifications {
+    button {
+      width: 100%;
+      align-items: center;
+      display: flex;
+      justify-content: end;
+      gap: 10px;
+    }
+  }
+}

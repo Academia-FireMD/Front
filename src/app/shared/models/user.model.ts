@@ -1,3 +1,4 @@
+import { Comunidad } from './pregunta.model';
 import { Test } from './test.model';
 
 export interface Usuario {
@@ -13,9 +14,17 @@ export interface Usuario {
   apellidos: string;
   esTutor: boolean;
   tutorId?: number;
+  comunidad: Comunidad;
+  tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
 }
 
 export enum Rol {
   ADMIN = 'ADMIN',
   ALUMNO = 'ALUMNO',
+}
+
+export enum TipoDePlanificacionDeseada {
+  CUATRO_HORAS = 'CUATRO_HORAS',
+  SEIS_HORAS = 'SEIS_HORAS',
+  OCHO_HORAS = 'OCHO_HORAS',
 }

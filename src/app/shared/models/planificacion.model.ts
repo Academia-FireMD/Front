@@ -1,4 +1,5 @@
-import { Usuario } from './user.model';
+import { Comunidad } from './pregunta.model';
+import { TipoDePlanificacionDeseada, Usuario } from './user.model';
 
 export interface PlanificacionBloque {
   id: any;
@@ -45,8 +46,11 @@ export interface PlanificacionMensual {
   mes: number;
   ano: number;
   subBloques: SubBloque[];
-  asignaciones: AsignacionAlumno[];
+  asignacion: AsignacionAlumno;
   createdAt: Date;
+  esPorDefecto: boolean;
+  tipoDePlanificacion?: TipoDePlanificacionDeseada;
+  relevancia: Array<Comunidad>;
   updatedAt: Date;
 }
 

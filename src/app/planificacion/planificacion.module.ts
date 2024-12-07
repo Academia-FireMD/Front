@@ -15,6 +15,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { TableModule } from 'primeng/table';
 import { SharedModule } from '../shared/shared.module';
 import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
@@ -27,6 +28,7 @@ import { PlanificacionRoutingModule } from './planificacion-routing.module';
 import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantilla-semanal-edit.component';
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
 import { VistaSemanalComponent } from './vista-semanal/vista-semanal.component';
+import { PlanificacionComentariosOverviewComponent } from './planificacion-comentarios-overview/planificacion-comentarios-overview.component';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [
@@ -39,6 +41,7 @@ registerLocaleData(localeEs);
     EditarSubBloqueDialogComponent,
     VistaSemanalComponent,
     CalendarHeaderComponent,
+    PlanificacionComentariosOverviewComponent,
   ],
   imports: [
     CommonModule,
@@ -55,6 +58,7 @@ registerLocaleData(localeEs);
     PaginatorModule,
     InputTextModule,
     FormsModule,
+    ProgressBarModule,
   ],
   providers: [
     ConfirmationService,

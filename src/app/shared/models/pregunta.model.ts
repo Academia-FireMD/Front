@@ -1,5 +1,5 @@
 import { Test } from './test.model';
-import { Usuario } from './user.model';
+import { TipoDePlanificacionDeseada, Usuario } from './user.model';
 
 export interface Pregunta {
   id: number;
@@ -51,3 +51,13 @@ export enum Comunidad {
   VALENCIA = 'VALENCIA',
   MURCIA = 'MURCIA',
 }
+
+export const duracionesDisponibles = [
+  { label: '4 Horas', value: 'CUATRO_HORAS' },
+  { label: '6 Horas', value: 'SEIS_HORAS' },
+  { label: '8 Horas', value: 'OCHO_HORAS' },
+];
+
+export const matchKeyWithLabel = (key: TipoDePlanificacionDeseada) => {
+  return duracionesDisponibles.find((e) => e.value == key)?.label ?? '';
+};

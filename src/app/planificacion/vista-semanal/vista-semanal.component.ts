@@ -19,6 +19,7 @@ import {
   PlanificacionBloque,
   SubBloque,
 } from '../../shared/models/planificacion.model';
+import { EventsService } from '../services/events.service';
 export const colors: any = {
   yellow: {
     primary: '#e3bc08',
@@ -36,6 +37,7 @@ export const colors: any = {
 })
 export class VistaSemanalComponent {
   planificacionesService = inject(PlanificacionesService);
+  eventsService = inject(EventsService);
   public searchTerm = signal('');
   isCommentDialogVisible: boolean = false;
   selectedSubBloque!: SubBloque;
@@ -57,6 +59,12 @@ export class VistaSemanalComponent {
   @Output() saveChanges = new EventEmitter<void>();
   @Input() viewDate = new Date();
   @Input() mode: 'picker' | 'edit' = 'edit';
+  public getEventsForDay = this.eventsService.getEventsForDay;
+  public getProgressBarColor = this.eventsService.getProgressBarColor;
+  public getCompletedSubBlocksForDay =
+    this.eventsService.getCompletedSubBlocksForDay;
+  public getProgressPercentageForDay =
+    this.eventsService.getProgressPercentageForDay;
 
   public getAllBloques$ = computed(() => {
     return this.planificacionesService

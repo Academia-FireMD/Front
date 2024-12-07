@@ -4,6 +4,7 @@ import { FormControl } from '@angular/forms';
 import { cloneDeep } from 'lodash';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
+import { AuthService } from '../../../services/auth.service';
 import { UserService } from '../../../services/user.service';
 import { Usuario } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
@@ -16,6 +17,7 @@ import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.com
 export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   userService = inject(UserService);
   confirmationService = inject(ConfirmationService);
+  authService = inject(AuthService);
   filterOptions: any[] = [
     { label: 'Pendientes', value: 'pendientes' },
     { label: 'Activos', value: 'activos' },
@@ -25,6 +27,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   public filterType = signal<'pendientes' | 'activos' | 'todos'>('pendientes');
   editDialogVisible = false;
   selectedUser!: Usuario;
+  public decodedUser = this.authService.decodeToken() as Usuario;
 
   constructor() {
     super();

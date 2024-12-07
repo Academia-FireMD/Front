@@ -41,6 +41,8 @@ export class LayoutComponent {
         apellidos: usuarioActualizado.apellidos,
         esTutor: usuarioActualizado.esTutor,
         tutorId: usuarioActualizado.tutorId,
+        tipoDePlanificacionDuracionDeseada:
+          usuarioActualizado.tipoDePlanificacionDuracionDeseada,
       })
       .subscribe({
         next: () => {
@@ -90,6 +92,11 @@ export class LayoutComponent {
               label: 'Planificación mensual',
               icon: 'pi pi-calendar-plus',
               routerLink: '/app/planificacion/planificacion-mensual',
+            },
+            {
+              label: 'Comentarios',
+              icon: 'fa fa-comment',
+              routerLink: '/app/planificacion/comentarios',
             },
           ],
         },

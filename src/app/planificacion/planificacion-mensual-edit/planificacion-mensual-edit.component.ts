@@ -1,5 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CalendarEvent, CalendarView } from 'angular-calendar';
 import { ToastrService } from 'ngx-toastr';
@@ -19,7 +24,14 @@ import {
   PlantillaSemanal,
   SubBloque,
 } from '../../shared/models/planificacion.model';
-import { Usuario } from '../../shared/models/user.model';
+import {
+  Comunidad,
+  duracionesDisponibles,
+} from '../../shared/models/pregunta.model';
+import {
+  TipoDePlanificacionDeseada,
+  Usuario,
+} from '../../shared/models/user.model';
 import { EventsService } from '../services/events.service';
 
 @Component({
@@ -34,7 +46,24 @@ export class PlanificacionMensualEditComponent {
     descripcion: ['', Validators.required],
     mes: [0, Validators.required],
     ano: [0, Validators.required],
+    relevancia: this.fb.array([] as Array<Comunidad>),
+    esPorDefecto: [false],
+    tipoDePlanificacion: [TipoDePlanificacionDeseada.SEIS_HORAS],
   });
+  public get relevancia(): FormArray {
+    return this.formGroup.get('relevancia') as FormArray;
+  }
+  public get esPorDefecto() {
+    return this.formGroup.get('esPorDefecto') as FormControl;
+  }
+
+  public get tipoDePlanificacion() {
+    return this.formGroup.get('tipoDePlanificacion') as FormControl;
+  }
+  public updateCommunitySelection(communities: Comunidad[]) {
+    this.relevancia.clear();
+    communities.forEach((code) => this.relevancia.push(new FormControl(code)));
+  }
   viewportService = inject(ViewportService);
   activedRoute = inject(ActivatedRoute);
   planificacionesService = inject(PlanificacionesService);
@@ -63,6 +92,14 @@ export class PlanificacionMensualEditComponent {
   public usuariosSeleccionadosId = [] as Array<number>;
   searchTerm: string = ''; // Término de búsqueda
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  public getEventsForDay = this.eventsService.getEventsForDay;
+  public getProgressBarColor = this.eventsService.getProgressBarColor;
+  public getCompletedSubBlocksForDay =
+    this.eventsService.getCompletedSubBlocksForDay;
+  public getProgressPercentageForDay =
+    this.eventsService.getProgressPercentageForDay;
+  duracionesDisponibles = duracionesDisponibles;
+
   filterUsers(users: Array<Usuario>): Array<Usuario> {
     const term = this.searchTerm.toLowerCase();
     return (users ?? []).filter(
@@ -71,6 +108,18 @@ export class PlanificacionMensualEditComponent {
         user.email.toLowerCase().includes(term)
     );
   }
+
+  public uniqueEventsForDay = (events: CalendarEvent[], date: Date) => {
+    const res = this.getEventsForDay(events, date);
+    const uniqueEvents = new Map();
+    res.forEach((event) => {
+      if (!uniqueEvents.has(event.title)) {
+        uniqueEvents.set(event.title, event);
+      }
+    });
+
+    return Array.from(uniqueEvents.values());
+  };
 
   public alternarVista = () => {
     this.view =
@@ -256,7 +305,12 @@ export class PlanificacionMensualEditComponent {
         end: adjustedEnd,
       };
     });
-
+    eventsToApplyToCurrentWeek.forEach((event) => {
+      if (event?.meta?.subBloque as SubBloque) {
+        (event?.meta?.subBloque as SubBloque).id = undefined;
+        (event?.meta?.subBloque as SubBloque).plantillaId = undefined;
+      }
+    });
     // Combinar eventos de otras semanas con los eventos ajustados para la semana actual
     this.events = [...eventsOutsideCurrentWeek, ...adjustedEvents];
 
@@ -349,15 +403,17 @@ export class PlanificacionMensualEditComponent {
           tap((entry) => {
             const subBloques = entry.subBloques;
             this.events = this.eventsService.fromSubbloquesToEvents(subBloques);
+            this.relevancia.clear();
+            entry.relevancia.forEach((e) =>
+              this.relevancia.push(new FormControl(e))
+            );
             if (!this.calculatedInitialDate) {
               const minDate = this.eventsService.calculateMinDate(this.events);
               this.viewDate = minDate;
               this.calculatedInitialDate = true;
             }
-            (this.usuariosSeleccionadosId = entry.asignaciones.map(
-              (e) => e.alumnoId
-            )),
-              this.formGroup.patchValue(entry);
+            this.usuariosSeleccionadosId = [];
+            this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();
           })
         )
@@ -373,6 +429,12 @@ export class PlanificacionMensualEditComponent {
         ano: this.formGroup.value.ano ?? new Date().getFullYear(),
         mes: this.formGroup.value.mes ?? new Date().getMonth() + 1,
         id: this.getId() == 'new' ? undefined : Number(this.getId()),
+        relevancia:
+          (this.formGroup?.value?.relevancia as Array<Comunidad>) ?? [],
+        esPorDefecto: this.formGroup.value.esPorDefecto ?? false,
+        tipoDePlanificacion:
+          this.formGroup.value.tipoDePlanificacion ??
+          TipoDePlanificacionDeseada.SEIS_HORAS,
         subBloques: this.eventsService.fromEventsToSubbloques(
           this.events
         ) as SubBloque[],

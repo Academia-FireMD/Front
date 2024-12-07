@@ -5,12 +5,27 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
+import { FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
-import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import {
+  combineLatest,
+  filter,
+  firstValueFrom,
+  map,
+  Observable,
+  switchMap,
+  tap,
+} from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
+import { UserService } from '../../services/user.service';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { PlanificacionMensual } from '../../shared/models/planificacion.model';
+import {
+  duracionesDisponibles,
+  matchKeyWithLabel,
+} from '../../shared/models/pregunta.model';
+import { Usuario } from '../../shared/models/user.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
 
 @Component({
@@ -22,9 +37,28 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   planificacionesService = inject(PlanificacionesService);
   confirmationService = inject(ConfirmationService);
   activatedRoute = inject(ActivatedRoute);
+  userService = inject(UserService);
   router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
+  duracionesDisponibles = duracionesDisponibles;
+  public opcionesAsignadas = [
+    {
+      label: 'Asignadas',
+      value: true,
+    },
+    {
+      label: 'Sin asignar',
+      value: false,
+    },
+  ];
   public uploadingFile = false;
+  allUsers$ = this.userService
+    .getAllUsers$({
+      take: 9999999,
+      skip: 0,
+      searchTerm: '',
+    })
+    .pipe(map((e) => (e.data ?? []) as Array<Usuario>)) as Observable<any>;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   commMap = (pagination: PaginationFilter) => {
     return {
@@ -36,11 +70,35 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
         .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
     };
   };
+  public matchKeyWithLabel = matchKeyWithLabel;
+  public valueDuracion = new FormControl();
+  public asignadas = new FormControl(false);
+
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
-      return this.getPlanificacion(this.pagination());
+      return this.getPlanificacion({
+        ...this.pagination(),
+        where: this.getWhere(),
+      });
     });
+  }
+
+  public updateWhere() {
+    this.pagination.set({
+      ...this.pagination(),
+      where: this.getWhere(),
+    });
+  }
+
+  private getWhere() {
+    const initialWhere = {} as any;
+    if (!!this.valueDuracion.value) {
+      initialWhere['tipoDePlanificacion'] = this.valueDuracion.value;
+    }
+    if (this.asignadas.value == false || this.asignadas.value == true)
+      initialWhere['asignada'] = !!this.asignadas.value;
+    return initialWhere;
   }
 
   private getPlanificacion(pagination: PaginationFilter) {

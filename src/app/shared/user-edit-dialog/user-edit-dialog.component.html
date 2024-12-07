@@ -8,16 +8,23 @@
   [breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
 >
   <div class="p-fluid py-3" *ngIf="selectedUser">
-    <div class="field">
-      <label for="nombre">Nombre</label>
-      <input
-        type="text"
-        pInputText
-        id="nombre"
-        [(ngModel)]="selectedUser.nombre"
-      />
-    </div>
+    <div class="wrapper-name-flag gap-2">
+      <div class="nombre">
+        <label for="nombre">Nombre</label>
+        <input
+          type="text"
+          pInputText
+          id="nombre"
+          [(ngModel)]="selectedUser.nombre"
+        />
+      </div>
 
+      <div class="display-flag">
+        <app-comunidad-picker
+          [comunidades]="[selectedUser.comunidad]"
+        ></app-comunidad-picker>
+      </div>
+    </div>
     <div class="field">
       <label for="apellidos">Apellidos</label>
       <input
@@ -66,6 +73,23 @@
       </p-dropdown>
     </div>
 
+    <div class="field">
+      <label for="tipoDePlanificacionDuracionDeseada"
+        >Duración de planificación</label
+      >
+      <p-dropdown
+        class="w-full"
+        id="tipoDePlanificacionDuracionDeseada"
+        [options]="duracionesDisponibles"
+        [(ngModel)]="selectedUser.tipoDePlanificacionDuracionDeseada"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        placeholder="Seleccione una duración"
+      >
+      </p-dropdown>
+    </div>
+
     <div class="field tutor" *ngIf="!!allowSetIsTutor">
       <label for="esTutor">Este usuario es tutor?</label>
       <p-toggleButton
@@ -76,7 +100,35 @@
       />
     </div>
 
-    <div class="field flex justify-content-end">
+    <div
+      class="assigned-planifications py-1 flex justify-content-between"
+      *ngIf="rol == 'ALUMNO'"
+    >
+      <ng-container
+        *ngIf="
+          countPlanificacionesAsignadas$ | async as count;
+          else noPlanificaciones
+        "
+      >
+        <label>Nº Planificaciones asignadas:</label>
+        <strong>{{ countPlanificacionesAsignadas$ | async }}</strong>
+      </ng-container>
+      <ng-template #noPlanificaciones>
+        <p-button
+          class="w-full"
+          [link]="true"
+          icon="pi pi-sync"
+          (click)="
+            $event.stopPropagation();
+            $event.preventDefault();
+            autoAssignPlanificacion()
+          "
+          >Asignar planificación automaticamente</p-button
+        >
+      </ng-template>
+    </div>
+
+    <div class="field flex justify-content-end mt-3">
       <p-button
         label="Guardar"
         icon="pi pi-check"
