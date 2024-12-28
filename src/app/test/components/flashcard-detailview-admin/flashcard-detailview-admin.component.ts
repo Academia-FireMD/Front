@@ -4,11 +4,12 @@ import { FormArray, FormBuilder, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Editor } from '@toast-ui/editor';
 import { ToastrService } from 'ngx-toastr';
-import { firstValueFrom, map, tap } from 'rxjs';
+import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { TemaService } from '../../../services/tema.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
 import { Comunidad } from '../../../shared/models/pregunta.model';
+import { Rol } from '../../../shared/models/user.model';
 import { getAllDifficultades, groupedTemas } from '../../../utils/utils';
 @Component({
   selector: 'app-flashcard-detailview-admin',
@@ -23,7 +24,7 @@ export class FlashcardDetailviewAdminComponent {
   activedRoute = inject(ActivatedRoute);
   temaService = inject(TemaService);
   flashCardService = inject(FlashcardDataService);
-
+  public expectedRole: Rol = Rol.ADMIN;
   editor!: any;
   editorEnunciado!: any;
 
@@ -63,10 +64,25 @@ export class FlashcardDetailviewAdminComponent {
     })
   );
 
-  public getAllDifficultades = getAllDifficultades(true);
+  private getRole() {
+    return combineLatest([
+      this.activedRoute.data,
+      this.activedRoute.queryParams,
+    ]).pipe(
+      filter((e) => !!e),
+      tap((e) => {
+        const [data, queryParams] = e;
+        const { expectedRole, type } = data;
+        this.expectedRole = expectedRole;
+      })
+    );
+  }
+
+  public getAllDifficultades = getAllDifficultades;
 
   ngOnInit(): void {
     this.loadFlashcard();
+    firstValueFrom(this.getRole());
   }
 
   public getId() {
@@ -102,7 +118,11 @@ export class FlashcardDetailviewAdminComponent {
     if (this.goBack()) {
       this.location.back();
     } else {
-      this.router.navigate(['/app/test/flashcards']);
+      if (this.expectedRole == 'ADMIN') {
+        this.router.navigate(['/app/test/flashcards']);
+      } else {
+        this.router.navigate(['/app/test/alumno/flashcards']);
+      }
     }
   }
 
@@ -152,7 +172,11 @@ export class FlashcardDetailviewAdminComponent {
   public async crearFlashcard() {
     const res = await this.updateFlashcard();
     this.toast.success('Flashcard creada con éxito!', 'Creación exitosa');
-    await this.router.navigate(['app/test/flashcards/' + res.id]);
+    if (this.expectedRole == 'ADMIN') {
+      await this.router.navigate(['app/test/flashcards/' + res.id]);
+    } else {
+      await this.router.navigate(['app/test/alumno/flashcards/' + res.id]);
+    }
     this.loadFlashcard();
   }
 }

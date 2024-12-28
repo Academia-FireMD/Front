@@ -5,13 +5,17 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom, tap } from 'rxjs';
+import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
+import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { Pregunta } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { getStarsBasedOnDifficulty } from '../../../utils/utils';
+import {
+  getAlumnoDificultad,
+  getStarsBasedOnDifficulty,
+} from '../../../utils/utils';
 
 @Component({
   selector: 'app-preguntas-dashboard-admin',
@@ -21,23 +25,54 @@ import { getStarsBasedOnDifficulty } from '../../../utils/utils';
 export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregunta> {
   preguntasService = inject(PreguntasService);
   confirmationService = inject(ConfirmationService);
+  activatedRoute = inject(ActivatedRoute);
   router = inject(Router);
+  public getAlumnoDificultad = getAlumnoDificultad;
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;
+
+  public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  commMap = (pagination: PaginationFilter) => {
+    return {
+      ADMIN: this.preguntasService
+        .getPreguntas$(pagination)
+        .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
+      ALUMNO: this.preguntasService
+        .getPreguntasAlumno$(pagination)
+        .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
+    };
+  };
 
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
-      return this.preguntasService
-        .getPreguntas$(this.pagination())
-        .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+      return this.getPreguntas({ ...this.pagination() });
     });
+  }
+
+  private getPreguntas(pagination: PaginationFilter) {
+    return combineLatest([
+      this.activatedRoute.data,
+      this.activatedRoute.queryParams,
+    ]).pipe(
+      filter((e) => !!e),
+      switchMap((e) => {
+        const [data, queryParams] = e;
+        const { expectedRole, type } = data;
+        this.expectedRole = expectedRole;
+        return this.commMap(pagination)[this.expectedRole];
+      })
+    );
   }
 
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
 
   public navigateToDetailview = (id: number | 'new') => {
-    this.router.navigate(['/app/test/preguntas/' + id]);
+    if (this.expectedRole == 'ADMIN') {
+      this.router.navigate(['/app/test/preguntas/' + id]);
+    } else {
+      this.router.navigate(['/app/test/alumno/preguntas/' + id]);
+    }
   };
 
   async onFileSelected(event: Event) {

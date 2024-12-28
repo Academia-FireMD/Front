@@ -55,13 +55,26 @@
                     <span class="hidden md:block">Identificador: </span>
                     <strong class="identifier">{{ item.identificador }}</strong>
                   </div>
-                  <div class="flex gap-1">
-                    <i
-                      class="pi pi-{{ star }}"
-                      *ngFor="
-                        let star of getStarsBasedOnDifficulty(item.dificultad)
-                      "
-                    ></i>
+                  <div class="flex gap-1 align-items-center">
+                    <ng-container
+                      *ngIf="expectedRole == 'ALUMNO'; else elseTemplate"
+                    >
+                      <ng-container
+                        *ngIf="
+                          getAlumnoDificultad(item.dificultad) as dificultad
+                        "
+                      >
+                        {{ dificultad.label }}
+                      </ng-container>
+                    </ng-container>
+                    <ng-template #elseTemplate>
+                      <i
+                        class="pi pi-{{ star }}"
+                        *ngFor="
+                          let star of getStarsBasedOnDifficulty(item.dificultad)
+                        "
+                      ></i>
+                    </ng-template>
                   </div>
                   <div class="flex gap-1">
                     <span>Tema: </span>

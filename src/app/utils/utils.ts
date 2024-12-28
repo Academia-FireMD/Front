@@ -186,6 +186,16 @@ export const getStarsBasedOnDifficulty = (difficulty: Dificultad) => {
   }
 };
 
+export const getAlumnoDificultad = (difficulty: Dificultad) => {
+  switch (difficulty) {
+    case Dificultad.PRIVADAS:
+      return { icon: 'pi-eye-slash', label: 'Privado/a' };
+    case Dificultad.PUBLICAS:
+      return { icon: 'pi-eye', label: 'Publico/a' };
+  }
+  return null;
+};
+
 export const getNumeroDePreguntas = () => {
   return [20, 40, 60, 80, 100].map((entry) => {
     return {
@@ -213,7 +223,7 @@ export const groupedTemas = (temas: Array<Tema>) => {
         acc[categoria as any] = [];
       }
       acc[categoria as any].push({
-        label: tema.numero + ' - ' + tema.descripcion ?? '',
+        label: tema.numero + ' - ' + tema.descripcion,
         value: tema.id,
         numero: tema.numero,
       });
@@ -226,25 +236,39 @@ export const groupedTemas = (temas: Array<Tema>) => {
   }));
 };
 
-export const getAllDifficultades = (isFlashcards = false) => {
-  return Object.keys(Dificultad).map((entry) => {
-    const map = {
-      [Dificultad.BASICO]: {
-        label: isFlashcards ? 'Datos Básicos' : 'Basico',
-        stars: getStarsBasedOnDifficulty(Dificultad.BASICO),
-        value: Dificultad.BASICO,
-      },
-      [Dificultad.INTERMEDIO]: {
-        label: isFlashcards ? 'Datos' : 'Intermedio',
-        stars: getStarsBasedOnDifficulty(Dificultad.INTERMEDIO),
-        value: Dificultad.INTERMEDIO,
-      },
-      [Dificultad.DIFICIL]: {
-        label: isFlashcards ? 'Tarjetas' : 'Dificil',
-        stars: getStarsBasedOnDifficulty(Dificultad.DIFICIL),
-        value: Dificultad.DIFICIL,
-      },
-    } as any;
-    return map[entry];
-  });
+export const getAllDifficultades = (isFlashcards = false, isAlumno = false) => {
+  const privada = getAlumnoDificultad(Dificultad.PRIVADAS);
+  const publica = getAlumnoDificultad(Dificultad.PUBLICAS);
+
+  const allDificultades = [
+    {
+      label: isFlashcards ? 'Datos Básicos' : 'Basico',
+      stars: getStarsBasedOnDifficulty(Dificultad.BASICO),
+      value: Dificultad.BASICO,
+    },
+    {
+      label: isFlashcards ? 'Datos' : 'Intermedio',
+      stars: getStarsBasedOnDifficulty(Dificultad.INTERMEDIO),
+      value: Dificultad.INTERMEDIO,
+    },
+    {
+      label: isFlashcards ? 'Tarjetas' : 'Dificil',
+      stars: getStarsBasedOnDifficulty(Dificultad.DIFICIL),
+      value: Dificultad.DIFICIL,
+    },
+  ];
+  const alumnoOnly = [
+    {
+      label: privada?.label,
+      icon: privada?.icon,
+      value: Dificultad.PRIVADAS,
+    },
+    {
+      label: publica?.label,
+      icon: publica?.icon,
+      value: Dificultad.PUBLICAS,
+    },
+  ];
+  if (isAlumno) return alumnoOnly;
+  return [...allDificultades, ...alumnoOnly];
 };

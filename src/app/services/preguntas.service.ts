@@ -25,6 +25,12 @@ export class PreguntasService extends ApiBaseService {
     return this.post('', filter) as Observable<PaginatedResult<Pregunta>>;
   }
 
+  public getPreguntasAlumno$(filter: PaginationFilter) {
+    return this.post('/alumno', filter) as Observable<
+      PaginatedResult<Pregunta>
+    >;
+  }
+
   public getPreguntaById(id: number) {
     return this.get('/' + id) as Observable<Pregunta>;
   }
@@ -36,6 +42,4 @@ export class PreguntasService extends ApiBaseService {
   public deletePregunta$(id: number) {
     return this.delete('/' + id);
   }
-
-
 }

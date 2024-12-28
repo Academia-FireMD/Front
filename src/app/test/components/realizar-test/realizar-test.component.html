@@ -32,28 +32,9 @@
           ></p-dropdown>
         </div>
         <div class="col-12 md:col-4">
-          <p-dropdown
-            class="w-full"
-            [style]="{ width: '100%', height: '100%' }"
-            [options]="getAllDifficultades"
-            formControlName="dificultad"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Selecciona una dificultad"
-          >
-            <ng-template let-item pTemplate="selectedItem">
-              <div class="flex align-items-center gap-2 h-full">
-                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
-                <div >{{ item.label }}</div>
-              </div>
-            </ng-template>
-            <ng-template let-item let-index pTemplate="item">
-              <div class="flex align-items-center gap-2 h-full">
-                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
-                <div >{{ item.label }}</div>
-              </div>
-            </ng-template>
-          </p-dropdown>
+          <app-dificultad-dropdown
+            [formControlDificultad]="formGroup.get('dificultad')"
+          ></app-dificultad-dropdown>
         </div>
         <div class="col-12 md:col-4">
           <p-multiSelect

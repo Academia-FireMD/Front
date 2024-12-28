@@ -38,6 +38,8 @@ export enum Dificultad {
   BASICO = 'BASICO',
   INTERMEDIO = 'INTERMEDIO',
   DIFICIL = 'DIFICIL',
+  PRIVADAS = 'PRIVADAS',
+  PUBLICAS = 'PUBLICAS',
 }
 
 export enum SeguridadAlResponder {

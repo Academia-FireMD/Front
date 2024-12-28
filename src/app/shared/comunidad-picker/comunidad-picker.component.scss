@@ -4,11 +4,14 @@
   gap: 5px;
   justify-content: center;
 }
-
+:host ::ng-deep {
+  .p-button-icon {
+    font-size: 20px;
+  }
+}
 
 .list {
   @media (max-width: 768px) {
     flex-wrap: wrap;
   }
 }
-

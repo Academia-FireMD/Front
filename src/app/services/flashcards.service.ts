@@ -58,6 +58,10 @@ export class FlashcardDataService extends ApiBaseService {
     return this.post('', filter) as Observable<PaginatedResult<FlashcardData>>;
   }
 
+  public getFlashcardsAlumno$(filter: PaginationFilter) {
+    return this.post('/alumno', filter) as Observable<PaginatedResult<FlashcardData>>;
+  }
+
   public importarExcel(file: FormData) {
     return this.post('/importar-excel', file);
   }

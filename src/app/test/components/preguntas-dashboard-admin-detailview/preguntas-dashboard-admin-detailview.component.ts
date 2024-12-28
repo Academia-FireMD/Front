@@ -8,10 +8,11 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { firstValueFrom, map, tap } from 'rxjs';
+import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { TemaService } from '../../../services/tema.service';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
+import { Rol } from '../../../shared/models/user.model';
 import {
   getAllDifficultades,
   getLetter,
@@ -32,6 +33,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   fb = inject(FormBuilder);
   toast = inject(ToastrService);
   router = inject(Router);
+  public expectedRole: Rol = Rol.ADMIN;
 
   public checked = {};
   public getAllTemas$ = this.temaService.getAllTemas$().pipe(
@@ -45,7 +47,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
-  public getAllDifficultades = getAllDifficultades();
+  public getAllDifficultades = getAllDifficultades;
 
   formGroup = this.fb.group({
     identificador: [''],
@@ -73,10 +75,25 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   ngOnInit(): void {
     this.loadPregunta();
+    firstValueFrom(this.getRole());
   }
 
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as number | 'new';
+  }
+
+  private getRole() {
+    return combineLatest([
+      this.activedRoute.data,
+      this.activedRoute.queryParams,
+    ]).pipe(
+      filter((e) => !!e),
+      tap((e) => {
+        const [data, queryParams] = e;
+        const { expectedRole, type } = data;
+        this.expectedRole = expectedRole;
+      })
+    );
   }
 
   private loadPregunta() {
@@ -144,7 +161,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public async crearPregunta() {
     const res = await this.updatePregunta();
     this.toast.success('Pregunta creada con éxito!', 'Creación exitosa');
-    await this.router.navigate(['app/test/preguntas/' + res.id]);
+    if (this.expectedRole == 'ADMIN') {
+      await this.router.navigate(['app/test/preguntas/' + res.id]);
+    } else {
+      await this.router.navigate(['/app/test/alumno/preguntas/' + res.id]);
+    }
     this.loadPregunta();
   }
 
@@ -152,7 +173,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
     if (this.goBack()) {
       this.location.back();
     } else {
-      this.router.navigate(['/app/test/preguntas']);
+      if (this.expectedRole == 'ADMIN') {
+        this.router.navigate(['app/test/preguntas/']);
+      } else {
+        this.router.navigate(['/app/test/alumno/preguntas/']);
+      }
     }
   }
 }

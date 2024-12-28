@@ -162,6 +162,21 @@ export class LayoutComponent {
     } else {
       this.items = [
         {
+          label: 'Gestión',
+          items: [
+            {
+              label: 'Preguntas',
+              icon: 'pi pi-question',
+              routerLink: '/app/test/alumno/preguntas',
+            },
+            {
+              label: 'Flashcards',
+              icon: 'pi pi-id-card',
+              routerLink: '/app/test/alumno/flashcards',
+            },
+          ],
+        },
+        {
           label: 'Módulo de tests',
           items: [
             {

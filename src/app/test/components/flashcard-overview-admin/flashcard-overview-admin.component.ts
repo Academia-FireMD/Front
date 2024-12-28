@@ -5,13 +5,14 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom, tap } from 'rxjs';
+import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
+import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { getStarsBasedOnDifficulty } from '../../../utils/utils';
+import { getAlumnoDificultad, getStarsBasedOnDifficulty } from '../../../utils/utils';
 
 @Component({
   selector: 'app-flashcard-overview-admin',
@@ -21,17 +22,43 @@ import { getStarsBasedOnDifficulty } from '../../../utils/utils';
 export class FlashcardOverviewAdminComponent extends SharedGridComponent<FlashcardData> {
   confirmationService = inject(ConfirmationService);
   flashcardService = inject(FlashcardDataService);
+  activatedRoute = inject(ActivatedRoute);
   router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;
+  public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
+  public getAlumnoDificultad = getAlumnoDificultad;
+  commMap = (pagination: PaginationFilter) => {
+    return {
+      ADMIN: this.flashcardService
+        .getFlashcards$(this.pagination())
+        .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
+      ALUMNO: this.flashcardService
+        .getFlashcardsAlumno$(pagination)
+        .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
+    };
+  };
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
-      return this.flashcardService
-        .getFlashcards$(this.pagination())
-        .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+      return this.getFlashcards({ ...this.pagination() });
     });
+  }
+
+  private getFlashcards(pagination: PaginationFilter) {
+    return combineLatest([
+      this.activatedRoute.data,
+      this.activatedRoute.queryParams,
+    ]).pipe(
+      filter((e) => !!e),
+      switchMap((e) => {
+        const [data, queryParams] = e;
+        const { expectedRole, type } = data;
+        this.expectedRole = expectedRole;
+        return this.commMap(pagination)[this.expectedRole];
+      })
+    );
   }
 
   async onFileSelected(event: Event) {
@@ -70,7 +97,11 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
   }
 
   public navigateToDetailview = (id: number | 'new') => {
-    this.router.navigate(['/app/test/flashcards/' + id]);
+    if (this.expectedRole == 'ADMIN') {
+      this.router.navigate(['/app/test/flashcards/' + id]);
+    } else {
+      this.router.navigate(['/app/test/alumno/flashcards/' + id]);
+    }
   };
 
   public eliminarFlashcard(id: number, event: Event) {
