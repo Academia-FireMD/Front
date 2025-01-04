@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import {
   PaginatedResult,
   PaginationFilter,
@@ -41,5 +42,15 @@ export class PreguntasService extends ApiBaseService {
 
   public deletePregunta$(id: number) {
     return this.delete('/' + id);
+  }
+
+  public getAllPreguntasCreadosPorAlumnos() {
+    return this._http.post(
+      environment.apiUrl +
+        this.controllerPrefix +
+        '/preguntas-creadas-por-alumnos',
+      {},
+      { responseType: 'blob' }
+    );
   }
 }

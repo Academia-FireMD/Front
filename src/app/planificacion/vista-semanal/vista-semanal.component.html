@@ -3,6 +3,68 @@
   [data]="editSubBloqueData"
   (savedSubBloque)="saveEvent($event)"
 ></app-editar-sub-bloque-dialog>
+
+<p-dialog
+  *ngIf="role == 'ADMIN'"
+  header="Seleccionar bloque asignable"
+  [(visible)]="seleccionandoBloquesAsignables"
+  [modal]="true"
+>
+  <div class="col-12">
+    <div class="top-action-bar">
+      <p-iconField iconPosition="left">
+        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+        <input
+          type="text"
+          pInputText
+          placeholder="Buscar por identificador"
+          style="min-width: 30vw"
+          (input)="debouncedValueChanged($event)"
+        />
+      </p-iconField>
+      <div class="right-actions"></div>
+    </div>
+  </div>
+  <div
+    class="list-bloques flex gap-2"
+    mwlDroppable
+    dragOverClass="drag-over"
+    *ngIf="getAllBloques$() | async as bloques"
+  >
+    <p *ngIf="bloques.data.length == 0"><em>No events added</em></p>
+
+    <p-card
+      *ngFor="let bloque of bloques.data"
+      (click)="bloqueAsignableSeleccionado(bloque)"
+      header="{{ bloque.identificador }}"
+      class="col-12 md:col-3"
+    >
+      <div class="content-card">
+        <div
+          class="flex flex-wrap p-2 align-items-center gap-3"
+          [ngStyle]="{ 'background-color': subBloque.color }"
+          *ngFor="let subBloque of bloque.subBloques"
+        >
+          <div class="flex-1 flex flex-column gap-2">
+            <span class="font-bold">{{
+              subBloque.nombre && subBloque.nombre.length > 0
+                ? subBloque.nombre
+                : "Sin nombre"
+            }}</span>
+            <div class="flex align-items-center gap-2">
+              <i class="pi pi-clock text-sm"></i>
+              <span> {{ subBloque.duracion }} minutos </span>
+            </div>
+          </div>
+          <span class="font-bold">
+            {{ subBloque.comentarios || "Sin comentarios" }}
+          </span>
+        </div>
+      </div>
+    </p-card>
+  </div>
+</p-dialog>
+
 <ng-template
   #headerTemplate
   let-days="days"
@@ -29,7 +91,7 @@
       <!-- Progreso debajo del día -->
       <div
         class="progress-container"
-        *ngIf="getEventsForDay(events, day.date).length > 0"
+        *ngIf="role == 'ALUMNO' && getEventsForDay(events, day.date).length > 0"
       >
         <div class="progress-bar-background">
           <div
@@ -85,72 +147,24 @@
 </p-dialog>
 
 <div class="row">
-  <p-accordion *ngIf="mode == 'edit'">
+  <!-- <p-accordion *ngIf="mode == 'edit'">
     <p-accordionTab header="Bloques asignables">
-      <div class="col-12">
-        <div class="top-action-bar">
-          <p-iconField iconPosition="left">
-            <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-            <input
-              type="text"
-              pInputText
-              placeholder="Buscar por identificador"
-              style="min-width: 30vw"
-              (input)="debouncedValueChanged($event)"
-            />
-          </p-iconField>
-          <div class="right-actions"></div>
-        </div>
-      </div>
-      <div
-        class="list-bloques flex gap-2"
-        mwlDroppable
-        dragOverClass="drag-over"
-        *ngIf="getAllBloques$() | async as bloques"
-      >
-        <p *ngIf="bloques.data.length == 0"><em>No events added</em></p>
 
-        <p-card
-          *ngFor="let bloque of bloques.data"
-          mwlDraggable
-          [dropData]="{ event: bloque }"
-          [touchStartLongPress]="{ delay: 300, delta: 30 }"
-          dragActiveClass="drag-active"
-          header="{{ bloque.identificador }}"
-          class="col-12 md:col-3 drag-card"
-        >
-          <div class="content-card">
-            <div
-              class="flex flex-wrap p-2 align-items-center gap-3"
-              [ngStyle]="{ 'background-color': subBloque.color }"
-              *ngFor="let subBloque of bloque.subBloques"
-            >
-              <div class="flex-1 flex flex-column gap-2">
-                <span class="font-bold">{{
-                  subBloque.nombre && subBloque.nombre.length > 0
-                    ? subBloque.nombre
-                    : "Sin nombre"
-                }}</span>
-                <div class="flex align-items-center gap-2">
-                  <i class="pi pi-clock text-sm"></i>
-                  <span> {{ subBloque.duracion }} minutos </span>
-                </div>
-              </div>
-              <span class="font-bold">
-                {{ subBloque.comentarios || "Sin comentarios" }}
-              </span>
-            </div>
-          </div>
-        </p-card>
-      </div>
     </p-accordionTab>
-  </p-accordion>
+  </p-accordion> -->
 
   <div class="col-md-9 calendar-table">
     <ng-template #templatePlan let-weekEvent="weekEvent">
       <div
         class="wrapper"
-        (click)="mode == 'edit' ? onEventClicked(weekEvent.event) : false"
+        (click)="
+          role == 'ALUMNO'
+            ? (weekEvent.event.meta.subBloque.realizado =
+                !weekEvent.event.meta.subBloque.realizado)
+            : mode == 'edit'
+            ? onEventClicked(weekEvent.event)
+            : false
+        "
       >
         <div
           class="custom-event-template"
@@ -186,9 +200,7 @@
                 @if(role == 'ADMIN'){
                 <i
                   class="fa-solid fa-trash-can text-primary"
-                  (click)="
-                    deleteEvent(weekEvent?.event?.meta?.subBloque, $event)
-                  "
+                  (click)="deleteEvent(weekEvent?.event, $event)"
                 ></i>
                 }
               </div>
@@ -203,9 +215,16 @@
         </div>
       </div>
     </ng-template>
+    <p-contextMenu
+      #cm
+      [model]="menuItems"
+      [global]="true"
+      [appendTo]="'body'"
+    ></p-contextMenu>
+
     <mwl-calendar-week-view
       [viewDate]="viewDate"
-      [dayStartHour]="0"
+      [dayStartHour]="6"
       [dayEndHour]="23"
       [hourSegments]="2"
       [locale]="'es'"
@@ -215,7 +234,7 @@
       [headerTemplate]="headerTemplate"
       [weekStartsOn]="1"
       [eventTemplate]="templatePlan"
-      (hourSegmentClicked)="mode === 'edit' && onTimeClicked($event)"
+      (hourSegmentClicked)="mode === 'edit' && onTimeClicked($event, cm)"
       (eventTimesChanged)="mode === 'edit' && eventDropped($event)"
       (eventClicked)="mode === 'edit' && onEventClicked($event.event)"
     >

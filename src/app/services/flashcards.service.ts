@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import {
   EstadoFlashcard,
   FlashcardData,
@@ -59,7 +60,9 @@ export class FlashcardDataService extends ApiBaseService {
   }
 
   public getFlashcardsAlumno$(filter: PaginationFilter) {
-    return this.post('/alumno', filter) as Observable<PaginatedResult<FlashcardData>>;
+    return this.post('/alumno', filter) as Observable<
+      PaginatedResult<FlashcardData>
+    >;
   }
 
   public importarExcel(file: FormData) {
@@ -111,5 +114,15 @@ export class FlashcardDataService extends ApiBaseService {
 
   public getAllFinishedTest() {
     return this.get('/finished') as Observable<Array<FlashcardTest>>;
+  }
+
+  public getAllFlashcardsCreadasPorAlumnos() {
+    return this._http.post(
+      environment.apiUrl +
+        this.controllerPrefix +
+        '/flashcards-creados-por-alumno',
+      {},
+      { responseType: 'blob' }
+    );
   }
 }

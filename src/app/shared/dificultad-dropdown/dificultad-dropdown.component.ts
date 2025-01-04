@@ -10,6 +10,7 @@ import { Rol } from '../models/user.model';
 export class DificultadDropdownComponent {
   @Input() rol: Rol = Rol.ADMIN;
   @Input() formControlDificultad!: any;
+  @Input() isDoingTest = false;
   public rolEnum = Rol;
   public getAllDifficultades = getAllDifficultades;
 }

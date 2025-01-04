@@ -22,10 +22,22 @@
 }
 :host ::ng-deep {
   app-vista-semanal {
-    .calendar-table {
-      max-height: 70vh;
-      overflow: auto;
-      display: block;
+    .calendar-container {
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .cal-day-headers {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background-color: white;
+    }
+
+    .calendar-content {
+      overflow-y: auto;
+      height: calc(100vh - 40px);
     }
   }
   p-speeddial {

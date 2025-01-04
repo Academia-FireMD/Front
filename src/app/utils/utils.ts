@@ -236,7 +236,11 @@ export const groupedTemas = (temas: Array<Tema>) => {
   }));
 };
 
-export const getAllDifficultades = (isFlashcards = false, isAlumno = false) => {
+export const getAllDifficultades = (
+  isFlashcards = false,
+  isAlumno = false,
+  isCreatingTest = false
+) => {
   const privada = getAlumnoDificultad(Dificultad.PRIVADAS);
   const publica = getAlumnoDificultad(Dificultad.PUBLICAS);
 
@@ -259,12 +263,20 @@ export const getAllDifficultades = (isFlashcards = false, isAlumno = false) => {
   ];
   const alumnoOnly = [
     {
-      label: privada?.label,
+      label: isCreatingTest
+        ? isFlashcards
+          ? 'Solo mis flashcards'
+          : 'Solo mis preguntas'
+        : privada?.label,
       icon: privada?.icon,
       value: Dificultad.PRIVADAS,
     },
     {
-      label: publica?.label,
+      label: isCreatingTest
+        ? isFlashcards
+          ? 'Solo flashcards publicos'
+          : 'Solo preguntas publicas'
+        : publica?.label,
       icon: publica?.icon,
       value: Dificultad.PUBLICAS,
     },
@@ -272,3 +284,4 @@ export const getAllDifficultades = (isFlashcards = false, isAlumno = false) => {
   if (isAlumno) return alumnoOnly;
   return [...allDificultades, ...alumnoOnly];
 };
+

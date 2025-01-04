@@ -12,7 +12,10 @@ import { FlashcardDataService } from '../../../services/flashcards.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { getAlumnoDificultad, getStarsBasedOnDifficulty } from '../../../utils/utils';
+import {
+  getAlumnoDificultad,
+  getStarsBasedOnDifficulty,
+} from '../../../utils/utils';
 
 @Component({
   selector: 'app-flashcard-overview-admin',
@@ -122,5 +125,22 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
       },
       reject: () => {},
     });
+  }
+
+  public descargarFlashcardsDeAlumnos() {
+    firstValueFrom(
+      this.flashcardService.getAllFlashcardsCreadasPorAlumnos().pipe(
+        tap((response: any) => {
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(response);
+          link.href = url;
+          link.download = `flashcards_alumno_${+new Date()}.xlsx`;
+          link.click();
+
+          // Limpia el URL temporal
+          URL.revokeObjectURL(url);
+        })
+      )
+    );
   }
 }

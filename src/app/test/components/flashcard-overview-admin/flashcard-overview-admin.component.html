@@ -14,6 +14,17 @@
       </p-iconField>
       <div class="right-actions">
         <p-button
+          *ngIf="expectedRole == 'ADMIN'"
+          label="{{
+            viewportService.screenWidth == 'xs'
+              ? undefined
+              : 'Descargar flashcards de alumnos'
+          }}"
+          icon="pi pi-download"
+          [link]="true"
+          (click)="descargarFlashcardsDeAlumnos()"
+        ></p-button>
+        <p-button
           label="{{
             viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
           }}"
@@ -56,25 +67,14 @@
                     <strong class="identifier">{{ item.identificador }}</strong>
                   </div>
                   <div class="flex gap-1 align-items-center">
-                    <ng-container
-                      *ngIf="expectedRole == 'ALUMNO'; else elseTemplate"
-                    >
-                      <ng-container
-                        *ngIf="
-                          getAlumnoDificultad(item.dificultad) as dificultad
-                        "
-                      >
-                        {{ dificultad.label }}
-                      </ng-container>
-                    </ng-container>
-                    <ng-template #elseTemplate>
+                    <ng-container *ngIf="expectedRole == 'ADMIN'">
                       <i
                         class="pi pi-{{ star }}"
                         *ngFor="
                           let star of getStarsBasedOnDifficulty(item.dificultad)
                         "
                       ></i>
-                    </ng-template>
+                    </ng-container>
                   </div>
                   <div class="flex gap-1">
                     <span>Tema: </span>

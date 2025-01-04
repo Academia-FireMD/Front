@@ -12,7 +12,9 @@ import {
   CalendarEventTimesChangedEvent,
   CalendarView,
 } from 'angular-calendar';
-import { debounce } from 'lodash';
+import { cloneDeep, debounce } from 'lodash';
+import { MenuItem } from 'primeng/api';
+import { ContextMenu } from 'primeng/contextmenu';
 import { map, Subject } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import {
@@ -54,11 +56,59 @@ export class VistaSemanalComponent {
   activeDayIsOpen = false;
   view = CalendarView.Month;
   public isDialogVisible: boolean = false;
-  @Input() events: CalendarEvent[] = [];
+  public seleccionandoBloquesAsignables = false;
+  @Input() public set events(data: CalendarEvent[]) {
+    if (this.role == 'ALUMNO') data.forEach((e) => (e.draggable = false));
+    this._events = data;
+  }
+  public get events() {
+    return this._events;
+  }
+  private _events: CalendarEvent[] = [];
   @Output() eventsChange = new EventEmitter<CalendarEvent[]>();
   @Output() saveChanges = new EventEmitter<void>();
   @Input() viewDate = new Date();
   @Input() mode: 'picker' | 'edit' = 'edit';
+  private onTimeClickedDate!: Date;
+  menuItems: MenuItem[] = [
+    {
+      label: 'Añadir nuevo',
+      icon: 'pi pi-plus',
+      command: () => {
+        this.selectedEvent = null;
+        const nuevoSubBloque: SubBloque = {
+          id: undefined, // Se generará al guardar
+          horaInicio: this.onTimeClickedDate, // Usa la fecha/hora seleccionada
+          duracion: 60, // Valor predeterminado
+          nombre: '',
+          comentarios: '',
+          color: '#ffffff', // Color predeterminado
+        };
+        this.selectedEvent = {
+          title: nuevoSubBloque.nombre,
+          start: this.onTimeClickedDate,
+          draggable: true,
+          end: new Date(
+            this.onTimeClickedDate.getTime() + nuevoSubBloque.duracion * 60000
+          ),
+          meta: {
+            subBloque: {
+              comentarios: nuevoSubBloque.comentarios,
+              color: nuevoSubBloque.color,
+              duracion: nuevoSubBloque.duracion,
+            },
+          },
+        };
+        this.editSubBloqueData = nuevoSubBloque;
+        this.isDialogVisible = true;
+      },
+    },
+    {
+      label: 'Aplicar bloque asignable',
+      icon: 'pi pi-book',
+      command: () => (this.seleccionandoBloquesAsignables = true),
+    },
+  ];
   public getEventsForDay = this.eventsService.getEventsForDay;
   public getProgressBarColor = this.eventsService.getProgressBarColor;
   public getCompletedSubBlocksForDay =
@@ -85,6 +135,9 @@ export class VistaSemanalComponent {
   };
   public debouncedValueChanged = debounce(this.valueChanged, 300);
   public colors = colors;
+
+  ngOnInit(): void {}
+
   onEventClicked(event: CalendarEvent): void {
     this.selectedEvent = event;
     this.editSubBloqueData = event.meta.subBloque;
@@ -128,6 +181,55 @@ export class VistaSemanalComponent {
     }
   }
 
+  public bloqueAsignableSeleccionado(planificacionBloque: PlanificacionBloque) {
+    this.applyPlanificacionBloque(planificacionBloque, this.onTimeClickedDate);
+    this.events = [...this.events];
+    if (this.view === 'month') {
+      this.viewDate = this.onTimeClickedDate;
+      this.activeDayIsOpen = true;
+    }
+    this.eventsChange.emit(this.events);
+    this.refresh.next();
+    this.onTimeClickedDate = null as any;
+    this.seleccionandoBloquesAsignables = false;
+  }
+
+  private applyPlanificacionBloque(
+    planificacionBloque: PlanificacionBloque,
+    newStart: Date
+  ) {
+    // Supongamos que el `CalendarEvent` tiene una referencia al `PlanificacionBloque`
+
+    if (planificacionBloque) {
+      // Establecemos la hora de inicio base en newStart
+      let currentStartDate = new Date(newStart);
+      let clonedPlanificacion = cloneDeep(planificacionBloque);
+      // Iteramos sobre los subBloques y creamos eventos basados en ellos
+      clonedPlanificacion.subBloques.forEach((subBloque) => {
+        subBloque.id = null;
+        const subEvent: CalendarEvent = {
+          title: subBloque.nombre,
+          color: {
+            primary: subBloque.color || this.colors.yellow.primary,
+            secondary: subBloque.color || this.colors.yellow.secondary,
+          },
+          start: new Date(currentStartDate),
+          end: new Date(
+            currentStartDate.getTime() + subBloque.duracion * 60000
+          ),
+          meta: { subBloque },
+          draggable: true,
+        };
+
+        // Añadimos el sub-evento a los eventos
+        this.events.push(subEvent);
+
+        // Actualizamos currentStart para el próximo subBloque
+        currentStartDate = new Date(subEvent.end as Date);
+      });
+    }
+  }
+
   eventDropped({
     event,
     newStart,
@@ -149,35 +251,7 @@ export class VistaSemanalComponent {
     }
     // Verificamos si el evento tiene `template: true` para decidir si ejecutar el bucle de subBloques
     if ((event as any)['tieneTemplate'] || event.meta?.template) {
-      // Supongamos que el `CalendarEvent` tiene una referencia al `PlanificacionBloque`
-      const planificacionBloque: PlanificacionBloque = event as any;
-
-      if (planificacionBloque) {
-        // Establecemos la hora de inicio base en newStart
-        let currentStartDate = new Date(newStart);
-
-        // Iteramos sobre los subBloques y creamos eventos basados en ellos
-        planificacionBloque.subBloques.forEach((subBloque) => {
-          const subEvent: CalendarEvent = {
-            title: subBloque.nombre,
-            color: {
-              primary: subBloque.color || this.colors.yellow.primary,
-              secondary: subBloque.color || this.colors.yellow.secondary,
-            },
-            start: new Date(currentStartDate),
-            end: new Date(
-              currentStartDate.getTime() + subBloque.duracion * 60000
-            ),
-            meta: { subBloque },
-          };
-
-          // Añadimos el sub-evento a los eventos
-          this.events.push(subEvent);
-
-          // Actualizamos currentStart para el próximo subBloque
-          currentStartDate = new Date(subEvent.end as Date);
-        });
-      }
+      this.applyPlanificacionBloque(event as any, newStart);
     } else {
       // El evento simplemente se movió dentro del calendario, por lo que no necesitamos crear sub-eventos
       console.log('Movimiento de evento existente dentro del calendario');
@@ -196,14 +270,14 @@ export class VistaSemanalComponent {
   }
 
   ngAfterViewInit(): void {
-    if (
-      document.getElementsByClassName('cal-time') !== undefined &&
-      document.getElementsByClassName('cal-time').length > 0
-    ) {
-      let scrollbar = document.getElementsByClassName('cal-time')[16];
-      scrollbar.scrollIntoView({ behavior: 'smooth' });
-      scrollbar.scrollIntoView(true);
-    }
+    // if (
+    //   document.getElementsByClassName('cal-time') !== undefined &&
+    //   document.getElementsByClassName('cal-time').length > 0
+    // ) {
+    //   let scrollbar = document.getElementsByClassName('cal-time')[16];
+    //   scrollbar.scrollIntoView({ behavior: 'smooth' });
+    //   scrollbar.scrollIntoView(true);
+    // }
   }
 
   toggleComplete(event: CalendarEvent): void {
@@ -217,11 +291,9 @@ export class VistaSemanalComponent {
     this.isCommentDialogVisible = true;
   }
 
-  public deleteEvent(subBloque: SubBloque, event: Event) {
+  public deleteEvent(calendarEvent: CalendarEvent, event: Event) {
     event.stopPropagation();
-    this.events = this.events.filter(
-      (event) => event.meta?.subBloque?.id != subBloque.id
-    );
+    this.events = this.events.filter((event) => event != calendarEvent);
     this.eventsChange.emit(this.events);
   }
 
@@ -245,33 +317,9 @@ export class VistaSemanalComponent {
     }, 0);
   }
 
-  onTimeClicked({ date, sourceEvent }: any): void {
+  onTimeClicked({ date, sourceEvent }: any, cm: ContextMenu): void {
     sourceEvent.stopPropagation();
-    this.selectedEvent = null;
-
-    const nuevoSubBloque: SubBloque = {
-      id: undefined, // Se generará al guardar
-      horaInicio: date, // Usa la fecha/hora seleccionada
-      duracion: 60, // Valor predeterminado
-      nombre: '',
-      comentarios: '',
-      color: '#ffffff', // Color predeterminado
-    };
-
-    this.selectedEvent = {
-      title: nuevoSubBloque.nombre,
-      start: date,
-      end: new Date(date.getTime() + nuevoSubBloque.duracion * 60000),
-      meta: {
-        subBloque: {
-          comentarios: nuevoSubBloque.comentarios,
-          color: nuevoSubBloque.color,
-          duracion: nuevoSubBloque.duracion,
-        },
-      },
-    };
-
-    this.editSubBloqueData = nuevoSubBloque;
-    this.isDialogVisible = true;
+    this.onTimeClickedDate = date;
+    cm.show(sourceEvent);
   }
 }

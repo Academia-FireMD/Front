@@ -75,6 +75,23 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
     }
   };
 
+  public descargarPreguntasDeAlumnos() {
+    firstValueFrom(
+      this.preguntasService.getAllPreguntasCreadosPorAlumnos().pipe(
+        tap((response: any) => {
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(response);
+          link.href = url;
+          link.download = `preguntas_alumno_${+new Date()}.xlsx`;
+          link.click();
+
+          // Limpia el URL temporal
+          URL.revokeObjectURL(url);
+        })
+      )
+    );
+  }
+
   async onFileSelected(event: Event) {
     try {
       const input = event.target as HTMLInputElement;
