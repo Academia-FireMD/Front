@@ -32,7 +32,17 @@ export class TestStatsComponent {
   private lastLoadedTest!: Test;
   public seguridad = SeguridadAlResponder;
 
+  public calcular100() {
+    if (!this.lastLoadedStats || !this.lastLoadedTest) return 0;
+    const { stats100 } = getStats(this.lastLoadedStats);
 
+    return this.calcularCalificacion(
+      stats100.correctas,
+      stats100.incorrectas,
+      this.lastLoadedTest.preguntas.length,
+      'calcular100'
+    );
+  }
 
   public calcular100y50() {
     if (!this.lastLoadedStats || !this.lastLoadedTest) return 0;

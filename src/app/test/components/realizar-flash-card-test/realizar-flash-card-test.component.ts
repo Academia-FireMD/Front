@@ -42,7 +42,7 @@ export class RealizarFlashCardTestComponent {
   public getFallosCount$ = this.flashcardService.obtenerFallosCount();
   public getAllTestsComenzados$ = this.flashcardService.getAllTest();
   public preguntas = getNumeroDePreguntas();
-  public getAllDifficultades = getAllDifficultades(true, false, true);
+  public getAllDifficultades = getAllDifficultades(true, true);
   public generandoTest = false;
 
   public async generarTest() {

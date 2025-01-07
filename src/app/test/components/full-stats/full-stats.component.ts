@@ -10,6 +10,7 @@ import { TestService } from '../../../services/test.service';
 import { FlashcardTest } from '../../../shared/models/flashcard.model';
 import { Test } from '../../../shared/models/test.model';
 import {
+  calcular100,
   calcular100y50,
   calcular100y75y50,
   colorCorrectas,
@@ -42,6 +43,10 @@ export class FullStatsComponent {
   public fullStats$ = this.getFullStats();
   public keys = Object.keys;
   public toPascalCase = toPascalCase;
+  public calcular100 = (rawStats: any, numPreguntas: number) => {
+    const statsParsed = getStats(rawStats);
+    return calcular100(statsParsed.stats100, numPreguntas);
+  };
   public calcular100y50 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
     return calcular100y50(
@@ -226,6 +231,7 @@ export class FullStatsComponent {
     const correctasData = [] as Array<{ value: number; id: number }>;
     const incorrectasData = [] as Array<{ value: number; id: number }>;
     const omitidasData = [] as Array<{ value: number; id: number }>;
+    const dataSet100 = [] as Array<number>;
     const dataSet10050 = [] as Array<number>;
     const dataSet1007550 = [] as Array<number>;
 
@@ -247,6 +253,11 @@ export class FullStatsComponent {
       correctasData.push({ value: correctas, id: test.id });
       incorrectasData.push({ value: totalIncorrectas, id: test.id });
       omitidasData.push({ value: omitidas, id: test.id });
+      dataSet100.push(
+        Number(
+          calcular100(stat.stats100, test.testPreguntas?.length ?? 0).toFixed(2)
+        )
+      );
 
       dataSet10050.push(
         Number(
@@ -292,8 +303,9 @@ export class FullStatsComponent {
           'Correctas',
           'Incorrectas',
           'Omitidas',
-          'Nota 100+50',
-          'Nota 100+75+50',
+          '⭐',
+          '⭐ + 👎',
+          '⭐ + 👍 + 👎',
         ],
       },
       xAxis: {
@@ -332,33 +344,48 @@ export class FullStatsComponent {
           itemStyle: { color: colorSinResponder },
         },
         {
-          name: 'Nota 100+50',
+          name: '⭐',
+          type: 'line',
+          data: dataSet100,
+          yAxisIndex: 0,
+          lineStyle: {
+            color: '#4CAF50', // Verde brillante
+            width: 2,
+          },
+          symbol: 'circle',
+          symbolSize: 8,
+          itemStyle: {
+            color: '#4CAF50',
+          },
+        },
+        {
+          name: '⭐ + 👎',
           type: 'line',
           data: dataSet10050,
           yAxisIndex: 0,
           lineStyle: {
-            color: '#FFD700',
+            color: '#2196F3', // Azul brillante
             width: 2,
           },
           symbol: 'circle',
           symbolSize: 8,
           itemStyle: {
-            color: '#FFD700',
+            color: '#2196F3',
           },
         },
         {
-          name: 'Nota 100+75+50',
+          name: '⭐ + 👍 + 👎',
           type: 'line',
           data: dataSet1007550,
           yAxisIndex: 0,
           lineStyle: {
-            color: '#FFA500',
+            color: '#FF5722', // Naranja profundo
             width: 2,
           },
           symbol: 'circle',
           symbolSize: 8,
           itemStyle: {
-            color: '#FFA500',
+            color: '#FF5722',
           },
         },
       ],
@@ -478,6 +505,11 @@ export class FullStatsComponent {
     tests.forEach((test) => {
       totalPreguntas += test.testPreguntas?.length ?? 0;
     });
+    const total100 = tests.reduce((prev, next) => {
+      prev =
+        prev + this.calcular100(next.stats, next.testPreguntas?.length ?? 0);
+      return prev;
+    }, 0);
     const total10050 = tests.reduce((prev, next) => {
       prev =
         prev + this.calcular100y50(next.stats, next.testPreguntas?.length ?? 0);
@@ -494,6 +526,7 @@ export class FullStatsComponent {
       total10050: total10050 == 0 ? total10050 : total10050 / totalTests,
       total1007550:
         total1007550 == 0 ? total1007550 : total1007550 / totalTests,
+      total100: total100 == 0 ? total100 : total100 / totalTests,
       totalPreguntas: totalPreguntas ?? 0,
       blockStats,
     };

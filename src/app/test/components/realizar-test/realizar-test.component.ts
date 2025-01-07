@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, map } from 'rxjs';
@@ -25,10 +26,11 @@ export class RealizarTestComponent {
   temaService = inject(TemaService);
   confirmationService = inject(ConfirmationService);
   testService = inject(TestService);
+  router = inject(Router);
 
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
-    dificultad: [Dificultad.BASICO, Validators.required],
+    dificultad: [],
     temas: [[], Validators.required],
     generarTestDeRepaso: [false],
     generarTestDeExamen: [false],
@@ -69,17 +71,38 @@ export class RealizarTestComponent {
       } else {
         generarTestDeRepasoControl.clearValidators();
       }
-      generarTestDeRepasoControl.updateValueAndValidity();
+      generarTestDeRepasoControl.updateValueAndValidity({
+        onlySelf: true,
+        emitEvent: false,
+      });
     });
   }
 
-  public async generarTest() {
+  public confirmGenerarTest(event: Event) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: `Estás a punto de comenzar un examen. El tiempo empezará a descontarse automáticamente y serás dirigido a él. ¿Deseas continuar?`,
+      header: 'Confirmación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        this.generarTest(true);
+      },
+      reject: () => {},
+    });
+  }
+
+  public async generarTest(autoRedirect = false) {
     try {
       this.generandoTest = true;
       const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
       const payload = {
         numPreguntas,
-        dificultad: this.formGroup.value.dificultad ?? Dificultad.BASICO,
+        dificultad: this.formGroup.value.dificultad ?? Dificultad.INTERMEDIO,
         temas: this.formGroup.value.temas ?? [],
         generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
         duracion: this.formGroup.value.generarTestDeExamen
@@ -91,6 +114,8 @@ export class RealizarTestComponent {
       this.toast.success('Test generado exitosamente!', 'Generación exitosa');
       this.getAllTestsComenzados$ = this.testService.getAllTest();
       this.generandoTest = false;
+      if (!!autoRedirect)
+        this.router.navigate(['/app/test/alumno/realizar-test/' + res.id]);
     } catch (error) {
       this.toast.error('Error al generar el test.', 'Error');
       this.generandoTest = false;

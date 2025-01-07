@@ -13,6 +13,7 @@ export interface Test {
   realizador: Usuario;
   testPreguntas?: any[];
   preguntas: Pregunta[];
+  respuestas: Respuesta[];
   testPreguntasIds: number[];
   status: TestStatus;
   duration?: number;
@@ -30,4 +31,5 @@ export interface Respuesta {
   seguridad?: SeguridadAlResponder;
   createdAt: Date;
   updatedAt: Date;
+  indicePregunta: number;
 }

@@ -50,7 +50,7 @@
           >
             <div class="flex flex-row align-items-between flex-wrap">
               <div
-                class="flex flex-column col-12 md:col-9 left-side py-1 md:py-2"
+                class="flex flex-column col-12 md:col-6 left-side py-1 md:py-2"
               >
                 <div class="text-lg font-medium flex gap-2 align-items-center">
                   <div class="flex gap-1 text-sm">
@@ -78,7 +78,7 @@
                 </span>
               </div>
               <div
-                class="right-side col-12 md:col-3 py-1 md:py-2 flex align-items-center justify-content-start md:justify-content-end"
+                class="right-side col-12 md:col-6 py-1 md:py-2 flex align-items-center justify-content-start md:justify-content-end"
               >
                 <div
                   class="flex flex-row align-items-center justify-content-end gap-3"
@@ -86,12 +86,21 @@
                   @if(type == 'TESTS'){
                   <span class="text-sm font-small">
                     <strong>{{
+                      calcular100(
+                        item.stats,
+                        item?.testPreguntas?.length ?? 0
+                      ).toFixed(2)
+                    }}</strong>
+                    (⭐)</span
+                  >
+                  <span class="text-sm font-small">
+                    <strong>{{
                       calcular100y50(
                         item.stats,
                         item?.testPreguntas?.length ?? 0
                       ).toFixed(2)
                     }}</strong>
-                    (100%+50%)</span
+                    ( + 👎)</span
                   >
                   <span class="text-sm font-small">
                     <strong>
@@ -102,7 +111,7 @@
                         ).toFixed(2)
                       }}</strong
                     >
-                    (100%+75%+50%)</span
+                    (+ 👍 )</span
                   >
                   }
                   <span

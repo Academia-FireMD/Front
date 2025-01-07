@@ -3,11 +3,11 @@ $primaryColor: #bb292a;
 $primaryDarkColor: #2c2c2c;
 $primaryDarkerColor: darken($primaryDarkColor, 10%); // Ajusta según prefieras
 $primaryTextColor: #ffffff;
-
+$yellow: #fbc02d;
 $colors: (
   "red": #bb292a,
   "green": #4caf50,
-  "yellow": #fbc02d,
+  "yellow": $yellow,
   "cyan": #00bcd4,
   "pink": #e91e63,
   "indigo": #3f51b5,

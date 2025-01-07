@@ -17,12 +17,16 @@
       [stat]="stat"
     ></app-pie-chart-dashboard-security>
     <div class="grid pb-4 w-full">
-      <div class="col-6 nota">
-        <p>Nota 100% + 50%</p>
+      <div class="col-4 nota">
+        <p>⭐</p>
+        <div>{{ calcular100().toFixed(2) }}</div>
+      </div>
+      <div class="col-4 nota">
+        <p>⭐ + 👎</p>
         <div>{{ calcular100y50().toFixed(2) }}</div>
       </div>
-      <div class="col-6 nota">
-        <p>Nota 100% + 75% + 50%</p>
+      <div class="col-4 nota">
+        <p>⭐ + 👍 + 👎</p>
         <div>{{ calcular100y75y50().toFixed(2) }}</div>
       </div>
     </div>

@@ -73,6 +73,11 @@ export class LayoutComponent {
               icon: 'pi pi-book',
               routerLink: '/app/test/tema',
             },
+            {
+              label: 'Documentos',
+              icon: 'pi pi-file',
+              routerLink: '/app/documentacion',
+            },
           ],
         },
         {
@@ -173,6 +178,11 @@ export class LayoutComponent {
               label: 'Flashcards',
               icon: 'pi pi-id-card',
               routerLink: '/app/test/alumno/flashcards',
+            },
+            {
+              label: 'Documentos',
+              icon: 'pi pi-file',
+              routerLink: '/app/documentacion/alumno',
             },
           ],
         },

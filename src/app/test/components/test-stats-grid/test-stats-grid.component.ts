@@ -10,6 +10,7 @@ import { FlashcardTest } from '../../../shared/models/flashcard.model';
 import { Test } from '../../../shared/models/test.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
+  calcular100,
   calcular100y50,
   calcular100y75y50,
   getStats,
@@ -79,6 +80,11 @@ export class TestStatsGridComponent extends SharedGridComponent<
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   selectedRangeDates = new FormControl([], Validators.required);
   public generandoEstadistica = false;
+
+  public calcular100 = (rawStats: any, numPreguntas: number) => {
+    const statsParsed = getStats(rawStats);
+    return calcular100(statsParsed.stats100, numPreguntas);
+  };
 
   public calcular100y50 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
@@ -162,7 +168,6 @@ export class TestStatsGridComponent extends SharedGridComponent<
 
   public obtenerTipoDeTest = obtenerTipoDeTest;
   public obtenerTemas = obtenerTemas;
-
 
   public viewStats = (id: number | 'new') => {
     const map = {

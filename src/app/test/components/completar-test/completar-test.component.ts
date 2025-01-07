@@ -16,8 +16,12 @@ import {
   Dificultad,
   SeguridadAlResponder,
 } from '../../../shared/models/pregunta.model';
-import { Test } from '../../../shared/models/test.model';
-import { getAllDifficultades, getLetter } from '../../../utils/utils';
+import { Respuesta, Test } from '../../../shared/models/test.model';
+import {
+  getAllDifficultades,
+  getLetter,
+  obtainSecurityEmojiBasedOnEnum,
+} from '../../../utils/utils';
 
 @Component({
   selector: 'app-completar-test',
@@ -34,6 +38,7 @@ export class CompletarTestComponent {
 
   public indicePregunta = 0;
   public displayFeedbackDialog = false;
+  public displayNavegador = false;
   public displayFalloDialog = false;
   public indiceSeleccionado = new BehaviorSubject(-1);
   public seguroDeLaPregunta = new FormControl(
@@ -51,21 +56,36 @@ export class CompletarTestComponent {
   public indicePreguntaCorrecta = -1;
   public answeredQuestion = -1;
 
-  private lastLoadedTest!: Test;
+  public lastLoadedTest!: Test;
   private lastAnsweredQuestion!: { preguntaId: number };
 
-  public testCargado$ = this.testService.getTestById(Number(this.getId())).pipe(
-    tap((entry: any) => {
-      const parsedTest: Test & { respuestasCount: number } = entry;
-      this.indicePregunta = parsedTest.respuestasCount;
-      this.lastLoadedTest = entry;
-    })
-  );
+  public testCargado$ = this.getTest();
+  public obtainSecurityEmojiBasedOnEnum = obtainSecurityEmojiBasedOnEnum;
 
   public comunicating = false;
 
   public isModoExamen() {
     return !!this.lastLoadedTest.duration && !!this.lastLoadedTest.endsAt;
+  }
+
+  public preguntaRespondida(indexPregunta: number): Respuesta | undefined {
+    return (this.lastLoadedTest?.respuestas ?? []).find(
+      (r) => r.indicePregunta == indexPregunta
+    );
+  }
+
+  private getTest() {
+    return this.testService.getTestById(Number(this.getId())).pipe(
+      tap((entry: any) => {
+        const parsedTest: Test & { respuestasCount: number } = entry;
+        if (this.lastLoadedTest) {
+          this.lastLoadedTest.respuestas = entry.respuestas;
+        } else {
+          this.lastLoadedTest = entry;
+          this.indicePregunta = parsedTest.respuestasCount;
+        }
+      })
+    );
   }
 
   ngOnInit(): void {
@@ -74,6 +94,25 @@ export class CompletarTestComponent {
       .subscribe(async (data) => {
         this.processAnswer(data);
       });
+  }
+
+  isRespuestaCorrecta(indice: number): boolean {
+    return (
+      (indice === this.indicePreguntaCorrecta &&
+        indice === this.indiceSeleccionado.getValue() &&
+        !this.isModoExamen()) ||
+      (indice === this.indicePreguntaCorrecta &&
+        this.indiceSeleccionado.getValue() !== this.indicePreguntaCorrecta &&
+        !this.isModoExamen())
+    );
+  }
+
+  isRespuestaIncorrecta(indice: number): boolean {
+    return (
+      indice === this.indiceSeleccionado.getValue() &&
+      indice !== this.indicePreguntaCorrecta &&
+      !this.isModoExamen()
+    );
   }
 
   public async processAnswer(respuestaDada?: number, omitida = false) {
@@ -91,6 +130,7 @@ export class CompletarTestComponent {
           preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta].id,
           respuestaDada,
           omitida,
+          indicePregunta: this.indicePregunta,
           seguridad:
             this.seguroDeLaPregunta.value ??
             SeguridadAlResponder.CIEN_POR_CIENTO,
@@ -100,13 +140,24 @@ export class CompletarTestComponent {
             this.comunicating = false;
             return of(err);
           }),
-          tap((res) => (this.lastAnsweredQuestion = res as any))
+          tap((res) => {
+            this.lastAnsweredQuestion = res as any;
+            firstValueFrom(this.getTest());
+          })
         )
     );
     this.comunicating = false;
     this.indicePreguntaCorrecta = res.pregunta.respuestaCorrectaIndex;
     this.answeredQuestion = this.indiceSeleccionado.getValue();
     if (omitida) this.siguiente();
+  }
+
+  public atras() {
+    this.indicePregunta--;
+  }
+
+  public adelante() {
+    this.indicePregunta++;
   }
 
   showFeedbackDialog() {
@@ -145,15 +196,24 @@ export class CompletarTestComponent {
   public siguiente() {
     if (this.indicePregunta == this.lastLoadedTest.preguntas.length - 1) {
       //completado
-      console.log('¡Test completado!');
-      this.router.navigate([
-        'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
-      ]);
+      if (
+        this.lastLoadedTest.preguntas.length !=
+        this.lastLoadedTest.respuestas.length
+      ) {
+        this.toast.info(
+          'Todavia no has terminado el test, te faltan preguntas por responder!'
+        );
+      } else {
+        this.router.navigate([
+          'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
+        ]);
+      }
     } else {
       this.indicePregunta++;
-      if (Math.random() < 0.05 && !this.isModoExamen()) {
-        this.showFeedbackDialog();
-      }
+      //Disabled fo rnow
+      // if (Math.random() < 0.05 && !this.isModoExamen()) {
+      //   this.showFeedbackDialog();
+      // }
     }
     this.seguroDeLaPregunta.reset(SeguridadAlResponder.CIEN_POR_CIENTO);
     this.indiceSeleccionado.next(-1);
@@ -181,6 +241,4 @@ export class CompletarTestComponent {
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as string;
   }
-
-  public omitirPregunta() {}
 }

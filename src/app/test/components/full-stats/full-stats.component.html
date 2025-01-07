@@ -13,12 +13,16 @@
     </div>
     <div class="right flex-column">
       <div>
-        Nota media 100% + 50% =
-        {{ (mediaBloque?.total10050 ?? 0).toFixed(2) }}
+        Nota media ⭐ =
+        <strong> {{ (mediaBloque?.total100 ?? 0).toFixed(2) }}</strong>
       </div>
       <div>
-        Nota media 100% + 75% + 50% =
-        {{ (mediaBloque?.total1007550 ?? 0).toFixed(2) }}
+        Nota media ⭐ + 👎 =
+        <strong> {{ (mediaBloque?.total10050 ?? 0).toFixed(2) }}</strong>
+      </div>
+      <div>
+        Nota media ⭐ + 👍 + 👎 =
+        <strong> {{ (mediaBloque?.total1007550 ?? 0).toFixed(2) }}</strong>
       </div>
     </div>
   </div>
@@ -81,6 +85,9 @@
     </div>
   </div>
   <div class="col-12">
+    <div class="mb-2">
+      <strong>Por bloque</strong>
+    </div>
     <p-accordion>
       <p-accordionTab *ngFor="let key of keys(fullStats)">
         <ng-template pTemplate="header">
@@ -93,12 +100,16 @@
             @if(type == 'TESTS'){
             <div *ngIf="calcularMediaCategoria(fullStats[key]) as mediaBloque">
               <span class="text-sm font-small">
+                <strong> {{ mediaBloque.total100.toFixed(2) }}</strong>
+                (⭐)</span
+              >
+              <span class="text-sm font-small">
                 <strong> {{ mediaBloque.total10050.toFixed(2) }}</strong>
-                (100%+50%)</span
+                (⭐ + 👎)</span
               >
               <span class="text-sm font-small">
                 <strong> {{ mediaBloque.total1007550.toFixed(2) }}</strong>
-                (100%+75%+50%)</span
+                (⭐ + 👍 + 👎)</span
               >
             </div>
             }

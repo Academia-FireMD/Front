@@ -24,6 +24,13 @@ const routes: Routes = [
             (m) => m.PlanificacionModule
           ),
       },
+      {
+        path: 'documentacion',
+        loadChildren: () =>
+          import('./documentacion/documentacion.module').then(
+            (m) => m.DocumentacionModule
+          ),
+      },
     ],
   },
   {

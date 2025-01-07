@@ -1,10 +1,42 @@
 <p-dialog
+  [(visible)]="displayNavegador"
+  header="Navegador de preguntas"
+  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+  [style]="{ width: '75vw', }"
+  [closable]="true"
+>
+  <div class="flex flex-column gap-3 py-3">
+    Haz click en cualquiera de las preguntas listadas a continuación para
+    navegar a ellas.
+    <div class="list-blocks">
+      <p-card
+        pRipple
+        [ngClass]="{
+          'sin-responder': !!preguntaRespondida(i)
+        }"
+        class="pointer p-3"
+        *ngFor="let pregunta of lastLoadedTest?.preguntas ?? []; let i = index"
+        (click)="indicePregunta = i; displayNavegador = false"
+      >
+        <div class="content flex align-items-center justify-content-center">
+          @if ( !!preguntaRespondida( i )) {
+          {{ obtainSecurityEmojiBasedOnEnum(preguntaRespondida(i)?.seguridad) }}
+          }@else {
+          {{ i }}
+          }
+        </div>
+      </p-card>
+    </div>
+  </div>
+</p-dialog>
+
+<p-dialog
   [(visible)]="displayFeedbackDialog"
   modal="modal"
   header="Feedback"
   [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
   [style]="{ width: '75vw', }"
-  [closable]="true"
+  [closable]="false"
 >
   <div class="flex flex-column gap-3 py-3">
     <h4 class="m-0">Nos gustaría conocer tu opinión</h4>
@@ -40,50 +72,56 @@
 ></app-reportar-fallo-dialog>
 
 <ng-template #seguridadPicker let-control="control">
-  <div class="flex flex-row gap-2">
-    <p-card
+  <div class="flex flex-row gap-2 mt-2">
+    <div
       pRipple
-      class="pointer"
+      class="pointer p-3"
       (click)="control.patchValue(SeguridadAlResponder.CINCUENTA_POR_CIENTO)"
       [ngClass]="{
+        'selected-difficulty':
+          control.value == SeguridadAlResponder.CINCUENTA_POR_CIENTO,
         'lower-opacity':
           control.value != SeguridadAlResponder.CINCUENTA_POR_CIENTO
       }"
     >
       <div class="seguridad-box">
-        <i class="pi pi-thumbs-down"></i>
-        <span>50%</span>
+        👎
+        <span class="hidden md:block">Dudo entre 3</span>
       </div>
-    </p-card>
-    <p-card
+    </div>
+    <div
       pRipple
-      class="pointer"
+      class="pointer p-3"
       (click)="
         control.patchValue(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO)
       "
       [ngClass]="{
+        'selected-difficulty':
+          control.value == SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
         'lower-opacity':
           control.value != SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
       }"
     >
       <div class="seguridad-box">
-        <i class="pi pi-thumbs-up"></i>
-        <span>75%</span>
+        👍
+        <span class="hidden md:block">Dudo entre 2</span>
       </div>
-    </p-card>
-    <p-card
+    </div>
+    <div
       pRipple
-      class="pointer"
+      class="pointer p-3"
       (click)="control.patchValue(SeguridadAlResponder.CIEN_POR_CIENTO)"
       [ngClass]="{
+        'selected-difficulty':
+          control.value == SeguridadAlResponder.CIEN_POR_CIENTO,
         'lower-opacity': control.value != SeguridadAlResponder.CIEN_POR_CIENTO
       }"
     >
       <div class="seguridad-box">
-        <i class="pi pi-star"></i>
-        <span>100%</span>
+        ⭐
+        <span class="hidden md:block">No dudo</span>
       </div>
-    </p-card>
+    </div>
   </div>
 </ng-template>
 
@@ -118,11 +156,20 @@
                 <span *ngIf="!!testCargado.duration">{{
                   testCargado.endsAt | countdown
                 }}</span>
-                <p-button
-                  label="Reportar fallo"
-                  [link]="true"
-                  (click)="displayFalloDialog = true"
-                />
+                <div class="actions">
+                  <p-button
+                    label="Navegador"
+                    [link]="true"
+                    icon="pi pi-compass"
+                    *ngIf="isModoExamen()"
+                    (click)="displayNavegador = true"
+                  />
+                  <p-button
+                    label="Reportar fallo"
+                    [link]="true"
+                    (click)="displayFalloDialog = true"
+                  />
+                </div>
               </div>
             </ng-template>
             <p>
@@ -133,11 +180,13 @@
               pRipple
               *ngFor="let respuesta of pregunta.respuestas; let i = index"
               [ngClass]="{
-                'respuesta-correcta': i == indiceSeleccionado.getValue(),
-                'respuesta-incorrecta':
-                  i == indicePreguntaCorrecta &&
-                  i != indiceSeleccionado.getValue() &&
-                  !isModoExamen()
+                'respuesta-correcta':
+                  isRespuestaCorrecta(i) ||
+                  (i == indiceSeleccionado.getValue() && isModoExamen()) ||
+                  (preguntaRespondida(i) &&
+                    isModoExamen() &&
+                    preguntaRespondida(indicePregunta)?.respuestaDada == i),
+                'respuesta-incorrecta': isRespuestaIncorrecta(i)
               }"
               (click)="
                 answeredCurrentQuestion() ? false : indiceSeleccionado.next(i)
@@ -163,11 +212,29 @@
                     "
                   ></ng-container>
                 </div>
-                <p-button
-                  label="Omitir"
-                  [link]="true"
-                  (click)="processAnswer(undefined, true)"
-                />
+                <div class="actions">
+                  <p-button
+                    label="Atrás"
+                    [link]="true"
+                    *ngIf="isModoExamen()"
+                    (click)="atras()"
+                    [disabled]="indicePregunta == 0"
+                  />
+                  <p-button
+                    label="Omitir"
+                    [link]="true"
+                    (click)="processAnswer(undefined, true)"
+                  />
+                  <p-button
+                    label="Adelante"
+                    [link]="true"
+                    *ngIf="isModoExamen()"
+                    (click)="adelante()"
+                    [disabled]="
+                      indicePregunta == testCargado.preguntas.length - 1
+                    "
+                  />
+                </div>
               </div>
             </div>
             <div

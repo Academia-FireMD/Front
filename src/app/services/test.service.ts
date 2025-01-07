@@ -17,6 +17,7 @@ export interface RegistrarRespuestaDto {
   respuestaDada?: number;
   omitida?: boolean;
   seguridad?: SeguridadAlResponder;
+  indicePregunta?: number;
 }
 export interface GenerarTestDto {
   numPreguntas: number;

@@ -38,17 +38,9 @@
             <small class="p-error">El email es requerido.</small>
           </div>
 
-          <!-- Campo de contraseña -->
-          <p-floatLabel>
-            <input
-              id="contrasenya"
-              type="password"
-              class="w-full"
-              pInputText
-              formControlName="contrasenya"
-            />
-            <label for="contrasenya">Contraseña</label>
-          </p-floatLabel>
+          <app-password-input
+            formControlName="contrasenya"
+          ></app-password-input>
           <!-- Error: contraseña requerida -->
           <div
             *ngIf="

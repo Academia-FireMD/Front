@@ -34,7 +34,6 @@
         <div class="col-12 md:col-4">
           <app-dificultad-dropdown
             [formControlDificultad]="formGroup.get('dificultad')"
-            [isDoingTest]="true"
           ></app-dificultad-dropdown>
         </div>
         <div class="col-12 md:col-4">
@@ -99,7 +98,11 @@
             formGroup.invalid && !formGroup.get('generarTestDeRepaso')?.value
           "
           class="p-button dark-button p-button-raised"
-          (click)="generarTest()"
+          (click)="
+            formGroup.value.generarTestDeExamen
+              ? confirmGenerarTest($event)
+              : generarTest()
+          "
           [loading]="generandoTest"
         >
           <span class="w-full">Generar test</span>

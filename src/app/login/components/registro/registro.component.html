@@ -128,17 +128,9 @@
             <small class="p-error">El email es requerido.</small>
           </div>
 
-          <!-- Campo de contraseña -->
-          <p-floatLabel>
-            <input
-              type="password"
-              class="w-full"
-              pInputText
-              id="contrasenya"
-              formControlName="contrasenya"
-            />
-            <label for="contrasenya">Contraseña</label>
-          </p-floatLabel>
+          <app-password-input
+            formControlName="contrasenya"
+          ></app-password-input>
           <!-- Error: contraseña requerida -->
           <div
             *ngIf="
@@ -163,17 +155,11 @@
             >
           </div>
 
-          <!-- Campo de repetir contraseña -->
-          <p-floatLabel>
-            <input
-              id="repetirContrasenya"
-              type="password"
-              class="w-full"
-              pInputText
-              formControlName="repetirContrasenya"
-            />
-            <label for="repetirContrasenya">Repetir contraseña</label>
-          </p-floatLabel>
+          <app-password-input
+            formControlName="repetirContrasenya"
+            [label]="'Repetir Contraseña'"
+          ></app-password-input>
+
           <!-- Error: repetir contraseña requerida -->
           <div
             *ngIf="

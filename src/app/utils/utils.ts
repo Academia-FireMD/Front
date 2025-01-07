@@ -54,6 +54,19 @@ export const getDataFromFlashcards = (data: any) => {
   };
 };
 
+export const obtainSecurityEmojiBasedOnEnum = (
+  data: SeguridadAlResponder | undefined
+) => {
+  switch (data) {
+    case SeguridadAlResponder.CIEN_POR_CIENTO:
+      return '⭐';
+    case SeguridadAlResponder.CINCUENTA_POR_CIENTO:
+      return '👎';
+    default:
+      return '👍';
+  }
+};
+
 export const obtenerTemas = (
   testItem: (Test & any) | FlashcardTest,
   type: 'TESTS' | 'FLASHCARDS',
@@ -129,6 +142,10 @@ export const getStats = (statsRaw: any) => {
     statsRaw.seguridad[SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO];
   const stats50 = statsRaw.seguridad[SeguridadAlResponder.CINCUENTA_POR_CIENTO];
   return { stats100, stats75, stats50 };
+};
+
+export const calcular100 = (stats100: StatType, total: number) => {
+  return calcularCalificacion(stats100.correctas, stats100.incorrectas, total);
 };
 
 export const calcular100y50 = (
@@ -238,7 +255,6 @@ export const groupedTemas = (temas: Array<Tema>) => {
 
 export const getAllDifficultades = (
   isFlashcards = false,
-  isAlumno = false,
   isCreatingTest = false
 ) => {
   const privada = getAlumnoDificultad(Dificultad.PRIVADAS);
@@ -281,7 +297,6 @@ export const getAllDifficultades = (
       value: Dificultad.PUBLICAS,
     },
   ];
-  if (isAlumno) return alumnoOnly;
+  if (!isFlashcards) return alumnoOnly;
   return [...allDificultades, ...alumnoOnly];
 };
-
