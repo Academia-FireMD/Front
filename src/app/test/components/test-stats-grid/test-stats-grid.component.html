@@ -84,25 +84,38 @@
                   class="flex flex-row align-items-center justify-content-end gap-3"
                 >
                   @if(type == 'TESTS'){
-                  <span class="text-sm font-small">
+                  <span
+                    class="text-sm font-small flex align-items-center gap-2"
+                  >
                     <strong>{{
                       calcular100(
                         item.stats,
                         item?.testPreguntas?.length ?? 0
                       ).toFixed(2)
                     }}</strong>
-                    (⭐)</span
+                    <div class="card flex justify-center firemd-avatar-group">
+                      <p-avatarGroup>
+                        <p-avatar label="⭐" shape="circle" size="normal" />
+                      </p-avatarGroup></div
+                  ></span>
+                  <span
+                    class="text-sm font-small flex align-items-center gap-2"
                   >
-                  <span class="text-sm font-small">
                     <strong>{{
                       calcular100y50(
                         item.stats,
                         item?.testPreguntas?.length ?? 0
                       ).toFixed(2)
                     }}</strong>
-                    ( + 👎)</span
+                    <div class="card flex justify-center firemd-avatar-group">
+                      <p-avatarGroup>
+                        <p-avatar label="⭐" shape="circle" size="normal" />
+                        <p-avatar label="👎" shape="circle" size="normal" />
+                      </p-avatarGroup></div
+                  ></span>
+                  <span
+                    class="text-sm font-small flex align-items-center gap-2"
                   >
-                  <span class="text-sm font-small">
                     <strong>
                       {{
                         calcular100y75y50(
@@ -111,8 +124,14 @@
                         ).toFixed(2)
                       }}</strong
                     >
-                    (+ 👍 )</span
-                  >
+                    <div class="card flex justify-center firemd-avatar-group">
+                      <p-avatarGroup>
+                        <p-avatar label="⭐" shape="circle" size="normal" />
+                        <p-avatar label="👍" shape="circle" size="normal" />
+                        <p-avatar label="👎" shape="circle" size="normal" />
+                      </p-avatarGroup>
+                    </div>
+                  </span>
                   }
                   <span
                     class="font-medium text-secondary text-sm hidden md:block"

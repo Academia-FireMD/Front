@@ -13,6 +13,11 @@
   z-index: 1000;
 }
 
+.lateral-bar {
+  height: 100%;
+  overflow: auto;
+}
+
 .layout-content {
   height: 100%;
   @media (max-width: 575.98px) {

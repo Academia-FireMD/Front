@@ -16,7 +16,7 @@
   </div>
 
   <div
-    class="col-2 py-0 pl-0"
+    class="col-2 py-0 pl-0 lateral-bar"
     [ngClass]="{
       'mobile-expanded': viewportService.screenWidth == 'xs' && isMenuVisible
     }"
@@ -33,21 +33,30 @@
         >
           <i class="pi pi-user"></i>
           <span class="descripcion">
-            {{ decodedUser.email }}
+            {{ decodedUser.nombre }}
           </span>
         </div>
       </ng-template>
       <ng-template pTemplate="submenuheader" let-item>
-        <div class="menu-header" (click)="toggleCollapse(item)">
+        <div
+          class="menu-header"
+          (click)="
+            !!item.items && item.items.length > 0
+              ? toggleCollapse(item)
+              : navigateToPath(item.routerLink)
+          "
+        >
+          <span *ngIf="item.icon" [class]="item.icon" class="mr-2"></span>
           <span class="font-bold">{{ item.label }}</span>
           <i
+            *ngIf="!!item.items && item.items.length > 0"
             class="pi ml-auto"
             [ngClass]="item.collapsed ? 'pi-angle-down' : 'pi-angle-up'"
           ></i>
         </div>
       </ng-template>
       <ng-template pTemplate="item" let-item>
-        <div *ngIf="!isParentCollapsed(item)">
+        <div *ngIf="!!item && !isParentCollapsed(item)">
           <a
             pRipple
             class="flex align-items-center p-menuitem-link"

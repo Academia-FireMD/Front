@@ -56,6 +56,11 @@ export class LayoutComponent {
       });
   }
 
+  public navigateToPath(path: string) {
+    this.router.navigate([path]);
+    this.isMenuVisible = false;
+  }
+
   ngOnInit(): void {
     if (this.decodedUser.rol == 'ADMIN') {
       this.items = [
@@ -167,10 +172,46 @@ export class LayoutComponent {
     } else {
       this.items = [
         {
-          label: 'Gestión',
+          label: 'Documentos',
+          icon: 'pi pi-file',
+          routerLink: '/app/documentacion/alumno',
+          items: [],
+        },
+        {
+          label: 'Test',
           items: [
             {
-              label: 'Preguntas',
+              label: 'Realizar tests',
+              icon: 'pi pi-question',
+              routerLink: '/app/test/alumno/realizar-test',
+            },
+            {
+              label: 'Estadísticas test',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/alumno/test-stats',
+            },
+          ],
+        },
+        {
+          label: 'Flashcards',
+          items: [
+            {
+              label: 'Realizar flashcards',
+              icon: 'pi pi-id-card',
+              routerLink: '/app/test/alumno/realizar-flash-cards-test',
+            },
+            {
+              label: 'Estadísticas flashcards',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/alumno/flashcard-stats',
+            },
+          ],
+        },
+        {
+          label: 'Crea tu propio contenido',
+          items: [
+            {
+              label: 'Test',
               icon: 'pi pi-question',
               routerLink: '/app/test/alumno/preguntas',
             },
@@ -179,57 +220,19 @@ export class LayoutComponent {
               icon: 'pi pi-id-card',
               routerLink: '/app/test/alumno/flashcards',
             },
-            {
-              label: 'Documentos',
-              icon: 'pi pi-file',
-              routerLink: '/app/documentacion/alumno',
-            },
           ],
         },
         {
-          label: 'Módulo de tests',
-          items: [
-            {
-              label: 'Realizar tests',
-              icon: 'pi pi-question',
-              routerLink: '/app/test/alumno/realizar-test',
-            },
-            {
-              label: 'Estadistica',
-              icon: 'pi pi-chart-pie',
-              routerLink: '/app/test/alumno/test-stats',
-            },
-          ],
+          label: 'Planificación mensual',
+          icon: 'pi pi-calendar-plus',
+          routerLink: '/app/planificacion/planificacion-mensual-alumno',
+          items: [],
         },
         {
-          label: 'Módulo de Flashcards',
-          items: [
-            {
-              label: 'Realizar tests',
-              icon: 'pi pi-id-card',
-              routerLink: '/app/test/alumno/realizar-flash-cards-test',
-            },
-            {
-              label: 'Estadistica',
-              icon: 'pi pi-chart-pie',
-              routerLink: '/app/test/alumno/flashcard-stats',
-            },
-          ],
-        },
-        {
-          label: 'Perfil',
-          items: [
-            {
-              label: 'Planificación mensual',
-              icon: 'pi pi-calendar-plus',
-              routerLink: '/app/planificacion/planificacion-mensual-alumno',
-            },
-            {
-              label: 'Desconectarse',
-              icon: 'pi pi-sign-out',
-              routerLink: '/auth',
-            },
-          ],
+          label: 'Desconectarse',
+          icon: 'pi pi-sign-out',
+          routerLink: '/auth',
+          items: [],
         },
       ];
     }

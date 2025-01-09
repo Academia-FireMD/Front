@@ -1,5 +1,5 @@
 <p-dialog
-  header="Editar Sub-Bloque"
+  header="{{ role == 'ADMIN' ? 'Editar Sub-Bloque' : 'Visualizar Sub-Bloque' }}"
   [(visible)]="isDialogVisible"
   [modal]="true"
   (onHide)="isDialogVisibleChange.emit(false)"
@@ -8,6 +8,9 @@
   <form [formGroup]="formGroup">
     <div class="grid py-5">
       <div class="col-4">
+        @if (formGroup.get('nombre')?.disabled) { Nombre:
+        <strong>{{ formGroup.get("nombre")?.value }}</strong>
+        }@else{
         <p-floatLabel>
           <input
             id="nombre"
@@ -18,9 +21,10 @@
           />
           <label for="nombre">Nombre</label>
         </p-floatLabel>
+        }
       </div>
 
-      <div class="col-4">
+      <div class="col-4" *ngIf="role == 'ADMIN'">
         <p-floatLabel>
           <p-dropdown
             id="duracion"
@@ -33,7 +37,10 @@
           <label for="duracion">Duración</label>
         </p-floatLabel>
       </div>
-      <div class="col-4 flex align-items-center justify-content-end gap-2">
+      <div
+        class="col-4 flex align-items-center justify-content-end gap-2"
+        *ngIf="role == 'ADMIN'"
+      >
         <p-floatLabel>
           <p-dropdown
             id="color"
@@ -51,7 +58,10 @@
         <p-divider layout="vertical" />
         <p-colorPicker [formControl]="color" appendTo="body" />
       </div>
-      <div class="col-12 py-3">
+      <div class="col-12" [ngClass]="{ 'py-3': role == 'ADMIN' }">
+        @if (formGroup.get('comentarios')?.disabled) {
+        <p>Comentarios: {{ formGroup.get("comentarios")?.value }}</p>
+        }@else{
         <p-floatLabel>
           <textarea
             id="comentarios"
@@ -61,17 +71,19 @@
           ></textarea>
           <label for="comentarios">Comentarios</label>
         </p-floatLabel>
+        }
       </div>
     </div>
   </form>
   <p-footer>
     <button
       pButton
-      label="Cancelar"
+      label="{{ role == 'ADMIN' ? 'Cancelar' : 'Cerrar' }}"
       (click)="cancelarEdicion()"
       class="p-button-text"
     ></button>
     <button
+      *ngIf="role == 'ADMIN'"
       pButton
       label="Guardar"
       (click)="guardarEdicion()"

@@ -55,6 +55,7 @@ export enum Comunidad {
 }
 
 export const duracionesDisponibles = [
+  { label: '2 Horas', value: 'DOS_HORAS' },
   { label: '4 Horas', value: 'CUATRO_HORAS' },
   { label: '6 Horas', value: 'SEIS_HORAS' },
   { label: '8 Horas', value: 'OCHO_HORAS' },

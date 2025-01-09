@@ -297,6 +297,14 @@ export const getAllDifficultades = (
       value: Dificultad.PUBLICAS,
     },
   ];
-  if (!isFlashcards) return alumnoOnly;
+  if (!isFlashcards)
+    return [
+      {
+        label: 'Academia FireMD',
+        icon: 'pi-check-square',
+        value: Dificultad.INTERMEDIO,
+      },
+      ...alumnoOnly,
+    ];
   return [...allDificultades, ...alumnoOnly];
 };

@@ -1,3 +1,5 @@
+@import "../../../theme-firemd/variables";
+
 .drag-active {
   position: relative;
   z-index: 1;
@@ -30,7 +32,7 @@
 }
 .wrapper {
   height: 100%;
-  padding: 0.3rem;
+  padding: 0.3rem 0.1rem;
 }
 .custom-event-template {
   padding: 8px;
@@ -41,6 +43,10 @@
   height: 100%;
   display: flex;
   align-items: center;
+}
+
+.checked-event {
+  border: 3px solid $primaryColor;
 }
 
 .custom-event-template:hover {

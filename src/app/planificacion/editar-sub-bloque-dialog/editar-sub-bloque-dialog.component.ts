@@ -11,7 +11,14 @@ import { SubBloque } from '../../shared/models/planificacion.model';
 export class EditarSubBloqueDialogComponent {
   @Input() set data(data: any) {
     this.formGroup.patchValue(data);
+    if (this.role == 'ADMIN') {
+      this.formGroup.enable();
+    } else {
+      this.formGroup.disable();
+      this.formGroup.get(['nombre', 'comentarios'])?.enable();
+    }
   }
+  @Input() role: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   @Input() isDialogVisible = false;
   @Output() isDialogVisibleChange = new EventEmitter<boolean>();
   @Output() savedSubBloque = new EventEmitter<SubBloque>();

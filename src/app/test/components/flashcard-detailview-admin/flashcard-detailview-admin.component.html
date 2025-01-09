@@ -9,7 +9,7 @@
             @if (getId() !== 'new') { Identificador:
             <strong>{{ formGroup.value.identificador }}</strong>
             }@else {
-            <p-floatLabel>
+            <p-floatLabel *ngIf="expectedRole == 'ADMIN'">
               <input
                 type="text"
                 pInputText

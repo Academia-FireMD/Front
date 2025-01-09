@@ -30,7 +30,7 @@ export class RealizarTestComponent {
 
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
-    dificultad: [],
+    dificultad: [Dificultad.INTERMEDIO],
     temas: [[], Validators.required],
     generarTestDeRepaso: [false],
     generarTestDeExamen: [false],
@@ -78,10 +78,14 @@ export class RealizarTestComponent {
     });
   }
 
-  public confirmGenerarTest(event: Event) {
+  public confirmGenerarTest(event: Event, esTipoExamen = false) {
+    const mensaje = esTipoExamen
+      ? `Estás a punto de comenzar un examen. El tiempo empezará a descontarse automáticamente y serás dirigido a él. ¿Deseas continuar?`
+      : `Estás a punto de comenzar un test. Serás redirigido a él. ¿Deseas continuar?`;
+
     this.confirmationService.confirm({
       target: event.target as EventTarget,
-      message: `Estás a punto de comenzar un examen. El tiempo empezará a descontarse automáticamente y serás dirigido a él. ¿Deseas continuar?`,
+      message: mensaje,
       header: 'Confirmación',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',

@@ -24,6 +24,7 @@ export enum Rol {
 }
 
 export enum TipoDePlanificacionDeseada {
+  DOS_HORAS = 'DOS_HORAS',
   CUATRO_HORAS = 'CUATRO_HORAS',
   SEIS_HORAS = 'SEIS_HORAS',
   OCHO_HORAS = 'OCHO_HORAS',

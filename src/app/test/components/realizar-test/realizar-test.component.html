@@ -34,6 +34,7 @@
         <div class="col-12 md:col-4">
           <app-dificultad-dropdown
             [formControlDificultad]="formGroup.get('dificultad')"
+            [isDoingTest]="true"
           ></app-dificultad-dropdown>
         </div>
         <div class="col-12 md:col-4">
@@ -85,7 +86,7 @@
             pButton
             (click)="displayPopupFallosTest = true"
             type="submit"
-            class="p-button p-button-raised"
+            class="p-button dark-button p-button-raised"
           >
             <span class="w-full">Ver fallos</span>
           </button>
@@ -97,11 +98,9 @@
           [disabled]="
             formGroup.invalid && !formGroup.get('generarTestDeRepaso')?.value
           "
-          class="p-button dark-button p-button-raised"
+          class="p-button p-button-raised"
           (click)="
-            formGroup.value.generarTestDeExamen
-              ? confirmGenerarTest($event)
-              : generarTest()
+            confirmGenerarTest($event, !!formGroup.value.generarTestDeExamen)
           "
           [loading]="generandoTest"
         >

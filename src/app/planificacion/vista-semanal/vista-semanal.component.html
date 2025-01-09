@@ -1,6 +1,7 @@
 <app-editar-sub-bloque-dialog
   [(isDialogVisible)]="isDialogVisible"
   [data]="editSubBloqueData"
+  [role]="role"
   (savedSubBloque)="saveEvent($event)"
 ></app-editar-sub-bloque-dialog>
 
@@ -159,8 +160,7 @@
         class="wrapper"
         (click)="
           role == 'ALUMNO'
-            ? (weekEvent.event.meta.subBloque.realizado =
-                !weekEvent.event.meta.subBloque.realizado)
+            ? checkEvent(weekEvent)
             : mode == 'edit'
             ? onEventClicked(weekEvent.event)
             : false
@@ -171,6 +171,10 @@
           [ngStyle]="{
             'background-color': weekEvent?.event?.color?.primary || '#e3e3e3'
           }"
+          [ngClass]="{
+            'checked-event':
+              role == 'ALUMNO' && !!weekEvent.event.meta.subBloque.realizado
+          }"
         >
           <div class="event-content">
             <div class="event-header">
@@ -178,6 +182,15 @@
                 weekEvent?.event?.title || "Sin nombre"
               }}</strong>
               <div class="event-actions">
+                <i
+                  *ngIf="role == 'ALUMNO'"
+                  class="fa-regular fa-eye text-primary"
+                  (click)="
+                    $event.preventDefault();
+                    $event.stopPropagation();
+                    onEventClicked(weekEvent.event)
+                  "
+                ></i>
                 <i
                   class="{{
                     !!weekEvent?.event?.meta?.subBloque?.comentariosAlumno
@@ -188,14 +201,6 @@
                     openCommentDialog(weekEvent?.event?.meta?.subBloque, $event)
                   "
                 ></i>
-                <p-checkbox
-                  *ngIf="role == 'ALUMNO'"
-                  [(ngModel)]="weekEvent.event.meta.subBloque.realizado"
-                  binary="true"
-                  (click)="$event.preventDefault(); $event.stopPropagation()"
-                  (ngModelChange)="saveChanges.emit()"
-                  styleClass="complete-checkbox"
-                ></p-checkbox>
 
                 @if(role == 'ADMIN'){
                 <i

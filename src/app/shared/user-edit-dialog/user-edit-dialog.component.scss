@@ -7,12 +7,12 @@
 .wrapper-name-flag {
   display: flex;
   flex-wrap: nowrap;
-  align-items: end;
+  align-items: center;
   .nombre {
     width: 100%;
   }
   .display-flag {
-    margin-bottom: 10px;
+    margin-top: 10px;
   }
 }
 

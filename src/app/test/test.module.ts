@@ -5,6 +5,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { MarkdownModule } from 'ngx-markdown';
 import { ConfirmationService } from 'primeng/api';
+import { AvatarModule } from 'primeng/avatar';
+import { AvatarGroupModule } from 'primeng/avatargroup';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
@@ -30,7 +32,6 @@ import { PieChartDashboardSecurityComponent } from './components/test-stats/pie-
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { TestRoutingModule } from './test-routing.module';
-
 @NgModule({
   declarations: [
     UserDashboardComponent,
@@ -66,6 +67,8 @@ import { TestRoutingModule } from './test-routing.module';
     ReactiveFormsModule,
     FormsModule,
     NgxEchartsDirective,
+    AvatarGroupModule,
+    AvatarModule,
   ],
   providers: [ConfirmationService],
 })

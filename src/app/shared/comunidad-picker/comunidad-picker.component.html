@@ -27,6 +27,9 @@
 
 <div class="contenedor-comunidades">
   <div class="list flex align-items-center gap-1">
+    @if (comunidades.length==0) {
+    <span>Relevancia: </span>
+    }
     <img
       src="{{ map[comunidad].image }}"
       class="img-flag"

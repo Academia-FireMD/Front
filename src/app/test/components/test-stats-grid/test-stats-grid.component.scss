@@ -1,3 +1,19 @@
 .top-action-bar {
   flex-wrap: wrap;
 }
+
+:host ::ng-deep {
+  .firemd-avatar-group {
+    .p-avatar-group {
+      gap: 0.5rem;
+    }
+    .p-avatar-circle {
+      width: 1.5rem;
+      height: 1.5rem;
+      font-size: 0.8rem;
+    }
+    .p-avatar-text {
+      margin-top: -2px;
+    }
+  }
+}

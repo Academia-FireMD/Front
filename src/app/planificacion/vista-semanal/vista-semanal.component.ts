@@ -144,6 +144,12 @@ export class VistaSemanalComponent {
     this.isDialogVisible = true;
   }
 
+  checkEvent(event: { event: CalendarEvent }): void {
+    event.event.meta.subBloque.realizado =
+      !event.event.meta.subBloque.realizado;
+    this.saveChanges.emit();
+  }
+
   saveEvent(subbloque: SubBloque): void {
     if (this.selectedEvent && subbloque) {
       const updatedEvent = {

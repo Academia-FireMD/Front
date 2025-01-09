@@ -56,7 +56,12 @@ export class PreguntasDashboardAdminDetailviewComponent {
     temaId: [0],
     descripcion: [''],
     solucion: [''],
-    respuestas: this.fb.array([]),
+    respuestas: this.fb.array([
+      new FormControl(),
+      new FormControl(),
+      new FormControl(),
+      new FormControl(),
+    ]),
     respuestaCorrectaIndex: [0, Validators.required],
     seguridad: [''],
   });
