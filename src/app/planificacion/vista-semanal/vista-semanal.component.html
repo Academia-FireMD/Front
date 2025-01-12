@@ -240,7 +240,7 @@
       [weekStartsOn]="1"
       [eventTemplate]="templatePlan"
       (hourSegmentClicked)="mode === 'edit' && onTimeClicked($event, cm)"
-      (eventTimesChanged)="mode === 'edit' && eventDropped($event)"
+      (eventTimesChanged)="eventDropped($event, role == 'ALUMNO')"
       (eventClicked)="mode === 'edit' && onEventClicked($event.event)"
     >
     </mwl-calendar-week-view>

@@ -58,7 +58,6 @@ export class VistaSemanalComponent {
   public isDialogVisible: boolean = false;
   public seleccionandoBloquesAsignables = false;
   @Input() public set events(data: CalendarEvent[]) {
-    if (this.role == 'ALUMNO') data.forEach((e) => (e.draggable = false));
     this._events = data;
   }
   public get events() {
@@ -241,7 +240,7 @@ export class VistaSemanalComponent {
     newStart,
     newEnd,
     allDay,
-  }: CalendarEventTimesChangedEvent): void {
+  }: CalendarEventTimesChangedEvent, autoSave = false): void {
     if (event instanceof MouseEvent) {
       event.preventDefault();
       event.stopPropagation();
@@ -269,6 +268,7 @@ export class VistaSemanalComponent {
     }
     this.eventsChange.emit(this.events);
     this.refresh.next();
+    if(!!autoSave) this.saveChanges.emit() 
   }
 
   cancelEdit(): void {
