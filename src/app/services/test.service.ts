@@ -90,6 +90,10 @@ export class TestService extends ApiBaseService {
     return this.post('/registrar-respuesta', dto);
   }
 
+  public finalizarTest(testId: number) {
+    return this.post('/finalizar-test/' + testId, {});
+  }
+
   public eliminarTest(idTest: number) {
     return this.delete('/' + idTest);
   }

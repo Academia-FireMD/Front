@@ -1,32 +1,44 @@
+<ng-template #contentNavegador>
+  <div class="list-blocks">
+    <p-card
+      pRipple
+      #activeBlock
+      [ngClass]="{
+        'active-block': indicePregunta == i,
+        respondida:
+          !!preguntaRespondida(i) &&
+          preguntaRespondida(i)?.estado == 'RESPONDIDA',
+        omitida:
+          !!preguntaRespondida(i) && preguntaRespondida(i)?.estado == 'OMITIDA'
+      }"
+      class="pointer p-3"
+      *ngFor="let pregunta of lastLoadedTest?.preguntas ?? []; let i = index"
+      (click)="indicePregunta = i; displayNavegador = false"
+    >
+      <div class="content flex align-items-center justify-content-center">
+        @if ( !!preguntaRespondida( i) && preguntaRespondida(i)?.seguridad !=
+        'CIEN_POR_CIENTO') {
+        {{ obtainSecurityEmojiBasedOnEnum(preguntaRespondida(i)?.seguridad) }}
+        }@else {
+        {{ i + 1 }}
+        }
+      </div>
+    </p-card>
+  </div>
+</ng-template>
+
 <p-dialog
   [(visible)]="displayNavegador"
   header="Navegador de preguntas"
   [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
   [style]="{ width: '75vw', }"
   [closable]="true"
+  *ngIf="viewportService.screenWidth == 'xs'"
 >
   <div class="flex flex-column gap-3 py-3">
     Haz click en cualquiera de las preguntas listadas a continuación para
     navegar a ellas.
-    <div class="list-blocks">
-      <p-card
-        pRipple
-        [ngClass]="{
-          'sin-responder': !!preguntaRespondida(i)
-        }"
-        class="pointer p-3"
-        *ngFor="let pregunta of lastLoadedTest?.preguntas ?? []; let i = index"
-        (click)="indicePregunta = i; displayNavegador = false"
-      >
-        <div class="content flex align-items-center justify-content-center">
-          @if ( !!preguntaRespondida( i )) {
-          {{ obtainSecurityEmojiBasedOnEnum(preguntaRespondida(i)?.seguridad) }}
-          }@else {
-          {{ i }}
-          }
-        </div>
-      </p-card>
-    </div>
+    <ng-container *ngTemplateOutlet="contentNavegador"></ng-container>
   </div>
 </p-dialog>
 
@@ -76,19 +88,19 @@
     <div
       pRipple
       class="pointer p-3"
-      (click)="control.patchValue(SeguridadAlResponder.CINCUENTA_POR_CIENTO)"
+      (click)="control.patchValue(SeguridadAlResponder.CIEN_POR_CIENTO)"
       [ngClass]="{
         'selected-difficulty':
-          control.value == SeguridadAlResponder.CINCUENTA_POR_CIENTO,
-        'lower-opacity':
-          control.value != SeguridadAlResponder.CINCUENTA_POR_CIENTO
+          control.value == SeguridadAlResponder.CIEN_POR_CIENTO,
+        'lower-opacity': control.value != SeguridadAlResponder.CIEN_POR_CIENTO
       }"
     >
       <div class="seguridad-box">
-        👎
-        <span class="hidden md:block">Dudo entre 3</span>
+        ⭐
+        <span class="hidden md:block">No dudo</span>
       </div>
     </div>
+
     <div
       pRipple
       class="pointer p-3"
@@ -107,26 +119,44 @@
         <span class="hidden md:block">Dudo entre 2</span>
       </div>
     </div>
+
     <div
       pRipple
       class="pointer p-3"
-      (click)="control.patchValue(SeguridadAlResponder.CIEN_POR_CIENTO)"
+      (click)="control.patchValue(SeguridadAlResponder.CINCUENTA_POR_CIENTO)"
       [ngClass]="{
         'selected-difficulty':
-          control.value == SeguridadAlResponder.CIEN_POR_CIENTO,
-        'lower-opacity': control.value != SeguridadAlResponder.CIEN_POR_CIENTO
+          control.value == SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+        'lower-opacity':
+          control.value != SeguridadAlResponder.CINCUENTA_POR_CIENTO
       }"
     >
       <div class="seguridad-box">
-        ⭐
-        <span class="hidden md:block">No dudo</span>
+        👎
+        <span class="hidden md:block">Dudo entre 3</span>
+      </div>
+    </div>
+
+    <div
+      pRipple
+      class="pointer p-3"
+      (click)="control.patchValue(SeguridadAlResponder.CERO_POR_CIENTO)"
+      [ngClass]="{
+        'selected-difficulty':
+          control.value == SeguridadAlResponder.CERO_POR_CIENTO,
+        'lower-opacity': control.value != SeguridadAlResponder.CERO_POR_CIENTO
+      }"
+    >
+      <div class="seguridad-box">
+        🛑
+        <span class="hidden md:block">Dudo entre todas</span>
       </div>
     </div>
   </div>
 </ng-template>
 
 <div class="grid">
-  <ng-container *ngIf="testCargado$ | async as testCargado; else testNoCargado">
+  <ng-container *ngIf="lastLoadedTest as testCargado; else testNoCargado">
     @if(testCargado.preguntas[indicePregunta]){
 
     <p-card
@@ -158,85 +188,86 @@
                 }}</span>
                 <div class="actions">
                   <p-button
-                    label="Navegador"
+                    label="{{
+                      viewportService.screenWidth == 'xs' ? '' : 'Navegador'
+                    }}"
                     [link]="true"
                     icon="pi pi-compass"
-                    *ngIf="isModoExamen()"
-                    (click)="displayNavegador = true"
+                    *ngIf="viewportService.screenWidth == 'xs'"
+                    (click)="displayNavegadorFn()"
                   />
                   <p-button
-                    label="Reportar fallo"
+                    label="{{
+                      viewportService.screenWidth == 'xs'
+                        ? ''
+                        : 'Reportar fallo'
+                    }}"
                     [link]="true"
+                    icon="pi pi-exclamation-triangle"
                     (click)="displayFalloDialog = true"
                   />
                 </div>
               </div>
             </ng-template>
-            <p>
-              {{ pregunta.descripcion }}
-            </p>
-            <div
-              class="col-12 respuestas-list pointer"
-              pRipple
-              *ngFor="let respuesta of pregunta.respuestas; let i = index"
-              [ngClass]="{
-                'respuesta-correcta':
-                  isRespuestaCorrecta(i) ||
-                  (i == indiceSeleccionado.getValue() && isModoExamen()) ||
-                  (preguntaRespondida(i) &&
-                    isModoExamen() &&
-                    preguntaRespondida(indicePregunta)?.respuestaDada == i),
-                'respuesta-incorrecta': isRespuestaIncorrecta(i)
-              }"
-              (click)="
-                answeredCurrentQuestion() ? false : indiceSeleccionado.next(i)
-              "
-            >
-              <p-inputGroup>
-                <p-inputGroupAddon>{{ getLetter(i) }}) </p-inputGroupAddon>
-                <div class="flex w-full align-items-center">
-                  <span>{{ respuesta }}</span>
+
+            <div class="grid">
+              <div
+                class="{{
+                  viewportService.screenWidth == 'xs' ? 'col-12' : 'col-9'
+                }}  "
+              >
+                <p>
+                  {{ pregunta.descripcion }}
+                </p>
+                <div
+                  class="col-12 respuestas-list pointer"
+                  pRipple
+                  *ngFor="
+                    let respuesta of pregunta.respuestas;
+                    let indiceRespuesta = index
+                  "
+                  [ngClass]="{
+                    'respuesta-correcta':
+                      !isModoExamen() &&
+                      !!preguntaRespondida() &&
+                      preguntaRespondida()?.estado != 'OMITIDA' &&
+                      pregunta.respuestaCorrectaIndex == indiceRespuesta,
+                    'respuesta-incorrecta':
+                      !isModoExamen() &&
+                      !!preguntaRespondida() &&
+                      preguntaRespondida()?.estado != 'OMITIDA' &&
+                      pregunta.respuestaCorrectaIndex != indiceRespuesta &&
+                      preguntaRespondida()?.respuestaDada == indiceRespuesta,
+                    'respuesta-seleccionada':
+                      this.indiceSeleccionado.getValue() == indiceRespuesta ||
+                      (preguntaRespondida()?.respuestaDada == indiceRespuesta &&
+                        isModoExamen())
+                  }"
+                  (click)="
+                    answeredCurrentQuestion()
+                      ? false
+                      : indiceSeleccionado.next(indiceRespuesta)
+                  "
+                >
+                  <p-inputGroup>
+                    <p-inputGroupAddon
+                      >{{ getLetter(indiceRespuesta) }})
+                    </p-inputGroupAddon>
+                    <div class="flex w-full align-items-center">
+                      <span>{{ respuesta }}</span>
+                    </div>
+                  </p-inputGroup>
                 </div>
-              </p-inputGroup>
-            </div>
-            <div class="col-12" *ngIf="!answeredCurrentQuestion()">
-              <div class="flex justify-content-between">
-                <div class="seguridad">
-                  <span>Confianza al responder</span>
+              </div>
+              <div class="col-3" *ngIf="viewportService.screenWidth != 'xs'">
+                <div class="lateral-navegador">
                   <ng-container
-                    *ngTemplateOutlet="
-                      seguridadPicker;
-                      context: {
-                        control: seguroDeLaPregunta
-                      }
-                    "
+                    *ngTemplateOutlet="contentNavegador"
                   ></ng-container>
-                </div>
-                <div class="actions">
-                  <p-button
-                    label="Atrás"
-                    [link]="true"
-                    *ngIf="isModoExamen()"
-                    (click)="atras()"
-                    [disabled]="indicePregunta == 0"
-                  />
-                  <p-button
-                    label="Omitir"
-                    [link]="true"
-                    (click)="processAnswer(undefined, true)"
-                  />
-                  <p-button
-                    label="Adelante"
-                    [link]="true"
-                    *ngIf="isModoExamen()"
-                    (click)="adelante()"
-                    [disabled]="
-                      indicePregunta == testCargado.preguntas.length - 1
-                    "
-                  />
                 </div>
               </div>
             </div>
+
             <div
               class="grid w-full footer flex justify-content-between align-items-center mt-2"
               *ngIf="answeredCurrentQuestion()"
@@ -270,6 +301,71 @@
               </div>
             </div>
           </p-panel>
+          <div
+            class="col-12 bottom-bar-no-content"
+            *ngIf="!answeredCurrentQuestion()"
+          >
+            <p-panel>
+              <ng-template pTemplate="header">
+                <div class="seguridad w-full">
+                  <div
+                    class="flex justify-content-between align-items-center w-full"
+                  >
+                    <span>Confianza al responder</span>
+                    <div class="actions">
+                      <p-button
+                        label="{{
+                          viewportService.screenWidth == 'xs' ? '' : 'Atrás'
+                        }}"
+                        [link]="true"
+                        icon="pi pi-angle-double-left"
+                        (click)="processAnswer(undefined, 'before')"
+                        [disabled]="indicePregunta == 0"
+                      />
+                      <p-button
+                        label="{{
+                          viewportService.screenWidth == 'xs' ? '' : 'Omitir'
+                        }}"
+                        [link]="true"
+                        icon="pi pi-forward"
+                        (click)="processAnswer(undefined, 'omitir')"
+                      />
+                      <p-button
+                        label="{{
+                          viewportService.screenWidth == 'xs' ? '' : 'Adelante'
+                        }}"
+                        [link]="true"
+                        icon="pi pi-angle-double-right"
+                        (click)="processAnswer(undefined, 'next')"
+                        [disabled]="
+                          indicePregunta == testCargado.preguntas.length - 1
+                        "
+                      />
+
+                      <!-- <p-button
+                        label="{{
+                          viewportService.screenWidth == 'xs' ? '' : 'Finalizar'
+                        }}"
+                        [link]="true"
+                        [disabled]="lastLoadedTest.status == 'FINALIZADO'"
+                        icon="pi pi-flag"
+                        (click)="finalizarTest()"
+                      /> -->
+                    </div>
+                  </div>
+
+                  <ng-container
+                    *ngTemplateOutlet="
+                      seguridadPicker;
+                      context: {
+                        control: seguroDeLaPregunta
+                      }
+                    "
+                  ></ng-container>
+                </div>
+              </ng-template>
+            </p-panel>
+          </div>
         </div>
       </div>
     </p-card>

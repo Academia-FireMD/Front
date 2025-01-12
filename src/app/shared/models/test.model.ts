@@ -7,6 +7,12 @@ export enum TestStatus {
   FINALIZADO = 'FINALIZADO',
 }
 
+export enum EstadoPregunta {
+  NO_RESPONDIDA = 'NO_RESPONDIDA',
+  RESPONDIDA = 'RESPONDIDA',
+  OMITIDA = 'OMITIDA',
+}
+
 export interface Test {
   id: number;
   realizadorId: number;
@@ -32,4 +38,5 @@ export interface Respuesta {
   createdAt: Date;
   updatedAt: Date;
   indicePregunta: number;
+  estado: EstadoPregunta;
 }

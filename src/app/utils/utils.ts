@@ -62,6 +62,8 @@ export const obtainSecurityEmojiBasedOnEnum = (
       return '⭐';
     case SeguridadAlResponder.CINCUENTA_POR_CIENTO:
       return '👎';
+    case SeguridadAlResponder.CERO_POR_CIENTO:
+      return '🛑';
     default:
       return '👍';
   }
@@ -297,14 +299,16 @@ export const getAllDifficultades = (
       value: Dificultad.PUBLICAS,
     },
   ];
-  if (!isFlashcards)
-    return [
-      {
+  if (!isFlashcards) {
+
+    if (!!isCreatingTest)
+      alumnoOnly.push({
         label: 'Academia FireMD',
         icon: 'pi-check-square',
         value: Dificultad.INTERMEDIO,
-      },
-      ...alumnoOnly,
-    ];
+      });
+
+    return alumnoOnly;
+  }
   return [...allDificultades, ...alumnoOnly];
 };

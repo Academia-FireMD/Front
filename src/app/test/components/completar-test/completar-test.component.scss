@@ -9,6 +9,7 @@
   border: 1px solid $primaryColor;
   border-radius: 5px;
 }
+
 :host ::ng-deep {
   .list-blocks {
     display: flex;
@@ -25,10 +26,28 @@
       }
     }
   }
-  .sin-responder {
+
+  .lateral-navegador {
+    overflow: auto;
+    height: 100%;
+    display: block;
+    max-height: 300px;
+  }
+
+  .respondida {
     .p-card-body {
       background-color: $yellow;
       color: white;
     }
+  }
+  .omitida {
+    .p-card-body {
+      background-color: var(--surface-300);
+      color: white;
+    }
+  }
+
+  .active-block > .p-card {
+    border: 1px solid $primaryColor;
   }
 }

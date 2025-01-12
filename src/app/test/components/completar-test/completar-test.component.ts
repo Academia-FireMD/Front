@@ -1,10 +1,17 @@
-import { Component, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  inject,
+  QueryList,
+  ViewChildren,
+} from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import {
   BehaviorSubject,
   catchError,
+  delay,
   filter,
   firstValueFrom,
   of,
@@ -12,6 +19,7 @@ import {
 } from 'rxjs';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TestService } from '../../../services/test.service';
+import { ViewportService } from '../../../services/viewport.service';
 import {
   Dificultad,
   SeguridadAlResponder,
@@ -35,6 +43,8 @@ export class CompletarTestComponent {
   toast = inject(ToastrService);
   router = inject(Router);
   reporteFallo = inject(ReportesFalloService);
+  viewportService = inject(ViewportService);
+  @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
 
   public indicePregunta = 0;
   public displayFeedbackDialog = false;
@@ -56,10 +66,9 @@ export class CompletarTestComponent {
   public indicePreguntaCorrecta = -1;
   public answeredQuestion = -1;
 
-  public lastLoadedTest!: Test;
+  public lastLoadedTest!: Test & { endsAt: Date };
   private lastAnsweredQuestion!: { preguntaId: number };
 
-  public testCargado$ = this.getTest();
   public obtainSecurityEmojiBasedOnEnum = obtainSecurityEmojiBasedOnEnum;
 
   public comunicating = false;
@@ -68,10 +77,23 @@ export class CompletarTestComponent {
     return !!this.lastLoadedTest.duration && !!this.lastLoadedTest.endsAt;
   }
 
-  public preguntaRespondida(indexPregunta: number): Respuesta | undefined {
+  public preguntaRespondida(
+    specificIndex: number = this.indicePregunta
+  ): Respuesta | undefined {
     return (this.lastLoadedTest?.respuestas ?? []).find(
-      (r) => r.indicePregunta == indexPregunta
+      (r) => r.indicePregunta == specificIndex
     );
+  }
+
+  private scrollToActiveBlock(): void {
+    const activeElement = this.activeBlocks.toArray()[this.indicePregunta];
+    if (activeElement) {
+      (activeElement as any).el.nativeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+    }
   }
 
   private getTest() {
@@ -84,8 +106,21 @@ export class CompletarTestComponent {
           this.lastLoadedTest = entry;
           this.indicePregunta = parsedTest.respuestasCount;
         }
-      })
+      }),
+      delay(100),
+      tap(() => this.scrollToActiveBlock())
     );
+  }
+
+  constructor() {
+    firstValueFrom(this.getTest());
+  }
+
+  public displayNavegadorFn() {
+    this.displayNavegador = true;
+    setTimeout(() => {
+      this.scrollToActiveBlock();
+    }, 100);
   }
 
   ngOnInit(): void {
@@ -96,29 +131,17 @@ export class CompletarTestComponent {
       });
   }
 
-  isRespuestaCorrecta(indice: number): boolean {
-    return (
-      (indice === this.indicePreguntaCorrecta &&
-        indice === this.indiceSeleccionado.getValue() &&
-        !this.isModoExamen()) ||
-      (indice === this.indicePreguntaCorrecta &&
-        this.indiceSeleccionado.getValue() !== this.indicePreguntaCorrecta &&
-        !this.isModoExamen())
-    );
-  }
-
-  isRespuestaIncorrecta(indice: number): boolean {
-    return (
-      indice === this.indiceSeleccionado.getValue() &&
-      indice !== this.indicePreguntaCorrecta &&
-      !this.isModoExamen()
-    );
-  }
-
-  public async processAnswer(respuestaDada?: number, omitida = false) {
+  public async processAnswer(
+    respuestaDada?: number,
+    mode: 'none' | 'next' | 'before' | 'omitir' = 'none'
+  ) {
     this.answeredQuestion = -1;
     this.indicePreguntaCorrecta = -1;
     this.comunicating = true;
+    const answered = this.preguntaRespondida();
+    const isAnswered = !!answered?.respuestaDada;
+    const isOmitida =
+      mode == 'omitir' || ((mode == 'next' || mode == 'before') && !isAnswered);
     const res: {
       esCorrecta: boolean;
       respuestaDada: number;
@@ -129,7 +152,7 @@ export class CompletarTestComponent {
           testId: this.lastLoadedTest.id,
           preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta].id,
           respuestaDada,
-          omitida,
+          omitida: isOmitida,
           indicePregunta: this.indicePregunta,
           seguridad:
             this.seguroDeLaPregunta.value ??
@@ -146,10 +169,11 @@ export class CompletarTestComponent {
           })
         )
     );
-    this.comunicating = false;
-    this.indicePreguntaCorrecta = res.pregunta.respuestaCorrectaIndex;
+    this.indicePreguntaCorrecta = res?.pregunta?.respuestaCorrectaIndex ?? -1;
     this.answeredQuestion = this.indiceSeleccionado.getValue();
-    if (omitida) this.siguiente();
+    if (mode == 'next' || mode == 'omitir') this.siguiente();
+    if (mode == 'before') this.atras();
+    this.comunicating = false;
   }
 
   public atras() {
@@ -241,4 +265,13 @@ export class CompletarTestComponent {
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as string;
   }
+
+  // public async finalizarTest() {
+  //   await firstValueFrom(
+  //     this.testService
+  //       .finalizarTest(this.lastLoadedTest.id)
+  //       .pipe(switchMap(() => this.getTest()))
+  //   );
+  //   this.siguiente();
+  // }
 }

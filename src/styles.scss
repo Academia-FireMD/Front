@@ -104,11 +104,16 @@ app-preguntas-dashboard-admin-detailview {
 
 .respuesta-correcta {
   transition: 0.5s;
-  background-color: #00eb003d;
+  background-color: #00eb003d !important;
 }
 .respuesta-incorrecta {
   transition: 0.5s;
-  background-color: #ff9c9c;
+  background-color: #ff9c9c !important;
+}
+
+.respuesta-seleccionada {
+  transition: 0.5s;
+  background-color: $yellow;
 }
 
 .top-action-bar {
@@ -244,4 +249,11 @@ p-chip {
 }
 .p-chip-text {
   font-size: 12px;
+}
+
+.bottom-bar-no-content {
+  padding: 0px;
+  .p-panel-content {
+    display: none;
+  }
 }
