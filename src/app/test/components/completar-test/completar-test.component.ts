@@ -15,6 +15,7 @@ import {
   filter,
   firstValueFrom,
   of,
+  switchMap,
   tap,
 } from 'rxjs';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
@@ -22,6 +23,7 @@ import { TestService } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
 import {
   Dificultad,
+  Pregunta,
   SeguridadAlResponder,
 } from '../../../shared/models/pregunta.model';
 import { Respuesta, Test } from '../../../shared/models/test.model';
@@ -75,6 +77,25 @@ export class CompletarTestComponent {
 
   public isModoExamen() {
     return !!this.lastLoadedTest.duration && !!this.lastLoadedTest.endsAt;
+  }
+
+  public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
+    return (
+      !this.isModoExamen() &&
+      !!this.preguntaRespondida() &&
+      this.preguntaRespondida()?.estado != 'OMITIDA' &&
+      pregunta.respuestaCorrectaIndex == indiceRespuesta
+    );
+  }
+
+  public respuestaIncorrecta(pregunta: Pregunta, indiceRespuesta: number) {
+    return (
+      !this.isModoExamen() &&
+      !!this.preguntaRespondida() &&
+      this.preguntaRespondida()?.estado != 'OMITIDA' &&
+      pregunta.respuestaCorrectaIndex != indiceRespuesta &&
+      this.preguntaRespondida()?.respuestaDada == indiceRespuesta
+    );
   }
 
   public preguntaRespondida(
@@ -266,12 +287,14 @@ export class CompletarTestComponent {
     return this.activedRoute.snapshot.paramMap.get('id') as string;
   }
 
-  // public async finalizarTest() {
-  //   await firstValueFrom(
-  //     this.testService
-  //       .finalizarTest(this.lastLoadedTest.id)
-  //       .pipe(switchMap(() => this.getTest()))
-  //   );
-  //   this.siguiente();
-  // }
+  public async finalizarTest() {
+    await firstValueFrom(
+      this.testService
+        .finalizarTest(this.lastLoadedTest.id)
+        .pipe(switchMap(() => this.getTest()))
+    );
+    this.router.navigate([
+      'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
+    ]);
+  }
 }

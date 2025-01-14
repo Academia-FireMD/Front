@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { AvatarUploadComponent } from './avatar-upload/avatar-upload.component';
 import { ComunidadPickerComponent } from './comunidad-picker/comunidad-picker.component';
 import { DificultadDropdownComponent } from './dificultad-dropdown/dificultad-dropdown.component';
 import { PasswordInputComponent } from './password-input/password-input.component';
@@ -18,7 +19,8 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     CountdownPipe,
     UserEditDialogComponent,
     DificultadDropdownComponent,
-    PasswordInputComponent
+    PasswordInputComponent,
+    AvatarUploadComponent,
   ],
   imports: [
     CommonModule,
@@ -37,7 +39,8 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     FormsModule,
     ReactiveFormsModule,
     DificultadDropdownComponent,
-    PasswordInputComponent
+    PasswordInputComponent,
+    AvatarUploadComponent,
   ],
 })
 export class SharedModule {}

@@ -18,7 +18,9 @@
           [(ngModel)]="selectedUser.nombre"
         />
       </div>
-
+      <app-avatar-upload
+        [avatarUrl]="selectedUser.avatarUrl"
+      ></app-avatar-upload>
       <div class="display-flag">
         <app-comunidad-picker
           [comunidades]="[selectedUser.comunidad]"

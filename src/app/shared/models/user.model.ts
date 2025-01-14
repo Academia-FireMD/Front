@@ -15,6 +15,8 @@ export interface Usuario {
   esTutor: boolean;
   tutorId?: number;
   comunidad: Comunidad;
+  avatarUrl: string;
+  sub?: number;
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
 }
 

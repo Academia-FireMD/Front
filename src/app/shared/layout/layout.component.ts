@@ -23,6 +23,7 @@ export class LayoutComponent {
   items = [] as Array<any>;
   isMenuVisible: boolean = false;
   public decodedUser = this.authService.decodeToken() as Usuario;
+  public loadedUser$ = this.userService.getByEmail$(this.decodedUser.email);
   public selectedUser!: Usuario;
   public editDialogVisible = false;
   public async editProfile() {
@@ -32,6 +33,11 @@ export class LayoutComponent {
     );
     this.selectedUser = foundUser;
     this.editDialogVisible = true;
+  }
+
+  public onCloseUserEditDialog(visibility: boolean) {
+    this.editDialogVisible = visibility;
+    this.loadedUser$ = this.userService.getByEmail$(this.decodedUser.email);
   }
 
   public confirmarCambios(usuarioActualizado: Usuario) {

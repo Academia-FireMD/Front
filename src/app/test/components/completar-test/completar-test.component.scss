@@ -40,6 +40,16 @@
       color: white;
     }
   }
+  .correct-block {
+    .p-card-body {
+      background-color: #00eb003d;
+    }
+  }
+  .incorrect-block {
+    .p-card-body {
+      background-color: #ff9c9c;
+    }
+  }
   .omitida {
     .p-card-body {
       background-color: var(--surface-300);

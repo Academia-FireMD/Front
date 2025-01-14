@@ -14,6 +14,7 @@ import { DataViewModule } from 'primeng/dataview';
 import { DialogModule } from 'primeng/dialog';
 import { DividerModule } from 'primeng/divider';
 import { DropdownModule } from 'primeng/dropdown';
+import { FileUploadModule } from 'primeng/fileupload';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputGroupModule } from 'primeng/inputgroup';
@@ -70,6 +71,7 @@ const modules = [
   OrderListModule,
   DragDropModule,
   ColorPickerModule,
+  FileUploadModule,
 ];
 
 @NgModule({

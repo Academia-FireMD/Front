@@ -1,6 +1,7 @@
 <app-user-edit-dialog
   [selectedUser]="selectedUser"
-  [(editDialogVisible)]="editDialogVisible"
+  [editDialogVisible]="editDialogVisible"
+  (editDialogVisibleChange)="onCloseUserEditDialog($event)"
   [rol]="decodedUser.rol"
   [allowSetIsTutor]="decodedUser.rol == 'ADMIN'"
   (confirmarCambios)="confirmarCambios($event)"
@@ -22,18 +23,34 @@
     }"
     *ngIf="viewportService.screenWidth !== 'xs' || isMenuVisible"
   >
-    <p-menu [model]="items" styleClass="w-full h-full">
+    <p-menu
+      [model]="items"
+      styleClass="w-full h-full"
+      *ngIf="loadedUser$ | async as user"
+    >
       <ng-template pTemplate="start">
         <div class="image-container py-3">
           <img src="white_logo.png" alt="Logo" style="max-width: 160px" />
         </div>
         <div
           (click)="editProfile()"
-          class="perfil p-2 flex align-items-center justify-content-center w-full gap-2 pointer"
+          class="perfil p-2 flex align-items-center justify-content-start w-full gap-2 pointer"
         >
-          <i class="pi pi-user"></i>
+          <div class="avatar-container mt-0">
+            @if (!user.avatarUrl) {
+            <i class="pi pi-user"></i>
+            } @else {
+            <img
+              [src]="user.avatarUrl"
+              alt="Avatar"
+              class="avatar-preview"
+              style="max-width: 32px; max-height: 32px"
+            />
+            }
+          </div>
+
           <span class="descripcion">
-            {{ decodedUser.nombre }}
+            {{ user.nombre + " " + user.apellidos }}
           </span>
         </div>
       </ng-template>

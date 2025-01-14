@@ -1,0 +1,15 @@
+<div class="avatar-container" (click)="fileInput.click()">
+  @if (!avatarUrl) {
+  <i class="pi pi-camera"></i>
+  } @else {
+  <img [src]="avatarUrl" alt="Avatar" class="avatar-preview" />
+  }
+
+  <input
+    #fileInput
+    type="file"
+    accept=".png, .jpg, .jpeg"
+    (change)="onFileSelected($event)"
+    hidden
+  />
+</div>

@@ -5,7 +5,16 @@
       #activeBlock
       [ngClass]="{
         'active-block': indicePregunta == i,
+        'correct-block':
+          !isModoExamen() &&
+          preguntaRespondida(i)?.estado == 'RESPONDIDA' &&
+          !!preguntaRespondida(i)?.esCorrecta,
+        'incorrect-block':
+          !isModoExamen() &&
+          preguntaRespondida(i)?.estado == 'RESPONDIDA' &&
+          !preguntaRespondida(i)?.esCorrecta,
         respondida:
+          !!isModoExamen() &&
           !!preguntaRespondida(i) &&
           preguntaRespondida(i)?.estado == 'RESPONDIDA',
         omitida:
@@ -227,17 +236,14 @@
                     let indiceRespuesta = index
                   "
                   [ngClass]="{
-                    'respuesta-correcta':
-                      !isModoExamen() &&
-                      !!preguntaRespondida() &&
-                      preguntaRespondida()?.estado != 'OMITIDA' &&
-                      pregunta.respuestaCorrectaIndex == indiceRespuesta,
-                    'respuesta-incorrecta':
-                      !isModoExamen() &&
-                      !!preguntaRespondida() &&
-                      preguntaRespondida()?.estado != 'OMITIDA' &&
-                      pregunta.respuestaCorrectaIndex != indiceRespuesta &&
-                      preguntaRespondida()?.respuestaDada == indiceRespuesta,
+                    'respuesta-correcta': respuestaCorrecta(
+                      pregunta,
+                      indiceRespuesta
+                    ),
+                    'respuesta-incorrecta': respuestaIncorrecta(
+                      pregunta,
+                      indiceRespuesta
+                    ),
                     'respuesta-seleccionada':
                       this.indiceSeleccionado.getValue() == indiceRespuesta ||
                       (preguntaRespondida()?.respuestaDada == indiceRespuesta &&
@@ -342,7 +348,7 @@
                         "
                       />
 
-                      <!-- <p-button
+                      <p-button
                         label="{{
                           viewportService.screenWidth == 'xs' ? '' : 'Finalizar'
                         }}"
@@ -350,7 +356,7 @@
                         [disabled]="lastLoadedTest.status == 'FINALIZADO'"
                         icon="pi pi-flag"
                         (click)="finalizarTest()"
-                      /> -->
+                      />
                     </div>
                   </div>
 
