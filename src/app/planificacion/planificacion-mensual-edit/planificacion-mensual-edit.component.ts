@@ -306,6 +306,7 @@ export class PlanificacionMensualEditComponent {
       };
     });
     eventsToApplyToCurrentWeek.forEach((event) => {
+
       if (event?.meta?.subBloque as SubBloque) {
         (event?.meta?.subBloque as SubBloque).id = undefined;
         (event?.meta?.subBloque as SubBloque).plantillaId = undefined;

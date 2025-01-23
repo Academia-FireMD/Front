@@ -2,6 +2,7 @@
   [(isDialogVisible)]="isDialogVisible"
   [data]="editSubBloqueData"
   (savedSubBloque)="savedSubbloqueDialog($event)"
+  [role]="'ADMIN'"
 ></app-editar-sub-bloque-dialog>
 
 <div class="grid" [formGroup]="formGroup">

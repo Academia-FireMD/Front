@@ -58,11 +58,13 @@ export class VistaSemanalComponent {
   public isDialogVisible: boolean = false;
   public seleccionandoBloquesAsignables = false;
   @Input() public set events(data: CalendarEvent[]) {
+    data.forEach((e) => (e.draggable = true && this.mode == 'edit'));
     this._events = data;
   }
   public get events() {
     return this._events;
   }
+
   private _events: CalendarEvent[] = [];
   @Output() eventsChange = new EventEmitter<CalendarEvent[]>();
   @Output() saveChanges = new EventEmitter<void>();
@@ -235,12 +237,10 @@ export class VistaSemanalComponent {
     }
   }
 
-  eventDropped({
-    event,
-    newStart,
-    newEnd,
-    allDay,
-  }: CalendarEventTimesChangedEvent, autoSave = false): void {
+  eventDropped(
+    { event, newStart, newEnd, allDay }: CalendarEventTimesChangedEvent,
+    autoSave = false
+  ): void {
     if (event instanceof MouseEvent) {
       event.preventDefault();
       event.stopPropagation();
@@ -268,7 +268,7 @@ export class VistaSemanalComponent {
     }
     this.eventsChange.emit(this.events);
     this.refresh.next();
-    if(!!autoSave) this.saveChanges.emit() 
+    if (!!autoSave) this.saveChanges.emit();
   }
 
   cancelEdit(): void {

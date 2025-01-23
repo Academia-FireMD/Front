@@ -210,11 +210,15 @@ p-orderlist .p-orderlist-list .p-orderlist-item.p-highlight div button {
   color: #ffffff;
 }
 
-app-plantilla-semanal-edit,
-app-planificacion-mensual-edit {
+app-plantilla-semanal-edit {
   display: block;
   height: 100%;
   overflow-y: auto;
+}
+
+app-planificacion-mensual-edit {
+  display: block;
+  overflow: hidden;
 }
 
 p-chip {
