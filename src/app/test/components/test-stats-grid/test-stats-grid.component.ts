@@ -11,7 +11,7 @@ import { Test } from '../../../shared/models/test.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
   calcular100,
-  calcular100y50,
+  calcular100y75,
   calcular100y75y50,
   getStats,
   obtenerTemas,
@@ -86,11 +86,11 @@ export class TestStatsGridComponent extends SharedGridComponent<
     return calcular100(statsParsed.stats100, numPreguntas);
   };
 
-  public calcular100y50 = (rawStats: any, numPreguntas: number) => {
+  public calcular100y75 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
-    return calcular100y50(
+    return calcular100y75(
       statsParsed.stats100,
-      statsParsed.stats50,
+      statsParsed.stats75,
       numPreguntas
     );
   };

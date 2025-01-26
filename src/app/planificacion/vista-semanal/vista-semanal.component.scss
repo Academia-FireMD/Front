@@ -24,6 +24,13 @@
 }
 
 :host ::ng-deep {
+  .cal-time-events,
+  .cal-week-view,
+  .cal-day-headers {
+    border-top: 0px;
+    border-right: 0px;
+    border-bottom: 0px;
+  }
   .cal-header {
     span {
       display: none;

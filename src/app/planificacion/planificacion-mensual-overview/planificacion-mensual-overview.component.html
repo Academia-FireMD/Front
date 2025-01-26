@@ -112,6 +112,15 @@
                   >
                   <p-button
                     [link]="true"
+                    icon="pi pi-clone"
+                    (click)="
+                      $event.stopPropagation();
+                      $event.preventDefault();
+                      clonarPlanificacion(item.id)
+                    "
+                  ></p-button>
+                  <p-button
+                    [link]="true"
                     icon="pi pi-trash"
                     (click)="
                       $event.stopPropagation();

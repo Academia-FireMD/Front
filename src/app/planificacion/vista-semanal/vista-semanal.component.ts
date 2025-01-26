@@ -21,6 +21,7 @@ import {
   PlanificacionBloque,
   SubBloque,
 } from '../../shared/models/planificacion.model';
+import { getDateForDayOfWeek, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 export const colors: any = {
   yellow: {
@@ -58,7 +59,9 @@ export class VistaSemanalComponent {
   public isDialogVisible: boolean = false;
   public seleccionandoBloquesAsignables = false;
   @Input() public set events(data: CalendarEvent[]) {
-    data.forEach((e) => (e.draggable = true && this.mode == 'edit'));
+    data.forEach((e) => {
+      if (this.mode == 'edit') e.draggable = true;
+    });
     this._events = data;
   }
   public get events() {
@@ -116,7 +119,91 @@ export class VistaSemanalComponent {
     this.eventsService.getCompletedSubBlocksForDay;
   public getProgressPercentageForDay =
     this.eventsService.getProgressPercentageForDay;
+  isCloneDialogVisible: boolean = false;
+  selectedDayForCloning: Date | null = null;
+  targetDayForCloning: number | null = null;
 
+  daysOfWeek = [
+    { label: 'Lunes', value: 0 },
+    { label: 'Martes', value: 1 },
+    { label: 'Miércoles', value: 2 },
+    { label: 'Jueves', value: 3 },
+    { label: 'Viernes', value: 4 },
+    { label: 'Sábado', value: 5 },
+    { label: 'Domingo', value: 6 },
+  ];
+
+  openCloneDialog(day: Date): void {
+    this.selectedDayForCloning = day;
+    this.isCloneDialogVisible = true;
+  }
+
+  cloneEventsToTargetDay(): void {
+    if (!this.selectedDayForCloning || this.targetDayForCloning == null) {
+      console.error('Faltan el día seleccionado o el día objetivo.');
+      return;
+    }
+
+    // Convertir el día objetivo en una fecha dentro de la semana actual
+    const weekStart = getStartOfWeek(new Date()); // Inicio de la semana actual
+    const targetDayDate = getDateForDayOfWeek(
+      this.targetDayForCloning,
+      weekStart
+    );
+
+    // Obtener eventos del día seleccionado
+    const eventsToClone = cloneDeep(
+      this.getEventsForDay(this.events, this.selectedDayForCloning)
+    );
+
+    if (eventsToClone.length === 0) {
+      console.warn(
+        `No hay eventos para clonar desde ${this.selectedDayForCloning}.`
+      );
+      this.isCloneDialogVisible = false;
+      return;
+    }
+
+    // Crear clones de los eventos con la nueva fecha
+    const clonedEvents = eventsToClone.map((event) => {
+      event.meta.subBloque.id = undefined;
+      return {
+        ...event,
+        start: new Date(
+          targetDayDate.getFullYear(),
+          targetDayDate.getMonth(),
+          targetDayDate.getDate(),
+          event.start.getHours(),
+          event.start.getMinutes()
+        ),
+        end: new Date(
+          targetDayDate.getFullYear(),
+          targetDayDate.getMonth(),
+          targetDayDate.getDate(),
+          event.end.getHours(),
+          event.end.getMinutes()
+        ),
+        id: undefined, // Eliminar el ID para que el backend cree uno nuevo
+      };
+    });
+
+    // Agregar los eventos clonados a la lista de eventos actual
+    this.events = cloneDeep([
+      ...cloneDeep(this.events),
+      ...cloneDeep(clonedEvents),
+    ]);
+    this.eventsChange.emit(this.events);
+    console.log(
+      `Clonados ${clonedEvents.length} eventos de ${this.selectedDayForCloning} a ${targetDayDate}.`
+    );
+
+    // Cerrar el diálogo y reiniciar las variables
+    this.isCloneDialogVisible = false;
+    this.targetDayForCloning = null;
+
+    // Aquí podrías hacer una llamada al backend si los datos se guardan en un servidor:
+    // this.eventService.saveEvents(clonedEvents).subscribe(() => { ... });
+  }
   public getAllBloques$ = computed(() => {
     return this.planificacionesService
       .getBloques$({

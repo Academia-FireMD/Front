@@ -22,6 +22,21 @@ export interface StatType {
   incorrectas: number;
 }
 
+export const getStartOfWeek = (date: Date): Date => {
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Ajustar al lunes de la semana
+  const startOfWeek = new Date(date);
+  startOfWeek.setDate(date.getDate() + diff);
+  startOfWeek.setHours(0, 0, 0, 0); // Eliminar información de tiempo
+  return startOfWeek;
+};
+
+export const getDateForDayOfWeek = (dayIndex: number, startOfWeek: Date): Date =>  {
+  const targetDate = new Date(startOfWeek);
+  targetDate.setDate(startOfWeek.getDate() + dayIndex);
+  return targetDate;
+}
+
 export const getDataFromFlashcards = (data: any) => {
   const dataParsed = data as {
     estado: any;
@@ -150,14 +165,14 @@ export const calcular100 = (stats100: StatType, total: number) => {
   return calcularCalificacion(stats100.correctas, stats100.incorrectas, total);
 };
 
-export const calcular100y50 = (
+export const calcular100y75 = (
   stats100: StatType,
-  stats50: StatType,
+  stats75: StatType,
   total: number
 ) => {
   return calcularCalificacion(
-    stats100.correctas + stats50.correctas,
-    stats100.incorrectas + stats50.incorrectas,
+    stats100.correctas + stats75.correctas,
+    stats100.incorrectas + stats75.incorrectas,
     total
   );
 };
@@ -300,7 +315,6 @@ export const getAllDifficultades = (
     },
   ];
   if (!isFlashcards) {
-
     if (!!isCreatingTest)
       alumnoOnly.push({
         label: 'Academia FireMD',

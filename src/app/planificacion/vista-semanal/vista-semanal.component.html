@@ -1,3 +1,52 @@
+<p-dialog
+  header="Clonar eventos"
+  [(visible)]="isCloneDialogVisible"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '400px' }"
+>
+  <div class="p-fluid">
+    <div class="field">
+      <label for="selectedDay">Día seleccionado</label>
+      <input
+        id="selectedDay"
+        type="text"
+        pInputText
+        [value]="selectedDayForCloning | date : 'fullDate'"
+        readonly
+      />
+    </div>
+    <div class="field">
+      <label for="targetDay">Clonar al día</label>
+      <p-dropdown
+        id="targetDay"
+        appendTo="body"
+        [options]="daysOfWeek"
+        [(ngModel)]="targetDayForCloning"
+        optionValue="value"
+        optionLabel="label"
+        placeholder="Selecciona un día"
+      ></p-dropdown>
+    </div>
+  </div>
+  <p-footer>
+    <button
+      pButton
+      label="Cancelar"
+      class="p-button-text"
+      (click)="isCloneDialogVisible = false"
+    ></button>
+    <button
+      pButton
+      label="Clonar"
+      icon="pi pi-check"
+      class="p-button-primary"
+      (click)="cloneEventsToTargetDay()"
+      [disabled]="targetDayForCloning == null"
+    ></button>
+  </p-footer>
+</p-dialog>
+
 <app-editar-sub-bloque-dialog
   [(isDialogVisible)]="isDialogVisible"
   [data]="editSubBloqueData"
@@ -84,6 +133,15 @@
       <div class="top" [class.today]="day.isToday">
         <div class="day-label text-uppercase">
           {{ day.date | calendarDate : "weekViewColumnHeader" : locale }}
+          <i
+            class="pi pi-clone pointer"
+            *ngIf="role == 'ADMIN'"
+            (click)="
+              $event.stopPropagation();
+              $event.preventDefault();
+              openCloneDialog(day.date)
+            "
+          ></i>
         </div>
         <!-- <div class="day-number">
           {{ day.date | calendarDate : "weekViewColumnSubHeader" : locale }}

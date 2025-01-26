@@ -110,6 +110,10 @@ export class PlanificacionesService extends ApiBaseService {
     return this.delete('/planificacion-mensual/' + id);
   }
 
+  public clonarPlanificacionMensual$(id: number) {
+    return this.post('/planificacion-mensual/clonar/' + id, null);
+  }
+
   public asignarPlanificacionMensual$(
     planificacionId: number,
     alumnosIds: number[]

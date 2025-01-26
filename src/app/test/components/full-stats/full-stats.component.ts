@@ -11,7 +11,7 @@ import { FlashcardTest } from '../../../shared/models/flashcard.model';
 import { Test } from '../../../shared/models/test.model';
 import {
   calcular100,
-  calcular100y50,
+  calcular100y75,
   calcular100y75y50,
   colorCorrectas,
   colorFlashcardsCorrectas,
@@ -47,11 +47,11 @@ export class FullStatsComponent {
     const statsParsed = getStats(rawStats);
     return calcular100(statsParsed.stats100, numPreguntas);
   };
-  public calcular100y50 = (rawStats: any, numPreguntas: number) => {
+  public calcular100y75 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
-    return calcular100y50(
+    return calcular100y75(
       statsParsed.stats100,
-      statsParsed.stats50,
+      statsParsed.stats75,
       numPreguntas
     );
   };
@@ -261,9 +261,9 @@ export class FullStatsComponent {
 
       dataSet10050.push(
         Number(
-          calcular100y50(
+          calcular100y75(
             stat.stats100,
-            stat.stats50,
+            stat.stats75,
             test.testPreguntas?.length ?? 0
           ).toFixed(2)
         )
@@ -304,7 +304,7 @@ export class FullStatsComponent {
           'Incorrectas',
           'Omitidas',
           '⭐',
-          '⭐ + 👎',
+          '⭐ + 👍',
           '⭐ + 👍 + 👎',
         ],
       },
@@ -512,7 +512,7 @@ export class FullStatsComponent {
     }, 0);
     const total10050 = tests.reduce((prev, next) => {
       prev =
-        prev + this.calcular100y50(next.stats, next.testPreguntas?.length ?? 0);
+        prev + this.calcular100y75(next.stats, next.testPreguntas?.length ?? 0);
       return prev;
     }, 0);
     const total1007550 = tests.reduce((prev, next) => {

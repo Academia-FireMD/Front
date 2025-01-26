@@ -44,15 +44,15 @@ export class TestStatsComponent {
     );
   }
 
-  public calcular100y50() {
+  public calcular100y75() {
     if (!this.lastLoadedStats || !this.lastLoadedTest) return 0;
     const { stats100, stats75, stats50 } = getStats(this.lastLoadedStats);
 
     return this.calcularCalificacion(
-      stats100.correctas + stats50.correctas,
-      stats100.incorrectas + stats50.incorrectas,
+      stats100.correctas + stats75.correctas,
+      stats100.incorrectas + stats75.incorrectas,
       this.lastLoadedTest.preguntas.length,
-      'calcular100y50'
+      'calcular100y75'
     );
   }
 

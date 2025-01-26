@@ -117,8 +117,8 @@
     >
       <div class="left gap-2">
         <div class="identificador">
-          @if (getId() !== 'new') { @if (viewportService.screenWidth != 'xs') {
-          Identificador: }
+          @if (getId() !== 'new' && expectedRole != 'ADMIN') { @if
+          (viewportService.screenWidth != 'xs') { Identificador: }
           <strong>{{ formGroup.value.identificador }}</strong>
           }@else {
           <input

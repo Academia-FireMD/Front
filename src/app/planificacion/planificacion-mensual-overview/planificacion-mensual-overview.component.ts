@@ -147,4 +147,12 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
       reject: () => {},
     });
   }
+
+  public async clonarPlanificacion(id: number) {
+    await firstValueFrom(
+      this.planificacionesService.clonarPlanificacionMensual$(id)
+    );
+    this.toast.info('Planificación mensual clonada');
+    this.refresh();
+  }
 }

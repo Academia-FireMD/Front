@@ -32,6 +32,7 @@ import {
   TipoDePlanificacionDeseada,
   Usuario,
 } from '../../shared/models/user.model';
+import { getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 
 @Component({
@@ -261,7 +262,7 @@ export class PlanificacionMensualEditComponent {
   }
 
   onDayClicked(data: any): void {
-    const startOfWeek = this.getStartOfWeek(data.day.date);
+    const startOfWeek = getStartOfWeek(data.day.date);
     this.viewDate = startOfWeek;
 
     this.view = CalendarView.Week;
@@ -270,7 +271,7 @@ export class PlanificacionMensualEditComponent {
   public applyEventsToCurrentWeek(
     eventsToApplyToCurrentWeek: CalendarEvent[]
   ): void {
-    const startOfWeek = this.getStartOfWeek(this.viewDate); // Inicio de la semana actual
+    const startOfWeek = getStartOfWeek(this.viewDate); // Inicio de la semana actual
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6); // Fin de la semana actual
 
@@ -306,7 +307,6 @@ export class PlanificacionMensualEditComponent {
       };
     });
     eventsToApplyToCurrentWeek.forEach((event) => {
-
       if (event?.meta?.subBloque as SubBloque) {
         (event?.meta?.subBloque as SubBloque).id = undefined;
         (event?.meta?.subBloque as SubBloque).plantillaId = undefined;
@@ -322,14 +322,6 @@ export class PlanificacionMensualEditComponent {
     this.toast.success('Eventos aplicados correctamente a la semana actual');
   }
 
-  private getStartOfWeek(date: Date): Date {
-    const day = date.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // Ajustar al lunes de la semana
-    const startOfWeek = new Date(date);
-    startOfWeek.setDate(date.getDate() + diff);
-    startOfWeek.setHours(0, 0, 0, 0); // Eliminar información de tiempo
-    return startOfWeek;
-  }
   constructor(private primengConfig: PrimeNGConfig) {
     this.primengConfig.setTranslation({
       firstDayOfWeek: 1,
