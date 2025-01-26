@@ -145,7 +145,7 @@ export class VistaSemanalComponent {
     }
 
     // Convertir el día objetivo en una fecha dentro de la semana actual
-    const weekStart = getStartOfWeek(new Date()); // Inicio de la semana actual
+    const weekStart = getStartOfWeek(this.viewDate); // Inicio de la semana actual
     const targetDayDate = getDateForDayOfWeek(
       this.targetDayForCloning,
       weekStart
