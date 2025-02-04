@@ -10,6 +10,7 @@
             pInputText
             placeholder="Identificador o usuario"
             style="min-width: 30vw"
+            [value]="pagination().searchTerm"
             (input)="valueChanged($event)"
           />
         </p-iconField>

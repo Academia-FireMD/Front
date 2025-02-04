@@ -1,5 +1,4 @@
 import { Component, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { TemaService } from '../../../services/tema.service';
@@ -13,7 +12,6 @@ import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.com
 })
 export class TemaOverviewComponent extends SharedGridComponent<Tema> {
   private temaService = inject(TemaService);
-  private router = inject(Router);
   confirmationService = inject(ConfirmationService);
 
   constructor() {

@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { PrimeNGConfig } from 'primeng/api';
 import { filter, of, switchMap, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
@@ -75,7 +75,6 @@ export class TestStatsGridComponent extends SharedGridComponent<
   testService = inject(TestService);
   flashcardsService = inject(FlashcardDataService);
   activatedRoute = inject(ActivatedRoute);
-  router = inject(Router);
   public type: 'TESTS' | 'FLASHCARDS' = 'TESTS';
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   selectedRangeDates = new FormControl([], Validators.required);

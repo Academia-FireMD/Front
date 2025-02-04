@@ -5,7 +5,7 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
@@ -26,7 +26,6 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
   confirmationService = inject(ConfirmationService);
   flashcardService = inject(FlashcardDataService);
   activatedRoute = inject(ActivatedRoute);
-  router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';

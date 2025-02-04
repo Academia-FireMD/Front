@@ -6,8 +6,27 @@
           class="col-12 header flex justify-content-between align-items-center pb-3"
         >
           <div class="identificador">
-            @if (getId() !== 'new') { Identificador:
-            <strong>{{ formGroup.value.identificador }}</strong>
+            @if (getId() !== 'new') {
+            <div class="flex align-items-center gap-2">
+              <span>Identificador:</span>
+              <strong>{{ formGroup.value.identificador }}</strong>
+
+              <p-button
+                label="{{ viewportService.screenWidth == 'xs' ? '' : 'Atrás' }}"
+                [link]="true"
+                icon="pi pi-angle-double-left"
+                (click)="anteriorPregunta()"
+              />
+
+              <p-button
+                label="{{
+                  viewportService.screenWidth == 'xs' ? '' : 'Adelante'
+                }}"
+                [link]="true"
+                icon="pi pi-angle-double-right"
+                (click)="siguientePregunta()"
+              />
+            </div>
             }@else {
             <p-floatLabel *ngIf="expectedRole == 'ADMIN'">
               <input

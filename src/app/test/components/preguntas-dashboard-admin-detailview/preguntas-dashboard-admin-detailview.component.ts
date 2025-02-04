@@ -11,6 +11,7 @@ import { ToastrService } from 'ngx-toastr';
 import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { TemaService } from '../../../services/tema.service';
+import { ViewportService } from '../../../services/viewport.service';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import {
@@ -33,6 +34,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   fb = inject(FormBuilder);
   toast = inject(ToastrService);
   router = inject(Router);
+  viewportService = inject(ViewportService);
   public expectedRole: Rol = Rol.ADMIN;
 
   public checked = {};
@@ -44,6 +46,22 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
+  }
+
+  public siguientePregunta() {
+    firstValueFrom(
+      this.preguntasService
+        .nextPregunta(this.formGroup.value.identificador ?? '')
+        .pipe(tap((e) => this.setLoadedPregunta(e)))
+    );
+  }
+
+  public anteriorPregunta() {
+    firstValueFrom(
+      this.preguntasService
+        .prevPregunta(this.formGroup.value.identificador ?? '')
+        .pipe(tap((e) => this.setLoadedPregunta(e)))
+    );
   }
 
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
@@ -101,6 +119,22 @@ export class PreguntasDashboardAdminDetailviewComponent {
     );
   }
 
+  private setLoadedPregunta(pregunta: Pregunta) {
+    this.lastLoadedPregunta = pregunta;
+    this.formGroup.patchValue(pregunta);
+    this.relevancia.clear();
+    pregunta.relevancia.forEach((relevancia) =>
+      this.relevancia.push(new FormControl(relevancia))
+    );
+    this.respuestas.clear();
+    pregunta.respuestas.forEach((respuesta) =>
+      this.respuestas.push(
+        new FormControl({ value: respuesta, disabled: true })
+      )
+    );
+    this.formGroup.markAsPristine();
+  }
+
   private loadPregunta() {
     const itemId = this.getId();
     if (itemId === 'new') {
@@ -109,19 +143,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
       firstValueFrom(
         this.preguntasService.getPreguntaById(itemId).pipe(
           tap((entry) => {
-            this.lastLoadedPregunta = entry;
-            this.formGroup.patchValue(entry);
-            this.relevancia.clear();
-            entry.relevancia.forEach((relevancia) =>
-              this.relevancia.push(new FormControl(relevancia))
-            );
-            this.respuestas.clear();
-            entry.respuestas.forEach((respuesta) =>
-              this.respuestas.push(
-                new FormControl({ value: respuesta, disabled: true })
-              )
-            );
-            this.formGroup.markAsPristine();
+            this.setLoadedPregunta(entry);
           })
         )
       );

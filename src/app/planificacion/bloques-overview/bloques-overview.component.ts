@@ -5,7 +5,6 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
@@ -20,7 +19,6 @@ import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.compon
 export class BloquesOverviewComponent extends SharedGridComponent<PlanificacionBloque> {
   planificacionesService = inject(PlanificacionesService);
   confirmationService = inject(ConfirmationService);
-  router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;
 

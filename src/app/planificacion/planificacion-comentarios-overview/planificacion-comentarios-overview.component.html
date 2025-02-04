@@ -8,6 +8,7 @@
           pInputText
           placeholder="Buscar por nombre o email de usuario"
           style="min-width: 30vw"
+          [value]="pagination().searchTerm"
           (input)="valueChanged($event)"
         />
       </p-iconField>

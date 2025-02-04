@@ -6,7 +6,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import {
   combineLatest,
@@ -38,7 +38,6 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   confirmationService = inject(ConfirmationService);
   activatedRoute = inject(ActivatedRoute);
   userService = inject(UserService);
-  router = inject(Router);
   @ViewChild('fileInput') fileInput!: ElementRef;
   duracionesDisponibles = duracionesDisponibles;
   public opcionesAsignadas = [

@@ -84,6 +84,14 @@ export class FlashcardDataService extends ApiBaseService {
     return this.get('/' + id) as Observable<FlashcardData>;
   }
 
+  public nextFlashcard(id: string) {
+    return this.get('/next/' + id) as Observable<FlashcardData>;
+  }
+
+  public prevFlashcard(id: string) {
+    return this.get('/prev/' + id) as Observable<FlashcardData>;
+  }
+
   public deleteFlashcard$(id: number) {
     return this.delete('/' + id);
   }

@@ -5,7 +5,7 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
@@ -26,7 +26,6 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
   preguntasService = inject(PreguntasService);
   confirmationService = inject(ConfirmationService);
   activatedRoute = inject(ActivatedRoute);
-  router = inject(Router);
   public getAlumnoDificultad = getAlumnoDificultad;
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;

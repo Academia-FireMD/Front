@@ -36,6 +36,14 @@ export class PreguntasService extends ApiBaseService {
     return this.get('/' + id) as Observable<Pregunta>;
   }
 
+  public nextPregunta(id: string) {
+    return this.get('/next/' + id) as Observable<Pregunta>;
+  }
+
+  public prevPregunta(id: string) {
+    return this.get('/prev/' + id) as Observable<Pregunta>;
+  }
+
   public importarPreguntasExcel(file: FormData) {
     return this.post('/importar-excel', file);
   }

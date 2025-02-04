@@ -15,6 +15,7 @@
         pInputText
         placeholder="Buscar por email"
         style="min-width: 30vw"
+        [value]="pagination().searchTerm"
         (input)="valueChanged($event)"
       />
     </p-iconField>

@@ -1,5 +1,4 @@
 import { Component, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
@@ -16,7 +15,6 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
   preguntasService = inject(PreguntasService);
   reportesFalloService = inject(ReportesFalloService);
   confirmationService = inject(ConfirmationService);
-  router = inject(Router);
   public expandedItem!: PreguntaFallo | null;
 
   constructor() {

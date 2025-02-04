@@ -9,6 +9,7 @@
           pInputText
           placeholder="Buscar por identificador"
           style="min-width: 30vw"
+          [value]="pagination().searchTerm"
           (input)="valueChanged($event)"
         />
       </p-iconField>

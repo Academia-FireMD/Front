@@ -7,6 +7,7 @@ import { ToastrService } from 'ngx-toastr';
 import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { TemaService } from '../../../services/tema.service';
+import { ViewportService } from '../../../services/viewport.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
 import { Comunidad } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
@@ -23,10 +24,27 @@ export class FlashcardDetailviewAdminComponent {
   location = inject(Location);
   activedRoute = inject(ActivatedRoute);
   temaService = inject(TemaService);
+  viewportService = inject(ViewportService);
   flashCardService = inject(FlashcardDataService);
   public expectedRole: Rol = Rol.ADMIN;
   editor!: any;
   editorEnunciado!: any;
+
+  public siguienteFlashcard() {
+    firstValueFrom(
+      this.flashCardService
+        .nextFlashcard(this.formGroup.value.identificador ?? '')
+        .pipe(tap((e) => this.setFlashcard(e)))
+    );
+  }
+
+  public anteriorFlashcard() {
+    firstValueFrom(
+      this.flashCardService
+        .prevFlashcard(this.formGroup.value.identificador ?? '')
+        .pipe(tap((e) => this.setFlashcard(e)))
+    );
+  }
 
   private initEditor(initialValue: string, initialEnunciadoValue: string) {
     this.editor = new Editor({
@@ -126,6 +144,20 @@ export class FlashcardDetailviewAdminComponent {
     }
   }
 
+  private setFlashcard(flashcard: FlashcardData) {
+    this.lastLoadedFlashcard = flashcard;
+    this.formGroup.patchValue(flashcard);
+    this.relevancia.clear();
+    flashcard.relevancia.forEach((relevancia) =>
+      this.relevancia.push(new FormControl(relevancia))
+    );
+    this.formGroup.markAsPristine();
+    this.initEditor(
+      this.formGroup.value.solucion ?? '',
+      this.formGroup.value.descripcion ?? ''
+    );
+  }
+
   private loadFlashcard() {
     const itemId = this.getId();
     if (itemId === 'new') {
@@ -135,17 +167,7 @@ export class FlashcardDetailviewAdminComponent {
       firstValueFrom(
         this.flashCardService.getFlashcardById(itemId).pipe(
           tap((entry) => {
-            this.lastLoadedFlashcard = entry;
-            this.formGroup.patchValue(entry);
-            this.relevancia.clear();
-            entry.relevancia.forEach((relevancia) =>
-              this.relevancia.push(new FormControl(relevancia))
-            );
-            this.formGroup.markAsPristine();
-            this.initEditor(
-              this.formGroup.value.solucion ?? '',
-              this.formGroup.value.descripcion ?? ''
-            );
+            this.setFlashcard(entry);
           })
         )
       );

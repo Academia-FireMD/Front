@@ -1,5 +1,4 @@
 import { Component, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { SubBloque } from '../../shared/models/planificacion.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
@@ -11,7 +10,6 @@ import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.compon
 })
 export class PlanificacionComentariosOverviewComponent extends SharedGridComponent<SubBloque> {
   planificacionesService = inject(PlanificacionesService);
-  router = inject(Router);
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
