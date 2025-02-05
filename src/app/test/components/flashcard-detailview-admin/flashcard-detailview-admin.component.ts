@@ -34,7 +34,12 @@ export class FlashcardDetailviewAdminComponent {
     firstValueFrom(
       this.flashCardService
         .nextFlashcard(this.formGroup.value.identificador ?? '')
-        .pipe(tap((e) => this.setFlashcard(e)))
+        .pipe(
+          tap((e) => {
+            this.setFlashcard(e);
+            this.navigateToFlashcard(e.id + '');
+          })
+        )
     );
   }
 
@@ -42,7 +47,12 @@ export class FlashcardDetailviewAdminComponent {
     firstValueFrom(
       this.flashCardService
         .prevFlashcard(this.formGroup.value.identificador ?? '')
-        .pipe(tap((e) => this.setFlashcard(e)))
+        .pipe(
+          tap((e) => {
+            this.setFlashcard(e);
+            this.navigateToFlashcard(e.id + '');
+          })
+        )
     );
   }
 
@@ -194,11 +204,19 @@ export class FlashcardDetailviewAdminComponent {
   public async crearFlashcard() {
     const res = await this.updateFlashcard();
     this.toast.success('Flashcard creada con éxito!', 'Creación exitosa');
-    if (this.expectedRole == 'ADMIN') {
-      await this.router.navigate(['app/test/flashcards/' + res.id]);
-    } else {
-      await this.router.navigate(['app/test/alumno/flashcards/' + res.id]);
-    }
+    await this.navigateToFlashcard(res.id + '');
     this.loadFlashcard();
+  }
+
+  private async navigateToFlashcard(id: string) {
+    if (this.expectedRole == 'ADMIN') {
+      await this.router.navigate(['app/test/flashcards/' + id], {
+        replaceUrl: true,
+      });
+    } else {
+      await this.router.navigate(['app/test/alumno/flashcards/' + id], {
+        replaceUrl: true,
+      });
+    }
   }
 }

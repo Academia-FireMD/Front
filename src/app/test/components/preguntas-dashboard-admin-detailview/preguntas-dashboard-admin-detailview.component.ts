@@ -52,7 +52,12 @@ export class PreguntasDashboardAdminDetailviewComponent {
     firstValueFrom(
       this.preguntasService
         .nextPregunta(this.formGroup.value.identificador ?? '')
-        .pipe(tap((e) => this.setLoadedPregunta(e)))
+        .pipe(
+          tap((e) => {
+            this.setLoadedPregunta(e);
+            this.navigatetoPregunta(e.id + '');
+          })
+        )
     );
   }
 
@@ -60,7 +65,12 @@ export class PreguntasDashboardAdminDetailviewComponent {
     firstValueFrom(
       this.preguntasService
         .prevPregunta(this.formGroup.value.identificador ?? '')
-        .pipe(tap((e) => this.setLoadedPregunta(e)))
+        .pipe(
+          tap((e) => {
+            this.setLoadedPregunta(e);
+            this.navigatetoPregunta(e.id + '');
+          })
+        )
     );
   }
 
@@ -188,12 +198,20 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public async crearPregunta() {
     const res = await this.updatePregunta();
     this.toast.success('Pregunta creada con éxito!', 'Creación exitosa');
-    if (this.expectedRole == 'ADMIN') {
-      await this.router.navigate(['app/test/preguntas/' + res.id]);
-    } else {
-      await this.router.navigate(['/app/test/alumno/preguntas/' + res.id]);
-    }
+    await this.navigatetoPregunta(res.id + '');
     this.loadPregunta();
+  }
+
+  private async navigatetoPregunta(id: string) {
+    if (this.expectedRole == 'ADMIN') {
+      await this.router.navigate(['app/test/preguntas/' + id], {
+        replaceUrl: true,
+      });
+    } else {
+      await this.router.navigate(['/app/test/alumno/preguntas/' + id], {
+        replaceUrl: true,
+      });
+    }
   }
 
   public handleBackButton() {

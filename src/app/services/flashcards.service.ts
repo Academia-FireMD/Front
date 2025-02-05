@@ -35,6 +35,10 @@ export class FlashcardDataService extends ApiBaseService {
     this.controllerPrefix = '/flashcards';
   }
 
+  public finalizarTest(testId: number) {
+    return this.post('/finalizar-test/' + testId, {});
+  }
+
   public getTestsAlumno$(filter: PaginationFilter) {
     return this.post('/tests-alumno', filter) as Observable<
       PaginatedResult<FlashcardTest>

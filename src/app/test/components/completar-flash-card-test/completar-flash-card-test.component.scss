@@ -1,6 +1,13 @@
 p {
   text-align: center;
 }
+:host ::ng-deep {
+  .footer {
+    .p-toggleable-content {
+      display: none;
+    }
+  }
+}
 
 .right {
   display: flex;
@@ -17,4 +24,48 @@ p {
       max-width: 26px;
     }
   }
+}
+
+.flashcard-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+}
+
+.flashcard-content {
+  flex-grow: 1;
+  width: fit-content;
+  max-width: 780px;
+}
+
+.nav-button {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  @media (max-width: 768px) {
+    width: 30px;
+    height: 30px;
+  }
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  flex-shrink: 0;
+}
+
+.nav-button:hover {
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+.nav-button:disabled {
+  background-color: rgba(0, 0, 0, 0.4);
+  cursor: not-allowed;
 }

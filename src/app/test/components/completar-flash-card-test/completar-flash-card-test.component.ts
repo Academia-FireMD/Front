@@ -2,9 +2,10 @@ import { Component, HostListener, inject } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, firstValueFrom, of, tap } from 'rxjs';
+import { catchError, firstValueFrom, of, switchMap, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
+import { ViewportService } from '../../../services/viewport.service';
 import {
   EstadoFlashcard,
   FlashcardTest,
@@ -21,13 +22,13 @@ export class CompletarFlashCardTestComponent {
     if (this.comunicating) return;
     switch (event.key) {
       case 'ArrowLeft':
-        this.selectedEstado(EstadoFlashcard.REVISAR);
+        this.selectedEstado(EstadoFlashcard.MAL);
         break;
       case 'ArrowRight':
         this.selectedEstado(EstadoFlashcard.BIEN);
         break;
       case 'ArrowDown':
-        this.selectedEstado(EstadoFlashcard.MAL);
+        this.selectedEstado(EstadoFlashcard.REVISAR);
         break;
       case ' ':
       case 'Space':
@@ -43,6 +44,7 @@ export class CompletarFlashCardTestComponent {
   toast = inject(ToastrService);
   router = inject(Router);
   reporteFallo = inject(ReportesFalloService);
+  viewport = inject(ViewportService);
   public indicePregunta = 0;
   public lastLoadedTest!: FlashcardTest;
   public comunicating = false;
@@ -50,6 +52,17 @@ export class CompletarFlashCardTestComponent {
   public displayFalloDialog = false;
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as string;
+  }
+
+  public async finalizarTestFlashcard() {
+    await firstValueFrom(
+      this.flashcardService
+        .finalizarTest(this.lastLoadedTest.id)
+        .pipe(switchMap(() => this.cargarTest$()))
+    );
+    this.router.navigate([
+      'app/test/alumno/stats-test-flashcard/' + this.lastLoadedTest.id,
+    ]);
   }
 
   public testCargado$ = this.cargarTest$();
@@ -107,5 +120,12 @@ export class CompletarFlashCardTestComponent {
       'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.'
     );
     this.displayFalloDialog = false;
+  }
+
+  public navigateFlashcard(direction: number) {
+    const newIndex = this.indicePregunta + direction;
+    if (newIndex >= 0 && newIndex < this.lastLoadedTest.flashcards.length) {
+      this.indicePregunta = newIndex;
+    }
   }
 }

@@ -24,6 +24,27 @@
           </div>
         </div>
         <div class="col-12">
+          <ng-template #leftButton>
+            <button
+              pButton
+              class="nav-button left"
+              [disabled]="indicePregunta === 0"
+              (click)="navigateFlashcard(-1)"
+            >
+              <i class="pi pi-chevron-left"></i>
+            </button>
+          </ng-template>
+          <ng-template #rightButton>
+            <button
+              pButton
+              class="nav-button right"
+              [disabled]="indicePregunta >= testCargado.flashcards.length - 1"
+              (click)="navigateFlashcard(1)"
+            >
+              <i class="pi pi-chevron-right"></i>
+            </button>
+          </ng-template>
+
           <p-panel>
             <ng-template pTemplate="header">
               <div
@@ -35,89 +56,151 @@
                     pregunta.flashcard.tema?.descripcion
                 }}</span>
                 <div class="right">
-                  <div class="keys">
-                    <img src="left.png" alt="" srcset="" />
-                    <img src="abajo.png" alt="" srcset="" />
-                    <img src="derecha.png" alt="" srcset="" />
-                  </div>
                   <p-button
-                    label="Reportar fallo"
+                    label="{{
+                      viewport.screenWidth == 'xs' ? '' : 'Reportar fallo'
+                    }}"
                     [link]="true"
+                    icon="pi pi-exclamation-triangle"
                     (click)="displayFalloDialog = true"
                   />
                 </div>
               </div>
             </ng-template>
-            <p>
-              <markdown
-                [data]="
-                  pregunta.flashcard.descripcion &&
-                  pregunta.flashcard.descripcion.length > 0
-                    ? pregunta.flashcard.descripcion
-                    : 'No hay un enunciado definido.'
-                "
-              ></markdown>
-            </p>
+            <div class="flashcard-container">
+              @if (viewport.screenWidth != 'xs') {
+              <ng-container *ngTemplateOutlet="leftButton"></ng-container>
+              }
 
-            <div class="next-button col-12 w-full">
-              <button
-                pButton
-                class="p-button p-button-raised w-full"
-                *ngIf="!pregunta.mostrarSolucion"
-                (click)="pregunta.mostrarSolucion = true"
-              >
-                <span class="w-full">Mostrar solución</span>
-              </button>
-            </div>
+              <p-card class="flashcard-content col-12">
+                <p>
+                  <markdown
+                    [data]="
+                      pregunta.flashcard.descripcion &&
+                      pregunta.flashcard.descripcion.length > 0
+                        ? pregunta.flashcard.descripcion
+                        : 'No hay un enunciado definido.'
+                    "
+                  ></markdown>
+                </p>
 
-            <div
-              class="grid w-full footer flex justify-content-between align-items-center mt-2"
-              *ngIf="!!pregunta.mostrarSolucion"
-            >
-              <div
-                class="solution col-12 align-items-center flex flex-column"
-                style="max-height: 40vh; overflow: auto"
-              >
-                <strong>Solución:</strong>
-                <markdown
-                  [data]="
-                    pregunta.flashcard.solucion &&
-                    pregunta.flashcard.solucion.length > 0
-                      ? pregunta.flashcard.solucion
-                      : 'No hay una solución definida.'
-                  "
-                ></markdown>
-              </div>
-              <div class="col-12 flex gap-2">
-                <button
-                  pButton
-                  [disabled]="comunicating"
-                  [severity]="'warning'"
-                  (click)="selectedEstado(estadoFlashcard.REVISAR)"
-                  class="p-button p-button-raised w-full"
+                <div class="next-button col-12 w-full">
+                  <button
+                    pButton
+                    class="p-button p-button-raised w-full"
+                    *ngIf="!pregunta.mostrarSolucion"
+                    (click)="pregunta.mostrarSolucion = true"
+                  >
+                    <span class="w-full"
+                      >Mostrar solución
+                      <app-key
+                        keyName="␣"
+                        *ngIf="viewport.screenWidth != 'xs'"
+                      ></app-key
+                    ></span>
+                  </button>
+                </div>
+
+                <div
+                  class="grid w-full footer flex justify-content-between align-items-center mt-2"
+                  *ngIf="!!pregunta.mostrarSolucion"
                 >
-                  <span class="w-full">REPASAR</span>
-                </button>
-                <button
-                  pButton
-                  [disabled]="comunicating"
-                  class="p-button p-button-raised w-full"
-                  [severity]="'danger'"
-                  (click)="selectedEstado(estadoFlashcard.MAL)"
-                >
-                  <span class="w-full">MAL</span>
-                </button>
-                <button
-                  pButton
-                  [disabled]="comunicating"
-                  [severity]="'success'"
-                  class="p-button p-button-raised w-full"
-                  (click)="selectedEstado(estadoFlashcard.BIEN)"
-                >
-                  <span class="w-full">BIEN</span>
-                </button>
-              </div>
+                  <div
+                    class="solution col-12 align-items-center flex flex-column"
+                    style="max-height: 40vh; overflow: auto"
+                  >
+                    <strong>Solución:</strong>
+                    <markdown
+                      [data]="
+                        pregunta.flashcard.solucion &&
+                        pregunta.flashcard.solucion.length > 0
+                          ? pregunta.flashcard.solucion
+                          : 'No hay una solución definida.'
+                      "
+                    ></markdown>
+                  </div>
+                  <div class="col-12 flex gap-2">
+                    <button
+                      pButton
+                      [disabled]="comunicating"
+                      class="p-button p-button-raised w-full"
+                      [severity]="'danger'"
+                      (click)="selectedEstado(estadoFlashcard.MAL)"
+                    >
+                      <span class="w-full"
+                        >MAL
+                        <app-key
+                          keyName="←"
+                          *ngIf="viewport.screenWidth != 'xs'"
+                        ></app-key
+                      ></span>
+                    </button>
+                    <button
+                      pButton
+                      [disabled]="comunicating"
+                      [severity]="'warning'"
+                      (click)="selectedEstado(estadoFlashcard.REVISAR)"
+                      class="p-button p-button-raised w-full text-white"
+                    >
+                      <span class="w-full"
+                        >REPASAR
+                        <app-key
+                          keyName="↓"
+                          *ngIf="viewport.screenWidth != 'xs'"
+                        ></app-key
+                      ></span>
+                    </button>
+
+                    <button
+                      pButton
+                      [disabled]="comunicating"
+                      [severity]="'success'"
+                      class="p-button p-button-raised w-full"
+                      (click)="selectedEstado(estadoFlashcard.BIEN)"
+                    >
+                      <span class="w-full"
+                        >BIEN
+                        <app-key
+                          keyName="→"
+                          *ngIf="viewport.screenWidth != 'xs'"
+                        ></app-key
+                      ></span>
+                    </button>
+                  </div>
+                </div>
+                @if (viewport.screenWidth == 'xs') {
+                <div class="flex justify-content-end gap-2">
+                  <ng-container *ngTemplateOutlet="leftButton"></ng-container>
+                  <ng-container *ngTemplateOutlet="rightButton"></ng-container>
+                </div>
+                }
+              </p-card>
+
+              @if (viewport.screenWidth != 'xs') {
+              <ng-container *ngTemplateOutlet="rightButton"></ng-container>
+              }
             </div>
+          </p-panel>
+          <p-panel class="footer">
+            <ng-template pTemplate="header">
+              <div class="seguridad w-full">
+                <div
+                  class="flex justify-content-end align-items-center w-full"
+                >
+                  <div class="actions">
+                    <p-button
+                      label="{{
+                        viewport.screenWidth == 'xs' ? '' : 'Finalizar'
+                      }}"
+                      (click)="finalizarTestFlashcard()"
+                      [link]="true"
+                      [disabled]="lastLoadedTest.status == 'FINALIZADO'"
+                      icon="pi pi-flag"
+                    />
+                  </div>
+                </div>
+              </div>
+            </ng-template>
           </p-panel>
         </div>
       </div>

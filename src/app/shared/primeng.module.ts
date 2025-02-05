@@ -34,6 +34,7 @@ import { RippleModule } from 'primeng/ripple';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { ToggleButtonModule } from 'primeng/togglebutton';
+import { KeyComponent } from './key/key.component';
 
 const modules = [
   OverlayPanelModule,
@@ -72,6 +73,7 @@ const modules = [
   DragDropModule,
   ColorPickerModule,
   FileUploadModule,
+  KeyComponent
 ];
 
 @NgModule({
