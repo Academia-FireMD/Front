@@ -30,6 +30,7 @@ import { PlanificacionRoutingModule } from './planificacion-routing.module';
 import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantilla-semanal-edit.component';
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
 import { VistaSemanalComponent } from './vista-semanal/vista-semanal.component';
+import { MarkdownModule } from 'ngx-markdown';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [
@@ -48,6 +49,7 @@ registerLocaleData(localeEs);
     CommonModule,
     SharedModule,
     PlanificacionRoutingModule,
+    MarkdownModule,
     CalendarModule,
     CardModule,
     StepperModule,

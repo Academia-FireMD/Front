@@ -48,17 +48,12 @@
           </div>
         </div>
         <div class="col-12 py-3">
-          <p-floatLabel>
-            <textarea
-              class="w-full"
-              id="float-input"
-              rows="5"
-              cols="30"
-              pInputTextarea
-              formControlName="descripcion"
-            ></textarea>
-            <label for="float-input">Descripción</label>
-          </p-floatLabel>
+          <div class="markdown-container">
+            <div class="editor">
+              <h3>Enunciado</h3>
+              <div id="editor-enunciado"></div>
+            </div>
+          </div>
         </div>
         <div class="col-6">
           <p-dropdown
@@ -129,19 +124,24 @@
         </div>
       </div>
       <div class="col-12 px-0">
-        <p-floatLabel>
-          <textarea
-            class="w-full"
-            id="solucion-input"
-            rows="5"
-            cols="30"
-            pInputTextarea
-            formControlName="solucion"
-          ></textarea>
-          <label for="solucion-input">Solución (opcional)</label>
-        </p-floatLabel>
+        <div class="markdown-container">
+          <div class="editor">
+            <h3>Solución (opcional)</h3>
+            <div id="editor"></div>
+          </div>
+        </div>
       </div>
     </p-card>
+  </div>
+  <div class="col-12 justify-content-end align-items-center w-full flex">
+    @if (getId() == 'new') {
+    <p-checkbox
+      inputId="crearOtra"
+      [formControl]="crearOtroControl"
+      [binary]="true"
+    ></p-checkbox>
+    <label for="crearOtra" class="ml-2">Crear otra</label>
+    }
   </div>
   <div class="col-12 footer flex justify-content-end w-full">
     <p-button

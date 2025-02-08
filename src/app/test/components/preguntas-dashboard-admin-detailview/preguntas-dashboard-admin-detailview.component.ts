@@ -14,6 +14,7 @@ import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
+import { Editor } from '@toast-ui/editor';
 import {
   getAllDifficultades,
   getLetter,
@@ -36,6 +37,9 @@ export class PreguntasDashboardAdminDetailviewComponent {
   router = inject(Router);
   viewportService = inject(ViewportService);
   public expectedRole: Rol = Rol.ADMIN;
+  crearOtroControl = new FormControl(false);
+  editorSolucion!: any;
+  editorEnunciado!: any;
 
   public checked = {};
   public getAllTemas$ = this.temaService.getAllTemas$().pipe(
@@ -142,6 +146,10 @@ export class PreguntasDashboardAdminDetailviewComponent {
         new FormControl({ value: respuesta, disabled: true })
       )
     );
+    this.initEditor(
+      this.formGroup.value.solucion ?? '',
+      this.formGroup.value.descripcion ?? ''
+    );
     this.formGroup.markAsPristine();
   }
 
@@ -149,6 +157,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
     const itemId = this.getId();
     if (itemId === 'new') {
       this.formGroup.reset();
+      this.initEditor('', '');
     } else {
       firstValueFrom(
         this.preguntasService.getPreguntaById(itemId).pipe(
@@ -198,8 +207,44 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public async crearPregunta() {
     const res = await this.updatePregunta();
     this.toast.success('Pregunta creada con éxito!', 'Creación exitosa');
-    await this.navigatetoPregunta(res.id + '');
-    this.loadPregunta();
+    if (!this.crearOtroControl.value) {
+      await this.navigatetoPregunta(res.id + '');
+      this.loadPregunta();
+    }
+  }
+
+  private initEditor(initialValue: string, initialEnunciadoValue: string) {
+    this.editorSolucion = new Editor({
+      el: document.querySelector('#editor')!,
+      height: '400px',
+      initialEditType: 'markdown',
+      previewStyle: 'vertical',
+      autofocus: false,
+      initialValue: initialValue || '',
+      events: {
+        change: () => {
+          this.formGroup
+            .get('solucion')
+            ?.patchValue(this.editorSolucion.getMarkdown());
+        },
+      },
+    });
+
+    this.editorEnunciado = new Editor({
+      el: document.querySelector('#editor-enunciado')!,
+      height: '400px',
+      initialEditType: 'markdown',
+      previewStyle: 'vertical',
+      autofocus: false,
+      initialValue: initialEnunciadoValue || '',
+      events: {
+        change: () => {
+          this.formGroup
+            .get('descripcion')
+            ?.patchValue(this.editorEnunciado.getMarkdown());
+        },
+      },
+    });
   }
 
   private async navigatetoPregunta(id: string) {

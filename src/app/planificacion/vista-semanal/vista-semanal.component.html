@@ -218,7 +218,7 @@
         class="wrapper"
         (click)="
           role == 'ALUMNO'
-            ? checkEvent(weekEvent)
+            ? onEventClicked(weekEvent.event)
             : mode == 'edit'
             ? onEventClicked(weekEvent.event)
             : false
@@ -229,10 +229,6 @@
           [ngStyle]="{
             'background-color': weekEvent?.event?.color?.primary || '#e3e3e3'
           }"
-          [ngClass]="{
-            'checked-event':
-              role == 'ALUMNO' && !!weekEvent.event.meta.subBloque.realizado
-          }"
         >
           <div class="event-content">
             <div class="event-header">
@@ -240,15 +236,6 @@
                 weekEvent?.event?.title || "Sin nombre"
               }}</strong>
               <div class="event-actions">
-                <i
-                  *ngIf="role == 'ALUMNO'"
-                  class="fa-regular fa-eye text-primary"
-                  (click)="
-                    $event.preventDefault();
-                    $event.stopPropagation();
-                    onEventClicked(weekEvent.event)
-                  "
-                ></i>
                 <i
                   class="{{
                     !!weekEvent?.event?.meta?.subBloque?.comentariosAlumno
@@ -266,6 +253,14 @@
                   (click)="deleteEvent(weekEvent?.event, $event)"
                 ></i>
                 }
+                <p-checkbox
+                  *ngIf="role == 'ALUMNO'"
+                  [(ngModel)]="weekEvent.event.meta.subBloque.realizado"
+                  binary="true"
+                  (click)="$event.preventDefault(); $event.stopPropagation()"
+                  (ngModelChange)="triggerSaveUpdateProgress.next(null)"
+                  styleClass="complete-checkbox"
+                ></p-checkbox>
               </div>
             </div>
             <span class="event-comments descripcion w-full">

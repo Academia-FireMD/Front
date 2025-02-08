@@ -2,7 +2,7 @@ import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { cloneDeep, uniqueId } from 'lodash';
 import { SubBloque } from '../../shared/models/planificacion.model';
-
+import { Editor } from '@toast-ui/editor';
 @Component({
   selector: 'app-editar-sub-bloque-dialog',
   templateUrl: './editar-sub-bloque-dialog.component.html',
@@ -17,12 +17,15 @@ export class EditarSubBloqueDialogComponent {
       this.formGroup.disable();
       this.formGroup.get(['nombre', 'comentarios'])?.enable();
     }
+    setTimeout(() => {
+      this.initEditor(data?.comentarios ?? '');
+    }, 0);
   }
   @Input() role: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   @Input() isDialogVisible = false;
   @Output() isDialogVisibleChange = new EventEmitter<boolean>();
   @Output() savedSubBloque = new EventEmitter<SubBloque>();
-
+  editorComentarios!: any;
   fb = inject(FormBuilder);
   public formGroup = this.fb.group({
     duracion: [60, [Validators.required, Validators.min(1)]],
@@ -74,10 +77,31 @@ export class EditarSubBloqueDialogComponent {
     this.color.setValue(selectedColor, { emitEvent: true }); // Actualiza el control del formulario
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.initEditor('');
+  }
   public cancelarEdicion() {
     this.isDialogVisible = false;
     this.isDialogVisibleChange.emit(false);
+  }
+
+  private initEditor(initialValueComentarios: string) {
+    if (!document.querySelector('#editor-comentarios')) return;
+    this.editorComentarios = new Editor({
+      el: document.querySelector('#editor-comentarios')!,
+      height: '400px',
+      initialEditType: 'markdown',
+      previewStyle: 'vertical',
+      autofocus: false,
+      initialValue: initialValueComentarios || '',
+      events: {
+        change: () => {
+          this.formGroup
+            .get('comentarios')
+            ?.patchValue(this.editorComentarios.getMarkdown());
+        },
+      },
+    });
   }
 
   public guardarEdicion() {

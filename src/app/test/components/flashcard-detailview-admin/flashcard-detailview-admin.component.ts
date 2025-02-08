@@ -29,6 +29,7 @@ export class FlashcardDetailviewAdminComponent {
   public expectedRole: Rol = Rol.ADMIN;
   editor!: any;
   editorEnunciado!: any;
+  crearOtroControl = new FormControl(false);
 
   public siguienteFlashcard() {
     firstValueFrom(
@@ -62,6 +63,7 @@ export class FlashcardDetailviewAdminComponent {
       height: '400px',
       initialEditType: 'markdown',
       previewStyle: 'vertical',
+      autofocus: false,
       initialValue: initialValue || '',
       events: {
         change: () => {
@@ -75,6 +77,7 @@ export class FlashcardDetailviewAdminComponent {
       height: '400px',
       initialEditType: 'markdown',
       previewStyle: 'vertical',
+      autofocus: false,
       initialValue: initialEnunciadoValue || '',
       events: {
         change: () => {
@@ -204,8 +207,10 @@ export class FlashcardDetailviewAdminComponent {
   public async crearFlashcard() {
     const res = await this.updateFlashcard();
     this.toast.success('Flashcard creada con éxito!', 'Creación exitosa');
-    await this.navigateToFlashcard(res.id + '');
-    this.loadFlashcard();
+    if (!this.crearOtroControl.value) {
+      await this.navigateToFlashcard(res.id + '');
+      this.loadFlashcard();
+    }
   }
 
   private async navigateToFlashcard(id: string) {

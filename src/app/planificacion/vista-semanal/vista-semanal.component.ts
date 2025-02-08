@@ -15,7 +15,7 @@ import {
 import { cloneDeep, debounce } from 'lodash';
 import { MenuItem } from 'primeng/api';
 import { ContextMenu } from 'primeng/contextmenu';
-import { map, Subject } from 'rxjs';
+import { BehaviorSubject, debounceTime, map, Subject } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import {
   PlanificacionBloque,
@@ -23,6 +23,7 @@ import {
 } from '../../shared/models/planificacion.model';
 import { getDateForDayOfWeek, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 export const colors: any = {
   yellow: {
     primary: '#e3bc08',
@@ -74,6 +75,7 @@ export class VistaSemanalComponent {
   @Input() viewDate = new Date();
   @Input() mode: 'picker' | 'edit' = 'edit';
   private onTimeClickedDate!: Date;
+  public triggerSaveUpdateProgress = new Subject();
   menuItems: MenuItem[] = [
     {
       label: 'Añadir nuevo',
@@ -224,18 +226,18 @@ export class VistaSemanalComponent {
   public debouncedValueChanged = debounce(this.valueChanged, 300);
   public colors = colors;
 
+  constructor() {
+    this.triggerSaveUpdateProgress
+      .pipe(debounceTime(1000), takeUntilDestroyed())
+      .subscribe(() => this.saveChanges.emit());
+  }
+
   ngOnInit(): void {}
 
   onEventClicked(event: CalendarEvent): void {
     this.selectedEvent = event;
     this.editSubBloqueData = event.meta.subBloque;
     this.isDialogVisible = true;
-  }
-
-  checkEvent(event: { event: CalendarEvent }): void {
-    event.event.meta.subBloque.realizado =
-      !event.event.meta.subBloque.realizado;
-    this.saveChanges.emit();
   }
 
   saveEvent(subbloque: SubBloque): void {

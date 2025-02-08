@@ -1,4 +1,4 @@
-<div class="grid" [formGroup]="formGroup">
+<div class="grid p-2" [formGroup]="formGroup">
   <div class="col-12 content">
     <p-card>
       <div class="grid">
@@ -90,7 +90,17 @@
       </div>
     </p-card>
   </div>
-  <div class="col-12 footer flex justify-content-end w-full">
+  <div class="col-12 justify-content-end align-items-center w-full flex">
+    @if (getId() == 'new') {
+    <p-checkbox
+      inputId="crearOtra"
+      [formControl]="crearOtroControl"
+      [binary]="true"
+    ></p-checkbox>
+    <label for="crearOtra" class="ml-2">Crear otra</label>
+    }
+  </div>
+  <div class="col-12 footer flex justify-content-end w-full align-items-center">
     <p-button
       label="Volver atrás"
       [link]="true"

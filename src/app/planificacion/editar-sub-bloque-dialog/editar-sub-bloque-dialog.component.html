@@ -24,7 +24,7 @@
         }
       </div>
 
-      <div class="col-4" *ngIf="role == 'ADMIN'">
+      <div class="col-3" *ngIf="role == 'ADMIN'">
         <p-floatLabel>
           <p-dropdown
             id="duracion"
@@ -38,7 +38,7 @@
         </p-floatLabel>
       </div>
       <div
-        class="col-4 flex align-items-center justify-content-end gap-2"
+        class="col-5 flex align-items-center justify-content-end gap-2"
         *ngIf="role == 'ADMIN'"
       >
         <p-floatLabel>
@@ -60,17 +60,19 @@
       </div>
       <div class="col-12" [ngClass]="{ 'py-3': role == 'ADMIN' }">
         @if (formGroup.get('comentarios')?.disabled) {
-        <p>Comentarios: {{ formGroup.get("comentarios")?.value }}</p>
+        <p>
+          Comentarios:
+          <markdown [data]="formGroup.get('comentarios')?.value"></markdown>
+        </p>
         }@else{
-        <p-floatLabel>
-          <textarea
-            id="comentarios"
-            pInputTextarea
-            style="width: 100%"
-            formControlName="comentarios"
-          ></textarea>
-          <label for="comentarios">Comentarios</label>
-        </p-floatLabel>
+        <div class="col-12 py-3">
+          <div class="markdown-container">
+            <div class="editor">
+              <h3>Comentarios:</h3>
+              <div id="editor-comentarios"></div>
+            </div>
+          </div>
+        </div>
         }
       </div>
     </div>
