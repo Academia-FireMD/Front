@@ -1,8 +1,8 @@
 import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
+import { Editor } from '@toast-ui/editor';
 import { cloneDeep, uniqueId } from 'lodash';
 import { SubBloque } from '../../shared/models/planificacion.model';
-import { Editor } from '@toast-ui/editor';
 @Component({
   selector: 'app-editar-sub-bloque-dialog',
   templateUrl: './editar-sub-bloque-dialog.component.html',
@@ -86,6 +86,10 @@ export class EditarSubBloqueDialogComponent {
   }
 
   private initEditor(initialValueComentarios: string) {
+    if (this.editorComentarios) {
+      this.editorComentarios.destroy();
+      this.editorComentarios = null;
+    }
     if (!document.querySelector('#editor-comentarios')) return;
     this.editorComentarios = new Editor({
       el: document.querySelector('#editor-comentarios')!,

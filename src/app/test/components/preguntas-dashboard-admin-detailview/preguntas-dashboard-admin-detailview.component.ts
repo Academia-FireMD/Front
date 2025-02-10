@@ -7,6 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Editor } from '@toast-ui/editor';
 import { ToastrService } from 'ngx-toastr';
 import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
@@ -14,7 +15,6 @@ import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
-import { Editor } from '@toast-ui/editor';
 import {
   getAllDifficultades,
   getLetter,
@@ -214,6 +214,15 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   private initEditor(initialValue: string, initialEnunciadoValue: string) {
+    if (this.editorSolucion) {
+      this.editorSolucion.destroy();
+      this.editorSolucion = null;
+    }
+    if (this.editorEnunciado) {
+      this.editorEnunciado.destroy();
+      this.editorEnunciado = null;
+    }
+
     this.editorSolucion = new Editor({
       el: document.querySelector('#editor')!,
       height: '400px',

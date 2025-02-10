@@ -58,6 +58,14 @@ export class FlashcardDetailviewAdminComponent {
   }
 
   private initEditor(initialValue: string, initialEnunciadoValue: string) {
+    if (this.editor) {
+      this.editor.destroy();
+      this.editor = null;
+    }
+    if (this.editorEnunciado) {
+      this.editorEnunciado.destroy();
+      this.editorEnunciado = null;
+    }
     this.editor = new Editor({
       el: document.querySelector('#editor')!,
       height: '400px',
