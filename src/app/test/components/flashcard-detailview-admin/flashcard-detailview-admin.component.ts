@@ -37,6 +37,7 @@ export class FlashcardDetailviewAdminComponent {
     const cloned = cloneDeep(data) as FlashcardData;
     cloned.id = undefined as any;
     cloned.dificultad = Dificultad.PRIVADAS;
+    cloned.identificador = null as any;
     this.setFlashcard(cloned);
   }
   @Output() flashcardCreada = new EventEmitter<FlashcardData>();

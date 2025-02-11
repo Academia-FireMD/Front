@@ -6,7 +6,7 @@
           class="col-12 header flex justify-content-between align-items-center pb-3"
         >
           <div class="identificador">
-            @if (getId() !== 'new' && mode == 'edit') {
+            @if(mode == 'edit'){ @if (getId() !== 'new') {
             <div class="flex align-items-center gap-2">
               <span>Identificador:</span>
               <strong>{{ formGroup.value.identificador }}</strong>
@@ -30,7 +30,7 @@
               />
             </div>
             }@else {
-            <p-floatLabel *ngIf="expectedRole == 'ADMIN' || mode == 'injected'">
+            <p-floatLabel *ngIf="expectedRole == 'ADMIN'">
               <input
                 type="text"
                 pInputText
@@ -39,7 +39,7 @@
               />
               <label for="identificador">Identificador</label>
             </p-floatLabel>
-            }
+            }}
           </div>
           <div class="relevancia">
             <app-comunidad-picker

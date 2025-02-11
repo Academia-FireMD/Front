@@ -51,6 +51,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
     const cloned = cloneDeep(data) as Pregunta;
     cloned.id = undefined as any;
     cloned.dificultad = Dificultad.PRIVADAS;
+    cloned.identificador = null as any;
     this.setLoadedPregunta(cloned);
   }
   @Output() preguntaCreada = new EventEmitter<Pregunta>();
