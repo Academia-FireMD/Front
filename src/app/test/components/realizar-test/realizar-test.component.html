@@ -32,28 +32,39 @@
           ></p-dropdown>
         </div>
         <div class="col-12 md:col-4">
-          <app-dificultad-dropdown
-            [formControlDificultad]="formGroup.get('dificultad')"
-            [isDoingTest]="true"
-          ></app-dificultad-dropdown>
-        </div>
-        <div class="col-12 md:col-4">
           <p-multiSelect
-            [options]="(getAllTemas$ | async) ?? []"
-            [group]="true"
-            [showClear]="true"
-            formControlName="temas"
-            placeholder="Selecciona los temas"
             class="w-full"
-            [style]="{ width: '100%' }"
-            display="chip"
+            [style]="{ width: '100%', height: '100%' }"
+            [options]="getAllDifficultades"
+            formControlName="dificultad"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecciona un tipo"
+            [showHeader]="false"
+            [defaultLabel]="'Selecciona un tipo'"
           >
-            <ng-template let-group pTemplate="group">
-              <div class="flex align-items-center">
-                <span>{{ group.label }}</span>
+            <ng-template let-item pTemplate="selectedItem">
+              <div class="flex align-items-center gap-2 h-full">
+                @if (item.icon) {
+                <i class="pi {{ item.icon }}"></i>
+                }
+                <div class="hidden md:block">{{ item.label }}</div>
+              </div>
+            </ng-template>
+            <ng-template let-item let-index pTemplate="item">
+              <div class="flex align-items-center gap-2 h-full">
+                @if (item.icon) {
+                <i class="pi {{ item.icon }}"></i>
+                }
+                <div class="hidden md:block">{{ item.label }}</div>
               </div>
             </ng-template>
           </p-multiSelect>
+        </div>
+        <div class="col-12 md:col-4">
+          <app-tema-select
+            [formControl]="formGroup.controls.temas"
+          ></app-tema-select>
         </div>
       </div>
 

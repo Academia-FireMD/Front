@@ -10,6 +10,7 @@ import { PieChartComponent } from './pie-chart/pie-chart.component';
 import { CountdownPipe } from './pipes/countdown.pipe';
 import { PrimengModule } from './primeng.module';
 import { SharedGridComponent } from './shared-grid/shared-grid.component';
+import { TemaSelectComponent } from './tema-select/tema-select.component';
 import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.component';
 @NgModule({
   declarations: [
@@ -21,6 +22,7 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     DificultadDropdownComponent,
     PasswordInputComponent,
     AvatarUploadComponent,
+    TemaSelectComponent,
   ],
   imports: [
     CommonModule,
@@ -41,6 +43,7 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     DificultadDropdownComponent,
     PasswordInputComponent,
     AvatarUploadComponent,
+    TemaSelectComponent,
   ],
 })
 export class SharedModule {}

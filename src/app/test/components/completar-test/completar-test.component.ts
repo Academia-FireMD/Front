@@ -1,8 +1,10 @@
 import {
   Component,
+  effect,
   ElementRef,
   inject,
   QueryList,
+  signal,
   ViewChildren,
 } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
@@ -48,9 +50,18 @@ export class CompletarTestComponent {
   viewportService = inject(ViewportService);
   @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
 
-  public indicePregunta = 0;
+  public indicePregunta = signal(0);
+  public indicePreguntaChanged = effect(() => {
+    const respuesta = this.preguntaRespondida(this.indicePregunta());
+    this.seguroDeLaPregunta.patchValue(
+      respuesta && respuesta.seguridad
+        ? respuesta.seguridad
+        : SeguridadAlResponder.CIEN_POR_CIENTO
+    );
+  });
   public displayFeedbackDialog = false;
   public displayNavegador = false;
+  public displayClonacion = false;
   public displayFalloDialog = false;
   public indiceSeleccionado = new BehaviorSubject(-1);
   public seguroDeLaPregunta = new FormControl(
@@ -99,7 +110,7 @@ export class CompletarTestComponent {
   }
 
   public preguntaRespondida(
-    specificIndex: number = this.indicePregunta
+    specificIndex: number = this.indicePregunta()
   ): Respuesta | undefined {
     return (this.lastLoadedTest?.respuestas ?? []).find(
       (r) => r.indicePregunta == specificIndex
@@ -107,7 +118,7 @@ export class CompletarTestComponent {
   }
 
   private scrollToActiveBlock(): void {
-    const activeElement = this.activeBlocks.toArray()[this.indicePregunta];
+    const activeElement = this.activeBlocks.toArray()[this.indicePregunta()];
     if (activeElement) {
       (activeElement as any).el.nativeElement.scrollIntoView({
         behavior: 'smooth',
@@ -125,7 +136,7 @@ export class CompletarTestComponent {
           this.lastLoadedTest.respuestas = entry.respuestas;
         } else {
           this.lastLoadedTest = entry;
-          this.indicePregunta = parsedTest.respuestasCount;
+          this.indicePregunta.set(parsedTest.respuestasCount);
         }
       }),
       delay(100),
@@ -144,12 +155,47 @@ export class CompletarTestComponent {
     }, 100);
   }
 
+  public clickedAnswer(indice: number) {
+    const respuesta = this.preguntaRespondida();
+    if (!!respuesta && !this.isModoExamen()) {
+      return;
+    }
+    if (
+      !!respuesta &&
+      respuesta.respuestaDada == indice &&
+      this.isModoExamen()
+    ) {
+      this.processAnswer(-1);
+    } else {
+      this.indiceSeleccionado.next(indice);
+    }
+  }
+
+  public clickedPreguntaFromNavegador(indicePregunta: number) {
+    if (this.answeredCurrentQuestion() && this.isModoExamen()) {
+      return;
+    }
+    this.indicePregunta.set(indicePregunta);
+    this.displayNavegador = false;
+  }
+
   ngOnInit(): void {
     this.indiceSeleccionado
       .pipe(filter((e) => e >= 0))
       .subscribe(async (data) => {
         this.processAnswer(data);
       });
+  }
+
+  public updateSecurity(value: SeguridadAlResponder) {
+    const respuesta = this.preguntaRespondida();
+    if (!!respuesta && !this.isModoExamen()) {
+      return;
+    }
+    this.seguroDeLaPregunta.patchValue(value);
+    if (respuesta) {
+      this.indiceSeleccionado.next(respuesta.respuestaDada);
+    }
   }
 
   public async processAnswer(
@@ -171,10 +217,10 @@ export class CompletarTestComponent {
       this.testService
         .actualizarProgresoTest({
           testId: this.lastLoadedTest.id,
-          preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta].id,
+          preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
           respuestaDada,
           omitida: isOmitida,
-          indicePregunta: this.indicePregunta,
+          indicePregunta: this.indicePregunta(),
           seguridad:
             this.seguroDeLaPregunta.value ??
             SeguridadAlResponder.CIEN_POR_CIENTO,
@@ -186,6 +232,7 @@ export class CompletarTestComponent {
           }),
           tap((res) => {
             this.lastAnsweredQuestion = res as any;
+            if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
             firstValueFrom(this.getTest());
           })
         )
@@ -198,11 +245,11 @@ export class CompletarTestComponent {
   }
 
   public atras() {
-    this.indicePregunta--;
+    this.indicePregunta.set(this.indicePregunta() - 1);
   }
 
   public adelante() {
-    this.indicePregunta++;
+    this.indicePregunta.set(this.indicePregunta() + 1);
   }
 
   showFeedbackDialog() {
@@ -228,7 +275,7 @@ export class CompletarTestComponent {
   public async submitReporteFallo(reportDesc: string) {
     const feedback = await firstValueFrom(
       this.reporteFallo.reportarFallo({
-        preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta].id,
+        preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
         descripcion: reportDesc ?? '',
       })
     );
@@ -239,7 +286,7 @@ export class CompletarTestComponent {
   }
 
   public siguiente() {
-    if (this.indicePregunta == this.lastLoadedTest.preguntas.length - 1) {
+    if (this.indicePregunta() == this.lastLoadedTest.preguntas.length - 1) {
       //completado
       if (
         this.lastLoadedTest.preguntas.length !=
@@ -254,7 +301,7 @@ export class CompletarTestComponent {
         ]);
       }
     } else {
-      this.indicePregunta++;
+      this.adelante();
       //Disabled fo rnow
       // if (Math.random() < 0.05 && !this.isModoExamen()) {
       //   this.showFeedbackDialog();

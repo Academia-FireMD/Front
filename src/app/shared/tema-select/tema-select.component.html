@@ -1,0 +1,59 @@
+<p-multiSelect
+  #ms
+  [formControl]="formControl"
+  [options]="filteredTemas((getAllTemas$ | async) ?? [])"
+  [showToggleAll]="false"
+  [group]="true"
+  [showClear]="true"
+  [filter]="false"
+  [style]="{ width: '100%' }"
+  placeholder="Selecciona los temas"
+  display="chip"
+  class="w-full"
+>
+  <ng-template pTemplate="header">
+    <div
+      class="flex gap-2 align-items-center w-full"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex flex-column align-items-center justify-content-center">
+        <p-checkbox
+          class="no-margin-checkbox"
+          [binary]="true"
+          [ngModel]="allSelected"
+          (onChange)="onSelectAll($event.checked)"
+          [ngModelOptions]="{ standalone: true }"
+          (click)="$event.stopPropagation()"
+        >
+        </p-checkbox>
+        <small style="font-size: 0.8rem">Todas</small>
+      </div>
+
+      <input
+        type="text"
+        class="w-full"
+        pInputText
+        (input)="filterLocal($event)"
+        placeholder="Buscar..."
+      />
+    </div>
+  </ng-template>
+  <ng-template let-group pTemplate="group">
+    <div
+      class="flex align-items-center gap-2"
+      style="margin-left: -5px"
+      (click)="onSelectGroup(!isGroupSelected(group.items), group.items)"
+    >
+      <p-checkbox
+        #checkbox
+        (click)="$event.stopPropagation()"
+        [binary]="true"
+        [ngModel]="isGroupSelected(group.items)"
+        [ngModelOptions]="{ standalone: true }"
+        (onChange)="onSelectGroup($event.checked, group.items)"
+      >
+      </p-checkbox>
+      <strong>{{ group.label }}</strong>
+    </div>
+  </ng-template>
+</p-multiSelect>

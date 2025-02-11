@@ -4,7 +4,7 @@
       pRipple
       #activeBlock
       [ngClass]="{
-        'active-block': indicePregunta == i,
+        'active-block': indicePregunta() == i,
         'correct-block':
           !isModoExamen() &&
           preguntaRespondida(i)?.estado == 'RESPONDIDA' &&
@@ -18,11 +18,12 @@
           !!preguntaRespondida(i) &&
           preguntaRespondida(i)?.estado == 'RESPONDIDA',
         omitida:
-          !!preguntaRespondida(i) && preguntaRespondida(i)?.estado == 'OMITIDA'
+          !!preguntaRespondida(i) && preguntaRespondida(i)?.estado == 'OMITIDA',
+        disabled: answeredCurrentQuestion()
       }"
       class="pointer p-3"
       *ngFor="let pregunta of lastLoadedTest?.preguntas ?? []; let i = index"
-      (click)="indicePregunta = i; displayNavegador = false"
+      (click)="clickedPreguntaFromNavegador(i)"
     >
       <div class="content flex align-items-center justify-content-center">
         @if ( !!preguntaRespondida( i) && preguntaRespondida(i)?.seguridad !=
@@ -48,6 +49,23 @@
     Haz click en cualquiera de las preguntas listadas a continuación para
     navegar a ellas.
     <ng-container *ngTemplateOutlet="contentNavegador"></ng-container>
+  </div>
+</p-dialog>
+
+<p-dialog
+  [(visible)]="displayClonacion"
+  modal="modal"
+  header="Clona la pregunta actual"
+  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+  [style]="{ width: '75vw', }"
+  [closable]="true"
+>
+  <div class="flex flex-column gap-3 py-3" *ngIf="displayClonacion">
+    <app-preguntas-dashboard-admin-detailview
+      [injectedPregunta]="lastLoadedTest.preguntas[indicePregunta()]"
+      [mode]="'injected'"
+      (preguntaCreada)="displayClonacion = false"
+    ></app-preguntas-dashboard-admin-detailview>
   </div>
 </p-dialog>
 
@@ -97,7 +115,7 @@
     <div
       pRipple
       class="pointer p-3"
-      (click)="control.patchValue(SeguridadAlResponder.CIEN_POR_CIENTO)"
+      (click)="updateSecurity(SeguridadAlResponder.CIEN_POR_CIENTO)"
       [ngClass]="{
         'selected-difficulty':
           control.value == SeguridadAlResponder.CIEN_POR_CIENTO,
@@ -113,9 +131,7 @@
     <div
       pRipple
       class="pointer p-3"
-      (click)="
-        control.patchValue(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO)
-      "
+      (click)="updateSecurity(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO)"
       [ngClass]="{
         'selected-difficulty':
           control.value == SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
@@ -132,7 +148,7 @@
     <div
       pRipple
       class="pointer p-3"
-      (click)="control.patchValue(SeguridadAlResponder.CINCUENTA_POR_CIENTO)"
+      (click)="updateSecurity(SeguridadAlResponder.CINCUENTA_POR_CIENTO)"
       [ngClass]="{
         'selected-difficulty':
           control.value == SeguridadAlResponder.CINCUENTA_POR_CIENTO,
@@ -149,7 +165,7 @@
     <div
       pRipple
       class="pointer p-3"
-      (click)="control.patchValue(SeguridadAlResponder.CERO_POR_CIENTO)"
+      (click)="updateSecurity(SeguridadAlResponder.CERO_POR_CIENTO)"
       [ngClass]="{
         'selected-difficulty':
           control.value == SeguridadAlResponder.CERO_POR_CIENTO,
@@ -166,11 +182,11 @@
 
 <div class="grid">
   <ng-container *ngIf="lastLoadedTest as testCargado; else testNoCargado">
-    @if(testCargado.preguntas[indicePregunta]){
+    @if(testCargado.preguntas[indicePregunta()]){
 
     <p-card
       class="col-12"
-      *ngIf="testCargado.preguntas[indicePregunta] as pregunta"
+      *ngIf="testCargado.preguntas[indicePregunta()] as pregunta"
     >
       <div class="grid">
         <div class="col-12 header justify-content-between flex">
@@ -180,7 +196,7 @@
           </div>
           <div class="index-pregunta">
             Pregunta
-            {{ indicePregunta + 1 }}/{{ testCargado.preguntas.length }}
+            {{ indicePregunta() + 1 }}/{{ testCargado.preguntas.length }}
           </div>
         </div>
         <div class="col-12">
@@ -215,6 +231,14 @@
                     icon="pi pi-exclamation-triangle"
                     (click)="displayFalloDialog = true"
                   />
+                  <p-button
+                    label="{{
+                      viewportService.screenWidth == 'xs' ? '' : 'Clonar'
+                    }}"
+                    [link]="true"
+                    icon="pi pi-clone"
+                    (click)="displayClonacion = true"
+                  />
                 </div>
               </div>
             </ng-template>
@@ -228,8 +252,7 @@
                 <p>
                   <markdown
                     [data]="
-                      pregunta.descripcion &&
-                      pregunta.descripcion.length > 0
+                      pregunta.descripcion && pregunta.descripcion.length > 0
                         ? pregunta.descripcion
                         : 'No hay un enunciado definido.'
                     "
@@ -256,11 +279,7 @@
                       (preguntaRespondida()?.respuestaDada == indiceRespuesta &&
                         isModoExamen())
                   }"
-                  (click)="
-                    answeredCurrentQuestion()
-                      ? false
-                      : indiceSeleccionado.next(indiceRespuesta)
-                  "
+                  (click)="clickedAnswer(indiceRespuesta)"
                 >
                   <p-inputGroup>
                     <p-inputGroupAddon
@@ -293,13 +312,12 @@
                 <strong>Solución:</strong>
                 <p class="m-0">
                   <markdown
-                  [data]="
-                    pregunta.solucion &&
-                    pregunta.solucion.length > 0
-                      ? pregunta.solucion
-                      : 'No hay una solución definida.'
-                  "
-                ></markdown>
+                    [data]="
+                      pregunta.solucion && pregunta.solucion.length > 0
+                        ? pregunta.solucion
+                        : 'No hay una solución definida.'
+                    "
+                  ></markdown>
                 </p>
                 } @else {
                 <strong class="respuesta-correcta">¡Respuesta correcta!</strong>
@@ -319,7 +337,10 @@
           </p-panel>
           <div
             class="col-12 bottom-bar-no-content"
-            *ngIf="!answeredCurrentQuestion()"
+            *ngIf="
+              !answeredCurrentQuestion() ||
+              (answeredCurrentQuestion() && isModoExamen())
+            "
           >
             <p-panel>
               <ng-template pTemplate="header">
@@ -336,7 +357,7 @@
                         [link]="true"
                         icon="pi pi-angle-double-left"
                         (click)="processAnswer(undefined, 'before')"
-                        [disabled]="indicePregunta == 0"
+                        [disabled]="indicePregunta() == 0"
                       />
                       <p-button
                         label="{{
@@ -354,7 +375,7 @@
                         icon="pi pi-angle-double-right"
                         (click)="processAnswer(undefined, 'next')"
                         [disabled]="
-                          indicePregunta == testCargado.preguntas.length - 1
+                          indicePregunta() == testCargado.preguntas.length - 1
                         "
                       />
 

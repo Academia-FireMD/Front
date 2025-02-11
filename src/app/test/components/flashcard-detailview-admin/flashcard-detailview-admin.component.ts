@@ -1,15 +1,16 @@
 import { Location } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
 import { FormArray, FormBuilder, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Editor } from '@toast-ui/editor';
+import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
-import { Comunidad } from '../../../shared/models/pregunta.model';
+import { Comunidad, Dificultad } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { getAllDifficultades, groupedTemas } from '../../../utils/utils';
 @Component({
@@ -30,6 +31,15 @@ export class FlashcardDetailviewAdminComponent {
   editor!: any;
   editorEnunciado!: any;
   crearOtroControl = new FormControl(false);
+  @Input() mode: 'edit' | 'injected' = 'edit';
+  //La flashcard que ha seleccionado desde el test que estaba realizando
+  @Input() set injectedFlashcard(data: FlashcardData) {
+    const cloned = cloneDeep(data) as FlashcardData;
+    cloned.id = undefined as any;
+    cloned.dificultad = Dificultad.PRIVADAS;
+    this.setFlashcard(cloned);
+  }
+  @Output() flashcardCreada = new EventEmitter<FlashcardData>();
 
   public siguienteFlashcard() {
     firstValueFrom(
@@ -120,8 +130,10 @@ export class FlashcardDetailviewAdminComponent {
   public getAllDifficultades = getAllDifficultades;
 
   ngOnInit(): void {
-    this.loadFlashcard();
-    firstValueFrom(this.getRole());
+    if (this.mode == 'edit') {
+      this.loadFlashcard();
+      firstValueFrom(this.getRole());
+    }
   }
 
   public getId() {
@@ -173,10 +185,12 @@ export class FlashcardDetailviewAdminComponent {
       this.relevancia.push(new FormControl(relevancia))
     );
     this.formGroup.markAsPristine();
-    this.initEditor(
-      this.formGroup.value.solucion ?? '',
-      this.formGroup.value.descripcion ?? ''
-    );
+    setTimeout(() => {
+      this.initEditor(
+        this.formGroup.value.solucion ?? '',
+        this.formGroup.value.descripcion ?? ''
+      );
+    }, 0);
   }
 
   private loadFlashcard() {
@@ -215,10 +229,11 @@ export class FlashcardDetailviewAdminComponent {
   public async crearFlashcard() {
     const res = await this.updateFlashcard();
     this.toast.success('Flashcard creada con éxito!', 'Creación exitosa');
-    if (!this.crearOtroControl.value) {
+    if (!this.crearOtroControl.value && this.mode == 'edit') {
       await this.navigateToFlashcard(res.id + '');
       this.loadFlashcard();
     }
+    this.flashcardCreada.emit(res);
   }
 
   private async navigateToFlashcard(id: string) {

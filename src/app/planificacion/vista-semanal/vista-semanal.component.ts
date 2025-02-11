@@ -7,15 +7,16 @@ import {
   Output,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   CalendarEvent,
   CalendarEventTimesChangedEvent,
   CalendarView,
 } from 'angular-calendar';
 import { cloneDeep, debounce } from 'lodash';
-import { MenuItem } from 'primeng/api';
+import { Memoize } from 'lodash-decorators';
 import { ContextMenu } from 'primeng/contextmenu';
-import { BehaviorSubject, debounceTime, map, Subject } from 'rxjs';
+import { debounceTime, map, Subject } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import {
   PlanificacionBloque,
@@ -23,7 +24,6 @@ import {
 } from '../../shared/models/planificacion.model';
 import { getDateForDayOfWeek, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 export const colors: any = {
   yellow: {
     primary: '#e3bc08',
@@ -76,8 +76,9 @@ export class VistaSemanalComponent {
   @Input() mode: 'picker' | 'edit' = 'edit';
   private onTimeClickedDate!: Date;
   public triggerSaveUpdateProgress = new Subject();
-  menuItems: MenuItem[] = [
-    {
+  @Memoize()
+  getMenuItems(role: 'ADMIN' | 'ALUMNO') {
+    const addNew = {
       label: 'Añadir nuevo',
       icon: 'pi pi-plus',
       command: () => {
@@ -108,13 +109,17 @@ export class VistaSemanalComponent {
         this.editSubBloqueData = nuevoSubBloque;
         this.isDialogVisible = true;
       },
-    },
-    {
+    };
+    const aplicarBloqueAsignable = {
       label: 'Aplicar bloque asignable',
       icon: 'pi pi-book',
       command: () => (this.seleccionandoBloquesAsignables = true),
-    },
-  ];
+    };
+    if (role == 'ADMIN') {
+      return [addNew, aplicarBloqueAsignable];
+    }
+    return [addNew];
+  }
   public getEventsForDay = this.eventsService.getEventsForDay;
   public getProgressBarColor = this.eventsService.getProgressBarColor;
   public getCompletedSubBlocksForDay =
@@ -274,6 +279,8 @@ export class VistaSemanalComponent {
       this.refresh.next();
       this.eventsChange.emit(this.events);
       this.displayDialog = false;
+      //Como el alumno no tiene botón de guardar... se autoguarda al añadir
+      if (this.role == 'ALUMNO') this.saveChanges.emit();
     }
   }
 

@@ -3,15 +3,14 @@ import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom, map } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { TemaService } from '../../../services/tema.service';
 import { GenerarTestDto, TestService } from '../../../services/test.service';
 import { Dificultad } from '../../../shared/models/pregunta.model';
 import {
   getAllDifficultades,
-  getNumeroDePreguntas,
-  groupedTemas,
+  getNumeroDePreguntas
 } from '../../../utils/utils';
 
 @Component({
@@ -30,7 +29,7 @@ export class RealizarTestComponent {
 
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
-    dificultad: [Dificultad.INTERMEDIO],
+    dificultad: [[Dificultad.INTERMEDIO]],
     temas: [[], Validators.required],
     generarTestDeRepaso: [false],
     generarTestDeExamen: [false],
@@ -38,10 +37,7 @@ export class RealizarTestComponent {
   });
 
   public preguntas = getNumeroDePreguntas();
-  public getAllDifficultades = getAllDifficultades();
-  public getAllTemas$ = this.temaService
-    .getAllTemas$()
-    .pipe(map((temas) => groupedTemas(temas)));
+  public getAllDifficultades = getAllDifficultades(false, true);
   public getAllTestsComenzados$ = this.testService.getAllTest();
   public getFallosCount$ = this.testService.obtenerFallosCount();
   public displayPopupFallosTest = false;
@@ -106,7 +102,9 @@ export class RealizarTestComponent {
       const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
       const payload = {
         numPreguntas,
-        dificultad: this.formGroup.value.dificultad ?? Dificultad.INTERMEDIO,
+        dificultades: this.formGroup.value.dificultad ?? [
+          Dificultad.INTERMEDIO,
+        ],
         temas: this.formGroup.value.temas ?? [],
         generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
         duracion: this.formGroup.value.generarTestDeExamen

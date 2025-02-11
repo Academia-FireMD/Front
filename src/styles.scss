@@ -5,6 +5,22 @@
 @import "ngx-toastr/toastr";
 @import "../node_modules/angular-calendar/css/angular-calendar.css";
 @import "@fortawesome/fontawesome-free/css/all.min.css";
+
+p-multiselect {
+  p-overlay {
+    .p-overlay {
+      z-index: 1000;
+      width: 100%;
+    }
+  }
+}
+
+.no-margin-checkbox {
+  .p-checkbox {
+    margin-right: 0;
+  }
+}
+
 .dark-button {
   background-color: $primaryDarkColor;
   border-color: $primaryDarkColor;

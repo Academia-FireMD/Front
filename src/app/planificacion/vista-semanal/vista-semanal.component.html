@@ -273,13 +273,14 @@
         </div>
       </div>
     </ng-template>
+
     <p-contextMenu
       #cm
-      [model]="menuItems"
-      [global]="true"
+      [model]="getMenuItems(role)"
+      [global]="false"
       [appendTo]="'body'"
     ></p-contextMenu>
-
+    {{ mode }}
     <mwl-calendar-week-view
       [viewDate]="viewDate"
       [dayStartHour]="6"
@@ -292,7 +293,7 @@
       [headerTemplate]="headerTemplate"
       [weekStartsOn]="1"
       [eventTemplate]="templatePlan"
-      (hourSegmentClicked)="mode === 'edit' && onTimeClicked($event, cm)"
+      (hourSegmentClicked)="onTimeClicked($event, cm)"
       (eventTimesChanged)="eventDropped($event, role == 'ALUMNO')"
       (eventClicked)="mode === 'edit' && onEventClicked($event.event)"
     >

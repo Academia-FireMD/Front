@@ -4,6 +4,23 @@
   (onHide)="displayFalloDialog = false"
 ></app-reportar-fallo-dialog>
 
+<p-dialog
+  [(visible)]="displayClonacion"
+  modal="modal"
+  header="Clona la pregunta actual"
+  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+  [style]="{ width: '75vw', }"
+  [closable]="true"
+>
+  <div class="flex flex-column gap-3 py-3" *ngIf="displayClonacion">
+    <app-flashcard-detailview-admin
+      [injectedFlashcard]="lastLoadedTest.flashcards[indicePregunta].flashcard"
+      [mode]="'injected'"
+      (flashcardCreada)="displayClonacion = false"
+    ></app-flashcard-detailview-admin>
+  </div>
+</p-dialog>
+
 <div class="grid">
   <ng-container *ngIf="testCargado$ | async as testCargado; else testNoCargado">
     @if(lastLoadedTest.flashcards[indicePregunta]){
@@ -63,6 +80,12 @@
                     [link]="true"
                     icon="pi pi-exclamation-triangle"
                     (click)="displayFalloDialog = true"
+                  />
+                  <p-button
+                    label="{{ viewport.screenWidth == 'xs' ? '' : 'Clonar' }}"
+                    [link]="true"
+                    icon="pi pi-clone"
+                    (click)="displayClonacion = true"
                   />
                 </div>
               </div>
@@ -184,9 +207,7 @@
           <p-panel class="footer">
             <ng-template pTemplate="header">
               <div class="seguridad w-full">
-                <div
-                  class="flex justify-content-end align-items-center w-full"
-                >
+                <div class="flex justify-content-end align-items-center w-full">
                   <div class="actions">
                     <p-button
                       label="{{

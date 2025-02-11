@@ -10,8 +10,10 @@ import { SubBloque } from '../../shared/models/planificacion.model';
 })
 export class EditarSubBloqueDialogComponent {
   @Input() set data(data: any) {
+    this.isAddingNew = !data?.id;
     this.formGroup.patchValue(data);
-    if (this.role == 'ADMIN') {
+    //Si data.id es falsey, significa que el alumno está intentando crear un evento, cosa que está permitida
+    if (this.role == 'ADMIN' || this.isAddingNew) {
       this.formGroup.enable();
     } else {
       this.formGroup.disable();
@@ -26,6 +28,9 @@ export class EditarSubBloqueDialogComponent {
   @Output() isDialogVisibleChange = new EventEmitter<boolean>();
   @Output() savedSubBloque = new EventEmitter<SubBloque>();
   editorComentarios!: any;
+  public isAddingNew = false;
+  public isRoleAdminOrAddingNew = () =>
+    this.role == 'ADMIN' || this.isAddingNew;
   fb = inject(FormBuilder);
   public formGroup = this.fb.group({
     duracion: [60, [Validators.required, Validators.min(1)]],

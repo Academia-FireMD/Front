@@ -1,5 +1,7 @@
 <p-dialog
-  header="{{ role == 'ADMIN' ? 'Editar Sub-Bloque' : 'Visualizar Sub-Bloque' }}"
+  header="{{
+    isRoleAdminOrAddingNew() ? 'Editar Sub-Bloque' : 'Visualizar Sub-Bloque'
+  }}"
   [(visible)]="isDialogVisible"
   [modal]="true"
   (onHide)="isDialogVisibleChange.emit(false)"
@@ -24,7 +26,7 @@
         }
       </div>
 
-      <div class="col-3" *ngIf="role == 'ADMIN'">
+      <div class="col-3" *ngIf="isRoleAdminOrAddingNew()">
         <p-floatLabel>
           <p-dropdown
             id="duracion"
@@ -39,7 +41,7 @@
       </div>
       <div
         class="col-5 flex align-items-center justify-content-end gap-2"
-        *ngIf="role == 'ADMIN'"
+        *ngIf="isRoleAdminOrAddingNew()"
       >
         <p-floatLabel>
           <p-dropdown
@@ -58,7 +60,7 @@
         <p-divider layout="vertical" />
         <p-colorPicker [formControl]="color" appendTo="body" />
       </div>
-      <div class="col-12" [ngClass]="{ 'py-3': role == 'ADMIN' }">
+      <div class="col-12" [ngClass]="{ 'py-3': isRoleAdminOrAddingNew() }">
         @if (formGroup.get('comentarios')?.disabled) {
         <p>
           Comentarios:
@@ -80,12 +82,12 @@
   <p-footer>
     <button
       pButton
-      label="{{ role == 'ADMIN' ? 'Cancelar' : 'Cerrar' }}"
+      label="{{ isRoleAdminOrAddingNew() ? 'Cancelar' : 'Cerrar' }}"
       (click)="cancelarEdicion()"
       class="p-button-text"
     ></button>
     <button
-      *ngIf="role == 'ADMIN'"
+      *ngIf="isRoleAdminOrAddingNew()"
       pButton
       label="Guardar"
       (click)="guardarEdicion()"

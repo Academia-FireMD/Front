@@ -21,7 +21,7 @@ export interface RegistrarRespuestaDto {
 }
 export interface GenerarTestDto {
   numPreguntas: number;
-  dificultad: Dificultad;
+  dificultades: Dificultad[];
   temas: Array<number>;
   generarTestDeRepaso: boolean;
   duracion?: number;

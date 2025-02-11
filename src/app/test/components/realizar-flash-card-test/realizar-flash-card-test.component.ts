@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom, map } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import {
   FlashcardDataService,
   GenerarFlashcardTestDto,
@@ -13,8 +13,7 @@ import { TemaService } from '../../../services/tema.service';
 import { Dificultad } from '../../../shared/models/pregunta.model';
 import {
   getAllDifficultades,
-  getNumeroDePreguntas,
-  groupedTemas,
+  getNumeroDePreguntas
 } from '../../../utils/utils';
 
 @Component({
@@ -29,10 +28,6 @@ export class RealizarFlashCardTestComponent {
   temaService = inject(TemaService);
   confirmationService = inject(ConfirmationService);
   flashcardService = inject(FlashcardDataService);
-  public getAllTemas$ = this.temaService
-    .getAllTemas$()
-    .pipe(map((temas) => groupedTemas(temas)));
-
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
     dificultad: [[Dificultad.BASICO], Validators.required],

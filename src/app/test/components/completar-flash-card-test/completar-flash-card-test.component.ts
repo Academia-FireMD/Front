@@ -50,6 +50,7 @@ export class CompletarFlashCardTestComponent {
   public comunicating = false;
   public estadoFlashcard = EstadoFlashcard;
   public displayFalloDialog = false;
+  public displayClonacion = false;
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as string;
   }

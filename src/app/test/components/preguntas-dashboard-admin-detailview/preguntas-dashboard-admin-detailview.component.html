@@ -6,12 +6,13 @@
           class="col-12 header flex justify-content-between align-items-center pb-3"
         >
           <div class="identificador">
-            @if (getId() !== 'new') {
+            @if (getId() !== 'new' && mode == 'edit') {
             <div class="flex align-items-center gap-2">
               <span>Identificador:</span>
               <strong>{{ formGroup.value.identificador }}</strong>
 
               <p-button
+                *ngIf="mode == 'edit'"
                 label="{{ viewportService.screenWidth == 'xs' ? '' : 'Atrás' }}"
                 [link]="true"
                 icon="pi pi-angle-double-left"
@@ -19,6 +20,7 @@
               />
 
               <p-button
+                *ngIf="mode == 'edit'"
                 label="{{
                   viewportService.screenWidth == 'xs' ? '' : 'Adelante'
                 }}"
@@ -28,7 +30,7 @@
               />
             </div>
             }@else {
-            <p-floatLabel *ngIf="expectedRole == 'ADMIN'">
+            <p-floatLabel *ngIf="expectedRole == 'ADMIN' || mode == 'injected'">
               <input
                 type="text"
                 pInputText
@@ -134,7 +136,7 @@
     </p-card>
   </div>
   <div class="col-12 justify-content-end align-items-center w-full flex">
-    @if (getId() == 'new') {
+    @if (getId() == 'new' && mode == 'edit') {
     <p-checkbox
       inputId="crearOtra"
       [formControl]="crearOtroControl"
@@ -145,11 +147,12 @@
   </div>
   <div class="col-12 footer flex justify-content-end w-full">
     <p-button
+      *ngIf="mode != 'injected'"
       label="Volver atrás"
       [link]="true"
       (click)="handleBackButton()"
     ></p-button>
-    @if(getId() == 'new'){
+    @if(getId() == 'new' || mode == 'injected'){
     <p-button label="Crear pregunta" (click)="crearPregunta()"></p-button>
     }@else{
     <p-button

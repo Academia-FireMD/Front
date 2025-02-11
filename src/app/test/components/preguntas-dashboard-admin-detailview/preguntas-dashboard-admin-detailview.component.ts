@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -8,12 +8,17 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Editor } from '@toast-ui/editor';
+import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
-import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
+import {
+  Comunidad,
+  Dificultad,
+  Pregunta,
+} from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import {
   getAllDifficultades,
@@ -40,6 +45,15 @@ export class PreguntasDashboardAdminDetailviewComponent {
   crearOtroControl = new FormControl(false);
   editorSolucion!: any;
   editorEnunciado!: any;
+  @Input() mode: 'edit' | 'injected' = 'edit';
+  //La pregunta que ha seleccionado desde el test que estaba realizando
+  @Input() set injectedPregunta(data: Pregunta) {
+    const cloned = cloneDeep(data) as Pregunta;
+    cloned.id = undefined as any;
+    cloned.dificultad = Dificultad.PRIVADAS;
+    this.setLoadedPregunta(cloned);
+  }
+  @Output() preguntaCreada = new EventEmitter<Pregunta>();
 
   public checked = {};
   public getAllTemas$ = this.temaService.getAllTemas$().pipe(
@@ -111,8 +125,10 @@ export class PreguntasDashboardAdminDetailviewComponent {
   getLetter = getLetter;
 
   ngOnInit(): void {
-    this.loadPregunta();
-    firstValueFrom(this.getRole());
+    if (this.mode == 'edit') {
+      this.loadPregunta();
+      firstValueFrom(this.getRole());
+    }
   }
 
   public getId() {
@@ -146,10 +162,12 @@ export class PreguntasDashboardAdminDetailviewComponent {
         new FormControl({ value: respuesta, disabled: true })
       )
     );
-    this.initEditor(
-      this.formGroup.value.solucion ?? '',
-      this.formGroup.value.descripcion ?? ''
-    );
+    setTimeout(() => {
+      this.initEditor(
+        this.formGroup.value.solucion ?? '',
+        this.formGroup.value.descripcion ?? ''
+      );
+    }, 0);
     this.formGroup.markAsPristine();
   }
 
@@ -207,10 +225,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public async crearPregunta() {
     const res = await this.updatePregunta();
     this.toast.success('Pregunta creada con éxito!', 'Creación exitosa');
-    if (!this.crearOtroControl.value) {
+    if (!this.crearOtroControl.value && this.mode == 'edit') {
       await this.navigatetoPregunta(res.id + '');
       this.loadPregunta();
     }
+    this.preguntaCreada.emit(res);
   }
 
   private initEditor(initialValue: string, initialEnunciadoValue: string) {
