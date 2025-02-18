@@ -83,6 +83,7 @@
             ></app-comunidad-picker>
           </div>
         </div>
+        @if (expectedRole == 'ADMIN') {
         <div
           class="col-12"
           *ngIf="getFallosFlashcard$() | async as fallosPregunta"
@@ -106,6 +107,8 @@
             <p>No hay fallos reportados para este flashcard.</p>
           </ng-template>
         </div>
+        }
+
         <div class="col-6">
           <p-dropdown
             class="w-full"
