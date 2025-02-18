@@ -1,5 +1,13 @@
 import { Location } from '@angular/common';
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import {
+  Component,
+  computed,
+  EventEmitter,
+  inject,
+  Input,
+  Output,
+  signal,
+} from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -10,14 +18,25 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
-import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
+import {
+  combineLatest,
+  filter,
+  firstValueFrom,
+  map,
+  Observable,
+  of,
+  tap,
+} from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
+import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
+import { PaginatedResult } from '../../../shared/models/pagination.model';
 import {
   Comunidad,
   Dificultad,
   Pregunta,
+  PreguntaFallo,
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import {
@@ -25,6 +44,7 @@ import {
   getLetter,
   getStarsBasedOnDifficulty,
   groupedTemas,
+  universalEditorConfig,
 } from '../../../utils/utils';
 
 @Component({
@@ -37,6 +57,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   activedRoute = inject(ActivatedRoute);
   preguntasService = inject(PreguntasService);
   temaService = inject(TemaService);
+  fallosService = inject(ReportesFalloService);
   fb = inject(FormBuilder);
   toast = inject(ToastrService);
   router = inject(Router);
@@ -67,34 +88,47 @@ export class PreguntasDashboardAdminDetailviewComponent {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
   }
 
-  public siguientePregunta() {
+  private processPreguntaRequest(
+    requestFn: (identificador: string) => Observable<Pregunta>
+  ): void {
     firstValueFrom(
-      this.preguntasService
-        .nextPregunta(this.formGroup.value.identificador ?? '')
-        .pipe(
-          tap((e) => {
-            this.setLoadedPregunta(e);
-            this.navigatetoPregunta(e.id + '');
-          })
-        )
+      requestFn(this.formGroup.value.identificador ?? '').pipe(
+        tap((e) => {
+          this.setLoadedPregunta(e);
+          this.navigatetoPregunta(e.id + '');
+        })
+      )
+    );
+  }
+
+  public siguientePregunta() {
+    this.processPreguntaRequest(
+      this.preguntasService.nextPregunta.bind(this.preguntasService)
     );
   }
 
   public anteriorPregunta() {
-    firstValueFrom(
-      this.preguntasService
-        .prevPregunta(this.formGroup.value.identificador ?? '')
-        .pipe(
-          tap((e) => {
-            this.setLoadedPregunta(e);
-            this.navigatetoPregunta(e.id + '');
-          })
-        )
+    this.processPreguntaRequest(
+      this.preguntasService.prevPregunta.bind(this.preguntasService)
+    );
+  }
+
+  public anteriorForwardPregunta() {
+    this.processPreguntaRequest(
+      this.preguntasService.prevPreguntaForward.bind(this.preguntasService)
+    );
+  }
+
+  public siguienteForwardPregunta() {
+    this.processPreguntaRequest(
+      this.preguntasService.nextPreguntaForward.bind(this.preguntasService)
     );
   }
 
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   public getAllDifficultades = getAllDifficultades;
+
+  public dialogVisible = false;
 
   formGroup = this.fb.group({
     identificador: [''],
@@ -122,7 +156,23 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   public parseControl = (control: any) => control as FormControl;
-  public lastLoadedPregunta!: Pregunta;
+  public lastLoadedPregunta = signal<Pregunta>(null as any);
+  public lastLoadedFallosPreguntaPagination!: PaginatedResult<PreguntaFallo>;
+  public getFallosPregunta$ = computed(() => {
+    if (!this.lastLoadedPregunta()) return of(0);
+    return this.fallosService
+      .getReporteFallos$({
+        take: 99999,
+        skip: 0,
+        searchTerm: this.lastLoadedPregunta().identificador ?? '',
+      })
+      .pipe(
+        tap((e) => {
+          this.lastLoadedFallosPreguntaPagination = e;
+        }),
+        map((e) => e?.data?.length ?? 0)
+      );
+  });
   getLetter = getLetter;
 
   ngOnInit(): void {
@@ -151,7 +201,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   private setLoadedPregunta(pregunta: Pregunta) {
-    this.lastLoadedPregunta = pregunta;
+    this.lastLoadedPregunta.set(pregunta);
     this.formGroup.patchValue(pregunta);
     this.relevancia.clear();
     pregunta.relevancia.forEach((relevancia) =>
@@ -208,7 +258,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   private async updatePregunta() {
     const merged = {
-      ...this.lastLoadedPregunta,
+      ...this.lastLoadedPregunta(),
       ...this.formGroup.getRawValue(),
     };
     const result = await firstValueFrom(
@@ -245,10 +295,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
     this.editorSolucion = new Editor({
       el: document.querySelector('#editor')!,
-      height: '400px',
-      initialEditType: 'markdown',
-      previewStyle: 'vertical',
-      autofocus: false,
+      ...universalEditorConfig,
       initialValue: initialValue || '',
       events: {
         change: () => {
@@ -261,10 +308,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
     this.editorEnunciado = new Editor({
       el: document.querySelector('#editor-enunciado')!,
-      height: '400px',
-      initialEditType: 'markdown',
-      previewStyle: 'vertical',
-      autofocus: false,
+      ...universalEditorConfig,
       initialValue: initialEnunciadoValue || '',
       events: {
         change: () => {

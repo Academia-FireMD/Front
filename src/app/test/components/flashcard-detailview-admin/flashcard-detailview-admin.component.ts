@@ -1,18 +1,44 @@
 import { Location } from '@angular/common';
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import {
+  Component,
+  computed,
+  EventEmitter,
+  inject,
+  Input,
+  Output,
+  signal,
+} from '@angular/core';
 import { FormArray, FormBuilder, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
-import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
+import {
+  combineLatest,
+  filter,
+  firstValueFrom,
+  map,
+  Observable,
+  of,
+  tap,
+} from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
+import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
-import { Comunidad, Dificultad } from '../../../shared/models/pregunta.model';
+import { PaginatedResult } from '../../../shared/models/pagination.model';
+import {
+  Comunidad,
+  Dificultad,
+  PreguntaFallo,
+} from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
-import { getAllDifficultades, groupedTemas } from '../../../utils/utils';
+import {
+  getAllDifficultades,
+  groupedTemas,
+  universalEditorConfig,
+} from '../../../utils/utils';
 @Component({
   selector: 'app-flashcard-detailview-admin',
   templateUrl: './flashcard-detailview-admin.component.html',
@@ -41,30 +67,41 @@ export class FlashcardDetailviewAdminComponent {
     this.setFlashcard(cloned);
   }
   @Output() flashcardCreada = new EventEmitter<FlashcardData>();
+  public dialogVisible = false;
+  private processFlashcardRequest(
+    requestFn: (identificador: string) => Observable<FlashcardData>
+  ): void {
+    firstValueFrom(
+      requestFn(this.formGroup.value.identificador ?? '').pipe(
+        tap((flashcard) => {
+          this.setFlashcard(flashcard);
+          this.navigateToFlashcard(flashcard.id + '');
+        })
+      )
+    );
+  }
 
   public siguienteFlashcard() {
-    firstValueFrom(
-      this.flashCardService
-        .nextFlashcard(this.formGroup.value.identificador ?? '')
-        .pipe(
-          tap((e) => {
-            this.setFlashcard(e);
-            this.navigateToFlashcard(e.id + '');
-          })
-        )
+    this.processFlashcardRequest(
+      this.flashCardService.nextFlashcard.bind(this.flashCardService)
     );
   }
 
   public anteriorFlashcard() {
-    firstValueFrom(
-      this.flashCardService
-        .prevFlashcard(this.formGroup.value.identificador ?? '')
-        .pipe(
-          tap((e) => {
-            this.setFlashcard(e);
-            this.navigateToFlashcard(e.id + '');
-          })
-        )
+    this.processFlashcardRequest(
+      this.flashCardService.prevFlashcard.bind(this.flashCardService)
+    );
+  }
+
+  public anteriorForwardFlashcard() {
+    this.processFlashcardRequest(
+      this.flashCardService.prevFlashcardForward.bind(this.flashCardService)
+    );
+  }
+
+  public siguienteForwardFlashcard() {
+    this.processFlashcardRequest(
+      this.flashCardService.nextFlashcardForward.bind(this.flashCardService)
     );
   }
 
@@ -79,10 +116,7 @@ export class FlashcardDetailviewAdminComponent {
     }
     this.editor = new Editor({
       el: document.querySelector('#editor')!,
-      height: '400px',
-      initialEditType: 'markdown',
-      previewStyle: 'vertical',
-      autofocus: false,
+      ...universalEditorConfig,
       initialValue: initialValue || '',
       events: {
         change: () => {
@@ -93,10 +127,7 @@ export class FlashcardDetailviewAdminComponent {
 
     this.editorEnunciado = new Editor({
       el: document.querySelector('#editor-enunciado')!,
-      height: '400px',
-      initialEditType: 'markdown',
-      previewStyle: 'vertical',
-      autofocus: false,
+      ...universalEditorConfig,
       initialValue: initialEnunciadoValue || '',
       events: {
         change: () => {
@@ -148,8 +179,25 @@ export class FlashcardDetailviewAdminComponent {
   public get relevancia() {
     return this.formGroup.get('relevancia') as FormArray;
   }
+  fallosService = inject(ReportesFalloService);
 
-  public lastLoadedFlashcard!: FlashcardData;
+  public lastLoadedFlashcard = signal<FlashcardData>(null as any);
+  public lastLoadedFallosFlashcardPagination!: PaginatedResult<PreguntaFallo>;
+  public getFallosFlashcard$ = computed(() => {
+    if (!this.lastLoadedFlashcard()) return of(0);
+    return this.fallosService
+      .getReporteFallosFlashcards$({
+        take: 99999,
+        skip: 0,
+        searchTerm: this.lastLoadedFlashcard().identificador ?? '',
+      })
+      .pipe(
+        tap((e) => {
+          this.lastLoadedFallosFlashcardPagination = e;
+        }),
+        map((e) => e?.data?.length ?? 0)
+      );
+  });
 
   formGroup = this.fb.group({
     identificador: [''],
@@ -179,7 +227,7 @@ export class FlashcardDetailviewAdminComponent {
   }
 
   private setFlashcard(flashcard: FlashcardData) {
-    this.lastLoadedFlashcard = flashcard;
+    this.lastLoadedFlashcard.set(flashcard);
     this.formGroup.patchValue(flashcard);
     this.relevancia.clear();
     flashcard.relevancia.forEach((relevancia) =>
@@ -212,7 +260,7 @@ export class FlashcardDetailviewAdminComponent {
 
   private async updateFlashcard() {
     const merged = {
-      ...this.lastLoadedFlashcard,
+      ...this.lastLoadedFlashcard(),
       ...this.formGroup.getRawValue(),
     };
     const result = await firstValueFrom(

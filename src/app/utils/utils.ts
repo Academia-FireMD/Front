@@ -17,6 +17,13 @@ export const colorFlashcardsCorrectas = '#00eb003d';
 export const colorFlashcardsIncorretas = '#ff9c9c';
 export const colorFlashcardsRevisar = '#FFD54F';
 
+export const universalEditorConfig = {
+  height: '300px',
+  initialEditType: 'markdown',
+  previewStyle: 'vertical',
+  autofocus: false,
+};
+
 export interface StatType {
   correctas: number;
   incorrectas: number;
@@ -31,11 +38,14 @@ export const getStartOfWeek = (date: Date): Date => {
   return startOfWeek;
 };
 
-export const getDateForDayOfWeek = (dayIndex: number, startOfWeek: Date): Date =>  {
+export const getDateForDayOfWeek = (
+  dayIndex: number,
+  startOfWeek: Date
+): Date => {
   const targetDate = new Date(startOfWeek);
   targetDate.setDate(startOfWeek.getDate() + dayIndex);
   return targetDate;
-}
+};
 
 export const getDataFromFlashcards = (data: any) => {
   const dataParsed = data as {

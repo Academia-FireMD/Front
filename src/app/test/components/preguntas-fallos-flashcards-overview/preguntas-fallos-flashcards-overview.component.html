@@ -1,6 +1,6 @@
 <p-confirmDialog></p-confirmDialog>
 <div class="grid">
-  <div class="col-12">
+  <div class="col-12" *ngIf="mode == 'overview'">
     <div class="top-action-bar">
       <p-iconField iconPosition="left">
         <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
@@ -15,6 +15,7 @@
       </p-iconField>
     </div>
   </div>
+
   <div class="col-12 list-generic">
     <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
       <ng-template pTemplate="list" let-products>
@@ -26,6 +27,7 @@
           >
             <div class="flex flex-row align-items-between">
               <div class="flex flex-column py-2 col-9 left-side">
+                <!-- Encabezado con identificador y tema -->
                 <div class="text-lg font-medium flex gap-2 align-items-center">
                   <div class="flex gap-1">
                     <span>Identificador: </span>
@@ -40,12 +42,14 @@
                     </div>
                   </div>
                 </div>
+                <!-- Descripción breve (visible cuando NO está expandido) -->
                 <span
                   class="font-small text-secondary text-sm descripcion"
-                  *ngIf="!expandedItem"
+                  *ngIf="expandedItem !== item"
                   >{{ item.descripcion }}</span
                 >
               </div>
+
               <div
                 class="right-side col-3 flex align-items-center justify-content-end"
               >
@@ -55,9 +59,10 @@
                   <span
                     class="font-medium text-secondary text-sm hidden md:block"
                   >
-                    {{ item.createdAt | date : "short" }}</span
-                  >
+                    {{ item.createdAt | date : "short" }}
+                  </span>
                   <p-button
+                    *ngIf="mode == 'overview'"
                     [link]="true"
                     icon="pi pi-eye"
                     [routerLink]="[
@@ -67,6 +72,7 @@
                     (click)="$event.stopPropagation(); $event.preventDefault()"
                   ></p-button>
                   <p-button
+                    *ngIf="mode == 'overview'"
                     [link]="true"
                     icon="pi pi-trash"
                     (click)="
@@ -78,19 +84,33 @@
                 </div>
               </div>
             </div>
+
+            <!-- Contenido expandido -->
             <div
               class="expanded-content"
               [ngClass]="{ 'show py-2': expandedItem === item }"
             >
+              <!-- Descripción completa -->
               <p class="font-medium text-secondary text-sm px-2 mt-0">
                 Descripción completa: {{ item.descripcion }}
               </p>
+
+              <!-- Info adicional del usuario (nombre, apellidos, email) -->
+              <div class="px-2 mt-2">
+                <strong class="pr-2">Reportado por:</strong>
+                <span>
+                  {{ item.usuario?.nombre }}
+                  {{ item.usuario?.apellidos }}
+                  ({{ item.usuario?.email }})
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </ng-template>
     </p-dataView>
   </div>
+
   <div class="col-12">
     <div class="card flex justify-content-end">
       <p-paginator

@@ -1,8 +1,9 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, Input } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom, tap } from 'rxjs';
+import { firstValueFrom, of, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
+import { PaginatedResult } from '../../../shared/models/pagination.model';
 import { PreguntaFallo } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 
@@ -16,10 +17,13 @@ export class PreguntasFallosOverviewComponent extends SharedGridComponent<Pregun
   reportesFalloService = inject(ReportesFalloService);
   confirmationService = inject(ConfirmationService);
   public expandedItem!: PreguntaFallo | null;
+  @Input() mode: 'injected' | 'overview' = 'overview';
+  @Input() data!: PaginatedResult<PreguntaFallo>;
 
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
+      if (!!this.data) return of(this.data);
       return this.reportesFalloService
         .getReporteFallos$(this.pagination())
         .pipe(tap((entry) => (this.lastLoadedPagination = entry)));

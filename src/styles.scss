@@ -298,3 +298,13 @@ p-chip {
   object-fit: cover;
   border-radius: 50%;
 }
+
+/* Aumenta el font-size del área de edición en Markdown */
+.toastui-editor-defaultUI .ProseMirror {
+  font-size: 18px;
+}
+
+/* Aumenta el font-size de la vista previa */
+.toastui-editor-defaultUI .toastui-editor-contents {
+  font-size: 18px;
+}
