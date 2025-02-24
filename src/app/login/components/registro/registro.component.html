@@ -134,8 +134,8 @@
           <!-- Error: contraseña requerida -->
           <div
             *ngIf="
-              formGroup.get('contrasenya')?.hasError('required') &&
-              formGroup.get('contrasenya')?.touched
+              contrasenya?.hasError('required') &&
+              contrasenya?.touched
             "
             class="error-message"
           >
@@ -144,15 +144,15 @@
           <!-- Error: contraseña no segura -->
           <div
             *ngIf="
-              formGroup.get('contrasenya')?.hasError('passwordStrength') &&
-              formGroup.get('contrasenya')?.touched
+              contrasenya?.hasError('passwordStrength') &&
+              contrasenya?.touched
             "
             class="error-message"
           >
-            <small class="p-error"
-              >La contraseña debe tener al menos 8 caracteres, una mayúscula,
-              una minúscula, un número y un carácter especial.</small
-            >
+            <small class="p-error">
+              La contraseña debe tener al menos 8 caracteres, una mayúscula,
+              una minúscula, un número y un carácter especial.
+            </small>
           </div>
 
           <app-password-input
@@ -163,8 +163,8 @@
           <!-- Error: repetir contraseña requerida -->
           <div
             *ngIf="
-              formGroup.get('repetirContrasenya')?.hasError('required') &&
-              formGroup.get('repetirContrasenya')?.touched
+              repetirContrasenya?.hasError('required') &&
+              repetirContrasenya?.touched
             "
             class="error-message"
           >
@@ -174,7 +174,7 @@
           <div
             *ngIf="
               formGroup.hasError('passwordsDontMatch') &&
-              formGroup.get('repetirContrasenya')?.touched
+              repetirContrasenya?.touched
             "
             class="error-message"
           >

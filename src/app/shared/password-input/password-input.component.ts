@@ -31,6 +31,11 @@ export class PasswordInputComponent implements ControlValueAccessor {
     this.onChange(value);
   }
 
+  // Añadir método para manejar el evento blur
+  onBlur() {
+    this.onTouched();
+  }
+
   // Métodos para ControlValueAccessor
   writeValue(value: string): void {
     this.value = value || '';

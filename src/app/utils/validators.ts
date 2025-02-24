@@ -1,13 +1,13 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
-export const passwordMatchValidator: ValidatorFn = (
-  control: AbstractControl
-): ValidationErrors | null => {
-  const password = control.get('contrasenya')?.value;
-  const confirmPassword = control.get('repetirContrasenya')?.value;
+export function passwordMatchValidator(formGroup: AbstractControl): ValidationErrors | null {
+  const password = formGroup.get('contrasenya')?.value;
+  const confirmPassword = formGroup.get('repetirContrasenya')?.value;
 
-  return password === confirmPassword ? null : { passwordsDontMatch: true };
-};
+  return password && confirmPassword && password !== confirmPassword
+    ? { 'passwordsDontMatch': true }
+    : null;
+}
 
 export function passwordStrengthValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -20,16 +20,16 @@ export function passwordStrengthValidator(): ValidatorFn {
     const hasUpperCase = /[A-Z]/.test(value);
     const hasLowerCase = /[a-z]/.test(value);
     const hasNumeric = /[0-9]/.test(value);
-    const hasSpecialCharacter = true; // backend will check
-    const isValidLength = value.length >= 8;
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(value);
+    const hasMinLength = value.length >= 8;
 
     const passwordValid =
       hasUpperCase &&
       hasLowerCase &&
       hasNumeric &&
-      hasSpecialCharacter &&
-      isValidLength;
+      hasSpecialChar &&
+      hasMinLength;
 
-    return !passwordValid ? { passwordStrength: true } : null;
+    return !passwordValid ? { 'passwordStrength': true } : null;
   };
 }

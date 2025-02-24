@@ -33,7 +33,10 @@ export class RegistroComponent {
       nombre: ['', Validators.required],
       apellidos: ['', Validators.required],
       email: ['', [Validators.email, Validators.required]],
-      contrasenya: ['', [Validators.required, passwordStrengthValidator()]],
+      contrasenya: ['', [
+        Validators.required,
+        passwordStrengthValidator()
+      ]],
       repetirContrasenya: ['', [Validators.required]],
       relevancia: ['', Validators.required],
       tutor: [],
@@ -50,6 +53,14 @@ export class RegistroComponent {
       ...comunidadConImagenNombreMap[entry],
     };
   });
+
+  get contrasenya() {
+    return this.formGroup.get('contrasenya');
+  }
+
+  get repetirContrasenya() {
+    return this.formGroup.get('repetirContrasenya');
+  }
 
   public get relevancia() {
     return this.formGroup.get('relevancia') as FormControl;
