@@ -400,11 +400,12 @@ export class PlanificacionMensualEditComponent {
             entry.relevancia.forEach((e) =>
               this.relevancia.push(new FormControl(e))
             );
-            if (!this.calculatedInitialDate) {
-              const minDate = this.eventsService.calculateMinDate(this.events);
-              this.viewDate = minDate;
-              this.calculatedInitialDate = true;
-            }
+            //Disabled calculation initial date
+            // if (!this.calculatedInitialDate) {
+            //   const minDate = this.eventsService.calculateMinDate(this.events);
+            //   this.viewDate = minDate;
+            //   this.calculatedInitialDate = true;
+            // }
             this.usuariosSeleccionadosId = [];
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();

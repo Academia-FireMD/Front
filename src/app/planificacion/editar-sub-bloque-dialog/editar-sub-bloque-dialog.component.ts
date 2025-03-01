@@ -40,6 +40,8 @@ export class EditarSubBloqueDialogComponent {
     color: [''],
     siendoEditado: [false],
     controlId: [uniqueId()],
+    importante: [false],
+    tiempoAviso: [null]
   });
 
   duracionOptions = [
@@ -72,10 +74,35 @@ export class EditarSubBloqueDialogComponent {
       label: 'Psicotécnico',
       value: '#f7d794', // Amarillo más fuerte
     },
+    {
+      label: 'Varios',
+      value: '#ffffff', // Blanco
+    },
+    {
+      label: 'Examen',
+      value: '#ffcdd2', // Rojo suave
+    },
+  ];
+
+  tiempoAvisoOptions = [
+    { label: '15 minutos', value: 15 },
+    { label: '30 minutos', value: 30 },
+    { label: '1 hora', value: 60 },
+    { label: '2 horas', value: 120 },
+    { label: '1 día', value: 1440 },
+    { label: '2 días', value: 2880 },
   ];
 
   public get color() {
     return this.formGroup.get('color') as FormControl;
+  }
+
+  public get importante() {
+    return this.formGroup.get('importante') as FormControl;
+  }
+
+  public get tiempoAviso() {
+    return this.formGroup.get('tiempoAviso') as FormControl;
   }
 
   onColorTypeChange(event: any): void {

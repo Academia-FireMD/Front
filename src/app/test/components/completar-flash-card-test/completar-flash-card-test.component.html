@@ -90,114 +90,117 @@
                 </div>
               </div>
             </ng-template>
-            <div class="flashcard-container">
+            <div class="flashcard-container flex">
               @if (viewport.screenWidth != 'xs') {
               <ng-container *ngTemplateOutlet="leftButton"></ng-container>
               }
 
-              <p-card class="flashcard-content col-12">
-                <p>
-                  <markdown
-                    [data]="
-                      pregunta.flashcard.descripcion &&
-                      pregunta.flashcard.descripcion.length > 0
-                        ? pregunta.flashcard.descripcion
-                        : 'No hay un enunciado definido.'
-                    "
-                  ></markdown>
-                </p>
+              <div class="flex flex-column gap-3 w-full align-items-center">
+                <!-- Card para el enunciado y solución -->
+                <p-card class="flashcard-content col-12 mb-3 w-full">
+                  <div class="flex flex-column gap-3">
+                    <p>
+                      <markdown
+                        [data]="
+                          pregunta.flashcard.descripcion &&
+                          pregunta.flashcard.descripcion.length > 0
+                            ? pregunta.flashcard.descripcion
+                            : 'No hay un enunciado definido.'
+                        "
+                      ></markdown>
+                    </p>
 
-                <div class="next-button col-12 w-full">
-                  <button
-                    pButton
-                    class="p-button p-button-raised w-full"
-                    *ngIf="!pregunta.mostrarSolucion"
-                    (click)="pregunta.mostrarSolucion = true"
-                  >
-                    <span class="w-full"
-                      >Mostrar solución
-                      <app-key
-                        keyName="␣"
-                        *ngIf="viewport.screenWidth != 'xs'"
-                      ></app-key
-                    ></span>
-                  </button>
-                </div>
+                    <div
+                      class="solution col-12 align-items-center flex flex-column"
+                      style="max-height: 40vh; overflow: auto"
+                      *ngIf="!!pregunta.mostrarSolucion"
+                    >
+                      <strong>Solución:</strong>
+                      <markdown
+                        [data]="
+                          pregunta.flashcard.solucion &&
+                          pregunta.flashcard.solucion.length > 0
+                            ? pregunta.flashcard.solucion
+                            : 'No hay una solución definida.'
+                        "
+                      ></markdown>
+                    </div>
+                  </div>
+                </p-card>
 
-                <div
-                  class="grid w-full footer flex justify-content-between align-items-center mt-2"
-                  *ngIf="!!pregunta.mostrarSolucion"
-                >
+                <!-- Botones fuera de la card -->
+                <div class="flex flex-column gap-3 w-full">
+                  <div class="next-button w-full">
+                    <button
+                      pButton
+                      class="p-button p-button-raised w-full"
+                      *ngIf="!pregunta.mostrarSolucion"
+                      (click)="pregunta.mostrarSolucion = true"
+                    >
+                      <span class="w-full"
+                        >Mostrar solución
+                        <app-key
+                          keyName="␣"
+                          *ngIf="viewport.screenWidth != 'xs'"
+                        ></app-key
+                      ></span>
+                    </button>
+                  </div>
+
                   <div
-                    class="solution col-12 align-items-center flex flex-column"
-                    style="max-height: 40vh; overflow: auto"
+                    class="flex flex-column"
+                    *ngIf="!!pregunta.mostrarSolucion"
                   >
-                    <strong>Solución:</strong>
-                    <markdown
-                      [data]="
-                        pregunta.flashcard.solucion &&
-                        pregunta.flashcard.solucion.length > 0
-                          ? pregunta.flashcard.solucion
-                          : 'No hay una solución definida.'
-                      "
-                    ></markdown>
-                  </div>
-                  <div class="col-12 flex gap-2">
-                    <button
-                      pButton
-                      [disabled]="comunicating"
-                      class="p-button p-button-raised w-full"
-                      [severity]="'danger'"
-                      (click)="selectedEstado(estadoFlashcard.MAL)"
-                    >
-                      <span class="w-full"
-                        >MAL
-                        <app-key
-                          keyName="←"
-                          *ngIf="viewport.screenWidth != 'xs'"
-                        ></app-key
-                      ></span>
-                    </button>
-                    <button
-                      pButton
-                      [disabled]="comunicating"
-                      [severity]="'warning'"
-                      (click)="selectedEstado(estadoFlashcard.REVISAR)"
-                      class="p-button p-button-raised w-full text-white"
-                    >
-                      <span class="w-full"
-                        >REPASAR
-                        <app-key
-                          keyName="↓"
-                          *ngIf="viewport.screenWidth != 'xs'"
-                        ></app-key
-                      ></span>
-                    </button>
-
-                    <button
-                      pButton
-                      [disabled]="comunicating"
-                      [severity]="'success'"
-                      class="p-button p-button-raised w-full"
-                      (click)="selectedEstado(estadoFlashcard.BIEN)"
-                    >
-                      <span class="w-full"
-                        >BIEN
-                        <app-key
-                          keyName="→"
-                          *ngIf="viewport.screenWidth != 'xs'"
-                        ></app-key
-                      ></span>
-                    </button>
+                    <div class="flex gap-2">
+                      <button
+                        pButton
+                        [disabled]="comunicating"
+                        class="p-button p-button-raised w-full"
+                        [severity]="'danger'"
+                        (click)="selectedEstado(estadoFlashcard.MAL)"
+                      >
+                        <span class="w-full"
+                          >MAL
+                          <app-key
+                            keyName="←"
+                            *ngIf="viewport.screenWidth != 'xs'"
+                          ></app-key
+                        ></span>
+                      </button>
+                      <button
+                        pButton
+                        [disabled]="comunicating"
+                        [severity]="'warning'"
+                        (click)="selectedEstado(estadoFlashcard.REVISAR)"
+                        class="p-button p-button-raised w-full text-white"
+                      >
+                        <span class="w-full"
+                          >REPASAR
+                          <app-key
+                            keyName="↓"
+                            *ngIf="viewport.screenWidth != 'xs'"
+                          ></app-key
+                        ></span>
+                      </button>
+                      <button
+                        pButton
+                        [disabled]="comunicating"
+                        [severity]="'success'"
+                        class="p-button p-button-raised w-full"
+                        (click)="selectedEstado(estadoFlashcard.BIEN)"
+                      >
+                        <span class="w-full"
+                          >BIEN
+                          <app-key
+                            keyName="→"
+                            *ngIf="viewport.screenWidth != 'xs'"
+                          ></app-key
+                        ></span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-                @if (viewport.screenWidth == 'xs') {
-                <div class="flex justify-content-end gap-2">
-                  <ng-container *ngTemplateOutlet="leftButton"></ng-container>
-                  <ng-container *ngTemplateOutlet="rightButton"></ng-container>
-                </div>
-                }
-              </p-card>
+              </div>
 
               @if (viewport.screenWidth != 'xs') {
               <ng-container *ngTemplateOutlet="rightButton"></ng-container>

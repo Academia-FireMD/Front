@@ -77,6 +77,28 @@
         </div>
         }
       </div>
+
+      <!-- Nuevos controles -->
+      <div class="col-12 flex align-items-center gap-3" *ngIf="role == 'ADMIN'">
+        <p-checkbox
+          [formControl]="importante"
+          [binary]="true"
+          label="Marcar como importante">
+        </p-checkbox>
+
+        <p-floatLabel *ngIf="importante.value">
+          <p-dropdown
+            id="tiempoAviso"
+            [style]="{ width: '200px' }"
+            [formControl]="tiempoAviso"
+            [options]="tiempoAvisoOptions"
+            appendTo="body"
+            placeholder="Seleccione el tiempo"
+          ></p-dropdown>
+          <label for="tiempoAviso">Avisar con antelación de</label>
+        </p-floatLabel>
+      </div>
+      <!-- Fin nuevos controles -->
     </div>
   </form>
   <p-footer>

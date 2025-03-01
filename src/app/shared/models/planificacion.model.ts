@@ -17,6 +17,8 @@ export interface SubBloque {
   horaInicio: Date; // La fecha y hora de inicio del sub-bloque
   duracion: number;
   color?: string;
+  importante?: boolean;
+  tiempoAviso?: number;
   nombre: string;
   comentarios?: string;
   bloqueId?: number; // Relación opcional con PlanificacionBloque

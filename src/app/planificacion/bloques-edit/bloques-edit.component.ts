@@ -76,6 +76,8 @@ export class BloquesEditComponent {
       color: [''],
       siendoEditado: [false],
       controlId: [uniqueId()],
+      importante: [false],
+      tiempoAviso: [0]
     });
   }
 

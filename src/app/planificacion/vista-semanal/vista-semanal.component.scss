@@ -11,7 +11,7 @@
 
 .list-bloques {
   overflow: auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .content-card {
@@ -55,8 +55,6 @@
 .checked-event {
   border: 3px solid $primaryColor;
 }
-
-
 
 .event-content {
   width: 100%;
@@ -125,3 +123,4 @@ small {
   height: 100%;
   transition: width 0.3s ease;
 }
+

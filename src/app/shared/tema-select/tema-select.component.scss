@@ -1,0 +1,21 @@
+:host {
+  ::ng-deep .p-multiselect-panel {
+    .p-multiselect-items {
+      // Oculta solo los items por defecto, no el contenedor
+      .p-multiselect-item {
+        display: none !important;
+      }
+    }
+
+    // Asegurarse que nuestro contenido personalizado sea visible
+    .p-multiselect-header {
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #dee2e6;
+    }
+  }
+
+  // Ajustes adicionales para mejorar el aspecto
+  ::ng-deep .p-checkbox {
+    margin-right: 0.5rem;
+  }
+}

@@ -42,7 +42,6 @@
     <div
       class="flex align-items-center gap-2"
       style="margin-left: -5px"
-      (click)="onSelectGroup(!isGroupSelected(group.items), group.items)"
     >
       <p-checkbox
         #checkbox
@@ -53,7 +52,22 @@
         (onChange)="onSelectGroup($event.checked, group.items)"
       >
       </p-checkbox>
-      <strong>{{ group.label }}</strong>
+      <div class="flex align-items-center gap-2 w-full justify-content-between" style="cursor: pointer" (click)="toggleGroup($event, group.label)">
+        <strong>{{ group.label }}</strong>
+        <i [class]="isGroupCollapsed(group.label) ? 'pi pi-chevron-down' : 'pi pi-chevron-up'"></i>
+      </div>
+    </div>
+    <div [style.display]="isGroupCollapsed(group.label) ? 'none' : 'block'" style="padding-left: 20px">
+      <div *ngFor="let item of group.items" class="flex align-items-center gap-2 my-2">
+        <p-checkbox
+          [binary]="true"
+          [ngModel]="(formControl?.value ?? []).includes(item.value)"
+          (onChange)="onSelectGroup($event.checked, [item])"
+          [ngModelOptions]="{ standalone: true }"
+        >
+        </p-checkbox>
+        {{ item.label }}
+      </div>
     </div>
   </ng-template>
 </p-multiSelect>

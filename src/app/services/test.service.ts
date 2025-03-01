@@ -30,6 +30,7 @@ export interface GenerarTestDto {
 export interface DateRangeDto {
   from: Date; // Campo obligatorio
   to?: Date; // Campo opcional
+  temas?: Array<string>;
 }
 
 @Injectable({

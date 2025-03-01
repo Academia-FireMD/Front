@@ -60,6 +60,20 @@
                   <div class="flex align-items-center gap-2">
                     <i class="pi pi-clock text-sm"></i>
                     <span> {{ subBloque.duracion }} minutos </span>
+                    @if(subBloque.importante) {
+                    <i
+                      class="pi pi-exclamation-circle text-red-500"
+                      pTooltip="Sub-bloque importante"
+                    ></i>
+                    } @if(subBloque.avisoAnticipado) {
+                    <div class="flex align-items-center gap-1">
+                      <i
+                        class="pi pi-bell text-orange-500"
+                        pTooltip="Aviso anticipado"
+                      ></i>
+                      <small>{{ subBloque.avisoAnticipado }} min</small>
+                    </div>
+                    }
                   </div>
                 </div>
                 <span class="font-bold">

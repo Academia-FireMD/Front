@@ -16,6 +16,8 @@ export class EventsService {
       id: event.meta?.subBloque?.id,
       realizado: event.meta?.subBloque?.realizado ?? false,
       comentariosAlumno: event.meta?.subBloque?.comentariosAlumno ?? null,
+      importante: event.meta?.subBloque?.importante ?? false,
+      tiempoAviso: event.meta?.subBloque?.tiempoAviso ?? null,
       horaInicio: event.start, // Fecha y hora completa del evento
       duracion: event.meta?.subBloque?.duracion || event.duracion, // Duración del evento
       nombre: event.title, // Título del sub-bloque o evento

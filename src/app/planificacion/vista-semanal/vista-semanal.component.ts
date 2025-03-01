@@ -265,6 +265,8 @@ export class VistaSemanalComponent {
             comentarios: subbloque.comentarios,
             color: subbloque.color,
             duracion: subbloque.duracion,
+            importante: subbloque.importante,
+            tiempoAviso: subbloque.tiempoAviso,
           },
         },
       };

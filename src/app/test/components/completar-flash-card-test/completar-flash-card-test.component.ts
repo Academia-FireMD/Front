@@ -22,12 +22,15 @@ export class CompletarFlashCardTestComponent {
     if (this.comunicating) return;
     switch (event.key) {
       case 'ArrowLeft':
+        if (!this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion) return;
         this.selectedEstado(EstadoFlashcard.MAL);
         break;
       case 'ArrowRight':
+        if (!this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion) return;
         this.selectedEstado(EstadoFlashcard.BIEN);
         break;
       case 'ArrowDown':
+        if (!this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion) return;
         this.selectedEstado(EstadoFlashcard.REVISAR);
         break;
       case ' ':
@@ -79,7 +82,7 @@ export class CompletarFlashCardTestComponent {
     );
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void { }
 
   public async selectedEstado(estado: EstadoFlashcard) {
     this.comunicating = true;

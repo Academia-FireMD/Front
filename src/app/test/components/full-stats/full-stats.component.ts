@@ -34,6 +34,7 @@ export class FullStatsComponent {
   public type: 'TESTS' | 'FLASHCARDS' = 'TESTS';
   public from!: Date;
   public to!: Date;
+  public temas: Array<string> = [];
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   plugins = [ChartDataLabels, annotationPlugin];
   activatedRoute = inject(ActivatedRoute);
@@ -532,20 +533,20 @@ export class FullStatsComponent {
     };
   };
 
-  commMap = (from: Date, to: Date) => {
+  commMap = (from: Date, to: Date, temas: Array<string>) => {
     return {
       ADMIN: {
-        FLASHCARDS: this.flashcardService.getStatsByCategoryAdmin({ from, to }),
-        TESTS: this.testService.getStatsByCategoryAdmin({ from, to }),
+        FLASHCARDS: this.flashcardService.getStatsByCategoryAdmin({ from, to, temas }),
+        TESTS: this.testService.getStatsByCategoryAdmin({ from, to, temas }),
       },
       ALUMNO: {
-        FLASHCARDS: this.flashcardService.getStatsByCategory({ from, to }),
-        TESTS: this.testService.getStatsByCategory({ from, to }),
+        FLASHCARDS: this.flashcardService.getStatsByCategory({ from, to, temas }),
+        TESTS: this.testService.getStatsByCategory({ from, to, temas }),
       },
     };
   };
 
-  constructor() {}
+  constructor() { }
 
   private getFullStats() {
     return combineLatest([
@@ -556,12 +557,13 @@ export class FullStatsComponent {
       switchMap((e) => {
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
-        const { from, to } = queryParams;
+        const { from, to, temas } = queryParams;
         this.type = type;
         this.expectedRole = expectedRole;
         this.from = new Date(from);
         this.to = new Date(to);
-        return this.commMap(new Date(from), new Date(to))[this.expectedRole][
+        this.temas = (temas as string).split(',');
+        return this.commMap(new Date(from), new Date(to), this.temas)[this.expectedRole][
           this.type
         ];
       })

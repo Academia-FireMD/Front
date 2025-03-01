@@ -18,6 +18,9 @@ import { PaginatedResult, PaginationFilter } from '../models/pagination.model';
 @Component({
   selector: 'app-base-grid',
   template: '',
+  host: {
+    'class': 'shared-grid-component'
+  }
 })
 export class SharedGridComponent<T> implements OnInit {
   toast = inject(ToastrService);

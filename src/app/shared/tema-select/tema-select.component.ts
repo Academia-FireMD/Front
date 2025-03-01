@@ -12,9 +12,17 @@ import { groupedTemas } from '../../utils/utils';
 export class TemaSelectComponent {
   @Input() formControl!: FormControl;
   temaService = inject(TemaService);
+  public collapsedGroups = new Map<string, boolean>();
   public getAllTemas$ = this.temaService.getAllTemas$().pipe(
     map((temas) => groupedTemas(temas)),
-    tap((e) => (this.lastLoadedTemas = e))
+    tap((e) => {
+      this.lastLoadedTemas = e;
+      e.forEach(group => {
+        if (!this.collapsedGroups.has(group.label)) {
+          this.collapsedGroups.set(group.label, true);
+        }
+      });
+    })
   );
   private lastLoadedTemas: Array<any> = [];
   public filterQuery = '';
@@ -80,5 +88,14 @@ export class TemaSelectComponent {
 
     this.formControl?.setValue(selected as any);
     this.formControl?.updateValueAndValidity();
+  }
+
+  toggleGroup(event: Event, groupLabel: string) {
+    event.stopPropagation();
+    this.collapsedGroups.set(groupLabel, !this.collapsedGroups.get(groupLabel));
+  }
+
+  isGroupCollapsed(groupLabel: string): boolean {
+    return this.collapsedGroups.get(groupLabel) ?? true;
   }
 }

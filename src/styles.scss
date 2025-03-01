@@ -308,3 +308,36 @@ p-chip {
 .toastui-editor-defaultUI .toastui-editor-contents {
   font-size: 18px;
 }
+
+.select-bloque-asignable-dialog {
+  .p-dialog {
+    width: 100%;
+  }
+}
+
+.shared-grid-component {
+  .grid {
+    @media (min-width: 769px) {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+    }
+  }
+
+  .list-generic {
+    @media (min-width: 769px) {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+
+      ::ng-deep .p-dataview {
+        height: 100%;
+
+        .p-dataview-content {
+          overflow-y: auto;
+        }
+      }
+    }
+  }
+}

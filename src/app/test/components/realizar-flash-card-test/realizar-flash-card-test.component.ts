@@ -30,7 +30,7 @@ export class RealizarFlashCardTestComponent {
   flashcardService = inject(FlashcardDataService);
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
-    dificultad: [[Dificultad.BASICO], Validators.required],
+    dificultad: [[Dificultad.BASICO, Dificultad.INTERMEDIO, Dificultad.DIFICIL], Validators.required],
     temas: [[], Validators.required],
     generarTestDeRepaso: [false],
   });
@@ -79,7 +79,7 @@ export class RealizarFlashCardTestComponent {
         this.toast.info('Test eliminado exitosamente');
         this.getAllTestsComenzados$ = this.flashcardService.getAllTest();
       },
-      reject: () => {},
+      reject: () => { },
     });
   }
 }

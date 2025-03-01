@@ -78,6 +78,7 @@ export class TestStatsGridComponent extends SharedGridComponent<
   public type: 'TESTS' | 'FLASHCARDS' = 'TESTS';
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   selectedRangeDates = new FormControl([], Validators.required);
+  public temas = new FormControl<string[] | null>([], Validators.required);
   public generandoEstadistica = false;
 
   public calcular100 = (rawStats: any, numPreguntas: number) => {
@@ -102,6 +103,40 @@ export class TestStatsGridComponent extends SharedGridComponent<
       numPreguntas
     );
   };
+
+  private whereQueryTests(ids: Array<string>) {
+    return {
+      testPreguntas: {
+        some: {
+          pregunta: {
+            temaId: {
+              in: ids
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private whereQueryFlashcards(ids: Array<string>) {
+    return {
+      flashcards: {
+        some: {
+          flashcard: {
+            temaId: {
+              in: ids
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private getWhereQuery() {
+    return this.type == 'TESTS' ? this.whereQueryTests : this.whereQueryFlashcards;
+  }
+
+
   constructor(private primengConfig: PrimeNGConfig) {
     super();
     this.primengConfig.setTranslation(this.es);
@@ -151,14 +186,32 @@ export class TestStatsGridComponent extends SharedGridComponent<
                   gte: entry[0] ?? new Date(),
                   lte: entry[1] ?? new Date(),
                 },
+                ...(this.temas.value?.length ? this.getWhereQuery()(this.temas.value) : {}),
               },
             });
           } else {
             this.pagination.set({
               ...this.pagination(),
-              where: {},
+              where: {
+                ...(this.temas.value?.length ? this.getWhereQuery()(this.temas.value) : {}),
+              },
             });
           }
+        }),
+        takeUntilDestroyed()
+      )
+      .subscribe();
+
+    this.temas.valueChanges
+      .pipe(
+        tap((selectedTemas: string[] | null) => {
+          this.pagination.set({
+            ...this.pagination(),
+            where: {
+              ...this.pagination().where,
+              ...(selectedTemas?.length ? this.getWhereQuery()(selectedTemas) : {}),
+            },
+          });
         }),
         takeUntilDestroyed()
       )
@@ -188,10 +241,10 @@ export class TestStatsGridComponent extends SharedGridComponent<
   };
 
   public generarEstadisticas() {
-    const from = ((this.selectedRangeDates.value as any)[0] ??
-      new Date()) as Date;
-    const to = ((this.selectedRangeDates.value as any)[1] ??
-      new Date()) as Date;
+    const from = ((this.selectedRangeDates.value as any)[0] ?? new Date()) as Date;
+    const to = ((this.selectedRangeDates.value as any)[1] ?? new Date()) as Date;
+    const temas = this.temas.value;
+
     const map = {
       ADMIN: {
         TESTS: '/app/test/full-stats-test/',
@@ -207,6 +260,7 @@ export class TestStatsGridComponent extends SharedGridComponent<
       queryParams: {
         from: from.toISOString(),
         to: to.toISOString(),
+        ...(temas?.length ? { temas: temas.join(',') } : {}),
       },
     });
   }

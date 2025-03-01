@@ -56,6 +56,7 @@
 
 <p-dialog
   *ngIf="role == 'ADMIN'"
+  class="select-bloque-asignable-dialog"
   header="Seleccionar bloque asignable"
   [(visible)]="seleccionandoBloquesAsignables"
   [modal]="true"
@@ -87,26 +88,36 @@
       *ngFor="let bloque of bloques.data"
       (click)="bloqueAsignableSeleccionado(bloque)"
       header="{{ bloque.identificador }}"
-      class="col-12 md:col-3"
+      class="col-12 md:col-3 cursor-pointer hover:shadow-4"
     >
       <div class="content-card">
         <div
-          class="flex flex-wrap p-2 align-items-center gap-3"
+          class="flex flex-wrap p-2 align-items-center gap-3 mb-2 border-round"
           [ngStyle]="{ 'background-color': subBloque.color }"
           *ngFor="let subBloque of bloque.subBloques"
         >
           <div class="flex-1 flex flex-column gap-2">
-            <span class="font-bold">{{
-              subBloque.nombre && subBloque.nombre.length > 0
-                ? subBloque.nombre
-                : "Sin nombre"
-            }}</span>
+            <div class="flex align-items-center gap-2">
+              <i *ngIf="subBloque.importante"
+                 class="pi pi-star-fill text-yellow-500"
+                 pTooltip="Sub-bloque importante"></i>
+              <div *ngIf="subBloque.tiempoAviso" class="flex align-items-center gap-1">
+                <i class="pi pi-bell text-orange-500"
+                   pTooltip="Aviso anticipado"></i>
+                <small>{{subBloque.tiempoAviso}} min</small>
+              </div>
+              <span class="font-bold text-overflow-ellipsis">{{
+                subBloque.nombre && subBloque.nombre.length > 0
+                  ? subBloque.nombre
+                  : "Sin nombre"
+              }}</span>
+            </div>
             <div class="flex align-items-center gap-2">
               <i class="pi pi-clock text-sm"></i>
-              <span> {{ subBloque.duracion }} minutos </span>
+              <span class="text-sm"> {{ subBloque.duracion }} minutos </span>
             </div>
           </div>
-          <span class="font-bold">
+          <span class="font-bold text-sm text-overflow-ellipsis">
             {{ subBloque.comentarios || "Sin comentarios" }}
           </span>
         </div>
@@ -132,7 +143,9 @@
     >
       <div class="top" [class.today]="day.isToday">
         <div class="day-label text-uppercase">
+          {{ day.date | date : "d" }} -
           {{ day.date | calendarDate : "weekViewColumnHeader" : locale }}
+
           <i
             class="pi pi-clone pointer"
             *ngIf="role == 'ADMIN'"
@@ -143,9 +156,6 @@
             "
           ></i>
         </div>
-        <!-- <div class="day-number">
-          {{ day.date | calendarDate : "weekViewColumnSubHeader" : locale }}
-        </div> -->
       </div>
       <!-- Progreso debajo del día -->
       <div
@@ -232,9 +242,17 @@
         >
           <div class="event-content">
             <div class="event-header">
-              <strong class="descripcion w-full">{{
-                weekEvent?.event?.title || "Sin nombre"
-              }}</strong>
+              <div class="d-flex align-items-center gap-1">
+                <i *ngIf="weekEvent?.event?.meta?.subBloque?.importante"
+                   class="pi pi-star-fill text-yellow-500"
+                   style="font-size: 0.8rem;"
+                   pTooltip="Sub-bloque importante"></i>
+                <i *ngIf="weekEvent?.event?.meta?.subBloque?.tiempoAviso"
+                   class="pi pi-bell text-orange-500"
+                   style="font-size: 0.8rem;"
+                   pTooltip="Aviso: {{weekEvent?.event?.meta?.subBloque?.tiempoAviso}} min"></i>
+                <strong class="descripcion text-sm">{{weekEvent?.event?.title || "Sin nombre"}}</strong>
+              </div>
               <div class="event-actions">
                 <i
                   class="{{
