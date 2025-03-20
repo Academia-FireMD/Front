@@ -8,6 +8,7 @@ import {
 } from '../shared/models/pagination.model';
 import { Pregunta } from '../shared/models/pregunta.model';
 import { ApiBaseService } from './api-base.service';
+import { GenerarTestDto } from './test.service';
 
 @Injectable({
   providedIn: 'root',
@@ -34,6 +35,10 @@ export class PreguntasService extends ApiBaseService {
 
   public getPreguntaById(id: number) {
     return this.get('/' + id) as Observable<Pregunta>;
+  }
+
+  public getPreguntaByIdentificador(identificador: string) {
+    return this.get('/identificador/' + identificador) as Observable<Pregunta>;
   }
 
   public nextPregunta(id: string) {
@@ -63,10 +68,16 @@ export class PreguntasService extends ApiBaseService {
   public getAllPreguntasCreadosPorAlumnos() {
     return this._http.post(
       environment.apiUrl +
-        this.controllerPrefix +
-        '/preguntas-creadas-por-alumnos',
+      this.controllerPrefix +
+      '/preguntas-creadas-por-alumnos',
       {},
       { responseType: 'blob' }
     );
+  }
+
+  public getAllPreguntasByFilter$(dto: GenerarTestDto) {
+    return this.post('/get-all-preguntas-by-filter', dto) as Observable<
+      Pregunta[]
+    >;
   }
 }

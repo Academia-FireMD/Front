@@ -11,7 +11,7 @@ export class ApiBaseService {
   protected toast = inject(ToastrService);
   private router = inject(Router);
 
-  constructor(protected _http: HttpClient) {}
+  constructor(protected _http: HttpClient) { }
 
   public get(
     endpoint: string,
@@ -37,6 +37,14 @@ export class ApiBaseService {
       .pipe(catchError((err) => this.handleError(err, ignoreError)));
   }
 
+  public put(
+    endpoint: string,
+    body: any,
+    ignoreError?: boolean
+  ): Observable<any> {
+    return this._http.put(environment.apiUrl + this.controllerPrefix + endpoint, body, { withCredentials: true })
+      .pipe(catchError((err) => this.handleError(err, ignoreError)));
+  }
   public post(
     endpoint: string,
     body: any,

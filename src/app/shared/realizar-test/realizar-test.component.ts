@@ -1,17 +1,17 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
-import { PreguntasService } from '../../../services/preguntas.service';
-import { TemaService } from '../../../services/tema.service';
-import { GenerarTestDto, TestService } from '../../../services/test.service';
-import { Dificultad } from '../../../shared/models/pregunta.model';
+import { PreguntasService } from '../../services/preguntas.service';
+import { TemaService } from '../../services/tema.service';
+import { GenerarTestDto, TestService } from '../../services/test.service';
 import {
   getAllDifficultades,
   getNumeroDePreguntas
-} from '../../../utils/utils';
+} from '../../utils/utils';
+import { Dificultad } from '../models/pregunta.model';
 
 @Component({
   selector: 'app-realizar-test',
@@ -26,6 +26,7 @@ export class RealizarTestComponent {
   confirmationService = inject(ConfirmationService);
   testService = inject(TestService);
   router = inject(Router);
+  @Input() mode: 'injected' | 'default' = 'default';
 
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
@@ -92,26 +93,30 @@ export class RealizarTestComponent {
       accept: async () => {
         this.generarTest(true);
       },
-      reject: () => {},
+      reject: () => { },
     });
+  }
+
+  public generateDto() {
+    const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
+    const payload = {
+      numPreguntas,
+      dificultades: this.formGroup.value.dificultad ?? [
+        Dificultad.INTERMEDIO,
+      ],
+      temas: this.formGroup.value.temas ?? [],
+      generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
+      duracion: this.formGroup.value.generarTestDeExamen
+        ? this.formGroup.value.tiempoLimiteEnMinutos ?? numPreguntas
+        : undefined,
+    } as GenerarTestDto;
+    return payload;
   }
 
   public async generarTest(autoRedirect = false) {
     try {
       this.generandoTest = true;
-      const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
-      const payload = {
-        numPreguntas,
-        dificultades: this.formGroup.value.dificultad ?? [
-          Dificultad.INTERMEDIO,
-        ],
-        temas: this.formGroup.value.temas ?? [],
-        generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
-        duracion: this.formGroup.value.generarTestDeExamen
-          ? this.formGroup.value.tiempoLimiteEnMinutos ?? numPreguntas
-          : undefined,
-      } as GenerarTestDto;
-
+      const payload = this.generateDto();
       const res = await firstValueFrom(this.testService.generarTest(payload));
       this.toast.success('Test generado exitosamente!', 'Generación exitosa');
       this.getAllTestsComenzados$ = this.testService.getAllTest();
@@ -140,7 +145,7 @@ export class RealizarTestComponent {
         this.toast.info('Test eliminado exitosamente');
         this.getAllTestsComenzados$ = this.testService.getAllTest();
       },
-      reject: () => {},
+      reject: () => { },
     });
   }
 }

@@ -7,6 +7,7 @@ import { MarkdownModule } from 'ngx-markdown';
 import { ConfirmationService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { AvatarGroupModule } from 'primeng/avatargroup';
+import { MessagesModule } from 'primeng/messages';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
@@ -16,13 +17,11 @@ import { DashboardStatsComponent } from './components/dashboard-stats/dashboard-
 import { FlashcardDetailviewAdminComponent } from './components/flashcard-detailview-admin/flashcard-detailview-admin.component';
 import { FlashcardOverviewAdminComponent } from './components/flashcard-overview-admin/flashcard-overview-admin.component';
 import { FullStatsComponent } from './components/full-stats/full-stats.component';
-import { PopupFallosTestComponent } from './components/popup-fallos-test/popup-fallos-test.component';
 import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
 import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
 import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
 import { RealizarFlashCardTestComponent } from './components/realizar-flash-card-test/realizar-flash-card-test.component';
-import { RealizarTestComponent } from './components/realizar-test/realizar-test.component';
 import { ReportarFalloDialogComponent } from './components/reportar-fallo-dialog/reportar-fallo-dialog.component';
 import { TemaDetailviewComponent } from './components/tema-detailview/tema-detailview.component';
 import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
@@ -36,11 +35,9 @@ import { TestRoutingModule } from './test-routing.module';
   declarations: [
     UserDashboardComponent,
     PreguntasDashboardAdminComponent,
-    RealizarTestComponent,
     PreguntasDashboardAdminDetailviewComponent,
     AjustesAdminComponent,
     CompletarTestComponent,
-    PopupFallosTestComponent,
     TestStatsComponent,
     DashboardStatsComponent,
     PreguntasFallosOverviewComponent,
@@ -69,7 +66,8 @@ import { TestRoutingModule } from './test-routing.module';
     NgxEchartsDirective,
     AvatarGroupModule,
     AvatarModule,
+    MessagesModule,
   ],
   providers: [ConfirmationService],
 })
-export class TestModule {}
+export class TestModule { }

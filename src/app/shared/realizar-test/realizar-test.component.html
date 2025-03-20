@@ -1,4 +1,5 @@
 <p-dialog
+  *ngIf="mode == 'default'"
   header="Visualizador de fallos"
   [modal]="true"
   [(visible)]="displayPopupFallosTest"
@@ -20,6 +21,7 @@
       <div class="grid">
         <div class="col-12 md:col-4">
           <p-dropdown
+            appendTo="body"
             class="w-full"
             [style]="{ width: '100%' }"
             [options]="preguntas"
@@ -34,6 +36,7 @@
         <div class="col-12 md:col-4">
           <p-multiSelect
             class="w-full"
+            appendTo="body"
             [style]="{ width: '100%', height: '100%' }"
             [options]="getAllDifficultades"
             formControlName="dificultad"
@@ -70,6 +73,7 @@
 
       <div
         class="flex align-items-center justify-content-end w-full gap-2 flex-wrap mt-3"
+        *ngIf="mode == 'default'"
       >
         <p-floatLabel *ngIf="formGroup.value.generarTestDeExamen">
           <input
@@ -118,6 +122,7 @@
           <span class="w-full">Generar test</span>
         </button>
       </div>
+      @if (mode == 'default') {
       <div
         class="grid"
         *ngIf="getAllTestsComenzados$ | async as testsComenzados"
@@ -184,6 +189,7 @@
           </p-card>
         </div>
       </div>
+      }
     </p-card>
   </div>
 </div>

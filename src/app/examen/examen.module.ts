@@ -1,0 +1,60 @@
+import { CommonModule } from '@angular/common';
+import { LOCALE_ID, NgModule } from '@angular/core';
+
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ConfirmationService } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
+import { CalendarModule } from 'primeng/calendar';
+import { CardModule } from 'primeng/card';
+import { CheckboxModule } from 'primeng/checkbox';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DataViewModule } from 'primeng/dataview';
+import { DropdownModule } from 'primeng/dropdown';
+import { FloatLabelModule } from 'primeng/floatlabel';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputTextareaModule } from 'primeng/inputtextarea';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { PaginatorModule } from 'primeng/paginator';
+import { StepsModule } from 'primeng/steps';
+import { TableModule } from 'primeng/table';
+import { TreeModule } from 'primeng/tree';
+import { SharedModule } from '../shared/shared.module';
+import { ExamenesDashboardAdminDetailviewComponent } from './components/examenes-dashboard-admin-detailview/examenes-dashboard-admin-detailview.component';
+import { ExamenesDashboardAdminComponent } from './components/examenes-dashboard-admin/examenes-dashboard-admin.component';
+import { ExamenRoutingModule } from './examen-routing.module';
+@NgModule({
+  declarations: [
+    ExamenesDashboardAdminComponent,
+    ExamenesDashboardAdminDetailviewComponent
+  ],
+  imports: [
+    CommonModule,
+    ExamenRoutingModule,
+    ButtonModule,
+    InputTextModule,
+    ReactiveFormsModule,
+    DropdownModule,
+    CalendarModule,
+    InputTextareaModule,
+    InputNumberModule,
+    FormsModule,
+    ConfirmDialogModule,
+    DataViewModule,
+    IconFieldModule,
+    InputIconModule,
+    PaginatorModule,
+    FloatLabelModule,
+    CardModule,
+    SharedModule,
+    TreeModule,
+    TableModule,
+    MultiSelectModule,
+    StepsModule,
+    CheckboxModule
+  ],
+  providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
+})
+export class ExamenModule { }

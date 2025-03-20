@@ -1,3 +1,4 @@
+import { EstadoExamen, TipoAcceso } from '../examen/models/examen.model';
 import {
   EstadoFlashcard,
   FlashcardTest,
@@ -16,6 +17,27 @@ export const colorSinResponder = '#c5c5c5';
 export const colorFlashcardsCorrectas = '#00eb003d';
 export const colorFlashcardsIncorretas = '#ff9c9c';
 export const colorFlashcardsRevisar = '#FFD54F';
+
+export const duracionOptions = [
+  { label: '1 hora', value: 60 },
+  { label: '2 horas', value: 120 },
+  { label: '3 horas', value: 180 },
+  { label: '4 horas', value: 240 },
+  { label: '5 horas', value: 300 },
+  { label: '6 horas', value: 360 },
+];
+
+export const estadoExamenOptions = [
+  { label: 'Borrador', value: EstadoExamen.BORRADOR },
+  { label: 'Publicado', value: EstadoExamen.PUBLICADO },
+  { label: 'Archivado', value: EstadoExamen.ARCHIVADO },
+];
+
+export const tipoAccesoOptions = [
+  { label: 'Público', value: TipoAcceso.PUBLICO },
+  { label: 'Restringido', value: TipoAcceso.RESTRINGIDO },
+  { label: 'Simulacro', value: TipoAcceso.SIMULACRO },
+];
 
 export const universalEditorConfig = {
   height: '300px',
@@ -115,11 +137,11 @@ export const obtenerTemas = (
     return listaUnicaTemas.length > 3
       ? 'Temas variados'
       : listaUnicaTemas
-          .map(
-            (tema: any) =>
-              `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
-          )
-          .join(', ');
+        .map(
+          (tema: any) =>
+            `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
+        )
+        .join(', ');
   } else {
     const preguntasTest = (testItem.flashcards ?? []) as Array<any>;
     const temas = preguntasTest.reduce((prev, next) => {
@@ -136,11 +158,11 @@ export const obtenerTemas = (
     return listaUnicaTemas.length > 3
       ? 'Temas variados'
       : listaUnicaTemas
-          .map(
-            (tema: any) =>
-              `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
-          )
-          .join(', ');
+        .map(
+          (tema: any) =>
+            `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
+        )
+        .join(', ');
   }
 };
 

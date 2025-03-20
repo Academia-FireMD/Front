@@ -159,6 +159,17 @@ export class LayoutComponent {
           ],
         },
         {
+          label: 'Exámenes',
+          collapsed: false,
+          items: [
+            {
+              label: 'Gestión de exámenes',
+              icon: 'pi pi-file-edit',
+              routerLink: '/app/examen',
+            },
+          ],
+        },
+        {
           label: 'Perfil',
           items: [
             {
@@ -234,6 +245,16 @@ export class LayoutComponent {
           routerLink: '/app/planificacion/planificacion-mensual-alumno',
           items: [],
         },
+        // {
+        //   label: 'Exámenes',
+        //   items: [
+        //     {
+        //       label: 'Exámenes disponibles',
+        //       icon: 'pi pi-file',
+        //       routerLink: '/app/examen/alumno',
+        //     },
+        //   ],
+        // },
         {
           label: 'Desconectarse',
           icon: 'pi pi-sign-out',

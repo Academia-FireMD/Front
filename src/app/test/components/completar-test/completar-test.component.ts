@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import {
   Component,
   effect,
@@ -49,6 +50,7 @@ export class CompletarTestComponent {
   reporteFallo = inject(ReportesFalloService);
   viewportService = inject(ViewportService);
   @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
+  public location = inject(Location);
 
   public indicePregunta = signal(0);
   public indicePreguntaChanged = effect(() => {
@@ -81,6 +83,7 @@ export class CompletarTestComponent {
 
   public lastLoadedTest!: Test & { endsAt: Date };
   private lastAnsweredQuestion!: { preguntaId: number };
+  public vistaPrevia = false;
 
   public obtainSecurityEmojiBasedOnEnum = obtainSecurityEmojiBasedOnEnum;
 
@@ -146,6 +149,14 @@ export class CompletarTestComponent {
 
   constructor() {
     firstValueFrom(this.getTest());
+    this.loadRouteData();
+  }
+
+  private async loadRouteData() {
+    const data = await firstValueFrom(this.activedRoute.data)
+    if (data['vistaPrevia']) {
+      this.vistaPrevia = true;
+    }
   }
 
   public displayNavegadorFn() {
@@ -156,6 +167,8 @@ export class CompletarTestComponent {
   }
 
   public clickedAnswer(indice: number) {
+    if (this.vistaPrevia) return;
+
     const respuesta = this.preguntaRespondida();
     if (!!respuesta && !this.isModoExamen()) {
       return;
@@ -188,6 +201,8 @@ export class CompletarTestComponent {
   }
 
   public updateSecurity(value: SeguridadAlResponder) {
+    if (this.vistaPrevia) return;
+
     const respuesta = this.preguntaRespondida();
     if (!!respuesta && !this.isModoExamen()) {
       return;
@@ -202,6 +217,12 @@ export class CompletarTestComponent {
     respuestaDada?: number,
     mode: 'none' | 'next' | 'before' | 'omitir' = 'none'
   ) {
+    if (this.vistaPrevia) {
+      if (mode === 'next' || mode === 'omitir') this.siguiente();
+      if (mode === 'before') this.atras();
+      return;
+    }
+
     this.answeredQuestion = -1;
     this.indicePreguntaCorrecta = -1;
     this.comunicating = true;

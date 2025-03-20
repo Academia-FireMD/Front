@@ -3,7 +3,7 @@ import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep, uniqueId } from 'lodash';
 import { SubBloque } from '../../shared/models/planificacion.model';
-import { universalEditorConfig } from '../../utils/utils';
+import { duracionOptions, universalEditorConfig } from '../../utils/utils';
 @Component({
   selector: 'app-editar-sub-bloque-dialog',
   templateUrl: './editar-sub-bloque-dialog.component.html',
@@ -44,14 +44,7 @@ export class EditarSubBloqueDialogComponent {
     tiempoAviso: [null]
   });
 
-  duracionOptions = [
-    { label: '1 hora', value: 60 },
-    { label: '2 horas', value: 120 },
-    { label: '3 horas', value: 180 },
-    { label: '4 horas', value: 240 },
-    { label: '5 horas', value: 300 },
-    { label: '6 horas', value: 360 },
-  ];
+  duracionOptions = duracionOptions;
 
   posiblesTipos = [
     {

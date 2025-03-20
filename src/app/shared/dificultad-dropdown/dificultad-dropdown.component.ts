@@ -11,6 +11,7 @@ export class DificultadDropdownComponent {
   @Input() rol: Rol = Rol.ADMIN;
   @Input() formControlDificultad!: any;
   @Input() isDoingTest = false;
+  @Input() customOptions: { label: string; value: string }[] = [];
   public rolEnum = Rol;
   public getAllDifficultades = getAllDifficultades;
 }

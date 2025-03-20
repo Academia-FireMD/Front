@@ -27,6 +27,7 @@ import {
   of,
   tap,
 } from 'rxjs';
+import { ExamenesService } from '../../../examen/servicios/examen.service';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
@@ -62,11 +63,12 @@ export class PreguntasDashboardAdminDetailviewComponent {
   toast = inject(ToastrService);
   router = inject(Router);
   viewportService = inject(ViewportService);
+  examenesService = inject(ExamenesService);
   public expectedRole: Rol = Rol.ADMIN;
   crearOtroControl = new FormControl(false);
   editorSolucion!: any;
   editorEnunciado!: any;
-  @Input() mode: 'edit' | 'injected' = 'edit';
+  @Input() mode: 'edit' | 'injected' | 'examen' = 'edit';
   //La pregunta que ha seleccionado desde el test que estaba realizando
   @Input() set injectedPregunta(data: Pregunta) {
     const cloned = cloneDeep(data) as Pregunta;
@@ -175,12 +177,22 @@ export class PreguntasDashboardAdminDetailviewComponent {
   });
   getLetter = getLetter;
 
+  private examenId: string | null = null;
+
   ngOnInit(): void {
     if (this.mode == 'edit') {
       this.loadPregunta();
       firstValueFrom(this.getRole());
+
+      // Obtener el examenId del queryParam si existe
+      this.examenId = this.activedRoute.snapshot.queryParamMap.get('examenId');
+      this.mode = 'examen';
+      this.formGroup.get('dificultad')?.patchValue('EXAMEN');
+      this.formGroup.get('dificultad')?.disable();
     }
   }
+
+
 
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as number | 'new';
@@ -276,6 +288,21 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public async crearPregunta() {
     const res = await this.updatePregunta();
     this.toast.success('Pregunta creada con éxito!', 'Creación exitosa');
+
+    // Si hay un examenId en los queryParams, vincular la pregunta al examen
+    if (this.examenId) {
+      await firstValueFrom(
+        this.examenesService.addPreguntasToExamen$(
+          parseInt(this.examenId),
+          [res.id]
+        )
+      );
+
+      // Redirigir de vuelta al examen
+      await this.router.navigate(['/app/examen', this.examenId]);
+      return;
+    }
+
     if (!this.crearOtroControl.value && this.mode == 'edit') {
       await this.navigatetoPregunta(res.id + '');
       this.loadPregunta();

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { AvatarUploadComponent } from './avatar-upload/avatar-upload.component';
 import { ComunidadPickerComponent } from './comunidad-picker/comunidad-picker.component';
@@ -8,7 +9,9 @@ import { DificultadDropdownComponent } from './dificultad-dropdown/dificultad-dr
 import { PasswordInputComponent } from './password-input/password-input.component';
 import { PieChartComponent } from './pie-chart/pie-chart.component';
 import { CountdownPipe } from './pipes/countdown.pipe';
+import { PopupFallosTestComponent } from './popup-fallos-test/popup-fallos-test.component';
 import { PrimengModule } from './primeng.module';
+import { RealizarTestComponent } from './realizar-test/realizar-test.component';
 import { SharedGridComponent } from './shared-grid/shared-grid.component';
 import { TemaSelectComponent } from './tema-select/tema-select.component';
 import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.component';
@@ -22,7 +25,8 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     DificultadDropdownComponent,
     PasswordInputComponent,
     AvatarUploadComponent,
-    TemaSelectComponent,
+    TemaSelectComponent, RealizarTestComponent,
+    PopupFallosTestComponent
   ],
   imports: [
     CommonModule,
@@ -30,6 +34,7 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     FormsModule,
     ReactiveFormsModule,
     PrimengModule,
+    RouterModule
   ],
   exports: [
     SharedGridComponent,
@@ -42,8 +47,9 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     ReactiveFormsModule,
     DificultadDropdownComponent,
     PasswordInputComponent,
-    AvatarUploadComponent,
+    AvatarUploadComponent, RealizarTestComponent,
     TemaSelectComponent,
+    PopupFallosTestComponent
   ],
 })
-export class SharedModule {}
+export class SharedModule { }

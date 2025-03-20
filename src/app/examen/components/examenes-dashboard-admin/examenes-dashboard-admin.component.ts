@@ -1,0 +1,150 @@
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  ViewChild,
+} from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { ConfirmationService } from 'primeng/api';
+import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { PaginationFilter } from '../../../shared/models/pagination.model';
+import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import { EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
+import { ExamenesService } from '../../servicios/examen.service';
+
+
+@Component({
+  selector: 'app-examenes-dashboard-admin',
+  templateUrl: './examenes-dashboard-admin.component.html',
+  styleUrl: './examenes-dashboard-admin.component.scss',
+})
+export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen> {
+  examenesService = inject(ExamenesService);
+  confirmationService = inject(ConfirmationService);
+  activatedRoute = inject(ActivatedRoute);
+  @ViewChild('fileInput') fileInput!: ElementRef;
+  public uploadingFile = false;
+
+  public expectedRole: 'ADMIN' | 'ALUMNO' = 'ADMIN';
+  commMap = (pagination: PaginationFilter) => {
+    return {
+      ADMIN: this.examenesService
+        .getExamenes$(pagination)
+        .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
+      ALUMNO: this.examenesService
+        .getExamenesDisponibles$(pagination)
+        .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
+    };
+  };
+
+  constructor() {
+    super();
+    this.fetchItems$ = computed(() => {
+      return this.getExamenes({ ...this.pagination() });
+    });
+  }
+
+
+
+  private getExamenes(pagination: PaginationFilter) {
+    return combineLatest([
+      this.activatedRoute.data,
+      this.activatedRoute.queryParams,
+    ]).pipe(
+      filter((e) => !!e),
+      switchMap((e) => {
+        const [data, queryParams] = e;
+        const { expectedRole, type } = data;
+        this.expectedRole = expectedRole;
+        return this.commMap(pagination)[this.expectedRole];
+      })
+    );
+  }
+
+  public navigateToDetailview = (id: number | 'new') => {
+    if (this.expectedRole == 'ADMIN') {
+      this.router.navigate(['/app/examen/' + id]);
+    } else {
+      this.router.navigate(['/app/examen/alumno/' + id]);
+    }
+  };
+
+  public getEstadoLabel(estado: EstadoExamen): string {
+    const estadoMap = {
+      [EstadoExamen.BORRADOR]: 'Borrador',
+      [EstadoExamen.PUBLICADO]: 'Publicado',
+      [EstadoExamen.ARCHIVADO]: 'Archivado',
+    };
+    return estadoMap[estado] || estado;
+  }
+
+  public getTipoAccesoLabel(tipoAcceso: TipoAcceso): string {
+    const tipoAccesoMap = {
+      [TipoAcceso.PUBLICO]: 'Público',
+      [TipoAcceso.RESTRINGIDO]: 'Restringido',
+      [TipoAcceso.SIMULACRO]: 'Simulacro',
+    };
+    return tipoAccesoMap[tipoAcceso] || tipoAcceso;
+  }
+
+  public eliminarExamen(id: number, event: Event) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: `Vas a eliminar el examen con el ID ${id}, ¿estás seguro?`,
+      header: 'Confirmación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        await firstValueFrom(this.examenesService.deleteExamen$(id));
+        this.toast.info('Examen eliminado exitosamente');
+        this.refresh();
+      },
+      reject: () => { },
+    });
+  }
+
+  public publicarExamen(id: number, event: Event) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: `Vas a publicar el examen con el ID ${id}, ¿estás seguro?`,
+      header: 'Confirmación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        await firstValueFrom(this.examenesService.publicarExamen$(id));
+        this.toast.info('Examen publicado exitosamente');
+        this.refresh();
+      },
+      reject: () => { },
+    });
+  }
+
+  public archivarExamen(id: number, event: Event) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: `Vas a archivar el examen con el ID ${id}, ¿estás seguro?`,
+      header: 'Confirmación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        await firstValueFrom(this.examenesService.archivarExamen$(id));
+        this.toast.info('Examen archivado exitosamente');
+        this.refresh();
+      },
+      reject: () => { },
+    });
+  }
+}

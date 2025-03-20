@@ -102,6 +102,10 @@ app-preguntas-dashboard-admin-detailview {
   }
 }
 
+span.p-float-label {
+  margin-top: 0.75rem;
+}
+
 .pointer {
   cursor: pointer;
 }
@@ -190,6 +194,8 @@ app-completar-test,
 app-preguntas-dashboard-admin-detailview,
 app-bloques-edit,
 app-user-dashboard,
+app-examenes-dashboard-admin,
+app-examenes-dashboard-admin-detailview,
 app-full-stats {
   overflow-y: auto;
   overflow-x: hidden;

@@ -1,0 +1,27 @@
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+}
+
+.bg-primary {
+  background-color: var(--primary-color);
+}
+
+.bg-secondary {
+  background-color: var(--text-color-secondary);
+}
+
+.bg-warning {
+  background-color: var(--yellow-500);
+}
+
+.bg-info {
+  background-color: var(--blue-500);
+}
+
+.pointer {
+  cursor: pointer;
+}

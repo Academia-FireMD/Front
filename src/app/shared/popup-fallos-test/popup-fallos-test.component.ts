@@ -1,9 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { tap } from 'rxjs';
-import { TestService } from '../../../services/test.service';
-import { Respuesta } from '../../../shared/models/test.model';
-import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { getLetter, getStarsBasedOnDifficulty } from '../../../utils/utils';
+import { TestService } from '../../services/test.service';
+import { getLetter, getStarsBasedOnDifficulty } from '../../utils/utils';
+import { Respuesta } from '../models/test.model';
+import { SharedGridComponent } from '../shared-grid/shared-grid.component';
 
 @Component({
   selector: 'app-popup-fallos-test',

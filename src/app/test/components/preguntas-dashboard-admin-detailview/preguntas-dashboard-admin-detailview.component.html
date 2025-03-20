@@ -41,7 +41,7 @@
             </p-floatLabel>
             } }
           </div>
-          <div class="actions">
+          <div class="actions" *ngIf="mode != 'examen'">
             <p-button
               *ngIf="mode == 'edit'"
               [link]="true"
@@ -138,6 +138,9 @@
           <app-dificultad-dropdown
             [formControlDificultad]="formGroup.get('dificultad')"
             [rol]="expectedRole"
+            [customOptions]="
+              mode == 'examen' ? [{ label: 'Exámen', value: 'EXAMEN' }] : []
+            "
           ></app-dificultad-dropdown>
         </div>
         <div

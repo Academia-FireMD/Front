@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
+import { RealizarTestComponent } from '../shared/realizar-test/realizar-test.component';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
 import { CompletarTestComponent } from './components/completar-test/completar-test.component';
@@ -14,7 +15,6 @@ import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboa
 import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
 import { PreguntasFallosOverviewComponent } from './components/preguntas-fallos-overview/preguntas-fallos-overview.component';
 import { RealizarFlashCardTestComponent } from './components/realizar-flash-card-test/realizar-flash-card-test.component';
-import { RealizarTestComponent } from './components/realizar-test/realizar-test.component';
 import { TemaDetailviewComponent } from './components/tema-detailview/tema-detailview.component';
 import { TemaOverviewComponent } from './components/tema-overview/tema-overview.component';
 import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards/test-stats-flashcards.component';
@@ -23,6 +23,12 @@ import { TestStatsComponent } from './components/test-stats/test-stats.component
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 
 const routes: Routes = [
+  {
+    path: 'realizar-test/vista-previa/:id',
+    component: CompletarTestComponent,
+    canActivate: [roleGuard],
+    data: { title: 'Vista previa del test', vistaPrevia: true },
+  },
   {
     path: 'user',
     component: UserDashboardComponent,
@@ -257,4 +263,4 @@ const routes: Routes = [
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule],
 })
-export class TestRoutingModule {}
+export class TestRoutingModule { }
