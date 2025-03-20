@@ -236,13 +236,14 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   private async updateExamen() {
     const formValues = this.formGroup.getRawValue();
-
-    await firstValueFrom(
-      this.examenesService.updatePreguntasOrder$(
-        this.getId() as number,
-        this.lastLoadedPreguntas().map(p => p.id)
-      )
-    );
+    if (this.lastLoadedTestPreguntas().length > 0) {
+      await firstValueFrom(
+        this.examenesService.updatePreguntasOrder$(
+          this.getId() as number,
+          this.lastLoadedPreguntas().map(p => p.id)
+        )
+      );
+    }
 
     const examenData = {
       ...formValues,

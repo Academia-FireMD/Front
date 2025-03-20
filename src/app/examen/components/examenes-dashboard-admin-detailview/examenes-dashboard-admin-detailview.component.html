@@ -286,17 +286,7 @@
     </p-card>
   </div>
 
-  <div class="col-12 justify-content-end align-items-center w-full flex">
-    <p-checkbox
-      *ngIf="getId() == 'new'"
-      inputId="crearOtro"
-      [formControl]="crearOtroControl"
-      [binary]="true"
-    ></p-checkbox>
-    <label *ngIf="getId() == 'new'" for="crearOtro" class="ml-2"
-      >Crear otro</label
-    >
-  </div>
+
   <div class="col-12 footer flex justify-content-end w-full">
     <p-button
       label="Volver atrás"
