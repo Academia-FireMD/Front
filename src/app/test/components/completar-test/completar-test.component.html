@@ -5,14 +5,8 @@
       #activeBlock
       [ngClass]="{
         'active-block': indicePregunta() == i,
-        'correct-block':
-          !isModoExamen() &&
-          preguntaRespondida(i)?.estado == 'RESPONDIDA' &&
-          !!preguntaRespondida(i)?.esCorrecta,
-        'incorrect-block':
-          !isModoExamen() &&
-          preguntaRespondida(i)?.estado == 'RESPONDIDA' &&
-          !preguntaRespondida(i)?.esCorrecta,
+        'correct-block': respuestaCorrectaBlock(i),
+        'incorrect-block': respuestaIncorrectaBlock(i),
         respondida:
           !!isModoExamen() &&
           !!preguntaRespondida(i) &&
@@ -64,6 +58,7 @@
     <app-preguntas-dashboard-admin-detailview
       [injectedPregunta]="lastLoadedTest.preguntas[indicePregunta()]"
       [mode]="'injected'"
+      [expectedRole]="expectedRole"
       (preguntaCreada)="displayClonacion = false"
     ></app-preguntas-dashboard-admin-detailview>
   </div>
@@ -182,6 +177,21 @@
 
 <div class="grid">
   <ng-container *ngIf="lastLoadedTest as testCargado; else testNoCargado">
+    <!-- Añadir mensaje informativo para modo ver respuestas -->
+    <p-messages
+      *ngIf="modoVerRespuestas"
+      class="col-12"
+      [closable]="false"
+      [value]="[
+        {
+          severity: 'info',
+          summary: 'Visualización de respuestas',
+          detail:
+            'Estás viendo tus respuestas. Las respuestas correctas están marcadas en verde y las incorrectas en rojo.'
+        }
+      ]"
+    ></p-messages>
+
     <!-- Banner informativo para modo vista previa -->
     <p-messages
       *ngIf="vistaPrevia"
@@ -196,7 +206,6 @@
         }
       ]"
     ></p-messages>
-
     @if(testCargado.preguntas[indicePregunta()]){
 
     <p-card
@@ -223,9 +232,12 @@
                 <span>{{
                   pregunta.tema.numero + " - " + pregunta.tema.descripcion
                 }}</span>
-                <span *ngIf="!!testCargado.duration && !vistaPrevia">{{
-                  testCargado.endsAt | countdown
-                }}</span>
+                <span
+                  *ngIf="
+                    !!testCargado.duration && !vistaPrevia && !modoVerRespuestas
+                  "
+                  >{{ testCargado.endsAt | countdown }}</span
+                >
                 <div class="actions">
                   <p-button
                     label="{{
@@ -245,7 +257,7 @@
                     [link]="true"
                     icon="pi pi-exclamation-triangle"
                     (click)="displayFalloDialog = true"
-                    *ngIf="!vistaPrevia"
+                    *ngIf="!vistaPrevia && !modoVerRespuestas"
                   />
                   <p-button
                     label="{{
@@ -254,7 +266,7 @@
                     [link]="true"
                     icon="pi pi-clone"
                     (click)="displayClonacion = true"
-                    *ngIf="!vistaPrevia"
+                    *ngIf="!vistaPrevia && !modoVerRespuestas"
                   />
                 </div>
               </div>
@@ -277,8 +289,8 @@
                 </p>
                 <div
                   class="col-12 respuestas-list pointer"
-                  [class.pointer]="!vistaPrevia"
-                  [class.disabled]="vistaPrevia"
+                  [class.pointer]="!vistaPrevia && !modoVerRespuestas"
+                  [class.disabled]="vistaPrevia || modoVerRespuestas"
                   pRipple
                   *ngFor="
                     let respuesta of pregunta.respuestas;
@@ -288,7 +300,7 @@
                     'respuesta-correcta': respuestaCorrecta(
                       pregunta,
                       indiceRespuesta
-                    ) || (vistaPrevia && pregunta.respuestaCorrectaIndex === indiceRespuesta),
+                    ),
                     'respuesta-incorrecta': respuestaIncorrecta(
                       pregunta,
                       indiceRespuesta
@@ -298,7 +310,11 @@
                       (preguntaRespondida()?.respuestaDada == indiceRespuesta &&
                         isModoExamen())
                   }"
-                  (click)="!vistaPrevia && clickedAnswer(indiceRespuesta)"
+                  (click)="
+                    !vistaPrevia &&
+                      !modoVerRespuestas &&
+                      clickedAnswer(indiceRespuesta)
+                  "
                 >
                   <p-inputGroup>
                     <p-inputGroupAddon
@@ -321,7 +337,9 @@
 
             <div
               class="grid w-full footer flex justify-content-between align-items-center mt-2"
-              *ngIf="answeredCurrentQuestion() && !vistaPrevia"
+              *ngIf="
+                answeredCurrentQuestion() && !vistaPrevia && !modoVerRespuestas
+              "
             >
               <div
                 class="solution col-12 align-items-center flex flex-column"
@@ -359,7 +377,8 @@
             *ngIf="
               (!answeredCurrentQuestion() ||
                 (answeredCurrentQuestion() && isModoExamen())) &&
-              !vistaPrevia
+              !vistaPrevia &&
+              !modoVerRespuestas
             "
           >
             <p-panel>
@@ -386,6 +405,10 @@
                         [link]="true"
                         icon="pi pi-forward"
                         (click)="processAnswer(undefined, 'omitir')"
+                        [disabled]="
+                          (!isModoExamen() && !!preguntaRespondida()) ||
+                          comunicating
+                        "
                       />
                       <p-button
                         label="{{
@@ -425,16 +448,20 @@
           </div>
 
           <!-- Barra de navegación simplificada para vista previa -->
-          <div class="col-12 bottom-bar-no-content" *ngIf="vistaPrevia">
+          <div
+            class="col-12 bottom-bar-no-content"
+            *ngIf="vistaPrevia || modoVerRespuestas"
+          >
             <p-panel>
               <ng-template pTemplate="header">
                 <div
                   class="flex justify-content-between align-items-center w-full"
                 >
-                  <span>Navegación (Vista previa)</span>
                   <div class="actions">
                     <p-button
-                      label="{{ viewportService.screenWidth == 'xs' ? '' : 'Volver' }}"
+                      label="{{
+                        viewportService.screenWidth == 'xs' ? '' : 'Volver'
+                      }}"
                       [link]="true"
                       icon="pi pi-arrow-left"
                       (click)="location.back()"

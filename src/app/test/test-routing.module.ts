@@ -27,8 +27,9 @@ const routes: Routes = [
     path: 'realizar-test/vista-previa/:id',
     component: CompletarTestComponent,
     canActivate: [roleGuard],
-    data: { title: 'Vista previa del test', vistaPrevia: true },
+    data: { title: 'Vista previa del test', vistaPrevia: true, expectedRole: 'ADMIN' },
   },
+
   {
     path: 'user',
     component: UserDashboardComponent,
@@ -137,6 +138,12 @@ const routes: Routes = [
   {
     path: 'alumno',
     children: [
+      {
+        path: 'realizar-test/modo-ver-respuestas/:id',
+        component: CompletarTestComponent,
+        canActivate: [roleGuard],
+        data: { title: 'Modo ver respuestas', modoVerRespuestas: true, expectedRole: 'ALUMNO' },
+      },
       {
         path: 'realizar-test',
         component: RealizarTestComponent,

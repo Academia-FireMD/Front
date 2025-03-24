@@ -21,6 +21,38 @@ p-multiselect {
   }
 }
 
+.p-dialog-content {
+  padding: 1rem;
+}
+
+.bg-primary {
+  background-color: var(--primary-color);
+}
+
+.bg-secondary {
+  background-color: var(--text-color-secondary);
+}
+
+.bg-warning {
+  background-color: var(--yellow-500);
+}
+
+.bg-info {
+  background-color: var(--blue-500);
+}
+
+.bg-success {
+  background-color: var(--green-500);
+}
+
+.bg-danger {
+  background-color: var(--red-500);
+}
+
+.bg-dark {
+  background-color: var(--text-color-secondary);
+}
+
 .dark-button {
   background-color: $primaryDarkColor;
   border-color: $primaryDarkColor;

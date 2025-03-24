@@ -26,7 +26,8 @@ export class CountdownPipe implements PipeTransform, OnDestroy {
     }, 1000);
   }
 
-  transform(value: Date): string {
+  transform(value: Date | undefined): string {
+    if (!value) return '00:00:00';
     const now = new Date().getTime();
     const endTime = new Date(value).getTime();
     const distance = endTime - now;
@@ -38,7 +39,7 @@ export class CountdownPipe implements PipeTransform, OnDestroy {
       ) {
         this.router.navigate([
           'app/test/alumno/stats-test/' +
-            (this.activatedRoute.snapshot?.params as any)?.id,
+          (this.activatedRoute.snapshot?.params as any)?.id,
         ]);
         this.toast.info('El tiempo ha terminado!');
       }

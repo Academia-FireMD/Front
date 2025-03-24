@@ -90,7 +90,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
     PanelMenuModule,
     MarkdownModule.forRoot(),
     BrowserAnimationsModule, // required animations module
-    ToastrModule.forRoot({ positionClass: 'toast-top-left' }), // ToastrModule added
+    ToastrModule.forRoot({ positionClass: 'toast-top-center' }), // ToastrModule added
     NgxEchartsModule.forRoot({ echarts }),
     NgxSpinnerModule.forRoot(),
     CalendarModule.forRoot({

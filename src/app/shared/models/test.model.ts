@@ -1,3 +1,4 @@
+import { Examen } from '../../examen/models/examen.model';
 import { Pregunta, SeguridadAlResponder } from './pregunta.model';
 import { Usuario } from './user.model';
 
@@ -26,6 +27,9 @@ export interface Test {
   endsAt?: Date;
   createdAt: Date;
   esDeRepaso?: boolean;
+  examenId?: number;
+  ExamenRealizado?: Examen;
+  ExamenOriginal?: Examen;
 }
 
 export interface Respuesta {

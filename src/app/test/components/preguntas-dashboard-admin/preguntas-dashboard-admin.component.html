@@ -67,16 +67,6 @@
                     <span class="hidden md:block">Identificador: </span>
                     <strong class="identifier">{{ item.identificador }}</strong>
                   </div>
-                  <div class="flex gap-1 align-items-center">
-                    <ng-container *ngIf="expectedRole == 'ADMIN'">
-                      <i
-                        class="pi pi-{{ star }}"
-                        *ngFor="
-                          let star of getStarsBasedOnDifficulty(item.dificultad)
-                        "
-                      ></i>
-                    </ng-container>
-                  </div>
                   <div class="flex gap-1">
                     <span>Tema: </span>
                     <strong>{{ item.tema.numero }}</strong>

@@ -15,6 +15,11 @@ export class ExamenesService extends ApiBaseService {
     this.controllerPrefix = '/examenes';
   }
 
+  public anyadirPreguntasAcademia$(examenId: number): Observable<any> {
+    return this.post(`/${examenId}/anyadir-preguntas-academia`, {}) as Observable<any>;
+  }
+
+
 
   public updatePreguntaReservaStatus$(
     examenId: number,
@@ -82,13 +87,12 @@ export class ExamenesService extends ApiBaseService {
     return this.post('/disponibles', pagination) as Observable<PaginatedResult<Examen>>;
   }
 
+
+
   public startExamen$(examenId: number): Observable<any> {
     return this.post(`/iniciar/${examenId}`, {}) as Observable<any>;
   }
 
-  public getResultadosExamenes$(): Observable<any> {
-    return this.get('/resultados') as Observable<any>;
-  }
 
   public updatePreguntasOrder$(examenId: number, preguntaIds: number[]) {
     return this.put(`/${examenId}/preguntas/order`, {

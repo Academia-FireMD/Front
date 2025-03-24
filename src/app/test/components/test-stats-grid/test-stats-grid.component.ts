@@ -80,6 +80,9 @@ export class TestStatsGridComponent extends SharedGridComponent<
   selectedRangeDates = new FormControl([], Validators.required);
   public temas = new FormControl<string[] | null>([], Validators.required);
   public generandoEstadistica = false;
+  showOptionsDialog = false;
+  selectedTestId: number | null = null;
+  selectedTest: Test | null = null;
 
   public calcular100 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
@@ -222,6 +225,30 @@ export class TestStatsGridComponent extends SharedGridComponent<
   public obtenerTemas = obtenerTemas;
 
   public viewStats = (id: number | 'new') => {
+    const item = (this.lastLoadedPagination?.data || []).find(test => test.id === id);
+    const isExamenTest = item && 'ExamenRealizado' in item && !!item.ExamenRealizado;
+
+    if (isExamenTest) {
+      this.selectedTestId = id as number;
+      this.selectedTest = item;
+      this.showOptionsDialog = true;
+    } else {
+      this.navigateToStats(id);
+    }
+  };
+
+  public canViewResponses(): boolean {
+    if (!this.selectedTest?.ExamenRealizado || !this.selectedTest.ExamenRealizado?.fechaSolucion) {
+      return true;
+    }
+
+    const fechaSolucion = new Date(this.selectedTest.ExamenRealizado?.fechaSolucion);
+    const now = new Date();
+
+    return now >= fechaSolucion;
+  }
+
+  public navigateToStats(id: number | null | 'new') {
     const map = {
       ADMIN: {
         TESTS: '/app/test/stats-test/',
@@ -238,7 +265,26 @@ export class TestStatsGridComponent extends SharedGridComponent<
         goBack: true,
       },
     });
-  };
+  }
+
+  public navigateToResponses(id: number | null) {
+    const map = {
+      ADMIN: {
+        TESTS: '/app/test/realizar-test/modo-ver-respuestas/',
+        FLASHCARDS: '/app/test/realizar-flash-cards-test/modo-ver-respuestas/',
+      },
+      ALUMNO: {
+        TESTS: '/app/test/alumno/realizar-test/modo-ver-respuestas/',
+        FLASHCARDS: '/app/test/alumno/realizar-flash-cards-test/modo-ver-respuestas/',
+      },
+    };
+    const path = (map as any)[this.expectedRole][this.type];
+    this.router.navigate([path + id], {
+      queryParams: {
+        goBack: true,
+      },
+    });
+  }
 
   public generarEstadisticas() {
     const from = ((this.selectedRangeDates.value as any)[0] ?? new Date()) as Date;

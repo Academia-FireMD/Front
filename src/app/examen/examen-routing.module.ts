@@ -6,6 +6,17 @@ import { ExamenesDashboardAdminComponent } from './components/examenes-dashboard
 
 const routes: Routes = [
   {
+    path: 'alumno',
+    children: [
+      {
+        path: '',
+        component: ExamenesDashboardAdminComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO', title: 'Exámenes disponibles' }
+      },
+    ]
+  },
+  {
     path: '',
     component: ExamenesDashboardAdminComponent,
     canActivate: [roleGuard],
@@ -16,23 +27,6 @@ const routes: Routes = [
     component: ExamenesDashboardAdminDetailviewComponent,
     canActivate: [roleGuard],
     data: { expectedRole: 'ADMIN', title: 'Detalle de examen' }
-  },
-  {
-    path: 'alumno',
-    children: [
-      {
-        path: '',
-        component: ExamenesDashboardAdminComponent,
-        canActivate: [roleGuard],
-        data: { expectedRole: 'ALUMNO', title: 'Exámenes disponibles' }
-      },
-      {
-        path: ':id',
-        component: ExamenesDashboardAdminDetailviewComponent,
-        canActivate: [roleGuard],
-        data: { expectedRole: 'ALUMNO', title: 'Detalle de examen' }
-      }
-    ]
   }
 ];
 

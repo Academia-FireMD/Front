@@ -13,14 +13,16 @@
           (input)="valueChanged($event)"
         />
       </p-iconField>
-      <div class="right-actions">
+      <div class="right-actions flex gap-2">
+        <app-tema-select [formControl]="formControlTemas"></app-tema-select>
+
         <p-button
           *ngIf="expectedRole == 'ADMIN'"
           label="{{
             viewportService.screenWidth == 'xs' ? undefined : 'Nuevo examen'
           }}"
           icon="pi pi-plus"
-          (click)="navigateToDetailview('new')"
+          (click)="navigateToDetailview($event, 'new')"
         ></p-button>
       </div>
     </div>
@@ -40,30 +42,68 @@
           <div class="grid grid-nogutter">
             <div
               class="col-12 item-container pointer"
-              (click)="navigateToDetailview(item.id)"
+              (click)="navigateToDetailview($event, item.id, item.test?.id)"
               *ngFor="let item of examenes; let first = first"
             >
               <div class="flex flex-row align-items-between">
                 <div class="flex flex-column py-2 col-9 left-side">
-                  <div class="text-lg font-medium flex gap-2 align-items-center">
+                  <div
+                    class="text-lg font-medium flex gap-2 align-items-center"
+                  >
                     <strong>{{ item.titulo }}</strong>
-                    <div class="flex align-items-center gap-2">
+                    <div
+                      class="flex align-items-center gap-2"
+                      *ngIf="expectedRole === 'ALUMNO'"
+                    >
                       <span
-                        class="badge"
-                        [ngClass]="{
-                          'bg-primary': item.estado === 'PUBLICADO',
-                          'bg-warning text-dark': item.estado === 'BORRADOR',
-                          'bg-danger': item.estado === 'ARCHIVADO'
-                        }"
+                        class="badge bg-primary text-white"
+                        *ngIf="item.tipoAcceso === 'SIMULACRO'"
                       >
-                        {{ getEstadoLabel(item.estado) }}
+                        <i class="pi pi-stopwatch"></i> Simulacro
                       </span>
-                      <span class="badge bg-info">
-                        {{ getTipoAccesoLabel(item.tipoAcceso) }}
+                      <span
+                        class="badge bg-success text-white"
+                        *ngIf="item.test?.duration"
+                      >
+                        <i class="pi pi-clock"></i> Duración:
+                        {{ item.test?.duration }} min
                       </span>
                     </div>
                   </div>
-                  <span class="font-small text-secondary text-sm descripcion">{{ item.descripcion }}</span>
+                  <div
+                    class="flex flex-column gap-1"
+                    *ngIf="expectedRole === 'ALUMNO'"
+                  >
+                    <span class="font-small text-secondary text-sm descripcion">
+                      {{ item.descripcion }}
+                    </span>
+                    <div class="flex flex-column text-sm gap-1">
+                      <span class="text-primary" *ngIf="item.fechaActivacion">
+                        <i class="pi pi-calendar"></i> Disponible desde:
+                        {{ item.fechaActivacion | date : "dd/MM/yyyy HH:mm" }}
+                      </span>
+                      <span class="text-info" *ngIf="item.fechaSolucion">
+                        <i class="pi pi-check-circle"></i> Soluciones
+                        disponibles:
+                        {{ item.fechaSolucion | date : "dd/MM/yyyy HH:mm" }}
+                      </span>
+                      <span
+                        class="text-warning"
+                        *ngIf="item.tipoAcceso === 'RESTRINGIDO'"
+                      >
+                        <i class="pi pi-lock"></i> Acceso restringido - Requiere
+                        código
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    class="flex flex-column gap-1"
+                    *ngIf="expectedRole !== 'ALUMNO'"
+                  >
+                    <span class="font-small text-secondary text-sm descripcion">
+                      {{ item.descripcion }}
+                    </span>
+                  </div>
                 </div>
                 <div
                   class="right-side col-3 flex align-items-center justify-content-end"
@@ -75,48 +115,60 @@
                       [comunidades]="item.relevancia"
                     ></app-comunidad-picker>
                     <span
-                      class="font-medium text-secondary text-sm hidden md:block"
+                      class="badge"
+                      *ngIf="expectedRole === 'ALUMNO' && item.test?.status"
+                      [ngClass]="{
+                        'bg-warning': item.test?.status === 'CREADO',
+                        'bg-info': item.test?.status === 'EMPEZADO',
+                        'bg-success': item.test?.status === 'FINALIZADO'
+                      }"
                     >
-                      {{ item.createdAt | date : "short" }}</span
+                      {{ item.test?.status }}
+                    </span>
+                    <div
+                      class="admin-controls"
+                      *ngIf="expectedRole !== 'ALUMNO'"
                     >
-                    <div class="flex gap-2">
                       <p-button
-                        *ngIf="
-                          expectedRole === 'ADMIN' && item.estado === 'BORRADOR'
-                        "
-                        [link]="true"
+                        *ngIf="item.estado === 'BORRADOR'"
                         icon="pi pi-check"
-                        tooltip="Publicar"
+                        severity="success"
                         (click)="
                           $event.stopPropagation();
                           $event.preventDefault();
                           publicarExamen(item.id, $event)
                         "
-                      ></p-button>
+                        [text]="true"
+                        pTooltip="Publicar"
+                      >
+                      </p-button>
+
                       <p-button
-                        *ngIf="
-                          expectedRole === 'ADMIN' && item.estado === 'PUBLICADO'
-                        "
-                        [link]="true"
+                        *ngIf="item.estado === 'PUBLICADO'"
                         icon="pi pi-inbox"
-                        tooltip="Archivar"
+                        severity="warning"
                         (click)="
                           $event.stopPropagation();
                           $event.preventDefault();
                           archivarExamen(item.id, $event)
                         "
-                      ></p-button>
+                        [text]="true"
+                        pTooltip="Archivar"
+                      >
+                      </p-button>
+
                       <p-button
-                        *ngIf="expectedRole === 'ADMIN'"
-                        [link]="true"
                         icon="pi pi-trash"
-                        tooltip="Eliminar"
+                        severity="danger"
                         (click)="
                           $event.stopPropagation();
                           $event.preventDefault();
                           eliminarExamen(item.id, $event)
                         "
-                      ></p-button>
+                        [text]="true"
+                        pTooltip="Eliminar"
+                      >
+                      </p-button>
                     </div>
                   </div>
                 </div>

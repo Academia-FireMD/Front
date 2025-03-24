@@ -17,7 +17,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Editor } from '@toast-ui/editor';
 import { debounce } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
-import { MenuItem } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import {
   combineLatest,
   filter,
@@ -69,6 +69,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public estadoExamenOptions = estadoExamenOptions;
 
   public tipoAccesoOptions = tipoAccesoOptions;
+  confirmationService = inject(ConfirmationService);
 
   formGroup = this.fb.group({
     titulo: ['', Validators.required],
@@ -80,13 +81,29 @@ export class ExamenesDashboardAdminDetailviewComponent {
     fechaActivacion: [null],
     fechaSolucion: [null],
     relevancia: this.fb.array([] as Array<Comunidad>),
-    consideracionesGenerales: [''],
   });
 
   public get relevancia() {
     return this.formGroup.get('relevancia') as FormArray;
   }
 
+  public anyadirPreguntasAcademia() {
+    this.confirmationService.confirm({
+      header: 'Añadir preguntas a la academia',
+      message: 'Todas las preguntas añadidas manualmente con la letra "E" en el identificador serán añadidas a la academia si no existen ya. ¿Estás seguro de querer continuar?',
+      acceptLabel: 'Sí, añadir',
+      rejectLabel: 'No, cancelar',
+      rejectButtonStyleClass: 'p-button-outlined',
+      accept: () => {
+        firstValueFrom(this.examenesService.anyadirPreguntasAcademia$(this.getId() as number).pipe(
+          tap((res) => {
+            this.toast.success(res.message);
+            this.loadExamen();
+          })
+        ));
+      }
+    });
+  }
 
   public addPreguntasDialogVisible = false;
   public selectedPreguntasToAdd: Array<Pregunta> = [];
@@ -185,7 +202,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       codigoAcceso: examen.codigoAcceso || '',
       fechaActivacion: (examen.fechaActivacion ? new Date(examen.fechaActivacion) : null) as any,
       fechaSolucion: (examen.fechaSolucion ? new Date(examen.fechaSolucion) : null) as any,
-      consideracionesGenerales: examen.consideracionesGenerales || '',
     });
 
     // Cargar relevancia
@@ -201,7 +217,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
     setTimeout(() => {
       this.initEditor(
         examen.descripcion || '',
-        examen.consideracionesGenerales || ''
       );
     }, 0);
 
@@ -216,7 +231,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
         tipoAcceso: TipoAcceso.PUBLICO,
         duracion: 60
       });
-      this.initEditor('', '');
+      this.initEditor('');
     } else {
       firstValueFrom(
         this.examenesService.getExamenById$(itemId).pipe(
@@ -277,14 +292,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
   }
 
-  private initEditor(initialDescripcion: string, initialConsideraciones: string) {
+  private initEditor(initialDescripcion: string,) {
     if (this.editorDescripcion) {
       this.editorDescripcion.destroy();
       this.editorDescripcion = null;
-    }
-    if (this.editorConsideraciones) {
-      this.editorConsideraciones.destroy();
-      this.editorConsideraciones = null;
     }
 
     this.editorDescripcion = new Editor({
@@ -296,19 +307,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
           this.formGroup
             .get('descripcion')
             ?.patchValue(this.editorDescripcion.getMarkdown());
-        },
-      },
-    });
-
-    this.editorConsideraciones = new Editor({
-      el: document.querySelector('#editor-consideraciones')!,
-      ...universalEditorConfig,
-      initialValue: initialConsideraciones || '',
-      events: {
-        change: () => {
-          this.formGroup
-            .get('consideracionesGenerales')
-            ?.patchValue(this.editorConsideraciones.getMarkdown());
         },
       },
     });
@@ -450,6 +448,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       });
 
       this.toast.success(`Se han añadido ${this.selectedPreguntasToAdd.length} preguntas al examen`, 'Preguntas añadidas');
+      this.loadExamen();
       this.cancelarSeleccionPreguntas();
     }
   }

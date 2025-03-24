@@ -64,7 +64,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   router = inject(Router);
   viewportService = inject(ViewportService);
   examenesService = inject(ExamenesService);
-  public expectedRole: Rol = Rol.ADMIN;
+  @Input() expectedRole: Rol = Rol.ADMIN;
   crearOtroControl = new FormControl(false);
   editorSolucion!: any;
   editorEnunciado!: any;
@@ -186,9 +186,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
       // Obtener el examenId del queryParam si existe
       this.examenId = this.activedRoute.snapshot.queryParamMap.get('examenId');
-      this.mode = 'examen';
-      this.formGroup.get('dificultad')?.patchValue('EXAMEN');
-      this.formGroup.get('dificultad')?.disable();
+      if (this.examenId) {
+        this.mode = 'examen';
+        this.formGroup.get('dificultad')?.patchValue('EXAMEN');
+        this.formGroup.get('dificultad')?.disable();
+      }
     }
   }
 

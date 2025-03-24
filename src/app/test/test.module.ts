@@ -7,6 +7,7 @@ import { MarkdownModule } from 'ngx-markdown';
 import { ConfirmationService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { AvatarGroupModule } from 'primeng/avatargroup';
+import { BadgeModule } from 'primeng/badge';
 import { MessagesModule } from 'primeng/messages';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
@@ -67,6 +68,7 @@ import { TestRoutingModule } from './test-routing.module';
     AvatarGroupModule,
     AvatarModule,
     MessagesModule,
+    BadgeModule,
   ],
   providers: [ConfirmationService],
 })

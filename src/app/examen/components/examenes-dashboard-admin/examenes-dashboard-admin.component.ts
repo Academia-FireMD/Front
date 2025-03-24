@@ -5,9 +5,10 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
+import { FormControl } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
-import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { combineLatest, debounceTime, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
@@ -25,8 +26,10 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
   activatedRoute = inject(ActivatedRoute);
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;
+  public formControlTemas = new FormControl();
 
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ADMIN';
+  public type: 'disponibles' | 'realizados' = 'disponibles';
   commMap = (pagination: PaginationFilter) => {
     return {
       ADMIN: this.examenesService
@@ -43,6 +46,27 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
     this.fetchItems$ = computed(() => {
       return this.getExamenes({ ...this.pagination() });
     });
+    this.formControlTemas.valueChanges.pipe(debounceTime(500)).subscribe((value) => {
+      if (!!value?.length) {
+        this.pagination.set({
+          ...this.pagination(), where: {
+            test: {
+              testPreguntas: {
+                some: {
+                  pregunta: {
+                    temaId: {
+                      in: value
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+      } else {
+        this.pagination.set({ ...this.pagination(), where: {} });
+      }
+    });
   }
 
 
@@ -57,16 +81,35 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
+        this.type = type;
         return this.commMap(pagination)[this.expectedRole];
       })
     );
   }
 
-  public navigateToDetailview = (id: number | 'new') => {
+  public navigateToDetailview = (event: Event, id: number | 'new', idTest?: number) => {
     if (this.expectedRole == 'ADMIN') {
       this.router.navigate(['/app/examen/' + id]);
     } else {
-      this.router.navigate(['/app/examen/alumno/' + id]);
+      const mensaje = `Estás a punto de comenzar un examen. El tiempo empezará a descontarse automáticamente y serás dirigido a él. ¿Deseas continuar?`
+      this.confirmationService.confirm({
+        target: event.target as EventTarget,
+        message: mensaje,
+        header: 'Confirmación',
+        icon: 'pi pi-exclamation-triangle',
+        acceptIcon: 'none',
+        acceptLabel: 'Sí',
+        rejectLabel: 'No',
+        rejectIcon: 'none',
+        rejectButtonStyleClass: 'p-button-text',
+        accept: async () => {
+          const test = await firstValueFrom(this.examenesService.startExamen$(id as number));
+          if (test) {
+            this.router.navigate(['/app/test/alumno/realizar-test/' + (test.id)]);
+          }
+        },
+        reject: () => { },
+      });
     }
   };
 

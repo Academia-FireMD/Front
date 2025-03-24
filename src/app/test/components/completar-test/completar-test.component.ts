@@ -14,6 +14,7 @@ import { ToastrService } from 'ngx-toastr';
 import {
   BehaviorSubject,
   catchError,
+  combineLatest,
   delay,
   filter,
   firstValueFrom,
@@ -30,6 +31,7 @@ import {
   SeguridadAlResponder,
 } from '../../../shared/models/pregunta.model';
 import { Respuesta, Test } from '../../../shared/models/test.model';
+import { Rol } from '../../../shared/models/user.model';
 import {
   getAllDifficultades,
   getLetter,
@@ -84,10 +86,12 @@ export class CompletarTestComponent {
   public lastLoadedTest!: Test & { endsAt: Date };
   private lastAnsweredQuestion!: { preguntaId: number };
   public vistaPrevia = false;
+  public modoVerRespuestas = false;
 
   public obtainSecurityEmojiBasedOnEnum = obtainSecurityEmojiBasedOnEnum;
 
   public comunicating = false;
+  public expectedRole: Rol = Rol.ALUMNO;
 
   public isModoExamen() {
     return !!this.lastLoadedTest.duration && !!this.lastLoadedTest.endsAt;
@@ -95,7 +99,7 @@ export class CompletarTestComponent {
 
   public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
     return (
-      !this.isModoExamen() &&
+      (!this.isModoExamen() || this.modoVerRespuestas) &&
       !!this.preguntaRespondida() &&
       this.preguntaRespondida()?.estado != 'OMITIDA' &&
       pregunta.respuestaCorrectaIndex == indiceRespuesta
@@ -103,13 +107,25 @@ export class CompletarTestComponent {
   }
 
   public respuestaIncorrecta(pregunta: Pregunta, indiceRespuesta: number) {
-    return (
-      !this.isModoExamen() &&
+    return ((
+      (!this.isModoExamen() || this.modoVerRespuestas) &&
       !!this.preguntaRespondida() &&
       this.preguntaRespondida()?.estado != 'OMITIDA' &&
       pregunta.respuestaCorrectaIndex != indiceRespuesta &&
       this.preguntaRespondida()?.respuestaDada == indiceRespuesta
-    );
+    ));
+  }
+
+  public respuestaIncorrectaBlock(indiceRespuesta: number) {
+    return (!this.isModoExamen() || this.modoVerRespuestas) &&
+      this.preguntaRespondida(indiceRespuesta)?.estado == 'RESPONDIDA' &&
+      !this.preguntaRespondida(indiceRespuesta)?.esCorrecta
+  }
+
+  public respuestaCorrectaBlock(indiceRespuesta: number) {
+    return (!this.isModoExamen() || this.modoVerRespuestas) &&
+      this.preguntaRespondida(indiceRespuesta)?.estado == 'RESPONDIDA' &&
+      !!this.preguntaRespondida(indiceRespuesta)?.esCorrecta
   }
 
   public preguntaRespondida(
@@ -133,13 +149,15 @@ export class CompletarTestComponent {
 
   private getTest() {
     return this.testService.getTestById(Number(this.getId())).pipe(
-      tap((entry: any) => {
+      tap(async (entry: any) => {
+        await this.loadRouteData();
         const parsedTest: Test & { respuestasCount: number } = entry;
+        const initialIndex = this.modoVerRespuestas || this.vistaPrevia ? 0 : parsedTest.respuestasCount;
         if (this.lastLoadedTest) {
           this.lastLoadedTest.respuestas = entry.respuestas;
         } else {
           this.lastLoadedTest = entry;
-          this.indicePregunta.set(parsedTest.respuestasCount);
+          this.indicePregunta.set(initialIndex);
         }
       }),
       delay(100),
@@ -156,6 +174,14 @@ export class CompletarTestComponent {
     const data = await firstValueFrom(this.activedRoute.data)
     if (data['vistaPrevia']) {
       this.vistaPrevia = true;
+    } else {
+      this.vistaPrevia = false;
+    }
+
+    if (data['modoVerRespuestas']) {
+      this.modoVerRespuestas = true;
+    } else {
+      this.modoVerRespuestas = false;
     }
   }
 
@@ -167,7 +193,7 @@ export class CompletarTestComponent {
   }
 
   public clickedAnswer(indice: number) {
-    if (this.vistaPrevia) return;
+    if (this.vistaPrevia || this.modoVerRespuestas) return;
 
     const respuesta = this.preguntaRespondida();
     if (!!respuesta && !this.isModoExamen()) {
@@ -198,10 +224,11 @@ export class CompletarTestComponent {
       .subscribe(async (data) => {
         this.processAnswer(data);
       });
+    firstValueFrom(this.getRole());
   }
 
   public updateSecurity(value: SeguridadAlResponder) {
-    if (this.vistaPrevia) return;
+    if (this.vistaPrevia || this.modoVerRespuestas) return;
 
     const respuesta = this.preguntaRespondida();
     if (!!respuesta && !this.isModoExamen()) {
@@ -217,7 +244,7 @@ export class CompletarTestComponent {
     respuestaDada?: number,
     mode: 'none' | 'next' | 'before' | 'omitir' = 'none'
   ) {
-    if (this.vistaPrevia) {
+    if (this.vistaPrevia || this.modoVerRespuestas) {
       if (mode === 'next' || mode === 'omitir') this.siguiente();
       if (mode === 'before') this.atras();
       return;
@@ -291,6 +318,20 @@ export class CompletarTestComponent {
     this.feedback.reset();
     this.dificultadPercibida.reset();
     this.displayFeedbackDialog = false;
+  }
+
+  private getRole() {
+    return combineLatest([
+      this.activedRoute.data,
+      this.activedRoute.queryParams,
+    ]).pipe(
+      filter((e) => !!e),
+      tap((e) => {
+        const [data, queryParams] = e;
+        const { expectedRole, type } = data;
+        this.expectedRole = expectedRole;
+      })
+    );
   }
 
   public async submitReporteFallo(reportDesc: string) {

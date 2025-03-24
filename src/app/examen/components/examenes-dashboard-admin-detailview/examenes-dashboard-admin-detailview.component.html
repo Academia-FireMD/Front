@@ -1,3 +1,4 @@
+<p-confirmDialog></p-confirmDialog>
 <div class="grid p-2" [formGroup]="formGroup">
   <div class="col-12 content">
     <p-card>
@@ -24,6 +25,9 @@
               label="{{
                 viewportService.screenWidth == 'xs' ? undefined : 'Vista previa'
               }}"
+              [disabled]="
+                (lastLoadedExamen().test?.testPreguntas ?? []).length === 0
+              "
               styleClass="p-button-outlined"
               [routerLink]="[
                 '/app/test/realizar-test/vista-previa',
@@ -38,6 +42,9 @@
                   ? undefined
                   : 'Descargar Word'
               }}"
+              [disabled]="
+                (lastLoadedExamen().test?.testPreguntas ?? []).length === 0
+              "
               (click)="descargarWord()"
             ></p-button>
             <app-comunidad-picker
@@ -105,6 +112,7 @@
           <div class="col-12 gap-3 flex">
             <p-floatLabel>
               <p-calendar
+                [showTime]="true"
                 class="block"
                 formControlName="fechaActivacion"
                 placeholder="Fecha de activación"
@@ -114,6 +122,7 @@
 
             <p-floatLabel>
               <p-calendar
+                [showTime]="true"
                 class="block"
                 formControlName="fechaSolucion"
                 placeholder="Fecha de solución"
@@ -132,16 +141,7 @@
           </div>
         </div>
 
-        <div class="col-12 py-3">
-          <div class="markdown-container">
-            <div class="editor">
-              <h3>Consideraciones generales</h3>
-              <div id="editor-consideraciones"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12 py-3">
+        <div class="col-12 py-3" *ngIf="getId() != 'new'">
           <h3>Añadir preguntas al examen</h3>
           <div class="grid">
             <div class="col-12 md:col-4 p-2">
@@ -177,30 +177,21 @@
           </div>
         </div>
 
-        <div class="col-12">
+        <div class="col-12" *ngIf="getId() != 'new'">
           <h3>Preguntas seleccionadas</h3>
+
           <div class="grid">
             <div class="col-12 mb-3">
               <div class="p-inputgroup">
-                <span class="p-inputgroup-addon">
-                  <i class="pi pi-search"></i>
-                </span>
                 <input
                   type="text"
                   pInputText
                   placeholder="Buscar por identificador"
                   (input)="buscarPorIdentificadorInput($event)"
                 />
-                <button
-                  *ngIf="filtroIdentificador"
-                  pButton
-                  type="button"
-                  icon="pi pi-times"
-                  class="p-button-danger"
-                  (click)="filtroIdentificador.set('')"
-                ></button>
               </div>
             </div>
+
             <div class="col-12">
               <p-table
                 [value]="testPreguntasFiltradas()"
@@ -280,12 +271,19 @@
                 </ng-template>
               </p-table>
             </div>
+            <div class="actions w-full">
+              <p-button
+                label="Añadir preguntas a la academia"
+                icon="pi pi-plus"
+                [link]="true"
+                (click)="anyadirPreguntasAcademia()"
+              ></p-button>
+            </div>
           </div>
         </div>
       </div>
     </p-card>
   </div>
-
 
   <div class="col-12 footer flex justify-content-end w-full">
     <p-button

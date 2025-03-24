@@ -25,7 +25,6 @@ export interface Examen {
   fechaActivacion?: Date;
   fechaSolucion?: Date;
   relevancia: Comunidad[];
-  consideracionesGenerales?: string;
   creadorId: number;
   testId?: number;
   test?: Test;

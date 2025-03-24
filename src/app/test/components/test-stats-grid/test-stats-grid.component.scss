@@ -16,4 +16,25 @@
       margin-top: -2px;
     }
   }
+
+  // Estilos para los botones del diálogo
+  .p-button-lg {
+    padding: 1rem;
+
+    .p-button-icon {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+
+    .p-button-label {
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+  }
+
+  // Estilo para el badge de examen
+  .p-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
 }
