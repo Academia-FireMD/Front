@@ -298,7 +298,6 @@
       [global]="false"
       [appendTo]="'body'"
     ></p-contextMenu>
-    {{ mode }}
     <mwl-calendar-week-view
       [viewDate]="viewDate"
       [dayStartHour]="6"
@@ -307,7 +306,7 @@
       [locale]="'es'"
       [events]="events"
       [refresh]="refresh"
-      [snapDraggedEvents]="false"
+      [snapDraggedEvents]="true"
       [headerTemplate]="headerTemplate"
       [weekStartsOn]="1"
       [eventTemplate]="templatePlan"

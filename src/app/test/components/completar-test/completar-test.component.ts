@@ -99,21 +99,21 @@ export class CompletarTestComponent {
 
   public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
     return (
-      (!this.isModoExamen() || this.modoVerRespuestas) &&
-      !!this.preguntaRespondida() &&
-      this.preguntaRespondida()?.estado != 'OMITIDA' &&
-      pregunta.respuestaCorrectaIndex == indiceRespuesta
+      ((!this.isModoExamen() || this.modoVerRespuestas || this.vistaPrevia) &&
+      (!!this.preguntaRespondida() || this.vistaPrevia) &&
+      (this.preguntaRespondida()?.estado != 'OMITIDA' || this.vistaPrevia) &&
+      pregunta.respuestaCorrectaIndex == indiceRespuesta)
     );
   }
 
   public respuestaIncorrecta(pregunta: Pregunta, indiceRespuesta: number) {
-    return ((
-      (!this.isModoExamen() || this.modoVerRespuestas) &&
+    return (
+      ((!this.isModoExamen() || this.modoVerRespuestas) &&
       !!this.preguntaRespondida() &&
       this.preguntaRespondida()?.estado != 'OMITIDA' &&
       pregunta.respuestaCorrectaIndex != indiceRespuesta &&
-      this.preguntaRespondida()?.respuestaDada == indiceRespuesta
-    ));
+      this.preguntaRespondida()?.respuestaDada == indiceRespuesta)
+    );
   }
 
   public respuestaIncorrectaBlock(indiceRespuesta: number) {

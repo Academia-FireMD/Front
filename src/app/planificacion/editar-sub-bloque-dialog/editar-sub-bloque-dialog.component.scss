@@ -12,4 +12,27 @@
   .p-divider {
     height: 5px;
   }
+
+  // Estilos responsive adicionales
+  .p-dialog-content {
+    overflow-x: hidden;
+  }
+
+  @media screen and (max-width: 640px) {
+    .p-dropdown, .p-inputtext, .p-colorpicker {
+      width: 100% !important;
+    }
+
+    .markdown-container {
+      width: 100%;
+    }
+
+    .p-dialog .p-dialog-header {
+      padding: 1rem;
+    }
+
+    .p-dialog .p-dialog-content {
+      padding: 0 1rem 1rem 1rem;
+    }
+  }
 }

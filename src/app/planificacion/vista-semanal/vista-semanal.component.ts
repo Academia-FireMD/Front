@@ -7,7 +7,6 @@ import {
   Output,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   CalendarEvent,
   CalendarEventTimesChangedEvent,
@@ -16,7 +15,7 @@ import {
 import { cloneDeep, debounce } from 'lodash';
 import { Memoize } from 'lodash-decorators';
 import { ContextMenu } from 'primeng/contextmenu';
-import { debounceTime, map, Subject } from 'rxjs';
+import { map, Subject } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import {
   PlanificacionBloque,
@@ -233,15 +232,17 @@ export class VistaSemanalComponent {
 
   constructor() {
     this.triggerSaveUpdateProgress
-      .pipe(debounceTime(1000), takeUntilDestroyed())
       .subscribe(() => this.saveChanges.emit());
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void { }
 
   onEventClicked(event: CalendarEvent): void {
     this.selectedEvent = event;
-    this.editSubBloqueData = event.meta.subBloque;
+    this.editSubBloqueData = {
+      ...event.meta.subBloque,
+      nombre: event.title,
+    };
     this.isDialogVisible = true;
   }
 
@@ -256,7 +257,7 @@ export class VistaSemanalComponent {
         },
         end: new Date(
           new Date(this.selectedEvent.start).getTime() +
-            subbloque.duracion * 60000
+          subbloque.duracion * 60000
         ),
         meta: {
           ...this.selectedEvent.meta,
@@ -274,9 +275,13 @@ export class VistaSemanalComponent {
       if (isNewlyAdded) {
         this.events.push(updatedEvent as CalendarEvent);
       } else {
-        this.events = this.events.map((event) =>
-          event === this.selectedEvent ? updatedEvent : event
-        ) as CalendarEvent<any>[];
+        for (let i = 0; i < this.events.length; i++) {
+          const event = this.events[i];
+          if (event === this.selectedEvent) {
+            this.events[i] = cloneDeep(updatedEvent) as CalendarEvent;
+            this.events = [...this.events];
+          }
+        }
       }
       this.refresh.next();
       this.eventsChange.emit(this.events);

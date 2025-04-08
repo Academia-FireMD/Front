@@ -144,6 +144,20 @@ export class ExamenesDashboardAdminDetailviewComponent {
     );
   });
 
+  @ViewChild('menuDescarga') menuDescarga: any;
+
+  public opcionesDescargaMenu: MenuItem[] = [
+    {
+      label: 'Sin soluciones',
+      icon: 'pi pi-file-word',
+      command: () => this.descargarWord(false)
+    },
+    {
+      label: 'Con soluciones',
+      icon: 'pi pi-check-square',
+      command: () => this.descargarWord(true)
+    }
+  ];
 
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
@@ -170,12 +184,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
     });
   }
 
-
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as number | 'new';
   }
-
-
 
   private getRole() {
     return combineLatest([
@@ -212,8 +223,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       );
     }
 
-
-
     setTimeout(() => {
       this.initEditor(
         examen.descripcion || '',
@@ -247,7 +256,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.relevancia.clear();
     communities.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
-
 
   private async updateExamen() {
     const formValues = this.formGroup.getRawValue();
@@ -453,13 +461,19 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
   }
 
-  public descargarWord() {
+  public mostrarOpcionesDescarga(event: any) {
+    if (this.menuDescarga) {
+      this.menuDescarga.toggle(event);
+    }
+  }
+
+  public descargarWord(conSoluciones: boolean = false) {
     if (!this.getId() || this.getId() === 'new') {
       this.toast.warning('Debe guardar el examen antes de descargarlo');
       return;
     }
 
-    this.examenesService.downloadExamenWithFilename$(this.getId() as number, this.lastLoadedExamen().titulo).subscribe({
+    this.examenesService.downloadExamenWithFilename$(this.getId() as number, this.lastLoadedExamen().titulo, conSoluciones).subscribe({
       next: ({ blob, filename }) => {
         // Crear un objeto URL para el blob
         const url = window.URL.createObjectURL(blob);
@@ -477,7 +491,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        this.toast.success('Documento descargado correctamente');
+        this.toast.success(`Documento ${conSoluciones ? 'con soluciones' : ''} descargado correctamente`);
       },
       error: (error) => {
         console.error('Error al descargar el examen', error);

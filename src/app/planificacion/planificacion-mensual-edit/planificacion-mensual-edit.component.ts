@@ -441,7 +441,6 @@ export class PlanificacionMensualEditComponent {
         '/app/planificacion/planificacion-mensual/' + res.id,
       ]);
     }
-    this.load();
   }
 
   onDateSelect(event: Date): void {

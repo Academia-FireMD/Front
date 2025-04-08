@@ -16,6 +16,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
+import { MenuModule } from 'primeng/menu';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { StepsModule } from 'primeng/steps';
@@ -53,7 +54,8 @@ import { ExamenRoutingModule } from './examen-routing.module';
     TableModule,
     MultiSelectModule,
     StepsModule,
-    CheckboxModule
+    CheckboxModule,
+    MenuModule
   ],
   providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
 })

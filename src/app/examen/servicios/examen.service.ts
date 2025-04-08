@@ -102,8 +102,8 @@ export class ExamenesService extends ApiBaseService {
 
 
 
-  public downloadExamenWithFilename$(id: number, examenName: string): Observable<{ blob: Blob, filename: string }> {
-    return this.http.get(`${environment.apiUrl}${this.controllerPrefix}/download-word/${id}`, {
+  public downloadExamenWithFilename$(id: number, examenName: string, conSoluciones: boolean = false): Observable<{ blob: Blob, filename: string }> {
+    return this.http.get(`${environment.apiUrl}${this.controllerPrefix}/download-word/${id}?conSoluciones=${conSoluciones}`, {
       observe: 'response',
       responseType: 'blob'
     }).pipe(
@@ -113,7 +113,7 @@ export class ExamenesService extends ApiBaseService {
 
         // Asegurarse de que el nombre del archivo esté correctamente formateado para HTTP
         const safeFilename = examenName.replace(/ /g, '_').toLowerCase();
-        let filename = `${safeFilename}_${+new Date()}.docx`;
+        let filename = `${safeFilename}_${conSoluciones ? 'con_soluciones_' : ''}${+new Date()}.docx`;
 
         // Intentar extraer el nombre del archivo con diferentes patrones
         const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;

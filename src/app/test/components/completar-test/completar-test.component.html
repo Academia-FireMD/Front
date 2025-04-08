@@ -338,14 +338,14 @@
             <div
               class="grid w-full footer flex justify-content-between align-items-center mt-2"
               *ngIf="
-                answeredCurrentQuestion() && !vistaPrevia && !modoVerRespuestas
+                (answeredCurrentQuestion() && !modoVerRespuestas) || vistaPrevia
               "
             >
               <div
                 class="solution col-12 align-items-center flex flex-column"
                 *ngIf="!isModoExamen()"
               >
-                @if (showSolution()) {
+                @if (showSolution() || vistaPrevia) {
                 <strong>Solución:</strong>
                 <p class="m-0">
                   <markdown
@@ -361,7 +361,7 @@
                 }
               </div>
 
-              <div class="next-button col-12 w-full">
+              <div class="next-button col-12 w-full" *ngIf="!vistaPrevia">
                 <button
                   pButton
                   class="p-button p-button-raised w-full"

@@ -5,11 +5,13 @@
   [(visible)]="isDialogVisible"
   [modal]="true"
   (onHide)="isDialogVisibleChange.emit(false)"
-  [style]="{ width: '50vw' }"
+  [style]="{ width: '90vw', maxWidth: '800px' }"
+  [breakpoints]="{'960px': '95vw', '640px': '100vw'}"
+  styleClass="p-fluid"
 >
   <form [formGroup]="formGroup">
     <div class="grid py-5">
-      <div class="col-4">
+      <div class="col-12 md:col-4">
         @if (formGroup.get('nombre')?.disabled) { Nombre:
         <strong>{{ formGroup.get("nombre")?.value }}</strong>
         }@else{
@@ -26,7 +28,7 @@
         }
       </div>
 
-      <div class="col-3" *ngIf="isRoleAdminOrAddingNew()">
+      <div class="col-12 md:col-3" *ngIf="isRoleAdminOrAddingNew()">
         <p-floatLabel>
           <p-dropdown
             id="duracion"
@@ -40,7 +42,7 @@
         </p-floatLabel>
       </div>
       <div
-        class="col-5 flex align-items-center justify-content-end gap-2"
+        class="col-12 md:col-5 flex align-items-center justify-content-start md:justify-content-end gap-2"
         *ngIf="isRoleAdminOrAddingNew()"
       >
         <p-floatLabel>
@@ -79,7 +81,7 @@
       </div>
 
       <!-- Nuevos controles -->
-      <div class="col-12 flex align-items-center gap-3" *ngIf="role == 'ADMIN'">
+      <div class="col-12 flex flex-column md:flex-row align-items-start md:align-items-center gap-3" *ngIf="role == 'ADMIN'">
         <p-checkbox
           [formControl]="importante"
           [binary]="true"
@@ -101,7 +103,7 @@
       <!-- Fin nuevos controles -->
     </div>
   </form>
-  <p-footer>
+  <p-footer class="flex flex-column sm:flex-row justify-content-center sm:justify-content-end gap-2">
     <button
       pButton
       label="{{ isRoleAdminOrAddingNew() ? 'Cancelar' : 'Cerrar' }}"

@@ -23,7 +23,7 @@ export class SpinnerInterceptor implements HttpInterceptor {
 
     const request$ = next.handle(req);
 
-    timer(1000).subscribe(() => {
+    timer(5000).subscribe(() => {
       if (this.activeRequests > 0) {
         this.spinner.show(); // Mostrar el spinner si hay peticiones activas
       }
