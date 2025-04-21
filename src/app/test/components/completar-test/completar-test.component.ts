@@ -4,6 +4,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Input,
   QueryList,
   signal,
   ViewChildren,
@@ -93,6 +94,10 @@ export class CompletarTestComponent {
   public comunicating = false;
   public expectedRole: Rol = Rol.ALUMNO;
 
+  @Input() testId: number | null = null;
+  @Input() modoSimulacro: boolean = false;
+  @Input() idExamenSimulacro: number | null = null;
+
   public isModoExamen() {
     return !!this.lastLoadedTest.duration && !!this.lastLoadedTest.endsAt;
   }
@@ -100,19 +105,19 @@ export class CompletarTestComponent {
   public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
     return (
       ((!this.isModoExamen() || this.modoVerRespuestas || this.vistaPrevia) &&
-      (!!this.preguntaRespondida() || this.vistaPrevia) &&
-      (this.preguntaRespondida()?.estado != 'OMITIDA' || this.vistaPrevia) &&
-      pregunta.respuestaCorrectaIndex == indiceRespuesta)
+        (!!this.preguntaRespondida() || this.vistaPrevia) &&
+        (this.preguntaRespondida()?.estado != 'OMITIDA' || this.vistaPrevia) &&
+        pregunta.respuestaCorrectaIndex == indiceRespuesta)
     );
   }
 
   public respuestaIncorrecta(pregunta: Pregunta, indiceRespuesta: number) {
     return (
       ((!this.isModoExamen() || this.modoVerRespuestas) &&
-      !!this.preguntaRespondida() &&
-      this.preguntaRespondida()?.estado != 'OMITIDA' &&
-      pregunta.respuestaCorrectaIndex != indiceRespuesta &&
-      this.preguntaRespondida()?.respuestaDada == indiceRespuesta)
+        !!this.preguntaRespondida() &&
+        this.preguntaRespondida()?.estado != 'OMITIDA' &&
+        pregunta.respuestaCorrectaIndex != indiceRespuesta &&
+        this.preguntaRespondida()?.respuestaDada == indiceRespuesta)
     );
   }
 
@@ -147,26 +152,9 @@ export class CompletarTestComponent {
     }
   }
 
-  private getTest() {
-    return this.testService.getTestById(Number(this.getId())).pipe(
-      tap(async (entry: any) => {
-        await this.loadRouteData();
-        const parsedTest: Test & { respuestasCount: number } = entry;
-        const initialIndex = this.modoVerRespuestas || this.vistaPrevia ? 0 : parsedTest.respuestasCount;
-        if (this.lastLoadedTest) {
-          this.lastLoadedTest.respuestas = entry.respuestas;
-        } else {
-          this.lastLoadedTest = entry;
-          this.indicePregunta.set(initialIndex);
-        }
-      }),
-      delay(100),
-      tap(() => this.scrollToActiveBlock())
-    );
-  }
+
 
   constructor() {
-    firstValueFrom(this.getTest());
     this.loadRouteData();
   }
 
@@ -219,6 +207,17 @@ export class CompletarTestComponent {
   }
 
   ngOnInit(): void {
+    if (this.testId) {
+      firstValueFrom(this.loadTest(this.testId.toString()));
+    } else {
+      this.activedRoute.params.subscribe(params => {
+        const id = params['id'];
+        if (id) {
+          firstValueFrom(this.loadTest(id));
+        }
+      });
+    }
+
     this.indiceSeleccionado
       .pipe(filter((e) => e >= 0))
       .subscribe(async (data) => {
@@ -281,7 +280,7 @@ export class CompletarTestComponent {
           tap((res) => {
             this.lastAnsweredQuestion = res as any;
             if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
-            firstValueFrom(this.getTest());
+            firstValueFrom(this.loadTest());
           })
         )
     );
@@ -358,9 +357,17 @@ export class CompletarTestComponent {
           'Todavia no has terminado el test, te faltan preguntas por responder!'
         );
       } else {
-        this.router.navigate([
-          'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
-        ]);
+        if (this.modoSimulacro && this.idExamenSimulacro) {
+          this.router.navigate([
+            '/simulacros/resultado',
+            this.idExamenSimulacro,
+            this.lastLoadedTest.id
+          ]);
+        } else {
+          this.router.navigate([
+            'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
+          ]);
+        }
       }
     } else {
       this.adelante();
@@ -393,17 +400,44 @@ export class CompletarTestComponent {
   }
 
   public getId() {
-    return this.activedRoute.snapshot.paramMap.get('id') as string;
+    return this.testId ? this.testId.toString() : this.activedRoute.snapshot.paramMap.get('id') as string;
   }
 
   public async finalizarTest() {
     await firstValueFrom(
       this.testService
         .finalizarTest(this.lastLoadedTest.id)
-        .pipe(switchMap(() => this.getTest()))
+        .pipe(switchMap(() => this.loadTest()))
     );
-    this.router.navigate([
-      'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
-    ]);
+
+    if (this.modoSimulacro && this.idExamenSimulacro) {
+      this.router.navigate([
+        '/simulacros/resultado',
+        this.idExamenSimulacro,
+        this.lastLoadedTest.id
+      ]);
+    } else {
+      this.router.navigate([
+        'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
+      ]);
+    }
+  }
+
+  private loadTest(id: string = this.getId()) {
+    return this.testService.getTestById(Number(id)).pipe(
+      tap(async (entry: any) => {
+        await this.loadRouteData();
+        const parsedTest: Test & { respuestasCount: number } = entry;
+        const initialIndex = this.modoVerRespuestas || this.vistaPrevia ? 0 : parsedTest.respuestasCount;
+        if (this.lastLoadedTest) {
+          this.lastLoadedTest.respuestas = entry.respuestas;
+        } else {
+          this.lastLoadedTest = entry;
+          this.indicePregunta.set(initialIndex);
+        }
+      }),
+      delay(100),
+      tap(() => this.scrollToActiveBlock())
+    )
   }
 }

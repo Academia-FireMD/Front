@@ -1,71 +1,7 @@
-.actions {
-  display: flex;
-  justify-content: end;
-  align-items: center;
-}
-
-.markdown-container {
-  width: 100%;
-
-  .editor {
-    width: 100%;
-  }
-}
-
-.config-inputs {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-}
-
-:host ::ng-deep {
-  .toastui-editor-defaultUI {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-}
-
-.metodo-card {
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1.5rem;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  transition: all 0.3s ease;
-  cursor: pointer;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    border-color: var(--primary-color);
-  }
-
-  .metodo-icon {
-    font-size: 2.5rem;
-    color: var(--primary-color);
-    margin-bottom: 1rem;
-  }
-
-  h4 {
-    margin-bottom: 0.5rem;
-    color: var(--text-color);
-  }
-
-  p {
-    color: var(--text-secondary-color);
-    margin: 0;
-  }
-}
-
-.qr-container {
+.qr-share-container {
   background-color: var(--surface-card);
   border-radius: 8px;
   padding: 1.5rem;
-  margin-top: 1rem;
 
   h3 {
     margin-top: 0;
@@ -73,6 +9,30 @@
     font-size: 1.25rem;
     margin-bottom: 0.5rem;
   }
+
+  &.vertical-layout {
+    text-align: center;
+
+    .qr-code-wrapper {
+      margin-bottom: 2rem;
+    }
+
+    h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .share-links {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+  }
+}
+
+.vertical-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .qr-code-wrapper {
@@ -123,10 +83,28 @@
     display: flex;
     gap: 0.5rem;
     margin-top: 1rem;
+    justify-content: center;
 
     button {
       width: 2.5rem;
       height: 2.5rem;
     }
+  }
+}
+
+@media (max-width: 768px) {
+  .qr-share-container {
+    padding: 1rem;
+
+    &.vertical-layout {
+      .qr-code-wrapper {
+        margin-bottom: 1.5rem;
+      }
+    }
+  }
+
+  .qr-code-wrapper .qr-code {
+    width: 150px;
+    height: 150px;
   }
 }

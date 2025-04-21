@@ -14,9 +14,16 @@
 
 <div class="wrapper">
   <div class="grid">
-    <p-card class="col-12 md:col-6 lg:col-3">
+    <p-card
+      class="col-12"
+      [ngClass]="{ 'md:col-6 lg:col-3': mode == 'default' }"
+    >
       <div class="card-login py-4">
-        <div class="form-login" [formGroup]="formGroup">
+        <div
+          class="form-login"
+          [ngClass]="{ 'injected-form-login': mode == 'injected' }"
+          [formGroup]="formGroup"
+        >
           <div class="imagen">
             <img src="black_logo.png" alt="Logo" />
           </div>
@@ -133,10 +140,7 @@
           ></app-password-input>
           <!-- Error: contraseña requerida -->
           <div
-            *ngIf="
-              contrasenya?.hasError('required') &&
-              contrasenya?.touched
-            "
+            *ngIf="contrasenya?.hasError('required') && contrasenya?.touched"
             class="error-message"
           >
             <small class="p-error">La contraseña es requerida.</small>
@@ -144,14 +148,13 @@
           <!-- Error: contraseña no segura -->
           <div
             *ngIf="
-              contrasenya?.hasError('passwordStrength') &&
-              contrasenya?.touched
+              contrasenya?.hasError('passwordStrength') && contrasenya?.touched
             "
             class="error-message"
           >
             <small class="p-error">
-              La contraseña debe tener al menos 8 caracteres, una mayúscula,
-              una minúscula, un número y un carácter especial.
+              La contraseña debe tener al menos 8 caracteres, una mayúscula, una
+              minúscula, un número y un carácter especial.
             </small>
           </div>
 
@@ -183,6 +186,7 @@
 
           <!-- Tutor -->
           <p-dropdown
+            *ngIf="mode == 'default'"
             class="w-full"
             [style]="{ width: '100%', height: '100%' }"
             [options]="(tutores$ | async) ?? []"

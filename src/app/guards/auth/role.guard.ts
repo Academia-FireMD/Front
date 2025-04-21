@@ -16,9 +16,8 @@ export const roleGuard: CanActivateFn = (route, state) => {
   const payload = JSON.parse(atob(token.split('.')[1]));
 
   const userRole = payload.rol;
-
   const expectedRole = route.data['expectedRole'];
-  if (userRole === expectedRole || userRole == 'ADMIN') {
+  if ((userRole === expectedRole || userRole == 'ADMIN') && userRole != 'SIN_APROBACION') {
     return true;
   } else {
     router.navigate(['/auth']);

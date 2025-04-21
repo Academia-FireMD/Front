@@ -3,10 +3,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { PrimeNGConfig } from 'primeng/api';
-import { filter, of, switchMap, tap } from 'rxjs';
+import { combineLatest, filter, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { TestService } from '../../../services/test.service';
 import { FlashcardTest } from '../../../shared/models/flashcard.model';
+import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { Test } from '../../../shared/models/test.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
@@ -17,7 +18,6 @@ import {
   obtenerTemas,
   obtenerTipoDeTest,
 } from '../../../utils/utils';
-
 @Component({
   selector: 'app-test-stats-grid',
   templateUrl: './test-stats-grid.component.html',
@@ -79,6 +79,7 @@ export class TestStatsGridComponent extends SharedGridComponent<
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   selectedRangeDates = new FormControl([], Validators.required);
   public temas = new FormControl<string[] | null>([], Validators.required);
+  public displayOnlyExamen = false;
   public generandoEstadistica = false;
   showOptionsDialog = false;
   selectedTestId: number | null = null;
@@ -139,45 +140,54 @@ export class TestStatsGridComponent extends SharedGridComponent<
     return this.type == 'TESTS' ? this.whereQueryTests : this.whereQueryFlashcards;
   }
 
+  private getPaginationFilter(onlyExamen: boolean, pagination: PaginationFilter) {
+    const newPagination = {
+      ...pagination,
+      where: {
+        ...pagination.where,
+        ...(onlyExamen ? { ExamenRealizado: { isNot: null } } : {ExamenRealizado: { is: null }}),
+      },
+    }
+    return newPagination;
+  }
 
   constructor(private primengConfig: PrimeNGConfig) {
     super();
     this.primengConfig.setTranslation(this.es);
-    this.activatedRoute.data
-      .pipe(
-        filter((e) => !!e),
-        switchMap((e) => {
-          this.fetchItems$ = computed(() => {
-            const { expectedRole, type } = e;
-            this.type = type;
-            this.expectedRole = expectedRole;
-            if (this.type == 'FLASHCARDS') {
-              if (this.expectedRole == 'ADMIN') {
-                return this.flashcardsService
-                  .getTestsAdmin$(this.pagination())
-                  .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
-              } else {
-                return this.flashcardsService
-                  .getTestsAlumno$(this.pagination())
-                  .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
-              }
-            } else {
-              if (this.expectedRole == 'ADMIN') {
-                return this.testService
-                  .getTestsAdmin$(this.pagination())
-                  .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
-              } else {
-                return this.testService
-                  .getTestsAlumno$(this.pagination())
-                  .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
-              }
-            }
-          });
-          return of(e);
-        })
-      )
-      .pipe(takeUntilDestroyed())
-      .subscribe();
+    combineLatest([
+      this.activatedRoute.queryParams,
+      this.activatedRoute.data.pipe(filter((e) => !!e))
+    ]).subscribe(([queryParams, data]) => {
+      this.displayOnlyExamen = queryParams['onlyExamen'] === 'true';
+      this.fetchItems$ = computed(() => {
+        const pagination = this.getPaginationFilter(this.displayOnlyExamen, this.pagination());
+        const { expectedRole, type } = data;
+        this.type = type;
+        this.expectedRole = expectedRole;
+        if (this.type == 'FLASHCARDS') {
+          if (this.expectedRole == 'ADMIN') {
+            return this.flashcardsService
+              .getTestsAdmin$(pagination)
+              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+          } else {
+            return this.flashcardsService
+              .getTestsAlumno$(pagination)
+              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+          }
+        } else {
+          if (this.expectedRole == 'ADMIN') {
+            return this.testService
+              .getTestsAdmin$(pagination)
+              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+          } else {
+            return this.testService
+              .getTestsAlumno$(pagination)
+              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+          }
+        }
+      });
+    });
+
     this.selectedRangeDates.valueChanges
       .pipe(
         tap((entry: any) => {

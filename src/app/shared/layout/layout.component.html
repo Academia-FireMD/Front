@@ -78,6 +78,7 @@
             pRipple
             class="flex align-items-center p-menuitem-link"
             [routerLink]="item.routerLink"
+            [queryParams]="item.queryParams"
             (click)="isMenuVisible = false"
             routerLinkActive="router-link-active"
             [routerLinkActiveOptions]="{ exact: true }"

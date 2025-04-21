@@ -1,16 +1,33 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, of, tap } from 'rxjs';
 import { Comunidad } from '../shared/models/pregunta.model';
+import { Usuario } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService extends ApiBaseService {
+  // BehaviorSubject para mantener el estado del usuario actual
+  private currentUserSubject = new BehaviorSubject<Usuario | null>(null);
+
+  // Observable público que otros componentes pueden suscribirse
+  public currentUser$ = this.currentUserSubject.asObservable();
+
   constructor(private http: HttpClient) {
     super(http);
     this.controllerPrefix = '/auth';
+
+    // Inicializar el usuario actual desde el token si existe
+    this.initCurrentUser();
+  }
+
+  private initCurrentUser(): void {
+    const decodedToken = this.decodeToken();
+    if (decodedToken) {
+      this.currentUserSubject.next(decodedToken);
+    }
   }
 
   public register$(
@@ -30,16 +47,22 @@ export class AuthService extends ApiBaseService {
       tutorId,
     });
   }
+
   public login$(email: string, password: string): Observable<any> {
     return this.post('/login', { email, password }).pipe(
       tap((tokens) => {
         if (tokens) {
           this.setToken(tokens.access_token);
           this.setRefreshToken(tokens.refresh_token);
+
+          // Actualizar el usuario actual después del login
+          const decodedUser = this.decodeToken();
+          this.currentUserSubject.next(decodedUser);
         }
       })
     );
   }
+
   public refreshToken$(): Observable<any> {
     const refreshToken = this.getRefreshToken();
     if (!refreshToken) {
@@ -50,10 +73,26 @@ export class AuthService extends ApiBaseService {
       tap((tokens) => {
         if (tokens && tokens.access_token) {
           this.setToken(tokens.access_token);
+
+          // Actualizar el usuario actual después de refrescar el token
+          const decodedUser = this.decodeToken();
+          this.currentUserSubject.next(decodedUser);
         }
       })
     );
   }
+
+  public logout$(): Observable<any> {
+    // Implementar la llamada al backend para logout si es necesario
+    return of(true).pipe(
+      tap(() => {
+        // Limpiar tokens y usuario actual
+        this.clearToken();
+        this.currentUserSubject.next(null);
+      })
+    );
+  }
+
   private readonly TOKEN_KEY = 'authToken';
   private readonly REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -100,4 +139,15 @@ export class AuthService extends ApiBaseService {
   resetPassword(token: string, newPassword: string): Observable<any> {
     return this.post('/reset-password', { token, newPassword });
   }
+
+  // Método para obtener el usuario actual de forma síncrona
+  public getCurrentUser(): Usuario | null {
+    return this.currentUserSubject.value;
+  }
+
+  // Método para verificar si el usuario está autenticado
+  public isAuthenticated(): boolean {
+    return !!this.getCurrentUser();
+  }
 }
+

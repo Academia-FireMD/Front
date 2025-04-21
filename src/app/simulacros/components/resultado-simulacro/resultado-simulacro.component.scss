@@ -1,0 +1,250 @@
+.resultado-simulacro-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+
+    p {
+      margin-top: 1rem;
+      color: var(--text-color-secondary);
+    }
+  }
+
+  .error-container {
+    max-width: 600px;
+    margin: 2rem auto;
+
+    .error-message {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+
+      i {
+        font-size: 3rem;
+        color: var(--red-500);
+        margin-bottom: 1rem;
+      }
+
+      h3 {
+        margin: 0 0 0.5rem 0;
+        color: var(--text-color);
+      }
+
+      p {
+        margin-bottom: 1.5rem;
+        color: var(--text-color-secondary);
+      }
+    }
+  }
+
+  .resultados-content {
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+
+      h1 {
+        margin: 0;
+        color: var(--primary-color);
+        font-size: 2rem;
+      }
+
+      h2 {
+        margin: 0.5rem 0 1.5rem;
+        color: var(--text-color);
+        font-size: 1.5rem;
+      }
+
+      .mi-posicion {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-top: 2rem;
+
+        .posicion-card, .nota-card {
+          background-color: var(--surface-card);
+          border-radius: 1rem;
+          padding: 1.5rem;
+          min-width: 200px;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+          text-align: center;
+        }
+
+        .posicion-numero {
+          font-size: 3rem;
+          font-weight: bold;
+          color: var(--primary-color);
+          line-height: 1;
+          margin-bottom: 0.5rem;
+        }
+
+        .posicion-texto {
+          font-size: 1.2rem;
+          color: var(--text-color);
+          margin-bottom: 0.25rem;
+        }
+
+        .posicion-total {
+          font-size: 0.9rem;
+          color: var(--text-color-secondary);
+        }
+
+        .nota-numero {
+          font-size: 3rem;
+          font-weight: bold;
+          line-height: 1;
+          margin-bottom: 0.5rem;
+
+          &.nota-excelente { color: var(--green-600); }
+          &.nota-notable { color: var(--blue-600); }
+          &.nota-aprobado { color: var(--orange-500); }
+          &.nota-suspenso { color: var(--red-500); }
+        }
+
+        .nota-texto {
+          font-size: 1.2rem;
+          color: var(--text-color);
+          margin-bottom: 0.25rem;
+        }
+
+        .nota-detalle {
+          font-size: 0.9rem;
+          color: var(--text-color-secondary);
+        }
+      }
+    }
+
+    .leaderboard-container {
+      margin: 2rem 0;
+
+      h3 {
+        margin: 0 0 1rem;
+        color: var(--text-color);
+        font-size: 1.3rem;
+      }
+
+      .posicion-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background-color: var(--surface-200);
+        color: var(--text-color);
+        font-weight: bold;
+
+        &.first-place {
+          background-color: var(--yellow-500);
+          color: var(--yellow-900);
+        }
+
+        &.second-place {
+          background-color: var(--bluegray-300);
+          color: var(--bluegray-900);
+        }
+
+        &.third-place {
+          background-color: var(--orange-300);
+          color: var(--orange-900);
+        }
+      }
+
+      .usuario-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .usuario-nombre {
+          font-weight: 500;
+        }
+
+        .academia-badge, .tu-badge {
+          font-size: 0.7rem;
+          padding: 0.2rem 0.5rem;
+          border-radius: 4px;
+        }
+
+        .academia-badge {
+          background-color: var(--blue-100);
+          color: var(--blue-800);
+        }
+
+        .tu-badge {
+          background-color: var(--green-100);
+          color: var(--green-800);
+        }
+      }
+
+      .usuario-email {
+        font-size: 0.8rem;
+        color: var(--text-color-secondary);
+        margin-top: 0.25rem;
+      }
+
+      .nota-valor {
+        font-weight: bold;
+
+        &.nota-excelente { color: var(--green-600); }
+        &.nota-notable { color: var(--blue-600); }
+        &.nota-aprobado { color: var(--orange-500); }
+        &.nota-suspenso { color: var(--red-500); }
+      }
+
+      .correctas-valor {
+        color: var(--green-600);
+
+        .porcentaje {
+          font-size: 0.8rem;
+          color: var(--text-color-secondary);
+        }
+      }
+
+      .incorrectas-valor {
+        color: var(--red-500);
+
+        .porcentaje {
+          font-size: 0.8rem;
+          color: var(--text-color-secondary);
+        }
+      }
+
+      .mi-resultado {
+        background-color: var(--green-50) !important;
+      }
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .resultado-simulacro-container {
+    padding: 1rem;
+
+    .resultados-content {
+      .header {
+        .mi-posicion {
+          flex-direction: column;
+          gap: 1rem;
+
+          .posicion-card, .nota-card {
+            min-width: auto;
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+}

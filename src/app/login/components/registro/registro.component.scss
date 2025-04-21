@@ -25,7 +25,7 @@ p-floatlabel {
     gap: 25px;
     align-items: center;
     width: 100%;
-    max-width: 320px;
+    max-width: 20rem;
     button {
       width: 100%;
       text-align: center;
@@ -41,6 +41,10 @@ p-floatlabel {
       justify-content: center;
       text-decoration: none;
     }
+  }
+
+  .injected-form-login {
+    max-width: 100%;
   }
 }
 

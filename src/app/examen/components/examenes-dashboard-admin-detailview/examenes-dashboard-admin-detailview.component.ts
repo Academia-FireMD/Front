@@ -56,7 +56,38 @@ export class ExamenesDashboardAdminDetailviewComponent {
   editorDescripcion!: any;
   editorConsideraciones!: any;
   @Input() mode: 'edit' | 'injected' = 'edit';
+  metodosAgregarDialogVisible = false;
+  public TipoAcceso = TipoAcceso;
+  // Añade estos métodos signal
+  preguntasNormales = computed(() => {
+    if (!this.lastLoadedTestPreguntas()) return [];
+    return this.lastLoadedTestPreguntas()
+      .filter(tp => !tp.deReserva)
+      .filter(tp =>
+        !this.filtroIdentificador() ||
+        tp.pregunta.identificador.toLowerCase().includes(this.filtroIdentificador().toLowerCase())
+      );
+  });
 
+  preguntasReserva = computed(() => {
+    if (!this.lastLoadedTestPreguntas()) return [];
+    return this.lastLoadedTestPreguntas()
+      .filter(tp => tp.deReserva)
+      .filter(tp =>
+        !this.filtroIdentificador() ||
+        tp.pregunta.identificador.toLowerCase().includes(this.filtroIdentificador().toLowerCase())
+      );
+  });
+
+  // Añade estos métodos
+  marcarComoReserva(testPregunta: any, esReserva: boolean) {
+    // Implementa la lógica para marcar/desmarcar como reserva
+    this.actualizarEstadoReserva(testPregunta, esReserva);
+  }
+  // Método para mostrar el diálogo de métodos de agregar preguntas
+  mostrarOpcionesAgregarPreguntas(event: Event) {
+    this.metodosAgregarDialogVisible = true;
+  }
   public checked = {};
   public getAllTemas$ = this.temaService.getAllTemas$().pipe(
     map((temas) => {
@@ -107,7 +138,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   public addPreguntasDialogVisible = false;
   public selectedPreguntasToAdd: Array<Pregunta> = [];
-  public selectedPreguntasReservaToAdd: Array<Pregunta> = [];
   public lastLoadedExamen = signal<Examen>(null as any);
 
   public lastLoadedTestPreguntas = computed(() =>
@@ -172,8 +202,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
     // Mostrar/ocultar campo de código según el tipo de acceso
     this.formGroup.get('tipoAcceso')?.valueChanges.subscribe(value => {
       const codigoControl = this.formGroup.get('codigoAcceso');
-      if (value === TipoAcceso.RESTRINGIDO) {
-        codigoControl?.setValidators([Validators.required]);
+      if (value === TipoAcceso.SIMULACRO) {
+        codigoControl?.setValidators([Validators.required, Validators.minLength(6), Validators.maxLength(6)]);
         codigoControl?.enable();
       } else {
         codigoControl?.clearValidators();
@@ -182,6 +212,22 @@ export class ExamenesDashboardAdminDetailviewComponent {
       }
       codigoControl?.updateValueAndValidity();
     });
+
+    // Si es un simulacro existente, generar el QR
+    if (this.getId() !== 'new') {
+      this.formGroup.get('tipoAcceso')?.valueChanges.subscribe(value => {
+        if (value === this.TipoAcceso.SIMULACRO) {
+          this.updateSimulacroUrl();
+        } else {
+          this.simulacroUrl = '';
+        }
+      });
+
+      // Generar QR si ya es un simulacro
+      if (this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO) {
+        this.updateSimulacroUrl();
+      }
+    }
   }
 
   public getId() {
@@ -232,7 +278,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.formGroup.markAsPristine();
   }
 
-  private loadExamen() {
+  public verPregunta(id: number) {
+    this.router.navigate(['/app/test/preguntas/' + id], { queryParams: { examenId: this.getId(), goBack: true } });
+  }
+
+  private async loadExamen() {
     const itemId = this.getId();
     if (itemId === 'new') {
       this.formGroup.reset({
@@ -242,13 +292,23 @@ export class ExamenesDashboardAdminDetailviewComponent {
       });
       this.initEditor('');
     } else {
-      firstValueFrom(
-        this.examenesService.getExamenById$(itemId).pipe(
-          tap((entry) => {
-            this.setLoadedExamen(entry);
-          })
-        )
-      );
+      try {
+        firstValueFrom(
+          this.examenesService.getExamenById$(itemId).pipe(
+            tap((entry) => {
+              this.setLoadedExamen(entry);
+            })
+          )
+        );
+
+        // Actualizar la URL del simulacro si es necesario
+        if (this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO) {
+          this.updateSimulacroUrl();
+        }
+      } catch (error) {
+        console.error('Error al cargar el examen', error);
+        this.toast.error('Error al cargar el examen');
+      }
     }
   }
 
@@ -558,20 +618,24 @@ export class ExamenesDashboardAdminDetailviewComponent {
         )
       );
 
-      // Actualizar el estado localmente
-      const examen = { ...this.lastLoadedExamen() };
-      if (examen.test && examen.test.testPreguntas) {
-        const tp = examen.test.testPreguntas.find(tp => tp.pregunta.id === testPregunta.pregunta.id);
-        if (tp) {
-          tp.deReserva = esReserva;
-          this.lastLoadedExamen.set(examen);
-        }
-      }
+      this.loadExamen();
 
       this.toast.success(`Pregunta ${esReserva ? 'marcada' : 'desmarcada'} como de reserva`);
     } catch (error) {
       this.toast.error('Error al actualizar el estado de la pregunta');
       console.error('Error al actualizar estado de reserva:', error);
+    }
+  }
+
+  // Propiedades para el QR
+  public simulacroUrl: string = '';
+
+  // Añadir este método para actualizar la URL
+  private updateSimulacroUrl(): void {
+    const examenId = this.lastLoadedExamen()?.id;
+    if (examenId) {
+      const baseUrl = window.location.origin;
+      this.simulacroUrl = `${baseUrl}/simulacros/realizar-simulacro/${examenId}`;
     }
   }
 }

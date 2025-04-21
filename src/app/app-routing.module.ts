@@ -9,6 +9,11 @@ const routes: Routes = [
       import('./login/login.module').then((m) => m.LoginModule),
   },
   {
+    path: 'simulacros',
+    loadChildren: () =>
+      import('./simulacros/simulacros.module').then((m) => m.SimulacrosModule),
+  },
+  {
     path: 'app',
     component: LayoutComponent,
     children: [

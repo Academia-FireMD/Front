@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import { PaginatedResult, PaginationFilter } from '../../shared/models/pagination.model';
+import { Pregunta } from '../../shared/models/pregunta.model';
 import { Examen } from '../models/examen.model';
 @Injectable({
   providedIn: 'root',
@@ -17,6 +18,14 @@ export class ExamenesService extends ApiBaseService {
 
   public anyadirPreguntasAcademia$(examenId: number): Observable<any> {
     return this.post(`/${examenId}/anyadir-preguntas-academia`, {}) as Observable<any>;
+  }
+
+  public nextPregunta(examenId: string, preguntaId: string): Observable<Pregunta> {
+    return this.get(`/next/${examenId}/${preguntaId}`) as Observable<Pregunta>;
+  }
+
+  public prevPregunta(examenId: string, preguntaId: string): Observable<Pregunta> {
+    return this.get(`/prev/${examenId}/${preguntaId}`) as Observable<Pregunta>;
   }
 
 
@@ -38,6 +47,14 @@ export class ExamenesService extends ApiBaseService {
 
   public getExamenById$(id: number): Observable<Examen> {
     return this.get(`/${id}`) as Observable<Examen>;
+  }
+
+  public getSimulacroById$(id: number): Observable<Examen> {
+    return this.get(`/simulacro/${id}`) as Observable<Examen>;
+  }
+
+  public getSimulacroResultados$(idExamen: number): Observable<any> {
+    return this.get(`/simulacro/${idExamen}/resultados`);
   }
 
   public createExamen$(examen: any): Observable<Examen> {
@@ -136,5 +153,25 @@ export class ExamenesService extends ApiBaseService {
         };
       })
     );
+  }
+
+  /**
+   * Verifica el código de acceso para un simulacro
+   * @param examenId ID del examen
+   * @param codigo Código de acceso
+   * @returns Observable<boolean> True si el código es válido
+   */
+  public verificarCodigoAcceso$(examenId: number, codigo: string): Observable<boolean> {
+    return this.post(`/verificar-codigo/${examenId}`, { codigo });
+  }
+
+  /**
+   * Inicia un examen con código de acceso
+   * @param examenId ID del examen
+   * @param codigo Código de acceso (opcional)
+   * @returns Observable con el test creado
+   */
+  public startSimulacro$(examenId: number, codigo?: string): Observable<any> {
+    return this.post(`/start-simulacro/${examenId}`, { codigo });
   }
 }

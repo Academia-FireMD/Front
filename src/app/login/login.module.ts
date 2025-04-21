@@ -9,13 +9,13 @@ import { DropdownModule } from 'primeng/dropdown';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputTextModule } from 'primeng/inputtext';
 import { SharedModule } from '../shared/shared.module';
+import { ChangePasswordComponent } from './components/change-password/change-password.component';
 import { LoginComponent } from './components/login/login.component';
+import { RecuperarContrasenyaComponent } from './components/recuperar-contrasenya/recuperar-contrasenya.component';
 import { RegistroComponent } from './components/registro/registro.component';
 import { LoginRoutingModule } from './login-routing.module';
-import { RecuperarContrasenyaComponent } from './components/recuperar-contrasenya/recuperar-contrasenya.component';
-import { ChangePasswordComponent } from './components/change-password/change-password.component';
 @NgModule({
-  declarations: [LoginComponent, RegistroComponent, RecuperarContrasenyaComponent, ChangePasswordComponent],
+  declarations: [LoginComponent, RecuperarContrasenyaComponent, ChangePasswordComponent],
   imports: [
     CommonModule,
     LoginRoutingModule,
@@ -28,7 +28,8 @@ import { ChangePasswordComponent } from './components/change-password/change-pas
     DropdownModule,
     CheckboxModule,
     DialogModule,
+    RegistroComponent
   ],
-  exports: [LoginComponent, RegistroComponent],
+  exports: [LoginComponent],
 })
 export class LoginModule {}

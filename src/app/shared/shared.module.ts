@@ -3,7 +3,10 @@ import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { TooltipModule } from 'primeng/tooltip';
 import { AvatarUploadComponent } from './avatar-upload/avatar-upload.component';
+import { QrCodeShareComponent } from './components/qr-code-share/qr-code-share.component';
 import { ComunidadPickerComponent } from './comunidad-picker/comunidad-picker.component';
 import { DificultadDropdownComponent } from './dificultad-dropdown/dificultad-dropdown.component';
 import { PasswordInputComponent } from './password-input/password-input.component';
@@ -26,7 +29,8 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     PasswordInputComponent,
     AvatarUploadComponent,
     TemaSelectComponent, RealizarTestComponent,
-    PopupFallosTestComponent
+    PopupFallosTestComponent,
+    QrCodeShareComponent
   ],
   imports: [
     CommonModule,
@@ -34,7 +38,9 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     FormsModule,
     ReactiveFormsModule,
     PrimengModule,
-    RouterModule
+    RouterModule,
+    InputTextModule,
+    TooltipModule
   ],
   exports: [
     SharedGridComponent,
@@ -49,7 +55,8 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     PasswordInputComponent,
     AvatarUploadComponent, RealizarTestComponent,
     TemaSelectComponent,
-    PopupFallosTestComponent
+    PopupFallosTestComponent,
+    QrCodeShareComponent
   ],
 })
 export class SharedModule { }

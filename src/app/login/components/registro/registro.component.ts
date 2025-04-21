@@ -1,14 +1,22 @@
+import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
-import { FormBuilder, FormControl, Validators } from '@angular/forms';
+import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { CardModule } from 'primeng/card';
+import { CheckboxModule } from 'primeng/checkbox';
+import { DialogModule } from 'primeng/dialog';
+import { DropdownModule } from 'primeng/dropdown';
+import { FloatLabelModule } from 'primeng/floatlabel';
+import { InputTextModule } from 'primeng/inputtext';
 import { firstValueFrom, map } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { UserService } from '../../../services/user.service';
 import { comunidadConImagenNombreMap } from '../../../shared/comunidad-picker/comunidad-picker.component';
 import { Comunidad } from '../../../shared/models/pregunta.model';
+import { SharedModule } from '../../../shared/shared.module';
 import {
   passwordMatchValidator,
   passwordStrengthValidator,
@@ -18,6 +26,19 @@ import {
   selector: 'app-registro',
   templateUrl: './registro.component.html',
   styleUrl: './registro.component.scss',
+  standalone: true,
+  imports: [
+    CommonModule,
+    CardModule,
+    InputTextModule,
+    FormsModule,
+    ReactiveFormsModule,
+    FloatLabelModule,
+    SharedModule,
+    DropdownModule,
+    CheckboxModule,
+    DialogModule,
+  ]
 })
 export class RegistroComponent {
   fb = inject(FormBuilder);
@@ -27,6 +48,8 @@ export class RegistroComponent {
   http = inject(HttpClient);
   sanitizer = inject(DomSanitizer);
   users = inject(UserService);
+  @Input() mode: 'default' | 'injected' = 'default';
+  @Output() registroCompletado = new EventEmitter<{email: string, password: string}>();
   tutores$ = this.users.getAllTutores$();
   formGroup = this.fb.group(
     {
@@ -78,24 +101,32 @@ export class RegistroComponent {
 
   public async register() {
     try {
+      const email = this.formGroup.value.email ?? '';
+      const password = this.formGroup.value.contrasenya ?? '';
+
       const res = await firstValueFrom(
         this.auth.register$(
-          this.formGroup.value.email ?? '',
-          this.formGroup.value.contrasenya ?? '',
+          email,
+          password,
           (this.formGroup.value.relevancia as Comunidad) ?? Comunidad.VALENCIA,
           this.formGroup.value.nombre ?? '',
           this.formGroup.value.apellidos ?? '',
           this.formGroup.value.tutor as any
         )
       );
+
       this.toast.info(
-        'El usuario con el email ' +
-          (this.formGroup.value.email ?? '') +
-          ' ha inicializado la petición de creación de cuenta.'
+        'El usuario con el email ' + email + ' ha inicializado la petición de creación de cuenta.'
       );
-      setTimeout(() => {
-        this.router.navigate(['/auth/login']);
-      }, 0);
+
+      // Emitir evento de registro completado con credenciales para login automático
+      this.registroCompletado.emit({ email, password });
+
+      if (this.mode === 'default') {
+        setTimeout(() => {
+          this.router.navigate(['/auth/login']);
+        }, 0);
+      }
     } catch (error) {
       console.error(error);
     }

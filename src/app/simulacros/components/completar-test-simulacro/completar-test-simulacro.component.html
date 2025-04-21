@@ -1,0 +1,27 @@
+<div class="simulacro-test-container">
+  <div class="loading-container" *ngIf="loading">
+    <p-progressSpinner></p-progressSpinner>
+    <p>Cargando simulacro...</p>
+  </div>
+
+  <div class="error-container" *ngIf="error">
+    <p-card>
+      <div class="error-message">
+        <i class="pi pi-exclamation-triangle"></i>
+        <h3>No se pudo cargar el simulacro</h3>
+        <p>Ha ocurrido un error al intentar cargar el simulacro. Por favor, inténtalo de nuevo más tarde.</p>
+        <button pButton label="Volver" icon="pi pi-arrow-left" (click)="location.back()"></button>
+      </div>
+    </p-card>
+  </div>
+
+  <div *ngIf="!loading && !error">
+    <!-- Usar el componente de completar test existente -->
+    <app-completar-test
+      [testId]="idTest"
+      [modoSimulacro]="true"
+      [idExamenSimulacro]="idExamen"
+      (testCompleted)="onTestCompleted($event)"
+    ></app-completar-test>
+  </div>
+</div>

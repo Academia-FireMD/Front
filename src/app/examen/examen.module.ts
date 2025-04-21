@@ -29,7 +29,7 @@ import { ExamenRoutingModule } from './examen-routing.module';
 @NgModule({
   declarations: [
     ExamenesDashboardAdminComponent,
-    ExamenesDashboardAdminDetailviewComponent
+    ExamenesDashboardAdminDetailviewComponent,
   ],
   imports: [
     CommonModule,

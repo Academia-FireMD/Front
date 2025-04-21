@@ -35,7 +35,6 @@ export const estadoExamenOptions = [
 
 export const tipoAccesoOptions = [
   { label: 'Público', value: TipoAcceso.PUBLICO },
-  { label: 'Restringido', value: TipoAcceso.RESTRINGIDO },
   { label: 'Simulacro', value: TipoAcceso.SIMULACRO },
 ];
 

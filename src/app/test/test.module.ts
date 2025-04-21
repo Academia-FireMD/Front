@@ -71,5 +71,8 @@ import { TestRoutingModule } from './test-routing.module';
     BadgeModule,
   ],
   providers: [ConfirmationService],
+  exports: [
+    CompletarTestComponent,
+  ]
 })
 export class TestModule { }

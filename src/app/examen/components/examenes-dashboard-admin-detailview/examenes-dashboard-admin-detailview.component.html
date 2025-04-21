@@ -55,7 +55,7 @@
           </div>
         </div>
         <div class="col config-inputs">
-          <div class="col-6 md:col-3">
+          <div class="col">
             <p-floatLabel>
               <p-dropdown
                 id="duracion"
@@ -69,7 +69,7 @@
             </p-floatLabel>
           </div>
 
-          <div class="col-6 md:col-3">
+          <div class="col">
             <p-floatLabel>
               <p-dropdown
                 formControlName="estado"
@@ -83,7 +83,7 @@
             </p-floatLabel>
           </div>
 
-          <div class="col-6 md:col-3">
+          <div class="col">
             <p-floatLabel>
               <p-dropdown
                 formControlName="tipoAcceso"
@@ -97,7 +97,10 @@
             </p-floatLabel>
           </div>
 
-          <div class="col-6 md:col-3">
+          <div
+            class="col"
+            *ngIf="formGroup.get('tipoAcceso')?.value === TipoAcceso.SIMULACRO"
+          >
             <p-floatLabel>
               <input
                 type="text"
@@ -107,9 +110,17 @@
               />
               <label for="codigoAcceso">Código de acceso</label>
             </p-floatLabel>
+            <small
+              class="text-gray-500 block mt-1"
+              *ngIf="formGroup.get('codigoAcceso')?.errors?.['minlength']"
+            >
+              El código de acceso debe tener 6 dígitos
+            </small>
           </div>
+        </div>
 
-          <div class="col-12 gap-3 flex">
+        <div class="col-12 flex">
+          <div class="col-3">
             <p-floatLabel>
               <p-calendar
                 [showTime]="true"
@@ -119,7 +130,8 @@
               ></p-calendar>
               <label>Fecha de activación</label>
             </p-floatLabel>
-
+          </div>
+          <div class="col-3">
             <p-floatLabel>
               <p-calendar
                 [showTime]="true"
@@ -141,42 +153,6 @@
           </div>
         </div>
 
-        <div class="col-12 py-3" *ngIf="getId() != 'new'">
-          <h3>Añadir preguntas al examen</h3>
-          <div class="grid">
-            <div class="col-12 md:col-4 p-2">
-              <div class="metodo-card" (click)="abrirDialogoAutomatico()">
-                <div class="metodo-icon">
-                  <i class="pi pi-cog"></i>
-                </div>
-                <h4>Método automático</h4>
-                <p>
-                  Selecciona preguntas existentes mediante filtros y
-                  configuración automática
-                </p>
-              </div>
-            </div>
-            <div class="col-12 md:col-4 p-2">
-              <div class="metodo-card" (click)="abrirDialogoSemiAutomatico()">
-                <div class="metodo-icon">
-                  <i class="pi pi-code"></i>
-                </div>
-                <h4>Método semi-automático</h4>
-                <p>Importa preguntas mediante un identificador</p>
-              </div>
-            </div>
-            <div class="col-12 md:col-4 p-2">
-              <div class="metodo-card" (click)="abrirDialogoManual()">
-                <div class="metodo-icon">
-                  <i class="pi pi-pencil"></i>
-                </div>
-                <h4>Método manual</h4>
-                <p>Crea preguntas manualmente para este examen</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div class="col-12" *ngIf="getId() != 'new'">
           <h3>Preguntas seleccionadas</h3>
 
@@ -189,26 +165,34 @@
                   placeholder="Buscar por identificador"
                   (input)="buscarPorIdentificadorInput($event)"
                 />
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-plus"
+                  label="Añadir preguntas"
+                  (click)="mostrarOpcionesAgregarPreguntas($event)"
+                ></button>
               </div>
             </div>
 
-            <div class="col-12">
+            <!-- Tabla de preguntas normales -->
+            <div class="col-12 mb-4">
+              <h4>Preguntas del examen</h4>
               <p-table
-                [value]="testPreguntasFiltradas()"
+                [value]="preguntasNormales()"
                 [reorderableColumns]="true"
                 [paginator]="true"
                 [rows]="10"
                 [rowsPerPageOptions]="[5, 10, 25, 50]"
                 [scrollable]="true"
-                scrollHeight="400px"
               >
                 <ng-template pTemplate="header">
                   <tr>
                     <th style="width: 3rem"></th>
+                    <th style="width: 3rem"></th>
                     <th pReorderableColumn>Identificador</th>
                     <th pReorderableColumn>Descripción</th>
-                    <th style="width: 8rem">De Reserva</th>
-                    <th pReorderableColumn style="width: 6rem">Acciones</th>
+                    <th pReorderableColumn style="width: 8rem">Acciones</th>
                   </tr>
                 </ng-template>
                 <ng-template
@@ -221,57 +205,154 @@
                       <span class="pi pi-bars" pReorderableRowHandle></span>
                     </td>
                     <td>
+                      <span
+                        class="pi pi-eye"
+                        tooltip="Ver pregunta"
+                        (click)="verPregunta(testPregunta.pregunta.id)"
+                      ></span>
+                    </td>
+                    <td>
                       <strong>
                         {{ testPregunta.pregunta.identificador }}
                       </strong>
                     </td>
                     <td>{{ testPregunta.pregunta.descripcion }}</td>
-                    <td class="text-center">
-                      <p-checkbox
-                        [binary]="true"
-                        [ngModel]="testPregunta.deReserva"
-                        [ngModelOptions]="{ standalone: true }"
-                        (onChange)="
-                          actualizarEstadoReserva(testPregunta, $event.checked)
-                        "
-                      ></p-checkbox>
-                    </td>
                     <td>
-                      <p-button
-                        icon="pi pi-trash"
-                        [link]="true"
-                        (click)="eliminarPregunta(testPregunta.pregunta.id)"
-                      ></p-button>
+                      <div class="flex gap-2">
+                        <p-button
+                          icon="pi pi-arrow-down"
+                          [link]="true"
+                          pTooltip="Mover a preguntas de reserva"
+                          tooltipPosition="top"
+                          (click)="marcarComoReserva(testPregunta, true)"
+                        ></p-button>
+                        <p-button
+                          icon="pi pi-trash"
+                          [link]="true"
+                          pTooltip="Eliminar pregunta"
+                          tooltipPosition="top"
+                          (click)="eliminarPregunta(testPregunta.pregunta.id)"
+                        ></p-button>
+                      </div>
                     </td>
                   </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                   <tr>
-                    <td colspan="5" class="text-center p-4">
+                    <td colspan="4" class="text-center p-4">
                       <div
                         *ngIf="
-                          !lastLoadedTestPreguntas() ||
-                          lastLoadedTestPreguntas().length === 0
+                          !preguntasNormales() ||
+                          preguntasNormales().length === 0
                         "
                       >
-                        No hay preguntas añadidas al examen
+                        No hay preguntas normales añadidas al examen
                       </div>
                       <div
                         *ngIf="
-                          lastLoadedTestPreguntas() &&
-                          lastLoadedTestPreguntas().length > 0
+                          preguntasNormales() &&
+                          preguntasNormales().length > 0 &&
+                          filtroIdentificador()
                         "
                       >
-                        No se encontraron preguntas con el identificador "{{
-                          filtroIdentificador()
-                        }}"
+                        No se encontraron preguntas normales con el
+                        identificador "{{ filtroIdentificador() }}"
                       </div>
                     </td>
                   </tr>
                 </ng-template>
               </p-table>
             </div>
-            <div class="actions w-full">
+
+            <!-- Tabla de preguntas de reserva -->
+            <div class="col-12">
+              <h4>Preguntas de reserva</h4>
+              <p-table
+                [value]="preguntasReserva()"
+                [reorderableColumns]="true"
+                [paginator]="true"
+                [rows]="10"
+                [rowsPerPageOptions]="[5, 10, 25, 50]"
+                [scrollable]="true"
+              >
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="width: 3rem"></th>
+                    <th style="width: 3rem"></th>
+                    <th pReorderableColumn>Identificador</th>
+                    <th pReorderableColumn>Descripción</th>
+                    <th pReorderableColumn style="width: 8rem">Acciones</th>
+                  </tr>
+                </ng-template>
+                <ng-template
+                  pTemplate="body"
+                  let-testPregunta
+                  let-index="rowIndex"
+                >
+                  <tr [pReorderableRow]="index">
+                    <td>
+                      <span class="pi pi-bars" pReorderableRowHandle></span>
+                    </td>
+                    <td>
+                      <span
+                        class="pi pi-eye"
+                        tooltip="Ver pregunta"
+                        (click)="verPregunta(testPregunta.pregunta.id)"
+                      ></span>
+                    </td>
+                    <td>
+                      <strong>
+                        {{ testPregunta.pregunta.identificador }}
+                      </strong>
+                    </td>
+                    <td>{{ testPregunta.pregunta.descripcion }}</td>
+                    <td>
+                      <div class="flex gap-2">
+                        <p-button
+                          icon="pi pi-arrow-up"
+                          [link]="true"
+                          pTooltip="Mover a preguntas normales"
+                          tooltipPosition="top"
+                          (click)="marcarComoReserva(testPregunta, false)"
+                        ></p-button>
+                        <p-button
+                          icon="pi pi-trash"
+                          [link]="true"
+                          pTooltip="Eliminar pregunta"
+                          tooltipPosition="top"
+                          (click)="eliminarPregunta(testPregunta.pregunta.id)"
+                        ></p-button>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="4" class="text-center p-4">
+                      <div
+                        *ngIf="
+                          !preguntasReserva() || preguntasReserva().length === 0
+                        "
+                      >
+                        No hay preguntas de reserva añadidas al examen
+                      </div>
+                      <div
+                        *ngIf="
+                          preguntasReserva() &&
+                          preguntasReserva().length > 0 &&
+                          filtroIdentificador()
+                        "
+                      >
+                        No se encontraron preguntas de reserva con el
+                        identificador "{{ filtroIdentificador() }}"
+                      </div>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+
+            <div class="actions w-full mt-3">
               <p-button
                 label="Añadir preguntas a la academia"
                 icon="pi pi-plus"
@@ -280,6 +361,20 @@
               ></p-button>
             </div>
           </div>
+        </div>
+
+        <div
+          class="col-12 mt-3"
+          *ngIf="formGroup.get('tipoAcceso')?.value === TipoAcceso.SIMULACRO && getId() !== 'new'"
+        >
+          <p-divider></p-divider>
+
+          <app-qr-code-share
+            [url]="simulacroUrl"
+            title="Compartir simulacro"
+            description="Comparte este simulacro con tus alumnos mediante el siguiente código QR o enlaces directos."
+            [downloadFileName]="'simulacro-' + lastLoadedExamen()?.id"
+          ></app-qr-code-share>
         </div>
       </div>
     </p-card>
@@ -299,6 +394,7 @@
     <p-button
       *ngIf="getId() != 'new'"
       label="Actualizar examen"
+      [disabled]="!formGroup.valid"
       (click)="actualizarExamen()"
     ></p-button>
   </div>
@@ -503,6 +599,61 @@
       (click)="agregarPreguntaEncontrada()"
     ></p-button>
   </ng-template>
+</p-dialog>
+
+<!-- Diálogo para seleccionar método de añadir preguntas -->
+<p-dialog
+  [(visible)]="metodosAgregarDialogVisible"
+  [style]="{ width: '90vw', maxWidth: '900px' }"
+  [breakpoints]="{ '960px': '95vw', '640px': '100vw' }"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  header="Añadir preguntas al examen"
+>
+  <div class="grid">
+    <div class="col-12 md:col-4 p-2">
+      <div
+        class="metodo-card"
+        (click)="abrirDialogoAutomatico(); metodosAgregarDialogVisible = false"
+      >
+        <div class="metodo-icon">
+          <i class="pi pi-cog"></i>
+        </div>
+        <h4>Método automático</h4>
+        <p>
+          Selecciona preguntas existentes mediante filtros y configuración
+          automática
+        </p>
+      </div>
+    </div>
+    <div class="col-12 md:col-4 p-2">
+      <div
+        class="metodo-card"
+        (click)="
+          abrirDialogoSemiAutomatico(); metodosAgregarDialogVisible = false
+        "
+      >
+        <div class="metodo-icon">
+          <i class="pi pi-code"></i>
+        </div>
+        <h4>Método semi-automático</h4>
+        <p>Importa preguntas mediante un identificador</p>
+      </div>
+    </div>
+    <div class="col-12 md:col-4 p-2">
+      <div
+        class="metodo-card"
+        (click)="abrirDialogoManual(); metodosAgregarDialogVisible = false"
+      >
+        <div class="metodo-icon">
+          <i class="pi pi-pencil"></i>
+        </div>
+        <h4>Método manual</h4>
+        <p>Crea preguntas manualmente para este examen</p>
+      </div>
+    </div>
+  </div>
 </p-dialog>
 
 <p-menu #menuDescarga [popup]="true" [model]="opcionesDescargaMenu"></p-menu>

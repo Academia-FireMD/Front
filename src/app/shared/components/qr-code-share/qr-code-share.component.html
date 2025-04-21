@@ -1,0 +1,93 @@
+<div class="qr-share-container" [ngClass]="{'vertical-layout': vertical}">
+  <div class="grid" [ngClass]="{'vertical-grid': vertical}">
+    <div [ngClass]="vertical ? 'col-12' : 'col-12 md:col-6'">
+      <h3>{{ title }}</h3>
+      <p class="text-gray-600 mb-3">{{ description }}</p>
+
+      <div class="qr-code-wrapper">
+        <div class="qr-code">
+          <img [src]="qrCodeUrl" alt="Código QR" *ngIf="qrCodeUrl && !isGenerating" />
+          <div class="qr-placeholder" *ngIf="!qrCodeUrl || isGenerating">
+            <i class="pi pi-spin pi-spinner"></i>
+            <span>Generando QR...</span>
+          </div>
+        </div>
+
+        <div class="qr-actions">
+          <button
+            pButton
+            icon="pi pi-download"
+            label="Descargar QR"
+            class="p-button-outlined p-button-sm"
+            (click)="downloadQRCode()"
+            [disabled]="!qrCodeUrl || isGenerating"
+          ></button>
+        </div>
+      </div>
+    </div>
+
+    <div [ngClass]="vertical ? 'col-12' : 'col-12 md:col-6'" *ngIf="showSocialButtons">
+      <h3>Enlaces directos</h3>
+      <p class="text-gray-600 mb-3">
+        Comparte estos enlaces en diferentes plataformas.
+      </p>
+
+      <div class="share-links">
+        <div class="p-inputgroup mb-3">
+          <input
+            type="text"
+            pInputText
+            [value]="url"
+            readonly
+            #urlInput
+          />
+          <button
+            pButton
+            icon="pi pi-copy"
+            (click)="copyToClipboard(urlInput)"
+            pTooltip="Copiar enlace"
+            tooltipPosition="top"
+          ></button>
+        </div>
+
+        <div class="social-share-buttons">
+          <button
+            pButton
+            icon="pi pi-whatsapp"
+            class="p-button-success p-button-rounded p-button-sm"
+            (click)="shareOnWhatsApp()"
+            pTooltip="Compartir en WhatsApp"
+            tooltipPosition="top"
+          ></button>
+
+          <button
+            pButton
+            icon="pi pi-telegram"
+            class="p-button-info p-button-rounded p-button-sm"
+            (click)="shareOnTelegram()"
+            pTooltip="Compartir en Telegram"
+            tooltipPosition="top"
+          ></button>
+
+          <button
+            pButton
+            icon="pi pi-envelope"
+            class="p-button-warning p-button-rounded p-button-sm"
+            (click)="shareByEmail()"
+            pTooltip="Compartir por Email"
+            tooltipPosition="top"
+          ></button>
+
+          <button
+            pButton
+            icon="pi pi-twitter"
+            class="p-button-primary p-button-rounded p-button-sm"
+            (click)="shareOnTwitter()"
+            pTooltip="Compartir en Twitter"
+            tooltipPosition="top"
+          ></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

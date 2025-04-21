@@ -125,7 +125,6 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
   public getTipoAccesoLabel(tipoAcceso: TipoAcceso): string {
     const tipoAccesoMap = {
       [TipoAcceso.PUBLICO]: 'Público',
-      [TipoAcceso.RESTRINGIDO]: 'Restringido',
       [TipoAcceso.SIMULACRO]: 'Simulacro',
     };
     return tipoAccesoMap[tipoAcceso] || tipoAcceso;

@@ -9,7 +9,6 @@ export enum EstadoExamen {
 
 export enum TipoAcceso {
   PUBLICO = 'PUBLICO',
-  RESTRINGIDO = 'RESTRINGIDO',
   SIMULACRO = 'SIMULACRO',
 }
 

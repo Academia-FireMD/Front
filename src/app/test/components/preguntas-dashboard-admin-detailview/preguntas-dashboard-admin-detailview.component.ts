@@ -104,15 +104,27 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   public siguientePregunta() {
-    this.processPreguntaRequest(
-      this.preguntasService.nextPregunta.bind(this.preguntasService)
-    );
+    if (this.mode == 'examen') {
+      this.processPreguntaRequest(
+        this.examenesService.nextPregunta.bind(this.examenesService, this.examenId ?? '', this.lastLoadedPregunta().id + '')
+      );
+    } else {
+      this.processPreguntaRequest(
+        this.preguntasService.nextPregunta.bind(this.preguntasService)
+      );
+    }
   }
 
   public anteriorPregunta() {
-    this.processPreguntaRequest(
-      this.preguntasService.prevPregunta.bind(this.preguntasService)
-    );
+    if (this.mode == 'examen') {
+      this.processPreguntaRequest(
+        this.examenesService.prevPregunta.bind(this.examenesService, this.examenId ?? '', this.lastLoadedPregunta().id + '')
+      );
+    } else {
+      this.processPreguntaRequest(
+        this.preguntasService.prevPregunta.bind(this.preguntasService)
+      );
+    }
   }
 
   public anteriorForwardPregunta() {
@@ -350,13 +362,18 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   private async navigatetoPregunta(id: string) {
+    // Obtener los query params actuales
+    const currentQueryParams = { ...this.activedRoute.snapshot.queryParams };
+
     if (this.expectedRole == 'ADMIN') {
       await this.router.navigate(['app/test/preguntas/' + id], {
         replaceUrl: true,
+        queryParams: currentQueryParams
       });
     } else {
       await this.router.navigate(['/app/test/alumno/preguntas/' + id], {
         replaceUrl: true,
+        queryParams: currentQueryParams
       });
     }
   }

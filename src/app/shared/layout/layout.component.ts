@@ -253,6 +253,14 @@ export class LayoutComponent {
               icon: 'pi pi-file',
               routerLink: '/app/examen/alumno',
             },
+            {
+              label: 'Mis exámenes realizados',
+              icon: 'pi pi-file',
+              routerLink: '/app/test/alumno/test-stats',
+              queryParams: {
+                onlyExamen: true,
+              },
+            },
           ],
         },
         {
