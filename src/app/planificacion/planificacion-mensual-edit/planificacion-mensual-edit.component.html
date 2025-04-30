@@ -267,5 +267,12 @@
         [disabled]="getId() == 'new'"
       />
     </div>
+    <div class="col-12 pt-2" *ngIf="expectedRole == 'ALUMNO'">
+      <p-message
+        severity="info"
+        text="Puedes marcar tus tareas como completadas y agregar comentarios haciendo clic en cada evento."
+        styleClass="w-full mb-2"
+      ></p-message>
+    </div>
   </div>
 </div>

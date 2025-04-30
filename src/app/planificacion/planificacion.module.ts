@@ -31,6 +31,7 @@ import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantill
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
 import { VistaSemanalComponent } from './vista-semanal/vista-semanal.component';
 import { MarkdownModule } from 'ngx-markdown';
+import { MessageModule } from 'primeng/message';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [
@@ -63,6 +64,7 @@ registerLocaleData(localeEs);
     FormsModule,
     ProgressBarModule,
     ContextMenuModule,
+    MessageModule,
   ],
   providers: [
     ConfirmationService,

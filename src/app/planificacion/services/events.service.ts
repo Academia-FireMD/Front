@@ -12,35 +12,97 @@ export class EventsService {
 
   public fromEventsToSubbloques(events: CalendarEvent[]): Partial<SubBloque>[] {
     events = cloneDeep(events);
-    return events.map((event: any) => ({
-      id: event.meta?.subBloque?.id,
-      realizado: event.meta?.subBloque?.realizado ?? false,
-      comentariosAlumno: event.meta?.subBloque?.comentariosAlumno ?? null,
-      importante: event.meta?.subBloque?.importante ?? false,
-      tiempoAviso: event.meta?.subBloque?.tiempoAviso ?? null,
-      horaInicio: event.start, // Fecha y hora completa del evento
-      duracion: event.meta?.subBloque?.duracion || event.duracion, // Duración del evento
-      nombre: event.title, // Título del sub-bloque o evento
-      comentarios: event.meta?.subBloque?.comentarios || event.comentarios, // Comentarios opcionales
-      color: event.color?.primary || '', // Color del evento si está definido
-    }));
+    return events.map((event: any) => {
+      const esPersonalizado = event.meta?.esPersonalizado || false;
+
+      return {
+        id: event.meta?.subBloque?.id,
+        realizado: event.meta?.subBloque?.realizado ?? false,
+        comentariosAlumno: event.meta?.subBloque?.comentariosAlumno ?? null,
+        importante: event.meta?.subBloque?.importante ?? false,
+        tiempoAviso: event.meta?.subBloque?.tiempoAviso ?? null,
+        horaInicio: event.start,
+        duracion:
+          event.meta?.subBloque?.duracion ||
+          (event.end.getTime() - event.start.getTime()) / 60000,
+        nombre: event.title,
+        comentarios: event.meta?.subBloque?.comentarios || '',
+        color: event.color?.primary || '',
+        esPersonalizado: esPersonalizado,
+        planificacionId: event.meta?.subBloque?.planificacionId || null,
+      };
+    });
   }
 
-  public fromSubbloquesToEvents(subbloques: SubBloque[]): CalendarEvent[] {
-    subbloques = cloneDeep(subbloques);
-    return subbloques.map((subBloque) => ({
-      title: subBloque.nombre,
-      start: new Date(subBloque.horaInicio), // Convertir la hora de inicio a Date
-      end: new Date(
-        new Date(subBloque.horaInicio).getTime() + subBloque.duracion * 60000
-      ), // Calcular la hora de finalización
-      color: {
-        primary: subBloque.color || colors.yellow.primary,
-        secondary: subBloque.color || colors.yellow.secondary,
-      },
-      draggable: true, // Si los eventos pueden ser arrastrados
-      meta: { subBloque }, // Adjuntar el subBloque original para referencia
-    }));
+  public fromSubbloquesToEvents(
+    subbloques: SubBloque[],
+    eventosPersonalizados: any[] = []
+  ): CalendarEvent[] {
+    const eventos = [];
+
+    // Procesar subbloques normales
+    if (subbloques && subbloques.length > 0) {
+      subbloques = cloneDeep(subbloques);
+      eventos.push(
+        ...subbloques.map((subBloque) => ({
+          title: subBloque.nombre,
+          start: new Date(subBloque.horaInicio),
+          end: new Date(
+            new Date(subBloque.horaInicio).getTime() +
+              subBloque.duracion * 60000
+          ),
+          color: {
+            primary: subBloque.color || colors.yellow.primary,
+            secondary: subBloque.color || colors.yellow.secondary,
+          },
+          draggable: true,
+          meta: {
+            esPersonalizado: false,
+            subBloque: {
+              ...subBloque,
+              esPersonalizado: false,
+            },
+          },
+        }))
+      );
+    }
+
+    // Procesar eventos personalizados
+    if (eventosPersonalizados && eventosPersonalizados.length > 0) {
+      eventosPersonalizados = cloneDeep(eventosPersonalizados);
+      eventos.push(
+        ...eventosPersonalizados.map((evento) => ({
+          title: evento.nombre,
+          start: new Date(evento.horaInicio),
+          end: new Date(
+            new Date(evento.horaInicio).getTime() + evento.duracion * 60000
+          ),
+          color: {
+            primary: evento.color || '#4caf50',
+            secondary: evento.color || '#4caf50',
+          },
+          draggable: true,
+          meta: {
+            esPersonalizado: true,
+            subBloque: {
+              id: evento.id,
+              nombre: evento.nombre,
+              horaInicio: evento.horaInicio,
+              duracion: evento.duracion,
+              comentarios: evento.descripcion || '',
+              color: evento.color || '#4caf50',
+              importante: evento.importante || false,
+              tiempoAviso: evento.tiempoAviso,
+              realizado: evento.realizado || false,
+              planificacionId: evento.planificacionId,
+              esPersonalizado: true,
+            },
+          },
+        }))
+      );
+    }
+
+    return eventos;
   }
 
   public calculateMinDate(events: CalendarEvent[]) {

@@ -32,7 +32,7 @@ import {
   TipoDePlanificacionDeseada,
   Usuario,
 } from '../../shared/models/user.model';
-import { getStartOfWeek } from '../../utils/utils';
+import { getStartOfWeek, getDateForDayOfWeek, crearEventoCalendario } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 
 @Component({
@@ -395,17 +395,43 @@ export class PlanificacionMensualEditComponent {
         this.planificacionesService.getPlanificacionMensualById$(itemId).pipe(
           tap((entry) => {
             const subBloques = entry.subBloques;
+            
+            // Convertir los subbloques a eventos
             this.events = this.eventsService.fromSubbloquesToEvents(subBloques);
+            
+            // Para alumnos, cargar también los eventos personalizados
+            if (this.expectedRole === 'ALUMNO') {
+              this.loadEventosPersonalizados(Number(itemId));
+            }
+            
+            // Configurar eventos para alumnos
+            if (this.expectedRole === 'ALUMNO') {
+              this.events.forEach(event => {
+                // Permitir arrastre para alumnos
+                event.draggable = true;
+                // Pero no permitir redimensionar
+                event.resizable = {
+                  beforeStart: false,
+                  afterEnd: false
+                };
+                
+                // Aplicar posiciones personalizadas si existen
+                if (event.meta?.subBloque?.posicionPersonalizada) {
+                  const posicion = new Date(event.meta.subBloque.posicionPersonalizada);
+                  // Mantener la duración original
+                  const duracion = event.end ? event.end.getTime() - event.start.getTime() : 0;
+                  // Establecer la nueva posición
+                  event.start = posicion;
+                  event.end = new Date(posicion.getTime() + duracion);
+                }
+              });
+            }
+            
             this.relevancia.clear();
             entry.relevancia.forEach((e) =>
               this.relevancia.push(new FormControl(e))
             );
-            //Disabled calculation initial date
-            // if (!this.calculatedInitialDate) {
-            //   const minDate = this.eventsService.calculateMinDate(this.events);
-            //   this.viewDate = minDate;
-            //   this.calculatedInitialDate = true;
-            // }
+            
             this.usuariosSeleccionadosId = [];
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();
@@ -413,6 +439,21 @@ export class PlanificacionMensualEditComponent {
         )
       );
     }
+  }
+
+  // Método para cargar los eventos personalizados - refactorizado
+  private loadEventosPersonalizados(planificacionId: number) {
+    this.planificacionesService.getEventosPersonalizados$(planificacionId)
+      .subscribe({
+        next: (eventosPersonalizados) => {
+          // Agregar los eventos personalizados a la lista de eventos utilizando el servicio
+          const nuevosEventos = this.eventsService.fromSubbloquesToEvents([], eventosPersonalizados);
+          this.events = [...this.events, ...nuevosEventos];
+        },
+        error: (err) => {
+          console.error('Error al cargar eventos personalizados:', err);
+        }
+      });
   }
 
   public async guardarCambios() {

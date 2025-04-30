@@ -1,3 +1,4 @@
+import { CalendarEvent } from 'angular-calendar';
 import { EstadoExamen, TipoAcceso } from '../examen/models/examen.model';
 import {
   EstadoFlashcard,
@@ -356,4 +357,37 @@ export const getAllDifficultades = (
     return alumnoOnly;
   }
   return [...allDificultades, ...alumnoOnly];
+};
+
+export const crearEventoCalendario = (evento: any, esPersonalizado: boolean = false): CalendarEvent => {
+  const inicio = new Date(evento.horaInicio);
+  const duracion = evento.duracion || 60;
+  const fin = new Date(inicio.getTime() + duracion * 60000);
+  
+  // Crear una estructura unificada
+  return {
+    title: evento.nombre,
+    start: inicio,
+    end: fin,
+    color: {
+      primary: evento.color || (esPersonalizado ? '#4caf50' : '#ffffff'),
+      secondary: evento.color || (esPersonalizado ? '#4caf50' : '#ffffff')
+    },
+    draggable: true,
+    meta: {
+      esPersonalizado: esPersonalizado, // Flag para identificar el tipo
+      subBloque: {
+        id: evento.id,
+        comentarios: evento.comentarios || '',
+        comentariosAlumno: evento.comentariosAlumno || '',
+        color: evento.color || (esPersonalizado ? '#4caf50' : '#ffffff'),
+        duracion: evento.duracion,
+        importante: evento.importante || false,
+        tiempoAviso: evento.tiempoAviso,
+        realizado: evento.realizado || false,
+        planificacionId: evento.planificacionId, // Añadimos planificacionId para eventos personalizados
+        esPersonalizado: esPersonalizado, // Duplicamos el flag dentro del subBloque para facilitar el acceso
+      }
+    }
+  };
 };

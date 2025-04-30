@@ -21,8 +21,14 @@ import {
   PlanificacionBloque,
   SubBloque,
 } from '../../shared/models/planificacion.model';
-import { getDateForDayOfWeek, getStartOfWeek } from '../../utils/utils';
+import {
+  getDateForDayOfWeek,
+  getStartOfWeek,
+  crearEventoCalendario,
+} from '../../utils/utils';
 import { EventsService } from '../services/events.service';
+import { ToastrService } from 'ngx-toastr';
+import { ActivatedRoute } from '@angular/router';
 export const colors: any = {
   yellow: {
     primary: '#e3bc08',
@@ -75,8 +81,48 @@ export class VistaSemanalComponent {
   @Input() mode: 'picker' | 'edit' = 'edit';
   private onTimeClickedDate!: Date;
   public triggerSaveUpdateProgress = new Subject();
+  private activatedRoute = inject(ActivatedRoute);
   @Memoize()
   getMenuItems(role: 'ADMIN' | 'ALUMNO') {
+    const addNewPersonalizado = {
+      label: 'Añadir evento personal',
+      icon: 'pi pi-plus-circle',
+      command: () => {
+        this.selectedEvent = null;
+        const nuevoEvento = {
+          id: undefined,
+          horaInicio: this.onTimeClickedDate,
+          duracion: 60,
+          nombre: '',
+          descripcion: '',
+          color: '#4caf50', // Color diferente para distinguir
+          planificacionId: Number(
+            this.activatedRoute?.snapshot?.paramMap?.get('id')
+          ),
+        };
+
+        this.selectedEvent = {
+          title: nuevoEvento.nombre,
+          start: this.onTimeClickedDate,
+          draggable: true,
+          end: new Date(
+            this.onTimeClickedDate.getTime() + nuevoEvento.duracion * 60000
+          ),
+          color: {
+            primary: nuevoEvento.color,
+            secondary: nuevoEvento.color,
+          },
+          meta: {
+            tipo: 'personalizado',
+            eventoPersonalizado: nuevoEvento,
+          },
+        };
+
+        this.editEventoPersonalizadoData = nuevoEvento;
+        this.isEventoPersonalizadoDialogVisible = true;
+      },
+    };
+
     const addNew = {
       label: 'Añadir nuevo',
       icon: 'pi pi-plus',
@@ -109,15 +155,19 @@ export class VistaSemanalComponent {
         this.isDialogVisible = true;
       },
     };
+
     const aplicarBloqueAsignable = {
       label: 'Aplicar bloque asignable',
       icon: 'pi pi-book',
       command: () => (this.seleccionandoBloquesAsignables = true),
     };
+
     if (role == 'ADMIN') {
       return [addNew, aplicarBloqueAsignable];
     }
-    return [addNew];
+
+    // Para alumnos, mostrar opción de agregar evento personal
+    return [addNewPersonalizado];
   }
   public getEventsForDay = this.eventsService.getEventsForDay;
   public getProgressBarColor = this.eventsService.getProgressBarColor;
@@ -229,21 +279,38 @@ export class VistaSemanalComponent {
   };
   public debouncedValueChanged = debounce(this.valueChanged, 300);
   public colors = colors;
+  toast = inject(ToastrService);
 
   constructor() {
-    this.triggerSaveUpdateProgress
-      .subscribe(() => this.saveChanges.emit());
+    this.triggerSaveUpdateProgress.subscribe(() => this.saveChanges.emit());
   }
 
-  ngOnInit(): void { }
+  ngOnInit(): void {}
 
   onEventClicked(event: CalendarEvent): void {
     this.selectedEvent = event;
-    this.editSubBloqueData = {
-      ...event.meta.subBloque,
-      nombre: event.title,
-    };
-    this.isDialogVisible = true;
+
+    if (event.meta?.esPersonalizado) {
+      this.editEventoPersonalizadoData = {
+        id: event.meta.subBloque.id,
+        planificacionId: Number(this.activatedRoute.snapshot.params['id']),
+        nombre: event.title,
+        descripcion: event.meta.subBloque.comentarios,
+        horaInicio: event.start,
+        duracion: event.meta.subBloque.duracion,
+        color: event.meta.subBloque.color,
+        importante: event.meta.subBloque.importante,
+        tiempoAviso: event.meta.subBloque.tiempoAviso,
+        realizado: event.meta.subBloque.realizado,
+      };
+      this.isEventoPersonalizadoDialogVisible = true;
+    } else {
+      this.editSubBloqueData = {
+        ...event.meta.subBloque,
+        nombre: event.title,
+      };
+      this.isDialogVisible = true;
+    }
   }
 
   saveEvent(subbloque: SubBloque): void {
@@ -257,7 +324,7 @@ export class VistaSemanalComponent {
         },
         end: new Date(
           new Date(this.selectedEvent.start).getTime() +
-          subbloque.duracion * 60000
+            subbloque.duracion * 60000
         ),
         meta: {
           ...this.selectedEvent.meta,
@@ -357,21 +424,68 @@ export class VistaSemanalComponent {
     if (newEnd) {
       event.end = newEnd;
     }
-    // Verificamos si el evento tiene `template: true` para decidir si ejecutar el bucle de subBloques
-    if ((event as any)['tieneTemplate'] || event.meta?.template) {
+
+    // Verificamos el tipo de evento usando la nueva estructura con esPersonalizado
+    if (event.meta?.esPersonalizado) {
+      // Es un evento personalizado, actualizar en la base de datos
+      const subBloque = event.meta.subBloque;
+      if (subBloque && subBloque.id) {
+        this.planificacionesService
+          .actualizarEventoPersonalizado$({
+            id: subBloque.id,
+            planificacionId: Number(this.activatedRoute.snapshot.params['id']),
+            nombre: event.title,
+            descripcion: subBloque.comentarios || '',
+            horaInicio: newStart,
+            duracion: subBloque.duracion,
+            color: subBloque.color,
+            importante: subBloque.importante || false,
+            tiempoAviso: subBloque.tiempoAviso
+          })
+          .subscribe({
+            next: () => {
+              // Actualizar localmente
+              event.meta.subBloque.horaInicio = newStart;
+              this.refresh.next();
+            },
+            error: (err) => {
+              this.toast.error(
+                'Error al guardar la posición del evento personal'
+              );
+              console.error('Error:', err);
+            },
+          });
+      }
+    } else if ((event as any)['tieneTemplate'] || event.meta?.template) {
+      // Aplicar template (código existente)
       this.applyPlanificacionBloque(event as any, newStart);
-    } else {
-      // El evento simplemente se movió dentro del calendario, por lo que no necesitamos crear sub-eventos
-      console.log('Movimiento de evento existente dentro del calendario');
+    } else if (this.role === 'ALUMNO' && event?.meta?.subBloque?.id) {
+      // Actualizar posición personalizada (código existente)
+      this.planificacionesService
+        .actualizarProgresoSubBloque$({
+          subBloqueId: event.meta.subBloque.id,
+          posicionPersonalizada: newStart,
+        })
+        .subscribe({
+          next: () => {
+            console.log('Posición personalizada guardada');
+          },
+          error: (err) => {
+            this.toast.error('Error al guardar la posición personalizada');
+            console.error('Error al guardar posición:', err);
+          },
+        });
     }
+
     this.events = [...this.events];
     if (this.view === 'month') {
       this.viewDate = newStart;
       this.activeDayIsOpen = true;
     }
-    this.eventsChange.emit(this.events);
     this.refresh.next();
-    if (!!autoSave) this.saveChanges.emit();
+    if (this.role === 'ADMIN' && !!autoSave) {
+      this.saveChanges.emit();
+    }
   }
 
   cancelEdit(): void {
@@ -387,11 +501,6 @@ export class VistaSemanalComponent {
     //   scrollbar.scrollIntoView({ behavior: 'smooth' });
     //   scrollbar.scrollIntoView(true);
     // }
-  }
-
-  toggleComplete(event: CalendarEvent): void {
-    event.meta = { ...event.meta, completado: !event.meta?.completado };
-    this.refresh.next(); // Refresca la vista del calendario
   }
 
   openCommentDialog(subBloque: any, event: Event): void {
@@ -414,21 +523,249 @@ export class VistaSemanalComponent {
 
     const subBloque = event?.meta.subBloque;
 
-    if (subBloque) {
-      subBloque.comentariosAlumno = this.selectedSubBloque.comentariosAlumno;
+    if (!subBloque || !subBloque.id) {
+      this.toast.error('No se pudo guardar el comentario');
+      this.isCommentDialogVisible = false;
+      return;
     }
 
-    this.isCommentDialogVisible = false;
-    this.refresh.next();
-    this.eventsChange.emit(this.events);
-    setTimeout(() => {
-      this.saveChanges.emit();
-    }, 0);
+    if (this.role === 'ALUMNO') {
+      // Para alumnos, usar el nuevo servicio
+      this.planificacionesService
+        .actualizarProgresoSubBloque$({
+          subBloqueId: subBloque.id,
+          comentariosAlumno: this.selectedSubBloque.comentariosAlumno,
+        })
+        .subscribe({
+          next: () => {
+            // Actualizar localmente
+            subBloque.comentariosAlumno =
+              this.selectedSubBloque.comentariosAlumno;
+            this.isCommentDialogVisible = false;
+            this.refresh.next();
+            this.toast.success('Comentario guardado correctamente');
+          },
+          error: (err) => {
+            this.toast.error('Error al guardar el comentario');
+            console.error('Error al guardar comentario:', err);
+            this.isCommentDialogVisible = false;
+          },
+        });
+    } else {
+      // Para admin, comportamiento previo
+      subBloque.comentariosAlumno = this.selectedSubBloque.comentariosAlumno;
+      this.isCommentDialogVisible = false;
+      this.refresh.next();
+      this.eventsChange.emit(this.events);
+    }
   }
 
   onTimeClicked({ date, sourceEvent }: any, cm: ContextMenu): void {
     sourceEvent.stopPropagation();
     this.onTimeClickedDate = date;
     cm.show(sourceEvent);
+  }
+
+  // Propiedades para manejar eventos personalizados
+  public isEventoPersonalizadoDialogVisible: boolean = false;
+  public editEventoPersonalizadoData: any = null;
+
+  // Guardar evento personalizado
+  saveEventoPersonalizado(evento: any): void {
+    if (!evento) return;
+
+    // Determinar si es nuevo o existente
+    const isNew = !evento.id;
+
+    // Preparar para guardar en base de datos
+    const dto = {
+      id: evento.id,
+      planificacionId: Number(this.activatedRoute.snapshot.params['id']),
+      nombre: evento.nombre,
+      descripcion: evento.descripcion,
+      horaInicio: evento.horaInicio,
+      duracion: evento.duracion,
+      color: evento.color,
+      importante: evento.importante,
+      tiempoAviso: evento.tiempoAviso,
+      realizado: evento.realizado,
+    };
+
+    // Llamada al servicio
+    const observable = isNew
+      ? this.planificacionesService.crearEventoPersonalizado$(dto)
+      : this.planificacionesService.actualizarEventoPersonalizado$(dto);
+
+    observable.subscribe({
+      next: (response) => {
+        // Crear objeto para el evento
+        const eventoData = {
+          ...dto,
+          id: isNew ? response.id : dto.id,
+        };
+
+        // Crear el evento del calendario con estructura unificada
+        const updatedEvent = {
+          title: eventoData.nombre,
+          start: new Date(eventoData.horaInicio),
+          end: new Date(
+            new Date(eventoData.horaInicio).getTime() +
+              eventoData.duracion * 60000
+          ),
+          color: {
+            primary: eventoData.color || '#4caf50',
+            secondary: eventoData.color || '#4caf50',
+          },
+          draggable: true,
+          meta: {
+            esPersonalizado: true,
+            subBloque: {
+              id: eventoData.id,
+              nombre: eventoData.nombre,
+              horaInicio: eventoData.horaInicio,
+              duracion: eventoData.duracion,
+              comentarios: eventoData.descripcion || '',
+              color: eventoData.color || '#4caf50',
+              importante: eventoData.importante || false,
+              tiempoAviso: eventoData.tiempoAviso,
+              realizado: eventoData.realizado || false,
+              planificacionId: Number(this.activatedRoute.snapshot.params['id']),
+              esPersonalizado: true,
+            },
+          },
+        };
+
+        if (isNew) {
+          this.events.push(updatedEvent as CalendarEvent);
+        } else {
+          // Reemplazar el evento existente
+          for (let i = 0; i < this.events.length; i++) {
+            if (
+              this.events[i].meta?.esPersonalizado &&
+              this.events[i].meta?.subBloque?.id === eventoData.id
+            ) {
+              this.events[i] = updatedEvent as CalendarEvent;
+              break;
+            }
+          }
+        }
+
+        this.events = [...this.events];
+        this.refresh.next();
+        this.isEventoPersonalizadoDialogVisible = false;
+        this.toast.success(
+          `Evento personal ${isNew ? 'creado' : 'actualizado'} correctamente`
+        );
+      },
+      error: (err) => {
+        this.toast.error(
+          `Error al ${isNew ? 'crear' : 'actualizar'} el evento personal`
+        );
+        console.error('Error:', err);
+      },
+    });
+  }
+
+  // Eliminar evento personalizado
+  deleteEventoPersonalizado(event: CalendarEvent, domEvent: Event): void {
+    domEvent.stopPropagation();
+
+    if (!event.meta?.subBloque?.id || !event.meta?.esPersonalizado) {
+      this.toast.error('No se puede eliminar este evento');
+      return;
+    }
+
+    this.planificacionesService
+      .eliminarEventoPersonalizado$(event.meta.subBloque.id)
+      .subscribe({
+        next: () => {
+          this.events = this.events.filter(
+            (e) =>
+              !(
+                e.meta?.esPersonalizado &&
+                e.meta?.subBloque?.id === event.meta?.subBloque?.id
+              )
+          );
+          this.refresh.next();
+          this.toast.success('Evento personal eliminado correctamente');
+        },
+        error: (err) => {
+          this.toast.error('Error al eliminar el evento personal');
+          console.error('Error:', err);
+        },
+      });
+  }
+
+  // Función unificada para actualizar realizado en cualquier tipo de evento
+  updateEventProgress(event: CalendarEvent, realizado?: boolean): void {
+    // Si no se proporciona valor, toggled el valor actual
+    const nuevoEstado =
+      realizado !== undefined ? realizado : !event.meta?.subBloque?.realizado;
+
+    // Verificar si tenemos ID
+    if (!event?.meta?.subBloque?.id) {
+      console.error('No se puede actualizar: falta el ID del evento');
+      return;
+    }
+
+    // Verificar si es un evento personalizado
+    const esPersonalizado = event.meta?.esPersonalizado || false;
+
+    if (esPersonalizado) {
+      // Crear un objeto DTO simplificado
+      const dto = {
+        id: event.meta.subBloque.id,
+        planificacionId: Number(this.activatedRoute.snapshot.params['id']),
+        realizado: nuevoEstado,
+      };
+
+      this.planificacionesService
+        .actualizarEventoPersonalizadoRealizado$(
+          dto.id,
+          dto.planificacionId,
+          dto.realizado
+        )
+        .subscribe({
+          next: () => {
+            // Actualizar localmente
+            event.meta.subBloque.realizado = nuevoEstado;
+            this.refresh.next();
+            this.toast.success(
+              `Evento marcado como ${nuevoEstado ? 'realizado' : 'pendiente'}`
+            );
+          },
+          error: (err) => {
+            console.error('Error al actualizar el evento:', err);
+            this.toast.error('Error al actualizar el estado del evento');
+          },
+        });
+    } else {
+      // Es un subbloque normal
+      if (this.role === 'ALUMNO') {
+        this.planificacionesService
+          .actualizarProgresoSubBloque$({
+            subBloqueId: event.meta.subBloque.id,
+            realizado: nuevoEstado,
+          })
+          .subscribe({
+            next: () => {
+              event.meta.subBloque.realizado = nuevoEstado;
+              this.refresh.next();
+            },
+            error: (err) => {
+              event.meta.subBloque.realizado = !nuevoEstado;
+              this.refresh.next();
+              this.toast.error(
+                'Error al actualizar el progreso. Inténtalo de nuevo.'
+              );
+              console.error('Error actualizar progreso:', err);
+            },
+          });
+      } else {
+        // Para el modo ADMIN
+        event.meta.subBloque.realizado = nuevoEstado;
+        this.refresh.next();
+      }
+    }
   }
 }

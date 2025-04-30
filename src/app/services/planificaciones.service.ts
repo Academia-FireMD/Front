@@ -13,6 +13,27 @@ import {
 import { TipoDePlanificacionDeseada } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
 
+// Interfaz para la actualización de progreso
+export interface ProgresoSubBloqueDTO {
+  subBloqueId: number;
+  realizado?: boolean;
+  comentariosAlumno?: string;
+}
+
+// Definir interfaz para eventos personalizados
+export interface EventoPersonalizadoDTO {
+  id?: number;
+  planificacionId: number;
+  nombre: string;
+  descripcion?: string;
+  horaInicio: Date;
+  duracion: number;
+  color?: string;
+  importante?: boolean;
+  tiempoAviso?: number;
+  realizado?: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -138,5 +159,41 @@ export class PlanificacionesService extends ApiBaseService {
 
   public autoAssignPlanificacionMensualAll() {
     return this.post('/auto-assign-planificacion-mensual-all', {});
+  }
+
+  // NUEVO: Método para actualizar el progreso de un subbloque
+  public actualizarProgresoSubBloque$(dto: {
+    subBloqueId: number;
+    realizado?: boolean;
+    comentariosAlumno?: string;
+    posicionPersonalizada?: Date;
+  }): Observable<any> {
+    return this.post('/actualizar-progreso-subbloque', dto);
+  }
+
+  // Métodos para eventos personalizados
+  public getEventosPersonalizados$(planificacionId: number): Observable<any[]> {
+    return this.get(`/eventos-personalizados/${planificacionId}`);
+  }
+
+  public crearEventoPersonalizado$(dto: EventoPersonalizadoDTO): Observable<any> {
+    return this.post('/eventos-personalizados', dto);
+  }
+
+  public actualizarEventoPersonalizado$(dto: EventoPersonalizadoDTO): Observable<any> {
+    return this.post('/eventos-personalizados/actualizar', dto);
+  }
+
+  public eliminarEventoPersonalizado$(id: number): Observable<any> {
+    return this.delete(`/eventos-personalizados/${id}`);
+  }
+
+  // Método específico para actualizar solo el estado "realizado" de un evento personalizado
+  public actualizarEventoPersonalizadoRealizado$(id: number, planificacionId: number, realizado: boolean): Observable<any> {
+    return this.post('/eventos-personalizados/actualizar-realizado', {
+      id,
+      planificacionId,
+      realizado
+    });
   }
 }

@@ -227,9 +227,7 @@
       <div
         class="wrapper"
         (click)="
-          role == 'ALUMNO'
-            ? onEventClicked(weekEvent.event)
-            : mode == 'edit'
+          role == 'ALUMNO' || mode == 'edit'
             ? onEventClicked(weekEvent.event)
             : false
         "
@@ -237,24 +235,32 @@
         <div
           class="custom-event-template"
           [ngStyle]="{
-            'background-color': weekEvent?.event?.color?.primary || '#e3e3e3'
+            'background-color': weekEvent?.event?.color?.primary || '#e3e3e3',
+            'border-left': weekEvent?.event?.meta?.esPersonalizado ? '4px solid #ff9800' : 'none'
           }"
         >
           <div class="event-content">
             <div class="event-header">
               <div class="d-flex align-items-center gap-1">
+                <!-- Iconos para eventos personalizados -->
+                <i *ngIf="weekEvent?.event?.meta?.esPersonalizado"
+                   class="pi pi-user text-orange-500"
+                   style="font-size: 0.8rem;"
+                   pTooltip="Evento personal"></i>
+                <!-- Iconos existentes -->
                 <i *ngIf="weekEvent?.event?.meta?.subBloque?.importante"
                    class="pi pi-star-fill text-yellow-500"
                    style="font-size: 0.8rem;"
-                   pTooltip="Sub-bloque importante"></i>
+                   pTooltip="Importante"></i>
                 <i *ngIf="weekEvent?.event?.meta?.subBloque?.tiempoAviso"
                    class="pi pi-bell text-orange-500"
                    style="font-size: 0.8rem;"
-                   pTooltip="Aviso: {{weekEvent?.event?.meta?.subBloque?.tiempoAviso}} min"></i>
+                   pTooltip="Aviso anticipado"></i>
                 <strong class="descripcion text-sm">{{weekEvent?.event?.title || "Sin nombre"}}</strong>
               </div>
               <div class="event-actions">
-                <i
+                <!-- Ícono de comentario para eventos no personalizados -->
+                <i *ngIf="!weekEvent?.event?.meta?.esPersonalizado"
                   class="{{
                     !!weekEvent?.event?.meta?.subBloque?.comentariosAlumno
                       ? 'fa-solid'
@@ -265,27 +271,28 @@
                   "
                 ></i>
 
-                @if(role == 'ADMIN'){
+                <!-- Ícono de borrar (adaptado para ambos tipos) -->
                 <i
                   class="fa-solid fa-trash-can text-primary"
-                  (click)="deleteEvent(weekEvent?.event, $event)"
+                  (click)="weekEvent?.event?.meta?.esPersonalizado ? 
+                         deleteEventoPersonalizado(weekEvent?.event, $event) : 
+                         deleteEvent(weekEvent?.event, $event)"
+                  *ngIf="role == 'ADMIN' || weekEvent?.event?.meta?.esPersonalizado"
                 ></i>
-                }
+                
+                <!-- Checkbox unificado para ambos tipos de eventos -->
                 <p-checkbox
                   *ngIf="role == 'ALUMNO'"
-                  [(ngModel)]="weekEvent.event.meta.subBloque.realizado"
+                  [ngModel]="weekEvent?.event?.meta?.subBloque?.realizado"
                   binary="true"
                   (click)="$event.preventDefault(); $event.stopPropagation()"
-                  (ngModelChange)="triggerSaveUpdateProgress.next(null)"
+                  (onChange)="updateEventProgress(weekEvent?.event)"
                   styleClass="complete-checkbox"
                 ></p-checkbox>
               </div>
             </div>
             <span class="event-comments descripcion w-full">
-              {{
-                weekEvent?.event?.meta?.subBloque?.comentarios ||
-                  "Sin comentarios"
-              }}
+              {{ weekEvent?.event?.meta?.subBloque?.comentarios || "Sin comentarios" }}
             </span>
           </div>
         </div>
@@ -317,3 +324,97 @@
     </mwl-calendar-week-view>
   </div>
 </div>
+
+<!-- Añadir diálogo para eventos personalizados -->
+<p-dialog
+  header="Evento Personalizado"
+  [(visible)]="isEventoPersonalizadoDialogVisible"
+  [modal]="true"
+  [style]="{width: '450px'}"
+  [closable]="true"
+>
+  <div class="p-fluid" *ngIf="editEventoPersonalizadoData">
+    <div class="field">
+      <label for="nombre">Nombre del evento</label>
+      <input 
+        id="nombre" 
+        type="text" 
+        pInputText 
+        [(ngModel)]="editEventoPersonalizadoData.nombre" 
+        required
+      />
+    </div>
+    
+    <div class="field">
+      <label for="descripcion">Descripción</label>
+      <textarea 
+        id="descripcion" 
+        pInputTextarea 
+        [(ngModel)]="editEventoPersonalizadoData.descripcion" 
+        rows="3"
+      ></textarea>
+    </div>
+    
+    <div class="field">
+      <label for="horaInicio">Hora de inicio</label>
+      <p-calendar 
+        id="horaInicio" 
+        appendTo="body"
+        [(ngModel)]="editEventoPersonalizadoData.horaInicio" 
+        [showTime]="true" 
+        [showSeconds]="false"
+        dateFormat="dd/mm/yy"
+        [style]="{width: '100%'}"
+      ></p-calendar>
+    </div>
+    
+    <div class="field">
+      <label for="duracion">Duración (minutos)</label>
+      <p-inputNumber 
+        id="duracion" 
+        [(ngModel)]="editEventoPersonalizadoData.duracion" 
+        [min]="15" 
+        [max]="480"
+        [showButtons]="true"
+        [style]="{width: '100%'}"
+      ></p-inputNumber>
+    </div>
+    
+    <div class="field">
+      <label for="color">Color</label>
+      <p-colorPicker 
+        appendTo="body"
+        id="color" 
+        [(ngModel)]="editEventoPersonalizadoData.color" 
+        [style]="{width: '100%'}"
+      ></p-colorPicker>
+    </div>
+    
+    <div class="field-checkbox" *ngIf="editEventoPersonalizadoData.id">
+      <p-checkbox 
+        [(ngModel)]="editEventoPersonalizadoData.realizado" 
+        [binary]="true" 
+        inputId="realizado"
+      ></p-checkbox>
+      <label for="realizado">Marcar como realizado</label>
+    </div>
+  </div>
+  
+  <ng-template pTemplate="footer">
+    <button 
+      pButton 
+      label="Cancelar" 
+      icon="pi pi-times" 
+      class="p-button-text" 
+      (click)="isEventoPersonalizadoDialogVisible = false"
+    ></button>
+    <button 
+      pButton 
+      label="Guardar" 
+      icon="pi pi-check" 
+      class="p-button-primary" 
+      (click)="saveEventoPersonalizado(editEventoPersonalizadoData)"
+      [disabled]="!editEventoPersonalizadoData.nombre"
+    ></button>
+  </ng-template>
+</p-dialog>
