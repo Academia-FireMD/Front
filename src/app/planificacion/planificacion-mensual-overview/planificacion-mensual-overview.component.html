@@ -111,7 +111,7 @@
                   >
                     {{ item.createdAt | date : "short" }}</span
                   >
-                  <p-button
+                  <p-button *ngIf="expectedRole == 'ADMIN'"
                     [link]="true"
                     icon="pi pi-clone"
                     (click)="

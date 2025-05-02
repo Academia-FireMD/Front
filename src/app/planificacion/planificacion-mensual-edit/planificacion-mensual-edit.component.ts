@@ -49,7 +49,7 @@ export class PlanificacionMensualEditComponent {
     ano: [0, Validators.required],
     relevancia: this.fb.array([] as Array<Comunidad>),
     esPorDefecto: [false],
-    tipoDePlanificacion: [TipoDePlanificacionDeseada.SEIS_HORAS],
+    tipoDePlanificacion: [TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS],
   });
   public get relevancia(): FormArray {
     return this.formGroup.get('relevancia') as FormArray;
@@ -469,7 +469,7 @@ export class PlanificacionMensualEditComponent {
         esPorDefecto: this.formGroup.value.esPorDefecto ?? false,
         tipoDePlanificacion:
           this.formGroup.value.tipoDePlanificacion ??
-          TipoDePlanificacionDeseada.SEIS_HORAS,
+          TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
         subBloques: this.eventsService.fromEventsToSubbloques(
           this.events
         ) as SubBloque[],

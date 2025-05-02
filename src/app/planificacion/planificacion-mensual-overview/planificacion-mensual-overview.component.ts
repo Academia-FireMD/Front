@@ -126,25 +126,49 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   };
 
   public eliminar(id: number, event: Event) {
-    this.confirmationService.confirm({
-      target: event.target as EventTarget,
-      message: `Vas a eliminar una planificación mensual con el ID ${id}, ¿estás seguro?`,
-      header: 'Confirmación',
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'none',
-      acceptLabel: 'Sí',
-      rejectLabel: 'No',
-      rejectIcon: 'none',
-      rejectButtonStyleClass: 'p-button-text',
-      accept: async () => {
-        await firstValueFrom(
-          this.planificacionesService.deletePlanificacionMensual$(id)
-        );
-        this.toast.info('Planificación mensual eliminada exitosamente');
-        this.refresh();
-      },
-      reject: () => {},
-    });
+
+    if (this.expectedRole == 'ALUMNO') {
+      this.confirmationService.confirm({
+        target: event.target as EventTarget,
+        message: `Vas a desvincular una planificación mensual con el ID ${id} perdiendo todo tu progreso, ¿estás seguro?`,
+        header: 'Confirmación',
+        icon: 'pi pi-exclamation-triangle',
+        acceptIcon: 'none',
+        acceptLabel: 'Sí',
+        rejectLabel: 'No',
+        rejectIcon: 'none',
+        rejectButtonStyleClass: 'p-button-text',
+        accept: async () => {
+          await firstValueFrom(
+            this.planificacionesService.desvincularPlanificacionMensual$(id)
+          );
+          this.toast.info('Planificación mensual desvinculada exitosamente');
+          this.refresh();
+        },
+        reject: () => { },
+      });
+    } else {
+
+      this.confirmationService.confirm({
+        target: event.target as EventTarget,
+        message: `Vas a eliminar una planificación mensual con el ID ${id}, ¿estás seguro?`,
+        header: 'Confirmación',
+        icon: 'pi pi-exclamation-triangle',
+        acceptIcon: 'none',
+        acceptLabel: 'Sí',
+        rejectLabel: 'No',
+        rejectIcon: 'none',
+        rejectButtonStyleClass: 'p-button-text',
+        accept: async () => {
+          await firstValueFrom(
+            this.planificacionesService.deletePlanificacionMensual$(id)
+          );
+          this.toast.info('Planificación mensual eliminada exitosamente');
+          this.refresh();
+        },
+        reject: () => { },
+      });
+    }
   }
 
   public async clonarPlanificacion(id: number) {

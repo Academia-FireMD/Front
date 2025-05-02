@@ -196,4 +196,8 @@ export class PlanificacionesService extends ApiBaseService {
       realizado
     });
   }
+
+  public desvincularPlanificacionMensual$(id: number): Observable<any> {
+    return this.post(`/desvincular-planificacion-mensual/${id}`, null);
+  }
 }

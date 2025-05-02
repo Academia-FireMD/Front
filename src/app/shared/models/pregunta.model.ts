@@ -56,10 +56,8 @@ export enum Comunidad {
 }
 
 export const duracionesDisponibles = [
-  { label: '2 Horas', value: 'DOS_HORAS' },
-  { label: '4 Horas', value: 'CUATRO_HORAS' },
-  { label: '6 Horas', value: 'SEIS_HORAS' },
-  { label: '8 Horas', value: 'OCHO_HORAS' },
+  { label: '4-6 Horas', value: 'FRANJA_CUATRO_A_SEIS_HORAS' },
+  { label: '6-8 Horas', value: 'FRANJA_SEIS_A_OCHO_HORAS' },
 ];
 
 export const matchKeyWithLabel = (key: TipoDePlanificacionDeseada) => {
