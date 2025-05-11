@@ -1,14 +1,27 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { MarkdownModule } from 'ngx-markdown';
 import { ConfirmationService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { AvatarGroupModule } from 'primeng/avatargroup';
 import { BadgeModule } from 'primeng/badge';
+import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { CheckboxModule } from 'primeng/checkbox';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DropdownModule } from 'primeng/dropdown';
+import { InputSwitchModule } from 'primeng/inputswitch';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { MessagesModule } from 'primeng/messages';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { ToolbarModule } from 'primeng/toolbar';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
@@ -18,6 +31,8 @@ import { DashboardStatsComponent } from './components/dashboard-stats/dashboard-
 import { FlashcardDetailviewAdminComponent } from './components/flashcard-detailview-admin/flashcard-detailview-admin.component';
 import { FlashcardOverviewAdminComponent } from './components/flashcard-overview-admin/flashcard-overview-admin.component';
 import { FullStatsComponent } from './components/full-stats/full-stats.component';
+import { ModuloDetailviewComponent } from './components/modulo-detailview/modulo-detailview.component';
+import { ModuloOverviewComponent } from './components/modulo-overview/modulo-overview.component';
 import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
 import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
@@ -55,6 +70,8 @@ import { TestRoutingModule } from './test-routing.module';
     TestStatsGridComponent,
     FullStatsComponent,
     PieChartDashboardSecurityComponent,
+    ModuloOverviewComponent,
+    ModuloDetailviewComponent
   ],
   imports: [
     CommonModule,
@@ -63,16 +80,32 @@ import { TestRoutingModule } from './test-routing.module';
     SharedModule,
     FormsModule,
     ReactiveFormsModule,
+    RouterModule,
     FormsModule,
     NgxEchartsDirective,
     AvatarGroupModule,
     AvatarModule,
     MessagesModule,
     BadgeModule,
+    ButtonModule,
+    CardModule,
+    CheckboxModule,
+    ConfirmDialogModule,
+    DropdownModule,
+    InputSwitchModule,
+    InputTextModule,
+    InputTextareaModule,
+    TableModule,
+    TagModule,
+    ToolbarModule
   ],
   providers: [ConfirmationService],
   exports: [
     CompletarTestComponent,
+    TemaOverviewComponent,
+    TemaDetailviewComponent,
+    ModuloOverviewComponent,
+    ModuloDetailviewComponent
   ]
 })
 export class TestModule { }

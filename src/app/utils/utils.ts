@@ -284,15 +284,17 @@ export const getLetter = (index: number) => {
 export const groupedTemas = (temas: Array<Tema>) => {
   return Object.entries(
     temas.reduce((acc, tema) => {
-      const categoria = tema.categoria;
-      if (!acc[categoria as any]) {
-        acc[categoria as any] = [];
+      const categoria = tema.modulo?.nombre;
+      if (tema.modulo?.esPublico) {
+        if (!acc[categoria as any]) {
+          acc[categoria as any] = [];
+        }
+        acc[categoria as any].push({
+          label: tema.numero + ' - ' + tema.descripcion,
+          value: tema.id,
+          numero: tema.numero,
+        });
       }
-      acc[categoria as any].push({
-        label: tema.numero + ' - ' + tema.descripcion,
-        value: tema.id,
-        numero: tema.numero,
-      });
       return acc;
     }, {} as { [key: string]: { label: string; value: number; numero: number }[] })
   ).map(([categoria, items]) => ({
@@ -363,7 +365,7 @@ export const crearEventoCalendario = (evento: any, esPersonalizado: boolean = fa
   const inicio = new Date(evento.horaInicio);
   const duracion = evento.duracion || 60;
   const fin = new Date(inicio.getTime() + duracion * 60000);
-  
+
   // Crear una estructura unificada
   return {
     title: evento.nombre,

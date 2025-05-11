@@ -80,6 +80,11 @@ export class LayoutComponent {
               routerLink: '/app/test/user',
             },
             {
+              label: 'Modulos',
+              icon: 'pi pi-book',
+              routerLink: '/app/test/modulos',
+            },
+            {
               label: 'Temas',
               icon: 'pi pi-book',
               routerLink: '/app/test/tema',

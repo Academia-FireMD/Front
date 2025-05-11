@@ -10,6 +10,8 @@ import { DashboardStatsComponent } from './components/dashboard-stats/dashboard-
 import { FlashcardDetailviewAdminComponent } from './components/flashcard-detailview-admin/flashcard-detailview-admin.component';
 import { FlashcardOverviewAdminComponent } from './components/flashcard-overview-admin/flashcard-overview-admin.component';
 import { FullStatsComponent } from './components/full-stats/full-stats.component';
+import { ModuloDetailviewComponent } from './components/modulo-detailview/modulo-detailview.component';
+import { ModuloOverviewComponent } from './components/modulo-overview/modulo-overview.component';
 import { PreguntasDashboardAdminDetailviewComponent } from './components/preguntas-dashboard-admin-detailview/preguntas-dashboard-admin-detailview.component';
 import { PreguntasDashboardAdminComponent } from './components/preguntas-dashboard-admin/preguntas-dashboard-admin.component';
 import { PreguntasFallosFlashcardsOverviewComponent } from './components/preguntas-fallos-flashcards-overview/preguntas-fallos-flashcards-overview.component';
@@ -50,6 +52,18 @@ const routes: Routes = [
     canActivate: [roleGuard],
     title: 'Tema',
     data: { expectedRole: 'ADMIN', title: 'Tema' },
+  },
+  {
+    path: 'modulos',
+    component: ModuloOverviewComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN' },
+  },
+  {
+    path: 'modulos/:id',
+    component: ModuloDetailviewComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN' },
   },
   {
     path: 'preguntas',
@@ -264,6 +278,7 @@ const routes: Routes = [
     path: '**',
     redirectTo: 'user',
   },
+
 ];
 
 @NgModule({

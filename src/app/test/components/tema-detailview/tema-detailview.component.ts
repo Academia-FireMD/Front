@@ -6,6 +6,7 @@ import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom, tap } from 'rxjs';
 import { TemaService } from '../../../services/tema.service';
 import { Tema } from '../../../shared/models/pregunta.model';
+import { Modulo, ModuloService } from '../../../shared/services/modulo.service';
 
 @Component({
   selector: 'app-tema-detailview',
@@ -20,15 +21,27 @@ export class TemaDetailviewComponent {
   toast = inject(ToastrService);
   router = inject(Router);
   private lastLoadedTema!: Tema;
+  modulos: Modulo[] = [];
+  private moduloService = inject(ModuloService);
 
   formGroup = this.fb.group({
     numero: [1, Validators.required],
     descripcion: ['', Validators.required],
-    categoria: ['', Validators.required],
+    moduloId: [null, Validators.required],
   });
 
   ngOnInit(): void {
     this.loadTema();
+    this.cargarModulos();
+  }
+
+  private async cargarModulos() {
+    try {
+      this.modulos = await firstValueFrom(this.moduloService.getModulos$());
+    } catch (error) {
+      console.error('Error al cargar módulos:', error);
+      this.toast.error('Error al cargar los módulos');
+    }
   }
 
   public getId() {
@@ -70,7 +83,7 @@ export class TemaDetailviewComponent {
       ...this.formGroup.getRawValue(),
     };
     const result = await firstValueFrom(
-      this.temaService.updateTema$(merged as Tema)
+      this.temaService.updateTema$(merged as any as Tema)
     );
     return result;
   }

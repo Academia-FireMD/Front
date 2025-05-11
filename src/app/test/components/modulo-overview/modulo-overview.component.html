@@ -7,22 +7,12 @@
         <input
           type="text"
           pInputText
-          placeholder="Buscar por categoría"
+          placeholder="Buscar por nombre"
           style="min-width: 30vw"
           [value]="pagination().searchTerm"
           (input)="valueChanged($event)"
         />
       </p-iconField>
-      <p-dropdown
-        [options]="(modulos$ | async) ?? []"
-        [(ngModel)]="selectedModuloId"
-        optionLabel="nombre"
-        optionValue="id"
-        [showClear]="true"
-        placeholder="Filtrar por módulo"
-        (onChange)="onModuloChange($event)"
-        class="ml-2"
-      ></p-dropdown>
       <div class="right-actions">
         <p-button
           label="{{
@@ -30,7 +20,7 @@
           }}"
           icon="pi pi-plus"
           [link]="true"
-          (click)="navigateToDetailview('new')"
+          [routerLink]="['/app/test/modulos', 'new']"
         ></p-button>
       </div>
     </div>
@@ -46,15 +36,21 @@
           >
             <div class="flex flex-row align-items-between">
               <div class="flex flex-column py-2 col-9 left-side">
-                <div class="font-medium text-secondary text-sm hora-solicitud flex gap-2 align-items-center">
-                  <div class="flex gap-1 align-items-center">
-                    <span>Tema: </span>
-                    <strong>{{ item.numero }}</strong>
+                <div class="font-medium text-secondary text-sm hora-solicitud flex gap-2">
+                  <div class="flex gap-1">
+                    <span>Nombre: </span>
+                    <strong>{{ item.nombre }}</strong>
                   </div>
-
-                  <div class="flex gap-1 align-items-center">
-                    <span>Módulo: </span>
-                    <p-tag [value]="item.modulo?.nombre ?? 'Sin módulo'" [severity]="item.modulo ? 'info' : 'warning'"></p-tag>
+                  <div class="flex gap-1">
+                    <span>Estado: </span>
+                    <p-tag
+                      [value]="item.esPublico ? 'Público' : 'Privado'"
+                      [severity]="item.esPublico ? 'success' : 'warning'"
+                    ></p-tag>
+                  </div>
+                  <div class="flex gap-1">
+                    <span>Temas: </span>
+                    <p-badge [value]="item._count?.temas?.toString() ?? '0'"></p-badge>
                   </div>
                 </div>
                 <span class="font-small text-secondary text-sm descripcion">
@@ -78,7 +74,7 @@
                     (click)="
                       $event.stopPropagation();
                       $event.preventDefault();
-                      eliminarTema(item.id, $event)
+                      eliminarModulo(item)
                     "
                   ></p-button>
                 </div>

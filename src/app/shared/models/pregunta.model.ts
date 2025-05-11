@@ -1,3 +1,4 @@
+import { Modulo } from '../services/modulo.service';
 import { Test } from './test.model';
 import { TipoDePlanificacionDeseada, Usuario } from './user.model';
 
@@ -32,6 +33,8 @@ export interface Tema {
   numero: number;
   descripcion?: string;
   categoria?: string;
+  moduloId?: number;
+  modulo?: Modulo;
 }
 
 export enum Dificultad {

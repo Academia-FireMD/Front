@@ -17,15 +17,15 @@
             </p-floatLabel>
           </div>
           <div class="categoria">
-            <p-floatLabel>
-              <input
-                type="text"
-                pInputText
-                class="w-full"
-                formControlName="categoria"
-              />
-              <label for="categoria">Categoría</label>
-            </p-floatLabel>
+            <p-dropdown
+              id="moduloId"
+              [options]="modulos"
+              formControlName="moduloId"
+              optionLabel="nombre"
+              optionValue="id"
+              [showClear]="true"
+              placeholder="Selecciona un módulo"
+            ></p-dropdown>
           </div>
         </div>
         <div class="col-12 py-3">
