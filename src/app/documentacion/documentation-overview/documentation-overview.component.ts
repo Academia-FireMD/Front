@@ -1,6 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap } from 'rxjs';
 import { Documento } from '../../shared/models/documentacion.model';
@@ -8,20 +9,17 @@ import { PaginationFilter } from '../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
 import { DocumentosService } from '../services/documentacion.service';
 
-interface UploadEvent {
-  originalEvent: Event;
-  files: File[];
-}
 @Component({
   selector: 'app-documentation-overview',
   templateUrl: './documentation-overview.component.html',
   styleUrl: './documentation-overview.component.scss',
 })
-export class DocumentationOverviewComponent extends SharedGridComponent<Documento> {
+export class DocumentationOverviewComponent extends SharedGridComponent<Documento> implements OnInit {
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   activatedRoute = inject(ActivatedRoute);
   service = inject(DocumentosService);
   confirmationService = inject(ConfirmationService);
+  private notificationService = inject(ToastrService);
 
   public uploadingFile = false;
   public mostrarSubirFichero = false;
@@ -37,6 +35,10 @@ export class DocumentationOverviewComponent extends SharedGridComponent<Document
     this.fetchItems$ = computed(() => {
       return this.getDocumentacion({ ...this.pagination() });
     });
+  }
+
+  override ngOnInit() {
+    super.ngOnInit();
   }
 
   private getDocumentacion(pagination: PaginationFilter) {
@@ -116,5 +118,36 @@ export class DocumentationOverviewComponent extends SharedGridComponent<Document
         this.toast.error('Error al eliminar el documento.');
       },
     });
+  }
+
+  async descargarDocumento(url: string,fileName:string) {
+    try {
+      this.notificationService.info('Descargando documento...');
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error al descargar: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(blobUrl);
+
+      this.notificationService.success('Documento descargado correctamente');
+    } catch (error) {
+      console.error('Error al descargar el documento:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al descargar el documento';
+      this.notificationService.error(errorMessage);
+    }
   }
 }

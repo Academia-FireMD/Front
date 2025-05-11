@@ -1,6 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import { Documento } from '../../shared/models/documentacion.model';
 import {
@@ -35,5 +37,19 @@ export class DocumentosService extends ApiBaseService {
 
   public eliminarDocumento$(id: number): Observable<void> {
     return this.delete(`/${id}`) as Observable<void>;
+  }
+
+  public descargarDocumento$(id: number): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl + this.controllerPrefix}/download/${id}`, {
+      responseType: 'blob',
+      observe: 'response'
+    }).pipe(
+      map(response => {
+        if (!response.body) {
+          throw new Error('No se pudo descargar el archivo');
+        }
+        return response.body;
+      })
+    );
   }
 }

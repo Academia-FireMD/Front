@@ -122,13 +122,11 @@
                   >
                     Creado: {{ document.createdAt | date : "short" }}</span
                   >
-                  <a
-                    [href]="document.url"
-                    target="_blank"
-                    class="p-button p-component p-button-link"
-                  >
-                    <i class="pi pi-download"></i>
-                  </a>
+                  <p-button
+                    [link]="true"
+                    icon="pi pi-download"
+                    (click)="descargarDocumento(document.url,document.fileName)"
+                  ></p-button>
                   <p-button
                     *ngIf="expectedRole == 'ADMIN'"
                     [link]="true"
