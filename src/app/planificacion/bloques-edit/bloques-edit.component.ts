@@ -32,7 +32,7 @@ export class BloquesEditComponent {
   public checked = {};
   public getAllTemas$ = this.temaService.getAllTemas$().pipe(
     map((temas) => {
-      return groupedTemas(temas);
+      return groupedTemas(temas, true);
     })
   );
 

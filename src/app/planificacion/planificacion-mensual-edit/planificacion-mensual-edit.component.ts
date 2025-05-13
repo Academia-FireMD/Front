@@ -32,7 +32,7 @@ import {
   TipoDePlanificacionDeseada,
   Usuario,
 } from '../../shared/models/user.model';
-import { getStartOfWeek, getDateForDayOfWeek, crearEventoCalendario } from '../../utils/utils';
+import { getNextWeekIfFriday, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 
 @Component({
@@ -101,6 +101,10 @@ export class PlanificacionMensualEditComponent {
     this.eventsService.getProgressPercentageForDay;
   duracionesDisponibles = duracionesDisponibles;
 
+  // Add properties for date range
+  public startDate: Date | null = null;
+  public endDate: Date | null = null;
+
   filterUsers(users: Array<Usuario>): Array<Usuario> {
     const term = this.searchTerm.toLowerCase();
     return (users ?? []).filter(
@@ -157,19 +161,16 @@ export class PlanificacionMensualEditComponent {
 
       lines.push(
         'BEGIN:VEVENT',
-        `UID:${
-          event.id ||
-          `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
+        `UID:${event.id ||
+        `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
         }`,
-        `DTSTAMP:${
-          new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
+        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
         }`,
         `DTSTART:${start}`,
         `DTEND:${end}`,
         `SUMMARY:${event.title}`,
-        `DESCRIPTION:${
-          event.meta?.subBloque?.comentarios ||
-          'Evento exportado desde Academia FireMD'
+        `DESCRIPTION:${event.meta?.subBloque?.comentarios ||
+        'Evento exportado desde Academia FireMD'
         }`,
         `LOCATION:${event.meta?.location || ''}`,
         'END:VEVENT'
@@ -229,8 +230,7 @@ export class PlanificacionMensualEditComponent {
         )
       );
       this.toast.success(
-        `Planificación asignada exitosamente a ${
-          this.usuariosSeleccionadosId.length ?? 0
+        `Planificación asignada exitosamente a ${this.usuariosSeleccionadosId.length ?? 0
         } usuarios!`
       );
       this.load();
@@ -295,9 +295,9 @@ export class PlanificacionMensualEditComponent {
 
       const adjustedEnd = event.end
         ? new Date(
-            adjustedStart.getTime() +
-              (event.end.getTime() - event.start.getTime())
-          ) // Mantener duración
+          adjustedStart.getTime() +
+          (event.end.getTime() - event.start.getTime())
+        ) // Mantener duración
         : undefined;
 
       return {
@@ -395,15 +395,15 @@ export class PlanificacionMensualEditComponent {
         this.planificacionesService.getPlanificacionMensualById$(itemId).pipe(
           tap((entry) => {
             const subBloques = entry.subBloques;
-            
+
             // Convertir los subbloques a eventos
             this.events = this.eventsService.fromSubbloquesToEvents(subBloques);
-            
+
             // Para alumnos, cargar también los eventos personalizados
             if (this.expectedRole === 'ALUMNO') {
               this.loadEventosPersonalizados(Number(itemId));
             }
-            
+
             // Configurar eventos para alumnos
             if (this.expectedRole === 'ALUMNO') {
               this.events.forEach(event => {
@@ -414,7 +414,7 @@ export class PlanificacionMensualEditComponent {
                   beforeStart: false,
                   afterEnd: false
                 };
-                
+
                 // Aplicar posiciones personalizadas si existen
                 if (event.meta?.subBloque?.posicionPersonalizada) {
                   const posicion = new Date(event.meta.subBloque.posicionPersonalizada);
@@ -425,13 +425,18 @@ export class PlanificacionMensualEditComponent {
                   event.end = new Date(posicion.getTime() + duracion);
                 }
               });
+
+              this.userService.getCurrentUser$().subscribe((user: any) => {
+                this.startDate = user.validatedAt ? new Date(user.validatedAt) : new Date(user.createdAt);
+                this.endDate = getNextWeekIfFriday(new Date());
+              });
             }
-            
+
             this.relevancia.clear();
             entry.relevancia.forEach((e) =>
               this.relevancia.push(new FormControl(e))
             );
-            
+
             this.usuariosSeleccionadosId = [];
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();

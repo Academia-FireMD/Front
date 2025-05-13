@@ -281,11 +281,11 @@ export const getLetter = (index: number) => {
   return String.fromCharCode(97 + index);
 };
 
-export const groupedTemas = (temas: Array<Tema>) => {
+export const groupedTemas = (temas: Array<Tema>, isAdmin: boolean = false) => {
   return Object.entries(
     temas.reduce((acc, tema) => {
       const categoria = tema.modulo?.nombre;
-      if (tema.modulo?.esPublico) {
+      if (tema.modulo?.esPublico || isAdmin) {
         if (!acc[categoria as any]) {
           acc[categoria as any] = [];
         }
@@ -393,3 +393,21 @@ export const crearEventoCalendario = (evento: any, esPersonalizado: boolean = fa
     }
   };
 };
+
+export function isDateInRange(date: Date, startDate: Date, endDate: Date): boolean {
+  const dateToCheck = new Date(date);
+  return dateToCheck >= startDate && dateToCheck <= endDate;
+}
+
+export function getNextWeekIfFriday(date: Date): Date {
+  const today = new Date(date);
+  const dayOfWeek = today.getDay();
+  const endDate = new Date(today);
+
+  // If it's Friday (5), Saturday (6) or Sunday (0), show next week
+  if (dayOfWeek >= 5 || dayOfWeek === 0) {
+    endDate.setDate(endDate.getDate() + 7);
+  }
+
+  return endDate;
+}

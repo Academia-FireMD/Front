@@ -3,6 +3,7 @@
     <p-button
       icon="pi pi-angle-left"
       [link]="true"
+      [disabled]="isPreviousDisabled()"
       class="p-button-primary"
       (click)="changeViewDate('previous')"
     ></p-button>
@@ -18,6 +19,7 @@
     <p-button
       icon="pi pi-angle-right"
       [link]="true"
+      [disabled]="isNextDisabled()"
       class="p-button-primary"
       (click)="changeViewDate('next')"
     ></p-button>

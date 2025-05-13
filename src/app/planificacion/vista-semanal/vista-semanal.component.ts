@@ -7,6 +7,7 @@ import {
   Output,
   signal,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import {
   CalendarEvent,
   CalendarEventTimesChangedEvent,
@@ -14,6 +15,7 @@ import {
 } from 'angular-calendar';
 import { cloneDeep, debounce } from 'lodash';
 import { Memoize } from 'lodash-decorators';
+import { ToastrService } from 'ngx-toastr';
 import { ContextMenu } from 'primeng/contextmenu';
 import { map, Subject } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
@@ -23,12 +25,9 @@ import {
 } from '../../shared/models/planificacion.model';
 import {
   getDateForDayOfWeek,
-  getStartOfWeek,
-  crearEventoCalendario,
+  getStartOfWeek
 } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
-import { ToastrService } from 'ngx-toastr';
-import { ActivatedRoute } from '@angular/router';
 export const colors: any = {
   yellow: {
     primary: '#e3bc08',

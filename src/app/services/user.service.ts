@@ -17,6 +17,10 @@ export class UserService extends ApiBaseService {
     this.controllerPrefix = '/user';
   }
 
+  public getCurrentUser$(): Observable<Usuario> {
+    return this.get('/me') as Observable<Usuario>;
+  }
+
   public uploadAvatar$(formData: FormData): Observable<Usuario> {
     return this.post('/upload-avatar', formData) as Observable<Usuario>; // Retorna la URL del avatar subido
   }

@@ -91,7 +91,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public checked = {};
   public getAllTemas$ = this.temaService.getAllTemas$().pipe(
     map((temas) => {
-      return groupedTemas(temas);
+      return groupedTemas(temas, this.expectedRole == 'ADMIN');
     })
   );
 
