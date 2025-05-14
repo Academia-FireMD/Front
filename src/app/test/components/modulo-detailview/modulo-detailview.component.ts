@@ -26,6 +26,7 @@ export class ModuloDetailviewComponent implements OnInit {
   constructor() {
     this.moduloForm = this.fb.group({
       nombre: ['', [Validators.required]],
+      identificadorModulo: [''],
       descripcion: [''],
       esPublico: [true]
     });

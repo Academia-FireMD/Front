@@ -2,7 +2,18 @@
   <div class="col-12 content">
     <p-card>
       <div class="grid">
-        <div class="col-12 md:col-6 lg:col-8">
+        <div class="col-12 md:col-6 lg:col-4">
+          <p-floatLabel>
+            <input
+              type="text"
+              pInputText
+              class="w-full"
+              formControlName="identificadorModulo"
+            />
+            <label for="identificadorModulo">Identificador del módulo</label>
+          </p-floatLabel>
+        </div>
+        <div class="col-12 md:col-6 lg:col-4">
           <p-floatLabel>
             <input
               type="text"
@@ -13,12 +24,15 @@
             <label for="nombre">Nombre</label>
           </p-floatLabel>
         </div>
-        <div class="col-12 md:col-6 lg:col-4 flex align-items-center justify-content-start">
+        <div
+          class="col-12 md:col-6 lg:col-4 flex align-items-center justify-content-start"
+        >
           <div class="flex align-items-center gap-2">
             <p-inputSwitch formControlName="esPublico"></p-inputSwitch>
             <label>Módulo público</label>
           </div>
         </div>
+
         <div class="col-12 py-3">
           <p-floatLabel>
             <textarea
