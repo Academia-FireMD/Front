@@ -1,11 +1,4 @@
-<app-user-edit-dialog
-  [selectedUser]="selectedUser"
-  [editDialogVisible]="editDialogVisible"
-  (editDialogVisibleChange)="onCloseUserEditDialog($event)"
-  [rol]="decodedUser.rol"
-  [allowSetIsTutor]="decodedUser.rol == 'ADMIN'"
-  (confirmarCambios)="confirmarCambios($event)"
-></app-user-edit-dialog>
+
 <div class="grid h-full" style="overflow: hidden">
   <div class="bar w-full mb-2" *ngIf="viewportService.screenWidth === 'xs'">
     <button

@@ -1,0 +1,301 @@
+<div class="profile-container">
+  <!-- Spinner de carga -->
+  <div class="loading-container" *ngIf="isLoading">
+    <ngx-spinner></ngx-spinner>
+    <p>Cargando perfil...</p>
+  </div>
+
+  <div class="profile-content" *ngIf="!isLoading && user">
+    <div class="grid">
+      <!-- Información del perfil (lado izquierdo) -->
+      <div class="col-12 md:col-8">
+        <div class="profile-card">
+          <div class="card-header">
+            <h2><i class="pi pi-user-edit"></i> Mi Perfil</h2>
+          </div>
+
+          <div class="card-content">
+            <div class="user-info-header mb-4">
+              <div class="avatar-container">
+                <app-avatar-upload
+                  [avatarUrl]="user.avatarUrl"
+                ></app-avatar-upload>
+              </div>
+              <div class="user-info-text">
+                <h3>{{ user.nombre }} {{ user.apellidos }}</h3>
+                <span
+                  class="user-role"
+                  [ngClass]="{ 'admin-role': user.rol === 'ADMIN' }"
+                >
+                  {{ user.rol === "ADMIN" ? "Administrador" : "Alumno" }}
+                </span>
+                <div class="user-community">
+                  <app-comunidad-picker
+                    [comunidades]="[user.comunidad]"
+                  ></app-comunidad-picker>
+                </div>
+              </div>
+            </div>
+
+            <!-- Campos de formulario -->
+            <div class="form-group mb-3">
+              <label for="nombre">Nombre</label>
+              <input
+                type="text"
+                pInputText
+                id="nombre"
+                [(ngModel)]="user.nombre"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="apellidos">Apellidos</label>
+              <input
+                type="text"
+                pInputText
+                id="apellidos"
+                [(ngModel)]="user.apellidos"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="email">Email</label>
+              <input
+                type="text"
+                pInputText
+                id="email"
+                [value]="user.email"
+                disabled
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="comunidad">Comunidad</label>
+              <p-dropdown
+                [options]="comunidades"
+                [(ngModel)]="user.comunidad"
+                optionLabel="name"
+                optionValue="value"
+                styleClass="w-full"
+                id="comunidad"
+                placeholder="Selecciona comunidad"
+              ></p-dropdown>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="tutores">Tutor asignado</label>
+              <p-dropdown
+                id="tutores"
+                styleClass="w-full"
+                [options]="(tutores$ | async) ?? []"
+                [(ngModel)]="user.tutorId"
+                optionLabel="email"
+                optionValue="id"
+                appendTo="body"
+                placeholder="Tutor (opcional)"
+              >
+                <ng-template let-item pTemplate="selectedItem">
+                  <div class="flex align-items-center gap-2">
+                    <div>
+                      {{
+                        item.nombre && item.apellidos
+                          ? item.nombre + " " + item.apellidos
+                          : item.email
+                      }}
+                    </div>
+                  </div>
+                </ng-template>
+                <ng-template let-item let-index pTemplate="item">
+                  <div class="flex align-items-center gap-2">
+                    <div>
+                      {{
+                        item.nombre && item.apellidos
+                          ? item.nombre + " " + item.apellidos
+                          : item.email
+                      }}
+                    </div>
+                  </div>
+                </ng-template>
+              </p-dropdown>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="tipoDePlanificacionDuracionDeseada"
+                >Duración de planificación</label
+              >
+              <p-dropdown
+                id="tipoDePlanificacionDuracionDeseada"
+                styleClass="w-full"
+                [options]="duracionesDisponibles"
+                [(ngModel)]="user.tipoDePlanificacionDuracionDeseada"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                placeholder="Seleccione una duración"
+              ></p-dropdown>
+            </div>
+
+            <div class="form-group mb-3" *ngIf="user.rol === 'ADMIN'">
+              <label for="esTutor">Este usuario es tutor?</label>
+              <p-toggleButton
+                id="esTutor"
+                [(ngModel)]="user.esTutor"
+                onLabel="Sí"
+                offLabel="No"
+                styleClass="w-full"
+              ></p-toggleButton>
+            </div>
+
+            <div
+              class="planification-section mt-4"
+              *ngIf="user.rol === 'ALUMNO'"
+            >
+              <div
+                class="assigned-planifications flex justify-content-between align-items-center"
+              >
+                <ng-container
+                  *ngIf="
+                    countPlanificacionesAsignadas$ | async as count;
+                    else noPlanificaciones
+                  "
+                >
+                  <label>Planificaciones asignadas:</label>
+                  <span class="planification-count">{{ count }}</span>
+                </ng-container>
+
+                <ng-template #noPlanificaciones>
+                  <div class="no-planification-message">
+                    <p>No tienes planificaciones asignadas</p>
+                    <p-button
+                      styleClass="p-button-outlined"
+                      icon="pi pi-sync"
+                      label="Asignar planificación automáticamente"
+                      (click)="autoAssignPlanificacion()"
+                    ></p-button>
+                  </div>
+                </ng-template>
+              </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="action-buttons mt-4 flex justify-content-end">
+              <p-button
+                label="Guardar cambios"
+                icon="pi pi-save"
+                [loading]="isSaving"
+                (click)="saveProfile()"
+              ></p-button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Información de suscripción (lado derecho) -->
+      <div class="col-12 md:col-4">
+        <div class="subscription-card">
+          <div class="card-header">
+            <h2><i class="pi pi-credit-card"></i> Mi Suscripción</h2>
+          </div>
+
+          <div class="card-content">
+            <!-- Si no hay suscripción -->
+            <div class="no-subscription" *ngIf="!user.suscripcion">
+              <i class="pi pi-info-circle"></i>
+              <h3>Sin suscripción activa</h3>
+              <p>No tienes ninguna suscripción activa en este momento.</p>
+              <a href="https://academiafiremd.com/tarifas/" target="_blank">
+                <p-button
+                  label="Ver planes"
+                  icon="pi pi-external-link"
+                  styleClass="p-button-outlined mt-3"
+                ></p-button>
+              </a>
+            </div>
+
+            <!-- Si hay suscripción -->
+            <div class="subscription-details" *ngIf="user.suscripcion">
+              <div
+                class="plan-type-badge"
+                [ngClass]="'plan-type-' + user.suscripcion.tipo.toLowerCase()"
+              >
+                {{
+                  user.suscripcion.tipo === SuscripcionTipo.BASIC
+                    ? "Básico"
+                    : user.suscripcion.tipo === SuscripcionTipo.ADVANCED
+                    ? "Avanzado"
+                    : user.suscripcion.tipo === SuscripcionTipo.PREMIUM
+                    ? "Premium"
+                    : user.suscripcion.tipo
+                }}
+              </div>
+
+              <div class="subscription-info">
+                <div class="subscription-item">
+                  <label>Estado:</label>
+                  <span [ngClass]="getSubscriptionStatusClass()">
+                    {{ user.suscripcion.status || "Activo" }}
+                  </span>
+                </div>
+
+                <div class="subscription-item">
+                  <label>Precio mensual:</label>
+                  <span>{{ user.suscripcion.monthlyPrice || 0 }} €</span>
+                </div>
+
+                <div class="subscription-item">
+                  <label>Fecha de inicio:</label>
+                  <span>{{
+                    user.suscripcion.fechaInicio | date : "dd/MM/yyyy"
+                  }}</span>
+                </div>
+
+                <div class="subscription-item">
+                  <label>Fecha de fin:</label>
+                  <span>{{ getSubscriptionEndDate() }}</span>
+                </div>
+              </div>
+
+              <div
+                class="subscription-countdown"
+                *ngIf="getRemainingDays() > 0"
+              >
+                <div class="countdown-title">Tu suscripción finaliza en:</div>
+                <div
+                  class="countdown-days"
+                  [ngClass]="getSubscriptionStatusClass()"
+                >
+                  {{ getRemainingDays() }} días
+                </div>
+              </div>
+
+              <div class="subscription-actions mt-4">
+                <a href="https://academiafiremd.com/tarifas/" target="_blank">
+                  <p-button
+                    label="Cambiar plan"
+                    icon="pi pi-arrow-up"
+                    styleClass="p-button-text w-full p-button-outlined"
+                  ></p-button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mostrar errores -->
+  <div class="error-container" *ngIf="errors.length > 0">
+    <div class="error-card">
+      <div class="error-list">
+        <h3>Errores:</h3>
+        <ul>
+          <li *ngFor="let error of errors">{{ error }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

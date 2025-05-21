@@ -32,12 +32,8 @@ export class LoginComponent {
           this.formGroup.value.contrasenya ?? ''
         )
       );
-      const isAdmin = this.auth.decodeToken().rol == 'ADMIN';
-      if (isAdmin) {
-        this.router.navigate(['app/test']);
-      } else {
-        this.router.navigate(['app/test/alumno']);
-      }
+      this.router.navigate(['app/profile']);
+
     } catch (error) {
       console.error(error);
     }

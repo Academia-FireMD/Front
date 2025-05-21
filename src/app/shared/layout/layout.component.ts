@@ -2,7 +2,6 @@ import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { MenuItem } from 'primeng/api';
-import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
@@ -26,13 +25,11 @@ export class LayoutComponent {
   public loadedUser$ = this.userService.getByEmail$(this.decodedUser.email);
   public selectedUser!: Usuario;
   public editDialogVisible = false;
-  public async editProfile() {
-    this.selectedUser = null as any;
-    const foundUser = await firstValueFrom(
-      this.userService.getByEmail$(this.decodedUser.email)
-    );
-    this.selectedUser = foundUser;
-    this.editDialogVisible = true;
+
+  public editProfile() {
+    // Redirigir a la nueva página de perfil
+    this.router.navigate(['/app/profile']);
+    this.isMenuVisible = false;
   }
 
   public onCloseUserEditDialog(visibility: boolean) {
@@ -178,11 +175,15 @@ export class LayoutComponent {
           label: 'Perfil',
           items: [
             {
+              label: 'Mi Perfil',
+              icon: 'pi pi-user',
+              routerLink: '/app/profile',
+            },
+            {
               label: 'Ajustes',
               icon: 'pi pi-cog',
               routerLink: '/app/test/ajustes',
             },
-
             {
               label: 'Desconectarse',
               icon: 'pi pi-sign-out',
@@ -269,10 +270,24 @@ export class LayoutComponent {
           ],
         },
         {
-          label: 'Desconectarse',
-          icon: 'pi pi-sign-out',
-          routerLink: '/auth',
-          items: [],
+          label: 'Perfil',
+          items: [
+            {
+              label: 'Mi Perfil',
+              icon: 'pi pi-user',
+              routerLink: '/app/profile',
+            },
+            {
+              label: 'Ajustes',
+              icon: 'pi pi-cog',
+              routerLink: '/app/test/ajustes/alumno',
+            },
+            {
+              label: 'Desconectarse',
+              icon: 'pi pi-sign-out',
+              routerLink: '/auth',
+            },
+          ],
         },
       ];
     }

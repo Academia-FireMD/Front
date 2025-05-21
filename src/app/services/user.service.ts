@@ -21,6 +21,13 @@ export class UserService extends ApiBaseService {
     return this.get('/me') as Observable<Usuario>;
   }
 
+  /**
+   * Obtiene el perfil completo del usuario actual, incluyendo suscripción
+   */
+  public getUserProfile$(): Observable<Usuario> {
+    return this.get('/profile') as Observable<Usuario>;
+  }
+
   public uploadAvatar$(formData: FormData): Observable<Usuario> {
     return this.post('/upload-avatar', formData) as Observable<Usuario>; // Retorna la URL del avatar subido
   }

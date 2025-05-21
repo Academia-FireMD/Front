@@ -29,6 +29,7 @@ import { MenuModule } from 'primeng/menu';
 import { PanelMenuModule } from 'primeng/panelmenu';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { ProfileComponent } from './profile/profile.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { SpinnerInterceptor } from './services/spinner.interceptor';
 import { LayoutComponent } from './shared/layout/layout.component';
@@ -79,7 +80,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
   }
 }
 @NgModule({
-  declarations: [AppComponent, LayoutComponent],
+  declarations: [AppComponent, LayoutComponent,ProfileComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,

@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { ProfileComponent } from './profile/profile.component';
 import { LayoutComponent } from './shared/layout/layout.component';
 
 const routes: Routes = [
@@ -17,6 +18,10 @@ const routes: Routes = [
     path: 'app',
     component: LayoutComponent,
     children: [
+      {
+        path: 'profile',
+        component: ProfileComponent,
+      },
       {
         path: 'test',
         loadChildren: () =>

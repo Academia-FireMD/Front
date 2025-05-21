@@ -15,6 +15,11 @@ const routes: Routes = [
     component: RegistroComponent,
   },
   {
+    path: 'activate-subscription',
+    component: RegistroComponent,
+    data: { mode: 'activation' }
+  },
+  {
     path: 'recuperar-contrasenya',
     component: RecuperarContrasenyaComponent,
   },

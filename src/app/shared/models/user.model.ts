@@ -1,4 +1,5 @@
 import { Comunidad } from './pregunta.model';
+import { Suscripcion } from './subscription.model';
 import { Test } from './test.model';
 
 export interface Usuario {
@@ -18,6 +19,8 @@ export interface Usuario {
   avatarUrl: string;
   sub?: number;
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
+  woocommerceCustomerId?: string;
+  suscripcion?: Suscripcion;
 }
 
 export enum Rol {

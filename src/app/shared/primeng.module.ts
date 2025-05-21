@@ -1,6 +1,7 @@
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
+import { NgxSpinnerModule } from 'ngx-spinner';
 import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
@@ -73,7 +74,8 @@ const modules = [
   DragDropModule,
   ColorPickerModule,
   FileUploadModule,
-  KeyComponent
+  KeyComponent,
+  NgxSpinnerModule
 ];
 
 @NgModule({

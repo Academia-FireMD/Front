@@ -17,14 +17,12 @@ import { PrimengModule } from './primeng.module';
 import { RealizarTestComponent } from './realizar-test/realizar-test.component';
 import { SharedGridComponent } from './shared-grid/shared-grid.component';
 import { TemaSelectComponent } from './tema-select/tema-select.component';
-import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.component';
 @NgModule({
   declarations: [
     SharedGridComponent,
     ComunidadPickerComponent,
     PieChartComponent,
     CountdownPipe,
-    UserEditDialogComponent,
     DificultadDropdownComponent,
     PasswordInputComponent,
     AvatarUploadComponent,
@@ -40,14 +38,13 @@ import { UserEditDialogComponent } from './user-edit-dialog/user-edit-dialog.com
     PrimengModule,
     RouterModule,
     InputTextModule,
-    TooltipModule
+    TooltipModule,
   ],
   exports: [
     SharedGridComponent,
     ComunidadPickerComponent,
     PieChartComponent,
     CountdownPipe,
-    UserEditDialogComponent,
     PrimengModule,
     FormsModule,
     ReactiveFormsModule,

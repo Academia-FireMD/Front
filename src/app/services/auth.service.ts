@@ -36,7 +36,9 @@ export class AuthService extends ApiBaseService {
     comunidad: Comunidad,
     nombre: string,
     apellidos: string,
-    tutorId?: number
+    tutorId?: number,
+    woocommerceCustomerId?: string,
+    planType?: string
   ) {
     return this.post('/register', {
       email,
@@ -45,6 +47,8 @@ export class AuthService extends ApiBaseService {
       nombre,
       apellidos,
       tutorId,
+      woocommerceCustomerId,
+      planType
     });
   }
 
@@ -148,6 +152,10 @@ export class AuthService extends ApiBaseService {
   // Método para verificar si el usuario está autenticado
   public isAuthenticated(): boolean {
     return !!this.getCurrentUser();
+  }
+
+  public registroTemporal$(token: string): Observable<any> {
+    return this.get(`/registro-temporal/${token}`);
   }
 }
 

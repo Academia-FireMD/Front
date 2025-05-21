@@ -18,10 +18,27 @@
       class="col-12"
       [ngClass]="{ 'md:col-6 lg:col-3': mode == 'default' }"
     >
-      <div class="card-login py-4">
+      <div class="card-login py-4 flex flex-column gap-4">
+        <!-- Loading indicator -->
+        <div *ngIf="isLoading" class="loading-overlay">
+          <p-progressSpinner></p-progressSpinner>
+        </div>
+
+        <!-- Subscription Info -->
+        <div *ngIf="mode === 'activation' && registroTemporal" class="subscription-info mb-4">
+          <h3>Completa tu registro</h3>
+          <div class="plan-details">
+            <p><strong>Plan seleccionado:</strong> {{registroTemporal.planType}}</p>
+            <p><strong>Precio mensual:</strong> {{registroTemporal.monthlyPrice}}€</p>
+          </div>
+        </div>
+
         <div
           class="form-login"
-          [ngClass]="{ 'injected-form-login': mode == 'injected' }"
+          [ngClass]="{
+            'injected-form-login': mode == 'injected',
+            'activation-form-login': mode == 'activation'
+          }"
           [formGroup]="formGroup"
         >
           <div class="imagen">
@@ -259,7 +276,7 @@
             class="p-button dark-button p-button-raised"
             (click)="register()"
           >
-            <span class="w-full">Registrarse</span>
+            <span class="w-full">{{mode === 'activation' ? 'Completar registro' : 'Registrarse'}}</span>
           </button>
         </div>
       </div>

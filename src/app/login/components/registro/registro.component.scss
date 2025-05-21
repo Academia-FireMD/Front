@@ -9,14 +9,20 @@ p-floatlabel {
 
 .card-login {
   @extend .center-flex;
+  position: relative;
+  padding: 1rem;
 }
 
 .wrapper {
-  height: 100%;
+  min-height: 100vh;
   @extend .center-flex;
+  padding: 2rem 1rem;
+
   > .grid {
     @extend .center-flex;
     width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
   }
 
   .form-login {
@@ -25,16 +31,21 @@ p-floatlabel {
     gap: 25px;
     align-items: center;
     width: 100%;
-    max-width: 20rem;
+    max-width: 100%;
+    padding: 0 1rem;
+
     button {
       width: 100%;
       text-align: center;
     }
+
     .imagen {
       img {
         max-width: 158px;
+        height: auto;
       }
     }
+
     .link-text {
       display: flex;
       align-items: center;
@@ -53,17 +64,93 @@ p-floatlabel {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
   .info-card {
     display: flex;
     flex-direction: row;
     gap: 10px;
+
     i {
       font-size: 20px;
     }
+
     .content {
       display: flex;
       gap: 10px;
       flex-direction: column;
+    }
+  }
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.subscription-info {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--surface-hover);
+  border-radius: 8px;
+  width: 100%;
+
+  h3 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+  }
+
+  .plan-details {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    p {
+      margin: 0;
+      font-size: 1.1rem;
+
+      strong {
+        color: var(--text-color-secondary);
+      }
+    }
+  }
+}
+
+// Responsive adjustments
+@media screen and (max-width: 768px) {
+  .wrapper {
+    padding: 1rem 0.5rem;
+
+    > .grid {
+      width: 100%;
+      margin: 0;
+    }
+
+    .form-login {
+      padding: 0 0.5rem;
+    }
+  }
+
+  .subscription-info {
+    padding: 1rem;
+
+    h3 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .plan-details p {
+      font-size: 1rem;
     }
   }
 }
