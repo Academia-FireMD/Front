@@ -150,7 +150,7 @@ export class RegistroComponent implements OnInit {
           apellidos: response.apellidos,
           woocommerceCustomerId: response.woocommerceCustomerId,
           planType: response.planType,
-          relevancia: Comunidad.VALENCIA // Default, el usuario puede cambiarlo
+          relevancia: '' // Default, el usuario puede cambiarlo
         });
 
         // Deshabilitar el campo de email ya que viene de WooCommerce

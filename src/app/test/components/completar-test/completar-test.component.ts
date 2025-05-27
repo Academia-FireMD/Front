@@ -19,9 +19,8 @@ import {
   delay,
   filter,
   firstValueFrom,
-  of,
   switchMap,
-  tap,
+  tap
 } from 'rxjs';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TestService } from '../../../services/test.service';
@@ -92,6 +91,7 @@ export class CompletarTestComponent {
   public obtainSecurityEmojiBasedOnEnum = obtainSecurityEmojiBasedOnEnum;
 
   public comunicating = false;
+  private isProcessingAnswer = false;
   public expectedRole: Rol = Rol.ALUMNO;
 
   @Input() testId: number | null = null;
@@ -181,7 +181,7 @@ export class CompletarTestComponent {
   }
 
   public clickedAnswer(indice: number) {
-    if (this.vistaPrevia || this.modoVerRespuestas) return;
+    if (this.vistaPrevia || this.modoVerRespuestas || this.isProcessingAnswer) return;
 
     const respuesta = this.preguntaRespondida();
     if (!!respuesta && !this.isModoExamen()) {
@@ -249,46 +249,65 @@ export class CompletarTestComponent {
       return;
     }
 
+    if (this.isProcessingAnswer) {
+      console.warn('Ya se está procesando una respuesta, ignorando nueva llamada');
+      return;
+    }
+
+    this.isProcessingAnswer = true;
     this.answeredQuestion = -1;
     this.indicePreguntaCorrecta = -1;
     this.comunicating = true;
-    const answered = this.preguntaRespondida();
-    const isAnswered = !!answered?.respuestaDada;
-    const isOmitida =
-      mode == 'omitir' || ((mode == 'next' || mode == 'before') && !isAnswered);
-    const res: {
-      esCorrecta: boolean;
-      respuestaDada: number;
-      pregunta: { respuestaCorrectaIndex: number };
-    } = await firstValueFrom(
-      this.testService
-        .actualizarProgresoTest({
-          testId: this.lastLoadedTest.id,
-          preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
-          respuestaDada,
-          omitida: isOmitida,
-          indicePregunta: this.indicePregunta(),
-          seguridad:
-            this.seguroDeLaPregunta.value ??
-            SeguridadAlResponder.CIEN_POR_CIENTO,
-        })
-        .pipe(
-          catchError((err) => {
-            this.comunicating = false;
-            return of(err);
-          }),
-          tap((res) => {
-            this.lastAnsweredQuestion = res as any;
-            if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
-            firstValueFrom(this.loadTest());
+
+    try {
+      const answered = this.preguntaRespondida();
+      const isAnswered = !!answered?.respuestaDada;
+      const isOmitida =
+        mode == 'omitir' || ((mode == 'next' || mode == 'before') && !isAnswered);
+
+      const res: {
+        esCorrecta: boolean;
+        respuestaDada: number;
+        pregunta: { respuestaCorrectaIndex: number };
+      } = await firstValueFrom(
+        this.testService
+          .actualizarProgresoTest({
+            testId: this.lastLoadedTest.id,
+            preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
+            respuestaDada,
+            omitida: isOmitida,
+            indicePregunta: this.indicePregunta(),
+            seguridad:
+              this.seguroDeLaPregunta.value ??
+              SeguridadAlResponder.CIEN_POR_CIENTO,
           })
-        )
-    );
-    this.indicePreguntaCorrecta = res?.pregunta?.respuestaCorrectaIndex ?? -1;
-    this.answeredQuestion = this.indiceSeleccionado.getValue();
-    if (mode == 'next' || mode == 'omitir') this.siguiente();
-    if (mode == 'before') this.atras();
-    this.comunicating = false;
+          .pipe(
+            catchError((err) => {
+              console.error('Error al procesar respuesta:', err);
+              this.toast.error('Error al procesar la respuesta. Intenta de nuevo.');
+              throw err;
+            }),
+            tap((res) => {
+              this.lastAnsweredQuestion = res as any;
+              if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
+            })
+          )
+      );
+
+      await firstValueFrom(this.loadTest());
+
+      this.indicePreguntaCorrecta = res?.pregunta?.respuestaCorrectaIndex ?? -1;
+      this.answeredQuestion = this.indiceSeleccionado.getValue();
+
+      if (mode == 'next' || mode == 'omitir') this.siguiente();
+      if (mode == 'before') this.atras();
+
+    } catch (error) {
+      console.error('Error en processAnswer:', error);
+    } finally {
+      this.comunicating = false;
+      this.isProcessingAnswer = false;
+    }
   }
 
   public atras() {
