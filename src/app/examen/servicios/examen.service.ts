@@ -145,7 +145,6 @@ export class ExamenesService extends ApiBaseService {
           }
         }
 
-        console.log('Nombre de archivo extraído:', filename);
 
         return {
           blob: response.body as Blob,

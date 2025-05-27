@@ -7,8 +7,8 @@ import { FlashcardDataService } from '../../../services/flashcards.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { ViewportService } from '../../../services/viewport.service';
 import {
-  EstadoFlashcard,
-  FlashcardTest,
+    EstadoFlashcard,
+    FlashcardTest,
 } from '../../../shared/models/flashcard.model';
 
 @Component({
@@ -105,7 +105,6 @@ export class CompletarFlashCardTestComponent {
     this.indicePregunta++;
     this.comunicating = false;
     if (this.indicePregunta == this.lastLoadedTest.flashcards.length) {
-      console.log('Test completado');
       this.router.navigate([
         'app/test/alumno/stats-test-flashcard/' + this.lastLoadedTest.id,
       ]);

@@ -159,7 +159,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   @debounce(500)
   public buscarPorIdentificadorInput(event: any) {
-    console.log(event.target.value)
     this.filtroIdentificador.set(event.target.value);
   }
 

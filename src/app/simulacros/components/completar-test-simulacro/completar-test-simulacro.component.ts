@@ -53,9 +53,6 @@ export class CompletarTestSimulacroComponent {
 
   // Método que será llamado cuando el test se complete
   public onTestCompleted(event: any): void {
-    // Aquí puedes manejar la finalización del test
-    console.log('Test completado:', event);
-
     // Redireccionar a la página de resultados del simulacro
     this.router.navigate(['/simulacros/resultado', this.idExamen, this.idTest]);
   }

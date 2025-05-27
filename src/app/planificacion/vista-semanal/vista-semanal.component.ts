@@ -1,17 +1,17 @@
 import {
-  Component,
-  computed,
-  EventEmitter,
-  inject,
-  Input,
-  Output,
-  signal,
+    Component,
+    computed,
+    EventEmitter,
+    inject,
+    Input,
+    Output,
+    signal,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
-  CalendarEvent,
-  CalendarEventTimesChangedEvent,
-  CalendarView,
+    CalendarEvent,
+    CalendarEventTimesChangedEvent,
+    CalendarView,
 } from 'angular-calendar';
 import { cloneDeep, debounce } from 'lodash';
 import { Memoize } from 'lodash-decorators';
@@ -20,12 +20,12 @@ import { ContextMenu } from 'primeng/contextmenu';
 import { map, Subject } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import {
-  PlanificacionBloque,
-  SubBloque,
+    PlanificacionBloque,
+    SubBloque,
 } from '../../shared/models/planificacion.model';
 import {
-  getDateForDayOfWeek,
-  getStartOfWeek
+    getDateForDayOfWeek,
+    getStartOfWeek
 } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 export const colors: any = {
@@ -248,9 +248,7 @@ export class VistaSemanalComponent {
       ...cloneDeep(clonedEvents),
     ]);
     this.eventsChange.emit(this.events);
-    console.log(
-      `Clonados ${clonedEvents.length} eventos de ${this.selectedDayForCloning} a ${targetDayDate}.`
-    );
+
 
     // Cerrar el diálogo y reiniciar las variables
     this.isCloneDialogVisible = false;
