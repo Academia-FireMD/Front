@@ -164,6 +164,7 @@ export class PlanificacionesService extends ApiBaseService {
   // NUEVO: Método para actualizar el progreso de un subbloque
   public actualizarProgresoSubBloque$(dto: {
     subBloqueId: number;
+    planificacionId: number;
     realizado?: boolean;
     comentariosAlumno?: string;
     posicionPersonalizada?: Date;
