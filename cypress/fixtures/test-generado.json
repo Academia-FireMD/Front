@@ -1,0 +1,97 @@
+{
+  "id": 123,
+  "status": "CREADO",
+  "duration": null,
+  "endsAt": null,
+  "createdAt": "2024-01-15T10:00:00Z",
+  "respuestasCount": 0,
+  "testPreguntasCount": 10,
+  "preguntas": [
+    {
+      "id": 1,
+      "identificador": "TEST-001",
+      "descripcion": "¿Cuál es la principal función del sistema cardiovascular?",
+      "solucion": "El sistema cardiovascular transporta sangre, oxígeno y nutrientes por todo el cuerpo.",
+      "respuestaCorrectaIndex": 0,
+      "tema": {
+        "numero": 1,
+        "descripcion": "Sistema Cardiovascular"
+      },
+      "respuestas": [
+        "Transportar sangre y nutrientes",
+        "Regular la temperatura corporal",
+        "Filtrar toxinas del cuerpo",
+        "Controlar el equilibrio hormonal"
+      ]
+    },
+    {
+      "id": 2,
+      "identificador": "TEST-002",
+      "descripcion": "¿Qué tipo de tejido forma el músculo cardíaco?",
+      "solucion": "El músculo cardíaco está formado por tejido muscular estriado cardíaco.",
+      "respuestaCorrectaIndex": 1,
+      "tema": {
+        "numero": 1,
+        "descripcion": "Sistema Cardiovascular"
+      },
+      "respuestas": [
+        "Tejido muscular liso",
+        "Tejido muscular estriado cardíaco",
+        "Tejido muscular esquelético",
+        "Tejido conectivo"
+      ]
+    },
+    {
+      "id": 3,
+      "identificador": "TEST-003",
+      "descripcion": "¿Cuál es la frecuencia cardíaca normal en reposo?",
+      "solucion": "La frecuencia cardíaca normal en reposo es de 60-100 latidos por minuto.",
+      "respuestaCorrectaIndex": 2,
+      "tema": {
+        "numero": 1,
+        "descripcion": "Sistema Cardiovascular"
+      },
+      "respuestas": [
+        "40-60 latidos por minuto",
+        "80-120 latidos por minuto",
+        "60-100 latidos por minuto",
+        "100-140 latidos por minuto"
+      ]
+    },
+    {
+      "id": 4,
+      "identificador": "TEST-004",
+      "descripcion": "¿Qué válvula separa el ventrículo izquierdo de la aorta?",
+      "solucion": "La válvula aórtica separa el ventrículo izquierdo de la aorta.",
+      "respuestaCorrectaIndex": 3,
+      "tema": {
+        "numero": 1,
+        "descripcion": "Sistema Cardiovascular"
+      },
+      "respuestas": [
+        "Válvula mitral",
+        "Válvula tricúspide",
+        "Válvula pulmonar",
+        "Válvula aórtica"
+      ]
+    },
+    {
+      "id": 5,
+      "identificador": "TEST-005",
+      "descripcion": "¿Cuál es la función principal de los glóbulos rojos?",
+      "solucion": "Los glóbulos rojos transportan oxígeno desde los pulmones hasta los tejidos.",
+      "respuestaCorrectaIndex": 0,
+      "tema": {
+        "numero": 2,
+        "descripcion": "Sistema Respiratorio"
+      },
+      "respuestas": [
+        "Transportar oxígeno",
+        "Combatir infecciones",
+        "Coagular la sangre",
+        "Regular el pH sanguíneo"
+      ]
+    }
+  ],
+  "respuestas": []
+}

@@ -14,6 +14,7 @@
                 pInputText
                 class="w-full"
                 formControlName="titulo"
+                data-testid="nombre-examen-input"
               />
               <label for="titulo">Título del examen</label>
             </p-floatLabel>
@@ -33,6 +34,7 @@
                 '/app/test/realizar-test/vista-previa',
                 lastLoadedExamen().testId
               ]"
+              data-testid="vista-previa-btn"
             ></p-button>
             <p-button
               *ngIf="getId() !== 'new'"
@@ -46,6 +48,7 @@
                 (lastLoadedExamen().test?.testPreguntas ?? []).length === 0
               "
               (click)="mostrarOpcionesDescarga($event)"
+              data-testid="descargar-word-btn"
             ></p-button>
             <app-comunidad-picker
               [allowAdd]="true"
@@ -64,6 +67,7 @@
                 [options]="duracionOptions"
                 appendTo="body"
                 placeholder="Seleccione la duración"
+                data-testid="duracion-dropdown"
               ></p-dropdown>
               <label for="duracion">Duración</label>
             </p-floatLabel>
@@ -78,6 +82,7 @@
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
+                data-testid="estado-dropdown"
               ></p-dropdown>
               <label for="estado">Estado</label>
             </p-floatLabel>
@@ -92,6 +97,7 @@
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
+                data-testid="tipo-acceso-dropdown"
               ></p-dropdown>
               <label for="tipoAcceso">Tipo de acceso</label>
             </p-floatLabel>
@@ -107,6 +113,7 @@
                 pInputText
                 class="w-full"
                 formControlName="codigoAcceso"
+                data-testid="codigo-acceso-input"
               />
               <label for="codigoAcceso">Código de acceso</label>
             </p-floatLabel>
@@ -127,6 +134,7 @@
                 class="block"
                 formControlName="fechaActivacion"
                 placeholder="Fecha de activación"
+                data-testid="fecha-activacion-input"
               ></p-calendar>
               <label>Fecha de activación</label>
             </p-floatLabel>
@@ -138,6 +146,7 @@
                 class="block"
                 formControlName="fechaSolucion"
                 placeholder="Fecha de solución"
+                data-testid="fecha-solucion-input"
               ></p-calendar>
               <label>Fecha de solución</label>
             </p-floatLabel>
@@ -148,7 +157,7 @@
           <div class="markdown-container">
             <div class="editor">
               <h3>Descripción</h3>
-              <div id="editor-descripcion"></div>
+              <div id="editor-descripcion" data-testid="descripcion-editor"></div>
             </div>
           </div>
         </div>
@@ -164,6 +173,7 @@
                   pInputText
                   placeholder="Buscar por identificador"
                   (input)="buscarPorIdentificadorInput($event)"
+                  data-testid="buscar-pregunta-input"
                 />
                 <button
                   pButton
@@ -171,6 +181,7 @@
                   icon="pi pi-plus"
                   label="Añadir preguntas"
                   (click)="mostrarOpcionesAgregarPreguntas($event)"
+                  data-testid="agregar-preguntas-btn"
                 ></button>
               </div>
             </div>
@@ -185,6 +196,7 @@
                 [rows]="10"
                 [rowsPerPageOptions]="[5, 10, 25, 50]"
                 [scrollable]="true"
+                data-testid="tabla-preguntas-normales"
               >
                 <ng-template pTemplate="header">
                   <tr>
@@ -200,7 +212,7 @@
                   let-testPregunta
                   let-index="rowIndex"
                 >
-                  <tr [pReorderableRow]="index">
+                  <tr [pReorderableRow]="index" data-testid="pregunta-row">
                     <td>
                       <span class="pi pi-bars" pReorderableRowHandle></span>
                     </td>
@@ -209,6 +221,7 @@
                         class="pi pi-eye"
                         tooltip="Ver pregunta"
                         (click)="verPregunta(testPregunta.pregunta.id)"
+                        data-testid="ver-pregunta-btn"
                       ></span>
                     </td>
                     <td>
@@ -225,6 +238,7 @@
                           pTooltip="Mover a preguntas de reserva"
                           tooltipPosition="top"
                           (click)="marcarComoReserva(testPregunta, true)"
+                          data-testid="mover-reserva-btn"
                         ></p-button>
                         <p-button
                           icon="pi pi-trash"
@@ -232,6 +246,7 @@
                           pTooltip="Eliminar pregunta"
                           tooltipPosition="top"
                           (click)="eliminarPregunta(testPregunta.pregunta.id)"
+                          data-testid="eliminar-pregunta-btn"
                         ></p-button>
                       </div>
                     </td>
@@ -245,6 +260,7 @@
                           !preguntasNormales() ||
                           preguntasNormales().length === 0
                         "
+                        data-testid="no-preguntas-normales-message"
                       >
                         No hay preguntas normales añadidas al examen
                       </div>
@@ -274,6 +290,7 @@
                 [rows]="10"
                 [rowsPerPageOptions]="[5, 10, 25, 50]"
                 [scrollable]="true"
+                data-testid="tabla-preguntas-reserva"
               >
                 <ng-template pTemplate="header">
                   <tr>
@@ -289,7 +306,7 @@
                   let-testPregunta
                   let-index="rowIndex"
                 >
-                  <tr [pReorderableRow]="index">
+                  <tr [pReorderableRow]="index" data-testid="pregunta-reserva-row">
                     <td>
                       <span class="pi pi-bars" pReorderableRowHandle></span>
                     </td>
@@ -298,6 +315,7 @@
                         class="pi pi-eye"
                         tooltip="Ver pregunta"
                         (click)="verPregunta(testPregunta.pregunta.id)"
+                        data-testid="ver-pregunta-reserva-btn"
                       ></span>
                     </td>
                     <td>
@@ -314,6 +332,7 @@
                           pTooltip="Mover a preguntas normales"
                           tooltipPosition="top"
                           (click)="marcarComoReserva(testPregunta, false)"
+                          data-testid="mover-normal-btn"
                         ></p-button>
                         <p-button
                           icon="pi pi-trash"
@@ -321,6 +340,7 @@
                           pTooltip="Eliminar pregunta"
                           tooltipPosition="top"
                           (click)="eliminarPregunta(testPregunta.pregunta.id)"
+                          data-testid="eliminar-pregunta-reserva-btn"
                         ></p-button>
                       </div>
                     </td>
@@ -333,6 +353,7 @@
                         *ngIf="
                           !preguntasReserva() || preguntasReserva().length === 0
                         "
+                        data-testid="no-preguntas-reserva-message"
                       >
                         No hay preguntas de reserva añadidas al examen
                       </div>
@@ -358,6 +379,7 @@
                 icon="pi pi-plus"
                 [link]="true"
                 (click)="anyadirPreguntasAcademia()"
+                data-testid="anyadir-preguntas-academia-btn"
               ></p-button>
             </div>
           </div>
@@ -374,6 +396,7 @@
             title="Compartir simulacro"
             description="Comparte este simulacro con tus alumnos mediante el siguiente código QR o enlaces directos."
             [downloadFileName]="'simulacro-' + lastLoadedExamen()?.id"
+            data-testid="qr-code-share"
           ></app-qr-code-share>
         </div>
       </div>
@@ -385,17 +408,20 @@
       label="Volver atrás"
       [link]="true"
       (click)="handleBackButton()"
+      data-testid="volver-atras-btn"
     ></p-button>
     <p-button
       *ngIf="getId() == 'new'"
       label="Crear examen"
       (click)="crearExamen()"
+      data-testid="crear-examen-btn"
     ></p-button>
     <p-button
       *ngIf="getId() != 'new'"
       label="Actualizar examen"
       [disabled]="!formGroup.valid"
       (click)="actualizarExamen()"
+      data-testid="actualizar-examen-btn"
     ></p-button>
   </div>
 </div>

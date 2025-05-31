@@ -106,7 +106,7 @@
 ></app-reportar-fallo-dialog>
 
 <ng-template #seguridadPicker let-control="control">
-  <div class="flex flex-row gap-2 mt-2">
+  <div class="flex flex-row gap-2 mt-2" data-testid="selector-confianza">
     <div
       pRipple
       class="pointer p-3"
@@ -190,6 +190,7 @@
             'Estás viendo tus respuestas. Las respuestas correctas están marcadas en verde y las incorrectas en rojo.'
         }
       ]"
+      data-testid="modo-ver-respuestas-mensaje"
     ></p-messages>
 
     <!-- Banner informativo para modo vista previa -->
@@ -205,40 +206,43 @@
             'Solo puedes navegar entre las preguntas sin registrar respuestas.'
         }
       ]"
+      data-testid="modo-vista-previa-mensaje"
     ></p-messages>
     @if(testCargado.preguntas[indicePregunta()]){
 
     <p-card
       class="col-12"
       *ngIf="testCargado.preguntas[indicePregunta()] as pregunta"
+      data-testid="pregunta-card"
     >
       <div class="grid">
         <div class="col-12 header justify-content-between flex">
-          <div class="identificador">
+          <div class="identificador" data-testid="pregunta-identificador">
             Identificador:
             {{ pregunta.identificador }}
           </div>
-          <div class="index-pregunta">
+          <div class="index-pregunta" data-testid="numero-pregunta">
             Pregunta
             {{ indicePregunta() + 1 }}/{{ testCargado.preguntas.length }}
           </div>
         </div>
         <div class="col-12">
-          <p-panel>
+          <p-panel data-testid="pregunta-panel">
             <ng-template pTemplate="header">
               <div
                 class="flex justify-content-between w-full font-bold align-items-center"
               >
-                <span>{{
+                <span data-testid="tema-pregunta">{{
                   pregunta.tema.numero + " - " + pregunta.tema.descripcion
                 }}</span>
                 <span
                   *ngIf="
                     !!testCargado.duration && !vistaPrevia && !modoVerRespuestas
                   "
+                  data-testid="cronometro"
                   >{{ testCargado.endsAt | countdown }}</span
                 >
-                <div class="actions">
+                <div class="actions" data-testid="acciones-pregunta">
                   <p-button
                     label="{{
                       viewportService.screenWidth == 'xs' ? '' : 'Navegador'
@@ -247,6 +251,7 @@
                     icon="pi pi-compass"
                     *ngIf="viewportService.screenWidth == 'xs'"
                     (click)="displayNavegadorFn()"
+                    data-testid="navegador-btn"
                   />
                   <p-button
                     label="{{
@@ -258,6 +263,7 @@
                     icon="pi pi-exclamation-triangle"
                     (click)="displayFalloDialog = true"
                     *ngIf="!vistaPrevia && !modoVerRespuestas && !modoSimulacro"
+                    data-testid="reportar-fallo-btn"
                   />
                   <p-button
                     label="{{
@@ -267,6 +273,7 @@
                     icon="pi pi-clone"
                     (click)="displayClonacion = true"
                     *ngIf="!vistaPrevia && !modoVerRespuestas && !modoSimulacro"
+                    data-testid="clonar-pregunta-btn"
                   />
                 </div>
               </div>
@@ -278,7 +285,7 @@
                   viewportService.screenWidth == 'xs' ? 'col-12' : 'col-9'
                 }}  "
               >
-                <p>
+                <p data-testid="enunciado-pregunta">
                   <markdown
                     [data]="
                       pregunta.descripcion && pregunta.descripcion.length > 0
@@ -315,6 +322,8 @@
                       !modoVerRespuestas &&
                       clickedAnswer(indiceRespuesta)
                   "
+                  data-testid="opcion-respuesta"
+                  [attr.data-respuesta-index]="indiceRespuesta"
                 >
                   <p-inputGroup>
                     <p-inputGroupAddon
@@ -327,7 +336,7 @@
                 </div>
               </div>
               <div class="col-3" *ngIf="viewportService.screenWidth != 'xs'">
-                <div class="lateral-navegador">
+                <div class="lateral-navegador" data-testid="navegador-lateral">
                   <ng-container
                     *ngTemplateOutlet="contentNavegador"
                   ></ng-container>
@@ -340,14 +349,16 @@
               *ngIf="
                 (answeredCurrentQuestion() && !modoVerRespuestas) || vistaPrevia
               "
+              data-testid="footer-respuesta"
             >
               <div
                 class="solution col-12 align-items-center flex flex-column"
                 *ngIf="!isModoExamen()"
+                data-testid="solucion-container"
               >
                 @if (showSolution() || vistaPrevia) {
                 <strong>Solución:</strong>
-                <p class="m-0">
+                <p class="m-0" data-testid="solucion-texto">
                   <markdown
                     [data]="
                       pregunta.solucion && pregunta.solucion.length > 0
@@ -357,7 +368,11 @@
                   ></markdown>
                 </p>
                 } @else {
-                <strong class="respuesta-correcta">¡Respuesta correcta!</strong>
+                <strong
+                  class="respuesta-correcta"
+                  data-testid="respuesta-correcta-mensaje"
+                  >¡Respuesta correcta!</strong
+                >
                 }
               </div>
 
@@ -366,6 +381,7 @@
                   pButton
                   class="p-button p-button-raised w-full"
                   (click)="siguiente()"
+                  data-testid="continuar-btn"
                 >
                   <span class="w-full">Continuar</span>
                 </button>
@@ -380,6 +396,7 @@
               !vistaPrevia &&
               !modoVerRespuestas
             "
+            data-testid="barra-navegacion"
           >
             <p-panel>
               <ng-template pTemplate="header">
@@ -388,7 +405,7 @@
                     class="flex justify-content-between align-items-center w-full"
                   >
                     <span>Confianza al responder</span>
-                    <div class="actions">
+                    <div class="actions" data-testid="acciones-navegacion">
                       <p-button
                         label="{{
                           viewportService.screenWidth == 'xs' ? '' : 'Atrás'
@@ -397,6 +414,7 @@
                         icon="pi pi-angle-double-left"
                         (click)="processAnswer(undefined, 'before')"
                         [disabled]="indicePregunta() == 0"
+                        data-testid="anterior-pregunta-btn"
                       />
                       <p-button
                         label="{{
@@ -409,6 +427,7 @@
                           (!isModoExamen() && !!preguntaRespondida()) ||
                           comunicating
                         "
+                        data-testid="omitir-pregunta-btn"
                       />
                       <p-button
                         label="{{
@@ -420,6 +439,7 @@
                         [disabled]="
                           indicePregunta() == testCargado.preguntas.length - 1
                         "
+                        data-testid="siguiente-pregunta-btn"
                       />
 
                       <p-button
@@ -430,6 +450,7 @@
                         [disabled]="lastLoadedTest.status == 'FINALIZADO'"
                         icon="pi pi-flag"
                         (click)="finalizarTest()"
+                        data-testid="finalizar-test-btn"
                       />
                     </div>
                   </div>
@@ -451,13 +472,14 @@
           <div
             class="col-12 bottom-bar-no-content"
             *ngIf="vistaPrevia || modoVerRespuestas"
+            data-testid="barra-navegacion-vista-previa"
           >
             <p-panel>
               <ng-template pTemplate="header">
                 <div
                   class="flex justify-content-between align-items-center w-full"
                 >
-                  <div class="actions">
+                  <div class="actions" data-testid="acciones-vista-previa">
                     <p-button
                       label="{{
                         viewportService.screenWidth == 'xs' ? '' : 'Volver'
@@ -465,6 +487,7 @@
                       [link]="true"
                       icon="pi pi-arrow-left"
                       (click)="location.back()"
+                      data-testid="volver-btn"
                     />
                     <p-button
                       label="{{
@@ -474,6 +497,7 @@
                       icon="pi pi-angle-double-left"
                       (click)="atras()"
                       [disabled]="indicePregunta() == 0"
+                      data-testid="atras-vista-previa-btn"
                     />
                     <p-button
                       label="{{
@@ -485,6 +509,7 @@
                       [disabled]="
                         indicePregunta() == testCargado.preguntas.length - 1
                       "
+                      data-testid="adelante-vista-previa-btn"
                     />
                   </div>
                 </div>
@@ -496,7 +521,7 @@
     </p-card>
 
     }@else {
-    <p-card class="col-12">
+    <p-card class="col-12" data-testid="pregunta-no-encontrada">
       <div class="info">
         <div class="flex gap-2 info-card">
           <div class="icon">
@@ -515,7 +540,7 @@
   </ng-container>
   <ng-template #testNoCargado>
     <div class="col-12">
-      <p-card>
+      <p-card data-testid="test-no-cargado">
         <div class="info">
           <div class="flex gap-2 info-card">
             <div class="icon">
@@ -529,6 +554,7 @@
                 [routerLink]="['/app/test/alumno/realizar-test']"
                 class="link-text flex align-items-center"
                 style="text-decoration: none"
+                data-testid="probar-otro-test-link"
               >
                 <span>Prueba con otro</span> <i class="pi pi-angle-right"></i>
               </a>

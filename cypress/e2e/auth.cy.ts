@@ -17,7 +17,7 @@ describe('Autenticación', () => {
       cy.get('button[type="submit"]').click();
 
       // Verificar redirección a la ruta de admin
-      cy.url().should('include', '/app/test');
+      cy.url().should('include', '/app/profile');
     });
 
     it('debería hacer login como alumno correctamente', () => {
@@ -26,7 +26,7 @@ describe('Autenticación', () => {
       cy.get('button[type="submit"]').click();
 
       // Verificar redirección a la ruta de alumno
-      cy.url().should('include', '/app/test/alumno');
+      cy.url().should('include', '/app/profile');
     });
 
     it('debería mostrar error con credenciales inválidas', () => {

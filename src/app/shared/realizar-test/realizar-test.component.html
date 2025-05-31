@@ -7,17 +7,19 @@
   [style]="{ width: '75vw', height: '100%' }"
   [draggable]="false"
   [resizable]="false"
+  data-testid="popup-fallos-dialog"
 >
   <app-popup-fallos-test
     style="width: 100%; height: 100%; display: block"
     class="py-2"
+    data-testid="popup-fallos-content"
   ></app-popup-fallos-test>
 </p-dialog>
 
-<p-confirmDialog></p-confirmDialog>
-<div class="grid" [formGroup]="formGroup">
+<p-confirmDialog data-testid="confirmacion-dialog"></p-confirmDialog>
+<div class="grid" [formGroup]="formGroup" data-testid="realizar-test-container">
   <div class="col-12 content">
-    <p-card>
+    <p-card data-testid="configuracion-test-card">
       <div class="grid">
         <div class="col-12 md:col-4">
           <p-dropdown
@@ -31,6 +33,7 @@
             optionLabel="label"
             optionValue="code"
             placeholder="Número de preguntas"
+            data-testid="num-preguntas-dropdown"
           ></p-dropdown>
         </div>
         <div class="col-12 md:col-4">
@@ -45,6 +48,7 @@
             placeholder="Selecciona un tipo"
             [showHeader]="false"
             [defaultLabel]="'Selecciona un tipo'"
+            data-testid="dificultad-multiselect"
           >
             <ng-template let-item pTemplate="selectedItem">
               <div class="flex align-items-center gap-2 h-full">
@@ -67,6 +71,7 @@
         <div class="col-12 md:col-4">
           <app-tema-select
             [formControl]="formGroup.controls.temas"
+            data-testid="temas-select"
           ></app-tema-select>
         </div>
       </div>
@@ -74,6 +79,7 @@
       <div
         class="flex align-items-center justify-content-end w-full gap-2 flex-wrap mt-3"
         *ngIf="mode == 'default'"
+        data-testid="opciones-test-container"
       >
         <p-floatLabel *ngIf="formGroup.value.generarTestDeExamen">
           <input
@@ -83,18 +89,21 @@
             placeholder="Minutos"
             aria-describedby="tiempoLimiteEnMinutos-help"
             [formControl]="formGroup.controls.tiempoLimiteEnMinutos"
+            data-testid="tiempo-limite-input"
           />
           <label for="tiempoLimiteEnMinutos">Tiempo límite</label>
         </p-floatLabel>
         <label for="switch1">Generar test de examen</label>
         <p-inputSwitch
           [formControl]="formGroup.controls.generarTestDeExamen"
+          data-testid="test-examen-switch"
         ></p-inputSwitch>
 
         <ng-container *ngIf="!!(getFallosCount$ | async)">
           <label for="switch1">Generar test de repaso</label>
           <p-inputSwitch
             [formControl]="formGroup.controls.generarTestDeRepaso"
+            data-testid="test-repaso-switch"
           ></p-inputSwitch>
 
           <button
@@ -102,6 +111,7 @@
             (click)="displayPopupFallosTest = true"
             type="submit"
             class="p-button dark-button p-button-raised"
+            data-testid="ver-fallos-btn"
           >
             <span class="w-full">Ver fallos</span>
           </button>
@@ -118,6 +128,7 @@
             confirmGenerarTest($event, !!formGroup.value.generarTestDeExamen)
           "
           [loading]="generandoTest"
+          data-testid="generar-test-btn"
         >
           <span class="w-full">Generar test</span>
         </button>
@@ -126,12 +137,15 @@
       <div
         class="grid"
         *ngIf="getAllTestsComenzados$ | async as testsComenzados"
+        data-testid="tests-pendientes-container"
       >
         <div
           class="col-12 md:col-6"
           *ngFor="let testComenzado of testsComenzados"
+          data-testid="test-pendiente"
+          [attr.data-test-id]="testComenzado.id"
         >
-          <p-card>
+          <p-card data-testid="test-pendiente-card">
             <div class="info">
               <div class="flex gap-2 info-card">
                 <div class="icon">
@@ -139,7 +153,7 @@
                 </div>
                 <div class="content">
                   <div class="title">
-                    <h4 class="my-0">
+                    <h4 class="my-0" data-testid="test-pendiente-titulo">
                       Tienes un test pendiente
                       {{
                         !!testComenzado.duration && !!testComenzado.endsAt
@@ -148,7 +162,7 @@
                       }}
                     </h4>
                   </div>
-                  <div class="body">
+                  <div class="body" data-testid="test-pendiente-info">
                     Has comenzado un test el día
                     <strong>{{
                       testComenzado.createdAt | date : "shortDate"
@@ -156,6 +170,7 @@
 
                     <strong
                       *ngIf="!!testComenzado.duration && !!testComenzado.endsAt"
+                      data-testid="tiempo-restante-examen"
                       >. Y te quedan
                       {{ testComenzado.endsAt | countdown }} minutos para
                       terminarlo</strong
@@ -174,6 +189,7 @@
                   label="Abortar"
                   [link]="true"
                   (click)="eliminarTest(testComenzado.id, $event)"
+                  data-testid="abortar-test-btn"
                 ></p-button>
                 <a
                   [routerLink]="[
@@ -181,6 +197,7 @@
                   ]"
                   class="link-text flex align-items-center p-button p-button-raised"
                   style="text-decoration: none"
+                  data-testid="continuar-test-btn"
                 >
                   <span>Continuar</span>
                 </a>

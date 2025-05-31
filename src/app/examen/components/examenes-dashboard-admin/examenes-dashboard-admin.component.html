@@ -11,6 +11,7 @@
           style="min-width: 30vw"
           [value]="pagination().searchTerm"
           (input)="valueChanged($event)"
+          data-testid="buscar-examenes-input"
         />
       </p-iconField>
       <div class="right-actions flex gap-2">
@@ -23,6 +24,7 @@
           }}"
           icon="pi pi-plus"
           (click)="navigateToDetailview($event, 'new')"
+          data-testid="nuevo-examen-btn"
         ></p-button>
       </div>
     </div>
@@ -44,6 +46,8 @@
               class="col-12 item-container pointer"
               (click)="navigateToDetailview($event, item.id, item.test?.id)"
               *ngFor="let item of examenes; let first = first"
+              data-testid="examen-item"
+              [attr.data-testid]="item.estado === 'BORRADOR' ? 'examen-borrador' : 'examen-item'"
             >
               <div class="flex flex-row align-items-between">
                 <div class="flex flex-column py-2 col-9 left-side">
@@ -122,9 +126,21 @@
                         'bg-info': item.test?.status === 'EMPEZADO',
                         'bg-success': item.test?.status === 'FINALIZADO'
                       }"
+                      data-testid="estado-test-badge"
                     >
                       {{ item.test?.status }}
                     </span>
+
+                    <!-- Botón para iniciar examen (solo alumnos) -->
+                    <p-button
+                      *ngIf="expectedRole === 'ALUMNO' && (!item.test || item.test?.status === 'CREADO')"
+                      label="Iniciar"
+                      icon="pi pi-play"
+                      severity="success"
+                      data-testid="iniciar-examen-btn"
+                      (click)="navigateToDetailview($event, item.id, item.test?.id)"
+                    ></p-button>
+
                     <div
                       class="admin-controls"
                       *ngIf="expectedRole !== 'ALUMNO'"
@@ -140,6 +156,7 @@
                         "
                         [text]="true"
                         pTooltip="Publicar"
+                        data-testid="publicar-examen-btn"
                       >
                       </p-button>
 
@@ -154,6 +171,21 @@
                         "
                         [text]="true"
                         pTooltip="Archivar"
+                        data-testid="archivar-examen-btn"
+                      >
+                      </p-button>
+
+                      <p-button
+                        icon="pi pi-pencil"
+                        severity="info"
+                        (click)="
+                          $event.stopPropagation();
+                          $event.preventDefault();
+                          navigateToDetailview($event, item.id)
+                        "
+                        [text]="true"
+                        pTooltip="Editar"
+                        data-testid="editar-examen-btn"
                       >
                       </p-button>
 
@@ -167,6 +199,7 @@
                         "
                         [text]="true"
                         pTooltip="Eliminar"
+                        data-testid="eliminar-examen-btn"
                       >
                       </p-button>
                     </div>
@@ -178,7 +211,7 @@
         </ng-template>
       </p-dataView>
       }@else {
-      <div class="text-center p-4">No hay exámenes disponibles</div>
+      <div class="text-center p-4" data-testid="no-examenes-message">No hay exámenes disponibles</div>
       }
     </ng-container>
   </div>
@@ -190,6 +223,7 @@
         [rows]="pagination().take"
         [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
         [showPageLinks]="viewportService.screenWidth != 'xs'"
+        data-testid="paginador-examenes"
       ></p-paginator>
     </div>
   </div>
