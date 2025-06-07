@@ -1,0 +1,165 @@
+.examenes-realizados-container {
+  padding: 1rem;
+
+  .examen-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .examen-titulo {
+      font-weight: 500;
+    }
+
+    .ultimo-intento-badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background-color: var(--blue-100);
+      color: var(--blue-800);
+    }
+  }
+
+  .nota-valor {
+    font-weight: bold;
+
+    &.nota-excelente {
+      color: var(--green-600);
+    }
+    &.nota-notable {
+      color: var(--blue-600);
+    }
+    &.nota-aprobado {
+      color: var(--orange-500);
+    }
+    &.nota-suspenso {
+      color: var(--red-500);
+    }
+  }
+
+  .correctas-valor {
+    color: var(--green-600);
+
+    .porcentaje {
+      font-size: 0.8rem;
+      color: var(--text-color-secondary);
+    }
+  }
+
+  .incorrectas-valor {
+    color: var(--red-500);
+
+    .porcentaje {
+      font-size: 0.8rem;
+      color: var(--text-color-secondary);
+    }
+  }
+}
+
+.intentos-list {
+  .intento-item {
+    background-color: var(--surface-card);
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: var(--surface-hover);
+    }
+
+    &.first-attempt {
+      border: 1px solid var(--primary-color);
+      background-color: var(--primary-50);
+
+      &:hover {
+        background-color: var(--primary-100);
+      }
+    }
+
+    .pi-star-fill {
+      &.nota-excelente {
+        color: var(--green-600);
+      }
+      &.nota-notable {
+        color: var(--blue-600);
+      }
+      &.nota-aprobado {
+        color: var(--orange-500);
+      }
+      &.nota-suspenso {
+        color: var(--red-500);
+      }
+    }
+  }
+}
+
+.top-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.list-generic {
+  .item-container {
+    border: 1px solid var(--surface-border);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: var(--surface-hover);
+      border-color: var(--primary-color);
+    }
+
+    .left-side {
+      padding: 1rem;
+
+      .descripcion {
+        margin-top: 0.5rem;
+      }
+    }
+
+    .right-side {
+      padding: 1rem;
+
+      .nota-valor {
+        font-weight: bold;
+        font-size: 1.2rem;
+
+        &.nota-excelente {
+          color: var(--green-600);
+        }
+        &.nota-notable {
+          color: var(--blue-600);
+        }
+        &.nota-aprobado {
+          color: var(--orange-500);
+        }
+        &.nota-suspenso {
+          color: var(--red-500);
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .top-action-bar {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+
+    .left-actions,
+    .right-actions {
+      width: 100%;
+    }
+  }
+
+  .list-generic {
+    .item-container {
+      .right-side {
+        border-left: none;
+      }
+    }
+  }
+}

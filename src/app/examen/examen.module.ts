@@ -26,10 +26,14 @@ import { SharedModule } from '../shared/shared.module';
 import { ExamenesDashboardAdminDetailviewComponent } from './components/examenes-dashboard-admin-detailview/examenes-dashboard-admin-detailview.component';
 import { ExamenesDashboardAdminComponent } from './components/examenes-dashboard-admin/examenes-dashboard-admin.component';
 import { ExamenRoutingModule } from './examen-routing.module';
+import { ExamenesRealizadosAlumnoComponent } from './components/examenes-realizados-alumno/examenes-realizados-alumno.component';
+import { PrimengModule } from '../shared/primeng.module';
+import { BadgeModule } from 'primeng/badge';
 @NgModule({
   declarations: [
     ExamenesDashboardAdminComponent,
     ExamenesDashboardAdminDetailviewComponent,
+    ExamenesRealizadosAlumnoComponent,
   ],
   imports: [
     CommonModule,
@@ -55,8 +59,9 @@ import { ExamenRoutingModule } from './examen-routing.module';
     MultiSelectModule,
     StepsModule,
     CheckboxModule,
-    MenuModule
+    MenuModule,
+    BadgeModule,
   ],
   providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
 })
-export class ExamenModule { }
+export class ExamenModule {}

@@ -17,6 +17,7 @@ p-floatlabel {
   > .grid {
     @extend .center-flex;
     width: 100%;
+    max-width: 500px;
   }
 
   .form-login {

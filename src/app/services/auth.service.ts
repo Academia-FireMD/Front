@@ -1,21 +1,35 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
 import { Comunidad } from '../shared/models/pregunta.model';
 import { Usuario } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
+import { UserService } from './user.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService extends ApiBaseService {
   // BehaviorSubject para mantener el estado del usuario actual
-  private currentUserSubject = new BehaviorSubject<Usuario | null>(null);
+  private currentDecodedUserSubject = new BehaviorSubject<any | null>(null);
+  
+  public currentUser$ = this.currentDecodedUserSubject.pipe(
+    switchMap((user) => {
+      if (user) {
+        return this.userService.getByEmail$(user.email);
+      }
+      return of(null);
+    }),
+    tap((user) => {
+      this.lastUserLoaded = user;
+    })
+  );
 
   // Observable público que otros componentes pueden suscribirse
-  public currentUser$ = this.currentUserSubject.asObservable();
+  public lastUserLoaded: Usuario | null = null;
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private userService: UserService) {
     super(http);
     this.controllerPrefix = '/auth';
 
@@ -26,7 +40,7 @@ export class AuthService extends ApiBaseService {
   private initCurrentUser(): void {
     const decodedToken = this.decodeToken();
     if (decodedToken) {
-      this.currentUserSubject.next(decodedToken);
+      this.currentDecodedUserSubject.next(decodedToken);
     }
   }
 
@@ -48,7 +62,7 @@ export class AuthService extends ApiBaseService {
       apellidos,
       tutorId,
       woocommerceCustomerId,
-      planType
+      planType,
     });
   }
 
@@ -61,7 +75,7 @@ export class AuthService extends ApiBaseService {
 
           // Actualizar el usuario actual después del login
           const decodedUser = this.decodeToken();
-          this.currentUserSubject.next(decodedUser);
+          this.currentDecodedUserSubject.next(decodedUser);
         }
       })
     );
@@ -80,7 +94,7 @@ export class AuthService extends ApiBaseService {
 
           // Actualizar el usuario actual después de refrescar el token
           const decodedUser = this.decodeToken();
-          this.currentUserSubject.next(decodedUser);
+          this.currentDecodedUserSubject.next(decodedUser);
         }
       })
     );
@@ -92,7 +106,7 @@ export class AuthService extends ApiBaseService {
       tap(() => {
         // Limpiar tokens y usuario actual
         this.clearToken();
-        this.currentUserSubject.next(null);
+        this.currentDecodedUserSubject.next(null);
       })
     );
   }
@@ -146,7 +160,7 @@ export class AuthService extends ApiBaseService {
 
   // Método para obtener el usuario actual de forma síncrona
   public getCurrentUser(): Usuario | null {
-    return this.currentUserSubject.value;
+    return this.lastUserLoaded;
   }
 
   // Método para verificar si el usuario está autenticado
@@ -157,5 +171,13 @@ export class AuthService extends ApiBaseService {
   public registroTemporal$(token: string): Observable<any> {
     return this.get(`/registro-temporal/${token}`);
   }
-}
 
+  activateConsumible$(token: string, userId: number) {
+    return this.http.post<any>(`${environment.apiUrl}/auth/activate-consumible`, {
+      token,
+      userId
+    });
+  }
+
+ 
+}

@@ -20,21 +20,66 @@
       <h1>Resultados del Simulacro</h1>
       <h2>{{ examen?.titulo }}</h2>
 
-      <div class="mi-posicion" *ngIf="miPosicion">
-        <div class="posicion-card">
-          <div class="posicion-numero">{{ miPosicion }}</div>
-          <div class="posicion-texto">Tu posición</div>
-          <div class="posicion-total">de {{ totalParticipantes }} participantes</div>
+      <!-- Último intento (si existe y es diferente del primer intento) -->
+      <div class="intentos-container" *ngIf="ultimoIntento || miResultado">
+        <!-- Primer intento (registrado) -->
+        <div class="intento-section" *ngIf="miResultado">
+          <h3 class="intento-title">Intento Registrado</h3>
+          <div class="cards-container">
+            <div class="posicion-card" *ngIf="miPosicion">
+              <div class="posicion-numero">{{ miPosicion }}</div>
+              <div class="posicion-texto">Tu posición</div>
+              <div class="posicion-total">de {{ totalParticipantes }} participantes</div>
+            </div>
+
+            <div class="nota-card">
+              <div class="nota-numero" [ngClass]="getNotaClass(miResultado.estadisticas.nota)">
+                {{ miResultado.estadisticas.nota !== null ? miResultado.estadisticas.nota.toFixed(2) : 'N/A' }}
+              </div>
+              <div class="nota-texto">Nota registrada</div>
+              <div class="nota-detalle">
+                {{ miResultado.estadisticas.correctas }} correctas /
+                {{ miResultado.estadisticas.incorrectas }} incorrectas
+              </div>
+              <div class="card-actions">
+                <button 
+                  pButton 
+                  type="button" 
+                  label="Ver respuestas" 
+                  icon="pi pi-eye"
+                  class="p-button-outlined p-button-primary"
+                  (click)="verRespuestas(miResultado.testId)"
+                ></button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="nota-card" *ngIf="miResultado">
-          <div class="nota-numero" [ngClass]="getNotaClass(miResultado.estadisticas.nota)">
-            {{ miResultado.estadisticas.nota !== null ? miResultado.estadisticas.nota.toFixed(2) : 'N/A' }}
-          </div>
-          <div class="nota-texto">Tu nota</div>
-          <div class="nota-detalle">
-            {{ miResultado.estadisticas.correctas }} correctas /
-            {{ miResultado.estadisticas.incorrectas }} incorrectas
+        <!-- Último intento (no registrado) -->
+        <div class="intento-section" *ngIf="ultimoIntento">
+          <h3 class="intento-title">Último Intento (no cuenta para el ranking)</h3>
+          <div class="cards-container">
+            <div class="nota-card ultimo-intento">
+              <div class="nota-numero" [ngClass]="getNotaClass(ultimoIntento.estadisticas.nota)">
+                {{ ultimoIntento.estadisticas.nota.toFixed(2) }}
+              </div>
+              <div class="nota-texto">Nota obtenida</div>
+              <div class="nota-detalle">
+                {{ ultimoIntento.estadisticas.correctas }} correctas /
+                {{ ultimoIntento.estadisticas.incorrectas }} incorrectas
+              </div>
+            
+              <div class="card-actions">
+                <button 
+                  pButton 
+                  type="button" 
+                  label="Ver respuestas" 
+                  icon="pi pi-eye"
+                  class="p-button-outlined p-button-primary"
+                  (click)="verRespuestas(ultimoIntento.testId)"
+                ></button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -61,7 +106,6 @@
             <th style="width: 120px">Correctas</th>
             <th style="width: 120px">Incorrectas</th>
             <th style="width: 150px">Fecha</th>
-            <!-- <th style="width: 100px" *ngIf="isAdmin || miResultado">Acciones</th> -->
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-resultado let-i="rowIndex">
@@ -93,7 +137,8 @@
               <div class="correctas-valor">
                 {{ resultado.estadisticas.correctas }}
                 <span class="porcentaje">
-                  ({{ (resultado.estadisticas.correctas / resultado.estadisticas.totalPreguntas * 100).toFixed(0) }}%)
+                  ({{ resultado.estadisticas.totalPreguntas ? 
+                        (resultado.estadisticas.correctas / resultado.estadisticas.totalPreguntas * 100).toFixed(0) : 0 }}%)
                 </span>
               </div>
             </td>
@@ -101,22 +146,15 @@
               <div class="incorrectas-valor">
                 {{ resultado.estadisticas.incorrectas }}
                 <span class="porcentaje">
-                  ({{ (resultado.estadisticas.incorrectas / resultado.estadisticas.totalPreguntas * 100).toFixed(0) }}%)
+                  ({{ resultado.estadisticas.totalPreguntas ? 
+                        (resultado.estadisticas.incorrectas / resultado.estadisticas.totalPreguntas * 100).toFixed(0) : 0 }}%)
                 </span>
               </div>
             </td>
             <td>
               {{ resultado.fechaRealizacion | date:'dd/MM/yyyy HH:mm' }}
             </td>
-            <!-- <td *ngIf="isAdmin || resultado.usuario.esTuResultado">
-              <button
-                pButton
-                icon="pi pi-chart-bar"
-                class="p-button-rounded p-button-sm p-button-info"
-                pTooltip="Ver detalles"
-                (click)="verDetalles(resultado.testId)"
-              ></button>
-            </td> -->
+          
           </tr>
         </ng-template>
         <ng-template pTemplate="emptymessage">
@@ -129,7 +167,7 @@
       </p-table>
     </div>
 
-    <div class="actions">
+    <div class="actions" *ngIf="!ocultarVolver">
       <button pButton label="Volver" icon="pi pi-arrow-left" class="p-button-outlined" (click)="volver()"></button>
     </div>
   </div>

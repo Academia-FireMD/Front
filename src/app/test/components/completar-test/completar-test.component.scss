@@ -15,6 +15,18 @@
 }
 
 :host ::ng-deep {
+  .impugnada-block {
+    .p-card {
+      border: 1px solid var(--orange-500);
+    }
+  }
+
+  .reserva-block {
+    .p-card {
+      border: 1px solid var(--blue-500);
+    }
+  }
+
   .list-blocks {
     display: flex;
     flex-direction: row;

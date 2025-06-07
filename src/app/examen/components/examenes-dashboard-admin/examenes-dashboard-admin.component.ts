@@ -105,7 +105,10 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
         accept: async () => {
           const test = await firstValueFrom(this.examenesService.startExamen$(id as number));
           if (test) {
-            this.router.navigate(['/app/test/alumno/realizar-test/' + (test.id)]);
+            this.router.navigate(['/app/test/alumno/realizar-test/' + (test.id)],{queryParams:{
+              idExamen:id,
+              modoSimulacro:true
+            }});
           }
         },
         reject: () => { },

@@ -15,6 +15,10 @@ export interface Pregunta {
   respuestaCorrectaIndex: number;
   seguridad: SeguridadAlResponder;
   tests: Test[];
+  impugnada?: boolean;
+  motivoImpugnacion?: string;
+  deReserva?: boolean;
+  orden?: number;
 }
 
 export interface PreguntaFallo {

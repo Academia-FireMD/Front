@@ -14,19 +14,19 @@ import { InputOtpModule } from 'primeng/inputotp';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
+import { LoginComponent } from '../login/components/login/login.component';
 import { RegistroComponent } from '../login/components/registro/registro.component';
 import { PrimengModule } from '../shared/primeng.module';
 import { SharedModule } from '../shared/shared.module';
 import { TestModule } from '../test/test.module';
 import { CompletarTestSimulacroComponent } from './components/completar-test-simulacro/completar-test-simulacro.component';
 import { RealizarSimulacroComponent } from './components/realizar-simulacro/realizar-simulacro.component';
-import { ResultadoSimulacroComponent } from './components/resultado-simulacro/resultado-simulacro.component';
+import { ResultadoSimulacroComponent } from './standalone/resultado-simulacro/resultado-simulacro.component';
 import { SimulacrosRoutingModule } from './simulacros-routing.module';
 @NgModule({
   declarations: [
     RealizarSimulacroComponent,
     CompletarTestSimulacroComponent,
-    ResultadoSimulacroComponent
   ],
   imports: [
     CommonModule,
@@ -41,12 +41,15 @@ import { SimulacrosRoutingModule } from './simulacros-routing.module';
     DialogModule,
     ConfirmDialogModule,
     InputOtpModule,
+    LoginComponent,
     RegistroComponent,
     TestModule,
     ProgressSpinnerModule,
     TableModule,
     CardModule,
-    TooltipModule
+    TooltipModule,
+  ],
+  exports: [
   ],
   providers: [
     ConfirmationService,

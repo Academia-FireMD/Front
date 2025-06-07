@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
 import { Usuario } from '../models/user.model';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-layout',
@@ -21,8 +22,7 @@ export class LayoutComponent {
   toast = inject(ToastrService);
   items = [] as Array<any>;
   isMenuVisible: boolean = false;
-  public decodedUser = this.authService.decodeToken() as Usuario;
-  public loadedUser$ = this.userService.getByEmail$(this.decodedUser.email);
+
   public selectedUser!: Usuario;
   public editDialogVisible = false;
 
@@ -30,11 +30,6 @@ export class LayoutComponent {
     // Redirigir a la nueva página de perfil
     this.router.navigate(['/app/profile']);
     this.isMenuVisible = false;
-  }
-
-  public onCloseUserEditDialog(visibility: boolean) {
-    this.editDialogVisible = visibility;
-    this.loadedUser$ = this.userService.getByEmail$(this.decodedUser.email);
   }
 
   public confirmarCambios(usuarioActualizado: Usuario) {
@@ -65,232 +60,237 @@ export class LayoutComponent {
   }
 
   ngOnInit(): void {
-    if (this.decodedUser.rol == 'ADMIN') {
-      this.items = [
-        {
-          label: 'Gestión',
-          collapsed: false,
-          items: [
-            {
-              label: 'Usuarios',
-              icon: 'pi pi-user',
-              routerLink: '/app/test/user',
-            },
-            {
-              label: 'Modulos',
-              icon: 'pi pi-book',
-              routerLink: '/app/test/modulos',
-            },
-            {
-              label: 'Temas',
-              icon: 'pi pi-book',
-              routerLink: '/app/test/tema',
-            },
-            {
-              label: 'Documentos',
-              icon: 'pi pi-file',
-              routerLink: '/app/documentacion',
-            },
-          ],
-        },
-        {
-          label: 'Planificación',
-          items: [
-            {
-              label: 'Bloques',
-              icon: 'pi pi-th-large',
-              routerLink: '/app/planificacion/bloques',
-            },
-            {
-              label: 'Plantillas semanales',
-              icon: 'pi pi-sync',
-              routerLink: '/app/planificacion/plantillas-semanales',
-            },
-            {
-              label: 'Planificación mensual',
-              icon: 'pi pi-calendar-plus',
-              routerLink: '/app/planificacion/planificacion-mensual',
-            },
-            {
-              label: 'Comentarios',
-              icon: 'fa fa-comment',
-              routerLink: '/app/planificacion/comentarios',
-            },
-          ],
-        },
-        {
-          label: 'Preguntas',
-          collapsed: true,
-          items: [
-            {
-              label: 'Lista',
-              icon: 'pi pi-question',
-              routerLink: '/app/test/preguntas',
-            },
-            {
-              label: 'Fallos reportados',
-              icon: 'pi pi-flag-fill',
-              routerLink: '/app/test/preguntas-fallos',
-            },
-            {
-              label: 'Estadisticas',
-              icon: 'pi pi-chart-pie',
-              routerLink: '/app/test/test-stats',
-            },
-          ],
-        },
-        {
-          label: 'Flash Cards',
-          collapsed: true,
-          items: [
-            {
-              label: 'Lista',
-              icon: 'pi pi-id-card',
-              routerLink: '/app/test/flashcards',
-            },
-            {
-              label: 'Fallos reportados',
-              icon: 'pi pi-flag-fill',
-              routerLink: '/app/test/flashcards-fallos',
-            },
-            {
-              label: 'Estadisticas',
-              icon: 'pi pi-chart-pie',
-              routerLink: '/app/test/flashcard-stats',
-            },
-          ],
-        },
-        {
-          label: 'Exámenes',
-          collapsed: false,
-          items: [
-            {
-              label: 'Gestión de exámenes',
-              icon: 'pi pi-file-edit',
-              routerLink: '/app/examen',
-            },
-          ],
-        },
-        {
-          label: 'Perfil',
-          items: [
-            {
-              label: 'Mi Perfil',
-              icon: 'pi pi-user',
-              routerLink: '/app/profile',
-            },
-            {
-              label: 'Ajustes',
-              icon: 'pi pi-cog',
-              routerLink: '/app/test/ajustes',
-            },
-            {
-              label: 'Desconectarse',
-              icon: 'pi pi-sign-out',
-              routerLink: '/auth',
-            },
-          ],
-        },
-      ];
-    } else {
-      this.items = [
-        {
-          label: 'Documentos',
-          icon: 'pi pi-file',
-          routerLink: '/app/documentacion/alumno',
-          items: [],
-        },
-        {
-          label: 'Test',
-          items: [
-            {
-              label: 'Realizar tests',
-              icon: 'pi pi-question',
-              routerLink: '/app/test/alumno/realizar-test',
-            },
-            {
-              label: 'Estadísticas test',
-              icon: 'pi pi-chart-pie',
-              routerLink: '/app/test/alumno/test-stats',
-            },
-          ],
-        },
-        {
-          label: 'Flashcards',
-          items: [
-            {
-              label: 'Realizar flashcards',
-              icon: 'pi pi-id-card',
-              routerLink: '/app/test/alumno/realizar-flash-cards-test',
-            },
-            {
-              label: 'Estadísticas flashcards',
-              icon: 'pi pi-chart-pie',
-              routerLink: '/app/test/alumno/flashcard-stats',
-            },
-          ],
-        },
-        {
-          label: 'Crea tu propio contenido',
-          items: [
-            {
-              label: 'Test',
-              icon: 'pi pi-question',
-              routerLink: '/app/test/alumno/preguntas',
-            },
-            {
-              label: 'Flashcards',
-              icon: 'pi pi-id-card',
-              routerLink: '/app/test/alumno/flashcards',
-            },
-          ],
-        },
-        {
-          label: 'Planificación mensual',
-          icon: 'pi pi-calendar-plus',
-          routerLink: '/app/planificacion/planificacion-mensual-alumno',
-          items: [],
-        },
-        {
-          label: 'Exámenes',
-          items: [
-            {
-              label: 'Exámenes disponibles',
-              icon: 'pi pi-file',
-              routerLink: '/app/examen/alumno',
-            },
-            {
-              label: 'Mis exámenes realizados',
-              icon: 'pi pi-file',
-              routerLink: '/app/test/alumno/test-stats',
-              queryParams: {
-                onlyExamen: true,
+    this.authService.currentUser$.subscribe((user) => {
+      if (user?.rol == 'ADMIN') {
+        this.items = [
+          {
+            label: 'Gestión',
+            collapsed: false,
+            items: [
+              {
+                label: 'Usuarios',
+                icon: 'pi pi-user',
+                routerLink: '/app/test/user',
               },
-            },
-          ],
-        },
-        {
-          label: 'Perfil',
-          items: [
-            {
-              label: 'Mi Perfil',
-              icon: 'pi pi-user',
-              routerLink: '/app/profile',
-            },
-            {
-              label: 'Ajustes',
-              icon: 'pi pi-cog',
-              routerLink: '/app/test/ajustes/alumno',
-            },
-            {
-              label: 'Desconectarse',
-              icon: 'pi pi-sign-out',
-              routerLink: '/auth',
-            },
-          ],
-        },
-      ];
-    }
+              {
+                label: 'Modulos',
+                icon: 'pi pi-book',
+                routerLink: '/app/test/modulos',
+              },
+              {
+                label: 'Temas',
+                icon: 'pi pi-book',
+                routerLink: '/app/test/tema',
+              },
+              {
+                label: 'Documentos',
+                icon: 'pi pi-file',
+                routerLink: '/app/documentacion',
+              },
+            ],
+          },
+          {
+            label: 'Planificación',
+            items: [
+              {
+                label: 'Bloques',
+                icon: 'pi pi-th-large',
+                routerLink: '/app/planificacion/bloques',
+              },
+              {
+                label: 'Plantillas semanales',
+                icon: 'pi pi-sync',
+                routerLink: '/app/planificacion/plantillas-semanales',
+              },
+              {
+                label: 'Planificación mensual',
+                icon: 'pi pi-calendar-plus',
+                routerLink: '/app/planificacion/planificacion-mensual',
+              },
+              {
+                label: 'Comentarios',
+                icon: 'fa fa-comment',
+                routerLink: '/app/planificacion/comentarios',
+              },
+            ],
+          },
+          {
+            label: 'Preguntas',
+            collapsed: true,
+            items: [
+              {
+                label: 'Lista',
+                icon: 'pi pi-question',
+                routerLink: '/app/test/preguntas',
+              },
+              {
+                label: 'Fallos reportados',
+                icon: 'pi pi-flag-fill',
+                routerLink: '/app/test/preguntas-fallos',
+              },
+              {
+                label: 'Estadisticas',
+                icon: 'pi pi-chart-pie',
+                routerLink: '/app/test/test-stats',
+              },
+            ],
+          },
+          {
+            label: 'Flash Cards',
+            collapsed: true,
+            items: [
+              {
+                label: 'Lista',
+                icon: 'pi pi-id-card',
+                routerLink: '/app/test/flashcards',
+              },
+              {
+                label: 'Fallos reportados',
+                icon: 'pi pi-flag-fill',
+                routerLink: '/app/test/flashcards-fallos',
+              },
+              {
+                label: 'Estadisticas',
+                icon: 'pi pi-chart-pie',
+                routerLink: '/app/test/flashcard-stats',
+              },
+            ],
+          },
+          {
+            label: 'Exámenes',
+            collapsed: false,
+            items: [
+              {
+                label: 'Gestión de exámenes',
+                icon: 'pi pi-file-edit',
+                routerLink: '/app/examen',
+              },
+            ],
+          },
+          {
+            label: 'Perfil',
+            items: [
+              {
+                label: 'Mi Perfil',
+                icon: 'pi pi-user',
+                routerLink: '/app/profile',
+              },
+              {
+                label: 'Ajustes',
+                icon: 'pi pi-cog',
+                routerLink: '/app/test/ajustes',
+              },
+              {
+                label: 'Desconectarse',
+                icon: 'pi pi-sign-out',
+                  command: async () => {
+                    await firstValueFrom(this.authService.logout$());
+                    this.router.navigate(['/auth/login']);
+                  },
+              },
+            ],
+          },
+        ];
+      } else {
+        this.items = [
+          {
+            label: 'Documentos',
+            icon: 'pi pi-file',
+            routerLink: '/app/documentacion/alumno',
+            items: [],
+          },
+          {
+            label: 'Test',
+            items: [
+              {
+                label: 'Realizar tests',
+                icon: 'pi pi-question',
+                routerLink: '/app/test/alumno/realizar-test',
+              },
+              {
+                label: 'Estadísticas test',
+                icon: 'pi pi-chart-pie',
+                routerLink: '/app/test/alumno/test-stats',
+              },
+            ],
+          },
+          {
+            label: 'Flashcards',
+            items: [
+              {
+                label: 'Realizar flashcards',
+                icon: 'pi pi-id-card',
+                routerLink: '/app/test/alumno/realizar-flash-cards-test',
+              },
+              {
+                label: 'Estadísticas flashcards',
+                icon: 'pi pi-chart-pie',
+                routerLink: '/app/test/alumno/flashcard-stats',
+              },
+            ],
+          },
+          {
+            label: 'Crea tu propio contenido',
+            items: [
+              {
+                label: 'Test',
+                icon: 'pi pi-question',
+                routerLink: '/app/test/alumno/preguntas',
+              },
+              {
+                label: 'Flashcards',
+                icon: 'pi pi-id-card',
+                routerLink: '/app/test/alumno/flashcards',
+              },
+            ],
+          },
+          {
+            label: 'Planificación mensual',
+            icon: 'pi pi-calendar-plus',
+            routerLink: '/app/planificacion/planificacion-mensual-alumno',
+            items: [],
+          },
+          {
+            label: 'Exámenes',
+            items: [
+              {
+                label: 'Exámenes disponibles',
+                icon: 'pi pi-file',
+                routerLink: '/app/examen/alumno',
+              },
+              {
+                label: 'Exámenes realizados',
+                icon: 'pi pi-check-circle',
+                routerLink: '/app/examen/alumno/examenes-realizados',
+              },
+            ],
+          },
+          {
+            label: 'Perfil',
+            items: [
+              {
+                label: 'Mi Perfil',
+                icon: 'pi pi-user',
+                routerLink: '/app/profile',
+              },
+              {
+                label: 'Ajustes',
+                icon: 'pi pi-cog',
+                routerLink: '/app/test/ajustes/alumno',
+              },
+              {
+                label: 'Desconectarse',
+                icon: 'pi pi-sign-out',
+                command: async () => {
+                  await firstValueFrom(this.authService.logout$());
+                  this.router.navigate(['/auth/login']);
+                },
+              },
+            ],
+          },
+        ];
+      }
+    });
   }
 
   public isParentCollapsed(itemChild: MenuItem) {

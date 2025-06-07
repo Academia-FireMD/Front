@@ -190,6 +190,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   getLetter = getLetter;
 
   private examenId: string | null = null;
+  private esReserva = false;
 
   ngOnInit(): void {
     if (this.mode == 'edit') {
@@ -203,10 +204,10 @@ export class PreguntasDashboardAdminDetailviewComponent {
         this.formGroup.get('dificultad')?.patchValue('EXAMEN');
         this.formGroup.get('dificultad')?.disable();
       }
+
+      this.esReserva = this.activedRoute.snapshot.queryParamMap.get('esReserva') === 'true';
     }
   }
-
-
 
   public getId() {
     return this.activedRoute.snapshot.paramMap.get('id') as number | 'new';
@@ -308,7 +309,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
       await firstValueFrom(
         this.examenesService.addPreguntasToExamen$(
           parseInt(this.examenId),
-          [res.id]
+          [res.id],
+          this.esReserva
         )
       );
 

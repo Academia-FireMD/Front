@@ -22,6 +22,7 @@ import { MessagesModule } from 'primeng/messages';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToolbarModule } from 'primeng/toolbar';
+import { TooltipModule } from 'primeng/tooltip';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
@@ -47,6 +48,8 @@ import { PieChartDashboardSecurityComponent } from './components/test-stats/pie-
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { TestRoutingModule } from './test-routing.module';
+import { SimulacrosModule } from '../simulacros/simulacros.module';
+import { ResultadoSimulacroComponent } from '../simulacros/standalone/resultado-simulacro/resultado-simulacro.component';
 @NgModule({
   declarations: [
     UserDashboardComponent,
@@ -97,6 +100,7 @@ import { TestRoutingModule } from './test-routing.module';
     InputTextareaModule,
     TableModule,
     TagModule,
+    TooltipModule,
     ToolbarModule
   ],
   providers: [ConfirmationService],

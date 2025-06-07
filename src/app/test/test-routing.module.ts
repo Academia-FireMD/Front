@@ -23,6 +23,7 @@ import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards
 import { TestStatsGridComponent } from './components/test-stats-grid/test-stats-grid.component';
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
+import { ResultadoSimulacroComponent } from '../simulacros/standalone/resultado-simulacro/resultado-simulacro.component';
 
 const routes: Routes = [
   {
@@ -257,6 +258,13 @@ const routes: Routes = [
         canActivate: [roleGuard],
         title: 'Flash Cards',
         data: { expectedRole: 'ALUMNO', title: 'Flash Cards' },
+      },
+      {
+        path: 'examen/resultado/:idExamen/:idTest',
+        loadComponent: () =>
+          import('../simulacros/standalone/resultado-simulacro/resultado-simulacro.component').then(m => m.ResultadoSimulacroComponent),
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO', ocultarVolver: true },
       },
       {
         path: '',

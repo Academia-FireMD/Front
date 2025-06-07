@@ -1,14 +1,29 @@
-import { Location } from '@angular/common';
+import { CommonModule, DatePipe, Location } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { catchError, finalize, firstValueFrom, of } from 'rxjs';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import { AuthService } from '../../../services/auth.service';
+import { SharedModule } from '../../../shared/shared.module';
+import { TableModule } from 'primeng/table';
+import { PrimengModule } from '../../../shared/primeng.module';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { getColorClass, getNotaClass } from '../../../utils/utils';
 @Component({
   selector: 'app-resultado-simulacro',
   templateUrl: './resultado-simulacro.component.html',
-  styleUrl: './resultado-simulacro.component.scss'
+  styleUrl: './resultado-simulacro.component.scss',
+  standalone: true,
+  imports: [
+    CommonModule,
+    RouterModule,
+    ToastrModule,
+    SharedModule,
+    PrimengModule,
+    TableModule,
+    ProgressSpinnerModule,
+  ],
 })
 export class ResultadoSimulacroComponent implements OnInit {
   activedRoute = inject(ActivatedRoute);
@@ -29,7 +44,12 @@ export class ResultadoSimulacroComponent implements OnInit {
   public miPosicion: number | null = null;
   public totalParticipantes: number = 0;
   public miResultado: any = null;
+  public ultimoIntento: any = null;
   public isAdmin: boolean = false;
+  public ocultarVolver: boolean = false;
+
+  getColorClass = getColorClass;
+  getNotaClass = getNotaClass;
 
   ngOnInit(): void {
     this.loadRouteData();
@@ -38,8 +58,11 @@ export class ResultadoSimulacroComponent implements OnInit {
 
   private async loadRouteData() {
     try {
-      const { idExamen, idTest } = await firstValueFrom(this.activedRoute.params);
-
+      const { idExamen, idTest } = await firstValueFrom(
+        this.activedRoute.params
+      );
+      const { ocultarVolver } = await firstValueFrom(this.activedRoute.data);
+      this.ocultarVolver = !!ocultarVolver;
       if (!idExamen || !idTest) {
         this.error = true;
         this.errorMessage = 'Parámetros de ruta inválidos';
@@ -57,19 +80,24 @@ export class ResultadoSimulacroComponent implements OnInit {
       this.error = true;
       this.errorMessage = 'No se pudieron cargar los datos del simulacro';
       this.loading = false;
-      this.toastr.error('No se pudieron cargar los datos del simulacro', 'Error');
+      this.toastr.error(
+        'No se pudieron cargar los datos del simulacro',
+        'Error'
+      );
     }
   }
 
   private async loadResultados() {
     if (!this.idExamen) return;
 
-    this.examenService.getSimulacroResultados$(this.idExamen)
+    this.examenService
+      .getSimulacroResultados$(this.idExamen)
       .pipe(
-        catchError(err => {
+        catchError((err) => {
           console.error('Error al cargar los resultados:', err);
           this.error = true;
-          this.errorMessage = err.error?.message || 'Error al cargar los resultados';
+          this.errorMessage =
+            err.error?.message || 'Error al cargar los resultados';
           this.toastr.error(this.errorMessage, 'Error');
           return of(null);
         }),
@@ -77,39 +105,46 @@ export class ResultadoSimulacroComponent implements OnInit {
           this.loading = false;
         })
       )
-      .subscribe(data => {
+      .subscribe((data) => {
         if (!data) return;
 
         this.examen = data.examen;
         this.resultados = data.resultados;
         this.miPosicion = data.miPosicion;
         this.totalParticipantes = data.totalParticipantes;
+        this.ultimoIntento = data.ultimoIntento;
 
-        // Encontrar mi resultado
-        this.miResultado = this.resultados.find(r => r.usuario.esTuResultado);
+        // Encontrar mi resultado (primer intento)
+        this.miResultado = this.resultados.find((r) => r.usuario.esTuResultado);
       });
   }
 
-  public getColorClass(posicion: number): string {
-    if (posicion === 1) return 'first-place';
-    if (posicion === 2) return 'second-place';
-    if (posicion === 3) return 'third-place';
-    return '';
-  }
 
-  public getNotaClass(nota: number | null): string {
-    if (nota === null) return 'nota-na';
-    if (nota >= 9) return 'nota-excelente';
-    if (nota >= 7) return 'nota-notable';
-    if (nota >= 5) return 'nota-aprobado';
-    return 'nota-suspenso';
+
+  public goBack() {
+    return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
   }
 
   public volver(): void {
-    this.router.navigate(['/auth/login']);
+    if (this.goBack()) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/auth/login']);
+    }
   }
 
   public verDetalles(testId: number): void {
     this.router.navigate(['/app/test/alumno/stats-test', testId]);
+  }
+
+  public verRespuestas(testId: number): void {
+    this.router.navigate(
+      ['/app/test/alumno/realizar-test/modo-ver-respuestas/' + testId],
+      {
+        queryParams: {
+          goBack: true,
+        },
+      }
+    );
   }
 }

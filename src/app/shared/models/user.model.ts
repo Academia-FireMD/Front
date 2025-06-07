@@ -21,12 +21,24 @@ export interface Usuario {
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
   woocommerceCustomerId?: string;
   suscripcion?: Suscripcion;
+  consumibles?: Consumible[];
+}
+
+export interface Consumible {
+  id: number;
+  tipo: string;
+  estado: string;
+  sku: string;
+  orderId: string;
 }
 
 export enum Rol {
   ADMIN = 'ADMIN',
   ALUMNO = 'ALUMNO',
 }
+
+export const rolesPlataforma = [Rol.ADMIN, Rol.ALUMNO];
+export const esRolPlataforma = (rol: Rol) => rolesPlataforma.includes(rol);
 
 export enum TipoDePlanificacionDeseada {
   FRANJA_CUATRO_A_SEIS_HORAS = 'FRANJA_CUATRO_A_SEIS_HORAS',

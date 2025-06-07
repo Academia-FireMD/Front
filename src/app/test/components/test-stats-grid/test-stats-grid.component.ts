@@ -81,7 +81,6 @@ export class TestStatsGridComponent extends SharedGridComponent<
   public temas = new FormControl<string[] | null>([], Validators.required);
   public displayOnlyExamen = false;
   public generandoEstadistica = false;
-  showOptionsDialog = false;
   selectedTestId: number | null = null;
   selectedTest: Test | null = null;
 
@@ -241,22 +240,12 @@ export class TestStatsGridComponent extends SharedGridComponent<
     if (isExamenTest) {
       this.selectedTestId = id as number;
       this.selectedTest = item;
-      this.showOptionsDialog = true;
     } else {
       this.navigateToStats(id);
     }
   };
 
-  public canViewResponses(): boolean {
-    if (!this.selectedTest?.ExamenRealizado || !this.selectedTest.ExamenRealizado?.fechaSolucion) {
-      return true;
-    }
-
-    const fechaSolucion = new Date(this.selectedTest.ExamenRealizado?.fechaSolucion);
-    const now = new Date();
-
-    return now >= fechaSolucion;
-  }
+ 
 
   public navigateToStats(id: number | null | 'new') {
     const map = {

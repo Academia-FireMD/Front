@@ -1,8 +1,12 @@
-<div class="wrapper">
+<div class="wrapper" [ngClass]="{ 'injected-wrapper': mode === 'injected' }">
   <div class="grid">
-    <p-card class="col-12 md:col-6 lg:col-3">
+    <p-card class="col-12">
       <div class="card-login py-4">
-        <div class="form-login" [formGroup]="formGroup">
+        <div
+          class="form-login"
+          [ngClass]="{ 'injected-form-login': mode === 'injected' }"
+          [formGroup]="formGroup"
+        >
           <div class="imagen">
             <img src="black_logo.png" alt="Logo" />
           </div>
@@ -68,10 +72,15 @@
             [routerLink]="['/auth/registro']"
             routerLinkActive="router-link-active"
             class="link-text"
+            *ngIf="mode !== 'injected'"
           >
             <span>Crear cuenta</span> <i class="pi pi-angle-right mt-1"></i>
           </a>
-          <a [routerLink]="['/auth/recuperar-contrasenya']" class="link-text">
+          <a
+            [routerLink]="['/auth/recuperar-contrasenya']"
+            class="link-text"
+            *ngIf="mode !== 'injected'"
+          >
             <span>Recuperar contraseña</span>
           </a>
         </div>

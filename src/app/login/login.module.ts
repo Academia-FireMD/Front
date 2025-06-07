@@ -15,7 +15,7 @@ import { RecuperarContrasenyaComponent } from './components/recuperar-contraseny
 import { RegistroComponent } from './components/registro/registro.component';
 import { LoginRoutingModule } from './login-routing.module';
 @NgModule({
-  declarations: [LoginComponent, RecuperarContrasenyaComponent, ChangePasswordComponent],
+  declarations: [RecuperarContrasenyaComponent, ChangePasswordComponent],
   imports: [
     CommonModule,
     LoginRoutingModule,
@@ -28,8 +28,9 @@ import { LoginRoutingModule } from './login-routing.module';
     DropdownModule,
     CheckboxModule,
     DialogModule,
-    RegistroComponent
+    RegistroComponent,
+    LoginComponent
   ],
-  exports: [LoginComponent],
+  exports: [],
 })
 export class LoginModule {}

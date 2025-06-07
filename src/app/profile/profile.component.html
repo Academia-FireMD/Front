@@ -8,7 +8,13 @@
   <div class="profile-content" *ngIf="!isLoading && user">
     <div class="grid">
       <!-- Información del perfil (lado izquierdo) -->
-      <div class="col-12 md:col-8">
+      <div
+        class="col-12"
+        [ngClass]="{
+          'md:col-8': user.rol !== 'ADMIN',
+          'md:col-12': user.rol === 'ADMIN'
+        }"
+      >
         <div class="profile-card">
           <div class="card-header">
             <h2><i class="pi pi-user-edit"></i> Mi Perfil</h2>
@@ -194,7 +200,7 @@
       </div>
 
       <!-- Información de suscripción (lado derecho) -->
-      <div class="col-12 md:col-4">
+      <div class="col-12 md:col-4" *ngIf="user.rol !== 'ADMIN'">
         <div class="subscription-card">
           <div class="card-header">
             <h2><i class="pi pi-credit-card"></i> Mi Suscripción</h2>

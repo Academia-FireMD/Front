@@ -1,6 +1,10 @@
 <div class="simulacro-container">
   <!-- Estado de carga -->
-  <div *ngIf="statusLoad === 'non_loaded'" class="loading-state" data-testid="simulacro-loading">
+  <div
+    *ngIf="statusLoad === 'non_loaded'"
+    class="loading-state"
+    data-testid="simulacro-loading"
+  >
     <div class="loading-animation">
       <i class="pi pi-spin pi-spinner"></i>
     </div>
@@ -9,19 +13,38 @@
   </div>
 
   <!-- Estado de error -->
-  <div *ngIf="statusLoad === 'not_found'" class="error-state" data-testid="simulacro-not-found">
+  <div
+    *ngIf="statusLoad === 'not_found'"
+    class="error-state"
+    data-testid="simulacro-not-found"
+  >
     <div class="error-icon">
       <i class="pi pi-exclamation-triangle"></i>
     </div>
     <h2>¡Vaya! No encontramos este simulacro</h2>
     <p>El simulacro que buscas no existe o no ha sido publicado todavía.</p>
-    <button pButton label="Volver a Simulacros" icon="pi pi-arrow-left" class="p-button-outlined" routerLink="/app/simulacros" data-testid="volver-simulacros-btn"></button>
+    <button
+      pButton
+      label="Volver a Simulacros"
+      icon="pi pi-arrow-left"
+      class="p-button-outlined"
+      routerLink="/app/simulacros"
+      data-testid="volver-simulacros-btn"
+    ></button>
   </div>
 
   <!-- Estado cargado -->
-  <div *ngIf="statusLoad === 'loaded'" class="loaded-state" data-testid="simulacro-loaded">
+  <div
+    *ngIf="statusLoad === 'loaded'"
+    class="loaded-state"
+    data-testid="simulacro-loaded"
+  >
     <!-- Barra de usuario si está autenticado -->
-    <div *ngIf="currentUser()" class="user-status-bar" data-testid="user-status-bar">
+    <div
+      *ngIf="currentUser()"
+      class="user-status-bar"
+      data-testid="user-status-bar"
+    >
       <div class="user-info">
         <i class="pi pi-user"></i>
         <span data-testid="user-name-display">{{ getNombreUsuario() }}</span>
@@ -38,7 +61,12 @@
 
     <div class="simulacro-header">
       <h1 data-testid="simulacro-title">Simulacro de Examen</h1>
-      <p-chip *ngFor="let rel of lastLoadedExamen()?.relevancia" [styleClass]="'relevancia-chip'" [label]="rel" data-testid="relevancia-chip"></p-chip>
+      <p-chip
+        *ngFor="let rel of lastLoadedExamen()?.relevancia"
+        [styleClass]="'relevancia-chip'"
+        [label]="rel"
+        data-testid="relevancia-chip"
+      ></p-chip>
     </div>
 
     <div class="simulacro-content">
@@ -48,44 +76,85 @@
         <div class="simulacro-details">
           <div class="detail-item" data-testid="duracion-detail">
             <i class="pi pi-clock"></i>
-            <span>Duración: <strong>{{ lastLoadedExamen()?.test?.duration }} minutos</strong></span>
+            <span
+              >Duración:
+              <strong
+                >{{ lastLoadedExamen()?.test?.duration }} minutos</strong
+              ></span
+            >
           </div>
 
           <div class="detail-item" data-testid="preguntas-detail">
             <i class="pi pi-list"></i>
-            <span>Preguntas: <strong>{{ lastLoadedExamen()?.test?.testPreguntas?.length || 0 }}</strong></span>
+            <span
+              >Preguntas:
+              <strong>{{
+                lastLoadedExamen()?.test?.testPreguntas?.length || 0
+              }}</strong></span
+            >
           </div>
 
-          <div *ngIf="lastLoadedExamen()?.fechaActivacion" class="detail-item" data-testid="fecha-detail">
+          <div
+            *ngIf="lastLoadedExamen()?.fechaActivacion"
+            class="detail-item"
+            data-testid="fecha-detail"
+          >
             <i class="pi pi-calendar"></i>
-            <span>Disponible desde: <strong>{{ lastLoadedExamen()?.fechaActivacion | date:'dd/MM/yyyy' }}</strong></span>
+            <span
+              >Disponible desde:
+              <strong>{{
+                lastLoadedExamen()?.fechaActivacion | date : "dd/MM/yyyy"
+              }}</strong></span
+            >
           </div>
         </div>
 
-        <div class="simulacro-description" *ngIf="lastLoadedExamen()?.descripcion" data-testid="simulacro-description">
+        <div
+          class="simulacro-description"
+          *ngIf="lastLoadedExamen()?.descripcion"
+          data-testid="simulacro-description"
+        >
           <p-divider></p-divider>
           <markdown [data]="lastLoadedExamen()?.descripcion"></markdown>
         </div>
 
         <div class="start-button-container">
           <!-- Mensaje para usuarios no autenticados -->
-          <div *ngIf="!currentUser()" class="registro-info" data-testid="registro-info">
+          <div
+            *ngIf="!currentUser()"
+            class="registro-info"
+            data-testid="registro-info"
+          >
             <i class="pi pi-info-circle"></i>
-            <p>Para realizar este simulacro necesitarás registrarte. Es rápido y sencillo.</p>
+            <p>
+              Para realizar este simulacro necesitarás registrarte. Es rápido y
+              sencillo.
+            </p>
           </div>
 
           <!-- Mensaje para usuarios autenticados -->
-          <div *ngIf="currentUser()" class="user-ready-info" data-testid="user-ready-info">
+          <div
+            *ngIf="currentUser()"
+            class="user-ready-info"
+            data-testid="user-ready-info"
+          >
             <i class="pi pi-check-circle"></i>
             <div>
               <h3>¡Todo listo!</h3>
-              <p>Estás conectado como <strong>{{ getNombreUsuario() }}</strong> y puedes comenzar el simulacro cuando quieras.</p>
+              <p>
+                Estás conectado como <strong>{{ getNombreUsuario() }}</strong> y
+                puedes comenzar el simulacro cuando quieras.
+              </p>
             </div>
           </div>
 
           <button
             pButton
-            [label]="currentUser() ? 'INICIAR SIMULACRO' : 'REGISTRARSE E INICIAR SIMULACRO'"
+            [label]="
+              currentUser()
+                ? 'INICIAR SIMULACRO'
+                : 'REGISTRARSE O INICIAR SESIÓN'
+            "
             [icon]="currentUser() ? 'pi pi-play' : 'pi pi-user-plus'"
             class="p-button-lg start-button"
             (click)="iniciarSimulacro()"
@@ -93,10 +162,17 @@
             data-testid="iniciar-simulacro-btn"
           ></button>
 
-          <div *ngIf="iniciando" class="countdown-overlay" [@fadeInOut] data-testid="countdown-overlay">
+          <div
+            *ngIf="iniciando"
+            class="countdown-overlay"
+            [@fadeInOut]
+            data-testid="countdown-overlay"
+          >
             <div class="countdown-content">
               <h2>¡Preparado!</h2>
-              <div class="countdown-number" data-testid="countdown-number">{{ countdown }}</div>
+              <div class="countdown-number" data-testid="countdown-number">
+                {{ countdown }}
+              </div>
               <p>El simulacro comenzará en breve...</p>
             </div>
           </div>
@@ -118,31 +194,68 @@
   </div>
 </div>
 
-<!-- Diálogo de registro -->
+<!-- Diálogo de registro/login -->
 <p-dialog
   [(visible)]="registroDialogVisible"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{width: '90vw', maxWidth: '800px'}"
-  [breakpoints]="{'960px': '95vw', '640px': '100vw'}"
-  header="Regístrate para realizar el simulacro"
+  [style]="{ width: '90vw', maxWidth: '800px' }"
+  [breakpoints]="{ '960px': '95vw', '640px': '100vw' }"
+  [header]="
+    mostrarRegistro
+      ? 'Regístrate para realizar el simulacro'
+      : 'Inicia sesión para realizar el simulacro'
+  "
   styleClass="registro-dialog"
   [closable]="true"
-  (onHide)="cerrarDialogoRegistro()"
+  (onHide)="registroDialogVisible = false"
   data-testid="registro-dialog"
 >
   <div class="registro-dialog-content">
-    <p class="registro-intro">
-      Para poder realizar este simulacro y evaluar tus conocimientos, necesitamos que te registres primero.
-      Esto nos permitirá guardar tus resultados y ofrecerte una experiencia personalizada.
+    <p class="registro-intro text-center" *ngIf="mostrarRegistro">
+      Para poder realizar este simulacro y evaluar tus conocimientos,
+      necesitamos que te registres primero. Esto nos permitirá guardar tus
+      resultados y ofrecerte una experiencia personalizada.
     </p>
 
+    <p class="registro-intro text-center" *ngIf="!mostrarRegistro">
+      Si ya tienes una cuenta, inicia sesión para continuar con el simulacro.
+    </p>
+
+    <!-- Botón para alternar entre registro y login -->
+    <div class="toggle-auth-mode text-center">
+      <button
+        pButton
+        type="button"
+        class="p-button-text p-button-sm"
+        (click)="toggleRegistroLogin()"
+      >
+        {{
+          mostrarRegistro
+            ? "¿Ya tienes cuenta? Inicia sesión"
+            : "¿No tienes cuenta? Regístrate"
+        }}
+      </button>
+    </div>
+
+    <!-- Componente de registro -->
     <app-registro
+      *ngIf="mostrarRegistro"
       mode="injected"
-      (registroCompletado)="onRegistroCompleto({email: $event.email, password: $event.password})"
+      (registroCompletado)="
+        onRegistroCompleto({ email: $event.email, password: $event.password })
+      "
       data-testid="registro-component"
     ></app-registro>
+
+    <!-- Componente de login -->
+    <app-login
+      *ngIf="!mostrarRegistro"
+      mode="injected"
+      (loginCompletado)="onLoginCompleto()"
+      data-testid="login-component"
+    ></app-login>
   </div>
 </p-dialog>
 
@@ -152,8 +265,8 @@
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{width: '500px'}"
-  [breakpoints]="{'960px': '80vw', '640px': '90vw'}"
+  [style]="{ width: '500px' }"
+  [breakpoints]="{ '960px': '80vw', '640px': '90vw' }"
   header="Código de acceso"
   styleClass="codigo-acceso-dialog"
   [closable]="true"
@@ -167,7 +280,10 @@
 
     <h3>Introduce el código de acceso</h3>
 
-    <p>Para acceder a este simulacro, necesitas introducir el código de 6 dígitos que te ha sido proporcionado.</p>
+    <p>
+      Para acceder a este simulacro, necesitas introducir el código de 6 dígitos
+      que te ha sido proporcionado.
+    </p>
 
     <form [formGroup]="codigoAccesoForm" (ngSubmit)="verificarCodigoAcceso()">
       <div class="codigo-input-container">
@@ -179,8 +295,13 @@
         ></p-inputOtp>
       </div>
 
-      <small *ngIf="codigoError" class="p-error codigo-error" data-testid="codigo-error-message">
-        El código introducido no es válido. Por favor, verifica e inténtalo de nuevo.
+      <small
+        *ngIf="codigoError"
+        class="p-error codigo-error"
+        data-testid="codigo-error-message"
+      >
+        El código introducido no es válido. Por favor, verifica e inténtalo de
+        nuevo.
       </small>
 
       <div class="codigo-actions">
@@ -205,4 +326,7 @@
   </div>
 </p-dialog>
 
-<p-confirmDialog header="Confirmación" icon="pi pi-exclamation-triangle"></p-confirmDialog>
+<p-confirmDialog
+  header="Confirmación"
+  icon="pi pi-exclamation-triangle"
+></p-confirmDialog>

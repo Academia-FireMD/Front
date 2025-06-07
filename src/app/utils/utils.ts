@@ -19,6 +19,23 @@ export const colorFlashcardsCorrectas = '#00eb003d';
 export const colorFlashcardsIncorretas = '#ff9c9c';
 export const colorFlashcardsRevisar = '#FFD54F';
 
+
+export const getColorClass = (posicion: number): string => {
+    if (posicion === 1) return 'first-place';
+    if (posicion === 2) return 'second-place';
+    if (posicion === 3) return 'third-place';
+    return '';
+  }
+
+export const getNotaClass = (nota: number | null): string => {
+    if (nota === null) return 'nota-na';
+    if (nota >= 9) return 'nota-excelente';
+    if (nota >= 7) return 'nota-notable';
+    if (nota >= 5) return 'nota-aprobado';
+    return 'nota-suspenso';
+  }
+
+
 export const duracionOptions = [
   { label: '1 hora', value: 60 },
   { label: '2 horas', value: 120 },

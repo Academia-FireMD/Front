@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
 import { ExamenesDashboardAdminDetailviewComponent } from './components/examenes-dashboard-admin-detailview/examenes-dashboard-admin-detailview.component';
 import { ExamenesDashboardAdminComponent } from './components/examenes-dashboard-admin/examenes-dashboard-admin.component';
+import { ExamenesRealizadosAlumnoComponent } from './components/examenes-realizados-alumno/examenes-realizados-alumno.component';
 
 const routes: Routes = [
   {
@@ -14,6 +15,12 @@ const routes: Routes = [
         canActivate: [roleGuard],
         data: { expectedRole: 'ALUMNO', title: 'Exámenes disponibles' }
       },
+      {
+        path: 'examenes-realizados',
+        component: ExamenesRealizadosAlumnoComponent,
+        canActivate: [roleGuard],
+        data: { expectedRole: 'ALUMNO', title: 'Exámenes realizados' }
+      }
     ]
   },
   {

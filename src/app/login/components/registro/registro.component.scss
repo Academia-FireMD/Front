@@ -126,6 +126,56 @@ p-floatlabel {
   }
 }
 
+.activation-info {
+  background-color: var(--surface-card);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--surface-border);
+
+  h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .plan-details,
+  .product-details {
+    p {
+      margin: 0.5rem 0;
+      
+      strong {
+        color: var(--text-color-secondary);
+        margin-right: 0.5rem;
+      }
+    }
+  }
+
+  .text-secondary {
+    color: var(--text-color-secondary);
+  }
+
+  .text-sm {
+    font-size: 0.875rem;
+  }
+
+  .alert {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+
+    &.alert-info {
+      background-color: var(--primary-50);
+      color: var(--primary-700);
+      border: 1px solid var(--primary-100);
+    }
+  }
+
+  i {
+    vertical-align: middle;
+  }
+}
+
 // Responsive adjustments
 @media screen and (max-width: 768px) {
   .wrapper {

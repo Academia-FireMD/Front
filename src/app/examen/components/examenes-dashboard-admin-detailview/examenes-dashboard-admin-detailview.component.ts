@@ -58,6 +58,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
   @Input() mode: 'edit' | 'injected' = 'edit';
   metodosAgregarDialogVisible = false;
   public TipoAcceso = TipoAcceso;
+  public agregarComoReserva = false;
   // Añade estos métodos signal
   preguntasNormales = computed(() => {
     if (!this.lastLoadedTestPreguntas()) return [];
@@ -322,7 +323,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       await firstValueFrom(
         this.examenesService.updatePreguntasOrder$(
           this.getId() as number,
-          this.lastLoadedPreguntas().map(p => p.id)
+          this.preguntasNormales().map(p => p.pregunta.id)
         )
       );
     }
@@ -417,9 +418,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public abrirDialogoManual() {
     this.router.navigate(['app/test/preguntas/new'], {
       queryParams: {
-        examenId: this.getId()
+        examenId: this.getId(),
+        esReserva: this.agregarComoReserva
       }
     });
+    this.agregarComoReserva = false;
   }
 
   // Stepper
@@ -505,8 +508,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   public async addSelectedPreguntas() {
     if (this.selectedPreguntasToAdd && this.selectedPreguntasToAdd.length > 0) {
-
-      await firstValueFrom(this.examenesService.addPreguntasToExamen$(this.getId() as number, this.selectedPreguntasToAdd.map(pregunta => pregunta.id)));
+      await firstValueFrom(this.examenesService.addPreguntasToExamen$(
+        this.getId() as number, 
+        this.selectedPreguntasToAdd.map(pregunta => pregunta.id),
+        this.agregarComoReserva
+      ));
 
       // Actualizar también los temas si es necesario
       const temasSeleccionados = new Set<number>();
@@ -514,9 +520,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
         temasSeleccionados.add(pregunta.temaId);
       });
 
-      this.toast.success(`Se han añadido ${this.selectedPreguntasToAdd.length} preguntas al examen`, 'Preguntas añadidas');
+      this.toast.success(`Se han añadido ${this.selectedPreguntasToAdd.length} preguntas ${this.agregarComoReserva ? 'de reserva' : ''} al examen`, 'Preguntas añadidas');
       this.loadExamen();
       this.cancelarSeleccionPreguntas();
+      this.agregarComoReserva = false;
     }
   }
 
@@ -589,13 +596,15 @@ export class ExamenesDashboardAdminDetailviewComponent {
       await firstValueFrom(
         this.examenesService.addPreguntasToExamen$(
           this.getId() as number,
-          [this.preguntaEncontrada.id]
+          [this.preguntaEncontrada.id],
+          this.agregarComoReserva
         )
       );
 
-      this.toast.success('Pregunta añadida correctamente');
+      this.toast.success(`Pregunta ${this.agregarComoReserva ? 'de reserva' : ''} añadida correctamente`);
       this.semiAutomaticDialogVisible = false;
       this.loadExamen();
+      this.agregarComoReserva = false;
     } catch (error) {
       this.toast.error('Error al añadir la pregunta');
     }
@@ -635,6 +644,49 @@ export class ExamenesDashboardAdminDetailviewComponent {
     if (examenId) {
       const baseUrl = window.location.origin;
       this.simulacroUrl = `${baseUrl}/simulacros/realizar-simulacro/${examenId}`;
+    }
+  }
+
+  // Propiedades para la impugnación
+  public impugnacionDialogVisible = false;
+  public preguntaAImpugnar: any = null;
+  public motivoImpugnacion: string = '';
+
+  // Método para abrir el diálogo de impugnación
+  public abrirDialogoImpugnacion(testPregunta: any) {
+    this.preguntaAImpugnar = testPregunta;
+    this.motivoImpugnacion = testPregunta.motivoImpugnacion || '';
+    this.impugnacionDialogVisible = true;
+  }
+
+  // Método para confirmar la impugnación
+  public async confirmarImpugnacion() {
+    if (!this.preguntaAImpugnar) return;
+
+    try {
+      await firstValueFrom(
+        this.examenesService.impugnarPregunta$(
+          this.getId() as number,
+          this.preguntaAImpugnar.pregunta.id,
+          !this.preguntaAImpugnar.impugnada,
+          this.motivoImpugnacion
+        )
+      );
+
+      this.toast.success(
+        this.preguntaAImpugnar.impugnada
+          ? 'Pregunta desimpugnada correctamente'
+          : 'Pregunta impugnada correctamente'
+      );
+
+      // Recargar el examen para actualizar el estado
+      await this.loadExamen();
+    } catch (error) {
+      this.toast.error('Error al impugnar la pregunta');
+    } finally {
+      this.impugnacionDialogVisible = false;
+      this.preguntaAImpugnar = null;
+      this.motivoImpugnacion = '';
     }
   }
 }

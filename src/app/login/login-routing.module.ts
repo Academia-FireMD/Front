@@ -15,9 +15,14 @@ const routes: Routes = [
     component: RegistroComponent,
   },
   {
-    path: 'activate-subscription',
+    path: 'activate-product',
     component: RegistroComponent,
     data: { mode: 'activation' }
+  },
+  {
+    path: 'login-with-activation',
+    component: LoginComponent,
+    data: { activationMode: true }
   },
   {
     path: 'recuperar-contrasenya',

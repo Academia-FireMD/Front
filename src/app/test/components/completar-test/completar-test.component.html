@@ -7,6 +7,9 @@
         'active-block': indicePregunta() == i,
         'correct-block': respuestaCorrectaBlock(i),
         'incorrect-block': respuestaIncorrectaBlock(i),
+        'impugnada-block':
+          pregunta?.impugnada && (vistaPrevia || modoVerRespuestas),
+        'reserva-block': pregunta?.deReserva,
         respondida:
           !!isModoExamen() &&
           !!preguntaRespondida(i) &&
@@ -208,6 +211,23 @@
       ]"
       data-testid="modo-vista-previa-mensaje"
     ></p-messages>
+
+    <!-- Mensaje informativo para modo simulacro -->
+    <p-messages
+      *ngIf="modoSimulacro && idExamenSimulacro"
+      class="w-full"
+      [closable]="false"
+      [value]="[
+        {
+          severity: 'warn',
+          summary: 'Importante',
+          detail:
+            'Solo el primer intento del examen será tenido en cuenta para la puntuación. Los intentos posteriores no afectarán a tu calificación final.'
+        }
+      ]"
+      data-testid="modo-simulacro-mensaje"
+    ></p-messages>
+
     @if(testCargado.preguntas[indicePregunta()]){
 
     <p-card
@@ -232,9 +252,27 @@
               <div
                 class="flex justify-content-between w-full font-bold align-items-center"
               >
-                <span data-testid="tema-pregunta">{{
-                  pregunta.tema.numero + " - " + pregunta.tema.descripcion
-                }}</span>
+                <div class="flex align-items-center gap-2">
+                  <span data-testid="tema-pregunta">{{
+                    pregunta.tema.numero + " - " + pregunta.tema.descripcion
+                  }}</span>
+                  @if (pregunta.impugnada && (vistaPrevia || modoVerRespuestas))
+                  {
+                  <p-tag
+                    severity="danger"
+                    [pTooltip]="pregunta.motivoImpugnacion"
+                    tooltipPosition="right"
+                    value="IMPUGNADA"
+                    data-testid="impugnada-tag"
+                  ></p-tag>
+                  } @if (pregunta.deReserva) {
+                  <p-tag
+                    severity="info"
+                    value="DE RESERVA"
+                    data-testid="de-reserva-tag"
+                  ></p-tag>
+                  }
+                </div>
                 <span
                   *ngIf="
                     !!testCargado.duration && !vistaPrevia && !modoVerRespuestas

@@ -27,9 +27,18 @@ interface RegistroTemporal {
   email: string;
   nombre: string;
   apellidos: string;
-  planType: string;
-  monthlyPrice: number;
   woocommerceCustomerId: string;
+  
+  // Campos de suscripción
+  planType?: string;
+  monthlyPrice?: number;
+  
+  // Campos de consumible
+  tipoRegistro: 'SUSCRIPCION' | 'CONSUMIBLE';
+  tipoConsumible?: string;
+  precio?: number;
+  productId?: string;
+  sku?: string;
 }
 
 @Component({
@@ -183,12 +192,20 @@ export class RegistroComponent implements OnInit {
         )
       );
 
-      this.toast.success(
-        'Cuenta creada correctamente. Ya puedes iniciar sesión.'
-      );
+      
 
       // Emitir evento de registro completado con credenciales para login automático
       this.registroCompletado.emit({ email, password });
+
+      if(this.mode == 'default'){
+        this.toast.success(
+          'Cuenta creada correctamente.'
+        );
+      }else if(this.mode == 'activation'){
+        this.toast.success(
+          'Producto activado correctamente.'
+        );
+      }
 
       if (this.mode === 'default' || this.mode === 'activation') {
         setTimeout(() => {
@@ -209,5 +226,12 @@ export class RegistroComponent implements OnInit {
 
   closePoliticaDialog() {
     this.politicaDialogVisible = false;
+  }
+
+  irALoginConActivacion() {
+    const token = this.route.snapshot.queryParams['token'];
+    this.router.navigate(['/auth/login-with-activation'], {
+      queryParams: { token }
+    });
   }
 }

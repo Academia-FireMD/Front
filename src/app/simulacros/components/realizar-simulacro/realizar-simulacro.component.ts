@@ -18,13 +18,11 @@ import { Usuario } from '../../../shared/models/user.model';
     trigger('fadeInOut', [
       transition(':enter', [
         style({ opacity: 0 }),
-        animate('300ms', style({ opacity: 1 }))
+        animate('300ms', style({ opacity: 1 })),
       ]),
-      transition(':leave', [
-        animate('300ms', style({ opacity: 0 }))
-      ])
-    ])
-  ]
+      transition(':leave', [animate('300ms', style({ opacity: 0 }))]),
+    ]),
+  ],
 })
 export class RealizarSimulacroComponent implements OnInit, OnDestroy {
   activedRoute = inject(ActivatedRoute);
@@ -40,6 +38,8 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
   public iniciando: boolean = false;
   public countdown: number = 3;
   public registroDialogVisible: boolean = false;
+  public loginDialogVisible: boolean = false;
+  public mostrarRegistro: boolean = true; // Para alternar entre login y registro
   public codigoAccesoDialogVisible: boolean = false;
   public codigoAccesoForm: FormGroup;
   public codigoError: boolean = false;
@@ -52,13 +52,16 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
   constructor() {
     this.loadRouteData();
     this.codigoAccesoForm = this.fb.group({
-      codigo: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]]
+      codigo: [
+        '',
+        [Validators.required, Validators.minLength(6), Validators.maxLength(6)],
+      ],
     });
   }
 
   ngOnInit(): void {
     // Suscribirse a los cambios del usuario actual
-    this.userSubscription = this.authService.currentUser$.subscribe(user => {
+    this.userSubscription = this.authService.currentUser$.subscribe((user) => {
       this.currentUser.set(user);
     });
   }
@@ -75,20 +78,24 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       const { idExamen } = await firstValueFrom(this.activedRoute.params);
 
       // Simular un tiempo de carga para mostrar la animación
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      await firstValueFrom(this.examenService.getSimulacroById$(idExamen).pipe(tap((examen) => {
-        if (examen) {
-          this.lastLoadedExamen.set(examen);
-          this.statusLoad = 'loaded';
+      await firstValueFrom(
+        this.examenService.getSimulacroById$(idExamen).pipe(
+          tap((examen) => {
+            if (examen) {
+              this.lastLoadedExamen.set(examen);
+              this.statusLoad = 'loaded';
 
-          // Generar URL para compartir
-          const baseUrl = window.location.origin;
-          this.simulacroUrl = `${baseUrl}/simulacros/realizar-simulacro/${idExamen}`;
-        } else {
-          this.statusLoad = 'not_found';
-        }
-      })));
+              // Generar URL para compartir
+              const baseUrl = window.location.origin;
+              this.simulacroUrl = `${baseUrl}/simulacros/realizar-simulacro/${idExamen}`;
+            } else {
+              this.statusLoad = 'not_found';
+            }
+          })
+        )
+      );
     } catch (error) {
       console.error('Error al cargar el simulacro:', error);
       this.statusLoad = 'not_found';
@@ -102,7 +109,8 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     if (this.currentUser()) {
       this.mostrarDialogoCodigoAcceso();
     } else {
-      // Mostrar diálogo de registro
+      // Mostrar diálogo de registro/login
+      this.mostrarRegistro = true; // Por defecto mostrar registro
       this.mostrarDialogoRegistro();
     }
   }
@@ -111,12 +119,17 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     this.registroDialogVisible = true;
   }
 
-  public async onRegistroCompleto(userData: { email: string, password: string }): Promise<void> {
+  public async onRegistroCompleto(userData: {
+    email: string;
+    password: string;
+  }): Promise<void> {
     this.registroDialogVisible = false;
 
     try {
       // Realizar login automático con los datos del registro
-      await firstValueFrom(this.authService.login$(userData.email, userData.password));
+      await firstValueFrom(
+        this.authService.login$(userData.email, userData.password)
+      );
 
       this.toastr.success('Has iniciado sesión correctamente', 'Bienvenido');
 
@@ -130,8 +143,19 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     }
   }
 
-  public cerrarDialogoRegistro(): void {
+  public onLoginCompleto(): void {
     this.registroDialogVisible = false;
+
+    this.toastr.success('Has iniciado sesión correctamente', 'Bienvenido');
+
+    // Continuar solicitando el código de acceso
+    setTimeout(() => {
+      this.mostrarDialogoCodigoAcceso();
+    }, 500);
+  }
+
+  public toggleRegistroLogin(): void {
+    this.mostrarRegistro = !this.mostrarRegistro;
   }
 
   public mostrarDialogoCodigoAcceso(): void {
@@ -160,6 +184,24 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       );
 
       if (verificado) {
+        // Verificar si el usuario tiene un consumible de simulacro activo
+        const user = this.currentUser();
+        if (
+          !user ||
+          !user.consumibles ||
+          !user.consumibles.find(
+            (consumible) =>
+              consumible.tipo === 'SIMULACRO' &&
+              consumible.estado === 'ACTIVADO'
+          )
+        ) {
+          this.toastr.error(
+            'No tienes un consumible de simulacro activo en tu cuenta',
+            'Error'
+          );
+          return;
+        }
+
         this.codigoAccesoDialogVisible = false;
         this.confirmarInicioSimulacro(codigo);
       } else {
@@ -186,13 +228,14 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
           console.error('Error al cerrar sesión:', error);
           this.toastr.error('Error al cerrar sesión');
         }
-      }
+      },
     });
   }
 
   private confirmarInicioSimulacro(codigo: string): void {
     this.confirmationService.confirm({
-      message: '¿Estás listo para comenzar el simulacro? Una vez iniciado, el tiempo comenzará a contar.',
+      message:
+        '¿Estás listo para comenzar el simulacro? Una vez iniciado, el tiempo comenzará a contar.',
       header: 'Comenzar Simulacro',
       icon: 'pi pi-play',
       rejectButtonStyleClass: 'p-button-outlined',
@@ -200,7 +243,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       rejectLabel: 'Cancelar',
       accept: () => {
         this.startCountdown(codigo);
-      }
+      },
     });
   }
 
@@ -230,7 +273,11 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       );
 
       if (response && response.id) {
-        const url = '/simulacros/realizar-simulacro/' + examenId + '/completar/' + response.id
+        const url =
+          '/simulacros/realizar-simulacro/' +
+          examenId +
+          '/completar/' +
+          response.id;
         // Navegar al componente de completar test con el ID del test creado
         this.router.navigate([url]);
       } else {
@@ -238,7 +285,10 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error al iniciar el examen:', error);
-      this.toastr.error('Ha ocurrido un error al iniciar el simulacro', 'Error');
+      this.toastr.error(
+        'Ha ocurrido un error al iniciar el simulacro',
+        'Error'
+      );
       this.iniciando = false;
     }
   }

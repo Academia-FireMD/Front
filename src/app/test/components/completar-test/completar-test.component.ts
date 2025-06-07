@@ -20,7 +20,7 @@ import {
   filter,
   firstValueFrom,
   switchMap,
-  tap
+  tap,
 } from 'rxjs';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TestService } from '../../../services/test.service';
@@ -31,12 +31,13 @@ import {
   SeguridadAlResponder,
 } from '../../../shared/models/pregunta.model';
 import { Respuesta, Test } from '../../../shared/models/test.model';
-import { Rol } from '../../../shared/models/user.model';
+import { esRolPlataforma, Rol } from '../../../shared/models/user.model';
 import {
   getAllDifficultades,
   getLetter,
   obtainSecurityEmojiBasedOnEnum,
 } from '../../../utils/utils';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-completar-test',
@@ -53,6 +54,7 @@ export class CompletarTestComponent {
   viewportService = inject(ViewportService);
   @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
   public location = inject(Location);
+  auth = inject(AuthService);
 
   public indicePregunta = signal(0);
   public indicePreguntaChanged = effect(() => {
@@ -104,33 +106,37 @@ export class CompletarTestComponent {
 
   public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
     return (
-      ((!this.isModoExamen() || this.modoVerRespuestas || this.vistaPrevia) &&
-        (!!this.preguntaRespondida() || this.vistaPrevia) &&
-        (this.preguntaRespondida()?.estado != 'OMITIDA' || this.vistaPrevia) &&
-        pregunta.respuestaCorrectaIndex == indiceRespuesta)
+      (!this.isModoExamen() || this.modoVerRespuestas || this.vistaPrevia) &&
+      (!!this.preguntaRespondida() || this.vistaPrevia) &&
+      (this.preguntaRespondida()?.estado != 'OMITIDA' || this.vistaPrevia) &&
+      pregunta.respuestaCorrectaIndex == indiceRespuesta
     );
   }
 
   public respuestaIncorrecta(pregunta: Pregunta, indiceRespuesta: number) {
     return (
-      ((!this.isModoExamen() || this.modoVerRespuestas) &&
-        !!this.preguntaRespondida() &&
-        this.preguntaRespondida()?.estado != 'OMITIDA' &&
-        pregunta.respuestaCorrectaIndex != indiceRespuesta &&
-        this.preguntaRespondida()?.respuestaDada == indiceRespuesta)
+      (!this.isModoExamen() || this.modoVerRespuestas) &&
+      !!this.preguntaRespondida() &&
+      this.preguntaRespondida()?.estado != 'OMITIDA' &&
+      pregunta.respuestaCorrectaIndex != indiceRespuesta &&
+      this.preguntaRespondida()?.respuestaDada == indiceRespuesta
     );
   }
 
   public respuestaIncorrectaBlock(indiceRespuesta: number) {
-    return (!this.isModoExamen() || this.modoVerRespuestas) &&
+    return (
+      (!this.isModoExamen() || this.modoVerRespuestas) &&
       this.preguntaRespondida(indiceRespuesta)?.estado == 'RESPONDIDA' &&
       !this.preguntaRespondida(indiceRespuesta)?.esCorrecta
+    );
   }
 
   public respuestaCorrectaBlock(indiceRespuesta: number) {
-    return (!this.isModoExamen() || this.modoVerRespuestas) &&
+    return (
+      (!this.isModoExamen() || this.modoVerRespuestas) &&
       this.preguntaRespondida(indiceRespuesta)?.estado == 'RESPONDIDA' &&
       !!this.preguntaRespondida(indiceRespuesta)?.esCorrecta
+    );
   }
 
   public preguntaRespondida(
@@ -152,14 +158,12 @@ export class CompletarTestComponent {
     }
   }
 
-
-
   constructor() {
     this.loadRouteData();
   }
 
   private async loadRouteData() {
-    const data = await firstValueFrom(this.activedRoute.data)
+    const data = await firstValueFrom(this.activedRoute.data);
     if (data['vistaPrevia']) {
       this.vistaPrevia = true;
     } else {
@@ -181,7 +185,8 @@ export class CompletarTestComponent {
   }
 
   public clickedAnswer(indice: number) {
-    if (this.vistaPrevia || this.modoVerRespuestas || this.isProcessingAnswer) return;
+    if (this.vistaPrevia || this.modoVerRespuestas || this.isProcessingAnswer)
+      return;
 
     const respuesta = this.preguntaRespondida();
     if (!!respuesta && !this.isModoExamen()) {
@@ -210,7 +215,7 @@ export class CompletarTestComponent {
     if (this.testId) {
       firstValueFrom(this.loadTest(this.testId.toString()));
     } else {
-      this.activedRoute.params.subscribe(params => {
+      this.activedRoute.params.subscribe((params) => {
         const id = params['id'];
         if (id) {
           firstValueFrom(this.loadTest(id));
@@ -250,7 +255,9 @@ export class CompletarTestComponent {
     }
 
     if (this.isProcessingAnswer) {
-      console.warn('Ya se está procesando una respuesta, ignorando nueva llamada');
+      console.warn(
+        'Ya se está procesando una respuesta, ignorando nueva llamada'
+      );
       return;
     }
 
@@ -263,7 +270,8 @@ export class CompletarTestComponent {
       const answered = this.preguntaRespondida();
       const isAnswered = !!answered?.respuestaDada;
       const isOmitida =
-        mode == 'omitir' || ((mode == 'next' || mode == 'before') && !isAnswered);
+        mode == 'omitir' ||
+        ((mode == 'next' || mode == 'before') && !isAnswered);
 
       const res: {
         esCorrecta: boolean;
@@ -284,7 +292,9 @@ export class CompletarTestComponent {
           .pipe(
             catchError((err) => {
               console.error('Error al procesar respuesta:', err);
-              this.toast.error('Error al procesar la respuesta. Intenta de nuevo.');
+              this.toast.error(
+                'Error al procesar la respuesta. Intenta de nuevo.'
+              );
               throw err;
             }),
             tap((res) => {
@@ -301,7 +311,6 @@ export class CompletarTestComponent {
 
       if (mode == 'next' || mode == 'omitir') this.siguiente();
       if (mode == 'before') this.atras();
-
     } catch (error) {
       console.error('Error en processAnswer:', error);
     } finally {
@@ -347,6 +356,9 @@ export class CompletarTestComponent {
       tap((e) => {
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
+        const { idExamen, modoSimulacro } = queryParams;
+        if (!!idExamen) this.idExamenSimulacro = idExamen;
+        if (!!modoSimulacro) this.modoSimulacro = !!modoSimulacro;
         this.expectedRole = expectedRole;
       })
     );
@@ -380,7 +392,7 @@ export class CompletarTestComponent {
           this.router.navigate([
             '/simulacros/resultado',
             this.idExamenSimulacro,
-            this.lastLoadedTest.id
+            this.lastLoadedTest.id,
           ]);
         } else {
           this.router.navigate([
@@ -419,7 +431,9 @@ export class CompletarTestComponent {
   }
 
   public getId() {
-    return this.testId ? this.testId.toString() : this.activedRoute.snapshot.paramMap.get('id') as string;
+    return this.testId
+      ? this.testId.toString()
+      : (this.activedRoute.snapshot.paramMap.get('id') as string);
   }
 
   public async finalizarTest() {
@@ -430,11 +444,23 @@ export class CompletarTestComponent {
     );
 
     if (this.modoSimulacro && this.idExamenSimulacro) {
-      this.router.navigate([
-        '/simulacros/resultado',
-        this.idExamenSimulacro,
-        this.lastLoadedTest.id
-      ]);
+      const user = this.auth.getCurrentUser();
+      if (esRolPlataforma(user?.rol as Rol) && !!user?.validated) {
+        this.router.navigate(
+          [
+            '/app/test/alumno/examen/resultado',
+            this.idExamenSimulacro,
+            this.lastLoadedTest.id,
+          ],
+          { queryParams: { goBack: true } }
+        );
+      } else {
+        this.router.navigate([
+          '/simulacros/resultado',
+          this.idExamenSimulacro,
+          this.lastLoadedTest.id,
+        ]);
+      }
     } else {
       this.router.navigate([
         'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
@@ -447,7 +473,10 @@ export class CompletarTestComponent {
       tap(async (entry: any) => {
         await this.loadRouteData();
         const parsedTest: Test & { respuestasCount: number } = entry;
-        const initialIndex = this.modoVerRespuestas || this.vistaPrevia ? 0 : parsedTest.respuestasCount;
+        const initialIndex =
+          this.modoVerRespuestas || this.vistaPrevia
+            ? 0
+            : parsedTest.respuestasCount;
         if (this.lastLoadedTest) {
           this.lastLoadedTest.respuestas = entry.respuestas;
         } else {
@@ -457,6 +486,6 @@ export class CompletarTestComponent {
       }),
       delay(100),
       tap(() => this.scrollToActiveBlock())
-    )
+    );
   }
 }

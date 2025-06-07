@@ -79,10 +79,12 @@ export class ExamenesService extends ApiBaseService {
 
   public addPreguntasToExamen$(
     examenId: number,
-    preguntaIds: number[]
+    preguntaIds: number[],
+    esReserva: boolean = false
   ): Observable<any> {
     return this.post(`/${examenId}/preguntas`, {
       preguntaIds,
+      esReserva
     }) as Observable<any>;
   }
 
@@ -172,5 +174,16 @@ export class ExamenesService extends ApiBaseService {
    */
   public startSimulacro$(examenId: number, codigo?: string): Observable<any> {
     return this.post(`/start-simulacro/${examenId}`, { codigo });
+  }
+
+  public impugnarPregunta$(examenId: number, preguntaId: number, impugnada: boolean, motivoImpugnacion?: string) {
+    return this.post(`/${examenId}/preguntas/${preguntaId}/impugnar`, {
+      impugnada,
+      motivoImpugnacion
+    });
+  }
+
+  public getExamenesRealizados$(pagination: PaginationFilter): Observable<PaginatedResult<any>> {
+    return this.post('/realizados', pagination) as Observable<PaginatedResult<any>>;
   }
 }

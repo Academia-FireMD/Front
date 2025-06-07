@@ -175,14 +175,6 @@
                   (input)="buscarPorIdentificadorInput($event)"
                   data-testid="buscar-pregunta-input"
                 />
-                <button
-                  pButton
-                  type="button"
-                  icon="pi pi-plus"
-                  label="Añadir preguntas"
-                  (click)="mostrarOpcionesAgregarPreguntas($event)"
-                  data-testid="agregar-preguntas-btn"
-                ></button>
               </div>
             </div>
 
@@ -248,6 +240,15 @@
                           (click)="eliminarPregunta(testPregunta.pregunta.id)"
                           data-testid="eliminar-pregunta-btn"
                         ></p-button>
+                        <p-button
+                          [icon]="testPregunta.impugnada ? 'pi pi-flag-fill' : 'pi pi-flag'"
+                          [link]="true"
+                          [pTooltip]="testPregunta.impugnada ? 'Desimpugnar pregunta' : 'Impugnar pregunta'"
+                          tooltipPosition="top"
+                          (click)="abrirDialogoImpugnacion(testPregunta)"
+                          [class.text-red-500]="testPregunta.impugnada"
+                          data-testid="impugnar-pregunta-btn"
+                        ></p-button>
                       </div>
                     </td>
                   </tr>
@@ -283,6 +284,17 @@
             <!-- Tabla de preguntas de reserva -->
             <div class="col-12">
               <h4>Preguntas de reserva</h4>
+              <div class="col-12 mb-3">
+                <div class="p-inputgroup">
+                  <input
+                    type="text"
+                    pInputText
+                    placeholder="Buscar por identificador"
+                    (input)="buscarPorIdentificadorInput($event)"
+                    data-testid="buscar-pregunta-reserva-input"
+                  />
+                </div>
+              </div>
               <p-table
                 [value]="preguntasReserva()"
                 [reorderableColumns]="true"
@@ -342,6 +354,7 @@
                           (click)="eliminarPregunta(testPregunta.pregunta.id)"
                           data-testid="eliminar-pregunta-reserva-btn"
                         ></p-button>
+                       
                       </div>
                     </td>
                   </tr>
@@ -638,6 +651,7 @@
   header="Añadir preguntas al examen"
 >
   <div class="grid">
+    
     <div class="col-12 md:col-4 p-2">
       <div
         class="metodo-card"
@@ -680,6 +694,64 @@
       </div>
     </div>
   </div>
+  <div class="col-12 mb-3">
+    <p-checkbox [(ngModel)]="agregarComoReserva" [binary]="true" label="Agregar como preguntas de reserva"></p-checkbox>
+  </div>
 </p-dialog>
 
 <p-menu #menuDescarga [popup]="true" [model]="opcionesDescargaMenu"></p-menu>
+
+<!-- Añadir el diálogo de impugnación -->
+<p-dialog
+  [(visible)]="impugnacionDialogVisible"
+  [header]="preguntaAImpugnar?.impugnada ? 'Desimpugnar pregunta' : 'Impugnar pregunta'"
+  [modal]="true"
+  [style]="{ width: '450px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div class="grid p-fluid">
+    <div class="col-12" *ngIf="!preguntaAImpugnar?.impugnada">
+      <p-floatLabel>
+        <textarea
+          pInputTextarea
+          [(ngModel)]="motivoImpugnacion"
+          [rows]="5"
+          [cols]="30"
+          placeholder="Explique el motivo de la impugnación"
+        ></textarea>
+        <label>Motivo de la impugnación</label>
+      </p-floatLabel>
+    </div>
+    <div class="col-12" *ngIf="preguntaAImpugnar?.impugnada">
+      <p>¿Está seguro de que desea desimpugnar esta pregunta?</p>
+      <p *ngIf="preguntaAImpugnar?.motivoImpugnacion" class="text-sm text-gray-600 mt-2">
+        <strong>Motivo actual:</strong> {{ preguntaAImpugnar.motivoImpugnacion }}
+      </p>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button
+      icon="pi pi-times"
+      (click)="impugnacionDialogVisible = false"
+      label="Cancelar"
+      styleClass="p-button-text"
+    ></p-button>
+    <p-button
+      icon="pi pi-check"
+      (click)="confirmarImpugnacion()"
+      [label]="preguntaAImpugnar?.impugnada ? 'Desimpugnar' : 'Impugnar'"
+    ></p-button>
+  </ng-template>
+</p-dialog>
+
+<!-- Botón FAB flotante -->
+<button 
+  pButton 
+  class="p-button-rounded p-button-primary fab-button" 
+  icon="pi pi-plus"
+  (click)="mostrarOpcionesAgregarPreguntas($event)"
+  pTooltip="Agregar preguntas"
+  tooltipPosition="left"
+></button>
+

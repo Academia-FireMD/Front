@@ -9,7 +9,7 @@ import { environment } from '../../environments/environment';
 export class ApiBaseService {
   protected controllerPrefix = '';
   protected toast = inject(ToastrService);
-  private router = inject(Router);
+  protected router = inject(Router);
 
   constructor(protected _http: HttpClient) { }
 

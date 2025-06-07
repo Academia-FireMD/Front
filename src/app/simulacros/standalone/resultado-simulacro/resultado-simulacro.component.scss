@@ -62,61 +62,103 @@
         font-size: 1.5rem;
       }
 
-      .mi-posicion {
+      .intentos-container {
         display: flex;
-        justify-content: center;
+        flex-direction: row;
+        justify-content: space-around;
         gap: 2rem;
         margin-top: 2rem;
 
-        .posicion-card, .nota-card {
-          background-color: var(--surface-card);
-          border-radius: 1rem;
-          padding: 1.5rem;
-          min-width: 200px;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-          text-align: center;
-        }
+        .intento-section {
+          .intento-title {
+            color: var(--text-color-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+          }
 
-        .posicion-numero {
-          font-size: 3rem;
-          font-weight: bold;
-          color: var(--primary-color);
-          line-height: 1;
-          margin-bottom: 0.5rem;
-        }
+          .cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+          }
 
-        .posicion-texto {
-          font-size: 1.2rem;
-          color: var(--text-color);
-          margin-bottom: 0.25rem;
-        }
+          .posicion-card,
+          .nota-card {
+            background-color: var(--surface-card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            min-width: 200px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            text-align: center;
 
-        .posicion-total {
-          font-size: 0.9rem;
-          color: var(--text-color-secondary);
-        }
+            &.ultimo-intento {
+              border: 1px dashed var(--surface-border);
+              background-color: var(--surface-ground);
 
-        .nota-numero {
-          font-size: 3rem;
-          font-weight: bold;
-          line-height: 1;
-          margin-bottom: 0.5rem;
+           
+            }
 
-          &.nota-excelente { color: var(--green-600); }
-          &.nota-notable { color: var(--blue-600); }
-          &.nota-aprobado { color: var(--orange-500); }
-          &.nota-suspenso { color: var(--red-500); }
-        }
+            .card-actions {
+              margin-top: 1rem;
+              padding-top: 1rem;
+              border-top: 1px solid var(--surface-border);
 
-        .nota-texto {
-          font-size: 1.2rem;
-          color: var(--text-color);
-          margin-bottom: 0.25rem;
-        }
+              button {
+                width: 100%;
+              }
+            }
+          }
 
-        .nota-detalle {
-          font-size: 0.9rem;
-          color: var(--text-color-secondary);
+          .posicion-numero {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            line-height: 1;
+            margin-bottom: 0.5rem;
+          }
+
+          .posicion-texto {
+            font-size: 1.2rem;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+          }
+
+          .posicion-total {
+            font-size: 0.9rem;
+            color: var(--text-color-secondary);
+          }
+
+          .nota-numero {
+            font-size: 3rem;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+
+            &.nota-excelente {
+              color: var(--green-600);
+            }
+            &.nota-notable {
+              color: var(--blue-600);
+            }
+            &.nota-aprobado {
+              color: var(--orange-500);
+            }
+            &.nota-suspenso {
+              color: var(--red-500);
+            }
+          }
+
+          .nota-texto {
+            font-size: 1.2rem;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+          }
+
+          .nota-detalle {
+            font-size: 0.9rem;
+            color: var(--text-color-secondary);
+          }
         }
       }
     }
@@ -166,7 +208,8 @@
           font-weight: 500;
         }
 
-        .academia-badge, .tu-badge {
+        .academia-badge,
+        .tu-badge {
           font-size: 0.7rem;
           padding: 0.2rem 0.5rem;
           border-radius: 4px;
@@ -192,10 +235,18 @@
       .nota-valor {
         font-weight: bold;
 
-        &.nota-excelente { color: var(--green-600); }
-        &.nota-notable { color: var(--blue-600); }
-        &.nota-aprobado { color: var(--orange-500); }
-        &.nota-suspenso { color: var(--red-500); }
+        &.nota-excelente {
+          color: var(--green-600);
+        }
+        &.nota-notable {
+          color: var(--blue-600);
+        }
+        &.nota-aprobado {
+          color: var(--orange-500);
+        }
+        &.nota-suspenso {
+          color: var(--red-500);
+        }
       }
 
       .correctas-valor {
@@ -219,6 +270,10 @@
       .mi-resultado {
         background-color: var(--green-50) !important;
       }
+
+      td:last-child {
+        text-align: center;
+      }
     }
 
     .actions {
@@ -230,18 +285,27 @@
 }
 
 @media (max-width: 768px) {
+  .intentos-container {
+    flex-direction: column !important;
+  }
+
   .resultado-simulacro-container {
     padding: 1rem;
 
     .resultados-content {
       .header {
-        .mi-posicion {
-          flex-direction: column;
-          gap: 1rem;
+        .intentos-container {
+          .intento-section {
+            .cards-container {
+              flex-direction: column;
+              gap: 1rem;
 
-          .posicion-card, .nota-card {
-            min-width: auto;
-            width: 100%;
+              .posicion-card,
+              .nota-card {
+                min-width: auto;
+                width: 100%;
+              }
+            }
           }
         }
       }
