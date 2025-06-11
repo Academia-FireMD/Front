@@ -80,6 +80,15 @@
                   >
                   <p-button
                     [link]="true"
+                    icon="pi pi-clone"
+                    (click)="
+                      $event.stopPropagation();
+                      $event.preventDefault();
+                      clonarBloque(item.id)
+                    "
+                  ></p-button>
+                  <p-button
+                    [link]="true"
                     icon="pi pi-trash"
                     (click)="
                       $event.stopPropagation();

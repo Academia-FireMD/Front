@@ -66,6 +66,16 @@
                   <p-button
                     *ngIf="mode == 'overview'"
                     [link]="true"
+                    icon="pi pi-clone"
+                    (click)="
+                      $event.stopPropagation();
+                      $event.preventDefault();
+                      clonarPlantillaSemanal(item.id)
+                    "
+                  ></p-button>
+                  <p-button
+                    *ngIf="mode == 'overview'"
+                    [link]="true"
                     icon="pi pi-trash"
                     (click)="
                       $event.stopPropagation();

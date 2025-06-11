@@ -87,4 +87,14 @@ export class BloquesOverviewComponent extends SharedGridComponent<PlanificacionB
       reject: () => {},
     });
   }
+
+  public async clonarBloque(id: number) {
+    try {
+      await firstValueFrom(this.planificacionesService.clonarBloque$(id));
+      this.toast.success('Bloque clonado exitosamente');
+      this.refresh();
+    } catch (error) {
+      this.toast.error('Error al clonar el bloque');
+    }
+  }
 }

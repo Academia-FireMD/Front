@@ -135,6 +135,14 @@ export class PlanificacionesService extends ApiBaseService {
     return this.post('/planificacion-mensual/clonar/' + id, null);
   }
 
+  public clonarBloque$(id: number) {
+    return this.post('/bloque/clonar/' + id, null);
+  }
+
+  public clonarPlantillaSemanal$(id: number) {
+    return this.post('/plantilla-semanal/clonar/' + id, null);
+  }
+
   public asignarPlanificacionMensual$(
     planificacionId: number,
     alumnosIds: number[]

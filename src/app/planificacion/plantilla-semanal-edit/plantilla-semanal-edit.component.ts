@@ -8,7 +8,7 @@ import { firstValueFrom, tap } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { TemaService } from '../../services/tema.service';
 import { ViewportService } from '../../services/viewport.service';
-import { SubBloque } from '../../shared/models/planificacion.model';
+import { PlantillaSemanal, SubBloque } from '../../shared/models/planificacion.model';
 import { EventsService } from '../services/events.service';
 import { VistaSemanalComponent } from '../vista-semanal/vista-semanal.component';
 
@@ -32,7 +32,7 @@ export class PlantillaSemanalEditComponent {
   CalendarView = CalendarView;
   view = CalendarView.Month;
   @ViewChild(VistaSemanalComponent) vistaSemanal!: VistaSemanalComponent;
-
+  public lastLoaded!: PlantillaSemanal;
   formGroup = this.fb.group({
     identificador: ['', Validators.required],
     descripcion: ['', Validators.required],
@@ -58,6 +58,7 @@ export class PlantillaSemanalEditComponent {
       firstValueFrom(
         this.planificacionesService.getPlantillaSemanalById(itemId).pipe(
           tap((entry) => {
+            this.lastLoaded = entry;
             const subBloques = entry.subBloques;
             this.events = this.eventsService.fromSubbloquesToEvents(subBloques);
             const minDate = this.eventsService.calculateMinDate(this.events);

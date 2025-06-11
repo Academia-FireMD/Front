@@ -4,8 +4,8 @@
       class="col-12 header flex justify-content-start align-items-center pt-4 gap-3"
     >
       <div class="identificador">
-        @if (getId() !== 'new') { @if (viewportService.screenWidth != 'xs') {
-        Identificador: }
+        @if (getId() !== 'new' && !lastLoaded?.identificador?.includes('CLON'))
+        { @if (viewportService.screenWidth != 'xs') { Identificador: }
         <strong>{{ formGroup.value.identificador }}</strong>
         }@else {
         <p-floatLabel>

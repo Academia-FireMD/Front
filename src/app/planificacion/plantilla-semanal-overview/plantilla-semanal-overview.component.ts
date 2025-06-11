@@ -62,4 +62,14 @@ export class PlantillaSemanalOverviewComponent extends SharedGridComponent<Plant
       reject: () => {},
     });
   }
+
+  public async clonarPlantillaSemanal(id: number) {
+    try {
+      await firstValueFrom(this.planificacionesService.clonarPlantillaSemanal$(id));
+      this.toast.success('Plantilla semanal clonada exitosamente');
+      this.refresh();
+    } catch (error) {
+      this.toast.error('Error al clonar la plantilla semanal');
+    }
+  }
 }
