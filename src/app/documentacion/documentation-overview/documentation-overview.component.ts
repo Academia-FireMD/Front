@@ -3,7 +3,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import { combineLatest, filter, firstValueFrom, switchMap } from 'rxjs';
+import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { Documento } from '../../shared/models/documentacion.model';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
@@ -14,7 +14,10 @@ import { DocumentosService } from '../services/documentacion.service';
   templateUrl: './documentation-overview.component.html',
   styleUrl: './documentation-overview.component.scss',
 })
-export class DocumentationOverviewComponent extends SharedGridComponent<Documento> implements OnInit {
+export class DocumentationOverviewComponent
+  extends SharedGridComponent<Documento>
+  implements OnInit
+{
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   activatedRoute = inject(ActivatedRoute);
   service = inject(DocumentosService);
@@ -33,7 +36,9 @@ export class DocumentationOverviewComponent extends SharedGridComponent<Document
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
-      return this.getDocumentacion({ ...this.pagination() });
+      return this.getDocumentacion({ ...this.pagination() }).pipe(
+        tap((entry) => (this.lastLoadedPagination = entry))
+      );
     });
   }
 
@@ -127,28 +132,33 @@ export class DocumentationOverviewComponent extends SharedGridComponent<Document
       // Usar el servicio para descargar a través del backend
       this.service.descargarDocumento$(documentoId).subscribe({
         next: (blob) => {
-      const blobUrl = window.URL.createObjectURL(blob);
+          const blobUrl = window.URL.createObjectURL(blob);
 
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName;
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
 
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
 
-      window.URL.revokeObjectURL(blobUrl);
+          window.URL.revokeObjectURL(blobUrl);
 
-      this.notificationService.success('Documento descargado correctamente');
+          this.notificationService.success(
+            'Documento descargado correctamente'
+          );
         },
         error: (error) => {
           console.error('Error al descargar el documento:', error);
           this.notificationService.error('Error al descargar el documento');
-        }
+        },
       });
     } catch (error) {
       console.error('Error al descargar el documento:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error al descargar el documento';
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Error al descargar el documento';
       this.notificationService.error(errorMessage);
     }
   }
