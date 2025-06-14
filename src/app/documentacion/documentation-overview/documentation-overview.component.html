@@ -125,7 +125,7 @@
                   <p-button
                     [link]="true"
                     icon="pi pi-download"
-                    (click)="descargarDocumento(document.url,document.fileName)"
+                    (click)="descargarDocumento(document.id, document.fileName)"
                   ></p-button>
                   <p-button
                     *ngIf="expectedRole == 'ADMIN'"

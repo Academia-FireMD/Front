@@ -120,21 +120,17 @@ export class DocumentationOverviewComponent extends SharedGridComponent<Document
     });
   }
 
-  async descargarDocumento(url: string,fileName:string) {
+  async descargarDocumento(documentoId: number, fileName: string) {
     try {
       this.notificationService.info('Descargando documento...');
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Error al descargar: ${response.status}`);
-      }
-
-      const blob = await response.blob();
+      // Usar el servicio para descargar a través del backend
+      this.service.descargarDocumento$(documentoId).subscribe({
+        next: (blob) => {
       const blobUrl = window.URL.createObjectURL(blob);
 
       const link = document.createElement('a');
       link.href = blobUrl;
-
       link.download = fileName;
 
       document.body.appendChild(link);
@@ -144,6 +140,12 @@ export class DocumentationOverviewComponent extends SharedGridComponent<Document
       window.URL.revokeObjectURL(blobUrl);
 
       this.notificationService.success('Documento descargado correctamente');
+        },
+        error: (error) => {
+          console.error('Error al descargar el documento:', error);
+          this.notificationService.error('Error al descargar el documento');
+        }
+      });
     } catch (error) {
       console.error('Error al descargar el documento:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error al descargar el documento';

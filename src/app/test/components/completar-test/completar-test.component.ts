@@ -388,17 +388,7 @@ export class CompletarTestComponent {
           'Todavia no has terminado el test, te faltan preguntas por responder!'
         );
       } else {
-        if (this.modoSimulacro && this.idExamenSimulacro) {
-          this.router.navigate([
-            '/simulacros/resultado',
-            this.idExamenSimulacro,
-            this.lastLoadedTest.id,
-          ]);
-        } else {
-          this.router.navigate([
-            'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
-          ]);
-        }
+        this.navegarAResultados();
       }
     } else {
       this.adelante();
@@ -436,13 +426,7 @@ export class CompletarTestComponent {
       : (this.activedRoute.snapshot.paramMap.get('id') as string);
   }
 
-  public async finalizarTest() {
-    await firstValueFrom(
-      this.testService
-        .finalizarTest(this.lastLoadedTest.id)
-        .pipe(switchMap(() => this.loadTest()))
-    );
-
+  private navegarAResultados() {
     if (this.modoSimulacro && this.idExamenSimulacro) {
       const user = this.auth.getCurrentUser();
       if (esRolPlataforma(user?.rol as Rol) && !!user?.validated) {
@@ -466,6 +450,16 @@ export class CompletarTestComponent {
         'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
       ]);
     }
+  }
+
+  public async finalizarTest() {
+    await firstValueFrom(
+      this.testService
+        .finalizarTest(this.lastLoadedTest.id)
+        .pipe(switchMap(() => this.loadTest()))
+    );
+
+    this.navegarAResultados();
   }
 
   private loadTest(id: string = this.getId()) {

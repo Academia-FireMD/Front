@@ -28,6 +28,13 @@ export class ExamenesService extends ApiBaseService {
     return this.get(`/prev/${examenId}/${preguntaId}`) as Observable<Pregunta>;
   }
 
+  public nextPreguntaForward(examenId: string, preguntaId: string): Observable<Pregunta> {
+    return this.get(`/next-forward/${examenId}/${preguntaId}`) as Observable<Pregunta>;
+  }
+
+  public prevPreguntaForward(examenId: string, preguntaId: string): Observable<Pregunta> {
+    return this.get(`/prev-forward/${examenId}/${preguntaId}`) as Observable<Pregunta>;
+  }
 
 
   public updatePreguntaReservaStatus$(

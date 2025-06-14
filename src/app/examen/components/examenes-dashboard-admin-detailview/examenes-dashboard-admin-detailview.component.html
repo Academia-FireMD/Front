@@ -2,400 +2,650 @@
 <div class="grid p-2" [formGroup]="formGroup">
   <div class="col-12 content">
     <p-card>
+      <!-- Header with title and main actions -->
       <div class="grid">
-        <div
-          class="col-12 header flex justify-content-between align-items-center gap-3"
-        >
-          <div class="titulo col-6 md:col-6">
-            <p-floatLabel>
-              <input
-                id="titulo"
-                type="text"
-                pInputText
-                class="w-full"
-                formControlName="titulo"
-                data-testid="nombre-examen-input"
-              />
-              <label for="titulo">Título del examen</label>
-            </p-floatLabel>
-          </div>
-          <div class="actions col-6 md:col-6 gap-2">
-            <p-button
-              *ngIf="getId() !== 'new' && !!lastLoadedExamen()"
-              icon="pi pi-eye"
-              label="{{
-                viewportService.screenWidth == 'xs' ? undefined : 'Vista previa'
-              }}"
-              [disabled]="
-                (lastLoadedExamen().test?.testPreguntas ?? []).length === 0
-              "
-              styleClass="p-button-outlined"
-              [routerLink]="[
-                '/app/test/realizar-test/vista-previa',
-                lastLoadedExamen().testId
-              ]"
-              data-testid="vista-previa-btn"
-            ></p-button>
-            <p-button
-              *ngIf="getId() !== 'new'"
-              icon="pi pi-file-word"
-              label="{{
-                viewportService.screenWidth == 'xs'
-                  ? undefined
-                  : 'Descargar Word'
-              }}"
-              [disabled]="
-                (lastLoadedExamen().test?.testPreguntas ?? []).length === 0
-              "
-              (click)="mostrarOpcionesDescarga($event)"
-              data-testid="descargar-word-btn"
-            ></p-button>
-            <app-comunidad-picker
-              [allowAdd]="true"
-              [comunidades]="relevancia.value"
-              (updateSelection)="updateCommunitySelection($event)"
-            ></app-comunidad-picker>
-          </div>
-        </div>
-        <div class="col config-inputs">
-          <div class="col">
-            <p-floatLabel>
-              <p-dropdown
-                id="duracion"
-                [style]="{ width: '100%', height: '100%' }"
-                formControlName="duracion"
-                [options]="duracionOptions"
-                appendTo="body"
-                placeholder="Seleccione la duración"
-                data-testid="duracion-dropdown"
-              ></p-dropdown>
-              <label for="duracion">Duración</label>
-            </p-floatLabel>
-          </div>
-
-          <div class="col">
-            <p-floatLabel>
-              <p-dropdown
-                formControlName="estado"
-                [style]="{ width: '100%', height: '100%' }"
-                [options]="estadoExamenOptions"
-                optionLabel="label"
-                optionValue="value"
-                class="w-full"
-                data-testid="estado-dropdown"
-              ></p-dropdown>
-              <label for="estado">Estado</label>
-            </p-floatLabel>
-          </div>
-
-          <div class="col">
-            <p-floatLabel>
-              <p-dropdown
-                formControlName="tipoAcceso"
-                [style]="{ width: '100%', height: '100%' }"
-                [options]="tipoAccesoOptions"
-                optionLabel="label"
-                optionValue="value"
-                class="w-full"
-                data-testid="tipo-acceso-dropdown"
-              ></p-dropdown>
-              <label for="tipoAcceso">Tipo de acceso</label>
-            </p-floatLabel>
-          </div>
-
-          <div
-            class="col"
-            *ngIf="formGroup.get('tipoAcceso')?.value === TipoAcceso.SIMULACRO"
-          >
-            <p-floatLabel>
-              <input
-                type="text"
-                pInputText
-                class="w-full"
-                formControlName="codigoAcceso"
-                data-testid="codigo-acceso-input"
-              />
-              <label for="codigoAcceso">Código de acceso</label>
-            </p-floatLabel>
-            <small
-              class="text-gray-500 block mt-1"
-              *ngIf="formGroup.get('codigoAcceso')?.errors?.['minlength']"
-            >
-              El código de acceso debe tener 6 dígitos
-            </small>
-          </div>
-        </div>
-
-        <div class="col-12 flex">
-          <div class="col-3">
-            <p-floatLabel>
-              <p-calendar
-                [showTime]="true"
-                class="block"
-                formControlName="fechaActivacion"
-                placeholder="Fecha de activación"
-                data-testid="fecha-activacion-input"
-              ></p-calendar>
-              <label>Fecha de activación</label>
-            </p-floatLabel>
-          </div>
-          <div class="col-3">
-            <p-floatLabel>
-              <p-calendar
-                [showTime]="true"
-                class="block"
-                formControlName="fechaSolucion"
-                placeholder="Fecha de solución"
-                data-testid="fecha-solucion-input"
-              ></p-calendar>
-              <label>Fecha de solución</label>
-            </p-floatLabel>
-          </div>
-        </div>
-
-        <div class="col-12 py-3">
-          <div class="markdown-container">
-            <div class="editor">
-              <h3>Descripción</h3>
-              <div id="editor-descripcion" data-testid="descripcion-editor"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12" *ngIf="getId() != 'new'">
-          <h3>Preguntas seleccionadas</h3>
-
-          <div class="grid">
-            <div class="col-12 mb-3">
-              <div class="p-inputgroup">
+        <div class="col-12 header-section">
+          <div class="flex justify-content-between align-items-center gap-3 mb-4">
+            <div class="titulo flex-1">
+              <p-floatLabel>
                 <input
+                  id="titulo"
                   type="text"
                   pInputText
-                  placeholder="Buscar por identificador"
-                  (input)="buscarPorIdentificadorInput($event)"
-                  data-testid="buscar-pregunta-input"
+                  class="w-full"
+                  formControlName="titulo"
+                  data-testid="nombre-examen-input"
                 />
-              </div>
+                <label for="titulo">Título del examen</label>
+              </p-floatLabel>
             </div>
-
-            <!-- Tabla de preguntas normales -->
-            <div class="col-12 mb-4">
-              <h4>Preguntas del examen</h4>
-              <p-table
-                [value]="preguntasNormales()"
-                [reorderableColumns]="true"
-                [paginator]="true"
-                [rows]="10"
-                [rowsPerPageOptions]="[5, 10, 25, 50]"
-                [scrollable]="true"
-                data-testid="tabla-preguntas-normales"
-              >
-                <ng-template pTemplate="header">
-                  <tr>
-                    <th style="width: 3rem"></th>
-                    <th style="width: 3rem"></th>
-                    <th pReorderableColumn>Identificador</th>
-                    <th pReorderableColumn>Descripción</th>
-                    <th pReorderableColumn style="width: 8rem">Acciones</th>
-                  </tr>
-                </ng-template>
-                <ng-template
-                  pTemplate="body"
-                  let-testPregunta
-                  let-index="rowIndex"
-                >
-                  <tr [pReorderableRow]="index" data-testid="pregunta-row">
-                    <td>
-                      <span class="pi pi-bars" pReorderableRowHandle></span>
-                    </td>
-                    <td>
-                      <span
-                        class="pi pi-eye"
-                        tooltip="Ver pregunta"
-                        (click)="verPregunta(testPregunta.pregunta.id)"
-                        data-testid="ver-pregunta-btn"
-                      ></span>
-                    </td>
-                    <td>
-                      <strong>
-                        {{ testPregunta.pregunta.identificador }}
-                      </strong>
-                    </td>
-                    <td>{{ testPregunta.pregunta.descripcion }}</td>
-                    <td>
-                      <div class="flex gap-2">
-                        <p-button
-                          icon="pi pi-arrow-down"
-                          [link]="true"
-                          pTooltip="Mover a preguntas de reserva"
-                          tooltipPosition="top"
-                          (click)="marcarComoReserva(testPregunta, true)"
-                          data-testid="mover-reserva-btn"
-                        ></p-button>
-                        <p-button
-                          icon="pi pi-trash"
-                          [link]="true"
-                          pTooltip="Eliminar pregunta"
-                          tooltipPosition="top"
-                          (click)="eliminarPregunta(testPregunta.pregunta.id)"
-                          data-testid="eliminar-pregunta-btn"
-                        ></p-button>
-                        <p-button
-                          [icon]="testPregunta.impugnada ? 'pi pi-flag-fill' : 'pi pi-flag'"
-                          [link]="true"
-                          [pTooltip]="testPregunta.impugnada ? 'Desimpugnar pregunta' : 'Impugnar pregunta'"
-                          tooltipPosition="top"
-                          (click)="abrirDialogoImpugnacion(testPregunta)"
-                          [class.text-red-500]="testPregunta.impugnada"
-                          data-testid="impugnar-pregunta-btn"
-                        ></p-button>
-                      </div>
-                    </td>
-                  </tr>
-                </ng-template>
-                <ng-template pTemplate="emptymessage">
-                  <tr>
-                    <td colspan="4" class="text-center p-4">
-                      <div
-                        *ngIf="
-                          !preguntasNormales() ||
-                          preguntasNormales().length === 0
-                        "
-                        data-testid="no-preguntas-normales-message"
-                      >
-                        No hay preguntas normales añadidas al examen
-                      </div>
-                      <div
-                        *ngIf="
-                          preguntasNormales() &&
-                          preguntasNormales().length > 0 &&
-                          filtroIdentificador()
-                        "
-                      >
-                        No se encontraron preguntas normales con el
-                        identificador "{{ filtroIdentificador() }}"
-                      </div>
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
-            </div>
-
-            <!-- Tabla de preguntas de reserva -->
-            <div class="col-12">
-              <h4>Preguntas de reserva</h4>
-              <div class="col-12 mb-3">
-                <div class="p-inputgroup">
-                  <input
-                    type="text"
-                    pInputText
-                    placeholder="Buscar por identificador"
-                    (input)="buscarPorIdentificadorInput($event)"
-                    data-testid="buscar-pregunta-reserva-input"
-                  />
-                </div>
-              </div>
-              <p-table
-                [value]="preguntasReserva()"
-                [reorderableColumns]="true"
-                [paginator]="true"
-                [rows]="10"
-                [rowsPerPageOptions]="[5, 10, 25, 50]"
-                [scrollable]="true"
-                data-testid="tabla-preguntas-reserva"
-              >
-                <ng-template pTemplate="header">
-                  <tr>
-                    <th style="width: 3rem"></th>
-                    <th style="width: 3rem"></th>
-                    <th pReorderableColumn>Identificador</th>
-                    <th pReorderableColumn>Descripción</th>
-                    <th pReorderableColumn style="width: 8rem">Acciones</th>
-                  </tr>
-                </ng-template>
-                <ng-template
-                  pTemplate="body"
-                  let-testPregunta
-                  let-index="rowIndex"
-                >
-                  <tr [pReorderableRow]="index" data-testid="pregunta-reserva-row">
-                    <td>
-                      <span class="pi pi-bars" pReorderableRowHandle></span>
-                    </td>
-                    <td>
-                      <span
-                        class="pi pi-eye"
-                        tooltip="Ver pregunta"
-                        (click)="verPregunta(testPregunta.pregunta.id)"
-                        data-testid="ver-pregunta-reserva-btn"
-                      ></span>
-                    </td>
-                    <td>
-                      <strong>
-                        {{ testPregunta.pregunta.identificador }}
-                      </strong>
-                    </td>
-                    <td>{{ testPregunta.pregunta.descripcion }}</td>
-                    <td>
-                      <div class="flex gap-2">
-                        <p-button
-                          icon="pi pi-arrow-up"
-                          [link]="true"
-                          pTooltip="Mover a preguntas normales"
-                          tooltipPosition="top"
-                          (click)="marcarComoReserva(testPregunta, false)"
-                          data-testid="mover-normal-btn"
-                        ></p-button>
-                        <p-button
-                          icon="pi pi-trash"
-                          [link]="true"
-                          pTooltip="Eliminar pregunta"
-                          tooltipPosition="top"
-                          (click)="eliminarPregunta(testPregunta.pregunta.id)"
-                          data-testid="eliminar-pregunta-reserva-btn"
-                        ></p-button>
-                       
-                      </div>
-                    </td>
-                  </tr>
-                </ng-template>
-                <ng-template pTemplate="emptymessage">
-                  <tr>
-                    <td colspan="4" class="text-center p-4">
-                      <div
-                        *ngIf="
-                          !preguntasReserva() || preguntasReserva().length === 0
-                        "
-                        data-testid="no-preguntas-reserva-message"
-                      >
-                        No hay preguntas de reserva añadidas al examen
-                      </div>
-                      <div
-                        *ngIf="
-                          preguntasReserva() &&
-                          preguntasReserva().length > 0 &&
-                          filtroIdentificador()
-                        "
-                      >
-                        No se encontraron preguntas de reserva con el
-                        identificador "{{ filtroIdentificador() }}"
-                      </div>
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
-            </div>
-
-            <div class="actions w-full mt-3">
+            <div class="actions-header flex gap-2">
               <p-button
-                label="Añadir preguntas a la academia"
-                icon="pi pi-plus"
-                [link]="true"
-                (click)="anyadirPreguntasAcademia()"
-                data-testid="anyadir-preguntas-academia-btn"
-              ></p-button>
+                *ngIf="getId() !== 'new' && !!lastLoadedExamen()"
+                icon="pi pi-eye"
+                label="Vista previa"
+                [disabled]="(lastLoadedExamen().test?.testPreguntas ?? []).length === 0"
+                styleClass="p-button-outlined"
+                [routerLink]="['/app/test/realizar-test/vista-previa', lastLoadedExamen().testId]"
+                data-testid="vista-previa-btn"
+              />
+              <p-button
+                *ngIf="getId() !== 'new'"
+                icon="pi pi-file-word"
+                label="Descargar"
+                [disabled]="(lastLoadedExamen().test?.testPreguntas ?? []).length === 0"
+                (click)="mostrarOpcionesDescarga($event)"
+                data-testid="descargar-word-btn"
+              />
+              <app-comunidad-picker
+                [allowAdd]="true"
+                [comunidades]="relevancia.value"
+                (updateSelection)="updateCommunitySelection($event)"
+              />
             </div>
           </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="col-12">
+          <p-tabView [(activeIndex)]="activeTabIndex" (onChange)="onTabChange($event)">
+            
+            <!-- Tab 1: Configuración -->
+            <p-tabPanel header="Configuración" leftIcon="pi pi-cog">
+              <div class="configuration-content">
+                <!-- Basic Configuration -->
+                <div class="grid mb-4">
+                  <div class="col-12">
+                    <h4 class="mb-3 text-primary">⚙️ Configuración básica</h4>
+                  </div>
+                  
+                  <div class="col-12 md:col-3">
+                    <p-floatLabel>
+                      <p-dropdown
+                        id="duracion"
+                        [style]="{ width: '100%' }"
+                        formControlName="duracion"
+                        [options]="duracionOptions"
+                        appendTo="body"
+                        placeholder="Seleccione la duración"
+                        data-testid="duracion-dropdown"
+                      />
+                      <label for="duracion">⏱️ Duración</label>
+                    </p-floatLabel>
+                  </div>
+
+                  <div class="col-12 md:col-3">
+                    <p-floatLabel>
+                      <p-dropdown
+                        formControlName="estado"
+                        [style]="{ width: '100%' }"
+                        [options]="estadoExamenOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        class="w-full"
+                        data-testid="estado-dropdown"
+                      />
+                      <label for="estado">📋 Estado</label>
+                    </p-floatLabel>
+                  </div>
+
+                  <div class="col-12 md:col-3">
+                    <p-floatLabel>
+                      <p-dropdown
+                        formControlName="tipoAcceso"
+                        [style]="{ width: '100%' }"
+                        [options]="tipoAccesoOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        class="w-full"
+                        data-testid="tipo-acceso-dropdown"
+                      />
+                      <label for="tipoAcceso">🔐 Tipo de acceso</label>
+                    </p-floatLabel>
+                  </div>
+
+                  <div
+                    class="col-12 md:col-3"
+                    *ngIf="formGroup.get('tipoAcceso')?.value === TipoAcceso.SIMULACRO"
+                  >
+                    <p-floatLabel>
+                      <input
+                        type="text"
+                        pInputText
+                        class="w-full"
+                        formControlName="codigoAcceso"
+                        data-testid="codigo-acceso-input"
+                      />
+                      <label for="codigoAcceso">🔑 Código de acceso</label>
+                    </p-floatLabel>
+                    <small
+                      class="text-red-500 block mt-1"
+                      *ngIf="formGroup.get('codigoAcceso')?.errors?.['minlength']"
+                    >
+                      El código debe tener 6 dígitos
+                    </small>
+                  </div>
+                </div>
+
+                <!-- Scheduling -->
+                <div class="grid mb-4">
+                  <div class="col-12">
+                    <h4 class="mb-3 text-primary">📅 Programación</h4>
+                  </div>
+                  
+                  <div class="col-12 md:col-6">
+                    <p-floatLabel>
+                      <p-calendar
+                        [showTime]="true"
+                        class="w-full"
+                        formControlName="fechaActivacion"
+                        placeholder="Fecha de activación"
+                        data-testid="fecha-activacion-input"
+                      />
+                      <label>🚀 Fecha de activación</label>
+                    </p-floatLabel>
+                  </div>
+                  
+                  <div class="col-12 md:col-6">
+                    <p-floatLabel>
+                      <p-calendar
+                        [showTime]="true"
+                        class="w-full"
+                        formControlName="fechaSolucion"
+                        placeholder="Fecha de solución"
+                        data-testid="fecha-solucion-input"
+                      />
+                      <label>📋 Fecha de solución</label>
+                    </p-floatLabel>
+                  </div>
+                </div>
+
+                <!-- Description -->
+                <div class="grid mb-4">
+                  <div class="col-12">
+                    <h4 class="mb-3 text-primary">📝 Descripción</h4>
+                    <div class="markdown-container">
+                      <div class="editor">
+                        <div id="editor-descripcion" data-testid="descripcion-editor"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Questions Management -->
+                <div class="grid" *ngIf="getId() != 'new'">
+                  <div class="col-12">
+                    <h4 class="mb-3 text-primary">❓ Gestión de preguntas</h4>
+                  </div>
+                  
+                  <div class="col-12 mb-3">
+                    <div class="flex gap-2 align-items-center">
+                      <div class="p-inputgroup flex-1">
+                        <input
+                          type="text"
+                          pInputText
+                          placeholder="Buscar por identificador..."
+                          (input)="buscarPorIdentificadorInput($event)"
+                          data-testid="buscar-pregunta-input"
+                        />
+                      </div>
+                   
+                    </div>
+                  </div>
+
+                  <!-- Normal Questions Table -->
+                  <div class="col-12 mb-4">
+                    <div class="flex justify-content-between align-items-center mb-3">
+                      <h5 class="m-0">📝 Preguntas del examen ({{ preguntasNormales().length }})</h5>
+                    </div>
+                    
+                    <p-table
+                      [value]="preguntasNormales()"
+                      [reorderableColumns]="true"
+                      [paginator]="true"
+                      [rows]="10"
+                      [rowsPerPageOptions]="[5, 10, 25, 50]"
+                      [scrollable]="true"
+                      data-testid="tabla-preguntas-normales"
+                      styleClass="p-datatable-sm"
+                    >
+                      <ng-template pTemplate="header">
+                        <tr>
+                          <th style="width: 3rem"></th>
+                          <th style="width: 3rem"></th>
+                          <th pReorderableColumn>Identificador</th>
+                          <th pReorderableColumn>Descripción</th>
+                          <th pReorderableColumn style="width: 8rem">Acciones</th>
+                        </tr>
+                      </ng-template>
+                      <ng-template
+                        pTemplate="body"
+                        let-testPregunta
+                        let-index="rowIndex"
+                      >
+                        <tr [pReorderableRow]="index" data-testid="pregunta-row">
+                          <td>
+                            <span class="pi pi-bars" pReorderableRowHandle></span>
+                          </td>
+                          <td>
+                            <span
+                              class="pi pi-eye"
+                              tooltip="Ver pregunta"
+                              (click)="verPregunta(testPregunta.pregunta.id)"
+                              data-testid="ver-pregunta-btn"
+                            ></span>
+                          </td>
+                          <td>
+                            <strong>
+                              {{ testPregunta.pregunta.identificador }}
+                            </strong>
+                          </td>
+                          <td>{{ testPregunta.pregunta.descripcion }}</td>
+                          <td>
+                            <div class="flex gap-2">
+                              <p-button
+                                icon="pi pi-arrow-down"
+                                [link]="true"
+                                pTooltip="Mover a preguntas de reserva"
+                                tooltipPosition="top"
+                                (click)="marcarComoReserva(testPregunta, true)"
+                                data-testid="mover-reserva-btn"
+                              ></p-button>
+                              <p-button
+                                icon="pi pi-trash"
+                                [link]="true"
+                                pTooltip="Eliminar pregunta"
+                                tooltipPosition="top"
+                                (click)="eliminarPregunta(testPregunta.pregunta.id)"
+                                data-testid="eliminar-pregunta-btn"
+                              ></p-button>
+                              <p-button
+                                [icon]="testPregunta.impugnada ? 'pi pi-flag-fill' : 'pi pi-flag'"
+                                [link]="true"
+                                [pTooltip]="testPregunta.impugnada ? 'Desimpugnar pregunta' : 'Impugnar pregunta'"
+                                tooltipPosition="top"
+                                (click)="abrirDialogoImpugnacion(testPregunta)"
+                                [class.text-red-500]="testPregunta.impugnada"
+                                data-testid="impugnar-pregunta-btn"
+                              ></p-button>
+                            </div>
+                          </td>
+                        </tr>
+                      </ng-template>
+                      <ng-template pTemplate="emptymessage">
+                        <tr>
+                          <td colspan="4" class="text-center p-4">
+                            <div
+                              *ngIf="
+                                !preguntasNormales() ||
+                                preguntasNormales().length === 0
+                              "
+                              data-testid="no-preguntas-normales-message"
+                            >
+                              No hay preguntas normales añadidas al examen
+                            </div>
+                            <div
+                              *ngIf="
+                                preguntasNormales() &&
+                                preguntasNormales().length > 0 &&
+                                filtroIdentificador()
+                              "
+                            >
+                              No se encontraron preguntas normales con el
+                              identificador "{{ filtroIdentificador() }}"
+                            </div>
+                          </td>
+                        </tr>
+                      </ng-template>
+                    </p-table>
+                  </div>
+
+                  <!-- Tabla de preguntas de reserva -->
+                  <div class="col-12">
+                    <h4>Preguntas de reserva</h4>
+                    <div class="col-12 mb-3">
+                      <div class="p-inputgroup">
+                        <input
+                          type="text"
+                          pInputText
+                          placeholder="Buscar por identificador"
+                          (input)="buscarPorIdentificadorInput($event)"
+                          data-testid="buscar-pregunta-reserva-input"
+                        />
+                      </div>
+                    </div>
+                    <p-table
+                      [value]="preguntasReserva()"
+                      [reorderableColumns]="true"
+                      [paginator]="true"
+                      [rows]="10"
+                      [rowsPerPageOptions]="[5, 10, 25, 50]"
+                      [scrollable]="true"
+                      data-testid="tabla-preguntas-reserva"
+                    >
+                      <ng-template pTemplate="header">
+                        <tr>
+                          <th style="width: 3rem"></th>
+                          <th style="width: 3rem"></th>
+                          <th pReorderableColumn>Identificador</th>
+                          <th pReorderableColumn>Descripción</th>
+                          <th pReorderableColumn style="width: 8rem">Acciones</th>
+                        </tr>
+                      </ng-template>
+                      <ng-template
+                        pTemplate="body"
+                        let-testPregunta
+                        let-index="rowIndex"
+                      >
+                        <tr [pReorderableRow]="index" data-testid="pregunta-reserva-row">
+                          <td>
+                            <span class="pi pi-bars" pReorderableRowHandle></span>
+                          </td>
+                          <td>
+                            <span
+                              class="pi pi-eye"
+                              tooltip="Ver pregunta"
+                              (click)="verPregunta(testPregunta.pregunta.id)"
+                              data-testid="ver-pregunta-reserva-btn"
+                            ></span>
+                          </td>
+                          <td>
+                            <strong>
+                              {{ testPregunta.pregunta.identificador }}
+                            </strong>
+                          </td>
+                          <td>{{ testPregunta.pregunta.descripcion }}</td>
+                          <td>
+                            <div class="flex gap-2">
+                              <p-button
+                                icon="pi pi-arrow-up"
+                                [link]="true"
+                                pTooltip="Mover a preguntas normales"
+                                tooltipPosition="top"
+                                (click)="marcarComoReserva(testPregunta, false)"
+                                data-testid="mover-normal-btn"
+                              ></p-button>
+                              <p-button
+                                icon="pi pi-trash"
+                                [link]="true"
+                                pTooltip="Eliminar pregunta"
+                                tooltipPosition="top"
+                                (click)="eliminarPregunta(testPregunta.pregunta.id)"
+                                data-testid="eliminar-pregunta-reserva-btn"
+                              ></p-button>
+                             
+                            </div>
+                          </td>
+                        </tr>
+                      </ng-template>
+                      <ng-template pTemplate="emptymessage">
+                        <tr>
+                          <td colspan="4" class="text-center p-4">
+                            <div
+                              *ngIf="
+                                !preguntasReserva() || preguntasReserva().length === 0
+                              "
+                              data-testid="no-preguntas-reserva-message"
+                            >
+                              No hay preguntas de reserva añadidas al examen
+                            </div>
+                            <div
+                              *ngIf="
+                                preguntasReserva() &&
+                                preguntasReserva().length > 0 &&
+                                filtroIdentificador()
+                              "
+                            >
+                              No se encontraron preguntas de reserva con el
+                              identificador "{{ filtroIdentificador() }}"
+                            </div>
+                          </td>
+                        </tr>
+                      </ng-template>
+                    </p-table>
+                  </div>
+
+                  <div class="actions w-full mt-3">
+                    <p-button
+                      label="Añadir preguntas a la academia"
+                      icon="pi pi-plus"
+                      [link]="true"
+                      (click)="anyadirPreguntasAcademia()"
+                      data-testid="anyadir-preguntas-academia-btn"
+                    ></p-button>
+                  </div>
+                </div>
+              </div>
+            </p-tabPanel>
+
+            <!-- Tab 2: Resultados y Análisis -->
+            <p-tabPanel header="Resultados y Análisis" leftIcon="pi pi-chart-bar">
+              <div class="results-content" *ngIf="getId() != 'new'">
+                
+                <!-- Loading state -->
+                <div *ngIf="loadingResults()" class="text-center p-4">
+                  <p-progressSpinner />
+                  <p class="mt-2">Cargando resultados...</p>
+                </div>
+
+                <!-- No results state -->
+                <div *ngIf="!loadingResults() && !examenResultados()" class="text-center p-4">
+                  <i class="pi pi-info-circle text-6xl text-gray-400 mb-3"></i>
+                  <h4 class="text-gray-600">No hay resultados disponibles</h4>
+                  <p class="text-gray-500">Los resultados aparecerán cuando los estudiantes completen el examen.</p>
+                </div>
+
+                <!-- Results content -->
+                <div *ngIf="!loadingResults() && examenResultados()" class="grid">
+                  
+                  <!-- Statistics Overview -->
+                  <div class="col-12 mb-4">
+                    <h4 class="mb-3 text-primary">📈 Resumen estadístico</h4>
+                    <div class="grid">
+                      <!-- Main stats cards -->
+                      <div class="col-12 lg:col-3 md:col-6">
+                        <p-card styleClass="h-full">
+                          <div class="text-center">
+                            <i class="pi pi-users text-4xl text-blue-500 mb-2"></i>
+                            <h3 class="m-0 text-blue-600">{{ totalParticipantes() }}</h3>
+                            <p class="text-gray-600 m-0">Participantes</p>
+                          </div>
+                        </p-card>
+                      </div>
+                      
+                      <div class="col-12 lg:col-3 md:col-6">
+                        <p-card styleClass="h-full">
+                          <div class="text-center">
+                            <i class="pi pi-star text-4xl text-orange-500 mb-2"></i>
+                            <h3 class="m-0 text-orange-600">{{ notaPromedio() }}</h3>
+                            <p class="text-gray-600 m-0">Nota promedio</p>
+                          </div>
+                        </p-card>
+                      </div>
+                      
+                      <div class="col-12 lg:col-3 md:col-6" *ngIf="statsBasicas()">
+                        <p-card styleClass="h-full">
+                          <div class="text-center">
+                            <i class="pi pi-check-circle text-4xl text-green-500 mb-2"></i>
+                            <h3 class="m-0 text-green-600">{{ statsBasicas()?.aprobados }}</h3>
+                            <p class="text-gray-600 m-0">Aprobados</p>
+                          </div>
+                        </p-card>
+                      </div>
+                      
+                      <div class="col-12 lg:col-3 md:col-6" *ngIf="statsBasicas()">
+                        <p-card styleClass="h-full">
+                          <div class="text-center">
+                            <i class="pi pi-times-circle text-4xl text-red-500 mb-2"></i>
+                            <h3 class="m-0 text-red-600">{{ statsBasicas()?.suspensos }}</h3>
+                            <p class="text-gray-600 m-0">Suspensos</p>
+                          </div>
+                        </p-card>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Additional Stats -->
+                  <div class="col-12 mb-4" *ngIf="statsBasicas()">
+                    <p-card>
+                      <h5 class="mb-3">📊 Estadísticas detalladas</h5>
+                      <div class="grid">
+                        <div class="col-12 md:col-4">
+                          <div class="stat-item">
+                            <span class="stat-label">Nota máxima:</span>
+                            <span class="stat-value text-green-600 font-bold">{{ statsBasicas()?.notaMaxima }}</span>
+                          </div>
+                        </div>
+                        <div class="col-12 md:col-4">
+                          <div class="stat-item">
+                            <span class="stat-label">Nota mínima:</span>
+                            <span class="stat-value text-red-600 font-bold">{{ statsBasicas()?.notaMinima }}</span>
+                          </div>
+                        </div>
+                        <div class="col-12 md:col-4">
+                          <div class="stat-item">
+                            <span class="stat-label">Promedio correctas:</span>
+                            <span class="stat-value text-blue-600 font-bold">{{ statsBasicas()?.correctasPromedio }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </p-card>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="col-12 mb-4">
+                    <div class="flex gap-2">
+                      <p-button
+                        icon="pi pi-download"
+                        label="Exportar resultados"
+                        (click)="exportarResultados()"
+                        severity="secondary"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Results Table -->
+                  <div class="col-12">
+                    <p-card>
+                      <h5 class="mb-3">👥 Resultados por estudiante</h5>
+                      <p-table
+                        [value]="resultadosData()"
+                        [paginator]="true"
+                        [rows]="10"
+                        [rowsPerPageOptions]="[10, 25, 50]"
+                        [sortField]="'estadisticas.nota'"
+                        [sortOrder]="-1"
+                        styleClass="p-datatable-sm"
+                      >
+                        <ng-template pTemplate="header">
+                          <tr>
+                            <th pSortableColumn="posicion">
+                              #
+                              <p-sortIcon field="posicion"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="usuario.nombre">
+                              Estudiante
+                              <p-sortIcon field="usuario.nombre"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="estadisticas.nota">
+                              Nota
+                              <p-sortIcon field="estadisticas.nota"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="estadisticas.correctas">
+                              Correctas
+                              <p-sortIcon field="estadisticas.correctas"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="estadisticas.incorrectas">
+                              Incorrectas
+                              <p-sortIcon field="estadisticas.incorrectas"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="fechaRealizacion">
+                              Fecha
+                              <p-sortIcon field="fechaRealizacion"></p-sortIcon>
+                            </th>
+                            <th>Acciones</th>
+                          </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-resultado>
+                          <tr>
+                            <td>
+                              <p-tag 
+                                [value]="resultado.posicion" 
+                                [severity]="resultado.posicion <= 3 ? 'success' : 'secondary'"
+                              />
+                            </td>
+                            <td>
+                              <div class="flex align-items-center gap-2">
+                                <i class="pi pi-user"></i>
+                                <div>
+                                  <div class="font-semibold">{{ resultado.usuario.nombre }} {{ resultado.usuario.apellidos }}</div>
+                                  <div class="text-sm text-gray-500">{{ resultado.usuario.email }}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <p-tag 
+                                [value]="resultado.estadisticas.nota" 
+                                [severity]="resultado.estadisticas.nota >= 5 ? 'success' : 'danger'"
+                              />
+                            </td>
+                            <td>
+                              <span class="text-green-600 font-semibold">{{ resultado.estadisticas.correctas }}</span>
+                            </td>
+                            <td>
+                              <span class="text-red-600 font-semibold">{{ resultado.estadisticas.incorrectas }}</span>
+                            </td>
+                            <td>
+                              <small>{{ resultado.fechaRealizacion | date:'short' }}</small>
+                            </td>
+                            <td>
+                              <div class="flex gap-1">
+                                <p-button
+                                  icon="pi pi-refresh"
+                                  [link]="true"
+                                  pTooltip="Reiniciar intento"
+                                  tooltipPosition="top"
+                                  (click)="reiniciarIntento(resultado.usuario.id)"
+                                  severity="warning"
+                                  size="small"
+                                />
+                                <p-button
+                                  icon="pi pi-key"
+                                  [link]="true"
+                                  pTooltip="Gestionar acceso"
+                                  tooltipPosition="top"
+                                  (click)="darAcceso(resultado.usuario.id)"
+                                  severity="help"
+                                  size="small"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                          <tr>
+                            <td colspan="7" class="text-center p-4">
+                              <div class="text-gray-500">
+                                <i class="pi pi-info-circle text-3xl mb-2"></i>
+                                <p>No hay resultados para mostrar</p>
+                              </div>
+                            </td>
+                          </tr>
+                        </ng-template>
+                      </p-table>
+                    </p-card>
+                  </div>
+                </div>
+              </div>
+
+              <!-- New exam message -->
+              <div *ngIf="getId() === 'new'" class="text-center p-4">
+                <i class="pi pi-info-circle text-4xl text-gray-400 mb-3"></i>
+                <h4 class="text-gray-600">Guarda el examen primero</h4>
+                <p class="text-gray-500">Los resultados estarán disponibles después de guardar y publicar el examen.</p>
+              </div>
+            </p-tabPanel>
+          </p-tabView>
         </div>
 
         <div

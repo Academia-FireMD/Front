@@ -19,8 +19,11 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
 import { MenuModule } from 'primeng/menu';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { StepsModule } from 'primeng/steps';
 import { TableModule } from 'primeng/table';
+import { TabViewModule } from 'primeng/tabview';
+import { TagModule } from 'primeng/tag';
 import { TreeModule } from 'primeng/tree';
 import { SharedModule } from '../shared/shared.module';
 import { ExamenesDashboardAdminDetailviewComponent } from './components/examenes-dashboard-admin-detailview/examenes-dashboard-admin-detailview.component';
@@ -61,6 +64,9 @@ import { BadgeModule } from 'primeng/badge';
     CheckboxModule,
     MenuModule,
     BadgeModule,
+    TabViewModule,
+    ProgressSpinnerModule,
+    TagModule,
   ],
   providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
 })

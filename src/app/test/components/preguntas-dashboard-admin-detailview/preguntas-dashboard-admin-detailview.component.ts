@@ -128,15 +128,27 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   public anteriorForwardPregunta() {
-    this.processPreguntaRequest(
-      this.preguntasService.prevPreguntaForward.bind(this.preguntasService)
-    );
+    if (this.mode == 'examen') {
+      this.processPreguntaRequest(
+        this.examenesService.prevPreguntaForward.bind(this.examenesService, this.examenId ?? '', this.lastLoadedPregunta().id + '')
+      );
+    } else {
+      this.processPreguntaRequest(
+        this.preguntasService.prevPreguntaForward.bind(this.preguntasService)
+      );
+    }
   }
 
   public siguienteForwardPregunta() {
-    this.processPreguntaRequest(
-      this.preguntasService.nextPreguntaForward.bind(this.preguntasService)
-    );
+    if (this.mode == 'examen') {
+      this.processPreguntaRequest(
+        this.examenesService.nextPreguntaForward.bind(this.examenesService, this.examenId ?? '', this.lastLoadedPregunta().id + '')
+      );
+    } else {
+      this.processPreguntaRequest(
+        this.preguntasService.nextPreguntaForward.bind(this.preguntasService)
+      );
+    }
   }
 
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
@@ -315,7 +327,10 @@ export class PreguntasDashboardAdminDetailviewComponent {
       );
 
       // Redirigir de vuelta al examen
-      await this.router.navigate(['/app/examen', this.examenId]);
+      //await this.router.navigate(['/app/examen', this.examenId]);
+      //Cambiado a recargar pregunta actual
+      await this.navigatetoPregunta(res.id + '');
+      this.loadPregunta();
       return;
     }
 

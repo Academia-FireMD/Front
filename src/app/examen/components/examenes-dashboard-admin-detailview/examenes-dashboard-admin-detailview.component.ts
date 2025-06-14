@@ -59,6 +59,40 @@ export class ExamenesDashboardAdminDetailviewComponent {
   metodosAgregarDialogVisible = false;
   public TipoAcceso = TipoAcceso;
   public agregarComoReserva = false;
+  // Tab management
+  public activeTabIndex = 0;
+  
+  // Results and analytics
+  public examenResultados = signal<any>(null);
+  public loadingResults = signal<boolean>(false);
+  public resultadosData = computed(() => this.examenResultados()?.resultados || []);
+  public totalParticipantes = computed(() => this.examenResultados()?.totalParticipantes || 0);
+  public notaPromedio = computed(() => {
+    const resultados = this.resultadosData();
+    if (resultados.length === 0) return 0;
+    const suma = resultados.reduce((acc: number, r: any) => acc + r.estadisticas.nota, 0);
+    return parseFloat((suma / resultados.length).toFixed(2));
+  });
+  
+  // Computed stats
+  public statsBasicas = computed(() => {
+    const resultados = this.resultadosData();
+    if (resultados.length === 0) return null;
+    
+    const notas = resultados.map((r: any) => r.estadisticas.nota);
+    const correctas = resultados.map((r: any) => r.estadisticas.correctas);
+    const incorrectas = resultados.map((r: any) => r.estadisticas.incorrectas);
+    
+    return {
+      notaMaxima: Math.max(...notas),
+      notaMinima: Math.min(...notas),
+      correctasPromedio: parseFloat((correctas.reduce((a: number, b: number) => a + b, 0) / correctas.length).toFixed(1)),
+      incorrectasPromedio: parseFloat((incorrectas.reduce((a: number, b: number) => a + b, 0) / incorrectas.length).toFixed(1)),
+      aprobados: resultados.filter((r: any) => r.estadisticas.nota >= 5).length,
+      suspensos: resultados.filter((r: any) => r.estadisticas.nota < 5).length
+    };
+  });
+
   // Añade estos métodos signal
   preguntasNormales = computed(() => {
     if (!this.lastLoadedTestPreguntas()) return [];
@@ -673,20 +707,55 @@ export class ExamenesDashboardAdminDetailviewComponent {
         )
       );
 
-      this.toast.success(
-        this.preguntaAImpugnar.impugnada
-          ? 'Pregunta desimpugnada correctamente'
-          : 'Pregunta impugnada correctamente'
-      );
-
-      // Recargar el examen para actualizar el estado
-      await this.loadExamen();
-    } catch (error) {
-      this.toast.error('Error al impugnar la pregunta');
-    } finally {
+      this.toast.success('Pregunta impugnada/desimpugnada correctamente');
       this.impugnacionDialogVisible = false;
       this.preguntaAImpugnar = null;
       this.motivoImpugnacion = '';
+      this.loadExamen();
+    } catch (error) {
+      this.toast.error('Error al impugnar/desimpugnar la pregunta');
     }
+  }
+
+  // Results and analytics methods
+  public async loadExamenResults() {
+    if (this.getId() === 'new') return;
+    
+    this.loadingResults.set(true);
+    try {
+      const response = await firstValueFrom(
+        this.examenesService.getSimulacroResultados$(this.getId() as number)
+      );
+      this.examenResultados.set(response);
+    } catch (error) {
+      console.error('Error loading exam results:', error);
+      this.toast.error('Error al cargar los resultados del examen');
+    } finally {
+      this.loadingResults.set(false);
+    }
+  }
+
+  public onTabChange(event: any) {
+    this.activeTabIndex = event.index;
+    
+    // Load results when switching to results tab
+    if (event.index === 1 && !this.examenResultados()) {
+      this.loadExamenResults();
+    }
+  }
+
+  public exportarResultados() {
+    // Placeholder for future functionality
+    this.toast.info('Funcionalidad de exportación próximamente disponible');
+  }
+
+  public reiniciarIntento(userId: number) {
+    // Placeholder for future functionality  
+    this.toast.info('Funcionalidad de reinicio de intentos próximamente disponible');
+  }
+
+  public darAcceso(userId: number) {
+    // Placeholder for future functionality
+    this.toast.info('Funcionalidad de gestión de accesos próximamente disponible');
   }
 }
