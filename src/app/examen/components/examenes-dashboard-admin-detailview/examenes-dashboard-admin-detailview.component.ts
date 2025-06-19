@@ -5,7 +5,7 @@ import {
   inject,
   Input,
   signal,
-  ViewChild
+  ViewChild,
 } from '@angular/core';
 import {
   FormArray,
@@ -18,13 +18,7 @@ import { Editor } from '@toast-ui/editor';
 import { debounce } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService, MenuItem } from 'primeng/api';
-import {
-  combineLatest,
-  filter,
-  firstValueFrom,
-  map,
-  tap
-} from 'rxjs';
+import { combineLatest, filter, firstValueFrom, map, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { TemaService } from '../../../services/tema.service';
 import { GenerarTestDto } from '../../../services/test.service';
@@ -32,7 +26,14 @@ import { ViewportService } from '../../../services/viewport.service';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-test.component';
-import { duracionOptions, estadoExamenOptions, getAllDifficultades, groupedTemas, tipoAccesoOptions, universalEditorConfig } from '../../../utils/utils';
+import {
+  duracionOptions,
+  estadoExamenOptions,
+  getAllDifficultades,
+  groupedTemas,
+  tipoAccesoOptions,
+  universalEditorConfig,
+} from '../../../utils/utils';
 import { EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
 import { ExamenesService } from '../../servicios/examen.service';
 
@@ -61,35 +62,52 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public agregarComoReserva = false;
   // Tab management
   public activeTabIndex = 0;
-  
+
   // Results and analytics
   public examenResultados = signal<any>(null);
   public loadingResults = signal<boolean>(false);
-  public resultadosData = computed(() => this.examenResultados()?.resultados || []);
-  public totalParticipantes = computed(() => this.examenResultados()?.totalParticipantes || 0);
+  public resultadosData = computed(
+    () => this.examenResultados()?.resultados || []
+  );
+  public totalParticipantes = computed(
+    () => this.examenResultados()?.totalParticipantes || 0
+  );
   public notaPromedio = computed(() => {
     const resultados = this.resultadosData();
     if (resultados.length === 0) return 0;
-    const suma = resultados.reduce((acc: number, r: any) => acc + r.estadisticas.nota, 0);
+    const suma = resultados.reduce(
+      (acc: number, r: any) => acc + r.estadisticas.nota,
+      0
+    );
     return parseFloat((suma / resultados.length).toFixed(2));
   });
-  
+
   // Computed stats
   public statsBasicas = computed(() => {
     const resultados = this.resultadosData();
     if (resultados.length === 0) return null;
-    
+
     const notas = resultados.map((r: any) => r.estadisticas.nota);
     const correctas = resultados.map((r: any) => r.estadisticas.correctas);
     const incorrectas = resultados.map((r: any) => r.estadisticas.incorrectas);
-    
+
     return {
       notaMaxima: Math.max(...notas),
       notaMinima: Math.min(...notas),
-      correctasPromedio: parseFloat((correctas.reduce((a: number, b: number) => a + b, 0) / correctas.length).toFixed(1)),
-      incorrectasPromedio: parseFloat((incorrectas.reduce((a: number, b: number) => a + b, 0) / incorrectas.length).toFixed(1)),
+      correctasPromedio: parseFloat(
+        (
+          correctas.reduce((a: number, b: number) => a + b, 0) /
+          correctas.length
+        ).toFixed(1)
+      ),
+      incorrectasPromedio: parseFloat(
+        (
+          incorrectas.reduce((a: number, b: number) => a + b, 0) /
+          incorrectas.length
+        ).toFixed(1)
+      ),
       aprobados: resultados.filter((r: any) => r.estadisticas.nota >= 5).length,
-      suspensos: resultados.filter((r: any) => r.estadisticas.nota < 5).length
+      suspensos: resultados.filter((r: any) => r.estadisticas.nota < 5).length,
     };
   });
 
@@ -97,20 +115,26 @@ export class ExamenesDashboardAdminDetailviewComponent {
   preguntasNormales = computed(() => {
     if (!this.lastLoadedTestPreguntas()) return [];
     return this.lastLoadedTestPreguntas()
-      .filter(tp => !tp.deReserva)
-      .filter(tp =>
-        !this.filtroIdentificador() ||
-        tp.pregunta.identificador.toLowerCase().includes(this.filtroIdentificador().toLowerCase())
+      .filter((tp) => !tp.deReserva)
+      .filter(
+        (tp) =>
+          !this.filtroIdentificador() ||
+          tp.pregunta.identificador
+            .toLowerCase()
+            .includes(this.filtroIdentificador().toLowerCase())
       );
   });
 
   preguntasReserva = computed(() => {
     if (!this.lastLoadedTestPreguntas()) return [];
     return this.lastLoadedTestPreguntas()
-      .filter(tp => tp.deReserva)
-      .filter(tp =>
-        !this.filtroIdentificador() ||
-        tp.pregunta.identificador.toLowerCase().includes(this.filtroIdentificador().toLowerCase())
+      .filter((tp) => tp.deReserva)
+      .filter(
+        (tp) =>
+          !this.filtroIdentificador() ||
+          tp.pregunta.identificador
+            .toLowerCase()
+            .includes(this.filtroIdentificador().toLowerCase())
       );
   });
 
@@ -156,18 +180,23 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public anyadirPreguntasAcademia() {
     this.confirmationService.confirm({
       header: 'Añadir preguntas a la academia',
-      message: 'Todas las preguntas añadidas manualmente con la letra "E" en el identificador serán añadidas a la academia si no existen ya. ¿Estás seguro de querer continuar?',
+      message:
+        'Todas las preguntas añadidas manualmente con la letra "E" en el identificador serán añadidas a la academia si no existen ya. ¿Estás seguro de querer continuar?',
       acceptLabel: 'Sí, añadir',
       rejectLabel: 'No, cancelar',
       rejectButtonStyleClass: 'p-button-outlined',
       accept: () => {
-        firstValueFrom(this.examenesService.anyadirPreguntasAcademia$(this.getId() as number).pipe(
-          tap((res) => {
-            this.toast.success(res.message);
-            this.loadExamen();
-          })
-        ));
-      }
+        firstValueFrom(
+          this.examenesService
+            .anyadirPreguntasAcademia$(this.getId() as number)
+            .pipe(
+              tap((res) => {
+                this.toast.success(res.message);
+                this.loadExamen();
+              })
+            )
+        );
+      },
     });
   }
 
@@ -175,12 +204,12 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public selectedPreguntasToAdd: Array<Pregunta> = [];
   public lastLoadedExamen = signal<Examen>(null as any);
 
-  public lastLoadedTestPreguntas = computed(() =>
-    this.lastLoadedExamen()?.test?.testPreguntas ?? []
+  public lastLoadedTestPreguntas = computed(
+    () => this.lastLoadedExamen()?.test?.testPreguntas ?? []
   );
 
-  public lastLoadedPreguntas = computed(() =>
-    this.lastLoadedTestPreguntas().map(tp => tp.pregunta) ?? []
+  public lastLoadedPreguntas = computed(
+    () => this.lastLoadedTestPreguntas().map((tp) => tp.pregunta) ?? []
   );
 
   @ViewChild('realizarTest') realizarTest!: RealizarTestComponent;
@@ -203,8 +232,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
       return this.lastLoadedTestPreguntas();
     }
 
-    return this.lastLoadedTestPreguntas().filter(testPregunta =>
-      testPregunta.pregunta.identificador.toLowerCase().includes(this.filtroIdentificador().toLowerCase())
+    return this.lastLoadedTestPreguntas().filter((testPregunta) =>
+      testPregunta.pregunta.identificador
+        .toLowerCase()
+        .includes(this.filtroIdentificador().toLowerCase())
     );
   });
 
@@ -214,13 +245,13 @@ export class ExamenesDashboardAdminDetailviewComponent {
     {
       label: 'Sin soluciones',
       icon: 'pi pi-file-word',
-      command: () => this.descargarWord(false)
+      command: () => this.descargarWord(false),
     },
     {
       label: 'Con soluciones',
       icon: 'pi pi-check-square',
-      command: () => this.descargarWord(true)
-    }
+      command: () => this.descargarWord(true),
+    },
   ];
 
   public goBack() {
@@ -234,10 +265,14 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
 
     // Mostrar/ocultar campo de código según el tipo de acceso
-    this.formGroup.get('tipoAcceso')?.valueChanges.subscribe(value => {
+    this.formGroup.get('tipoAcceso')?.valueChanges.subscribe((value) => {
       const codigoControl = this.formGroup.get('codigoAcceso');
       if (value === TipoAcceso.SIMULACRO) {
-        codigoControl?.setValidators([Validators.required, Validators.minLength(6), Validators.maxLength(6)]);
+        codigoControl?.setValidators([
+          Validators.required,
+          Validators.minLength(6),
+          Validators.maxLength(6),
+        ]);
         codigoControl?.enable();
       } else {
         codigoControl?.clearValidators();
@@ -249,7 +284,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
     // Si es un simulacro existente, generar el QR
     if (this.getId() !== 'new') {
-      this.formGroup.get('tipoAcceso')?.valueChanges.subscribe(value => {
+      this.formGroup.get('tipoAcceso')?.valueChanges.subscribe((value) => {
         if (value === this.TipoAcceso.SIMULACRO) {
           this.updateSimulacroUrl();
         } else {
@@ -258,7 +293,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
       });
 
       // Generar QR si ya es un simulacro
-      if (this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO) {
+      if (
+        this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO
+      ) {
         this.updateSimulacroUrl();
       }
     }
@@ -291,8 +328,12 @@ export class ExamenesDashboardAdminDetailviewComponent {
       estado: examen.estado,
       tipoAcceso: examen.tipoAcceso,
       codigoAcceso: examen.codigoAcceso || '',
-      fechaActivacion: (examen.fechaActivacion ? new Date(examen.fechaActivacion) : null) as any,
-      fechaSolucion: (examen.fechaSolucion ? new Date(examen.fechaSolucion) : null) as any,
+      fechaActivacion: (examen.fechaActivacion
+        ? new Date(examen.fechaActivacion)
+        : null) as any,
+      fechaSolucion: (examen.fechaSolucion
+        ? new Date(examen.fechaSolucion)
+        : null) as any,
     });
 
     // Cargar relevancia
@@ -304,16 +345,16 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
 
     setTimeout(() => {
-      this.initEditor(
-        examen.descripcion || '',
-      );
+      this.initEditor(examen.descripcion || '');
     }, 0);
 
     this.formGroup.markAsPristine();
   }
 
   public verPregunta(id: number) {
-    this.router.navigate(['/app/test/preguntas/' + id], { queryParams: { examenId: this.getId(), goBack: true } });
+    this.router.navigate(['/app/test/preguntas/' + id], {
+      queryParams: { examenId: this.getId(), goBack: true },
+    });
   }
 
   private async loadExamen() {
@@ -322,7 +363,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.formGroup.reset({
         estado: EstadoExamen.BORRADOR,
         tipoAcceso: TipoAcceso.PUBLICO,
-        duracion: 60
+        duracion: 60,
       });
       this.initEditor('');
     } else {
@@ -336,7 +377,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
         );
 
         // Actualizar la URL del simulacro si es necesario
-        if (this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO) {
+        if (
+          this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO
+        ) {
           this.updateSimulacroUrl();
         }
       } catch (error) {
@@ -357,15 +400,19 @@ export class ExamenesDashboardAdminDetailviewComponent {
       await firstValueFrom(
         this.examenesService.updatePreguntasOrder$(
           this.getId() as number,
-          this.preguntasNormales().map(p => p.pregunta.id)
+          this.preguntasNormales().map((p) => p.pregunta.id)
         )
       );
     }
 
     const examenData = {
       ...formValues,
-      fechaActivacion: formValues.fechaActivacion ? new Date(formValues.fechaActivacion).toISOString() : null,
-      fechaSolucion: formValues.fechaSolucion ? new Date(formValues.fechaSolucion).toISOString() : null,
+      fechaActivacion: formValues.fechaActivacion
+        ? new Date(formValues.fechaActivacion).toISOString()
+        : null,
+      fechaSolucion: formValues.fechaSolucion
+        ? new Date(formValues.fechaSolucion).toISOString()
+        : null,
     };
 
     if (this.getId() === 'new') {
@@ -394,24 +441,26 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
   }
 
-  private initEditor(initialDescripcion: string,) {
-    if (this.editorDescripcion) {
-      this.editorDescripcion.destroy();
-      this.editorDescripcion = null;
-    }
-
-    this.editorDescripcion = new Editor({
-      el: document.querySelector('#editor-descripcion')!,
-      ...universalEditorConfig,
-      initialValue: initialDescripcion || '',
-      events: {
-        change: () => {
-          this.formGroup
-            .get('descripcion')
-            ?.patchValue(this.editorDescripcion.getMarkdown());
+  private initEditor(initialDescripcion: string) {
+    setTimeout(() => {
+      if (this.editorDescripcion) {
+        this.editorDescripcion.destroy();
+        this.editorDescripcion = null;
+      }
+      const element = document.querySelector('#editor-descripcion')!;
+      this.editorDescripcion = new Editor({
+        el: element,
+        ...universalEditorConfig,
+        initialValue: initialDescripcion || '',
+        events: {
+          change: () => {
+            this.formGroup
+              .get('descripcion')
+              ?.patchValue(this.editorDescripcion.getMarkdown());
+          },
         },
-      },
-    });
+      });
+    }, 0);
   }
 
   private async navigateToExamen(id: string) {
@@ -453,8 +502,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.router.navigate(['app/test/preguntas/new'], {
       queryParams: {
         examenId: this.getId(),
-        esReserva: this.agregarComoReserva
-      }
+        esReserva: this.agregarComoReserva,
+      },
     });
     this.agregarComoReserva = false;
   }
@@ -462,7 +511,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
   // Stepper
   public stepsModel: MenuItem[] = [
     { label: 'Configurar filtros' },
-    { label: 'Seleccionar preguntas' }
+    { label: 'Seleccionar preguntas' },
   ];
   public activeStepIndex = 0;
 
@@ -470,7 +519,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public filtroConfig = {
     numPreguntas: null,
     dificultad: [],
-    temas: []
+    temas: [],
   };
 
   // Opciones para los filtros
@@ -484,7 +533,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
   ];
 
   public getAllDifficultades = getAllDifficultades(false, true);
-  public automaticPreguntas = [] as Pregunta[]
+  public automaticPreguntas = [] as Pregunta[];
 
   // Métodos para el stepper
   public nextStep() {
@@ -508,23 +557,25 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   // Métodos para filtrar y seleccionar preguntas
   public aplicarFiltros(config: GenerarTestDto) {
-    firstValueFrom(this.preguntasService.getAllPreguntasByFilter$(config)).then(preguntas => {
-      this.automaticPreguntas = preguntas;
-    })
+    firstValueFrom(this.preguntasService.getAllPreguntasByFilter$(config)).then(
+      (preguntas) => {
+        this.automaticPreguntas = preguntas;
+      }
+    );
   }
 
   public seleccionarTodasPreguntas() {
-    this.automaticPreguntas = this.automaticPreguntas.map(pregunta => ({
+    this.automaticPreguntas = this.automaticPreguntas.map((pregunta) => ({
       ...pregunta,
-      selected: true
+      selected: true,
     }));
     this.selectedPreguntasToAdd = this.automaticPreguntas;
   }
 
   public deseleccionarTodasPreguntas() {
-    this.automaticPreguntas = this.automaticPreguntas.map(pregunta => ({
+    this.automaticPreguntas = this.automaticPreguntas.map((pregunta) => ({
       ...pregunta,
-      selected: false
+      selected: false,
     }));
     this.selectedPreguntasToAdd = [];
   }
@@ -534,27 +585,43 @@ export class ExamenesDashboardAdminDetailviewComponent {
   }
 
   public eliminarPregunta(id: number) {
-    firstValueFrom(this.examenesService.removePreguntasFromExamen$(this.getId() as number, [id]).pipe(tap(() => {
-      this.toast.success('Pregunta eliminada del examen', 'Pregunta eliminada');
-      this.loadExamen();
-    })));
+    firstValueFrom(
+      this.examenesService
+        .removePreguntasFromExamen$(this.getId() as number, [id])
+        .pipe(
+          tap(() => {
+            this.toast.success(
+              'Pregunta eliminada del examen',
+              'Pregunta eliminada'
+            );
+            this.loadExamen();
+          })
+        )
+    );
   }
 
   public async addSelectedPreguntas() {
     if (this.selectedPreguntasToAdd && this.selectedPreguntasToAdd.length > 0) {
-      await firstValueFrom(this.examenesService.addPreguntasToExamen$(
-        this.getId() as number, 
-        this.selectedPreguntasToAdd.map(pregunta => pregunta.id),
-        this.agregarComoReserva
-      ));
+      await firstValueFrom(
+        this.examenesService.addPreguntasToExamen$(
+          this.getId() as number,
+          this.selectedPreguntasToAdd.map((pregunta) => pregunta.id),
+          this.agregarComoReserva
+        )
+      );
 
       // Actualizar también los temas si es necesario
       const temasSeleccionados = new Set<number>();
-      this.selectedPreguntasToAdd.forEach(pregunta => {
+      this.selectedPreguntasToAdd.forEach((pregunta) => {
         temasSeleccionados.add(pregunta.temaId);
       });
 
-      this.toast.success(`Se han añadido ${this.selectedPreguntasToAdd.length} preguntas ${this.agregarComoReserva ? 'de reserva' : ''} al examen`, 'Preguntas añadidas');
+      this.toast.success(
+        `Se han añadido ${this.selectedPreguntasToAdd.length} preguntas ${
+          this.agregarComoReserva ? 'de reserva' : ''
+        } al examen`,
+        'Preguntas añadidas'
+      );
       this.loadExamen();
       this.cancelarSeleccionPreguntas();
       this.agregarComoReserva = false;
@@ -573,31 +640,41 @@ export class ExamenesDashboardAdminDetailviewComponent {
       return;
     }
 
-    this.examenesService.downloadExamenWithFilename$(this.getId() as number, this.lastLoadedExamen().titulo, conSoluciones).subscribe({
-      next: ({ blob, filename }) => {
-        // Crear un objeto URL para el blob
-        const url = window.URL.createObjectURL(blob);
+    this.examenesService
+      .downloadExamenWithFilename$(
+        this.getId() as number,
+        this.lastLoadedExamen().titulo,
+        conSoluciones
+      )
+      .subscribe({
+        next: ({ blob, filename }) => {
+          // Crear un objeto URL para el blob
+          const url = window.URL.createObjectURL(blob);
 
-        // Crear un elemento <a> para descargar el archivo
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
+          // Crear un elemento <a> para descargar el archivo
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
 
-        // Simular un clic en el enlace para iniciar la descarga
-        document.body.appendChild(a);
-        a.click();
+          // Simular un clic en el enlace para iniciar la descarga
+          document.body.appendChild(a);
+          a.click();
 
-        // Limpiar
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+          // Limpiar
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
 
-        this.toast.success(`Documento ${conSoluciones ? 'con soluciones' : ''} descargado correctamente`);
-      },
-      error: (error) => {
-        console.error('Error al descargar el examen', error);
-        this.toast.error('Error al descargar el examen');
-      }
-    });
+          this.toast.success(
+            `Documento ${
+              conSoluciones ? 'con soluciones' : ''
+            } descargado correctamente`
+          );
+        },
+        error: (error) => {
+          console.error('Error al descargar el examen', error);
+          this.toast.error('Error al descargar el examen');
+        },
+      });
   }
 
   public async buscarPreguntaPorIdentificador() {
@@ -608,13 +685,17 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
     try {
       const pregunta = await firstValueFrom(
-        this.preguntasService.getPreguntaByIdentificador(this.identificadorBusqueda)
+        this.preguntasService.getPreguntaByIdentificador(
+          this.identificadorBusqueda
+        )
       );
 
       if (pregunta) {
         this.preguntaEncontrada = pregunta;
       } else {
-        this.toast.warning('No se encontró ninguna pregunta con ese identificador');
+        this.toast.warning(
+          'No se encontró ninguna pregunta con ese identificador'
+        );
         this.preguntaEncontrada = null;
       }
     } catch (error) {
@@ -635,7 +716,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
         )
       );
 
-      this.toast.success(`Pregunta ${this.agregarComoReserva ? 'de reserva' : ''} añadida correctamente`);
+      this.toast.success(
+        `Pregunta ${
+          this.agregarComoReserva ? 'de reserva' : ''
+        } añadida correctamente`
+      );
       this.semiAutomaticDialogVisible = false;
       this.loadExamen();
       this.agregarComoReserva = false;
@@ -662,7 +747,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
       this.loadExamen();
 
-      this.toast.success(`Pregunta ${esReserva ? 'marcada' : 'desmarcada'} como de reserva`);
+      this.toast.success(
+        `Pregunta ${esReserva ? 'marcada' : 'desmarcada'} como de reserva`
+      );
     } catch (error) {
       this.toast.error('Error al actualizar el estado de la pregunta');
       console.error('Error al actualizar estado de reserva:', error);
@@ -720,7 +807,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
   // Results and analytics methods
   public async loadExamenResults() {
     if (this.getId() === 'new') return;
-    
+
     this.loadingResults.set(true);
     try {
       const response = await firstValueFrom(
@@ -737,7 +824,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   public onTabChange(event: any) {
     this.activeTabIndex = event.index;
-    
+
     // Load results when switching to results tab
     if (event.index === 1 && !this.examenResultados()) {
       this.loadExamenResults();
@@ -750,12 +837,16 @@ export class ExamenesDashboardAdminDetailviewComponent {
   }
 
   public reiniciarIntento(userId: number) {
-    // Placeholder for future functionality  
-    this.toast.info('Funcionalidad de reinicio de intentos próximamente disponible');
+    // Placeholder for future functionality
+    this.toast.info(
+      'Funcionalidad de reinicio de intentos próximamente disponible'
+    );
   }
 
   public darAcceso(userId: number) {
     // Placeholder for future functionality
-    this.toast.info('Funcionalidad de gestión de accesos próximamente disponible');
+    this.toast.info(
+      'Funcionalidad de gestión de accesos próximamente disponible'
+    );
   }
 }

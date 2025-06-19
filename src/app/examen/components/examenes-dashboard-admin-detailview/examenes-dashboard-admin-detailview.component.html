@@ -24,7 +24,7 @@
                 *ngIf="getId() !== 'new' && !!lastLoadedExamen()"
                 icon="pi pi-eye"
                 label="Vista previa"
-                [disabled]="(lastLoadedExamen().test?.testPreguntas ?? []).length === 0"
+                [disabled]="(lastLoadedExamen()?.test?.testPreguntas ?? []).length === 0"
                 styleClass="p-button-outlined"
                 [routerLink]="['/app/test/realizar-test/vista-previa', lastLoadedExamen().testId]"
                 data-testid="vista-previa-btn"
@@ -33,7 +33,7 @@
                 *ngIf="getId() !== 'new'"
                 icon="pi pi-file-word"
                 label="Descargar"
-                [disabled]="(lastLoadedExamen().test?.testPreguntas ?? []).length === 0"
+                [disabled]="(lastLoadedExamen()?.test?.testPreguntas ?? []).length === 0"
                 (click)="mostrarOpcionesDescarga($event)"
                 data-testid="descargar-word-btn"
               />
