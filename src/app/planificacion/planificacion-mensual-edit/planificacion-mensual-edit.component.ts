@@ -148,7 +148,7 @@ export class PlanificacionMensualEditComponent {
     const lines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//AcademiaFireMD//Calendar Export//EN',
+      'PRODID:-//Tecnika Fire//Calendar Export//EN',
     ];
     this.events.forEach((event, index) => {
       const start = new Date(event.start)
@@ -170,7 +170,7 @@ export class PlanificacionMensualEditComponent {
         `DTEND:${end}`,
         `SUMMARY:${event.title}`,
         `DESCRIPTION:${event.meta?.subBloque?.comentarios ||
-        'Evento exportado desde Academia FireMD'
+        'Evento exportado desde Tecnika Fire'
         }`,
         `LOCATION:${event.meta?.location || ''}`,
         'END:VEVENT'

@@ -368,7 +368,7 @@ export const getAllDifficultades = (
   if (!isFlashcards) {
     if (!!isCreatingTest)
       alumnoOnly.push({
-        label: 'Academia FireMD',
+        label: 'Tecnika Fire',
         icon: 'pi-check-square',
         value: Dificultad.INTERMEDIO,
       });
