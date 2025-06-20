@@ -76,7 +76,23 @@ export class VistaSemanalComponent {
   private _events: CalendarEvent[] = [];
   @Output() eventsChange = new EventEmitter<CalendarEvent[]>();
   @Output() saveChanges = new EventEmitter<void>();
-  @Input() viewDate = new Date();
+  
+  private _viewDate = new Date();
+  @Input() 
+  set viewDate(value: Date) {
+    // Validar que la fecha sea válida
+    if (value && value instanceof Date && !isNaN(value.getTime())) {
+      this._viewDate = value;
+    } else {
+      console.warn('Invalid viewDate provided, using current date');
+      this._viewDate = new Date();
+    }
+  }
+  
+  get viewDate(): Date {
+    return this._viewDate;
+  }
+  
   @Input() mode: 'picker' | 'edit' = 'edit';
   private onTimeClickedDate!: Date;
   public triggerSaveUpdateProgress = new Subject();

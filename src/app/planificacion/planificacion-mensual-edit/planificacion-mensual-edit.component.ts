@@ -49,7 +49,9 @@ export class PlanificacionMensualEditComponent {
     ano: [0, Validators.required],
     relevancia: this.fb.array([] as Array<Comunidad>),
     esPorDefecto: [false],
-    tipoDePlanificacion: [TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS],
+    tipoDePlanificacion: [
+      TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+    ],
   });
   public get relevancia(): FormArray {
     return this.formGroup.get('relevancia') as FormArray;
@@ -87,7 +89,7 @@ export class PlanificacionMensualEditComponent {
   public isDialogVisible = false;
   public isDialogAsignacionUsuarioVisible = false;
   public pickedEvents: CalendarEvent[] = [];
-  public pickedEventsViewDate!: Date;
+  public pickedEventsViewDate: Date = new Date();
   private calculatedInitialDate = false;
   public activeStepSeleccionPlantilla = 0;
   public usuariosSeleccionadosId = [] as Array<number>;
@@ -161,16 +163,19 @@ export class PlanificacionMensualEditComponent {
 
       lines.push(
         'BEGIN:VEVENT',
-        `UID:${event.id ||
-        `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
+        `UID:${
+          event.id ||
+          `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
         }`,
-        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
+        `DTSTAMP:${
+          new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
         }`,
         `DTSTART:${start}`,
         `DTEND:${end}`,
         `SUMMARY:${event.title}`,
-        `DESCRIPTION:${event.meta?.subBloque?.comentarios ||
-        'Evento exportado desde Tecnika Fire'
+        `DESCRIPTION:${
+          event.meta?.subBloque?.comentarios ||
+          'Evento exportado desde Tecnika Fire'
         }`,
         `LOCATION:${event.meta?.location || ''}`,
         'END:VEVENT'
@@ -186,6 +191,7 @@ export class PlanificacionMensualEditComponent {
         icon: 'fa-solid fa-user-pen',
         tooltipOptions: {
           tooltipLabel: 'Asignar a usuarios',
+          position: 'right',
         },
         command: () => {
           this.isDialogAsignacionUsuarioVisible = true;
@@ -195,6 +201,7 @@ export class PlanificacionMensualEditComponent {
         disabled: this.view != CalendarView.Week,
         icon: 'fa-regular fa-hand-pointer',
         tooltipOptions: {
+          position: 'right',
           tooltipLabel: 'Seleccionar una plantilla semanal',
         },
         command: () => {
@@ -230,7 +237,8 @@ export class PlanificacionMensualEditComponent {
         )
       );
       this.toast.success(
-        `Planificación asignada exitosamente a ${this.usuariosSeleccionadosId.length ?? 0
+        `Planificación asignada exitosamente a ${
+          this.usuariosSeleccionadosId.length ?? 0
         } usuarios!`
       );
       this.load();
@@ -241,24 +249,42 @@ export class PlanificacionMensualEditComponent {
   }
 
   public async pickedPlantilla(plantillaOverview: Partial<PlantillaSemanal>) {
-    const fullPlantilla = await firstValueFrom(
-      this.planificacionesService.getPlantillaSemanalById(
-        plantillaOverview.id ?? 0
-      )
-    );
-    this.pickedEvents = this.eventsService
-      .fromSubbloquesToEvents(fullPlantilla.subBloques)
-      .map((e) => {
-        e.draggable = false;
-        e.resizable = {
-          beforeStart: false,
-          afterEnd: false,
-        };
-        return e;
-      });
-    this.pickedEventsViewDate = this.eventsService.calculateMinDate(
-      this.pickedEvents
-    );
+    try {
+      // Limpiar datos anteriores
+      this.pickedEvents = [];
+      this.pickedEventsViewDate = new Date();
+
+      const fullPlantilla = await firstValueFrom(
+        this.planificacionesService.getPlantillaSemanalById(
+          plantillaOverview.id ?? 0
+        )
+      );
+
+      if (fullPlantilla && fullPlantilla.subBloques) {
+        this.pickedEvents = this.eventsService
+          .fromSubbloquesToEvents(fullPlantilla.subBloques)
+          .map((e) => {
+            e.draggable = false;
+            e.resizable = {
+              beforeStart: false,
+              afterEnd: false,
+            };
+            return e;
+          });
+
+        // Solo calcular la fecha mínima si hay eventos
+        if (this.pickedEvents.length > 0) {
+          this.pickedEventsViewDate = this.eventsService.calculateMinDate(
+            this.pickedEvents
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar la plantilla:', error);
+      this.toast.error('Error al cargar la plantilla seleccionada');
+      this.pickedEvents = [];
+      this.pickedEventsViewDate = new Date();
+    }
   }
 
   onDayClicked(data: any): void {
@@ -295,9 +321,9 @@ export class PlanificacionMensualEditComponent {
 
       const adjustedEnd = event.end
         ? new Date(
-          adjustedStart.getTime() +
-          (event.end.getTime() - event.start.getTime())
-        ) // Mantener duración
+            adjustedStart.getTime() +
+              (event.end.getTime() - event.start.getTime())
+          ) // Mantener duración
         : undefined;
 
       return {
@@ -406,20 +432,24 @@ export class PlanificacionMensualEditComponent {
 
             // Configurar eventos para alumnos
             if (this.expectedRole === 'ALUMNO') {
-              this.events.forEach(event => {
+              this.events.forEach((event) => {
                 // Permitir arrastre para alumnos
                 event.draggable = true;
                 // Pero no permitir redimensionar
                 event.resizable = {
                   beforeStart: false,
-                  afterEnd: false
+                  afterEnd: false,
                 };
 
                 // Aplicar posiciones personalizadas si existen
                 if (event.meta?.subBloque?.posicionPersonalizada) {
-                  const posicion = new Date(event.meta.subBloque.posicionPersonalizada);
+                  const posicion = new Date(
+                    event.meta.subBloque.posicionPersonalizada
+                  );
                   // Mantener la duración original
-                  const duracion = event.end ? event.end.getTime() - event.start.getTime() : 0;
+                  const duracion = event.end
+                    ? event.end.getTime() - event.start.getTime()
+                    : 0;
                   // Establecer la nueva posición
                   event.start = posicion;
                   event.end = new Date(posicion.getTime() + duracion);
@@ -427,7 +457,9 @@ export class PlanificacionMensualEditComponent {
               });
 
               this.userService.getCurrentUser$().subscribe((user: any) => {
-                this.startDate = user.validatedAt ? new Date(user.validatedAt) : new Date(user.createdAt);
+                this.startDate = user.validatedAt
+                  ? new Date(user.validatedAt)
+                  : new Date(user.createdAt);
                 this.endDate = getNextWeekIfFriday(new Date());
               });
             }
@@ -448,16 +480,20 @@ export class PlanificacionMensualEditComponent {
 
   // Método para cargar los eventos personalizados - refactorizado
   private loadEventosPersonalizados(planificacionId: number) {
-    this.planificacionesService.getEventosPersonalizados$(planificacionId)
+    this.planificacionesService
+      .getEventosPersonalizados$(planificacionId)
       .subscribe({
         next: (eventosPersonalizados) => {
           // Agregar los eventos personalizados a la lista de eventos utilizando el servicio
-          const nuevosEventos = this.eventsService.fromSubbloquesToEvents([], eventosPersonalizados);
+          const nuevosEventos = this.eventsService.fromSubbloquesToEvents(
+            [],
+            eventosPersonalizados
+          );
           this.events = [...this.events, ...nuevosEventos];
         },
         error: (err) => {
           console.error('Error al cargar eventos personalizados:', err);
-        }
+        },
       });
   }
 

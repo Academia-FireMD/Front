@@ -88,12 +88,22 @@
         let-index="index"
       >
         <app-vista-semanal
+          *ngIf="
+            pickedEvents && pickedEvents.length > 0 && pickedEventsViewDate
+          "
           [ngStyle]="{ height: '56vh', display: 'block', overflow: 'auto' }"
           [events]="pickedEvents"
           [viewDate]="pickedEventsViewDate"
           [role]="'ADMIN'"
           [mode]="'picker'"
         ></app-vista-semanal>
+        <div
+          *ngIf="!pickedEvents || pickedEvents.length === 0"
+          class="p-4 text-center"
+        >
+          <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+          <p>Cargando plantilla seleccionada...</p>
+        </div>
         <div class="flex pt-4 justify-content-between">
           <p-button
             label="Volver atrás"
@@ -104,6 +114,7 @@
             label="Utilizar esta plantilla semanal"
             icon="pi pi-check"
             (click)="applyEventsToCurrentWeek(pickedEvents)"
+            [disabled]="!pickedEvents || pickedEvents.length === 0"
           />
         </div>
       </ng-template>
@@ -203,7 +214,8 @@
         [(viewDate)]="viewDate"
         [role]="expectedRole"
         [startDate]="startDate"
-        [endDate]="endDate">
+        [endDate]="endDate"
+      >
       </app-calendar-header>
     </div>
     <div class="row relative weekly-calendar">

@@ -33,12 +33,13 @@
               <div class="flex flex-column py-2 col-9 left-side">
                 <div class="font-medium text-secondary text-sm flex gap-2">
                   <strong>{{
-                    item.planificacion.asignacion.alumno.nombre ||
-                      item.planificacion.asignacion.alumno.email
+                    (item.planificacion.asignaciones && item.planificacion.asignaciones.length > 0)
+                      ? (item.planificacion.asignaciones[0].alumno.nombre || item.planificacion.asignaciones[0].alumno.email)
+                      : 'Usuario no disponible'
                   }}</strong>
                 </div>
                 <div class="font-small text-secondary text-sm comentario">
-                  <span>{{ item.comentariosAlumno }}</span>
+                  <span>{{ item.comentariosAlumno || 'Sin comentarios' }}</span>
                 </div>
               </div>
               <!-- Derecha: Fecha y Botón -->

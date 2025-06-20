@@ -73,7 +73,7 @@
           <div class="markdown-container">
             <div class="editor">
               <h3>Comentarios:</h3>
-              <div id="editor-comentarios"></div>
+              <div [id]="'editor-comentarios-' + formGroup.get('controlId')?.value"></div>
             </div>
           </div>
         </div>
