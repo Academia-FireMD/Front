@@ -20,12 +20,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   userService = inject(UserService);
   confirmationService = inject(ConfirmationService);
   authService = inject(AuthService);
-  
-  filterOptions = [
-    { label: 'Sin suscripción', value: 'pendientes' },
-    { label: 'Activos', value: 'activos' },
-    { label: 'Todos', value: 'todos' },
-  ];
 
   subscriptionFilterOptions = [
     { label: 'Todas las suscripciones', value: 'todas' },
@@ -37,10 +31,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   availableSubscriptions: any[] = [];
   selectedSubscriptionFilter = new FormControl('todas');
-  formControlFilterOptions = new FormControl(this.filterOptions[0].value);
-  public filterType = signal<'pendientes' | 'activos' | 'todos'>('pendientes');
   public subscriptionFilter = signal<string>('todas');
-  
+
   editDialogVisible = false;
   subscriptionDialogVisible = false;
   selectedUser!: Usuario;
@@ -50,33 +42,37 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   constructor() {
     super();
     this.loadAvailableSubscriptions();
-    
+
     this.fetchItems$ = computed(() => {
-      const map = {
-        pendientes: this.userService.getNonVerifiedUsers$(this.pagination()),
-        activos: this.userService.getVerifiedUsers$(this.pagination()),
-        todos: this.userService.getAllUsers$(this.pagination()),
+      const whereFilter = {
+        ...this.pagination(),
+        where: {
+          ...this.pagination().where,
+        },
       };
-      return map[this.filterType()].pipe(
+
+      // Aplicar filtro de suscripción
+      if (this.subscriptionFilter() !== 'todas') {
+        if (this.subscriptionFilter() === 'sin_suscripcion') {
+          whereFilter.where.suscripcion = {
+            is: null,
+          };
+        } else {
+          whereFilter.where.suscripcion = {
+            tipo: {
+              equals: this.subscriptionFilter(),
+            },
+          };
+        }
+      }
+
+      return this.userService.getAllUsers$(whereFilter).pipe(
         tap((entry) => {
           this.lastLoadedPagination = entry;
-          // Aplicar filtro de suscripción
-          if (this.subscriptionFilter() !== 'todas') {
-            entry.data = entry.data.filter(user => {
-              if (this.subscriptionFilter() === 'sin_suscripcion') {
-                return !user.suscripcion;
-              }
-              return user.suscripcion?.tipo === this.subscriptionFilter();
-            });
-          }
         })
       );
     });
-    
-    this.formControlFilterOptions.valueChanges
-      .pipe(takeUntilDestroyed())
-      .subscribe((data) => this.filterType.set((data || 'pendientes') as 'pendientes' | 'activos' | 'todos'));
-      
+
     this.selectedSubscriptionFilter.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((data) => {
@@ -87,7 +83,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   async loadAvailableSubscriptions() {
     try {
-      this.availableSubscriptions = await firstValueFrom(this.userService.getAvailableSubscriptions());
+      this.availableSubscriptions = await firstValueFrom(
+        this.userService.getAvailableSubscriptions()
+      );
     } catch (error) {
       console.error('Error loading subscriptions:', error);
     }
@@ -95,13 +93,13 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   getSubscriptionBadgeClass(suscripcion: any): string {
     if (!suscripcion) return 'no-subscription';
-    
+
     return `plan-type-${suscripcion.tipo.toLowerCase()}`;
   }
 
   getSubscriptionLabel(suscripcion: any): string {
     if (!suscripcion) return 'Sin suscripción';
-    
+
     switch (suscripcion.tipo) {
       case SuscripcionTipo.BASIC:
         return 'Básica';
@@ -116,13 +114,17 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   openSubscriptionDialog(user: Usuario) {
     this.selectedUser = { ...user };
-    this.selectedSubscriptionType = user.suscripcion?.tipo || SuscripcionTipo.BASIC;
+    this.selectedSubscriptionType =
+      user.suscripcion?.tipo || SuscripcionTipo.BASIC;
     this.subscriptionDialogVisible = true;
   }
 
   updateUserSubscription() {
     this.userService
-      .updateUserSubscription(this.selectedUser.id, this.selectedSubscriptionType)
+      .updateUserSubscription(
+        this.selectedUser.id,
+        this.selectedSubscriptionType
+      )
       .subscribe({
         next: () => {
           this.toast.success('Suscripción actualizada correctamente');
@@ -216,7 +218,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       {
         label: 'Suscripción',
         icon: 'pi pi-credit-card',
-        command: () => this.openSubscriptionDialog(user)
+        command: () => this.openSubscriptionDialog(user),
       },
       {
         label: 'Denegar',
@@ -224,7 +226,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         command: () => {
           const event = new MouseEvent('click');
           this.denegar(user.id, event);
-        }
+        },
       },
       {
         label: 'Eliminar',
@@ -232,8 +234,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         command: () => {
           const event = new MouseEvent('click');
           this.deleteUser(user.id, event);
-        }
-      }
+        },
+      },
     ];
   }
 }

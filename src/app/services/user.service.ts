@@ -36,12 +36,6 @@ export class UserService extends ApiBaseService {
     return this.post('/get-by-email', { email }) as Observable<Usuario>;
   }
 
-  public getNonVerifiedUsers$(filter: PaginationFilter) {
-    return this.post('/pending', filter) as Observable<
-      PaginatedResult<Usuario>
-    >;
-  }
-
   public getVerifiedUsers$(filter: PaginationFilter) {
     return this.post('/validated', filter) as Observable<
       PaginatedResult<Usuario>
