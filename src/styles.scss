@@ -232,8 +232,7 @@ app-profile,
 app-resultado-simulacro,
 app-full-stats,
 app-realizar-simulacro,
-app-completar-test-simulacro
-{
+app-completar-test-simulacro {
   overflow-y: auto;
   overflow-x: hidden;
   height: 100%;
@@ -383,3 +382,54 @@ p-chip {
     }
   }
 }
+
+.plan-type-basic {
+  > div {
+    background-color: var(--blue-100);
+    color: var(--blue-700);
+  }
+}
+
+.plan-type-advanced {
+  > div {
+    background-color: var(--green-100);
+    color: var(--green-700);
+  }
+}
+
+.plan-type-premium {
+  > div {
+    background-color: var(--purple-100);
+    color: var(--purple-700);
+  }
+}
+
+.plan-type-pro {
+  > div {
+    background-color: var(--purple-100);
+    color: var(--purple-700);
+  }
+}
+
+.no-subscription {
+  > div {
+    background-color: var(--surface-hover);
+    color: var(--text-color-secondary);
+  }
+}
+
+.action-split-button {
+  .p-splitbutton-defaultbutton {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .p-splitbutton-menubutton {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 1px solid var(--primary-600);
+  }
+
+ 
+}
+

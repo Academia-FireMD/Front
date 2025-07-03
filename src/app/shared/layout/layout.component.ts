@@ -22,9 +22,40 @@ export class LayoutComponent {
   toast = inject(ToastrService);
   items = [] as Array<any>;
   isMenuVisible: boolean = false;
+  isMenuExpanded: boolean = false;
 
   public selectedUser!: Usuario;
   public editDialogVisible = false;
+
+  onMenuHover(expanded: boolean): void {
+    if (this.viewportService.screenWidth !== 'xs') {
+      this.isMenuExpanded = expanded;
+    }
+  }
+
+  handleMenuItemClick(event: Event, item: MenuItem): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Si estamos en mobile, cerrar el menú
+    if (this.viewportService.screenWidth === 'xs') {
+      this.isMenuVisible = false;
+    }
+
+    // Ejecutar el comando si existe
+    if (item.command) {
+      item.command({
+        originalEvent: event,
+        item: item
+      });
+    }
+    // Si hay routerLink, navegar
+    else if (item.routerLink) {
+      this.router.navigate([item.routerLink], {
+        queryParams: item.queryParams
+      });
+    }
+  }
 
   public editProfile() {
     // Redirigir a la nueva página de perfil

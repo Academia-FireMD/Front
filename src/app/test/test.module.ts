@@ -14,11 +14,13 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { MessagesModule } from 'primeng/messages';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToolbarModule } from 'primeng/toolbar';
@@ -94,6 +96,7 @@ import { ResultadoSimulacroComponent } from '../simulacros/standalone/resultado-
     CardModule,
     CheckboxModule,
     ConfirmDialogModule,
+    DialogModule,
     DropdownModule,
     InputSwitchModule,
     InputTextModule,
@@ -101,7 +104,8 @@ import { ResultadoSimulacroComponent } from '../simulacros/standalone/resultado-
     TableModule,
     TagModule,
     TooltipModule,
-    ToolbarModule
+    ToolbarModule,
+    SplitButtonModule
   ],
   providers: [ConfirmationService],
   exports: [

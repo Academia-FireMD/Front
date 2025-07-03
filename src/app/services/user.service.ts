@@ -71,4 +71,12 @@ export class UserService extends ApiBaseService {
   public updateUser(userId: number, userToUpdate: Partial<Usuario>) {
     return this.post('/update/' + userId, userToUpdate);
   }
+
+  public updateUserSubscription(userId: number, subscriptionType: string) {
+    return this.post('/update-subscription/' + userId, { subscriptionType });
+  }
+
+  public getAvailableSubscriptions() {
+    return this.get('/obtain-avaliable-subscriptions');
+  }
 }

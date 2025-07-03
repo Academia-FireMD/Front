@@ -4,6 +4,15 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  
+  img {
+    max-width: 160px;
+    transition: all 0.3s ease;
+    
+    &.small-logo {
+      max-width: 40px;
+    }
+  }
 }
 
 .bar {
@@ -16,20 +25,89 @@
 .lateral-bar {
   height: 100%;
   overflow: auto;
+  transition: all 0.3s ease;
+  
+  &.menu-collapsed {
+    width: 70px !important;
+    min-width: 70px;
+    
+    ::ng-deep {
+      .p-menu {
+        .p-menuitem-text {
+          display: none;
+        }
+        
+        .menu-collapsed-text {
+          display: block;
+          text-transform: uppercase;
+          font-weight: bold;
+        }
+
+        .p-menuitem-icon {
+          margin-right: 0;
+          font-size: 1.2rem;
+        }
+
+        .p-menuitem-link {
+          justify-content: center;
+          padding: 0.75rem;
+        }
+
+        .menu-header, .p-menuitem-link {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+
+          [class^="pi-"] {
+            width: 1.5rem;
+            text-align: center;
+            margin: 0;
+          }
+
+          .menu-collapsed-text {
+            width: 1.5rem;
+            text-align: center;
+          }
+        }
+      }
+    }
+  }
+  
+  &.menu-expanded {
+    width: 250px !important;
+    min-width: 250px;
+    
+    ::ng-deep {
+      .menu-collapsed-text {
+        display: none;
+      }
+
+      .menu-header, .p-menuitem-link {
+        [class^="pi-"] {
+          width: 1.5rem;
+          text-align: center;
+          margin-right: 0.5rem;
+        }
+      }
+    }
+  }
 }
 
 .layout-content {
   height: 100%;
+  transition: all 0.3s ease;
+  
   @media (max-width: 575.98px) {
     height: calc(100% - 40px);
     align-self: flex-end;
   }
 }
+
 .p-button-icon-only {
   background-color: transparent;
   border: none;
   outline: none;
-  color: white; // O el color que prefieras para el ícono
+  color: white;
   font-size: 1.5rem;
   cursor: pointer;
 }
@@ -42,7 +120,13 @@
 
 .p-menuitem-link {
   color: #fff;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 }
+
 .mobile-expanded {
   width: 102%;
   padding: 0px;
@@ -53,7 +137,6 @@
 }
 
 @media (max-width: 575.98px) {
-  // En PrimeNG, "xs" es para pantallas menores de 576px
   .p-menu {
     position: absolute;
     top: 0;

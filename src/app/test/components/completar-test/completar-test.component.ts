@@ -204,9 +204,13 @@ export class CompletarTestComponent {
   }
 
   public clickedPreguntaFromNavegador(indicePregunta: number) {
-    if (this.answeredCurrentQuestion() && this.isModoExamen()) {
-      return;
-    }
+    this.seguroDeLaPregunta.reset(SeguridadAlResponder.CIEN_POR_CIENTO);
+    this.indiceSeleccionado.next(-1);
+    this.answeredQuestion = -1; // Corrección en la asignación
+    this.indicePreguntaCorrecta = -1;
+    // if (this.answeredCurrentQuestion() && this.isModoExamen()) {
+    // return;
+    //}
     this.indicePregunta.set(indicePregunta);
     this.displayNavegador = false;
   }
@@ -388,6 +392,7 @@ export class CompletarTestComponent {
           'Todavia no has terminado el test, te faltan preguntas por responder!'
         );
       } else {
+        // if(this.modoSimulacro && this.idExamenSimulacro) {}
         this.navegarAResultados();
       }
     } else {

@@ -16,7 +16,6 @@
           preguntaRespondida(i)?.estado == 'RESPONDIDA',
         omitida:
           !!preguntaRespondida(i) && preguntaRespondida(i)?.estado == 'OMITIDA',
-        disabled: answeredCurrentQuestion()
       }"
       class="pointer p-3"
       *ngFor="let pregunta of lastLoadedTest?.preguntas ?? []; let i = index"
@@ -385,16 +384,18 @@
             <div
               class="grid w-full footer flex justify-content-between align-items-center mt-2"
               *ngIf="
-                (answeredCurrentQuestion() && !modoVerRespuestas) || vistaPrevia
+                (answeredCurrentQuestion() && !modoVerRespuestas) ||
+                vistaPrevia ||
+                modoVerRespuestas
               "
               data-testid="footer-respuesta"
             >
               <div
                 class="solution col-12 align-items-center flex flex-column"
-                *ngIf="!isModoExamen()"
+                *ngIf="!isModoExamen() || modoVerRespuestas"
                 data-testid="solucion-container"
               >
-                @if (showSolution() || vistaPrevia) {
+                @if (showSolution() || vistaPrevia || modoVerRespuestas) {
                 <strong>Solución:</strong>
                 <p class="m-0" data-testid="solucion-texto">
                   <markdown
@@ -414,7 +415,10 @@
                 }
               </div>
 
-              <div class="next-button col-12 w-full" *ngIf="!vistaPrevia">
+              <div
+                class="next-button col-12 w-full"
+                *ngIf="!vistaPrevia && !modoVerRespuestas"
+              >
                 <button
                   pButton
                   class="p-button p-button-raised w-full"

@@ -9,11 +9,15 @@
   </div>
 
   <div
-    class="col-2 py-0 pl-0 lateral-bar"
+    class="col-auto py-0 pl-0 lateral-bar"
     [ngClass]="{
-      'mobile-expanded': viewportService.screenWidth == 'xs' && isMenuVisible
+      'mobile-expanded': viewportService.screenWidth == 'xs' && isMenuVisible,
+      'menu-collapsed': !isMenuExpanded && viewportService.screenWidth !== 'xs',
+      'menu-expanded': isMenuExpanded && viewportService.screenWidth !== 'xs'
     }"
     *ngIf="viewportService.screenWidth !== 'xs' || isMenuVisible"
+    (mouseenter)="onMenuHover(true)"
+    (mouseleave)="onMenuHover(false)"
   >
     <p-menu
       [model]="items"
@@ -22,11 +26,17 @@
     >
       <ng-template pTemplate="start">
         <div class="image-container py-3">
-          <img src="white_logo.png" alt="Logo" style="max-width: 160px" />
+          <img
+            src="white_logo.png"
+            alt="Logo"
+            [class.small-logo]="
+              !isMenuExpanded && viewportService.screenWidth !== 'xs'
+            "
+          />
         </div>
         <div
           (click)="editProfile()"
-          class="perfil p-2 flex align-items-center justify-content-start w-full gap-2 pointer"
+          class="perfil p-2 flex align-items-center justify-content-center w-full gap-2 pointer"
         >
           <div class="avatar-container mt-0">
             @if (!user.avatarUrl) {
@@ -41,7 +51,10 @@
             }
           </div>
 
-          <span class="descripcion">
+          <span
+            class="descripcion"
+            *ngIf="isMenuExpanded || viewportService.screenWidth === 'xs'"
+          >
             {{ user.nombre + " " + user.apellidos }}
           </span>
         </div>
@@ -55,10 +68,30 @@
               : navigateToPath(item.routerLink)
           "
         >
-          <span *ngIf="item.icon" [class]="item.icon" class="mr-2"></span>
-          <span class="font-bold">{{ item.label }}</span>
+          <span
+            *ngIf="item.icon"
+            class="{{ item.icon + ' ' + (isMenuExpanded ? 'mr-2' : '') }}"
+          ></span>
+          <span
+            class="font-bold"
+            *ngIf="isMenuExpanded || viewportService.screenWidth === 'xs'"
+            >{{ item.label }}</span
+          >
+          <span
+            class="font-bold menu-collapsed-text"
+            *ngIf="
+              !isMenuExpanded &&
+              viewportService.screenWidth !== 'xs' &&
+              !item.icon
+            "
+            >{{ item.label[0] }}</span
+          >
           <i
-            *ngIf="!!item.items && item.items.length > 0"
+            *ngIf="
+              !!item.items &&
+              item.items.length > 0 &&
+              (isMenuExpanded || viewportService.screenWidth === 'xs')
+            "
             class="pi ml-auto"
             [ngClass]="item.collapsed ? 'pi-angle-down' : 'pi-angle-up'"
           ></i>
@@ -66,16 +99,6 @@
       </ng-template>
       <ng-template pTemplate="item" let-item>
         <div *ngIf="!!item && !isParentCollapsed(item)">
-          @if(item.command) {
-          <a
-            pRipple
-            class="flex align-items-center p-menuitem-link"
-            (click)="isMenuVisible = false;item.command?.()"
-          >
-            <span [class]="item.icon"></span>
-            <span class="ml-2">{{ item.label }}</span>
-          </a>
-          } @else {
           <a
             pRipple
             class="flex align-items-center p-menuitem-link"
@@ -83,20 +106,27 @@
             [queryParams]="item.queryParams"
             routerLinkActive="router-link-active"
             [routerLinkActiveOptions]="{ exact: true }"
+            (click)="handleMenuItemClick($event, item)"
           >
             <span [class]="item.icon"></span>
-            <span class="ml-2">{{ item.label }}</span>
+            <span
+              class="ml-2"
+              *ngIf="isMenuExpanded || viewportService.screenWidth === 'xs'"
+              >{{ item.label }}</span
+            >
           </a>
-          }
         </div>
       </ng-template>
     </p-menu>
   </div>
 
   <div
-    class="layout-content col-{{
-      viewportService.screenWidth === 'xs' || isMenuVisible ? 12 : 10
-    }} "
+    class="layout-content"
+    [ngClass]="{
+      'col-12': viewportService.screenWidth === 'xs' || isMenuVisible,
+      'col-11': !isMenuExpanded && viewportService.screenWidth !== 'xs',
+      'col-10': isMenuExpanded && viewportService.screenWidth !== 'xs'
+    }"
   >
     <router-outlet></router-outlet>
   </div>

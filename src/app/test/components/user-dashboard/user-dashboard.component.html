@@ -1,25 +1,37 @@
-
-
 <p-confirmDialog />
 <div class="grid">
   <div class="col-12 flex gap-2 wrapper-top">
-    <p-iconField iconPosition="left">
-      <p-inputIcon styleClass="pi pi-search" />
-      <input
-        type="text"
-        pInputText
-        placeholder="Buscar por email"
-        style="min-width: 30vw"
-        [value]="pagination().searchTerm"
-        (input)="valueChanged($event)"
-      />
-    </p-iconField>
-    <p-selectButton
-      [options]="filterOptions"
-      [formControl]="formControlFilterOptions"
-      optionLabel="label"
-      optionValue="value"
-    />
+    <div class="flex flex-grow-1 gap-2">
+      <p-iconField iconPosition="left" class="flex-grow-1">
+        <p-inputIcon styleClass="pi pi-search" />
+        <input
+          type="text"
+          pInputText
+          placeholder="Buscar por email"
+          [value]="pagination().searchTerm"
+          (input)="valueChanged($event)"
+          class="w-full"
+        />
+      </p-iconField>
+      <p-dropdown
+        [options]="filterOptions"
+        [formControl]="formControlFilterOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Estado"
+        appendTo="body"
+        [style]="{'min-width': '150px'}"
+      ></p-dropdown>
+      <p-dropdown
+        [options]="subscriptionFilterOptions"
+        [formControl]="selectedSubscriptionFilter"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Suscripción"
+        appendTo="body"
+        [style]="{'min-width': '150px'}"
+      ></p-dropdown>
+    </div>
   </div>
   <div class="col-12 list-generic">
     <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
@@ -30,7 +42,7 @@
             *ngFor="let item of products; let first = first"
           >
             <div
-              class="flex flex-row align-items-center grid p-1 px-2 pointer"
+              class="flex flex-row align-items-center grid p-2 pointer"
               (click)="editarUsuario(item)"
             >
               <div class="flex flex-column p-2 col-6">
@@ -64,6 +76,10 @@
                     class="tutor-tag"
                     label="Tutor"
                   />
+                  <p-chip
+                    [ngClass]="getSubscriptionBadgeClass(item.suscripcion)"
+                    [label]="getSubscriptionLabel(item.suscripcion)"
+                  />
                 </span>
                 <div class="text-md font-medium text-900 descripcion">
                   @if (item.nombre && item.apellidos && item.nombre.length>0 &&
@@ -82,51 +98,15 @@
                 <div
                   class="flex flex-row align-items-center justify-content-end gap-2"
                 >
-                  <p-button
-                    [link]="true"
-                    label="{{
-                      viewportService.screenWidth == 'xs'
-                        ? undefined
-                        : 'Denegar'
-                    }}"
-                    icon="pi pi-times"
-                    (click)="
-                      $event.preventDefault();
-                      $event.stopPropagation();
-                      denegar(item.id, $event)
-                    "
-                  />
-                  <p-button
-                    [link]="true"
-                    label="{{
-                      viewportService.screenWidth == 'xs'
-                        ? undefined
-                        : 'Eliminar'
-                    }}"
-                    icon="pi pi-trash"
-                    (click)="
-                      $event.preventDefault();
-                      $event.stopPropagation();
-                      deleteUser(item.id, $event)
-                    "
-                  />
-                  <p-button
+                  <p-splitButton
+                    [label]="viewportService.screenWidth != 'xs' ? 'Permitir' : ''"
                     icon="pi pi-check"
-                    label="{{
-                      viewportService.screenWidth == 'xs'
-                        ? undefined
-                        : 'Permitir'
-                    }}"
-                    [raised]="true"
-                    [disabled]="
-                      !(filterType() == 'pendientes' || !item.validated)
-                    "
-                    (click)="
-                      $event.preventDefault();
-                      $event.stopPropagation();
-                      permitir(item.id)
-                    "
-                  />
+                    [model]="getActionItems(item)"
+                    (onClick)="permitir(item.id)"
+                    styleClass="p-button-raised action-split-button"
+                    appendTo="body"
+                    (click)="$event.stopPropagation()"
+                  ></p-splitButton>
                 </div>
               </div>
             </div>
@@ -147,3 +127,58 @@
     </div>
   </div>
 </div>
+
+<!-- Diálogo para cambiar suscripción -->
+<p-dialog
+  header="Cambiar Suscripción"
+  [(visible)]="subscriptionDialogVisible"
+  [modal]="true"
+  [style]="{ width: '450px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div class="flex flex-column gap-3">
+    <div class="flex flex-column gap-2">
+      <label class="font-medium">Usuario:</label>
+      <span>{{ selectedUser?.nombre }} {{ selectedUser?.apellidos }} ({{ selectedUser?.email }})</span>
+    </div>
+    
+    <div class="flex flex-column gap-2">
+      <label class="font-medium">Suscripción actual:</label>
+      <p-chip
+        [ngClass]="getSubscriptionBadgeClass(selectedUser?.suscripcion)"
+        [label]="getSubscriptionLabel(selectedUser?.suscripcion)"
+      />
+    </div>
+    
+    <div class="flex flex-column gap-2">
+      <label class="font-medium">Nueva suscripción:</label>
+      <p-dropdown
+        [options]="availableSubscriptions"
+        [(ngModel)]="selectedSubscriptionType"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Selecciona una suscripción"
+        [style]="{ width: '100%' }"
+        appendTo="body"
+      />
+    </div>
+  </div>
+  
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        (click)="subscriptionDialogVisible = false"
+        [text]="true"
+      />
+      <p-button
+        label="Actualizar"
+        icon="pi pi-check"
+        (click)="updateUserSubscription()"
+        [loading]="false"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
