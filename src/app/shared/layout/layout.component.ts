@@ -33,6 +33,25 @@ export class LayoutComponent {
     }
   }
 
+  public getResponsiveWidth(expanded: boolean): string {
+    console.log(expanded, this.viewportService.screenWidth);
+
+    switch (this.viewportService.screenWidth) {
+      case 'xs':
+        return '100%';
+      case 'sm':
+        return expanded ? '55%' : '85%';
+      case 'md':
+        return expanded ? '60%' : '90%';
+      case 'lg':
+        return expanded ? '70%' : '90%';
+      case 'xl':
+        return expanded ? '75%' : '90%';
+      default:
+        return expanded ? '80%' : '95%';
+    }
+  }
+
   handleMenuItemClick(event: Event, item: MenuItem): void {
     event.preventDefault();
     event.stopPropagation();

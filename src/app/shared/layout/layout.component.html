@@ -122,11 +122,7 @@
 
   <div
     class="layout-content"
-    [ngClass]="{
-      'col-12': viewportService.screenWidth === 'xs' || isMenuVisible,
-      'col-11': !isMenuExpanded && viewportService.screenWidth !== 'xs',
-      'col-10': isMenuExpanded && viewportService.screenWidth !== 'xs'
-    }"
+    [style.width]="getResponsiveWidth(isMenuExpanded)"
   >
     <router-outlet></router-outlet>
   </div>

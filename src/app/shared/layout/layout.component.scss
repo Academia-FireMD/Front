@@ -96,9 +96,10 @@
 .layout-content {
   height: 100%;
   transition: all 0.3s ease;
+  padding: 0.5rem;
   
   @media (max-width: 575.98px) {
-    height: calc(100% - 40px);
+    height: calc(100% - 45px);
     align-self: flex-end;
   }
 }
