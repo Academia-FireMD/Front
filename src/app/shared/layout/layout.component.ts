@@ -34,7 +34,6 @@ export class LayoutComponent {
   }
 
   public getResponsiveWidth(expanded: boolean): string {
-    console.log(expanded, this.viewportService.screenWidth);
 
     switch (this.viewportService.screenWidth) {
       case 'xs':
