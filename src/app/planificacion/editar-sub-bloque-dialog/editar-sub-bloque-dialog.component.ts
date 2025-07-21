@@ -196,11 +196,12 @@ export class EditarSubBloqueDialogComponent implements OnDestroy, AfterViewInit,
     }
   }
 
-  public guardarEdicion() {
+  public async guardarEdicion() {
     this.isDialogVisible = false;
     this.isDialogVisibleChange.emit(false);
     const value = cloneDeep(this.formGroup.value);
     this.savedSubBloque.emit(value as SubBloque);
+    return Promise.resolve();
   }
 
   ngOnInit(): void {

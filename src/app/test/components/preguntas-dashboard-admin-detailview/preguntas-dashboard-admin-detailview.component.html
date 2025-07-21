@@ -217,12 +217,15 @@
       (click)="handleBackButton()"
     ></p-button>
     @if(getId() == 'new' || mode == 'injected'){
-    <p-button label="Crear pregunta" (click)="crearPregunta()"></p-button>
+    <app-async-button
+      label="Crear pregunta"
+      [action]="crearPregunta.bind(this)"
+    ></app-async-button>
     }@else{
-    <p-button
+    <app-async-button
       label="Actualizar pregunta"
-      (click)="actualizarPregunta()"
-    ></p-button>
+      [action]="actualizarPregunta.bind(this)"
+    ></app-async-button>
     }
   </div>
 </div>

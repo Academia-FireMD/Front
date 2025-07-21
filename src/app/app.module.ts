@@ -32,8 +32,10 @@ import { AppComponent } from './app.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { SpinnerInterceptor } from './services/spinner.interceptor';
+import { ErrorInterceptor } from './shared/interceptors/error.interceptor';
 import { LayoutComponent } from './shared/layout/layout.component';
 import { SharedModule } from './shared/shared.module';
+import { AsyncButtonComponent } from './shared/components/async-button/async-button.component';
 registerLocaleData(localeEs);
 class CustomDateFormatter extends CalendarNativeDateFormatter {
   // Sobrescribe la hora en la vista diaria
@@ -98,6 +100,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
       provide: DateAdapter,
       useFactory: adapterFactory,
     }),
+    AsyncButtonComponent,
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()),
@@ -109,6 +112,11 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
     {
       provide: HTTP_INTERCEPTORS,
       useClass: SpinnerInterceptor,
+      multi: true,
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ErrorInterceptor,
       multi: true,
     },
     { provide: LOCALE_ID, useValue: 'es' },

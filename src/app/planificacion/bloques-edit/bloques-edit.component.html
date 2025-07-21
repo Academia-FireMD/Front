@@ -127,17 +127,17 @@
       (click)="handleBackButton()"
     ></p-button>
     @if(getId() == 'new'){
-    <p-button
+    <app-async-button
       label="Crear bloque"
       [disabled]="formGroup.invalid"
-      (click)="crear()"
-    ></p-button>
+      [action]="crear.bind(this)"
+    ></app-async-button>
     }@else{
-    <p-button
+    <app-async-button
       label="Actualizar bloque"
       [disabled]="formGroup.invalid"
-      (click)="actualizar()"
-    ></p-button>
+      [action]="actualizar.bind(this)"
+    ></app-async-button>
     }
   </div>
 </div>

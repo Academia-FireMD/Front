@@ -8,6 +8,7 @@ import { PrimengModule } from '../shared/primeng.module';
 import { SharedModule } from '../shared/shared.module';
 import { DocumentacionRoutingModule } from './documentacion-routing.module';
 import { DocumentationOverviewComponent } from './documentation-overview/documentation-overview.component';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [DocumentationOverviewComponent],
@@ -17,6 +18,7 @@ registerLocaleData(localeEs);
     PrimengModule,
     FileUploadModule,
     DocumentacionRoutingModule,
+    AsyncButtonComponent,
   ],
   providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
 })

@@ -49,11 +49,11 @@
       </p-table>
     </div>
     <div class="col-12 flex justify-content-end">
-      <p-button
+      <app-async-button
         label="Confirmar selección"
         icon="pi pi-check"
-        (click)="confirmarSeleccion()"
-      ></p-button>
+        [action]="confirmarSeleccion.bind(this)"
+      ></app-async-button>
     </div>
   </div>
 </p-dialog>
@@ -181,11 +181,11 @@
           <label for="switch1">Por defecto</label>
           <p-inputSwitch [formControl]="esPorDefecto" />
         </div>
-        <p-button
+        <app-async-button
           [disabled]="formGroup.invalid"
-          (click)="guardarCambios()"
+          [action]="guardarCambios.bind(this)"
           label="Guardar cambios"
-        ></p-button>
+        ></app-async-button>
       </div>
     </div>
     <div class="col-12 calendar-info">

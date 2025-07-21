@@ -32,6 +32,7 @@ import { ExamenRoutingModule } from './examen-routing.module';
 import { ExamenesRealizadosAlumnoComponent } from './components/examenes-realizados-alumno/examenes-realizados-alumno.component';
 import { PrimengModule } from '../shared/primeng.module';
 import { BadgeModule } from 'primeng/badge';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 @NgModule({
   declarations: [
     ExamenesDashboardAdminComponent,
@@ -67,6 +68,7 @@ import { BadgeModule } from 'primeng/badge';
     TabViewModule,
     ProgressSpinnerModule,
     TagModule,
+    AsyncButtonComponent,
   ],
   providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
 })

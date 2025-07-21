@@ -40,19 +40,16 @@
           <label for="descripcion">Descripcion</label>
         </p-floatLabel>
         <div class="flex justify-content-end">
-          <p-button
+          <app-async-button
             label="{{
               viewportService.screenWidth == 'xs'
                 ? undefined
                 : 'Subir Documento'
             }}"
             icon="pi pi-upload"
-            [loading]="uploadingFile"
-            [disabled]="
-              uploadedFiles.length == 0 || uploadingFileFormGroup.invalid
-            "
-            (click)="subirDocumento()"
-          ></p-button>
+            [action]="subirDocumento.bind(this)"
+            [disabled]="uploadedFiles.length == 0 || uploadingFileFormGroup.invalid"
+          ></app-async-button>
         </div>
       </div>
     </ng-template>
@@ -122,16 +119,23 @@
                   >
                     Creado: {{ document.createdAt | date : "short" }}</span
                   >
-                  <p-button
+                  <app-async-button
                     [link]="true"
                     icon="pi pi-download"
-                    (click)="descargarDocumento(document.id, document.fileName)"
-                  ></p-button>
+                    (click)="$event.stopPropagation();$event.preventDefault();"
+                    [action]="
+                      descargarDocumento.bind(
+                        this,
+                        document.id,
+                        document.fileName
+                      )
+                    "
+                  ></app-async-button>
                   <p-button
                     *ngIf="expectedRole == 'ADMIN'"
                     [link]="true"
                     icon="pi pi-trash"
-                    (click)="confirmarEliminacion(document)"
+                    (click)="$event.stopPropagation();$event.preventDefault();confirmarEliminacion(document)"
                   ></p-button>
                 </div>
               </div>

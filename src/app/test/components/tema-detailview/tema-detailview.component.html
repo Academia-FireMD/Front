@@ -46,11 +46,16 @@
   </div>
   <div class="col-12 footer flex justify-content-end w-full">
     <p-button label="Volver atrás" [link]="true" (click)="handleBackButton()" />
-    <ng-container *ngIf="getId() === 'new'; else updateButton">
-      <p-button label="Crear tema" (click)="crearTema()" />
-    </ng-container>
+    <app-async-button
+      *ngIf="getId() === 'new'; else updateButton"
+      label="Crear tema"
+      [action]="crearTema.bind(this)"
+    />
     <ng-template #updateButton>
-      <p-button label="Actualizar tema" (click)="actualizarTema()" />
+      <app-async-button
+        label="Actualizar tema"
+        [action]="actualizarTema.bind(this)"
+      />
     </ng-template>
   </div>
 </div>

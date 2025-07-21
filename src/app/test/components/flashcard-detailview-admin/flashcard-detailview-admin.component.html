@@ -163,7 +163,7 @@
     <label for="crearOtra" class="ml-2">Crear otra</label>
     }
   </div>
-  <div class="col-12 footer flex justify-content-end w-full align-items-center">
+  <div class="col-12 footer flex justify-content-end w-full">
     <p-button
       *ngIf="mode != 'injected'"
       label="Volver atrás"
@@ -171,12 +171,15 @@
       (click)="handleBackButton()"
     ></p-button>
     @if(getId() == 'new' || mode == 'injected'){
-    <p-button label="Crear Flashcard" (click)="crearFlashcard()"></p-button>
+    <app-async-button
+      label="Crear Flashcard"
+      [action]="crearFlashcard.bind(this)"
+    ></app-async-button>
     }@else{
-    <p-button
+    <app-async-button
       label="Actualizar Flashcard"
-      (click)="actualizarFlashcard()"
-    ></p-button>
+      [action]="actualizarFlashcard.bind(this)"
+    ></app-async-button>
     }
   </div>
 </div>

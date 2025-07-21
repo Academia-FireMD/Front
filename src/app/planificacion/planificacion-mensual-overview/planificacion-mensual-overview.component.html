@@ -111,23 +111,24 @@
                   >
                     {{ item.createdAt | date : "short" }}</span
                   >
-                  <p-button *ngIf="expectedRole == 'ADMIN'"
+                  <app-async-button
+                    *ngIf="expectedRole == 'ADMIN'"
                     [link]="true"
                     icon="pi pi-clone"
-                    (click)="
-                      $event.stopPropagation();
-                      $event.preventDefault();
-                      clonarPlanificacion(item.id)
-                    "
+                    pTooltip="Clonar"
+                    (click)="$event.stopPropagation();$event.preventDefault();"
+                    [action]="clonarPlanificacion.bind(this, item.id)"
+                  ></app-async-button>
+                  <p-button
+                    (click)="$event.stopPropagation();$event.preventDefault();eliminar(item.id, $event);"
+                    icon="pi pi-trash"
+                    pTooltip="Eliminar"
+                    styleClass="p-button-danger"
                   ></p-button>
                   <p-button
-                    [link]="true"
-                    icon="pi pi-trash"
-                    (click)="
-                      $event.stopPropagation();
-                      $event.preventDefault();
-                      eliminar(item.id, $event)
-                    "
+                    (click)="$event.stopPropagation();$event.preventDefault();navigateToDetailview(item.id)"
+                    icon="pi pi-pencil"
+                    pTooltip="Editar"
                   ></p-button>
                 </div>
               </div>

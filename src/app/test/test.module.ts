@@ -52,6 +52,7 @@ import { UserDashboardComponent } from './components/user-dashboard/user-dashboa
 import { TestRoutingModule } from './test-routing.module';
 import { SimulacrosModule } from '../simulacros/simulacros.module';
 import { ResultadoSimulacroComponent } from '../simulacros/standalone/resultado-simulacro/resultado-simulacro.component';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 @NgModule({
   declarations: [
     UserDashboardComponent,
@@ -105,7 +106,8 @@ import { ResultadoSimulacroComponent } from '../simulacros/standalone/resultado-
     TagModule,
     TooltipModule,
     ToolbarModule,
-    SplitButtonModule
+    SplitButtonModule,
+    AsyncButtonComponent,
   ],
   providers: [ConfirmationService],
   exports: [

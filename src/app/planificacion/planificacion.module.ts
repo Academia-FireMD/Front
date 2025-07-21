@@ -32,6 +32,7 @@ import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/
 import { VistaSemanalComponent } from './vista-semanal/vista-semanal.component';
 import { MarkdownModule } from 'ngx-markdown';
 import { MessageModule } from 'primeng/message';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [
@@ -65,6 +66,7 @@ registerLocaleData(localeEs);
     ProgressBarModule,
     ContextMenuModule,
     MessageModule,
+    AsyncButtonComponent,
   ],
   providers: [
     ConfirmationService,

@@ -139,9 +139,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
   });
 
   // Añade estos métodos
-  marcarComoReserva(testPregunta: any, esReserva: boolean) {
+  async marcarComoReserva(testPregunta: any, esReserva: boolean) {
     // Implementa la lógica para marcar/desmarcar como reserva
-    this.actualizarEstadoReserva(testPregunta, esReserva);
+    await this.actualizarEstadoReserva(testPregunta, esReserva);
   }
   // Método para mostrar el diálogo de métodos de agregar preguntas
   mostrarOpcionesAgregarPreguntas(event: Event) {
@@ -584,8 +584,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
     return Array(difficulty).fill('star-fill');
   }
 
-  public eliminarPregunta(id: number) {
-    firstValueFrom(
+  public async eliminarPregunta(id: number) {
+    await firstValueFrom(
       this.examenesService
         .removePreguntasFromExamen$(this.getId() as number, [id])
         .pipe(
@@ -836,14 +836,14 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.toast.info('Funcionalidad de exportación próximamente disponible');
   }
 
-  public reiniciarIntento(userId: number) {
+  public async reiniciarIntento(userId: number) {
     // Placeholder for future functionality
     this.toast.info(
       'Funcionalidad de reinicio de intentos próximamente disponible'
     );
   }
 
-  public darAcceso(userId: number) {
+  public async darAcceso(userId: number) {
     // Placeholder for future functionality
     this.toast.info(
       'Funcionalidad de gestión de accesos próximamente disponible'

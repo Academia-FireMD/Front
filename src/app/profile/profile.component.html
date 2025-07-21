@@ -188,12 +188,11 @@
 
             <!-- Botones de acción -->
             <div class="action-buttons mt-4 flex justify-content-end">
-              <p-button
+              <app-async-button
                 label="Guardar cambios"
                 icon="pi pi-save"
-                [loading]="isSaving"
-                (click)="saveProfile()"
-              ></p-button>
+                [action]="saveProfile.bind(this)"
+              ></app-async-button>
             </div>
           </div>
         </div>

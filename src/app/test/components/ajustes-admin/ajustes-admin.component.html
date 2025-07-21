@@ -2,14 +2,12 @@
   <div class="col-12">
     <p-card>
       <h4 class="w-full">Acciones</h4>
-      <div
-        class="col-12 md:col-6 flex justify-content-start flex-column md:flex-row gap-2"
-      >
-        <p-button label="Ejecutar" (click)="ejecutarAsignacionTotal()" />
-        <label for=""
-          >Asigna planificaciones por defecto a todos los alumnos en base a sus
-          preferencias de duración de planificación</label
-        >
+      <div class="flex flex-column gap-2">
+        <label for="username">Asignación automática de planificación</label>
+        <app-async-button
+          label="Ejecutar"
+          [action]="ejecutarAsignacionTotal.bind(this)"
+        />
       </div>
     </p-card>
   </div>
@@ -120,6 +118,9 @@
     </p-card>
   </div>
   <div class="col-12 footer flex justify-content-end w-full">
-    <p-button label="Actualizar" (click)="actualizarAjustes()" />
+    <app-async-button
+      label="Actualizar"
+      [action]="actualizarAjustes.bind(this)"
+    />
   </div>
 </div>

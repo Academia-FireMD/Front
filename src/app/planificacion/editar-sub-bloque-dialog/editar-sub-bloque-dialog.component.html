@@ -110,12 +110,11 @@
       (click)="cancelarEdicion()"
       class="p-button-text"
     ></button>
-    <button
+    <app-async-button
       *ngIf="isRoleAdminOrAddingNew()"
-      pButton
       label="Guardar"
-      (click)="guardarEdicion()"
+      [action]="guardarEdicion.bind(this)"
       [disabled]="formGroup.invalid"
-    ></button>
+    ></app-async-button>
   </p-footer>
 </p-dialog>

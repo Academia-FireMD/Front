@@ -79,22 +79,21 @@
                     {{ item.createdAt | date : "short" }}</span
                   >
                   <p-button
-                    [link]="true"
-                    icon="pi pi-clone"
-                    (click)="
-                      $event.stopPropagation();
-                      $event.preventDefault();
-                      clonarBloque(item.id)
-                    "
-                  ></p-button>
-                  <p-button
-                    [link]="true"
+                    (click)="$event.stopPropagation();$event.preventDefault();eliminarBloque(item.id, $event)"
                     icon="pi pi-trash"
-                    (click)="
-                      $event.stopPropagation();
-                      $event.preventDefault();
-                      eliminarBloque(item.id, $event)
-                    "
+                    styleClass="p-button-danger"
+                    pTooltip="Eliminar"
+                  ></p-button>
+                  <app-async-button
+                    (click)="$event.stopPropagation();$event.preventDefault();"
+                    [action]="clonarBloque.bind(this, item.id)"
+                    icon="pi pi-copy"
+                    pTooltip="Clonar"
+                  ></app-async-button>
+                  <p-button
+                    (click)="$event.stopPropagation();$event.preventDefault();navigateToDetailview(item.id)"
+                    icon="pi pi-pencil"
+                    pTooltip="Editar"
                   ></p-button>
                 </div>
               </div>

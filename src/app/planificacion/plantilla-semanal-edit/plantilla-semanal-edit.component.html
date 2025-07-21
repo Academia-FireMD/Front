@@ -30,7 +30,10 @@
           <label for="descripcion">Descripción</label>
         </p-floatLabel>
       </div>
-      <p-button (click)="guardarPlantilla()" label="Guardar cambios"></p-button>
+      <app-async-button
+        [action]="guardarPlantilla.bind(this)"
+        label="Guardar cambios"
+      ></app-async-button>
     </div>
     <app-vista-semanal
       [(events)]="events"

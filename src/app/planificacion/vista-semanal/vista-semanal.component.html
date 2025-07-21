@@ -36,14 +36,13 @@
       class="p-button-text"
       (click)="isCloneDialogVisible = false"
     ></button>
-    <button
-      pButton
+    <app-async-button
       label="Clonar"
       icon="pi pi-check"
       class="p-button-primary"
-      (click)="cloneEventsToTargetDay()"
+      [action]="cloneEventsToTargetDay.bind(this)"
       [disabled]="targetDayForCloning == null"
-    ></button>
+    ></app-async-button>
   </p-footer>
 </p-dialog>
 
@@ -205,13 +204,12 @@
       class="p-button-text"
       (click)="isCommentDialogVisible = false"
     ></button>
-    <button
-      pButton
+    <app-async-button
       label="Guardar"
       icon="pi pi-check"
-      class="p-button-primary"
-      (click)="saveComment()"
-    ></button>
+      styleClass="p-button-primary"
+      [action]="saveComment.bind(this)"
+    ></app-async-button>
   </p-footer>
 </p-dialog>
 
@@ -408,13 +406,12 @@
       class="p-button-text" 
       (click)="isEventoPersonalizadoDialogVisible = false"
     ></button>
-    <button 
-      pButton 
-      label="Guardar" 
-      icon="pi pi-check" 
-      class="p-button-primary" 
-      (click)="saveEventoPersonalizado(editEventoPersonalizadoData)"
+    <app-async-button
+      label="Guardar"
+      icon="pi pi-check"
+      class="p-button-primary"
+      [action]="saveEventoPersonalizado.bind(this, editEventoPersonalizadoData)"
       [disabled]="!editEventoPersonalizadoData.nombre"
-    ></button>
+    ></app-async-button>
   </ng-template>
 </p-dialog>

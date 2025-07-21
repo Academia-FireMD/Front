@@ -243,22 +243,22 @@
                           <td>{{ testPregunta.pregunta.descripcion }}</td>
                           <td>
                             <div class="flex gap-2">
-                              <p-button
+                              <app-async-button
                                 icon="pi pi-arrow-down"
                                 [link]="true"
                                 pTooltip="Mover a preguntas de reserva"
                                 tooltipPosition="top"
-                                (click)="marcarComoReserva(testPregunta, true)"
+                                [action]="marcarComoReserva.bind(this, testPregunta, true)"
                                 data-testid="mover-reserva-btn"
-                              ></p-button>
-                              <p-button
+                              ></app-async-button>
+                              <app-async-button
                                 icon="pi pi-trash"
                                 [link]="true"
                                 pTooltip="Eliminar pregunta"
                                 tooltipPosition="top"
-                                (click)="eliminarPregunta(testPregunta.pregunta.id)"
+                                [action]="eliminarPregunta.bind(this, testPregunta.pregunta.id)"
                                 data-testid="eliminar-pregunta-btn"
-                              ></p-button>
+                              ></app-async-button>
                               <p-button
                                 [icon]="testPregunta.impugnada ? 'pi pi-flag-fill' : 'pi pi-flag'"
                                 [link]="true"
@@ -357,22 +357,22 @@
                           <td>{{ testPregunta.pregunta.descripcion }}</td>
                           <td>
                             <div class="flex gap-2">
-                              <p-button
+                              <app-async-button
                                 icon="pi pi-arrow-up"
                                 [link]="true"
                                 pTooltip="Mover a preguntas normales"
                                 tooltipPosition="top"
-                                (click)="marcarComoReserva(testPregunta, false)"
+                                [action]="marcarComoReserva.bind(this, testPregunta, false)"
                                 data-testid="mover-normal-btn"
-                              ></p-button>
-                              <p-button
+                              ></app-async-button>
+                              <app-async-button
                                 icon="pi pi-trash"
                                 [link]="true"
                                 pTooltip="Eliminar pregunta"
                                 tooltipPosition="top"
-                                (click)="eliminarPregunta(testPregunta.pregunta.id)"
+                                [action]="eliminarPregunta.bind(this, testPregunta.pregunta.id)"
                                 data-testid="eliminar-pregunta-reserva-btn"
-                              ></p-button>
+                              ></app-async-button>
                              
                             </div>
                           </td>
@@ -600,21 +600,21 @@
                             </td>
                             <td>
                               <div class="flex gap-1">
-                                <p-button
+                                <app-async-button
                                   icon="pi pi-refresh"
                                   [link]="true"
                                   pTooltip="Reiniciar intento"
                                   tooltipPosition="top"
-                                  (click)="reiniciarIntento(resultado.usuario.id)"
+                                  [action]="reiniciarIntento.bind(this, resultado.usuario.id)"
                                   severity="warning"
                                   size="small"
                                 />
-                                <p-button
+                                <app-async-button
                                   icon="pi pi-key"
                                   [link]="true"
                                   pTooltip="Gestionar acceso"
                                   tooltipPosition="top"
-                                  (click)="darAcceso(resultado.usuario.id)"
+                                  [action]="darAcceso.bind(this, resultado.usuario.id)"
                                   severity="help"
                                   size="small"
                                 />
@@ -673,19 +673,19 @@
       (click)="handleBackButton()"
       data-testid="volver-atras-btn"
     ></p-button>
-    <p-button
+    <app-async-button
       *ngIf="getId() == 'new'"
       label="Crear examen"
-      (click)="crearExamen()"
+      [action]="crearExamen.bind(this)"
       data-testid="crear-examen-btn"
-    ></p-button>
-    <p-button
+    ></app-async-button>
+    <app-async-button
       *ngIf="getId() != 'new'"
       label="Actualizar examen"
       [disabled]="!formGroup.valid"
-      (click)="actualizarExamen()"
+      [action]="actualizarExamen.bind(this)"
       data-testid="actualizar-examen-btn"
-    ></p-button>
+    ></app-async-button>
   </div>
 </div>
 
@@ -801,24 +801,24 @@
           styleClass="p-button-text"
           (click)="cancelarSeleccionPreguntas()"
         ></p-button>
-        <p-button
+        <app-async-button
           *ngIf="activeStepIndex === 0"
           label="Aplicar filtros"
           icon="pi pi-arrow-right"
           (click)="nextStep()"
           [disabled]="!realizarTest.formGroup.valid"
-        ></p-button>
-        <p-button
+        ></app-async-button>
+        <app-async-button
           *ngIf="activeStepIndex === 1"
           label="Añadir {{
             selectedPreguntasToAdd.length
           }} preguntas seleccionadas"
           icon="pi pi-check"
-          (click)="addSelectedPreguntas()"
+          [action]="addSelectedPreguntas.bind(this)"
           [disabled]="
             !selectedPreguntasToAdd || selectedPreguntasToAdd.length === 0
           "
-        ></p-button>
+        ></app-async-button>
       </div>
     </div>
   </ng-template>
@@ -845,13 +845,12 @@
             [ngModelOptions]="{ standalone: true }"
             (keyup.enter)="buscarPreguntaPorIdentificador()"
           />
-          <button
-            pButton
+          <app-async-button
             type="button"
             icon="pi pi-search"
-            (click)="buscarPreguntaPorIdentificador()"
+            [action]="buscarPreguntaPorIdentificador.bind(this)"
             [disabled]="!identificadorBusqueda"
-          ></button>
+          ></app-async-button>
         </div>
         <label for="identificador">Identificador de la pregunta</label>
       </p-floatLabel>
@@ -881,12 +880,12 @@
       styleClass="p-button-text"
       (click)="semiAutomaticDialogVisible = false"
     ></p-button>
-    <p-button
+    <app-async-button
       label="Añadir pregunta"
       icon="pi pi-plus"
       [disabled]="!preguntaEncontrada"
-      (click)="agregarPreguntaEncontrada()"
-    ></p-button>
+      [action]="agregarPreguntaEncontrada.bind(this)"
+    ></app-async-button>
   </ng-template>
 </p-dialog>
 
@@ -987,11 +986,11 @@
       label="Cancelar"
       styleClass="p-button-text"
     ></p-button>
-    <p-button
+    <app-async-button
       icon="pi pi-check"
-      (click)="confirmarImpugnacion()"
+      [action]="confirmarImpugnacion.bind(this)"
       [label]="preguntaAImpugnar?.impugnada ? 'Desimpugnar' : 'Impugnar'"
-    ></p-button>
+    ></app-async-button>
   </ng-template>
 </p-dialog>
 

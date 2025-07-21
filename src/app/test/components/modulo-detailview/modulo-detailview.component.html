@@ -49,13 +49,12 @@
       </div>
     </p-card>
   </div>
-  <div class="col-12 footer flex justify-content-end w-full gap-2">
+  <div class="col-12 footer flex justify-content-end w-full">
     <p-button label="Volver atrás" [link]="true" (click)="handleBackButton()" />
-    <ng-container *ngIf="getId() === 'new'; else updateButton">
-      <p-button label="Crear módulo" (click)="guardar()" />
-    </ng-container>
-    <ng-template #updateButton>
-      <p-button label="Actualizar módulo" (click)="guardar()" />
-    </ng-template>
+    @if(getId() == 'new'){
+    <app-async-button label="Crear módulo" [action]="guardar.bind(this)" />
+    }@else{
+    <app-async-button label="Actualizar módulo" [action]="guardar.bind(this)" />
+    }
   </div>
 </div>

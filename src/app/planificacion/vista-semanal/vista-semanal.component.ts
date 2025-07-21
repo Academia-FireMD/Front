@@ -209,7 +209,7 @@ export class VistaSemanalComponent {
     this.isCloneDialogVisible = true;
   }
 
-  cloneEventsToTargetDay(): void {
+  async cloneEventsToTargetDay(): Promise<void> {
     if (!this.selectedDayForCloning || this.targetDayForCloning == null) {
       console.error('Faltan el día seleccionado o el día objetivo.');
       return;
@@ -529,7 +529,7 @@ export class VistaSemanalComponent {
     this.eventsChange.emit(this.events);
   }
 
-  saveComment(): void {
+  async saveComment(): Promise<void> {
     const event = this.events.find(
       (event) =>
         event?.meta?.subBloque?.id === (this.selectedSubBloque as SubBloque)?.id
@@ -586,7 +586,7 @@ export class VistaSemanalComponent {
   public editEventoPersonalizadoData: any = null;
 
   // Guardar evento personalizado
-  saveEventoPersonalizado(evento: any): void {
+  async saveEventoPersonalizado(evento: any): Promise<void> {
     if (!evento) return;
 
     // Determinar si es nuevo o existente

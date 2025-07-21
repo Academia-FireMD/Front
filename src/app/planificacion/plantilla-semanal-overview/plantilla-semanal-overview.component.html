@@ -63,16 +63,13 @@
                   >
                     {{ item.createdAt | date : "short" }}</span
                   >
-                  <p-button
+                  <app-async-button
                     *ngIf="mode == 'overview'"
                     [link]="true"
                     icon="pi pi-clone"
-                    (click)="
-                      $event.stopPropagation();
-                      $event.preventDefault();
-                      clonarPlantillaSemanal(item.id)
-                    "
-                  ></p-button>
+                    (click)="$event.stopPropagation();$event.preventDefault();"
+                    [action]="clonarPlantillaSemanal.bind(this, item.id)"
+                  ></app-async-button>
                   <p-button
                     *ngIf="mode == 'overview'"
                     [link]="true"
