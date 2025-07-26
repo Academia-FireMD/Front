@@ -36,7 +36,7 @@
         </div>
         <div
           (click)="editProfile()"
-          class="perfil p-2 flex align-items-center justify-content-center w-full gap-2 pointer"
+          class="perfil p-2 flex align-items-center justify-content-{{isMenuExpanded ? 'start' : 'center'}} w-full gap-2 pointer"
         >
           <div class="avatar-container mt-0">
             @if (!user.avatarUrl) {
