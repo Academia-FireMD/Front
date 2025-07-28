@@ -113,12 +113,12 @@ export class TestStatsGridComponent extends SharedGridComponent<
         some: {
           pregunta: {
             temaId: {
-              in: ids
-            }
-          }
-        }
-      }
-    }
+              in: ids,
+            },
+          },
+        },
+      },
+    };
   }
 
   private whereQueryFlashcards(ids: Array<string>) {
@@ -127,26 +127,40 @@ export class TestStatsGridComponent extends SharedGridComponent<
         some: {
           flashcard: {
             temaId: {
-              in: ids
-            }
-          }
-        }
-      }
-    }
+              in: ids,
+            },
+          },
+        },
+      },
+    };
   }
 
   private getWhereQuery() {
-    return this.type == 'TESTS' ? this.whereQueryTests : this.whereQueryFlashcards;
+    return this.type == 'TESTS'
+      ? this.whereQueryTests
+      : this.whereQueryFlashcards;
   }
 
-  private getPaginationFilter(onlyExamen: boolean, pagination: PaginationFilter) {
+  private getPaginationFilter(
+    onlyExamen: boolean,
+    pagination: PaginationFilter
+  ) {
+    let extra = {};
+    if (this.type == 'TESTS') {
+      if (onlyExamen) {
+        extra = { ExamenRealizado: { isNot: null } };
+      } else {
+        extra = { ExamenRealizado: { is: null } };
+      }
+    }
+
     const newPagination = {
       ...pagination,
       where: {
         ...pagination.where,
-        ...(onlyExamen ? { ExamenRealizado: { isNot: null } } : {ExamenRealizado: { is: null }}),
+        ...extra,
       },
-    }
+    };
     return newPagination;
   }
 
@@ -155,14 +169,17 @@ export class TestStatsGridComponent extends SharedGridComponent<
     this.primengConfig.setTranslation(this.es);
     combineLatest([
       this.activatedRoute.queryParams,
-      this.activatedRoute.data.pipe(filter((e) => !!e))
+      this.activatedRoute.data.pipe(filter((e) => !!e)),
     ]).subscribe(([queryParams, data]) => {
       this.displayOnlyExamen = queryParams['onlyExamen'] === 'true';
       this.fetchItems$ = computed(() => {
-        const pagination = this.getPaginationFilter(this.displayOnlyExamen, this.pagination());
         const { expectedRole, type } = data;
         this.type = type;
         this.expectedRole = expectedRole;
+        const pagination = this.getPaginationFilter(
+          this.displayOnlyExamen,
+          this.pagination()
+        );
         if (this.type == 'FLASHCARDS') {
           if (this.expectedRole == 'ADMIN') {
             return this.flashcardsService
@@ -198,14 +215,18 @@ export class TestStatsGridComponent extends SharedGridComponent<
                   gte: entry[0] ?? new Date(),
                   lte: entry[1] ?? new Date(),
                 },
-                ...(this.temas.value?.length ? this.getWhereQuery()(this.temas.value) : {}),
+                ...(this.temas.value?.length
+                  ? this.getWhereQuery()(this.temas.value)
+                  : {}),
               },
             });
           } else {
             this.pagination.set({
               ...this.pagination(),
               where: {
-                ...(this.temas.value?.length ? this.getWhereQuery()(this.temas.value) : {}),
+                ...(this.temas.value?.length
+                  ? this.getWhereQuery()(this.temas.value)
+                  : {}),
               },
             });
           }
@@ -221,7 +242,9 @@ export class TestStatsGridComponent extends SharedGridComponent<
             ...this.pagination(),
             where: {
               ...this.pagination().where,
-              ...(selectedTemas?.length ? this.getWhereQuery()(selectedTemas) : {}),
+              ...(selectedTemas?.length
+                ? this.getWhereQuery()(selectedTemas)
+                : {}),
             },
           });
         }),
@@ -234,8 +257,11 @@ export class TestStatsGridComponent extends SharedGridComponent<
   public obtenerTemas = obtenerTemas;
 
   public viewStats = (id: number | 'new') => {
-    const item = (this.lastLoadedPagination?.data || []).find(test => test.id === id);
-    const isExamenTest = item && 'ExamenRealizado' in item && !!item.ExamenRealizado;
+    const item = (this.lastLoadedPagination?.data || []).find(
+      (test) => test.id === id
+    );
+    const isExamenTest =
+      item && 'ExamenRealizado' in item && !!item.ExamenRealizado;
 
     if (isExamenTest) {
       this.selectedTestId = id as number;
@@ -244,8 +270,6 @@ export class TestStatsGridComponent extends SharedGridComponent<
       this.navigateToStats(id);
     }
   };
-
- 
 
   public navigateToStats(id: number | null | 'new') {
     const map = {
@@ -274,7 +298,8 @@ export class TestStatsGridComponent extends SharedGridComponent<
       },
       ALUMNO: {
         TESTS: '/app/test/alumno/realizar-test/modo-ver-respuestas/',
-        FLASHCARDS: '/app/test/alumno/realizar-flash-cards-test/modo-ver-respuestas/',
+        FLASHCARDS:
+          '/app/test/alumno/realizar-flash-cards-test/modo-ver-respuestas/',
       },
     };
     const path = (map as any)[this.expectedRole][this.type];
@@ -286,8 +311,10 @@ export class TestStatsGridComponent extends SharedGridComponent<
   }
 
   public generarEstadisticas() {
-    const from = ((this.selectedRangeDates.value as any)[0] ?? new Date()) as Date;
-    const to = ((this.selectedRangeDates.value as any)[1] ?? new Date()) as Date;
+    const from = ((this.selectedRangeDates.value as any)[0] ??
+      new Date()) as Date;
+    const to = ((this.selectedRangeDates.value as any)[1] ??
+      new Date()) as Date;
     const temas = this.temas.value;
 
     const map = {
