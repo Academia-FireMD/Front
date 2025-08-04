@@ -10,6 +10,7 @@ import { Usuario } from '../../../shared/models/user.model';
 import { SuscripcionTipo } from '../../../shared/models/subscription.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { Memoize } from 'lodash-decorators';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-user-dashboard',
@@ -21,64 +22,101 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   confirmationService = inject(ConfirmationService);
   authService = inject(AuthService);
 
-  subscriptionFilterOptions = [
-    { label: 'Todas las suscripciones', value: 'todas' },
-    { label: 'Sin suscripción', value: 'sin_suscripcion' },
-    { label: 'Básica', value: SuscripcionTipo.BASIC },
-    { label: 'Premium', value: SuscripcionTipo.PREMIUM },
-    { label: 'Pro', value: SuscripcionTipo.PRO },
-  ];
-
   availableSubscriptions: any[] = [];
-  selectedSubscriptionFilter = new FormControl('todas');
-  public subscriptionFilter = signal<string>('todas');
-
   editDialogVisible = false;
   subscriptionDialogVisible = false;
   selectedUser!: Usuario;
   selectedSubscriptionType = SuscripcionTipo.BASIC;
   public decodedUser = this.authService.decodeToken() as Usuario;
 
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+    {
+      key: 'suscripcion',
+      label: 'Suscripción',
+      type: 'dropdown',
+      placeholder: 'Seleccionar suscripción',
+      options: [
+        { label: 'Todas las suscripciones', value: 'todas' },
+        { label: 'Sin suscripción', value: 'sin_suscripcion' },
+        { label: 'Básica', value: SuscripcionTipo.BASIC },
+        { label: 'Premium', value: SuscripcionTipo.PREMIUM },
+        { label: 'Pro', value: SuscripcionTipo.PRO },
+      ],
+      filterInterpolation: (value) => {
+        if (value === 'todas') return {};
+        if (value === 'sin_suscripcion') {
+          return { suscripcion: { is: null } };
+        }
+        return { suscripcion: { tipo: { equals: value } } };
+      },
+    },
+    {
+      key: 'validated',
+      label: 'Estado',
+      type: 'dropdown',
+      placeholder: 'Seleccionar estado',
+      options: [
+        { label: 'Todos', value: 'todos' },
+        { label: 'Verificados', value: true },
+        { label: 'Sin verificar', value: false },
+      ],
+      filterInterpolation: (value) => {
+        if (value === 'todos') return {};
+        return { validated: value };
+      },
+    },
+    {
+      key: 'rol',
+      label: 'Rol',
+      type: 'dropdown',
+      placeholder: 'Seleccionar rol',
+      options: [
+        { label: 'Todos', value: 'todos' },
+        { label: 'Admin', value: 'ADMIN' },
+        { label: 'Alumno', value: 'ALUMNO' },
+      ],
+      filterInterpolation: (value) => {
+        if (value === 'todos') return {};
+        return { rol: value };
+      },
+    },
+  ];
+
   constructor() {
     super();
     this.loadAvailableSubscriptions();
 
     this.fetchItems$ = computed(() => {
-      const whereFilter = {
-        ...this.pagination(),
-        where: {
-          ...this.pagination().where,
-        },
-      };
-
-      // Aplicar filtro de suscripción
-      if (this.subscriptionFilter() !== 'todas') {
-        if (this.subscriptionFilter() === 'sin_suscripcion') {
-          whereFilter.where.suscripcion = {
-            is: null,
-          };
-        } else {
-          whereFilter.where.suscripcion = {
-            tipo: {
-              equals: this.subscriptionFilter(),
-            },
-          };
-        }
-      }
-
-      return this.userService.getAllUsers$(whereFilter).pipe(
+      return this.userService.getAllUsers$(this.pagination()).pipe(
         tap((entry) => {
           this.lastLoadedPagination = entry;
         })
       );
     });
+  }
 
-    this.selectedSubscriptionFilter.valueChanges
-      .pipe(takeUntilDestroyed())
-      .subscribe((data) => {
-        this.subscriptionFilter.set(data || 'todas');
-        this.refresh(); // Forzar actualización cuando cambie el filtro
-      });
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
+    });
+  }
+
+  public onItemClick(item: Usuario) {
+    this.editarUsuario(item);
   }
 
   async loadAvailableSubscriptions() {
@@ -92,9 +130,18 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   getSubscriptionBadgeClass(suscripcion: any): string {
-    if (!suscripcion) return 'no-subscription';
+    if (!suscripcion) return 'no-subscription-chip';
 
-    return `plan-type-${suscripcion.tipo.toLowerCase()}`;
+    switch (suscripcion.tipo) {
+      case SuscripcionTipo.BASIC:
+        return 'basic-chip';
+      case SuscripcionTipo.PREMIUM:
+        return 'premium-chip';
+      case SuscripcionTipo.PRO:
+        return 'pro-chip';
+      default:
+        return 'no-subscription-chip';
+    }
   }
 
   getSubscriptionLabel(suscripcion: any): string {

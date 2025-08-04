@@ -10,6 +10,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { ButtonModule } from 'primeng/button';
+import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
 
 @Component({
   selector: 'app-login',
@@ -25,7 +26,8 @@ import { ButtonModule } from 'primeng/button';
     FloatLabelModule,
     SharedModule,
     RouterModule,
-    ButtonModule
+    ButtonModule,
+    AsyncButtonComponent
   ]
 })
 export class LoginComponent implements OnInit {

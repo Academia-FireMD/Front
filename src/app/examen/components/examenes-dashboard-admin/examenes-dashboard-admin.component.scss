@@ -1,15 +1,53 @@
-.badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: white;
-}
+@import '../../../shared/styles/list-styles.scss';
 
+// Estilos específicos para el item de examen
+// Los estilos base están en list-styles.scss
 
-
-
-
+// Estilos específicos que no están en el archivo estandarizado
 .pointer {
   cursor: pointer;
+}
+
+// Asegurar que el contenido se ajuste a la altura fija
+.h-full {
+  height: 100%;
+}
+
+.left-side {
+  .flex.flex-column {
+    height: 100%;
+  }
+  
+  .mb-1 {
+    margin-bottom: 0.25rem;
+  }
+}
+
+// Ajustes para el layout horizontal
+.flex.flex-row.align-items-center {
+  gap: 0.5rem;
+}
+
+// Layout específico para móvil
+@media (max-width: 768px) {
+  .left-side {
+    .flex.flex-row.align-items-center {
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+    
+    .flex.align-items-center.gap-1 {
+      gap: 0.2rem !important;
+    }
+    
+    .flex.align-items-center.gap-2 {
+      gap: 0.4rem !important;
+    }
+  }
+  
+  .right-side {
+    .flex.flex-row.align-items-center.justify-content-end {
+      gap: 0.3rem;
+    }
+  }
 }

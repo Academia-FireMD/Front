@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { TemaService } from '../../../services/tema.service';
@@ -6,6 +6,7 @@ import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { Tema } from '../../../shared/models/pregunta.model';
 import { ModuloService } from '../../../shared/services/modulo.service';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-tema-overview',
@@ -17,27 +18,86 @@ export class TemaOverviewComponent extends SharedGridComponent<Tema> {
   private moduloService = inject(ModuloService);
   confirmationService = inject(ConfirmationService);
 
-  selectedModuloId = signal<number | null>(null);
   modulos$ = this.moduloService.getModulos$();
+
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+    {
+      key: 'moduloId',
+      label: 'Módulo',
+      type: 'dropdown',
+      placeholder: 'Seleccionar módulo',
+      options: [
+        { label: 'Todos los módulos', value: 'todos' },
+        // Los módulos se cargarán dinámicamente
+      ],
+      filterInterpolation: (value) => {
+        if (value === 'todos') return {};
+        return { moduloId: value };
+      },
+    },
+    {
+      key: 'temas',
+      label: 'Temas',
+      type: 'tema-select',
+      filterInterpolation: (value) => {
+        if (!value || value.length === 0) return {};
+        return { id: { in: value } };
+      },
+    },
+  ];
 
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
-      const filter: PaginationFilter = {
-        ...this.pagination(),
-        where: this.selectedModuloId() ? {
-          moduloId: this.selectedModuloId()
-        } : undefined
-      };
       return this.temaService
-        .getPaginatedTemas$(filter)
+        .getPaginatedTemas$(this.pagination())
         .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+    });
+
+    // Cargar módulos para el filtro
+    this.loadModulosForFilter();
+  }
+
+  private async loadModulosForFilter() {
+    try {
+      const modulos = await firstValueFrom(this.modulos$);
+      const moduloFilter = this.filters.find(f => f.key === 'moduloId');
+      if (moduloFilter) {
+        moduloFilter.options = [
+          { label: 'Todos los módulos', value: 'todos' },
+          ...modulos.map(modulo => ({
+            label: modulo.nombre,
+            value: modulo.id
+          }))
+        ];
+      }
+    } catch (error) {
+      console.error('Error loading modules for filter:', error);
+    }
+  }
+
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
     });
   }
 
-  onModuloChange(event: any) {
-    this.selectedModuloId.set(event.value);
-    this.refresh();
+  public onItemClick(item: Tema) {
+    this.navigateToDetailview(item.id);
   }
 
   public navigateToDetailview = (id: number | 'new') => {

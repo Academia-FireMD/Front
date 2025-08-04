@@ -57,15 +57,13 @@
           </div>
 
           <!-- Botón de acceso -->
-          <button
-            pButton
-            type="submit"
+          <app-async-button
+            class="w-full"
+            label="Acceder"
+            [action]="login.bind(this)"
             [disabled]="formGroup.invalid"
-            class="p-button dark-button p-button-raised"
-            (click)="login()"
-          >
-            <span class="w-full">Acceder</span>
-          </button>
+            styleClass="p-button dark-button p-button-raised w-full"
+          ></app-async-button>
 
           <!-- Enlace a registro -->
           <a

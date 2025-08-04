@@ -13,6 +13,7 @@ import { firstValueFrom, tap } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { PlantillaSemanal } from '../../shared/models/planificacion.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
+import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-plantilla-semanal-overview',
@@ -28,6 +29,20 @@ export class PlantillaSemanalOverviewComponent extends SharedGridComponent<Plant
   @Input() mode: 'picker' | 'overview' = 'overview';
   @Output() picked = new EventEmitter<PlantillaSemanal>();
 
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+  ];
+
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
@@ -35,6 +50,23 @@ export class PlantillaSemanalOverviewComponent extends SharedGridComponent<Plant
         .getPlantillaSemanales$(this.pagination())
         .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
     });
+  }
+
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
+    });
+  }
+
+  public onItemClick(item: PlantillaSemanal) {
+    if (this.mode === 'overview') {
+      this.navigateToDetailview(item.id);
+    } else {
+      this.picked.emit(item);
+    }
   }
 
   public navigateToDetailview = (id: number | 'new') => {

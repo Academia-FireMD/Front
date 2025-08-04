@@ -7,6 +7,7 @@ import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { Documento } from '../../shared/models/documentacion.model';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
+import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { DocumentosService } from '../services/documentacion.service';
 
 @Component({
@@ -32,6 +33,20 @@ export class DocumentationOverviewComponent
     identificador: ['', Validators.required],
     descripcion: [''],
   });
+
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+  ];
 
   constructor() {
     super();
@@ -60,6 +75,16 @@ export class DocumentationOverviewComponent
       })
     );
   }
+
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
+    });
+  }
+
 
   onSelect(event: any) {
     this.uploadedFiles = event.currentFiles;
@@ -94,8 +119,10 @@ export class DocumentationOverviewComponent
       this.uploadingFileFormGroup.reset();
       this.mostrarSubirFichero = false;
       this.uploadedFiles = [];
+      this.refresh();
     } catch (error) {
       this.uploadingFile = false;
+      this.toast.error('Error al subir el archivo');
     }
 
     this.refresh();
@@ -103,8 +130,8 @@ export class DocumentationOverviewComponent
 
   confirmarEliminacion(document: Documento) {
     this.confirmationService.confirm({
-      message: `¿Estás seguro de que deseas eliminar el documento "${document.identificador}"?`,
-      header: 'Confirmación',
+      message: `¿Estás seguro de que quieres eliminar el documento "${document.identificador}"?`,
+      header: 'Confirmar eliminación',
       icon: 'pi pi-exclamation-triangle',
       accept: () => {
         this.eliminarDocumento(document.id);
@@ -115,12 +142,11 @@ export class DocumentationOverviewComponent
   eliminarDocumento(id: number) {
     this.service.eliminarDocumento$(id).subscribe({
       next: () => {
-        this.toast.success('Documento eliminado correctamente.');
-        this.refresh(); // Actualiza la lista después de eliminar
+        this.toast.success('Documento eliminado correctamente');
+        this.refresh();
       },
-      error: (err) => {
-        console.error(err);
-        this.toast.error('Error al eliminar el documento.');
+      error: (error) => {
+        this.toast.error('Error al eliminar el documento');
       },
     });
   }

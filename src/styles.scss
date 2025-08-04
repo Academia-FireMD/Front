@@ -5,6 +5,25 @@
 @import "ngx-toastr/toastr";
 @import "../node_modules/angular-calendar/css/angular-calendar.css";
 @import "@fortawesome/fontawesome-free/css/all.min.css";
+@import "./app/shared/styles/list-styles.scss";
+
+.truncate-flex-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.right-side {
+  flex: 0;
+}
+
+.unbreakable-text {
+  white-space: nowrap;
+  overflow: hidden; /* opcional si querés recortar si no cabe */
+  text-overflow: ellipsis; /* opcional si usás overflow */
+}
 
 p-multiselect {
   p-overlay {
@@ -120,9 +139,10 @@ app-layout {
 }
 
 .list-generic {
-  overflow: auto;
+  // Removido overflow: auto para evitar doble scroll
+  // overflow: auto;
   @media (max-width: 768px) {
-    max-height: 77vh;
+    // max-height: 77vh; // Removido para evitar doble scroll
   }
 }
 app-preguntas-dashboard-admin-detailview {
@@ -225,8 +245,6 @@ app-pie-chart-dashboard-security,
 app-completar-test,
 app-preguntas-dashboard-admin-detailview,
 app-bloques-edit,
-app-user-dashboard,
-app-examenes-dashboard-admin,
 app-examenes-dashboard-admin-detailview,
 app-profile,
 app-resultado-simulacro,
@@ -429,7 +447,4 @@ p-chip {
     border-bottom-left-radius: 0;
     border-left: 1px solid var(--primary-600);
   }
-
- 
 }
-

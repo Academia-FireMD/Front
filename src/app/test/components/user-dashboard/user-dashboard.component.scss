@@ -1,3 +1,5 @@
+@import '../../../shared/styles/list-styles.scss';
+
 .hora-solicitud {
   text-wrap: nowrap;
 }
@@ -34,12 +36,136 @@
 
 .right-side {
   @media screen and (max-width: 768px) {
-    margin-top: 1rem;
     justify-content: flex-start;
     
     .flex {
       flex-wrap: wrap;
       gap: 0.5rem !important;
+    }
+  }
+}
+
+// Estilos para los badges de estado
+:host ::ng-deep {
+  .verified-chip {
+    background-color: var(--green-500) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: white !important;
+    }
+  }
+  
+  .nonverified-chip {
+    background-color: var(--orange-500) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: white !important;
+    }
+  }
+  
+  .admin-chip {
+    background-color: var(--red-500) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: white !important;
+    }
+  }
+  
+  .alumno-chip {
+    background-color: var(--blue-500) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: white !important;
+    }
+  }
+  
+  .tutor-chip {
+    background-color: var(--purple-500) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: white !important;
+    }
+  }
+  
+  // Estilos para las suscripciones
+  .basic-chip {
+    background-color: var(--blue-500) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: white !important;
+    }
+  }
+  
+  .premium-chip {
+    background-color: var(--yellow-500) !important;
+    color: var(--text-color) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: var(--text-color) !important;
+    }
+  }
+  
+  .pro-chip {
+    background-color: var(--purple-500) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: white !important;
+    }
+  }
+  
+  .no-subscription-chip {
+    background-color: var(--orange-400) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    
+    .p-chip-text {
+      color: white !important;
+    }
+  }
+  
+  // Mejorar el split button
+  .action-split-button {
+    .p-splitbutton-defaultbutton {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+    
+    .p-splitbutton-menubutton {
+      padding: 0.5rem 0.5rem;
+      font-size: 0.875rem;
     }
   }
 }

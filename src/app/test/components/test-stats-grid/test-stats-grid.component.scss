@@ -1,7 +1,10 @@
+@import '../../../shared/styles/list-styles.scss';
+
 .top-action-bar {
   flex-wrap: wrap;
 }
 
+// Estilos específicos para el layout de test-stats-grid
 :host ::ng-deep {
   .firemd-avatar-group {
     .p-avatar-group {
@@ -17,24 +20,44 @@
     }
   }
 
-  // Estilos para los botones del diálogo
-  .p-button-lg {
-    padding: 1rem;
-
-    .p-button-icon {
-      font-size: 1.2rem;
-      margin-right: 0.5rem;
-    }
-
-    .p-button-label {
-      font-size: 1.1rem;
-      font-weight: 500;
-    }
-  }
-
-  // Estilo para el badge de examen
+  // Estilos para el badge de examen
   .p-badge {
     font-size: 0.75rem;
     font-weight: 600;
+  }
+
+
+
+  // Aumentar el espacio de los dropdowns en los filtros
+  .filters-container {
+    .p-dropdown {
+      min-width: 12rem !important;
+      width: 12rem !important;
+    }
+    
+    .p-calendar {
+      min-width: 12rem !important;
+      width: 12rem !important;
+    }
+  }
+}
+
+// Responsive para el selector de temas
+@media (max-width: 768px) {
+  .left-actions .flex {
+    flex-direction: column;
+    gap: 0.5rem;
+    
+    .p-iconfield {
+      width: 100%;
+    }
+    
+    app-tema-select {
+      width: 100% !important;
+      
+      .p-multiselect {
+        border-radius: 20px !important;
+      }
+    }
   }
 }

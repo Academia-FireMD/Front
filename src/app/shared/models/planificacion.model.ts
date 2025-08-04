@@ -25,6 +25,8 @@ export interface SubBloque {
   bloque?: PlanificacionBloque; // Referencia opcional al bloque
   plantillaId?: number; // Relación con PlantillaSemanal
   plantilla?: PlantillaSemanal; // Relación con la plantilla semanal, si aplica
+  planificacionId?: number; // Relación con PlanificacionMensual
+  planificacion?: PlanificacionMensual; // Referencia a la planificación mensual
   createdAt?: Date;
   updatedAt?: Date;
   realizado?: boolean;

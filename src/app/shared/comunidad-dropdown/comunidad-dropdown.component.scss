@@ -1,0 +1,16 @@
+.img-flag {
+  width: 20px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+:host ::ng-deep {
+  .p-dropdown {
+    width: 100%;
+  }
+  
+  .p-dropdown-items-wrapper {
+    max-height: 200px;
+  }
+} 

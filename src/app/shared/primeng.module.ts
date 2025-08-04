@@ -35,6 +35,7 @@ import { RippleModule } from 'primeng/ripple';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { ToggleButtonModule } from 'primeng/togglebutton';
+import { TooltipModule } from 'primeng/tooltip';
 import { KeyComponent } from './key/key.component';
 
 const modules = [
@@ -74,6 +75,7 @@ const modules = [
   DragDropModule,
   ColorPickerModule,
   FileUploadModule,
+  TooltipModule,
   KeyComponent,
   NgxSpinnerModule
 ];

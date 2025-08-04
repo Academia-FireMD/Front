@@ -10,14 +10,18 @@ import { FlashcardTest } from '../../../shared/models/flashcard.model';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { Test } from '../../../shared/models/test.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import {
   calcular100,
   calcular100y75,
   calcular100y75y50,
+  getAllInArrays,
   getStats,
   obtenerTemas,
   obtenerTipoDeTest,
 } from '../../../utils/utils';
+import { flatten, flattenDeep } from 'lodash';
+
 @Component({
   selector: 'app-test-stats-grid',
   templateUrl: './test-stats-grid.component.html',
@@ -77,12 +81,30 @@ export class TestStatsGridComponent extends SharedGridComponent<
   activatedRoute = inject(ActivatedRoute);
   public type: 'TESTS' | 'FLASHCARDS' = 'TESTS';
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
-  selectedRangeDates = new FormControl([], Validators.required);
-  public temas = new FormControl<string[] | null>([], Validators.required);
   public displayOnlyExamen = false;
   public generandoEstadistica = false;
   selectedTestId: number | null = null;
   selectedTest: Test | null = null;
+
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+    {
+      key: 'temas',
+      label: 'Temas',
+      type: 'tema-select',
+      filterInterpolation: (value) => this.getWhereQuery(value),
+    },
+  ];
 
   public calcular100 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
@@ -135,10 +157,10 @@ export class TestStatsGridComponent extends SharedGridComponent<
     };
   }
 
-  private getWhereQuery() {
+  private getWhereQuery(ids: Array<string>) {
     return this.type == 'TESTS'
-      ? this.whereQueryTests
-      : this.whereQueryFlashcards;
+      ? this.whereQueryTests(ids)
+      : this.whereQueryFlashcards(ids);
   }
 
   private getPaginationFilter(
@@ -203,54 +225,6 @@ export class TestStatsGridComponent extends SharedGridComponent<
         }
       });
     });
-
-    this.selectedRangeDates.valueChanges
-      .pipe(
-        tap((entry: any) => {
-          if (entry) {
-            this.pagination.set({
-              ...this.pagination(),
-              where: {
-                createdAt: {
-                  gte: entry[0] ?? new Date(),
-                  lte: entry[1] ?? new Date(),
-                },
-                ...(this.temas.value?.length
-                  ? this.getWhereQuery()(this.temas.value)
-                  : {}),
-              },
-            });
-          } else {
-            this.pagination.set({
-              ...this.pagination(),
-              where: {
-                ...(this.temas.value?.length
-                  ? this.getWhereQuery()(this.temas.value)
-                  : {}),
-              },
-            });
-          }
-        }),
-        takeUntilDestroyed()
-      )
-      .subscribe();
-
-    this.temas.valueChanges
-      .pipe(
-        tap((selectedTemas: string[] | null) => {
-          this.pagination.set({
-            ...this.pagination(),
-            where: {
-              ...this.pagination().where,
-              ...(selectedTemas?.length
-                ? this.getWhereQuery()(selectedTemas)
-                : {}),
-            },
-          });
-        }),
-        takeUntilDestroyed()
-      )
-      .subscribe();
   }
 
   public obtenerTipoDeTest = obtenerTipoDeTest;
@@ -311,11 +285,13 @@ export class TestStatsGridComponent extends SharedGridComponent<
   }
 
   public generarEstadisticas() {
-    const from = ((this.selectedRangeDates.value as any)[0] ??
-      new Date()) as Date;
-    const to = ((this.selectedRangeDates.value as any)[1] ??
-      new Date()) as Date;
-    const temas = this.temas.value;
+    // Obtener los valores de los filtros del GenericListComponent
+    const filters = this.pagination().where || {};
+    const from = filters.createdAt?.gte || new Date();
+    const to = filters.createdAt?.lte || new Date();
+    const temas = flattenDeep(
+      getAllInArrays(filters.testPreguntas ?? filters.flashcards)
+    );
 
     const map = {
       ADMIN: {
@@ -334,6 +310,15 @@ export class TestStatsGridComponent extends SharedGridComponent<
         to: to.toISOString(),
         ...(temas?.length ? { temas: temas.join(',') } : {}),
       },
+    });
+  }
+
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
     });
   }
 }

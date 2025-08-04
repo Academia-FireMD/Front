@@ -1,124 +1,108 @@
 <p-confirmDialog />
-<div class="grid">
-  <div class="col-12 flex gap-2 wrapper-top">
-    <div class="flex flex-grow-1 gap-2">
-      <p-iconField iconPosition="left" class="flex-grow-1">
-        <p-inputIcon styleClass="pi pi-search" />
-        <input
-          type="text"
-          pInputText
-          placeholder="Buscar por email"
-          [value]="pagination().searchTerm"
-          (input)="valueChanged($event)"
-          class="w-full"
-        />
-      </p-iconField>
-      <p-dropdown
-        [options]="subscriptionFilterOptions"
-        [formControl]="selectedSubscriptionFilter"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Suscripción"
-        appendTo="body"
-        [style]="{ 'min-width': '150px' }"
-      ></p-dropdown>
-    </div>
-  </div>
-  <div class="col-12 list-generic">
-    <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
-      <ng-template pTemplate="list" let-products>
-        <div class="grid grid-nogutter">
-          <div
-            class="col-12 item-container"
-            *ngFor="let item of products; let first = first"
-          >
-            <div
-              class="flex flex-row align-items-center grid p-2 pointer"
-              (click)="editarUsuario(item)"
-            >
-              <div class="flex flex-column p-2 col-6">
-                <span
-                  class="font-medium text-secondary text-sm hora-solicitud flex gap-2"
-                >
-                  {{
-                    viewportService.screenWidth != "xs"
-                      ? "Solicitado el día"
-                      : ""
-                  }}
-                  {{ item.createdAt | date : "short" }}
-                  <p-chip
-                    [ngClass]="{
-                      verified: item.validated,
-                      nonverified: !item.validated
-                    }"
-                    label="{{
-                      item.validated ? 'Verificado' : 'Sin verificar'
-                    }}"
-                  />
-                  <p-chip
-                    [ngClass]="{
-                      admin: item.rol == 'ADMIN',
-                    }"
-                    label="{{ item.rol == 'ADMIN' ? 'Admin' : 'Alumno' }}"
-                  />
-                  <p-chip
-                    *ngIf="item.esTutor"
-                    class="tutor-tag"
-                    label="Tutor"
-                  />
-                  <p-chip
-                    [ngClass]="getSubscriptionBadgeClass(item.suscripcion)"
-                    [label]="getSubscriptionLabel(item.suscripcion)"
-                  />
-                </span>
-                <div class="text-md font-medium text-900 descripcion">
-                  @if (item.nombre && item.apellidos && item.nombre.length>0 &&
-                  item.apellidos.length>0 && viewportService.screenWidth!= 'xs')
-                  {
-                  {{ item.nombre + " " + item.apellidos }}
-                  <span class="font-small">{{
-                    " ( " + item.email + " ) "
-                  }}</span>
-                  } @else {
-                  {{ item.email }}
-                  }
-                </div>
-              </div>
-              <div class="right-side col-6">
-                <div
-                  class="flex flex-row align-items-center justify-content-end gap-2"
-                >
-                  <p-splitButton
-                    [label]="
-                      viewportService.screenWidth != 'xs' ? 'Permitir' : ''
-                    "
-                    icon="pi pi-check"
-                    [model]="getActionItems(item)"
-                    (onClick)="permitir(item.id)"
-                    styleClass="p-button-raised action-split-button"
-                    appendTo="body"
-                    (click)="$event.stopPropagation()"
-                  ></p-splitButton>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ng-template>
-    </p-dataView>
-  </div>
-  <div class="col-12">
-    <div class="card flex justify-content-end">
-      <p-paginator
-        (onPageChange)="onPageChange($event)"
-        [first]="pagination().skip"
-        [rows]="pagination().take"
-        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
-        [showPageLinks]="viewportService.screenWidth != 'xs'"
+
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="userItemTemplate"
+  [filters]="filters"
+  (onItemClick)="onItemClick($event)"
+  (filtersChanged)="onFiltersChanged($event)"
+>
+  <div left-actions>
+    <p-iconField iconPosition="left" class="flex-grow-1">
+      <p-inputIcon styleClass="pi pi-search" />
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar por email"
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+        class="w-full"
       />
+    </p-iconField>
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4">
+      No hay usuarios disponibles
     </div>
   </div>
-</div>
+</app-generic-list>
+
+<!-- Template para el item de usuario -->
+<ng-template #userItemTemplate let-item>
+  <div class="flex flex-row align-items-between">
+    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <span class="identifier" pTooltip="{{ item.email }}" tooltipPosition="top">
+          @if (item.nombre && item.apellidos && item.nombre.length>0 &&
+          item.apellidos.length>0 && viewportService.screenWidth!= 'xs')
+          {
+          {{ item.nombre + " " + item.apellidos }}
+          <span class="font-small">{{
+            " ( " + item.email + " ) "
+          }}</span>
+          } @else {
+          {{ item.email }}
+          }
+        </span>
+        
+        <div class="flex gap-1">
+          <p-chip
+            [styleClass]="item.validated ? 'verified-chip' : 'nonverified-chip'"
+            label="{{
+              item.validated ? 'Verificado' : 'Sin verificar'
+            }}"
+            pTooltip="{{ item.validated ? 'Usuario verificado' : 'Usuario sin verificar' }}"
+            tooltipPosition="top"
+          />
+          <p-chip
+            [styleClass]="item.rol == 'ADMIN' ? 'admin-chip' : 'alumno-chip'"
+            label="{{ item.rol == 'ADMIN' ? 'Admin' : 'Alumno' }}"
+            pTooltip="{{ item.rol == 'ADMIN' ? 'Usuario administrador' : 'Usuario alumno' }}"
+            tooltipPosition="top"
+          />
+          <p-chip
+            *ngIf="item.esTutor"
+            styleClass="tutor-chip"
+            label="Tutor"
+            pTooltip="Usuario tutor"
+            tooltipPosition="top"
+          />
+          <p-chip
+            [styleClass]="getSubscriptionBadgeClass(item.suscripcion)"
+            [label]="getSubscriptionLabel(item.suscripcion)"
+            pTooltip="Tipo de suscripción"
+            tooltipPosition="top"
+          />
+        </div>
+      </div>
+      <span class="descripcion unbreakable-text" pTooltip="Fecha de solicitud" tooltipPosition="top">
+        {{
+          viewportService.screenWidth != "xs"
+            ? "Solicitado el día"
+            : ""
+        }}
+        {{ item.createdAt | date : "short" }}
+      </span>
+    </div>
+
+    <div class="right-side col-3 flex align-items-center justify-content-end">
+      <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <p-splitButton
+          [label]="
+            viewportService.screenWidth != 'xs' ? 'Permitir' : ''
+          "
+          icon="pi pi-check"
+          [model]="getActionItems(item)"
+          (onClick)="permitir(item.id)"
+          styleClass="p-button-sm p-button-raised action-split-button"
+          appendTo="body"
+          (click)="$event.stopPropagation()"
+        ></p-splitButton>
+      </div>
+    </div>
+  </div>
+</ng-template>
 
 <!-- Diálogo para cambiar suscripción -->
 <p-dialog

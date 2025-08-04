@@ -10,8 +10,9 @@ import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
-import { Pregunta } from '../../../shared/models/pregunta.model';
+import { Pregunta, Dificultad, Comunidad } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import {
   getAlumnoDificultad,
   getStarsBasedOnDifficulty,
@@ -31,6 +32,35 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
   public uploadingFile = false;
 
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+    {
+      key: 'temas',
+      label: 'Temas',
+      type: 'tema-select',
+      filterInterpolation: (value) => ({
+        temaId: { in: value }
+      }),
+    },
+    {
+      key: 'relevancia',
+      label: 'Comunidad',
+      type: 'comunidad-dropdown',
+      placeholder: 'Seleccionar comunidad',
+    },
+  ];
+
   commMap = (pagination: PaginationFilter) => {
     return {
       ADMIN: this.preguntasService
@@ -73,6 +103,15 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
       this.router.navigate(['/app/test/alumno/preguntas/' + id]);
     }
   };
+
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
+    });
+  }
 
   public descargarPreguntasDeAlumnos() {
     firstValueFrom(

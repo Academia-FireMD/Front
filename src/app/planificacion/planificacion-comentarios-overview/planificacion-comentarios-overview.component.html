@@ -1,80 +1,83 @@
-<div class="grid">
-  <div class="col-12">
-    <div class="top-action-bar">
-      <p-iconField iconPosition="left">
-        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-        <input
-          type="text"
-          pInputText
-          placeholder="Buscar por nombre o email de usuario"
-          style="min-width: 30vw"
-          [value]="pagination().searchTerm"
-          (input)="valueChanged($event)"
-        />
-      </p-iconField>
-      <div class="right-actions"></div>
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="comentarioItemTemplate"
+  [filters]="filters"
+  (onItemClick)="onItemClick($event)"
+  (filtersChanged)="onFiltersChanged($event)"
+>
+  <div left-actions>
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar por nombre o email de usuario"
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+        class="w-full"
+      />
+    </p-iconField>
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4">
+      No hay comentarios disponibles
     </div>
   </div>
-  <div class="col-12 list-generic">
-    <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
-      <ng-template pTemplate="list" let-products>
-        <div class="grid grid-nogutter">
-          <div
-            class="col-12 item-container pointer"
-            *ngFor="let item of products; let first = first"
-            [routerLink]="[
-              '/app/planificacion/planificacion-mensual/' + item.planificacionId
-            ]"
-          >
-            <div
-              class="flex flex-row align-items-center justify-content-between"
-            >
-              <!-- Izquierda: Información del Usuario y Comentario -->
-              <div class="flex flex-column py-2 col-9 left-side">
-                <div class="font-medium text-secondary text-sm flex gap-2">
-                  <strong>{{
-                    (item.planificacion.asignaciones && item.planificacion.asignaciones.length > 0)
-                      ? (item.planificacion.asignaciones[0].alumno.nombre || item.planificacion.asignaciones[0].alumno.email)
-                      : 'Usuario no disponible'
-                  }}</strong>
-                </div>
-                <div class="font-small text-secondary text-sm comentario">
-                  <span>{{ item.comentariosAlumno || 'Sin comentarios' }}</span>
-                </div>
-              </div>
-              <!-- Derecha: Fecha y Botón -->
-              <div
-                class="right-side col-3 flex align-items-center justify-content-end gap-3"
-              >
-                <span class="font-medium text-secondary text-sm">
-                  {{ item.createdAt | date : "short" }}
-                </span>
-                <p-button
-                  [link]="true"
-                  icon="pi pi-calendar"
-                  styleClass="p-button-primary p-button-rounded"
-                  label="Ver planificación"
-                  [routerLink]="[
-                    '/app/planificacion/planificacion-mensual/' +
-                      item.planificacionId
-                  ]"
-                ></p-button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ng-template>
-    </p-dataView>
-  </div>
-  <div class="col-12">
-    <div class="card flex justify-content-end">
-      <p-paginator
-        (onPageChange)="onPageChange($event)"
-        [first]="pagination().skip"
-        [rows]="pagination().take"
-        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
-        [showPageLinks]="viewportService.screenWidth != 'xs'"
-      ></p-paginator>
+</app-generic-list>
+
+<!-- Template para el item de comentario -->
+<ng-template #comentarioItemTemplate let-item>
+  <div class="flex flex-row align-items-between">
+    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <span 
+          class="identifier" 
+          pTooltip="Usuario del comentario" 
+          tooltipPosition="top"
+        >
+          {{
+            (item.planificacion?.asignaciones && item.planificacion.asignaciones.length > 0)
+              ? (item.planificacion.asignaciones[0].alumno.nombre || item.planificacion.asignaciones[0].alumno.email)
+              : 'Usuario no disponible'
+          }}
+        </span>
+        <span 
+          class="badge bg-primary text-white" 
+          pTooltip="Planificación asociada" 
+          tooltipPosition="top"
+        >
+          {{ item.planificacion?.identificador || 'Sin planificación' }}
+        </span>
+      </div>
+      <span 
+        class="descripcion" 
+        pTooltip="{{ item.comentariosAlumno }}" 
+        tooltipPosition="top"
+      >
+        {{ item.comentariosAlumno || 'Sin comentarios' }}
+      </span>
+    </div>
+    <div class="right-side col-3 flex align-items-center justify-content-end">
+      <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <span 
+          class="text-xs hidden md:block unbreakable-text" 
+          pTooltip="Fecha del comentario: {{ item.createdAt | date : 'dd/MM/yyyy HH:mm' }}" 
+          tooltipPosition="top"
+        >
+          {{ item.createdAt | date : "short" }}
+        </span>
+        <p-button
+          icon="pi pi-calendar"
+          styleClass="p-button-primary"
+          pTooltip="Ver planificación"
+          (click)="
+            $event.stopPropagation();
+            $event.preventDefault();
+            onItemClick(item)
+          "
+        ></p-button>
+      </div>
     </div>
   </div>
-</div>
+</ng-template>

@@ -6,6 +6,7 @@ import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { PaginatedResult } from '../../../shared/models/pagination.model';
 import { PreguntaFallo } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-preguntas-fallos-overview',
@@ -20,6 +21,20 @@ export class PreguntasFallosOverviewComponent extends SharedGridComponent<Pregun
   @Input() mode: 'injected' | 'overview' = 'overview';
   @Input() data!: PaginatedResult<PreguntaFallo>;
 
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+  ];
+
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
@@ -28,6 +43,20 @@ export class PreguntasFallosOverviewComponent extends SharedGridComponent<Pregun
         .getReporteFallos$(this.pagination())
         .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
     });
+  }
+
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
+    });
+  }
+
+  public onItemClick(item: PreguntaFallo) {
+    // Manejar click en el item si es necesario
+    this.toggleRowExpansion(item);
   }
 
   toggleRowExpansion(item: PreguntaFallo) {

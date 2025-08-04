@@ -1,0 +1,207 @@
+.top-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.left-actions {
+  flex: 1;
+  min-width: 0; // Permite que el flex item se encoja
+}
+
+.right-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0; // Evita que los botones se encojan
+}
+
+// Estilos para el badge del botón de filtros en PrimeNG v17
+.filter-button-wrapper {
+  position: relative;
+  display: inline-block;
+  
+  .filter-count-badge {
+    position: absolute !important;
+    top: -4px !important;
+    right: -4px !important;
+    min-width: 14px !important;
+    width: 0px;
+    height: 14px !important;
+    font-size: 0.6rem !important;
+    font-weight: 500 !important;
+    border-radius: 7px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 2px !important;
+    z-index: 10 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border: 1px solid white !important;
+    opacity: 0.9 !important;
+  }
+}
+
+// Estilos para el diálogo de filtros
+:host ::ng-deep .p-dialog {
+  .p-dialog-content {
+    padding: 1.5rem;
+  }
+
+  .field {
+    margin-bottom: 1rem;
+
+    label {
+      color: var(--text-color);
+      font-weight: 500;
+    }
+  }
+}
+
+// Mejoras responsive para los filtros
+@media (max-width: 768px) {
+  .top-action-bar {
+    flex-direction: row;
+    gap: 1rem;
+    align-items: stretch;
+
+    .left-actions,
+    .right-actions {
+      width: 100%;
+    }
+
+    .left-actions {
+      flex: 1;
+    }
+
+    .right-actions {
+      flex: 0;
+    }
+  }
+}
+
+.list-generic {
+  // Eliminar altura fija para evitar doble scroll
+  // overflow: auto;
+  @media (max-width: 768px) {
+    max-height: 70vh;
+    overflow: auto;
+  }
+
+  .item-container {
+    background-color: var(--surface-card);
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+    // Altura más compacta para todos los items
+    min-height: 80px;
+    max-height: 80px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    &:hover {
+      background-color: var(--surface-hover);
+      border-color: var(--primary-color);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .left-side {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+
+      .identifier {
+        color: var(--primary-color);
+        font-weight: 600;
+      }
+
+      .descripcion {
+        color: var(--text-color-secondary);
+        margin-top: 0.25rem;
+        // Limitar líneas de descripción
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        max-height: 1.3em; // 1 línea
+      }
+    }
+
+    .right-side {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+
+      .nota-valor {
+        font-weight: 600;
+        font-size: 1.1rem;
+
+        &.excellent {
+          color: var(--green-500);
+        }
+        &.good {
+          color: var(--blue-500);
+        }
+        &.average {
+          color: var(--orange-500);
+        }
+        &.poor {
+          color: var(--red-500);
+        }
+      }
+    }
+  }
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .list-generic {
+    .item-container {
+      min-height: 70px;
+      max-height: 70px;
+      padding: 0.5rem;
+
+      .left-side {
+        .descripcion {
+          -webkit-line-clamp: 1;
+          max-height: 1.3em;
+        }
+      }
+    }
+  }
+}
+
+// Optimizaciones para pantallas muy pequeñas
+@media (max-width: 480px) {
+  .list-generic {
+    .item-container {
+      min-height: 65px;
+      max-height: 65px;
+      padding: 0.4rem;
+
+      .left-side {
+        .descripcion {
+          font-size: 0.75rem;
+          line-height: 1.2;
+        }
+      }
+    }
+  }
+}

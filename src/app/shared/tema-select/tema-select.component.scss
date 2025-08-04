@@ -1,5 +1,6 @@
 :host {
   ::ng-deep .p-multiselect-panel {
+    border-radius: 20px !important;
     .p-multiselect-items {
       // Oculta solo los items por defecto, no el contenedor
       .p-multiselect-item {
@@ -17,5 +18,20 @@
   // Ajustes adicionales para mejorar el aspecto
   ::ng-deep .p-checkbox {
     margin-right: 0.5rem;
+  }
+}
+
+:host ::ng-deep {
+  // Hacer el selector de temas redondo
+  .p-multiselect {
+    border-radius: 10px !important;
+
+    .p-multiselect-trigger {
+      border-radius: 0 20px 20px 0 !important;
+    }
+
+    .p-multiselect-label {
+      border-radius: 20px 0 0 20px !important;
+    }
   }
 }

@@ -1,230 +1,191 @@
-<div class="grid">
-  <div class="col-12">
-    <p-confirmDialog></p-confirmDialog>
-    <div class="top-action-bar">
-      <p-iconField iconPosition="left">
-        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-        <input
-          type="text"
-          pInputText
-          placeholder="Buscar exámenes"
-          style="min-width: 30vw"
-          [value]="pagination().searchTerm"
-          (input)="valueChanged($event)"
-          data-testid="buscar-examenes-input"
-        />
-      </p-iconField>
-      <div class="right-actions flex gap-2">
-        <app-tema-select [formControl]="formControlTemas"></app-tema-select>
+<p-confirmDialog></p-confirmDialog>
 
-        <p-button
-          *ngIf="expectedRole == 'ADMIN'"
-          label="{{
-            viewportService.screenWidth == 'xs' ? undefined : 'Nuevo examen'
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="examenItemTemplate"
+  [filters]="filters"
+  (onItemClick)="onItemClick($event)"
+  (filtersChanged)="onFiltersChanged($event)"
+>
+  <div left-actions>
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar exámenes"
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+        data-testid="buscar-examenes-input"
+        class="w-full"
+      />
+    </p-iconField>
+  </div>
+
+  <div right-actions>
+    <div class="flex gap-2">
+      <p-button
+        *ngIf="expectedRole == 'ADMIN'"
+        label="{{
+          viewportService.screenWidth == 'xs' ? undefined : 'Nuevo examen'
+        }}"
+        icon="pi pi-plus"
+        [link]="true"
+        (click)="navigateToDetailview($event, 'new')"
+        data-testid="nuevo-examen-btn"
+      ></p-button>
+    </div>
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4" data-testid="no-examenes-message">
+      No hay exámenes disponibles
+    </div>
+  </div>
+</app-generic-list>
+
+<!-- Template para el item de examen -->
+<ng-template #examenItemTemplate let-item>
+  <div class="flex flex-row align-items-between">
+    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <div class="flex gap-1">
+          <strong
+            class="examen-titulo"
+            pTooltip="{{ item.titulo }}"
+            tooltipPosition="top"
+            >{{ item.titulo }}</strong
+          >
+        </div>
+        <div class="flex gap-1 align-items-center" *ngIf="expectedRole === 'ALUMNO'">
+          <span
+            class="badge bg-primary text-white"
+            *ngIf="item.tipoAcceso === 'SIMULACRO'"
+            pTooltip="Examen tipo simulacro - Acceso restringido"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-stopwatch"></i> Simulacro
+          </span>
+          <span
+            class="badge bg-primary text-white"
+            *ngIf="item.test?.duration"
+            pTooltip="Duración del examen: {{ item.test?.duration }} minutos"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-clock"></i> {{ item.test?.duration }} min
+          </span>
+        </div>
+        <div class="flex gap-1 align-items-center" *ngIf="expectedRole === 'ALUMNO'">
+          <span
+            class="text-primary text-xs"
+            *ngIf="item.fechaActivacion"
+            pTooltip="Disponible desde: {{ item.fechaActivacion | date : 'dd/MM/yyyy HH:mm' }}"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-calendar"></i> {{ item.fechaActivacion | date : "dd/MM" }}
+          </span>
+          <span
+            class="text-info text-xs"
+            *ngIf="item.fechaSolucion"
+            pTooltip="Soluciones disponibles desde: {{ item.fechaSolucion | date : 'dd/MM/yyyy HH:mm' }}"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-check-circle"></i> {{ item.fechaSolucion | date : "dd/MM" }}
+          </span>
+        </div>
+      </div>
+      <span
+        class="descripcion"
+        pTooltip="{{ item.descripcion }}"
+        tooltipPosition="top"
+        >{{ item.descripcion }}</span
+      >
+    </div>
+
+    <div class="right-side col-3 flex align-items-center justify-content-end">
+      <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <app-comunidad-picker [comunidades]="item.relevancia"></app-comunidad-picker>
+
+        <span
+          class="badge"
+          *ngIf="expectedRole === 'ALUMNO' && item.test?.status"
+          [ngClass]="{
+            'bg-warning': item.test?.status === 'CREADO',
+            'bg-info': item.test?.status === 'EMPEZADO',
+            'bg-success': item.test?.status === 'FINALIZADO'
+          }"
+          data-testid="estado-test-badge"
+          pTooltip="Estado del examen: {{ item.test?.status }}"
+          tooltipPosition="top"
+        >
+          {{ item.test?.status }}
+        </span>
+
+        <span
+          class="text-xs hidden md:block unbreakable-text"
+          pTooltip="Fecha de creación: {{
+            item.createdAt | date : 'dd/MM/yyyy HH:mm'
           }}"
-          icon="pi pi-plus"
-          (click)="navigateToDetailview($event, 'new')"
-          data-testid="nuevo-examen-btn"
+          tooltipPosition="top"
+        >
+          {{ item.createdAt | date : "short" }}</span
+        >
+
+        <!-- Botón para iniciar examen (solo alumnos) -->
+        <p-button
+          *ngIf="expectedRole === 'ALUMNO' && (!item.test || item.test?.status === 'CREADO')"
+          label="Iniciar"
+          icon="pi pi-play"
+          severity="success"
+          size="small"
+          data-testid="iniciar-examen-btn"
+          (click)="$event.stopPropagation(); navigateToDetailview($event, item.id, item.test?.id)"
         ></p-button>
+
+        <div class="admin-controls" *ngIf="expectedRole !== 'ALUMNO'">
+          <p-button
+            *ngIf="item.estado === 'BORRADOR'"
+            icon="pi pi-check"
+            severity="success"
+            (click)="$event.stopPropagation(); $event.preventDefault(); publicarExamen(item.id, $event)"
+            [text]="true"
+            pTooltip="Publicar examen"
+            size="small"
+            data-testid="publicar-examen-btn"
+          ></p-button>
+
+          <p-button
+            *ngIf="item.estado === 'PUBLICADO'"
+            icon="pi pi-inbox"
+            severity="warning"
+            (click)="$event.stopPropagation(); $event.preventDefault(); archivarExamen(item.id, $event)"
+            [text]="true"
+            pTooltip="Archivar examen"
+            size="small"
+            data-testid="archivar-examen-btn"
+          ></p-button>
+
+          <p-button
+            icon="pi pi-pencil"
+            severity="info"
+            (click)="$event.stopPropagation(); $event.preventDefault(); navigateToDetailview($event, item.id)"
+            [text]="true"
+            pTooltip="Editar examen"
+            size="small"
+            data-testid="editar-examen-btn"
+          ></p-button>
+
+          <p-button
+            icon="pi pi-trash"
+            severity="danger"
+            (click)="$event.stopPropagation(); $event.preventDefault(); eliminarExamen(item.id, $event)"
+            [text]="true"
+            pTooltip="Eliminar examen"
+            size="small"
+            data-testid="eliminar-examen-btn"
+          ></p-button>
+        </div>
       </div>
     </div>
   </div>
-
-  <div class="col-12 list-generic">
-    <ng-container *ngIf="fetchItems$() | async as data">
-      @if (data?.data && data.data.length) {
-      <p-dataView
-        [value]="data?.data ?? []"
-        [emptyMessage]="'No hay exámenes disponibles'"
-      >
-        <ng-template pTemplate="empty">
-          <div class="text-center p-4">No hay exámenes disponibles</div>
-        </ng-template>
-        <ng-template pTemplate="list" let-examenes>
-          <div class="grid grid-nogutter">
-            <div
-              class="col-12 item-container pointer"
-              (click)="navigateToDetailview($event, item.id, item.test?.id)"
-              *ngFor="let item of examenes; let first = first"
-              data-testid="examen-item"
-              [attr.data-testid]="item.estado === 'BORRADOR' ? 'examen-borrador' : 'examen-item'"
-            >
-              <div class="flex flex-row align-items-between">
-                <div class="flex flex-column py-2 col-9 left-side">
-                  <div
-                    class="text-lg font-medium flex gap-2 align-items-center"
-                  >
-                    <strong>{{ item.titulo }}</strong>
-                    <div
-                      class="flex align-items-center gap-2"
-                      *ngIf="expectedRole === 'ALUMNO'"
-                    >
-                      <span
-                        class="badge bg-primary text-white"
-                        *ngIf="item.tipoAcceso === 'SIMULACRO'"
-                      >
-                        <i class="pi pi-stopwatch"></i> Simulacro
-                      </span>
-                      <span
-                        class="badge bg-success text-white"
-                        *ngIf="item.test?.duration"
-                      >
-                        <i class="pi pi-clock"></i> Duración:
-                        {{ item.test?.duration }} min
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    class="flex flex-column gap-1"
-                    *ngIf="expectedRole === 'ALUMNO'"
-                  >
-                    <span class="font-small text-secondary text-sm descripcion">
-                      {{ item.descripcion }}
-                    </span>
-                    <div class="flex flex-column text-sm gap-1">
-                      <span class="text-primary" *ngIf="item.fechaActivacion">
-                        <i class="pi pi-calendar"></i> Disponible desde:
-                        {{ item.fechaActivacion | date : "dd/MM/yyyy HH:mm" }}
-                      </span>
-                      <span class="text-info" *ngIf="item.fechaSolucion">
-                        <i class="pi pi-check-circle"></i> Soluciones
-                        disponibles:
-                        {{ item.fechaSolucion | date : "dd/MM/yyyy HH:mm" }}
-                      </span>
-                      <span
-                        class="text-warning"
-                        *ngIf="item.tipoAcceso === 'SIMULACRO'"
-                      >
-                        <i class="pi pi-lock"></i> Acceso restringido - Requiere
-                        código
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    class="flex flex-column gap-1"
-                    *ngIf="expectedRole !== 'ALUMNO'"
-                  >
-                    <span class="font-small text-secondary text-sm descripcion">
-                      {{ item.descripcion }}
-                    </span>
-                  </div>
-                </div>
-                <div
-                  class="right-side col-3 flex align-items-center justify-content-end"
-                >
-                  <div
-                    class="flex flex-row align-items-center justify-content-end gap-2"
-                  >
-                    <app-comunidad-picker
-                      [comunidades]="item.relevancia"
-                    ></app-comunidad-picker>
-                    <span
-                      class="badge"
-                      *ngIf="expectedRole === 'ALUMNO' && item.test?.status"
-                      [ngClass]="{
-                        'bg-warning': item.test?.status === 'CREADO',
-                        'bg-info': item.test?.status === 'EMPEZADO',
-                        'bg-success': item.test?.status === 'FINALIZADO'
-                      }"
-                      data-testid="estado-test-badge"
-                    >
-                      {{ item.test?.status }}
-                    </span>
-
-                    <!-- Botón para iniciar examen (solo alumnos) -->
-                    <p-button
-                      *ngIf="expectedRole === 'ALUMNO' && (!item.test || item.test?.status === 'CREADO')"
-                      label="Iniciar"
-                      icon="pi pi-play"
-                      severity="success"
-                      data-testid="iniciar-examen-btn"
-                      (click)="navigateToDetailview($event, item.id, item.test?.id)"
-                    ></p-button>
-
-                    <div
-                      class="admin-controls"
-                      *ngIf="expectedRole !== 'ALUMNO'"
-                    >
-                      <p-button
-                        *ngIf="item.estado === 'BORRADOR'"
-                        icon="pi pi-check"
-                        severity="success"
-                        (click)="
-                          $event.stopPropagation();
-                          $event.preventDefault();
-                          publicarExamen(item.id, $event)
-                        "
-                        [text]="true"
-                        pTooltip="Publicar"
-                        data-testid="publicar-examen-btn"
-                      >
-                      </p-button>
-
-                      <p-button
-                        *ngIf="item.estado === 'PUBLICADO'"
-                        icon="pi pi-inbox"
-                        severity="warning"
-                        (click)="
-                          $event.stopPropagation();
-                          $event.preventDefault();
-                          archivarExamen(item.id, $event)
-                        "
-                        [text]="true"
-                        pTooltip="Archivar"
-                        data-testid="archivar-examen-btn"
-                      >
-                      </p-button>
-
-                      <p-button
-                        icon="pi pi-pencil"
-                        severity="info"
-                        (click)="
-                          $event.stopPropagation();
-                          $event.preventDefault();
-                          navigateToDetailview($event, item.id)
-                        "
-                        [text]="true"
-                        pTooltip="Editar"
-                        data-testid="editar-examen-btn"
-                      >
-                      </p-button>
-
-                      <p-button
-                        icon="pi pi-trash"
-                        severity="danger"
-                        (click)="
-                          $event.stopPropagation();
-                          $event.preventDefault();
-                          eliminarExamen(item.id, $event)
-                        "
-                        [text]="true"
-                        pTooltip="Eliminar"
-                        data-testid="eliminar-examen-btn"
-                      >
-                      </p-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </ng-template>
-      </p-dataView>
-      }@else {
-      <div class="text-center p-4" data-testid="no-examenes-message">No hay exámenes disponibles</div>
-      }
-    </ng-container>
-  </div>
-  <div class="col-12">
-    <div class="card flex justify-content-end">
-      <p-paginator
-        (onPageChange)="onPageChange($event)"
-        [first]="pagination().skip"
-        [rows]="pagination().take"
-        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
-        [showPageLinks]="viewportService.screenWidth != 'xs'"
-        data-testid="paginador-examenes"
-      ></p-paginator>
-    </div>
-  </div>
-</div>
+</ng-template>

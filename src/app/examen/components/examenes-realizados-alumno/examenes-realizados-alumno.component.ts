@@ -9,6 +9,7 @@ import { PrimengModule } from '../../../shared/primeng.module';
 import { getNotaClass } from '../../../utils/utils';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ViewportService } from '../../../services/viewport.service';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 
 interface ExamenIntento {
   idTest: number;
@@ -37,7 +38,7 @@ interface ExamenRealizado {
 @Component({
   selector: 'app-examenes-realizados-alumno',
   templateUrl: './examenes-realizados-alumno.component.html',
-  styleUrls: ['./examenes-realizados-alumno.component.scss'],
+  styleUrls: ['./examenes-realizados-alumno.component.scss']
 })
 export class ExamenesRealizadosAlumnoComponent extends SharedGridComponent<ExamenRealizado> {
   private examenesService = inject(ExamenesService);
@@ -45,33 +46,41 @@ export class ExamenesRealizadosAlumnoComponent extends SharedGridComponent<Exame
 
   showOptionsDialog = false;
   getNotaClass = getNotaClass;
-  selectedRangeDates = new FormControl([], Validators.required);
   selectedTest: ExamenRealizado | null = null;
+
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'fechaRealizacion',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+  ];
 
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
       return this.examenesService.getExamenesRealizados$(this.pagination());
     });
+  }
 
-    this.selectedRangeDates.valueChanges.subscribe((dates: any) => {
-      if (dates) {
-        this.pagination.set({
-          ...this.pagination(),
-          where: {
-            createdAt: {
-              gte: dates[0] ?? new Date(),
-              lte: dates[1] ?? new Date(),
-            },
-          },
-        });
-      } else {
-        this.pagination.set({
-          ...this.pagination(),
-          where: {},
-        });
-      }
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
     });
+  }
+
+  public onItemClick(item: ExamenRealizado) {
+    this.selectedTest = item;
+    this.showOptionsDialog = true;
   }
 
   public verResultadosTest(idTest: number): void {

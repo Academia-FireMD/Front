@@ -1,183 +1,157 @@
 <p-confirmDialog></p-confirmDialog>
-<div class="grid">
-  <div class="col-12">
-    <div class="top-action-bar">
-      <div class="left-actions flex gap-2">
-        <p-iconField
-          iconPosition="left"
-          *ngIf="expectedRole == 'ADMIN' && viewportService.screenWidth != 'xs'"
-        >
-          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-          <input
-            type="text"
-            pInputText
-            placeholder="Buscar por email"
-            style="min-width: 30vw"
-            [value]="pagination().searchTerm"
-            (input)="valueChanged($event)"
-          />
-        </p-iconField>
-        <p-calendar
-          appendTo="body"
-          [formControl]="selectedRangeDates"
-          selectionMode="range"
-          placeholder="Rango de fechas"
-          [readonlyInput]="true"
-          [showButtonBar]="true"
-        />
-        <app-tema-select
-          style="width: 300px"
-          [formControl]="temas"
-        ></app-tema-select>
-      </div>
-      <div class="right-actions">
-        <p-button
-          [disabled]="selectedRangeDates.invalid"
-          (onClick)="generarEstadisticas()"
-          [loading]="generandoEstadistica"
-          label="{{
-            viewportService.screenWidth == 'xs'
-              ? 'Generar'
-              : 'Generar estadistica'
-          }}"
-        />
-      </div>
-    </div>
-  </div>
-  <div class="col-12 list-generic">
-    <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
-      <ng-template pTemplate="list" let-products>
-        <div class="grid grid-nogutter">
-          <div
-            class="col-12 item-container pointer"
-            *ngFor="let item of products; let first = first"
-            (click)="viewStats(item.id)"
-          >
-            <div class="flex flex-row align-items-between flex-wrap">
-              <div
-                class="flex flex-column col-12 md:col-6 left-side py-1 md:py-2"
-              >
-                <div class="text-lg font-medium flex gap-2 align-items-center">
-                  <div class="flex gap-1 text-sm">
-                    <span class="hidden md:block">Tipo de test: </span>
-                    <strong class="identifier">{{
-                      obtenerTipoDeTest(item, type)
-                    }}</strong>
-                  </div>
 
-                  <div class="flex gap-1 text-sm">
-                    <strong>{{ obtenerTemas(item, type) }}</strong>
-                  </div>
-                  <p-badge
-                    *ngIf="item.ExamenRealizado"
-                    value="{{ item.ExamenRealizado.titulo }}"
-                    severity="info"
-                    styleClass="ml-2"
-                  ></p-badge>
-                </div>
-                <span
-                  class="font-small text-secondary text-sm descripcion"
-                  *ngIf="viewportService.screenWidth != 'xs'"
-                >
-                  Numero de items: @if(type == 'TESTS'){
-                  {{ item.testPreguntas.length }}
-                  }@else {
-                  {{ item.flashcards.length }}
-                  } @if(expectedRole == 'ADMIN'){ Realizado por
-                  {{ item.realizador.email }}
-                  }
-                </span>
-              </div>
-              <div
-                class="right-side col-12 md:col-6 py-1 md:py-2 flex align-items-center justify-content-start md:justify-content-end"
-              >
-                <div
-                  class="flex flex-row align-items-center justify-content-end gap-3"
-                >
-                  @if(type == 'TESTS'){
-                  <span
-                    class="text-sm font-small flex align-items-center gap-2"
-                  >
-                    <strong>{{
-                      calcular100(
-                        item.stats,
-                        item?.testPreguntas?.length ?? 0
-                      ).toFixed(2)
-                    }}</strong>
-                    <div class="card flex justify-center firemd-avatar-group">
-                      <p-avatarGroup>
-                        <p-avatar label="⭐" shape="circle" size="normal" />
-                      </p-avatarGroup></div
-                  ></span>
-                  <span
-                    class="text-sm font-small flex align-items-center gap-2"
-                  >
-                    <strong>{{
-                      calcular100y75(
-                        item.stats,
-                        item?.testPreguntas?.length ?? 0
-                      ).toFixed(2)
-                    }}</strong>
-                    <div class="card flex justify-center firemd-avatar-group">
-                      <p-avatarGroup>
-                        <p-avatar label="⭐" shape="circle" size="normal" />
-                        <p-avatar label="👍" shape="circle" size="normal" />
-                      </p-avatarGroup></div
-                  ></span>
-                  <span
-                    class="text-sm font-small flex align-items-center gap-2"
-                  >
-                    <strong>
-                      {{
-                        calcular100y75y50(
-                          item.stats,
-                          item?.testPreguntas?.length ?? 0
-                        ).toFixed(2)
-                      }}</strong
-                    >
-                    <div class="card flex justify-center firemd-avatar-group">
-                      <p-avatarGroup>
-                        <p-avatar label="⭐" shape="circle" size="normal" />
-                        <p-avatar label="👍" shape="circle" size="normal" />
-                        <p-avatar label="👎" shape="circle" size="normal" />
-                      </p-avatarGroup>
-                    </div>
-                  </span>
-                  }
-                  <span
-                    class="font-medium text-secondary text-sm hidden md:block"
-                  >
-                    {{ item.createdAt | date : "short" }}</span
-                  >
-                  <!-- <p-button
-                    [link]="true"
-                    icon="pi pi-trash"
-                    (click)="$event.stopPropagation(); $event.preventDefault()"
-                  ></p-button> -->
-                </div>
-              </div>
-            </div>
-            <!-- <div class="flex flex-row align-items-between">
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Libero
-              consequatur fuga atque officia error quaerat, harum quia repellat
-              eum autem voluptates? Voluptatibus blanditiis repellendus
-              provident repellat quis ut quos voluptatum.
-            </div> -->
-          </div>
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="testStatsItemTemplate"
+  [filters]="filters"
+  (onItemClick)="viewStats($any($event).id)"
+  (filtersChanged)="onFiltersChanged($event)"
+  #genericList
+>
+  <div left-actions>
+    <p-iconField iconPosition="left" class="w-full">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar estadísticas de tests"
+        class="w-full"
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+      />
+    </p-iconField>
+  </div>
+
+  <div right-actions>
+    <p-button
+      (onClick)="generarEstadisticas()"
+      [loading]="generandoEstadistica"
+      label="{{
+        viewportService.screenWidth == 'xs' ? '' : 'Generar estadistica'
+      }}"
+      icon="pi pi-chart-bar"
+    />
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4">No hay estadísticas disponibles</div>
+  </div>
+</app-generic-list>
+
+<!-- Template para el item de estadísticas de test -->
+<ng-template #testStatsItemTemplate let-item>
+  <div class="flex flex-row align-items-between flex-wrap">
+    <div
+      class="flex flex-column col-12 md:col-6 left-side py-1 md:py-2 truncate-flex-content"
+    >
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <div class="flex gap-1 text-sm">
+          <span class="hidden md:block">Tipo de test: </span>
+          <strong class="identifier">{{
+            obtenerTipoDeTest(item, type)
+          }}</strong>
         </div>
-      </ng-template>
-    </p-dataView>
-  </div>
-  <div class="col-12">
-    <div class="card flex justify-content-end">
-      <p-paginator
-        (onPageChange)="onPageChange($event)"
-        [first]="pagination().skip"
-        [rows]="pagination().take"
-        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
-        [showPageLinks]="viewportService.screenWidth != 'xs'"
-      ></p-paginator>
+
+        <div class="flex gap-1">
+          <span
+            class="badge bg-primary text-white"
+            pTooltip="Temas del test"
+            tooltipPosition="top"
+          >
+            {{ obtenerTemas(item, type) }}
+          </span>
+        </div>
+        <p-badge
+          *ngIf="item.ExamenRealizado"
+          value="{{ item.ExamenRealizado.titulo }}"
+          severity="info"
+          styleClass="ml-2"
+          pTooltip="Examen: {{ item.ExamenRealizado.titulo }}"
+          tooltipPosition="top"
+        ></p-badge>
+      </div>
+      <span
+        class="descripcion"
+        *ngIf="viewportService.screenWidth != 'xs'"
+        pTooltip="Número de items en el test"
+        tooltipPosition="top"
+      >
+        Numero de items: @if(type == 'TESTS'){
+        {{ item.testPreguntas.length }}
+        }@else {
+        {{ item.flashcards.length }}
+        } @if(expectedRole == 'ADMIN'){ Realizado por
+        {{ item.realizador.email }}
+        }
+      </span>
+    </div>
+    <div
+      class="right-side col-12 md:col-6 py-1 md:py-2 flex align-items-center justify-content-start md:justify-content-end"
+    >
+      <div class="flex flex-row align-items-center justify-content-end gap-3">
+        @if(type == 'TESTS'){
+        <span
+          class="text-sm font-small flex align-items-center gap-2"
+          pTooltip="Puntuación 100%"
+          tooltipPosition="top"
+        >
+          <strong>{{
+            calcular100(item.stats, item?.testPreguntas?.length ?? 0).toFixed(2)
+          }}</strong>
+          <div class="card flex justify-center firemd-avatar-group">
+            <p-avatarGroup>
+              <p-avatar label="⭐" shape="circle" size="normal" />
+            </p-avatarGroup></div
+        ></span>
+        <span
+          class="text-sm font-small flex align-items-center gap-2"
+          pTooltip="Puntuación 100% + 75%"
+          tooltipPosition="top"
+        >
+          <strong>{{
+            calcular100y75(
+              item.stats,
+              item?.testPreguntas?.length ?? 0
+            ).toFixed(2)
+          }}</strong>
+          <div class="card flex justify-center firemd-avatar-group">
+            <p-avatarGroup>
+              <p-avatar label="⭐" shape="circle" size="normal" />
+              <p-avatar label="👍" shape="circle" size="normal" />
+            </p-avatarGroup></div
+        ></span>
+        <span
+          class="text-sm font-small flex align-items-center gap-2"
+          pTooltip="Puntuación 100% + 75% + 50%"
+          tooltipPosition="top"
+        >
+          <strong>
+            {{
+              calcular100y75y50(
+                item.stats,
+                item?.testPreguntas?.length ?? 0
+              ).toFixed(2)
+            }}</strong
+          >
+          <div class="card flex justify-center firemd-avatar-group">
+            <p-avatarGroup>
+              <p-avatar label="⭐" shape="circle" size="normal" />
+              <p-avatar label="👍" shape="circle" size="normal" />
+              <p-avatar label="👎" shape="circle" size="normal" />
+            </p-avatarGroup>
+          </div>
+        </span>
+        }
+        <span
+          class="text-xs hidden md:block unbreakable-text"
+          pTooltip="Fecha de creación: {{
+            item.createdAt | date : 'dd/MM/yyyy HH:mm'
+          }}"
+          tooltipPosition="top"
+        >
+          {{ item.createdAt | date : "short" }}</span
+        >
+      </div>
     </div>
   </div>
-</div>
-
+</ng-template>

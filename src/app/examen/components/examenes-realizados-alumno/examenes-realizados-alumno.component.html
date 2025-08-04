@@ -12,18 +12,25 @@
       <h3>Intentos realizados</h3>
       <div class="intentos-list">
         <div
-          *ngFor="let intento of selectedTest.intentos.slice().reverse(); let i = index; let last = last"
+          *ngFor="
+            let intento of selectedTest.intentos.slice().reverse();
+            let i = index;
+            let last = last
+          "
           class="intento-item p-3 mb-2"
-          [ngClass]="{'first-attempt': last}"
+          [ngClass]="{ 'first-attempt': last }"
         >
           <div class="flex align-items-center justify-content-between">
             <div class="flex flex-column">
               <span class="font-medium mb-2">
                 <ng-container *ngIf="i === 0">Último intento</ng-container>
                 <ng-container *ngIf="last">
-                  <i class="pi pi-flag text-primary"></i> Primer intento (registrado)
+                  <i class="pi pi-flag text-primary"></i> Primer intento
+                  (registrado)
                 </ng-container>
-                <ng-container *ngIf="!last && i !== 0">Intento anterior</ng-container>
+                <ng-container *ngIf="!last && i !== 0"
+                  >Intento anterior</ng-container
+                >
                 <span class="text-sm text-secondary">
                   ({{ intento.fechaRealizacion | date : "dd/MM/yyyy HH:mm" }})
                 </span>
@@ -51,7 +58,9 @@
                 icon="pi pi-eye"
                 styleClass="p-button-rounded p-button-outlined p-button-primary"
                 pTooltip="Ver respuestas"
-                (onClick)="verRespuestas(intento.idTest); showOptionsDialog = false"
+                (onClick)="
+                  verRespuestas(intento.idTest); showOptionsDialog = false
+                "
               ></p-button>
               <p-button
                 icon="pi pi-chart-bar"
@@ -61,7 +70,6 @@
                   verResultadosTest(intento.idTest); showOptionsDialog = false
                 "
               ></p-button>
-             
             </div>
           </div>
         </div>
@@ -70,105 +78,93 @@
   </div>
 </p-dialog>
 
-<div class="grid">
-  <div class="col-12">
-    <div class="top-action-bar">
-      <div class="left-actions flex gap-2">
-        <p-calendar
-          appendTo="body"
-          [formControl]="selectedRangeDates"
-          selectionMode="range"
-          placeholder="Rango de fechas"
-          [readonlyInput]="true"
-          [showButtonBar]="true"
-        />
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="examenItemTemplate"
+  [filters]="filters"
+  (onItemClick)="onItemClick($event)"
+  (filtersChanged)="onFiltersChanged($event)"
+>
+  <div left-actions>
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar exámenes realizados"
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+        data-testid="buscar-examenes-realizados-input"
+        class="w-full"
+      />
+    </p-iconField>
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4">No has realizado ningún examen todavía.</div>
+  </div>
+</app-generic-list>
+
+<!-- Template para el item de examen -->
+<ng-template #examenItemTemplate let-examen>
+  <div class="flex flex-row align-items-between">
+    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <span
+          class="examen-titulo"
+          pTooltip="{{ examen.titulo }}"
+          tooltipPosition="top"
+          >{{ examen.titulo }}</span
+        >
+        <p-badge
+          *ngIf="examen.tieneMultiplesIntentos"
+          [value]="examen.intentos.length + ' intentos'"
+          severity="primary"
+          pTooltip="Examen con múltiples intentos realizados"
+          tooltipPosition="top"
+        ></p-badge>
+      </div>
+      <span
+        class="descripcion"
+        pTooltip="{{ examen.titulo }}"
+        tooltipPosition="top"
+      >
+        Primer intento: {{ examen.correctas }} correctas /
+        {{ examen.incorrectas }} incorrectas ({{
+          examen.totalPreguntas
+            ? ((examen.correctas / examen.totalPreguntas) * 100).toFixed(0)
+            : 0
+        }}% acierto)
+      </span>
+    </div>
+
+    <div class="right-side col-3 flex align-items-center justify-content-end">
+      <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <span class="text-sm font-medium flex align-items-center gap-2">
+          <div
+            class="nota-valor"
+            [ngClass]="getNotaClass(examen.nota)"
+            pTooltip="Nota del examen: {{
+              examen.nota !== null ? examen.nota.toFixed(2) : 'N/A'
+            }}"
+            tooltipPosition="top"
+          >
+            {{ examen.nota !== null ? examen.nota.toFixed(2) : "N/A" }}
+          </div>
+        </span>
+        <span class="text-xs hidden md:block unbreakable-text">
+          {{ examen.fechaRealizacion | date : "dd/MM/yyyy HH:mm" }}
+        </span>
+        <p-button
+          icon="pi pi-chart-line"
+          styleClass="p-button-rounded p-button-outlined p-button-primary"
+          pTooltip="Ver ranking"
+          (onClick)="
+            $event.stopPropagation();
+            verLeaderboard(examen.idExamen, examen.idTest)
+          "
+        ></p-button>
       </div>
     </div>
   </div>
-  <div class="col-12 list-generic">
-    <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
-      <ng-template pTemplate="list" let-examenes>
-        <div class="grid grid-nogutter">
-          <div
-            class="col-12 item-container pointer"
-            *ngFor="let examen of examenes"
-            (click)="selectedTest = examen; showOptionsDialog = true"
-          >
-            <div class="flex flex-row align-items-between flex-wrap">
-              <div
-                class="flex flex-column col-12 md:col-6 left-side py-1 md:py-2"
-              >
-                <div class="text-lg font-medium flex gap-2 align-items-center">
-                  <span class="examen-titulo">{{ examen.titulo }}</span>
-                  <p-badge
-                    *ngIf="examen.tieneMultiplesIntentos"
-                    [value]="examen.intentos.length + ' intentos'"
-                    severity="primary"
-                  ></p-badge>
-                </div>
-                <span class="font-small text-secondary text-sm descripcion">
-                 Primer intento: {{ examen.correctas }} correctas /
-                  {{ examen.incorrectas }} incorrectas ({{
-                    examen.totalPreguntas
-                      ? (
-                          (examen.correctas / examen.totalPreguntas) *
-                          100
-                        ).toFixed(0)
-                      : 0
-                  }}% acierto)
-                </span>
-              </div>
-              <div
-                class="right-side col-12 md:col-6 py-1 md:py-2 flex align-items-center justify-content-start md:justify-content-end"
-              >
-                <div
-                  class="flex flex-row align-items-center justify-content-end gap-3"
-                >
-                  <span
-                    class="text-sm font-medium flex align-items-center gap-2"
-                  >
-                    <div
-                      class="nota-valor"
-                      [ngClass]="getNotaClass(examen.nota)"
-                    >
-                      {{
-                        examen.nota !== null ? examen.nota.toFixed(2) : "N/A"
-                      }}
-                    </div>
-                  </span>
-                  <span
-                    class="font-medium text-secondary text-sm hidden md:block"
-                  >
-                    {{ examen.fechaRealizacion | date : "dd/MM/yyyy HH:mm" }}
-                  </span>
-                  <p-button
-                    icon="pi pi-chart-line"
-                    styleClass="p-button-rounded p-button-outlined p-button-primary"
-                    pTooltip="Ver ranking"
-                    (onClick)="$event.stopPropagation(); verLeaderboard(examen.idExamen, examen.idTest)"
-                  ></p-button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ng-template>
-      <ng-template pTemplate="empty">
-        <div class="text-center p-4">
-          No has realizado ningún examen todavía.
-        </div>
-      </ng-template>
-    </p-dataView>
-  </div>
-  <div class="col-12">
-    <div class="card flex justify-content-end">
-      <p-paginator
-        (onPageChange)="onPageChange($event)"
-        [first]="pagination().skip"
-        [rows]="pagination().take"
-        [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
-        [showPageLinks]="true"
-      ></p-paginator>
-    </div>
-  </div>
-</div>
+</ng-template>

@@ -18,6 +18,7 @@ import { UserService } from '../../../services/user.service';
 import { comunidadConImagenNombreMap } from '../../../shared/comunidad-picker/comunidad-picker.component';
 import { Comunidad } from '../../../shared/models/pregunta.model';
 import { SharedModule } from '../../../shared/shared.module';
+import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
 import {
   passwordMatchValidator,
   passwordStrengthValidator,
@@ -57,7 +58,8 @@ interface RegistroTemporal {
     DropdownModule,
     CheckboxModule,
     DialogModule,
-    ProgressSpinnerModule
+    ProgressSpinnerModule,
+    AsyncButtonComponent
   ]
 })
 export class RegistroComponent implements OnInit {

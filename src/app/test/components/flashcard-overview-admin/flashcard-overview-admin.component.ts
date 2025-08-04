@@ -12,6 +12,8 @@ import { FlashcardDataService } from '../../../services/flashcards.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
+import { Dificultad, Comunidad } from '../../../shared/models/pregunta.model';
 import {
   getAlumnoDificultad,
   getStarsBasedOnDifficulty,
@@ -31,6 +33,21 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   public getAlumnoDificultad = getAlumnoDificultad;
+
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+  ];
+
   commMap = (pagination: PaginationFilter) => {
     return {
       ADMIN: this.flashcardService
@@ -41,6 +58,7 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
         .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
     };
   };
+
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
@@ -61,6 +79,15 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
         return this.commMap(pagination)[this.expectedRole];
       })
     );
+  }
+
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
+    });
   }
 
   async onFileSelected(event: Event) {

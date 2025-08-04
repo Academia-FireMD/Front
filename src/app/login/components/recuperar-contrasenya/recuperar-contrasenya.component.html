@@ -48,15 +48,13 @@
           </div>
 
           <!-- Botón de recuperación -->
-          <button
-            pButton
-            type="submit"
+          <app-async-button
+            label="Enviar enlace"
+            [action]="requestPasswordReset.bind(this)"
             [disabled]="formGroup.invalid"
-            class="p-button dark-button p-button-raised w-full"
-            (click)="requestPasswordReset()"
-          >
-            <span class="w-full">Enviar enlace</span>
-          </button>
+            styleClass="p-button dark-button p-button-raised"
+            class="w-full"
+          ></app-async-button>
 
           <!-- Enlace de retorno al login -->
           <a [routerLink]="['/auth/login']" class="link-text mt-3">

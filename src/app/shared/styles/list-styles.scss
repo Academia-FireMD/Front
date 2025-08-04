@@ -1,0 +1,196 @@
+// Estilos estandarizados para todos los listados
+// Este archivo debe ser importado en cada componente que use GenericListComponent
+
+// Estilos base para títulos de items
+.examen-titulo,
+.item-titulo,
+.list-item-titulo,
+.identifier {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+// Estilos base para badges
+.badge {
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  
+  &.bg-primary {
+    background-color: var(--primary-color) !important;
+  }
+  
+  &.bg-success {
+    background-color: var(--green-500) !important;
+  }
+  
+  &.bg-warning {
+    background-color: var(--orange-500) !important;
+  }
+  
+  &.bg-info {
+    background-color: var(--blue-500) !important;
+  }
+  
+  &.bg-danger {
+    background-color: var(--red-500) !important;
+  }
+}
+
+// Estilos específicos para chips de planificación
+.p-chip {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  
+  &.p-chip-danger {
+    background-color: var(--red-500) !important;
+  }
+  
+  &.p-chip-success {
+    background-color: var(--green-500) !important;
+  }
+  
+  &.p-chip-warning {
+    background-color: var(--orange-500) !important;
+  }
+  
+  &.p-chip-info {
+    background-color: var(--blue-500) !important;
+  }
+}
+
+// Estilos base para descripciones
+.descripcion {
+  color: var(--text-color-secondary);
+  margin-top: 0.25rem;
+  line-height: 1.2;
+  font-size: 0.8rem;
+}
+
+// Estilos base para fechas
+.text-xs {
+  font-size: 0.7rem;
+  line-height: 1.1;
+}
+
+// Estilos base para iconos
+.pi {
+  font-size: 0.8rem;
+}
+
+// Estilos base para controles de admin
+.admin-controls {
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+  
+  .p-button {
+    padding: 0.2rem;
+    font-size: 0.8rem;
+  }
+}
+
+// Colores estandarizados
+.text-primary {
+  color: var(--primary-color) !important;
+}
+
+.text-info {
+  color: var(--blue-500) !important;
+}
+
+.text-warning {
+  color: var(--orange-500) !important;
+}
+
+.text-danger {
+  color: var(--red-500) !important;
+}
+
+// Responsive estandarizado
+@media (max-width: 768px) {
+  .examen-titulo,
+  .item-titulo,
+  .list-item-titulo,
+  .identifier {
+    font-size: 0.85rem;
+  }
+  
+  .badge {
+    padding: 0.15rem 0.3rem;
+    font-size: 0.65rem;
+  }
+  
+  .p-chip {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.3rem;
+  }
+  
+  .descripcion {
+    font-size: 0.75rem;
+    line-height: 1.1;
+  }
+  
+  .text-xs {
+    font-size: 0.65rem;
+  }
+  
+  .pi {
+    font-size: 0.7rem;
+  }
+  
+  .admin-controls {
+    gap: 0.15rem;
+    
+    .p-button {
+      padding: 0.15rem;
+      font-size: 0.75rem;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .examen-titulo,
+  .item-titulo,
+  .list-item-titulo,
+  .identifier {
+    font-size: 0.8rem;
+  }
+  
+  .badge {
+    padding: 0.1rem 0.25rem;
+    font-size: 0.6rem;
+  }
+  
+  .p-chip {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.25rem;
+  }
+  
+  .descripcion {
+    font-size: 0.7rem;
+  }
+  
+  .text-xs {
+    font-size: 0.6rem;
+  }
+  
+  .pi {
+    font-size: 0.65rem;
+  }
+  
+  .admin-controls {
+    .p-button {
+      padding: 0.1rem;
+      font-size: 0.7rem;
+    }
+  }
+} 

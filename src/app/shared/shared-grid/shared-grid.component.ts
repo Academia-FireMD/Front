@@ -11,7 +11,7 @@ import { cloneDeep } from 'lodash';
 import { Debounce } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { PaginatorState } from 'primeng/paginator';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { ViewportService } from '../../services/viewport.service';
 import { PaginatedResult, PaginationFilter } from '../models/pagination.model';
 
@@ -19,8 +19,8 @@ import { PaginatedResult, PaginationFilter } from '../models/pagination.model';
   selector: 'app-base-grid',
   template: '',
   host: {
-    'class': 'shared-grid-component'
-  }
+    class: 'shared-grid-component',
+  },
 })
 export class SharedGridComponent<T> implements OnInit {
   toast = inject(ToastrService);
@@ -28,7 +28,9 @@ export class SharedGridComponent<T> implements OnInit {
   router = inject(Router);
   route = inject(ActivatedRoute);
 
-  @Input() fetchItems$!: Signal<Observable<PaginatedResult<T>>>;
+  @Input() fetchItems$: Signal<Observable<PaginatedResult<T> | null>> = signal(
+    of(null)
+  );
 
   // Estado inicial de la paginación
   public pagination = signal<PaginationFilter>({

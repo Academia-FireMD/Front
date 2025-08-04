@@ -9,6 +9,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputTextModule } from 'primeng/inputtext';
 import { SharedModule } from '../shared/shared.module';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 import { ChangePasswordComponent } from './components/change-password/change-password.component';
 import { LoginComponent } from './components/login/login.component';
 import { RecuperarContrasenyaComponent } from './components/recuperar-contrasenya/recuperar-contrasenya.component';
@@ -29,7 +30,8 @@ import { LoginRoutingModule } from './login-routing.module';
     CheckboxModule,
     DialogModule,
     RegistroComponent,
-    LoginComponent
+    LoginComponent,
+    AsyncButtonComponent
   ],
   exports: [],
 })

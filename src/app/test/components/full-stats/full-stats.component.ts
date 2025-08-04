@@ -536,17 +536,25 @@ export class FullStatsComponent {
   commMap = (from: Date, to: Date, temas: Array<string>) => {
     return {
       ADMIN: {
-        FLASHCARDS: this.flashcardService.getStatsByCategoryAdmin({ from, to, temas }),
+        FLASHCARDS: this.flashcardService.getStatsByCategoryAdmin({
+          from,
+          to,
+          temas,
+        }),
         TESTS: this.testService.getStatsByCategoryAdmin({ from, to, temas }),
       },
       ALUMNO: {
-        FLASHCARDS: this.flashcardService.getStatsByCategory({ from, to, temas }),
+        FLASHCARDS: this.flashcardService.getStatsByCategory({
+          from,
+          to,
+          temas,
+        }),
         TESTS: this.testService.getStatsByCategory({ from, to, temas }),
       },
     };
   };
 
-  constructor() { }
+  constructor() {}
 
   private getFullStats() {
     return combineLatest([
@@ -562,10 +570,10 @@ export class FullStatsComponent {
         this.expectedRole = expectedRole;
         this.from = new Date(from);
         this.to = new Date(to);
-        this.temas = (temas as string).split(',');
-        return this.commMap(new Date(from), new Date(to), this.temas)[this.expectedRole][
-          this.type
-        ];
+        this.temas = !temas ? [] : (temas as string).split(',');
+        return this.commMap(new Date(from), new Date(to), this.temas)[
+          this.expectedRole
+        ][this.type];
       })
     );
   }

@@ -135,28 +135,11 @@
           </div>
 
           <!-- Campo de comunidad -->
-          <p-dropdown
-            class="w-full"
-            [style]="{ width: '100%', height: '100%' }"
-            [options]="comunidades"
+          <app-comunidad-dropdown
             [formControl]="relevancia"
-            optionLabel="name"
-            optionValue="code"
-            placeholder="Comunidad"
-          >
-            <ng-template let-item pTemplate="selectedItem">
-              <div class="flex align-items-center gap-2 h-full">
-                <img src="{{ item.image }}" class="img-flag" />
-                <div>{{ item.name }}</div>
-              </div>
-            </ng-template>
-            <ng-template let-item let-index pTemplate="item">
-              <div class="flex align-items-center gap-2 h-full">
-                <img src="{{ item.image }}" class="img-flag" />
-                <div>{{ item.name }}</div>
-              </div>
-            </ng-template>
-          </p-dropdown>
+            [placeholder]="'Comunidad'"
+            [multiple]="false"
+          ></app-comunidad-dropdown>
           <!-- Error: relevancia requerida -->
           <div
             *ngIf="
@@ -316,17 +299,13 @@
             </div>
           </div>
           <!-- Botón de registro -->
-          <button
-            pButton
-            type="submit"
+          <app-async-button
+            [label]="mode === 'activation' ? 'Completar registro' : 'Registrarse'"
+            [action]="register.bind(this)"
             [disabled]="formGroup.invalid"
-            class="p-button dark-button p-button-raised"
-            (click)="register()"
-          >
-            <span class="w-full">{{
-              mode === "activation" ? "Completar registro" : "Registrarse"
-            }}</span>
-          </button>
+            styleClass="p-button dark-button p-button-raised"
+            class="w-full"
+          ></app-async-button>
         </div>
       </div>
     </p-card>

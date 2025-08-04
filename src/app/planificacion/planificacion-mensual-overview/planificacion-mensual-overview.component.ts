@@ -27,6 +27,7 @@ import {
 } from '../../shared/models/pregunta.model';
 import { Usuario } from '../../shared/models/user.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
+import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-planificacion-mensual-overview',
@@ -40,16 +41,6 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   userService = inject(UserService);
   @ViewChild('fileInput') fileInput!: ElementRef;
   duracionesDisponibles = duracionesDisponibles;
-  public opcionesAsignadas = [
-    {
-      label: 'Asignadas',
-      value: true,
-    },
-    {
-      label: 'Sin asignar',
-      value: false,
-    },
-  ];
   public uploadingFile = false;
   allUsers$ = this.userService
     .getAllUsers$({
@@ -59,6 +50,38 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
     })
     .pipe(map((e) => (e.data ?? []) as Array<Usuario>)) as Observable<any>;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+
+  // Configuración de filtros para el GenericListComponent
+  public filters: FilterConfig[] = [
+    {
+      key: 'createdAt',
+      specialCaseKey: 'rangeDate',
+      label: 'Rango de fechas',
+      type: 'calendar',
+      placeholder: 'Seleccionar rango de fechas',
+      dateConfig: {
+        selectionMode: 'range',
+      },
+    },
+    {
+      key: 'tipoDePlanificacion',
+      label: 'Duración',
+      type: 'dropdown',
+      placeholder: 'Seleccionar duración',
+      options: duracionesDisponibles,
+    },
+    {
+      key: 'asignada',
+      label: 'Tipo',
+      type: 'dropdown',
+      placeholder: 'Seleccionar tipo',
+      options: [
+        { label: 'Asignadas', value: true },
+        { label: 'Sin asignar', value: false },
+      ],
+    },
+  ];
+
   commMap = (pagination: PaginationFilter) => {
     return {
       ADMIN: this.planificacionesService
@@ -69,35 +92,14 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
         .pipe(tap((entry) => (this.lastLoadedPagination = entry))),
     };
   };
+
   public matchKeyWithLabel = matchKeyWithLabel;
-  public valueDuracion = new FormControl();
-  public asignadas = new FormControl(false);
 
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
-      return this.getPlanificacion({
-        ...this.pagination(),
-        where: this.getWhere(),
-      });
+      return this.getPlanificacion({ ...this.pagination() });
     });
-  }
-
-  public updateWhere() {
-    this.pagination.set({
-      ...this.pagination(),
-      where: this.getWhere(),
-    });
-  }
-
-  private getWhere() {
-    const initialWhere = {} as any;
-    if (!!this.valueDuracion.value) {
-      initialWhere['tipoDePlanificacion'] = this.valueDuracion.value;
-    }
-    if (this.asignadas.value == false || this.asignadas.value == true)
-      initialWhere['asignada'] = !!this.asignadas.value;
-    return initialWhere;
   }
 
   private getPlanificacion(pagination: PaginationFilter) {
@@ -113,6 +115,15 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
         return this.commMap(pagination)[this.expectedRole];
       })
     );
+  }
+
+  public onFiltersChanged(where: any) {
+    // Actualizar la paginación con los nuevos filtros
+    this.pagination.set({
+      ...this.pagination(),
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
+    });
   }
 
   public navigateToDetailview = (id: number | 'new') => {

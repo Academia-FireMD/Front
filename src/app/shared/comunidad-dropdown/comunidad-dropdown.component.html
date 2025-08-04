@@ -1,0 +1,26 @@
+<p-dropdown
+  class="w-full"
+  [style]="{ width: '100%', height: '100%' }"
+  [options]="comunidades"
+  [(ngModel)]="value"
+  [showClear]="showClear"
+  [disabled]="disabled"
+  optionLabel="name"
+  optionValue="code"
+  [placeholder]="placeholder"
+  (onChange)="onValueChange($event)"
+  appendTo="body"
+>
+  <ng-template let-item pTemplate="selectedItem">
+    <div class="flex align-items-center gap-2 h-full">
+      <img src="{{ item.image }}" class="img-flag" />
+      <div>{{ item.name }}</div>
+    </div>
+  </ng-template>
+  <ng-template let-item let-index pTemplate="item">
+    <div class="flex align-items-center gap-2 h-full">
+      <img src="{{ item.image }}" class="img-flag" />
+      <div>{{ item.name }}</div>
+    </div>
+  </ng-template>
+</p-dropdown> 

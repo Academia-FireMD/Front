@@ -10,6 +10,7 @@ import {
   Tema,
 } from '../shared/models/pregunta.model';
 import { Test } from '../shared/models/test.model';
+import { forOwn, isObjectLike } from 'lodash';
 
 export const colorCorrectas = '#00eb003d';
 export const colorIncorretas = '#ff9c9c';
@@ -19,22 +20,37 @@ export const colorFlashcardsCorrectas = '#00eb003d';
 export const colorFlashcardsIncorretas = '#ff9c9c';
 export const colorFlashcardsRevisar = '#FFD54F';
 
-
 export const getColorClass = (posicion: number): string => {
-    if (posicion === 1) return 'first-place';
-    if (posicion === 2) return 'second-place';
-    if (posicion === 3) return 'third-place';
-    return '';
-  }
+  if (posicion === 1) return 'first-place';
+  if (posicion === 2) return 'second-place';
+  if (posicion === 3) return 'third-place';
+  return '';
+};
 
 export const getNotaClass = (nota: number | null): string => {
-    if (nota === null) return 'nota-na';
-    if (nota >= 9) return 'nota-excelente';
-    if (nota >= 7) return 'nota-notable';
-    if (nota >= 5) return 'nota-aprobado';
-    return 'nota-suspenso';
+  if (nota === null) return 'nota-na';
+  if (nota >= 9) return 'nota-excelente';
+  if (nota >= 7) return 'nota-notable';
+  if (nota >= 5) return 'nota-aprobado';
+  return 'nota-suspenso';
+};
+
+export const getAllInArrays = (obj: any) => {
+  const result: any[] = [];
+
+  function traverse(o: any) {
+    forOwn(o, (val, key) => {
+      if (key === 'in' && Array.isArray(val)) {
+        result.push(val);
+      } else if (isObjectLike(val)) {
+        traverse(val);
+      }
+    });
   }
 
+  traverse(obj);
+  return result;
+};
 
 export const duracionOptions = [
   { label: '1 hora', value: 60 },
@@ -154,11 +170,11 @@ export const obtenerTemas = (
     return listaUnicaTemas.length > 3
       ? 'Temas variados'
       : listaUnicaTemas
-        .map(
-          (tema: any) =>
-            `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
-        )
-        .join(', ');
+          .map(
+            (tema: any) =>
+              `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
+          )
+          .join(', ');
   } else {
     const preguntasTest = (testItem.flashcards ?? []) as Array<any>;
     const temas = preguntasTest.reduce((prev, next) => {
@@ -175,11 +191,17 @@ export const obtenerTemas = (
     return listaUnicaTemas.length > 3
       ? 'Temas variados'
       : listaUnicaTemas
-        .map(
-          (tema: any) =>
-            `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
-        )
-        .join(', ');
+          .map(
+            (tema: any) =>
+              `Tema ${tema.numero} ${
+                simplified
+                  ? ''
+                  : !!tema?.modulo?.nombre
+                  ? '- ' + tema?.modulo?.nombre
+                  : ''
+              } `
+          )
+          .join(', ');
   }
 };
 
@@ -378,7 +400,10 @@ export const getAllDifficultades = (
   return [...allDificultades, ...alumnoOnly];
 };
 
-export const crearEventoCalendario = (evento: any, esPersonalizado: boolean = false): CalendarEvent => {
+export const crearEventoCalendario = (
+  evento: any,
+  esPersonalizado: boolean = false
+): CalendarEvent => {
   const inicio = new Date(evento.horaInicio);
   const duracion = evento.duracion || 60;
   const fin = new Date(inicio.getTime() + duracion * 60000);
@@ -390,7 +415,7 @@ export const crearEventoCalendario = (evento: any, esPersonalizado: boolean = fa
     end: fin,
     color: {
       primary: evento.color || (esPersonalizado ? '#4caf50' : '#ffffff'),
-      secondary: evento.color || (esPersonalizado ? '#4caf50' : '#ffffff')
+      secondary: evento.color || (esPersonalizado ? '#4caf50' : '#ffffff'),
     },
     draggable: true,
     meta: {
@@ -406,12 +431,16 @@ export const crearEventoCalendario = (evento: any, esPersonalizado: boolean = fa
         realizado: evento.realizado || false,
         planificacionId: evento.planificacionId, // Añadimos planificacionId para eventos personalizados
         esPersonalizado: esPersonalizado, // Duplicamos el flag dentro del subBloque para facilitar el acceso
-      }
-    }
+      },
+    },
   };
 };
 
-export function isDateInRange(date: Date, startDate: Date, endDate: Date): boolean {
+export function isDateInRange(
+  date: Date,
+  startDate: Date,
+  endDate: Date
+): boolean {
   const dateToCheck = new Date(date);
   return dateToCheck >= startDate && dateToCheck <= endDate;
 }
