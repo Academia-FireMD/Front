@@ -5,7 +5,9 @@
       <!-- Header with title and main actions -->
       <div class="grid">
         <div class="col-12 header-section">
-          <div class="flex justify-content-between align-items-center gap-3 mb-4">
+          <div
+            class="flex justify-content-between align-items-center gap-3 mb-4"
+          >
             <div class="titulo flex-1">
               <p-floatLabel>
                 <input
@@ -24,16 +26,23 @@
                 *ngIf="getId() !== 'new' && !!lastLoadedExamen()"
                 icon="pi pi-eye"
                 label="Vista previa"
-                [disabled]="(lastLoadedExamen()?.test?.testPreguntas ?? []).length === 0"
+                [disabled]="
+                  (lastLoadedExamen()?.test?.testPreguntas ?? []).length === 0
+                "
                 styleClass="p-button-outlined"
-                [routerLink]="['/app/test/realizar-test/vista-previa', lastLoadedExamen().testId]"
+                [routerLink]="[
+                  '/app/test/realizar-test/vista-previa',
+                  lastLoadedExamen().testId
+                ]"
                 data-testid="vista-previa-btn"
               />
               <p-button
                 *ngIf="getId() !== 'new'"
                 icon="pi pi-file-word"
                 label="Descargar"
-                [disabled]="(lastLoadedExamen()?.test?.testPreguntas ?? []).length === 0"
+                [disabled]="
+                  (lastLoadedExamen()?.test?.testPreguntas ?? []).length === 0
+                "
                 (click)="mostrarOpcionesDescarga($event)"
                 data-testid="descargar-word-btn"
               />
@@ -48,17 +57,19 @@
 
         <!-- Tabs -->
         <div class="col-12">
-          <p-tabView [(activeIndex)]="activeTabIndex" (onChange)="onTabChange($event)">
-            
+          <p-tabView
+            [(activeIndex)]="activeTabIndex"
+            (onChange)="onTabChange($event)"
+          >
             <!-- Tab 1: Configuración -->
             <p-tabPanel header="Configuración" leftIcon="pi pi-cog">
               <div class="configuration-content">
                 <!-- Basic Configuration -->
                 <div class="grid mb-4">
                   <div class="col-12">
-                    <h4 class="mb-3 text-primary">⚙️ Configuración básica</h4>
+                    <h4 class="mb-3 text-primary">Configuración básica</h4>
                   </div>
-                  
+
                   <div class="col-12 md:col-3">
                     <p-floatLabel>
                       <p-dropdown
@@ -70,7 +81,7 @@
                         placeholder="Seleccione la duración"
                         data-testid="duracion-dropdown"
                       />
-                      <label for="duracion">⏱️ Duración</label>
+                      <label for="duracion">Duración</label>
                     </p-floatLabel>
                   </div>
 
@@ -85,7 +96,7 @@
                         class="w-full"
                         data-testid="estado-dropdown"
                       />
-                      <label for="estado">📋 Estado</label>
+                      <label for="estado">Estado</label>
                     </p-floatLabel>
                   </div>
 
@@ -100,13 +111,16 @@
                         class="w-full"
                         data-testid="tipo-acceso-dropdown"
                       />
-                      <label for="tipoAcceso">🔐 Tipo de acceso</label>
+                      <label for="tipoAcceso">Tipo de acceso</label>
                     </p-floatLabel>
                   </div>
 
                   <div
                     class="col-12 md:col-3"
-                    *ngIf="formGroup.get('tipoAcceso')?.value === TipoAcceso.SIMULACRO"
+                    *ngIf="
+                      formGroup.get('tipoAcceso')?.value ===
+                      TipoAcceso.SIMULACRO
+                    "
                   >
                     <p-floatLabel>
                       <input
@@ -116,7 +130,7 @@
                         formControlName="codigoAcceso"
                         data-testid="codigo-acceso-input"
                       />
-                      <label for="codigoAcceso">🔑 Código de acceso</label>
+                      <label for="codigoAcceso">Código de acceso</label>
                     </p-floatLabel>
                     <small
                       class="text-red-500 block mt-1"
@@ -130,9 +144,9 @@
                 <!-- Scheduling -->
                 <div class="grid mb-4">
                   <div class="col-12">
-                    <h4 class="mb-3 text-primary">📅 Programación</h4>
+                    <h4 class="mb-3 text-primary">Programación</h4>
                   </div>
-                  
+
                   <div class="col-12 md:col-6">
                     <p-floatLabel>
                       <p-calendar
@@ -142,10 +156,10 @@
                         placeholder="Fecha de activación"
                         data-testid="fecha-activacion-input"
                       />
-                      <label>🚀 Fecha de activación</label>
+                      <label>Fecha de activación</label>
                     </p-floatLabel>
                   </div>
-                  
+
                   <div class="col-12 md:col-6">
                     <p-floatLabel>
                       <p-calendar
@@ -155,7 +169,7 @@
                         placeholder="Fecha de solución"
                         data-testid="fecha-solucion-input"
                       />
-                      <label>📋 Fecha de solución</label>
+                      <label>Fecha de solución</label>
                     </p-floatLabel>
                   </div>
                 </div>
@@ -163,10 +177,13 @@
                 <!-- Description -->
                 <div class="grid mb-4">
                   <div class="col-12">
-                    <h4 class="mb-3 text-primary">📝 Descripción</h4>
+                    <h4 class="mb-3 text-primary">Descripción</h4>
                     <div class="markdown-container">
                       <div class="editor">
-                        <div id="editor-descripcion" data-testid="descripcion-editor"></div>
+                        <div
+                          id="editor-descripcion"
+                          data-testid="descripcion-editor"
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -175,9 +192,9 @@
                 <!-- Questions Management -->
                 <div class="grid" *ngIf="getId() != 'new'">
                   <div class="col-12">
-                    <h4 class="mb-3 text-primary">❓ Gestión de preguntas</h4>
+                    <h4 class="mb-3 text-primary">Gestión de preguntas</h4>
                   </div>
-                  
+
                   <div class="col-12 mb-3">
                     <div class="flex gap-2 align-items-center">
                       <div class="p-inputgroup flex-1">
@@ -189,16 +206,19 @@
                           data-testid="buscar-pregunta-input"
                         />
                       </div>
-                   
                     </div>
                   </div>
 
                   <!-- Normal Questions Table -->
                   <div class="col-12 mb-4">
-                    <div class="flex justify-content-between align-items-center mb-3">
-                      <h5 class="m-0">📝 Preguntas del examen ({{ preguntasNormales().length }})</h5>
+                    <div
+                      class="flex justify-content-between align-items-center mb-3"
+                    >
+                      <h5 class="m-0">
+                        Preguntas del examen ({{ preguntasNormales().length }})
+                      </h5>
                     </div>
-                    
+
                     <p-table
                       [value]="preguntasNormales()"
                       [reorderableColumns]="true"
@@ -215,7 +235,9 @@
                           <th style="width: 3rem"></th>
                           <th pReorderableColumn>Identificador</th>
                           <th pReorderableColumn>Descripción</th>
-                          <th pReorderableColumn style="width: 8rem">Acciones</th>
+                          <th pReorderableColumn style="width: 8rem">
+                            Acciones
+                          </th>
                         </tr>
                       </ng-template>
                       <ng-template
@@ -223,9 +245,15 @@
                         let-testPregunta
                         let-index="rowIndex"
                       >
-                        <tr [pReorderableRow]="index" data-testid="pregunta-row">
+                        <tr
+                          [pReorderableRow]="index"
+                          data-testid="pregunta-row"
+                        >
                           <td>
-                            <span class="pi pi-bars" pReorderableRowHandle></span>
+                            <span
+                              class="pi pi-bars"
+                              pReorderableRowHandle
+                            ></span>
                           </td>
                           <td>
                             <span
@@ -248,7 +276,13 @@
                                 [link]="true"
                                 pTooltip="Mover a preguntas de reserva"
                                 tooltipPosition="top"
-                                [action]="marcarComoReserva.bind(this, testPregunta, true)"
+                                [action]="
+                                  marcarComoReserva.bind(
+                                    this,
+                                    testPregunta,
+                                    true
+                                  )
+                                "
                                 data-testid="mover-reserva-btn"
                               ></app-async-button>
                               <app-async-button
@@ -256,13 +290,26 @@
                                 [link]="true"
                                 pTooltip="Eliminar pregunta"
                                 tooltipPosition="top"
-                                [action]="eliminarPregunta.bind(this, testPregunta.pregunta.id)"
+                                [action]="
+                                  eliminarPregunta.bind(
+                                    this,
+                                    testPregunta.pregunta.id
+                                  )
+                                "
                                 data-testid="eliminar-pregunta-btn"
                               ></app-async-button>
                               <p-button
-                                [icon]="testPregunta.impugnada ? 'pi pi-flag-fill' : 'pi pi-flag'"
+                                [icon]="
+                                  testPregunta.impugnada
+                                    ? 'pi pi-flag-fill'
+                                    : 'pi pi-flag'
+                                "
                                 [link]="true"
-                                [pTooltip]="testPregunta.impugnada ? 'Desimpugnar pregunta' : 'Impugnar pregunta'"
+                                [pTooltip]="
+                                  testPregunta.impugnada
+                                    ? 'Desimpugnar pregunta'
+                                    : 'Impugnar pregunta'
+                                "
                                 tooltipPosition="top"
                                 (click)="abrirDialogoImpugnacion(testPregunta)"
                                 [class.text-red-500]="testPregunta.impugnada"
@@ -329,7 +376,9 @@
                           <th style="width: 3rem"></th>
                           <th pReorderableColumn>Identificador</th>
                           <th pReorderableColumn>Descripción</th>
-                          <th pReorderableColumn style="width: 8rem">Acciones</th>
+                          <th pReorderableColumn style="width: 8rem">
+                            Acciones
+                          </th>
                         </tr>
                       </ng-template>
                       <ng-template
@@ -337,9 +386,15 @@
                         let-testPregunta
                         let-index="rowIndex"
                       >
-                        <tr [pReorderableRow]="index" data-testid="pregunta-reserva-row">
+                        <tr
+                          [pReorderableRow]="index"
+                          data-testid="pregunta-reserva-row"
+                        >
                           <td>
-                            <span class="pi pi-bars" pReorderableRowHandle></span>
+                            <span
+                              class="pi pi-bars"
+                              pReorderableRowHandle
+                            ></span>
                           </td>
                           <td>
                             <span
@@ -362,7 +417,13 @@
                                 [link]="true"
                                 pTooltip="Mover a preguntas normales"
                                 tooltipPosition="top"
-                                [action]="marcarComoReserva.bind(this, testPregunta, false)"
+                                [action]="
+                                  marcarComoReserva.bind(
+                                    this,
+                                    testPregunta,
+                                    false
+                                  )
+                                "
                                 data-testid="mover-normal-btn"
                               ></app-async-button>
                               <app-async-button
@@ -370,10 +431,14 @@
                                 [link]="true"
                                 pTooltip="Eliminar pregunta"
                                 tooltipPosition="top"
-                                [action]="eliminarPregunta.bind(this, testPregunta.pregunta.id)"
+                                [action]="
+                                  eliminarPregunta.bind(
+                                    this,
+                                    testPregunta.pregunta.id
+                                  )
+                                "
                                 data-testid="eliminar-pregunta-reserva-btn"
                               ></app-async-button>
-                             
                             </div>
                           </td>
                         </tr>
@@ -383,7 +448,8 @@
                           <td colspan="4" class="text-center p-4">
                             <div
                               *ngIf="
-                                !preguntasReserva() || preguntasReserva().length === 0
+                                !preguntasReserva() ||
+                                preguntasReserva().length === 0
                               "
                               data-testid="no-preguntas-reserva-message"
                             >
@@ -419,9 +485,11 @@
             </p-tabPanel>
 
             <!-- Tab 2: Resultados y Análisis -->
-            <p-tabPanel header="Resultados y Análisis" leftIcon="pi pi-chart-bar">
+            <p-tabPanel
+              header="Resultados y Análisis"
+              leftIcon="pi pi-chart-bar"
+            >
               <div class="results-content" *ngIf="getId() != 'new'">
-                
                 <!-- Loading state -->
                 <div *ngIf="loadingResults()" class="text-center p-4">
                   <p-progressSpinner />
@@ -429,55 +497,85 @@
                 </div>
 
                 <!-- No results state -->
-                <div *ngIf="!loadingResults() && !examenResultados()" class="text-center p-4">
+                <div
+                  *ngIf="!loadingResults() && !examenResultados()"
+                  class="text-center p-4"
+                >
                   <i class="pi pi-info-circle text-6xl text-gray-400 mb-3"></i>
                   <h4 class="text-gray-600">No hay resultados disponibles</h4>
-                  <p class="text-gray-500">Los resultados aparecerán cuando los estudiantes completen el examen.</p>
+                  <p class="text-gray-500">
+                    Los resultados aparecerán cuando los estudiantes completen
+                    el examen.
+                  </p>
                 </div>
 
                 <!-- Results content -->
-                <div *ngIf="!loadingResults() && examenResultados()" class="grid">
-                  
+                <div
+                  *ngIf="!loadingResults() && examenResultados()"
+                  class="grid"
+                >
                   <!-- Statistics Overview -->
                   <div class="col-12 mb-4">
-                    <h4 class="mb-3 text-primary">📈 Resumen estadístico</h4>
+                    <h4 class="mb-3 text-primary">Resumen estadístico</h4>
                     <div class="grid">
                       <!-- Main stats cards -->
                       <div class="col-12 lg:col-3 md:col-6">
                         <p-card styleClass="h-full">
                           <div class="text-center">
-                            <i class="pi pi-users text-4xl text-blue-500 mb-2"></i>
-                            <h3 class="m-0 text-blue-600">{{ totalParticipantes() }}</h3>
+                            <i
+                              class="pi pi-users text-4xl text-blue-500 mb-2"
+                            ></i>
+                            <h3 class="m-0 text-blue-600">
+                              {{ totalParticipantes() }}
+                            </h3>
                             <p class="text-gray-600 m-0">Participantes</p>
                           </div>
                         </p-card>
                       </div>
-                      
+
                       <div class="col-12 lg:col-3 md:col-6">
                         <p-card styleClass="h-full">
                           <div class="text-center">
-                            <i class="pi pi-star text-4xl text-orange-500 mb-2"></i>
-                            <h3 class="m-0 text-orange-600">{{ notaPromedio() }}</h3>
+                            <i
+                              class="pi pi-star text-4xl text-orange-500 mb-2"
+                            ></i>
+                            <h3 class="m-0 text-orange-600">
+                              {{ notaPromedio() }}
+                            </h3>
                             <p class="text-gray-600 m-0">Nota promedio</p>
                           </div>
                         </p-card>
                       </div>
-                      
-                      <div class="col-12 lg:col-3 md:col-6" *ngIf="statsBasicas()">
+
+                      <div
+                        class="col-12 lg:col-3 md:col-6"
+                        *ngIf="statsBasicas()"
+                      >
                         <p-card styleClass="h-full">
                           <div class="text-center">
-                            <i class="pi pi-check-circle text-4xl text-green-500 mb-2"></i>
-                            <h3 class="m-0 text-green-600">{{ statsBasicas()?.aprobados }}</h3>
+                            <i
+                              class="pi pi-check-circle text-4xl text-green-500 mb-2"
+                            ></i>
+                            <h3 class="m-0 text-green-600">
+                              {{ statsBasicas()?.aprobados }}
+                            </h3>
                             <p class="text-gray-600 m-0">Aprobados</p>
                           </div>
                         </p-card>
                       </div>
-                      
-                      <div class="col-12 lg:col-3 md:col-6" *ngIf="statsBasicas()">
+
+                      <div
+                        class="col-12 lg:col-3 md:col-6"
+                        *ngIf="statsBasicas()"
+                      >
                         <p-card styleClass="h-full">
                           <div class="text-center">
-                            <i class="pi pi-times-circle text-4xl text-red-500 mb-2"></i>
-                            <h3 class="m-0 text-red-600">{{ statsBasicas()?.suspensos }}</h3>
+                            <i
+                              class="pi pi-times-circle text-4xl text-red-500 mb-2"
+                            ></i>
+                            <h3 class="m-0 text-red-600">
+                              {{ statsBasicas()?.suspensos }}
+                            </h3>
                             <p class="text-gray-600 m-0">Suspensos</p>
                           </div>
                         </p-card>
@@ -488,24 +586,30 @@
                   <!-- Additional Stats -->
                   <div class="col-12 mb-4" *ngIf="statsBasicas()">
                     <p-card>
-                      <h5 class="mb-3">📊 Estadísticas detalladas</h5>
+                      <h5 class="mb-3">Estadísticas detalladas</h5>
                       <div class="grid">
                         <div class="col-12 md:col-4">
                           <div class="stat-item">
                             <span class="stat-label">Nota máxima:</span>
-                            <span class="stat-value text-green-600 font-bold">{{ statsBasicas()?.notaMaxima }}</span>
+                            <span class="stat-value text-green-600 font-bold">{{
+                              statsBasicas()?.notaMaxima
+                            }}</span>
                           </div>
                         </div>
                         <div class="col-12 md:col-4">
                           <div class="stat-item">
                             <span class="stat-label">Nota mínima:</span>
-                            <span class="stat-value text-red-600 font-bold">{{ statsBasicas()?.notaMinima }}</span>
+                            <span class="stat-value text-red-600 font-bold">{{
+                              statsBasicas()?.notaMinima
+                            }}</span>
                           </div>
                         </div>
                         <div class="col-12 md:col-4">
                           <div class="stat-item">
                             <span class="stat-label">Promedio correctas:</span>
-                            <span class="stat-value text-blue-600 font-bold">{{ statsBasicas()?.correctasPromedio }}</span>
+                            <span class="stat-value text-blue-600 font-bold">{{
+                              statsBasicas()?.correctasPromedio
+                            }}</span>
                           </div>
                         </div>
                       </div>
@@ -549,15 +653,21 @@
                             </th>
                             <th pSortableColumn="estadisticas.nota">
                               Nota
-                              <p-sortIcon field="estadisticas.nota"></p-sortIcon>
+                              <p-sortIcon
+                                field="estadisticas.nota"
+                              ></p-sortIcon>
                             </th>
                             <th pSortableColumn="estadisticas.correctas">
                               Correctas
-                              <p-sortIcon field="estadisticas.correctas"></p-sortIcon>
+                              <p-sortIcon
+                                field="estadisticas.correctas"
+                              ></p-sortIcon>
                             </th>
                             <th pSortableColumn="estadisticas.incorrectas">
                               Incorrectas
-                              <p-sortIcon field="estadisticas.incorrectas"></p-sortIcon>
+                              <p-sortIcon
+                                field="estadisticas.incorrectas"
+                              ></p-sortIcon>
                             </th>
                             <th pSortableColumn="fechaRealizacion">
                               Fecha
@@ -569,34 +679,53 @@
                         <ng-template pTemplate="body" let-resultado>
                           <tr>
                             <td>
-                              <p-tag 
-                                [value]="resultado.posicion" 
-                                [severity]="resultado.posicion <= 3 ? 'success' : 'secondary'"
+                              <p-tag
+                                [value]="resultado.posicion"
+                                [severity]="
+                                  resultado.posicion <= 3
+                                    ? 'success'
+                                    : 'secondary'
+                                "
                               />
                             </td>
                             <td>
                               <div class="flex align-items-center gap-2">
                                 <i class="pi pi-user"></i>
                                 <div>
-                                  <div class="font-semibold">{{ resultado.usuario.nombre }} {{ resultado.usuario.apellidos }}</div>
-                                  <div class="text-sm text-gray-500">{{ resultado.usuario.email }}</div>
+                                  <div class="font-semibold">
+                                    {{ resultado.usuario.nombre }}
+                                    {{ resultado.usuario.apellidos }}
+                                  </div>
+                                  <div class="text-sm text-gray-500">
+                                    {{ resultado.usuario.email }}
+                                  </div>
                                 </div>
                               </div>
                             </td>
                             <td>
-                              <p-tag 
-                                [value]="resultado.estadisticas.nota" 
-                                [severity]="resultado.estadisticas.nota >= 5 ? 'success' : 'danger'"
+                              <p-tag
+                                [value]="resultado.estadisticas.nota"
+                                [severity]="
+                                  resultado.estadisticas.nota >= 5
+                                    ? 'success'
+                                    : 'danger'
+                                "
                               />
                             </td>
                             <td>
-                              <span class="text-green-600 font-semibold">{{ resultado.estadisticas.correctas }}</span>
+                              <span class="text-green-600 font-semibold">{{
+                                resultado.estadisticas.correctas
+                              }}</span>
                             </td>
                             <td>
-                              <span class="text-red-600 font-semibold">{{ resultado.estadisticas.incorrectas }}</span>
+                              <span class="text-red-600 font-semibold">{{
+                                resultado.estadisticas.incorrectas
+                              }}</span>
                             </td>
                             <td>
-                              <small>{{ resultado.fechaRealizacion | date:'short' }}</small>
+                              <small>{{
+                                resultado.fechaRealizacion | date : "short"
+                              }}</small>
                             </td>
                             <td>
                               <div class="flex gap-1">
@@ -605,7 +734,12 @@
                                   [link]="true"
                                   pTooltip="Reiniciar intento"
                                   tooltipPosition="top"
-                                  [action]="reiniciarIntento.bind(this, resultado.usuario.id)"
+                                  [action]="
+                                    reiniciarIntento.bind(
+                                      this,
+                                      resultado.usuario.id
+                                    )
+                                  "
                                   severity="warning"
                                   size="small"
                                 />
@@ -614,7 +748,9 @@
                                   [link]="true"
                                   pTooltip="Gestionar acceso"
                                   tooltipPosition="top"
-                                  [action]="darAcceso.bind(this, resultado.usuario.id)"
+                                  [action]="
+                                    darAcceso.bind(this, resultado.usuario.id)
+                                  "
                                   severity="help"
                                   size="small"
                                 />
@@ -642,7 +778,10 @@
               <div *ngIf="getId() === 'new'" class="text-center p-4">
                 <i class="pi pi-info-circle text-4xl text-gray-400 mb-3"></i>
                 <h4 class="text-gray-600">Guarda el examen primero</h4>
-                <p class="text-gray-500">Los resultados estarán disponibles después de guardar y publicar el examen.</p>
+                <p class="text-gray-500">
+                  Los resultados estarán disponibles después de guardar y
+                  publicar el examen.
+                </p>
               </div>
             </p-tabPanel>
           </p-tabView>
@@ -650,7 +789,10 @@
 
         <div
           class="col-12 mt-3"
-          *ngIf="formGroup.get('tipoAcceso')?.value === TipoAcceso.SIMULACRO && getId() !== 'new'"
+          *ngIf="
+            formGroup.get('tipoAcceso')?.value === TipoAcceso.SIMULACRO &&
+            getId() !== 'new'
+          "
         >
           <p-divider></p-divider>
 
@@ -864,7 +1006,8 @@
       <p-card>
         <h4 class="mt-0">Pregunta encontrada:</h4>
         <p>
-          <strong>Identificador:</strong> {{ preguntaEncontrada.identificador }}
+          <strong>Identificador:</strong>
+          {{ preguntaEncontrada.identificador }}
         </p>
         <p>
           <strong>Descripción:</strong> {{ preguntaEncontrada.descripcion }}
@@ -900,7 +1043,6 @@
   header="Añadir preguntas al examen"
 >
   <div class="grid">
-    
     <div class="col-12 md:col-4 p-2">
       <div
         class="metodo-card"
@@ -944,7 +1086,11 @@
     </div>
   </div>
   <div class="col-12 mb-3">
-    <p-checkbox [(ngModel)]="agregarComoReserva" [binary]="true" label="Agregar como preguntas de reserva"></p-checkbox>
+    <p-checkbox
+      [(ngModel)]="agregarComoReserva"
+      [binary]="true"
+      label="Agregar como preguntas de reserva"
+    ></p-checkbox>
   </div>
 </p-dialog>
 
@@ -953,7 +1099,9 @@
 <!-- Añadir el diálogo de impugnación -->
 <p-dialog
   [(visible)]="impugnacionDialogVisible"
-  [header]="preguntaAImpugnar?.impugnada ? 'Desimpugnar pregunta' : 'Impugnar pregunta'"
+  [header]="
+    preguntaAImpugnar?.impugnada ? 'Desimpugnar pregunta' : 'Impugnar pregunta'
+  "
   [modal]="true"
   [style]="{ width: '450px' }"
   [draggable]="false"
@@ -974,8 +1122,12 @@
     </div>
     <div class="col-12" *ngIf="preguntaAImpugnar?.impugnada">
       <p>¿Está seguro de que desea desimpugnar esta pregunta?</p>
-      <p *ngIf="preguntaAImpugnar?.motivoImpugnacion" class="text-sm text-gray-600 mt-2">
-        <strong>Motivo actual:</strong> {{ preguntaAImpugnar.motivoImpugnacion }}
+      <p
+        *ngIf="preguntaAImpugnar?.motivoImpugnacion"
+        class="text-sm text-gray-600 mt-2"
+      >
+        <strong>Motivo actual:</strong>
+        {{ preguntaAImpugnar.motivoImpugnacion }}
       </p>
     </div>
   </div>
@@ -995,12 +1147,11 @@
 </p-dialog>
 
 <!-- Botón FAB flotante -->
-<button 
-  pButton 
-  class="p-button-rounded p-button-primary fab-button" 
+<button
+  pButton
+  class="p-button-rounded p-button-primary fab-button"
   icon="pi pi-plus"
   (click)="mostrarOpcionesAgregarPreguntas($event)"
   pTooltip="Agregar preguntas"
   tooltipPosition="left"
 ></button>
-
