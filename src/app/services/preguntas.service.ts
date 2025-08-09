@@ -80,4 +80,11 @@ export class PreguntasService extends ApiBaseService {
       Pregunta[]
     >;
   }
+
+  public descargarPlantillaImportacion() {
+    return this._http.get(
+      environment.apiUrl + this.controllerPrefix + '/plantilla-importacion',
+      { responseType: 'blob' }
+    );
+  }
 }

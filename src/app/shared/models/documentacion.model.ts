@@ -8,4 +8,6 @@ export interface Documento {
   creadoPorId: number; // ID del usuario que creó el documento
   creadoEn: Date; // Fecha de creación
   actualizadoEn: Date; // Fecha de última actualización
+  temaId?: number;
+  tema?: { id: number; numero: number | string; descripcion?: string };
 }

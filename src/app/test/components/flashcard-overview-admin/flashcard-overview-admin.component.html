@@ -8,87 +8,158 @@
   (filtersChanged)="onFiltersChanged($event)"
 >
   <div left-actions>
-      <p-iconField iconPosition="left">
-        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-        <input
-          type="text"
-          pInputText
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input
+        type="text"
+        class="w-full"
+        pInputText
         placeholder="Buscar flashcards"
-          style="min-width: 30vw"
-          [value]="pagination().searchTerm"
-          (input)="valueChanged($event)"
-        />
-      </p-iconField>
+        style="min-width: 30vw"
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+      />
+    </p-iconField>
   </div>
 
   <div right-actions>
     <div class="flex gap-2">
-        <p-button
-          *ngIf="expectedRole == 'ADMIN'"
-          label="{{
-            viewportService.screenWidth == 'xs'
-              ? undefined
-              : 'Descargar flashcards de alumnos'
-          }}"
-          icon="pi pi-download"
-          [link]="true"
-          (click)="descargarFlashcardsDeAlumnos()"
-        ></p-button>
-        <p-button
-          label="{{
-            viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
-          }}"
-          icon="pi pi-plus"
-          [link]="true"
-          (click)="navigateToDetailview('new')"
-        ></p-button>
-        <p-button
-          label="{{
-            viewportService.screenWidth == 'xs' ? undefined : 'Importar'
-          }}"
-          icon="pi pi-upload"
-          (click)="fileInput.click()"
-          [loading]="uploadingFile"
-        ></p-button>
-        <input
-          type="file"
-          accept=".xlsx, .xls"
-          #fileInput
-          style="display: none"
-          (change)="onFileSelected($event)"
-        />
-      </div>
+      <p-button
+        *ngIf="expectedRole == 'ADMIN'"
+        label="{{
+          viewportService.screenWidth == 'xs'
+            ? undefined
+            : 'Descargar flashcards de alumnos'
+        }}"
+        icon="pi pi-download"
+        [link]="true"
+        (click)="descargarFlashcardsDeAlumnos()"
+      ></p-button>
+      <p-button
+        label="{{
+          viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
+        }}"
+        icon="pi pi-plus"
+        [link]="true"
+        (click)="navigateToDetailview('new')"
+      ></p-button>
+      <p-button
+        label="{{
+          viewportService.screenWidth == 'xs' ? undefined : 'Importar'
+        }}"
+        icon="pi pi-upload"
+        (click)="mostrarImportDialog = true"
+        [loading]="uploadingFile"
+      ></p-button>
     </div>
+  </div>
 
   <div empty-template>
     <div class="text-center p-4">No hay flashcards disponibles</div>
   </div>
 </app-generic-list>
 
+<p-dialog
+  header="Importar flashcards desde Excel"
+  [(visible)]="mostrarImportDialog"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div class="flex flex-column gap-3" [formGroup]="importForm">
+    <div class="grid">
+      <div class="col-6">
+        <app-tema-select
+          [multiple]="false"
+          [formControl]="importForm.controls['temaId']"
+        ></app-tema-select>
+      </div>
+      <div class="col-6">
+        <app-dificultad-dropdown
+          [formControlDificultad]="importForm.controls['dificultad']"
+          [rol]="expectedRole"
+        ></app-dificultad-dropdown>
+      </div>
+    </div>
+    <div>
+      <label class="block mb-2">Archivo (.xlsx, .xls)</label>
+      <p-fileUpload
+        mode="advanced"
+        [auto]="false"
+        [multiple]="false"
+        [showUploadButton]="false"
+        [showCancelButton]="false"
+        accept=".xlsx,.xls"
+        (onSelect)="onPrimeFileSelect($event)"
+        chooseLabel="Seleccionar / Arrastrar aquí"
+        [style]="{ width: '100%' }"
+      ></p-fileUpload>
+    </div>
+
+    <div class="grid">
+      <div class="col-12 md:col-6">
+        <h4>Estructura esperada</h4>
+        <p>Columnas mínimas (en español):</p>
+        <ul>
+          <li><code>Descripción</code></li>
+          <li><code>Solución</code></li>
+        </ul>
+      </div>
+      <div class="col-12 md:col-6">
+        <h4>Notas</h4>
+        <ul>
+          <li>Puedes incluir más columnas, se ignorarán.</li>
+        </ul>
+        <div class="mt-2">
+          <p-button
+            label="Descargar plantilla Excel"
+            icon="pi pi-download"
+            styleClass="p-button-text"
+            (click)="descargarPlantillaFlashcards()"
+          ></p-button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="flex justify-content-end gap-2 mt-3">
+    <p-button
+      label="Cancelar"
+      styleClass="p-button-outlined"
+      (click)="mostrarImportDialog = false"
+    ></p-button>
+    <p-button
+      label="Importar"
+      icon="pi pi-upload"
+      (click)="importarFlashcards()"
+      [disabled]="!selectedFile || importForm.invalid"
+    ></p-button>
+  </div>
+</p-dialog>
+
 <!-- Template para el item de flashcard -->
 <ng-template #flashcardItemTemplate let-item>
-            <div class="flex flex-row align-items-between">
+  <div class="flex flex-row align-items-between">
     <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
-                <div class="text-lg font-medium flex gap-2 align-items-center">
-                  <div class="flex gap-1">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <div class="flex gap-1">
           <strong
             class="identifier"
             pTooltip="{{ item.identificador }}"
             tooltipPosition="top"
             >{{ item.identificador }}</strong
           >
-                  </div>
-                  <div class="flex gap-1 align-items-center">
-                    <ng-container *ngIf="expectedRole == 'ADMIN'">
-                      <i
-                        class="pi pi-{{ star }}"
+        </div>
+        <div class="flex gap-1 align-items-center">
+          <ng-container *ngIf="expectedRole == 'ADMIN'">
+            <i
+              class="pi pi-{{ star }}"
               *ngFor="let star of getStarsBasedOnDifficulty(item.dificultad)"
               pTooltip="Dificultad: {{ item.dificultad }}"
               tooltipPosition="top"
-                      ></i>
-                    </ng-container>
-                  </div>
-                  <div class="flex gap-1">
+            ></i>
+          </ng-container>
+        </div>
+        <div class="flex gap-1">
           <span
             class="badge bg-primary text-white"
             pTooltip="Tema: {{ item.tema.numero }}"
@@ -96,8 +167,8 @@
           >
             Tema {{ item.tema.numero }}
           </span>
-                  </div>
-                </div>
+        </div>
+      </div>
       <span
         class="descripcion"
         pTooltip="{{ item.descripcion }}"
@@ -108,27 +179,27 @@
             : "Sin descripción"
         }}</span
       >
-              </div>
+    </div>
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
-                  <app-comunidad-picker
-                    [comunidades]="item.relevancia"
-                  ></app-comunidad-picker>
-                  <span
+        <app-comunidad-picker
+          [comunidades]="item.relevancia"
+        ></app-comunidad-picker>
+        <span
           class="text-xs hidden md:block unbreakable-text"
           pTooltip="Fecha de creación: {{
             item.createdAt | date : 'dd/MM/yyyy HH:mm'
           }}"
           tooltipPosition="top"
-                  >
-                    {{ item.createdAt | date : "short" }}</span
-                  >
-                  <p-button
-                    (click)="
-                      $event.stopPropagation();
-                      $event.preventDefault();
-                      eliminarFlashcard(item.id, $event)
-                    "
+        >
+          {{ item.createdAt | date : "short" }}</span
+        >
+        <p-button
+          (click)="
+            $event.stopPropagation();
+            $event.preventDefault();
+            eliminarFlashcard(item.id, $event)
+          "
           icon="pi pi-trash"
           pTooltip="Eliminar flashcard"
           styleClass="p-button-danger"
@@ -141,8 +212,8 @@
           "
           icon="pi pi-pencil"
           pTooltip="Editar flashcard"
-                  ></p-button>
-            </div>
-          </div>
-        </div>
-      </ng-template>
+        ></p-button>
+      </div>
+    </div>
+  </div>
+</ng-template>

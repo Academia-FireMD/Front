@@ -40,6 +40,12 @@
           ></textarea>
           <label for="descripcion">Descripcion</label>
         </p-floatLabel>
+        <div>
+          <label class="block mb-2">Tema</label>
+          <app-tema-select
+            [formControl]="uploadingFileFormGroup.controls['temaIds']"
+          ></app-tema-select>
+        </div>
         <div class="flex justify-content-end">
           <app-async-button
             label="{{
@@ -57,6 +63,55 @@
       </div>
     </ng-template>
   </p-fileUpload>
+</p-dialog>
+
+<p-dialog
+  header="Editar documento"
+  [modal]="true"
+  [(visible)]="mostrarEditarDocumento"
+  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+  [style]="{ width: '75vw' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div [formGroup]="editarDocumentoForm" class="flex flex-column gap-3">
+    <p-floatLabel class="py-2">
+      <input
+        type="text"
+        pInputText
+        class="w-full"
+        formControlName="identificador"
+      />
+      <label for="identificador">Identificador</label>
+    </p-floatLabel>
+    <p-floatLabel>
+      <textarea
+        id="descripcion"
+        pInputTextarea
+        style="width: 100%"
+        formControlName="descripcion"
+      ></textarea>
+      <label for="descripcion">Descripcion</label>
+    </p-floatLabel>
+    <div>
+      <label class="block mb-2">Tema</label>
+      <app-tema-select
+        [formControl]="editarDocumentoForm.controls['temaIds']"
+      ></app-tema-select>
+    </div>
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Cancelar"
+        styleClass="p-button-outlined"
+        (click)="mostrarEditarDocumento = false; documentoEditando = null"
+      ></p-button>
+      <p-button
+        label="Guardar"
+        icon="pi pi-save"
+        (click)="guardarCambiosDocumento()"
+      ></p-button>
+    </div>
+  </div>
 </p-dialog>
 
 <app-generic-list
@@ -98,7 +153,15 @@
 
 <!-- Template para el item de documento -->
 <ng-template #documentItemTemplate let-document>
-  <div class="flex flex-row align-items-between">
+  <div
+    class="flex flex-row align-items-between"
+    (click)="
+      descargarDocumento(
+        document.id,
+        document.fileName || document.identificador
+      )
+    "
+  >
     <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
       <div class="text-lg font-medium flex gap-2 align-items-center">
         <span
@@ -116,7 +179,23 @@
           }}"
           tooltipPosition="top"
         >
-          {{ document.esPublico ? 'Público' : 'Privado' }}
+          {{ document.esPublico ? "Público" : "Privado" }}
+        </span>
+
+        <span
+          class="badge bg-primary"
+          pTooltip="{{
+            document.tema?.numero
+              ? 'Tema: ' + document.tema?.numero
+              : 'Sin tema'
+          }}"
+          tooltipPosition="top"
+        >
+          {{
+            document.tema?.numero
+              ? "Tema: " + document.tema?.numero
+              : "Sin tema"
+          }}
         </span>
       </div>
       <span
@@ -144,12 +223,14 @@
           {{ document.createdAt | date : "short" }}
         </span>
         <p-button
-          icon="pi pi-download"
-          pTooltip="Descargar documento"
+          *ngIf="expectedRole == 'ADMIN'"
+          icon="pi pi-pencil"
+          styleClass="p-button-warning"
+          pTooltip="Editar documento"
           (click)="
             $event.stopPropagation();
             $event.preventDefault();
-            descargarDocumento(document.id, document.fileName || document.identificador)
+            abrirEditarDocumento(document)
           "
         ></p-button>
         <p-button

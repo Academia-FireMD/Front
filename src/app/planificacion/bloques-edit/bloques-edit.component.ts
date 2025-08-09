@@ -30,11 +30,6 @@ export class BloquesEditComponent {
   private editingIndex = 0;
 
   public checked = {};
-  public getAllTemas$ = this.temaService.getAllTemas$().pipe(
-    map((temas) => {
-      return groupedTemas(temas, true);
-    })
-  );
 
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
@@ -77,7 +72,7 @@ export class BloquesEditComponent {
       siendoEditado: [false],
       controlId: [uniqueId()],
       importante: [false],
-      tiempoAviso: [0]
+      tiempoAviso: [0],
     });
   }
 

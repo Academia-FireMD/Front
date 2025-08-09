@@ -375,7 +375,7 @@ p-chip {
 }
 
 .shared-grid-component {
-  .grid {
+  .shared-grid {
     @media (min-width: 769px) {
       display: flex;
       flex-direction: column;

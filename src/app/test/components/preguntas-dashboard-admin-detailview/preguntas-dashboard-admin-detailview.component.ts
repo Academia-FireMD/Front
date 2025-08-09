@@ -80,11 +80,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   @Output() preguntaCreada = new EventEmitter<Pregunta>();
 
   public checked = {};
-  public getAllTemas$ = this.temaService.getAllTemas$().pipe(
-    map((temas) => {
-      return groupedTemas(temas, this.expectedRole == 'ADMIN');
-    })
-  );
+ 
 
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';

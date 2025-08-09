@@ -139,12 +139,6 @@ export class FlashcardDetailviewAdminComponent {
     });
   }
 
-  public getAllTemas$ = this.temaService.getAllTemas$().pipe(
-    map((temas) => {
-      return groupedTemas(temas, this.expectedRole == 'ADMIN');
-    })
-  );
-
   private getRole() {
     return combineLatest([
       this.activedRoute.data,

@@ -145,4 +145,11 @@ export class FlashcardDataService extends ApiBaseService {
       { responseType: 'blob' }
     );
   }
+
+  public descargarPlantillaImportacion() {
+    return this._http.get(
+      environment.apiUrl + this.controllerPrefix + '/plantilla-importacion',
+      { responseType: 'blob' }
+    );
+  }
 }

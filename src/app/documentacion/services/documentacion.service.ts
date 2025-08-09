@@ -52,4 +52,8 @@ export class DocumentosService extends ApiBaseService {
       })
     );
   }
+
+  public updateDocumento$(payload: { id: number; identificador?: string; descripcion?: string; temaId?: number | null; }) {
+    return this.post('/update', payload) as Observable<Documento>;
+  }
 }

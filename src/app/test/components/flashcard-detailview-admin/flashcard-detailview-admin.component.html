@@ -110,22 +110,10 @@
         }
 
         <div class="col-6">
-          <p-dropdown
-            class="w-full"
-            [style]="{ width: '100%' }"
-            [filter]="true"
-            filterBy="label"
-            [options]="(getAllTemas$ | async) ?? []"
-            formControlName="temaId"
-            placeholder="Selecciona un tema"
-            [group]="true"
-          >
-            <ng-template let-group pTemplate="group">
-              <div class="flex align-items-center">
-                <strong>{{ group.label }}</strong>
-              </div>
-            </ng-template>
-          </p-dropdown>
+          <app-tema-select
+            [multiple]="false"
+            [formControl]="formGroup.controls['temaId']"
+          ></app-tema-select>
         </div>
         <div class="col-6">
           <app-dificultad-dropdown

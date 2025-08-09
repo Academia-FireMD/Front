@@ -43,7 +43,7 @@ export interface FilterConfig {
 @Component({
   selector: 'app-generic-list',
   template: `
-    <div class="grid">
+    <div class="shared-grid grid">
       <!-- Top Action Bar -->
       <div class="col-12">
         <div class="top-action-bar">

@@ -1,75 +1,51 @@
-<p-multiSelect
-  #ms
-  [formControl]="formControl"
-  [options]="filteredTemas((getAllTemas$ | async) ?? [])"
-  [showToggleAll]="false"
-  [group]="true"
-  [showClear]="true"
-  [filter]="false"
-  [style]="{ width: '100%' }"
-  placeholder="Selecciona los temas"
-  display="chip"
-  class="w-full"
-  appendTo="body"
-  data-testid="temas-multiselect"
->
-  <ng-template pTemplate="header">
-    <div
-      class="flex gap-2 align-items-center w-full"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="flex flex-column align-items-center justify-content-center">
-        <p-checkbox
-          class="no-margin-checkbox"
-          [binary]="true"
-          [ngModel]="allSelected"
-          (onChange)="onSelectAll($event.checked)"
-          [ngModelOptions]="{ standalone: true }"
-          (click)="$event.stopPropagation()"
-        >
-        </p-checkbox>
+<div class="w-full">
+  <!-- Trigger styled like p-dropdown -->
+  <div
+    class="p-dropdown p-component w-full flex" 
+    [style]="{ width: '100%', height: '100%' }"
+    (click)="togglePanel($event)"
+    tabindex="0"
+    role="button"
+  >
+    <div class="p-dropdown-label p-inputtext w-full flex align-items-center gap-2 flex-wrap">
+      <span class="text-color-secondary" *ngIf="selectedCount() === 0 && multiple">Selecciona los temas</span>
+      <span class="text-color-secondary" *ngIf="selectedCount() === 0 && !multiple">Selecciona un tema</span>
+      <ng-container *ngIf="selectedCount() > 0">
+        <span class="p-chip p-component" *ngFor="let chip of visibleChips()">{{ chip }}</span>
+        <span class="p-chip p-component" *ngIf="multiple && selectedCount() - visibleChips().length > 0">+{{ selectedCount() - visibleChips().length }}</span>
+      </ng-container>
+    </div>
+    <div class="p-dropdown-trigger" style="display: flex; align-items: center;">
+      <span class="p-dropdown-trigger-icon pi pi-chevron-down"></span>
+    </div>
+  </div>
+
+  <p-overlayPanel #op [showCloseIcon]="true" [dismissable]="true" [style]="{ width: '100%', maxWidth: '600px' }">
+    <div class="flex gap-2 align-items-center w-full" (click)="$event.stopPropagation()">
+      <div class="flex flex-column align-items-center justify-content-center" *ngIf="multiple">
+        <p-checkbox class="no-margin-checkbox" [binary]="true" [ngModel]="allSelected" (onChange)="onSelectAll($event.checked)" [ngModelOptions]="{ standalone: true }"></p-checkbox>
         <small style="font-size: 0.8rem">Todos</small>
       </div>
-
-      <input
-        type="text"
-        class="w-full"
-        pInputText
-        (input)="filterLocal($event)"
-        placeholder="Buscar..."
-      />
+      <input type="text" class="w-full" pInputText (input)="filterLocal($event)" placeholder="Buscar..." />
     </div>
-  </ng-template>
-  <ng-template let-group pTemplate="group">
-    <div
-      class="flex align-items-center gap-2"
-      style="margin-left: -5px"
-    >
-      <p-checkbox
-        #checkbox
-        (click)="$event.stopPropagation()"
-        [binary]="true"
-        [ngModel]="isGroupSelected(group.items)"
-        [ngModelOptions]="{ standalone: true }"
-        (onChange)="onSelectGroup($event.checked, group.items)"
-      >
-      </p-checkbox>
-      <div class="flex align-items-center gap-2 w-full justify-content-between" style="cursor: pointer" (click)="toggleGroup($event, group.label)">
-        <strong>{{ group.label }}</strong>
-        <i [class]="isGroupCollapsed(group.label) ? 'pi pi-chevron-down' : 'pi pi-chevron-up'"></i>
-      </div>
+    <div class="mt-2" style="max-height: 320px; overflow: auto">
+      <ng-container *ngFor="let group of grupos; trackBy: trackGroup">
+        <div class="flex align-items-center gap-2 py-2">
+          <p-checkbox *ngIf="multiple" [binary]="true" [ngModel]="isGroupSelected(group.items)" [ngModelOptions]="{ standalone: true }" (onChange)="onSelectGroup($event.checked, group.items)"></p-checkbox>
+          <span class="font-bold pointer" (click)="toggleGroup(group.label)">
+            {{ group.label }}
+            <i class="pi" [ngClass]="isGroupCollapsed(group.label) ? 'pi-chevron-right' : 'pi-chevron-down'" style="margin-left: .25rem"></i>
+          </span>
+        </div>
+        <div class="pl-3" *ngIf="!isGroupCollapsed(group.label)">
+          <div *ngFor="let item of group.items; trackBy: trackItem" class="flex align-items-center gap-2 my-2">
+            <p-checkbox *ngIf="multiple" [binary]="true" [ngModel]="isSelected(item.value)" [ngModelOptions]="{ standalone: true }" (onChange)="onSelectGroup($event.checked, [item])"></p-checkbox>
+            <p-radioButton *ngIf="!multiple" name="singleTema" [value]="item.value" [ngModel]="formControl.value" (onClick)="onSelectGroup(true, [item])"></p-radioButton>
+            <span class="pointer" (click)="multiple ? onSelectGroup(!isSelected(item.value), [item]) : onSelectGroup(true, [item])">{{ item.label }}</span>
+          </div>
+        </div>
+        <p-divider styleClass="my-2"></p-divider>
+      </ng-container>
     </div>
-    <div [style.display]="isGroupCollapsed(group.label) ? 'none' : 'block'" style="padding-left: 20px">
-      <div *ngFor="let item of group.items" class="flex align-items-center gap-2 my-2">
-        <p-checkbox
-          [binary]="true"
-          [ngModel]="(formControl?.value ?? []).includes(item.value)"
-          (onChange)="onSelectGroup($event.checked, [item])"
-          [ngModelOptions]="{ standalone: true }"
-        >
-        </p-checkbox>
-        {{ item.label }}
-      </div>
-    </div>
-  </ng-template>
-</p-multiSelect>
+  </p-overlayPanel>
+</div>

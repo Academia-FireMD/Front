@@ -10,13 +10,19 @@ import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
-import { Pregunta, Dificultad, Comunidad } from '../../../shared/models/pregunta.model';
+import {
+  Pregunta,
+  Dificultad,
+  Comunidad,
+} from '../../../shared/models/pregunta.model';
+import { Rol } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import {
   getAlumnoDificultad,
   getStarsBasedOnDifficulty,
 } from '../../../utils/utils';
+import { FormBuilder, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-preguntas-dashboard-admin',
@@ -24,33 +30,30 @@ import {
   styleUrl: './preguntas-dashboard-admin.component.scss',
 })
 export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregunta> {
+  public Rol = Rol;
   preguntasService = inject(PreguntasService);
   confirmationService = inject(ConfirmationService);
   activatedRoute = inject(ActivatedRoute);
   public getAlumnoDificultad = getAlumnoDificultad;
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;
-
-  public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  private fb = inject(FormBuilder);
+  public mostrarImportDialog = false;
+  public importForm = this.fb.group({
+    temaId: [null as number | null, [Validators.required]],
+    dificultad: [null as Dificultad | null, [Validators.required]],
+  });
+  public selectedFile: File | null = null;
+  public expectedRole: Rol = Rol.ALUMNO;
 
   // Configuración de filtros para el GenericListComponent
   public filters: FilterConfig[] = [
-    {
-      key: 'createdAt',
-      specialCaseKey: 'rangeDate',
-      label: 'Rango de fechas',
-      type: 'calendar',
-      placeholder: 'Seleccionar rango de fechas',
-      dateConfig: {
-        selectionMode: 'range',
-      },
-    },
     {
       key: 'temas',
       label: 'Temas',
       type: 'tema-select',
       filterInterpolation: (value) => ({
-        temaId: { in: value }
+        temaId: { in: value },
       }),
     },
     {
@@ -130,38 +133,64 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
     );
   }
 
-  async onFileSelected(event: Event) {
+  public descargarPlantillaPreguntas() {
+    firstValueFrom(
+      this.preguntasService.descargarPlantillaImportacion().pipe(
+        tap((blob: Blob) => {
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.href = url;
+          link.download = `plantilla_preguntas.xlsx`;
+          link.click();
+          URL.revokeObjectURL(url);
+        })
+      )
+    );
+  }
+
+  onFileChosen(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile =
+      input.files && input.files.length > 0 ? input.files[0] : null;
+  }
+
+  onPrimeFileSelect(event: any) {
+    const files = event?.currentFiles ?? event?.files ?? [];
+    this.selectedFile = files.length > 0 ? files[0] : null;
+  }
+
+  async importarPreguntas() {
+    if (!this.selectedFile) {
+      this.toast.error('Selecciona un archivo');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', this.selectedFile, this.selectedFile.name);
+    formData.append('temaId', String(this.importForm.value.temaId));
+    formData.append(
+      'dificultad',
+      String(this.importForm.value.dificultad ?? 'PUBLICAS')
+    );
+
+    this.uploadingFile = true;
     try {
-      const input = event.target as HTMLInputElement;
-      if (input.files && input.files.length > 0) {
-        const selectedFile = input.files[0];
-        if (!selectedFile) {
-          this.toast.error('Por favor, selecciona un archivo primero.');
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', selectedFile, selectedFile.name);
-        this.uploadingFile = true;
-        try {
-          const response = await firstValueFrom(
-            this.preguntasService.importarPreguntasExcel(formData)
-          );
-          this.toast.success(
-            `Archivo importado exitosamente con ${
-              response.count ?? 0
-            } insertadas y ${response.ignoradas ?? 0} ignoradas.`
-          );
-          this.uploadingFile = false;
-        } catch (error) {
-          this.uploadingFile = false;
-        }
-
-        this.refresh();
-        this.fileInput.nativeElement.value = '';
-      }
+      const response: any = await firstValueFrom(
+        this.preguntasService.importarPreguntasExcel(formData)
+      );
+      this.toast.success(
+        `Archivo importado: ${response.count ?? 0} insertadas, ${
+          response.ignoradas ?? 0
+        } ignoradas.`
+      );
+      this.mostrarImportDialog = false;
+      this.selectedFile = null;
+      this.importForm.reset({ temaId: null, dificultad: null });
     } catch (error) {
-      this.fileInput.nativeElement.value = '';
+      this.toast.error('Error al importar');
+    } finally {
+      this.uploadingFile = false;
+      this.refresh();
     }
   }
 

@@ -9,6 +9,7 @@ import { PaginationFilter } from '../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
 import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { DocumentosService } from '../services/documentacion.service';
+import { Tema } from '../../shared/models/pregunta.model';
 
 @Component({
   selector: 'app-documentation-overview',
@@ -32,6 +33,15 @@ export class DocumentationOverviewComponent
   public uploadingFileFormGroup = this.fb.group({
     identificador: ['', Validators.required],
     descripcion: [''],
+    temaIds: [[] as number[]],
+  });
+
+  public mostrarEditarDocumento = false;
+  public documentoEditando: Documento | null = null;
+  public editarDocumentoForm = this.fb.group({
+    identificador: ['', Validators.required],
+    descripcion: [''],
+    temaIds: [[] as number[]],
   });
 
   // Configuración de filtros para el GenericListComponent
@@ -45,6 +55,12 @@ export class DocumentationOverviewComponent
       dateConfig: {
         selectionMode: 'range',
       },
+    },
+    {
+      key: 'temaId',
+      label: 'Temas',
+      type: 'tema-select',
+      filterInterpolation: (value: number[]) => ({ temaId: { in: value } }),
     },
   ];
 
@@ -109,6 +125,11 @@ export class DocumentationOverviewComponent
     );
     formData.append('esPublico', true + '');
 
+    const temaId = (this.uploadingFileFormGroup.value.temaIds ?? [])[0];
+    if (temaId !== undefined) {
+      formData.append('temaId', String(temaId));
+    }
+
     this.uploadingFile = true;
     try {
       const response = await firstValueFrom(
@@ -126,6 +147,38 @@ export class DocumentationOverviewComponent
     }
 
     this.refresh();
+  }
+
+  abrirEditarDocumento(document: Documento) {
+    this.documentoEditando = document;
+    this.mostrarEditarDocumento = true;
+    this.editarDocumentoForm.patchValue({
+      identificador: document.identificador,
+      descripcion: document.descripcion ?? '',
+      temaIds: document.temaId ? [document.temaId] : [],
+    });
+  }
+
+  async guardarCambiosDocumento() {
+    if (!this.documentoEditando) return;
+
+    const id = this.documentoEditando.id;
+    const identificador = this.editarDocumentoForm.value.identificador ?? '';
+    const descripcion = this.editarDocumentoForm.value.descripcion ?? '';
+    const temaIds = this.editarDocumentoForm.value.temaIds ?? [];
+    const temaId = temaIds.length > 0 ? temaIds[0] : null;
+
+    try {
+      await firstValueFrom(
+        this.service.updateDocumento$({ id, identificador, descripcion, temaId })
+      );
+      this.toast.success('Documento actualizado correctamente');
+      this.mostrarEditarDocumento = false;
+      this.documentoEditando = null;
+      this.refresh();
+    } catch (error) {
+      this.toast.error('Error al actualizar el documento');
+    }
   }
 
   confirmarEliminacion(document: Documento) {
@@ -170,9 +223,7 @@ export class DocumentationOverviewComponent
 
           window.URL.revokeObjectURL(blobUrl);
 
-          this.notificationService.success(
-            'Documento descargado correctamente'
-          );
+          this.notificationService.success('Documento descargado correctamente');
         },
         error: (error) => {
           console.error('Error al descargar el documento:', error);
@@ -182,9 +233,7 @@ export class DocumentationOverviewComponent
     } catch (error) {
       console.error('Error al descargar el documento:', error);
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Error al descargar el documento';
+        error instanceof Error ? error.message : 'Error al descargar el documento';
       this.notificationService.error(errorMessage);
     }
   }

@@ -18,6 +18,8 @@ import {
   getAlumnoDificultad,
   getStarsBasedOnDifficulty,
 } from '../../../utils/utils';
+import { FormBuilder, Validators } from '@angular/forms';
+import { Rol } from '../../../shared/models/user.model';
 
 @Component({
   selector: 'app-flashcard-overview-admin',
@@ -25,28 +27,25 @@ import {
   styleUrl: './flashcard-overview-admin.component.scss',
 })
 export class FlashcardOverviewAdminComponent extends SharedGridComponent<FlashcardData> {
+  public Rol = Rol;
   confirmationService = inject(ConfirmationService);
   flashcardService = inject(FlashcardDataService);
   activatedRoute = inject(ActivatedRoute);
   @ViewChild('fileInput') fileInput!: ElementRef;
   public uploadingFile = false;
-  public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  public expectedRole: Rol = Rol.ALUMNO;
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   public getAlumnoDificultad = getAlumnoDificultad;
+  private fb = inject(FormBuilder);
+  public mostrarImportDialog = false;
+  public importForm = this.fb.group({
+    temaId: [null as number | null, [Validators.required]],
+    dificultad: [null as Dificultad | null, [Validators.required]],
+  });
+  public selectedFile: File | null = null;
 
   // Configuración de filtros para el GenericListComponent
-  public filters: FilterConfig[] = [
-    {
-      key: 'createdAt',
-      specialCaseKey: 'rangeDate',
-      label: 'Rango de fechas',
-      type: 'calendar',
-      placeholder: 'Seleccionar rango de fechas',
-      dateConfig: {
-        selectionMode: 'range',
-      },
-    },
-  ];
+  public filters: FilterConfig[] = [];
 
   commMap = (pagination: PaginationFilter) => {
     return {
@@ -90,38 +89,53 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
     });
   }
 
-  async onFileSelected(event: Event) {
+  onFileChosen(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile =
+      input.files && input.files.length > 0 ? input.files[0] : null;
+  }
+
+  onPrimeFileSelect(event: any) {
+    const files = event?.currentFiles ?? event?.files ?? [];
+    this.selectedFile = files.length > 0 ? files[0] : null;
+  }
+
+  async importarFlashcards() {
+    if (!this.selectedFile) {
+      this.toast.error('Selecciona un archivo');
+      return;
+    }
+    const temaId = this.importForm.value.temaId;
+    if (!temaId) {
+      this.toast.error('Selecciona un tema');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', this.selectedFile, this.selectedFile.name);
+    formData.append('temaId', String(temaId));
+    formData.append(
+      'dificultad',
+      String(this.importForm.value.dificultad ?? 'PUBLICAS')
+    );
+
+    this.uploadingFile = true;
     try {
-      const input = event.target as HTMLInputElement;
-      if (input.files && input.files.length > 0) {
-        const selectedFile = input.files[0];
-        if (!selectedFile) {
-          this.toast.error('Por favor, selecciona un archivo primero.');
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', selectedFile, selectedFile.name);
-        this.uploadingFile = true;
-        try {
-          const response = await firstValueFrom(
-            this.flashcardService.importarExcel(formData)
-          );
-          this.toast.success(
-            `Archivo importado exitosamente con ${
-              response.count ?? 0
-            } insertadas y ${response.ignoradas ?? 0} ignoradas.`
-          );
-          this.uploadingFile = false;
-        } catch (error) {
-          this.uploadingFile = false;
-        }
-
-        this.refresh();
-        this.fileInput.nativeElement.value = '';
-      }
+      const response: any = await firstValueFrom(
+        this.flashcardService.importarExcel(formData)
+      );
+      this.toast.success(
+        `Archivo importado: ${response.count ?? 0} insertadas, ${
+          response.ignoradas ?? 0
+        } ignoradas.`
+      );
+      this.mostrarImportDialog = false;
+      this.selectedFile = null;
+      this.importForm.reset({ temaId: null, dificultad: null });
     } catch (error) {
-      this.fileInput.nativeElement.value = '';
+      this.toast.error('Error al importar');
+    } finally {
+      this.uploadingFile = false;
+      this.refresh();
     }
   }
 
@@ -164,6 +178,21 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
           link.click();
 
           // Limpia el URL temporal
+          URL.revokeObjectURL(url);
+        })
+      )
+    );
+  }
+
+  public descargarPlantillaFlashcards() {
+    firstValueFrom(
+      this.flashcardService.descargarPlantillaImportacion().pipe(
+        tap((blob: Blob) => {
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.href = url;
+          link.download = `plantilla_flashcards.xlsx`;
+          link.click();
           URL.revokeObjectURL(url);
         })
       )
