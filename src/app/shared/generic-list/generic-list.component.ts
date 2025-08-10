@@ -7,11 +7,12 @@ import {
   OnInit,
   ChangeDetectorRef,
   OnDestroy,
+  computed,
 } from '@angular/core';
 import { FormBuilder, FormControl } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { SharedGridComponent } from '../shared-grid/shared-grid.component';
-import { interval, Subscription } from 'rxjs';
+import { interval, Subscription, tap } from 'rxjs';
 import { Rol } from '../models/user.model';
 
 export interface FilterOption {
@@ -81,7 +82,7 @@ export interface FilterConfig {
 
       <!-- List Content -->
       <div class="col-12 list-generic">
-        <p-dataView #dv [value]="(fetchItems$() | async)?.data ?? []">
+        <p-dataView #dv [value]="(internalFetch$() | async)?.data ?? []">
           <ng-template pTemplate="list" let-data>
             <div class="grid grid-nogutter">
               <div
@@ -248,6 +249,18 @@ export class GenericListComponent<T>
   filterControls: Map<string, FormControl> = new Map();
   private queryParamsSubscription?: Subscription;
   public Rol = Rol;
+
+  // Envuelve el fetch entrante para actualizar el total en el paginador
+  public internalFetch$ = computed(() => {
+    const source$ = this.fetchItems$();
+    return source$.pipe(
+      tap((res) => {
+        if (res) {
+          this.lastLoadedPagination = res as any;
+        }
+      })
+    );
+  });
 
   constructor(
     override router: Router,
