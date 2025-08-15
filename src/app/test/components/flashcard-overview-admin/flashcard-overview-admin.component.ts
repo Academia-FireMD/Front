@@ -45,7 +45,22 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
   public selectedFile: File | null = null;
 
   // Configuración de filtros para el GenericListComponent
-  public filters: FilterConfig[] = [];
+  public filters: FilterConfig[] = [
+    {
+      key: 'temas',
+      label: 'Temas',
+      type: 'tema-select',
+      filterInterpolation: (value) => ({
+        temaId: { in: value },
+      }),
+    },
+    {
+      key: 'relevancia',
+      label: 'Comunidad',
+      type: 'comunidad-dropdown',
+      placeholder: 'Seleccionar comunidad',
+    },
+  ];
 
   commMap = (pagination: PaginationFilter) => {
     return {
