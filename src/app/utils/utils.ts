@@ -11,6 +11,7 @@ import {
 } from '../shared/models/pregunta.model';
 import { Test } from '../shared/models/test.model';
 import { forOwn, isObjectLike } from 'lodash';
+import { Rol } from '../shared/models/user.model';
 
 export const colorCorrectas = '#00eb003d';
 export const colorIncorretas = '#ff9c9c';
@@ -402,59 +403,112 @@ export const groupedTemas = (temas: Array<Tema>, isAdmin: boolean = false) => {
 
 export const getAllDifficultades = (
   isFlashcards = false,
-  isCreatingTest = false
+  isCreatingTest = false,
+  rol?: Rol
 ) => {
   const privada = getAlumnoDificultad(Dificultad.PRIVADAS);
   const publica = getAlumnoDificultad(Dificultad.PUBLICAS);
 
-  const allDificultades = [
+  // Opciones básicas de dificultad para flashcards
+  const dificultadesBasicas = [
     {
-      label: isFlashcards ? 'Datos Básicos' : 'Basico',
+      label: 'Datos Básicos',
       stars: getStarsBasedOnDifficulty(Dificultad.BASICO),
       value: Dificultad.BASICO,
     },
     {
-      label: isFlashcards ? 'Datos' : 'Intermedio',
+      label: 'Datos',
       stars: getStarsBasedOnDifficulty(Dificultad.INTERMEDIO),
       value: Dificultad.INTERMEDIO,
     },
     {
-      label: isFlashcards ? 'Tarjetas' : 'Dificil',
+      label: 'Tarjetas',
       stars: getStarsBasedOnDifficulty(Dificultad.DIFICIL),
       value: Dificultad.DIFICIL,
     },
   ];
-  const alumnoOnly = [
+
+  // Opciones de visibilidad (privado/público)
+  const opcionesVisibilidad = [
     {
       label: isCreatingTest
-        ? isFlashcards
-          ? 'Solo mis flashcards'
-          : 'Solo mis preguntas'
+        ? (isFlashcards ? 'Solo mis flashcards' : 'Solo mis preguntas')
         : privada?.label,
       icon: privada?.icon,
       value: Dificultad.PRIVADAS,
     },
     {
       label: isCreatingTest
-        ? isFlashcards
-          ? 'Solo flashcards publicos'
-          : 'Solo preguntas publicas'
+        ? (isFlashcards ? 'Solo flashcards publicos' : 'Solo preguntas publicas')
         : publica?.label,
       icon: publica?.icon,
       value: Dificultad.PUBLICAS,
     },
   ];
-  if (!isFlashcards) {
-    if (!!isCreatingTest)
-      alumnoOnly.push({
-        label: 'Tecnika Fire',
-        icon: 'pi-check-square',
-        value: Dificultad.INTERMEDIO,
-      });
 
-    return alumnoOnly;
+  // Si es admin
+  if (rol === Rol.ADMIN) {
+    if (isFlashcards) {
+      // Admin con flashcards: datos básicos + datos + tarjetas + privado + público
+      return [...dificultadesBasicas, ...opcionesVisibilidad];
+    } else {
+      // Admin sin flashcards: solo mis preguntas + solo preguntas publicas + tecnika fire
+      return [
+        ...opcionesVisibilidad,
+        {
+          label: 'Tecnika Fire',
+          icon: 'pi-check-square',
+          value: Dificultad.INTERMEDIO,
+        }
+      ];
+    }
   }
-  return [...allDificultades, ...alumnoOnly];
+
+  // Si es alumno
+  if (rol === Rol.ALUMNO) {
+    if (isFlashcards) {
+      if (isCreatingTest) {
+        // Alumno creando test de flashcards: datos básicos + datos + tarjetas + privado + público
+        return [...dificultadesBasicas, ...opcionesVisibilidad];
+      } else {
+        // Alumno no creando test de flashcards: solo privado + público
+        return opcionesVisibilidad;
+      }
+    } else {
+      // Alumno con preguntas normales
+      if (isCreatingTest) {
+        // Alumno creando test: solo mis preguntas + solo preguntas publicas + tecnika fire
+        return [
+          ...opcionesVisibilidad,
+          {
+            label: 'Tecnika Fire',
+            icon: 'pi-check-square',
+            value: Dificultad.INTERMEDIO,
+          }
+        ];
+      } else {
+        // Alumno no creando test: solo privado + público
+        return opcionesVisibilidad;
+      }
+    }
+  }
+
+  // Fallback: comportamiento original para compatibilidad
+  if (!isFlashcards) {
+    if (isCreatingTest) {
+      return [
+        ...opcionesVisibilidad,
+        {
+          label: 'Tecnika Fire',
+          icon: 'pi-check-square',
+          value: Dificultad.INTERMEDIO,
+        }
+      ];
+    }
+    return opcionesVisibilidad;
+  }
+  
+  return [...dificultadesBasicas, ...opcionesVisibilidad];
 };
 
 export const crearEventoCalendario = (

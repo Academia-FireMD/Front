@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
+import { Store } from '@ngrx/store';
 import { getAllDifficultades } from '../../utils/utils';
-import { Rol } from '../models/user.model';
+import { selectUserRol } from '../../store/user/user.selectors';
 
 @Component({
   selector: 'app-dificultad-dropdown',
@@ -13,18 +14,37 @@ export class DificultadDropdownComponent {
   @Input() customOptions: Array<any> = [];
   @Input() isGrouped: boolean = false;
   @Input() isFlashcards = false;
-  public rolEnum = Rol;
+  
   public getAllDifficultades = getAllDifficultades;
 
+  constructor(private store: Store) {
+  }
+
   get optionsToUse() {
-    const options =
-      this.customOptions.length > 0
-        ? this.customOptions
-        : getAllDifficultades(this.isFlashcards, this.isDoingTest);
-    // Auto-detect grouping if items exist
+    // Si hay opciones personalizadas, usarlas directamente
+    if (this.customOptions.length > 0) {
+      return this.customOptions;
+    }
+
+    // Obtener el rol del store
+    const currentRol = this.store.selectSignal(selectUserRol);
+
+    // Obtener opciones basadas en el rol y parámetros
+    const options = getAllDifficultades(
+      this.isFlashcards, 
+      this.isDoingTest, 
+      currentRol()
+    );
+
+    // Auto-detect grouping if items exist (solo para opciones agrupadas)
     const looksGrouped =
-      Array.isArray(options) && options.length > 0 && !!options[0]?.items;
+      Array.isArray(options) && 
+      options.length > 0 && 
+      'items' in options[0] && 
+      Array.isArray((options[0] as any).items);
+    
     this.isGrouped = this.isGrouped || looksGrouped;
+    
     return options;
   }
 }
