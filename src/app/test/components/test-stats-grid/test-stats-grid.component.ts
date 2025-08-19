@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { PrimeNGConfig } from 'primeng/api';
 import { combineLatest, filter, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
@@ -9,6 +10,9 @@ import { TestService } from '../../../services/test.service';
 import { FlashcardTest } from '../../../shared/models/flashcard.model';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { Test } from '../../../shared/models/test.model';
+import { MetodoCalificacion } from '../../../shared/models/user.model';
+import { AppState } from '../../../store/app.state';
+import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import {
@@ -79,6 +83,10 @@ export class TestStatsGridComponent extends SharedGridComponent<
   testService = inject(TestService);
   flashcardsService = inject(FlashcardDataService);
   activatedRoute = inject(ActivatedRoute);
+  store = inject(Store<AppState>);
+  
+  // Selector para obtener el método de calificación del usuario
+  userMetodoCalificacion$ = this.store.select(selectUserMetodoCalificacion);
   public type: 'TESTS' | 'FLASHCARDS' = 'TESTS';
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   public displayOnlyExamen = false;
@@ -106,9 +114,59 @@ export class TestStatsGridComponent extends SharedGridComponent<
     },
   ];
 
+  // Variable para almacenar el método actual
+  private currentMetodoCalificacion: MetodoCalificacion = MetodoCalificacion.A1_E1_3_B0;
+
+  constructor(private primengConfig: PrimeNGConfig) {
+    super();
+    this.primengConfig.setTranslation(this.es);
+    
+    // Suscribirse al método de calificación del usuario
+    this.userMetodoCalificacion$.subscribe(metodo => {
+      this.currentMetodoCalificacion = metodo;
+    });
+    
+    combineLatest([
+      this.activatedRoute.queryParams,
+      this.activatedRoute.data.pipe(filter((e) => !!e)),
+    ]).subscribe(([queryParams, data]) => {
+      this.displayOnlyExamen = queryParams['onlyExamen'] === 'true';
+      this.fetchItems$ = computed(() => {
+        const { expectedRole, type } = data;
+        this.type = type;
+        this.expectedRole = expectedRole;
+        const pagination = this.getPaginationFilter(
+          this.displayOnlyExamen,
+          this.pagination()
+        );
+        if (this.type == 'FLASHCARDS') {
+          if (this.expectedRole == 'ADMIN') {
+            return this.flashcardsService
+              .getTestsAdmin$(pagination)
+              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+          } else {
+            return this.flashcardsService
+              .getTestsAlumno$(pagination)
+              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+          }
+        } else {
+          if (this.expectedRole == 'ADMIN') {
+            return this.testService
+              .getTestsAdmin$(pagination)
+              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+          } else {
+            return this.testService
+              .getTestsAlumno$(pagination)
+              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+          }
+        }
+      });
+    });
+  }
+
   public calcular100 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
-    return calcular100(statsParsed.stats100, numPreguntas);
+    return calcular100(statsParsed.stats100, numPreguntas, this.currentMetodoCalificacion);
   };
 
   public calcular100y75 = (rawStats: any, numPreguntas: number) => {
@@ -116,7 +174,8 @@ export class TestStatsGridComponent extends SharedGridComponent<
     return calcular100y75(
       statsParsed.stats100,
       statsParsed.stats75,
-      numPreguntas
+      numPreguntas,
+      this.currentMetodoCalificacion
     );
   };
   public calcular100y75y50 = (rawStats: any, numPreguntas: number) => {
@@ -125,7 +184,8 @@ export class TestStatsGridComponent extends SharedGridComponent<
       statsParsed.stats100,
       statsParsed.stats75,
       statsParsed.stats50,
-      numPreguntas
+      numPreguntas,
+      this.currentMetodoCalificacion
     );
   };
 
@@ -186,46 +246,7 @@ export class TestStatsGridComponent extends SharedGridComponent<
     return newPagination;
   }
 
-  constructor(private primengConfig: PrimeNGConfig) {
-    super();
-    this.primengConfig.setTranslation(this.es);
-    combineLatest([
-      this.activatedRoute.queryParams,
-      this.activatedRoute.data.pipe(filter((e) => !!e)),
-    ]).subscribe(([queryParams, data]) => {
-      this.displayOnlyExamen = queryParams['onlyExamen'] === 'true';
-      this.fetchItems$ = computed(() => {
-        const { expectedRole, type } = data;
-        this.type = type;
-        this.expectedRole = expectedRole;
-        const pagination = this.getPaginationFilter(
-          this.displayOnlyExamen,
-          this.pagination()
-        );
-        if (this.type == 'FLASHCARDS') {
-          if (this.expectedRole == 'ADMIN') {
-            return this.flashcardsService
-              .getTestsAdmin$(pagination)
-              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
-          } else {
-            return this.flashcardsService
-              .getTestsAlumno$(pagination)
-              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
-          }
-        } else {
-          if (this.expectedRole == 'ADMIN') {
-            return this.testService
-              .getTestsAdmin$(pagination)
-              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
-          } else {
-            return this.testService
-              .getTestsAlumno$(pagination)
-              .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
-          }
-        }
-      });
-    });
-  }
+
 
   public obtenerTipoDeTest = obtenerTipoDeTest;
   public obtenerTemas = obtenerTemas;

@@ -1,5 +1,8 @@
 import { LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { StoreModule } from '@ngrx/store';
+import { EffectsModule } from '@ngrx/effects';
+import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 
 import { registerLocaleData } from '@angular/common';
 import {
@@ -36,6 +39,9 @@ import { ErrorInterceptor } from './shared/interceptors/error.interceptor';
 import { LayoutComponent } from './shared/layout/layout.component';
 import { SharedModule } from './shared/shared.module';
 import { AsyncButtonComponent } from './shared/components/async-button/async-button.component';
+import { userReducer } from './store/user/user.reducer';
+import { UserEffects } from './store/user/user.effects';
+import { environment } from '../environments/environment';
 registerLocaleData(localeEs);
 class CustomDateFormatter extends CalendarNativeDateFormatter {
   // Sobrescribe la hora en la vista diaria
@@ -101,6 +107,12 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
       useFactory: adapterFactory,
     }),
     AsyncButtonComponent,
+    StoreModule.forRoot({ user: userReducer }),
+    EffectsModule.forRoot([UserEffects]),
+    StoreDevtoolsModule.instrument({
+      maxAge: 25,
+      logOnly: environment.production,
+    }),
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()),

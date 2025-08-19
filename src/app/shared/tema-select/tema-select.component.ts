@@ -72,7 +72,7 @@ export class TemaSelectComponent implements OnInit, OnDestroy {
       for (const group of this.lastLoadedTemas) {
         for (const item of group.items) {
           if (selectedValues.includes(item.value)) labels.push(item.label);
-          if (labels.length >= 3) return labels; // show first 3
+          if (labels.length >= 2) return labels; // show first 2
         }
       }
       return labels;

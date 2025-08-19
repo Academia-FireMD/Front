@@ -1,5 +1,6 @@
 import { Comunidad, Pregunta } from "../../shared/models/pregunta.model";
 import { Test } from "../../shared/models/test.model";
+import { MetodoCalificacion } from "../../shared/models/user.model";
 
 export enum EstadoExamen {
   BORRADOR = 'BORRADOR',
@@ -23,6 +24,7 @@ export interface Examen {
   codigoAcceso?: string;
   fechaActivacion?: Date;
   fechaSolucion?: Date;
+  metodoCalificacion?: MetodoCalificacion;
   relevancia: Comunidad[];
   creadorId: number;
   testId?: number;

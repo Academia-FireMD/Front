@@ -1,11 +1,14 @@
 <div class="profile-container">
   <!-- Spinner de carga -->
-  <div class="loading-container" *ngIf="isLoading">
+  <div class="loading-container" *ngIf="isLoading$ | async">
     <ngx-spinner></ngx-spinner>
     <p>Cargando perfil...</p>
   </div>
 
-  <div class="profile-content" *ngIf="!isLoading && user">
+  <div
+    class="profile-content"
+    *ngIf="!(isLoading$ | async) && user"
+  >
     <div class="grid">
       <!-- Información del perfil (lado izquierdo) -->
       <div
@@ -144,60 +147,68 @@
               ></p-dropdown>
             </div>
 
-            <div class="form-group mb-3" *ngIf="user.rol === 'ADMIN'">
-              <label for="esTutor">Este usuario es tutor?</label>
-              <p-toggleButton
-                id="esTutor"
-                [(ngModel)]="user.esTutor"
-                onLabel="Sí"
-                offLabel="No"
-                styleClass="w-full"
-              ></p-toggleButton>
-            </div>
+            <div class="form-group mb-3">
+              <app-metodo-calificacion-picker
+                [(value)]="user.metodoCalificacion"
+                [showClear]="false"
+                label="Método de calificación"
+                placeholder="Seleccione un método de calificación"
+              ></app-metodo-calificacion-picker>
 
-            <div
-              class="planification-section mt-4"
-              *ngIf="user.rol === 'ALUMNO'"
-            >
-              <div
-                class="assigned-planifications flex justify-content-between align-items-center"
-              >
-                <ng-container
-                  *ngIf="
-                    countPlanificacionesAsignadas$ | async as count;
-                    else noPlanificaciones
-                  "
-                >
-                  <label>Planificaciones asignadas:</label>
-                  <span class="planification-count">{{ count }}</span>
-                </ng-container>
-
-                <ng-template #noPlanificaciones>
-                  <div class="no-planification-message">
-                    <p>No tienes planificaciones asignadas</p>
-                    <p-button
-                      styleClass="p-button-outlined"
-                      icon="pi pi-sync"
-                      label="Asignar planificación automáticamente"
-                      (click)="autoAssignPlanificacion()"
-                    ></p-button>
-                  </div>
-                </ng-template>
+              <div class="form-group mb-3" *ngIf="user.rol === 'ADMIN'">
+                <label for="esTutor">Este usuario es tutor?</label>
+                <p-toggleButton
+                  id="esTutor"
+                  [(ngModel)]="user.esTutor"
+                  onLabel="Sí"
+                  offLabel="No"
+                  styleClass="w-full"
+                ></p-toggleButton>
               </div>
-            </div>
 
-            <!-- Botones de acción -->
-            <div class="action-buttons mt-4 flex justify-content-end">
-              <app-async-button
-                label="Guardar cambios"
-                icon="pi pi-save"
-                [action]="saveProfile.bind(this)"
-              ></app-async-button>
+              <div
+                class="planification-section mt-4"
+                *ngIf="user.rol === 'ALUMNO'"
+              >
+                <div
+                  class="assigned-planifications flex justify-content-between align-items-center"
+                >
+                  <ng-container
+                    *ngIf="
+                      countPlanificacionesAsignadas$ | async as count;
+                      else noPlanificaciones
+                    "
+                  >
+                    <label>Planificaciones asignadas:</label>
+                    <span class="planification-count">{{ count }}</span>
+                  </ng-container>
+
+                  <ng-template #noPlanificaciones>
+                    <div class="no-planification-message">
+                      <p>No tienes planificaciones asignadas</p>
+                      <p-button
+                        styleClass="p-button-outlined"
+                        icon="pi pi-sync"
+                        label="Asignar planificación automáticamente"
+                        (click)="autoAssignPlanificacion()"
+                      ></p-button>
+                    </div>
+                  </ng-template>
+                </div>
+              </div>
+
+              <!-- Botones de acción -->
+              <div class="action-buttons mt-4 flex justify-content-end">
+                <app-async-button
+                  label="Guardar cambios"
+                  icon="pi pi-save"
+                  [action]="saveProfile.bind(this)"
+                ></app-async-button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
       <!-- Información de suscripción (lado derecho) -->
       <div class="col-12 md:col-4" *ngIf="user.rol !== 'ADMIN'">
         <div class="subscription-card">
@@ -290,16 +301,16 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Mostrar errores -->
-  <div class="error-container" *ngIf="errors.length > 0">
-    <div class="error-card">
-      <div class="error-list">
-        <h3>Errores:</h3>
-        <ul>
-          <li *ngFor="let error of errors">{{ error }}</li>
-        </ul>
+    <!-- Mostrar errores -->
+    <div class="error-container" *ngIf="errors.length > 0">
+      <div class="error-card">
+        <div class="error-list">
+          <h3>Errores:</h3>
+          <ul>
+            <li *ngFor="let error of errors">{{ error }}</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>

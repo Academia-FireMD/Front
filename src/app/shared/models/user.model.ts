@@ -19,6 +19,7 @@ export interface Usuario {
   avatarUrl: string;
   sub?: number;
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
+  metodoCalificacion: MetodoCalificacion;
   woocommerceCustomerId?: string;
   suscripcion?: Suscripcion;
   consumibles?: Consumible[];
@@ -43,4 +44,10 @@ export const esRolPlataforma = (rol: Rol) => rolesPlataforma.includes(rol);
 export enum TipoDePlanificacionDeseada {
   FRANJA_CUATRO_A_SEIS_HORAS = 'FRANJA_CUATRO_A_SEIS_HORAS',
   FRANJA_SEIS_A_OCHO_HORAS = 'FRANJA_SEIS_A_OCHO_HORAS',
+}
+
+export enum MetodoCalificacion {
+  A1_E1_3_B0 = 'A1_E1_3_B0',
+  A1_E1_4_B0 = 'A1_E1_4_B0',
+  BASICO = 'BASICO',
 }

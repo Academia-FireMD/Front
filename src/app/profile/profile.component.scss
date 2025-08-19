@@ -1,3 +1,12 @@
+::ng-deep {
+  label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+  }
+}
+
 .profile-container {
   padding: 2rem;
   max-width: 1200px;
@@ -108,21 +117,12 @@
         color: white;
       }
     }
-
-
   }
 }
 
 // Estilos para los grupos de formulario
 .form-group {
   margin-bottom: 1.5rem;
-
-  label {
-    display: block;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    color: var(--text-color);
-  }
 
   input,
   p-dropdown {

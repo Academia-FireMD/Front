@@ -115,6 +115,20 @@
                     </p-floatLabel>
                   </div>
 
+                  <div class="col-12 md:col-3">
+                    <p-floatLabel>
+                      <app-metodo-calificacion-picker
+                        formControlName="metodoCalificacion"
+                        [showClear]="true"
+                        label="Método de calificación"
+                        placeholder="Seleccione un método de calificación"
+                        [useFloatLabel]="true"
+                        [simplified]="true"
+                        data-testid="metodo-calificacion-dropdown"
+                      ></app-metodo-calificacion-picker>
+                    </p-floatLabel>
+                  </div>
+
                   <div
                     class="col-12 md:col-3"
                     *ngIf="

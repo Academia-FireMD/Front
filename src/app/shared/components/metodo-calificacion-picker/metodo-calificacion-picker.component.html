@@ -1,0 +1,46 @@
+<!-- Plantilla reutilizable para el dropdown -->
+<ng-template #dropdownTemplate>
+  <p-dropdown
+    [id]="'metodo-calificacion'"
+    styleClass="w-full"
+    [options]="metodosCalificacion"
+    [(ngModel)]="value"
+    optionLabel="label"
+    optionValue="value"
+    appendTo="body"
+    [showClear]="showClear"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    (onChange)="onValueChange($event.value)"
+  >
+    <ng-template let-item pTemplate="selectedItem">
+      <div class="flex flex-column" *ngIf="item">
+        <span class="font-medium">{{ item.label }}</span>
+        <small *ngIf="!simplified" class="text-xs text-500">{{ item.descripcion }}</small>
+      </div>
+      <span *ngIf="!item && showClear" class="text-500"
+        >Usar preferencia del usuario</span
+      >
+    </ng-template>
+    <ng-template let-item pTemplate="item">
+      <div class="flex flex-column">
+        <span class="font-medium">{{ item.label }}</span>
+        <small class="text-xs text-500">{{ item.descripcion }}</small>
+      </div>
+    </ng-template>
+  </p-dropdown>
+</ng-template>
+
+<!-- Modo con float label -->
+<div *ngIf="useFloatLabel" class="mb-3">
+  <p-floatLabel>
+    <ng-container *ngTemplateOutlet="dropdownTemplate"></ng-container>
+    <label [for]="'metodo-calificacion'">{{ label }}</label>
+  </p-floatLabel>
+</div>
+
+<!-- Modo sin float label (por defecto) -->
+<div *ngIf="!useFloatLabel" class="form-group mb-3">
+  <label [for]="'metodo-calificacion'">{{ label }}</label>
+  <ng-container *ngTemplateOutlet="dropdownTemplate"></ng-container>
+</div>

@@ -1,11 +1,14 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
+import { Store } from '@ngrx/store';
 import { Comunidad } from '../shared/models/pregunta.model';
 import { Usuario } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
+import { AppState } from '../store/app.state';
+import * as UserActions from '../store/user/user.actions';
 
 @Injectable({
   providedIn: 'root',
@@ -28,6 +31,9 @@ export class AuthService extends ApiBaseService {
 
   // Observable público que otros componentes pueden suscribirse
   public lastUserLoaded: Usuario | null = null;
+
+  // Store para NgRx
+  private store = inject(Store<AppState>);
 
   constructor(private http: HttpClient, private userService: UserService) {
     super(http);
@@ -107,6 +113,10 @@ export class AuthService extends ApiBaseService {
         // Limpiar tokens y usuario actual
         this.clearToken();
         this.currentDecodedUserSubject.next(null);
+        this.lastUserLoaded = null;
+        
+        // Limpiar el store de NgRx
+        this.store.dispatch(UserActions.clearUser());
       })
     );
   }
@@ -148,6 +158,9 @@ export class AuthService extends ApiBaseService {
   clearToken(): void {
     sessionStorage.removeItem(this.TOKEN_KEY);
     sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    
+    // También limpiar el store de NgRx si se limpia el token
+    this.store.dispatch(UserActions.clearUser());
   }
 
   requestPasswordReset(email: string): Observable<any> {

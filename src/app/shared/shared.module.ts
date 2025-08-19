@@ -7,12 +7,14 @@ import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
+import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
 import { DataViewModule } from 'primeng/dataview';
 import { PaginatorModule } from 'primeng/paginator';
 import { AvatarUploadComponent } from './avatar-upload/avatar-upload.component';
 import { QrCodeShareComponent } from './components/qr-code-share/qr-code-share.component';
+import { MetodoCalificacionPickerComponent } from './components/metodo-calificacion-picker/metodo-calificacion-picker.component';
 import { ComunidadPickerComponent } from './comunidad-picker/comunidad-picker.component';
 import { ComunidadDropdownComponent } from './comunidad-dropdown/comunidad-dropdown.component';
 import { DificultadDropdownComponent } from './dificultad-dropdown/dificultad-dropdown.component';
@@ -39,7 +41,8 @@ import { GenericListComponent } from './generic-list/generic-list.component';
     AvatarUploadComponent,
     TemaSelectComponent, RealizarTestComponent,
     PopupFallosTestComponent,
-    QrCodeShareComponent
+    QrCodeShareComponent,
+    MetodoCalificacionPickerComponent
   ],
   imports: [
     CommonModule,
@@ -48,6 +51,7 @@ import { GenericListComponent } from './generic-list/generic-list.component';
     CalendarModule,
     DialogModule,
     DropdownModule,
+    FloatLabelModule,
     FormsModule,
     ReactiveFormsModule,
     PrimengModule,
@@ -73,7 +77,9 @@ import { GenericListComponent } from './generic-list/generic-list.component';
     TemaSelectComponent,
     PopupFallosTestComponent,
     QrCodeShareComponent,
-    BadgeModule
+    MetodoCalificacionPickerComponent,
+    BadgeModule,
+    FloatLabelModule
   ],
 })
 export class SharedModule { }

@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { EChartsOption } from 'echarts';
@@ -9,6 +10,9 @@ import { FlashcardDataService } from '../../../services/flashcards.service';
 import { TestService } from '../../../services/test.service';
 import { FlashcardTest } from '../../../shared/models/flashcard.model';
 import { Test } from '../../../shared/models/test.model';
+import { MetodoCalificacion } from '../../../shared/models/user.model';
+import { AppState } from '../../../store/app.state';
+import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
   calcular100,
   calcular100y75,
@@ -41,19 +45,34 @@ export class FullStatsComponent {
   testService = inject(TestService);
   router = inject(Router);
   flashcardService = inject(FlashcardDataService);
+  store = inject(Store<AppState>);
+  
+  // Selector para obtener el método de calificación del usuario
+  userMetodoCalificacion$ = this.store.select(selectUserMetodoCalificacion);
   public fullStats$ = this.getFullStats();
   public keys = Object.keys;
   public toPascalCase = toPascalCase;
+  // Variable para almacenar el método actual
+  private currentMetodoCalificacion: MetodoCalificacion = MetodoCalificacion.A1_E1_3_B0;
+
+  constructor() {
+    // Suscribirse al método de calificación del usuario
+    this.userMetodoCalificacion$.subscribe(metodo => {
+      this.currentMetodoCalificacion = metodo;
+    });
+  }
+
   public calcular100 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
-    return calcular100(statsParsed.stats100, numPreguntas);
+    return calcular100(statsParsed.stats100, numPreguntas, this.currentMetodoCalificacion);
   };
   public calcular100y75 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
     return calcular100y75(
       statsParsed.stats100,
       statsParsed.stats75,
-      numPreguntas
+      numPreguntas,
+      this.currentMetodoCalificacion
     );
   };
   public calcular100y75y50 = (rawStats: any, numPreguntas: number) => {
@@ -62,7 +81,8 @@ export class FullStatsComponent {
       statsParsed.stats100,
       statsParsed.stats75,
       statsParsed.stats50,
-      numPreguntas
+      numPreguntas,
+      this.currentMetodoCalificacion
     );
   };
 
@@ -554,7 +574,7 @@ export class FullStatsComponent {
     };
   };
 
-  constructor() {}
+
 
   private getFullStats() {
     return combineLatest([

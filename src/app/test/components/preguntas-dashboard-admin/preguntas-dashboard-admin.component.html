@@ -80,7 +80,6 @@
         <label class="block mb-2">Dificultad</label>
         <app-dificultad-dropdown
           [formControlDificultad]="importForm.controls['dificultad']"
-          [rol]="expectedRole"
           [isDoingTest]="expectedRole == 'ADMIN'"
         ></app-dificultad-dropdown>
       </div>

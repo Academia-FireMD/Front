@@ -232,38 +232,18 @@ export const getStats = (statsRaw: any) => {
   return { stats100, stats75, stats50 };
 };
 
-export const calcular100 = (stats100: StatType, total: number) => {
-  return calcularCalificacion(stats100.correctas, stats100.incorrectas, total);
-};
 
-export const calcular100y75 = (
-  stats100: StatType,
-  stats75: StatType,
-  total: number
-) => {
-  return calcularCalificacion(
-    stats100.correctas + stats75.correctas,
-    stats100.incorrectas + stats75.incorrectas,
-    total
-  );
-};
 
-export const calcular100y75y50 = (
-  stats100: StatType,
-  stats75: StatType,
-  stats50: StatType,
-  total: number,
-  identifier?: string
-) => {
-  return calcularCalificacion(
-    stats100.correctas + stats75.correctas + stats50.correctas,
-    stats100.incorrectas + stats75.incorrectas + stats50.incorrectas,
-    total,
-    identifier
-  );
-};
-
-export const calcularCalificacion = (
+/**
+ * Calcula la calificación usando la fórmula A1, E1/3, B0
+ * Q = ((A - E/3) * 10) / N
+ * Donde:
+ * - A = Aciertos (suman 1 punto cada uno)
+ * - E = Errores (restan 1/3 punto cada uno)
+ * - N = Total de preguntas
+ * - B = Preguntas en blanco (implícitas, no se consideran)
+ */
+export const calcularCalificacionA1E1_3B0 = (
   A: number,
   E: number,
   N: number,
@@ -273,6 +253,83 @@ export const calcularCalificacion = (
   if (A == 0 && E == 0 && N == 0) return 0;
   const Q = ((A - E / 3) * 10) / N;
   return Q;
+};
+
+/**
+ * Calcula la calificación usando la fórmula A1, E1/4, B0
+ * Q = (A - (E/P) + B*PB) * 10 / N
+ * Donde:
+ * - A = Aciertos (suman 1 punto cada uno)
+ * - E = Errores (restan 1/4 punto cada uno, por lo que P = 4)
+ * - B = Preguntas en blanco (se calculan automáticamente: B = N - A - E)
+ * - N = Total de preguntas
+ * - La calificación se redondea hasta la segunda cifra decimal
+ */
+export const calcularCalificacionA1E1_4B0 = (
+  A: number,
+  E: number,
+  N: number,
+  identificador?: string
+): number => {
+  if (identificador) console.table([identificador, A, E, N]);
+  if (A == 0 && E == 0 && N == 0) return 0;
+  
+  const P = 4; // Penalización por fallo (1/4)
+  const PB = 0; // Penalización por preguntas en blanco
+  const B = N - A - E; // Preguntas en blanco calculadas automáticamente
+  
+  const Q = ((A - (E / P) + B * PB) * 10) / N;
+  
+  // Redondear hasta la segunda cifra decimal como especifica la fórmula
+  return Math.round(Q * 100) / 100;
+};
+
+/**
+ * Calcula la calificación usando el método básico (aciertos/total * 10)
+ * Q = (A * 10) / N
+ * Donde:
+ * - A = Aciertos
+ * - N = Total de preguntas
+ * - No se penalizan errores ni preguntas en blanco
+ */
+export const calcularCalificacionBasico = (
+  A: number,
+  E: number,
+  N: number,
+  identificador?: string
+): number => {
+  if (identificador) console.table([identificador, A, E, N]);
+  if (A == 0 && E == 0 && N == 0) return 0;
+  if (N == 0) return 0;
+  
+  return parseFloat(((A * 10) / N).toFixed(2));
+};
+
+/**
+ * Calcula la calificación usando el método especificado
+ * @param A Número de aciertos
+ * @param E Número de errores
+ * @param N Total de preguntas
+ * @param metodoCalificacion Método de calificación a usar
+ * @param identificador Identificador opcional para debug
+ * @returns Calificación calculada
+ */
+export const calcularCalificacionPorMetodo = (
+  A: number,
+  E: number,
+  N: number,
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
+  identificador?: string
+): number => {
+  switch (metodoCalificacion) {
+    case 'A1_E1_4_B0':
+      return calcularCalificacionA1E1_4B0(A, E, N, identificador);
+    case 'BASICO':
+      return calcularCalificacionBasico(A, E, N, identificador);
+    case 'A1_E1_3_B0':
+    default:
+      return calcularCalificacionA1E1_3B0(A, E, N, identificador);
+  }
 };
 
 export const getStarsBasedOnDifficulty = (difficulty: Dificultad) => {
@@ -457,3 +514,45 @@ export function getNextWeekIfFriday(date: Date): Date {
 
   return endDate;
 }
+
+/**
+ * Funciones de cálculo de calificaciones que admiten método de calificación
+ */
+export const calcular100 = (
+  stats100: StatType, 
+  total: number,
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+) => {
+  return calcularCalificacionPorMetodo(stats100.correctas, stats100.incorrectas, total, metodoCalificacion);
+};
+
+export const calcular100y75 = (
+  stats100: StatType,
+  stats75: StatType,
+  total: number,
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+) => {
+  return calcularCalificacionPorMetodo(
+    stats100.correctas + stats75.correctas,
+    stats100.incorrectas + stats75.incorrectas,
+    total,
+    metodoCalificacion
+  );
+};
+
+export const calcular100y75y50 = (
+  stats100: StatType,
+  stats75: StatType,
+  stats50: StatType,
+  total: number,
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
+  identifier?: string
+) => {
+  return calcularCalificacionPorMetodo(
+    stats100.correctas + stats75.correctas + stats50.correctas,
+    stats100.incorrectas + stats75.incorrectas + stats50.incorrectas,
+    total,
+    metodoCalificacion,
+    identifier
+  );
+};

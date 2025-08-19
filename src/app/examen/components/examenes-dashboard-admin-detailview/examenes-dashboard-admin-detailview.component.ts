@@ -24,7 +24,7 @@ import { TemaService } from '../../../services/tema.service';
 import { GenerarTestDto } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
-import { Rol } from '../../../shared/models/user.model';
+import { Rol, MetodoCalificacion } from '../../../shared/models/user.model';
 import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-test.component';
 import {
   duracionOptions,
@@ -157,6 +157,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public tipoAccesoOptions = tipoAccesoOptions;
   confirmationService = inject(ConfirmationService);
 
+
+
   formGroup = this.fb.group({
     titulo: ['', Validators.required],
     descripcion: [''],
@@ -166,6 +168,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     codigoAcceso: [{ disabled: true, value: '' }],
     fechaActivacion: [null],
     fechaSolucion: [null],
+    metodoCalificacion: [null as MetodoCalificacion | null], // Opcional, si es null usa el del usuario
     relevancia: this.fb.array([] as Array<Comunidad>),
   });
 
@@ -330,6 +333,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       fechaSolucion: (examen.fechaSolucion
         ? new Date(examen.fechaSolucion)
         : null) as any,
+      metodoCalificacion: examen.metodoCalificacion || null,
     });
 
     // Cargar relevancia

@@ -185,7 +185,6 @@ export interface FilterConfig {
               getFilterControl(filter.key) as control
             "
             [formControlDificultad]="control"
-            [rol]="Rol.ADMIN"
             [isDoingTest]="false"
           ></app-dificultad-dropdown>
 
@@ -436,11 +435,11 @@ export class GenericListComponent<T>
     // Dropdown simple - devolver valor único
     if (filter.type === 'dropdown') {
       if (encodedValue === 'null' || encodedValue === '') return null;
-      
+
       // Manejar valores booleanos
       if (encodedValue === 'true') return true;
       if (encodedValue === 'false') return false;
-      
+
       // Intentar convertir a número si es posible
       const numValue = parseInt(encodedValue);
       return isNaN(numValue) ? encodedValue : numValue;

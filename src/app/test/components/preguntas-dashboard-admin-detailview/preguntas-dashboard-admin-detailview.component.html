@@ -126,7 +126,6 @@
         <div class="col-6">
           <app-dificultad-dropdown
             [formControlDificultad]="formGroup.get('dificultad')"
-            [rol]="expectedRole"
             [isDoingTest]="expectedRole == 'ADMIN'"
             [customOptions]="
               mode == 'examen' ? [{ label: 'Exámen', value: 'EXAMEN' }] : []
