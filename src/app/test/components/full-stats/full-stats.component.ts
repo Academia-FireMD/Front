@@ -8,6 +8,8 @@ import { Memoize } from 'lodash-decorators';
 import { combineLatest, filter, switchMap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { TestService } from '../../../services/test.service';
+import { ConfidenceAnalysis } from '../../../shared/components/confidence-analysis-cards/confidence-analysis-cards.component';
+import { KpiStat } from '../../../shared/components/kpi-stats-cards/kpi-stats-cards.component';
 import { FlashcardTest } from '../../../shared/models/flashcard.model';
 import { Test } from '../../../shared/models/test.model';
 import { MetodoCalificacion } from '../../../shared/models/user.model';
@@ -15,8 +17,8 @@ import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
   calcular100,
-  calcular100y75,
-  calcular100y75y50,
+  calcular50,
+  calcular75,
   colorCorrectas,
   colorFlashcardsCorrectas,
   colorFlashcardsIncorretas,
@@ -66,20 +68,17 @@ export class FullStatsComponent {
     const statsParsed = getStats(rawStats);
     return calcular100(statsParsed.stats100, numPreguntas, this.currentMetodoCalificacion);
   };
-  public calcular100y75 = (rawStats: any, numPreguntas: number) => {
+  public calcular75 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
-    return calcular100y75(
-      statsParsed.stats100,
+    return calcular75(
       statsParsed.stats75,
       numPreguntas,
       this.currentMetodoCalificacion
     );
   };
-  public calcular100y75y50 = (rawStats: any, numPreguntas: number) => {
+  public calcular50 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
-    return calcular100y75y50(
-      statsParsed.stats100,
-      statsParsed.stats75,
+    return calcular50(
       statsParsed.stats50,
       numPreguntas,
       this.currentMetodoCalificacion
@@ -253,8 +252,8 @@ export class FullStatsComponent {
     const incorrectasData = [] as Array<{ value: number; id: number }>;
     const omitidasData = [] as Array<{ value: number; id: number }>;
     const dataSet100 = [] as Array<number>;
-    const dataSet10050 = [] as Array<number>;
-    const dataSet1007550 = [] as Array<number>;
+    const dataSet75 = [] as Array<number>;
+    const dataSet50 = [] as Array<number>;
 
     // Procesamos cada test y calculamos los datos
     testsBlock.forEach((test) => {
@@ -274,29 +273,22 @@ export class FullStatsComponent {
       correctasData.push({ value: correctas, id: test.id });
       incorrectasData.push({ value: totalIncorrectas, id: test.id });
       omitidasData.push({ value: omitidas, id: test.id });
+      
       dataSet100.push(
         Number(
-          calcular100(stat.stats100, test.testPreguntas?.length ?? 0).toFixed(2)
+          this.calcular100(test.stats, test.testPreguntas?.length ?? 0).toFixed(2)
         )
       );
 
-      dataSet10050.push(
+      dataSet75.push(
         Number(
-          calcular100y75(
-            stat.stats100,
-            stat.stats75,
-            test.testPreguntas?.length ?? 0
-          ).toFixed(2)
+          this.calcular75(test.stats, test.testPreguntas?.length ?? 0).toFixed(2)
         )
       );
-      dataSet1007550.push(
+      
+      dataSet50.push(
         Number(
-          calcular100y75y50(
-            stat.stats100,
-            stat.stats75,
-            stat.stats50,
-            test.testPreguntas?.length ?? 0
-          ).toFixed(2)
+          this.calcular50(test.stats, test.testPreguntas?.length ?? 0).toFixed(2)
         )
       );
 
@@ -324,9 +316,9 @@ export class FullStatsComponent {
           'Correctas',
           'Incorrectas',
           'Omitidas',
-          '⭐',
-          '⭐ + 👍',
-          '⭐ + 👍 + 👎',
+          '⭐ (100%)',
+          '👍 (75%)',
+          '👎 (50%)',
         ],
       },
       xAxis: {
@@ -336,9 +328,20 @@ export class FullStatsComponent {
           interval: 0,
         },
       },
-      yAxis: {
-        type: 'value',
-      },
+      yAxis: [
+        {
+          type: 'value',
+          name: 'Preguntas',
+          position: 'left',
+        },
+        {
+          type: 'value',
+          name: 'Nota',
+          position: 'right',
+          min: 0,
+          max: 10,
+        }
+      ],
       grid: {
         containLabel: true,
       },
@@ -347,31 +350,34 @@ export class FullStatsComponent {
           name: 'Correctas',
           type: 'bar',
           stack: 'stats',
-          data: correctasData, // Incluye ahora el id del test en cada dato
+          data: correctasData,
           itemStyle: { color: colorCorrectas },
+          yAxisIndex: 0,
         },
         {
           name: 'Incorrectas',
           type: 'bar',
           stack: 'stats',
-          data: incorrectasData, // Incluye ahora el id del test en cada dato
+          data: incorrectasData,
           itemStyle: { color: colorIncorretas },
+          yAxisIndex: 0,
         },
         {
           name: 'Omitidas',
           type: 'bar',
           stack: 'stats',
-          data: omitidasData, // Incluye ahora el id del test en cada dato
+          data: omitidasData,
           itemStyle: { color: colorSinResponder },
+          yAxisIndex: 0,
         },
         {
-          name: '⭐',
+          name: '⭐ (100%)',
           type: 'line',
           data: dataSet100,
-          yAxisIndex: 0,
+          yAxisIndex: 1,
           lineStyle: {
-            color: '#4CAF50', // Verde brillante
-            width: 2,
+            color: '#4CAF50',
+            width: 3,
           },
           symbol: 'circle',
           symbolSize: 8,
@@ -380,13 +386,13 @@ export class FullStatsComponent {
           },
         },
         {
-          name: '⭐ + 👎',
+          name: '👍 (75%)',
           type: 'line',
-          data: dataSet10050,
-          yAxisIndex: 0,
+          data: dataSet75,
+          yAxisIndex: 1,
           lineStyle: {
-            color: '#2196F3', // Azul brillante
-            width: 2,
+            color: '#2196F3',
+            width: 3,
           },
           symbol: 'circle',
           symbolSize: 8,
@@ -395,13 +401,13 @@ export class FullStatsComponent {
           },
         },
         {
-          name: '⭐ + 👍 + 👎',
+          name: '👎 (50%)',
           type: 'line',
-          data: dataSet1007550,
-          yAxisIndex: 0,
+          data: dataSet50,
+          yAxisIndex: 1,
           lineStyle: {
-            color: '#FF5722', // Naranja profundo
-            width: 2,
+            color: '#FF5722',
+            width: 3,
           },
           symbol: 'circle',
           symbolSize: 8,
@@ -450,6 +456,223 @@ export class FullStatsComponent {
   }
 
   @Memoize()
+  public getNotaFinalChartOptions(nota: number): EChartsOption {
+    return {
+      series: [
+        {
+          type: 'gauge',
+          startAngle: 180,
+          endAngle: 0,
+          min: 0,
+          max: 10,
+          splitNumber: 10,
+          itemStyle: {
+            color: '#58D68D',
+          },
+          progress: {
+            show: true,
+            roundCap: true,
+            width: 18,
+          },
+          pointer: {
+            show: false,
+          },
+          axisLine: {
+            roundCap: true,
+            lineStyle: {
+              width: 18,
+            },
+          },
+          axisTick: {
+            show: false,
+          },
+          splitLine: {
+            show: false,
+          },
+          axisLabel: {
+            show: false,
+          },
+          anchor: {
+            show: false,
+          },
+          title: {
+            show: false,
+          },
+          detail: {
+            show: true,
+            valueAnimation: true,
+            offsetCenter: [0, '0%'],
+            fontSize: 30,
+            fontWeight: 'bold',
+            formatter: '{value}',
+            color: 'inherit',
+          },
+          data: [
+            {
+              value: nota,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  public getNotaChartOptions(nota: number): EChartsOption {
+    return {
+      series: [
+        {
+          type: 'gauge',
+          startAngle: 180,
+          endAngle: 0,
+          min: 0,
+          max: 10,
+          splitNumber: 10,
+          radius: '100%',
+          itemStyle: {
+            color: '#58D68D',
+          },
+          progress: {
+            show: true,
+            roundCap: true,
+            width: 18,
+          },
+          pointer: {
+            show: false,
+          },
+          axisLine: {
+            roundCap: true,
+            lineStyle: {
+              width: 18,
+            },
+          },
+          axisTick: {
+            show: false,
+          },
+          splitLine: {
+            show: false,
+          },
+          axisLabel: {
+            show: false,
+          },
+          anchor: {
+            show: false,
+          },
+          title: {
+            show: false,
+          },
+          detail: {
+            show: true,
+            valueAnimation: true,
+            offsetCenter: [0, '0%'],
+            fontSize: 24,
+            fontWeight: 'bold',
+            formatter: '{value}',
+            color: 'inherit',
+          },
+          data: [
+            {
+              value: nota,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  public obtainTotalPreguntasPorSeguridad(tests: Array<Test & { stats: any }>, nivelSeguridad: number): number {
+    return tests.reduce((total, test) => {
+      const stats = getStats(test.stats);
+      if (nivelSeguridad === 100) {
+        return total + stats.stats100.correctas + stats.stats100.incorrectas + stats.stats100.noRespondidas;
+      } else if (nivelSeguridad === 75) {
+        return total + stats.stats75.correctas + stats.stats75.incorrectas + stats.stats75.noRespondidas;
+      } else if (nivelSeguridad === 50) {
+        return total + stats.stats50.correctas + stats.stats50.incorrectas + stats.stats50.noRespondidas;
+      } else if (nivelSeguridad === 0) {
+        return total + stats.stats0.correctas + stats.stats0.incorrectas + stats.stats0.noRespondidas;
+      }
+      return total;
+    }, 0);
+  }
+
+  public obtainNoContestadasPorSeguridad(tests: Array<Test & { stats: any }>, nivelSeguridad: number): number {
+    return tests.reduce((total, test) => {
+      const stats = getStats(test.stats);
+      if (nivelSeguridad === 100) {
+        return total + stats.stats100.noRespondidas;
+      } else if (nivelSeguridad === 75) {
+        return total + stats.stats75.noRespondidas;
+      } else if (nivelSeguridad === 50) {
+        return total + stats.stats50.noRespondidas;
+      } else if (nivelSeguridad === 0) {
+        return total + stats.stats0.noRespondidas;
+      }
+      return total;
+    }, 0);
+  }
+
+  public obtainAccuracyPorSeguridad(tests: Array<Test & { stats: any }>, nivelSeguridad: number): number {
+    let correctas = this.obtainCorrectasPorSeguridad(tests, nivelSeguridad);
+    let total = correctas + this.obtainIncorrectasPorSeguridad(tests, nivelSeguridad);
+    return total > 0 ? Math.round((correctas / total) * 100) : 0;
+  }
+
+  public calcularMediaPorSeguridad(tests: Array<Test & { stats: any }>, nivelSeguridad: number): number {
+    let totalCorrectas = 0;
+    let totalPreguntas = 0;
+
+    tests.forEach((test) => {
+      const stats = getStats(test.stats);
+      if (nivelSeguridad === 100) {
+        totalCorrectas += stats.stats100.correctas;
+        totalPreguntas += stats.stats100.correctas + stats.stats100.incorrectas;
+      } else if (nivelSeguridad === 75) {
+        totalCorrectas += stats.stats75.correctas;
+        totalPreguntas += stats.stats75.correctas + stats.stats75.incorrectas;
+      } else if (nivelSeguridad === 50) {
+        totalCorrectas += stats.stats50.correctas;
+        totalPreguntas += stats.stats50.correctas + stats.stats50.incorrectas;
+      } else if (nivelSeguridad === 0) {
+        totalCorrectas += stats.stats0.correctas;
+        totalPreguntas += stats.stats0.correctas + stats.stats0.incorrectas;
+      }
+    });
+
+    return totalPreguntas > 0 ? (totalCorrectas / totalPreguntas) * 10 : 0;
+  }
+
+  public obtainCorrectasPorSeguridad(tests: Array<Test & { stats: any }>, nivelSeguridad: number): number {
+    return tests.reduce((total, test) => {
+      const stats = getStats(test.stats);
+      if (nivelSeguridad === 100) {
+        return total + stats.stats100.correctas;
+      } else if (nivelSeguridad === 75) {
+        return total + stats.stats75.correctas;
+      } else if (nivelSeguridad === 50) {
+        return total + stats.stats50.correctas;
+      } else if (nivelSeguridad === 0) {
+        return total + stats.stats0.correctas;
+      }
+      return total;
+    }, 0);
+  }
+
+  public obtainIncorrectasPorSeguridad(tests: Array<Test & { stats: any }>, nivelSeguridad: number): number {
+    return tests.reduce((total, test) => {
+      const stats = getStats(test.stats);
+      if (nivelSeguridad === 100) {
+        return total + stats.stats100.incorrectas;
+      } else if (nivelSeguridad === 75) {
+        return total + stats.stats75.incorrectas;
+      } else if (nivelSeguridad === 50) {
+        return total + stats.stats50.incorrectas;
+      } else if (nivelSeguridad === 0) {
+        return total + stats.stats0.incorrectas;
+      }
+      return total;
+    }, 0);
+  }
+
   public obtainSeguridadGlobal(stats: any) {
     const allTests = this.obtainAllTests(stats);
     const resultado = {
@@ -531,22 +754,20 @@ export class FullStatsComponent {
         prev + this.calcular100(next.stats, next.testPreguntas?.length ?? 0);
       return prev;
     }, 0);
-    const total10050 = tests.reduce((prev, next) => {
+    const total75 = tests.reduce((prev, next) => {
       prev =
-        prev + this.calcular100y75(next.stats, next.testPreguntas?.length ?? 0);
+        prev + this.calcular75(next.stats, next.testPreguntas?.length ?? 0);
       return prev;
     }, 0);
-    const total1007550 = tests.reduce((prev, next) => {
+    const total50 = tests.reduce((prev, next) => {
       prev =
-        prev +
-        this.calcular100y75y50(next.stats, next.testPreguntas?.length ?? 0);
+        prev + this.calcular50(next.stats, next.testPreguntas?.length ?? 0);
       return prev;
     }, 0);
     return {
       totalTests: totalTests,
-      total10050: total10050 == 0 ? total10050 : total10050 / totalTests,
-      total1007550:
-        total1007550 == 0 ? total1007550 : total1007550 / totalTests,
+      total75: total75 == 0 ? total75 : total75 / totalTests,
+      total50: total50 == 0 ? total50 : total50 / totalTests,
       total100: total100 == 0 ? total100 : total100 / totalTests,
       totalPreguntas: totalPreguntas ?? 0,
       blockStats,
@@ -575,6 +796,92 @@ export class FullStatsComponent {
   };
 
 
+
+  // Métodos para mapear datos a los componentes reutilizables
+  getKpiStatsForTests(mediaBloque: any): KpiStat[] {
+    return [
+      {
+        value: mediaBloque.blockStats.correctas,
+        label: 'Correctas',
+        type: 'correctas',
+        icon: 'pi-check'
+      },
+      {
+        value: mediaBloque.blockStats.incorrectas,
+        label: 'Incorrectas',
+        type: 'incorrectas',
+        icon: 'pi-times'
+      },
+      {
+        value: mediaBloque.blockStats.omitidas,
+        label: 'Sin Contestar',
+        type: 'no-contestadas',
+        icon: 'pi-minus'
+      }
+    ];
+  }
+
+  getKpiStatsForFlashcards(blocks: any[]): KpiStat[] {
+    const labels = ['Aprendidas', 'Con Dificultad', 'Para Repasar'];
+    const types: ('correctas' | 'incorrectas' | 'repasar')[] = ['correctas', 'incorrectas', 'repasar'];
+    const icons = ['pi-check', 'pi-times', 'pi-refresh'];
+    
+    return blocks.map((block, i) => ({
+      value: block.value,
+      label: labels[i],
+      type: types[i],
+      icon: icons[i]
+    }));
+  }
+
+  getConfidenceAnalysisForTests(tests: Array<Test & { stats: any }>): ConfidenceAnalysis[] {
+    return [
+      {
+        id: 'cien',
+        title: '100% Seguro',
+        icon: '⭐',
+        score: this.calcularMediaPorSeguridad(tests, 100),
+        totalPreguntas: this.obtainTotalPreguntasPorSeguridad(tests, 100),
+        correctas: this.obtainCorrectasPorSeguridad(tests, 100),
+        incorrectas: this.obtainIncorrectasPorSeguridad(tests, 100),
+        noContestadas: this.obtainNoContestadasPorSeguridad(tests, 100),
+        accuracyPercentage: this.obtainAccuracyPorSeguridad(tests, 100)
+      },
+      {
+        id: 'setenta-cinco',
+        title: '75% Seguro',
+        icon: '👍',
+        score: this.calcularMediaPorSeguridad(tests, 75),
+        totalPreguntas: this.obtainTotalPreguntasPorSeguridad(tests, 75),
+        correctas: this.obtainCorrectasPorSeguridad(tests, 75),
+        incorrectas: this.obtainIncorrectasPorSeguridad(tests, 75),
+        noContestadas: this.obtainNoContestadasPorSeguridad(tests, 75),
+        accuracyPercentage: this.obtainAccuracyPorSeguridad(tests, 75)
+      },
+      {
+        id: 'cincuenta',
+        title: '50% Seguro',
+        icon: '👎',
+        score: this.calcularMediaPorSeguridad(tests, 50),
+        totalPreguntas: this.obtainTotalPreguntasPorSeguridad(tests, 50),
+        correctas: this.obtainCorrectasPorSeguridad(tests, 50),
+        incorrectas: this.obtainIncorrectasPorSeguridad(tests, 50),
+        noContestadas: this.obtainNoContestadasPorSeguridad(tests, 50),
+        accuracyPercentage: this.obtainAccuracyPorSeguridad(tests, 50)
+      },
+      {
+        id: 'cero',
+        title: '0% Seguro',
+        icon: '❌',
+        score: this.calcularMediaPorSeguridad(tests, 0),
+        totalPreguntas: this.obtainTotalPreguntasPorSeguridad(tests, 0),
+        correctas: this.obtainCorrectasPorSeguridad(tests, 0),
+        incorrectas: this.obtainIncorrectasPorSeguridad(tests, 0),
+        noContestadas: this.obtainNoContestadasPorSeguridad(tests, 0),
+        accuracyPercentage: this.obtainAccuracyPorSeguridad(tests, 0)
+      }
+    ];
+  }
 
   private getFullStats() {
     return combineLatest([

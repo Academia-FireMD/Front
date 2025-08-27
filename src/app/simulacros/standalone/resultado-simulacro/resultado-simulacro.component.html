@@ -16,71 +16,78 @@
   </div>
 
   <div *ngIf="!loading && !error" class="resultados-content">
-    <div class="header">
-      <h1>Resultados del Simulacro</h1>
-      <h2>{{ examen?.titulo }}</h2>
+    <div class="header mb-4">
+      <h1 class="text-center text-2xl font-bold text-primary mb-4">{{ examen?.titulo }}</h1>
+      <p class="text-center text-sm text-500 mb-4">{{ examen?.fechaActivacion | date:'dd \'de\' MMMM, yyyy':'es' }}</p>
 
-      <!-- Último intento (si existe y es diferente del primer intento) -->
-      <div class="intentos-container" *ngIf="ultimoIntento || miResultado">
-        <!-- Primer intento (registrado) -->
-        <div class="intento-section" *ngIf="miResultado">
-          <h3 class="intento-title">Intento Registrado</h3>
-          <div class="cards-container">
-            <div class="posicion-card" *ngIf="miPosicion">
-              <div class="posicion-numero">{{ miPosicion }}</div>
-              <div class="posicion-texto">Tu posición</div>
-              <div class="posicion-total">de {{ totalParticipantes }} participantes</div>
-            </div>
-
-            <div class="nota-card">
-              <div class="nota-numero" [ngClass]="getNotaClass(miResultado.estadisticas.nota)">
-                {{ miResultado.estadisticas.nota !== null ? miResultado.estadisticas.nota.toFixed(2) : 'N/A' }}
-              </div>
-              <div class="nota-texto">Nota registrada</div>
-              <div class="nota-detalle">
-                {{ miResultado.estadisticas.correctas }} correctas /
-                {{ miResultado.estadisticas.incorrectas }} incorrectas
-              </div>
-              <div class="card-actions">
-                <button 
-                  pButton 
-                  type="button" 
-                  label="Ver respuestas" 
-                  icon="pi pi-eye"
-                  class="p-button-outlined p-button-primary"
-                  (click)="verRespuestas(miResultado.testId)"
-                ></button>
-              </div>
-            </div>
+      <!-- Mi Resultado Principal -->
+      <div *ngIf="miResultado" class="mi-resultado-section">
+        <!-- Posición Badge -->
+        <div class="posicion-banner text-center mb-4" *ngIf="miPosicion">
+          <div class="posicion-badge inline-flex align-items-center bg-yellow-100 text-yellow-800 px-4 py-2 border-round-lg">
+            <i class="pi pi-trophy mr-2"></i>
+            <span class="font-semibold">Tu posición: {{ miPosicion }}° de {{ totalParticipantes }} participantes</span>
           </div>
         </div>
 
-        <!-- Último intento (no registrado) -->
-        <div class="intento-section" *ngIf="ultimoIntento">
-          <h3 class="intento-title">Último Intento (no cuenta para el ranking)</h3>
-          <div class="cards-container">
-            <div class="nota-card ultimo-intento">
-              <div class="nota-numero" [ngClass]="getNotaClass(ultimoIntento.estadisticas.nota)">
-                {{ ultimoIntento.estadisticas.nota.toFixed(2) }}
-              </div>
-              <div class="nota-texto">Nota obtenida</div>
-              <div class="nota-detalle">
-                {{ ultimoIntento.estadisticas.correctas }} correctas /
-                {{ ultimoIntento.estadisticas.incorrectas }} incorrectas
-              </div>
-            
-              <div class="card-actions">
-                <button 
-                  pButton 
-                  type="button" 
-                  label="Ver respuestas" 
-                  icon="pi pi-eye"
-                  class="p-button-outlined p-button-primary"
-                  (click)="verRespuestas(ultimoIntento.testId)"
-                ></button>
-              </div>
-            </div>
+        <!-- Grid de Estadísticas -->
+        <div class="grid">
+          <!-- Nota con Gráfico Circular -->
+          <div class="col-12 md:col-4">
+            <app-score-chart-card
+              title="Nota Final"
+              [score]="miResultado.estadisticas.nota"
+              description="Puntuación obtenida"
+            ></app-score-chart-card>
           </div>
+
+          <!-- Estadísticas KPI -->
+          <div class="col-12 md:col-8">
+            <app-kpi-stats-cards
+              [stats]="getKpiStatsForResult(miResultado.estadisticas)"
+            ></app-kpi-stats-cards>
+          </div>
+        </div>
+
+        <!-- Botón Ver Respuestas -->
+        <div class="text-center mt-4">
+          <button 
+            pButton 
+            type="button" 
+            label="Ver respuestas" 
+            icon="pi pi-eye"
+            class="p-button-outlined p-button-primary"
+            (click)="verRespuestas(miResultado.testId)"
+          ></button>
+        </div>
+      </div>
+
+      <!-- Último intento (no registrado) -->
+      <div *ngIf="ultimoIntento" class="ultimo-intento-section mt-4">
+        <h3 class="text-lg font-semibold text-700 mb-3">Último Intento (no cuenta para el ranking)</h3>
+        <div class="grid">
+          <div class="col-12 md:col-4">
+            <app-score-chart-card
+              title="Nota Último Intento"
+              [score]="ultimoIntento.estadisticas.nota"
+              description="Puntuación obtenida"
+            ></app-score-chart-card>
+          </div>
+          <div class="col-12 md:col-8">
+            <app-kpi-stats-cards
+              [stats]="getKpiStatsForResult(ultimoIntento.estadisticas)"
+            ></app-kpi-stats-cards>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button 
+            pButton 
+            type="button" 
+            label="Ver respuestas" 
+            icon="pi pi-eye"
+            class="p-button-outlined p-button-primary"
+            (click)="verRespuestas(ultimoIntento.testId)"
+          ></button>
         </div>
       </div>
     </div>
@@ -97,6 +104,8 @@
         [rowHover]="true"
         styleClass="p-datatable-sm p-datatable-striped"
         [scrollable]="true"
+        dataKey="usuario.id"
+        [expandedRowKeys]="expandedRowKeys"
       >
         <ng-template pTemplate="header">
           <tr>
@@ -106,9 +115,10 @@
             <th style="width: 120px">Correctas</th>
             <th style="width: 120px">Incorrectas</th>
             <th style="width: 150px">Fecha</th>
+            <th style="width: 60px">Detalles</th>
           </tr>
         </ng-template>
-        <ng-template pTemplate="body" let-resultado let-i="rowIndex">
+        <ng-template pTemplate="body" let-resultado let-i="rowIndex" let-expanded="expanded">
           <tr [ngClass]="{'mi-resultado': resultado.usuario.esTuResultado}">
             <td>
               <div class="posicion-badge" [ngClass]="getColorClass(resultado.posicion)">
@@ -154,12 +164,37 @@
             <td>
               {{ resultado.fechaRealizacion | date:'dd/MM/yyyy HH:mm' }}
             </td>
-          
+            <td>
+              <p-button
+                icon="pi pi-chevron-down"
+                class="p-button-text p-button-sm"
+                [style]="{'transform': expandedRowKeys[resultado.usuario.id] ? 'rotate(180deg)' : 'rotate(0deg)', 'transition': 'transform 0.3s'}"
+                pTooltip="Ver análisis por confianza"
+                (click)="toggleRowExpansion(resultado)"
+              ></p-button>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="rowexpansion" let-resultado>
+          <tr>
+            <td colspan="8">
+              <div class="p-3">
+                <h5 class="mb-3">Análisis por Nivel de Confianza</h5>
+                <app-confidence-analysis-cards
+                  *ngIf="resultado.estadisticas?.detalles?.seguridad"
+                  [analyses]="getConfidenceAnalysisForResult(resultado.estadisticas.detalles.seguridad)"
+                  [attr.data-row-id]="resultado.usuario.id"
+                ></app-confidence-analysis-cards>
+                <div *ngIf="!resultado.estadisticas?.detalles?.seguridad" class="text-center p-4">
+                  <p class="text-muted">No hay datos de confianza disponibles para este resultado</p>
+                </div>
+              </div>
+            </td>
           </tr>
         </ng-template>
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="7" class="text-center">
+            <td colspan="8" class="text-center">
               No hay resultados disponibles para este simulacro.
             </td>
           </tr>

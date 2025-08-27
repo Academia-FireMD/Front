@@ -1,0 +1,27 @@
+<p-card styleClass="h-full nota-final">
+  <ng-template pTemplate="header">
+    <div class="text-center p-3">
+      <h3 class="text-xl font-semibold text-700 m-0">{{ title }}</h3>
+    </div>
+  </ng-template>
+  <ng-template pTemplate="content">
+    <div class="flex flex-column align-items-center justify-content-center">
+      <div class="nota-final-container mb-3">
+        <div class="nota-final-chart">
+              <echarts
+      [options]="chartOptions"
+      [autoResize]="true"
+      [id]="chartId"
+      [initOpts]="{ renderer: 'canvas', devicePixelRatio: 1 }"
+      [merge]="{ silent: true }"
+    >
+    </echarts>
+        </div>
+      </div>
+      <p class="text-500 text-center m-0" *ngIf="description">
+        {{ description }}
+      </p>
+    </div>
+  </ng-template>
+</p-card>
+

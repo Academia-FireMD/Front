@@ -1,4 +1,5 @@
 import { CalendarEvent } from 'angular-calendar';
+import { forOwn, isObjectLike } from 'lodash';
 import { EstadoExamen, TipoAcceso } from '../examen/models/examen.model';
 import {
   EstadoFlashcard,
@@ -10,7 +11,6 @@ import {
   Tema,
 } from '../shared/models/pregunta.model';
 import { Test } from '../shared/models/test.model';
-import { forOwn, isObjectLike } from 'lodash';
 import { Rol } from '../shared/models/user.model';
 
 export const colorCorrectas = '#00eb003d';
@@ -230,10 +230,9 @@ export const getStats = (statsRaw: any) => {
   const stats75 =
     statsRaw.seguridad[SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO];
   const stats50 = statsRaw.seguridad[SeguridadAlResponder.CINCUENTA_POR_CIENTO];
-  return { stats100, stats75, stats50 };
+  const stats0 = statsRaw.seguridad[SeguridadAlResponder.CERO_POR_CIENTO];
+  return { stats100, stats75, stats50, stats0 };
 };
-
-
 
 /**
  * Calcula la calificación usando la fórmula A1, E1/3, B0
@@ -253,7 +252,8 @@ export const calcularCalificacionA1E1_3B0 = (
   if (identificador) console.table([identificador, A, E, N]);
   if (A == 0 && E == 0 && N == 0) return 0;
   const Q = ((A - E / 3) * 10) / N;
-  return Q;
+  // Limitar la nota entre 0 y 10
+  return Math.max(0, Math.min(10, Q));
 };
 
 /**
@@ -274,15 +274,16 @@ export const calcularCalificacionA1E1_4B0 = (
 ): number => {
   if (identificador) console.table([identificador, A, E, N]);
   if (A == 0 && E == 0 && N == 0) return 0;
-  
+
   const P = 4; // Penalización por fallo (1/4)
   const PB = 0; // Penalización por preguntas en blanco
   const B = N - A - E; // Preguntas en blanco calculadas automáticamente
-  
-  const Q = ((A - (E / P) + B * PB) * 10) / N;
-  
-  // Redondear hasta la segunda cifra decimal como especifica la fórmula
-  return Math.round(Q * 100) / 100;
+
+  const Q = ((A - E / P + B * PB) * 10) / N;
+
+  // Redondear hasta la segunda cifra decimal y limitar entre 0 y 10
+  const rounded = Math.round(Q * 100) / 100;
+  return Math.max(0, Math.min(10, rounded));
 };
 
 /**
@@ -302,8 +303,10 @@ export const calcularCalificacionBasico = (
   if (identificador) console.table([identificador, A, E, N]);
   if (A == 0 && E == 0 && N == 0) return 0;
   if (N == 0) return 0;
-  
-  return parseFloat(((A * 10) / N).toFixed(2));
+
+  const result = parseFloat(((A * 10) / N).toFixed(2));
+  // Limitar la nota entre 0 y 10
+  return Math.max(0, Math.min(10, result));
 };
 
 /**
@@ -432,14 +435,18 @@ export const getAllDifficultades = (
   const opcionesVisibilidad = [
     {
       label: isCreatingTest
-        ? (isFlashcards ? 'Solo mis flashcards' : 'Solo mis preguntas')
+        ? isFlashcards
+          ? 'Solo mis flashcards'
+          : 'Solo mis preguntas'
         : privada?.label,
       icon: privada?.icon,
       value: Dificultad.PRIVADAS,
     },
     {
       label: isCreatingTest
-        ? (isFlashcards ? 'Solo flashcards publicos' : 'Solo preguntas publicas')
+        ? isFlashcards
+          ? 'Solo flashcards publicos'
+          : 'Solo preguntas publicas'
         : publica?.label,
       icon: publica?.icon,
       value: Dificultad.PUBLICAS,
@@ -459,7 +466,7 @@ export const getAllDifficultades = (
           label: 'Tecnika Fire',
           icon: 'pi-check-square',
           value: Dificultad.INTERMEDIO,
-        }
+        },
       ];
     }
   }
@@ -484,7 +491,7 @@ export const getAllDifficultades = (
             label: 'Tecnika Fire',
             icon: 'pi-check-square',
             value: Dificultad.INTERMEDIO,
-          }
+          },
         ];
       } else {
         // Alumno no creando test: solo privado + público
@@ -502,12 +509,12 @@ export const getAllDifficultades = (
           label: 'Tecnika Fire',
           icon: 'pi-check-square',
           value: Dificultad.INTERMEDIO,
-        }
+        },
       ];
     }
     return opcionesVisibilidad;
   }
-  
+
   return [...dificultadesBasicas, ...opcionesVisibilidad];
 };
 
@@ -573,40 +580,118 @@ export function getNextWeekIfFriday(date: Date): Date {
  * Funciones de cálculo de calificaciones que admiten método de calificación
  */
 export const calcular100 = (
-  stats100: StatType, 
-  total: number,
-  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
-) => {
-  return calcularCalificacionPorMetodo(stats100.correctas, stats100.incorrectas, total, metodoCalificacion);
-};
-
-export const calcular100y75 = (
   stats100: StatType,
-  stats75: StatType,
   total: number,
   metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
 ) => {
   return calcularCalificacionPorMetodo(
-    stats100.correctas + stats75.correctas,
-    stats100.incorrectas + stats75.incorrectas,
+    stats100.correctas,
+    stats100.incorrectas,
     total,
     metodoCalificacion
   );
 };
 
-export const calcular100y75y50 = (
-  stats100: StatType,
+export const calcular75 = (
   stats75: StatType,
-  stats50: StatType,
   total: number,
-  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
-  identifier?: string
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
 ) => {
   return calcularCalificacionPorMetodo(
-    stats100.correctas + stats75.correctas + stats50.correctas,
-    stats100.incorrectas + stats75.incorrectas + stats50.incorrectas,
+    stats75.correctas,
+    stats75.incorrectas,
     total,
-    metodoCalificacion,
-    identifier
+    metodoCalificacion
   );
 };
+
+export const calcular50 = (
+  stats50: StatType,
+  total: number,
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+) => {
+  return calcularCalificacionPorMetodo(
+    stats50.correctas,
+    stats50.incorrectas,
+    total,
+    metodoCalificacion
+  );
+};
+
+export const calcular0 = (
+  stats0: StatType,
+  total: number,
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+) => {
+  return calcularCalificacionPorMetodo(
+    stats0.correctas,
+    stats0.incorrectas,
+    total,
+    metodoCalificacion
+  );
+};
+
+// Función utilitaria para crear análisis de confianza
+export const createConfidenceAnalysisForResult = (
+  seguridad: any, 
+  metodoCalificacion: any,
+  getTotalPreguntasPorSeguridad: (stats: any, tipo: string) => number,
+  getCorrectas: (stats: any, tipo: string) => number,
+  getIncorrectas: (stats: any, tipo: string) => number,
+  getNoContestadas: (stats: any, tipo: string) => number,
+  getAccuracyPercentage: (stats: any, tipo: string) => number
+) => {
+  if (!seguridad) return [];
+
+  const types = [
+    { 
+      id: 'cien', 
+      title: '100% Seguro', 
+      icon: '⭐', 
+      key: 'CIEN_POR_CIENTO',
+      calculator: calcular100
+    },
+    { 
+      id: 'setenta-cinco', 
+      title: '75% Seguro', 
+      icon: '👍', 
+      key: 'SETENTA_Y_CINCO_POR_CIENTO',
+      calculator: calcular75
+    },
+    { 
+      id: 'cincuenta', 
+      title: '50% Seguro', 
+      icon: '👎', 
+      key: 'CINCUENTA_POR_CIENTO',
+      calculator: calcular50
+    },
+    { 
+      id: 'cero', 
+      title: '0% Seguro', 
+      icon: '❌', 
+      key: 'CERO_POR_CIENTO',
+      calculator: calcular0  // Usar mismo cálculo que 50%
+    }
+  ];
+
+  return types.map(type => ({
+    id: type.id,
+    title: type.title,
+    icon: type.icon,
+    score: type.calculator(
+      { 
+        correctas: getCorrectas({ seguridad }, type.key), 
+        incorrectas: getIncorrectas({ seguridad }, type.key) 
+      },
+      getTotalPreguntasPorSeguridad({ seguridad }, type.key),
+      metodoCalificacion
+    ),
+    totalPreguntas: getTotalPreguntasPorSeguridad({ seguridad }, type.key),
+    correctas: getCorrectas({ seguridad }, type.key),
+    incorrectas: getIncorrectas({ seguridad }, type.key),
+    noContestadas: getNoContestadas({ seguridad }, type.key),
+    accuracyPercentage: getAccuracyPercentage({ seguridad }, type.key)
+  }));
+};
+
+

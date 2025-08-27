@@ -1,34 +1,48 @@
 <ng-container *ngIf="stats$ | async as stat">
-  <div class="grid mb-4">
+  <div class="grid mb-4 p-2">
     <div class="col-12" *ngIf="test$ | async as test">
-      <div class="flex align-items-center justify-content-between topbar">
-        <span
-          >Test realizado el dia
-          {{ test.createdAt | date : "short" }}</span
-        >
+      <div class="flex align-items-center justify-content-between topbar mb-4">
+        <span class="text-xl font-semibold text-700">
+          Test realizado el día {{ test.createdAt | date : "short" }}
+        </span>
         <p-button
           [link]="true"
-          label="Volver atras"
+          label="{{ viewportService.isMobile() ? 'Volver atrás' : '' }}"
+          icon="pi pi-arrow-left"
           (click)="handleBackButton()"
         />
       </div>
     </div>
-    <app-pie-chart-dashboard-security
-      [stat]="stat"
-    ></app-pie-chart-dashboard-security>
-    <div class="grid pb-4 w-full">
-      <div class="col-4 nota">
-        <p>⭐</p>
-        <div>{{ calcular100().toFixed(2) }}</div>
+
+    <!-- Overview Principal -->
+    <div class="col-12 mb-4">
+      <div class="grid">
+        <!-- Nota Final con Gráfico Circular -->
+        <div class="col-12 md:col-4">
+          <app-score-chart-card
+            title="Nota Final"
+            [score]="calcular100()"
+            description="Puntuación total del test"
+          ></app-score-chart-card>
+        </div>
+
+        <!-- Estadísticas Generales -->
+        <div class="col-12 md:col-8">
+          <app-kpi-stats-cards
+            [stats]="getKpiStatsForTestStats(stat)"
+          ></app-kpi-stats-cards>
+        </div>
       </div>
-      <div class="col-4 nota">
-        <p>⭐ + 👍</p>
-        <div>{{ calcular100y75().toFixed(2) }}</div>
-      </div>
-      <div class="col-4 nota">
-        <p>⭐ + 👍 + 👎</p>
-        <div>{{ calcular100y75y50().toFixed(2) }}</div>
-      </div>
+    </div>
+
+    <!-- Cards de Confianza -->
+    <div class="col-12">
+      <h3 class="text-xl font-semibold text-700 mb-3">
+        Análisis por Nivel de Confianza
+      </h3>
+      <app-confidence-analysis-cards
+        [analyses]="getConfidenceAnalysisForTestStats(stat)"
+      ></app-confidence-analysis-cards>
     </div>
   </div>
 </ng-container>

@@ -1,15 +1,21 @@
-import { CommonModule, DatePipe, Location } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { ToastrModule, ToastrService } from 'ngx-toastr';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { TableModule } from 'primeng/table';
 import { catchError, finalize, firstValueFrom, of } from 'rxjs';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import { AuthService } from '../../../services/auth.service';
-import { SharedModule } from '../../../shared/shared.module';
-import { TableModule } from 'primeng/table';
+import { ConfidenceAnalysis } from '../../../shared/components/confidence-analysis-cards/confidence-analysis-cards.component';
+import { KpiStat } from '../../../shared/components/kpi-stats-cards/kpi-stats-cards.component';
+import { MetodoCalificacion } from '../../../shared/models/user.model';
 import { PrimengModule } from '../../../shared/primeng.module';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { getColorClass, getNotaClass } from '../../../utils/utils';
+import { SharedModule } from '../../../shared/shared.module';
+import { AppState } from '../../../store/app.state';
+import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
+import { createConfidenceAnalysisForResult, getColorClass, getNotaClass } from '../../../utils/utils';
 @Component({
   selector: 'app-resultado-simulacro',
   templateUrl: './resultado-simulacro.component.html',
@@ -32,6 +38,8 @@ export class ResultadoSimulacroComponent implements OnInit {
   examenService = inject(ExamenesService);
   authService = inject(AuthService);
   location = inject(Location);
+  cdr = inject(ChangeDetectorRef);
+  store = inject(Store<AppState>);
 
   public idExamen: number | null = null;
   public idTest: number | null = null;
@@ -47,11 +55,21 @@ export class ResultadoSimulacroComponent implements OnInit {
   public ultimoIntento: any = null;
   public isAdmin: boolean = false;
   public ocultarVolver: boolean = false;
+  
+  // Selector para obtener el método de calificación del usuario
+  userMetodoCalificacion$ = this.store.select(selectUserMetodoCalificacion);
+  // Variable para almacenar el método actual
+  private currentMetodoCalificacion: MetodoCalificacion = MetodoCalificacion.A1_E1_3_B0;
 
   getColorClass = getColorClass;
   getNotaClass = getNotaClass;
 
   ngOnInit(): void {
+    // Suscribirse al método de calificación del usuario
+    this.userMetodoCalificacion$.subscribe(metodo => {
+      this.currentMetodoCalificacion = metodo;
+    });
+    
     this.loadRouteData();
     this.isAdmin = this.authService.getCurrentUser()?.rol === 'ADMIN';
   }
@@ -146,5 +164,110 @@ export class ResultadoSimulacroComponent implements OnInit {
         },
       }
     );
+  }
+
+  // Métodos para el desplegable de análisis de confianza
+  public expandedRowKeys: { [key: string]: boolean } = {};
+
+  toggleRowExpansion(resultado: any): void {
+    const key = resultado.usuario.id.toString();
+    
+    // Alternar el estado de expansión de esta fila específica
+    if (this.expandedRowKeys[key]) {
+      // Crear nuevo objeto sin esta key para forzar detección de cambios
+      const newExpandedRowKeys = { ...this.expandedRowKeys };
+      delete newExpandedRowKeys[key];
+      this.expandedRowKeys = newExpandedRowKeys;
+    } else {
+      // Crear nuevo objeto agregando esta key para forzar detección de cambios
+      this.expandedRowKeys = { ...this.expandedRowKeys, [key]: true };
+      
+      // Forzar detección de cambios y redimensionado de gráficos
+      this.cdr.detectChanges();
+      
+      // Múltiples timeouts para asegurar que los gráficos se rendericen correctamente
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 50);
+      
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 200);
+      
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 500);
+    }
+  }
+
+  getConfidenceAnalysisForResult(seguridad: any): ConfidenceAnalysis[] {
+    return createConfidenceAnalysisForResult(
+      seguridad,
+      this.currentMetodoCalificacion,
+      this.getTotalPreguntasPorSeguridad.bind(this),
+      this.getCorrectas.bind(this),
+      this.getIncorrectas.bind(this),
+      this.getNoContestadas.bind(this),
+      this.getAccuracyPercentage.bind(this)
+    );
+  }
+
+  getKpiStatsForResult(estadisticas: any): KpiStat[] {
+    if (!estadisticas) return [];
+    
+    const noContestadas = estadisticas.totalPreguntas - estadisticas.correctas - estadisticas.incorrectas;
+    
+    return [
+      {
+        value: estadisticas.correctas,
+        label: 'Correctas',
+        type: 'correctas',
+        icon: 'pi-check'
+      },
+      {
+        value: estadisticas.incorrectas,
+        label: 'Incorrectas',
+        type: 'incorrectas',
+        icon: 'pi-times'
+      },
+      {
+        value: noContestadas,
+        label: 'No contestadas',
+        type: 'no-contestadas',
+        icon: 'pi-minus'
+      }
+    ];
+  }
+
+  private getTotalPreguntas(stats: any): number {
+    if (!stats?.seguridad) return 0;
+    return Object.values(stats.seguridad).reduce((total: number, seguridad: any) => {
+      return total + (seguridad.correctas || 0) + (seguridad.incorrectas || 0) + (seguridad.noRespondidas || 0);
+    }, 0);
+  }
+
+  private getTotalPreguntasPorSeguridad(stats: any, tipoSeguridad: string): number {
+    if (!stats?.seguridad?.[tipoSeguridad]) return 0;
+    const seguridad = stats.seguridad[tipoSeguridad];
+    return (seguridad.correctas || 0) + (seguridad.incorrectas || 0) + (seguridad.noRespondidas || 0);
+  }
+
+  private getCorrectas(stats: any, tipoSeguridad: string): number {
+    return stats?.seguridad?.[tipoSeguridad]?.correctas || 0;
+  }
+
+  private getIncorrectas(stats: any, tipoSeguridad: string): number {
+    return stats?.seguridad?.[tipoSeguridad]?.incorrectas || 0;
+  }
+
+  private getNoContestadas(stats: any, tipoSeguridad: string): number {
+    return stats?.seguridad?.[tipoSeguridad]?.noRespondidas || 0;
+  }
+
+  private getAccuracyPercentage(stats: any, tipoSeguridad: string): number {
+    const total = this.getTotalPreguntasPorSeguridad(stats, tipoSeguridad);
+    if (total === 0) return 0;
+    const correctas = this.getCorrectas(stats, tipoSeguridad);
+    return Math.round((correctas / total) * 100);
   }
 }

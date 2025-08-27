@@ -1,0 +1,79 @@
+<div class="grid">
+  <div class="col-12 md:col-3" *ngFor="let analysis of analyses; trackBy: trackByAnalysisId">
+    <p-card styleClass="h-full confidence-card">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-center p-3">
+          <span class="confidence-icon">{{ analysis.icon }}</span>
+          <span class="confidence-title ml-2">{{ analysis.title }}</span>
+        </div>
+      </ng-template>
+      <ng-template pTemplate="content">
+        <div class="flex flex-column align-items-center text-center p-3">
+          <div class="confidence-score mb-3">
+            <div class="score-chart">
+                          <echarts
+              [options]="getNotaChartOptions(analysis.score)"
+              [autoResize]="true"
+              [id]="getChartId(analysis.id)"
+              [initOpts]="{ renderer: 'canvas', devicePixelRatio: 1 }"
+              [merge]="{ silent: true }"
+            >
+            </echarts>
+            </div>
+            <div class="score-label">Nota</div>
+          </div>
+
+          <div class="confidence-stats mb-3">
+            <div class="stat-item">
+              <span class="stat-label">
+                <i class="pi pi-list mr-2"></i>Preguntas:
+              </span>
+              <span class="stat-value">{{ analysis.totalPreguntas }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">
+                <i class="pi pi-check mr-2"></i>Correctas:
+              </span>
+              <span class="stat-value correct">{{ analysis.correctas }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">
+                <i class="pi pi-times mr-2"></i>Incorrectas:
+              </span>
+              <span class="stat-value incorrect">{{ analysis.incorrectas }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">
+                <i class="pi pi-minus mr-2"></i>No contestadas:
+              </span>
+              <span class="stat-value">{{ analysis.noContestadas }}</span>
+            </div>
+          </div>
+
+          <div class="accuracy-bar mb-3">
+            <div class="accuracy-label">
+              <span>% Acierto</span>
+              <span class="accuracy-percentage">{{ analysis.accuracyPercentage }}%</span>
+            </div>
+            <p-progressBar
+              [value]="analysis.accuracyPercentage"
+              [showValue]="false"
+              [style]="{'--progress-color': getProgressBarColor(analysis.score)}"
+              class="accuracy-progress"
+            >
+            </p-progressBar>
+          </div>
+
+          <p-button
+            [disabled]="analysis.buttonDisabled || true"
+            [label]="analysis.buttonLabel || 'Ver más'"
+            icon="pi pi-search"
+            class="p-button-outlined p-button-sm w-full"
+            (click)="handleButtonClick(analysis)"
+          >
+          </p-button>
+        </div>
+      </ng-template>
+    </p-card>
+  </div>
+</div>

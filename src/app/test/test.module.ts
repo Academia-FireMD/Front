@@ -20,11 +20,13 @@ import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { MessagesModule } from 'primeng/messages';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToolbarModule } from 'primeng/toolbar';
 import { TooltipModule } from 'primeng/tooltip';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
@@ -50,9 +52,6 @@ import { PieChartDashboardSecurityComponent } from './components/test-stats/pie-
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { TestRoutingModule } from './test-routing.module';
-import { SimulacrosModule } from '../simulacros/simulacros.module';
-import { ResultadoSimulacroComponent } from '../simulacros/standalone/resultado-simulacro/resultado-simulacro.component';
-import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 @NgModule({
   declarations: [
     UserDashboardComponent,
@@ -102,6 +101,7 @@ import { AsyncButtonComponent } from '../shared/components/async-button/async-bu
     InputSwitchModule,
     InputTextModule,
     InputTextareaModule,
+    ProgressBarModule,
     TableModule,
     TagModule,
     TooltipModule,

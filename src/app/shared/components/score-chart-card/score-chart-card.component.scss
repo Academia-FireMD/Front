@@ -1,0 +1,31 @@
+:host ::ng-deep {
+  .nota-final {
+    .p-card-body {
+      padding-top: 0px;
+    }
+    .p-card-content {
+      padding: 0px;
+    }
+  }
+}
+
+.nota-final-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.nota-final-chart {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+
+  ::ng-deep echarts {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+

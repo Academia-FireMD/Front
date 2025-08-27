@@ -654,6 +654,8 @@
                         [sortField]="'estadisticas.nota'"
                         [sortOrder]="-1"
                         styleClass="p-datatable-sm"
+                        dataKey="usuario.id"
+                        [expandedRowKeys]="expandedRowKeys"
                       >
                         <ng-template pTemplate="header">
                           <tr>
@@ -688,9 +690,10 @@
                               <p-sortIcon field="fechaRealizacion"></p-sortIcon>
                             </th>
                             <th>Acciones</th>
+                            <th style="width: 60px">Detalles</th>
                           </tr>
                         </ng-template>
-                        <ng-template pTemplate="body" let-resultado>
+                        <ng-template pTemplate="body" let-resultado let-i="rowIndex" let-expanded="expanded">
                           <tr>
                             <td>
                               <p-tag
@@ -770,11 +773,36 @@
                                 />
                               </div>
                             </td>
+                            <td>
+                              <p-button
+                                icon="pi pi-chevron-down"
+                                class="p-button-text p-button-sm"
+                                [style]="{'transform': expandedRowKeys[resultado.usuario.id] ? 'rotate(180deg)' : 'rotate(0deg)', 'transition': 'transform 0.3s'}"
+                                pTooltip="Ver análisis por confianza"
+                                (click)="toggleRowExpansion(resultado)"
+                              ></p-button>
+                            </td>
+                          </tr>
+                        </ng-template>
+                        <ng-template pTemplate="rowexpansion" let-resultado>
+                          <tr>
+                            <td colspan="8">
+                              <div class="p-3">
+                                <h5 class="mb-3">Análisis por Nivel de Confianza</h5>
+                                <app-confidence-analysis-cards
+                                  *ngIf="resultado.estadisticas?.detalles?.seguridad"
+                                  [analyses]="getConfidenceAnalysisForResult(resultado.estadisticas.detalles.seguridad)"
+                                ></app-confidence-analysis-cards>
+                                <div *ngIf="!resultado.estadisticas?.detalles?.seguridad" class="text-center p-4">
+                                  <p class="text-muted">No hay datos de confianza disponibles para este resultado</p>
+                                </div>
+                              </div>
+                            </td>
                           </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                           <tr>
-                            <td colspan="7" class="text-center p-4">
+                            <td colspan="8" class="text-center p-4">
                               <div class="text-gray-500">
                                 <i class="pi pi-info-circle text-3xl mb-2"></i>
                                 <p>No hay resultados para mostrar</p>

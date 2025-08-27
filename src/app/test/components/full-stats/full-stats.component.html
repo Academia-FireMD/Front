@@ -17,79 +17,95 @@
         <strong> {{ (mediaBloque?.total100 ?? 0).toFixed(2) }}</strong>
       </div>
       <div>
-        Nota media ⭐ + 👍 =
-        <strong> {{ (mediaBloque?.total10050 ?? 0).toFixed(2) }}</strong>
+        Nota media 👍 =
+        <strong> {{ (mediaBloque?.total75 ?? 0).toFixed(2) }}</strong>
       </div>
       <div>
-        Nota media ⭐ + 👍 + 👎 =
-        <strong> {{ (mediaBloque?.total1007550 ?? 0).toFixed(2) }}</strong>
+        Nota media 👎 =
+        <strong> {{ (mediaBloque?.total50 ?? 0).toFixed(2) }}</strong>
       </div>
     </div>
   </div>
 </ng-template>
 
 <div class="flex-column" *ngIf="fullStats$ | async as fullStats">
-  <div class="col-12">
-    <div>
-      <strong
-        >Información global periodo {{ from | date : "dd/MM/yyyy" }} -
-        {{ to | date : "dd/MM/yyyy" }}</strong
-      >
-    </div>
-    <div class="col-12">
-      @if (type == 'TESTS') {
-      <app-pie-chart-dashboard-security
-        *ngIf="obtainSeguridadGlobal(fullStats) as globalStats"
-        [stat]="{ seguridad: globalStats }"
-      ></app-pie-chart-dashboard-security>
-      }@else {
-      <p-card *ngIf="obtainEstadoGlobal(fullStats) as globalStats">
-        <ng-container
-          *ngIf="getDataFromFlashcards({ estado: globalStats }) as statsChart"
-        >
-          <div class="flex align-items-center justify-content-center">
-            <div class="py-2 col-12 md:col-4">
-              <app-pie-chart [data]="statsChart"></app-pie-chart>
-            </div>
-          </div>
-          <div
-            class="data-box"
-            *ngFor="let stat of statsChart.labels; let i = index"
-          >
-            <div
-              class="box"
-              [ngStyle]="{
-                'background-color': statsChart.datasets[0].backgroundColor[i]
-              }"
-            ></div>
-            <span
-              >{{ statsChart.datasets[0].data[i] }} {{ stat }} (<strong>{{
-                statsChart.percentages[i]
-              }}</strong
-              >%)</span
-            >
-          </div>
-        </ng-container>
-      </p-card>
-      }
-    </div>
-    <div class="col-12" *ngIf="type == 'TESTS'">
-      <ng-container
-        *ngTemplateOutlet="
-          notaMediaTests;
-          context: {
-            tests: obtainAllTests(fullStats)
-          }
-        "
-      ></ng-container>
+  <!-- Header con período -->
+  <div class="col-12 mb-4">
+    <div class="flex align-items-center justify-content-between topbar">
+      <span class="text-xl font-semibold text-700">
+        Estadísticas {{ type === "TESTS" ? "de Tests" : "de Flashcards" }}
+      </span>
+      <span class="period-badge">
+        {{ from | date : "dd/MM/yyyy" }} - {{ to | date : "dd/MM/yyyy" }}
+      </span>
     </div>
   </div>
+
+  <!-- Cards de Estadísticas -->
+  <div class="col-12 mb-4">
+    <div class="grid">
+      @if (type == 'TESTS') {
+      <ng-container
+        *ngIf="calcularMediaCategoria(obtainAllTests(fullStats)) as mediaBloque"
+      >
+        <!-- Nota Global -->
+        <div class="col-12 md:col-3">
+          <app-score-chart-card
+            title="Nota Global"
+            [score]="mediaBloque.total100"
+            description="Puntuación media total"
+          ></app-score-chart-card>
+        </div>
+
+        <!-- Estadísticas Generales -->
+        <div class="col-12 md:col-9">
+          <app-kpi-stats-cards
+            [stats]="getKpiStatsForTests(mediaBloque)"
+          ></app-kpi-stats-cards>
+        </div>
+      </ng-container>
+      } @else {
+      <ng-container
+        *ngIf="getBlockFlashcardBoxes(obtainAllTests(fullStats)) as blocks"
+      >
+        <app-kpi-stats-cards
+          [stats]="getKpiStatsForFlashcards(blocks)"
+        ></app-kpi-stats-cards>
+      </ng-container>
+      }
+    </div>
+  </div>
+
+  <!-- Análisis por Nivel de Confianza -->
+  <div class="col-12 mb-4" *ngIf="type == 'TESTS'">
+    <h3 class="text-xl font-semibold text-700 mb-3">
+      Análisis por Nivel de Confianza
+    </h3>
+    <app-confidence-analysis-cards
+      [analyses]="getConfidenceAnalysisForTests(obtainAllTests(fullStats))"
+    ></app-confidence-analysis-cards>
+  </div>
+
+
+  <!-- Tests Info -->
+  <div class="col-12" *ngIf="type == 'TESTS'">
+    <ng-container
+      *ngTemplateOutlet="
+        notaMediaTests;
+        context: {
+          tests: obtainAllTests($any(fullStats))
+        }
+      "
+    ></ng-container>
+  </div>
+
+  <!-- Bloques -->
   <div class="col-12">
     <div class="mb-2">
       <strong>Por bloque</strong>
     </div>
     <p-accordion>
-      <p-accordionTab *ngFor="let key of keys(fullStats)">
+      <p-accordionTab *ngFor="let key of keys($any(fullStats))">
         <ng-template pTemplate="header">
           <span
             class="flex align-items-center justify-content-between gap-2 w-full"
@@ -98,19 +114,23 @@
               toPascalCase(key)
             }}</span>
             @if(type == 'TESTS'){
-            <div *ngIf="calcularMediaCategoria(fullStats[key]) as mediaBloque">
+            <div
+              *ngIf="
+                calcularMediaCategoria($any(fullStats[key])) as mediaBloque
+              "
+            >
               <span class="text-sm font-small">
-                <strong> {{ mediaBloque.total100.toFixed(2) }}</strong>
-                (⭐)</span
-              >
+                <strong>{{ mediaBloque.total100.toFixed(2) }}</strong>
+                (⭐)
+              </span>
               <span class="text-sm font-small">
-                <strong> {{ mediaBloque.total10050.toFixed(2) }}</strong>
-                (⭐ + 👍)</span
-              >
+                <strong>{{ mediaBloque.total75.toFixed(2) }}</strong>
+                (👍)
+              </span>
               <span class="text-sm font-small">
-                <strong> {{ mediaBloque.total1007550.toFixed(2) }}</strong>
-                (⭐ + 👍 + 👎)</span
-              >
+                <strong>{{ mediaBloque.total50.toFixed(2) }}</strong>
+                (👎)
+              </span>
             </div>
             }
           </span>
@@ -156,15 +176,17 @@
           </div>
           <div class="contenido">
             <div class="card">
-              <div class="chart-container">
                 @if (type == 'TESTS') {
                 <ng-container
                   *ngIf="getBlockBarData(fullStats[key]) as blockBarData"
                 >
+
                   <div
                     echarts
                     (chartDblClick)="onChartClick($event)"
                     [options]="blockBarData.chartOption"
+                    [id]="'full-stats-chart-' + key"
+                    [initOpts]="{ renderer: 'canvas' }"
                     class="demo-chart"
                   ></div>
                 </ng-container>
@@ -176,12 +198,13 @@
                     echarts
                     (chartDblClick)="onChartClick($event)"
                     [options]="blockBarData.chartOption"
+                    [id]="'full-stats-chart-' + key"
+                    [initOpts]="{ renderer: 'canvas' }"
                     class="demo-chart"
                   ></div>
                 </ng-container>
                 }
               </div>
-            </div>
           </div>
         </div>
       </p-accordionTab>

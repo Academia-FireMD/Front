@@ -1,52 +1,86 @@
 <ng-container *ngIf="stats$ | async as stat">
   <div class="grid mb-4">
+    <!-- Header -->
     <div class="col-12" *ngIf="test$ | async as test">
-      <div class="flex align-items-center justify-content-between topbar">
-        <span
-          >Test realizado el dia
-          {{ test.createdAt | date : "short" }}</span
-        >
+      <div class="flex align-items-center justify-content-between topbar mb-4">
+        <span class="text-xl font-semibold text-700">
+          Test realizado el día {{ test.createdAt | date : "short" }}
+        </span>
         <p-button
           [link]="true"
-          label="Volver atras"
+          label="{{ viewportService.isMobile() ? 'Volver atrás' : '' }}"
+          icon="pi pi-arrow-left"
           (click)="handleBackButton()"
         />
       </div>
     </div>
-    <ng-template #boxDisplayStat let-statFocus="statFocus">
-      <div
-        class="data-box"
-        *ngFor="let stat of statFocus.labels; let i = index"
-      >
-        <div
-          class="box"
-          [ngStyle]="{
-            'background-color': statFocus.datasets[0].backgroundColor[i]
-          }"
-        ></div>
-        <span
-          >{{ statFocus.datasets[0].data[i] }} {{ stat }} (<strong>{{
-            statFocus.percentages[i]
-          }}</strong
-          >%)</span
-        >
-      </div>
-    </ng-template>
 
-    <div class="col-12 md:col-4">
-      <p-card *ngIf="getDataFromSeguridad(stat) as statCien">
-        <div class="py-2">
-          <app-pie-chart [data]="statCien"></app-pie-chart>
+    <!-- Overview Principal -->
+    <div class="col-12 mb-4">
+      <div class="grid">
+        <!-- Resumen con Gráfico Circular -->
+        <div class="col-12 md:col-4">
+          <p-card styleClass="h-full nota-final">
+            <ng-template pTemplate="header">
+              <div class="text-center p-3">
+                <h3 class="text-xl font-semibold text-700 m-0">Resumen</h3>
+              </div>
+            </ng-template>
+            <ng-template pTemplate="content">
+              <div class="flex flex-column align-items-center justify-content-center">
+                <div class="nota-final-container mb-3">
+                  <div class="nota-final-chart">
+                    <echarts 
+                      [options]="getNotaFinalChartOptions(stat)" 
+                      [autoResize]="true"
+                      id="flashcard-chart-main"
+                      [initOpts]="{ renderer: 'canvas' }"
+                    ></echarts>
+                  </div>
+                </div>
+                <div class="chart-legend">
+                  <div class="legend-item aprendidas">
+                    <div class="legend-color"></div>
+                    <div class="legend-label">Aprendidas</div>
+                    <div class="legend-value">{{ getAprendidas(stat) }}</div>
+                    <div class="legend-percentage">({{ getPercentage(stat, 'aprendidas') }}%)</div>
+                  </div>
+                  <div class="legend-item repasar">
+                    <div class="legend-color"></div>
+                    <div class="legend-label">Para Repasar</div>
+                    <div class="legend-value">{{ getRepasar(stat) }}</div>
+                    <div class="legend-percentage">({{ getPercentage(stat, 'repasar') }}%)</div>
+                  </div>
+                  <div class="legend-item dificultad">
+                    <div class="legend-color"></div>
+                    <div class="legend-label">Con Dificultad</div>
+                    <div class="legend-value">{{ getDificultad(stat) }}</div>
+                    <div class="legend-percentage">({{ getPercentage(stat, 'dificultad') }}%)</div>
+                  </div>
+                </div>
+                <div class="divider my-3"></div>
+                <div class="stats-summary">
+                  <div class="stat-item">
+                    <span class="stat-label">Total Tarjetas:</span>
+                    <span class="stat-value">{{ getTotalFlashcards(stat) }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">% Completado:</span>
+                    <span class="stat-value">{{ getCompletionPercentage(stat) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </ng-template>
+          </p-card>
         </div>
-        <ng-container
-          *ngTemplateOutlet="
-            boxDisplayStat;
-            context: {
-              statFocus: statCien
-            }
-          "
-        ></ng-container>
-      </p-card>
+
+        <!-- Estadísticas Detalladas -->
+        <div class="col-12 md:col-8">
+          <app-kpi-stats-cards
+            [stats]="getKpiStatsForFlashcards(stat)"
+          ></app-kpi-stats-cards>
+        </div>
+      </div>
     </div>
   </div>
 </ng-container>

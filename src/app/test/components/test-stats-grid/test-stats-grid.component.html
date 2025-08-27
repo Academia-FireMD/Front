@@ -109,14 +109,10 @@
           tooltipPosition="top"
         >
           <strong>{{
-            calcular100y75(
-              item.stats,
-              item?.testPreguntas?.length ?? 0
-            ).toFixed(2)
+            calcular75(item.stats, item?.testPreguntas?.length ?? 0).toFixed(2)
           }}</strong>
           <div class="card flex justify-center firemd-avatar-group">
             <p-avatarGroup>
-              <p-avatar label="⭐" shape="circle" size="normal" />
               <p-avatar label="👍" shape="circle" size="normal" />
             </p-avatarGroup></div
         ></span>
@@ -127,16 +123,13 @@
         >
           <strong>
             {{
-              calcular100y75y50(
-                item.stats,
-                item?.testPreguntas?.length ?? 0
-              ).toFixed(2)
+              calcular50(item.stats, item?.testPreguntas?.length ?? 0).toFixed(
+                2
+              )
             }}</strong
           >
           <div class="card flex justify-center firemd-avatar-group">
             <p-avatarGroup>
-              <p-avatar label="⭐" shape="circle" size="normal" />
-              <p-avatar label="👍" shape="circle" size="normal" />
               <p-avatar label="👎" shape="circle" size="normal" />
             </p-avatarGroup>
           </div>
