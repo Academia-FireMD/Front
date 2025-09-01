@@ -27,7 +27,7 @@
           class="activation-info mb-4"
         >
           <h3>Completa tu activación</h3>
-          
+
           <!-- Info para Suscripciones -->
           <div *ngIf="registroTemporal.tipoRegistro === 'SUSCRIPCION'" class="plan-details">
             <p>
@@ -68,10 +68,10 @@
 
           <!-- Botón "Ya tengo cuenta" para consumibles -->
           <div *ngIf="registroTemporal?.tipoRegistro === 'CONSUMIBLE'" class="mt-3">
-            <button 
-              pButton 
-              type="button" 
-              class="p-button-secondary p-button-text" 
+            <button
+              pButton
+              type="button"
+              class="p-button-secondary p-button-text"
               (click)="irALoginConActivacion()"
             >
               <i class="pi pi-user mr-2"></i>
@@ -135,7 +135,7 @@
           </div>
 
           <!-- Campo de comunidad -->
-          <app-comunidad-dropdown
+          <app-comunidad-dropdown class="w-full"
             [formControl]="relevancia"
             [placeholder]="'Comunidad'"
             [multiple]="false"
