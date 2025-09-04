@@ -17,6 +17,8 @@ import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
   calcular100,
+  calcular100y50,
+  calcular100y75y50,
   calcular50,
   calcular75,
   colorCorrectas,
@@ -48,7 +50,7 @@ export class FullStatsComponent {
   router = inject(Router);
   flashcardService = inject(FlashcardDataService);
   store = inject(Store<AppState>);
-  
+
   // Selector para obtener el método de calificación del usuario
   userMetodoCalificacion$ = this.store.select(selectUserMetodoCalificacion);
   public fullStats$ = this.getFullStats();
@@ -56,6 +58,9 @@ export class FullStatsComponent {
   public toPascalCase = toPascalCase;
   // Variable para almacenar el método actual
   private currentMetodoCalificacion: MetodoCalificacion = MetodoCalificacion.A1_E1_3_B0;
+
+  // Variable para controlar la visibilidad de las secciones
+  public showIndividualConfidence = false;
 
   constructor() {
     // Suscribirse al método de calificación del usuario
@@ -147,8 +152,9 @@ export class FullStatsComponent {
       const tipo = obtenerTipoDeTest(flashcard, this.type); // Obtener el tipo (similar a tests)
       const temas = obtenerTemas(flashcard, this.type, true); // Obtener los temas de la flashcard
 
-      // Etiqueta para el eje X, incluyendo tipo y temas
-      labels.push(`\n Tipo ${tipo} \n ${temas.split(', ').join('\n')}`);
+      // Crear etiqueta más corta y legible para flashcards
+      const temasCortos = temas.length > 15 ? temas.substring(0, 15) + '...' : temas;
+      labels.push(`${tipo}\n${temasCortos}`);
     });
 
     // Configuración del gráfico en ECharts
@@ -167,6 +173,16 @@ export class FullStatsComponent {
         data: labels,
         axisLabel: {
           interval: 0,
+          rotate: 45, // Rotar las etiquetas 45 grados
+          fontSize: 10, // Reducir el tamaño de la fuente
+          formatter: function(value: string) {
+            // Truncar texto muy largo
+            return value.length > 15 ? value.substring(0, 15) + '...' : value;
+          },
+          margin: 10, // Añadir margen para evitar solapamiento
+        },
+        axisTick: {
+          alignWithLabel: true,
         },
       },
       yAxis: {
@@ -174,6 +190,10 @@ export class FullStatsComponent {
       },
       grid: {
         containLabel: true,
+        bottom: 80, // Añadir más espacio en la parte inferior para las etiquetas rotadas
+        left: 60,
+        right: 60,
+        top: 60,
       },
       series: [
         {
@@ -273,7 +293,7 @@ export class FullStatsComponent {
       correctasData.push({ value: correctas, id: test.id });
       incorrectasData.push({ value: totalIncorrectas, id: test.id });
       omitidasData.push({ value: omitidas, id: test.id });
-      
+
       dataSet100.push(
         Number(
           this.calcular100(test.stats, test.testPreguntas?.length ?? 0).toFixed(2)
@@ -285,22 +305,19 @@ export class FullStatsComponent {
           this.calcular75(test.stats, test.testPreguntas?.length ?? 0).toFixed(2)
         )
       );
-      
+
       dataSet50.push(
         Number(
           this.calcular50(test.stats, test.testPreguntas?.length ?? 0).toFixed(2)
         )
       );
 
-      labels.push(
-        `\n Tipo ${obtenerTipoDeTest(test, this.type)} \n ${obtenerTemas(
-          test,
-          this.type,
-          true
-        )
-          .split(', ')
-          .join('\n')}`
-      );
+      // Crear etiqueta más corta y legible
+      const tipo = obtenerTipoDeTest(test, this.type);
+      const temas = obtenerTemas(test, this.type, true);
+      const temasCortos = temas.length > 20 ? temas.substring(0, 20) + '...' : temas;
+
+      labels.push(`${tipo}\n${temasCortos}`);
     });
 
     // Configuración del gráfico en ECharts
@@ -326,6 +343,16 @@ export class FullStatsComponent {
         data: labels,
         axisLabel: {
           interval: 0,
+          rotate: 45, // Rotar las etiquetas 45 grados
+          fontSize: 10, // Reducir el tamaño de la fuente
+          formatter: function(value: string) {
+            // Truncar texto muy largo
+            return value.length > 15 ? value.substring(0, 15) + '...' : value;
+          },
+          margin: 10, // Añadir margen para evitar solapamiento
+        },
+        axisTick: {
+          alignWithLabel: true,
         },
       },
       yAxis: [
@@ -344,6 +371,10 @@ export class FullStatsComponent {
       ],
       grid: {
         containLabel: true,
+        bottom: 80, // Añadir más espacio en la parte inferior para las etiquetas rotadas
+        left: 60,
+        right: 60,
+        top: 60,
       },
       series: [
         {
@@ -422,34 +453,25 @@ export class FullStatsComponent {
   }
 
   @Memoize()
-  public obtainAllTests(stats: any) {
+  public obtainAllTests(stats: any): Array<Test & { stats: any }> {
     const allTests = Object.keys(stats).reduce((prev, next) => {
-      prev = stats[next];
+      prev = [...prev, ...stats[next]];
       return prev;
-    }, []);
+    }, [] as Array<Test & { stats: any }>);
     return allTests;
   }
 
+
   @Memoize()
-  public obtainEstadoGlobal(stats: any) {
-    const allTests = this.obtainAllTests(stats);
-
-    const resultado = {
-      BIEN: { count: 0 },
-      MAL: { count: 0 },
-      REVISAR: { count: 0 },
-    };
-
-    allTests.forEach((test: any) => {
-      const { estado } = test.stats;
-
-      resultado.BIEN.count += estado.BIEN.count;
-      resultado.MAL.count += estado.MAL.count;
-      resultado.REVISAR.count += estado.REVISAR.count;
-    });
-
-    return resultado;
+  public obtainAllTestsFlashcards(stats: any): Array<FlashcardTest & { stats: any }> {
+    const allTests = Object.keys(stats).reduce((prev, next) => {
+      prev = [...prev, ...stats[next]];
+      return prev;
+    }, [] as Array<FlashcardTest & { stats: any }>);
+    return allTests;
   }
+
+
   @Memoize()
   public getDataFromFlashcards(stats: any) {
     return getDataFromFlashcards(stats);
@@ -746,33 +768,82 @@ export class FullStatsComponent {
     const totalTests = tests.length;
     let totalPreguntas = 0;
     const blockStats = this.obtenerGraficosDificultadesTest(tests);
+
+    // Acumular estadísticas combinadas de todos los tests
+    let combinedStats = {
+      stats100: { correctas: 0, incorrectas: 0 },
+      stats75: { correctas: 0, incorrectas: 0 },
+      stats50: { correctas: 0, incorrectas: 0 }
+    };
+
     tests.forEach((test) => {
       totalPreguntas += test.testPreguntas?.length ?? 0;
+
+      if (test.stats?.seguridad) {
+        const { stats100, stats75, stats50 } = this.getStats(test.stats);
+        combinedStats.stats100.correctas += stats100.correctas;
+        combinedStats.stats100.incorrectas += stats100.incorrectas;
+        combinedStats.stats75.correctas += stats75.correctas;
+        combinedStats.stats75.incorrectas += stats75.incorrectas;
+        combinedStats.stats50.correctas += stats50.correctas;
+        combinedStats.stats50.incorrectas += stats50.incorrectas;
+      }
     });
-    const total100 = tests.reduce((prev, next) => {
-      prev =
-        prev + this.calcular100(next.stats, next.testPreguntas?.length ?? 0);
-      return prev;
-    }, 0);
-    const total75 = tests.reduce((prev, next) => {
-      prev =
-        prev + this.calcular75(next.stats, next.testPreguntas?.length ?? 0);
-      return prev;
-    }, 0);
-    const total50 = tests.reduce((prev, next) => {
-      prev =
-        prev + this.calcular50(next.stats, next.testPreguntas?.length ?? 0);
-      return prev;
-    }, 0);
+
     return {
       totalTests: totalTests,
-      total75: total75 == 0 ? total75 : total75 / totalTests,
-      total50: total50 == 0 ? total50 : total50 / totalTests,
-      total100: total100 == 0 ? total100 : total100 / totalTests,
+      total75: this.calcular75Combinado(combinedStats.stats75, totalPreguntas),
+      total50: this.calcular50Combinado(combinedStats.stats50, totalPreguntas),
+      total100: this.calcular100Combinado(combinedStats.stats100, totalPreguntas),
+      total100y50: this.calcular100y50Combinado(combinedStats.stats100, combinedStats.stats50, totalPreguntas),
+      total100y75y50: this.calcular100y75y50Combinado(
+        combinedStats.stats100,
+        combinedStats.stats75,
+        combinedStats.stats50,
+        totalPreguntas
+      ),
       totalPreguntas: totalPreguntas ?? 0,
       blockStats,
     };
   };
+
+  // Métodos para calcular estadísticas combinadas
+  private calcular100Combinado(stats100: { correctas: number; incorrectas: number }, totalPreguntas: number): number {
+    return calcular100(stats100, totalPreguntas, this.currentMetodoCalificacion);
+  }
+
+  private calcular75Combinado(stats75: { correctas: number; incorrectas: number }, totalPreguntas: number): number {
+    return calcular75(stats75, totalPreguntas, this.currentMetodoCalificacion);
+  }
+
+  private calcular50Combinado(stats50: { correctas: number; incorrectas: number }, totalPreguntas: number): number {
+    return calcular50(stats50, totalPreguntas, this.currentMetodoCalificacion);
+  }
+
+  private calcular100y75y50Combinado(
+    stats100: { correctas: number; incorrectas: number },
+    stats75: { correctas: number; incorrectas: number },
+    stats50: { correctas: number; incorrectas: number },
+    totalPreguntas: number
+  ): number {
+    return calcular100y75y50(stats100, stats75, stats50, totalPreguntas, this.currentMetodoCalificacion);
+  }
+
+  private calcular100y50Combinado(
+    stats100: { correctas: number; incorrectas: number },
+    stats50: { correctas: number; incorrectas: number },
+    totalPreguntas: number
+  ): number {
+    return calcular100y50(stats100, stats50, totalPreguntas, this.currentMetodoCalificacion);
+  }
+
+  private getStats(statsRaw: any) {
+    return getStats(statsRaw);
+  }
+
+  public toggleIndividualConfidence() {
+    this.showIndividualConfidence = !this.showIndividualConfidence;
+  }
 
   commMap = (from: Date, to: Date, temas: Array<string>) => {
     return {
@@ -825,7 +896,7 @@ export class FullStatsComponent {
     const labels = ['Aprendidas', 'Con Dificultad', 'Para Repasar'];
     const types: ('correctas' | 'incorrectas' | 'repasar')[] = ['correctas', 'incorrectas', 'repasar'];
     const icons = ['pi-check', 'pi-times', 'pi-refresh'];
-    
+
     return blocks.map((block, i) => ({
       value: block.value,
       label: labels[i],
@@ -881,6 +952,80 @@ export class FullStatsComponent {
         accuracyPercentage: this.obtainAccuracyPorSeguridad(tests, 0)
       }
     ];
+  }
+
+  getCombinedConfidenceAnalysisForTests(tests: Array<Test & { stats: any }>): ConfidenceAnalysis[] {
+    // Acumular estadísticas combinadas de todos los tests
+    let combinedStats = {
+      stats100: { correctas: 0, incorrectas: 0 },
+      stats75: { correctas: 0, incorrectas: 0 },
+      stats50: { correctas: 0, incorrectas: 0 }
+    };
+
+    let totalPreguntas = 0;
+
+    tests.forEach((test) => {
+      totalPreguntas += test.testPreguntas?.length ?? 0;
+
+      if (test.stats?.seguridad) {
+        const { stats100, stats75, stats50 } = this.getStats(test.stats);
+        combinedStats.stats100.correctas += stats100.correctas;
+        combinedStats.stats100.incorrectas += stats100.incorrectas;
+        combinedStats.stats75.correctas += stats75.correctas;
+        combinedStats.stats75.incorrectas += stats75.incorrectas;
+        combinedStats.stats50.correctas += stats50.correctas;
+        combinedStats.stats50.incorrectas += stats50.incorrectas;
+      }
+    });
+
+    const combinations = [
+      {
+        id: 'only-100',
+        title: 'Solo 100% Seguro',
+        icon: '⭐',
+        tipos: ['CIEN_POR_CIENTO'],
+        stats: combinedStats.stats100,
+        calcularNota: () => this.calcular100Combinado(combinedStats.stats100, totalPreguntas)
+      },
+      {
+        id: 'combined-100-50',
+        title: '100% + 50% Seguro',
+        icon: '🎯',
+        tipos: ['CIEN_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
+        stats: {
+          correctas: combinedStats.stats100.correctas + combinedStats.stats50.correctas,
+          incorrectas: combinedStats.stats100.incorrectas + combinedStats.stats50.incorrectas
+        },
+        calcularNota: () => this.calcular100y50Combinado(combinedStats.stats100, combinedStats.stats50, totalPreguntas)
+      },
+      {
+        id: 'combined-100-75-50',
+        title: '100% + 75% + 50% Seguro',
+        icon: '📈',
+        tipos: ['CIEN_POR_CIENTO', 'SETENTA_Y_CINCO_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
+        stats: {
+          correctas: combinedStats.stats100.correctas + combinedStats.stats75.correctas + combinedStats.stats50.correctas,
+          incorrectas: combinedStats.stats100.incorrectas + combinedStats.stats75.incorrectas + combinedStats.stats50.incorrectas
+        },
+        calcularNota: () => this.calcular100y75y50Combinado(combinedStats.stats100, combinedStats.stats75, combinedStats.stats50, totalPreguntas)
+      }
+    ];
+
+    return combinations.map(combination => ({
+      id: combination.id,
+      title: combination.title,
+      icon: combination.icon,
+      score: combination.calcularNota(),
+      totalPreguntas: combination.stats.correctas + combination.stats.incorrectas,
+      correctas: combination.stats.correctas,
+      incorrectas: combination.stats.incorrectas,
+      noContestadas: 0, // En este contexto no hay no contestadas porque son combinaciones
+      accuracyPercentage: combination.stats.correctas + combination.stats.incorrectas > 0
+        ? Math.round((combination.stats.correctas / (combination.stats.correctas + combination.stats.incorrectas)) * 100)
+        : 0,
+      buttonLabel: 'Ver Detalles',
+      buttonDisabled: true,
+    }));
   }
 
   private getFullStats() {

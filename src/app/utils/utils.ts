@@ -171,11 +171,11 @@ export const obtenerTemas = (
     return listaUnicaTemas.length > 3
       ? 'Temas variados'
       : listaUnicaTemas
-          .map(
-            (tema: any) =>
-              `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
-          )
-          .join(', ');
+        .map(
+          (tema: any) =>
+            `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
+        )
+        .join(', ');
   } else {
     const preguntasTest = (testItem.flashcards ?? []) as Array<any>;
     const temas = preguntasTest.reduce((prev, next) => {
@@ -192,17 +192,16 @@ export const obtenerTemas = (
     return listaUnicaTemas.length > 3
       ? 'Temas variados'
       : listaUnicaTemas
-          .map(
-            (tema: any) =>
-              `Tema ${tema.numero} ${
-                simplified
-                  ? ''
-                  : !!tema?.modulo?.nombre
-                  ? '- ' + tema?.modulo?.nombre
-                  : ''
-              } `
-          )
-          .join(', ');
+        .map(
+          (tema: any) =>
+            `Tema ${tema.numero} ${simplified
+              ? ''
+              : !!tema?.modulo?.nombre
+                ? '- ' + tema?.modulo?.nombre
+                : ''
+            } `
+        )
+        .join(', ');
   }
 };
 
@@ -592,6 +591,40 @@ export const calcular100 = (
   );
 };
 
+
+
+export const calcular100y50 = (
+  stats100: StatType,
+  stats50: StatType,
+  total: number,
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+) => {
+  return calcularCalificacionPorMetodo(
+    stats100.correctas + stats50.correctas,
+    stats100.incorrectas + stats50.incorrectas,
+    total,
+    metodoCalificacion
+  );
+};
+
+export const calcular100y75y50 = (
+  stats100: StatType,
+  stats75: StatType,
+  stats50: StatType,
+  total: number,
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
+  identifier?: string
+) => {
+  return calcularCalificacionPorMetodo(
+    stats100.correctas + stats75.correctas + stats50.correctas,
+    stats100.incorrectas + stats75.incorrectas + stats50.incorrectas,
+    total,
+    metodoCalificacion,
+    identifier
+  );
+};
+
+
 export const calcular75 = (
   stats75: StatType,
   total: number,
@@ -633,7 +666,7 @@ export const calcular0 = (
 
 // Función utilitaria para crear análisis de confianza
 export const createConfidenceAnalysisForResult = (
-  seguridad: any, 
+  seguridad: any,
   metodoCalificacion: any,
   getTotalPreguntasPorSeguridad: (stats: any, tipo: string) => number,
   getCorrectas: (stats: any, tipo: string) => number,
@@ -644,31 +677,31 @@ export const createConfidenceAnalysisForResult = (
   if (!seguridad) return [];
 
   const types = [
-    { 
-      id: 'cien', 
-      title: '100% Seguro', 
-      icon: '⭐', 
+    {
+      id: 'cien',
+      title: '100% Seguro',
+      icon: '⭐',
       key: 'CIEN_POR_CIENTO',
       calculator: calcular100
     },
-    { 
-      id: 'setenta-cinco', 
-      title: '75% Seguro', 
-      icon: '👍', 
+    {
+      id: 'setenta-cinco',
+      title: '75% Seguro',
+      icon: '👍',
       key: 'SETENTA_Y_CINCO_POR_CIENTO',
       calculator: calcular75
     },
-    { 
-      id: 'cincuenta', 
-      title: '50% Seguro', 
-      icon: '👎', 
+    {
+      id: 'cincuenta',
+      title: '50% Seguro',
+      icon: '👎',
       key: 'CINCUENTA_POR_CIENTO',
       calculator: calcular50
     },
-    { 
-      id: 'cero', 
-      title: '0% Seguro', 
-      icon: '❌', 
+    {
+      id: 'cero',
+      title: '0% Seguro',
+      icon: '❌',
       key: 'CERO_POR_CIENTO',
       calculator: calcular0  // Usar mismo cálculo que 50%
     }
@@ -679,9 +712,9 @@ export const createConfidenceAnalysisForResult = (
     title: type.title,
     icon: type.icon,
     score: type.calculator(
-      { 
-        correctas: getCorrectas({ seguridad }, type.key), 
-        incorrectas: getIncorrectas({ seguridad }, type.key) 
+      {
+        correctas: getCorrectas({ seguridad }, type.key),
+        incorrectas: getIncorrectas({ seguridad }, type.key)
       },
       getTotalPreguntasPorSeguridad({ seguridad }, type.key),
       metodoCalificacion

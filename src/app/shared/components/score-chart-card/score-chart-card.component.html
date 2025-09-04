@@ -8,14 +8,14 @@
     <div class="flex flex-column align-items-center justify-content-center">
       <div class="nota-final-container mb-3">
         <div class="nota-final-chart">
-              <echarts
-      [options]="chartOptions"
-      [autoResize]="true"
-      [id]="chartId"
-      [initOpts]="{ renderer: 'canvas', devicePixelRatio: 1 }"
-      [merge]="{ silent: true }"
-    >
-    </echarts>
+          <echarts
+            [options]="chartOptions"
+            [autoResize]="true"
+            [id]="chartId"
+            [initOpts]="{ renderer: 'canvas', devicePixelRatio: 1 }"
+            [merge]="{ silent: true }"
+          >
+          </echarts>
         </div>
       </div>
       <p class="text-500 text-center m-0" *ngIf="description">
@@ -24,4 +24,3 @@
     </div>
   </ng-template>
 </p-card>
-

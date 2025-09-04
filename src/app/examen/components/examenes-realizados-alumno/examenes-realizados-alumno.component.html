@@ -23,11 +23,11 @@
           <div class="flex align-items-center justify-content-between">
             <div class="flex flex-column">
               <span class="font-medium mb-2">
-                <ng-container *ngIf="i === 0">Último intento</ng-container>
                 <ng-container *ngIf="last">
                   <i class="pi pi-flag text-primary"></i> Primer intento
                   (registrado)
                 </ng-container>
+                <ng-container *ngIf="!last && i === 0">Último intento</ng-container>
                 <ng-container *ngIf="!last && i !== 0"
                   >Intento anterior</ng-container
                 >
@@ -68,6 +68,16 @@
                 pTooltip="Ver estadisticas"
                 (onClick)="
                   verResultadosTest(intento.idTest); showOptionsDialog = false
+                "
+              ></p-button>
+
+              <p-button
+                icon="pi pi-chart-line"
+                styleClass="p-button-rounded p-button-outlined p-button-primary"
+                pTooltip="Ver ranking"
+                (onClick)="
+                  $event.stopPropagation();
+                  verLeaderboard(selectedTest.idExamen, intento.idTest)
                 "
               ></p-button>
             </div>

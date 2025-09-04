@@ -24,12 +24,12 @@ export interface ConfidenceAnalysis {
 })
 export class ConfidenceAnalysisCardsComponent implements OnInit, OnDestroy {
   @Input() analyses: ConfidenceAnalysis[] = [];
-
+  @Input() cardCol: string = "md:col-3";
   // Cache de IDs para evitar regeneración en cada detección de cambios
   private chartIdCache = new Map<string, string>();
   private componentId: string = '';
 
-  constructor(private elementRef: ElementRef) {}
+  constructor(private elementRef: ElementRef) { }
 
   ngOnInit(): void {
     // Generar ID único para este componente

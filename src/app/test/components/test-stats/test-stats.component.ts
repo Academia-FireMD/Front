@@ -16,6 +16,8 @@ import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors
 import {
   calcular0,
   calcular100,
+  calcular100y50,
+  calcular100y75y50,
   calcular50,
   calcular75,
   getStats,
@@ -68,6 +70,8 @@ export class TestStatsComponent {
   // Variable para almacenar el método actual
   private currentMetodoCalificacion: MetodoCalificacion =
     MetodoCalificacion.A1_E1_3_B0;
+
+  public showIndividualConfidence = false;
 
   // Configuración de las tarjetas de confianza
   confidenceCards: ConfidenceCard[] = [
@@ -148,6 +152,29 @@ export class TestStatsComponent {
     );
   }
 
+  public calcular100y50(): number {
+    if (!this.lastLoadedStats || !this.lastLoadedTest) return 0;
+    const { stats100, stats50 } = getStats(this.lastLoadedStats);
+    return calcular100y50(
+      stats100,
+      stats50,
+      this.lastLoadedTest.preguntas.length,
+      this.currentMetodoCalificacion
+    );
+  }
+
+  public calcular100y75y50(): number {
+    if (!this.lastLoadedStats || !this.lastLoadedTest) return 0;
+    const { stats100, stats75, stats50 } = getStats(this.lastLoadedStats);
+    return calcular100y75y50(
+      stats100,
+      stats75,
+      stats50,
+      this.lastLoadedTest.preguntas.length,
+      this.currentMetodoCalificacion
+    );
+  }
+
   // Métodos helper para las estadísticas
   public getTotalCorrectas(stat: any): number {
     if (!stat?.seguridad) return 0;
@@ -208,12 +235,53 @@ export class TestStatsComponent {
     return Math.round((correctas / total) * 100);
   }
 
+  // Métodos para estadísticas combinadas
+  public getCombinedCorrects(stat: any, tipos: string[]): number {
+    if (!stat?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => {
+      return total + (stat.seguridad[tipo]?.correctas || 0);
+    }, 0);
+  }
+
+  public getCombinedIncorrects(stat: any, tipos: string[]): number {
+    if (!stat?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => {
+      return total + (stat.seguridad[tipo]?.incorrectas || 0);
+    }, 0);
+  }
+
+  public getCombinedNoAnswered(stat: any, tipos: string[]): number {
+    if (!stat?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => {
+      return total + (stat.seguridad[tipo]?.noRespondidas || 0);
+    }, 0);
+  }
+
+  public getCombinedTotal(stat: any, tipos: string[]): number {
+    return this.getCombinedCorrects(stat, tipos) +
+      this.getCombinedIncorrects(stat, tipos) +
+      this.getCombinedNoAnswered(stat, tipos);
+  }
+
+  public getCombinedAccuracy(stat: any, tipos: string[]): number {
+    const total = this.getCombinedTotal(stat, tipos);
+    if (total === 0) return 0;
+    const correctas = this.getCombinedCorrects(stat, tipos);
+    return Math.round((correctas / total) * 100);
+  }
+
   public handleBackButton() {
     if (this.goBack()) {
       this.location.back();
     } else {
       this.router.navigate(['/app/test/alumno/realizar-test']);
     }
+  }
+
+
+
+  public toggleIndividualConfidence() {
+    this.showIndividualConfidence = !this.showIndividualConfidence;
   }
 
   // Método para optimizar el rendimiento del ngFor
@@ -257,6 +325,46 @@ export class TestStatsComponent {
       noContestadas: this.getNoContestadas(stat, card.seguridadKey),
       accuracyPercentage: this.getAccuracyPercentage(stat, card.seguridadKey),
       buttonLabel: 'Analizar Errores',
+      buttonDisabled: true,
+    }));
+  }
+
+  getCombinedConfidenceAnalysis(stat: any): ConfidenceAnalysis[] {
+    const combinations = [
+      {
+        id: 'only-100',
+        title: 'Solo 100% Seguro',
+        icon: '⭐',
+        tipos: ['CIEN_POR_CIENTO'],
+        calcularNota: () => this.calcular100()
+      },
+      {
+        id: 'combined-100-50',
+        title: '100% + 50% Seguro',
+        icon: '🎯',
+        tipos: ['CIEN_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
+        calcularNota: () => this.calcular100y50()
+      },
+      {
+        id: 'combined-100-75-50',
+        title: '100% + 75% + 50% Seguro',
+        icon: '📈',
+        tipos: ['CIEN_POR_CIENTO', 'SETENTA_Y_CINCO_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
+        calcularNota: () => this.calcular100y75y50()
+      }
+    ];
+
+    return combinations.map(combination => ({
+      id: combination.id,
+      title: combination.title,
+      icon: combination.icon,
+      score: combination.calcularNota(),
+      totalPreguntas: this.getCombinedTotal(stat, combination.tipos),
+      correctas: this.getCombinedCorrects(stat, combination.tipos),
+      incorrectas: this.getCombinedIncorrects(stat, combination.tipos),
+      noContestadas: this.getCombinedNoAnswered(stat, combination.tipos),
+      accuracyPercentage: this.getCombinedAccuracy(stat, combination.tipos),
+      buttonLabel: 'Ver Detalles',
       buttonDisabled: true,
     }));
   }

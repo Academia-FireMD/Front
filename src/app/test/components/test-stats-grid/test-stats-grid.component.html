@@ -105,11 +105,11 @@
         ></span>
         <span
           class="text-sm font-small flex align-items-center gap-2"
-          pTooltip="Puntuación 100% + 75%"
+          pTooltip="Puntuación 100% + 50%"
           tooltipPosition="top"
         >
           <strong>{{
-            calcular75(item.stats, item?.testPreguntas?.length ?? 0).toFixed(2)
+            calcular100y50(item.stats, item?.testPreguntas?.length ?? 0).toFixed(2)
           }}</strong>
           <div class="card flex justify-center firemd-avatar-group">
             <p-avatarGroup>
@@ -123,7 +123,7 @@
         >
           <strong>
             {{
-              calcular50(item.stats, item?.testPreguntas?.length ?? 0).toFixed(
+              calcular100y75y50(item.stats, item?.testPreguntas?.length ?? 0).toFixed(
                 2
               )
             }}</strong

@@ -1,5 +1,8 @@
 <div class="grid">
-  <div class="col-12 md:col-3" *ngFor="let analysis of analyses; trackBy: trackByAnalysisId">
+  <div
+    class="col-12 {{ cardCol }}"
+    *ngFor="let analysis of analyses; trackBy: trackByAnalysisId"
+  >
     <p-card styleClass="h-full confidence-card">
       <ng-template pTemplate="header">
         <div class="flex align-items-center justify-content-center p-3">
@@ -11,14 +14,14 @@
         <div class="flex flex-column align-items-center text-center p-3">
           <div class="confidence-score mb-3">
             <div class="score-chart">
-                          <echarts
-              [options]="getNotaChartOptions(analysis.score)"
-              [autoResize]="true"
-              [id]="getChartId(analysis.id)"
-              [initOpts]="{ renderer: 'canvas', devicePixelRatio: 1 }"
-              [merge]="{ silent: true }"
-            >
-            </echarts>
+              <echarts
+                [options]="getNotaChartOptions(analysis.score)"
+                [autoResize]="true"
+                [id]="getChartId(analysis.id)"
+                [initOpts]="{ renderer: 'canvas', devicePixelRatio: 1 }"
+                [merge]="{ silent: true }"
+              >
+              </echarts>
             </div>
             <div class="score-label">Nota</div>
           </div>
@@ -40,7 +43,9 @@
               <span class="stat-label">
                 <i class="pi pi-times mr-2"></i>Incorrectas:
               </span>
-              <span class="stat-value incorrect">{{ analysis.incorrectas }}</span>
+              <span class="stat-value incorrect">{{
+                analysis.incorrectas
+              }}</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">
@@ -53,12 +58,16 @@
           <div class="accuracy-bar mb-3">
             <div class="accuracy-label">
               <span>% Acierto</span>
-              <span class="accuracy-percentage">{{ analysis.accuracyPercentage }}%</span>
+              <span class="accuracy-percentage"
+                >{{ analysis.accuracyPercentage }}%</span
+              >
             </div>
             <p-progressBar
               [value]="analysis.accuracyPercentage"
               [showValue]="false"
-              [style]="{'--progress-color': getProgressBarColor(analysis.score)}"
+              [style]="{
+                '--progress-color': getProgressBarColor(analysis.score)
+              }"
               class="accuracy-progress"
             >
             </p-progressBar>

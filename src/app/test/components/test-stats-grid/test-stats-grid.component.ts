@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { parseISO } from 'date-fns';
 import { flattenDeep } from 'lodash';
 import { PrimeNGConfig } from 'primeng/api';
 import { combineLatest, filter, tap } from 'rxjs';
@@ -13,15 +14,15 @@ import { Test } from '../../../shared/models/test.model';
 import { MetodoCalificacion } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { AppState } from '../../../store/app.state';
-import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
+import { selectCurrentUser, selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
-    calcular100,
-    calcular50,
-    calcular75,
-    getAllInArrays,
-    getStats,
-    obtenerTemas,
-    obtenerTipoDeTest,
+  calcular100,
+  calcular100y50,
+  calcular100y75y50,
+  getAllInArrays,
+  getStats,
+  obtenerTemas,
+  obtenerTipoDeTest
 } from '../../../utils/utils';
 
 @Component({
@@ -172,18 +173,21 @@ export class TestStatsGridComponent extends SharedGridComponent<
     );
   };
 
-  public calcular75 = (rawStats: any, numPreguntas: number) => {
+  public calcular100y50 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
-    return calcular75(
-      statsParsed.stats75,
+    return calcular100y50(
+      statsParsed.stats100,
+      statsParsed.stats50,
       numPreguntas,
       this.currentMetodoCalificacion
     );
   };
 
-  public calcular50 = (rawStats: any, numPreguntas: number) => {
+  public calcular100y75y50 = (rawStats: any, numPreguntas: number) => {
     const statsParsed = getStats(rawStats);
-    return calcular50(
+    return calcular100y75y50(
+      statsParsed.stats100,
+      statsParsed.stats75,
       statsParsed.stats50,
       numPreguntas,
       this.currentMetodoCalificacion
@@ -307,10 +311,12 @@ export class TestStatsGridComponent extends SharedGridComponent<
   }
 
   public generarEstadisticas() {
+    const user = this.store.selectSignal(selectCurrentUser);
     // Obtener los valores de los filtros del GenericListComponent
     const filters = this.pagination().where || {};
-    const from = filters.createdAt?.gte || new Date();
+    const from = filters.createdAt?.gte || parseISO(user()?.createdAt.toString() ?? '') || new Date();
     const to = filters.createdAt?.lte || new Date();
+
     const temas = flattenDeep(
       getAllInArrays(filters.testPreguntas ?? filters.flashcards)
     );
