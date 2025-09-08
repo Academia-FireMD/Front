@@ -4,11 +4,12 @@ import { LOCALE_ID, NgModule } from '@angular/core';
 import localeEs from '@angular/common/locales/es';
 import { ConfirmationService } from 'primeng/api';
 import { FileUploadModule } from 'primeng/fileupload';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
+import { GenericListComponent } from '../shared/generic-list/generic-list.component';
 import { PrimengModule } from '../shared/primeng.module';
 import { SharedModule } from '../shared/shared.module';
 import { DocumentacionRoutingModule } from './documentacion-routing.module';
 import { DocumentationOverviewComponent } from './documentation-overview/documentation-overview.component';
-import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [DocumentationOverviewComponent],
@@ -19,6 +20,7 @@ registerLocaleData(localeEs);
     FileUploadModule,
     DocumentacionRoutingModule,
     AsyncButtonComponent,
+    GenericListComponent,
   ],
   providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
 })

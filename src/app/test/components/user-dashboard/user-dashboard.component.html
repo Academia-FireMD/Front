@@ -3,9 +3,13 @@
 <app-generic-list
   [fetchItems$]="fetchItems$"
   [itemTemplate]="userItemTemplate"
-  [filters]="filters"
+  [filters]="filters()"
+  [mode]="mode"
+  [selectedItemIds]="selectedUserIds"
+  [getItemId]="getUserId"
   (onItemClick)="onItemClick($event)"
   (filtersChanged)="onFiltersChanged($event)"
+  (selectionChange)="onSelectionChange($event)"
 >
   <div left-actions>
     <p-iconField iconPosition="left" class="flex-grow-1">
@@ -22,43 +26,52 @@
   </div>
 
   <div empty-template>
-    <div class="text-center p-4">
-      No hay usuarios disponibles
-    </div>
+    <div class="text-center p-4">No hay usuarios disponibles</div>
   </div>
 </app-generic-list>
 
 <!-- Template para el item de usuario -->
-<ng-template #userItemTemplate let-item>
+<ng-template
+  #userItemTemplate
+  let-item
+  let-mode="mode"
+  let-isSelected="isSelected"
+>
   <div class="flex flex-row align-items-between">
-    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+    <div
+      class="flex flex-column py-2 left-side truncate-flex-content"
+      [ngClass]="mode === 'selection' ? 'col-9' : 'col-9'"
+    >
       <div class="text-lg font-medium flex gap-2 align-items-center">
-        <span class="identifier" pTooltip="{{ item.email }}" tooltipPosition="top">
+        <span
+          class="identifier"
+          pTooltip="{{ item.email }}"
+          tooltipPosition="top"
+        >
           @if (item.nombre && item.apellidos && item.nombre.length>0 &&
-          item.apellidos.length>0 && viewportService.screenWidth!= 'xs')
-          {
+          item.apellidos.length>0 && viewportService.screenWidth!= 'xs') {
           {{ item.nombre + " " + item.apellidos }}
-          <span class="font-small">{{
-            " ( " + item.email + " ) "
-          }}</span>
+          <span class="font-small">{{ " ( " + item.email + " ) " }}</span>
           } @else {
           {{ item.email }}
           }
         </span>
-        
+
         <div class="flex gap-1">
           <p-chip
             [styleClass]="item.validated ? 'verified-chip' : 'nonverified-chip'"
-            label="{{
-              item.validated ? 'Verificado' : 'Sin verificar'
+            label="{{ item.validated ? 'Verificado' : 'Sin verificar' }}"
+            pTooltip="{{
+              item.validated ? 'Usuario verificado' : 'Usuario sin verificar'
             }}"
-            pTooltip="{{ item.validated ? 'Usuario verificado' : 'Usuario sin verificar' }}"
             tooltipPosition="top"
           />
           <p-chip
             [styleClass]="item.rol == 'ADMIN' ? 'admin-chip' : 'alumno-chip'"
             label="{{ item.rol == 'ADMIN' ? 'Admin' : 'Alumno' }}"
-            pTooltip="{{ item.rol == 'ADMIN' ? 'Usuario administrador' : 'Usuario alumno' }}"
+            pTooltip="{{
+              item.rol == 'ADMIN' ? 'Usuario administrador' : 'Usuario alumno'
+            }}"
             tooltipPosition="top"
           />
           <p-chip
@@ -76,22 +89,23 @@
           />
         </div>
       </div>
-      <span class="descripcion unbreakable-text" pTooltip="Fecha de solicitud" tooltipPosition="top">
-        {{
-          viewportService.screenWidth != "xs"
-            ? "Solicitado el día"
-            : ""
-        }}
+      <span
+        class="descripcion unbreakable-text"
+        pTooltip="Fecha de solicitud"
+        tooltipPosition="top"
+      >
+        {{ viewportService.screenWidth != "xs" ? "Solicitado el día" : "" }}
         {{ item.createdAt | date : "short" }}
       </span>
     </div>
 
-    <div class="right-side col-3 flex align-items-center justify-content-end">
+    <div
+      *ngIf="mode === 'overview'"
+      class="right-side col-3 flex align-items-center justify-content-end"
+    >
       <div class="flex flex-row align-items-center justify-content-end gap-2">
         <p-splitButton
-          [label]="
-            viewportService.screenWidth != 'xs' ? 'Permitir' : ''
-          "
+          [label]="viewportService.screenWidth != 'xs' ? 'Permitir' : ''"
           icon="pi pi-check"
           [model]="getActionItems(item)"
           (onClick)="permitir(item.id)"

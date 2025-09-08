@@ -1,19 +1,23 @@
+import { CommonModule } from '@angular/common';
 import {
-  Component,
-  Input,
-  TemplateRef,
-  Output,
-  EventEmitter,
-  OnInit,
   ChangeDetectorRef,
-  OnDestroy,
+  Component,
   computed,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output,
+  SimpleChanges,
+  TemplateRef,
 } from '@angular/core';
-import { FormBuilder, FormControl } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { SharedGridComponent } from '../shared-grid/shared-grid.component';
-import { interval, Subscription, tap } from 'rxjs';
+import { FormBuilder, FormControl, FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription, tap } from 'rxjs';
 import { Rol } from '../models/user.model';
+import { PrimengModule } from '../primeng.module';
+import { SharedGridComponent } from '../shared-grid/shared-grid.component';
+import { SharedModule } from '../shared.module';
 
 export interface FilterOption {
   label: string;
@@ -25,13 +29,14 @@ export interface FilterConfig {
   label: string;
   specialCaseKey?: 'rangeDate';
   type:
-    | 'dropdown'
-    | 'calendar'
-    | 'text'
-    | 'tema-select'
-    | 'dificultad-dropdown'
-    | 'comunidad-picker'
-    | 'comunidad-dropdown';
+  | 'dropdown'
+  | 'calendar'
+  | 'text'
+  | 'tema-select'
+  | 'dificultad-dropdown'
+  | 'comunidad-picker'
+  | 'comunidad-dropdown'
+  | 'toggle';
   options?: FilterOption[];
   placeholder?: string;
   defaultValue?: any;
@@ -41,8 +46,17 @@ export interface FilterConfig {
   filterInterpolation?: (value: any) => any;
 }
 
+export type GenericListMode = 'overview' | 'selection';
+
 @Component({
   selector: 'app-generic-list',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrimengModule,
+    SharedModule,
+  ],
   template: `
     <div class="shared-grid grid">
       <!-- Top Action Bar -->
@@ -52,7 +66,15 @@ export interface FilterConfig {
           <div class="left-actions">
             <ng-content select="[left-actions]"></ng-content>
           </div>
-
+          <div *ngIf="mode === 'selection'" class="flex align-items-center gap-2 ml-2">
+              <p-checkbox
+                [binary]="true"
+                [ngModel]="isAllSelected()"
+                (ngModelChange)="toggleSelectAll()"
+                styleClass="select-all-checkbox"
+              />
+              <label class="text-sm" *ngIf="viewportService.screenWidth != 'xs'">Seleccionar todo</label>
+            </div>
           <!-- Right Actions - Siempre visible -->
           <div class="right-actions">
             <ng-content select="[right-actions]"></ng-content>
@@ -86,15 +108,29 @@ export interface FilterConfig {
           <ng-template pTemplate="list" let-data>
             <div class="grid grid-nogutter">
               <div
-                class="col-12 item-container pointer"
+                class="col-12 item-container"
+                [ngClass]="{'pointer': mode === 'overview', 'selection-mode': mode === 'selection'}"
                 *ngFor="let item of data"
-                (click)="onItemClick.emit(item)"
+                (click)="handleItemClick(item)"
               >
-                <ng-container
-                  [ngTemplateOutlet]="itemTemplate"
-                  [ngTemplateOutletContext]="{ $implicit: item }"
-                >
-                </ng-container>
+                <!-- Checkbox para modo selección -->
+                <div *ngIf="mode === 'selection'" class="selection-checkbox-container">
+                  <p-checkbox
+                    [binary]="true"
+                    [ngModel]="isItemSelected(item)"
+                    (ngModelChange)="toggleItemSelection(item)"
+                    (click)="$event.stopPropagation()"
+                    styleClass="item-selection-checkbox"
+                  />
+                </div>
+
+                <div class="item-content" [ngClass]="{'with-checkbox': mode === 'selection'}">
+                  <ng-container
+                    [ngTemplateOutlet]="itemTemplate"
+                    [ngTemplateOutletContext]="{ $implicit: item, mode: mode, isSelected: isItemSelected(item) }"
+                  >
+                  </ng-container>
+                </div>
               </div>
             </div>
           </ng-template>
@@ -208,6 +244,18 @@ export interface FilterConfig {
             [placeholder]="filter.placeholder || filter.label"
             [multiple]="true"
           ></app-comunidad-dropdown>
+
+          <!-- Toggle Filter -->
+          <div
+            *ngIf="
+              filter.type === 'toggle' &&
+              getFilterControl(filter.key) as control
+            "
+            class="flex align-items-center gap-2"
+          >
+            <p-inputSwitch [formControl]="control"></p-inputSwitch>
+            <label class="text-sm">{{ filter.placeholder || 'Activar filtro' }}</label>
+          </div>
         </div>
 
         <!-- Botones de acción -->
@@ -235,13 +283,16 @@ export interface FilterConfig {
 })
 export class GenericListComponent<T>
   extends SharedGridComponent<T>
-  implements OnInit, OnDestroy
-{
+  implements OnInit, OnDestroy {
   @Input() itemTemplate!: TemplateRef<any>;
   @Input() showPagination: boolean = true;
   @Input() filters?: FilterConfig[];
+  @Input() mode: GenericListMode = 'overview';
+  @Input() selectedItemIds: (string | number)[] = [];
+  @Input() getItemId: (item: T) => string | number = (item: any) => item.id;
   @Output() onItemClick = new EventEmitter<T>();
   @Output() filtersChanged = new EventEmitter<any>();
+  @Output() selectionChange = new EventEmitter<(string | number)[]>();
 
   public showFiltersDialog = false;
   private fb = new FormBuilder();
@@ -292,6 +343,12 @@ export class GenericListComponent<T>
     setTimeout(() => {
       this.loadFiltersFromQueryParams();
     }, 0);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['selectedItemIds']) {
+      console.log('selectedItemIds', changes['selectedItemIds'].currentValue);
+    }
   }
 
   ngOnDestroy() {
@@ -617,5 +674,68 @@ export class GenericListComponent<T>
   // Método para verificar si hay filtros activos
   hasActiveFilters(): boolean {
     return this.getActiveFiltersCount() > 0;
+  }
+
+  // Métodos para modo selección
+  handleItemClick(item: T) {
+    if (this.mode === 'selection') {
+      this.toggleItemSelection(item);
+    } else {
+      this.onItemClick.emit(item);
+    }
+  }
+
+  toggleItemSelection(item: T) {
+    const itemId = this.getItemId(item);
+    const currentSelection = [...this.selectedItemIds];
+    const index = currentSelection.indexOf(itemId);
+
+    if (index > -1) {
+      currentSelection.splice(index, 1);
+    } else {
+      currentSelection.push(itemId);
+    }
+
+    this.selectionChange.emit(currentSelection);
+  }
+
+  isItemSelected(item: T): boolean {
+    const itemId = this.getItemId(item);
+    return this.selectedItemIds.includes(itemId);
+  }
+
+  isAllSelected(): boolean {
+    const currentData = this.lastLoadedPagination?.data || [];
+    if (currentData.length === 0) return false;
+
+    return currentData.every((item: T) => this.isItemSelected(item));
+  }
+
+  toggleSelectAll() {
+    const currentData = this.lastLoadedPagination?.data || [];
+    const allSelected = this.isAllSelected();
+
+    let newSelection = [...this.selectedItemIds];
+
+    if (allSelected) {
+      // Deseleccionar todos los elementos de la página actual
+      currentData.forEach((item: T) => {
+        const itemId = this.getItemId(item);
+        const index = newSelection.indexOf(itemId);
+        if (index > -1) {
+          newSelection.splice(index, 1);
+        }
+      });
+    } else {
+      // Seleccionar todos los elementos de la página actual
+      currentData.forEach((item: T) => {
+        const itemId = this.getItemId(item);
+        if (!newSelection.includes(itemId)) {
+          newSelection.push(itemId);
+        }
+      });
+    }
+
+    this.selectionChange.emit(newSelection);
   }
 }

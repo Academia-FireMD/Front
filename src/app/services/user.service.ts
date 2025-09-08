@@ -73,4 +73,8 @@ export class UserService extends ApiBaseService {
   public getAvailableSubscriptions() {
     return this.get('/obtain-avaliable-subscriptions');
   }
+
+  public getUsersByPlanification$(planificationId: number,) {
+    return this.post(`/by-planification/${planificationId}`, {}) as Observable<Usuario[]>;
+  }
 }

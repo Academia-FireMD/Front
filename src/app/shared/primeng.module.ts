@@ -33,6 +33,7 @@ import { PanelModule } from 'primeng/panel';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { RippleModule } from 'primeng/ripple';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { TagModule } from 'primeng/tag';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { TooltipModule } from 'primeng/tooltip';
@@ -77,7 +78,8 @@ const modules = [
   FileUploadModule,
   TooltipModule,
   KeyComponent,
-  NgxSpinnerModule
+  NgxSpinnerModule,
+  SplitButtonModule
 ];
 
 @NgModule({

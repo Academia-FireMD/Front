@@ -3,56 +3,23 @@
   header="Asignar planificación mensual"
   [(visible)]="isDialogAsignacionUsuarioVisible"
   [modal]="true"
-  [style]="{ width: '80vw', height: '80vh' }"
+  [style]="{ width: '90vw', height: '85vh' }"
   [dismissableMask]="true"
 >
-  <div class="grid h-full">
-    <div class="col-12">
-      <div class="flex align-items-center gap-2">
-        <input
-          type="text"
-          pInputText
-          [(ngModel)]="searchTerm"
-          class="w-full mt-2"
-          placeholder="Buscar por nombre o email"
-        />
-      </div>
-    </div>
-    <div class="col-12 rejilla">
-      <p-table
-        [value]="filterUsers(allUsers$ | async)"
-        [(selection)]="usuariosSeleccionadosId"
-        [paginator]="true"
-        [rows]="10"
-        [rowsPerPageOptions]="[10, 20, 50]"
-        [responsiveLayout]="'scroll'"
-        [paginatorDropdownAppendTo]="'body'"
-      >
-        <ng-template pTemplate="header">
-          <tr>
-            <th style="width: 3rem">
-              <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
-            </th>
-            <th>Nombre</th>
-            <th>Email</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-usuario>
-          <tr>
-            <td>
-              <p-tableCheckbox [value]="usuario.id"></p-tableCheckbox>
-            </td>
-            <td>{{ usuario.nombre ?? "Sin nombre" }}</td>
-            <td>{{ usuario.email }}</td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </div>
-    <div class="col-12 flex justify-content-end">
+  <div class="h-full">
+    <app-user-dashboard
+      mode="selection"
+      [selectedUserIds]="usuariosSeleccionadosId"
+      [extraFilters]="userFilters()"
+      (selectionChange)="onUserSelectionChange($event)"
+    ></app-user-dashboard>
+
+    <div class="flex justify-content-end pt-3 border-top-1 surface-border mt-3">
       <app-async-button
         label="Confirmar selección"
         icon="pi pi-check"
         [action]="confirmarSeleccion.bind(this)"
+        [disabled]="usuariosSeleccionadosId.length === 0"
       ></app-async-button>
     </div>
   </div>

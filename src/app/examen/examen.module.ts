@@ -3,6 +3,7 @@ import { LOCALE_ID, NgModule } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ConfirmationService } from 'primeng/api';
+import { BadgeModule } from 'primeng/badge';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { CardModule } from 'primeng/card';
@@ -25,14 +26,13 @@ import { TableModule } from 'primeng/table';
 import { TabViewModule } from 'primeng/tabview';
 import { TagModule } from 'primeng/tag';
 import { TreeModule } from 'primeng/tree';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
+import { GenericListComponent } from '../shared/generic-list/generic-list.component';
 import { SharedModule } from '../shared/shared.module';
 import { ExamenesDashboardAdminDetailviewComponent } from './components/examenes-dashboard-admin-detailview/examenes-dashboard-admin-detailview.component';
 import { ExamenesDashboardAdminComponent } from './components/examenes-dashboard-admin/examenes-dashboard-admin.component';
-import { ExamenRoutingModule } from './examen-routing.module';
 import { ExamenesRealizadosAlumnoComponent } from './components/examenes-realizados-alumno/examenes-realizados-alumno.component';
-import { PrimengModule } from '../shared/primeng.module';
-import { BadgeModule } from 'primeng/badge';
-import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
+import { ExamenRoutingModule } from './examen-routing.module';
 @NgModule({
   declarations: [
     ExamenesDashboardAdminComponent,
@@ -69,6 +69,7 @@ import { AsyncButtonComponent } from '../shared/components/async-button/async-bu
     ProgressSpinnerModule,
     TagModule,
     AsyncButtonComponent,
+    GenericListComponent,
   ],
   providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
 })

@@ -27,6 +27,7 @@ import { TagModule } from 'primeng/tag';
 import { ToolbarModule } from 'primeng/toolbar';
 import { TooltipModule } from 'primeng/tooltip';
 import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
+import { GenericListComponent } from '../shared/generic-list/generic-list.component';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
@@ -54,7 +55,6 @@ import { UserDashboardComponent } from './components/user-dashboard/user-dashboa
 import { TestRoutingModule } from './test-routing.module';
 @NgModule({
   declarations: [
-    UserDashboardComponent,
     PreguntasDashboardAdminComponent,
     PreguntasDashboardAdminDetailviewComponent,
     AjustesAdminComponent,
@@ -108,6 +108,8 @@ import { TestRoutingModule } from './test-routing.module';
     ToolbarModule,
     SplitButtonModule,
     AsyncButtonComponent,
+    UserDashboardComponent,
+    GenericListComponent,
   ],
   providers: [ConfirmationService],
   exports: [

@@ -35,7 +35,6 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
 @NgModule({
   declarations: [
     SharedGridComponent,
-    GenericListComponent,
     ComunidadPickerComponent,
     ComunidadDropdownComponent,
     PieChartComponent,
@@ -68,10 +67,10 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     DataViewModule,
     PaginatorModule,
     NgxEchartsModule,
+    GenericListComponent,
   ],
   exports: [
     SharedGridComponent,
-    GenericListComponent,
     ComunidadPickerComponent,
     ComunidadDropdownComponent,
     PieChartComponent,

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -13,14 +13,14 @@ import {
   combineLatest,
   filter,
   firstValueFrom,
-  map,
-  Observable,
-  tap,
+  tap
 } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
+import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import {
+  PlanificacionMensual,
   PlantillaSemanal,
   SubBloque,
 } from '../../shared/models/planificacion.model';
@@ -29,8 +29,7 @@ import {
   duracionesDisponibles,
 } from '../../shared/models/pregunta.model';
 import {
-  TipoDePlanificacionDeseada,
-  Usuario,
+  TipoDePlanificacionDeseada
 } from '../../shared/models/user.model';
 import { getNextWeekIfFriday, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
@@ -67,6 +66,7 @@ export class PlanificacionMensualEditComponent {
     this.relevancia.clear();
     communities.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
+  lastLoadedPlanification = signal(null as PlanificacionMensual | null);
   viewportService = inject(ViewportService);
   activedRoute = inject(ActivatedRoute);
   planificacionesService = inject(PlanificacionesService);
@@ -74,13 +74,6 @@ export class PlanificacionMensualEditComponent {
   userService = inject(UserService);
   toast = inject(ToastrService);
   router = inject(Router);
-  allUsers$ = this.userService
-    .getAllUsers$({
-      take: 9999999,
-      skip: 0,
-      searchTerm: '',
-    })
-    .pipe(map((e) => (e.data ?? []) as Array<Usuario>)) as Observable<any>;
   events: CalendarEvent[] = [];
   viewDate = new Date();
   view: CalendarView = CalendarView.Week;
@@ -90,11 +83,32 @@ export class PlanificacionMensualEditComponent {
   public isDialogAsignacionUsuarioVisible = false;
   public pickedEvents: CalendarEvent[] = [];
   public pickedEventsViewDate: Date = new Date();
-  private calculatedInitialDate = false;
   public activeStepSeleccionPlantilla = 0;
   public usuariosSeleccionadosId = [] as Array<number>;
-  searchTerm: string = ''; // Término de búsqueda
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  public userFilters = computed(() => [{
+    key: 'asignaciones',
+    label: 'Planificación asignada',
+    type: 'toggle',
+    placeholder: 'Solo usuarios con esta planificación asignada',
+    defaultValue: false,
+    filterInterpolation: (value: boolean) => {
+      if (!value) {
+        return {};
+      }
+      const planificacionId = this.lastLoadedPlanification()?.id;
+      if (!planificacionId || planificacionId === 0) {
+        return {};
+      }
+      return {
+        asignaciones: {
+          some: {
+            planificacionId: { equals: planificacionId }
+          }
+        }
+      };
+    }
+  }] as FilterConfig[]);
   public getEventsForDay = this.eventsService.getEventsForDay;
   public getProgressBarColor = this.eventsService.getProgressBarColor;
   public getCompletedSubBlocksForDay =
@@ -107,13 +121,16 @@ export class PlanificacionMensualEditComponent {
   public startDate: Date | null = null;
   public endDate: Date | null = null;
 
-  filterUsers(users: Array<Usuario>): Array<Usuario> {
-    const term = this.searchTerm.toLowerCase();
-    return (users ?? []).filter(
-      (user) =>
-        (user.nombre && user.nombre.toLowerCase().includes(term)) ||
-        user.email.toLowerCase().includes(term)
-    );
+  planificationIdEffect = effect(() => {
+    if (this.lastLoadedPlanification() && this.lastLoadedPlanification() !== null) {
+      firstValueFrom(this.userService.getUsersByPlanification$(this.lastLoadedPlanification()?.id as number).pipe(tap((e) => {
+        this.usuariosSeleccionadosId = e.map((e) => e.id);
+      })));
+    }
+  });
+
+  public onUserSelectionChange(selectedIds: number[]) {
+    this.usuariosSeleccionadosId = selectedIds;
   }
 
   public uniqueEventsForDay = (events: CalendarEvent[], date: Date) => {
@@ -163,19 +180,16 @@ export class PlanificacionMensualEditComponent {
 
       lines.push(
         'BEGIN:VEVENT',
-        `UID:${
-          event.id ||
-          `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
+        `UID:${event.id ||
+        `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
         }`,
-        `DTSTAMP:${
-          new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
+        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
         }`,
         `DTSTART:${start}`,
         `DTEND:${end}`,
         `SUMMARY:${event.title}`,
-        `DESCRIPTION:${
-          event.meta?.subBloque?.comentarios ||
-          'Evento exportado desde Tecnika Fire'
+        `DESCRIPTION:${event.meta?.subBloque?.comentarios ||
+        'Evento exportado desde Tecnika Fire'
         }`,
         `LOCATION:${event.meta?.location || ''}`,
         'END:VEVENT'
@@ -237,8 +251,7 @@ export class PlanificacionMensualEditComponent {
         )
       );
       this.toast.success(
-        `Planificación asignada exitosamente a ${
-          this.usuariosSeleccionadosId.length ?? 0
+        `Planificación asignada exitosamente a ${this.usuariosSeleccionadosId.length ?? 0
         } usuarios!`
       );
       this.load();
@@ -321,9 +334,9 @@ export class PlanificacionMensualEditComponent {
 
       const adjustedEnd = event.end
         ? new Date(
-            adjustedStart.getTime() +
-              (event.end.getTime() - event.start.getTime())
-          ) // Mantener duración
+          adjustedStart.getTime() +
+          (event.end.getTime() - event.start.getTime())
+        ) // Mantener duración
         : undefined;
 
       return {
@@ -404,6 +417,7 @@ export class PlanificacionMensualEditComponent {
     return this.activedRoute.snapshot.paramMap.get('id') as number | 'new';
   }
 
+
   ngOnInit(): void {
     this.load();
   }
@@ -420,6 +434,7 @@ export class PlanificacionMensualEditComponent {
       firstValueFrom(
         this.planificacionesService.getPlanificacionMensualById$(itemId).pipe(
           tap((entry) => {
+            this.lastLoadedPlanification.set(entry);
             const subBloques = entry.subBloques;
 
             // Convertir los subbloques a eventos

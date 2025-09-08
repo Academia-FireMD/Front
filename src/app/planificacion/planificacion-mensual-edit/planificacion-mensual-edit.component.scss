@@ -21,6 +21,19 @@
   justify-content: end;
 }
 :host ::ng-deep {
+  app-generic-list {
+    .shared-grid {
+      max-height: 38rem;
+    }
+    .selection-mode {
+      display: flex !important;
+      flex-direction: row !important;
+      width: 100%;
+      align-items: center !important;
+      justify-content: start !important;
+      gap: 1rem;
+    }
+  }
   .weekly-calendar {
     max-height: 80vh;
     overflow: auto;

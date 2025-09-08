@@ -10,15 +10,20 @@ import { StepperModule } from 'primeng/stepper';
 import localeEs from '@angular/common/locales/es';
 import { FormsModule } from '@angular/forms';
 import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
+import { MarkdownModule } from 'ngx-markdown';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ContextMenuModule } from 'primeng/contextmenu';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
 import { PaginatorModule } from 'primeng/paginator';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TableModule } from 'primeng/table';
+import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
+import { GenericListComponent } from '../shared/generic-list/generic-list.component';
 import { SharedModule } from '../shared/shared.module';
+import { UserDashboardComponent } from '../test/components/user-dashboard/user-dashboard.component';
 import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
 import { CalendarHeaderComponent } from './calendar-header/calendar-header.component';
@@ -30,9 +35,6 @@ import { PlanificacionRoutingModule } from './planificacion-routing.module';
 import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantilla-semanal-edit.component';
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
 import { VistaSemanalComponent } from './vista-semanal/vista-semanal.component';
-import { MarkdownModule } from 'ngx-markdown';
-import { MessageModule } from 'primeng/message';
-import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [
@@ -67,6 +69,8 @@ registerLocaleData(localeEs);
     ContextMenuModule,
     MessageModule,
     AsyncButtonComponent,
+    GenericListComponent,
+    UserDashboardComponent
   ],
   providers: [
     ConfirmationService,
@@ -77,4 +81,4 @@ registerLocaleData(localeEs);
     },
   ],
 })
-export class PlanificacionModule {}
+export class PlanificacionModule { }

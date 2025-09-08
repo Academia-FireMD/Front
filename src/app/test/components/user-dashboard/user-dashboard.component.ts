@@ -1,19 +1,29 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { Component, computed, EventEmitter, inject, input, Input, Output } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { cloneDeep } from 'lodash';
+import { Memoize } from 'lodash-decorators';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { UserService } from '../../../services/user.service';
-import { Usuario } from '../../../shared/models/user.model';
+import { FilterConfig, GenericListComponent, GenericListMode } from '../../../shared/generic-list/generic-list.component';
 import { SuscripcionTipo } from '../../../shared/models/subscription.model';
+import { Usuario } from '../../../shared/models/user.model';
+import { PrimengModule } from '../../../shared/primeng.module';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { Memoize } from 'lodash-decorators';
-import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
+import { SharedModule } from '../../../shared/shared.module';
 
 @Component({
   selector: 'app-user-dashboard',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrimengModule,
+    SharedModule,
+    GenericListComponent
+  ],
   templateUrl: './user-dashboard.component.html',
   styleUrl: './user-dashboard.component.scss',
 })
@@ -21,6 +31,11 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   userService = inject(UserService);
   confirmationService = inject(ConfirmationService);
   authService = inject(AuthService);
+
+  @Input() mode: GenericListMode = 'overview';
+  @Input() selectedUserIds: number[] = [];
+  extraFilters = input<FilterConfig[]>();
+  @Output() selectionChange = new EventEmitter<number[]>();
 
   availableSubscriptions: any[] = [];
   editDialogVisible = false;
@@ -30,68 +45,73 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   public decodedUser = this.authService.decodeToken() as Usuario;
 
   // Configuración de filtros para el GenericListComponent
-  public filters: FilterConfig[] = [
-    {
-      key: 'createdAt',
-      specialCaseKey: 'rangeDate',
-      label: 'Rango de fechas',
-      type: 'calendar',
-      placeholder: 'Seleccionar rango de fechas',
-      dateConfig: {
-        selectionMode: 'range',
+  public filters = computed(() => {
+    const baseFilters = [
+      {
+        key: 'createdAt',
+        specialCaseKey: 'rangeDate',
+        label: 'Rango de fechas',
+        type: 'calendar',
+        placeholder: 'Seleccionar rango de fechas',
+        dateConfig: {
+          selectionMode: 'range',
+        },
       },
-    },
-    {
-      key: 'suscripcion',
-      label: 'Suscripción',
-      type: 'dropdown',
-      placeholder: 'Seleccionar suscripción',
-      options: [
-        { label: 'Todas las suscripciones', value: 'todas' },
-        { label: 'Sin suscripción', value: 'sin_suscripcion' },
-        { label: 'Básica', value: SuscripcionTipo.BASIC },
-        { label: 'Premium', value: SuscripcionTipo.PREMIUM },
-        { label: 'Pro', value: SuscripcionTipo.PRO },
-      ],
-      filterInterpolation: (value) => {
-        if (value === 'todas') return {};
-        if (value === 'sin_suscripcion') {
-          return { suscripcion: { is: null } };
-        }
-        return { suscripcion: { tipo: { equals: value } } };
+      {
+        key: 'suscripcion',
+        label: 'Suscripción',
+        type: 'dropdown',
+        placeholder: 'Seleccionar suscripción',
+        options: [
+          { label: 'Todas las suscripciones', value: 'todas' },
+          { label: 'Sin suscripción', value: 'sin_suscripcion' },
+          { label: 'Básica', value: SuscripcionTipo.BASIC },
+          { label: 'Premium', value: SuscripcionTipo.PREMIUM },
+          { label: 'Pro', value: SuscripcionTipo.PRO },
+        ],
+        filterInterpolation: (value) => {
+          if (value === 'todas') return {};
+          if (value === 'sin_suscripcion') {
+            return { suscripcion: { is: null } };
+          }
+          return { suscripcion: { tipo: { equals: value } } };
+        },
       },
-    },
-    {
-      key: 'validated',
-      label: 'Estado',
-      type: 'dropdown',
-      placeholder: 'Seleccionar estado',
-      options: [
-        { label: 'Todos', value: 'todos' },
-        { label: 'Verificados', value: true },
-        { label: 'Sin verificar', value: false },
-      ],
-      filterInterpolation: (value) => {
-        if (value === 'todos') return {};
-        return { validated: value };
+      {
+        key: 'validated',
+        label: 'Estado',
+        type: 'dropdown',
+        placeholder: 'Seleccionar estado',
+        options: [
+          { label: 'Todos', value: 'todos' },
+          { label: 'Verificados', value: true },
+          { label: 'Sin verificar', value: false },
+        ],
+        filterInterpolation: (value) => {
+          if (value === 'todos') return {};
+          return { validated: value };
+        },
       },
-    },
-    {
-      key: 'rol',
-      label: 'Rol',
-      type: 'dropdown',
-      placeholder: 'Seleccionar rol',
-      options: [
-        { label: 'Todos', value: 'todos' },
-        { label: 'Admin', value: 'ADMIN' },
-        { label: 'Alumno', value: 'ALUMNO' },
-      ],
-      filterInterpolation: (value) => {
-        if (value === 'todos') return {};
-        return { rol: value };
+      {
+        key: 'rol',
+        label: 'Rol',
+        type: 'dropdown',
+        placeholder: 'Seleccionar rol',
+        options: [
+          { label: 'Todos', value: 'todos' },
+          { label: 'Admin', value: 'ADMIN' },
+          { label: 'Alumno', value: 'ALUMNO' },
+        ],
+        filterInterpolation: (value) => {
+          if (value === 'todos') return {};
+          return { rol: value };
+        },
       },
-    },
-  ];
+    ] as FilterConfig[];
+    return [...baseFilters, ...this.extraFilters() || []];
+  });
+
+
 
   constructor() {
     super();
@@ -117,6 +137,12 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   public onItemClick(item: Usuario) {
     this.editarUsuario(item);
+  }
+
+  public getUserId = (user: Usuario): number => user.id;
+
+  public onSelectionChange(selectedIds: (string | number)[]) {
+    this.selectionChange.emit(selectedIds as number[]);
   }
 
   async loadAvailableSubscriptions() {
@@ -228,7 +254,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         this.toast.info('Usuario denegado exitosamente');
         this.refresh();
       },
-      reject: () => {},
+      reject: () => { },
     });
   }
 
@@ -248,7 +274,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         this.toast.info('Usuario eliminado exitosamente');
         this.refresh();
       },
-      reject: () => {},
+      reject: () => { },
     });
   }
 
