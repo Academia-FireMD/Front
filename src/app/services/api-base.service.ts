@@ -76,7 +76,7 @@ export class ApiBaseService {
     if (response.status !== 500 && !!message) {
       if (!ignoreError) this.toast.error(message);
     }
-    if (response.status == 401) {
+    if (response.status == 401 || response.status == 403) {
       this.router.navigate(['/auth']);
     }
 

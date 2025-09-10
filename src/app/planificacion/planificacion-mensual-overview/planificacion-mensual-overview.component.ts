@@ -5,7 +5,6 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
-import { FormControl } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import {
@@ -19,6 +18,7 @@ import {
 } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
+import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import {
@@ -27,7 +27,6 @@ import {
 } from '../../shared/models/pregunta.model';
 import { Usuario } from '../../shared/models/user.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
-import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-planificacion-mensual-overview',
@@ -98,7 +97,17 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   constructor() {
     super();
     this.fetchItems$ = computed(() => {
-      return this.getPlanificacion({ ...this.pagination() });
+      return this.getPlanificacion({ ...this.pagination() }).pipe(
+        tap((result) => {
+          // Auto-redirect si es alumno y solo tiene una planificación
+          if (this.expectedRole === 'ALUMNO' && result?.data?.length === 1) {
+            const planificacion = result.data[0];
+            this.router.navigate([
+              '/app/planificacion/planificacion-mensual-alumno/' + planificacion.id
+            ]);
+          }
+        })
+      );
     });
   }
 

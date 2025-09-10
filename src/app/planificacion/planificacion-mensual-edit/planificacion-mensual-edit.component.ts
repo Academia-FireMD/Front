@@ -122,7 +122,7 @@ export class PlanificacionMensualEditComponent {
   public endDate: Date | null = null;
 
   planificationIdEffect = effect(() => {
-    if (this.lastLoadedPlanification() && this.lastLoadedPlanification() !== null) {
+    if (this.lastLoadedPlanification() && this.lastLoadedPlanification() !== null && this.expectedRole === 'ADMIN') {
       firstValueFrom(this.userService.getUsersByPlanification$(this.lastLoadedPlanification()?.id as number).pipe(tap((e) => {
         this.usuariosSeleccionadosId = e.map((e) => e.id);
       })));
@@ -251,8 +251,7 @@ export class PlanificacionMensualEditComponent {
         )
       );
       this.toast.success(
-        `Planificación asignada exitosamente a ${this.usuariosSeleccionadosId.length ?? 0
-        } usuarios!`
+        `${res.message}`
       );
       this.load();
       this.usuariosSeleccionadosId = [];
