@@ -1,3 +1,9 @@
+:host ::ng-deep {
+  button {
+    width: 100%;
+  }
+}
+
 .loading {
   animation: blink 1s infinite;
 }
@@ -6,4 +12,4 @@
   50% {
     opacity: 0.5;
   }
-} 
+}

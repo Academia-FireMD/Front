@@ -1,0 +1,253 @@
+.onboarding-container {
+  max-width: 900px;
+  margin: 0 auto;
+
+  .onboarding-header {
+    text-align: center;
+    margin-bottom: 2rem;
+
+    .onboarding-title {
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+      font-size: 1.75rem;
+      font-weight: 600;
+
+      i {
+        margin-right: 0.5rem;
+      }
+    }
+
+    .onboarding-subtitle {
+      color: var(--text-color-secondary);
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .completion-progress {
+      .progress-text {
+        text-align: right;
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+        color: var(--text-color-secondary);
+      }
+
+      .progress-bar {
+        height: 6px;
+        background-color: var(--surface-200);
+        border-radius: 3px;
+        overflow: hidden;
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, var(--primary-color), var(--primary-color-light));
+          border-radius: 3px;
+          transition: width 0.3s ease;
+        }
+      }
+    }
+  }
+
+  .onboarding-form {
+    :host ::ng-deep {
+      .p-accordion {
+        .p-accordion-header {
+          margin-bottom: 0;
+
+          .p-accordion-header-link {
+            padding: 1rem 1.25rem;
+            background: var(--surface-50);
+            border: 1px solid var(--surface-200);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+
+            &:hover {
+              background: var(--surface-100);
+            }
+
+            &:focus {
+              box-shadow: 0 0 0 2px var(--primary-color-light);
+            }
+          }
+
+          &.p-accordion-header-active {
+            .p-accordion-header-link {
+              background: var(--primary-color);
+              color: white;
+              border-color: var(--primary-color);
+            }
+          }
+        }
+
+        .p-accordion-content {
+          border: 1px solid var(--surface-200);
+          border-top: none;
+          border-radius: 0 0 6px 6px;
+          background: white;
+
+          .p-accordion-content-wrapper {
+            padding: 1.5rem;
+          }
+        }
+
+        .p-accordion-tab {
+          margin-bottom: 1rem;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+      }
+
+      .p-float-label {
+        margin-bottom: 1.5rem;
+
+        label {
+          color: var(--text-color-secondary);
+          transition: all 0.2s ease;
+        }
+
+        &:focus-within label,
+        &.p-float-label-focus label {
+          color: var(--primary-color);
+        }
+      }
+
+      .p-inputtext,
+      .p-dropdown,
+      .p-calendar .p-inputtext,
+      .p-inputnumber-input,
+      .p-inputtextarea {
+        border: 1px solid var(--surface-300);
+        border-radius: 6px;
+        padding: 0.75rem;
+        transition: all 0.2s ease;
+
+        &:focus {
+          border-color: var(--primary-color);
+          box-shadow: 0 0 0 2px var(--primary-color-light);
+        }
+      }
+
+      .p-checkbox {
+        .p-checkbox-box {
+          border-radius: 4px;
+          border: 2px solid var(--surface-300);
+          transition: all 0.2s ease;
+
+          &.p-highlight {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+          }
+        }
+      }
+
+      .field-checkbox {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        label {
+          margin-left: 0.5rem;
+          color: var(--text-color);
+          cursor: pointer;
+        }
+      }
+    }
+
+    .form-actions {
+      .completion-hint {
+        small {
+          color: var(--text-color-secondary);
+
+          i {
+            color: var(--primary-color);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive adaptations
+@media (max-width: 768px) {
+  .onboarding-container {
+
+    .onboarding-header {
+      .onboarding-title {
+        font-size: 1.5rem;
+      }
+    }
+
+    :host ::ng-deep {
+      .p-accordion {
+        .p-accordion-header {
+          .p-accordion-header-link {
+            padding: 0.75rem;
+            font-size: 0.9rem;
+          }
+        }
+
+        .p-accordion-content {
+          .p-accordion-content-wrapper {
+            padding: 1rem;
+          }
+        }
+      }
+
+      .p-float-label {
+        margin-bottom: 1.25rem;
+      }
+    }
+
+    .form-actions {
+      .flex {
+        flex-direction: column;
+        gap: 0.75rem !important;
+
+        .ml-auto {
+          margin-left: 0 !important;
+        }
+      }
+    }
+  }
+}
+
+// Dark theme support
+@media (prefers-color-scheme: dark) {
+  .onboarding-container {
+    .onboarding-header {
+      .completion-progress {
+        .progress-bar {
+          background-color: var(--surface-700);
+        }
+      }
+    }
+  }
+}
+
+// Animation for completion progress
+.progress-fill {
+  animation: progressGrow 0.6s ease-out;
+}
+
+@keyframes progressGrow {
+  from {
+    width: 0%;
+  }
+}
+
+// Hover effects for better UX
+.onboarding-form {
+  :host ::ng-deep {
+    .p-inputtext,
+    .p-dropdown,
+    .p-calendar .p-inputtext,
+    .p-inputnumber-input,
+    .p-inputtextarea {
+      &:hover:not(:focus) {
+        border-color: var(--surface-400);
+      }
+    }
+  }
+}

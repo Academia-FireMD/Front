@@ -104,6 +104,20 @@
       class="right-side col-3 flex align-items-center justify-content-end"
     >
       <div class="flex flex-row align-items-center justify-content-end gap-2">
+        @if (decodedUser.rol === 'ADMIN') {
+        <p-button
+          icon="pi pi-angle-down"
+          [style]="{
+            transform: isUserExpanded(item.id)
+              ? 'rotate(180deg)'
+              : 'rotate(0deg)'
+          }"
+          styleClass="p-button-sm p-button-text p-button-rounded"
+          (click)="toggleUserExpansion(item.id, $event)"
+          pTooltip="Ver planificaciones"
+          tooltipPosition="top"
+        />
+        }
         <p-splitButton
           [label]="viewportService.screenWidth != 'xs' ? 'Permitir' : ''"
           icon="pi pi-check"
@@ -116,6 +130,479 @@
       </div>
     </div>
   </div>
+
+  <!-- Expansión de planificaciones e información del usuario -->
+  @if (decodedUser.rol === 'ADMIN' && isUserExpanded(item.id)) {
+  <div class="col-12 mt-2 planifications-expansion">
+    <div class="p-3 border-1 border-round surface-border">
+      <!-- Tabs para planificaciones e información personal -->
+      <p-tabView>
+        <p-tabPanel header="Planificaciones" leftIcon="pi pi-calendar">
+          <div class="planifications-content">
+            @if (isLoadingPlanifications(item.id)) {
+            <div class="text-center py-3">
+              <p-progressSpinner styleClass="small-spinner" />
+              <p class="text-sm text-500">Cargando planificaciones...</p>
+            </div>
+            } @else if (getUserPlanifications(item.id).length === 0) {
+            <div class="text-center py-3">
+              <i class="pi pi-calendar-times text-400 text-xl"></i>
+              <p class="text-sm text-500 mt-2">
+                No tiene planificaciones asignadas
+              </p>
+            </div>
+            } @else {
+            <div class="grid">
+              @for (asignacion of getUserPlanifications(item.id); track
+              asignacion.id) {
+              <div class="col-12 lg:col-6">
+                <div
+                  class="p-3 border-1 border-round-md surface-50 planification-card"
+                >
+                  <div class="flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                      <h6 class="m-0 mb-2 text-primary">
+                        {{ asignacion.planificacion.identificador }}
+                      </h6>
+                      <p class="text-sm text-600 m-0 mb-2">
+                        {{ asignacion.planificacion.descripcion }}
+                      </p>
+                      <div
+                        class="flex gap-2 align-items-center text-xs text-500"
+                      >
+                        <i class="pi pi-calendar"></i>
+                        <span
+                          >Asignada:
+                          {{ asignacion.createdAt | date : "short" }}</span
+                        >
+                      </div>
+                      @if (asignacion.planificacion.subBloques) {
+                      <div
+                        class="flex gap-2 align-items-center text-xs text-500 mt-1"
+                      >
+                        <i class="pi pi-list"></i>
+                        <span
+                          >{{
+                            asignacion.planificacion.subBloques.length
+                          }}
+                          subbloques</span
+                        >
+                      </div>
+                      }
+                    </div>
+                    <div class="flex flex-column gap-1">
+                      <p-button
+                        icon="pi pi-eye"
+                        styleClass="p-button-sm p-button-text"
+                        pTooltip="Ver planificación"
+                        tooltipPosition="left"
+                        (click)="
+                          verPlanificacion(asignacion.planificacion.id);
+                          $event.stopPropagation()
+                        "
+                      />
+                      <p-button
+                        icon="pi pi-times"
+                        styleClass="p-button-sm p-button-text p-button-danger"
+                        pTooltip="Desvincular"
+                        tooltipPosition="left"
+                        (click)="
+                          desvincularPlanificacion(
+                            asignacion.planificacion.id,
+                            item.id
+                          );
+                          $event.stopPropagation()
+                        "
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              }
+            </div>
+            }
+          </div>
+        </p-tabPanel>
+
+        <p-tabPanel header="Información Personal" leftIcon="pi pi-user-plus">
+          <div class="user-onboarding-info">
+            <div class="onboarding-summary mb-3">
+              <div class="flex justify-content-between align-items-center mb-2">
+                <span class="font-medium">Información completada:</span>
+                <span class="completion-percentage"
+                  >{{ getOnboardingCompletionPercentage(item) }}%</span
+                >
+              </div>
+              <div class="completion-bar">
+                <div
+                  class="completion-fill"
+                  [style.width.%]="getOnboardingCompletionPercentage(item)"
+                  [ngClass]="{
+                    low: getOnboardingCompletionPercentage(item) < 30,
+                    medium:
+                      getOnboardingCompletionPercentage(item) >= 30 &&
+                      getOnboardingCompletionPercentage(item) < 70,
+                    high: getOnboardingCompletionPercentage(item) >= 70
+                  }"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Tabs para organizar mejor la información -->
+            <p-tabView>
+              <!-- Información Principal -->
+              <p-tabPanel
+                header="Información Principal"
+                leftIcon="pi pi-info-circle"
+              >
+                <div class="onboarding-fields grid">
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Tipo de oposición:</label>
+                      <span>{{
+                        item.tipoOposicion || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Nivel:</label>
+                      <span>{{
+                        item.nivelOposicion || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Tipo de planificación deseada:</label>
+                      <span>{{
+                        item.tipoDePlanificacionDuracionDeseada ||
+                          "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <!--
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Planificación seleccionada:</label>
+                      <span>{{ item.planificacionSeleccionada || 'No proporcionado' }}</span>
+                    </div>
+                  </div> -->
+                </div>
+              </p-tabPanel>
+
+              <!-- Datos Personales -->
+              <p-tabPanel header="Datos Personales" leftIcon="pi pi-user">
+                <div class="onboarding-fields grid">
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>DNI:</label>
+                      <span>{{ item.dni || "No proporcionado" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Fecha de nacimiento:</label>
+                      <span>{{
+                        item.fechaNacimiento
+                          ? (item.fechaNacimiento | date : "dd/MM/yyyy")
+                          : "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Teléfono:</label>
+                      <span>{{ item.telefono || "No proporcionado" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Empresa:</label>
+                      <span>{{
+                        item.nombreEmpresa || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>País/Región:</label>
+                      <span>{{ item.paisRegion || "No proporcionado" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Provincia:</label>
+                      <span>{{ item.provincia || "No proporcionado" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Dirección:</label>
+                      <span>{{
+                        item.direccionCalle || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-4">
+                    <div class="info-field">
+                      <label>Código Postal:</label>
+                      <span>{{ item.codigoPostal || "No proporcionado" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-4">
+                    <div class="info-field">
+                      <label>Población:</label>
+                      <span>{{ item.poblacion || "No proporcionado" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-4">
+                    <div class="info-field">
+                      <label>Municipio Residencia:</label>
+                      <span>{{
+                        item.municipioResidencia || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </p-tabPanel>
+
+              <!-- Formación y Experiencia -->
+              <p-tabPanel header="Formación" leftIcon="pi pi-book">
+                <div class="onboarding-fields grid">
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Estudios previos:</label>
+                      <span>{{
+                        item.estudiosPrevaios || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Trabajo actual/ocupación:</label>
+                      <span>{{
+                        item.actualTrabajoOcupacion || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Hobbies:</label>
+                      <span>{{ item.hobbies || "No proporcionado" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Descripción de la semana:</label>
+                      <span>{{
+                        item.descripcionSemana || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Experiencia en temario:</label>
+                      <span>{{ item.temaPersonal || "No proporcionado" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Oposiciones hechas y resultados:</label>
+                      <span>{{
+                        item.oposicionesHechasResultados || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Pruebas físicas:</label>
+                      <span>{{
+                        item.pruebasFisicas || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Técnicas de estudio utilizadas:</label>
+                      <span>{{
+                        item.tecnicasEstudioUtilizadas || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </p-tabPanel>
+
+              <!-- Planificación -->
+              <p-tabPanel header="Planificación" leftIcon="pi pi-calendar">
+                <div class="onboarding-fields grid">
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Horas estudio/día:</label>
+                      <span>{{
+                        item.horasEstudioDiaSemana
+                          ? item.horasEstudioDiaSemana + "h"
+                          : "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Horas entreno/día:</label>
+                      <span>{{
+                        item.horasEntrenoDiaSemana
+                          ? item.horasEntrenoDiaSemana + "h"
+                          : "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Organización estudio y entrenamiento:</label>
+                      <span>{{
+                        item.organizacionEstudioEntreno || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>¿Trabajas actualmente?:</label>
+                      <span>{{
+                        item.trabajasActualmente || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Agotamiento físico y mental:</label>
+                      <span>{{
+                        item.agotamientoFisicoMental || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Tiempo dedicable al estudio:</label>
+                      <span>{{
+                        item.tiempoDedicableEstudio || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Días semana disponibles:</label>
+                      <span>{{
+                        item.diasSemanaDisponibles || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Otra información laboral:</label>
+                      <span>{{
+                        item.otraInformacionLaboral || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </p-tabPanel>
+
+              <!-- Objetivos -->
+              <p-tabPanel header="Objetivos" leftIcon="pi pi-target">
+                <div class="onboarding-fields grid">
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Objetivos a 6 meses:</label>
+                      <span>{{
+                        item.objetivosSeisMeses || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Objetivos a 1 año:</label>
+                      <span>{{
+                        item.objetivosUnAno || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </p-tabPanel>
+
+              <!-- Academia -->
+              <p-tabPanel header="Academia" leftIcon="pi pi-building">
+                <div class="onboarding-fields grid">
+                  <div class="col-12 md:col-6">
+                    <div class="info-field">
+                      <label>Experiencia en academias:</label>
+                      <span
+                        [ngClass]="
+                          item.experienciaAcademias ? 'badge-yes' : 'badge-no'
+                        "
+                      >
+                        {{ item.experienciaAcademias ? "Sí" : "No" }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>¿Qué valoras en una academia?:</label>
+                      <span>{{
+                        item.queValorasAcademia || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>¿Qué menos te gusta de las academias?:</label>
+                      <span>{{
+                        item.queMenosGustaAcademias || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>¿Qué esperas de esta academia?:</label>
+                      <span>{{
+                        item.queEsperasAcademia || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </p-tabPanel>
+
+              <!-- Comentarios -->
+              <p-tabPanel header="Comentarios" leftIcon="pi pi-comment">
+                <div class="onboarding-fields grid">
+                  <div class="col-12">
+                    <div class="info-field">
+                      <label>Comentarios adicionales:</label>
+                      <span>{{
+                        item.comentariosAdicionales || "No proporcionado"
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </p-tabPanel>
+            </p-tabView>
+
+            @if (getOnboardingCompletionPercentage(item) < 50) {
+            <div class="onboarding-alert mt-3">
+              <div class="alert-content">
+                <i class="pi pi-info-circle"></i>
+                <span
+                  >El alumno tiene poca información completada. Considera
+                  contactarle para completar su perfil.</span
+                >
+              </div>
+            </div>
+            }
+          </div>
+        </p-tabPanel>
+      </p-tabView>
+    </div>
+  </div>
+  }
 </ng-template>
 
 <!-- Diálogo para cambiar suscripción -->

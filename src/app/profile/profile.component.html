@@ -5,10 +5,7 @@
     <p>Cargando perfil...</p>
   </div>
 
-  <div
-    class="profile-content"
-    *ngIf="!(isLoading$ | async) && user"
-  >
+  <div class="profile-content" *ngIf="!(isLoading$ | async) && user">
     <div class="grid">
       <!-- Información del perfil (lado izquierdo) -->
       <div
@@ -83,15 +80,9 @@
 
             <div class="form-group mb-3">
               <label for="comunidad">Comunidad</label>
-              <p-dropdown
-                [options]="comunidades"
+              <app-comunidad-dropdown
                 [(ngModel)]="user.comunidad"
-                optionLabel="name"
-                optionValue="value"
-                styleClass="w-full"
-                id="comunidad"
-                placeholder="Selecciona comunidad"
-              ></p-dropdown>
+              ></app-comunidad-dropdown>
             </div>
 
             <div class="form-group mb-3">
@@ -129,22 +120,6 @@
                   </div>
                 </ng-template>
               </p-dropdown>
-            </div>
-
-            <div class="form-group mb-3">
-              <label for="tipoDePlanificacionDuracionDeseada"
-                >Duración de planificación</label
-              >
-              <p-dropdown
-                id="tipoDePlanificacionDuracionDeseada"
-                styleClass="w-full"
-                [options]="duracionesDisponibles"
-                [(ngModel)]="user.tipoDePlanificacionDuracionDeseada"
-                optionLabel="label"
-                optionValue="value"
-                appendTo="body"
-                placeholder="Seleccione una duración"
-              ></p-dropdown>
             </div>
 
             <div class="form-group mb-3">
@@ -299,6 +274,83 @@
             </div>
           </div>
         </div>
+
+        <!-- Card de Información Personal / Onboarding -->
+        <div class="onboarding-card mt-4" *ngIf="user.rol === Rol.ALUMNO">
+          <div class="card-header">
+            <h2><i class="pi pi-user-plus"></i> Información Personal</h2>
+          </div>
+
+          <div class="card-content">
+            <div class="onboarding-status mb-3">
+              <div class="completion-info">
+                <div
+                  class="flex justify-content-between align-items-center mb-2"
+                >
+                  <span class="completion-text"> Información completada: </span>
+                  <span class="completion-percentage font-semibold">
+                    {{ getOnboardingCompletionPercentage() }}%
+                  </span>
+                </div>
+                <div class="completion-bar">
+                  <div
+                    class="completion-fill"
+                    [style.width.%]="getOnboardingCompletionPercentage()"
+                    [ngClass]="{
+                      low: getOnboardingCompletionPercentage() < 30,
+                      medium:
+                        getOnboardingCompletionPercentage() >= 30 &&
+                        getOnboardingCompletionPercentage() < 70,
+                      high:
+                        getOnboardingCompletionPercentage() >= 70 &&
+                        getOnboardingCompletionPercentage() < 80,
+                      complete: getOnboardingCompletionPercentage() >= 80
+                    }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="onboarding-help"
+              *ngIf="getOnboardingCompletionPercentage() < 100"
+            >
+              <div class="help-message">
+                <i class="pi pi-info-circle mr-2"></i>
+                <span>
+                  Completar esta información nos ayuda a personalizar tu
+                  experiencia de aprendizaje
+                </span>
+              </div>
+            </div>
+
+            <div class="completed-message" *ngIf="isOnboardingComplete()">
+              <i class="pi pi-check-circle mr-2"></i>
+              <span *ngIf="getOnboardingCompletionPercentage() >= 100">
+                ¡Información completa! Gracias por ayudarnos a conocerte mejor.
+              </span>
+              <span
+                *ngIf="
+                  getOnboardingCompletionPercentage() >= 80 &&
+                  getOnboardingCompletionPercentage() < 100
+                "
+              >
+                ¡Lo tienes bastante bien! Aunque todavía puedes mejorar tu
+                perfil completando el
+                {{ 100 - getOnboardingCompletionPercentage() }}% restante.
+              </span>
+            </div>
+
+            <div class="onboarding-actions mt-4">
+              <p-button
+                label="Completar información"
+                icon="pi pi-pencil"
+                styleClass="p-button-outlined w-full"
+                (click)="openOnboardingModal()"
+              ></p-button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -315,3 +367,53 @@
     </div>
   </div>
 </div>
+
+<!-- Modal de onboarding -->
+<p-dialog
+  header="Completar ficha personal"
+  [(visible)]="showOnboardingModal"
+  [modal]="true"
+  [style]="{ width: '90vw', maxWidth: '1000px' }"
+  [draggable]="false"
+  [resizable]="false"
+  [maximizable]="true"
+>
+  <p *ngIf="firstTimeShowingOnboardingModal" class="text-center">
+    La información que recopilamos nos permite ofrecerte un servicio más
+    personalizado y eficiente.
+  </p>
+  <app-onboarding-form
+    #onboardingForm
+    [initialData]="onboardingData"
+    [isOptional]="true"
+    [showTitle]="false"
+    [showSkipButton]="false"
+    (dataSubmitted)="onOnboardingUpdated($event)"
+  ></app-onboarding-form>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end align-items-center">
+      <div class="completion-hint" *ngIf="viewportService.isMobile()">
+        <small class="text-500">
+          <i class="pi pi-info-circle mr-1"></i>
+          Esta información nos ayuda a personalizar tu experiencia de
+          aprendizaje
+        </small>
+      </div>
+
+      <div class="flex gap-2 justify-content-end">
+        <p-button
+          type="submit"
+          [label]="
+            isFormPartiallyFilled()
+              ? 'Actualizar información'
+              : 'Guardar información'
+          "
+          styleClass="p-button-raised"
+          [disabled]="!onboardingForm?.formGroup?.valid"
+          (click)="onboardingForm?.onSubmit()"
+        />
+      </div>
+    </div>
+  </ng-template>
+</p-dialog>

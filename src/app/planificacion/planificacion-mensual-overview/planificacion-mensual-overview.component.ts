@@ -79,6 +79,18 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
         { label: 'Sin asignar', value: false },
       ],
     },
+    {
+      key: 'esPorDefecto',
+      label: 'Planificación por defecto',
+      type: 'toggle',
+      placeholder: 'Mostrar planificación por defecto',
+      defaultValue: false,
+      filterInterpolation: (value: boolean) => {
+        return {
+          esPorDefecto: Boolean(value),
+        }
+      }
+    }
   ];
 
   commMap = (pagination: PaginationFilter) => {

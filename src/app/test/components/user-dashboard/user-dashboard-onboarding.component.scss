@@ -1,0 +1,107 @@
+// Estilos para la información de onboarding en el dashboard
+.user-onboarding-info {
+  .onboarding-summary {
+    .completion-percentage {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .completion-bar {
+      height: 6px;
+      background-color: var(--surface-200);
+      border-radius: 3px;
+      overflow: hidden;
+
+      .completion-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+
+        &.low {
+          background: linear-gradient(90deg, var(--red-400), var(--red-500));
+        }
+
+        &.medium {
+          background: linear-gradient(90deg, var(--orange-400), var(--orange-500));
+        }
+
+        &.high {
+          background: linear-gradient(90deg, var(--green-400), var(--green-500));
+        }
+      }
+    }
+  }
+
+  .onboarding-fields {
+    .info-field {
+      padding: 0.75rem;
+      background-color: var(--surface-50);
+      border-radius: 0.25rem;
+      margin-bottom: 0.5rem;
+
+      label {
+        display: block;
+        font-weight: 500;
+        color: var(--text-color-secondary);
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+      }
+
+      span {
+        color: var(--text-color);
+        font-size: 0.9rem;
+
+        &.badge-yes {
+          display: inline-block;
+          padding: 0.2rem 0.5rem;
+          background-color: var(--green-100);
+          color: var(--green-700);
+          border-radius: 0.25rem;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+
+        &.badge-no {
+          display: inline-block;
+          padding: 0.2rem 0.5rem;
+          background-color: var(--red-100);
+          color: var(--red-700);
+          border-radius: 0.25rem;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  .onboarding-alert {
+    .alert-content {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      background-color: var(--orange-50);
+      border-radius: 0.25rem;
+      color: var(--orange-700);
+      font-size: 0.875rem;
+      border-left: 3px solid var(--orange-500);
+
+      i {
+        color: var(--orange-500);
+        margin-right: 0.5rem;
+        font-size: 1rem;
+      }
+    }
+  }
+}
+
+// Responsive para los tabs
+@media (max-width: 768px) {
+  .user-onboarding-info {
+    .onboarding-fields {
+      .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+    }
+  }
+}

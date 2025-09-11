@@ -21,6 +21,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputIconModule } from 'primeng/inputicon';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
@@ -30,10 +31,12 @@ import { OrderListModule } from 'primeng/orderlist';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { PaginatorModule } from 'primeng/paginator';
 import { PanelModule } from 'primeng/panel';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { RippleModule } from 'primeng/ripple';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SplitButtonModule } from 'primeng/splitbutton';
+import { TabViewModule } from 'primeng/tabview';
 import { TagModule } from 'primeng/tag';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { TooltipModule } from 'primeng/tooltip';
@@ -62,6 +65,7 @@ const modules = [
   CalendarModule,
   InputGroupModule,
   InputGroupAddonModule,
+  InputNumberModule,
   RadioButtonModule,
   InputGroupModule,
   CheckboxModule,
@@ -77,9 +81,11 @@ const modules = [
   ColorPickerModule,
   FileUploadModule,
   TooltipModule,
+  TabViewModule,
   KeyComponent,
   NgxSpinnerModule,
-  SplitButtonModule
+  SplitButtonModule,
+  ProgressSpinnerModule
 ];
 
 @NgModule({

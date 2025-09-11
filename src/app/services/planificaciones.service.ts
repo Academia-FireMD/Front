@@ -84,6 +84,10 @@ export class PlanificacionesService extends ApiBaseService {
     >;
   }
 
+  public getPlanificacionesPorDefecto$(tipoDePlanificacion: TipoDePlanificacionDeseada) {
+    return this.post('/planificaciones-por-defecto', { tipoDePlanificacion }) as Observable<PlanificacionMensual[]>;
+  }
+
   public getPlanificacionMensualAlumno$(filter: PaginationFilter) {
     return this.post('/planificaciones-mensuales-alumno', filter) as Observable<
       PaginatedResult<PlanificacionMensual>

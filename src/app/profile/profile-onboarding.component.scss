@@ -1,0 +1,223 @@
+// Estilos para la card de onboarding
+.onboarding-card {
+  background-color: var(--surface-card);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-700));
+    color: white;
+    padding: 1.25rem 1.5rem;
+    position: relative;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      i {
+        font-size: 1.25rem;
+      }
+    }
+  }
+
+  .card-content {
+    padding: 1.5rem;
+  }
+
+  .onboarding-status {
+    .completion-info {
+      .completion-text {
+        font-size: 0.9rem;
+        color: var(--text-color-secondary);
+      }
+
+      .completion-percentage {
+        color: var(--primary-color);
+        font-size: 1rem;
+      }
+
+      .completion-bar {
+        height: 8px;
+        background-color: var(--surface-200);
+        border-radius: 4px;
+        overflow: hidden;
+
+        .completion-fill {
+          height: 100%;
+          border-radius: 4px;
+          transition: width 0.4s ease;
+
+          &.low {
+            background: linear-gradient(90deg, var(--red-400), var(--red-500));
+          }
+
+          &.medium {
+            background: linear-gradient(90deg, var(--orange-400), var(--orange-500));
+          }
+
+          &.high {
+            background: linear-gradient(90deg, var(--green-400), var(--green-500));
+          }
+
+          &.complete {
+            background: linear-gradient(90deg, var(--green-500), var(--green-600));
+          }
+        }
+      }
+    }
+  }
+
+  .onboarding-help {
+    .help-message {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      background-color: var(--blue-50);
+      border-radius: 0.25rem;
+      color: var(--blue-700);
+      font-size: 0.875rem;
+
+      i {
+        color: var(--blue-500);
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .completed-message {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: var(--green-50);
+    border-radius: 0.25rem;
+    color: var(--green-700);
+    font-size: 0.875rem;
+
+    i {
+      color: var(--green-500);
+      font-size: 1rem;
+    }
+  }
+}
+
+// Estilos para la sección de onboarding (legacy)
+.onboarding-section {
+  .onboarding-card {
+    background-color: var(--surface-hover);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    border: 2px dashed var(--surface-300);
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: var(--primary-color);
+      background-color: var(--surface-50);
+    }
+
+    h4 {
+      color: var(--text-color);
+
+      i {
+        color: var(--primary-color);
+      }
+    }
+
+    .onboarding-status {
+      .completion-info {
+        .completion-text {
+          display: block;
+          font-size: 0.9rem;
+          color: var(--text-color-secondary);
+          margin-bottom: 0.5rem;
+        }
+
+        .completion-bar {
+          height: 8px;
+          background-color: var(--surface-200);
+          border-radius: 4px;
+          overflow: hidden;
+
+          .completion-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+
+            &.low {
+              background: linear-gradient(90deg, var(--red-400), var(--red-500));
+            }
+
+            &.medium {
+              background: linear-gradient(90deg, var(--orange-400), var(--orange-500));
+            }
+
+            &.high {
+              background: linear-gradient(90deg, var(--green-400), var(--green-500));
+            }
+          }
+        }
+      }
+    }
+
+    .onboarding-help {
+      .help-message {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background-color: var(--blue-50);
+        border-radius: 0.25rem;
+        color: var(--blue-700);
+        font-size: 0.9rem;
+
+        i {
+          color: var(--blue-500);
+          font-size: 1rem;
+        }
+      }
+    }
+
+    .completed-message {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      background-color: var(--green-50);
+      border-radius: 0.25rem;
+      color: var(--green-700);
+      font-size: 0.9rem;
+
+      i {
+        color: var(--green-500);
+        font-size: 1rem;
+      }
+    }
+  }
+}
+
+// Responsive adaptations
+@media (max-width: 768px) {
+  .onboarding-section {
+    .onboarding-card {
+      padding: 1rem;
+
+      h4 {
+        font-size: 1rem;
+      }
+
+      .flex {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch !important;
+      }
+    }
+  }
+}

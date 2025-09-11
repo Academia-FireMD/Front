@@ -15,10 +15,11 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { firstValueFrom, map } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { UserService } from '../../../services/user.service';
-import { comunidadConImagenNombreMap } from '../../../shared/comunidad-picker/comunidad-picker.component';
-import { Comunidad } from '../../../shared/models/pregunta.model';
-import { SharedModule } from '../../../shared/shared.module';
 import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
+import { Comunidad } from '../../../shared/models/pregunta.model';
+import { OnboardingFormComponent } from '../../../shared/onboarding-form/onboarding-form.component';
+import { SharedModule } from '../../../shared/shared.module';
+import { comunidades } from '../../../utils/consts';
 import {
   passwordMatchValidator,
   passwordStrengthValidator,
@@ -29,11 +30,11 @@ interface RegistroTemporal {
   nombre: string;
   apellidos: string;
   woocommerceCustomerId: string;
-  
+
   // Campos de suscripción
   planType?: string;
   monthlyPrice?: number;
-  
+
   // Campos de consumible
   tipoRegistro: 'SUSCRIPCION' | 'CONSUMIBLE';
   tipoConsumible?: string;
@@ -59,7 +60,8 @@ interface RegistroTemporal {
     CheckboxModule,
     DialogModule,
     ProgressSpinnerModule,
-    AsyncButtonComponent
+    AsyncButtonComponent,
+    OnboardingFormComponent
   ]
 })
 export class RegistroComponent implements OnInit {
@@ -89,7 +91,7 @@ export class RegistroComponent implements OnInit {
         passwordStrengthValidator()
       ]],
       repetirContrasenya: ['', [Validators.required]],
-      relevancia: ['', Validators.required],
+      relevancia: [null as any, Validators.required],
       tutor: [],
       politicaDePrivacidadAceptada: [
         false,
@@ -104,7 +106,7 @@ export class RegistroComponent implements OnInit {
   public comunidades = Object.keys(Comunidad).map((entry) => {
     return {
       code: entry,
-      ...comunidadConImagenNombreMap[entry],
+      ...comunidades[entry],
     };
   });
 
@@ -194,9 +196,6 @@ export class RegistroComponent implements OnInit {
         )
       );
 
-      
-
-      // Emitir evento de registro completado con credenciales para login automático
       this.registroCompletado.emit({ email, password });
 
       if(this.mode == 'default'){
@@ -205,7 +204,7 @@ export class RegistroComponent implements OnInit {
         );
       }else if(this.mode == 'activation'){
         this.toast.success(
-          'Producto activado correctamente.'
+          'Producto activado correctamente. Ya puedes acceder a tu cuenta.'
         );
       }
 

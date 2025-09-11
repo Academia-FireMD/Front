@@ -29,19 +29,25 @@
           <h3>Completa tu activación</h3>
 
           <!-- Info para Suscripciones -->
-          <div *ngIf="registroTemporal.tipoRegistro === 'SUSCRIPCION'" class="plan-details">
+          <div
+            *ngIf="registroTemporal.tipoRegistro === 'SUSCRIPCION'"
+            class="plan-details"
+          >
             <p>
               <strong>Plan seleccionado:</strong>
               {{ registroTemporal.planType }}
             </p>
             <p>
               <strong>Precio mensual:</strong>
-              {{ registroTemporal.monthlyPrice | number:'1.2-2' }}€
+              {{ registroTemporal.monthlyPrice | number : "1.2-2" }}€
             </p>
           </div>
 
           <!-- Info para Consumibles -->
-          <div *ngIf="registroTemporal.tipoRegistro === 'CONSUMIBLE'" class="product-details">
+          <div
+            *ngIf="registroTemporal.tipoRegistro === 'CONSUMIBLE'"
+            class="product-details"
+          >
             <p>
               <strong>Producto:</strong>
               <span [ngSwitch]="registroTemporal.tipoConsumible">
@@ -53,21 +59,30 @@
             </p>
             <p>
               <strong>Precio:</strong>
-              {{ registroTemporal.precio | number:'1.2-2' }}€
+              {{ registroTemporal.precio | number : "1.2-2" }}€
             </p>
             <p class="text-sm text-secondary mt-2">
               <i class="pi pi-info-circle mr-2"></i>
-              Una vez completes el registro, podrás acceder a tu producto desde tu panel personal.
+              Una vez completes el registro, podrás acceder a tu producto desde
+              tu panel personal.
             </p>
           </div>
 
           <div class="alert alert-info mt-3">
             <i class="pi pi-check-circle mr-2"></i>
-            Rellena los siguientes datos para activar tu {{ registroTemporal.tipoRegistro === 'SUSCRIPCION' ? 'suscripción' : 'producto' }}.
+            Rellena los siguientes datos para activar tu
+            {{
+              registroTemporal.tipoRegistro === "SUSCRIPCION"
+                ? "suscripción"
+                : "producto"
+            }}.
           </div>
 
           <!-- Botón "Ya tengo cuenta" para consumibles -->
-          <div *ngIf="registroTemporal?.tipoRegistro === 'CONSUMIBLE'" class="mt-3">
+          <div
+            *ngIf="registroTemporal?.tipoRegistro === 'CONSUMIBLE'"
+            class="mt-3"
+          >
             <button
               pButton
               type="button"
@@ -80,6 +95,7 @@
           </div>
         </div>
 
+        <!-- Formulario básico de registro -->
         <div
           class="form-login"
           [ngClass]="{
@@ -135,7 +151,8 @@
           </div>
 
           <!-- Campo de comunidad -->
-          <app-comunidad-dropdown class="w-full"
+          <app-comunidad-dropdown
+            class="w-full"
             [formControl]="relevancia"
             [placeholder]="'Comunidad'"
             [multiple]="false"
@@ -300,7 +317,9 @@
           </div>
           <!-- Botón de registro -->
           <app-async-button
-            [label]="mode === 'activation' ? 'Completar registro' : 'Registrarse'"
+            [label]="
+              mode === 'activation' ? 'Completar registro' : 'Registrarse'
+            "
             [action]="register.bind(this)"
             [disabled]="formGroup.invalid"
             styleClass="p-button dark-button p-button-raised"

@@ -1,4 +1,4 @@
-import { Comunidad } from './pregunta.model';
+import { Comunidad, NivelOposicion, TipoOposicion } from './pregunta.model';
 import { Suscripcion } from './subscription.model';
 import { Test } from './test.model';
 
@@ -23,6 +23,48 @@ export interface Usuario {
   woocommerceCustomerId?: string;
   suscripcion?: Suscripcion;
   consumibles?: Consumible[];
+
+  // Campos de onboarding
+  dni?: string;
+  fechaNacimiento?: Date;
+  nombreEmpresa?: string;
+  paisRegion?: string;
+  direccionCalle?: string;
+  codigoPostal?: string;
+  poblacion?: string;
+  provincia?: string;
+  telefono?: string;
+  municipioResidencia?: string;
+  estudiosPrevaios?: string;
+  actualTrabajoOcupacion?: string;
+  hobbies?: string;
+  descripcionSemana?: string;
+  horasEstudioDiaSemana?: number;
+  horasEntrenoDiaSemana?: number;
+  organizacionEstudioEntreno?: string;
+  temaPersonal?: string;
+  oposicionesHechasResultados?: string;
+  pruebasFisicas?: string;
+  tecnicasEstudioUtilizadas?: string;
+  objetivosSeisMeses?: string;
+  objetivosUnAno?: string;
+  experienciaAcademias?: boolean;
+  queValorasAcademia?: string;
+  queMenosGustaAcademias?: string;
+  queEsperasAcademia?: string;
+  trabajasActualmente?: string;
+  agotamientoFisicoMental?: string;
+  tiempoDedicableEstudio?: string;
+  diasSemanaDisponibles?: string;
+  otraInformacionLaboral?: string;
+  comentariosAdicionales?: string;
+  onboardingCompletado?: boolean;
+  ultimoRecordatorioOnboarding?: Date;
+
+  // Nuevos campos faltantes
+  tipoOposicion?: TipoOposicion;
+  nivelOposicion?: NivelOposicion;
+  planificacionSeleccionada?: number; // ID de la planificación seleccionada
 }
 
 export interface Consumible {

@@ -6,6 +6,7 @@ import {
   PaginationFilter,
 } from '../shared/models/pagination.model';
 import { Usuario } from '../shared/models/user.model';
+import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { ApiBaseService } from './api-base.service';
 
 @Injectable({
@@ -76,5 +77,13 @@ export class UserService extends ApiBaseService {
 
   public getUsersByPlanification$(planificationId: number,) {
     return this.post(`/by-planification/${planificationId}`, {}) as Observable<Usuario[]>;
+  }
+
+  public getUserPlanifications$(userId: number) {
+    return this.get(`/planifications/${userId}`) as Observable<any[]>;
+  }
+
+  public updateOnboardingData$(data: OnboardingData): Observable<Usuario> {
+    return this.post('/update-onboarding', data) as Observable<Usuario>;
   }
 }

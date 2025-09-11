@@ -1,28 +1,30 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
-import { Observable, catchError, filter, firstValueFrom, of, tap } from 'rxjs';
+import { Observable, filter, firstValueFrom } from 'rxjs';
 import { PlanificacionesService } from '../services/planificaciones.service';
 import { UserService } from '../services/user.service';
+import { ViewportService } from '../services/viewport.service';
 import {
   Comunidad,
   duracionesDisponibles,
 } from '../shared/models/pregunta.model';
 import { SuscripcionTipo } from '../shared/models/subscription.model';
-import { Usuario } from '../shared/models/user.model';
+import { Rol, Usuario } from '../shared/models/user.model';
+import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
 import {
   selectCurrentUser,
-  selectUserLoading,
   selectUserError,
+  selectUserLoading,
 } from '../store/user/user.selectors';
-import { cloneDeep } from 'lodash';
 
 @Component({
   selector: 'app-profile',
   templateUrl: './profile.component.html',
-  styleUrl: './profile.component.scss',
+  styleUrls: ['./profile.component.scss', './profile-onboarding.component.scss'],
 })
 export class ProfileComponent implements OnInit {
   // Servicios
@@ -30,6 +32,7 @@ export class ProfileComponent implements OnInit {
   private planificacionService = inject(PlanificacionesService);
   private toastService = inject(ToastrService);
   private store = inject(Store<AppState>);
+  viewportService = inject(ViewportService);
 
   // Propiedades del store
   user$ = this.store.select(selectCurrentUser);
@@ -45,6 +48,12 @@ export class ProfileComponent implements OnInit {
   countPlanificacionesAsignadas$ =
     this.planificacionService.getInfoPlanificacionesAsignadas();
 
+  // Control del onboarding
+  showOnboardingModal = false;
+  firstTimeShowingOnboardingModal = false;
+  onboardingData: OnboardingData = {};
+  public Rol = Rol;
+
   // Enums para los templates
   SuscripcionTipo = SuscripcionTipo;
 
@@ -54,7 +63,7 @@ export class ProfileComponent implements OnInit {
     value: entry,
   }));
 
-  constructor() {}
+  constructor() { }
 
   ngOnInit(): void {
     // Cargar usuario desde el store
@@ -63,9 +72,13 @@ export class ProfileComponent implements OnInit {
     // Suscribirse al usuario del store
     firstValueFrom(this.user$.pipe(filter(user => user !== null))).then((user) => {
       this.user = cloneDeep(user);
+      this.loadOnboardingData();
+
+      // Verificar si es primer acceso y abrir modal automáticamente
+      this.checkFirstTimeAccess();
     });
 
-    
+
 
     // Manejar errores
     this.error$.subscribe((error) => {
@@ -166,5 +179,106 @@ export class ProfileComponent implements OnInit {
     if (remainingDays <= 0) return 'subscription-status-expired';
     if (remainingDays <= 7) return 'subscription-status-warning';
     return 'subscription-status-active';
+  }
+
+  private loadOnboardingData() {
+    if (!this.user) return;
+
+    // Mapear datos del usuario a formato de onboarding
+    this.onboardingData = {
+      dni: this.user.dni,
+      fechaNacimiento: this.user.fechaNacimiento ? new Date(this.user.fechaNacimiento) : undefined,
+      nombreEmpresa: this.user.nombreEmpresa,
+      paisRegion: this.user.paisRegion,
+      direccionCalle: this.user.direccionCalle,
+      codigoPostal: this.user.codigoPostal,
+      poblacion: this.user.poblacion,
+      provincia: this.user.provincia,
+      telefono: this.user.telefono,
+      municipioResidencia: this.user.municipioResidencia,
+      estudiosPrevaios: this.user.estudiosPrevaios,
+      actualTrabajoOcupacion: this.user.actualTrabajoOcupacion,
+      hobbies: this.user.hobbies,
+      descripcionSemana: this.user.descripcionSemana,
+      horasEstudioDiaSemana: this.user.horasEstudioDiaSemana,
+      horasEntrenoDiaSemana: this.user.horasEntrenoDiaSemana,
+      organizacionEstudioEntreno: this.user.organizacionEstudioEntreno,
+      temaPersonal: this.user.temaPersonal,
+      oposicionesHechasResultados: this.user.oposicionesHechasResultados,
+      pruebasFisicas: this.user.pruebasFisicas,
+      tecnicasEstudioUtilizadas: this.user.tecnicasEstudioUtilizadas,
+      objetivosSeisMeses: this.user.objetivosSeisMeses,
+      objetivosUnAno: this.user.objetivosUnAno,
+      experienciaAcademias: this.user.experienciaAcademias,
+      queValorasAcademia: this.user.queValorasAcademia,
+      queMenosGustaAcademias: this.user.queMenosGustaAcademias,
+      queEsperasAcademia: this.user.queEsperasAcademia,
+      trabajasActualmente: this.user.trabajasActualmente,
+      agotamientoFisicoMental: this.user.agotamientoFisicoMental,
+      tiempoDedicableEstudio: this.user.tiempoDedicableEstudio,
+      diasSemanaDisponibles: this.user.diasSemanaDisponibles,
+      otraInformacionLaboral: this.user.otraInformacionLaboral,
+      comentariosAdicionales: this.user.comentariosAdicionales,
+      tipoOposicion: this.user.tipoOposicion,
+      nivelOposicion: this.user.nivelOposicion,
+      tipoDePlanificacionDuracionDeseada: this.user.tipoDePlanificacionDuracionDeseada,
+      planificacionSeleccionada: this.user.planificacionSeleccionada
+    };
+  }
+
+  openOnboardingModal() {
+    this.showOnboardingModal = true;
+  }
+
+  async onOnboardingUpdated(data: OnboardingData) {
+    try {
+      await firstValueFrom(this.userService.updateOnboardingData$(data));
+      this.toastService.success('Información actualizada correctamente');
+      this.showOnboardingModal = false;
+
+      // Actualizar datos locales inmediatamente
+      this.onboardingData = { ...data };
+
+      // Recargar usuario
+      this.store.dispatch(UserActions.loadUser());
+    } catch (error) {
+      console.error('Error al actualizar onboarding:', error);
+      this.toastService.error('Error al actualizar la información');
+    }
+  }
+
+  isOnboardingComplete(): boolean {
+    if (!this.user) return false;
+    return this.user.onboardingCompletado || this.getOnboardingCompletionPercentage() >= 80;
+  }
+
+  getOnboardingCompletionPercentage(): number {
+    const data = this.onboardingData;
+    const fields = Object.values(data);
+    const filledFields = fields.filter(value =>
+      value !== null && value !== '' && value !== false && value !== undefined
+    ).length;
+    return Math.round((filledFields / fields.length) * 100);
+  }
+
+  isFormPartiallyFilled(): boolean {
+    return this.getOnboardingCompletionPercentage() > 0;
+  }
+
+  private checkFirstTimeAccess(): void {
+    if (!this.user) return;
+
+    const storageKey = `profile_first_access_${this.user.id}`;
+    const hasAccessedBefore = localStorage.getItem(storageKey);
+
+    // Si no ha accedido antes y el onboarding no está completo, abrir modal
+    if (!hasAccessedBefore && !this.isOnboardingComplete()) {
+      setTimeout(() => {
+        this.firstTimeShowingOnboardingModal = true;
+        this.showOnboardingModal = true;
+      }, 2000);
+      // Marcar que ya ha accedido al perfil
+      localStorage.setItem(storageKey, 'true');
+    }
   }
 }

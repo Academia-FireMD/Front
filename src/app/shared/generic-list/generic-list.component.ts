@@ -346,9 +346,6 @@ export class GenericListComponent<T>
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['selectedItemIds']) {
-      console.log('selectedItemIds', changes['selectedItemIds'].currentValue);
-    }
   }
 
   ngOnDestroy() {

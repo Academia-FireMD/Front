@@ -6,6 +6,7 @@ import { Memoize } from 'lodash-decorators';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
+import { PlanificacionesService } from '../../../services/planificaciones.service';
 import { UserService } from '../../../services/user.service';
 import { FilterConfig, GenericListComponent, GenericListMode } from '../../../shared/generic-list/generic-list.component';
 import { SuscripcionTipo } from '../../../shared/models/subscription.model';
@@ -25,10 +26,11 @@ import { SharedModule } from '../../../shared/shared.module';
     GenericListComponent
   ],
   templateUrl: './user-dashboard.component.html',
-  styleUrl: './user-dashboard.component.scss',
+  styleUrls: ['./user-dashboard.component.scss', './user-dashboard-onboarding.component.scss'],
 })
 export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   userService = inject(UserService);
+  planificacionesService = inject(PlanificacionesService);
   confirmationService = inject(ConfirmationService);
   authService = inject(AuthService);
 
@@ -43,6 +45,11 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   selectedUser!: Usuario;
   selectedSubscriptionType = SuscripcionTipo.BASIC;
   public decodedUser = this.authService.decodeToken() as Usuario;
+
+  // Nuevas propiedades para expansión
+  expandedUserIds = new Set<number>();
+  userPlanifications = new Map<number, any[]>();
+  loadingPlanifications = new Set<number>();
 
   // Configuración de filtros para el GenericListComponent
   public filters = computed(() => {
@@ -285,6 +292,60 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     );
     this.refresh();
   }
+  // Métodos para expansión de filas
+  toggleUserExpansion(userId: number, event: Event) {
+    event.stopPropagation();
+
+    if (this.expandedUserIds.has(userId)) {
+      this.expandedUserIds.delete(userId);
+    } else {
+      this.expandedUserIds.add(userId);
+      if (!this.userPlanifications.has(userId)) {
+        this.loadUserPlanifications(userId);
+      }
+    }
+  }
+
+  isUserExpanded(userId: number): boolean {
+    return this.expandedUserIds.has(userId);
+  }
+
+  async loadUserPlanifications(userId: number) {
+    this.loadingPlanifications.add(userId);
+    try {
+      const planifications = await firstValueFrom(this.userService.getUserPlanifications$(userId));
+      this.userPlanifications.set(userId, planifications);
+    } catch (error) {
+      console.error('Error loading user planifications:', error);
+      this.toast.error('Error al cargar planificaciones del usuario');
+    } finally {
+      this.loadingPlanifications.delete(userId);
+    }
+  }
+
+  getUserPlanifications(userId: number): any[] {
+    return this.userPlanifications.get(userId) || [];
+  }
+
+  isLoadingPlanifications(userId: number): boolean {
+    return this.loadingPlanifications.has(userId);
+  }
+
+  async desvincularPlanificacion(planificationId: number, userId: number) {
+    try {
+      await firstValueFrom(this.planificacionesService.desvincularPlanificacionMensual$(planificationId));
+      this.toast.success('Planificación desvinculada correctamente');
+      this.loadUserPlanifications(userId);
+    } catch (error) {
+      console.error('Error desvinculating planification:', error);
+      this.toast.error('Error al desvincular planificación');
+    }
+  }
+
+  verPlanificacion(planificationId: number) {
+    this.router.navigate(['/app/planificacion/planificacion-mensual', planificationId]);
+  }
+
   @Memoize()
   getActionItems(user: Usuario): MenuItem[] {
     return [
@@ -310,5 +371,56 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         },
       },
     ];
+  }
+
+  getOnboardingCompletionPercentage(user: Usuario): number {
+    const onboardingFields = [
+      user.tipoOposicion,
+      user.nivelOposicion,
+      user.tipoDePlanificacionDuracionDeseada,
+      user.planificacionSeleccionada,
+      user.dni,
+      user.fechaNacimiento,
+      user.nombreEmpresa,
+      user.paisRegion,
+      user.direccionCalle,
+      user.codigoPostal,
+      user.poblacion,
+      user.provincia,
+      user.telefono,
+      user.municipioResidencia,
+      user.estudiosPrevaios,
+      user.actualTrabajoOcupacion,
+      user.hobbies,
+      user.descripcionSemana,
+      user.horasEstudioDiaSemana,
+      user.horasEntrenoDiaSemana,
+      user.organizacionEstudioEntreno,
+      user.temaPersonal,
+      user.oposicionesHechasResultados,
+      user.pruebasFisicas,
+      user.tecnicasEstudioUtilizadas,
+      user.objetivosSeisMeses,
+      user.objetivosUnAno,
+      user.experienciaAcademias,
+      user.queValorasAcademia,
+      user.queMenosGustaAcademias,
+      user.queEsperasAcademia,
+      user.trabajasActualmente,
+      user.agotamientoFisicoMental,
+      user.tiempoDedicableEstudio,
+      user.diasSemanaDisponibles,
+      user.otraInformacionLaboral,
+      user.comentariosAdicionales
+    ];
+
+    const filledFields = onboardingFields.filter(field =>
+      field !== null &&
+      field !== '' &&
+      field !== false &&
+      field !== undefined
+    ).length;
+
+    return Math.round((filledFields / onboardingFields.length) * 100);
   }
 }

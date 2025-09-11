@@ -3,7 +3,8 @@
   [icon]="loading ? 'pi pi-spin pi-spinner' : icon"
   [disabled]="disabled || loading"
   (click)="onClick()"
+  class="w-full"
   [styleClass]="
     link ? 'p-button-link' : loading ? styleClass + ' loading' : styleClass
   "
-></p-button> 
+></p-button>

@@ -1,0 +1,641 @@
+<div class="onboarding-container">
+  <div class="onboarding-header" *ngIf="showTitle">
+    <h2 class="onboarding-title">
+      <i class="pi pi-user-plus"></i>
+      Completar perfil
+    </h2>
+    <p class="onboarding-subtitle">
+      Ayúdanos a conocerte mejor para ofrecerte la mejor experiencia personalizada
+    </p>
+
+    <div class="completion-progress mb-4" *ngIf="isFormPartiallyFilled()">
+      <div class="progress-text">
+        <span>Completado: {{ getCompletionPercentage() }}%</span>
+      </div>
+      <div class="progress-bar">
+        <div
+          class="progress-fill"
+          [style.width.%]="getCompletionPercentage()"
+        ></div>
+      </div>
+    </div>
+  </div>
+
+  <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="onboarding-form">
+    <p-accordion [multiple]="true" [activeIndex]="[0]">
+
+      <!-- Datos Principales -->
+      <p-accordionTab [selected]="true">
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Información Principal</span>
+            <p-badge [value]="getSectionBadgeConfig('datos-principales').value" [severity]="getSectionBadgeConfig('datos-principales').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <p-dropdown
+                [options]="tiposOposicion"
+                formControlName="tipoOposicion"
+                placeholder="Selecciona tipo"
+                class="w-full"
+                id="tipoOposicion"
+                [style]="{ width: '100%' }"
+                optionLabel="label"
+                optionValue="value"
+              />
+              <label for="tipoOposicion">Quiero opositar al *</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <p-dropdown
+                [options]="niveles"
+                formControlName="nivelOposicion"
+                placeholder="Selecciona nivel"
+                class="w-full"
+                id="nivelOposicion"
+                [style]="{ width: '100%' }"
+                optionLabel="label"
+                optionValue="value"
+              />
+              <label for="nivelOposicion">Nivel</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <p-dropdown
+                [options]="duraciones"
+                formControlName="tipoDePlanificacionDuracionDeseada"
+                placeholder="Selecciona duración"
+                class="w-full"
+                id="tipoDePlanificacionDuracionDeseada"
+                [style]="{ width: '100%' }"
+                optionLabel="label"
+                optionValue="value"
+              />
+              <label for="tipoDePlanificacionDuracionDeseada">Horas al día que me voy a dedicar *</label>
+            </p-floatLabel>
+          </div>
+
+          <!-- <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <p-dropdown
+                [options]="planificacionesDisponibles"
+                formControlName="planificacionSeleccionada"
+                placeholder="Selecciona planificación"
+                class="w-full"
+                id="planificacionSeleccionada"
+                [style]="{ width: '100%' }"
+                optionLabel="label"
+                optionValue="value"
+                [disabled]="planificacionesDisponibles.length === 0"
+              />
+              <label for="planificacionSeleccionada">Planificación *</label>
+            </p-floatLabel>
+            <small class="text-500" *ngIf="planificacionesDisponibles.length === 0">
+              Selecciona primero las horas de dedicación para ver las planificaciones disponibles
+            </small>
+          </div> -->
+        </div>
+      </p-accordionTab>
+
+      <!-- Datos Personales -->
+      <p-accordionTab [selected]="true">
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Datos Personales</span>
+            <p-badge [value]="getSectionBadgeConfig('datos-personales').value" [severity]="getSectionBadgeConfig('datos-personales').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                id="dni"
+                formControlName="dni"
+                class="w-full"
+              />
+              <label for="dni">DNI *</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <p-calendar
+                inputId="fechaNacimiento"
+                formControlName="fechaNacimiento"
+                [showIcon]="true"
+                dateFormat="dd/mm/yy"
+                [maxDate]="today"
+                placeholder="dd/mm/aaaa"
+                class="w-full"
+              ></p-calendar>
+              <label for="fechaNacimiento">Fecha de nacimiento</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                id="nombreEmpresa"
+                formControlName="nombreEmpresa"
+                class="w-full"
+              />
+              <label for="nombreEmpresa">Nombre de la empresa (opcional)</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <p-dropdown
+                [options]="paises"
+                formControlName="paisRegion"
+                [filter]="true"
+                filterBy="name"
+                placeholder="Selecciona país"
+                class="w-full"
+                id="paisRegion"
+                [style]="{ width: '100%' }"
+                optionLabel="name"
+                optionValue="code"
+              />
+              <label for="paisRegion">País / Región</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                id="telefono"
+                formControlName="telefono"
+                class="w-full"
+              />
+              <label for="telefono">Teléfono</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                id="direccionCalle"
+                formControlName="direccionCalle"
+                class="w-full"
+              />
+              <label for="direccionCalle">Dirección de la calle</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-4">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                id="codigoPostal"
+                formControlName="codigoPostal"
+                class="w-full"
+              />
+              <label for="codigoPostal">Código postal / ZIP</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-4">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                id="poblacion"
+                formControlName="poblacion"
+                class="w-full"
+              />
+              <label for="poblacion">Población</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-4">
+            <p-floatLabel>
+              <p-dropdown
+                [options]="provinciasEspanolas"
+                formControlName="provincia"
+                [filter]="true"
+                filterBy="name"
+                placeholder="Selecciona provincia"
+                class="w-full"
+                id="provincia"
+                [style]="{ width: '100%' }"
+                optionLabel="name"
+                optionValue="code"
+              />
+              <label for="provincia">Provincia</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12">
+            <p-floatLabel>
+              <input
+                type="text"
+                pInputText
+                id="municipioResidencia"
+                formControlName="municipioResidencia"
+                class="w-full"
+              />
+              <label for="municipioResidencia">Municipio de Residencia</label>
+            </p-floatLabel>
+          </div>
+        </div>
+      </p-accordionTab>
+
+      <!-- Formación y Experiencia -->
+      <p-accordionTab>
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Formación y Experiencia</span>
+            <p-badge [value]="getSectionBadgeConfig('formacion-experiencia').value" [severity]="getSectionBadgeConfig('formacion-experiencia').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="estudiosPrevaios" class="block text-sm font-medium mb-2">Estudios previos</label>
+              <textarea
+                pInputTextarea
+                id="estudiosPrevaios"
+                formControlName="estudiosPrevaios"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="actualTrabajoOcupacion" class="block text-sm font-medium mb-2">Actual trabajo/ocupación</label>
+              <textarea
+                pInputTextarea
+                id="actualTrabajoOcupacion"
+                formControlName="actualTrabajoOcupacion"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="hobbies" class="block text-sm font-medium mb-2">Hobbies</label>
+              <textarea
+                pInputTextarea
+                id="hobbies"
+                formControlName="hobbies"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="descripcionSemana" class="block text-sm font-medium mb-2">Describe tu semana</label>
+              <textarea
+                pInputTextarea
+                id="descripcionSemana"
+                formControlName="descripcionSemana"
+                rows="4"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </p-accordionTab>
+
+      <!-- Planificación de Estudio -->
+      <p-accordionTab>
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Planificación de Estudio</span>
+            <p-badge [value]="getSectionBadgeConfig('planificacion-estudio').value" [severity]="getSectionBadgeConfig('planificacion-estudio').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 md:col-6 p-2">
+            <p-floatLabel>
+              <p-inputNumber
+                inputId="horasEstudioDiaSemana"
+                formControlName="horasEstudioDiaSemana"
+                [min]="0"
+                [max]="24"
+                suffix=" h/día"
+                class="w-full"
+                [style]="{ width: '100%' }"
+              />
+              <label for="horasEstudioDiaSemana">Horas de estudio (por día)</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 md:col-6 p-2">
+            <p-floatLabel>
+              <p-inputNumber
+                inputId="horasEntrenoDiaSemana"
+                formControlName="horasEntrenoDiaSemana"
+                [min]="0"
+                [max]="24"
+                suffix=" h/día"
+                class="w-full"
+                [style]="{ width: '100%' }"
+              />
+              <label for="horasEntrenoDiaSemana">Horas de entreno (por día)</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="organizacionEstudioEntreno" class="block text-sm font-medium mb-2">¿Cómo organizas tu estudio y entrenamiento?</label>
+              <textarea
+                pInputTextarea
+                id="organizacionEstudioEntreno"
+                formControlName="organizacionEstudioEntreno"
+                rows="4"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </p-accordionTab>
+
+      <!-- Preparación de Oposiciones -->
+      <p-accordionTab>
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Experencia</span>
+            <p-badge [value]="getSectionBadgeConfig('experiencia').value" [severity]="getSectionBadgeConfig('experiencia').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="temaPersonal" class="block text-sm font-medium mb-2">En el temario</label>
+              <textarea
+                pInputTextarea
+                id="temaPersonal"
+                formControlName="temaPersonal"
+                rows="4"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="oposicionesHechasResultados" class="block text-sm font-medium mb-2">En oposiciones (hechas y resultados)</label>
+              <textarea
+                pInputTextarea
+                id="oposicionesHechasResultados"
+                formControlName="oposicionesHechasResultados"
+                rows="4"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="pruebasFisicas" class="block text-sm font-medium mb-2">Pruebas Físicas</label>
+              <textarea
+                pInputTextarea
+                id="pruebasFisicas"
+                formControlName="pruebasFisicas"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="tecnicasEstudioUtilizadas" class="block text-sm font-medium mb-2">Técnicas de estudio que utilizas</label>
+              <textarea
+                pInputTextarea
+                id="tecnicasEstudioUtilizadas"
+                formControlName="tecnicasEstudioUtilizadas"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </p-accordionTab>
+
+      <!-- Objetivos -->
+      <p-accordionTab>
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Define tus objetivos</span>
+            <p-badge [value]="getSectionBadgeConfig('objetivos').value" [severity]="getSectionBadgeConfig('objetivos').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="objetivosSeisMeses" class="block text-sm font-medium mb-2">A 6 meses vista</label>
+              <textarea
+                pInputTextarea
+                id="objetivosSeisMeses"
+                formControlName="objetivosSeisMeses"
+                rows="4"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="objetivosUnAno" class="block text-sm font-medium mb-2">A 1 año vista</label>
+              <textarea
+                pInputTextarea
+                id="objetivosUnAno"
+                formControlName="objetivosUnAno"
+                rows="4"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </p-accordionTab>
+
+      <!-- Academia -->
+      <p-accordionTab>
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Academia</span>
+            <p-badge [value]="getSectionBadgeConfig('academia').value" [severity]="getSectionBadgeConfig('academia').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 p-2">
+            <div class="field-checkbox mb-3">
+              <p-checkbox
+                formControlName="experienciaAcademias"
+                binary="true"
+                inputId="experienciaAcademias"
+              />
+              <label for="experienciaAcademias" class="ml-2">
+                Experiencia en academias (Sí o No)
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="queValorasAcademia" class="block text-sm font-medium mb-2">¿Qué valoras en una academia?</label>
+              <textarea
+                pInputTextarea
+                id="queValorasAcademia"
+                formControlName="queValorasAcademia"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="queMenosGustaAcademias" class="block text-sm font-medium mb-2">¿Qué es lo que menos te gusta de las academias?</label>
+              <textarea
+                pInputTextarea
+                id="queMenosGustaAcademias"
+                formControlName="queMenosGustaAcademias"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="queEsperasAcademia" class="block text-sm font-medium mb-2">¿Qué esperas de esta academia?</label>
+              <textarea
+                pInputTextarea
+                id="queEsperasAcademia"
+                formControlName="queEsperasAcademia"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </p-accordionTab>
+
+      <!-- Información para la planificación -->
+      <p-accordionTab>
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Información para la planificación</span>
+            <p-badge [value]="getSectionBadgeConfig('planificacion').value" [severity]="getSectionBadgeConfig('planificacion').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="trabajasActualmente" class="block text-sm font-medium mb-2">Trabajas actualmente, en qué y tiempo invertido en el trabajo</label>
+              <textarea
+                pInputTextarea
+                id="trabajasActualmente"
+                formControlName="trabajasActualmente"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="agotamientoFisicoMental" class="block text-sm font-medium mb-2">Agotamiento físico y mental al finalizar el trabajo</label>
+              <textarea
+                pInputTextarea
+                id="agotamientoFisicoMental"
+                formControlName="agotamientoFisicoMental"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="tiempoDedicableEstudio" class="block text-sm font-medium mb-2">¿Cuánto tiempo podrías dedicar al estudio por día?</label>
+              <textarea
+                pInputTextarea
+                id="tiempoDedicableEstudio"
+                formControlName="tiempoDedicableEstudio"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="diasSemanaDisponibles" class="block text-sm font-medium mb-2">Cuántos días estarías dispuesto a estudiar (Ej 6 días / 6 horas/día / semana)</label>
+              <textarea
+                pInputTextarea
+                id="diasSemanaDisponibles"
+                formControlName="diasSemanaDisponibles"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="otraInformacionLaboral" class="block text-sm font-medium mb-2">Otra información laboral/de estudio relevante</label>
+              <textarea
+                pInputTextarea
+                id="otraInformacionLaboral"
+                formControlName="otraInformacionLaboral"
+                rows="3"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </p-accordionTab>
+
+      <!-- Comentarios adicionales -->
+      <p-accordionTab>
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between w-full">
+            <span>Comentarios adicionales</span>
+            <p-badge [value]="getSectionBadgeConfig('comentarios').value" [severity]="getSectionBadgeConfig('comentarios').severity"></p-badge>
+          </div>
+        </ng-template>
+        <div class="grid">
+          <div class="col-12 p-2">
+            <div class="field">
+              <label for="comentariosAdicionales" class="block text-sm font-medium mb-2">Comentarios adicionales, sugerencias, inquietudes</label>
+              <textarea
+                pInputTextarea
+                id="comentariosAdicionales"
+                formControlName="comentariosAdicionales"
+                rows="5"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </p-accordionTab>
+    </p-accordion>
+
+  </form>
+</div>

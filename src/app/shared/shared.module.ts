@@ -23,6 +23,7 @@ import { ComunidadDropdownComponent } from './comunidad-dropdown/comunidad-dropd
 import { ComunidadPickerComponent } from './comunidad-picker/comunidad-picker.component';
 import { DificultadDropdownComponent } from './dificultad-dropdown/dificultad-dropdown.component';
 import { GenericListComponent } from './generic-list/generic-list.component';
+import { OnboardingFormComponent } from './onboarding-form/onboarding-form.component';
 import { PasswordInputComponent } from './password-input/password-input.component';
 import { PieChartComponent } from './pie-chart/pie-chart.component';
 import { CountdownPipe } from './pipes/countdown.pipe';
@@ -68,6 +69,7 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     PaginatorModule,
     NgxEchartsModule,
     GenericListComponent,
+    OnboardingFormComponent
   ],
   exports: [
     SharedGridComponent,
@@ -89,7 +91,8 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     KpiStatsCardsComponent,
     ConfidenceAnalysisCardsComponent,
     BadgeModule,
-    FloatLabelModule
+    FloatLabelModule,
+    OnboardingFormComponent
   ],
 })
 export class SharedModule { }
