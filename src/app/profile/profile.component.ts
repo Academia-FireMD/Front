@@ -222,7 +222,6 @@ export class ProfileComponent implements OnInit {
       tipoOposicion: this.user.tipoOposicion,
       nivelOposicion: this.user.nivelOposicion,
       tipoDePlanificacionDuracionDeseada: this.user.tipoDePlanificacionDuracionDeseada,
-      planificacionSeleccionada: this.user.planificacionSeleccionada
     };
   }
 

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, inject } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { AccordionModule } from 'primeng/accordion';
 import { BadgeModule } from 'primeng/badge';
@@ -15,6 +15,8 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { paises, provinciasEspanolas } from '../../utils/consts';
+import { duracionesDisponibles, nivelesDisponibles, NivelOposicion, TipoOposicion, tiposOposicionDisponibles } from '../models/pregunta.model';
+import { TipoDePlanificacionDeseada } from '../models/user.model';
 
 export interface OnboardingData {
   // Datos personales
@@ -65,6 +67,11 @@ export interface OnboardingData {
 
   // Comentarios adicionales
   comentariosAdicionales?: string;
+
+  // Nuevos campos faltantes
+  tipoOposicion?: TipoOposicion;
+  nivelOposicion?: NivelOposicion;
+  tipoDePlanificacionDuracionDeseada?: TipoDePlanificacionDeseada;
 }
 
 @Component({
@@ -105,6 +112,12 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
   provinciasEspanolas = provinciasEspanolas;
 
   paises = paises;
+
+  duraciones = duracionesDisponibles;
+
+  tiposOposicion = tiposOposicionDisponibles;
+
+  niveles = nivelesDisponibles;
 
   ngOnInit() {
     this.initializeForm();
@@ -192,8 +205,9 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
     return this.getCompletionPercentage() > 0;
   }
 
-  getEmptyFieldsCount(section: string): number {
+  private obtainSectionFields(section: string): string[] {
     const sectionFields: { [key: string]: string[] } = {
+      'datos-principales': ['tipoOposicion', 'nivelOposicion', 'tipoDePlanificacionDuracionDeseada'],
       'datos-personales': ['dni', 'fechaNacimiento', 'nombreEmpresa', 'paisRegion', 'direccionCalle', 'codigoPostal', 'poblacion', 'provincia', 'telefono', 'municipioResidencia'],
       'formacion-experiencia': ['estudiosPrevaios', 'actualTrabajoOcupacion', 'hobbies', 'descripcionSemana'],
       'planificacion-estudio': ['horasEstudioDiaSemana', 'horasEntrenoDiaSemana', 'organizacionEstudioEntreno'],
@@ -203,28 +217,22 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
       'planificacion': ['trabajasActualmente', 'agotamientoFisicoMental', 'tiempoDedicableEstudio', 'diasSemanaDisponibles', 'otraInformacionLaboral'],
       'comentarios': ['comentariosAdicionales']
     };
+    return sectionFields[section] || [];
+  }
 
-    const fields = sectionFields[section] || [];
+  getEmptyFieldsCount(section: string): number {
+    const sectionFields = this.obtainSectionFields(section);
+    const fields = sectionFields || [];
     return fields.filter(field => {
       const value = this.formGroup.get(field)?.value;
-      return value === null || value === '' || value === false;
+      return value === null || value === '' || value === false || value === undefined;
     }).length;
   }
 
   getSectionBadgeConfig(section: string): { severity: any; value: string } {
     const emptyCount = this.getEmptyFieldsCount(section);
-    const sectionFields: { [key: string]: string[] } = {
-      'datos-personales': ['dni', 'fechaNacimiento', 'nombreEmpresa', 'paisRegion', 'direccionCalle', 'codigoPostal', 'poblacion', 'provincia', 'telefono', 'municipioResidencia'],
-      'formacion-experiencia': ['estudiosPrevaios', 'actualTrabajoOcupacion', 'hobbies', 'descripcionSemana'],
-      'planificacion-estudio': ['horasEstudioDiaSemana', 'horasEntrenoDiaSemana', 'organizacionEstudioEntreno'],
-      'experiencia': ['temaPersonal', 'oposicionesHechasResultados', 'pruebasFisicas', 'tecnicasEstudioUtilizadas'],
-      'objetivos': ['objetivosSeisMeses', 'objetivosUnAno'],
-      'academia': ['experienciaAcademias', 'queValorasAcademia', 'queMenosGustaAcademias', 'queEsperasAcademia'],
-      'planificacion': ['trabajasActualmente', 'agotamientoFisicoMental', 'tiempoDedicableEstudio', 'diasSemanaDisponibles', 'otraInformacionLaboral'],
-      'comentarios': ['comentariosAdicionales']
-    };
-
-    const totalFields = sectionFields[section]?.length || 0;
+    const sectionFields = this.obtainSectionFields(section);
+    const totalFields = sectionFields?.length || 0;
     const completionPercentage = totalFields > 0 ? ((totalFields - emptyCount) / totalFields) * 100 : 0;
 
     if (emptyCount === 0) {

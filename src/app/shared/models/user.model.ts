@@ -64,7 +64,6 @@ export interface Usuario {
   // Nuevos campos faltantes
   tipoOposicion?: TipoOposicion;
   nivelOposicion?: NivelOposicion;
-  planificacionSeleccionada?: number; // ID de la planificación seleccionada
 }
 
 export interface Consumible {

@@ -378,7 +378,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       user.tipoOposicion,
       user.nivelOposicion,
       user.tipoDePlanificacionDuracionDeseada,
-      user.planificacionSeleccionada,
       user.dni,
       user.fechaNacimiento,
       user.nombreEmpresa,
