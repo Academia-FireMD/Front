@@ -271,7 +271,7 @@ export class ProfileComponent implements OnInit {
     const hasAccessedBefore = localStorage.getItem(storageKey);
 
     // Si no ha accedido antes y el onboarding no está completo, abrir modal
-    if (!hasAccessedBefore && !this.isOnboardingComplete()) {
+    if (!hasAccessedBefore && !this.isOnboardingComplete() && this.user.rol !== Rol.ADMIN) {
       setTimeout(() => {
         this.firstTimeShowingOnboardingModal = true;
         this.showOnboardingModal = true;
