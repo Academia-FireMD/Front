@@ -2,13 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  PaginatedResult,
-  PaginationFilter,
+    PaginatedResult,
+    PaginationFilter,
 } from '../shared/models/pagination.model';
 import {
-  PlanificacionBloque,
-  PlanificacionMensual,
-  PlantillaSemanal,
+    PlanificacionBloque,
+    PlanificacionMensual,
+    PlantillaSemanal,
 } from '../shared/models/planificacion.model';
 import { TipoDePlanificacionDeseada } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
@@ -212,5 +212,9 @@ export class PlanificacionesService extends ApiBaseService {
 
   public desvincularPlanificacionMensual$(id: number): Observable<any> {
     return this.post(`/desvincular-planificacion-mensual/${id}`, null);
+  }
+
+  public desvincularPlanificacionMensualAdmin$(planificacionId: number, alumnoId: number): Observable<any> {
+    return this.post(`/desvincular-planificacion-mensual-admin/${planificacionId}/${alumnoId}`, null);
   }
 }

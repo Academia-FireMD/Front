@@ -333,7 +333,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   async desvincularPlanificacion(planificationId: number, userId: number) {
     try {
-      await firstValueFrom(this.planificacionesService.desvincularPlanificacionMensual$(planificationId));
+      await firstValueFrom(this.planificacionesService.desvincularPlanificacionMensualAdmin$(planificationId, userId));
       this.toast.success('Planificación desvinculada correctamente');
       this.loadUserPlanifications(userId);
     } catch (error) {
