@@ -33,31 +33,31 @@
   <div class="flex flex-row align-items-between">
     <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
       <div class="text-lg font-medium flex gap-2 align-items-center">
-        <span 
-          class="identifier" 
-          pTooltip="Identificador de la flashcard" 
+        <span
+          class="identifier"
+          pTooltip="Identificador de la flashcard"
           tooltipPosition="top"
         >
           {{ item.FlashcardData.identificador }}
         </span>
-        <span 
-          class="badge bg-primary text-white" 
-          pTooltip="Número del tema" 
+        <span
+          class="badge bg-primary text-white"
+          pTooltip="Número del tema"
           tooltipPosition="top"
         >
           {{ item.FlashcardData.tema.numero }}
         </span>
-        <span 
-          class="badge bg-orange-500 text-white" 
-          pTooltip="Usuario que reportó" 
+        <span
+          class="badge bg-orange-500 text-white"
+          pTooltip="Usuario que reportó"
           tooltipPosition="top"
         >
-          {{ item.usuario?.nombre || 'Usuario' }}
+          {{ item.usuario?.nombre || 'Usuario' }} {{ item.usuario?.apellidos || '' }}
         </span>
       </div>
-      <span 
-        class="descripcion" 
-        pTooltip="{{ item.descripcion }}" 
+      <span
+        class="descripcion"
+        pTooltip="{{ item.descripcion }}"
         tooltipPosition="top"
       >
         {{ item.descripcion }}
@@ -65,9 +65,9 @@
     </div>
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
-        <span 
-          class="text-xs hidden md:block unbreakable-text" 
-          pTooltip="Fecha del reporte: {{ item.createdAt | date : 'dd/MM/yyyy HH:mm' }}" 
+        <span
+          class="text-xs hidden md:block unbreakable-text"
+          pTooltip="Fecha del reporte: {{ item.createdAt | date : 'dd/MM/yyyy HH:mm' }}"
           tooltipPosition="top"
         >
           {{ item.createdAt | date : "short" }}
@@ -86,6 +86,17 @@
           icon="pi pi-trash"
           styleClass="p-button-danger"
           pTooltip="Eliminar reporte"
+          (click)="
+            $event.stopPropagation();
+            $event.preventDefault();
+            eliminarFeedback(item.id, $event)
+          "
+        ></p-button>
+        <p-button
+          *ngIf="mode == 'injected'"
+          icon="pi pi-check"
+          styleClass="p-button-success"
+          pTooltip="Marcar como solucionado"
           (click)="
             $event.stopPropagation();
             $event.preventDefault();

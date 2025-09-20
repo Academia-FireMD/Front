@@ -1,15 +1,10 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { ExamenesService } from '../../servicios/examen.service';
-import { computed } from '@angular/core';
-import { SharedModule } from '../../../shared/shared.module';
-import { PrimengModule } from '../../../shared/primeng.module';
-import { getNotaClass } from '../../../utils/utils';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ViewportService } from '../../../services/viewport.service';
 import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
+import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import { getNotaClass } from '../../../utils/utils';
+import { TipoAcceso } from '../../models/examen.model';
+import { ExamenesService } from '../../servicios/examen.service';
 
 interface ExamenIntento {
   idTest: number;
@@ -25,6 +20,7 @@ interface ExamenRealizado {
   titulo: string;
   fechaSolucion: Date;
   fechaActivacion: Date;
+  tipoAcceso: TipoAcceso;
   intentos: ExamenIntento[];
   tieneMultiplesIntentos: boolean;
   idTest: number;
@@ -59,6 +55,17 @@ export class ExamenesRealizadosAlumnoComponent extends SharedGridComponent<Exame
       dateConfig: {
         selectionMode: 'range',
       },
+    },
+    {
+      key: 'tipoAcceso',
+      label: 'Tipo de examen',
+      type: 'dropdown',
+      placeholder: 'Filtrar por tipo',
+      options: [
+        { label: 'Exámenes por defecto', value: TipoAcceso.PUBLICO },
+        { label: 'Exámenes colaborativos', value: TipoAcceso.COLABORATIVO },
+        { label: 'Simulacros', value: TipoAcceso.SIMULACRO },
+      ],
     },
   ];
 

@@ -202,7 +202,9 @@ export type GenericListMode = 'overview' | 'selection';
             appendTo="body"
             class="w-full"
             [showButtonBar]="true"
+            [autofocus]="false"
             [selectionMode]="filter.dateConfig?.selectionMode ?? 'single'"
+            tabindex="-1"
           ></p-calendar>
 
           <!-- Tema Select Filter -->

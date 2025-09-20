@@ -67,6 +67,14 @@
             <i class="pi pi-stopwatch"></i> Simulacro
           </span>
           <span
+            class="badge bg-purple-500 text-white"
+            *ngIf="item.tipoAcceso === 'COLABORATIVO'"
+            pTooltip="Examen colaborativo - Requiere creación de preguntas"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-users"></i> Colaborativo
+          </span>
+          <span
             class="badge bg-primary text-white"
             *ngIf="item.test?.duration"
             pTooltip="Duración del examen: {{ item.test?.duration }} minutos"
@@ -189,3 +197,191 @@
     </div>
   </div>
 </ng-template>
+
+<!-- Diálogo para exámenes colaborativos -->
+<p-dialog
+  [(visible)]="colaborativoDialogVisible"
+  [style]="{ width: '90vw', maxWidth: '800px' }"
+  [breakpoints]="{ '960px': '95vw', '640px': '100vw' }"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="true"
+  (onHide)="cerrarDialogoColaborativo()"
+  [header]="'Examen Colaborativo: ' + (examenColaborativoSeleccionado?.titulo || '')"
+>
+  <div class="grid" *ngIf="loadingProgreso">
+    <div class="col-12 text-center p-4">
+      <p-progressSpinner strokeWidth="4" animationDuration="1s"></p-progressSpinner>
+      <p class="mt-3 text-600">Cargando progreso del examen...</p>
+    </div>
+  </div>
+
+  <div class="grid" *ngIf="!loadingProgreso && progresoColaborativo">
+    <!-- Información general del examen -->
+    <div class="col-12 mb-4">
+      <div class="surface-card p-3 border-round border-1 border-200">
+        <h4 class="mt-0 mb-3 text-primary">
+          <i class="pi pi-info-circle mr-2"></i>
+          Información del Examen
+        </h4>
+        <div class="grid">
+          <div class="col-12 md:col-6">
+            <p class="mb-2">
+              <strong>Fecha preparatoria:</strong>
+              {{ progresoColaborativo.examen.fechaPreparatoria | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+          </div>
+          <div class="col-12 md:col-6">
+            <p class="mb-2">
+              <strong>Fecha de activación:</strong>
+              {{ progresoColaborativo.examen.fechaActivacion | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progreso general -->
+    <div class="col-12 mb-4">
+      <div class="surface-card p-3 border-round border-1 border-200">
+        <h4 class="mt-0 mb-3 text-primary">
+          <i class="pi pi-chart-pie mr-2"></i>
+          Progreso General
+        </h4>
+
+        <div class="flex align-items-center justify-content-between mb-3">
+          <span class="font-medium">Condiciones cumplidas:</span>
+          <p-tag
+            [value]="progresoColaborativo.progreso.condicionesCumplidas + ' / ' + progresoColaborativo.progreso.totalCondiciones"
+            [severity]="progresoColaborativo.progreso.puedeAcceder ? 'success' : 'warning'"
+          ></p-tag>
+        </div>
+
+        <div class="flex align-items-center justify-content-between mb-3">
+          <span class="font-medium">Total de preguntas creadas:</span>
+          <span class="font-semibold">{{ progresoColaborativo.progreso.totalPreguntasCreadas }} / {{ progresoColaborativo.progreso.totalPreguntasRequeridas }}</span>
+        </div>
+
+        <p-progressBar
+          [value]="progresoColaborativo.progreso.porcentajeCompletado"
+          [showValue]="true"
+        ></p-progressBar>
+
+        <div class="mt-3">
+          <p-message
+            *ngIf="progresoColaborativo.progreso.puedeAcceder"
+            severity="success"
+            text="¡Felicidades! Has cumplido todas las condiciones y puedes realizar el examen."
+          ></p-message>
+          <p-message
+            *ngIf="!progresoColaborativo.progreso.puedeAcceder"
+            severity="warn"
+            text="Debes cumplir todas las condiciones para desbloquear el examen."
+          ></p-message>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalle de condiciones -->
+    <div class="col-12">
+      <div class="surface-card p-3 border-round border-1 border-200">
+        <h4 class="mt-0 mb-3 text-primary">
+          <i class="pi pi-list mr-2"></i>
+          Condiciones Requeridas
+        </h4>
+
+        <div
+          *ngFor="let condicion of progresoColaborativo.condiciones; let i = index"
+          class="mb-4 p-3 border-round border-1"
+          [ngClass]="{
+            'border-green-200 surface-green-50': condicion.cumplida,
+            'border-orange-200 surface-orange-50': !condicion.cumplida
+          }"
+        >
+          <div class="flex align-items-center justify-content-between mb-3">
+            <h6 class="m-0">
+              <i
+                class="mr-2"
+                [ngClass]="{
+                  'pi pi-check-circle text-green-500': condicion.cumplida,
+                  'pi pi-clock text-orange-500': !condicion.cumplida
+                }"
+              ></i>
+              Condición {{ i + 1 }}
+            </h6>
+            <p-tag
+              [value]="condicion.cumplida ? 'Completada' : 'Pendiente'"
+              [severity]="condicion.cumplida ? 'success' : 'warning'"
+            ></p-tag>
+          </div>
+
+          <div class="grid mb-3">
+            <div class="col-12 md:col-4">
+              <p class="mb-2">
+                <strong>Preguntas requeridas:</strong> {{ condicion.preguntasRequeridas }}
+              </p>
+            </div>
+            <div class="col-12 md:col-4">
+              <p class="mb-2">
+                <strong>Preguntas creadas:</strong> {{ condicion.preguntasCreadas }}
+              </p>
+            </div>
+            <div class="col-12 md:col-4">
+              <p class="mb-2">
+                <strong>Temas requeridos:</strong>
+              </p>
+              <div class="flex flex-wrap gap-1">
+                <p-tag
+                  *ngFor="let tema of condicion.condicion.temasInfo"
+                  [value]="'Tema ' + tema.numero + ': ' + tema.descripcion"
+                  severity="info"
+                  [style]="{'font-size': '0.75rem'}"
+                ></p-tag>
+              </div>
+            </div>
+          </div>
+
+          <p-progressBar
+            [value]="condicion.porcentajeCompletado"
+            [showValue]="true"
+            [styleClass]="condicion.cumplida ? 'p-progressbar-success' : ''"
+          ></p-progressBar>
+
+          <!-- Lista de preguntas creadas -->
+          <div *ngIf="condicion.preguntas && condicion.preguntas.length > 0" class="mt-3">
+            <h6 class="mb-2 text-600">Tus preguntas para esta condición:</h6>
+            <div class="grid">
+              <div
+                *ngFor="let pregunta of condicion.preguntas"
+                class="col-12 md:col-6 mb-2"
+              >
+                <div class="flex align-items-center p-2 border-round surface-100">
+                  <i class="pi pi-check-circle text-green-500 mr-2"></i>
+                  <div class="flex-1">
+                    <div class="font-semibold text-sm">{{ pregunta.identificador }}</div>
+                    <div class="text-600 text-xs">{{ pregunta.tema.descripcion }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cerrar"
+      [text]="true"
+      (onClick)="cerrarDialogoColaborativo()"
+    ></p-button>
+    <p-button
+      label="Realizar Examen"
+      [disabled]="!progresoColaborativo?.progreso?.puedeAcceder"
+      (onClick)="realizarExamenColaborativo()"
+      [loading]="loadingProgreso"
+    ></p-button>
+  </ng-template>
+</p-dialog>

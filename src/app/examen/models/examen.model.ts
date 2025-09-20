@@ -10,9 +10,18 @@ export enum EstadoExamen {
 
 export enum TipoAcceso {
   PUBLICO = 'PUBLICO',
+  RESTRINGIDO = 'RESTRINGIDO',
   SIMULACRO = 'SIMULACRO',
+  COLABORATIVO = 'COLABORATIVO',
 }
 
+
+export interface CondicionColaborativa {
+  id?: number;
+  numeroPreguntas: number;
+  temasRequeridos: number[];
+  orden?: number;
+}
 
 export interface Examen {
   id: number;
@@ -24,6 +33,10 @@ export interface Examen {
   codigoAcceso?: string;
   fechaActivacion?: Date;
   fechaSolucion?: Date;
+  fechaPreparatoria?: Date;
+  numeroPreguntas?: number;
+  temasColaborativos?: number[];
+  condicionesColaborativas?: CondicionColaborativa[];
   metodoCalificacion?: MetodoCalificacion;
   relevancia: Comunidad[];
   creadorId: number;

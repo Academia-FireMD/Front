@@ -70,7 +70,9 @@ export const estadoExamenOptions = [
 
 export const tipoAccesoOptions = [
   { label: 'Público', value: TipoAcceso.PUBLICO },
+  { label: 'Restringido', value: TipoAcceso.RESTRINGIDO },
   { label: 'Simulacro', value: TipoAcceso.SIMULACRO },
+  { label: 'Colaborativo', value: TipoAcceso.COLABORATIVO },
 ];
 
 export const universalEditorConfig = {
@@ -478,7 +480,11 @@ export const getAllDifficultades = (
         return [...dificultadesBasicas, ...opcionesVisibilidad];
       } else {
         // Alumno no creando test de flashcards: solo privado + público
-        return opcionesVisibilidad;
+        return [...opcionesVisibilidad, {
+          label: 'Colaborativa',
+          icon: 'pi-users',
+          value: Dificultad.COLABORATIVA,
+        }];
       }
     } else {
       // Alumno con preguntas normales
@@ -493,8 +499,15 @@ export const getAllDifficultades = (
           },
         ];
       } else {
-        // Alumno no creando test: solo privado + público
-        return opcionesVisibilidad;
+        // Alumno no creando test: solo privado + público + colaborativa
+        return [
+          ...opcionesVisibilidad,
+          {
+            label: 'Colaborativa',
+            icon: 'pi-users',
+            value: Dificultad.COLABORATIVA,
+          },
+        ];
       }
     }
   }
@@ -511,7 +524,15 @@ export const getAllDifficultades = (
         },
       ];
     }
-    return opcionesVisibilidad;
+    // Si no especifica rol pero no está creando test, incluir colaborativa para alumnos
+    return [
+      ...opcionesVisibilidad,
+      {
+        label: 'Colaborativa',
+        icon: 'pi-users',
+        value: Dificultad.COLABORATIVA,
+      },
+    ];
   }
 
   return [...dificultadesBasicas, ...opcionesVisibilidad];

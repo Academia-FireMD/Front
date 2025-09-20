@@ -1,6 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
+import { SubscriptionGuard } from '../guards/subscription.guard';
+import { SuscripcionTipo } from '../shared/models/subscription.model';
 import { RealizarTestComponent } from '../shared/realizar-test/realizar-test.component';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
@@ -23,7 +25,6 @@ import { TestStatsFlashcardsComponent } from './components/test-stats-flashcards
 import { TestStatsGridComponent } from './components/test-stats-grid/test-stats-grid.component';
 import { TestStatsComponent } from './components/test-stats/test-stats.component';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
-import { ResultadoSimulacroComponent } from '../simulacros/standalone/resultado-simulacro/resultado-simulacro.component';
 
 const routes: Routes = [
   {
@@ -162,14 +163,14 @@ const routes: Routes = [
       {
         path: 'realizar-test',
         component: RealizarTestComponent,
-        canActivate: [roleGuard],
-        data: { expectedRole: 'ALUMNO' },
+        canActivate: [roleGuard, SubscriptionGuard],
+        data: { expectedRole: 'ALUMNO', allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
       },
       {
         path: 'realizar-test/:id',
         component: CompletarTestComponent,
-        canActivate: [roleGuard],
-        data: { expectedRole: 'ALUMNO' },
+        canActivate: [roleGuard, SubscriptionGuard],
+        data: { expectedRole: 'ALUMNO', allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
       },
       {
         path: 'stats-test/:id',
@@ -192,14 +193,14 @@ const routes: Routes = [
       {
         path: 'realizar-flash-cards-test',
         component: RealizarFlashCardTestComponent,
-        canActivate: [roleGuard],
-        data: { expectedRole: 'ALUMNO' },
+        canActivate: [roleGuard, SubscriptionGuard],
+        data: { expectedRole: 'ALUMNO', allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
       },
       {
         path: 'realizar-flash-cards-test/:id',
         component: CompletarFlashCardTestComponent,
-        canActivate: [roleGuard],
-        data: { expectedRole: 'ALUMNO' },
+        canActivate: [roleGuard, SubscriptionGuard],
+        data: { expectedRole: 'ALUMNO', allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
       },
       {
         path: 'estadistica-flashcards-dashboard',
@@ -234,9 +235,9 @@ const routes: Routes = [
       {
         path: 'preguntas',
         component: PreguntasDashboardAdminComponent,
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, SubscriptionGuard],
         title: 'Preguntas',
-        data: { expectedRole: 'ALUMNO', title: 'Preguntas' },
+        data: { expectedRole: 'ALUMNO', title: 'Preguntas', allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
       },
       {
         path: 'preguntas/:id',
@@ -248,9 +249,9 @@ const routes: Routes = [
       {
         path: 'flashcards',
         component: FlashcardOverviewAdminComponent,
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, SubscriptionGuard],
         title: 'Flash Cards',
-        data: { expectedRole: 'ALUMNO', title: 'Flash Cards' },
+        data: { expectedRole: 'ALUMNO', title: 'Flash Cards', allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
       },
       {
         path: 'flashcards/:id',

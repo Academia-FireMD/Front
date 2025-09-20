@@ -1,6 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
+import { SubscriptionGuard } from '../guards/subscription.guard';
+import { SuscripcionTipo } from '../shared/models/subscription.model';
 import { DocumentationOverviewComponent } from './documentation-overview/documentation-overview.component';
 
 const routes: Routes = [
@@ -14,9 +16,9 @@ const routes: Routes = [
   {
     path: 'alumno',
     component: DocumentationOverviewComponent,
-    canActivate: [roleGuard],
+    canActivate: [roleGuard, SubscriptionGuard],
     title: 'Documentación',
-    data: { expectedRole: 'ALUMNO', title: 'Documentación' },
+    data: { expectedRole: 'ALUMNO', title: 'Documentación', allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
   },
 ];
 

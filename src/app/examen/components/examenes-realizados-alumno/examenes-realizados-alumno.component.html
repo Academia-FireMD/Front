@@ -133,6 +133,22 @@
           pTooltip="Examen con múltiples intentos realizados"
           tooltipPosition="top"
         ></p-badge>
+        <span
+          class="badge bg-primary text-white"
+          *ngIf="examen.tipoAcceso === 'SIMULACRO'"
+          pTooltip="Examen tipo simulacro - Acceso restringido"
+          tooltipPosition="top"
+        >
+          <i class="pi pi-stopwatch"></i> Simulacro
+        </span>
+        <span
+          class="badge bg-purple-500 text-white"
+          *ngIf="examen.tipoAcceso === 'COLABORATIVO'"
+          pTooltip="Examen colaborativo - Requiere creación de preguntas"
+          tooltipPosition="top"
+        >
+          <i class="pi pi-users"></i> Colaborativo
+        </span>
       </div>
       <span
         class="descripcion"

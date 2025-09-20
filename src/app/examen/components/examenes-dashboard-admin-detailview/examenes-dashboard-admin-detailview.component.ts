@@ -9,6 +9,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import {
+  AbstractControl,
   FormArray,
   FormBuilder,
   FormControl,
@@ -17,7 +18,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Editor } from '@toast-ui/editor';
-import { debounce } from 'lodash-decorators';
+import { debounce, Memoize } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, tap } from 'rxjs';
@@ -39,7 +40,7 @@ import {
   tipoAccesoOptions,
   universalEditorConfig,
 } from '../../../utils/utils';
-import { EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
+import { CondicionColaborativa, EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
 import { ExamenesService } from '../../servicios/examen.service';
 
 @Component({
@@ -73,6 +74,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
   metodosAgregarDialogVisible = false;
   public TipoAcceso = TipoAcceso;
   public agregarComoReserva = false;
+
   // Tab management
   public activeTabIndex = 0;
 
@@ -172,18 +174,34 @@ export class ExamenesDashboardAdminDetailviewComponent {
   formGroup = this.fb.group({
     titulo: ['', Validators.required],
     descripcion: [''],
-    duracion: [60, [Validators.required, Validators.min(1)]],
+    duracion: [60],
     estado: [EstadoExamen.BORRADOR],
     tipoAcceso: [TipoAcceso.PUBLICO],
     codigoAcceso: [{ disabled: true, value: '' }],
     fechaActivacion: [null],
     fechaSolucion: [null],
+    fechaPreparatoria: [null],
+    temasColaborativos: [[]] as Array<any>,
+    condicionesColaborativas: this.fb.array([]),
     metodoCalificacion: [null as MetodoCalificacion | null], // Opcional, si es null usa el del usuario
     relevancia: this.fb.array([] as Array<Comunidad>),
   });
 
   public get relevancia() {
     return this.formGroup.get('relevancia') as FormArray;
+  }
+
+  public get temasColaborativos() {
+    return this.formGroup.get('temasColaborativos') as FormControl;
+  }
+
+  public get condicionesColaborativas() {
+    return this.formGroup.get('condicionesColaborativas') as FormArray;
+  }
+
+  @Memoize()
+  public getTermasRequeridosFromCondicion(condicion: AbstractControl) {
+    return condicion.get('temasRequeridos') as FormControl;
   }
 
   public anyadirPreguntasAcademia() {
@@ -282,6 +300,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
     // Mostrar/ocultar campo de código según el tipo de acceso
     this.formGroup.get('tipoAcceso')?.valueChanges.subscribe((value) => {
       const codigoControl = this.formGroup.get('codigoAcceso');
+      const fechaPreparatoriaControl = this.formGroup.get('fechaPreparatoria');
+
       if (value === TipoAcceso.SIMULACRO) {
         codigoControl?.setValidators([
           Validators.required,
@@ -294,7 +314,16 @@ export class ExamenesDashboardAdminDetailviewComponent {
         codigoControl?.setValue('');
         codigoControl?.disable();
       }
+
+      if (value === TipoAcceso.COLABORATIVO) {
+        fechaPreparatoriaControl?.setValidators([Validators.required]);
+      } else {
+        fechaPreparatoriaControl?.clearValidators();
+        fechaPreparatoriaControl?.setValue(null);
+      }
+
       codigoControl?.updateValueAndValidity();
+      fechaPreparatoriaControl?.updateValueAndValidity();
     });
 
     // Si es un simulacro existente, generar el QR
@@ -314,6 +343,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
         this.updateSimulacroUrl();
       }
     }
+
+
   }
 
   public getId() {
@@ -349,8 +380,20 @@ export class ExamenesDashboardAdminDetailviewComponent {
       fechaSolucion: (examen.fechaSolucion
         ? new Date(examen.fechaSolucion)
         : null) as any,
+      fechaPreparatoria: (examen.fechaPreparatoria
+        ? new Date(examen.fechaPreparatoria)
+        : null) as any,
+      temasColaborativos: examen.temasColaborativos || [],
       metodoCalificacion: examen.metodoCalificacion || null,
     });
+
+    // Cargar condiciones colaborativas
+    this.condicionesColaborativas.clear();
+    if (examen.condicionesColaborativas && examen.condicionesColaborativas.length) {
+      examen.condicionesColaborativas.forEach((condicion) => {
+        this.condicionesColaborativas.push(this.crearCondicionFormGroup(condicion));
+      });
+    }
 
     // Cargar relevancia
     this.relevancia.clear();
@@ -428,6 +471,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
         : null,
       fechaSolucion: formValues.fechaSolucion
         ? new Date(formValues.fechaSolucion).toISOString()
+        : null,
+      fechaPreparatoria: formValues.fechaPreparatoria
+        ? new Date(formValues.fechaPreparatoria).toISOString()
         : null,
     };
 
@@ -548,7 +594,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     { label: '100 preguntas', code: 100 },
   ];
 
-  public getAllDifficultades = getAllDifficultades(false, true);
+  public getAllDifficultades = getAllDifficultades(false, true, this.expectedRole);
   public automaticPreguntas = [] as Pregunta[];
 
   // Métodos para el stepper
@@ -633,8 +679,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       });
 
       this.toast.success(
-        `Se han añadido ${this.selectedPreguntasToAdd.length} preguntas ${
-          this.agregarComoReserva ? 'de reserva' : ''
+        `Se han añadido ${this.selectedPreguntasToAdd.length} preguntas ${this.agregarComoReserva ? 'de reserva' : ''
         } al examen`,
         'Preguntas añadidas'
       );
@@ -681,8 +726,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
           document.body.removeChild(a);
 
           this.toast.success(
-            `Documento ${
-              conSoluciones ? 'con soluciones' : ''
+            `Documento ${conSoluciones ? 'con soluciones' : ''
             } descargado correctamente`
           );
         },
@@ -733,8 +777,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       );
 
       this.toast.success(
-        `Pregunta ${
-          this.agregarComoReserva ? 'de reserva' : ''
+        `Pregunta ${this.agregarComoReserva ? 'de reserva' : ''
         } añadida correctamente`
       );
       this.semiAutomaticDialogVisible = false;
@@ -848,30 +891,60 @@ export class ExamenesDashboardAdminDetailviewComponent {
   }
 
   public exportarResultados() {
-    // Placeholder for future functionality
-    this.toast.info('Funcionalidad de exportación próximamente disponible');
+    if (!this.examenResultados() || this.resultadosData().length === 0) {
+      this.toast.warning('No hay resultados para exportar');
+      return;
+    }
+
+    const resultados = this.resultadosData();
+    const headers = [
+      'Posición',
+      'Nombre',
+      'Apellidos',
+      'Email',
+      'Nota',
+      'Correctas',
+      'Incorrectas',
+      'No Contestadas',
+      'Fecha Realización'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...resultados.map((resultado: any) => [
+        resultado.posicion,
+        `"${resultado.usuario.nombre}"`,
+        `"${resultado.usuario.apellidos}"`,
+        `"${resultado.usuario.email}"`,
+        resultado.estadisticas.nota,
+        resultado.estadisticas.correctas,
+        resultado.estadisticas.incorrectas,
+        resultado.estadisticas.noContestadas || 0,
+        `"${new Date(resultado.fechaRealizacion).toLocaleString()}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `resultados-examen-${this.lastLoadedExamen().titulo}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    this.toast.success('Resultados exportados correctamente');
   }
 
-  public async reiniciarIntento(userId: number) {
-    // Placeholder for future functionality
-    this.toast.info(
-      'Funcionalidad de reinicio de intentos próximamente disponible'
-    );
-  }
-
-  public async darAcceso(userId: number) {
-    // Placeholder for future functionality
-    this.toast.info(
-      'Funcionalidad de gestión de accesos próximamente disponible'
-    );
-  }
 
   // Métodos para el desplegable de análisis de confianza
   public expandedRowKeys: { [key: string]: boolean } = {};
 
   toggleRowExpansion(resultado: any): void {
     const key = resultado.usuario.id.toString();
-    
+
     // Alternar el estado de expansión de esta fila específica
     if (this.expandedRowKeys[key]) {
       // Crear nuevo objeto sin esta key para forzar detección de cambios
@@ -881,18 +954,18 @@ export class ExamenesDashboardAdminDetailviewComponent {
     } else {
       // Crear nuevo objeto agregando esta key para forzar detección de cambios
       this.expandedRowKeys = { ...this.expandedRowKeys, [key]: true };
-      
+
       // Forzar detección de cambios y múltiples timeouts para gráficos
       this.cdr.detectChanges();
-      
+
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 50);
-      
+
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 200);
-      
+
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 500);
@@ -942,4 +1015,32 @@ export class ExamenesDashboardAdminDetailviewComponent {
     const correctas = this.getCorrectas(stats, tipoSeguridad);
     return Math.round((correctas / total) * 100);
   }
+
+  // Métodos para gestión de condiciones colaborativas
+  public crearCondicionFormGroup(condicion?: CondicionColaborativa) {
+    return this.fb.group({
+      numeroPreguntas: [condicion?.numeroPreguntas || 1, [Validators.required, Validators.min(1)]],
+      temasRequeridos: [condicion?.temasRequeridos || [], [Validators.required, Validators.minLength(1)]],
+      orden: [condicion?.orden || 0],
+    });
+  }
+
+  public agregarCondicion() {
+    this.condicionesColaborativas.push(this.crearCondicionFormGroup());
+  }
+
+  public eliminarCondicion(index: number) {
+    this.condicionesColaborativas.removeAt(index);
+  }
+
+  // Computed para verificar si debe mostrar la sección de condiciones
+  public get esExamenColaborativo(): boolean {
+    return this.formGroup.get('tipoAcceso')?.value === TipoAcceso.COLABORATIVO;
+  }
+
+  // Computed para verificar si debe mostrar preguntas actuales
+  public get debeOcultarPreguntas(): boolean {
+    return this.esExamenColaborativo;
+  }
+
 }

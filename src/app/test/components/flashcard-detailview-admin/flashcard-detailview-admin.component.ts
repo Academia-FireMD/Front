@@ -1,25 +1,23 @@
 import { Location } from '@angular/common';
 import {
   Component,
-  computed,
   EventEmitter,
   inject,
   Input,
   Output,
-  signal,
+  signal
 } from '@angular/core';
 import { FormArray, FormBuilder, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
+import { ConfirmationService } from 'primeng/api';
 import {
   combineLatest,
   filter,
   firstValueFrom,
-  map,
   Observable,
-  of,
   tap,
 } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
@@ -27,17 +25,14 @@ import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
-import { PaginatedResult } from '../../../shared/models/pagination.model';
 import {
   Comunidad,
   Dificultad,
-  PreguntaFallo,
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import {
   getAllDifficultades,
-  groupedTemas,
-  universalEditorConfig,
+  universalEditorConfig
 } from '../../../utils/utils';
 @Component({
   selector: 'app-flashcard-detailview-admin',
@@ -53,6 +48,7 @@ export class FlashcardDetailviewAdminComponent {
   temaService = inject(TemaService);
   viewportService = inject(ViewportService);
   flashCardService = inject(FlashcardDataService);
+  confirmationService = inject(ConfirmationService);
   public expectedRole: Rol = Rol.ADMIN;
   editor!: any;
   editorEnunciado!: any;
@@ -67,7 +63,6 @@ export class FlashcardDetailviewAdminComponent {
     this.setFlashcard(cloned);
   }
   @Output() flashcardCreada = new EventEmitter<FlashcardData>();
-  public dialogVisible = false;
   private processFlashcardRequest(
     requestFn: (identificador: string) => Observable<FlashcardData>
   ): void {
@@ -106,38 +101,40 @@ export class FlashcardDetailviewAdminComponent {
   }
 
   private initEditor(initialValue: string, initialEnunciadoValue: string) {
-    if (this.editor) {
-      this.editor.destroy();
-      this.editor = null;
-    }
-    if (this.editorEnunciado) {
-      this.editorEnunciado.destroy();
-      this.editorEnunciado = null;
-    }
-    this.editor = new Editor({
-      el: document.querySelector('#editor')!,
-      ...universalEditorConfig,
-      initialValue: initialValue || '',
-      events: {
-        change: () => {
-          this.formGroup.get('solucion')?.patchValue(this.editor.getMarkdown());
+    setTimeout(() => {
+      if (this.editor) {
+        this.editor.destroy();
+        this.editor = null;
+      }
+      if (this.editorEnunciado) {
+        this.editorEnunciado.destroy();
+        this.editorEnunciado = null;
+      }
+      this.editor = new Editor({
+        el: document.querySelector('#editor')!,
+        ...universalEditorConfig,
+        initialValue: initialValue || '',
+        events: {
+          change: () => {
+            this.formGroup.get('solucion')?.patchValue(this.editor.getMarkdown());
+          },
         },
-      },
-    });
+      });
 
-    this.editorEnunciado = new Editor({
-      el: document.querySelector('#editor-enunciado')!,
-      ...universalEditorConfig,
-      initialValue: initialEnunciadoValue || '',
-      events: {
-        change: () => {
-          this.formGroup
-            .get('descripcion')
-            ?.patchValue(this.editorEnunciado.getMarkdown());
+      this.editorEnunciado = new Editor({
+        el: document.querySelector('#editor-enunciado')!,
+        ...universalEditorConfig,
+        initialValue: initialEnunciadoValue || '',
+        events: {
+          change: () => {
+            this.formGroup
+              .get('descripcion')
+              ?.patchValue(this.editorEnunciado.getMarkdown());
+          },
         },
-      },
-    });
-  }
+      });
+    }, 0);
+    }
 
   private getRole() {
     return combineLatest([
@@ -176,22 +173,6 @@ export class FlashcardDetailviewAdminComponent {
   fallosService = inject(ReportesFalloService);
 
   public lastLoadedFlashcard = signal<FlashcardData>(null as any);
-  public lastLoadedFallosFlashcardPagination!: PaginatedResult<PreguntaFallo>;
-  public getFallosFlashcard$ = computed(() => {
-    if (!this.lastLoadedFlashcard()) return of(0);
-    return this.fallosService
-      .getReporteFallosFlashcards$({
-        take: 99999,
-        skip: 0,
-        searchTerm: this.lastLoadedFlashcard().identificador ?? '',
-      })
-      .pipe(
-        tap((e) => {
-          this.lastLoadedFallosFlashcardPagination = e;
-        }),
-        map((e) => e?.data?.length ?? 0)
-      );
-  });
 
   formGroup = this.fb.group({
     identificador: [''],
@@ -277,6 +258,27 @@ export class FlashcardDetailviewAdminComponent {
       this.loadFlashcard();
     }
     this.flashcardCreada.emit(res);
+  }
+
+  public eliminarFallo(id: number, event: Event) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.',
+      header: 'Marcar como solucionado',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        await firstValueFrom(this.fallosService.deleteReporteFallo$(id));
+        this.toast.info('Fallo marcado como solucionado exitosamente');
+        // Recargar la flashcard para actualizar la lista de fallos
+        this.loadFlashcard();
+      },
+      reject: () => { },
+    });
   }
 
   private async navigateToFlashcard(id: string) {

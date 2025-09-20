@@ -1,12 +1,15 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { MenuItem } from 'primeng/api';
+import { firstValueFrom, Observable } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
+import { selectCurrentUser } from '../../store/user/user.selectors';
+import { SuscripcionTipo } from '../models/subscription.model';
 import { Usuario } from '../models/user.model';
-import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-layout',
@@ -20,9 +23,12 @@ export class LayoutComponent {
   activatedRoute = inject(ActivatedRoute);
   userService = inject(UserService);
   toast = inject(ToastrService);
+  store = inject(Store);
+
   items = [] as Array<any>;
   isMenuVisible: boolean = false;
   isMenuExpanded: boolean = false;
+  currentUser$: Observable<Usuario | null> = this.store.select(selectCurrentUser);
 
   public selectedUser!: Usuario;
   public editDialogVisible = false;
@@ -109,237 +115,268 @@ export class LayoutComponent {
   }
 
   ngOnInit(): void {
-    this.authService.currentUser$.subscribe((user) => {
+    this.currentUser$.subscribe((user) => {
       if (user?.rol == 'ADMIN') {
-        this.items = [
-          {
-            label: 'Gestión',
-            collapsed: false,
-            items: [
-              {
-                label: 'Usuarios',
-                icon: 'pi pi-user',
-                routerLink: '/app/test/user',
-              },
-              {
-                label: 'Modulos',
-                icon: 'pi pi-book',
-                routerLink: '/app/test/modulos',
-              },
-              {
-                label: 'Temas',
-                icon: 'pi pi-book',
-                routerLink: '/app/test/tema',
-              },
-              {
-                label: 'Documentos',
-                icon: 'pi pi-file',
-                routerLink: '/app/documentacion',
-              },
-            ],
-          },
-          {
-            label: 'Planificación',
-            items: [
-              {
-                label: 'Bloques',
-                icon: 'pi pi-th-large',
-                routerLink: '/app/planificacion/bloques',
-              },
-              {
-                label: 'Plantillas semanales',
-                icon: 'pi pi-sync',
-                routerLink: '/app/planificacion/plantillas-semanales',
-              },
-              {
-                label: 'Planificación mensual',
-                icon: 'pi pi-calendar-plus',
-                routerLink: '/app/planificacion/planificacion-mensual',
-              },
-              {
-                label: 'Comentarios',
-                icon: 'fa fa-comment',
-                routerLink: '/app/planificacion/comentarios',
-              },
-            ],
-          },
-          {
-            label: 'Preguntas',
-            collapsed: true,
-            items: [
-              {
-                label: 'Lista',
-                icon: 'pi pi-question',
-                routerLink: '/app/test/preguntas',
-              },
-              {
-                label: 'Fallos reportados',
-                icon: 'pi pi-flag-fill',
-                routerLink: '/app/test/preguntas-fallos',
-              },
-              {
-                label: 'Estadisticas',
-                icon: 'pi pi-chart-pie',
-                routerLink: '/app/test/test-stats',
-              },
-            ],
-          },
-          {
-            label: 'Flash Cards',
-            collapsed: true,
-            items: [
-              {
-                label: 'Lista',
-                icon: 'pi pi-id-card',
-                routerLink: '/app/test/flashcards',
-              },
-              {
-                label: 'Fallos reportados',
-                icon: 'pi pi-flag-fill',
-                routerLink: '/app/test/flashcards-fallos',
-              },
-              {
-                label: 'Estadisticas',
-                icon: 'pi pi-chart-pie',
-                routerLink: '/app/test/flashcard-stats',
-              },
-            ],
-          },
-          {
-            label: 'Exámenes',
-            collapsed: false,
-            items: [
-              {
-                label: 'Gestión de exámenes',
-                icon: 'pi pi-file-edit',
-                routerLink: '/app/examen',
-              },
-            ],
-          },
-          {
-            label: 'Perfil',
-            items: [
-              {
-                label: 'Mi Perfil',
-                icon: 'pi pi-user',
-                routerLink: '/app/profile',
-              },
-              {
-                label: 'Ajustes',
-                icon: 'pi pi-cog',
-                routerLink: '/app/test/ajustes',
-              },
-              {
-                label: 'Desconectarse',
-                icon: 'pi pi-sign-out',
-                  command: async () => {
-                    await firstValueFrom(this.authService.logout$());
-                    this.router.navigate(['/auth/login']);
-                  },
-              },
-            ],
-          },
-        ];
+        this.items = this.getAdminMenu();
       } else {
-        this.items = [
+        this.items = this.getStudentMenu(user);
+      }
+    });
+  }
+
+  private getAdminMenu(): MenuItem[] {
+    return [
+      {
+        label: 'Gestión',
+        collapsed: false,
+        items: [
+          {
+            label: 'Usuarios',
+            icon: 'pi pi-user',
+            routerLink: '/app/test/user',
+          },
+          {
+            label: 'Modulos',
+            icon: 'pi pi-book',
+            routerLink: '/app/test/modulos',
+          },
+          {
+            label: 'Temas',
+            icon: 'pi pi-book',
+            routerLink: '/app/test/tema',
+          },
           {
             label: 'Documentos',
             icon: 'pi pi-file',
-            routerLink: '/app/documentacion/alumno',
-            items: [],
+            routerLink: '/app/documentacion',
+          },
+        ],
+      },
+      {
+        label: 'Planificación',
+        items: [
+          {
+            label: 'Bloques',
+            icon: 'pi pi-th-large',
+            routerLink: '/app/planificacion/bloques',
           },
           {
-            label: 'Test',
-            items: [
-              {
-                label: 'Realizar tests',
-                icon: 'pi pi-question',
-                routerLink: '/app/test/alumno/realizar-test',
-              },
-              {
-                label: 'Estadísticas test',
-                icon: 'pi pi-chart-pie',
-                routerLink: '/app/test/alumno/test-stats',
-              },
-            ],
-          },
-          {
-            label: 'Flashcards',
-            items: [
-              {
-                label: 'Realizar flashcards',
-                icon: 'pi pi-id-card',
-                routerLink: '/app/test/alumno/realizar-flash-cards-test',
-              },
-              {
-                label: 'Estadísticas flashcards',
-                icon: 'pi pi-chart-pie',
-                routerLink: '/app/test/alumno/flashcard-stats',
-              },
-            ],
-          },
-          {
-            label: 'Crea tu propio contenido',
-            items: [
-              {
-                label: 'Test',
-                icon: 'pi pi-question',
-                routerLink: '/app/test/alumno/preguntas',
-              },
-              {
-                label: 'Flashcards',
-                icon: 'pi pi-id-card',
-                routerLink: '/app/test/alumno/flashcards',
-              },
-            ],
+            label: 'Plantillas semanales',
+            icon: 'pi pi-sync',
+            routerLink: '/app/planificacion/plantillas-semanales',
           },
           {
             label: 'Planificación mensual',
             icon: 'pi pi-calendar-plus',
-            routerLink: '/app/planificacion/planificacion-mensual-alumno',
-            items: [],
+            routerLink: '/app/planificacion/planificacion-mensual',
           },
           {
-            label: 'Exámenes',
-            items: [
-              {
-                label: 'Exámenes disponibles',
-                icon: 'pi pi-file',
-                routerLink: '/app/examen/alumno',
-              },
-              {
-                label: 'Exámenes realizados',
-                icon: 'pi pi-check-circle',
-                routerLink: '/app/examen/alumno/examenes-realizados',
-              },
-            ],
+            label: 'Comentarios',
+            icon: 'fa fa-comment',
+            routerLink: '/app/planificacion/comentarios',
+          },
+        ],
+      },
+      {
+        label: 'Preguntas',
+        collapsed: true,
+        items: [
+          {
+            label: 'Lista',
+            icon: 'pi pi-question',
+            routerLink: '/app/test/preguntas',
           },
           {
-            label: 'Perfil',
-            items: [
-              {
-                label: 'Mi Perfil',
-                icon: 'pi pi-user',
-                routerLink: '/app/profile',
-              },
-              {
-                label: 'Ajustes',
-                icon: 'pi pi-cog',
-                routerLink: '/app/test/ajustes/alumno',
-              },
-              {
-                label: 'Desconectarse',
-                icon: 'pi pi-sign-out',
-                command: async () => {
-                  await firstValueFrom(this.authService.logout$());
-                  this.router.navigate(['/auth/login']);
-                },
-              },
-            ],
+            label: 'Fallos reportados',
+            icon: 'pi pi-flag-fill',
+            routerLink: '/app/test/preguntas-fallos',
           },
-        ];
-      }
+          {
+            label: 'Estadisticas',
+            icon: 'pi pi-chart-pie',
+            routerLink: '/app/test/test-stats',
+          },
+        ],
+      },
+      {
+        label: 'Flash Cards',
+        collapsed: true,
+        items: [
+          {
+            label: 'Lista',
+            icon: 'pi pi-id-card',
+            routerLink: '/app/test/flashcards',
+          },
+          {
+            label: 'Fallos reportados',
+            icon: 'pi pi-flag-fill',
+            routerLink: '/app/test/flashcards-fallos',
+          },
+          {
+            label: 'Estadisticas',
+            icon: 'pi pi-chart-pie',
+            routerLink: '/app/test/flashcard-stats',
+          },
+        ],
+      },
+      {
+        label: 'Exámenes',
+        collapsed: false,
+        items: [
+          {
+            label: 'Gestión de exámenes',
+            icon: 'pi pi-file-edit',
+            routerLink: '/app/examen',
+          },
+        ],
+      },
+      {
+        label: 'Perfil',
+        items: [
+          {
+            label: 'Mi Perfil',
+            icon: 'pi pi-user',
+            routerLink: '/app/profile',
+          },
+          {
+            label: 'Ajustes',
+            icon: 'pi pi-cog',
+            routerLink: '/app/test/ajustes',
+          },
+          {
+            label: 'Desconectarse',
+            icon: 'pi pi-sign-out',
+            command: async () => {
+              await firstValueFrom(this.authService.logout$());
+              this.router.navigate(['/auth/login']);
+            },
+          },
+        ],
+      },
+    ];
+  }
+
+  private getStudentMenu(user: Usuario | null): MenuItem[] {
+    const subscriptionType = user?.suscripcion?.tipo;
+    const isBasic = subscriptionType === SuscripcionTipo.BASIC;
+    const isAdvanced = subscriptionType === SuscripcionTipo.ADVANCED;
+    const isPremium = subscriptionType === SuscripcionTipo.PREMIUM;
+
+    const hasValidSubscription = isBasic || isAdvanced || isPremium;
+
+    const menu: MenuItem[] = [];
+
+    if (hasValidSubscription) {
+      menu.push(
+        {
+          label: 'Documentos',
+          icon: 'pi pi-file',
+          routerLink: '/app/documentacion/alumno',
+          items: [],
+        },
+        {
+          label: 'Test',
+          items: [
+            {
+              label: 'Realizar tests',
+              icon: 'pi pi-question',
+              routerLink: '/app/test/alumno/realizar-test',
+            },
+            {
+              label: 'Estadísticas test',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/alumno/test-stats',
+            },
+          ],
+        },
+        {
+          label: 'Flashcards',
+          items: [
+            {
+              label: 'Realizar flashcards',
+              icon: 'pi pi-id-card',
+              routerLink: '/app/test/alumno/realizar-flash-cards-test',
+            },
+            {
+              label: 'Estadísticas flashcards',
+              icon: 'pi pi-chart-pie',
+              routerLink: '/app/test/alumno/flashcard-stats',
+            },
+          ],
+        },
+        {
+          label: 'Crea tu propio contenido',
+          items: [
+            {
+              label: 'Test',
+              icon: 'pi pi-question',
+              routerLink: '/app/test/alumno/preguntas',
+            },
+            {
+              label: 'Flashcards',
+              icon: 'pi pi-id-card',
+              routerLink: '/app/test/alumno/flashcards',
+            },
+          ],
+        },
+      )
+    }
+
+    // Solo usuarios con suscripción válida (ADVANCED o PREMIUM) pueden acceder a planificación mensual
+    if (hasValidSubscription && (isAdvanced || isPremium)) {
+      menu.push({
+        label: 'Planificación mensual',
+        icon: 'pi pi-calendar-plus',
+        routerLink: '/app/planificacion/planificacion-mensual-alumno',
+        items: [],
+      });
+    }
+
+    // Solo usuarios con suscripción válida (ADVANCED o PREMIUM) pueden acceder a exámenes
+    if (hasValidSubscription && (isAdvanced || isPremium)) {
+      menu.push({
+        label: 'Exámenes',
+        items: [
+          {
+            label: 'Exámenes disponibles',
+            icon: 'pi pi-file',
+            routerLink: '/app/examen/alumno',
+          },
+          {
+            label: 'Exámenes realizados',
+            icon: 'pi pi-check-circle',
+            routerLink: '/app/examen/alumno/examenes-realizados',
+          },
+        ],
+      });
+    }
+
+    // Menú de perfil siempre disponible
+    menu.push({
+      label: 'Perfil',
+      items: [
+        {
+          label: 'Mi Perfil',
+          icon: 'pi pi-user',
+          routerLink: '/app/profile',
+        },
+        {
+          label: 'Ajustes',
+          icon: 'pi pi-cog',
+          routerLink: '/app/test/ajustes/alumno',
+        },
+        {
+          label: 'Desconectarse',
+          icon: 'pi pi-sign-out',
+          command: async () => {
+            await firstValueFrom(this.authService.logout$());
+            this.router.navigate(['/auth/login']);
+          },
+        },
+      ],
     });
+
+    return menu;
   }
 
   public isParentCollapsed(itemChild: MenuItem) {

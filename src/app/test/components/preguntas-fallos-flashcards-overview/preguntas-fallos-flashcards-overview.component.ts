@@ -3,10 +3,10 @@ import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, of, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { PaginatedResult } from '../../../shared/models/pagination.model';
 import { PreguntaFallo } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-preguntas-fallos-flashcards-overview',
@@ -73,10 +73,16 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
   }
 
   public eliminarFeedback(id: number, event: Event) {
+    const message = this.mode === 'injected'
+      ? '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.'
+      : 'Vas a eliminar el reporte de fallo, ¿estás seguro?';
+
+    const header = this.mode === 'injected' ? 'Marcar como solucionado' : 'Confirmación';
+
     this.confirmationService.confirm({
       target: event.target as EventTarget,
-      message: `Vas a eliminar el reporte de fallo, ¿estás seguro?`,
-      header: 'Confirmación',
+      message: message,
+      header: header,
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',
       acceptLabel: 'Sí',
@@ -85,7 +91,10 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
       rejectButtonStyleClass: 'p-button-text',
       accept: async () => {
         await firstValueFrom(this.reportesFalloService.deleteReporteFallo$(id));
-        this.toast.info('Reporte de fallo eliminado exitosamente');
+        const successMessage = this.mode === 'injected'
+          ? 'Fallo marcado como solucionado exitosamente'
+          : 'Reporte de fallo eliminado exitosamente';
+        this.toast.info(successMessage);
         this.refresh();
       },
       reject: () => {},

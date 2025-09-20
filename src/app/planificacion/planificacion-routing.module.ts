@@ -1,6 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
+import { SubscriptionGuard } from '../guards/subscription.guard';
+import { SuscripcionTipo } from '../shared/models/subscription.model';
 import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
 import { PlanificacionComentariosOverviewComponent } from './planificacion-comentarios-overview/planificacion-comentarios-overview.component';
@@ -48,9 +50,9 @@ const routes: Routes = [
   {
     path: 'planificacion-mensual-alumno',
     component: PlanificacionMensualOverviewComponent,
-    canActivate: [roleGuard],
+    canActivate: [roleGuard, SubscriptionGuard],
     title: 'Planificación mensual',
-    data: { expectedRole: 'ALUMNO', title: 'Planificación mensual' },
+    data: { expectedRole: 'ALUMNO', title: 'Planificación mensual', allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
   },
   {
     path: 'planificacion-mensual/:id',
@@ -62,9 +64,9 @@ const routes: Routes = [
   {
     path: 'planificacion-mensual-alumno/:id',
     component: PlanificacionMensualEditComponent,
-    canActivate: [roleGuard],
+    canActivate: [roleGuard, SubscriptionGuard],
     title: 'Planificación mensual',
-    data: { expectedRole: 'ALUMNO', title: 'Planificación mensual' },
+    data: { expectedRole: 'ALUMNO', title: 'Planificación mensual', allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
   },
   {
     path: 'comentarios',

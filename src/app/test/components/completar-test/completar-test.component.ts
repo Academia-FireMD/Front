@@ -22,6 +22,7 @@ import {
   switchMap,
   tap,
 } from 'rxjs';
+import { AuthService } from '../../../services/auth.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TestService } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
@@ -33,11 +34,9 @@ import {
 import { Respuesta, Test } from '../../../shared/models/test.model';
 import { esRolPlataforma, Rol } from '../../../shared/models/user.model';
 import {
-  getAllDifficultades,
   getLetter,
   obtainSecurityEmojiBasedOnEnum,
 } from '../../../utils/utils';
-import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-completar-test',
@@ -73,7 +72,6 @@ export class CompletarTestComponent {
   public seguroDeLaPregunta = new FormControl(
     SeguridadAlResponder.CIEN_POR_CIENTO
   );
-  public getAllDifficultades = getAllDifficultades();
   public dificultadPercibida = new FormControl(
     Dificultad.INTERMEDIO,
     Validators.required
@@ -105,21 +103,23 @@ export class CompletarTestComponent {
   }
 
   public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
+    const respuesta = this.modoVerRespuestas ? this.preguntaRespondidaPorId(pregunta.id) : this.preguntaRespondida();
     return (
       (!this.isModoExamen() || this.modoVerRespuestas || this.vistaPrevia) &&
-      (!!this.preguntaRespondida() || this.vistaPrevia) &&
-      (this.preguntaRespondida()?.estado != 'OMITIDA' || this.vistaPrevia) &&
+      (!!respuesta || this.vistaPrevia) &&
+      (respuesta?.estado != 'OMITIDA' || this.vistaPrevia || this.modoVerRespuestas) &&
       pregunta.respuestaCorrectaIndex == indiceRespuesta
     );
   }
 
   public respuestaIncorrecta(pregunta: Pregunta, indiceRespuesta: number) {
+    const respuesta = this.modoVerRespuestas ? this.preguntaRespondidaPorId(pregunta.id) : this.preguntaRespondida();
     return (
       (!this.isModoExamen() || this.modoVerRespuestas) &&
-      !!this.preguntaRespondida() &&
-      this.preguntaRespondida()?.estado != 'OMITIDA' &&
+      !!respuesta &&
+      respuesta?.estado != 'OMITIDA' &&
       pregunta.respuestaCorrectaIndex != indiceRespuesta &&
-      this.preguntaRespondida()?.respuestaDada == indiceRespuesta
+      respuesta?.respuestaDada == indiceRespuesta
     );
   }
 
@@ -144,6 +144,12 @@ export class CompletarTestComponent {
   ): Respuesta | undefined {
     return (this.lastLoadedTest?.respuestas ?? []).find(
       (r) => r.indicePregunta == specificIndex
+    );
+  }
+
+  public preguntaRespondidaPorId(preguntaId: number): Respuesta | undefined {
+    return (this.lastLoadedTest?.respuestas ?? []).find(
+      (r) => r.preguntaId == preguntaId
     );
   }
 

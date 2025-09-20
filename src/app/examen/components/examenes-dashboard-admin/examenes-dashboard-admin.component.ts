@@ -5,15 +5,14 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
-import { FormControl } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
-import { combineLatest, debounceTime, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
 import { ExamenesService } from '../../servicios/examen.service';
-import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-examenes-dashboard-admin',
@@ -29,6 +28,12 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
 
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ADMIN';
   public type: 'disponibles' | 'realizados' = 'disponibles';
+
+  // Propiedades para el popup de exámenes colaborativos
+  public colaborativoDialogVisible = false;
+  public examenColaborativoSeleccionado: Examen | null = null;
+  public progresoColaborativo: any = null;
+  public loadingProgreso = false;
 
   // Configuración de filtros para el GenericListComponent
   public filters: FilterConfig[] = [
@@ -69,16 +74,18 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
     //     { label: 'Archivado', value: EstadoExamen.ARCHIVADO },
     //   ],
     // },
-    // {
-    //   key: 'tipoAcceso',
-    //   label: 'Tipo de acceso',
-    //   type: 'dropdown',
-    //   placeholder: 'Seleccionar tipo de acceso',
-    //   options: [
-    //     { label: 'Público', value: TipoAcceso.PUBLICO },
-    //     { label: 'Simulacro', value: TipoAcceso.SIMULACRO },
-    //   ],
-    // },
+    {
+      key: 'tipoAcceso',
+      label: 'Tipo de acceso',
+      type: 'dropdown',
+      placeholder: 'Seleccionar tipo de acceso',
+      options: [
+        { label: 'Público', value: TipoAcceso.PUBLICO },
+        { label: 'Restringido', value: TipoAcceso.RESTRINGIDO },
+        { label: 'Simulacro', value: TipoAcceso.SIMULACRO },
+        { label: 'Colaborativo', value: TipoAcceso.COLABORATIVO },
+      ],
+    },
   ];
 
   commMap = (pagination: PaginationFilter) => {
@@ -125,6 +132,12 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
   }
 
   public onItemClick(item: Examen) {
+    // Si es un examen colaborativo y el usuario es alumno, mostrar popup de progreso
+    if (item.tipoAcceso === TipoAcceso.COLABORATIVO && this.expectedRole === 'ALUMNO') {
+      this.mostrarProgresoColaborativo(item);
+      return;
+    }
+
     // Crear un evento sintético para mantener compatibilidad
     const syntheticEvent = new Event('click');
     this.navigateToDetailview(syntheticEvent, item.id, item.test?.id);
@@ -171,7 +184,9 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
   public getTipoAccesoLabel(tipoAcceso: TipoAcceso): string {
     const tipoAccesoMap = {
       [TipoAcceso.PUBLICO]: 'Público',
+      [TipoAcceso.RESTRINGIDO]: 'Restringido',
       [TipoAcceso.SIMULACRO]: 'Simulacro',
+      [TipoAcceso.COLABORATIVO]: 'Colaborativo',
     };
     return tipoAccesoMap[tipoAcceso] || tipoAcceso;
   }
@@ -234,5 +249,56 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
       },
       reject: () => { },
     });
+  }
+
+  // Métodos para manejar exámenes colaborativos
+  public async mostrarProgresoColaborativo(examen: Examen) {
+    this.examenColaborativoSeleccionado = examen;
+    this.colaborativoDialogVisible = true;
+    this.loadingProgreso = true;
+    this.progresoColaborativo = null;
+
+    try {
+      const progreso = await firstValueFrom(
+        this.examenesService.getProgresoExamenColaborativo$(examen.id)
+      );
+      this.progresoColaborativo = progreso;
+    } catch (error) {
+      this.toast.error('Error al cargar el progreso del examen colaborativo');
+      console.error('Error:', error);
+    } finally {
+      this.loadingProgreso = false;
+    }
+  }
+
+  public async realizarExamenColaborativo() {
+    if (!this.examenColaborativoSeleccionado || !this.progresoColaborativo?.progreso?.puedeAcceder) {
+      return;
+    }
+
+    try {
+      const test = await firstValueFrom(
+        this.examenesService.startExamen$(this.examenColaborativoSeleccionado.id)
+      );
+
+      if (test) {
+        this.colaborativoDialogVisible = false;
+        this.router.navigate(['/app/test/alumno/realizar-test/' + test.id], {
+          queryParams: {
+            idExamen: this.examenColaborativoSeleccionado.id,
+            modoSimulacro: true
+          }
+        });
+      }
+    } catch (error) {
+      this.toast.error('Error al iniciar el examen colaborativo');
+      console.error('Error:', error);
+    }
+  }
+
+  public cerrarDialogoColaborativo() {
+    this.colaborativoDialogVisible = false;
+    this.examenColaborativoSeleccionado = null;
+    this.progresoColaborativo = null;
   }
 }

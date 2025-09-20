@@ -1,12 +1,11 @@
 import { Location } from '@angular/common';
 import {
   Component,
-  computed,
   EventEmitter,
   inject,
   Input,
   Output,
-  signal,
+  signal
 } from '@angular/core';
 import {
   FormArray,
@@ -18,13 +17,12 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
+import { ConfirmationService } from 'primeng/api';
 import {
   combineLatest,
   filter,
   firstValueFrom,
-  map,
   Observable,
-  of,
   tap,
 } from 'rxjs';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
@@ -32,20 +30,16 @@ import { PreguntasService } from '../../../services/preguntas.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
-import { PaginatedResult } from '../../../shared/models/pagination.model';
 import {
   Comunidad,
   Dificultad,
   Pregunta,
-  PreguntaFallo,
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import {
-  getAllDifficultades,
   getLetter,
   getStarsBasedOnDifficulty,
-  groupedTemas,
-  universalEditorConfig,
+  universalEditorConfig
 } from '../../../utils/utils';
 
 @Component({
@@ -64,6 +58,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   router = inject(Router);
   viewportService = inject(ViewportService);
   examenesService = inject(ExamenesService);
+  confirmationService = inject(ConfirmationService);
   @Input() expectedRole: Rol = Rol.ADMIN;
   crearOtroControl = new FormControl(false);
   editorSolucion!: any;
@@ -80,7 +75,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   @Output() preguntaCreada = new EventEmitter<Pregunta>();
 
   public checked = {};
- 
+
 
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
@@ -148,9 +143,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
-  public getAllDifficultades = getAllDifficultades;
 
-  public dialogVisible = false;
 
   formGroup = this.fb.group({
     identificador: [''],
@@ -179,22 +172,6 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   public parseControl = (control: any) => control as FormControl;
   public lastLoadedPregunta = signal<Pregunta>(null as any);
-  public lastLoadedFallosPreguntaPagination!: PaginatedResult<PreguntaFallo>;
-  public getFallosPregunta$ = computed(() => {
-    if (!this.lastLoadedPregunta()) return of(0);
-    return this.fallosService
-      .getReporteFallos$({
-        take: 99999,
-        skip: 0,
-        searchTerm: this.lastLoadedPregunta().identificador ?? '',
-      })
-      .pipe(
-        tap((e) => {
-          this.lastLoadedFallosPreguntaPagination = e;
-        }),
-        map((e) => e?.data?.length ?? 0)
-      );
-  });
   getLetter = getLetter;
 
   private examenId: string | null = null;
@@ -231,6 +208,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
+        console.log(this.expectedRole);
       })
     );
   }
@@ -338,40 +316,42 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   private initEditor(initialValue: string, initialEnunciadoValue: string) {
-    if (this.editorSolucion) {
-      this.editorSolucion.destroy();
-      this.editorSolucion = null;
-    }
-    if (this.editorEnunciado) {
-      this.editorEnunciado.destroy();
-      this.editorEnunciado = null;
-    }
+    setTimeout(() => {
+      if (this.editorSolucion) {
+        this.editorSolucion.destroy();
+        this.editorSolucion = null;
+      }
+      if (this.editorEnunciado) {
+        this.editorEnunciado.destroy();
+        this.editorEnunciado = null;
+      }
 
-    this.editorSolucion = new Editor({
-      el: document.querySelector('#editor')!,
-      ...universalEditorConfig,
-      initialValue: initialValue || '',
-      events: {
-        change: () => {
-          this.formGroup
-            .get('solucion')
-            ?.patchValue(this.editorSolucion.getMarkdown());
+      this.editorSolucion = new Editor({
+        el: document.querySelector('#editor')!,
+        ...universalEditorConfig,
+        initialValue: initialValue || '',
+        events: {
+          change: () => {
+            this.formGroup
+              .get('solucion')
+              ?.patchValue(this.editorSolucion.getMarkdown());
+          },
         },
-      },
-    });
+      });
 
-    this.editorEnunciado = new Editor({
-      el: document.querySelector('#editor-enunciado')!,
-      ...universalEditorConfig,
-      initialValue: initialEnunciadoValue || '',
-      events: {
-        change: () => {
-          this.formGroup
-            .get('descripcion')
-            ?.patchValue(this.editorEnunciado.getMarkdown());
+      this.editorEnunciado = new Editor({
+        el: document.querySelector('#editor-enunciado')!,
+        ...universalEditorConfig,
+        initialValue: initialEnunciadoValue || '',
+        events: {
+          change: () => {
+            this.formGroup
+              .get('descripcion')
+              ?.patchValue(this.editorEnunciado.getMarkdown());
+          },
         },
-      },
-    });
+      });
+    }, 0);
   }
 
   private async navigatetoPregunta(id: string) {
@@ -389,6 +369,27 @@ export class PreguntasDashboardAdminDetailviewComponent {
         queryParams: currentQueryParams
       });
     }
+  }
+
+  public eliminarFallo(id: number, event: Event) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.',
+      header: 'Marcar como solucionado',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        await firstValueFrom(this.fallosService.deleteReporteFallo$(id));
+        this.toast.info('Fallo marcado como solucionado exitosamente');
+        // Recargar la pregunta para actualizar la lista de fallos
+        this.loadPregunta();
+      },
+      reject: () => { },
+    });
   }
 
   public handleBackButton() {

@@ -1,5 +1,6 @@
 import { Comunidad, Dificultad, Tema } from './pregunta.model';
 import { TestStatus } from './test.model';
+import { Usuario } from './user.model';
 
 export interface FlashcardTest {
   id: number;
@@ -40,6 +41,17 @@ export interface FlashcardData {
   createdAt: Date;
   updatedAt: Date;
   tema?:Tema;
+  ReporteFallo: FlashcardDataFallo[];
+}
+
+export interface FlashcardDataFallo {
+  id: number;
+  flashcardDataId: number;
+  usuarioId: number;
+  descripcion: string;
+  createdAt: Date;
+  updatedAt: Date;
+  usuario?: Usuario;
 }
 
 export enum EstadoFlashcard {

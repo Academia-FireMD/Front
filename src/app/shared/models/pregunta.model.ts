@@ -19,6 +19,7 @@ export interface Pregunta {
   motivoImpugnacion?: string;
   deReserva?: boolean;
   orden?: number;
+  ReporteFallo: PreguntaFallo[];
 }
 
 export interface PreguntaFallo {
@@ -47,6 +48,8 @@ export enum Dificultad {
   DIFICIL = 'DIFICIL',
   PRIVADAS = 'PRIVADAS',
   PUBLICAS = 'PUBLICAS',
+  EXAMEN = 'EXAMEN',
+  COLABORATIVA = 'COLABORATIVA',
 }
 
 export enum SeguridadAlResponder {

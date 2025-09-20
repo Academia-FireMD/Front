@@ -1,23 +1,11 @@
-<p-dialog
-  [(visible)]="dialogVisible"
-  header="Fallos reportados en {{ lastLoadedPregunta().identificador }}"
-  [modal]="true"
-  [style]="{ width: '50vw' }"
-  [breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
-  (onHide)="dialogVisible = false"
-  *ngIf="lastLoadedPregunta()"
->
-  <app-preguntas-fallos-overview
-    *ngIf="dialogVisible && !!lastLoadedFallosPreguntaPagination"
-    [data]="lastLoadedFallosPreguntaPagination"
-    [mode]="'injected'"
-  ></app-preguntas-fallos-overview>
-</p-dialog>
+<p-confirmDialog></p-confirmDialog>
 
 <div class="grid p-2" [formGroup]="formGroup">
   <div class="col-12 content">
     <p-card>
-      <div class="grid">
+      <p-tabView>
+        <p-tabPanel header="Detalles">
+          <div class="grid">
         <div
           class="col-12 header flex justify-content-between align-items-center gap-3"
         >
@@ -84,31 +72,6 @@
             ></app-comunidad-picker>
           </div>
         </div>
-        @if (expectedRole == 'ADMIN') {
-        <div
-          class="col-12"
-          *ngIf="getFallosPregunta$() | async as fallosPregunta"
-        >
-          <ng-container *ngIf="fallosPregunta > 0; else noFallos">
-            <p class="m-0">
-              Esta pregunta tiene {{ fallosPregunta }} fallos reportados por
-              alumnos. Haga click en
-              <a
-                href="javascript:void(0)"
-                (click)="dialogVisible = true"
-                class="text-primary"
-              >
-                <strong>Ver fallos</strong></a
-              >
-              para visualizarlos.
-            </p>
-          </ng-container>
-
-          <ng-template #noFallos>
-            <p>No hay fallos reportados para esta pregunta.</p>
-          </ng-template>
-        </div>
-        }
         <div class="col-12 py-3">
           <div class="markdown-container">
             <div class="editor">
@@ -183,36 +146,66 @@
             <div id="editor"></div>
           </div>
         </div>
-      </div>
+          </div>
+          <div class="col-12 justify-content-end align-items-center w-full flex">
+            @if (getId() == 'new' && mode == 'edit') {
+            <p-checkbox
+              inputId="crearOtra"
+              [formControl]="crearOtroControl"
+              [binary]="true"
+            ></p-checkbox>
+            <label for="crearOtra" class="ml-2">Crear otra</label>
+            }
+          </div>
+          <div class="col-12 footer flex justify-content-end w-full">
+            <p-button
+              *ngIf="mode != 'injected'"
+              label="Volver atrás"
+              [link]="true"
+              (click)="handleBackButton()"
+            ></p-button>
+            @if(getId() == 'new' || mode == 'injected'){
+            <app-async-button
+              label="Crear pregunta"
+              [action]="crearPregunta.bind(this)"
+            ></app-async-button>
+            }@else{
+            <app-async-button
+              label="Actualizar pregunta"
+              [action]="actualizarPregunta.bind(this)"
+            ></app-async-button>
+            }
+          </div>
+        </p-tabPanel>
+
+        <p-tabPanel header="Fallos Reportados" *ngIf="expectedRole == 'ADMIN' && getId() !== 'new'">
+          <div *ngIf="lastLoadedPregunta()?.ReporteFallo && lastLoadedPregunta().ReporteFallo.length > 0; else noFallos">
+            <div *ngFor="let fallo of lastLoadedPregunta().ReporteFallo" class="p-3 border-bottom-1 border-200">
+              <div class="flex justify-content-between align-items-start">
+                <div class="flex-1">
+                  <div class="mb-2">
+                    <strong>{{ fallo.usuario?.nombre }} {{ fallo.usuario?.apellidos }}</strong>
+                    <span class="ml-2 text-sm text-500">({{ fallo.usuario?.email }})</span>
+                  </div>
+                  <p class="m-0 text-sm">{{ fallo.descripcion }}</p>
+                  <small class="text-xs text-400">{{ fallo.createdAt | date : 'dd/MM/yyyy HH:mm' }}</small>
+                </div>
+                <p-button
+                  icon="pi pi-check"
+                  styleClass="p-button-success p-button-sm"
+                  pTooltip="Marcar como solucionado"
+                  (click)="eliminarFallo(fallo.id, $event)"
+                ></p-button>
+              </div>
+            </div>
+          </div>
+          <ng-template #noFallos>
+            <div class="text-center p-4">
+              No hay fallos reportados para esta pregunta.
+            </div>
+          </ng-template>
+        </p-tabPanel>
+      </p-tabView>
     </p-card>
-  </div>
-  <div class="col-12 justify-content-end align-items-center w-full flex">
-    @if (getId() == 'new' && mode == 'edit') {
-    <p-checkbox
-      inputId="crearOtra"
-      [formControl]="crearOtroControl"
-      [binary]="true"
-    ></p-checkbox>
-    <label for="crearOtra" class="ml-2">Crear otra</label>
-    }
-  </div>
-  <div class="col-12 footer flex justify-content-end w-full">
-    <p-button
-      *ngIf="mode != 'injected'"
-      label="Volver atrás"
-      [link]="true"
-      (click)="handleBackButton()"
-    ></p-button>
-    @if(getId() == 'new' || mode == 'injected'){
-    <app-async-button
-      label="Crear pregunta"
-      [action]="crearPregunta.bind(this)"
-    ></app-async-button>
-    }@else{
-    <app-async-button
-      label="Actualizar pregunta"
-      [action]="actualizarPregunta.bind(this)"
-    ></app-async-button>
-    }
   </div>
 </div>

@@ -1,7 +1,9 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { SubscriptionGuard } from './guards/subscription.guard';
 import { ProfileComponent } from './profile/profile.component';
 import { LayoutComponent } from './shared/layout/layout.component';
+import { SuscripcionTipo } from './shared/models/subscription.model';
 
 const routes: Routes = [
   {
@@ -33,6 +35,8 @@ const routes: Routes = [
           import('./planificacion/planificacion.module').then(
             (m) => m.PlanificacionModule
           ),
+        canActivate: [SubscriptionGuard],
+        data: { allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] }
       },
       {
         path: 'documentacion',
@@ -40,11 +44,15 @@ const routes: Routes = [
           import('./documentacion/documentacion.module').then(
             (m) => m.DocumentacionModule
           ),
+        canActivate: [SubscriptionGuard],
+        data: { allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] }
       },
       {
         path: 'examen',
         loadChildren: () =>
           import('./examen/examen.module').then((m) => m.ExamenModule),
+        canActivate: [SubscriptionGuard],
+        data: { allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] }
       },
     ],
   },

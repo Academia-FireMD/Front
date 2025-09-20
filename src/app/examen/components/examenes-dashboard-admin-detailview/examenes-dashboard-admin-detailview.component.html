@@ -23,7 +23,11 @@
             </div>
             <div class="actions-header flex gap-2">
               <p-button
-                *ngIf="getId() !== 'new' && !!lastLoadedExamen()"
+                *ngIf="
+                  getId() !== 'new' &&
+                  !!lastLoadedExamen() &&
+                  lastLoadedExamen()?.tipoAcceso !== TipoAcceso.COLABORATIVO
+                "
                 icon="pi pi-eye"
                 label="Vista previa"
                 [disabled]="
@@ -32,12 +36,15 @@
                 styleClass="p-button-outlined"
                 [routerLink]="[
                   '/app/test/realizar-test/vista-previa',
-                  lastLoadedExamen().testId
+                  lastLoadedExamen()?.testId
                 ]"
                 data-testid="vista-previa-btn"
               />
               <p-button
-                *ngIf="getId() !== 'new'"
+                *ngIf="
+                  getId() !== 'new' &&
+                  lastLoadedExamen()?.tipoAcceso !== TipoAcceso.COLABORATIVO
+                "
                 icon="pi pi-file-word"
                 label="Descargar"
                 [disabled]="
@@ -186,10 +193,101 @@
                       <label>Fecha de solución</label>
                     </p-floatLabel>
                   </div>
+
+                  <!-- Campos específicos para exámenes colaborativos -->
+                  <div class="col-12 md:col-6" *ngIf="esExamenColaborativo">
+                    <p-floatLabel>
+                      <p-calendar
+                        [showTime]="true"
+                        class="w-full"
+                        formControlName="fechaPreparatoria"
+                        placeholder="Fecha preparatoria"
+                        data-testid="fecha-preparatoria-input"
+                      />
+                      <label
+                        >Fecha preparatoria (inicio período de creación)</label
+                      >
+                    </p-floatLabel>
+                  </div>
+                </div>
+
+                <!-- Configuración de condiciones colaborativas -->
+                <div class="grid mb-4" *ngIf="esExamenColaborativo">
+                  <div class="col-12">
+                    <h4 class="mb-3 text-primary">Condiciones Colaborativas</h4>
+                    <p class="text-600 mb-3">
+                      Define las condiciones que los alumnos deben cumplir para
+                      desbloquear el examen. Cada condición especifica un número
+                      de preguntas y los temas requeridos.
+                    </p>
+                  </div>
+
+                  <!-- Lista de condiciones colaborativas -->
+                  <div class="col-12" formArrayName="condicionesColaborativas">
+                    <div
+                      *ngFor="
+                        let condicion of condicionesColaborativas.controls;
+                        let i = index
+                      "
+                      [formGroupName]="i"
+                      class="mb-4 p-3 border-round surface-border"
+                      style="
+                        border: 1px solid var(--surface-border);
+                        background: var(--surface-card);
+                      "
+                    >
+                      <div
+                        class="flex justify-content-between align-items-start mb-3"
+                      >
+                        <h6 class="m-0 text-primary">Condición {{ i + 1 }}</h6>
+                        <p-button
+                          icon="pi pi-trash"
+                          severity="danger"
+                          [text]="true"
+                          [rounded]="true"
+                          size="small"
+                          (onClick)="eliminarCondicion(i)"
+                          pTooltip="Eliminar condición"
+                        />
+                      </div>
+
+                      <div class="grid">
+                        <div class="col-12 md:col-4">
+                          <p-floatLabel>
+                            <p-inputNumber
+                              formControlName="numeroPreguntas"
+                              class="w-full"
+                              [min]="1"
+                            />
+                            <label>Número de preguntas</label>
+                          </p-floatLabel>
+                        </div>
+
+                        <div class="col-12 md:col-8">
+                          <app-tema-select
+                            [formControl]="
+                              getTermasRequeridosFromCondicion(condicion)
+                            "
+                            placeholder="Seleccionar temas requeridos"
+                            [multiple]="true"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <p-button
+                      label="Agregar Condición"
+                      icon="pi pi-plus"
+                      severity="info"
+                      [outlined]="true"
+                      (onClick)="agregarCondicion()"
+                      class="mt-2"
+                    />
+                  </div>
                 </div>
 
                 <!-- Description -->
-                <div class="grid mb-4">
+                <div class="grid mb-4" *ngIf="lastLoadedExamen()?.tipoAcceso !== TipoAcceso.COLABORATIVO">
                   <div class="col-12">
                     <h4 class="mb-3 text-primary">Descripción</h4>
                     <div class="markdown-container">
@@ -204,7 +302,10 @@
                 </div>
 
                 <!-- Questions Management -->
-                <div class="grid" *ngIf="getId() != 'new'">
+                <div
+                  class="grid"
+                  *ngIf="getId() != 'new' && !debeOcultarPreguntas"
+                >
                   <div class="col-12">
                     <h4 class="mb-3 text-primary">Gestión de preguntas</h4>
                   </div>
@@ -689,11 +790,15 @@
                               Fecha
                               <p-sortIcon field="fechaRealizacion"></p-sortIcon>
                             </th>
-                            <th>Acciones</th>
                             <th style="width: 60px">Detalles</th>
                           </tr>
                         </ng-template>
-                        <ng-template pTemplate="body" let-resultado let-i="rowIndex" let-expanded="expanded">
+                        <ng-template
+                          pTemplate="body"
+                          let-resultado
+                          let-i="rowIndex"
+                          let-expanded="expanded"
+                        >
                           <tr>
                             <td>
                               <p-tag
@@ -744,40 +849,19 @@
                                 resultado.fechaRealizacion | date : "short"
                               }}</small>
                             </td>
-                            <td>
-                              <div class="flex gap-1">
-                                <app-async-button
-                                  icon="pi pi-refresh"
-                                  [link]="true"
-                                  pTooltip="Reiniciar intento"
-                                  tooltipPosition="top"
-                                  [action]="
-                                    reiniciarIntento.bind(
-                                      this,
-                                      resultado.usuario.id
-                                    )
-                                  "
-                                  severity="warning"
-                                  size="small"
-                                />
-                                <app-async-button
-                                  icon="pi pi-key"
-                                  [link]="true"
-                                  pTooltip="Gestionar acceso"
-                                  tooltipPosition="top"
-                                  [action]="
-                                    darAcceso.bind(this, resultado.usuario.id)
-                                  "
-                                  severity="help"
-                                  size="small"
-                                />
-                              </div>
-                            </td>
+
                             <td>
                               <p-button
                                 icon="pi pi-chevron-down"
                                 class="p-button-text p-button-sm"
-                                [style]="{'transform': expandedRowKeys[resultado.usuario.id] ? 'rotate(180deg)' : 'rotate(0deg)', 'transition': 'transform 0.3s'}"
+                                [style]="{
+                                  transform: expandedRowKeys[
+                                    resultado.usuario.id
+                                  ]
+                                    ? 'rotate(180deg)'
+                                    : 'rotate(0deg)',
+                                  transition: 'transform 0.3s'
+                                }"
                                 pTooltip="Ver análisis por confianza"
                                 (click)="toggleRowExpansion(resultado)"
                               ></p-button>
@@ -788,13 +872,29 @@
                           <tr>
                             <td colspan="8">
                               <div class="p-3">
-                                <h5 class="mb-3">Análisis por Nivel de Confianza</h5>
+                                <h5 class="mb-3">
+                                  Análisis por Nivel de Confianza
+                                </h5>
                                 <app-confidence-analysis-cards
-                                  *ngIf="resultado.estadisticas?.detalles?.seguridad"
-                                  [analyses]="getConfidenceAnalysisForResult(resultado.estadisticas.detalles.seguridad)"
+                                  *ngIf="
+                                    resultado.estadisticas?.detalles?.seguridad
+                                  "
+                                  [analyses]="
+                                    getConfidenceAnalysisForResult(
+                                      resultado.estadisticas.detalles.seguridad
+                                    )
+                                  "
                                 ></app-confidence-analysis-cards>
-                                <div *ngIf="!resultado.estadisticas?.detalles?.seguridad" class="text-center p-4">
-                                  <p class="text-muted">No hay datos de confianza disponibles para este resultado</p>
+                                <div
+                                  *ngIf="
+                                    !resultado.estadisticas?.detalles?.seguridad
+                                  "
+                                  class="text-center p-4"
+                                >
+                                  <p class="text-muted">
+                                    No hay datos de confianza disponibles para
+                                    este resultado
+                                  </p>
                                 </div>
                               </div>
                             </td>
@@ -1085,7 +1185,7 @@
   header="Añadir preguntas al examen"
 >
   <div class="grid">
-    <div class="col-12 md:col-4 p-2">
+    <div class="col-12 md:col-4 p-2" *ngIf="!esExamenColaborativo">
       <div
         class="metodo-card"
         (click)="abrirDialogoAutomatico(); metodosAgregarDialogVisible = false"
@@ -1100,7 +1200,7 @@
         </p>
       </div>
     </div>
-    <div class="col-12 md:col-4 p-2">
+    <div class="col-12 md:col-4 p-2" *ngIf="!esExamenColaborativo">
       <div
         class="metodo-card"
         (click)="
@@ -1114,7 +1214,7 @@
         <p>Importa preguntas mediante un identificador</p>
       </div>
     </div>
-    <div class="col-12 md:col-4 p-2">
+    <div class="col-12 md:col-4 p-2" *ngIf="!esExamenColaborativo">
       <div
         class="metodo-card"
         (click)="abrirDialogoManual(); metodosAgregarDialogVisible = false"
@@ -1190,6 +1290,11 @@
 
 <!-- Botón FAB flotante -->
 <button
+  *ngIf="
+    !!getId() &&
+    getId() != 'new' &&
+    formGroup.get('tipoAcceso')?.value != TipoAcceso.COLABORATIVO
+  "
   pButton
   class="p-button-rounded p-button-primary fab-button"
   icon="pi pi-plus"

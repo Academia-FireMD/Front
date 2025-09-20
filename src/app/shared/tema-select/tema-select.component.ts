@@ -1,9 +1,9 @@
-import { Component, ViewChild, inject, Input, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { map, tap, Subscription } from 'rxjs';
+import { OverlayPanel } from 'primeng/overlaypanel';
+import { map, Subscription } from 'rxjs';
 import { TemaService } from '../../services/tema.service';
 import { groupedTemas } from '../../utils/utils';
-import { OverlayPanel } from 'primeng/overlaypanel';
 
 @Component({
   selector: 'app-tema-select',
