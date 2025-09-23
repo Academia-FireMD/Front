@@ -168,7 +168,21 @@
                     <h4 class="mb-3 text-primary">Programación</h4>
                   </div>
 
-                  <div class="col-12 md:col-6">
+                  <div class="col-12 md:col-4" *ngIf="esExamenColaborativo">
+                    <p-floatLabel>
+                      <p-calendar
+                        [showTime]="true"
+                        class="w-full"
+                        [selectionMode]="'range'"
+                        formControlName="fechaPreparatoria"
+                        placeholder="Rango fecha preparatoria"
+                        data-testid="fecha-preparatoria-input"
+                      />
+                      <label>Rango fecha preparatoria</label>
+                    </p-floatLabel>
+                  </div>
+
+                  <div class="col-12" [ngClass]="{'md:col-4': esExamenColaborativo, 'md:col-6': !esExamenColaborativo}">
                     <p-floatLabel>
                       <p-calendar
                         [showTime]="true"
@@ -181,7 +195,7 @@
                     </p-floatLabel>
                   </div>
 
-                  <div class="col-12 md:col-6">
+                  <div class="col-12" [ngClass]="{'md:col-4': esExamenColaborativo, 'md:col-6': !esExamenColaborativo}">
                     <p-floatLabel>
                       <p-calendar
                         [showTime]="true"
@@ -195,20 +209,6 @@
                   </div>
 
                   <!-- Campos específicos para exámenes colaborativos -->
-                  <div class="col-12 md:col-6" *ngIf="esExamenColaborativo">
-                    <p-floatLabel>
-                      <p-calendar
-                        [showTime]="true"
-                        class="w-full"
-                        formControlName="fechaPreparatoria"
-                        placeholder="Fecha preparatoria"
-                        data-testid="fecha-preparatoria-input"
-                      />
-                      <label
-                        >Fecha preparatoria (inicio período de creación)</label
-                      >
-                    </p-floatLabel>
-                  </div>
                 </div>
 
                 <!-- Configuración de condiciones colaborativas -->
@@ -287,7 +287,9 @@
                 </div>
 
                 <!-- Description -->
-                <div class="grid mb-4" *ngIf="lastLoadedExamen()?.tipoAcceso !== TipoAcceso.COLABORATIVO">
+                <div
+                  class="grid mb-4"
+                >
                   <div class="col-12">
                     <h4 class="mb-3 text-primary">Descripción</h4>
                     <div class="markdown-container">

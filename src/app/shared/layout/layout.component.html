@@ -34,6 +34,32 @@
             "
           />
         </div>
+
+        <!-- Banner de impersonación -->
+        <div
+          *ngIf="authService.isImpersonating()"
+          class="impersonation-banner p-2 mb-2 mx-2 border-round"
+          [ngClass]="{
+            'impersonation-banner-collapsed': !isMenuExpanded && viewportService.screenWidth !== 'xs',
+            'impersonation-banner-expanded': isMenuExpanded || viewportService.screenWidth === 'xs'
+          }"
+        >
+          <div class="flex align-items-center gap-2">
+            <i class="pi pi-user-edit text-orange-500" *ngIf="isMenuExpanded || viewportService.screenWidth === 'xs'"></i>
+            <div class="flex-1" *ngIf="isMenuExpanded || viewportService.screenWidth === 'xs'">
+              <div class="text-xs text-orange-500 font-medium">Impersonando a:</div>
+              <div class="text-sm text-orange-800 font-bold">{{ user.nombre + " " + user.apellidos }}</div>
+            </div>
+            <p-button
+              icon="pi pi-sign-out"
+              styleClass="p-button-sm p-button-text p-button-rounded"
+              (click)="stopImpersonation()"
+              pTooltip="Salir de impersonación"
+              tooltipPosition="bottom"
+            />
+          </div>
+        </div>
+
         <div
           (click)="editProfile()"
           class="perfil p-2 flex align-items-center justify-content-{{isMenuExpanded ? 'start' : 'center'}} w-full gap-2 pointer"

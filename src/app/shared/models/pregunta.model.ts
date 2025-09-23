@@ -19,6 +19,7 @@ export interface Pregunta {
   motivoImpugnacion?: string;
   deReserva?: boolean;
   orden?: number;
+  examenId?: number;
   ReporteFallo: PreguntaFallo[];
 }
 

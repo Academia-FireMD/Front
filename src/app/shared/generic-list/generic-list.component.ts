@@ -44,6 +44,9 @@ export interface FilterConfig {
     selectionMode: 'single' | 'multiple' | 'range';
   };
   filterInterpolation?: (value: any) => any;
+  // Propiedades específicas para dificultad-dropdown
+  isFlashcards?: boolean;
+  isDoingTest?: boolean;
 }
 
 export type GenericListMode = 'overview' | 'selection';
@@ -223,7 +226,8 @@ export type GenericListMode = 'overview' | 'selection';
               getFilterControl(filter.key) as control
             "
             [formControlDificultad]="control"
-            [isDoingTest]="false"
+            [isDoingTest]="filter.isDoingTest || false"
+            [isFlashcards]="filter.isFlashcards || false"
           ></app-dificultad-dropdown>
 
           <!-- Comunidad Picker Filter -->

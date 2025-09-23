@@ -1,14 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
 import { Store } from '@ngrx/store';
+import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { Comunidad } from '../shared/models/pregunta.model';
 import { Usuario } from '../shared/models/user.model';
-import { ApiBaseService } from './api-base.service';
-import { UserService } from './user.service';
-import { environment } from '../../environments/environment';
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
+import { ApiBaseService } from './api-base.service';
+import { UserService } from './user.service';
 
 @Injectable({
   providedIn: 'root',
@@ -16,7 +16,7 @@ import * as UserActions from '../store/user/user.actions';
 export class AuthService extends ApiBaseService {
   // BehaviorSubject para mantener el estado del usuario actual
   private currentDecodedUserSubject = new BehaviorSubject<any | null>(null);
-  
+
   public currentUser$ = this.currentDecodedUserSubject.pipe(
     switchMap((user) => {
       if (user) {
@@ -82,6 +82,9 @@ export class AuthService extends ApiBaseService {
           // Actualizar el usuario actual después del login
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
+
+          // Disparar acción para cargar el usuario en el store
+          this.store.dispatch(UserActions.loadUser());
         }
       })
     );
@@ -114,7 +117,7 @@ export class AuthService extends ApiBaseService {
         this.clearToken();
         this.currentDecodedUserSubject.next(null);
         this.lastUserLoaded = null;
-        
+
         // Limpiar el store de NgRx
         this.store.dispatch(UserActions.clearUser());
       })
@@ -158,7 +161,7 @@ export class AuthService extends ApiBaseService {
   clearToken(): void {
     sessionStorage.removeItem(this.TOKEN_KEY);
     sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
-    
+
     // También limpiar el store de NgRx si se limpia el token
     this.store.dispatch(UserActions.clearUser());
   }
@@ -192,5 +195,61 @@ export class AuthService extends ApiBaseService {
     });
   }
 
- 
+  // Métodos para impersonación
+  public impersonateUser$(userId: number): Observable<any> {
+    return this.post(`/impersonate/${userId}`, {}).pipe(
+      tap((tokens) => {
+        if (tokens) {
+          this.setToken(tokens.access_token);
+          this.setRefreshToken(tokens.refresh_token);
+
+          // Actualizar el usuario actual después de la impersonación
+          const decodedUser = this.decodeToken();
+          this.currentDecodedUserSubject.next(decodedUser);
+
+          // Disparar acción para cargar el nuevo usuario en el store
+          this.store.dispatch(UserActions.loadUser());
+        }
+      })
+    );
+  }
+
+  public stopImpersonation$(): Observable<any> {
+    return this.post('/stop-impersonation', {}).pipe(
+      tap((tokens) => {
+        if (tokens) {
+          this.setToken(tokens.access_token);
+          this.setRefreshToken(tokens.refresh_token);
+
+          // Actualizar el usuario actual después de detener la impersonación
+          const decodedUser = this.decodeToken();
+          this.currentDecodedUserSubject.next(decodedUser);
+
+          // Disparar acción para cargar el nuevo usuario en el store
+          this.store.dispatch(UserActions.loadUser());
+        }
+      })
+    );
+  }
+
+  // Método para verificar si estamos impersonando
+  public isImpersonating(): boolean {
+    const token = this.decodeToken();
+    return token?.isImpersonating || false;
+  }
+
+  // Método para obtener información de impersonación
+  public getImpersonationInfo(): any {
+    const token = this.decodeToken();
+    if (token?.isImpersonating) {
+      return {
+        isImpersonating: true,
+        impersonatedBy: token.impersonatedBy,
+        originalAdminEmail: token.originalAdminEmail,
+      };
+    }
+    return { isImpersonating: false };
+  }
+
+
 }

@@ -4,11 +4,11 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  
+
   img {
     max-width: 160px;
     transition: all 0.3s ease;
-    
+
     &.small-logo {
       max-width: 40px;
     }
@@ -26,17 +26,17 @@
   height: 100%;
   overflow: auto;
   transition: all 0.3s ease;
-  
+
   &.menu-collapsed {
     width: 70px !important;
     min-width: 70px;
-    
+
     ::ng-deep {
       .p-menu {
         .p-menuitem-text {
           display: none;
         }
-        
+
         .menu-collapsed-text {
           display: block;
           text-transform: uppercase;
@@ -72,11 +72,11 @@
       }
     }
   }
-  
+
   &.menu-expanded {
     width: 250px !important;
     min-width: 250px;
-    
+
     ::ng-deep {
       .menu-collapsed-text {
         display: none;
@@ -97,7 +97,7 @@
   height: 100%;
   transition: all 0.3s ease;
   padding: 0.5rem;
-  
+
   @media (max-width: 575.98px) {
     height: calc(100% - 45px);
     align-self: flex-end;
@@ -122,7 +122,7 @@
 .p-menuitem-link {
   color: #fff;
   transition: background-color 0.2s;
-  
+
   &:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
@@ -145,5 +145,90 @@
     width: 100%;
     height: 100vh;
     z-index: 999;
+  }
+}
+
+/* Estilos para el banner de impersonación */
+.impersonation-banner {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 1px solid #ffc107;
+  box-shadow: 0 2px 4px rgba(255, 193, 7, 0.1);
+  transition: all 0.3s ease;
+
+  .text-orange-500 {
+    color: #f97316 !important;
+  }
+
+  .text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  .text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .font-medium {
+    font-weight: 500;
+  }
+
+  .font-bold {
+    font-weight: 700;
+  }
+
+  .flex-1 {
+    flex: 1 1 0%;
+  }
+
+  .gap-2 {
+    gap: 0.5rem;
+  }
+}
+
+/* Banner colapsado - solo botón */
+.impersonation-banner-collapsed {
+  padding: 0.5rem !important;
+  margin: 0.25rem !important;
+
+  .flex {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .p-button {
+    padding: 0.25rem;
+    min-width: auto;
+    width: 100%;
+
+    .p-button-icon {
+      font-size: 0.8rem;
+    }
+  }
+}
+
+/* Banner expandido - texto completo */
+.impersonation-banner-expanded {
+  padding: 0.75rem;
+  margin: 0.5rem;
+}
+
+@media (max-width: 767px) {
+  .impersonation-banner {
+    margin: 0.5rem;
+    padding: 0.75rem;
+
+    .text-xs {
+      font-size: 0.6rem;
+    }
+
+    .text-sm {
+      font-size: 0.75rem;
+    }
+  }
+
+  .impersonation-banner-collapsed {
+    margin: 0.25rem !important;
+    padding: 0.5rem !important;
   }
 }

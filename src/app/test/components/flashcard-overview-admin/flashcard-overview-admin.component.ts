@@ -1,25 +1,25 @@
 import {
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  ViewChild,
+    Component,
+    computed,
+    ElementRef,
+    inject,
+    ViewChild,
 } from '@angular/core';
+import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
-import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
-import { Dificultad, Comunidad } from '../../../shared/models/pregunta.model';
-import {
-  getAlumnoDificultad,
-  getStarsBasedOnDifficulty,
-} from '../../../utils/utils';
-import { FormBuilder, Validators } from '@angular/forms';
+import { Dificultad } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
+import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import {
+    getAlumnoDificultad,
+    getStarsBasedOnDifficulty,
+} from '../../../utils/utils';
 
 @Component({
   selector: 'app-flashcard-overview-admin',
@@ -52,6 +52,16 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
       type: 'tema-select',
       filterInterpolation: (value) => ({
         temaId: { in: value },
+      }),
+    },
+    {
+      key: 'dificultad',
+      label: 'Dificultad',
+      type: 'dificultad-dropdown',
+      placeholder: 'Seleccionar dificultad',
+      isFlashcards: true,
+      filterInterpolation: (value) => ({
+        dificultad: { equals: value },
       }),
     },
     {

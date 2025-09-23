@@ -5,24 +5,23 @@ import {
   inject,
   ViewChild,
 } from '@angular/core';
+import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import {
-  Pregunta,
   Dificultad,
-  Comunidad,
+  Pregunta
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import {
   getAlumnoDificultad,
   getStarsBasedOnDifficulty,
 } from '../../../utils/utils';
-import { FormBuilder, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-preguntas-dashboard-admin',
@@ -54,6 +53,15 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
       type: 'tema-select',
       filterInterpolation: (value) => ({
         temaId: { in: value },
+      }),
+    },
+    {
+      key: 'dificultad',
+      label: 'Dificultad',
+      type: 'dificultad-dropdown',
+      placeholder: 'Seleccionar dificultad',
+      filterInterpolation: (value) => ({
+        dificultad: { equals: value },
       }),
     },
     {

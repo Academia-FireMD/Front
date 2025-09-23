@@ -180,7 +180,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     codigoAcceso: [{ disabled: true, value: '' }],
     fechaActivacion: [null],
     fechaSolucion: [null],
-    fechaPreparatoria: [null],
+    fechaPreparatoria: [null as any],
     temasColaborativos: [[]] as Array<any>,
     condicionesColaborativas: this.fb.array([]),
     metodoCalificacion: [null as MetodoCalificacion | null], // Opcional, si es null usa el del usuario
@@ -208,7 +208,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.confirmationService.confirm({
       header: 'Añadir preguntas a la academia',
       message:
-        'Todas las preguntas añadidas manualmente con la letra "E" en el identificador serán añadidas a la academia si no existen ya. ¿Estás seguro de querer continuar?',
+        'Todas las preguntas inexistentes del examen serán añadidas a la academia. ¿Estás seguro de querer continuar?',
       acceptLabel: 'Sí, añadir',
       rejectLabel: 'No, cancelar',
       rejectButtonStyleClass: 'p-button-outlined',
@@ -380,9 +380,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
       fechaSolucion: (examen.fechaSolucion
         ? new Date(examen.fechaSolucion)
         : null) as any,
-      fechaPreparatoria: (examen.fechaPreparatoria
-        ? new Date(examen.fechaPreparatoria)
-        : null) as any,
+      fechaPreparatoria: examen.fechaPreparatoria && examen.fechaFinPreparatoria
+        ? [new Date(examen.fechaPreparatoria), new Date(examen.fechaFinPreparatoria)]
+        : null,
       temasColaborativos: examen.temasColaborativos || [],
       metodoCalificacion: examen.metodoCalificacion || null,
     });
@@ -472,8 +472,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
       fechaSolucion: formValues.fechaSolucion
         ? new Date(formValues.fechaSolucion).toISOString()
         : null,
-      fechaPreparatoria: formValues.fechaPreparatoria
-        ? new Date(formValues.fechaPreparatoria).toISOString()
+      fechaPreparatoria: formValues.fechaPreparatoria && formValues.fechaPreparatoria[0]
+        ? new Date(formValues.fechaPreparatoria[0]).toISOString()
+        : null,
+      fechaFinPreparatoria: formValues.fechaPreparatoria && formValues.fechaPreparatoria[1]
+        ? new Date(formValues.fechaPreparatoria[1]).toISOString()
         : null,
     };
 

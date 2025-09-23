@@ -34,6 +34,7 @@ export interface Examen {
   fechaActivacion?: Date;
   fechaSolucion?: Date;
   fechaPreparatoria?: Date;
+  fechaFinPreparatoria?: Date;
   numeroPreguntas?: number;
   temasColaborativos?: number[];
   condicionesColaborativas?: CondicionColaborativa[];

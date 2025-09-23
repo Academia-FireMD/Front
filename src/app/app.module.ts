@@ -1,7 +1,7 @@
-import { LOCALE_ID, NgModule } from '@angular/core';
+import { APP_INITIALIZER, LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
+import { StoreModule } from '@ngrx/store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 
 import { registerLocaleData } from '@angular/common';
@@ -26,23 +26,42 @@ import { NgxEchartsModule } from 'ngx-echarts';
 import { MarkdownModule } from 'ngx-markdown';
 import { NgxSpinnerModule } from 'ngx-spinner';
 import { ToastrModule } from 'ngx-toastr';
+import { PrimeNGConfig } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { MenuModule } from 'primeng/menu';
 import { PanelMenuModule } from 'primeng/panelmenu';
+import { environment } from '../environments/environment';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { SpinnerInterceptor } from './services/spinner.interceptor';
+import { AsyncButtonComponent } from './shared/components/async-button/async-button.component';
 import { ErrorInterceptor } from './shared/interceptors/error.interceptor';
 import { LayoutComponent } from './shared/layout/layout.component';
 import { SharedModule } from './shared/shared.module';
-import { AsyncButtonComponent } from './shared/components/async-button/async-button.component';
-import { userReducer } from './store/user/user.reducer';
 import { UserEffects } from './store/user/user.effects';
-import { environment } from '../environments/environment';
+import { userReducer } from './store/user/user.reducer';
 registerLocaleData(localeEs);
+
+// Inicializador para configurar PrimeNG globalmente en v17
+export function primengInitFactory(primeng: PrimeNGConfig) {
+  return () => {
+    primeng.ripple = true; // opcional
+    primeng.setTranslation({
+      dayNames: ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'],
+      dayNamesShort: ['dom','lun','mar','mié','jue','vie','sáb'],
+      dayNamesMin: ['D','L','M','X','J','V','S'],
+      monthNames: ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],
+      monthNamesShort: ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'],
+      firstDayOfWeek: 1,
+      dateFormat: 'dd/mm/yy', // dd/mm/yyyy en PrimeNG
+      today: 'Hoy',
+      clear: 'Limpiar',
+    });
+  };
+}
 class CustomDateFormatter extends CalendarNativeDateFormatter {
   // Sobrescribe la hora en la vista diaria
   public override dayViewHour({ date, locale }: DateFormatterParams): string {
@@ -88,7 +107,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
   }
 }
 @NgModule({
-  declarations: [AppComponent, LayoutComponent,ProfileComponent],
+  declarations: [AppComponent, LayoutComponent, ProfileComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,
@@ -132,6 +151,12 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
       multi: true,
     },
     { provide: LOCALE_ID, useValue: 'es' },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: primengInitFactory,
+      deps: [PrimeNGConfig],   // <- IMPORTANTE
+      multi: true,
+    },
     {
       provide: DateAdapter,
       useFactory: adapterFactory,

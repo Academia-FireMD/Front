@@ -144,6 +144,9 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
 
+  // Propiedades para exámenes colaborativos
+  public examenesColaborativosActivos = signal<any[]>([]);
+  public Dificultad = Dificultad;
 
   formGroup = this.fb.group({
     identificador: [''],
@@ -160,6 +163,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
     ]),
     respuestaCorrectaIndex: [0, Validators.required],
     seguridad: [''],
+    examenId: [null as any],
   });
 
   public get relevancia() {
@@ -192,6 +196,28 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
       this.esReserva = this.activedRoute.snapshot.queryParamMap.get('esReserva') === 'true';
     }
+
+    // Cargar exámenes colaborativos activos
+    this.cargarExamenesColaborativos();
+
+    // Suscribirse a cambios en la dificultad
+    this.formGroup.get('dificultad')?.valueChanges.subscribe((dificultad) => {
+      if (dificultad === Dificultad.COLABORATIVA) {
+        this.formGroup.get('examenId')?.setValidators([Validators.required]);
+      } else {
+        this.formGroup.get('examenId')?.clearValidators();
+        this.formGroup.get('examenId')?.setValue(null);
+      }
+      this.formGroup.get('examenId')?.updateValueAndValidity();
+    });
+  }
+
+  private cargarExamenesColaborativos() {
+    firstValueFrom(this.examenesService.getExamenesColaborativosActivos$()).then(
+      (examenes) => {
+        this.examenesColaborativosActivos.set(examenes);
+      }
+    );
   }
 
   public getId() {

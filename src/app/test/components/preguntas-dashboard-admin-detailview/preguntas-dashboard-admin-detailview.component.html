@@ -6,148 +6,179 @@
       <p-tabView>
         <p-tabPanel header="Detalles">
           <div class="grid">
-        <div
-          class="col-12 header flex justify-content-between align-items-center gap-3"
-        >
-          <div class="identificador">
-            @if(mode == 'edit' || mode == 'examen') { @if (expectedRole !=
-            'ADMIN') {
-            <div class="flex align-items-center gap-2">
-              <span *ngIf="viewportService.screenWidth != 'xs'"
-                >Identificador:</span
-              >
-              <strong>{{ formGroup.value.identificador }}</strong>
-            </div>
-            }@else {
-            <p-floatLabel *ngIf="expectedRole == 'ADMIN'">
-              <input
-                type="text"
-                pInputText
-                class="w-full"
-                formControlName="identificador"
-              />
-              <label for="identificador">Identificador</label>
-            </p-floatLabel>
-            } }
-          </div>
-          <div class="actions">
-            <p-button
-              *ngIf="mode == 'edit' || mode == 'examen'"
-              [link]="true"
-              icon="pi pi-angle-double-left"
-              (click)="anteriorForwardPregunta()"
-            />
-
-            <p-button
-              *ngIf="mode == 'edit' || mode == 'examen'"
-              [link]="true"
-              icon="pi pi-angle-left"
-              (click)="anteriorPregunta()"
-            />
-
-            <p-divider
-              *ngIf="viewportService.screenWidth != 'xs'"
-              layout="vertical"
-            />
-
-            <p-button
-              *ngIf="mode == 'edit' || mode == 'examen'"
-              [link]="true"
-              icon="pi pi-angle-right"
-              (click)="siguientePregunta()"
-            ></p-button>
-
-            <p-button
-              *ngIf="mode == 'edit' || mode == 'examen'"
-              [link]="true"
-              icon="pi pi-angle-double-right"
-              (click)="siguienteForwardPregunta()"
-            />
-          </div>
-          <div class="relevancia">
-            <app-comunidad-picker
-              [allowAdd]="true"
-              [comunidades]="relevancia.value"
-              (updateSelection)="updateCommunitySelection($event)"
-            ></app-comunidad-picker>
-          </div>
-        </div>
-        <div class="col-12 py-3">
-          <div class="markdown-container">
-            <div class="editor">
-              <h3>Enunciado</h3>
-              <div id="editor-enunciado"></div>
-            </div>
-          </div>
-        </div>
-        <div class="col-6">
-          <app-tema-select
-            [multiple]="false"
-            [formControl]="formGroup.controls['temaId']"
-          ></app-tema-select>
-        </div>
-        <div class="col-6">
-          <app-dificultad-dropdown
-            [formControlDificultad]="formGroup.get('dificultad')"
-            [isDoingTest]="expectedRole == 'ADMIN'"
-            [customOptions]="
-              mode == 'examen' ? [{ label: 'Exámen', value: 'EXAMEN' }] : []
-            "
-          ></app-dificultad-dropdown>
-        </div>
-        <div
-          class="col-12 respuestas-list pointer"
-          *ngFor="let control of respuestas.controls; let i = index"
-          (click)="formGroup.patchValue({ respuestaCorrectaIndex: i })"
-          [ngClass]="{
-            'respuesta-correcta': i == formGroup.value.respuestaCorrectaIndex
-          }"
-        >
-          <p-inputGroup>
-            <p-inputGroupAddon>{{ getLetter(i) }}) </p-inputGroupAddon>
-            @if(control.enabled){
-            <input
-              type="text"
-              pInputText
-              (click)="$event.preventDefault(); $event.stopPropagation()"
-              [formControl]="parseControl(control)"
-            />
-            }@else {
             <div
-              class="flex w-full align-items-center"
-              (dblclick)="enableAllRespuestas()"
+              class="col-12 header flex justify-content-between align-items-center gap-3"
             >
-              <span>{{ control.value }}</span>
+              <div class="identificador">
+                @if(mode == 'edit' || mode == 'examen') { @if (expectedRole !=
+                'ADMIN') {
+                <div class="flex align-items-center gap-2">
+                  <span *ngIf="viewportService.screenWidth != 'xs'"
+                    >Identificador:</span
+                  >
+                  <strong>{{ formGroup.value.identificador }}</strong>
+                </div>
+                }@else {
+                <p-floatLabel *ngIf="expectedRole == 'ADMIN'">
+                  <input
+                    type="text"
+                    pInputText
+                    class="w-full"
+                    formControlName="identificador"
+                  />
+                  <label for="identificador">Identificador</label>
+                </p-floatLabel>
+                } }
+              </div>
+              <div class="actions">
+                <p-button
+                  *ngIf="mode == 'edit' || mode == 'examen'"
+                  [link]="true"
+                  icon="pi pi-angle-double-left"
+                  (click)="anteriorForwardPregunta()"
+                />
+
+                <p-button
+                  *ngIf="mode == 'edit' || mode == 'examen'"
+                  [link]="true"
+                  icon="pi pi-angle-left"
+                  (click)="anteriorPregunta()"
+                />
+
+                <p-divider
+                  *ngIf="viewportService.screenWidth != 'xs'"
+                  layout="vertical"
+                />
+
+                <p-button
+                  *ngIf="mode == 'edit' || mode == 'examen'"
+                  [link]="true"
+                  icon="pi pi-angle-right"
+                  (click)="siguientePregunta()"
+                ></p-button>
+
+                <p-button
+                  *ngIf="mode == 'edit' || mode == 'examen'"
+                  [link]="true"
+                  icon="pi pi-angle-double-right"
+                  (click)="siguienteForwardPregunta()"
+                />
+              </div>
+              <div class="relevancia">
+                <app-comunidad-picker
+                  [allowAdd]="true"
+                  [comunidades]="relevancia.value"
+                  (updateSelection)="updateCommunitySelection($event)"
+                ></app-comunidad-picker>
+              </div>
             </div>
-            }
-            <p-inputGroupAddon (click)="respuestas.removeAt(i)"
-              ><i class="pi pi-trash"></i>
-            </p-inputGroupAddon>
-          </p-inputGroup>
-        </div>
-        <div class="col-12 respuestas-actions flex justify-content-end">
-          <p-button
-            label="Añadir nueva respuesta"
-            [link]="true"
-            (click)="addNewPregunta()"
-          ></p-button>
-          <p-button
-            *ngIf="respuestas.dirty"
-            label="Guardar cambios"
-            (click)="disableAllRespuestas()"
-            [link]="true"
-          ></p-button>
-        </div>
-      </div>
-      <div class="col-12 px-0">
-        <div class="markdown-container">
-          <div class="editor">
-            <h3>Solución (opcional)</h3>
-            <div id="editor"></div>
+            <div class="col-12 py-3">
+              <div class="markdown-container">
+                <div class="editor">
+                  <h3>Enunciado</h3>
+                  <div id="editor-enunciado"></div>
+                </div>
+              </div>
+            </div>
+            <div
+              [ngClass]="
+                formGroup.get('dificultad')?.value === Dificultad.COLABORATIVA
+                  ? 'col-4'
+                  : 'col-6'
+              "
+            >
+              <app-tema-select
+                [multiple]="false"
+                [formControl]="formGroup.controls['temaId']"
+              ></app-tema-select>
+            </div>
+            <div
+              [ngClass]="
+                formGroup.get('dificultad')?.value === Dificultad.COLABORATIVA
+                  ? 'col-4'
+                  : 'col-6'
+              "
+            >
+              <app-dificultad-dropdown
+                [formControlDificultad]="formGroup.get('dificultad')"
+                [isDoingTest]="expectedRole == 'ADMIN'"
+                [customOptions]="
+                  mode == 'examen' ? [{ label: 'Exámen', value: 'EXAMEN' }] : []
+                "
+              ></app-dificultad-dropdown>
+            </div>
+            <div
+              class="col-4"
+              *ngIf="
+                formGroup.get('dificultad')?.value === Dificultad.COLABORATIVA
+              "
+            >
+              <p-dropdown
+                [style]="{ width: '100%', maxWidth: '100%' }"
+                formControlName="examenId"
+                [options]="examenesColaborativosActivos()"
+                optionLabel="titulo"
+                optionValue="id"
+                placeholder="Seleccione un examen"
+                data-testid="examen-colaborativo-dropdown"
+              />
+            </div>
+            <div
+              class="col-12 respuestas-list pointer"
+              *ngFor="let control of respuestas.controls; let i = index"
+              (click)="formGroup.patchValue({ respuestaCorrectaIndex: i })"
+              [ngClass]="{
+                'respuesta-correcta':
+                  i == formGroup.value.respuestaCorrectaIndex
+              }"
+            >
+              <p-inputGroup>
+                <p-inputGroupAddon>{{ getLetter(i) }}) </p-inputGroupAddon>
+                @if(control.enabled){
+                <input
+                  type="text"
+                  pInputText
+                  (click)="$event.preventDefault(); $event.stopPropagation()"
+                  [formControl]="parseControl(control)"
+                />
+                }@else {
+                <div
+                  class="flex w-full align-items-center"
+                  (dblclick)="enableAllRespuestas()"
+                >
+                  <span>{{ control.value }}</span>
+                </div>
+                }
+                <p-inputGroupAddon (click)="respuestas.removeAt(i)"
+                  ><i class="pi pi-trash"></i>
+                </p-inputGroupAddon>
+              </p-inputGroup>
+            </div>
+            <div class="col-12 respuestas-actions flex justify-content-end">
+              <p-button
+                label="Añadir nueva respuesta"
+                [link]="true"
+                (click)="addNewPregunta()"
+              ></p-button>
+              <p-button
+                *ngIf="respuestas.dirty"
+                label="Guardar cambios"
+                (click)="disableAllRespuestas()"
+                [link]="true"
+              ></p-button>
+            </div>
           </div>
-        </div>
+          <div class="col-12 px-0">
+            <div class="markdown-container">
+              <div class="editor">
+                <h3>Solución (opcional)</h3>
+                <div id="editor"></div>
+              </div>
+            </div>
           </div>
-          <div class="col-12 justify-content-end align-items-center w-full flex">
+          <div
+            class="col-12 justify-content-end align-items-center w-full flex"
+          >
             @if (getId() == 'new' && mode == 'edit') {
             <p-checkbox
               inputId="crearOtra"
@@ -178,17 +209,36 @@
           </div>
         </p-tabPanel>
 
-        <p-tabPanel header="Fallos Reportados" *ngIf="expectedRole == 'ADMIN' && getId() !== 'new'">
-          <div *ngIf="lastLoadedPregunta()?.ReporteFallo && lastLoadedPregunta().ReporteFallo.length > 0; else noFallos">
-            <div *ngFor="let fallo of lastLoadedPregunta().ReporteFallo" class="p-3 border-bottom-1 border-200">
+        <p-tabPanel
+          header="Fallos Reportados"
+          *ngIf="expectedRole == 'ADMIN' && getId() !== 'new'"
+        >
+          <div
+            *ngIf="
+              lastLoadedPregunta()?.ReporteFallo &&
+                lastLoadedPregunta().ReporteFallo.length > 0;
+              else noFallos
+            "
+          >
+            <div
+              *ngFor="let fallo of lastLoadedPregunta().ReporteFallo"
+              class="p-3 border-bottom-1 border-200"
+            >
               <div class="flex justify-content-between align-items-start">
                 <div class="flex-1">
                   <div class="mb-2">
-                    <strong>{{ fallo.usuario?.nombre }} {{ fallo.usuario?.apellidos }}</strong>
-                    <span class="ml-2 text-sm text-500">({{ fallo.usuario?.email }})</span>
+                    <strong
+                      >{{ fallo.usuario?.nombre }}
+                      {{ fallo.usuario?.apellidos }}</strong
+                    >
+                    <span class="ml-2 text-sm text-500"
+                      >({{ fallo.usuario?.email }})</span
+                    >
                   </div>
                   <p class="m-0 text-sm">{{ fallo.descripcion }}</p>
-                  <small class="text-xs text-400">{{ fallo.createdAt | date : 'dd/MM/yyyy HH:mm' }}</small>
+                  <small class="text-xs text-400">{{
+                    fallo.createdAt | date : "dd/MM/yyyy HH:mm"
+                  }}</small>
                 </div>
                 <p-button
                   icon="pi pi-check"

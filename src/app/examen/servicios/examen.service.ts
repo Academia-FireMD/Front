@@ -123,6 +123,10 @@ export class ExamenesService extends ApiBaseService {
     return this.get(`/colaborativo/${examenId}/progreso`) as Observable<any>;
   }
 
+  public getExamenesColaborativosActivos$(): Observable<any[]> {
+    return this.get('/colaborativos-activos') as Observable<any[]>;
+  }
+
 
   public updatePreguntasOrder$(examenId: number, preguntaIds: number[]) {
     return this.put(`/${examenId}/preguntas/order`, {

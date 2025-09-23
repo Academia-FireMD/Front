@@ -73,6 +73,8 @@ import { ExamenRoutingModule } from './examen-routing.module';
     GenericListComponent,
     MessageModule
   ],
-  providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
+  providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' },
+
+  ],
 })
 export class ExamenModule {}

@@ -85,6 +85,14 @@
         </div>
         <div class="flex gap-1 align-items-center" *ngIf="expectedRole === 'ALUMNO'">
           <span
+            class="text-warning text-xs"
+            *ngIf="item.fechaPreparatoria && item.tipoAcceso === 'COLABORATIVO'"
+            pTooltip="Período de preparación: {{ item.fechaPreparatoria | date : 'dd/MM/yyyy HH:mm' }} - {{ item.fechaFinPreparatoria | date : 'dd/MM/yyyy HH:mm' }}"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-pencil"></i> Prep: {{ item.fechaPreparatoria | date : "dd/MM" }} - {{ item.fechaFinPreparatoria | date : "dd/MM" }}
+          </span>
+          <span
             class="text-primary text-xs"
             *ngIf="item.fechaActivacion"
             pTooltip="Disponible desde: {{ item.fechaActivacion | date : 'dd/MM/yyyy HH:mm' }}"
@@ -228,8 +236,8 @@
         <div class="grid">
           <div class="col-12 md:col-6">
             <p class="mb-2">
-              <strong>Fecha preparatoria:</strong>
-              {{ progresoColaborativo.examen.fechaPreparatoria | date:'dd/MM/yyyy HH:mm' }}
+              <strong>Período de preparación:</strong>
+              {{ progresoColaborativo.examen.fechaPreparatoria | date:'dd/MM/yyyy HH:mm' }} - {{ progresoColaborativo.examen.fechaFinPreparatoria | date:'dd/MM/yyyy HH:mm' }}
             </p>
           </div>
           <div class="col-12 md:col-6">

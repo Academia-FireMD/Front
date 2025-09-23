@@ -33,6 +33,7 @@ export class LayoutComponent {
   public selectedUser!: Usuario;
   public editDialogVisible = false;
 
+
   onMenuHover(expanded: boolean): void {
     if (this.viewportService.screenWidth !== 'xs') {
       this.isMenuExpanded = expanded;
@@ -122,6 +123,7 @@ export class LayoutComponent {
         this.items = this.getStudentMenu(user);
       }
     });
+
   }
 
   private getAdminMenu(): MenuItem[] {
@@ -377,6 +379,21 @@ export class LayoutComponent {
     });
 
     return menu;
+  }
+
+  // Método para detener impersonación
+  stopImpersonation() {
+    this.authService.stopImpersonation$().subscribe({
+      next: () => {
+        this.toast.success('Has vuelto a tu cuenta de administrador');
+        // Redirigir al dashboard de admin
+        this.router.navigate(['/app/test/user-dashboard']);
+      },
+      error: (error) => {
+        this.toast.error('Error al salir de la impersonación');
+        console.error('Stop impersonation error:', error);
+      }
+    });
   }
 
   public isParentCollapsed(itemChild: MenuItem) {

@@ -106,6 +106,13 @@
       <div class="flex flex-row align-items-center justify-content-end gap-2">
         @if (decodedUser.rol === 'ADMIN') {
         <p-button
+          icon="pi pi-user-edit"
+          styleClass="p-button-sm p-button-info p-button-rounded"
+          (click)="impersonateUser(item); $event.stopPropagation()"
+          pTooltip="Acceder como este usuario"
+          tooltipPosition="top"
+        />
+        <p-button
           icon="pi pi-angle-down"
           [style]="{
             transform: isUserExpanded(item.id)

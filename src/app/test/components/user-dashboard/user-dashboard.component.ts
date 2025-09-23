@@ -422,4 +422,19 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
     return Math.round((filledFields / onboardingFields.length) * 100);
   }
+
+  // Método para impersonar usuario
+  impersonateUser(user: Usuario) {
+    this.authService.impersonateUser$(user.id).subscribe({
+      next: (response) => {
+        this.toast.success(`Ahora estás accediendo como ${user.nombre} ${user.apellidos}`);
+        // Redirigir al dashboard principal para que vean la vista de alumno
+        this.router.navigate(['/app/profile']);
+      },
+      error: (error) => {
+        this.toast.error('Error al acceder como el usuario');
+        console.error('Impersonation error:', error);
+      }
+    });
+  }
 }
