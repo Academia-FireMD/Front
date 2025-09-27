@@ -201,4 +201,13 @@ export class ExamenesService extends ApiBaseService {
   public getExamenesRealizados$(pagination: PaginationFilter): Observable<PaginatedResult<any>> {
     return this.post('/realizados', pagination) as Observable<PaginatedResult<any>>;
   }
+
+  /**
+   * Obtiene las preguntas colaborativas creadas por los alumnos para un examen
+   * @param examenId ID del examen
+   * @returns Observable con las preguntas colaborativas
+   */
+  public getPreguntasColaborativas$(examenId: number): Observable<any[]> {
+    return this.get(`/${examenId}/preguntas-colaborativas`) as Observable<any[]>;
+  }
 }

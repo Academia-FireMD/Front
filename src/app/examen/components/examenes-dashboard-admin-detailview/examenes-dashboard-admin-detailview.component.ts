@@ -1,19 +1,19 @@
 import { Location } from '@angular/common';
 import {
-  ChangeDetectorRef,
-  Component,
-  computed,
-  inject,
-  Input,
-  signal,
-  ViewChild,
+    ChangeDetectorRef,
+    Component,
+    computed,
+    inject,
+    Input,
+    signal,
+    ViewChild,
 } from '@angular/core';
 import {
-  AbstractControl,
-  FormArray,
-  FormBuilder,
-  FormControl,
-  Validators,
+    AbstractControl,
+    FormArray,
+    FormBuilder,
+    FormControl,
+    Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -33,12 +33,12 @@ import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-te
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
-  createConfidenceAnalysisForResult,
-  duracionOptions,
-  estadoExamenOptions,
-  getAllDifficultades,
-  tipoAccesoOptions,
-  universalEditorConfig,
+    createConfidenceAnalysisForResult,
+    duracionOptions,
+    estadoExamenOptions,
+    getAllDifficultades,
+    tipoAccesoOptions,
+    universalEditorConfig,
 } from '../../../utils/utils';
 import { CondicionColaborativa, EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
 import { ExamenesService } from '../../servicios/examen.service';
@@ -81,6 +81,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
   // Results and analytics
   public examenResultados = signal<any>(null);
   public loadingResults = signal<boolean>(false);
+
+  // Collaborative questions
+  public preguntasColaborativas = signal<any[]>([]);
+  public loadingPreguntasColaborativas = signal<boolean>(false);
   public resultadosData = computed(
     () => this.examenResultados()?.resultados || []
   );
@@ -884,12 +888,35 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
   }
 
+  // Collaborative questions methods
+  public async loadPreguntasColaborativas() {
+    if (this.getId() === 'new') return;
+
+    this.loadingPreguntasColaborativas.set(true);
+    try {
+      const preguntas = await firstValueFrom(
+        this.examenesService.getPreguntasColaborativas$(this.getId() as number)
+      );
+      this.preguntasColaborativas.set(preguntas);
+    } catch (error) {
+      console.error('Error loading collaborative questions:', error);
+      this.toast.error('Error al cargar las preguntas colaborativas');
+    } finally {
+      this.loadingPreguntasColaborativas.set(false);
+    }
+  }
+
   public onTabChange(event: any) {
     this.activeTabIndex = event.index;
 
     // Load results when switching to results tab
     if (event.index === 1 && !this.examenResultados()) {
       this.loadExamenResults();
+    }
+
+    // Load collaborative questions when switching to collaborative questions tab
+    if (event.index === 2 && this.esExamenColaborativo && !this.preguntasColaborativas().length) {
+      this.loadPreguntasColaborativas();
     }
   }
 
@@ -1044,6 +1071,35 @@ export class ExamenesDashboardAdminDetailviewComponent {
   // Computed para verificar si debe mostrar preguntas actuales
   public get debeOcultarPreguntas(): boolean {
     return this.esExamenColaborativo;
+  }
+
+  // Métodos auxiliares para preguntas colaborativas
+  public getUniqueStudentsCount(): number {
+    const uniqueStudents = new Set(
+      this.preguntasColaborativas().map(p => p.createdBy?.id).filter(id => id)
+    );
+    return uniqueStudents.size;
+  }
+
+  public getUniqueTopicsCount(): number {
+    const uniqueTopics = new Set(
+      this.preguntasColaborativas().map(p => p.tema?.id).filter(id => id)
+    );
+    return uniqueTopics.size;
+  }
+
+  public onGlobalFilter(event: any) {
+    // Implementar filtro global si es necesario
+    // Por ahora PrimeNG maneja el filtro automáticamente
+  }
+
+  public abrirPreguntaEnNuevaPestana(preguntaId: number) {
+    const url = this.router.serializeUrl(
+      this.router.createUrlTree(['/app/test/preguntas', preguntaId], {
+        queryParams: { examenId: this.getId(), goBack: true }
+      })
+    );
+    window.open(url, '_blank');
   }
 
 }

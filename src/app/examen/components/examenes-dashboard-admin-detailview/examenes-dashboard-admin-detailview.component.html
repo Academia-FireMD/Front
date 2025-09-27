@@ -928,6 +928,211 @@
                 </p>
               </div>
             </p-tabPanel>
+
+            <!-- Tab 3: Preguntas Colaborativas -->
+            <p-tabPanel
+              *ngIf="esExamenColaborativo"
+              header="Preguntas Colaborativas"
+              leftIcon="pi pi-users"
+            >
+              <div class="collaborative-questions-content">
+                <!-- Loading state -->
+                <div *ngIf="loadingPreguntasColaborativas()" class="text-center p-4">
+                  <p-progressSpinner />
+                  <p class="mt-2">Cargando preguntas colaborativas...</p>
+                </div>
+
+                <!-- No questions state -->
+                <div
+                  *ngIf="!loadingPreguntasColaborativas() && preguntasColaborativas().length === 0"
+                  class="text-center p-4"
+                >
+                  <i class="pi pi-info-circle text-6xl text-gray-400 mb-3"></i>
+                  <h4 class="text-gray-600">No hay preguntas colaborativas</h4>
+                  <p class="text-gray-500">
+                    Los alumnos aún no han creado preguntas para este examen colaborativo.
+                  </p>
+                </div>
+
+                <!-- Questions content -->
+                <div
+                  *ngIf="!loadingPreguntasColaborativas() && preguntasColaborativas().length > 0"
+                  class="grid"
+                >
+                  <!-- Statistics Overview -->
+                  <div class="col-12 mb-4">
+                    <h4 class="mb-3 text-primary">Resumen de preguntas colaborativas</h4>
+                    <div class="grid">
+                      <div class="col-12 lg:col-4 md:col-6">
+                        <p-card styleClass="h-full">
+                          <div class="text-center">
+                            <i class="pi pi-question-circle text-4xl text-blue-500 mb-2"></i>
+                            <h3 class="m-0 text-blue-600">
+                              {{ preguntasColaborativas().length }}
+                            </h3>
+                            <p class="text-gray-600 m-0">Total preguntas</p>
+                          </div>
+                        </p-card>
+                      </div>
+
+                      <div class="col-12 lg:col-4 md:col-6">
+                        <p-card styleClass="h-full">
+                          <div class="text-center">
+                            <i class="pi pi-users text-4xl text-green-500 mb-2"></i>
+                            <h3 class="m-0 text-green-600">
+                              {{ getUniqueStudentsCount() }}
+                            </h3>
+                            <p class="text-gray-600 m-0">Alumnos participantes</p>
+                          </div>
+                        </p-card>
+                      </div>
+
+                      <div class="col-12 lg:col-4 md:col-6">
+                        <p-card styleClass="h-full">
+                          <div class="text-center">
+                            <i class="pi pi-book text-4xl text-orange-500 mb-2"></i>
+                            <h3 class="m-0 text-orange-600">
+                              {{ getUniqueTopicsCount() }}
+                            </h3>
+                            <p class="text-gray-600 m-0">Temas cubiertos</p>
+                          </div>
+                        </p-card>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Questions Table -->
+                  <div class="col-12">
+                    <p-card>
+                      <h5 class="mb-3">📝 Preguntas creadas por los alumnos</h5>
+                      <p-table
+                        [value]="preguntasColaborativas()"
+                        [paginator]="true"
+                        [rows]="10"
+                        [rowsPerPageOptions]="[10, 25, 50]"
+                        [sortField]="'createdAt'"
+                        [sortOrder]="-1"
+                        styleClass="p-datatable-sm"
+                        dataKey="id"
+                        [globalFilterFields]="['identificador', 'descripcion', 'createdBy.nombre', 'createdBy.apellidos', 'tema.numero']"
+                      >
+                        <ng-template pTemplate="caption">
+                          <div class="flex justify-content-between align-items-center">
+                            <span class="p-input-icon-left">
+                              <i class="pi pi-search"></i>
+                              <input
+                                pInputText
+                                type="text"
+                                placeholder="Buscar preguntas..."
+                                (input)="onGlobalFilter($event)"
+                              />
+                            </span>
+                          </div>
+                        </ng-template>
+
+                        <ng-template pTemplate="header">
+                          <tr>
+                            <th pSortableColumn="identificador">
+                              Identificador
+                              <p-sortIcon field="identificador"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="descripcion">
+                              Descripción
+                              <p-sortIcon field="descripcion"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="tema.numero">
+                              Tema
+                              <p-sortIcon field="tema.numero"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="createdBy.nombre">
+                              Creado por
+                              <p-sortIcon field="createdBy.nombre"></p-sortIcon>
+                            </th>
+                            <th pSortableColumn="createdAt">
+                              Fecha creación
+                              <p-sortIcon field="createdAt"></p-sortIcon>
+                            </th>
+                            <th style="width: 120px">Acciones</th>
+                          </tr>
+                        </ng-template>
+
+                        <ng-template pTemplate="body" let-pregunta>
+                          <tr>
+                            <td>
+                              <strong class="text-primary">
+                                {{ pregunta.identificador }}
+                              </strong>
+                            </td>
+                            <td>
+                              <div class="max-w-20rem">
+                                {{ pregunta.descripcion | slice:0:100 }}
+                                <span *ngIf="pregunta.descripcion.length > 100">...</span>
+                              </div>
+                            </td>
+                            <td>
+                              <p-tag
+                                [value]="pregunta.tema.numero"
+                                severity="info"
+                                [pTooltip]="pregunta.tema.descripcion"
+                              />
+                            </td>
+                            <td>
+                              <div class="flex align-items-center gap-2">
+                                <i class="pi pi-user text-gray-500"></i>
+                                <div>
+                                  <div class="font-semibold">
+                                    {{ pregunta.createdBy.nombre }} {{ pregunta.createdBy.apellidos }}
+                                  </div>
+                                  <div class="text-sm text-gray-500">
+                                    {{ pregunta.createdBy.email }}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <small>{{ pregunta.createdAt | date:'short' }}</small>
+                            </td>
+                            <td>
+                              <div class="flex gap-1">
+                                <p-button
+                                  icon="pi pi-eye"
+                                  [text]="true"
+                                  [rounded]="true"
+                                  size="small"
+                                  pTooltip="Ver pregunta"
+                                  (click)="verPregunta(pregunta.id)"
+                                  severity="info"
+                                />
+                                <p-button
+                                  icon="pi pi-external-link"
+                                  [text]="true"
+                                  [rounded]="true"
+                                  size="small"
+                                  pTooltip="Abrir en nueva pestaña"
+                                  (click)="abrirPreguntaEnNuevaPestana(pregunta.id)"
+                                  severity="secondary"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        </ng-template>
+
+                        <ng-template pTemplate="emptymessage">
+                          <tr>
+                            <td colspan="6" class="text-center p-4">
+                              <div class="text-gray-500">
+                                <i class="pi pi-info-circle text-3xl mb-2"></i>
+                                <p>No se encontraron preguntas colaborativas</p>
+                              </div>
+                            </td>
+                          </tr>
+                        </ng-template>
+                      </p-table>
+                    </p-card>
+                  </div>
+                </div>
+              </div>
+            </p-tabPanel>
           </p-tabView>
         </div>
 
