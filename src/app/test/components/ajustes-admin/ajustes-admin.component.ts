@@ -17,6 +17,8 @@ export class AjustesAdminComponent {
   planificacionService = inject(PlanificacionesService);
   toast = inject(ToastrService);
   getFactor$ = this.factorsService.getFactors$();
+
+  public registroUrl = `${window.location.origin}/auth/registro`;
   public factors = this.fb.group({
     preguntasFallidasPivote: [0, Validators.required],
     flashcardsMalPivote: [0, Validators.required],
@@ -95,5 +97,13 @@ export class AjustesAdminComponent {
         `Asignados automaticamente a ${res.length} alumnos con exito!`
       );
     } catch (error) {}
+  }
+
+  public copiarEnlace() {
+    navigator.clipboard.writeText(this.registroUrl).then(() => {
+      this.toast.success('Enlace copiado al portapapeles');
+    }).catch(() => {
+      this.toast.error('Error al copiar el enlace');
+    });
   }
 }

@@ -1,5 +1,5 @@
 <div class="grid">
-  <div class="col-12">
+  <div class="col-12 md:col-6">
     <p-card>
       <h4 class="w-full">Acciones</h4>
       <div class="flex flex-column gap-2">
@@ -8,6 +8,32 @@
           label="Ejecutar"
           [action]="ejecutarAsignacionTotal.bind(this)"
         />
+      </div>
+    </p-card>
+  </div>
+
+  <div class="col-12 md:col-6">
+    <p-card>
+      <h4 class="w-full">Enlace de registro</h4>
+      <div class="flex flex-column gap-3">
+        <p class="text-sm text-color-secondary">
+          Comparte este enlace con nuevos usuarios para que puedan registrarse:
+        </p>
+        <div class="flex gap-2 align-items-center">
+          <input
+            type="text"
+            pInputText
+            [value]="registroUrl"
+            readonly
+            class="flex-1"
+          />
+          <p-button
+            icon="pi pi-copy"
+            [text]="true"
+            (onClick)="copiarEnlace()"
+            pTooltip="Copiar enlace"
+          ></p-button>
+        </div>
       </div>
     </p-card>
   </div>
