@@ -14,13 +14,13 @@ import { MetodoCalificacion } from '../../../shared/models/user.model';
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
-  calcular0,
-  calcular100,
-  calcular100y50,
-  calcular100y75y50,
-  calcular50,
-  calcular75,
-  getStats,
+    calcular0,
+    calcular100,
+    calcular100y50,
+    calcular100y75y50,
+    calcular50,
+    calcular75,
+    getStats,
 } from '../../../utils/utils';
 
 interface ConfidenceCard {
@@ -276,6 +276,17 @@ export class TestStatsComponent {
     } else {
       this.router.navigate(['/app/test/alumno/realizar-test']);
     }
+  }
+
+  public verRespuestas(): void {
+    this.router.navigate(
+      ['/app/test/alumno/realizar-test/modo-ver-respuestas/' + this.getId()],
+      {
+        queryParams: {
+          goBack: true,
+        },
+      }
+    );
   }
 
 
