@@ -395,7 +395,6 @@
                 *ngIf="!isModoExamen() || modoVerRespuestas"
                 data-testid="solucion-container"
               >
-                @if (showSolution() || vistaPrevia || modoVerRespuestas) {
                 <strong>Solución:</strong>
                 <p class="m-0" data-testid="solucion-texto">
                   <markdown
@@ -406,13 +405,6 @@
                     "
                   ></markdown>
                 </p>
-                } @else {
-                <strong
-                  class="respuesta-correcta"
-                  data-testid="respuesta-correcta-mensaje"
-                  >¡Respuesta correcta!</strong
-                >
-                }
               </div>
 
               <div

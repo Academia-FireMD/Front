@@ -1,41 +1,41 @@
 import { Location } from '@angular/common';
 import {
-  Component,
-  effect,
-  ElementRef,
-  inject,
-  Input,
-  QueryList,
-  signal,
-  ViewChildren,
+    Component,
+    effect,
+    ElementRef,
+    inject,
+    Input,
+    QueryList,
+    signal,
+    ViewChildren,
 } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import {
-  BehaviorSubject,
-  catchError,
-  combineLatest,
-  delay,
-  filter,
-  firstValueFrom,
-  switchMap,
-  tap,
+    BehaviorSubject,
+    catchError,
+    combineLatest,
+    delay,
+    filter,
+    firstValueFrom,
+    switchMap,
+    tap,
 } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TestService } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
 import {
-  Dificultad,
-  Pregunta,
-  SeguridadAlResponder,
+    Dificultad,
+    Pregunta,
+    SeguridadAlResponder,
 } from '../../../shared/models/pregunta.model';
 import { Respuesta, Test } from '../../../shared/models/test.model';
 import { esRolPlataforma, Rol } from '../../../shared/models/user.model';
 import {
-  getLetter,
-  obtainSecurityEmojiBasedOnEnum,
+    getLetter,
+    obtainSecurityEmojiBasedOnEnum,
 } from '../../../utils/utils';
 
 @Component({
@@ -415,20 +415,27 @@ export class CompletarTestComponent {
   }
 
   public showSolution() {
+    if (this.isModoExamen() && !this.modoVerRespuestas) {
+      return false;
+    }
+    const respuesta = this.preguntaRespondida();
     return (
-      this.indiceSeleccionado.getValue() != this.indicePreguntaCorrecta &&
-      this.indicePreguntaCorrecta >= 0 &&
-      this.answeredQuestion >= 0 &&
+      !!respuesta &&
+      respuesta.estado === 'RESPONDIDA' &&
       !this.comunicating
     );
   }
 
   public answeredCurrentQuestion() {
-    return (
-      this.answeredQuestion == this.indiceSeleccionado.getValue() &&
-      this.answeredQuestion >= 0 &&
-      !this.comunicating
-    );
+    if (this.comunicating) {
+      return (
+        this.answeredQuestion == this.indiceSeleccionado.getValue() &&
+        this.answeredQuestion >= 0 &&
+        !this.comunicating
+      );
+    }
+    const respuesta = this.preguntaRespondida();
+    return !!respuesta && respuesta.estado === 'RESPONDIDA';
   }
 
   public getId() {

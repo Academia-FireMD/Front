@@ -348,18 +348,32 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   @Memoize()
   getActionItems(user: Usuario): MenuItem[] {
-    return [
+    const items: MenuItem[] = [];
+
+    if (this.decodedUser.rol === 'ADMIN') {
+      items.push({
+        label: 'Acceder como usuario',
+        icon: 'pi pi-user-edit',
+        command: () => this.impersonateUser(user),
+      });
+    }
+
+    items.push(
       {
         label: 'Suscripción',
         icon: 'pi pi-credit-card',
         command: () => this.openSubscriptionDialog(user),
       },
       {
-        label: 'Denegar',
-        icon: 'pi pi-times',
+        label: user.validated ? 'Verificar' : 'Denegar',
+        icon: user.validated ? 'pi pi-check' : 'pi pi-times',
         command: () => {
           const event = new MouseEvent('click');
-          this.denegar(user.id, event);
+          if (user.validated) {
+            this.permitir(user.id);
+          } else {
+            this.denegar(user.id, event);
+          }
         },
       },
       {
@@ -369,8 +383,10 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           const event = new MouseEvent('click');
           this.deleteUser(user.id, event);
         },
-      },
-    ];
+      }
+    );
+
+    return items;
   }
 
   getOnboardingCompletionPercentage(user: Usuario): number {

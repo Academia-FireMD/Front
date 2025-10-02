@@ -77,3 +77,10 @@
 ::ng-deep p-button[pTooltip="Ver planificaciones"] button {
   transition: transform 0.3s ease;
 }
+
+// Evitar que el texto del botón se rompa en múltiples líneas
+::ng-deep .no-wrap-button {
+  .p-button-label {
+    white-space: nowrap !important;
+  }
+}

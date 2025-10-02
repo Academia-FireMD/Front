@@ -33,7 +33,7 @@ export class TemaSelectComponent implements OnInit, OnDestroy {
         this.grupos = groups;
         this.lastLoadedTemas = groups;
         groups.forEach((g) => {
-          if (!this.collapsedGroups.has(g.label)) this.collapsedGroups.set(g.label, false);
+          if (!this.collapsedGroups.has(g.label)) this.collapsedGroups.set(g.label, true);
         });
       });
     this.subs.add(s);
