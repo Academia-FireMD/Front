@@ -2,11 +2,10 @@ import { Component, computed, inject } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { TemaService } from '../../../services/tema.service';
-import { PaginationFilter } from '../../../shared/models/pagination.model';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { Tema } from '../../../shared/models/pregunta.model';
 import { ModuloService } from '../../../shared/services/modulo.service';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-tema-overview',
@@ -107,11 +106,11 @@ export class TemaOverviewComponent extends SharedGridComponent<Tema> {
   public eliminarTema(id: number, event: Event) {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
-      message: `Vas a eliminar el tema con el id ${id}, ¿estás seguro?`,
-      header: 'Confirmación',
+      message: `Se eliminará el tema (id: ${id}) y TODAS sus preguntas asociadas. Esta acción es irreversible y puede afectar estadísticas e históricos. ¿Deseas continuar?`,
+      header: 'Eliminar tema',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',
-      acceptLabel: 'Sí',
+      acceptLabel: 'Eliminar',
       rejectLabel: 'No',
       rejectIcon: 'none',
       rejectButtonStyleClass: 'p-button-text',

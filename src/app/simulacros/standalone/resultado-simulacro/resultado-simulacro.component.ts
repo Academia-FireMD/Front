@@ -15,7 +15,7 @@ import { PrimengModule } from '../../../shared/primeng.module';
 import { SharedModule } from '../../../shared/shared.module';
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
-import { createConfidenceAnalysisForResult, getColorClass, getNotaClass } from '../../../utils/utils';
+import { calcular100, calcular100y50, calcular100y75y50, createConfidenceAnalysisForResult, getColorClass, getNotaClass } from '../../../utils/utils';
 @Component({
   selector: 'app-resultado-simulacro',
   templateUrl: './resultado-simulacro.component.html',
@@ -55,7 +55,10 @@ export class ResultadoSimulacroComponent implements OnInit {
   public ultimoIntento: any = null;
   public isAdmin: boolean = false;
   public ocultarVolver: boolean = false;
-  
+  public showIndividualConfidenceMi: boolean = false;
+  public showIndividualConfidenceUltimo: boolean = false;
+  public showIndividualConfidenceByUserId: { [key: string]: boolean } = {};
+
   // Selector para obtener el método de calificación del usuario
   userMetodoCalificacion$ = this.store.select(selectUserMetodoCalificacion);
   // Variable para almacenar el método actual
@@ -69,7 +72,7 @@ export class ResultadoSimulacroComponent implements OnInit {
     this.userMetodoCalificacion$.subscribe(metodo => {
       this.currentMetodoCalificacion = metodo;
     });
-    
+
     this.loadRouteData();
     this.isAdmin = this.authService.getCurrentUser()?.rol === 'ADMIN';
   }
@@ -171,7 +174,7 @@ export class ResultadoSimulacroComponent implements OnInit {
 
   toggleRowExpansion(resultado: any): void {
     const key = resultado.usuario.id.toString();
-    
+
     // Alternar el estado de expansión de esta fila específica
     if (this.expandedRowKeys[key]) {
       // Crear nuevo objeto sin esta key para forzar detección de cambios
@@ -181,19 +184,19 @@ export class ResultadoSimulacroComponent implements OnInit {
     } else {
       // Crear nuevo objeto agregando esta key para forzar detección de cambios
       this.expandedRowKeys = { ...this.expandedRowKeys, [key]: true };
-      
+
       // Forzar detección de cambios y redimensionado de gráficos
       this.cdr.detectChanges();
-      
+
       // Múltiples timeouts para asegurar que los gráficos se rendericen correctamente
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 50);
-      
+
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 200);
-      
+
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 500);
@@ -214,9 +217,9 @@ export class ResultadoSimulacroComponent implements OnInit {
 
   getKpiStatsForResult(estadisticas: any): KpiStat[] {
     if (!estadisticas) return [];
-    
+
     const noContestadas = estadisticas.totalPreguntas - estadisticas.correctas - estadisticas.incorrectas;
-    
+
     return [
       {
         value: estadisticas.correctas,
@@ -237,6 +240,96 @@ export class ResultadoSimulacroComponent implements OnInit {
         icon: 'pi-minus'
       }
     ];
+  }
+
+  // Helpers combinados
+  private getCombinedCorrects(stats: any, tipos: string[]): number {
+    if (!stats?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => {
+      return total + (stats.seguridad[tipo]?.correctas || 0);
+    }, 0);
+  }
+
+  private getCombinedIncorrects(stats: any, tipos: string[]): number {
+    if (!stats?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => {
+      return total + (stats.seguridad[tipo]?.incorrectas || 0);
+    }, 0);
+  }
+
+  private getCombinedNoAnswered(stats: any, tipos: string[]): number {
+    if (!stats?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => {
+      return total + (stats.seguridad[tipo]?.noRespondidas || 0);
+    }, 0);
+  }
+
+  private getCombinedTotal(stats: any, tipos: string[]): number {
+    return (
+      this.getCombinedCorrects(stats, tipos) +
+      this.getCombinedIncorrects(stats, tipos) +
+      this.getCombinedNoAnswered(stats, tipos)
+    );
+  }
+
+  private getCombinedAccuracy(stats: any, tipos: string[]): number {
+    const total = this.getCombinedTotal(stats, tipos);
+    if (total === 0) return 0;
+    const correctas = this.getCombinedCorrects(stats, tipos);
+    return Math.round((correctas / total) * 100);
+  }
+
+  public getCombinedConfidenceAnalysisFromSecurity(seguridad: any, totalPreguntas: number): ConfidenceAnalysis[] {
+    if (!seguridad) return [];
+
+    const stats100 = {
+      correctas: this.getCorrectas({ seguridad }, 'CIEN_POR_CIENTO'),
+      incorrectas: this.getIncorrectas({ seguridad }, 'CIEN_POR_CIENTO'),
+    };
+    const stats75 = {
+      correctas: this.getCorrectas({ seguridad }, 'SETENTA_Y_CINCO_POR_CIENTO'),
+      incorrectas: this.getIncorrectas({ seguridad }, 'SETENTA_Y_CINCO_POR_CIENTO'),
+    };
+    const stats50 = {
+      correctas: this.getCorrectas({ seguridad }, 'CINCUENTA_POR_CIENTO'),
+      incorrectas: this.getIncorrectas({ seguridad }, 'CINCUENTA_POR_CIENTO'),
+    };
+
+    const combinations = [
+      {
+        id: 'only-100',
+        title: 'Solo 100% Seguro',
+        icon: '⭐',
+        tipos: ['CIEN_POR_CIENTO'],
+        score: calcular100(stats100 as any, totalPreguntas, this.currentMetodoCalificacion),
+      },
+      {
+        id: 'combined-100-50',
+        title: '100% + 50% Seguro',
+        icon: '🎯',
+        tipos: ['CIEN_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
+        score: calcular100y50(stats100 as any, stats50 as any, totalPreguntas, this.currentMetodoCalificacion),
+      },
+      {
+        id: 'combined-100-75-50',
+        title: '100% + 75% + 50% Seguro',
+        icon: '📈',
+        tipos: ['CIEN_POR_CIENTO', 'SETENTA_Y_CINCO_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
+        score: calcular100y75y50(stats100 as any, stats75 as any, stats50 as any, totalPreguntas, this.currentMetodoCalificacion),
+      },
+    ];
+
+    return combinations.map((c) => ({
+      id: c.id,
+      title: c.title,
+      icon: c.icon,
+      score: c.score,
+      totalPreguntas: this.getCombinedTotal({ seguridad }, c.tipos),
+      correctas: this.getCombinedCorrects({ seguridad }, c.tipos),
+      incorrectas: this.getCombinedIncorrects({ seguridad }, c.tipos),
+      noContestadas: this.getCombinedNoAnswered({ seguridad }, c.tipos),
+      accuracyPercentage: this.getCombinedAccuracy({ seguridad }, c.tipos),
+    }));
   }
 
   private getTotalPreguntas(stats: any): number {

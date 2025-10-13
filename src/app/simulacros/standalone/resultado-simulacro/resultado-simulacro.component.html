@@ -51,14 +51,39 @@
 
         <!-- Botón Ver Respuestas -->
         <div class="text-center mt-4">
-          <button 
-            pButton 
-            type="button" 
-            label="Ver respuestas" 
+          <button
+            pButton
+            type="button"
+            label="Ver respuestas"
             icon="pi pi-eye"
             class="p-button-outlined p-button-primary"
             (click)="verRespuestas(miResultado.testId)"
           ></button>
+        </div>
+
+        <!-- Cards de Combinaciones de Confianza (Mi resultado) -->
+        <div class="col-12 mb-4 mt-4" *ngIf="miResultado?.estadisticas?.detalles?.seguridad">
+          <app-confidence-analysis-cards
+            [analyses]="getCombinedConfidenceAnalysisFromSecurity(miResultado.estadisticas.detalles.seguridad, miResultado.estadisticas.totalPreguntas)"
+            [cardCol]="'col-12 md:col-4'"
+          ></app-confidence-analysis-cards>
+        </div>
+
+        <!-- Desplegable análisis individual (Mi resultado) -->
+        <div class="col-12">
+          <div
+            class="flex align-items-center mb-3 cursor-pointer justify-content-between"
+            (click)="showIndividualConfidenceMi = !showIndividualConfidenceMi"
+          >
+            <h3 class="text-xl font-semibold text-700 mr-2">Análisis por Nivel de Confianza</h3>
+            <i class="pi" [class.pi-chevron-down]="!showIndividualConfidenceMi" [class.pi-chevron-up]="showIndividualConfidenceMi"></i>
+          </div>
+          <div *ngIf="showIndividualConfidenceMi">
+            <app-confidence-analysis-cards
+              *ngIf="miResultado?.estadisticas?.detalles?.seguridad"
+              [analyses]="getConfidenceAnalysisForResult(miResultado.estadisticas.detalles.seguridad)"
+            ></app-confidence-analysis-cards>
+          </div>
         </div>
       </div>
 
@@ -80,14 +105,39 @@
           </div>
         </div>
         <div class="text-center mt-3">
-          <button 
-            pButton 
-            type="button" 
-            label="Ver respuestas" 
+          <button
+            pButton
+            type="button"
+            label="Ver respuestas"
             icon="pi pi-eye"
             class="p-button-outlined p-button-primary"
             (click)="verRespuestas(ultimoIntento.testId)"
           ></button>
+        </div>
+
+        <!-- Cards de Combinaciones de Confianza (Último intento) -->
+        <div class="col-12 mb-4 mt-4" *ngIf="ultimoIntento?.estadisticas?.detalles?.seguridad">
+          <app-confidence-analysis-cards
+            [analyses]="getCombinedConfidenceAnalysisFromSecurity(ultimoIntento.estadisticas.detalles.seguridad, ultimoIntento.estadisticas.totalPreguntas)"
+            [cardCol]="'col-12 md:col-4'"
+          ></app-confidence-analysis-cards>
+        </div>
+
+        <!-- Desplegable análisis individual (Último intento) -->
+        <div class="col-12">
+          <div
+            class="flex align-items-center mb-3 cursor-pointer justify-content-between"
+            (click)="showIndividualConfidenceUltimo = !showIndividualConfidenceUltimo"
+          >
+            <h3 class="text-xl font-semibold text-700 mr-2">Análisis por Nivel de Confianza</h3>
+            <i class="pi" [class.pi-chevron-down]="!showIndividualConfidenceUltimo" [class.pi-chevron-up]="showIndividualConfidenceUltimo"></i>
+          </div>
+          <div *ngIf="showIndividualConfidenceUltimo">
+            <app-confidence-analysis-cards
+              *ngIf="ultimoIntento?.estadisticas?.detalles?.seguridad"
+              [analyses]="getConfidenceAnalysisForResult(ultimoIntento.estadisticas.detalles.seguridad)"
+            ></app-confidence-analysis-cards>
+          </div>
         </div>
       </div>
     </div>
@@ -147,7 +197,7 @@
               <div class="correctas-valor">
                 {{ resultado.estadisticas.correctas }}
                 <span class="porcentaje">
-                  ({{ resultado.estadisticas.totalPreguntas ? 
+                  ({{ resultado.estadisticas.totalPreguntas ?
                         (resultado.estadisticas.correctas / resultado.estadisticas.totalPreguntas * 100).toFixed(0) : 0 }}%)
                 </span>
               </div>
@@ -156,7 +206,7 @@
               <div class="incorrectas-valor">
                 {{ resultado.estadisticas.incorrectas }}
                 <span class="porcentaje">
-                  ({{ resultado.estadisticas.totalPreguntas ? 
+                  ({{ resultado.estadisticas.totalPreguntas ?
                         (resultado.estadisticas.incorrectas / resultado.estadisticas.totalPreguntas * 100).toFixed(0) : 0 }}%)
                 </span>
               </div>
@@ -180,11 +230,25 @@
             <td colspan="8">
               <div class="p-3">
                 <h5 class="mb-3">Análisis por Nivel de Confianza</h5>
+                <!-- Cards combinadas -->
                 <app-confidence-analysis-cards
                   *ngIf="resultado.estadisticas?.detalles?.seguridad"
-                  [analyses]="getConfidenceAnalysisForResult(resultado.estadisticas.detalles.seguridad)"
-                  [attr.data-row-id]="resultado.usuario.id"
+                  [analyses]="getCombinedConfidenceAnalysisFromSecurity(resultado.estadisticas.detalles.seguridad, resultado.estadisticas.totalPreguntas)"
+                  [cardCol]="'col-12 md:col-4'"
                 ></app-confidence-analysis-cards>
+
+                <!-- Desplegable con análisis individual -->
+                <div class="flex align-items-center mb-3 cursor-pointer justify-content-between" *ngIf="resultado.estadisticas?.detalles?.seguridad" (click)="showIndividualConfidenceByUserId[resultado.usuario.id] = !showIndividualConfidenceByUserId[resultado.usuario.id]">
+                  <h6 class="text-lg font-semibold text-700 mr-2">Detalle por nivel</h6>
+                  <i class="pi" [class.pi-chevron-down]="!showIndividualConfidenceByUserId[resultado.usuario.id]" [class.pi-chevron-up]="showIndividualConfidenceByUserId[resultado.usuario.id]"></i>
+                </div>
+                <div *ngIf="resultado.estadisticas?.detalles?.seguridad && showIndividualConfidenceByUserId[resultado.usuario.id]">
+                  <app-confidence-analysis-cards
+                    [analyses]="getConfidenceAnalysisForResult(resultado.estadisticas.detalles.seguridad)"
+                    [attr.data-row-id]="resultado.usuario.id"
+                  ></app-confidence-analysis-cards>
+                </div>
+
                 <div *ngIf="!resultado.estadisticas?.detalles?.seguridad" class="text-center p-4">
                   <p class="text-muted">No hay datos de confianza disponibles para este resultado</p>
                 </div>

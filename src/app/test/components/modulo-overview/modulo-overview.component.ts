@@ -1,8 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
+import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { Modulo, ModuloService } from '../../../shared/services/modulo.service';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-modulo-overview',
@@ -76,14 +76,19 @@ export class ModuloOverviewComponent extends SharedGridComponent<Modulo> {
 
     this.confirmationService.confirm({
       header: 'Eliminar módulo',
-      message: `¿Estás seguro de que deseas eliminar este módulo? ${
+      message: `Se eliminará el módulo y TODOS sus temas, junto con TODAS las preguntas de esos temas. Esta acción es irreversible y puede afectar estadísticas e históricos. ¿Deseas continuar? ${
         numTemas > 0
           ? `\nSe eliminarán también ${numTemas} tema${
               numTemas === 1 ? '' : 's'
             } asociado${numTemas === 1 ? '' : 's'}.`
           : ''
       }`,
-      rejectButtonStyleClass: 'p-button-outlined',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
       accept: () => {
         this.service.deleteModulo$(modulo.id).subscribe({
           next: (response) => {

@@ -33,6 +33,9 @@ import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-te
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
+    calcular100,
+    calcular100y50,
+    calcular100y75y50,
     createConfidenceAnalysisForResult,
     duracionOptions,
     estadoExamenOptions,
@@ -971,6 +974,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   // Métodos para el desplegable de análisis de confianza
   public expandedRowKeys: { [key: string]: boolean } = {};
+  public showIndividualConfidenceByUserId: { [key: string]: boolean } = {};
 
   toggleRowExpansion(resultado: any): void {
     const key = resultado.usuario.id.toString();
@@ -1012,6 +1016,86 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.getNoContestadas.bind(this),
       this.getAccuracyPercentage.bind(this)
     );
+  }
+
+  // Helpers combinados
+  private getCombinedCorrects(stats: any, tipos: string[]): number {
+    if (!stats?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => total + (stats.seguridad[tipo]?.correctas || 0), 0);
+  }
+  private getCombinedIncorrects(stats: any, tipos: string[]): number {
+    if (!stats?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => total + (stats.seguridad[tipo]?.incorrectas || 0), 0);
+  }
+  private getCombinedNoAnswered(stats: any, tipos: string[]): number {
+    if (!stats?.seguridad) return 0;
+    return tipos.reduce((total, tipo) => total + (stats.seguridad[tipo]?.noRespondidas || 0), 0);
+  }
+  private getCombinedTotal(stats: any, tipos: string[]): number {
+    return (
+      this.getCombinedCorrects(stats, tipos) +
+      this.getCombinedIncorrects(stats, tipos) +
+      this.getCombinedNoAnswered(stats, tipos)
+    );
+  }
+  private getCombinedAccuracy(stats: any, tipos: string[]): number {
+    const total = this.getCombinedTotal(stats, tipos);
+    if (total === 0) return 0;
+    const correctas = this.getCombinedCorrects(stats, tipos);
+    return Math.round((correctas / total) * 100);
+  }
+
+  public getCombinedConfidenceAnalysisFromSecurity(seguridad: any, totalPreguntas: number): ConfidenceAnalysis[] {
+    if (!seguridad) return [];
+
+    const stats100 = {
+      correctas: this.getCorrectas({ seguridad }, 'CIEN_POR_CIENTO'),
+      incorrectas: this.getIncorrectas({ seguridad }, 'CIEN_POR_CIENTO'),
+    } as any;
+    const stats75 = {
+      correctas: this.getCorrectas({ seguridad }, 'SETENTA_Y_CINCO_POR_CIENTO'),
+      incorrectas: this.getIncorrectas({ seguridad }, 'SETENTA_Y_CINCO_POR_CIENTO'),
+    } as any;
+    const stats50 = {
+      correctas: this.getCorrectas({ seguridad }, 'CINCUENTA_POR_CIENTO'),
+      incorrectas: this.getIncorrectas({ seguridad }, 'CINCUENTA_POR_CIENTO'),
+    } as any;
+
+    const combinations = [
+      {
+        id: 'only-100',
+        title: 'Solo 100% Seguro',
+        icon: '⭐',
+        tipos: ['CIEN_POR_CIENTO'],
+        score: calcular100(stats100, totalPreguntas, this.currentMetodoCalificacion),
+      },
+      {
+        id: 'combined-100-50',
+        title: '100% + 50% Seguro',
+        icon: '🎯',
+        tipos: ['CIEN_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
+        score: calcular100y50(stats100, stats50, totalPreguntas, this.currentMetodoCalificacion),
+      },
+      {
+        id: 'combined-100-75-50',
+        title: '100% + 75% + 50% Seguro',
+        icon: '📈',
+        tipos: ['CIEN_POR_CIENTO', 'SETENTA_Y_CINCO_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
+        score: calcular100y75y50(stats100, stats75, stats50, totalPreguntas, this.currentMetodoCalificacion),
+      },
+    ];
+
+    return combinations.map((c) => ({
+      id: c.id,
+      title: c.title,
+      icon: c.icon,
+      score: c.score,
+      totalPreguntas: this.getCombinedTotal({ seguridad }, c.tipos),
+      correctas: this.getCombinedCorrects({ seguridad }, c.tipos),
+      incorrectas: this.getCombinedIncorrects({ seguridad }, c.tipos),
+      noContestadas: this.getCombinedNoAnswered({ seguridad }, c.tipos),
+      accuracyPercentage: this.getCombinedAccuracy({ seguridad }, c.tipos),
+    }));
   }
 
   private getTotalPreguntasPorSeguridad(
@@ -1100,6 +1184,25 @@ export class ExamenesDashboardAdminDetailviewComponent {
       })
     );
     window.open(url, '_blank');
+  }
+
+  public eliminarPreguntaColaborativa(pregunta: any) {
+    this.confirmationService.confirm({
+      header: 'Eliminar pregunta colaborativa',
+      message: `Esta acción eliminará la pregunta "${pregunta.identificador}" de la base de datos. ¿Deseas continuar?`,
+      acceptLabel: 'Sí, eliminar',
+      rejectLabel: 'Cancelar',
+      rejectButtonStyleClass: 'p-button-outlined',
+      accept: async () => {
+        try {
+          await firstValueFrom(this.preguntasService.deletePregunta$(pregunta.id));
+          this.toast.success('Pregunta eliminada correctamente');
+          this.loadPreguntasColaborativas();
+        } catch (error) {
+          this.toast.error('Error al eliminar la pregunta');
+        }
+      }
+    });
   }
 
 }

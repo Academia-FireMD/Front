@@ -874,19 +874,31 @@
                           <tr>
                             <td colspan="8">
                               <div class="p-3">
-                                <h5 class="mb-3">
-                                  Análisis por Nivel de Confianza
-                                </h5>
+                                <h5 class="mb-3">Análisis por Nivel de Confianza</h5>
+                                <!-- Cards combinadas -->
                                 <app-confidence-analysis-cards
-                                  *ngIf="
-                                    resultado.estadisticas?.detalles?.seguridad
-                                  "
-                                  [analyses]="
-                                    getConfidenceAnalysisForResult(
-                                      resultado.estadisticas.detalles.seguridad
-                                    )
-                                  "
+                                  *ngIf="resultado.estadisticas?.detalles?.seguridad"
+                                  [analyses]="getCombinedConfidenceAnalysisFromSecurity(resultado.estadisticas.detalles.seguridad, resultado.estadisticas.totalPreguntas)"
+                                  [cardCol]="'col-12 md:col-4'"
                                 ></app-confidence-analysis-cards>
+                                <!-- Desplegable con análisis individual -->
+                                <div
+                                  class="flex align-items-center mb-3 cursor-pointer justify-content-between"
+                                  *ngIf="resultado.estadisticas?.detalles?.seguridad"
+                                  (click)="showIndividualConfidenceByUserId[resultado.usuario.id] = !showIndividualConfidenceByUserId[resultado.usuario.id]"
+                                >
+                                  <h6 class="text-lg font-semibold text-700 mr-2">Detalle por nivel</h6>
+                                  <i
+                                    class="pi"
+                                    [class.pi-chevron-down]="!showIndividualConfidenceByUserId[resultado.usuario.id]"
+                                    [class.pi-chevron-up]="showIndividualConfidenceByUserId[resultado.usuario.id]"
+                                  ></i>
+                                </div>
+                                <div *ngIf="resultado.estadisticas?.detalles?.seguridad && showIndividualConfidenceByUserId[resultado.usuario.id]">
+                                  <app-confidence-analysis-cards
+                                    [analyses]="getConfidenceAnalysisForResult(resultado.estadisticas.detalles.seguridad)"
+                                  ></app-confidence-analysis-cards>
+                                </div>
                                 <div
                                   *ngIf="
                                     !resultado.estadisticas?.detalles?.seguridad
@@ -1111,6 +1123,15 @@
                                   pTooltip="Abrir en nueva pestaña"
                                   (click)="abrirPreguntaEnNuevaPestana(pregunta.id)"
                                   severity="secondary"
+                                />
+                                <p-button
+                                  icon="pi pi-trash"
+                                  [text]="true"
+                                  [rounded]="true"
+                                  size="small"
+                                  pTooltip="Eliminar definitivamente"
+                                  (click)="eliminarPreguntaColaborativa(pregunta)"
+                                  severity="danger"
                                 />
                               </div>
                             </td>
