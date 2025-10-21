@@ -123,7 +123,15 @@
           }
         </div>
       </div>
-      <div class="right gap-2" *ngIf="expectedRole == 'ADMIN'">
+
+      <div class="right gap-2">
+        @if (getId() !== 'new') {
+        <app-attachments-manager
+          [entidadTipo]="entidadTipoPlanificacion"
+          [entidadId]="Number(getId())"
+          [mode]="expectedRole === 'ADMIN' ? 'admin' : 'view'"
+        ></app-attachments-manager>
+        } @if (expectedRole == 'ADMIN') {
         <div class="duracion">
           <p-dropdown
             class="w-full"
@@ -153,6 +161,7 @@
           [action]="guardarCambios.bind(this)"
           label="Guardar cambios"
         ></app-async-button>
+        }
       </div>
     </div>
     <div class="col-12 calendar-info">

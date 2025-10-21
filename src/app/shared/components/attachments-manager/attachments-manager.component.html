@@ -1,0 +1,170 @@
+<!-- Botón para abrir el diálogo de adjuntos -->
+<div class="attachments-button" 
+     (click)="openDialog()"
+     [pTooltip]="adjuntos().length === 0 ? 'Sin adjuntos' : adjuntos().length + ' adjunto(s)'"
+     tooltipPosition="left">
+  <i class="pi pi-paperclip"></i>
+  @if (adjuntos().length > 0) {
+    <span class="attachments-badge">{{ adjuntos().length }}</span>
+  }
+</div>
+
+<!-- Diálogo de confirmación para eliminar -->
+<p-confirmDialog></p-confirmDialog>
+
+<!-- Diálogo principal de adjuntos -->
+<p-dialog
+  header="Adjuntos"
+  [(visible)]="isDialogVisible"
+  [modal]="true"
+  [style]="{ width: '90vw', maxWidth: '800px' }"
+  [dismissableMask]="true"
+  [responsive]="true"
+  styleClass="attachments-dialog"
+>
+  <div class="attachments-container">
+    <!-- Botón para subir adjunto (solo admin) -->
+    @if (mode() === 'admin') {
+      <div class="flex justify-content-end mb-3">
+        <p-button
+          label="Subir adjunto"
+          icon="pi pi-upload"
+          (click)="openUploadDialog()"
+          styleClass="p-button-success p-button-sm"
+        ></p-button>
+      </div>
+    }
+
+    <!-- Lista de adjuntos -->
+    @if (adjuntos().length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-inbox empty-icon"></i>
+        <p class="empty-text">No hay adjuntos disponibles</p>
+      </div>
+    } @else {
+      <div class="adjuntos-list">
+        @for (adjunto of adjuntos(); track adjunto.id) {
+          <div class="adjunto-card">
+            <div class="adjunto-icon">
+              <i [class]="getFileIcon(adjunto.fileType)"></i>
+            </div>
+            <div class="adjunto-info">
+              <h4 class="adjunto-title">{{ adjunto.identificador }}</h4>
+              @if (adjunto.descripcion) {
+                <p class="adjunto-description">{{ adjunto.descripcion }}</p>
+              }
+              <div class="adjunto-meta">
+                <span class="adjunto-filename">
+                  <i class="pi pi-file"></i>
+                  {{ adjunto.fileName }}
+                </span>
+                <span class="adjunto-size">
+                  <i class="pi pi-database"></i>
+                  {{ formatFileSize(adjunto.fileSize) }}
+                </span>
+              </div>
+            </div>
+            <div class="adjunto-actions">
+              <p-button
+                icon="pi pi-download"
+                [outlined]="true"
+                [rounded]="true"
+                pTooltip="Descargar"
+                tooltipPosition="left"
+                (click)="descargarAdjunto(adjunto)"
+                styleClass="p-button-sm p-button-info"
+              ></p-button>
+              @if (mode() === 'admin') {
+                <p-button
+                  icon="pi pi-trash"
+                  [outlined]="true"
+                  [rounded]="true"
+                  pTooltip="Eliminar"
+                  tooltipPosition="left"
+                  (click)="confirmarEliminacion(adjunto)"
+                  styleClass="p-button-sm p-button-danger"
+                ></p-button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</p-dialog>
+
+<!-- Diálogo para subir adjunto -->
+<p-dialog
+  header="Subir adjunto"
+  [(visible)]="isUploadDialogVisible"
+  [modal]="true"
+  [style]="{ width: '90vw', maxWidth: '600px' }"
+  [dismissableMask]="true"
+  [responsive]="true"
+>
+  <form [formGroup]="uploadForm" class="upload-form">
+    <div class="field">
+      <label for="identificador">Nombre del adjunto *</label>
+      <input
+        id="identificador"
+        type="text"
+        pInputText
+        formControlName="identificador"
+        placeholder="Ej: Material de apoyo"
+        class="w-full"
+      />
+      <small class="p-error" *ngIf="uploadForm.get('identificador')?.invalid && uploadForm.get('identificador')?.touched">
+        El nombre es requerido
+      </small>
+    </div>
+
+    <div class="field">
+      <label for="descripcion">Descripción (opcional)</label>
+      <textarea
+        id="descripcion"
+        pInputTextarea
+        formControlName="descripcion"
+        placeholder="Añade una descripción..."
+        rows="3"
+        class="w-full"
+      ></textarea>
+    </div>
+
+    <div class="field">
+      <label>Archivo *</label>
+      <p-fileUpload
+        mode="basic"
+        [auto]="false"
+        chooseLabel="Seleccionar archivo"
+        (onSelect)="onFileSelect($event)"
+        [maxFileSize]="50000000"
+        [customUpload]="true"
+        [showUploadButton]="false"
+        [showCancelButton]="false"
+        styleClass="w-full"
+      ></p-fileUpload>
+      @if (uploadedFiles().length > 0) {
+        <small class="file-selected">
+          <i class="pi pi-check-circle"></i>
+          Archivo seleccionado: {{ uploadedFiles()[0].name }}
+        </small>
+      }
+    </div>
+
+    <div class="flex justify-content-end gap-2 mt-4">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        [outlined]="true"
+        (click)="isUploadDialogVisible.set(false)"
+        [disabled]="uploadingFile()"
+      ></p-button>
+      <app-async-button
+        label="Subir adjunto"
+        icon="pi pi-upload"
+        [action]="subirAdjunto.bind(this)"
+        [disabled]="uploadForm.invalid || uploadedFiles().length === 0"
+      ></app-async-button>
+    </div>
+  </form>
+</p-dialog>

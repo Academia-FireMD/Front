@@ -232,3 +232,117 @@
     padding: 0.5rem !important;
   }
 }
+
+/* Estilos para elementos de menú bloqueados */
+::ng-deep {
+  .locked-menu-item {
+    position: relative;
+    opacity: 0.6;
+    cursor: pointer !important;
+    transition: all 0.3s ease;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 193, 7, 0.1) 50%, transparent 100%) !important;
+    border-left: 3px solid transparent;
+
+    &:hover {
+      opacity: 0.8;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 193, 7, 0.2) 50%, transparent 100%) !important;
+      border-left-color: #ffc107;
+      transform: translateX(2px);
+
+      .locked-icon {
+        animation: shake 0.5s;
+        color: #ffc107;
+      }
+    }
+
+    .locked-icon {
+      color: #ff9800;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    // Prevenir que se active el routerLinkActive
+    &.router-link-active {
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 193, 7, 0.1) 50%, transparent 100%) !important;
+    }
+  }
+
+  // Tooltip personalizado para elementos bloqueados
+  .p-tooltip {
+    &.p-tooltip-right .p-tooltip-text {
+      background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+      color: #000;
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+
+      &::before {
+        border-right-color: #ffc107;
+      }
+    }
+  }
+}
+
+// Animación de candado
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+// Estilos para el menú colapsado con elementos bloqueados
+.menu-collapsed {
+  .locked-menu-item {
+    &:hover {
+      transform: translateX(0) !important;
+    }
+
+    .locked-icon {
+      display: none;
+    }
+
+    // En modo colapsado, mostrar un pequeño candado en el icono
+    &::after {
+      content: '\e97d'; // Unicode para pi-lock
+      font-family: 'primeicons';
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      font-size: 0.6rem;
+      color: #ffc107;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 50%;
+      padding: 0.15rem;
+      width: 1rem;
+      height: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+// Mejoras responsivas para elementos bloqueados
+@media (max-width: 767px) {
+  ::ng-deep {
+    .locked-menu-item {
+      .locked-icon {
+        font-size: 1rem;
+        margin-left: 0.5rem;
+      }
+    }
+
+    .p-tooltip .p-tooltip-text {
+      font-size: 0.75rem;
+      padding: 0.4rem 0.6rem;
+    }
+  }
+}

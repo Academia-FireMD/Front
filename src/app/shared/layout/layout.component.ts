@@ -28,11 +28,11 @@ export class LayoutComponent {
   items = [] as Array<any>;
   isMenuVisible: boolean = false;
   isMenuExpanded: boolean = false;
-  currentUser$: Observable<Usuario | null> = this.store.select(selectCurrentUser);
+  currentUser$: Observable<Usuario | null> =
+    this.store.select(selectCurrentUser);
 
   public selectedUser!: Usuario;
   public editDialogVisible = false;
-
 
   onMenuHover(expanded: boolean): void {
     if (this.viewportService.screenWidth !== 'xs') {
@@ -41,7 +41,6 @@ export class LayoutComponent {
   }
 
   public getResponsiveWidth(expanded: boolean): string {
-
     switch (this.viewportService.screenWidth) {
       case 'xs':
         return '100%';
@@ -71,13 +70,13 @@ export class LayoutComponent {
     if (item.command) {
       item.command({
         originalEvent: event,
-        item: item
+        item: item,
       });
     }
     // Si hay routerLink, navegar
     else if (item.routerLink) {
       this.router.navigate([item.routerLink], {
-        queryParams: item.queryParams
+        queryParams: item.queryParams,
       });
     }
   }
@@ -123,7 +122,6 @@ export class LayoutComponent {
         this.items = this.getStudentMenu(user);
       }
     });
-
   }
 
   private getAdminMenu(): MenuItem[] {
@@ -263,7 +261,6 @@ export class LayoutComponent {
     const isBasic = subscriptionType === SuscripcionTipo.BASIC;
     const isAdvanced = subscriptionType === SuscripcionTipo.ADVANCED;
     const isPremium = subscriptionType === SuscripcionTipo.PREMIUM;
-
     const hasValidSubscription = isBasic || isAdvanced || isPremium;
 
     const menu: MenuItem[] = [];
@@ -320,11 +317,11 @@ export class LayoutComponent {
               routerLink: '/app/test/alumno/flashcards',
             },
           ],
-        },
-      )
+        }
+      );
     }
 
-    // Solo usuarios con suscripción válida (ADVANCED o PREMIUM) pueden acceder a planificación mensual
+    // Planificación mensual - disponible para ADVANCED y PREMIUM
     if (hasValidSubscription && (isAdvanced || isPremium)) {
       menu.push({
         label: 'Planificación mensual',
@@ -332,9 +329,19 @@ export class LayoutComponent {
         routerLink: '/app/planificacion/planificacion-mensual-alumno',
         items: [],
       });
+    } else if (hasValidSubscription) {
+      // Usuario BASIC - mostrar bloqueado
+      menu.push({
+        label: 'Planificación mensual',
+        icon: 'pi pi-calendar-plus',
+        items: [],
+        styleClass: 'locked-menu-item',
+        state: { locked: true },
+        command: () => this.openUpgradePage(),
+      });
     }
 
-    // Solo usuarios con suscripción válida (ADVANCED o PREMIUM) pueden acceder a exámenes
+    // Exámenes - disponible para ADVANCED y PREMIUM
     if (hasValidSubscription && (isAdvanced || isPremium)) {
       menu.push({
         label: 'Exámenes',
@@ -348,6 +355,27 @@ export class LayoutComponent {
             label: 'Exámenes realizados',
             icon: 'pi pi-check-circle',
             routerLink: '/app/examen/alumno/examenes-realizados',
+          },
+        ],
+      });
+    } else if (hasValidSubscription) {
+      // Usuario BASIC - mostrar bloqueado
+      menu.push({
+        label: 'Exámenes',
+        items: [
+          {
+            label: 'Exámenes disponibles',
+            icon: 'pi pi-file',
+            styleClass: 'locked-menu-item',
+            state: { locked: true },
+            command: () => this.openUpgradePage(),
+          },
+          {
+            label: 'Exámenes realizados',
+            icon: 'pi pi-check-circle',
+            styleClass: 'locked-menu-item',
+            state: { locked: true },
+            command: () => this.openUpgradePage(),
           },
         ],
       });
@@ -381,6 +409,11 @@ export class LayoutComponent {
     return menu;
   }
 
+  // Método para abrir la página de tarifas
+  openUpgradePage(): void {
+    window.open('https://tecnikafire.com/tarifas/', '_blank');
+  }
+
   // Método para detener impersonación
   stopImpersonation() {
     this.authService.stopImpersonation$().subscribe({
@@ -392,7 +425,7 @@ export class LayoutComponent {
       error: (error) => {
         this.toast.error('Error al salir de la impersonación');
         console.error('Stop impersonation error:', error);
-      }
+      },
     });
   }
 

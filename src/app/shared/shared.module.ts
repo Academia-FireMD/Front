@@ -14,6 +14,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
 import { TooltipModule } from 'primeng/tooltip';
 import { AvatarUploadComponent } from './avatar-upload/avatar-upload.component';
+import { AsyncButtonComponent } from './components/async-button/async-button.component';
+import { AttachmentsManagerComponent } from './components/attachments-manager/attachments-manager.component';
 import { ConfidenceAnalysisCardsComponent } from './components/confidence-analysis-cards/confidence-analysis-cards.component';
 import { KpiStatsCardsComponent } from './components/kpi-stats-cards/kpi-stats-cards.component';
 import { MetodoCalificacionPickerComponent } from './components/metodo-calificacion-picker/metodo-calificacion-picker.component';
@@ -49,7 +51,8 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     MetodoCalificacionPickerComponent,
     ScoreChartCardComponent,
     KpiStatsCardsComponent,
-    ConfidenceAnalysisCardsComponent
+    ConfidenceAnalysisCardsComponent,
+    AttachmentsManagerComponent
   ],
   imports: [
     CommonModule,
@@ -69,7 +72,8 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     PaginatorModule,
     NgxEchartsModule,
     GenericListComponent,
-    OnboardingFormComponent
+    OnboardingFormComponent,
+    AsyncButtonComponent
   ],
   exports: [
     SharedGridComponent,
@@ -90,6 +94,8 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     ScoreChartCardComponent,
     KpiStatsCardsComponent,
     ConfidenceAnalysisCardsComponent,
+    AttachmentsManagerComponent,
+    AsyncButtonComponent,
     BadgeModule,
     FloatLabelModule,
     OnboardingFormComponent

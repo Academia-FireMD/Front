@@ -1,35 +1,36 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import {
-  FormArray,
-  FormBuilder,
-  FormControl,
-  Validators,
+    FormArray,
+    FormBuilder,
+    FormControl,
+    Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CalendarEvent, CalendarView } from 'angular-calendar';
 import { ToastrService } from 'ngx-toastr';
 import { PrimeNGConfig } from 'primeng/api';
 import {
-  combineLatest,
-  filter,
-  firstValueFrom,
-  tap
+    combineLatest,
+    filter,
+    firstValueFrom,
+    tap
 } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
 import { FilterConfig } from '../../shared/generic-list/generic-list.component';
+import { EntidadTipo } from '../../shared/models/attachment.model';
 import {
-  PlanificacionMensual,
-  PlantillaSemanal,
-  SubBloque,
+    PlanificacionMensual,
+    PlantillaSemanal,
+    SubBloque,
 } from '../../shared/models/planificacion.model';
 import {
-  Comunidad,
-  duracionesDisponibles,
+    Comunidad,
+    duracionesDisponibles,
 } from '../../shared/models/pregunta.model';
 import {
-  TipoDePlanificacionDeseada
+    TipoDePlanificacionDeseada
 } from '../../shared/models/user.model';
 import { getNextWeekIfFriday, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
@@ -120,6 +121,10 @@ export class PlanificacionMensualEditComponent {
   // Add properties for date range
   public startDate: Date | null = null;
   public endDate: Date | null = null;
+
+  // Para el componente de adjuntos
+  public entidadTipoPlanificacion = EntidadTipo.PLANIFICACION_MENSUAL;
+  public Number = Number;
 
   planificationIdEffect = effect(() => {
     if (this.lastLoadedPlanification() && this.lastLoadedPlanification() !== null && this.expectedRole === 'ADMIN') {
