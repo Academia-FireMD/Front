@@ -1,250 +1,398 @@
 <p-confirmDialog></p-confirmDialog>
 
-<p-dialog
-  header="Subir nuevo documento"
-  [modal]="true"
-  [(visible)]="mostrarSubirFichero"
-  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
-  [style]="{ width: '75vw', height: '100%' }"
-  [draggable]="false"
-  [resizable]="false"
->
-  <p-fileUpload
-    name="demo[]"
-    url="https://www.primefaces.org/cdn/api/upload.php"
-    [multiple]="false"
-    accept=".pdf,.doc,.docx"
-    maxFileSize="1000000000"
-    (onSelect)="onSelect($event)"
-    chooseLabel="Seleccionar archivo"
-    cancelStyleClass="hidden"
-    [uploadStyleClass]="'hidden'"
-  >
-    <ng-template pTemplate="content">
-      <div [formGroup]="uploadingFileFormGroup" class="flex flex-column gap-3">
-        <p-floatLabel class="py-2">
-          <input
-            type="text"
-            pInputText
-            class="w-full"
-            formControlName="identificador"
-          />
-          <label for="identificador">Identificador</label>
-        </p-floatLabel>
-        <p-floatLabel>
-          <textarea
-            id="descripcion"
-            pInputTextarea
-            style="width: 100%"
-            formControlName="descripcion"
-          ></textarea>
-          <label for="descripcion">Descripcion</label>
-        </p-floatLabel>
-        <div>
-          <label class="block mb-2">Tema</label>
-          <app-tema-select
-            [formControl]="uploadingFileFormGroup.controls['temaIds']"
-          ></app-tema-select>
+<!-- Vista de Acordeón para Alumnos -->
+<div *ngIf="expectedRole === 'ALUMNO'" class="alumno-documentos">
+  <h2>Documentación</h2>
+
+  <div *ngIf="loadingTree" class="loading-message">
+    <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+    <p>Cargando documentos...</p>
+  </div>
+  <div class="container-accordion">
+    <p-accordion *ngIf="!loadingTree && documentTree.length > 0">
+      <p-accordionTab
+        *ngFor="let modulo of documentTree"
+        [header]="modulo.nombre"
+      >
+        <div *ngFor="let tema of modulo.temas" class="tema-section">
+          <h4 class="tema-title">{{ tema.numero }} - {{ tema.descripcion }}</h4>
+          <div class="documentos-list">
+            <div *ngFor="let doc of tema.documentos" class="documento-item" [ngClass]="{'locked-document': doc.isLocked}">
+              <div class="doc-info" (click)="verDocumentoAlumno(doc)">
+                <span class="doc-name">
+                  <i
+                    *ngIf="doc.isLocked"
+                    class="pi pi-lock"
+                    [ngClass]="doc.isDownloadable ? 'text-orange-500' : 'text-red-500'"
+                    [pTooltip]="doc.isDownloadable ? 'Documento premium - Puedes descargarlo' : 'Documento premium - Requiere suscripción PREMIUM o ADVANCED'"
+                  ></i>
+                  {{ doc.identificador }}
+                  <span *ngIf="doc.isNew" class="badge-new">NEW</span>
+                  <span *ngIf="doc.isLocked" class="badge-premium">PREMIUM</span>
+                </span>
+                <span class="doc-desc" *ngIf="doc.descripcion">{{
+                  doc.descripcion
+                }}</span>
+              </div>
+              <button
+                pButton
+                (click)="descargarDocumentoAlumno(doc)"
+                class="p-button-sm"
+                icon="pi pi-download"
+                label="Descargar"
+                [disabled]="!doc.isDownloadable"
+              ></button>
+            </div>
+          </div>
         </div>
-        <div class="flex justify-content-end">
-          <app-async-button
-            label="{{
-              viewportService.screenWidth == 'xs'
-                ? undefined
-                : 'Subir Documento'
-            }}"
-            icon="pi pi-upload"
-            [action]="subirDocumento.bind(this)"
-            [disabled]="
-              uploadedFiles.length == 0 || uploadingFileFormGroup.invalid
-            "
-          ></app-async-button>
+      </p-accordionTab>
+    </p-accordion>
+  </div>
+
+  <div *ngIf="!loadingTree && documentTree.length === 0" class="no-docs">
+    <i class="pi pi-info-circle" style="font-size: 2rem"></i>
+    <p>No hay documentos disponibles</p>
+  </div>
+</div>
+
+<!-- Vista de Admin o modo selección -->
+<div *ngIf="expectedRole === 'ADMIN' || mode === 'selection'" class="admin-documents-container">
+  <p-dialog
+    header="Subir nuevo documento"
+    [modal]="true"
+    [(visible)]="mostrarSubirFichero"
+    [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+    [style]="{ width: '75vw', height: '100%' }"
+    [draggable]="false"
+    [resizable]="false"
+  >
+    <p-fileUpload
+      name="demo[]"
+      url="https://www.primefaces.org/cdn/api/upload.php"
+      [multiple]="false"
+      accept=".pdf,.doc,.docx"
+      maxFileSize="1000000000"
+      (onSelect)="onSelect($event)"
+      chooseLabel="Seleccionar archivo"
+      cancelStyleClass="hidden"
+      [uploadStyleClass]="'hidden'"
+    >
+      <ng-template pTemplate="content">
+        <div
+          [formGroup]="uploadingFileFormGroup"
+          class="flex flex-column gap-3"
+        >
+          <p-floatLabel class="py-2">
+            <input
+              type="text"
+              pInputText
+              class="w-full"
+              formControlName="identificador"
+            />
+            <label for="identificador">Identificador</label>
+          </p-floatLabel>
+          <p-floatLabel>
+            <textarea
+              id="descripcion"
+              pInputTextarea
+              style="width: 100%"
+              formControlName="descripcion"
+            ></textarea>
+            <label for="descripcion">Descripcion</label>
+          </p-floatLabel>
+          <div>
+            <label class="block mb-2">Tema</label>
+            <app-tema-select
+              [formControl]="uploadingFileFormGroup.controls['temaIds']"
+            ></app-tema-select>
+          </div>
+          <div class="flex flex-column gap-3">
+            <div class="flex flex-column gap-2">
+              <div class="flex align-items-center">
+                <p-checkbox
+                  formControlName="isLocked"
+                  [binary]="true"
+                  inputId="isLocked"
+                ></p-checkbox>
+                <label for="isLocked" class="ml-2"
+                  >Requiere suscripción PREMIUM o ADVANCED</label
+                >
+              </div>
+              <small class="text-color-secondary ml-4">
+                <i class="pi pi-info-circle"></i>
+                El documento será visible para todos los alumnos (según reglas de audiencia del release), pero solo podrán descargarlo usuarios con suscripción PREMIUM o ADVANCED.
+              </small>
+            </div>
+            <div class="flex flex-column gap-2">
+              <div class="flex align-items-center">
+                <p-checkbox
+                  formControlName="requireWatermark"
+                  [binary]="true"
+                  inputId="requireWatermark"
+                ></p-checkbox>
+                <label for="requireWatermark" class="ml-2"
+                  >Aplicar marca de agua</label
+                >
+              </div>
+              <small class="text-color-secondary ml-4">
+                <i class="pi pi-info-circle"></i>
+                Al descargar, el PDF incluirá automáticamente los datos del usuario (nombre, apellidos, DNI) como marca de agua para trazabilidad.
+              </small>
+            </div>
+          </div>
+          <div class="flex justify-content-end">
+            <app-async-button
+              label="{{
+                viewportService.screenWidth == 'xs'
+                  ? undefined
+                  : 'Subir Documento'
+              }}"
+              icon="pi pi-upload"
+              [action]="subirDocumento.bind(this)"
+              [disabled]="
+                uploadedFiles.length == 0 || uploadingFileFormGroup.invalid
+              "
+            ></app-async-button>
+          </div>
+        </div>
+      </ng-template>
+    </p-fileUpload>
+  </p-dialog>
+
+  <p-dialog
+    header="Editar documento"
+    [modal]="true"
+    [(visible)]="mostrarEditarDocumento"
+    [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
+    [style]="{ width: '75vw' }"
+    [draggable]="false"
+    [resizable]="false"
+  >
+    <div [formGroup]="editarDocumentoForm" class="flex flex-column gap-3">
+      <p-floatLabel class="py-2">
+        <input
+          type="text"
+          pInputText
+          class="w-full"
+          formControlName="identificador"
+        />
+        <label for="identificador">Identificador</label>
+      </p-floatLabel>
+      <p-floatLabel>
+        <textarea
+          id="descripcion"
+          pInputTextarea
+          style="width: 100%"
+          formControlName="descripcion"
+        ></textarea>
+        <label for="descripcion">Descripcion</label>
+      </p-floatLabel>
+      <div>
+        <label class="block mb-2">Tema</label>
+        <app-tema-select
+          [formControl]="editarDocumentoForm.controls['temaIds']"
+        ></app-tema-select>
+      </div>
+      <div class="flex flex-column gap-3">
+        <div class="flex flex-column gap-2">
+          <div class="flex align-items-center">
+            <p-checkbox
+              formControlName="isLocked"
+              [binary]="true"
+              inputId="editIsLocked"
+            ></p-checkbox>
+            <label for="editIsLocked" class="ml-2"
+              >Requiere suscripción PREMIUM o ADVANCED</label
+            >
+          </div>
+          <small class="text-color-secondary ml-4">
+            <i class="pi pi-info-circle"></i>
+            El documento será visible para todos los alumnos (según reglas de audiencia del release), pero solo podrán descargarlo usuarios con suscripción PREMIUM o ADVANCED.
+          </small>
+        </div>
+        <div class="flex flex-column gap-2">
+          <div class="flex align-items-center">
+            <p-checkbox
+              formControlName="requireWatermark"
+              [binary]="true"
+              inputId="editRequireWatermark"
+            ></p-checkbox>
+            <label for="editRequireWatermark" class="ml-2"
+              >Aplicar marca de agua</label
+            >
+          </div>
+          <small class="text-color-secondary ml-4">
+            <i class="pi pi-info-circle"></i>
+            Al descargar, el PDF incluirá automáticamente los datos del usuario (nombre, apellidos, DNI) como marca de agua para trazabilidad.
+          </small>
         </div>
       </div>
-    </ng-template>
-  </p-fileUpload>
-</p-dialog>
-
-<p-dialog
-  header="Editar documento"
-  [modal]="true"
-  [(visible)]="mostrarEditarDocumento"
-  [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
-  [style]="{ width: '75vw' }"
-  [draggable]="false"
-  [resizable]="false"
->
-  <div [formGroup]="editarDocumentoForm" class="flex flex-column gap-3">
-    <p-floatLabel class="py-2">
-      <input
-        type="text"
-        pInputText
-        class="w-full"
-        formControlName="identificador"
-      />
-      <label for="identificador">Identificador</label>
-    </p-floatLabel>
-    <p-floatLabel>
-      <textarea
-        id="descripcion"
-        pInputTextarea
-        style="width: 100%"
-        formControlName="descripcion"
-      ></textarea>
-      <label for="descripcion">Descripcion</label>
-    </p-floatLabel>
-    <div>
-      <label class="block mb-2">Tema</label>
-      <app-tema-select
-        [formControl]="editarDocumentoForm.controls['temaIds']"
-      ></app-tema-select>
+      <div class="flex justify-content-end gap-2">
+        <p-button
+          label="Cancelar"
+          styleClass="p-button-outlined"
+          (click)="mostrarEditarDocumento = false; documentoEditando = null"
+        ></p-button>
+        <p-button
+          label="Guardar"
+          icon="pi pi-save"
+          (click)="guardarCambiosDocumento()"
+        ></p-button>
+      </div>
     </div>
-    <div class="flex justify-content-end gap-2">
-      <p-button
-        label="Cancelar"
-        styleClass="p-button-outlined"
-        (click)="mostrarEditarDocumento = false; documentoEditando = null"
-      ></p-button>
-      <p-button
-        label="Guardar"
-        icon="pi pi-save"
-        (click)="guardarCambiosDocumento()"
-      ></p-button>
-    </div>
-  </div>
-</p-dialog>
+  </p-dialog>
 
-<app-generic-list
-  [fetchItems$]="fetchItems$"
-  [itemTemplate]="documentItemTemplate"
-  [filters]="filters"
-  (filtersChanged)="onFiltersChanged($event)"
->
-  <div left-actions>
-    <p-iconField iconPosition="left">
-      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-      <input
-        type="text"
-        pInputText
-        placeholder="Buscar documentos"
-        [value]="pagination().searchTerm"
-        (input)="valueChanged($event)"
-        class="w-full"
-      />
-    </p-iconField>
-  </div>
-
-  <div right-actions>
-    <p-button
-      *ngIf="expectedRole == 'ADMIN'"
-      label="{{
-        viewportService.screenWidth == 'xs' ? undefined : 'Subir Documento'
-      }}"
-      icon="pi pi-upload"
-      [link]="true"
-      (click)="mostrarSubirFichero = true"
-    ></p-button>
-  </div>
-
-  <div empty-template>
-    <div class="text-center p-4">No hay documentos disponibles</div>
-  </div>
-</app-generic-list>
-
-<!-- Template para el item de documento -->
-<ng-template #documentItemTemplate let-document>
-  <div
-    class="flex flex-row align-items-between"
-    (click)="
-      descargarDocumento(
-        document.id,
-        document.fileName || document.identificador
-      )
-    "
+  <app-generic-list
+    [fetchItems$]="fetchItems$"
+    [itemTemplate]="documentItemTemplate"
+    [filters]="filters"
+    [mode]="mode"
+    [selectedItemIds]="selectedDocumentIds"
+    [getItemId]="getDocumentId"
+    (filtersChanged)="onFiltersChanged($event)"
+    (selectionChange)="onSelectionChange($event)"
   >
-    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
-      <div class="text-lg font-medium flex gap-2 align-items-center">
-        <span
-          class="identifier"
-          pTooltip="Identificador del documento"
-          tooltipPosition="top"
-        >
-          {{ document.identificador }}
-        </span>
-        <span
-          class="badge"
-          [ngClass]="document.esPublico ? 'bg-green-500' : 'bg-orange-500'"
-          pTooltip="{{
-            document.esPublico ? 'Documento público' : 'Documento privado'
-          }}"
-          tooltipPosition="top"
-        >
-          {{ document.esPublico ? "Público" : "Privado" }}
-        </span>
+    <div left-actions>
+      <p-iconField iconPosition="left">
+        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+        <input
+          type="text"
+          pInputText
+          placeholder="Buscar documentos"
+          [value]="pagination().searchTerm"
+          (input)="valueChanged($event)"
+          class="w-full"
+        />
+      </p-iconField>
+    </div>
 
+    <div right-actions>
+      <p-button
+        *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
+        label="{{
+          viewportService.screenWidth == 'xs' ? undefined : 'Subir Documento'
+        }}"
+        icon="pi pi-upload"
+        [link]="true"
+        (click)="mostrarSubirFichero = true"
+      ></p-button>
+    </div>
+
+    <div empty-template>
+      <div class="text-center p-4">No hay documentos disponibles</div>
+    </div>
+  </app-generic-list>
+
+  <!-- Template para el item de documento -->
+  <ng-template #documentItemTemplate let-document let-mode="mode" let-isSelected="isSelected">
+    <div
+      class="flex flex-row align-items-between"
+      [ngClass]="{'selected-item': mode === 'selection' && isSelected}"
+      (click)="mode === 'overview' ? descargarDocumento(document.id, document.fileName || document.identificador) : null"
+    >
+      <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+        <div class="text-lg font-medium flex gap-2 align-items-center">
+          <span
+            class="identifier"
+            pTooltip="Identificador del documento"
+            tooltipPosition="top"
+          >
+            {{ document.identificador }}
+          </span>
+          <span
+            class="badge"
+            [ngClass]="document.esPublico ? 'bg-green-500' : 'bg-orange-500'"
+            pTooltip="{{
+              document.esPublico ? 'Documento público' : 'Documento privado'
+            }}"
+            tooltipPosition="top"
+          >
+            {{ document.esPublico ? "Público" : "Privado" }}
+          </span>
+
+          <span
+            class="badge bg-primary"
+            pTooltip="{{
+              document.tema?.numero
+                ? 'Tema: ' + document.tema?.numero
+                : 'Sin tema'
+            }}"
+            tooltipPosition="top"
+          >
+            {{
+              document.tema?.numero
+                ? "Tema: " + document.tema?.numero
+                : "Sin tema"
+            }}
+          </span>
+
+          <span
+            *ngIf="document.isLocked"
+            class="badge bg-orange-500"
+            pTooltip="Documento premium - Requiere suscripción PREMIUM o ADVANCED"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-lock"></i> PREMIUM
+          </span>
+
+          <span
+            *ngIf="document.requireWatermark"
+            class="badge bg-cyan-600"
+            pTooltip="Aplica marca de agua al descargar"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-shield"></i> WATERMARK
+          </span>
+        </div>
         <span
-          class="badge bg-primary"
-          pTooltip="{{
-            document.tema?.numero
-              ? 'Tema: ' + document.tema?.numero
-              : 'Sin tema'
-          }}"
+          class="descripcion"
+          pTooltip="{{ document.descripcion }}"
           tooltipPosition="top"
         >
           {{
-            document.tema?.numero
-              ? "Tema: " + document.tema?.numero
-              : "Sin tema"
+            document.descripcion && document.descripcion.length > 0
+              ? document.descripcion
+              : "Sin descripción"
           }}
         </span>
       </div>
-      <span
-        class="descripcion"
-        pTooltip="{{ document.descripcion }}"
-        tooltipPosition="top"
-      >
-        {{
-          document.descripcion && document.descripcion.length > 0
-            ? document.descripcion
-            : "Sin descripción"
-        }}
-      </span>
-    </div>
 
-    <div class="right-side col-3 flex align-items-center justify-content-end">
-      <div class="flex flex-row align-items-center justify-content-end gap-2">
-        <span
-          class="text-xs hidden md:block unbreakable-text"
-          pTooltip="Fecha de creación: {{
-            document.createdAt | date : 'dd/MM/yyyy HH:mm'
-          }}"
-          tooltipPosition="top"
-        >
-          {{ document.createdAt | date : "short" }}
-        </span>
-        <p-button
-          *ngIf="expectedRole == 'ADMIN'"
-          icon="pi pi-pencil"
-          styleClass="p-button-warning"
-          pTooltip="Editar documento"
-          (click)="
-            $event.stopPropagation();
-            $event.preventDefault();
-            abrirEditarDocumento(document)
-          "
-        ></p-button>
-        <p-button
-          *ngIf="expectedRole == 'ADMIN'"
-          icon="pi pi-trash"
-          styleClass="p-button-danger"
-          pTooltip="Eliminar documento"
-          (click)="
-            $event.stopPropagation();
-            $event.preventDefault();
-            confirmarEliminacion(document)
-          "
-        ></p-button>
+      <div class="right-side col-3 flex align-items-center justify-content-end">
+        <div class="flex flex-row align-items-center justify-content-end gap-2">
+          <span
+            class="text-xs hidden md:block unbreakable-text"
+            pTooltip="Fecha de creación: {{
+              document.createdAt | date : 'dd/MM/yyyy HH:mm'
+            }}"
+            tooltipPosition="top"
+          >
+            {{ document.createdAt | date : "short" }}
+          </span>
+          <p-button
+            *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
+            icon="pi pi-pencil"
+            styleClass="p-button-warning"
+            pTooltip="Editar documento"
+            (click)="
+              $event.stopPropagation();
+              $event.preventDefault();
+              abrirEditarDocumento(document)
+            "
+          ></p-button>
+          <p-button
+            *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
+            icon="pi pi-trash"
+            styleClass="p-button-danger"
+            pTooltip="Eliminar documento"
+            (click)="
+              $event.stopPropagation();
+              $event.preventDefault();
+              confirmarEliminacion(document)
+            "
+          ></p-button>
+        </div>
       </div>
     </div>
-  </div>
-</ng-template>
+  </ng-template>
+</div>
+<!-- Fin Vista Admin -->

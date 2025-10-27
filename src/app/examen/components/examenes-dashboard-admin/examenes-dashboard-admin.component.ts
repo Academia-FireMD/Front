@@ -1,9 +1,9 @@
 import {
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  ViewChild,
+    Component,
+    computed,
+    ElementRef,
+    inject,
+    ViewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
@@ -123,9 +123,8 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
   }
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros
-    this.pagination.set({
-      ...this.pagination(),
+    // Actualizar la paginación con los nuevos filtros usando el método seguro
+    this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });

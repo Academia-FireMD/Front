@@ -55,9 +55,8 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
   }
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros
-    this.pagination.set({
-      ...this.pagination(),
+    // Actualizar la paginación con los nuevos filtros usando el método seguro
+    this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });

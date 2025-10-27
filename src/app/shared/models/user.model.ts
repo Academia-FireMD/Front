@@ -2,6 +2,7 @@ import { Comunidad, NivelOposicion, TipoOposicion } from './pregunta.model';
 import { Suscripcion } from './subscription.model';
 import { Test } from './test.model';
 
+
 export interface Usuario {
   id: number;
   email: string;
@@ -23,6 +24,7 @@ export interface Usuario {
   woocommerceCustomerId?: string;
   suscripcion?: Suscripcion;
   consumibles?: Consumible[];
+  labels?: { labelId: string; label: { id: string; key: string; value?: string } }[];
 
   // Campos de onboarding
   dni?: string;

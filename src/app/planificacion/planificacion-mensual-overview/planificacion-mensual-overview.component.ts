@@ -1,20 +1,20 @@
 import {
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  ViewChild,
+    Component,
+    computed,
+    ElementRef,
+    inject,
+    ViewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import {
-  combineLatest,
-  filter,
-  firstValueFrom,
-  map,
-  Observable,
-  switchMap,
-  tap,
+    combineLatest,
+    filter,
+    firstValueFrom,
+    map,
+    Observable,
+    switchMap,
+    tap,
 } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
@@ -22,8 +22,8 @@ import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import {
-  duracionesDisponibles,
-  matchKeyWithLabel,
+    duracionesDisponibles,
+    matchKeyWithLabel,
 } from '../../shared/models/pregunta.model';
 import { Usuario } from '../../shared/models/user.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
@@ -139,9 +139,8 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   }
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros
-    this.pagination.set({
-      ...this.pagination(),
+    // Actualizar la paginación con los nuevos filtros usando el método seguro
+    this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });

@@ -107,6 +107,7 @@
             item.state?.locked ? 'Mejora tu suscripción para acceder' : ''
           "
           tooltipPosition="right"
+          [tooltipStyleClass]="item.state?.locked ? 'locked-tooltip' : ''"
           (click)="
             item.state?.locked
               ? openUpgradePage()
@@ -167,6 +168,7 @@
               item.state?.locked ? 'Mejora tu suscripción para acceder' : ''
             "
             tooltipPosition="right"
+            [tooltipStyleClass]="item.state?.locked ? 'locked-tooltip' : ''"
           >
             <span [class]="item.icon"></span>
             <span

@@ -1,0 +1,239 @@
+:host ::ng-deep {
+  app-generic-list {
+    .list-generic {
+      max-height: 28rem;
+    }
+    .selection-mode {
+      display: flex !important;
+      flex-direction: row !important;
+      width: 100%;
+      align-items: center !important;
+      justify-content: start !important;
+      gap: 1rem;
+      .item-content.with-checkbox {
+        flex: 1;
+      }
+    }
+  }
+}
+
+.release-management {
+  padding: 1rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+
+  .header {
+    h2 {
+      font-size: 1.5rem;
+
+      @media (min-width: 768px) {
+        font-size: 2rem;
+      }
+    }
+  }
+
+  .releases-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .release-card {
+    border: 1px solid var(--surface-border);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    background: var(--surface-card);
+    transition: box-shadow 0.2s;
+
+    &:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .release-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+
+      h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--text-color);
+      }
+
+      .release-actions {
+        display: flex;
+        gap: 0.5rem;
+
+        .btn-icon {
+          background: transparent;
+          border: none;
+          padding: 0.25rem 0.5rem;
+          cursor: pointer;
+          border-radius: var(--border-radius);
+          font-size: 1.2rem;
+          transition: background 0.2s;
+
+          &:hover {
+            background: var(--surface-hover);
+          }
+        }
+      }
+    }
+
+    .release-dates {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.875rem;
+      color: var(--text-color-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .release-stats {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-color-secondary);
+    }
+
+    .release-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+
+      ::ng-deep .p-button {
+        padding: 0.4rem 0.75rem;
+      }
+    }
+
+    .audience-rules {
+      border-top: 1px solid var(--surface-border);
+      padding-top: 1rem;
+
+      h4 {
+        font-size: 0.9rem;
+        margin: 0 0 0.5rem 0;
+        color: var(--text-color);
+      }
+
+      .rule-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        background: var(--surface-100);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin: 0.25rem;
+
+        .rule-effect {
+          font-weight: bold;
+
+          &.allow {
+            color: var(--green-500);
+          }
+
+          &.deny {
+            color: var(--red-500);
+          }
+        }
+
+        .btn-remove {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 1.2rem;
+          padding: 0;
+          margin-left: 0.25rem;
+          color: var(--text-color-secondary);
+          transition: color 0.2s;
+
+          &:hover {
+            color: var(--red-500);
+          }
+        }
+      }
+    }
+  }
+
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-color-secondary);
+  }
+}
+
+// Estilos para el diálogo de items
+::ng-deep .p-dialog {
+  .audience-rule-card {
+    background: var(--surface-50);
+  }
+
+  .p-table {
+    .p-datatable-thead > tr > th {
+      background: var(--surface-100);
+    }
+  }
+
+  // Estilos para el acordeón de vista previa
+  .tema-section {
+    .tema-title {
+      margin: 0 0 1rem 0;
+      padding: 0.75rem 1rem;
+      background: var(--surface-100);
+      border-left: 4px solid var(--primary-color);
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: var(--border-radius);
+    }
+
+    .documentos-list {
+      .documento-item {
+        transition: all 0.2s;
+
+        &:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          border-color: var(--primary-color);
+        }
+
+        .doc-info {
+          flex: 1;
+          min-width: 0; // Para que funcione el truncate
+        }
+      }
+    }
+  }
+}
+
+// Responsividad adicional
+@media (max-width: 767px) {
+  .release-management {
+    .release-card {
+      .release-header {
+        flex-direction: column;
+        gap: 0.5rem;
+
+        .release-actions {
+          align-self: flex-end;
+        }
+      }
+
+      .release-buttons {
+        flex-direction: column;
+
+        ::ng-deep .p-button {
+          width: 100%;
+        }
+      }
+    }
+  }
+}

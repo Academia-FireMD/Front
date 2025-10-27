@@ -9,6 +9,7 @@ import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ChipModule } from 'primeng/chip';
+import { ChipsModule } from 'primeng/chips';
 import { ColorPickerModule } from 'primeng/colorpicker';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DataViewModule } from 'primeng/dataview';
@@ -36,6 +37,7 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { RippleModule } from 'primeng/ripple';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SplitButtonModule } from 'primeng/splitbutton';
+import { TableModule } from 'primeng/table';
 import { TabViewModule } from 'primeng/tabview';
 import { TagModule } from 'primeng/tag';
 import { ToggleButtonModule } from 'primeng/togglebutton';
@@ -75,7 +77,9 @@ const modules = [
   DividerModule,
   AccordionModule,
   ChipModule,
+  ChipsModule,
   SelectButtonModule,
+  TableModule,
   OrderListModule,
   DragDropModule,
   ColorPickerModule,

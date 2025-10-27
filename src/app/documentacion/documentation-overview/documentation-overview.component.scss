@@ -1,2 +1,161 @@
-@import '../../shared/styles/list-styles.scss';
+.chip-estado {
+  text-align: center;
+}
 
+.container-accordion{
+  overflow: auto;
+  max-height: 80vh;
+}
+
+// Contenedor para vista admin con scroll
+.admin-documents-container {
+  height: 100%;
+}
+
+// Estilos para vista de alumno
+.alumno-documentos {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  h2 {
+    margin-bottom: 2rem;
+    color: #333;
+  }
+
+  .loading-message, .no-docs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+    color: #666;
+
+    p {
+      margin-top: 1rem;
+      font-size: 1.1rem;
+    }
+  }
+
+  .tema-section {
+    margin-bottom: 2rem;
+
+    .tema-title {
+      margin: 0 0 1rem 0;
+      padding: 0.75rem 1rem;
+      background: #f8f9fa;
+      border-left: 4px solid #007bff;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+  }
+
+  .documentos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-left: 1rem;
+  }
+
+  .documento-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    transition: all 0.2s;
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-color: #007bff;
+    }
+
+    &.locked-document {
+      border-left: 3px solid #f59e0b;
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%);
+    }
+
+    .doc-info {
+      flex: 1;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+
+      .doc-name {
+        font-weight: 600;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        i.pi-lock {
+          font-size: 0.9rem;
+        }
+
+        .badge-new {
+          display: inline-block;
+          background: #28a745;
+          color: white;
+          padding: 0.15rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          font-weight: bold;
+          margin-left: 0.5rem;
+        }
+
+        .badge-premium {
+          display: inline-block;
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          color: white;
+          padding: 0.15rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          font-weight: bold;
+          margin-left: 0.5rem;
+          box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+        }
+      }
+
+      .doc-desc {
+        color: #666;
+        font-size: 0.9rem;
+      }
+    }
+
+    button {
+      white-space: nowrap;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// Estilos para modo selección
+::ng-deep .selected-item {
+  background-color: var(--primary-50) !important;
+  border-left: 3px solid var(--primary-color) !important;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .alumno-documentos {
+    padding: 1rem;
+
+    .documento-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+}

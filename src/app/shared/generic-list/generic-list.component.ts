@@ -8,12 +8,11 @@ import {
   OnDestroy,
   OnInit,
   Output,
-  SimpleChanges,
-  TemplateRef,
+  TemplateRef
 } from '@angular/core';
 import { FormBuilder, FormControl, FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription, tap } from 'rxjs';
+import { firstValueFrom, tap } from 'rxjs';
 import { Rol } from '../models/user.model';
 import { PrimengModule } from '../primeng.module';
 import { SharedGridComponent } from '../shared-grid/shared-grid.component';
@@ -303,7 +302,6 @@ export class GenericListComponent<T>
   public showFiltersDialog = false;
   private fb = new FormBuilder();
   filterControls: Map<string, FormControl> = new Map();
-  private queryParamsSubscription?: Subscription;
   public Rol = Rol;
 
   // Envuelve el fetch entrante para actualizar el total en el paginador
@@ -331,7 +329,7 @@ export class GenericListComponent<T>
     this.initializeFilters();
 
     // Suscribirse a cambios en queryParams para recargar filtros automáticamente
-    this.queryParamsSubscription = this.route.queryParams.subscribe(
+    firstValueFrom(this.route.queryParams).then(
       (params) => {
         // Solo recargar si hay parámetros de filtros
         const hasFilterParams = Object.keys(params).some((key) =>
@@ -351,14 +349,7 @@ export class GenericListComponent<T>
     }, 0);
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-  }
 
-  ngOnDestroy() {
-    if (this.queryParamsSubscription) {
-      this.queryParamsSubscription.unsubscribe();
-    }
-  }
 
   private initializeFilters() {
     if (this.filters) {

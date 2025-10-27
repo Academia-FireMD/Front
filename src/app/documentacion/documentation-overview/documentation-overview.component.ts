@@ -1,15 +1,14 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { FilterConfig, GenericListMode } from '../../shared/generic-list/generic-list.component';
 import { Documento } from '../../shared/models/documentacion.model';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
-import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { DocumentosService } from '../services/documentacion.service';
-import { Tema } from '../../shared/models/pregunta.model';
 
 @Component({
   selector: 'app-documentation-overview',
@@ -20,11 +19,19 @@ export class DocumentationOverviewComponent
   extends SharedGridComponent<Documento>
   implements OnInit
 {
+  @Input() mode: GenericListMode = 'overview';
+  @Input() selectedDocumentIds: number[] = [];
+  @Output() selectionChange = new EventEmitter<number[]>();
+
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   activatedRoute = inject(ActivatedRoute);
   service = inject(DocumentosService);
   confirmationService = inject(ConfirmationService);
   private notificationService = inject(ToastrService);
+
+  // Para vista de alumno (acordeón)
+  public documentTree: any[] = [];
+  public loadingTree = false;
 
   public uploadingFile = false;
   public mostrarSubirFichero = false;
@@ -34,6 +41,8 @@ export class DocumentationOverviewComponent
     identificador: ['', Validators.required],
     descripcion: [''],
     temaIds: [[] as number[]],
+    isLocked: [false],
+    requireWatermark: [false],
   });
 
   public mostrarEditarDocumento = false;
@@ -42,6 +51,8 @@ export class DocumentationOverviewComponent
     identificador: ['', Validators.required],
     descripcion: [''],
     temaIds: [[] as number[]],
+    isLocked: [false],
+    requireWatermark: [false],
   });
 
   // Configuración de filtros para el GenericListComponent
@@ -62,6 +73,18 @@ export class DocumentationOverviewComponent
       type: 'tema-select',
       filterInterpolation: (value: number[]) => ({ temaId: { in: value } }),
     },
+    {
+      key: 'isLocked',
+      label: 'Solo documentos premium (isLocked)',
+      type: 'toggle',
+      filterInterpolation: (value: boolean) => value ? { isLocked: true } : {},
+    },
+    {
+      key: 'requireWatermark',
+      label: 'Solo documentos con marca de agua',
+      type: 'toggle',
+      filterInterpolation: (value: boolean) => value ? { requireWatermark: true } : {},
+    },
   ];
 
   constructor() {
@@ -75,6 +98,69 @@ export class DocumentationOverviewComponent
 
   override ngOnInit() {
     super.ngOnInit();
+
+    // Si mode es 'overview' y viene de la ruta, detectar rol
+    if (this.mode === 'overview') {
+      this.activatedRoute.data.subscribe(data => {
+        const { expectedRole } = data;
+        this.expectedRole = expectedRole;
+
+        if (this.expectedRole === 'ALUMNO') {
+          this.loadDocumentTree();
+        }
+      });
+    }
+  }
+
+  // Métodos para modo selección
+  isItemSelected(documento: Documento): boolean {
+    return this.selectedDocumentIds.includes(documento.id);
+  }
+
+  toggleItemSelection(documento: Documento): void {
+    const index = this.selectedDocumentIds.indexOf(documento.id);
+    if (index > -1) {
+      this.selectedDocumentIds = this.selectedDocumentIds.filter(id => id !== documento.id);
+    } else {
+      this.selectedDocumentIds = [...this.selectedDocumentIds, documento.id];
+    }
+    this.selectionChange.emit(this.selectedDocumentIds);
+  }
+
+  isAllSelected(): boolean {
+    const currentPageDocs = this.lastLoadedPagination?.data || [];
+    return currentPageDocs.length > 0 && currentPageDocs.every((doc: Documento) => this.selectedDocumentIds.includes(doc.id));
+  }
+
+  toggleSelectAll(): void {
+    const currentPageDocs = this.lastLoadedPagination?.data || [];
+    if (this.isAllSelected()) {
+      // Deseleccionar todos los de la página actual
+      this.selectedDocumentIds = this.selectedDocumentIds.filter(
+        id => !currentPageDocs.some((doc: Documento) => doc.id === id)
+      );
+    } else {
+      // Seleccionar todos los de la página actual
+      const newIds = currentPageDocs.map((doc: Documento) => doc.id);
+      this.selectedDocumentIds = [...new Set([...this.selectedDocumentIds, ...newIds])];
+    }
+    this.selectionChange.emit(this.selectedDocumentIds);
+  }
+
+  handleItemClick(documento: Documento): void {
+    if (this.mode === 'selection') {
+      this.toggleItemSelection(documento);
+    } else {
+      // Modo overview: abrir editar documento
+      this.abrirEditarDocumento(documento);
+    }
+  }
+
+  getDocumentId = (documento: Documento): number => documento.id;
+
+  onSelectionChange(selectedIds: (string | number)[]): void {
+    this.selectedDocumentIds = selectedIds as number[];
+    this.selectionChange.emit(this.selectedDocumentIds);
   }
 
   private getDocumentacion(pagination: PaginationFilter) {
@@ -93,9 +179,8 @@ export class DocumentationOverviewComponent
   }
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros
-    this.pagination.set({
-      ...this.pagination(),
+    // Actualizar la paginación con los nuevos filtros usando el método seguro
+    this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });
@@ -124,6 +209,8 @@ export class DocumentationOverviewComponent
       this.uploadingFileFormGroup.value.descripcion ?? ''
     );
     formData.append('esPublico', true + '');
+    formData.append('isLocked', String(this.uploadingFileFormGroup.value.isLocked ?? false));
+    formData.append('requireWatermark', String(this.uploadingFileFormGroup.value.requireWatermark ?? false));
 
     const temaId = (this.uploadingFileFormGroup.value.temaIds ?? [])[0];
     if (temaId !== undefined) {
@@ -152,10 +239,13 @@ export class DocumentationOverviewComponent
   abrirEditarDocumento(document: Documento) {
     this.documentoEditando = document;
     this.mostrarEditarDocumento = true;
+    this.documentoEditando = document;
     this.editarDocumentoForm.patchValue({
       identificador: document.identificador,
       descripcion: document.descripcion ?? '',
       temaIds: document.temaId ? [document.temaId] : [],
+      isLocked: (document as any).isLocked ?? false,
+      requireWatermark: (document as any).requireWatermark ?? false,
     });
   }
 
@@ -167,10 +257,19 @@ export class DocumentationOverviewComponent
     const descripcion = this.editarDocumentoForm.value.descripcion ?? '';
     const temaIds = this.editarDocumentoForm.value.temaIds ?? [];
     const temaId = temaIds.length > 0 ? temaIds[0] : null;
+    const isLocked = this.editarDocumentoForm.value.isLocked ?? false;
+    const requireWatermark = this.editarDocumentoForm.value.requireWatermark ?? false;
 
     try {
       await firstValueFrom(
-        this.service.updateDocumento$({ id, identificador, descripcion, temaId })
+        this.service.updateDocumento$({
+          id,
+          identificador,
+          descripcion,
+          temaId,
+          isLocked,
+          requireWatermark
+        })
       );
       this.toast.success('Documento actualizado correctamente');
       this.mostrarEditarDocumento = false;
@@ -235,6 +334,70 @@ export class DocumentationOverviewComponent
       const errorMessage =
         error instanceof Error ? error.message : 'Error al descargar el documento';
       this.notificationService.error(errorMessage);
+    }
+  }
+
+  // Métodos para vista de alumno
+  loadDocumentTree() {
+    this.loadingTree = true;
+    this.service.getDocumentTree$().subscribe({
+      next: (tree) => {
+        this.documentTree = tree;
+        this.loadingTree = false;
+      },
+      error: (err) => {
+        console.error('Error al cargar árbol de documentos:', err);
+        this.toast.error('Error al cargar documentos');
+        this.loadingTree = false;
+      }
+    });
+  }
+
+  async descargarDocumentoAlumno(documento: any) {
+    if (!documento.isDownloadable) {
+      this.toast.warning('No tienes permiso para descargar este documento');
+      return;
+    }
+
+    // Marcar como visto
+    try {
+      await firstValueFrom(this.service.markAsSeen$(documento.id));
+    } catch (err) {
+      console.warn('Error al marcar como visto:', err);
+    }
+
+    // Descargar con watermark si aplica
+    try {
+      this.toast.info('Descargando documento...');
+      const blob = await firstValueFrom(
+        this.service.downloadWithWatermark$(documento.id)
+      );
+      const url = window.URL.createObjectURL(blob);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = documento.fileName || documento.identificador;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      this.toast.success('Documento descargado correctamente');
+
+      // Recargar árbol para actualizar badge NEW
+      this.loadDocumentTree();
+    } catch (error) {
+      console.error('Error al descargar:', error);
+      this.toast.error('Error al descargar el documento');
+    }
+  }
+
+  async verDocumentoAlumno(documento: any) {
+    // Marcar como visto al hacer clic
+    try {
+      await firstValueFrom(this.service.markAsSeen$(documento.id));
+      documento.isNew = false; // Actualizar localmente
+    } catch (err) {
+      console.warn('Error al marcar como visto:', err);
     }
   }
 }

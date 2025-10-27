@@ -9,9 +9,11 @@ import { AuthService } from '../../../services/auth.service';
 import { PlanificacionesService } from '../../../services/planificaciones.service';
 import { UserService } from '../../../services/user.service';
 import { FilterConfig, GenericListComponent, GenericListMode } from '../../../shared/generic-list/generic-list.component';
+import { Label, UsuarioLabel } from '../../../shared/models/label.model';
 import { SuscripcionTipo } from '../../../shared/models/subscription.model';
 import { Usuario } from '../../../shared/models/user.model';
 import { PrimengModule } from '../../../shared/primeng.module';
+import { LabelsService } from '../../../shared/services/labels.service';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { SharedModule } from '../../../shared/shared.module';
 
@@ -33,6 +35,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   planificacionesService = inject(PlanificacionesService);
   confirmationService = inject(ConfirmationService);
   authService = inject(AuthService);
+  labelsService = inject(LabelsService);
 
   @Input() mode: GenericListMode = 'overview';
   @Input() selectedUserIds: number[] = [];
@@ -45,6 +48,17 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   selectedUser!: Usuario;
   selectedSubscriptionType = SuscripcionTipo.BASIC;
   public decodedUser = this.authService.decodeToken() as Usuario;
+
+  // Etiquetas management
+  labelsDialogVisible = false;
+  availableLabels: Label[] = [];
+  userLabels: UsuarioLabel[] = [];
+  selectedLabelId: string = '';
+
+  // Crear nueva etiqueta
+  creatingNewLabel = false;
+  newLabelKey = '';
+  newLabelValue = '';
 
   // Nuevas propiedades para expansión
   expandedUserIds = new Set<number>();
@@ -74,7 +88,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           { label: 'Sin suscripción', value: 'sin_suscripcion' },
           { label: 'Básica', value: SuscripcionTipo.BASIC },
           { label: 'Premium', value: SuscripcionTipo.PREMIUM },
-          { label: 'Pro', value: SuscripcionTipo.PRO },
+          { label: 'Avanzado', value: SuscripcionTipo.ADVANCED },
         ],
         filterInterpolation: (value) => {
           if (value === 'todas') return {};
@@ -114,6 +128,28 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           return { rol: value };
         },
       },
+      {
+        key: 'labels',
+        label: 'Etiquetas',
+        type: 'multi-select',
+        placeholder: 'Filtrar por etiquetas',
+        options: this.availableLabels.map(label => ({
+          label: `${label.key}${label.value ? ': ' + label.value : ''}`,
+          value: label.id
+        })),
+        filterInterpolation: (value: string[]) => {
+          if (!value || value.length === 0) return {};
+          return {
+            labels: {
+              some: {
+                labelId: {
+                  in: value
+                }
+              }
+            }
+          };
+        },
+      },
     ] as FilterConfig[];
     return [...baseFilters, ...this.extraFilters() || []];
   });
@@ -123,6 +159,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   constructor() {
     super();
     this.loadAvailableSubscriptions();
+    this.loadAvailableLabels();
 
     this.fetchItems$ = computed(() => {
       return this.userService.getAllUsers$(this.pagination()).pipe(
@@ -134,9 +171,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros
-    this.pagination.set({
-      ...this.pagination(),
+    // Actualizar la paginación con los nuevos filtros usando el método seguro
+    this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });
@@ -170,7 +206,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         return 'basic-chip';
       case SuscripcionTipo.PREMIUM:
         return 'premium-chip';
-      case SuscripcionTipo.PRO:
+      case SuscripcionTipo.ADVANCED:
         return 'pro-chip';
       default:
         return 'no-subscription-chip';
@@ -185,7 +221,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         return 'Básica';
       case SuscripcionTipo.PREMIUM:
         return 'Premium';
-      case SuscripcionTipo.PRO:
+      case SuscripcionTipo.ADVANCED:
         return 'Pro';
       default:
         return 'Sin suscripción';
@@ -221,6 +257,99 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   editarUsuario(user: Usuario) {
     this.selectedUser = { ...user }; // Copiar los datos del usuario para editar
     this.editDialogVisible = cloneDeep(true); // Mostrar el diálogo
+  }
+
+  // Etiquetas
+  async loadAvailableLabels() {
+    try {
+      this.availableLabels = await firstValueFrom(this.labelsService.getLabels());
+    } catch (e) {
+      console.error('Error cargando etiquetas:', e);
+    }
+  }
+
+  async openLabelsDialog(user: Usuario) {
+    this.selectedUser = { ...user };
+    this.creatingNewLabel = false;
+    this.newLabelKey = '';
+    this.newLabelValue = '';
+    this.selectedLabelId = '';
+
+    try {
+      await this.loadAvailableLabels();
+      await this.loadUserLabels(user.id);
+      this.labelsDialogVisible = true;
+    } catch (e) {
+      console.error(e);
+      this.toast.error('Error al cargar las etiquetas');
+    }
+  }
+
+  async loadUserLabels(userId: number) {
+    try {
+      this.userLabels = await firstValueFrom(this.labelsService.getUserLabels(userId));
+    } catch (e) {
+      console.error('Error cargando etiquetas del usuario:', e);
+    }
+  }
+
+  async assignSelectedLabelToUser() {
+    if (!this.selectedUser || !this.selectedLabelId) return;
+    try {
+      await firstValueFrom(this.labelsService.assignLabelToUser(this.selectedUser.id, this.selectedLabelId));
+      this.toast.success('Etiqueta asignada correctamente');
+      this.selectedLabelId = '';
+      await this.loadUserLabels(this.selectedUser.id);
+      this.refresh(); // Refrescar la lista de usuarios para ver el chip
+    } catch (e) {
+      this.toast.error('No se pudo asignar la etiqueta');
+    }
+  }
+
+  async removeUserLabel(labelId: string) {
+    if (!this.selectedUser) return;
+    try {
+      await firstValueFrom(this.labelsService.removeLabelFromUser(this.selectedUser.id, labelId));
+      this.toast.success('Etiqueta eliminada correctamente');
+      await this.loadUserLabels(this.selectedUser.id);
+      this.refresh(); // Refrescar la lista de usuarios para ver el cambio
+    } catch (e) {
+      this.toast.error('No se pudo eliminar la etiqueta');
+    }
+  }
+
+  async createAndAssignLabel() {
+    if (!this.selectedUser || !this.newLabelKey.trim()) {
+      this.toast.warning('La clave de la etiqueta es obligatoria');
+      return;
+    }
+
+    try {
+      await firstValueFrom(
+        this.labelsService.assignLabelByKeyValue(
+          this.selectedUser.id,
+          this.newLabelKey.trim(),
+          this.newLabelValue.trim() || undefined
+        )
+      );
+      this.toast.success('Etiqueta creada y asignada correctamente');
+      this.newLabelKey = '';
+      this.newLabelValue = '';
+      this.creatingNewLabel = false;
+      await this.loadAvailableLabels();
+      await this.loadUserLabels(this.selectedUser.id);
+      this.refresh(); // Refrescar la lista de usuarios para ver el chip
+    } catch (e) {
+      this.toast.error('No se pudo crear y asignar la etiqueta');
+    }
+  }
+
+  closeLabelsDialog() {
+    this.labelsDialogVisible = false;
+    this.creatingNewLabel = false;
+    this.newLabelKey = '';
+    this.newLabelValue = '';
+    this.selectedLabelId = '';
   }
 
   confirmarCambios(modifiedUser: Usuario) {
@@ -363,6 +492,11 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         label: 'Suscripción',
         icon: 'pi pi-credit-card',
         command: () => this.openSubscriptionDialog(user),
+      },
+      {
+        label: 'Gestionar etiquetas',
+        icon: 'pi pi-tag',
+        command: () => this.openLabelsDialog(user),
       },
       {
         label: user.validated ? 'Verificar' : 'Denegar',

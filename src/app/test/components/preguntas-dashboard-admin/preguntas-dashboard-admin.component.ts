@@ -1,9 +1,9 @@
 import {
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  ViewChild,
+    Component,
+    computed,
+    ElementRef,
+    inject,
+    ViewChild,
 } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -13,14 +13,14 @@ import { PreguntasService } from '../../../services/preguntas.service';
 import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import {
-  Dificultad,
-  Pregunta
+    Dificultad,
+    Pregunta
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
-  getAlumnoDificultad,
-  getStarsBasedOnDifficulty,
+    getAlumnoDificultad,
+    getStarsBasedOnDifficulty,
 } from '../../../utils/utils';
 
 @Component({
@@ -116,9 +116,8 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
   };
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros
-    this.pagination.set({
-      ...this.pagination(),
+    // Actualizar la paginación con los nuevos filtros usando el método seguro
+    this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });

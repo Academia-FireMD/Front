@@ -268,8 +268,9 @@
   }
 
   // Tooltip personalizado para elementos bloqueados
-  .p-tooltip {
-    &.p-tooltip-right .p-tooltip-text {
+  // Usamos una clase específica para no afectar otros tooltips
+  .locked-tooltip.p-tooltip {
+    .p-tooltip-text {
       background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
       color: #000;
       font-weight: 600;
@@ -277,10 +278,19 @@
       padding: 0.5rem 0.75rem;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+    }
 
-      &::before {
-        border-right-color: #ffc107;
-      }
+    &.p-tooltip-right .p-tooltip-arrow {
+      border-right-color: #ffc107;
+    }
+    &.p-tooltip-left .p-tooltip-arrow {
+      border-left-color: #ffc107;
+    }
+    &.p-tooltip-top .p-tooltip-arrow {
+      border-top-color: #ffc107;
+    }
+    &.p-tooltip-bottom .p-tooltip-arrow {
+      border-bottom-color: #ffc107;
     }
   }
 }
@@ -340,7 +350,7 @@
       }
     }
 
-    .p-tooltip .p-tooltip-text {
+    .locked-tooltip.p-tooltip .p-tooltip-text {
       font-size: 0.75rem;
       padding: 0.4rem 0.6rem;
     }

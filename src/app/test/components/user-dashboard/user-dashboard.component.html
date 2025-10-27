@@ -87,6 +87,21 @@
             pTooltip="Tipo de suscripción"
             tooltipPosition="top"
           />
+          @if (item.labels && item.labels.length > 0) {
+            @for (userLabel of item.labels; track userLabel.labelId) {
+              <p-chip
+                styleClass="label-chip"
+                [pTooltip]="'Etiqueta: ' + userLabel.label.key + (userLabel.label.value ? ' = ' + userLabel.label.value : '')"
+                tooltipPosition="top"
+              >
+                <i class="pi pi-tag mr-1"></i>
+                <span class="font-medium">{{ userLabel.label.key }}</span>
+                @if (userLabel.label.value) {
+                  <span class="ml-1">: {{ userLabel.label.value }}</span>
+                }
+              </p-chip>
+            }
+          }
         </div>
       </div>
       <span
@@ -659,6 +674,150 @@
         icon="pi pi-check"
         (click)="updateUserSubscription()"
         [loading]="false"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Diálogo para gestionar Etiquetas -->
+<p-dialog
+  header="Gestionar Etiquetas"
+  [(visible)]="labelsDialogVisible"
+  [modal]="true"
+  [style]="{ width: '600px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div class="flex flex-column gap-4">
+    <!-- Usuario -->
+    <div class="flex flex-column gap-2">
+      <label class="font-medium">Usuario:</label>
+      <span class="text-700">{{ selectedUser?.nombre }} {{ selectedUser?.apellidos }}</span>
+    </div>
+
+    <!-- Etiquetas actuales del usuario -->
+    <div class="flex flex-column gap-2">
+      <label class="font-medium">Etiquetas actuales:</label>
+      @if (userLabels.length === 0) {
+        <div class="p-3 border-1 border-round surface-border text-center text-500">
+          <i class="pi pi-tag mr-2"></i>
+          Sin etiquetas asignadas
+        </div>
+      } @else {
+        <div class="flex flex-wrap gap-2">
+          @for (userLabel of userLabels; track userLabel.labelId) {
+            <p-chip>
+              <span class="font-medium">{{ userLabel.label.key }}</span>
+              @if (userLabel.label.value) {
+                <span class="ml-1 text-500">: {{ userLabel.label.value }}</span>
+              }
+              <i
+                class="pi pi-times ml-2 cursor-pointer"
+                (click)="removeUserLabel(userLabel.labelId)"
+                pTooltip="Eliminar etiqueta"
+              ></i>
+            </p-chip>
+          }
+        </div>
+      }
+    </div>
+
+    <p-divider />
+
+    <!-- Pestañas para asignar o crear -->
+    <p-tabView>
+      <!-- Asignar etiqueta existente -->
+      <p-tabPanel header="Asignar existente" leftIcon="pi pi-tags">
+        <div class="flex flex-column gap-3">
+          <div class="flex flex-column gap-2">
+            <label class="font-medium">Seleccionar etiqueta:</label>
+            <p-dropdown
+              [options]="availableLabels"
+              [(ngModel)]="selectedLabelId"
+              optionValue="id"
+              appendTo="body"
+              [filter]="true"
+              placeholder="Selecciona una etiqueta"
+              [style]="{ width: '100%' }"
+            >
+              <ng-template pTemplate="selectedItem" let-option>
+                <span class="font-medium">{{ option.key }}</span>
+                @if (option.value) {
+                  <span class="ml-1 text-500">: {{ option.value }}</span>
+                }
+              </ng-template>
+              <ng-template pTemplate="item" let-option>
+                <div class="flex flex-column">
+                  <span class="font-medium">{{ option.key }}</span>
+                  @if (option.value) {
+                    <span class="text-sm text-500">{{ option.value }}</span>
+                  }
+                </div>
+              </ng-template>
+            </p-dropdown>
+          </div>
+          <p-button
+            label="Asignar"
+            icon="pi pi-check"
+            (click)="assignSelectedLabelToUser()"
+            [disabled]="!selectedLabelId"
+            styleClass="w-full"
+          />
+        </div>
+      </p-tabPanel>
+
+      <!-- Crear nueva etiqueta -->
+      <p-tabPanel header="Crear nueva" leftIcon="pi pi-plus-circle">
+        <div class="flex flex-column gap-3">
+          <div class="flex flex-column gap-2">
+            <label class="font-medium">
+              Clave: <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              pInputText
+              [(ngModel)]="newLabelKey"
+              placeholder="ej: cohorte, nivel, sede"
+              class="w-full"
+            />
+            <small class="text-color-secondary">
+              Identificador único de la etiqueta (ej: cohorte, nivel, sede)
+            </small>
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <label class="font-medium">Valor (opcional):</label>
+            <input
+              type="text"
+              pInputText
+              [(ngModel)]="newLabelValue"
+              placeholder="ej: 2025A, B1, Valencia"
+              class="w-full"
+            />
+            <small class="text-color-secondary">
+              Valor específico de la etiqueta (ej: 2025A, B1, Valencia)
+            </small>
+          </div>
+
+          <p-button
+            label="Crear y asignar"
+            icon="pi pi-plus"
+            (click)="createAndAssignLabel()"
+            [disabled]="!newLabelKey.trim()"
+            styleClass="w-full"
+          />
+        </div>
+      </p-tabPanel>
+    </p-tabView>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end">
+      <p-button
+        label="Cerrar"
+        icon="pi pi-times"
+        (click)="closeLabelsDialog()"
+        [text]="true"
       />
     </div>
   </ng-template>

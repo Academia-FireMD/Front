@@ -53,7 +53,48 @@ export class DocumentosService extends ApiBaseService {
     );
   }
 
-  public updateDocumento$(payload: { id: number; identificador?: string; descripcion?: string; temaId?: number | null; }) {
+  public updateDocumento$(payload: {
+    id: number;
+    identificador?: string;
+    descripcion?: string;
+    temaId?: number | null;
+    isLocked?: boolean;
+    requireWatermark?: boolean;
+  }) {
     return this.post('/update', payload) as Observable<Documento>;
+  }
+
+  public getDocumentTree$(at?: string): Observable<any> {
+    const params: { [key: string]: string } = {};
+    if (at) {
+      params['at'] = at;
+    }
+    return this.http.get(`${environment.apiUrl + this.controllerPrefix}/tree`, { params });
+  }
+
+  public markAsSeen$(documentId: number): Observable<{ message: string }> {
+    return this.post(`/${documentId}/ack`, {}) as Observable<{ message: string }>;
+  }
+
+  public downloadWithWatermark$(id: number): Observable<Blob> {
+    return this.http.post(`${environment.apiUrl + this.controllerPrefix}/${id}/download`, {}, {
+      responseType: 'blob',
+      observe: 'response'
+    }).pipe(
+      map(response => {
+        if (!response.body) {
+          throw new Error('No se pudo descargar el archivo');
+        }
+        return response.body;
+      })
+    );
+  }
+
+  public createOverride$(documentId: number, userId: number, visibility: string): Observable<any> {
+    return this.post(`/${documentId}/overrides`, { userId, visibility });
+  }
+
+  public deleteOverride$(documentId: number, overrideId: string): Observable<{ message: string }> {
+    return this.delete(`/${documentId}/overrides/${overrideId}`) as Observable<{ message: string }>;
   }
 }

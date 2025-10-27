@@ -1,8 +1,4 @@
 export enum SuscripcionTipo {
-  PRO = 'PRO', // deprecated => PREMIUM
-  NORMAL = 'NORMAL', // deprecated => ADVANCED
-  INDIVIDUAL = 'INDIVIDUAL', // deprecated => BASIC
-
   PREMIUM = 'PREMIUM',     // Plan Premium
   ADVANCED = 'ADVANCED',    // Plan Avanzado
   BASIC = 'BASIC'       // Plan Básico

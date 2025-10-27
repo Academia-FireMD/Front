@@ -1,0 +1,509 @@
+<div class="release-management">
+  <div
+    class="header flex flex-column md:flex-row justify-content-between align-items-center gap-3 mb-4"
+  >
+    <h2 class="m-0">Gestión de Publicaciones</h2>
+    <div class="flex gap-2">
+      <p-button
+        label="Nueva Publicación"
+        icon="pi pi-plus"
+        (click)="openCreateReleaseDialog()"
+      ></p-button>
+    </div>
+  </div>
+
+  <div class="releases-list" *ngIf="!loading">
+    <div class="release-card" *ngFor="let release of releases">
+      <div class="release-header">
+        <h3>{{ release.name }}</h3>
+        <div class="release-actions">
+          <button (click)="openEditReleaseDialog(release)" class="btn-icon">
+            ✏️
+          </button>
+          <button (click)="deleteRelease(release.id)" class="btn-icon">
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      <div class="release-dates">
+        <span>Desde: {{ release.startAt | date : "short" }}</span>
+        <span>Hasta: {{ release.endAt | date : "short" }}</span>
+      </div>
+
+      <div class="release-stats">
+        <span>{{ release._count?.items || 0 }} items</span>
+        <span>{{ release._count?.audienceRules || 0 }} reglas</span>
+      </div>
+
+      <div class="release-buttons">
+        <p-button
+          (click)="openItemsDialog(release)"
+          size="small"
+          label="Gestionar Items"
+          icon="pi pi-list"
+        ></p-button>
+        <p-button
+          (click)="openAudienceDialog(release)"
+          size="small"
+          label="Audiencia"
+          icon="pi pi-users"
+        ></p-button>
+      </div>
+
+      <div
+        class="audience-rules"
+        *ngIf="release.audienceRules && release.audienceRules.length > 0"
+      >
+        <h4>Reglas de Audiencia:</h4>
+        <div class="rule-chip" *ngFor="let rule of release.audienceRules">
+          <span class="rule-type">{{ getAudienceTypeDisplay(rule.type) }}</span>
+          <span class="rule-value" *ngIf="rule.value">: {{ getAudienceRuleValueDisplay(rule) }}</span>
+          <span
+            class="rule-effect"
+            [class.allow]="rule.effect === 'ALLOW'"
+            [class.deny]="rule.effect === 'DENY'"
+          >
+            {{ rule.effect }}
+          </span>
+          <button
+            (click)="deleteAudienceRuleFromRelease(release.id, rule.id)"
+            class="btn-remove"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" *ngIf="loading">Cargando...</div>
+</div>
+
+<!-- Dialog: Crear/Editar Release -->
+<p-dialog
+  [header]="(selectedRelease ? 'Editar' : 'Nueva') + ' Publicación'"
+  [(visible)]="showReleaseDialog"
+  [modal]="true"
+  [style]="{ width: '90vw', maxWidth: '600px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div [formGroup]="releaseForm" class="flex flex-column gap-4">
+    <div class="flex flex-column gap-2">
+      <label for="release-name" class="font-semibold">Nombre de la Publicación</label>
+      <input
+        pInputText
+        id="release-name"
+        type="text"
+        formControlName="name"
+        placeholder="Ej: Publicación Q1 2025"
+        class="w-full"
+      />
+      <small class="text-color-secondary">
+        Un nombre descriptivo para identificar esta publicación
+      </small>
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <label for="release-start" class="font-semibold">Fecha y Hora de Inicio</label>
+      <p-calendar
+        inputId="release-start"
+        formControlName="startAt"
+        [showTime]="true"
+        [showSeconds]="false"
+        [showIcon]="true"
+        dateFormat="dd/mm/yy"
+        placeholder="Selecciona fecha y hora"
+        appendTo="body"
+        styleClass="w-full"
+        [iconDisplay]="'input'"
+      ></p-calendar>
+      <small class="text-color-secondary">
+        Los documentos estarán visibles desde esta fecha
+      </small>
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <label for="release-end" class="font-semibold">Fecha y Hora de Fin</label>
+      <p-calendar
+        inputId="release-end"
+        formControlName="endAt"
+        [showTime]="true"
+        [showSeconds]="false"
+        [showIcon]="true"
+        dateFormat="dd/mm/yy"
+        placeholder="Selecciona fecha y hora"
+        appendTo="body"
+        styleClass="w-full"
+        [iconDisplay]="'input'"
+      ></p-calendar>
+      <small class="text-color-secondary">
+        Los documentos dejarán de estar visibles después de esta fecha
+      </small>
+    </div>
+
+    <div
+      *ngIf="releaseForm.errors?.['dateRange']"
+      class="p-3 border-round border-1 border-red-500 bg-red-50 text-red-700"
+    >
+      <i class="pi pi-exclamation-triangle mr-2"></i>
+      La fecha de inicio debe ser anterior a la fecha de fin
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        (click)="closeReleaseDialog()"
+        [text]="true"
+      ></p-button>
+      <p-button
+        label="Guardar"
+        icon="pi pi-check"
+        (click)="saveRelease()"
+        [disabled]="releaseForm.invalid"
+        [loading]="savingRelease"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog: Gestionar Items -->
+<p-dialog
+  header="Vista Previa - {{ selectedRelease?.name }}"
+  [(visible)]="showItemsDialog"
+  [modal]="true"
+  [style]="{ width: '90vw', maxWidth: '1200px', height: '85vh' }"
+  [draggable]="false"
+  [resizable]="false"
+  [contentStyle]="{ height: 'calc(100% - 100px)', overflow: 'auto' }"
+>
+  <div class="flex flex-column gap-3" style="height: 100%">
+    <!-- Botón para añadir documentos -->
+    <div class="flex justify-content-between align-items-center">
+      <h4 class="m-0">Vista de Arbol de Documentos</h4>
+      <p-button
+        label="Añadir Documentos"
+        icon="pi pi-plus"
+        size="small"
+        (click)="openDocumentPicker()"
+      ></p-button>
+    </div>
+
+    <p-divider></p-divider>
+
+    <!-- Acordeón de documentos (vista de alumno) -->
+    <div class="flex-1 overflow-auto" *ngIf="documentTree.length > 0">
+      <p-accordion>
+        <p-accordionTab *ngFor="let modulo of documentTree" [header]="modulo.nombre">
+          <div *ngFor="let tema of modulo.temas" class="tema-section mb-4">
+            <h5 class="tema-title mb-3">{{ tema.numero }} - {{ tema.descripcion }}</h5>
+            <div class="documentos-list flex flex-column gap-2">
+              <div
+                *ngFor="let doc of tema.documentos"
+                class="documento-item p-3 border-round border-1 surface-border flex justify-content-between align-items-center"
+              >
+                <div class="doc-info flex flex-column gap-1">
+                  <span class="font-semibold">{{ doc.identificador }}</span>
+                  <span class="text-sm text-color-secondary" *ngIf="doc.descripcion">
+                    {{ doc.descripcion }}
+                  </span>
+                </div>
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  size="small"
+                  (click)="removeReleaseItem(getItemIdFromDocument(doc))"
+                  pTooltip="Eliminar de la publicación"
+                ></p-button>
+              </div>
+            </div>
+          </div>
+        </p-accordionTab>
+      </p-accordion>
+    </div>
+
+    <div
+      *ngIf="documentTree.length === 0"
+      class="flex-1 flex align-items-center justify-content-center"
+    >
+      <div class="text-center">
+        <i class="pi pi-inbox" style="font-size: 3rem"></i>
+        <p class="text-color-secondary mt-3">
+          No hay documentos en esta publicación.
+          <br />
+          Haz clic en "Añadir Documentos" para comenzar.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end">
+      <p-button
+        label="Cerrar"
+        icon="pi pi-times"
+        (click)="closeItemsDialog()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog: Seleccionar Documentos -->
+<p-dialog
+  header="Seleccionar Documentos"
+  [(visible)]="showDocumentPickerDialog"
+  [modal]="true"
+  [style]="{ width: '95vw', maxWidth: '1400px', height: '90vh' }"
+  [draggable]="false"
+  [resizable]="false"
+  [contentStyle]="{ height: 'calc(100% - 60px)', overflow: 'hidden' }"
+>
+  <div style="height: 100%; overflow: hidden">
+    <app-documentation-overview
+      mode="selection"
+      [selectedDocumentIds]="selectedDocumentoIds"
+      (selectionChange)="onDocumentSelectionChange($event)"
+    ></app-documentation-overview>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-between align-items-center w-full">
+      <span class="text-color-secondary"
+        >{{ selectedDocumentoIds.length }} documento(s) seleccionado(s)</span
+      >
+      <div class="flex gap-2">
+        <p-button
+          label="Cancelar"
+          icon="pi pi-times"
+          (click)="showDocumentPickerDialog = false"
+          [text]="true"
+        ></p-button>
+        <p-button
+          label="Añadir Seleccionados"
+          icon="pi pi-check"
+          (click)="saveDocumentSelection()"
+          [disabled]="selectedDocumentoIds.length === 0"
+        ></p-button>
+      </div>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog: Audiencia -->
+<p-dialog
+  header="Reglas de Audiencia - {{ selectedRelease?.name }}"
+  [(visible)]="showAudienceDialog"
+  [modal]="true"
+  [style]="{ width: '90vw', maxWidth: '800px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div class="flex flex-column gap-3">
+    <p-button
+      label="Añadir Regla"
+      icon="pi pi-plus"
+      (click)="addAudienceRule()"
+      size="small"
+    ></p-button>
+
+    <div
+      class="audience-rule-card p-3 border-round border-1 surface-border"
+      *ngFor="let rule of audienceRules; let i = index"
+    >
+      <div class="grid">
+        <div class="col-12 md:col-4">
+          <label class="font-medium mb-2 block">Tipo</label>
+          <p-dropdown
+            [(ngModel)]="rule.type"
+            (onChange)="onRuleTypeChange(rule)"
+            appendTo="body"
+            [options]="[
+              { label: 'Todos', value: AudienceType.ALL },
+              { label: 'Suscripción', value: AudienceType.SUBSCRIPTION },
+              { label: 'Etiqueta', value: AudienceType.LABEL },
+              { label: 'Individual', value: AudienceType.INDIVIDUAL }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          ></p-dropdown>
+        </div>
+
+        <div class="col-12 md:col-4" *ngIf="rule.type !== AudienceType.ALL">
+          <label class="font-medium mb-2 block">Valor</label>
+
+          <!-- Suscripción -->
+          <p-dropdown
+            [(ngModel)]="rule.value"
+            *ngIf="rule.type === AudienceType.SUBSCRIPTION"
+            [options]="getSubscriptionTypes()"
+            styleClass="w-full"
+            appendTo="body"
+          ></p-dropdown>
+
+          <!-- Etiqueta -->
+          <p-dropdown
+            [(ngModel)]="rule.value"
+            *ngIf="rule.type === AudienceType.LABEL"
+            [options]="labels"
+            optionLabel="displayLabel"
+            optionValue="id"
+            [filter]="true"
+            filterBy="displayLabel"
+            placeholder="Selecciona una etiqueta"
+            styleClass="w-full"
+            appendTo="body"
+          >
+            <ng-template pTemplate="selectedItem" let-option>
+              <span class="font-medium">{{ option.key }}</span>
+              <span *ngIf="option.value" class="ml-1 text-500">: {{ option.value }}</span>
+            </ng-template>
+            <ng-template pTemplate="item" let-option>
+              <div class="flex flex-column">
+                <span class="font-medium">{{ option.key }}</span>
+                <span *ngIf="option.value" class="text-sm text-500">{{ option.value }}</span>
+              </div>
+            </ng-template>
+          </p-dropdown>
+
+          <!-- Individual -->
+          <div *ngIf="rule.type === AudienceType.INDIVIDUAL" class="flex gap-2">
+            <input
+              pInputText
+              type="text"
+              [value]="getSelectedUserEmail(rule.value)"
+              [disabled]="true"
+              placeholder="Ningún usuario seleccionado"
+              class="flex-1"
+            />
+            <p-button
+              icon="pi pi-user"
+              (click)="openUserSelector(rule)"
+              pTooltip="Seleccionar usuario"
+              styleClass="p-button-outlined"
+            ></p-button>
+          </div>
+        </div>
+
+        <div class="col-12 md:col-3">
+          <label class="font-medium mb-2 block">Efecto</label>
+          <p-dropdown
+            [(ngModel)]="rule.effect"
+            [options]="[
+              { label: 'ALLOW', value: RuleEffect.ALLOW },
+              { label: 'DENY', value: RuleEffect.DENY }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+            appendTo="body"
+          ></p-dropdown>
+        </div>
+
+        <div
+          class="col-12 md:col-1 flex align-items-end justify-content-center"
+        >
+          <p-button
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            (click)="removeAudienceRule(i)"
+            pTooltip="Eliminar regla"
+          ></p-button>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="audienceRules.length === 0" class="text-center p-4">
+      <p class="text-color-secondary">
+        No hay reglas de audiencia. Añade al menos una.
+      </p>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        (click)="closeAudienceDialog()"
+        [text]="true"
+      ></p-button>
+      <p-button
+        label="Guardar"
+        icon="pi pi-check"
+        (click)="saveAudienceRules()"
+        [disabled]="audienceRules.length === 0"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog: Selector de Usuario para regla Individual -->
+<p-dialog
+  header="Seleccionar Usuario"
+  [(visible)]="showUserSelectorDialog"
+  [modal]="true"
+  [style]="{ width: '90vw', maxWidth: '600px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <div class="flex flex-column gap-3">
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search" />
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar por email, nombre o apellidos..."
+        [(ngModel)]="userSearchTerm"
+        (input)="filterUsers()"
+        class="w-full"
+      />
+    </p-iconField>
+
+    <div class="user-list" style="max-height: 400px; overflow-y: auto;">
+      <div
+        *ngFor="let user of filteredUsers"
+        class="p-3 border-round border-1 surface-border mb-2 cursor-pointer hover:surface-hover"
+        [ngClass]="{ 'bg-primary-50 border-primary': selectedUserId === user.id }"
+        (click)="selectUser(user)"
+      >
+        <div class="flex align-items-center justify-content-between">
+          <div>
+            <div class="font-medium">{{ user.nombre }} {{ user.apellidos }}</div>
+            <div class="text-sm text-500">{{ user.email }}</div>
+          </div>
+          <i *ngIf="selectedUserId === user.id" class="pi pi-check text-primary"></i>
+        </div>
+      </div>
+
+      <div *ngIf="filteredUsers.length === 0" class="text-center p-4 text-500">
+        <i class="pi pi-users text-4xl mb-3"></i>
+        <p>No se encontraron usuarios</p>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        (click)="closeUserSelector()"
+        [text]="true"
+      ></p-button>
+      <p-button
+        label="Seleccionar"
+        icon="pi pi-check"
+        (click)="confirmUserSelection()"
+        [disabled]="!selectedUserId"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>
+

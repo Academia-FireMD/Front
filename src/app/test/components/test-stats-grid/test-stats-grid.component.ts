@@ -16,13 +16,13 @@ import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.com
 import { AppState } from '../../../store/app.state';
 import { selectCurrentUser, selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
-  calcular100,
-  calcular100y50,
-  calcular100y75y50,
-  getAllInArrays,
-  getStats,
-  obtenerTemas,
-  obtenerTipoDeTest
+    calcular100,
+    calcular100y50,
+    calcular100y75y50,
+    getAllInArrays,
+    getStats,
+    obtenerTemas,
+    obtenerTipoDeTest
 } from '../../../utils/utils';
 
 @Component({
@@ -342,9 +342,8 @@ export class TestStatsGridComponent extends SharedGridComponent<
   }
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros
-    this.pagination.set({
-      ...this.pagination(),
+    // Actualizar la paginación con los nuevos filtros usando el método seguro
+    this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });

@@ -1,16 +1,16 @@
 import {
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  ViewChild,
+    Component,
+    computed,
+    ElementRef,
+    inject,
+    ViewChild,
 } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
+import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { PlanificacionBloque } from '../../shared/models/planificacion.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
-import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 
 @Component({
   selector: 'app-bloques-overview',
@@ -47,9 +47,8 @@ export class BloquesOverviewComponent extends SharedGridComponent<PlanificacionB
   }
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros
-    this.pagination.set({
-      ...this.pagination(),
+    // Actualizar la paginación con los nuevos filtros usando el método seguro
+    this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });

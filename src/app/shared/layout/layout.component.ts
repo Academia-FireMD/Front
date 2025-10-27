@@ -150,6 +150,11 @@ export class LayoutComponent {
             icon: 'pi pi-file',
             routerLink: '/app/documentacion',
           },
+            {
+            label: 'Publicaciones',
+            icon: 'pi pi-calendar',
+            routerLink: '/app/documentacion/publicaciones',
+          },
         ],
       },
       {

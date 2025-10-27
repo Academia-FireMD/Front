@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   Input,
+  OnDestroy,
   OnInit,
   Signal,
   signal,
@@ -22,7 +23,7 @@ import { PaginatedResult, PaginationFilter } from '../models/pagination.model';
     class: 'shared-grid-component',
   },
 })
-export class SharedGridComponent<T> implements OnInit {
+export class SharedGridComponent<T> implements OnInit, OnDestroy {
   toast = inject(ToastrService);
   viewportService = inject(ViewportService);
   router = inject(Router);
@@ -41,15 +42,35 @@ export class SharedGridComponent<T> implements OnInit {
 
   public lastLoadedPagination!: PaginatedResult<T>;
 
+  // Timestamp del último cambio programático (para ignorar reacciones circulares)
+  private lastProgrammaticChangeTimestamp = 0;
+  private readonly PROGRAMMATIC_CHANGE_THRESHOLD = 100; // ms
+
   ngOnInit() {
     // Leer los parámetros de la URL si existen
     this.route.queryParams.subscribe((params) => {
+      const now = Date.now();
+
+      // Si este cambio ocurrió muy cerca de un cambio programático, ignorarlo
+      if (now - this.lastProgrammaticChangeTimestamp < this.PROGRAMMATIC_CHANGE_THRESHOLD) {
+        return;
+      }
+
       const skip = params['skip'] ? parseInt(params['skip'], 10) : 0;
       const take = params['take'] ? parseInt(params['take'], 10) : 10;
       const searchTerm = params['searchTerm'] || '';
 
-      this.pagination.set({ skip, take, searchTerm });
+      const current = this.pagination();
+
+      // Solo actualizar si los valores realmente cambiaron
+      if (current.skip !== skip || current.take !== take || current.searchTerm !== searchTerm) {
+        this.pagination.set({ ...current, skip, take, searchTerm });
+      }
     });
+  }
+
+  ngOnDestroy() {
+    // Cleanup si es necesario
   }
 
   @Debounce(200)
@@ -59,7 +80,7 @@ export class SharedGridComponent<T> implements OnInit {
       searchTerm: event.srcElement.value,
     };
     this.pagination.set(newPagination);
-    this.updateQueryParams(newPagination);
+    this.updateQueryParamsSafe(newPagination);
   }
 
   onPageChange(event: PaginatorState) {
@@ -71,7 +92,7 @@ export class SharedGridComponent<T> implements OnInit {
       take: rows,
     };
     this.pagination.set(newPagination);
-    this.updateQueryParams(newPagination);
+    this.updateQueryParamsSafe(newPagination);
   }
 
   public refresh() {
@@ -80,7 +101,23 @@ export class SharedGridComponent<T> implements OnInit {
         ...this.pagination(),
       })
     );
-    this.updateQueryParams(this.pagination());
+    this.updateQueryParamsSafe(this.pagination());
+  }
+
+  // Método helper para actualizar paginación y query params de forma segura
+  protected updatePaginationSafe(updates: Partial<PaginationFilter>) {
+    const newPagination = {
+      ...this.pagination(),
+      ...updates,
+    };
+    this.pagination.set(newPagination);
+    this.updateQueryParamsSafe(newPagination);
+  }
+
+  private updateQueryParamsSafe(pagination: PaginationFilter) {
+    // Marcar el timestamp de este cambio programático
+    this.lastProgrammaticChangeTimestamp = Date.now();
+    this.updateQueryParams(pagination);
   }
 
   private updateQueryParams(pagination: PaginationFilter) {
