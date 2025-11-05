@@ -116,11 +116,27 @@ export class LayoutComponent {
 
   ngOnInit(): void {
     this.currentUser$.subscribe((user) => {
+      // Solo reconstruir el menú si tenemos un usuario válido
+      if (!user) return;
+
+      // Preservar el estado de colapso antes de reconstruir el menú
+      const collapsedStates = this.items.reduce((acc, item, index) => {
+        acc[index] = item.collapsed;
+        return acc;
+      }, {} as Record<number, boolean>);
+
       if (user?.rol == 'ADMIN') {
         this.items = this.getAdminMenu();
       } else {
         this.items = this.getStudentMenu(user);
       }
+
+      // Restaurar el estado de colapso después de reconstruir el menú
+      this.items.forEach((item, index) => {
+        if (collapsedStates[index] !== undefined) {
+          item.collapsed = collapsedStates[index];
+        }
+      });
     });
   }
 

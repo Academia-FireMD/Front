@@ -101,6 +101,7 @@ export class ProfileComponent implements OnInit {
         userData: {
           nombre: this.user.nombre,
           apellidos: this.user.apellidos,
+          dni: this.user.dni,
           comunidad: this.user.comunidad,
           tutorId: this.user.tutorId,
           tipoDePlanificacionDuracionDeseada:

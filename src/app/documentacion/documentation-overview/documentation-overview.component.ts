@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { UserService } from '../../services/user.service';
 import { FilterConfig, GenericListMode } from '../../shared/generic-list/generic-list.component';
 import { Documento } from '../../shared/models/documentacion.model';
 import { PaginationFilter } from '../../shared/models/pagination.model';
@@ -26,6 +27,7 @@ export class DocumentationOverviewComponent
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   activatedRoute = inject(ActivatedRoute);
   service = inject(DocumentosService);
+  userService = inject(UserService);
   confirmationService = inject(ConfirmationService);
   private notificationService = inject(ToastrService);
 
@@ -357,6 +359,25 @@ export class DocumentationOverviewComponent
     if (!documento.isDownloadable) {
       this.toast.warning('No tienes permiso para descargar este documento');
       return;
+    }
+
+    // Si el documento requiere watermark, validar datos del usuario
+    if (documento.requireWatermark) {
+      try {
+        const usuario = await firstValueFrom(this.userService.getCurrentUser$());
+
+        if (!usuario.nombre || !usuario.apellidos || !usuario.dni) {
+          this.toast.error(
+            'Para descargar este documento debes completar tu perfil con nombre, apellidos y DNI/NIE',
+            'Datos incompletos'
+          );
+          return;
+        }
+      } catch (err) {
+        console.error('Error al validar usuario:', err);
+        this.toast.error('Error al validar tu perfil');
+        return;
+      }
     }
 
     // Marcar como visto

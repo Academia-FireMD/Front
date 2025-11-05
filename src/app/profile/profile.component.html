@@ -67,6 +67,18 @@
             </div>
 
             <div class="form-group mb-3">
+              <label for="dni">DNI/NIE</label>
+              <input
+                type="text"
+                pInputText
+                id="dni"
+                [(ngModel)]="user.dni"
+                placeholder="Ej: 12345678Z"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-group mb-3">
               <label for="email">Email</label>
               <input
                 type="text"
