@@ -171,6 +171,11 @@ export class LayoutComponent {
             icon: 'pi pi-calendar',
             routerLink: '/app/documentacion/publicaciones',
           },
+          {
+            label: 'Gestionar Tutorías',
+            icon: 'pi pi-file-edit',
+            routerLink: '/app/horarios',
+          },
         ],
       },
       {
@@ -251,6 +256,8 @@ export class LayoutComponent {
           },
         ],
       },
+
+
       {
         label: 'Perfil',
         items: [
@@ -402,6 +409,14 @@ export class LayoutComponent {
       });
     }
 
+    // Tutorías - disponible para todos los alumnos
+    menu.push({
+      label: 'Tutorías',
+      icon: 'pi pi-calendar',
+      routerLink: '/app/horarios/alumno',
+      items: [],
+    });
+
     // Menú de perfil siempre disponible
     menu.push({
       label: 'Perfil',
@@ -452,9 +467,12 @@ export class LayoutComponent {
 
   public isParentCollapsed(itemChild: MenuItem) {
     const index = this.items.findIndex((parentItem) =>
-      (parentItem?.items as Array<MenuItem>).find((e) => e == itemChild)
+      parentItem?.items && (parentItem.items as Array<MenuItem>).find((e) => e == itemChild)
     );
-    return !!this.items[index].collapsed;
+    if (index === -1) {
+      return false; // Si no se encuentra un padre, no está colapsado
+    }
+    return !!this.items[index]?.collapsed;
   }
 
   toggleMenu(): void {

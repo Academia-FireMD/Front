@@ -1,0 +1,422 @@
+<div class="horarios-admin-container">
+  <h2>Gestión de Horarios</h2>
+  
+  <div class="grid">
+    <div class="col-12 md:col-4">
+            <div class="card calendar-card">
+              <h3>Calendario</h3>
+              <app-calendario-horarios
+                [diasEstados]="diasEstados()"
+                [modoMultiSeleccion]="activeTab() === 0"
+                [fechasExternas]="fechasSeleccionadasHorarios()"
+                (fechaSeleccionada)="onFechaSeleccionada($event)"
+                (fechasSeleccionadas)="onFechasSeleccionadas($event)">
+              </app-calendario-horarios>
+            </div>
+    </div>
+    
+    <div class="col-12 md:col-8">
+      <div class="card">
+        <p-tabView [activeIndex]="activeTab()" (activeIndexChange)="onTabChange($event)">
+          <p-tabPanel header="Establecer Horarios">
+            <div class="p-fluid">
+              <div class="field">
+                <label>Selecciona fechas en el calendario (múltiple selección)</label>
+                <div class="flex align-items-center gap-2">
+                  <p class="text-sm text-color-secondary">
+                    Fechas seleccionadas: {{ fechasSeleccionadasHorarios().length }}
+                  </p>
+                  @if (fechasSeleccionadasHorarios().length > 0) {
+                    <p-button
+                      label="Desmarcar todas"
+                      icon="pi pi-times"
+                      [outlined]="true"
+                      severity="secondary"
+                      size="small"
+                      (click)="desmarcarTodasLasFechas()">
+                    </p-button>
+                  }
+                </div>
+              </div>
+              
+              <div class="field">
+                <label>Hora inicio</label>
+                <p-dropdown
+                  [options]="horas"
+                  [ngModel]="horaInicio()"
+                  (ngModelChange)="horaInicio.set($event)"
+                  optionLabel="label"
+                  optionValue="value"
+                  [style]="{width: '100%'}">
+                </p-dropdown>
+              </div>
+              
+              <div class="field">
+                <label>Hora fin</label>
+                <p-dropdown
+                  [options]="horas"
+                  [ngModel]="horaFin()"
+                  (ngModelChange)="horaFin.set($event)"
+                  optionLabel="label"
+                  optionValue="value"
+                  [style]="{width: '100%'}">
+                </p-dropdown>
+              </div>
+              
+              <div class="field">
+                <label>Capacidad</label>
+                <p-inputNumber
+                  [ngModel]="capacidad()"
+                  (ngModelChange)="capacidad.set($event)"
+                  [min]="1"
+                  [max]="100"
+                  [showButtons]="true"
+                  [style]="{width: '100%'}">
+                </p-inputNumber>
+              </div>
+
+              @if (horariosExistentes().length > 0) {
+                <div class="field">
+                  <label>Horarios existentes para las fechas seleccionadas</label>
+                  <p class="text-sm text-color-secondary mb-2">
+                    Se actualizarán los horarios existentes con los nuevos valores (hora inicio, hora fin, capacidad)
+                  </p>
+                  <div class="mb-2">
+                    <p-button
+                      label="Seleccionar todos"
+                      icon="pi pi-check-square"
+                      [outlined]="true"
+                      size="small"
+                      class="mr-2"
+                      (click)="toggleTodosHorariosEliminar()">
+                    </p-button>
+                    @if (horariosSeleccionadosEliminar().length > 0) {
+                      <p-button
+                        [label]="'Eliminar seleccionados (' + horariosSeleccionadosEliminar().length + ')'"
+                        icon="pi pi-trash"
+                        severity="danger"
+                        size="small"
+                        (click)="eliminarHorariosSeleccionados()">
+                      </p-button>
+                    }
+                  </div>
+                  <div class="table-container">
+                    <p-table
+                      [value]="horariosExistentes()"
+                      [paginator]="true"
+                      [rows]="10"
+                      [scrollable]="true"
+                      scrollHeight="200px">
+                      <ng-template pTemplate="header">
+                        <tr>
+                          <th style="width: 3rem">
+                            <p-checkbox
+                              [binary]="true"
+                              [ngModel]="horariosSeleccionadosEliminar().length === horariosExistentes().length && horariosExistentes().length > 0"
+                              (onChange)="toggleTodosHorariosEliminar()">
+                            </p-checkbox>
+                          </th>
+                          <th>Fecha</th>
+                          <th>Hora Inicio</th>
+                          <th>Hora Fin</th>
+                          <th>Capacidad</th>
+                          <th>Disponibles</th>
+                          <th>Estado</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </ng-template>
+                      <ng-template pTemplate="body" let-horario>
+                        <tr [class.horario-seleccionado]="horariosSeleccionadosEliminar().includes(horario.id)">
+                          <td>
+                            <p-checkbox
+                              [binary]="true"
+                              [ngModel]="horariosSeleccionadosEliminar().includes(horario.id)"
+                              (onChange)="toggleHorarioEliminar(horario.id)">
+                            </p-checkbox>
+                          </td>
+                          <td>{{ horario.fecha | date:'dd/MM/yyyy' }}</td>
+                          <td>{{ horario.horaInicio | date:'HH:mm' }}</td>
+                          <td>{{ horario.horaFin | date:'HH:mm' }}</td>
+                          <td>{{ horario.capacidad }}</td>
+                          <td>{{ getDisponibles(horario) }}</td>
+                          <td>
+                            <span [class]="'badge-' + horario.estado.toLowerCase()">
+                              {{ horario.estado }}
+                            </span>
+                          </td>
+                          <td>
+                            <p-button
+                              icon="pi pi-pencil"
+                              [outlined]="true"
+                              size="small"
+                              class="mr-2"
+                              (click)="abrirDialogEditar(horario)"
+                              pTooltip="Editar horario">
+                            </p-button>
+                          </td>
+                        </tr>
+                      </ng-template>
+                    </p-table>
+                  </div>
+                </div>
+              }
+              
+              <div class="field">
+                <p-button
+                  label="Establecer Horarios"
+                  icon="pi pi-plus"
+                  (click)="establecerHorarios()"
+                  [style]="{width: '100%'}">
+                </p-button>
+                <p class="text-sm text-color-secondary mt-2">
+                  Nota: Solo se crearán nuevos horarios. Para modificar horarios existentes, usa el botón "Editar" en la tabla.
+                </p>
+              </div>
+            </div>
+          </p-tabPanel>
+          
+          <p-tabPanel header="Disponibilidad">
+            <div class="disponibilidad-container">
+              @if (fechaSeleccionada()) {
+                <div class="mb-3">
+                  <strong>Filtrado por fecha:</strong> {{ fechaSeleccionada() | date:'fullDate':'es-ES' }}
+                  <p-button
+                    label="Limpiar filtro"
+                    icon="pi pi-times"
+                    [outlined]="true"
+                    severity="secondary"
+                    size="small"
+                    class="ml-2"
+                    (click)="fechaSeleccionada.set(null)">
+                  </p-button>
+                </div>
+              } @else {
+                <div class="mb-3">
+                  <p class="text-sm text-color-secondary">Selecciona un día en el calendario para filtrar los horarios</p>
+                </div>
+              }
+              <p-table
+                [value]="horariosFiltrados()"
+                [paginator]="true"
+                [rows]="10"
+                [scrollable]="true"
+                scrollHeight="400px">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Hora Inicio</th>
+                    <th>Hora Fin</th>
+                    <th>Capacidad</th>
+                    <th>Disponibles</th>
+                    <th>Estado</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-horario>
+                  <tr>
+                    <td>{{ horario.fecha | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ horario.horaInicio | date:'HH:mm' }}</td>
+                    <td>{{ horario.horaFin | date:'HH:mm' }}</td>
+                    <td>{{ horario.capacidad }}</td>
+                    <td>
+                      {{ getDisponibles(horario) }}
+                    </td>
+                    <td>
+                      <span [class]="'badge-' + horario.estado.toLowerCase()">
+                        {{ horario.estado }}
+                      </span>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+          </p-tabPanel>
+          
+          <p-tabPanel header="Tutorías">
+            @if (fechaSeleccionada()) {
+              <div class="tutorias-container">
+                <div class="mb-3">
+                  <strong>Fecha seleccionada:</strong> {{ fechaSeleccionada() | date:'fullDate':'es-ES' }}
+                </div>
+                
+                <div class="mb-3">
+                  <p-button
+                    label="Seleccionar todas"
+                    icon="pi pi-check-square"
+                    [outlined]="true"
+                    (click)="toggleTodasLasReservas()"
+                    class="mr-2">
+                  </p-button>
+                  <p-button
+                    label="Confirmar seleccionadas"
+                    icon="pi pi-check"
+                    (click)="confirmarReservas()"
+                    class="mr-2">
+                  </p-button>
+                  <p-button
+                    label="Cancelar seleccionadas"
+                    icon="pi pi-times"
+                    severity="danger"
+                    (click)="abrirDialogCancelacion()">
+                  </p-button>
+                </div>
+                
+                <div class="table-container">
+                  <p-table
+                    [value]="reservasDelDia()"
+                    [paginator]="true"
+                    [rows]="10"
+                    [scrollable]="true"
+                    scrollHeight="400px">
+                    <ng-template pTemplate="header">
+                      <tr>
+                        <th style="width: 3rem">
+                          <p-checkbox
+                            [binary]="true"
+                            [ngModel]="reservasSeleccionadas().length === reservasDelDia().length && reservasDelDia().length > 0"
+                            (onChange)="toggleTodasLasReservas()">
+                          </p-checkbox>
+                        </th>
+                        <th>Alumno</th>
+                        <th>Hora</th>
+                        <th>Estado</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-reserva>
+                      <tr>
+                        <td>
+                          <p-checkbox
+                            [binary]="true"
+                            [ngModel]="reservasSeleccionadas().includes(reserva.id)"
+                            (onChange)="toggleReservaSeleccionada(reserva.id)">
+                          </p-checkbox>
+                        </td>
+                        <td>
+                          {{ reserva.alumno?.nombre }} {{ reserva.alumno?.apellidos }}
+                          <br>
+                          <small>{{ reserva.alumno?.email }}</small>
+                        </td>
+                        <td>
+                          @if (reserva.horarioDisponible) {
+                            {{ reserva.horarioDisponible.horaInicio | date:'HH:mm' }} - 
+                            {{ reserva.horarioDisponible.horaFin | date:'HH:mm' }}
+                          }
+                        </td>
+                        <td>
+                          <span [class]="'badge-' + reserva.estado.toLowerCase()">
+                            {{ getEstadoLabel(reserva.estado) }}
+                          </span>
+                        </td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              </div>
+            } @else {
+              <div class="no-fecha-seleccionada">
+                <p>Selecciona un día en el calendario para ver las reservas</p>
+              </div>
+            }
+          </p-tabPanel>
+        </p-tabView>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p-dialog
+  header="Motivo de Cancelación"
+  [visible]="mostrarDialogCancelacion()"
+  (visibleChange)="mostrarDialogCancelacion.set($event)"
+  [modal]="true"
+  [style]="{width: '450px'}">
+  <div class="p-fluid">
+    <div class="field">
+      <label>Motivo</label>
+      <textarea
+        pInputTextarea
+        [ngModel]="motivoCancelacion()"
+        (ngModelChange)="motivoCancelacion.set($event)"
+        rows="4"
+        placeholder="Ingresa el motivo de cancelación">
+      </textarea>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      icon="pi pi-times"
+      [outlined]="true"
+      (click)="mostrarDialogCancelacion.set(false)">
+    </p-button>
+    <p-button
+      label="Confirmar"
+      icon="pi pi-check"
+      (click)="cancelarReservas()">
+    </p-button>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  header="Editar Horario"
+  [visible]="mostrarDialogEditar()"
+  (visibleChange)="mostrarDialogEditar.set($event)"
+  [modal]="true"
+  [style]="{width: '450px'}">
+  <div class="p-fluid">
+    @if (horarioEditando()) {
+      <div class="field">
+        <label>Fecha</label>
+        <p>{{ horarioEditando()!.fecha | date:'fullDate':'es-ES' }}</p>
+      </div>
+      
+      <div class="field">
+        <label>Hora inicio</label>
+        <p-dropdown
+          [options]="horas"
+          [ngModel]="horarioEditHoraInicio()"
+          (ngModelChange)="horarioEditHoraInicio.set($event)"
+          optionLabel="label"
+          optionValue="value"
+          [style]="{width: '100%'}">
+        </p-dropdown>
+      </div>
+      
+      <div class="field">
+        <label>Hora fin</label>
+        <p-dropdown
+          [options]="horas"
+          [ngModel]="horarioEditHoraFin()"
+          (ngModelChange)="horarioEditHoraFin.set($event)"
+          optionLabel="label"
+          optionValue="value"
+          [style]="{width: '100%'}">
+        </p-dropdown>
+      </div>
+      
+      <div class="field">
+        <label>Capacidad</label>
+        <p-inputNumber
+          [ngModel]="horarioEditCapacidad()"
+          (ngModelChange)="horarioEditCapacidad.set($event)"
+          [min]="1"
+          [max]="100"
+          [showButtons]="true"
+          [style]="{width: '100%'}">
+        </p-inputNumber>
+      </div>
+    }
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      icon="pi pi-times"
+      [outlined]="true"
+      (click)="mostrarDialogEditar.set(false)">
+    </p-button>
+    <p-button
+      label="Guardar"
+      icon="pi pi-check"
+      (click)="guardarHorarioEditado()">
+    </p-button>
+  </ng-template>
+</p-dialog>

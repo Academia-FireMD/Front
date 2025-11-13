@@ -1,0 +1,119 @@
+<div class="horarios-alumno-container">
+  <h2>Reservar Horarios</h2>
+  
+  <div class="grid">
+    <div class="col-12 md:col-4">
+      <div class="card calendar-card">
+        <h3>Calendario</h3>
+        <app-calendario-horarios
+          [diasEstados]="diasEstados()"
+          [modoMultiSeleccion]="false"
+          (fechaSeleccionada)="onFechaSeleccionada($event)">
+        </app-calendario-horarios>
+        <div class="leyenda-calendario">
+          <h4>Leyenda:</h4>
+          <div class="leyenda-item">
+            <span class="color-indicator disponible"></span>
+            <span>Día con todos los horarios disponibles</span>
+          </div>
+          <div class="leyenda-item">
+            <span class="color-indicator parcial"></span>
+            <span>Día parcialmente reservado</span>
+          </div>
+          <div class="leyenda-item">
+            <span class="color-indicator completo"></span>
+            <span>Día completamente reservado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-12 md:col-8">
+      <div class="card">
+        <div class="horarios-content">
+          @if (!fechaSeleccionada()) {
+            <div class="mb-3">
+              <h3>Selecciona un día del calendario para ver horarios disponibles</h3>
+            </div>
+          } @else {
+            <div class="mb-3">
+              <h3>Horarios disponibles para: {{ fechaSeleccionada() | date:'fullDate':'es-ES' }}</h3>
+            </div>
+          }
+          
+          @if (horariosPorProfesor().length > 0) {
+              <div class="horarios-grid">
+                <table class="horarios-rejilla">
+                  <thead>
+                    <tr>
+                      @for (item of horariosPorProfesor(); track item.profesor.id) {
+                        <th class="col-profesor">
+                          <div class="profesor-header">
+                            <div class="profesor-nombre">{{ item.profesor.nombre }} {{ item.profesor.apellidos }}</div>
+                            <div class="profesor-email">{{ item.profesor.email }}</div>
+                          </div>
+                        </th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      @for (item of horariosPorProfesor(); track item.profesor.id) {
+                        <td class="col-profesor-horarios" [attr.data-label]="item.profesor.nombre + ' ' + item.profesor.apellidos">
+                          <div class="profesor-mobile-header">
+       
+                          </div>
+                          <div class="horarios-list">
+                            @if (item.horarios.length > 0) {
+                              @for (horario of item.horarios; track horario.id) {
+                                <div class="horario-item">
+                                  <p-checkbox
+                                    [inputId]="'horario-' + horario.id + '-' + item.profesor.id"
+                                    [binary]="true"
+                                    [ngModel]="isHorarioSeleccionado(horario.id)"
+                                    (onChange)="toggleHorarioSeleccionado(horario.id)"
+                                    [disabled]="getDisponibles(horario) === 0">
+                                  </p-checkbox>
+                                  <label [for]="'horario-' + horario.id + '-' + item.profesor.id" class="horario-label">
+                                    <span class="horario-time">{{ getHorarioLabel(horario) }}</span>
+                                    @if (getDisponibles(horario) > 0) {
+                                      <span class="badge-disponible">({{ getDisponibles(horario) }} disponible{{ getDisponibles(horario) > 1 ? 's' : '' }})</span>
+                                    } @else {
+                                      <span class="badge-completo">(Completo)</span>
+                                    }
+                                  </label>
+                                </div>
+                              }
+                            } @else {
+                              <div class="sin-horarios">
+                                <p class="text-muted">No hay horarios disponibles</p>
+                              </div>
+                            }
+                          </div>
+                        </td>
+                      }
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="mt-3">
+                <p-button
+                  label="Reservar horarios seleccionados"
+                  icon="pi pi-check"
+                  (click)="crearReserva()"
+                  [disabled]="horariosSeleccionados.length === 0"
+                  [style]="{width: '100%'}">
+                </p-button>
+              </div>
+            } @else {
+              <div class="no-horarios">
+                <p>No hay profesores disponibles</p>
+              </div>
+            }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

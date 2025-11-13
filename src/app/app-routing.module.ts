@@ -54,6 +54,11 @@ const routes: Routes = [
         canActivate: [SubscriptionGuard],
         data: { allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] }
       },
+      {
+        path: 'horarios',
+        loadChildren: () =>
+          import('./horarios/horarios.module').then((m) => m.HorariosModule),
+      },
     ],
   },
   {

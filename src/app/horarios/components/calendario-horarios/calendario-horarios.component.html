@@ -1,0 +1,11 @@
+<p-calendar
+  [ngModel]="modoMultiSeleccion() ? fechasMultiples() : fecha()"
+  (ngModelChange)="onDateSelect($event)"
+  [selectionMode]="modoMultiSeleccion() ? 'multiple' : 'single'"
+  [inline]="true"
+  styleClass="calendario-horarios">
+  <ng-template pTemplate="date" let-date>
+    <span [ngClass]="getDateClass(date)" class="date-cell">{{ date.day }}</span>
+  </ng-template>
+</p-calendar>
+

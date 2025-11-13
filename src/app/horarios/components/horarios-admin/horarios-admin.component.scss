@@ -1,0 +1,145 @@
+.horarios-admin-container {
+  padding: 1rem;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+
+  h2 {
+    margin-bottom: 1rem;
+  }
+
+  .grid {
+    height: calc(100vh - 200px);
+    align-items: start;
+  }
+
+  .card {
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    height: fit-content;
+  }
+
+  .calendar-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    
+    h3 {
+      margin-bottom: 1rem;
+    }
+    
+    ::ng-deep {
+      .calendario-horarios {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        
+        .p-calendar {
+          width: 100%;
+          flex: 1;
+          
+          .p-datepicker {
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+
+  .field {
+    margin-bottom: 1rem;
+  }
+
+  .disponibilidad-container,
+  .tutorias-container {
+    padding: 1rem 0;
+  }
+
+  .table-container {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .horario-seleccionado {
+    background-color: #e3f2fd !important;
+  }
+
+  .no-fecha-seleccionada {
+    padding: 2rem;
+    text-align: center;
+    color: #6c757d;
+  }
+
+  .badge-activo {
+    background-color: #28a745;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .badge-cancelado {
+    background-color: #dc3545;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .badge-completado {
+    background-color: #17a2b8;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .badge-pendiente {
+    background-color: #ffc107;
+    color: #000;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .badge-confirmada {
+    background-color: #28a745;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .badge-cancelada {
+    background-color: #dc3545;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .badge-completada {
+    background-color: #17a2b8;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .badge-ausente {
+    background-color: #6c757d;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  ::ng-deep {
+    .p-datatable {
+      .p-datatable-wrapper {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+    }
+  }
+}
+
