@@ -35,22 +35,23 @@
           }
         }
         
-        &.dia-disponible {
-          background-color: #4caf50 !important;
+        &.dia-disponible,
+        &.dia-parcial,
+        &.dia-completo {
           color: white !important;
           border-radius: 4px;
+        }
+
+        &.dia-disponible {
+          background-color: #4caf50 !important;
         }
 
         &.dia-parcial {
           background-color: #2196f3 !important;
-          color: white !important;
-          border-radius: 4px;
         }
 
         &.dia-completo {
           background-color: #ff9800 !important;
-          color: white !important;
-          border-radius: 4px;
         }
 
         // Estilos para fechas seleccionadas
@@ -62,22 +63,23 @@
           font-weight: bold !important;
           
           // Si la fecha seleccionada también tiene un estado, mantener el color del estado pero con borde
-          &.dia-disponible {
-            background-color: #4caf50 !important;
+          &.dia-disponible,
+          &.dia-parcial,
+          &.dia-completo {
             border: 3px solid #9c27b0 !important;
             box-shadow: 0 0 8px rgba(156, 39, 176, 0.7) !important;
+          }
+
+          &.dia-disponible {
+            background-color: #4caf50 !important;
           }
 
           &.dia-parcial {
             background-color: #2196f3 !important;
-            border: 3px solid #9c27b0 !important;
-            box-shadow: 0 0 8px rgba(156, 39, 176, 0.7) !important;
           }
 
           &.dia-completo {
             background-color: #ff9800 !important;
-            border: 3px solid #9c27b0 !important;
-            box-shadow: 0 0 8px rgba(156, 39, 176, 0.7) !important;
           }
         }
       }

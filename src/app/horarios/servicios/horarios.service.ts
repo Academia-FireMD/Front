@@ -37,6 +37,10 @@ export class HorariosService extends ApiBaseService {
     return this.delete(`/admin/horario/${id}`);
   }
 
+  public deleteHorariosPasados$(): Observable<any> {
+    return this.delete('/admin/horarios-pasados');
+  }
+
   // Métodos para alumnos
   public getHorariosDisponibles$(): Observable<HorarioDisponible[]> {
     return this.get('/alumno/horarios-disponibles') as Observable<HorarioDisponible[]>;

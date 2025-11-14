@@ -5,10 +5,10 @@
 
   h2 {
     margin-bottom: 1rem;
+    font-size: 1.5rem;
   }
 
   .grid {
-    height: calc(100vh - 200px);
     align-items: start;
   }
 
@@ -16,32 +16,101 @@
     padding: 1.5rem;
     margin-bottom: 1rem;
     height: fit-content;
+
+    h4 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #495057;
+    }
   }
 
   .calendar-card {
     height: 100%;
     display: flex;
     flex-direction: column;
-    
+
     h3 {
       margin-bottom: 1rem;
     }
-    
+
     ::ng-deep {
       .calendario-horarios {
         flex: 1;
         display: flex;
         flex-direction: column;
-        
+
         .p-calendar {
           width: 100%;
           flex: 1;
-          
+
           .p-datepicker {
             width: 100%;
           }
         }
       }
+    }
+  }
+
+  // Filtros Desktop/Mobile
+  .filters-desktop {
+    @media (max-width: 768px) {
+      display: none !important;
+    }
+  }
+
+  .filters-mobile {
+    display: none;
+
+    @media (max-width: 768px) {
+      display: block;
+    }
+  }
+
+  .fecha-filtro-desktop {
+    @media (max-width: 768px) {
+      display: none !important;
+    }
+  }
+
+  .leyenda-calendario {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+
+    h4 {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .leyenda-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+  }
+
+  .color-indicator {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+
+    &.disponible {
+      background-color: #4caf50;
+    }
+
+    &.parcial {
+      background-color: #2196f3;
+    }
+
+    &.completo {
+      background-color: #ff9800;
     }
   }
 
@@ -57,6 +126,22 @@
   .table-container {
     max-height: 500px;
     overflow-y: auto;
+    overflow-x: auto;
+  }
+
+  // Vistas Desktop/Mobile
+  .desktop-view {
+    @media (max-width: 768px) {
+      display: none !important;
+    }
+  }
+
+  .mobile-view {
+    display: none;
+
+    @media (max-width: 768px) {
+      display: block;
+    }
   }
 
   .horario-seleccionado {
@@ -69,77 +154,626 @@
     color: #6c757d;
   }
 
-  .badge-activo {
-    background-color: #28a745;
-    color: #fff;
+  // Mixin para badges
+  @mixin badge-style($bg-color, $text-color: #fff) {
+    background-color: $bg-color;
+    color: $text-color;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: 0.875rem;
   }
 
-  .badge-cancelado {
-    background-color: #dc3545;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
+  .badge-activo,
+  .badge-confirmada {
+    @include badge-style(#28a745);
   }
 
-  .badge-completado {
-    background-color: #17a2b8;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
+  .badge-cancelado,
+  .badge-cancelada {
+    @include badge-style(#dc3545);
+  }
+
+  .badge-completado,
+  .badge-completada {
+    @include badge-style(#17a2b8);
   }
 
   .badge-pendiente {
-    background-color: #ffc107;
-    color: #000;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
-  }
-
-  .badge-confirmada {
-    background-color: #28a745;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
-  }
-
-  .badge-cancelada {
-    background-color: #dc3545;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
-  }
-
-  .badge-completada {
-    background-color: #17a2b8;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
+    @include badge-style(#ffc107, #000);
   }
 
   .badge-ausente {
-    background-color: #6c757d;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
+    @include badge-style(#6c757d);
   }
 
-  ::ng-deep {
-    .p-datatable {
-      .p-datatable-wrapper {
-        max-height: 400px;
-        overflow-y: auto;
+  .horario-pasado {
+    opacity: 0.6;
+    background-color: #f8f9fa;
+  }
+
+  .badge-pasado {
+    @include badge-style(#6c757d);
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+  }
+
+  // Contenedor de acciones de reservas
+  .acciones-reservas-container {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+
+    ::ng-deep {
+      p-button {
+        flex: 1 1 0;
+        min-width: 0;
+        display: block;
+        
+        button.p-button {
+          width: 100%;
+          box-sizing: border-box;
+        }
+      }
+      
+      app-async-button {
+        flex: 1 1 0;
+        min-width: 0;
+        display: block;
+        
+        p-button {
+          width: 100%;
+          display: block;
+          
+          button.p-button {
+            width: 100% !important;
+            box-sizing: border-box;
+          }
+        }
+      }
+    }
+  }
+
+  // Estilos responsive para móvil
+  @media (max-width: 768px) {
+    padding: 1rem;
+    height: calc(100vh - 100px);
+
+    h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      padding: 0;
+    }
+
+    .grid {
+      margin: 0;
+      gap: 1rem;
+    }
+
+    .card {
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+    }
+
+    .calendar-card {
+      height: auto;
+      min-height: auto;
+      padding: 1.25rem !important;
+      margin-bottom: 1rem;
+
+      h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      ::ng-deep {
+        .calendario-horarios {
+          margin-bottom: 1rem;
+
+          .p-calendar .p-datepicker {
+            width: 100% !important;
+            max-width: 100%;
+            border: 1px solid var(--surface-border);
+            border-radius: 8px;
+
+            table {
+              width: 100%;
+              font-size: 0.9rem;
+            }
+
+            .p-datepicker-header {
+              padding: 0.75rem;
+              border-bottom: 1px solid var(--surface-border);
+            }
+
+            .p-datepicker-calendar {
+              padding: 0.5rem;
+
+              td {
+                padding: 0.35rem;
+              }
+
+              span {
+                width: 2.25rem;
+                height: 2.25rem;
+                font-size: 0.9rem;
+                line-height: 2.25rem;
+                border-radius: 4px;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .leyenda-calendario {
+      h4 {
+        margin-bottom: 0.75rem;
+      }
+
+      .leyenda-item {
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .color-indicator {
+      flex-shrink: 0;
+    }
+
+    .disponibilidad-container,
+    .tutorias-container {
+      padding: 0.75rem 0;
+    }
+
+    // Filtros móvil (reutiliza estilos de acordeones)
+    .filters-mobile {
+      margin-bottom: 1rem;
+
+      ::ng-deep .p-accordion .p-accordion-tab {
+        margin-bottom: 0;
+        border: 1px solid var(--surface-border);
+        border-radius: 8px;
+
+        .p-accordion-header .p-accordion-header-link {
+          padding: 0.75rem 1rem;
+
+          i {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+
+      .filters-content .field {
+        margin-bottom: 1rem;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+
+    .table-container {
+      max-height: 400px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    // Tablas responsive
+    ::ng-deep {
+      .p-datatable {
+
+        .p-datatable-thead>tr>th,
+        .p-datatable-tbody>tr>td {
+          padding: 0.5rem;
+          font-size: 0.85rem;
+          white-space: nowrap;
+        }
+
+        .p-datatable-thead>tr>th {
+          font-size: 0.8rem;
+        }
+      }
+
+      // Estilos para acordeones móviles (reutilizable)
+      .p-accordion {
+        .p-accordion-tab {
+          margin-bottom: 0.75rem;
+          border: 1px solid var(--surface-border);
+          border-radius: 8px;
+          overflow: hidden;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          .p-accordion-header .p-accordion-header-link {
+            padding: 1rem;
+            background: var(--surface-card);
+            border: none;
+            border-radius: 0;
+          }
+
+          .p-accordion-content {
+            padding: 0;
+
+            .p-accordion-content-body {
+              padding: 1rem;
+            }
+          }
+        }
+      }
+
+      // Estilos comunes para headers de acordeones móviles
+      .accordion-header-mobile {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        gap: 0.75rem;
+        min-height: 48px;
+
+        .flex {
+          flex: 1;
+          min-width: 0;
+          align-items: center;
+        }
+
+        .horario-header-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          min-width: 0;
+          overflow: hidden;
+
+          .horario-fecha-mobile {
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .horario-hora-mobile {
+            font-size: 0.8rem;
+            color: var(--text-color-secondary);
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+        }
+
+        span[class*="badge-"] {
+          flex-shrink: 0;
+          white-space: nowrap;
+        }
+      }
+
+      .p-tabview {
+        .p-tabview-nav {
+          flex-wrap: wrap;
+
+          li {
+            flex: 1 1 auto;
+            min-width: 0;
+
+            .p-tabview-nav-link {
+              padding: 0.75rem 0.5rem;
+              font-size: 0.85rem;
+            }
+          }
+        }
+
+        .p-tabview-panels {
+          padding: 0.75rem 0;
+        }
+      }
+
+      .p-dialog {
+
+        .p-dialog-header,
+        .p-dialog-content {
+          padding: 1rem;
+        }
+
+        .p-dialog-footer {
+          padding: 0.75rem 1rem;
+        }
+      }
+    }
+
+    // Botones en grupos
+    .flex {
+      &.gap-2 {
+        flex-wrap: wrap;
+        gap: 0.5rem !important;
+      }
+    }
+
+    // Grid responsive
+    .grid {
+      margin: 0;
+      gap: 1rem;
+
+      .col-12 {
+        padding: 0;
+      }
+    }
+
+    // Campos de formulario
+    .field {
+      margin-bottom: 1rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    // Botones de acción
+    .p-button {
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+
+      &.p-button-sm {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+      }
+    }
+
+    // Grupos de botones apilados
+    .mb-3 .flex {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 0.75rem !important;
+
+      .p-button {
+        width: 100%;
+        margin: 0;
+      }
+    }
+
+    // Contenedor de acciones de reservas (ajustes móvil)
+    .acciones-reservas-container {
+      gap: 0.5rem;
+      flex-wrap: wrap;
+
+      ::ng-deep {
+        p-button {
+          flex: 1 1 auto;
+          min-width: 0;
+          
+          button.p-button {
+            padding: 0.5rem 0.75rem !important;
+            font-size: 0.8rem !important;
+            min-height: auto;
+            
+            .p-button-label {
+              font-size: 0.8rem !important;
+              white-space: nowrap;
+            }
+            
+            .p-button-icon {
+              font-size: 0.85rem !important;
+              margin-right: 0.25rem;
+            }
+          }
+        }
+        
+        app-async-button {
+          flex: 1 1 auto;
+          min-width: 0;
+          
+          p-button button.p-button {
+            padding: 0.5rem 0.75rem !important;
+            font-size: 0.8rem !important;
+            min-height: auto;
+            
+            .p-button-label {
+              font-size: 0.8rem !important;
+              white-space: nowrap;
+            }
+            
+            .p-button-icon {
+              font-size: 0.85rem !important;
+              margin-right: 0.25rem;
+            }
+          }
+        }
+      }
+    }
+
+    // Ajustes específicos para secciones
+    .flex.align-items-center.justify-content-between {
+      flex-direction: column;
+      align-items: flex-start !important;
+      gap: 1rem;
+
+      >div {
+        width: 100%;
+      }
+    }
+
+    // Mejoras de espaciado general
+    .mt-3 {
+      margin-top: 1rem !important;
+    }
+
+    .pt-4 {
+      padding-top: 1.5rem !important;
+    }
+
+    .mb-3 {
+      margin-bottom: 1rem !important;
+    }
+
+    // Badges más pequeños en móvil
+    [class*="badge-"] {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.4rem;
+    }
+
+    // Mensajes sin fecha
+    .no-fecha-seleccionada,
+    .no-reservas-mensaje {
+      padding: 1.5rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    // Inputs y dropdowns
+    ::ng-deep {
+
+      .p-dropdown,
+      .p-inputnumber,
+      .p-inputtext {
+        width: 100% !important;
+      }
+
+      .p-iconfield {
+        width: 100%;
+      }
+    }
+
+    // Estilos para detalles móviles (reutilizable)
+    .horario-details-mobile {
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--surface-border);
+
+        &:first-child {
+          padding-top: 0;
+        }
+
+        &:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+
+        &.actions-row {
+          justify-content: flex-start;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+          padding-top: 1rem;
+          margin-top: 0.75rem;
+          border-top: 1px solid var(--surface-border);
+
+          ::ng-deep .p-button {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            
+            .p-button-label {
+              font-size: 0.8rem;
+              white-space: nowrap;
+            }
+            
+            .p-button-icon {
+              font-size: 0.85rem;
+              margin-right: 0.25rem;
+            }
+          }
+        }
+
+        .detail-label {
+          font-weight: 600;
+          color: var(--text-color-secondary);
+          font-size: 0.875rem;
+          margin-right: 0.5rem;
+        }
+
+        .detail-value {
+          color: var(--text-color);
+          font-size: 0.9rem;
+          text-align: right;
+          flex: 1;
+          word-break: break-word;
+        }
+      }
+    }
+  }
+
+  // Estilos para pantallas muy pequeñas
+  @media (max-width: 480px) {
+    padding: 0.75rem;
+
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card {
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .calendar-card {
+      padding: 1rem !important;
+
+      h3 {
+        font-size: 1rem;
+      }
+    }
+
+    ::ng-deep {
+      .p-tabview {
+        .p-tabview-nav {
+          li {
+            .p-tabview-nav-link {
+              padding: 0.5rem 0.4rem;
+              font-size: 0.8rem;
+            }
+          }
+        }
+      }
+
+      .p-dialog {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        margin: 1rem auto;
+
+        .p-dialog-header,
+        .p-dialog-content,
+        .p-dialog-footer {
+          padding: 0.75rem;
+        }
+      }
+    }
+
+    .table-container {
+      max-height: 350px;
+    }
+
+    ::ng-deep {
+      .p-datatable {
+
+        .p-datatable-thead>tr>th,
+        .p-datatable-tbody>tr>td {
+          padding: 0.4rem;
+          font-size: 0.8rem;
+        }
       }
     }
   }
 }
 
+::ng-deep .p-inputnumber-button {
+  margin-left: 4px !important;
+}
+
+::ng-deep .p-inputnumber-button-up {
+  margin-bottom: 4px !important;
+}
+
+::ng-deep .p-inputnumber-button-down {
+  margin-top: 4px !important;
+}

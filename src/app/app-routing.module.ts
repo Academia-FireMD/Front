@@ -57,7 +57,7 @@ const routes: Routes = [
       {
         path: 'horarios',
         loadChildren: () =>
-          import('./horarios/horarios.module').then((m) => m.HorariosModule),
+          import('./horarios/horarios-routing.module').then((m) => m.routes),
       },
     ],
   },
