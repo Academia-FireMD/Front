@@ -14,6 +14,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { BadgeModule } from 'primeng/badge';
+import { TabViewModule } from 'primeng/tabview';
+import { AvatarModule } from 'primeng/avatar';
 import { ToastrService } from 'ngx-toastr';
 import { CalendarioHorariosComponent, DiaEstado } from '../calendario-horarios/calendario-horarios.component';
 import { HorariosService } from '../../servicios/horarios.service';
@@ -48,6 +50,8 @@ interface HorarioPorProfesor {
         IconFieldModule,
         InputIconModule,
         BadgeModule,
+        TabViewModule,
+        AvatarModule,
         CalendarioHorariosComponent,
         AsyncButtonComponent
     ]
@@ -71,6 +75,9 @@ export class HorariosAlumnoComponent {
     filtroEstado = signal<EstadoReserva | 'TODAS'>('TODAS');
     busquedaProfesor = signal<string>('');
     mostrarPasadas = signal<boolean>(false);
+    tabActivo = signal<number>(0); // 0 = Mis Reservas, 1 = Horarios Disponibles
+    mostrarDialogNotas = signal<boolean>(false);
+    notasReserva = signal<string>('');
 
     esHorarioPasado(horario: HorarioDisponible): boolean {
         return this.utils.esHorarioPasado(horario);
@@ -95,38 +102,52 @@ export class HorariosAlumnoComponent {
         }
 
         const map = new Map<number, HorarioPorProfesor>();
-        const todosProfesores = this.todosLosProfesores();
-
-        // Primero, crear entradas para TODOS los profesores (sin importar si tienen horarios ese día)
-        todosProfesores.forEach(profesor => {
-            map.set(profesor.id, {
-                profesor: profesor,
-                horarios: []
-            });
-        });
 
         const horariosDelDia = this.horariosDisponibles().filter(horario => {
             const fechaHorario = this.utils.toDate(horario.fecha);
-            return this.utils.getDateKey(fechaHorario) === this.utils.getDateKey(fecha) && !this.esHorarioPasado(horario);
+            return this.utils.getDateKey(fechaHorario) === this.utils.getDateKey(fecha);
         });
 
         horariosDelDia.forEach(horario => {
             if (!horario.admin) return;
 
             const adminId = horario.admin.id;
+            if (!map.has(adminId)) {
+                const profesor = this.todosLosProfesores().find(p => p.id === adminId);
+                if (profesor) {
+                    map.set(adminId, {
+                        profesor: profesor,
+                        horarios: []
+                    });
+                }
+            }
+            
             if (map.has(adminId)) {
                 map.get(adminId)!.horarios.push(horario);
             }
         });
 
-        return Array.from(map.values()).map(item => ({
-            ...item,
-            horarios: item.horarios.sort((a, b) => {
-                const horaInicioA = this.utils.toDate(a.horaInicio).getTime();
-                const horaInicioB = this.utils.toDate(b.horaInicio).getTime();
-                return horaInicioA - horaInicioB;
+        // Filtrar solo profesores que tienen al menos un horario disponible (no pasado y con disponibilidad)
+        return Array.from(map.values())
+            .filter(item => {
+                // Verificar que tenga al menos un horario no pasado y con disponibilidad
+                return item.horarios.some(h => {
+                    const noPasado = !this.esHorarioPasado(h);
+                    const tieneDisponibilidad = this.getDisponibles(h) > 0;
+                    return noPasado && tieneDisponibilidad;
+                });
             })
-        }));
+            .map(item => ({
+                ...item,
+                // Filtrar solo horarios no pasados
+                horarios: item.horarios
+                    .filter(h => !this.esHorarioPasado(h))
+                    .sort((a, b) => {
+                        const horaInicioA = this.utils.toDate(a.horaInicio).getTime();
+                        const horaInicioB = this.utils.toDate(b.horaInicio).getTime();
+                        return horaInicioA - horaInicioB;
+                    })
+            }));
     });
 
     todosLosHorariosDelDia = computed(() => {
@@ -135,14 +156,16 @@ export class HorariosAlumnoComponent {
 
         const horariosDelDia = this.horariosDisponibles().filter(horario => {
             const fechaHorario = this.utils.toDate(horario.fecha);
-            return this.utils.getDateKey(fechaHorario) === this.utils.getDateKey(fecha) && !this.esHorarioPasado(horario);
+            return this.utils.getDateKey(fechaHorario) === this.utils.getDateKey(fecha);
         });
 
-        return horariosDelDia.sort((a, b) => {
-            const horaInicioA = this.utils.toDate(a.horaInicio).getTime();
-            const horaInicioB = this.utils.toDate(b.horaInicio).getTime();
-            return horaInicioA - horaInicioB;
-        });
+        return horariosDelDia
+            .filter(h => !this.esHorarioPasado(h))
+            .sort((a, b) => {
+                const horaInicioA = this.utils.toDate(a.horaInicio).getTime();
+                const horaInicioB = this.utils.toDate(b.horaInicio).getTime();
+                return horaInicioA - horaInicioB;
+            });
     });
 
     reservasFiltradas = computed(() => {
@@ -303,7 +326,10 @@ export class HorariosAlumnoComponent {
     onFechaSeleccionada(fecha: Date | null) {
         this.fechaSeleccionada.set(fecha);
         this.horariosSeleccionados = [];
-        // No recargar reservas innecesariamente, los datos ya están cargados
+        // Cambiar a tab de Horarios Disponibles cuando se selecciona un día
+        if (fecha) {
+            this.tabActivo.set(1);
+        }
     }
 
     toggleHorarioSeleccionado(horarioId: number) {
@@ -331,6 +357,15 @@ export class HorariosAlumnoComponent {
         );
     }
 
+    abrirDialogNotas = async () => {
+        if (this.horariosSeleccionados.length === 0) {
+            this.toast.warning('Selecciona al menos un horario');
+            return;
+        }
+        this.notasReserva.set('');
+        this.mostrarDialogNotas.set(true);
+    }
+
     crearReserva = async () => {
         if (this.horariosSeleccionados.length === 0) {
             this.toast.warning('Selecciona al menos un horario');
@@ -338,11 +373,14 @@ export class HorariosAlumnoComponent {
         }
 
         try {
+            const notas = this.notasReserva() || undefined;
             for (const horarioId of this.horariosSeleccionados) {
-                await firstValueFrom(this.horariosService.reservarHorario$(horarioId));
+                await firstValueFrom(this.horariosService.reservarHorario$(horarioId, notas));
             }
             this.toast.success('Reserva(s) creada(s) correctamente');
             this.horariosSeleccionados = [];
+            this.mostrarDialogNotas.set(false);
+            this.notasReserva.set('');
             await Promise.all([this.cargarDatos(), this.cargarReservas()]);
         } catch (error: any) {
             const mensaje = error?.error?.message || 'Error al crear la reserva';
@@ -436,6 +474,20 @@ export class HorariosAlumnoComponent {
 
     puedeCancelarReserva(reserva: Reserva): boolean {
         return this.utils.puedeCancelarReserva(reserva);
+    }
+
+    onTabChange(event: any) {
+        this.tabActivo.set(event.index);
+    }
+
+    getAvatarUrl(profesor: Usuario): string | null {
+        return (profesor as any).avatarUrl || null;
+    }
+
+    getAvatarLabel(profesor: Usuario): string {
+        const nombre = profesor.nombre?.charAt(0) || '';
+        const apellidos = profesor.apellidos?.charAt(0) || '';
+        return (nombre + apellidos).toUpperCase();
     }
 }
 

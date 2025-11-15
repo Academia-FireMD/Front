@@ -12,172 +12,243 @@
           (fechaSeleccionada)="onFechaSeleccionada($event)">
         </app-calendario-horarios>
       </div>
-
-      <div class="reservas-card">
-        <div class="reservas-header">
-          <h3>Mis Reservas</h3>
-        </div>
-
-        <div class="reservas-filters">
-          <div class="filters-row">
-            <div class="search-filter">
-              <p-iconField iconPosition="left">
-                <p-inputIcon styleClass="pi pi-search" />
-                <input 
-                  type="text" 
-                  pInputText 
-                  placeholder="Buscar por profesor..." 
-                  [ngModel]="busquedaProfesor()"
-                  (ngModelChange)="busquedaProfesor.set($event)"
-                  class="w-full" />
-              </p-iconField>
-            </div>
-            
-            <div class="estado-filter">
-              <p-dropdown 
-                [options]="opcionesEstado()" 
-                [ngModel]="filtroEstado()" 
-                (ngModelChange)="cambiarFiltroEstado($event)"
-                optionLabel="label" 
-                optionValue="value"
-                [showClear]="true"
-                placeholder="Filtrar por estado"
-                styleClass="w-full md:w-auto">
-              </p-dropdown>
-            </div>
-            
-            <div class="toggle-filter">
-              <p-button
-                [icon]="mostrarPasadas() ? 'pi pi-eye-slash' : 'pi pi-eye'"
-                [outlined]="true"
-                severity="secondary"
-                size="small"
-                [label]="mostrarPasadas() ? 'Ocultar pasadas' : 'Mostrar pasadas'"
-                (click)="mostrarPasadas.set(!mostrarPasadas())"
-                pTooltip="Mostrar/ocultar reservas pasadas">
-              </p-button>
-            </div>
-
-            @if (tieneFiltrosActivos()) {
-              <p-button
-                icon="pi pi-times"
-                [outlined]="true"
-                severity="secondary"
-                size="small"
-                label="Limpiar"
-                (click)="limpiarFiltros()"
-                pTooltip="Limpiar todos los filtros">
-              </p-button>
-            }
-          </div>
-        </div>
-
-        <div class="reservas-list">
-          @if(reservasFiltradas().length > 0) {
-            @for(grupo of reservasAgrupadasPorFecha(); track grupo.fecha) {
-              <div class="fecha-grupo">
-                <div class="fecha-header">
-                  <i class="pi pi-calendar"></i>
-                  <span>{{ grupo.fecha }}</span>
-                  <span class="badge-count">{{ grupo.reservas.length }}</span>
-                </div>
-                @for(reserva of grupo.reservas; track reserva.id) {
-                  <div class="reserva-item" [class.reserva-pasada]="esReservaPasada(reserva)">
-                    <div class="reserva-header">
-                      <div class="reserva-info">
-                        <div class="reserva-horario">
-                          <i class="pi pi-clock"></i>
-                          {{ reserva.horarioDisponible?.horaInicio | date:'HH:mm' }} - {{ reserva.horarioDisponible?.horaFin | date:'HH:mm' }}
-                        </div>
-                        <div class="reserva-profesor">
-                          <i class="pi pi-user"></i>
-                          {{ reserva.horarioDisponible?.admin?.nombre }} {{ reserva.horarioDisponible?.admin?.apellidos }}
-                        </div>
-                        <div class="reserva-estado">
-                          <span [class]="'badge-' + reserva.estado.toLowerCase()">
-                            {{ getEstadoLabel(reserva.estado) }}
-                          </span>
-                        </div>
-                        @if (reserva.motivoCancelacion) {
-                          <div class="reserva-motivo">
-                            <i class="pi pi-info-circle"></i>
-                            <span>{{ reserva.motivoCancelacion }}</span>
-                          </div>
-                        }
-                      </div>
-                      <div class="reserva-actions">
-                        @if (puedeCancelarReserva(reserva)) {
-                          <p-button
-                            icon="pi pi-times"
-                            severity="danger"
-                            [outlined]="true"
-                            size="small"
-                            [rounded]="true"
-                            (click)="abrirDialogCancelacion(reserva.id)"
-                            pTooltip="Cancelar reserva">
-                          </p-button>
-                        }
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          } @else {
-            <div class="sin-reservas">
-              <p class="text-muted">No hay reservas que coincidan con los filtros</p>
-            </div>
-          }
-        </div>
-      </div>
-
     </div>
     
     <div class="col-12 md:col-8">
       <div class="card">
-        <div class="horarios-content">
-          @if (!fechaSeleccionada()) {
-            <div class="mb-3">
-              <h3>Selecciona un día del calendario para ver horarios disponibles</h3>
-            </div>
-          } @else {
-            <div class="mb-3">
-              <h3>Horarios disponibles para: {{ fechaSeleccionada() | date:'fullDate':'es-ES' }}</h3>
-            </div>
-          }
-          
-          @if (horariosPorProfesor().length > 0) {
-              <!-- Vista Desktop: Tabla -->
-              <div class="horarios-grid desktop-view">
-                <table class="horarios-rejilla">
-                  <thead>
-                    <tr>
-                      @for (item of horariosPorProfesor(); track item.profesor.id) {
-                        <th class="col-profesor">
-                          <div class="profesor-header">
-                            <div class="profesor-nombre">{{ item.profesor.nombre }} {{ item.profesor.apellidos }}</div>
-                            <div class="profesor-email">{{ item.profesor.email }}</div>
+        <p-tabView [activeIndex]="tabActivo()" (onChange)="onTabChange($event)">
+          <p-tabPanel header="Mis Reservas">
+            <div class="reservas-card-content">
+              <div class="reservas-filters">
+                <div class="filters-row">
+                  <div class="search-filter">
+                    <p-iconField iconPosition="left">
+                      <p-inputIcon styleClass="pi pi-search" />
+                      <input 
+                        type="text" 
+                        pInputText 
+                        placeholder="Buscar por profesor..." 
+                        [ngModel]="busquedaProfesor()"
+                        (ngModelChange)="busquedaProfesor.set($event)"
+                        class="w-full" />
+                    </p-iconField>
+                  </div>
+                  
+                  <div class="estado-filter">
+                    <p-dropdown 
+                      [options]="opcionesEstado()" 
+                      [ngModel]="filtroEstado()" 
+                      (ngModelChange)="cambiarFiltroEstado($event)"
+                      optionLabel="label" 
+                      optionValue="value"
+                      [showClear]="true"
+                      placeholder="Filtrar por estado"
+                      styleClass="w-full md:w-auto">
+                    </p-dropdown>
+                  </div>
+                  
+                  <div class="toggle-filter">
+                    <p-button
+                      [icon]="mostrarPasadas() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                      [outlined]="true"
+                      severity="secondary"
+                      size="small"
+                      [label]="mostrarPasadas() ? 'Ocultar pasadas' : 'Mostrar pasadas'"
+                      (click)="mostrarPasadas.set(!mostrarPasadas())"
+                      pTooltip="Mostrar/ocultar reservas pasadas">
+                    </p-button>
+                  </div>
+
+                  @if (tieneFiltrosActivos()) {
+                    <p-button
+                      icon="pi pi-times"
+                      [outlined]="true"
+                      severity="secondary"
+                      size="small"
+                      label="Limpiar"
+                      (click)="limpiarFiltros()"
+                      pTooltip="Limpiar todos los filtros">
+                    </p-button>
+                  }
+                </div>
+              </div>
+
+              <div class="reservas-list">
+                @if(reservasFiltradas().length > 0) {
+                  @for(grupo of reservasAgrupadasPorFecha(); track grupo.fecha) {
+                    <div class="fecha-grupo">
+                      <div class="fecha-header">
+                        <i class="pi pi-calendar"></i>
+                        <span>{{ grupo.fecha }}</span>
+                        <span class="badge-count">{{ grupo.reservas.length }}</span>
+                      </div>
+                      @for(reserva of grupo.reservas; track reserva.id) {
+                        <div class="reserva-item" [class.reserva-pasada]="esReservaPasada(reserva)">
+                          <div class="reserva-header">
+                            <div class="reserva-info">
+                              <div class="reserva-horario">
+                                <i class="pi pi-clock"></i>
+                                {{ reserva.horarioDisponible?.horaInicio | date:'HH:mm' }} - {{ reserva.horarioDisponible?.horaFin | date:'HH:mm' }}
+                              </div>
+                              <div class="reserva-profesor">
+                                <i class="pi pi-user"></i>
+                                {{ reserva.horarioDisponible?.admin?.nombre }} {{ reserva.horarioDisponible?.admin?.apellidos }}
+                              </div>
+                              <div class="reserva-estado">
+                                <span [class]="'badge-' + reserva.estado.toLowerCase()">
+                                  {{ getEstadoLabel(reserva.estado) }}
+                                </span>
+                              </div>
+                              @if (reserva.estado === EstadoReserva.CANCELADA && reserva.canceladoPor) {
+                                <div class="reserva-cancelado-por">
+                                  <i class="pi pi-user-minus"></i>
+                                  <span><strong>Cancelado por:</strong> {{ reserva.canceladoPor.nombre }} {{ reserva.canceladoPor.apellidos }}</span>
+                                </div>
+                              }
+                              @if (reserva.motivoCancelacion) {
+                                <div class="reserva-motivo">
+                                  <i class="pi pi-info-circle"></i>
+                                  <span>{{ reserva.motivoCancelacion }}</span>
+                                </div>
+                              }
+                            </div>
+                            <div class="reserva-actions">
+                              @if (puedeCancelarReserva(reserva)) {
+                                <p-button
+                                  icon="pi pi-times"
+                                  severity="danger"
+                                  [outlined]="true"
+                                  size="small"
+                                  [rounded]="true"
+                                  (click)="abrirDialogCancelacion(reserva.id)"
+                                  pTooltip="Cancelar reserva">
+                                </p-button>
+                              }
+                            </div>
                           </div>
-                        </th>
+                        </div>
                       }
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
+                    </div>
+                  }
+                } @else {
+                  <div class="sin-reservas">
+                    <p class="text-muted">No hay reservas que coincidan con los filtros</p>
+                  </div>
+                }
+              </div>
+            </div>
+          </p-tabPanel>
+          
+          <p-tabPanel header="Horarios Disponibles">
+            <div class="horarios-content">
+              @if (!fechaSeleccionada()) {
+                <div class="mb-3">
+                  <h3>Selecciona un día del calendario para ver horarios disponibles</h3>
+                </div>
+              } @else {
+                <div class="mb-3">
+                  <h3>Horarios disponibles para: {{ fechaSeleccionada() | date:'fullDate':'es-ES' }}</h3>
+                </div>
+              }
+              
+              @if (horariosPorProfesor().length > 0) {
+                  <!-- Vista Desktop: Tabla -->
+                  <div class="horarios-grid desktop-view">
+                    <table class="horarios-rejilla">
+                      <thead>
+                        <tr>
+                          @for (item of horariosPorProfesor(); track item.profesor.id) {
+                            <th class="col-profesor">
+                              <div class="profesor-header">
+                                <div class="profesor-avatar">
+                                  @if (getAvatarUrl(item.profesor)) {
+                                    <p-avatar [image]="getAvatarUrl(item.profesor)!" shape="circle" size="normal"></p-avatar>
+                                  } @else {
+                                    <p-avatar [label]="getAvatarLabel(item.profesor)" shape="circle" size="normal"></p-avatar>
+                                  }
+                                </div>
+                                <div class="profesor-nombre">{{ item.profesor.nombre }} {{ item.profesor.apellidos }}</div>
+                                <div class="profesor-email">{{ item.profesor.email }}</div>
+                              </div>
+                            </th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          @for (item of horariosPorProfesor(); track item.profesor.id) {
+                            <td class="col-profesor-horarios">
+                              <div class="horarios-list">
+                                @if (item.horarios.length > 0) {
+                                  @for (horario of item.horarios; track horario.id) {
+                                    <div class="horario-item" [class.horario-reservado]="tieneReservaActiva(horario.id)">
+                                      <p-checkbox
+                                        [inputId]="'horario-' + horario.id + '-' + item.profesor.id"
+                                        [binary]="true"
+                                        [ngModel]="isHorarioSeleccionado(horario.id) || tieneReservaActiva(horario.id)"
+                                        (onChange)="toggleHorarioSeleccionado(horario.id)"
+                                        [disabled]="getDisponibles(horario) === 0 || tieneReservaActiva(horario.id)">
+                                      </p-checkbox>
+                                      <label [for]="'horario-' + horario.id + '-' + item.profesor.id" class="horario-label">
+                                        <span class="horario-time">{{ getHorarioLabel(horario) }}</span>
+                                        @if (tieneReservaActiva(horario.id)) {
+                                          <span class="badge-reservado">(Ya reservado)</span>
+                                        } @else if (getDisponibles(horario) > 0) {
+                                          <span class="badge-disponible">({{ getDisponibles(horario) }} disponible{{ getDisponibles(horario) > 1 ? 's' : '' }})</span>
+                                        } @else {
+                                          <span class="badge-completo">(Completo)</span>
+                                        }
+                                      </label>
+                                    </div>
+                                  }
+                                } @else {
+                                  <div class="sin-horarios">
+                                    <p class="text-muted">No hay horarios disponibles</p>
+                                  </div>
+                                }
+                              </div>
+                            </td>
+                          }
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Vista Móvil: Acordeón -->
+                  <div class="horarios-accordion mobile-view">
+                    <p-accordion [multiple]="true">
                       @for (item of horariosPorProfesor(); track item.profesor.id) {
-                        <td class="col-profesor-horarios">
+                        <p-accordionTab>
+                          <ng-template pTemplate="header">
+                            <div class="accordion-header">
+                              <div class="profesor-info">
+                                <div class="profesor-avatar">
+                                  @if (getAvatarUrl(item.profesor)) {
+                                    <p-avatar [image]="getAvatarUrl(item.profesor)!" shape="circle" size="normal"></p-avatar>
+                                  } @else {
+                                    <p-avatar [label]="getAvatarLabel(item.profesor)" shape="circle" size="normal"></p-avatar>
+                                  }
+                                </div>
+                                <div class="profesor-details">
+                                  <div class="profesor-nombre">{{ item.profesor.nombre }} {{ item.profesor.apellidos }}</div>
+                                  <div class="profesor-email">{{ item.profesor.email }}</div>
+                                </div>
+                              </div>
+                              <span class="horarios-count">{{ item.horarios.length }} horario{{ item.horarios.length !== 1 ? 's' : '' }}</span>
+                            </div>
+                          </ng-template>
                           <div class="horarios-list">
                             @if (item.horarios.length > 0) {
                               @for (horario of item.horarios; track horario.id) {
                                 <div class="horario-item" [class.horario-reservado]="tieneReservaActiva(horario.id)">
                                   <p-checkbox
-                                    [inputId]="'horario-' + horario.id + '-' + item.profesor.id"
+                                    [inputId]="'horario-mobile-' + horario.id + '-' + item.profesor.id"
                                     [binary]="true"
                                     [ngModel]="isHorarioSeleccionado(horario.id) || tieneReservaActiva(horario.id)"
                                     (onChange)="toggleHorarioSeleccionado(horario.id)"
                                     [disabled]="getDisponibles(horario) === 0 || tieneReservaActiva(horario.id)">
                                   </p-checkbox>
-                                  <label [for]="'horario-' + horario.id + '-' + item.profesor.id" class="horario-label">
+                                  <label [for]="'horario-mobile-' + horario.id + '-' + item.profesor.id" class="horario-label">
                                     <span class="horario-time">{{ getHorarioLabel(horario) }}</span>
                                     @if (tieneReservaActiva(horario.id)) {
                                       <span class="badge-reservado">(Ya reservado)</span>
@@ -195,72 +266,30 @@
                               </div>
                             }
                           </div>
-                        </td>
+                        </p-accordionTab>
                       }
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Vista Móvil: Acordeón -->
-              <div class="horarios-accordion mobile-view">
-                <p-accordion [multiple]="true">
-                  @for (item of horariosPorProfesor(); track item.profesor.id) {
-                    <p-accordionTab>
-                      <ng-template pTemplate="header">
-                        <div class="accordion-header">
-                          <div class="profesor-info">
-                            <div class="profesor-nombre">{{ item.profesor.nombre }} {{ item.profesor.apellidos }}</div>
-                            <div class="profesor-email">{{ item.profesor.email }}</div>
-                          </div>
-                          <span class="horarios-count">{{ item.horarios.length }} horario{{ item.horarios.length !== 1 ? 's' : '' }}</span>
-                        </div>
-                      </ng-template>
-                      <div class="horarios-list">
-                        @if (item.horarios.length > 0) {
-                          @for (horario of item.horarios; track horario.id) {
-                            <div class="horario-item" [class.horario-reservado]="tieneReservaActiva(horario.id)">
-                              <p-checkbox
-                                [inputId]="'horario-mobile-' + horario.id + '-' + item.profesor.id"
-                                [binary]="true"
-                                [ngModel]="isHorarioSeleccionado(horario.id) || tieneReservaActiva(horario.id)"
-                                (onChange)="toggleHorarioSeleccionado(horario.id)"
-                                [disabled]="getDisponibles(horario) === 0 || tieneReservaActiva(horario.id)">
-                              </p-checkbox>
-                              <label [for]="'horario-mobile-' + horario.id + '-' + item.profesor.id" class="horario-label">
-                                <span class="horario-time">{{ getHorarioLabel(horario) }}</span>
-                                @if (tieneReservaActiva(horario.id)) {
-                                  <span class="badge-reservado">(Ya reservado)</span>
-                                } @else if (getDisponibles(horario) > 0) {
-                                  <span class="badge-disponible">({{ getDisponibles(horario) }} disponible{{ getDisponibles(horario) > 1 ? 's' : '' }})</span>
-                                } @else {
-                                  <span class="badge-completo">(Completo)</span>
-                                }
-                              </label>
-                            </div>
-                          }
-                        } @else {
-                          <div class="sin-horarios">
-                            <p class="text-muted">No hay horarios disponibles</p>
-                          </div>
-                        }
-                      </div>
-                    </p-accordionTab>
-                  }
-                </p-accordion>
-              </div>
-              
-              <div class="mt-3">
-                <app-async-button
-                  label="Reservar horarios seleccionados"
-                  icon="pi pi-check"
-                  [action]="crearReserva"
-                  [disabled]="horariosSeleccionados.length === 0"
-                  styleClass="p-button-primary">
-                </app-async-button>
-              </div>
-            }
-        </div>
+                    </p-accordion>
+                  </div>
+                  
+                  <div class="mt-3">
+                    <app-async-button
+                      label="Reservar horarios seleccionados"
+                      icon="pi pi-check"
+                      [action]="abrirDialogNotas"
+                      [disabled]="horariosSeleccionados.length === 0"
+                      styleClass="p-button-primary">
+                    </app-async-button>
+                  </div>
+                } @else if (fechaSeleccionada()) {
+                  <div class="no-horarios-disponibles">
+                    <i class="pi pi-calendar-times" style="font-size: 3rem; color: #6c757d; margin-bottom: 1rem;"></i>
+                    <h3>No hay horarios disponibles</h3>
+                    <p class="text-muted">No hay horarios disponibles para el día seleccionado.</p>
+                  </div>
+                }
+            </div>
+          </p-tabPanel>
+        </p-tabView>
       </div>
     </div>
   </div>
@@ -296,6 +325,41 @@
       icon="pi pi-check"
       [action]="cancelarReserva"
       styleClass="p-button-danger">
+    </app-async-button>
+  </ng-template>
+</p-dialog>
+
+<p-dialog 
+  header="Añadir Notas a la Reserva" 
+  [visible]="mostrarDialogNotas()"
+  (visibleChange)="mostrarDialogNotas.set($event)" 
+  [modal]="true" 
+  [style]="{width: '450px'}">
+  <div class="p-fluid">
+    <div class="field">
+      <label>Notas (opcional)</label>
+      <textarea 
+        pInputTextarea 
+        [ngModel]="notasReserva()" 
+        (ngModelChange)="notasReserva.set($event)" 
+        rows="4"
+        placeholder="Añade notas adicionales para esta reserva...">
+      </textarea>
+      <small class="text-color-secondary">Puedes dejar este campo vacío si no deseas añadir notas</small>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button 
+      label="Cancelar" 
+      icon="pi pi-times" 
+      [outlined]="true" 
+      (click)="mostrarDialogNotas.set(false)">
+    </p-button>
+    <app-async-button 
+      label="Confirmar Reserva" 
+      icon="pi pi-check"
+      [action]="crearReserva"
+      styleClass="p-button-primary">
     </app-async-button>
   </ng-template>
 </p-dialog>

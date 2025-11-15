@@ -29,6 +29,7 @@ export class CalendarioHorariosComponent {
 
   fecha = signal<Date | null>(null);
   fechasMultiples = signal<Date[]>([]);
+  fechaMinima = signal<Date>(new Date());
 
   valorCalendario = computed(() => {
     if (this.modoMultiSeleccion()) {
@@ -43,6 +44,11 @@ export class CalendarioHorariosComponent {
   });
 
   constructor() {
+    // Establecer la fecha mínima como hoy (sin hora)
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    this.fechaMinima.set(hoy);
+    
     effect(() => {
       if (this.modoMultiSeleccion()) {
         const fechasExt = this.fechasExternas();
@@ -105,6 +111,14 @@ export class CalendarioHorariosComponent {
       default:
         return '';
     }
+  }
+
+  isDateDisabled = (date: Date): boolean => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fechaComparar = new Date(date);
+    fechaComparar.setHours(0, 0, 0, 0);
+    return fechaComparar < hoy;
   }
 }
 

@@ -76,9 +76,10 @@ export class HorariosAdminComponent {
 
   horarios = signal<HorarioDisponible[]>([]);
   reservas = signal<Reserva[]>([]);
-  horaInicio = signal<number>(0);
+  horaInicio = signal<number>(7);
   horaFin = signal<number>(23);
   capacidad = signal<number>(1);
+  descripcionHorarios = signal<string>('');
   fechaSeleccionada = signal<Date | null>(null);
   reservasSeleccionadas = signal<number[]>([]);
   mostrarDialogCancelacion = signal<boolean>(false);
@@ -93,8 +94,23 @@ export class HorariosAdminComponent {
   horarioEditHoraInicio = signal<number>(0);
   horarioEditHoraFin = signal<number>(1);
   horarioEditCapacidad = signal<number>(1);
+  horarioEditDescripcion = signal<string>('');
   mostrarHorariosPasados = signal<boolean>(true);
   busquedaAlumno = signal<string>('');
+
+  reservasActivasHorarioEditando = computed(() => {
+    const horario = this.horarioEditando();
+    if (!horario || !horario.reservas) return 0;
+    // Solo contar reservas PENDIENTE y CONFIRMADA (las que ocupan capacidad)
+    return horario.reservas.filter(
+      r => r.estado === EstadoReserva.PENDIENTE || r.estado === EstadoReserva.CONFIRMADA
+    ).length;
+  });
+
+  capacidadMinimaHorarioEditando = computed(() => {
+    const reservasActivas = this.reservasActivasHorarioEditando();
+    return Math.max(1, reservasActivas);
+  });
 
   horas = Array.from({ length: 24 }, (_, i) => ({ label: `${i.toString().padStart(2, '0')}:00`, value: i }));
 
@@ -222,6 +238,97 @@ export class HorariosAdminComponent {
     return of(resultado);
   });
 
+  vistaPreviaHorarios = computed(() => {
+    const fechas = this.fechasSeleccionadasHorarios();
+    const inicio = this.horaInicio();
+    const fin = this.horaFin();
+    const capacidad = this.capacidad();
+    const horariosExistentesData = this.horariosExistentes();
+
+    if (fechas.length === 0 || inicio >= fin) {
+      return null;
+    }
+
+    const diasNumeros = fechas.map(fecha => fecha.getDate()).sort((a, b) => a - b);
+    const diasFormateados = diasNumeros.join(', ');
+
+    // Agrupar días por si tienen o no horarios existentes
+    const diasConHorarios: number[] = [];
+    const diasSinHorarios: number[] = [];
+    
+    // Obtener horarios únicos (sin repetir por día)
+    const horariosNuevosSet = new Set<string>();
+    const horariosExistentesSet = new Set<string>();
+    
+    fechas.forEach(fecha => {
+      const fechaKey = this.utils.getDateKey(fecha);
+      const diaNumero = fecha.getDate();
+      let tieneHorarios = false;
+      
+      for (let hora = inicio; hora < fin; hora++) {
+        const horaInicioStr = `${hora.toString().padStart(2, '0')}:00`;
+        const horaFinStr = `${(hora + 1).toString().padStart(2, '0')}:00`;
+        const horarioKey = `${horaInicioStr}-${horaFinStr}`;
+        
+        // Verificar si este horario ya existe para esta fecha específica
+        const horarioExiste = horariosExistentesData.some(h => {
+          const fechaH = this.utils.toDate(h.fecha);
+          const horaInicioH = this.utils.toDate(h.horaInicio);
+          const fechaHKey = this.utils.getDateKey(fechaH);
+          const horaInicioHHora = horaInicioH.getHours();
+          return fechaHKey === fechaKey && horaInicioHHora === hora;
+        });
+        
+        if (horarioExiste) {
+          tieneHorarios = true;
+          horariosExistentesSet.add(horarioKey);
+        } else {
+          horariosNuevosSet.add(horarioKey);
+        }
+      }
+      
+      if (tieneHorarios) {
+        diasConHorarios.push(diaNumero);
+      } else {
+        diasSinHorarios.push(diaNumero);
+      }
+    });
+
+    // Convertir sets a arrays ordenados
+    const horariosNuevos = Array.from(horariosNuevosSet).sort().map(key => {
+      const [horaInicioStr, horaFinStr] = key.split('-');
+      return { horaInicioStr, horaFinStr };
+    });
+    
+    const horariosExistentesList = Array.from(horariosExistentesSet).sort().map(key => {
+      const [horaInicioStr, horaFinStr] = key.split('-');
+      return { horaInicioStr, horaFinStr };
+    });
+
+    // Calcular totales
+    const totalHorariosNuevos = horariosNuevos.length * (diasConHorarios.length + diasSinHorarios.length);
+    const totalHorariosExistentes = horariosExistentesList.length * diasConHorarios.length;
+
+    return {
+      dias: diasFormateados,
+      diasCount: fechas.length,
+      diasConHorarios: diasConHorarios.sort((a, b) => a - b),
+      diasSinHorarios: diasSinHorarios.sort((a, b) => a - b),
+      horariosNuevos,
+      horariosExistentes: horariosExistentesList,
+      totalHorariosNuevos,
+      totalHorariosExistentes,
+      capacidad
+    };
+  });
+
+  totalHorariosACrear = computed(() => {
+    const vistaPrevia = this.vistaPreviaHorarios();
+    if (!vistaPrevia) return 0;
+    // Calcular correctamente: horarios nuevos * días sin horarios + horarios nuevos * días con horarios (solo los que no existen)
+    return vistaPrevia.horariosNuevos.length * vistaPrevia.diasCount;
+  });
+
   constructor() {
     this.cargarDatos();
   }
@@ -266,9 +373,19 @@ export class HorariosAdminComponent {
 
   onFechasSeleccionadas(fechas: Date[]) {
     if (this.activeTab() === 0) {
+      // Filtrar días pasados solo en la pestaña de establecer horarios
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const fechasFiltradas = fechas.filter(fecha => {
+        const fechaComparar = new Date(fecha);
+        fechaComparar.setHours(0, 0, 0, 0);
+        return fechaComparar >= hoy;
+      });
+      
       // Para la pestaña de establecer horarios
-      this.fechasSeleccionadasHorarios.set(fechas);
-      this.cargarHorariosExistentes(fechas);
+      this.fechasSeleccionadasHorarios.set(fechasFiltradas);
+      // Cargar horarios existentes cuando cambian las fechas
+      this.cargarHorariosExistentes(fechasFiltradas);
     }
   }
 
@@ -333,7 +450,8 @@ export class HorariosAdminComponent {
             fecha: new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()),
             horaInicio,
             horaFin,
-            capacidad: this.capacidad()
+            capacidad: this.capacidad(),
+            descripcion: this.descripcionHorarios() || undefined
           });
         }
       }
@@ -345,6 +463,7 @@ export class HorariosAdminComponent {
       this.fechasSeleccionadasHorarios.set([]);
       this.horariosExistentes.set([]);
       this.horariosSeleccionadosEliminar.set([]);
+      this.descripcionHorarios.set('');
       await this.cargarDatos();
     } else {
       this.toast.info('Todos los horarios para ese rango ya existen. Usa el botón "Editar" en la tabla para modificar horarios existentes.');
@@ -352,12 +471,19 @@ export class HorariosAdminComponent {
   }
 
   abrirDialogEditar(horario: HorarioDisponible) {
+    // No permitir editar horarios pasados
+    if (this.utils.esHorarioPasado(horario)) {
+      this.toast.warning('No se pueden editar horarios pasados. Solo se pueden eliminar o consultar.');
+      return;
+    }
+    
     const horaInicioDate = this.utils.toDate(horario.horaInicio);
     const horaFinDate = this.utils.toDate(horario.horaFin);
     this.horarioEditando.set(horario);
     this.horarioEditHoraInicio.set(horaInicioDate.getHours());
     this.horarioEditHoraFin.set(horaFinDate.getHours());
     this.horarioEditCapacidad.set(horario.capacidad);
+    this.horarioEditDescripcion.set(horario.descripcion || '');
     this.mostrarDialogEditar.set(true);
   }
 
@@ -369,12 +495,23 @@ export class HorariosAdminComponent {
     const horaFin = this.horarioEditHoraFin();
     const capacidad = this.horarioEditCapacidad();
 
-    if (horaInicio >= horaFin) {
-      this.toast.warning('La hora de inicio debe ser menor que la hora de fin');
+    // Validar que las horas sean secuenciales (horaFin = horaInicio + 1)
+    if (horaFin !== horaInicio + 1) {
+      this.toast.warning('La hora de fin debe ser exactamente una hora después de la hora de inicio (horarios secuenciales)');
       return;
     }
 
+    // Validar que no sean horas anteriores
     const fecha = this.utils.toDate(horario.fecha);
+    const ahora = new Date();
+    const fechaHoraInicio = new Date(fecha);
+    fechaHoraInicio.setHours(horaInicio, 0, 0, 0);
+    
+    if (fechaHoraInicio < ahora) {
+      this.toast.warning('No se pueden establecer horarios en el pasado');
+      return;
+    }
+
     const horaInicioDate = new Date(fecha);
     horaInicioDate.setHours(horaInicio, 0, 0, 0);
     
@@ -388,14 +525,14 @@ export class HorariosAdminComponent {
         horaInicio: horaInicioDate,
         horaFin: horaFinDate,
         capacidad: capacidad,
-        estado: horario.estado
+        estado: horario.estado,
+        descripcion: this.horarioEditDescripcion() || undefined
       }]));
       
       this.toast.success('Horario actualizado correctamente');
       this.mostrarDialogEditar.set(false);
       this.horarioEditando.set(null);
       await this.cargarDatos();
-      this.cargarHorariosExistentes(this.fechasSeleccionadasHorarios());
     } catch (error: any) {
       const mensaje = error?.error?.message || 'Error al actualizar horario';
       this.toast.error(mensaje);
@@ -412,14 +549,34 @@ export class HorariosAdminComponent {
   }
 
   toggleTodosHorariosEliminar() {
-    const horariosExistentes = this.horariosExistentes();
+    const horariosFiltrados = this.horariosFiltrados();
     const seleccionados = this.horariosSeleccionadosEliminar();
     
-    if (seleccionados.length === horariosExistentes.length) {
+    if (seleccionados.length === horariosFiltrados.length && horariosFiltrados.length > 0) {
       this.horariosSeleccionadosEliminar.set([]);
     } else {
-      this.horariosSeleccionadosEliminar.set(horariosExistentes.map(h => h.id));
+      this.horariosSeleccionadosEliminar.set(horariosFiltrados.map(h => h.id));
     }
+  }
+
+  confirmarEliminarHorario(horario: HorarioDisponible) {
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de que deseas eliminar el horario del ${this.utils.toDate(horario.fecha).toLocaleDateString('es-ES')} de ${this.utils.formatTime(horario.horaInicio)} a ${this.utils.formatTime(horario.horaFin)}?`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: async () => {
+        try {
+          await firstValueFrom(this.horariosService.deleteHorario$(horario.id));
+          this.toast.success('Horario eliminado correctamente');
+          await this.cargarDatos();
+        } catch (error: any) {
+          const mensaje = error?.error?.message || 'Error al eliminar horario';
+          this.toast.error(mensaje);
+        }
+      }
+    });
   }
 
   eliminarHorariosSeleccionados = async () => {
@@ -436,7 +593,6 @@ export class HorariosAdminComponent {
       this.toast.success(`${seleccionados.length} horario(s) eliminado(s) correctamente`);
       this.horariosSeleccionadosEliminar.set([]);
       await this.cargarDatos();
-      this.cargarHorariosExistentes(this.fechasSeleccionadasHorarios());
     } catch (error: any) {
       const mensaje = error?.error?.message || 'Error al eliminar horarios';
       this.toast.error(mensaje);
@@ -654,6 +810,52 @@ export class HorariosAdminComponent {
     return this.utils.getEstadoLabel(estado);
   }
 
+  getEstadoTooltip(estado: EstadoReserva): string {
+    switch (estado) {
+      case EstadoReserva.PENDIENTE:
+        return 'La reserva está pendiente de confirmación por el administrador';
+      case EstadoReserva.CONFIRMADA:
+        return 'La reserva ha sido confirmada. Puedes marcarla como completada o ausente';
+      case EstadoReserva.COMPLETADA:
+        return 'La reserva ha sido completada. El alumno asistió a la tutoría';
+      case EstadoReserva.AUSENTE:
+        return 'La reserva está marcada como ausente. El alumno no asistió a la tutoría';
+      case EstadoReserva.CANCELADA:
+        return 'La reserva ha sido cancelada. No se puede modificar su estado';
+      default:
+        return '';
+    }
+  }
+
+  getTooltipAccionReserva(reserva: Reserva): string {
+    if (reserva.estado === EstadoReserva.COMPLETADA) {
+      return 'Esta reserva ya está marcada como completada. No se puede modificar';
+    }
+    if (reserva.estado === EstadoReserva.AUSENTE) {
+      return 'Esta reserva ya está marcada como ausente. No se puede modificar';
+    }
+    if (reserva.estado === EstadoReserva.CANCELADA) {
+      return 'Esta reserva está cancelada. No se pueden realizar acciones sobre ella';
+    }
+    if (reserva.estado === EstadoReserva.PENDIENTE) {
+      return 'Primero debes confirmar la reserva antes de marcarla como completada o ausente';
+    }
+    return '';
+  }
+
+  getTooltipCheckboxReserva(reserva: Reserva): string {
+    if (reserva.estado === EstadoReserva.COMPLETADA) {
+      return 'No se puede seleccionar una reserva completada';
+    }
+    if (reserva.estado === EstadoReserva.AUSENTE) {
+      return 'No se puede seleccionar una reserva marcada como ausente';
+    }
+    if (reserva.estado === EstadoReserva.CANCELADA) {
+      return 'No se puede seleccionar una reserva cancelada';
+    }
+    return '';
+  }
+
   esHorarioPasado(horario: HorarioDisponible): boolean {
     return this.utils.esHorarioPasado(horario);
   }
@@ -690,12 +892,30 @@ export class HorariosAdminComponent {
 
   getMarcarCompletadaAction(reservaId: number) {
     return async () => {
+      const reserva = this.reservasDelDiaFiltradas().find(r => r.id === reservaId);
+      if (!reserva) {
+        this.toast.error('Reserva no encontrada');
+        return;
+      }
+      if (reserva.estado !== EstadoReserva.CONFIRMADA) {
+        this.toast.warning('Solo se pueden marcar como completadas las reservas confirmadas');
+        return;
+      }
       await this.marcarReservaCompletada(reservaId);
     };
   }
 
   getMarcarAusenteAction(reservaId: number) {
     return async () => {
+      const reserva = this.reservasDelDiaFiltradas().find(r => r.id === reservaId);
+      if (!reserva) {
+        this.toast.error('Reserva no encontrada');
+        return;
+      }
+      if (reserva.estado !== EstadoReserva.CONFIRMADA) {
+        this.toast.warning('Solo se pueden marcar como ausentes las reservas confirmadas');
+        return;
+      }
       await this.marcarReservaAusente(reservaId);
     };
   }

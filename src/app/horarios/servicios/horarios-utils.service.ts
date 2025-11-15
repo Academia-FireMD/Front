@@ -41,10 +41,14 @@ export class HorariosUtilsService {
   }
 
   getDisponibles(horario: HorarioDisponible): number {
+    // Solo contar reservas PENDIENTE y CONFIRMADA (las que ocupan capacidad)
+    // Las reservas COMPLETADA, AUSENTE y CANCELADA no ocupan capacidad
     const reservasActivas = (horario.reservas || []).filter(
-      r => r.estado !== EstadoReserva.CANCELADA
+      r => r.estado === EstadoReserva.PENDIENTE || r.estado === EstadoReserva.CONFIRMADA
     ).length;
-    return horario.capacidad - reservasActivas;
+    const disponibles = horario.capacidad - reservasActivas;
+    // Asegurar que nunca devuelva un valor negativo
+    return Math.max(0, disponibles);
   }
 
   getEstadoLabel(estado: EstadoReserva): string {

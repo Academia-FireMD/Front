@@ -4,6 +4,7 @@
     (ngModelChange)="onDateSelect($event)"
     selectionMode="multiple"
     [inline]="true"
+    [minDate]="fechaMinima()"
     styleClass="calendario-horarios">
     <ng-template pTemplate="date" let-date>
       <span [ngClass]="getDateClass(date)" class="date-cell">{{ date.day }}</span>

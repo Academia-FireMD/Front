@@ -44,24 +44,13 @@
     }
   }
 
-  .reservas-card {
-    margin-top: 1rem;
-    padding: 1.5rem;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  .reservas-card-content {
     display: flex;
     flex-direction: column;
+    height: 100%;
 
-    .reservas-header {
-      margin-bottom: 1.5rem;
-
-      h3 {
-        margin: 0 0 1rem 0;
-        font-size: 1.25rem;
-        color: #212529;
-        font-weight: 600;
-      }
+    .reservas-filters {
+      margin-bottom: 1rem;
 
       .reservas-stats {
         display: grid;
@@ -143,10 +132,6 @@
           }
         }
       }
-    }
-
-    .reservas-filters {
-      margin-bottom: 1rem;
 
       .filters-row {
         display: flex;
@@ -193,7 +178,6 @@
     }
 
     ::ng-deep {
-
       .p-iconField {
         width: 100%;
 
@@ -308,6 +292,27 @@
 
               i {
                 font-size: 0.85rem;
+              }
+            }
+
+            .reserva-cancelado-por {
+              font-size: 0.85rem;
+              color: #6c757d;
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              margin-top: 0.25rem;
+              padding: 0.5rem;
+              background-color: #f8d7da;
+              border-radius: 4px;
+              border-left: 3px solid #dc3545;
+
+              i {
+                color: #dc3545;
+              }
+
+              strong {
+                color: #721c24;
               }
             }
 
@@ -459,6 +464,10 @@
               gap: 0.5rem;
               align-items: center;
 
+              .profesor-avatar {
+                margin-bottom: 0.5rem;
+              }
+
               .profesor-nombre {
                 font-weight: 600;
                 font-size: 1rem;
@@ -511,9 +520,12 @@
                 flex-direction: column;
                 gap: 0.75rem;
                 min-height: 200px;
+                max-height: 400px;
+                overflow-y: auto;
 
                 @media (max-width: 768px) {
                   min-height: auto;
+                  max-height: 300px;
                 }
 
                 .horario-item {
@@ -630,16 +642,27 @@
 
                 .profesor-info {
                   flex: 1;
+                  display: flex;
+                  align-items: center;
+                  gap: 0.75rem;
 
-                  .profesor-nombre {
-                    font-weight: 600;
-                    color: var(--text-color);
-                    margin-bottom: 0.25rem;
+                  .profesor-avatar {
+                    flex-shrink: 0;
                   }
 
-                  .profesor-email {
-                    font-size: 0.85rem;
-                    color: var(--text-color-secondary);
+                  .profesor-details {
+                    flex: 1;
+
+                    .profesor-nombre {
+                      font-weight: 600;
+                      color: var(--text-color);
+                      margin-bottom: 0.25rem;
+                    }
+
+                    .profesor-email {
+                      font-size: 0.85rem;
+                      color: var(--text-color-secondary);
+                    }
                   }
                 }
 
@@ -670,6 +693,8 @@
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      max-height: 300px;
+      overflow-y: auto;
 
       .horario-item {
         display: flex;
@@ -761,6 +786,43 @@
     padding: 2rem;
     text-align: center;
     color: #6c757d;
+  }
+
+  .no-horarios-disponibles {
+    padding: 3rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+
+    i {
+      display: block;
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      margin: 0 0 0.5rem 0;
+      color: #212529;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .text-muted {
+      color: #6c757d;
+      font-size: 1rem;
+      margin: 0;
+    }
+  }
+}
+
+// Centrar botones del diálogo de cancelación
+::ng-deep .p-dialog {
+  .p-dialog-footer {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
   }
 }
 

@@ -46,8 +46,8 @@ export class HorariosService extends ApiBaseService {
     return this.get('/alumno/horarios-disponibles') as Observable<HorarioDisponible[]>;
   }
 
-  public reservarHorario$(horarioId: number): Observable<Reserva> {
-    return this.post(`/alumno/reservar/${horarioId}`, {}) as Observable<Reserva>;
+  public reservarHorario$(horarioId: number, notas?: string): Observable<Reserva> {
+    return this.post(`/alumno/reservar/${horarioId}`, { notas: notas || undefined }) as Observable<Reserva>;
   }
 
   public getMisReservas$(): Observable<Reserva[]> {

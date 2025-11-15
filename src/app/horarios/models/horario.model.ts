@@ -42,7 +42,7 @@ export interface Reserva {
   horarioDisponible?: HorarioDisponible;
   estado: EstadoReserva;
   notas?: string;
-  canceladoPor?: string;
+  canceladoPor?: Usuario;
   motivoCancelacion?: string;
   createdAt: Date;
   updatedAt: Date;
