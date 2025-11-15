@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -10,9 +9,9 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import {
-    ProductoWooCommerce,
-    SuscripcionManagementService,
-    ValidacionPlazo,
+  ProductoWooCommerce,
+  SuscripcionManagementService,
+  ValidacionPlazo,
 } from '../../services/suscripcion-management.service';
 
 @Component({
@@ -33,12 +32,14 @@ import {
   styleUrls: ['./cambio-suscripcion.component.scss'],
 })
 export class CambioSuscripcionComponent implements OnInit {
+  @Output() cerrar = new EventEmitter<void>();
+  @Output() solicitarConfirmacion = new EventEmitter<any>();
+  @Output() mostrarFueraDePlazo = new EventEmitter<any>();
+
   loading = signal(false);
   validandoPlazo = signal(true);
   cargandoPlanes = signal(true);
   procesandoCambio = signal(false);
-  dialogConfirmacion = signal(false);
-  dialogFueraDePlazo = signal(false);
 
   validacion: ValidacionPlazo | null = null;
   planesDisponibles: ProductoWooCommerce[] = [];
@@ -47,8 +48,7 @@ export class CambioSuscripcionComponent implements OnInit {
 
   constructor(
     private suscripcionService: SuscripcionManagementService,
-    private messageService: MessageService,
-    private router: Router
+    private messageService: MessageService
   ) {}
 
   ngOnInit(): void {
@@ -63,7 +63,7 @@ export class CambioSuscripcionComponent implements OnInit {
         this.validacion = result;
         this.validandoPlazo.set(false);
         if (!result.valido) {
-          this.dialogFueraDePlazo.set(true);
+          this.mostrarFueraDePlazo.emit(result);
         }
       },
       error: (error) => {
@@ -75,7 +75,7 @@ export class CambioSuscripcionComponent implements OnInit {
             error.error?.message ||
             'No se pudo validar el plazo de modificación',
         });
-        setTimeout(() => this.router.navigate(['/profile']), 2000);
+        setTimeout(() => this.cerrar.emit(), 2000);
       },
     });
   }
@@ -112,29 +112,32 @@ export class CambioSuscripcionComponent implements OnInit {
       });
       return;
     }
-    this.dialogConfirmacion.set(true);
+    this.solicitarConfirmacion.emit({
+      planSeleccionado: this.planSeleccionado,
+      comentario: this.comentario,
+      validacion: this.validacion,
+    });
   }
 
-  confirmarCambio(): void {
-    if (!this.planSeleccionado) return;
+  confirmarCambio(datos: { planSeleccionado: ProductoWooCommerce; comentario: string }): void {
+    if (!datos.planSeleccionado) return;
 
     this.procesandoCambio.set(true);
     this.suscripcionService
       .cambiarSuscripcion({
-        nuevoSkuProducto: this.planSeleccionado.sku,
-        comentario: this.comentario || undefined,
+        nuevoSkuProducto: datos.planSeleccionado.sku,
+        comentario: datos.comentario || undefined,
       })
       .subscribe({
         next: (response) => {
           this.procesandoCambio.set(false);
-          this.dialogConfirmacion.set(false);
           this.messageService.add({
             severity: 'success',
             summary: 'Cambio procesado',
             detail: response.mensaje,
             life: 5000,
           });
-          setTimeout(() => this.router.navigate(['/profile']), 3000);
+          setTimeout(() => this.cerrar.emit(), 2000);
         },
         error: (error) => {
           this.procesandoCambio.set(false);
@@ -150,12 +153,7 @@ export class CambioSuscripcionComponent implements OnInit {
   }
 
   cancelar(): void {
-    this.router.navigate(['/profile']);
-  }
-
-  cerrarDialogFueraDePlazo(): void {
-    this.dialogFueraDePlazo.set(false);
-    this.router.navigate(['/profile']);
+    this.cerrar.emit();
   }
 
   formatPrice(price: string): string {

@@ -498,3 +498,342 @@
     </div>
   </ng-template>
 </p-dialog>
+
+<!-- Dialog para Cambio de Suscripción -->
+<p-dialog
+  header="Cambio de Suscripción"
+  [(visible)]="showCambioSuscripcionDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '95vw', maxWidth: '1400px' }"
+  (onHide)="cerrarDialogCambioSuscripcion()"
+>
+  <app-cambio-suscripcion
+    *ngIf="showCambioSuscripcionDialog"
+    (cerrar)="cerrarDialogCambioSuscripcion()"
+    (solicitarConfirmacion)="onSolicitarConfirmacionCambio($event)"
+    (mostrarFueraDePlazo)="onFueraDePlazoCambio($event)"
+  ></app-cambio-suscripcion>
+</p-dialog>
+
+<!-- Dialog para Baja de Suscripción -->
+<p-dialog
+  header="Baja de Suscripción"
+  [(visible)]="showBajaSuscripcionDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '95vw', maxWidth: '1200px' }"
+  (onHide)="cerrarDialogBajaSuscripcion()"
+>
+  <app-baja-suscripcion
+    *ngIf="showBajaSuscripcionDialog"
+    (cerrar)="cerrarDialogBajaSuscripcion()"
+    (solicitarConfirmacion)="onSolicitarConfirmacionBaja($event)"
+    (mostrarFueraDePlazo)="onFueraDePlazoBaja($event)"
+  ></app-baja-suscripcion>
+</p-dialog>
+
+<!-- Dialog de Confirmación Cambio -->
+<p-dialog
+  header="Confirmar Cambio de Suscripción"
+  [(visible)]="showConfirmacionCambio"
+  [modal]="true"
+  [style]="{ width: '550px' }"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!procesandoCambio"
+>
+  @if (procesandoCambio) {
+  <div class="flex flex-column align-items-center justify-content-center gap-3" style="min-height: 200px;">
+    <p-progressSpinner />
+    <p class="text-lg font-medium">Procesando cambio de suscripción...</p>
+    <p class="text-sm text-600">Por favor, espera un momento</p>
+  </div>
+  } @else {
+  <div class="flex flex-column gap-3">
+    <p class="text-lg">
+      <i class="pi pi-info-circle text-blue-500 mr-2"></i>
+      ¿Confirmas el cambio a este plan?
+    </p>
+
+    @if (datosConfirmacionCambio?.planSeleccionado) {
+    <div class="p-3 surface-100 border-round">
+      <div class="flex justify-content-between align-items-center mb-2">
+        <span class="font-medium">Nuevo plan:</span>
+        <span class="text-xl font-bold text-primary">{{
+          datosConfirmacionCambio.planSeleccionado.name
+        }}</span>
+      </div>
+      <div class="flex justify-content-between align-items-center">
+        <span class="font-medium">Precio mensual:</span>
+        <span class="text-xl font-bold">{{
+          datosConfirmacionCambio.planSeleccionado.price
+        }}€</span>
+      </div>
+    </div>
+    }
+
+    <div class="p-3 surface-50 border-round border-1 border-primary">
+      <p class="font-medium mb-2">
+        <i class="pi pi-calendar mr-2"></i>
+        Fecha de aplicación del cambio:
+      </p>
+      <p class="text-lg font-bold text-primary">
+        {{ datosConfirmacionCambio?.validacion?.proximoPago | date : 'dd/MM/yyyy' }}
+      </p>
+    </div>
+
+    <p class="text-sm text-600 line-height-3">
+      El cambio se hará efectivo en tu próxima fecha de facturación. Tu plan
+      actual permanecerá activo hasta entonces.
+    </p>
+
+    @if (datosConfirmacionCambio?.comentario) {
+    <div class="mt-2">
+      <p class="font-medium text-sm mb-1">Tu comentario:</p>
+      <p class="text-sm text-600 p-2 surface-100 border-round">
+        {{ datosConfirmacionCambio.comentario }}
+      </p>
+    </div>
+    }
+  </div>
+  }
+
+  <ng-template pTemplate="footer">
+    @if (!procesandoCambio) {
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Volver"
+        icon="pi pi-arrow-left"
+        (onClick)="showConfirmacionCambio = false"
+        [text]="true"
+        styleClass="p-button-text"
+      />
+      <p-button
+        label="Confirmar Cambio"
+        icon="pi pi-check"
+        (onClick)="confirmarCambioDesdePadre()"
+      />
+    </div>
+    }
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog de Confirmación Baja -->
+<p-dialog
+  header="Confirmar Baja de Suscripción"
+  [(visible)]="showConfirmacionBaja"
+  [modal]="true"
+  [style]="{ width: '550px' }"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!procesandoBaja"
+>
+  @if (procesandoBaja) {
+  <div class="flex flex-column align-items-center justify-content-center gap-3" style="min-height: 200px;">
+    <p-progressSpinner />
+    <p class="text-lg font-medium">Procesando baja de suscripción...</p>
+    <p class="text-sm text-600">Por favor, espera un momento</p>
+  </div>
+  } @else {
+  <div class="flex flex-column gap-3">
+    <p class="text-lg">
+      <i class="pi pi-exclamation-triangle text-orange-500 mr-2"></i>
+      ¿Estás seguro de que deseas dar de baja tu suscripción?
+    </p>
+
+    <div class="p-3 surface-100 border-round">
+      <p class="font-medium mb-2">Tu suscripción permanecerá activa hasta:</p>
+      <p class="text-xl font-bold text-primary">
+        {{ datosConfirmacionBaja?.validacion?.proximoPago | date : 'dd/MM/yyyy' }}
+      </p>
+    </div>
+
+    <p class="text-sm text-600">
+      Una vez confirmada, tu suscripción se cancelará y no se renovará
+      automáticamente. Podrás seguir disfrutando del servicio hasta la fecha
+      indicada.
+    </p>
+
+    @if (datosConfirmacionBaja?.motivos && datosConfirmacionBaja.motivos.length > 0) {
+    <div class="mt-2">
+      <p class="font-medium text-sm mb-1">Motivos seleccionados:</p>
+      <div class="flex flex-wrap gap-2">
+        @for (motivo of datosConfirmacionBaja.motivos; track motivo) {
+        <span class="p-2 surface-100 border-round text-sm">
+          {{ getMotivoLabel(motivo) }}
+        </span>
+        }
+      </div>
+    </div>
+    }
+
+    @if (datosConfirmacionBaja?.comentario) {
+    <div class="mt-2">
+      <p class="font-medium text-sm mb-1">Tu comentario:</p>
+      <p class="text-sm text-600 p-2 surface-100 border-round">
+        {{ datosConfirmacionBaja.comentario }}
+      </p>
+    </div>
+    }
+  </div>
+  }
+
+  <ng-template pTemplate="footer">
+    @if (!procesandoBaja) {
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Volver"
+        icon="pi pi-arrow-left"
+        (onClick)="showConfirmacionBaja = false"
+        [text]="true"
+        styleClass="p-button-text"
+      />
+      <p-button
+        label="Confirmar Baja"
+        icon="pi pi-check"
+        (onClick)="confirmarBajaDesdePadre()"
+        severity="danger"
+      />
+    </div>
+    }
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog Fuera de Plazo Cambio -->
+<p-dialog
+  header="Solicitud fuera de plazo"
+  [(visible)]="showFueraDePlazoCambio"
+  [modal]="true"
+  [style]="{ width: '550px' }"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="false"
+>
+  <div class="flex flex-column gap-3">
+    <div class="flex align-items-center gap-2 mb-2">
+      <i class="pi pi-info-circle text-orange-500 text-3xl"></i>
+      <h3 class="m-0">No se puede procesar la solicitud</h3>
+    </div>
+
+    <p class="text-700 line-height-3">
+      Te informamos de que la solicitud de modificación de tu suscripción no se
+      ha podido tramitar, ya que debe realizarse con al menos
+      <strong>10 días de antelación</strong> a la fecha del próximo cobro.
+    </p>
+
+    <div class="p-3 surface-100 border-round">
+      <div class="flex justify-content-between mb-2">
+        <span class="font-medium">Próximo cobro:</span>
+        <span class="font-bold">{{
+          validacionPlazo?.proximoPago | date : 'dd/MM/yyyy'
+        }}</span>
+      </div>
+      <div class="flex justify-content-between">
+        <span class="font-medium">Días restantes:</span>
+        <span
+          class="font-bold"
+          [class.text-red-500]="validacionPlazo && validacionPlazo.diasRestantes < 10"
+        >
+          {{ validacionPlazo?.diasRestantes }} días
+        </span>
+      </div>
+    </div>
+
+    <p class="text-sm text-600 line-height-3">
+      En este caso, el pago ya programado se efectuará con normalidad, y tu
+      solicitud quedará registrada para aplicarse al periodo siguiente.
+    </p>
+
+    <p class="text-sm text-600">
+      Agradecemos tu comprensión y te recordamos que puedes contactar con
+      nuestro equipo si necesitas más información o asistencia con tu
+      suscripción.
+    </p>
+
+    <p class="font-medium text-center mt-2">
+      Gracias por formar parte de TecnikaFire.
+    </p>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-center">
+      <p-button
+        label="Entendido"
+        icon="pi pi-check"
+        (onClick)="cerrarFueraDePlazoCambio()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog Fuera de Plazo Baja -->
+<p-dialog
+  header="Solicitud fuera de plazo"
+  [(visible)]="showFueraDePlazoBaja"
+  [modal]="true"
+  [style]="{ width: '550px' }"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="false"
+>
+  <div class="flex flex-column gap-3">
+    <div class="flex align-items-center gap-2 mb-2">
+      <i class="pi pi-info-circle text-orange-500 text-3xl"></i>
+      <h3 class="m-0">No se puede procesar la solicitud</h3>
+    </div>
+
+    <p class="text-700 line-height-3">
+      Te informamos de que la solicitud de baja de tu suscripción no se ha
+      podido tramitar, ya que debe realizarse con al menos
+      <strong>10 días de antelación</strong> a la fecha del próximo cobro.
+    </p>
+
+    <div class="p-3 surface-100 border-round">
+      <div class="flex justify-content-between mb-2">
+        <span class="font-medium">Próximo cobro:</span>
+        <span class="font-bold">{{
+          validacionPlazo?.proximoPago | date : 'dd/MM/yyyy'
+        }}</span>
+      </div>
+      <div class="flex justify-content-between">
+        <span class="font-medium">Días restantes:</span>
+        <span
+          class="font-bold"
+          [class.text-red-500]="validacionPlazo && validacionPlazo.diasRestantes < 10"
+        >
+          {{ validacionPlazo?.diasRestantes }} días
+        </span>
+      </div>
+    </div>
+
+    <p class="text-sm text-600 line-height-3">
+      En este caso, el pago ya programado se efectuará con normalidad, y tu
+      solicitud quedará registrada para aplicarse al periodo siguiente.
+    </p>
+
+    <p class="text-sm text-600">
+      Agradecemos tu comprensión y te recordamos que puedes contactar con
+      nuestro equipo si necesitas más información o asistencia con tu
+      suscripción.
+    </p>
+
+    <p class="font-medium text-center mt-2">
+      Gracias por formar parte de TecnikaFire.
+    </p>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-center">
+      <p-button
+        label="Entendido"
+        icon="pi pi-check"
+        (onClick)="cerrarFueraDePlazoBaja()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

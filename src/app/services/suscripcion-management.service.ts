@@ -37,6 +37,7 @@ export interface ProductoWooCommerce {
   price: string;
   description: string;
   type: string;
+  imageUrl?: string | null;
 }
 
 export interface ResultadoCambioSuscripcion {

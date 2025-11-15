@@ -25,20 +25,6 @@ const routes: Routes = [
         component: ProfileComponent,
       },
       {
-        path: 'profile/baja-suscripcion',
-        loadComponent: () =>
-          import('./profile/baja-suscripcion/baja-suscripcion.component').then(
-            (m) => m.BajaSuscripcionComponent
-          ),
-      },
-      {
-        path: 'profile/cambio-suscripcion',
-        loadComponent: () =>
-          import('./profile/cambio-suscripcion/cambio-suscripcion.component').then(
-            (m) => m.CambioSuscripcionComponent
-          ),
-      },
-      {
         path: 'test',
         loadChildren: () =>
           import('./test/test.module').then((m) => m.TestModule),

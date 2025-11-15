@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -39,11 +38,13 @@ interface MotivoOption {
   styleUrls: ['./baja-suscripcion.component.scss'],
 })
 export class BajaSuscripcionComponent implements OnInit {
+  @Output() cerrar = new EventEmitter<void>();
+  @Output() solicitarConfirmacion = new EventEmitter<any>();
+  @Output() mostrarFueraDePlazo = new EventEmitter<any>();
+
   loading = signal(false);
   validandoPlazo = signal(true);
   procesandoBaja = signal(false);
-  dialogConfirmacion = signal(false);
-  dialogFueraDePlazo = signal(false);
 
   validacion: ValidacionPlazo | null = null;
   motivosSeleccionados: MotivoBaja[] = [];
@@ -94,8 +95,7 @@ export class BajaSuscripcionComponent implements OnInit {
 
   constructor(
     private suscripcionService: SuscripcionManagementService,
-    private messageService: MessageService,
-    private router: Router
+    private messageService: MessageService
   ) {}
 
   ngOnInit(): void {
@@ -109,7 +109,7 @@ export class BajaSuscripcionComponent implements OnInit {
         this.validacion = result;
         this.validandoPlazo.set(false);
         if (!result.valido) {
-          this.dialogFueraDePlazo.set(true);
+          this.mostrarFueraDePlazo.emit(result);
         }
       },
       error: (error) => {
@@ -121,8 +121,8 @@ export class BajaSuscripcionComponent implements OnInit {
             error.error?.message ||
             'No se pudo validar el plazo de modificación',
         });
-        // Redirigir al perfil si hay error
-        setTimeout(() => this.router.navigate(['/profile']), 2000);
+        // Cerrar dialog si hay error
+        setTimeout(() => this.cerrar.emit(), 2000);
       },
     });
   }
@@ -152,27 +152,30 @@ export class BajaSuscripcionComponent implements OnInit {
       });
       return;
     }
-    this.dialogConfirmacion.set(true);
+    this.solicitarConfirmacion.emit({
+      motivos: this.motivosSeleccionados,
+      comentario: this.comentarioAdicional,
+      validacion: this.validacion,
+    });
   }
 
-  confirmarBaja(): void {
+  confirmarBaja(datos: { motivos: MotivoBaja[]; comentario: string }): void {
     this.procesandoBaja.set(true);
     this.suscripcionService
       .solicitarBaja({
-        motivos: this.motivosSeleccionados,
-        comentarioAdicional: this.comentarioAdicional || undefined,
+        motivos: datos.motivos,
+        comentarioAdicional: datos.comentario || undefined,
       })
       .subscribe({
         next: (response) => {
           this.procesandoBaja.set(false);
-          this.dialogConfirmacion.set(false);
           this.messageService.add({
             severity: 'success',
             summary: 'Baja procesada',
             detail: response.mensaje,
             life: 5000,
           });
-          setTimeout(() => this.router.navigate(['/profile']), 3000);
+          setTimeout(() => this.cerrar.emit(), 2000);
         },
         error: (error) => {
           this.procesandoBaja.set(false);
@@ -187,11 +190,6 @@ export class BajaSuscripcionComponent implements OnInit {
   }
 
   cancelar(): void {
-    this.router.navigate(['/profile']);
-  }
-
-  cerrarDialogFueraDePlazo(): void {
-    this.dialogFueraDePlazo.set(false);
-    this.router.navigate(['/profile']);
+    this.cerrar.emit();
   }
 }

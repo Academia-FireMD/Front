@@ -5,67 +5,84 @@
     <p class="text-lg mt-3">Cargando información...</p>
   </div>
   } @else if (validacion && validacion.valido) {
-  <p-card header="Cambio de Suscripción" styleClass="cambio-card">
-    <div class="header-content mb-4">
-      <i class="pi pi-sync text-primary text-5xl"></i>
-      <h2 class="mt-3">Cambia tu plan de suscripción</h2>
-      <p class="mt-2 text-700">
-        Selecciona el nuevo plan que mejor se adapte a tus necesidades.
+  <div class="cambio-content">
+    <div class="header-section">
+      <div class="header-icon">
+        <i class="pi pi-sync"></i>
+      </div>
+      <h1 class="header-title">Cambia tu plan de suscripción</h1>
+      <p class="header-subtitle">
+        Selecciona el nuevo plan que mejor se adapte a tus necesidades
       </p>
-      <p class="text-sm text-600">
-        El cambio se aplicará en tu próxima facturación.
+      <p class="header-note">
+        <i class="pi pi-info-circle"></i>
+        El cambio se aplicará en tu próxima facturación
       </p>
     </div>
 
     <div class="planes-section">
-      <h3 class="mb-3">Planes Disponibles</h3>
-
       @if (planesDisponibles.length === 0) {
-      <div class="text-center p-4 surface-100 border-round">
-        <i class="pi pi-info-circle text-400 text-3xl"></i>
-        <p class="text-600 mt-2">
-          No hay planes disponibles en este momento
-        </p>
+      <div class="empty-state">
+        <i class="pi pi-info-circle"></i>
+        <p>No hay planes disponibles en este momento</p>
       </div>
       } @else {
-      <div class="planes-grid">
-        @for (plan of planesDisponibles; track plan.id) {
-        <div
-          class="plan-card"
-          [class.selected]="planSeleccionado?.id === plan.id"
-          (click)="seleccionarPlan(plan)"
-        >
-          <div class="plan-header">
-            <p-radioButton
-              [value]="plan"
-              [(ngModel)]="planSeleccionado"
-              [inputId]="'plan-' + plan.id"
-            />
-            <div class="plan-info">
-              <h4 class="plan-name">{{ plan.name }}</h4>
-              <div class="plan-price">
-                <span class="amount">{{ formatPrice(plan.price) }}€</span>
-                <span class="period">/mes</span>
+      <div class="planes-scroll-container">
+        <div class="planes-grid">
+          @for (plan of planesDisponibles; track plan.id) {
+          <div
+            class="plan-card"
+            [class.selected]="planSeleccionado?.id === plan.id"
+            (click)="seleccionarPlan(plan)"
+          >
+            <div class="plan-radio">
+              <p-radioButton
+                [value]="plan"
+                [(ngModel)]="planSeleccionado"
+                [inputId]="'plan-' + plan.id"
+              />
+            </div>
+
+            @if (plan.imageUrl) {
+            <div class="plan-image">
+              <img [src]="plan.imageUrl" [alt]="plan.name" />
+            </div>
+            }
+
+            <div class="plan-content">
+              <h3 class="plan-name">{{ plan.name }}</h3>
+
+              <div class="plan-price-section">
+                <span class="plan-price">{{ formatPrice(plan.price) }}€</span>
+                <span class="plan-period">/mes</span>
+              </div>
+
+              @if (plan.description) {
+              <div class="plan-description" [innerHTML]="plan.description"></div>
+              }
+
+              <div class="plan-sku">
+                <small>SKU: {{ plan.sku }}</small>
               </div>
             </div>
-          </div>
 
-          @if (plan.description) {
-          <div class="plan-description" [innerHTML]="plan.description"></div>
+            @if (planSeleccionado?.id === plan.id) {
+            <div class="plan-selected-badge">
+              <i class="pi pi-check-circle"></i>
+              <span>Seleccionado</span>
+            </div>
+            }
+          </div>
           }
-
-          <div class="plan-sku">
-            <small class="text-500">SKU: {{ plan.sku }}</small>
-          </div>
         </div>
-        }
       </div>
       }
 
-      <div class="mt-4">
-        <label for="comentario" class="block mb-2 font-medium"
-          >Comentario sobre el cambio (opcional):</label
-        >
+      <div class="comentario-section">
+        <label for="comentario" class="comentario-label">
+          <i class="pi pi-comment"></i>
+          Comentario sobre el cambio (opcional)
+        </label>
         <textarea
           pInputTextarea
           id="comentario"
@@ -75,170 +92,27 @@
           placeholder="¿Por qué deseas cambiar de plan?"
           [maxLength]="500"
         ></textarea>
-        <small class="text-500">{{ comentario.length }}/500</small>
+        <small class="comentario-counter">{{ comentario.length }}/500</small>
       </div>
     </div>
 
-    <ng-template pTemplate="footer">
-      <div class="flex justify-content-between gap-2">
-        <p-button
-          label="Cancelar"
-          icon="pi pi-times"
-          (onClick)="cancelar()"
-          [outlined]="true"
-          severity="secondary"
-        />
-        <p-button
-          label="Cambiar Plan"
-          icon="pi pi-check"
-          (onClick)="abrirDialogConfirmacion()"
-          [disabled]="!planSeleccionado"
-        />
-      </div>
-    </ng-template>
-  </p-card>
+    <div class="footer-actions">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        (onClick)="cancelar()"
+        [outlined]="true"
+        severity="secondary"
+        styleClass="cancel-button"
+      />
+      <p-button
+        label="Continuar con el cambio"
+        icon="pi pi-check"
+        (onClick)="abrirDialogConfirmacion()"
+        [disabled]="!planSeleccionado"
+        styleClass="confirm-button"
+      />
+    </div>
+  </div>
   }
 </div>
-
-<!-- Dialog de confirmación -->
-<p-dialog
-  header="Confirmar Cambio de Suscripción"
-  [(visible)]="dialogConfirmacion"
-  [modal]="true"
-  [style]="{ width: '550px' }"
-  [draggable]="false"
-  [resizable]="false"
->
-  <div class="flex flex-column gap-3">
-    <p class="text-lg">
-      <i class="pi pi-info-circle text-blue-500 mr-2"></i>
-      ¿Confirmas el cambio a este plan?
-    </p>
-
-    @if (planSeleccionado) {
-    <div class="p-3 surface-100 border-round">
-      <div class="flex justify-content-between align-items-center mb-2">
-        <span class="font-medium">Nuevo plan:</span>
-        <span class="text-xl font-bold text-primary">{{
-          planSeleccionado.name
-        }}</span>
-      </div>
-      <div class="flex justify-content-between align-items-center">
-        <span class="font-medium">Precio mensual:</span>
-        <span class="text-xl font-bold">{{
-          formatPrice(planSeleccionado.price)
-        }}€</span>
-      </div>
-    </div>
-    }
-
-    <div class="p-3 surface-50 border-round border-1 border-primary">
-      <p class="font-medium mb-2">
-        <i class="pi pi-calendar mr-2"></i>
-        Fecha de aplicación del cambio:
-      </p>
-      <p class="text-lg font-bold text-primary">
-        {{ validacion?.proximoPago | date : 'dd/MM/yyyy' }}
-      </p>
-    </div>
-
-    <p class="text-sm text-600 line-height-3">
-      El cambio se hará efectivo en tu próxima fecha de facturación. Tu plan
-      actual permanecerá activo hasta entonces.
-    </p>
-
-    @if (comentario) {
-    <div class="mt-2">
-      <p class="font-medium text-sm mb-1">Tu comentario:</p>
-      <p class="text-sm text-600 p-2 surface-100 border-round">
-        {{ comentario }}
-      </p>
-    </div>
-    }
-  </div>
-
-  <ng-template pTemplate="footer">
-    <div class="flex justify-content-end gap-2">
-      <p-button
-        label="Volver"
-        icon="pi pi-arrow-left"
-        (onClick)="dialogConfirmacion.set(false)"
-        [text]="true"
-        [disabled]="procesandoCambio()"
-      />
-      <p-button
-        label="Confirmar Cambio"
-        icon="pi pi-check"
-        (onClick)="confirmarCambio()"
-        [loading]="procesandoCambio()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
-
-<!-- Dialog fuera de plazo -->
-<p-dialog
-  header="Solicitud fuera de plazo"
-  [(visible)]="dialogFueraDePlazo"
-  [modal]="true"
-  [style]="{ width: '550px' }"
-  [draggable]="false"
-  [resizable]="false"
-  [closable]="false"
->
-  <div class="flex flex-column gap-3">
-    <div class="flex align-items-center gap-2 mb-2">
-      <i class="pi pi-info-circle text-orange-500 text-3xl"></i>
-      <h3 class="m-0">No se puede procesar la solicitud</h3>
-    </div>
-
-    <p class="text-700 line-height-3">
-      Te informamos de que la solicitud de modificación de tu suscripción no se
-      ha podido tramitar, ya que debe realizarse con al menos
-      <strong>10 días de antelación</strong> a la fecha del próximo cobro.
-    </p>
-
-    <div class="p-3 surface-100 border-round">
-      <div class="flex justify-content-between mb-2">
-        <span class="font-medium">Próximo cobro:</span>
-        <span class="font-bold">{{
-          validacion?.proximoPago | date : 'dd/MM/yyyy'
-        }}</span>
-      </div>
-      <div class="flex justify-content-between">
-        <span class="font-medium">Días restantes:</span>
-        <span
-          class="font-bold"
-          [class.text-red-500]="validacion && validacion.diasRestantes < 10"
-        >
-          {{ validacion?.diasRestantes }} días
-        </span>
-      </div>
-    </div>
-
-    <p class="text-sm text-600 line-height-3">
-      En este caso, el pago ya programado se efectuará con normalidad, y tu
-      solicitud quedará registrada para aplicarse al periodo siguiente.
-    </p>
-
-    <p class="text-sm text-600">
-      Agradecemos tu comprensión y te recordamos que puedes contactar con
-      nuestro equipo si necesitas más información o asistencia con tu
-      suscripción.
-    </p>
-
-    <p class="font-medium text-center mt-2">
-      Gracias por formar parte de TecnikaFire.
-    </p>
-  </div>
-
-  <ng-template pTemplate="footer">
-    <div class="flex justify-content-center">
-      <p-button
-        label="Entendido"
-        icon="pi pi-check"
-        (onClick)="cerrarDialogFueraDePlazo()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>

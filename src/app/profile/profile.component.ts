@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
@@ -6,7 +6,10 @@ import { ToastrService } from 'ngx-toastr';
 import { Observable, filter, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { PlanificacionesService } from '../services/planificaciones.service';
-import { SuscripcionManagementService } from '../services/suscripcion-management.service';
+import {
+  MotivoBaja,
+  SuscripcionManagementService,
+} from '../services/suscripcion-management.service';
 import { UserService } from '../services/user.service';
 import { ViewportService } from '../services/viewport.service';
 import {
@@ -23,6 +26,8 @@ import {
   selectUserError,
   selectUserLoading,
 } from '../store/user/user.selectors';
+import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.component';
+import { CambioSuscripcionComponent } from './cambio-suscripcion/cambio-suscripcion.component';
 
 @Component({
   selector: 'app-profile',
@@ -30,6 +35,10 @@ import {
   styleUrls: ['./profile.component.scss', './profile-onboarding.component.scss'],
 })
 export class ProfileComponent implements OnInit {
+  // ViewChild para acceder a componentes hijos
+  @ViewChild(CambioSuscripcionComponent) cambioSuscripcionComponent?: CambioSuscripcionComponent;
+  @ViewChild(BajaSuscripcionComponent) bajaSuscripcionComponent?: BajaSuscripcionComponent;
+
   // Servicios
   private userService = inject(UserService);
   private planificacionService = inject(PlanificacionesService);
@@ -58,6 +67,25 @@ export class ProfileComponent implements OnInit {
   firstTimeShowingOnboardingModal = false;
   onboardingData: OnboardingData = {};
   public Rol = Rol;
+
+  // Control de dialogs de suscripción
+  showCambioSuscripcionDialog = false;
+  showBajaSuscripcionDialog = false;
+
+  // Control de subdialogs
+  showConfirmacionCambio = false;
+  showConfirmacionBaja = false;
+  showFueraDePlazoCambio = false;
+  showFueraDePlazoBaja = false;
+
+  // Estados de procesamiento
+  procesandoCambio = false;
+  procesandoBaja = false;
+
+  // Datos temporales para confirmación
+  datosConfirmacionCambio: any = null;
+  datosConfirmacionBaja: any = null;
+  validacionPlazo: any = null;
 
   // Enums para los templates
   SuscripcionTipo = SuscripcionTipo;
@@ -288,11 +316,123 @@ export class ProfileComponent implements OnInit {
   }
 
   navegarACambioSuscripcion(): void {
-    this.router.navigate(['/app/profile/cambio-suscripcion']);
+    this.showCambioSuscripcionDialog = true;
   }
 
   navegarABajaSuscripcion(): void {
-    this.router.navigate(['/app/profile/baja-suscripcion']);
+    this.showBajaSuscripcionDialog = true;
+  }
+
+  cerrarDialogCambioSuscripcion(): void {
+    this.showCambioSuscripcionDialog = false;
+    this.showConfirmacionCambio = false;
+    this.showFueraDePlazoCambio = false;
+    this.datosConfirmacionCambio = null;
+    this.validacionPlazo = null;
+    this.procesandoCambio = false;
+    // Recargar usuario por si cambió algo
+    this.store.dispatch(UserActions.loadUser());
+  }
+
+  cerrarDialogBajaSuscripcion(): void {
+    this.showBajaSuscripcionDialog = false;
+    this.showConfirmacionBaja = false;
+    this.showFueraDePlazoBaja = false;
+    this.datosConfirmacionBaja = null;
+    this.validacionPlazo = null;
+    this.procesandoBaja = false;
+    // Recargar usuario por si cambió algo
+    this.store.dispatch(UserActions.loadUser());
+  }
+
+  // Eventos de cambio de suscripción
+  onSolicitarConfirmacionCambio(datos: any): void {
+    this.datosConfirmacionCambio = datos;
+    this.showConfirmacionCambio = true;
+  }
+
+  onFueraDePlazoCambio(validacion: any): void {
+    this.validacionPlazo = validacion;
+    this.showFueraDePlazoCambio = true;
+  }
+
+  cerrarFueraDePlazoCambio(): void {
+    this.showFueraDePlazoCambio = false;
+    this.validacionPlazo = null;
+    this.cerrarDialogCambioSuscripcion();
+  }
+
+  confirmarCambioDesdePadre(): void {
+    if (!this.datosConfirmacionCambio?.planSeleccionado) return;
+
+    this.procesandoCambio = true;
+
+    this.suscripcionManagementService
+      .cambiarSuscripcion({
+        nuevoSkuProducto: this.datosConfirmacionCambio.planSeleccionado.sku,
+        comentario: this.datosConfirmacionCambio.comentario || undefined,
+      })
+      .subscribe({
+        next: (response) => {
+          this.procesandoCambio = false;
+          this.showConfirmacionCambio = false;
+          this.toastService.success(response.mensaje || 'Cambio de suscripción procesado correctamente');
+          this.cerrarDialogCambioSuscripcion();
+          // Recargar usuario
+          this.store.dispatch(UserActions.loadUser());
+        },
+        error: (error) => {
+          this.procesandoCambio = false;
+          this.toastService.error(
+            error.error?.message || 'No se pudo procesar el cambio de suscripción'
+          );
+        },
+      });
+  }
+
+  confirmarBajaDesdePadre(): void {
+    if (!this.datosConfirmacionBaja?.motivos) return;
+
+    this.procesandoBaja = true;
+
+    this.suscripcionManagementService
+      .solicitarBaja({
+        motivos: this.datosConfirmacionBaja.motivos,
+        comentarioAdicional: this.datosConfirmacionBaja.comentario || undefined,
+      })
+      .subscribe({
+        next: (response) => {
+          this.procesandoBaja = false;
+          this.showConfirmacionBaja = false;
+          this.toastService.success(response.mensaje || 'Baja de suscripción procesada correctamente');
+          this.cerrarDialogBajaSuscripcion();
+          // Recargar usuario
+          this.store.dispatch(UserActions.loadUser());
+        },
+        error: (error) => {
+          this.procesandoBaja = false;
+          this.toastService.error(
+            error.error?.message || 'No se pudo procesar la solicitud de baja'
+          );
+        },
+      });
+  }
+
+  // Eventos de baja de suscripción
+  onSolicitarConfirmacionBaja(datos: any): void {
+    this.datosConfirmacionBaja = datos;
+    this.showConfirmacionBaja = true;
+  }
+
+  onFueraDePlazoBaja(validacion: any): void {
+    this.validacionPlazo = validacion;
+    this.showFueraDePlazoBaja = true;
+  }
+
+  cerrarFueraDePlazoBaja(): void {
+    this.showFueraDePlazoBaja = false;
+    this.validacionPlazo = null;
+    this.cerrarDialogBajaSuscripcion();
   }
 
   isLinkedToWordPress(): boolean {
@@ -371,6 +511,20 @@ export class ProfileComponent implements OnInit {
 
   canUnsubscribe(): boolean {
     return this.isLinkedToWordPress() && this.hasActiveWooCommerceSubscription();
+  }
+
+  getMotivoLabel(motivo: MotivoBaja): string {
+    const motivosMap: { [key: string]: string } = {
+      [MotivoBaja.APROBADO]: '🧑‍🚒 Ya he aprobado la oposición',
+      [MotivoBaja.CAMBIO_ACADEMIA]: '🔄 He decidido cambiar de academia',
+      [MotivoBaja.PREPARACION_PROPIA]: '💪 Voy a prepararlo por mi cuenta',
+      [MotivoBaja.TRATO_NO_COMODO]: '🤝 No me he sentido cómodo/a con el trato recibido',
+      [MotivoBaja.MATERIAL_INADECUADO]: '📚 El material no me ha resultado suficiente o adecuado',
+      [MotivoBaja.FALTA_TIEMPO]: '🕒 No dispongo del tiempo necesario',
+      [MotivoBaja.MOTIVOS_ECONOMICOS]: '💰 Motivos económicos o personales',
+      [MotivoBaja.OTROS]: '❓ Otros motivos',
+    };
+    return motivosMap[motivo] || motivo;
   }
 
   linkToWordPress(): void {
