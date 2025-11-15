@@ -1,4 +1,4 @@
-import { APP_INITIALIZER, LOCALE_ID, NgModule } from '@angular/core';
+import { APP_INITIALIZER, Injectable, LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
@@ -62,6 +62,7 @@ export function primengInitFactory(primeng: PrimeNGConfig) {
     });
   };
 }
+@Injectable()
 class CustomDateFormatter extends CalendarNativeDateFormatter {
   // Sobrescribe la hora en la vista diaria
   public override dayViewHour({ date, locale }: DateFormatterParams): string {

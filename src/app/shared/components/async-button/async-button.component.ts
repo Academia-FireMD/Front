@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-async-button',
   standalone: true,
-  imports: [CommonModule, ButtonModule],
+  imports: [CommonModule, ButtonModule, TooltipModule],
   templateUrl: './async-button.component.html',
   styleUrls: ['./async-button.component.scss'],
 })
@@ -15,6 +16,8 @@ export class AsyncButtonComponent {
   @Input() disabled: boolean = false;
   @Input() styleClass: string = 'p-button-primary';
   @Input() link: boolean = false;
+  @Input() tooltip: string = '';
+  @Input() tooltipPosition: string = 'top';
   @Input()
   action: () => Promise<any> = () => Promise.resolve();
 

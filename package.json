@@ -56,6 +56,7 @@
     "@angular/cli": "^18.1.4",
     "@angular/compiler-cli": "^18.1.0",
     "@angular/localize": "^18.1.4",
+    "@types/echarts": "^4.9.22",
     "@types/jasmine": "~5.1.0",
     "@types/lodash": "^4.17.7",
     "cypress": "^14.0.3",

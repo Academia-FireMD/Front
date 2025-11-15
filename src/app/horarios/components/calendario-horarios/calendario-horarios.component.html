@@ -1,0 +1,25 @@
+@if (modoMultiSeleccion()) {
+  <p-calendar
+    [ngModel]="valorCalendario()"
+    (ngModelChange)="onDateSelect($event)"
+    selectionMode="multiple"
+    [inline]="true"
+    [minDate]="fechaMinima()"
+    styleClass="calendario-horarios">
+    <ng-template pTemplate="date" let-date>
+      <span [ngClass]="getDateClass(date)" class="date-cell">{{ date.day }}</span>
+    </ng-template>
+  </p-calendar>
+} @else {
+  <p-calendar
+    [ngModel]="valorCalendario()"
+    (ngModelChange)="onDateSelect($event)"
+    selectionMode="single"
+    [inline]="true"
+    styleClass="calendario-horarios">
+    <ng-template pTemplate="date" let-date>
+      <span [ngClass]="getDateClass(date)" class="date-cell">{{ date.day }}</span>
+    </ng-template>
+  </p-calendar>
+}
+

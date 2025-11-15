@@ -25,7 +25,9 @@ export class SpinnerInterceptor implements HttpInterceptor {
 
     timer(5000).subscribe(() => {
       if (this.activeRequests > 0) {
-        this.spinner.show(); // Mostrar el spinner si hay peticiones activas
+        this.spinner.show(undefined, {
+          type: 'ball-scale-multiple'
+        }); // Mostrar el spinner si hay peticiones activas
       }
     });
 
