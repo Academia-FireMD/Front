@@ -178,7 +178,12 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
       otraInformacionLaboral: [this.initialData?.otraInformacionLaboral || ''],
 
       // Comentarios adicionales
-      comentariosAdicionales: [this.initialData?.comentariosAdicionales || '']
+      comentariosAdicionales: [this.initialData?.comentariosAdicionales || ''],
+
+      // Campos de oposiciones y planificación
+      tipoOposicion: [this.initialData?.tipoOposicion || null],
+      nivelOposicion: [this.initialData?.nivelOposicion || null],
+      tipoDePlanificacionDuracionDeseada: [this.initialData?.tipoDePlanificacionDuracionDeseada || null]
     });
   }
 

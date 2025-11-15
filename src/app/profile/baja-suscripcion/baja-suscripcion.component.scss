@@ -1,0 +1,76 @@
+.baja-suscripcion-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+  }
+
+  .baja-card {
+    .header-content {
+      text-align: center;
+
+      .warning-icon {
+        font-size: 4rem;
+        color: var(--orange-500);
+      }
+
+      h2 {
+        font-size: 1.75rem;
+        margin: 0;
+        color: var(--text-color);
+      }
+    }
+
+    .form-section {
+      h3 {
+        font-size: 1.25rem;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+      }
+
+      .motivos-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+
+        @media (min-width: 768px) {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .motivo-item {
+          display: flex;
+          align-items: center;
+          padding: 0.75rem;
+          border: 1px solid var(--surface-border);
+          border-radius: var(--border-radius);
+          transition: all 0.3s;
+          cursor: pointer;
+
+          &:hover {
+            background-color: var(--surface-100);
+            border-color: var(--primary-color);
+          }
+
+          label {
+            cursor: pointer;
+            user-select: none;
+            flex: 1;
+          }
+        }
+      }
+    }
+  }
+}
+
+:host ::ng-deep {
+  .p-dialog .p-dialog-content {
+    padding: 1.5rem;
+  }
+}

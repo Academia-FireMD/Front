@@ -245,6 +245,68 @@
   color: var(--text-color-secondary);
 }
 
+// Banner de vinculación con WordPress
+.link-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+
+  i {
+    color: white;
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  p {
+    opacity: 0.95;
+    line-height: 1.5;
+  }
+
+  ::ng-deep .p-button {
+    background-color: white;
+    color: #667eea;
+    border-color: white;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-color: rgba(255, 255, 255, 0.9);
+    }
+  }
+}
+
+// Banner sin plan activo
+.no-plan-banner {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+
+  i {
+    color: white;
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  p {
+    opacity: 0.95;
+    line-height: 1.5;
+  }
+
+  ::ng-deep .p-button {
+    background-color: white;
+    color: #f5576c;
+    border-color: white;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-color: rgba(255, 255, 255, 0.9);
+    }
+  }
+}
+
 // Estilos para planificaciones
 .planification-section {
   background-color: var(--surface-hover);

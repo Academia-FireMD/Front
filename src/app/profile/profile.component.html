@@ -211,7 +211,7 @@
               <p>No tienes ninguna suscripción activa en este momento.</p>
               <a href="https://tecnikafire.com/tarifas/" target="_blank">
                 <p-button
-                  label="Ver planes"
+                  label="Obtener plan"
                   icon="pi pi-external-link"
                   styleClass="p-button-outlined mt-3"
                 ></p-button>
@@ -237,19 +237,19 @@
 
               <div class="subscription-info">
                 <div class="subscription-item">
-                  <label>Estado:</label>
+                  <label class="mb-0">Estado:</label>
                   <span [ngClass]="getSubscriptionStatusClass()">
                     {{ user.suscripcion.status || "Activo" }}
                   </span>
                 </div>
 
                 <div class="subscription-item">
-                  <label>Precio mensual:</label>
+                  <label class="mb-0">Precio mensual:</label>
                   <span>{{ user.suscripcion.monthlyPrice || 0 }} €</span>
                 </div>
 
                 <div class="subscription-item">
-                  <label>Fecha de inicio:</label>
+                  <label class="mb-0">Fecha de inicio:</label>
                   <span>{{
                     user.suscripcion.fechaInicio | date : "dd/MM/yyyy"
                   }}</span>
@@ -275,13 +275,82 @@
               </div>
 
               <div class="subscription-actions mt-4">
-                <a href="https://tecnikafire.com/tarifas/" target="_blank">
+                <!-- Banner de vinculación si no está vinculado -->
+                <div
+                  class="link-banner mb-3 p-3 border-round"
+                  *ngIf="!isLinkedToWordPress()"
+                >
+                  <div class="flex align-items-start gap-3">
+                    <i class="pi pi-info-circle text-2xl"></i>
+                    <div class="flex-1">
+                      <h4 class="m-0 mb-2">Vincula tu cuenta con WordPress</h4>
+                      <p class="m-0 mb-2 text-sm">
+                        Para gestionar tu suscripción y pagos, vincula tu cuenta
+                        con WordPress.
+                      </p>
+                      <p
+                        class="m-0 mb-3 text-sm font-semibold"
+                        style="color: #ffd700"
+                        *ngIf="user?.suscripcion"
+                      >
+                        ⚠️ Atención: Tu suscripción actual será cancelada al
+                        vincular.
+                      </p>
+                      <p class="m-0 mb-3 text-sm" *ngIf="!user?.suscripcion">
+                        Después podrás seleccionar el plan que mejor se adapte a
+                        ti.
+                      </p>
+                      <p-button
+                        label="Vincular ahora"
+                        icon="pi pi-link"
+                        styleClass="p-button-sm"
+                        (onClick)="handleSubscriptionAction()"
+                      ></p-button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Banner sin plan activo -->
+                <div
+                  class="no-plan-banner mb-3 p-3 border-round"
+                  *ngIf="isLinkedToWordPress() && !hasActiveWooCommerceSubscription()"
+                >
+                  <div class="flex align-items-start gap-3">
+                    <i class="pi pi-exclamation-triangle text-2xl"></i>
+                    <div class="flex-1">
+                      <h4 class="m-0 mb-2">No tienes un plan activo</h4>
+                      <p class="m-0 mb-3 text-sm">
+                        Para acceder a todo el contenido, necesitas contratar un
+                        plan.
+                      </p>
+                      <p-button
+                        [label]="getSubscriptionButtonLabel()"
+                        [icon]="getSubscriptionButtonIcon()"
+                        styleClass="p-button-sm"
+                        (onClick)="handleSubscriptionAction()"
+                      ></p-button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Botones de gestión cuando tiene plan activo -->
+                <div
+                  class="flex flex-column gap-2"
+                  *ngIf="isLinkedToWordPress() && hasActiveWooCommerceSubscription()"
+                >
                   <p-button
                     label="Cambiar plan"
-                    icon="pi pi-arrow-up"
-                    styleClass="p-button-text w-full p-button-outlined"
+                    icon="pi pi-sync"
+                    styleClass="p-button-outlined w-full"
+                    (onClick)="navegarACambioSuscripcion()"
                   ></p-button>
-                </a>
+                  <p-button
+                    label="Dar de baja"
+                    icon="pi pi-sign-out"
+                    styleClass="p-button-outlined p-button-danger w-full"
+                    (onClick)="navegarABajaSuscripcion()"
+                  ></p-button>
+                </div>
               </div>
             </div>
           </div>

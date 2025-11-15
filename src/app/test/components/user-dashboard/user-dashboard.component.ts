@@ -79,6 +79,44 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         },
       },
       {
+        key: 'tipoUsuario',
+        label: 'Tipo de Usuario',
+        type: 'dropdown',
+        placeholder: 'Seleccionar tipo',
+        options: [
+          { label: 'Todos', value: 'todos' },
+          { label: 'Admin/Tutores', value: 'admin' },
+          { label: 'Usuarios Particulares', value: 'particulares' },
+          { label: 'Usuarios WooCommerce', value: 'woocommerce' },
+        ],
+        filterInterpolation: (value) => {
+          if (value === 'todos') return {};
+          if (value === 'admin') {
+            return {
+              OR: [
+                { rol: { equals: 'ADMIN' } },
+                { esTutor: { equals: true } }
+              ]
+            };
+          }
+          if (value === 'particulares') {
+            return {
+              AND: [
+                { woocommerceCustomerId: { equals: null } },
+                { rol: { equals: 'ALUMNO' } },
+                { esTutor: { equals: false } }
+              ]
+            };
+          }
+          if (value === 'woocommerce') {
+            return {
+              woocommerceCustomerId: { not: null }
+            };
+          }
+          return {};
+        },
+      },
+      {
         key: 'suscripcion',
         label: 'Suscripción',
         type: 'dropdown',

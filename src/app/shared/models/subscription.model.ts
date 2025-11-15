@@ -4,6 +4,11 @@ export enum SuscripcionTipo {
   BASIC = 'BASIC'       // Plan Básico
 }
 
+export enum SuscripcionStatus {
+  ACTIVE = 'ACTIVE',
+  CANCELLED = 'CANCELLED'
+}
+
 export interface Suscripcion {
   id: number;
   usuarioId: number;
@@ -16,7 +21,7 @@ export interface Suscripcion {
   isOfferPlan: boolean;
   offerDuration?: number;
   monthlyPrice?: number;
-  status?: string;
+  status: SuscripcionStatus;
   examenId?: number;
   createdAt: Date;
   updatedAt: Date;

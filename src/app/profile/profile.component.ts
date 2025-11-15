@@ -1,16 +1,19 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, filter, firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { PlanificacionesService } from '../services/planificaciones.service';
+import { SuscripcionManagementService } from '../services/suscripcion-management.service';
 import { UserService } from '../services/user.service';
 import { ViewportService } from '../services/viewport.service';
 import {
   Comunidad,
   duracionesDisponibles,
 } from '../shared/models/pregunta.model';
-import { SuscripcionTipo } from '../shared/models/subscription.model';
+import { SuscripcionStatus, SuscripcionTipo } from '../shared/models/subscription.model';
 import { Rol, Usuario } from '../shared/models/user.model';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { AppState } from '../store/app.state';
@@ -32,6 +35,8 @@ export class ProfileComponent implements OnInit {
   private planificacionService = inject(PlanificacionesService);
   private toastService = inject(ToastrService);
   private store = inject(Store<AppState>);
+  private router = inject(Router);
+  private suscripcionManagementService = inject(SuscripcionManagementService);
   viewportService = inject(ViewportService);
 
   // Propiedades del store
@@ -280,5 +285,146 @@ export class ProfileComponent implements OnInit {
       // Marcar que ya ha accedido al perfil
       localStorage.setItem(storageKey, 'true');
     }
+  }
+
+  navegarACambioSuscripcion(): void {
+    this.router.navigate(['/app/profile/cambio-suscripcion']);
+  }
+
+  navegarABajaSuscripcion(): void {
+    this.router.navigate(['/app/profile/baja-suscripcion']);
+  }
+
+  isLinkedToWordPress(): boolean {
+    return !!this.user?.woocommerceCustomerId;
+  }
+
+  hasActiveWooCommerceSubscription(): boolean {
+    // Verificar si tiene suscripción activa de WooCommerce
+    // Una suscripción es activa si tiene status ACTIVE y está vinculado a WordPress
+    if (!this.user?.suscripcion || !this.user?.woocommerceCustomerId) {
+      return false;
+    }
+
+    const subscription = this.user.suscripcion;
+
+    // Verificar por status
+    if (subscription.status === SuscripcionStatus.ACTIVE) {
+      // Verificar también que no haya expirado por fechaFin
+      if (subscription.fechaFin) {
+        const endDate = new Date(subscription.fechaFin);
+        const today = new Date();
+        return endDate > today;
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  getSubscriptionButtonLabel(): string {
+    if (!this.isLinkedToWordPress()) {
+      return 'Vincular con WordPress';
+    }
+
+    if (!this.hasActiveWooCommerceSubscription()) {
+      return 'Obtener plan';
+    }
+
+    return 'Cambiar plan';
+  }
+
+  getSubscriptionButtonIcon(): string {
+    if (!this.isLinkedToWordPress()) {
+      return 'pi pi-link';
+    }
+
+    if (!this.hasActiveWooCommerceSubscription()) {
+      return 'pi pi-shopping-cart';
+    }
+
+    return 'pi pi-sync';
+  }
+
+  handleSubscriptionAction(): void {
+    if (!this.isLinkedToWordPress()) {
+      this.linkToWordPress();
+      return;
+    }
+
+    if (!this.hasActiveWooCommerceSubscription()) {
+      // Redirigir a página de WooCommerce para contratar
+      this.obtenerPlan();
+      return;
+    }
+
+    // Ya tiene suscripción, puede cambiar
+    this.navegarACambioSuscripcion();
+  }
+
+  obtenerPlan(): void {
+    const wooCommerceUrl = environment.wooCommerceUrl;
+    window.open(wooCommerceUrl, '_blank');
+
+    this.toastService.info('Serás redirigido a nuestra tienda para seleccionar tu plan');
+  }
+
+  canUnsubscribe(): boolean {
+    return this.isLinkedToWordPress() && this.hasActiveWooCommerceSubscription();
+  }
+
+  linkToWordPress(): void {
+    // Si tiene suscripción local, mostrar advertencia
+    if (this.user?.suscripcion) {
+      const confirmed = confirm(
+        '⚠️ ATENCIÓN: Al vincular tu cuenta con WordPress:\n\n' +
+        '• Tu suscripción actual en la plataforma será CANCELADA\n' +
+        '• Deberás contratar un nuevo plan a través de WooCommerce\n' +
+        '• Tus datos y progreso se mantendrán intactos\n\n' +
+        '¿Estás seguro de que deseas continuar?'
+      );
+
+      if (!confirmed) return;
+    }
+
+    this.toastService.info('Vinculando tu cuenta con WordPress...');
+
+    this.suscripcionManagementService.linkToWordPress().subscribe({
+      next: async (response) => {
+        if (response.success) {
+          this.toastService.success(
+            response.message || 'Cuenta vinculada exitosamente.'
+          );
+
+          // Recargar datos del usuario desde el store
+          this.store.dispatch(UserActions.loadUser());
+
+          // Esperar a que el store se actualice y actualizar el usuario local
+          const updatedUser = await firstValueFrom(
+            this.user$.pipe(filter(user => user !== null && !!user.woocommerceCustomerId))
+          );
+          this.user = cloneDeep(updatedUser);
+
+          // Si no tiene suscripción WP, mostrar mensaje
+          if (!this.hasActiveWooCommerceSubscription()) {
+            setTimeout(() => {
+              alert(
+                '✅ Vinculación exitosa!\n\n' +
+                'Para completar el proceso, necesitas contratar un plan.\n' +
+                'Haz clic en "Obtener plan" para ver las opciones disponibles.'
+              );
+            }, 1000);
+          }
+        } else {
+          this.toastService.warning(response.message);
+        }
+      },
+      error: (error) => {
+        console.error('Error al vincular con WordPress:', error);
+        this.toastService.error(
+          'No se pudo vincular la cuenta. Por favor, contacta con soporte.'
+        );
+      },
+    });
   }
 }
