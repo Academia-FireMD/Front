@@ -1,36 +1,40 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, TemplateRef, ViewChild } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { firstValueFrom, of } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
+import { AccordionModule } from 'primeng/accordion';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { CheckboxModule } from 'primeng/checkbox';
+import { ChipModule } from 'primeng/chip';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
+import { DividerModule } from 'primeng/divider';
 import { DropdownModule } from 'primeng/dropdown';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TabViewModule } from 'primeng/tabview';
+import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
-import { AccordionModule } from 'primeng/accordion';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService } from 'primeng/api';
-import { ToastrService } from 'ngx-toastr';
-import { CalendarioHorariosComponent, DiaEstado } from '../calendario-horarios/calendario-horarios.component';
-import { HorariosService } from '../../servicios/horarios.service';
-import { HorariosUtilsService } from '../../servicios/horarios-utils.service';
+import { firstValueFrom, of } from 'rxjs';
+import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
+import { FilterConfig, GenericListComponent } from '../../../shared/generic-list/generic-list.component';
+import { PaginatedResult } from '../../../shared/models/pagination.model';
 import {
   EstadoReserva,
   HorarioDisponible,
   Reserva,
   UpdateEstadoReservaDto
 } from '../../models/horario.model';
-import { GenericListComponent, FilterConfig } from '../../../shared/generic-list/generic-list.component';
-import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
-import { PaginatedResult } from '../../../shared/models/pagination.model';
+import { HorariosUtilsService } from '../../servicios/horarios-utils.service';
+import { HorariosService } from '../../servicios/horarios.service';
+import { CalendarioHorariosComponent } from '../calendario-horarios/calendario-horarios.component';
 
 @Component({
   selector: 'app-horarios-admin',
@@ -45,15 +49,19 @@ import { PaginatedResult } from '../../../shared/models/pagination.model';
     ButtonModule,
     CalendarModule,
     CheckboxModule,
+    ChipModule,
     DialogModule,
+    DividerModule,
     DropdownModule,
     IconFieldModule,
     InputIconModule,
     InputNumberModule,
     InputTextModule,
     InputTextareaModule,
+    SelectButtonModule,
     TableModule,
     TabViewModule,
+    TagModule,
     TooltipModule,
     AccordionModule,
     ConfirmDialogModule,
@@ -73,6 +81,16 @@ export class HorariosAdminComponent {
   @ViewChild('reservaItemTemplate') reservaItemTemplate!: TemplateRef<any>;
 
   EstadoReserva = EstadoReserva;
+
+  // Nuevo: opciones para el modo
+  modoOpciones = [
+    { label: 'Ver', value: false },
+    { label: 'Crear', value: true }
+  ];
+
+  // Nuevo: estado del modo
+  modoCreacion = signal<boolean>(false);
+  mostrarPreviewDetallado = signal<boolean>(false);
 
   horarios = signal<HorarioDisponible[]>([]);
   reservas = signal<Reserva[]>([]);
@@ -139,9 +157,15 @@ export class HorariosAdminComponent {
 
   reservasDelDia = computed(() => {
     const fecha = this.fechaSeleccionada();
-    if (!fecha) return [];
-    
-    return this.reservas().filter(reserva => {
+    const todasLasReservas = this.reservas();
+
+    // Si no hay fecha seleccionada, mostrar todas las reservas
+    if (!fecha) {
+      return todasLasReservas;
+    }
+
+    // Si hay fecha seleccionada, filtrar por esa fecha
+    return todasLasReservas.filter(reserva => {
       if (!reserva.horarioDisponible) return false;
       const fechaReserva = this.utils.toDate(reserva.horarioDisponible.fecha);
       return this.utils.getDateKey(fechaReserva) === this.utils.getDateKey(fecha);
@@ -151,11 +175,11 @@ export class HorariosAdminComponent {
   reservasDelDiaFiltradas = computed(() => {
     const reservas = this.reservasDelDia();
     const busqueda = this.busquedaAlumno().toLowerCase().trim();
-    
+
     if (!busqueda) {
       return reservas;
     }
-    
+
     return reservas.filter(reserva => {
       const nombre = `${reserva.alumno?.nombre || ''} ${reserva.alumno?.apellidos || ''}`.toLowerCase();
       const email = (reserva.alumno?.email || '').toLowerCase();
@@ -180,18 +204,70 @@ export class HorariosAdminComponent {
   horariosFiltrados = computed(() => {
     const fecha = this.fechaSeleccionada();
     let todosHorarios = this.horarios();
-    
+
     if (!this.mostrarHorariosPasados()) {
       todosHorarios = todosHorarios.filter(h => !this.utils.esHorarioPasado(h));
     }
-    
+
     if (!fecha) {
       return todosHorarios;
     }
-    
+
     return todosHorarios.filter(horario => {
       const fechaHorario = this.utils.toDate(horario.fecha);
       return this.utils.getDateKey(fechaHorario) === this.utils.getDateKey(fecha);
+    });
+  });
+
+  horariosConReservas = computed(() => {
+    const horarios = this.horariosFiltrados();
+    const todasLasReservas = this.reservas();
+    const busqueda = this.busquedaAlumno().toLowerCase().trim();
+
+    return horarios.map(horario => {
+      // Obtener reservas de este horario
+      let reservasDelHorario = todasLasReservas.filter(
+        reserva => reserva.horarioDisponibleId === horario.id
+      );
+
+      // Filtrar por búsqueda si existe
+      if (busqueda) {
+        reservasDelHorario = reservasDelHorario.filter(reserva => {
+          const nombre = `${reserva.alumno?.nombre || ''} ${reserva.alumno?.apellidos || ''}`.toLowerCase();
+          const email = (reserva.alumno?.email || '').toLowerCase();
+          return nombre.includes(busqueda) || email.includes(busqueda);
+        });
+      }
+
+      return {
+        horario,
+        reservas: reservasDelHorario.sort((a, b) => {
+          // Ordenar por estado (pendientes primero) y luego por fecha de creación
+          const ordenEstados = {
+            [EstadoReserva.PENDIENTE]: 1,
+            [EstadoReserva.CONFIRMADA]: 2,
+            [EstadoReserva.COMPLETADA]: 3,
+            [EstadoReserva.AUSENTE]: 4,
+            [EstadoReserva.CANCELADA]: 5
+          };
+          const ordenA = ordenEstados[a.estado] || 99;
+          const ordenB = ordenEstados[b.estado] || 99;
+          if (ordenA !== ordenB) return ordenA - ordenB;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        })
+      };
+    }).filter(item => {
+      // Si hay búsqueda, solo mostrar horarios que tengan reservas que coincidan
+      // Si no hay búsqueda, mostrar todos los horarios
+      if (busqueda) {
+        return item.reservas.length > 0;
+      }
+      return true;
+    }).sort((a, b) => {
+      // Ordenar horarios por hora de inicio
+      const horaA = this.utils.toDate(a.horario.horaInicio).getTime();
+      const horaB = this.utils.toDate(b.horario.horaInicio).getTime();
+      return horaA - horaB;
     });
   });
 
@@ -255,7 +331,7 @@ export class HorariosAdminComponent {
     // Obtener TODOS los horarios existentes para las fechas seleccionadas (sin filtrar por rango)
     const horariosExistentesTodosSet = new Set<string>();
     const fechasKeys = fechas.map(f => this.utils.getDateKey(f));
-    
+
     horariosExistentesData.forEach(h => {
       const fechaH = this.utils.toDate(h.fecha);
       const fechaHKey = this.utils.getDateKey(fechaH);
@@ -272,21 +348,21 @@ export class HorariosAdminComponent {
     // Agrupar días por si tienen o no horarios existentes
     const diasConHorarios: number[] = [];
     const diasSinHorarios: number[] = [];
-    
+
     // Obtener horarios nuevos y existentes dentro del rango seleccionado
     const horariosNuevosSet = new Set<string>();
     const horariosExistentesEnRangoSet = new Set<string>();
-    
+
     fechas.forEach(fecha => {
       const fechaKey = this.utils.getDateKey(fecha);
       const diaNumero = fecha.getDate();
       let tieneHorarios = false;
-      
+
       for (let hora = inicio; hora < fin; hora++) {
         const horaInicioStr = `${hora.toString().padStart(2, '0')}:00`;
         const horaFinStr = `${(hora + 1).toString().padStart(2, '0')}:00`;
         const horarioKey = `${horaInicioStr}-${horaFinStr}`;
-        
+
         // Verificar si este horario ya existe para esta fecha específica
         const horarioExiste = horariosExistentesData.some(h => {
           const fechaH = this.utils.toDate(h.fecha);
@@ -295,7 +371,7 @@ export class HorariosAdminComponent {
           const horaInicioHHora = horaInicioH.getHours();
           return fechaHKey === fechaKey && horaInicioHHora === hora;
         });
-        
+
         if (horarioExiste) {
           tieneHorarios = true;
           horariosExistentesEnRangoSet.add(horarioKey);
@@ -303,7 +379,7 @@ export class HorariosAdminComponent {
           horariosNuevosSet.add(horarioKey);
         }
       }
-      
+
       if (tieneHorarios) {
         diasConHorarios.push(diaNumero);
       } else {
@@ -316,7 +392,7 @@ export class HorariosAdminComponent {
       const [horaInicioStr, horaFinStr] = key.split('-');
       return { horaInicioStr, horaFinStr };
     });
-    
+
     // Mostrar TODOS los horarios existentes, no solo los del rango
     const horariosExistentesList = Array.from(horariosExistentesTodosSet).sort().map(key => {
       const [horaInicioStr, horaFinStr] = key.split('-');
@@ -355,8 +431,8 @@ export class HorariosAdminComponent {
     try {
       const horarios = await firstValueFrom(this.horariosService.getHorarios$());
       this.horarios.set(horarios);
-      
-      const reservasData = horarios.flatMap(h => 
+
+      const reservasData = horarios.flatMap(h =>
         (h.reservas || []).map(reserva => ({
           ...reserva,
           horarioDisponible: h
@@ -390,8 +466,8 @@ export class HorariosAdminComponent {
   }
 
   onFechasSeleccionadas(fechas: Date[]) {
-    if (this.activeTab() === 0) {
-      // Filtrar días pasados solo en la pestaña de establecer horarios
+    if (this.modoCreacion()) {
+      // Filtrar días pasados solo en modo creación
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       const fechasFiltradas = fechas.filter(fecha => {
@@ -399,11 +475,34 @@ export class HorariosAdminComponent {
         fechaComparar.setHours(0, 0, 0, 0);
         return fechaComparar >= hoy;
       });
-      
-      // Para la pestaña de establecer horarios
+
       this.fechasSeleccionadasHorarios.set(fechasFiltradas);
-      // Cargar horarios existentes cuando cambian las fechas
       this.cargarHorariosExistentes(fechasFiltradas);
+    }
+  }
+
+  togglePreviewDetallado() {
+    this.mostrarPreviewDetallado.update(v => !v);
+  }
+
+  togglePasados() {
+    this.mostrarHorariosPasados.update(v => !v);
+  }
+
+  getEstadoSeverity(estado: EstadoReserva): 'success' | 'info' | 'warning' | 'danger' | 'secondary' {
+    switch (estado) {
+      case EstadoReserva.CONFIRMADA:
+        return 'success';
+      case EstadoReserva.PENDIENTE:
+        return 'warning';
+      case EstadoReserva.COMPLETADA:
+        return 'info';
+      case EstadoReserva.AUSENTE:
+        return 'secondary';
+      case EstadoReserva.CANCELADA:
+        return 'danger';
+      default:
+        return 'secondary';
     }
   }
 
@@ -419,7 +518,7 @@ export class HorariosAdminComponent {
     });
 
     this.horariosExistentes.set(horariosFiltrados);
-    
+
     if (horariosFiltrados.length > 0) {
       const primerHorario = horariosFiltrados[0];
       const horaInicioDate = this.utils.toDate(primerHorario.horaInicio);
@@ -449,12 +548,12 @@ export class HorariosAdminComponent {
       for (let hora = this.horaInicio(); hora < this.horaFin(); hora++) {
         const horaInicio = new Date(fecha);
         horaInicio.setHours(hora, 0, 0, 0);
-        
+
         const horaFin = new Date(fecha);
         horaFin.setHours(hora + 1, 0, 0, 0);
 
         const fechaKey = this.utils.getDateKey(fecha);
-        
+
         const yaExiste = horariosExistentes.some(h => {
           const fechaH = this.utils.toDate(h.fecha);
           const horaInicioH = this.utils.toDate(h.horaInicio);
@@ -462,7 +561,7 @@ export class HorariosAdminComponent {
           const horaInicioHHora = horaInicioH.getHours();
           return fechaHKey === fechaKey && horaInicioHHora === hora;
         });
-        
+
         if (!yaExiste) {
           horariosNuevos.push({
             fecha: new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()),
@@ -494,7 +593,7 @@ export class HorariosAdminComponent {
       this.toast.warning('No se pueden editar horarios pasados. Solo se pueden eliminar o consultar.');
       return;
     }
-    
+
     const horaInicioDate = this.utils.toDate(horario.horaInicio);
     const horaFinDate = this.utils.toDate(horario.horaFin);
     this.horarioEditando.set(horario);
@@ -524,7 +623,7 @@ export class HorariosAdminComponent {
     const ahora = new Date();
     const fechaHoraInicio = new Date(fecha);
     fechaHoraInicio.setHours(horaInicio, 0, 0, 0);
-    
+
     if (fechaHoraInicio < ahora) {
       this.toast.warning('No se pueden establecer horarios en el pasado');
       return;
@@ -532,7 +631,7 @@ export class HorariosAdminComponent {
 
     const horaInicioDate = new Date(fecha);
     horaInicioDate.setHours(horaInicio, 0, 0, 0);
-    
+
     const horaFinDate = new Date(fecha);
     horaFinDate.setHours(horaFin, 0, 0, 0);
 
@@ -546,7 +645,7 @@ export class HorariosAdminComponent {
         estado: horario.estado,
         descripcion: this.horarioEditDescripcion() || undefined
       }]));
-      
+
       this.toast.success('Horario actualizado correctamente');
       this.mostrarDialogEditar.set(false);
       this.horarioEditando.set(null);
@@ -569,7 +668,7 @@ export class HorariosAdminComponent {
   toggleTodosHorariosEliminar() {
     const horariosFiltrados = this.horariosFiltrados();
     const seleccionados = this.horariosSeleccionadosEliminar();
-    
+
     if (seleccionados.length === horariosFiltrados.length && horariosFiltrados.length > 0) {
       this.horariosSeleccionadosEliminar.set([]);
     } else {
@@ -634,14 +733,14 @@ export class HorariosAdminComponent {
 
   puedeConfirmarReserva(reserva: Reserva): boolean {
     return reserva.estado !== EstadoReserva.CONFIRMADA &&
-           reserva.estado !== EstadoReserva.COMPLETADA && 
-           reserva.estado !== EstadoReserva.AUSENTE && 
+           reserva.estado !== EstadoReserva.COMPLETADA &&
+           reserva.estado !== EstadoReserva.AUSENTE &&
            reserva.estado !== EstadoReserva.CANCELADA;
   }
 
   puedeCambiarEstado(reserva: Reserva): boolean {
-    return reserva.estado !== EstadoReserva.COMPLETADA && 
-           reserva.estado !== EstadoReserva.AUSENTE && 
+    return reserva.estado !== EstadoReserva.COMPLETADA &&
+           reserva.estado !== EstadoReserva.AUSENTE &&
            reserva.estado !== EstadoReserva.CANCELADA;
   }
 
@@ -663,10 +762,10 @@ export class HorariosAdminComponent {
     const reservasDelDia = this.reservasDelDiaFiltradas();
     const reservasCambiables = reservasDelDia.filter(r => this.puedeCambiarEstado(r));
     const seleccionadas = this.reservasSeleccionadas();
-    
-    const todasCambiablesSeleccionadas = reservasCambiables.length > 0 && 
+
+    const todasCambiablesSeleccionadas = reservasCambiables.length > 0 &&
       reservasCambiables.every(r => seleccionadas.includes(r.id));
-    
+
     if (todasCambiablesSeleccionadas) {
       this.reservasSeleccionadas.set([]);
     } else {

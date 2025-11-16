@@ -1,8 +1,6 @@
 .horarios-admin-container {
   padding: 1rem;
-  height: calc(100vh - 120px);
-  overflow-y: auto;
-
+  height: 100%;
   h2 {
     margin-bottom: 1rem;
     font-size: 1.5rem;
@@ -74,22 +72,54 @@
     }
   }
 
-  .leyenda-calendario {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #dee2e6;
+  // Calendario sticky
+  .sticky-calendar {
+    position: sticky;
+    top: 1rem;
+  }
 
-    h4 {
-      font-size: 0.9rem;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
+  // Modo selector
+  .modo-selector {
+    ::ng-deep .p-selectbutton {
+      width: 100%;
+      display: flex;
+
+      .p-button {
+        flex: 1;
+        justify-content: center;
+      }
     }
+  }
+
+  // Leyenda compacta
+  .leyenda-compacta {
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface-border);
 
     .leyenda-item {
       display: flex;
       align-items: center;
       margin-bottom: 0.5rem;
       font-size: 0.85rem;
+
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+
+        &.disponible {
+          background-color: #4caf50;
+        }
+
+        &.parcial {
+          background-color: #2196f3;
+        }
+
+        &.completo {
+          background-color: #ff9800;
+        }
+      }
     }
   }
 
@@ -118,6 +148,162 @@
     margin-bottom: 1rem;
   }
 
+  // Preview compacto
+  .preview-compact {
+    .horarios-badges-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .horario-badge-sm {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+
+      &.nuevo {
+        background-color: var(--primary-50);
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+      }
+
+      &.existente {
+        background-color: var(--surface-100);
+        color: var(--text-color-secondary);
+        border: 1px solid var(--surface-300);
+      }
+    }
+  }
+
+  // Split view
+  .split-view {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+
+    @media (max-width: 992px) {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .horarios-section,
+    .reservas-section {
+      max-height: 600px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: var(--surface-100);
+        border-radius: 3px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: var(--surface-400);
+        border-radius: 3px;
+
+        &:hover {
+          background: var(--surface-500);
+        }
+      }
+    }
+  }
+
+  // Tarjetas de horario
+  .horario-card {
+    transition: all 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--surface-100) !important;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    &.horario-seleccionado {
+      background-color: var(--primary-50) !important;
+      border: 1px solid var(--primary-color);
+    }
+  }
+
+  // Tarjetas de reserva
+  .reserva-card {
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--surface-50);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  // Tabla unificada
+  .horarios-tabla-unificada {
+    max-height: 40rem;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--surface-100);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--surface-400);
+      border-radius: 3px;
+
+      &:hover {
+        background: var(--surface-500);
+      }
+    }
+  }
+
+  .horario-row {
+    transition: all 0.2s ease;
+    background-color: var(--surface-card);
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    &.horario-seleccionado {
+      background-color: var(--primary-50) !important;
+      border-color: var(--primary-color) !important;
+    }
+
+    .horario-header {
+      .text-lg {
+        font-size: 1.1rem;
+      }
+    }
+
+    .reservas-del-horario {
+      padding-left: 2rem;
+
+      .reserva-item {
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+
+        &:hover {
+          background-color: var(--surface-100) !important;
+          border-color: var(--surface-border);
+        }
+
+        &.reserva-seleccionada {
+          background-color: var(--primary-50) !important;
+          border-color: var(--primary-color);
+        }
+      }
+    }
+  }
+
   .vista-previa-horarios {
     .vista-previa-info {
       padding: 1rem;
@@ -129,7 +315,6 @@
     .vista-previa-horarios-section {
       padding-left: 1.75rem;
     }
-
 
     .horarios-badges-container {
       display: flex;
@@ -167,7 +352,7 @@
       &.horario-nuevo {
         background-color: var(--primary-50);
         border-color: var(--primary-color);
-        
+
         i {
           color: var(--primary-color);
         }
@@ -177,7 +362,7 @@
         background-color: var(--surface-100);
         border-color: var(--surface-300);
         opacity: 0.7;
-        
+
         i {
           color: var(--text-color-secondary);
         }
@@ -189,7 +374,6 @@
   .tutorias-container {
     padding: 1rem 0;
   }
-
 
   // Vistas Desktop/Mobile
   .desktop-view {
@@ -270,22 +454,22 @@
         flex: 1 1 0;
         min-width: 0;
         display: block;
-        
+
         button.p-button {
           width: 100%;
           box-sizing: border-box;
         }
       }
-      
+
       app-async-button {
         flex: 1 1 0;
         min-width: 0;
         display: block;
-        
+
         p-button {
           width: 100%;
           display: block;
-          
+
           button.p-button {
             width: 100% !important;
             box-sizing: border-box;
@@ -315,6 +499,24 @@
       padding: 1.25rem;
       margin-bottom: 1rem;
       border-radius: 8px;
+    }
+
+    // Split view en móvil
+    .split-view {
+      .horarios-section,
+      .reservas-section {
+        max-height: 400px;
+      }
+    }
+
+    // Horario y reserva cards más compactas
+    .horario-card,
+    .reserva-card {
+      padding: 0.75rem !important;
+
+      .flex {
+        flex-wrap: wrap;
+      }
     }
 
     .calendar-card {
@@ -423,15 +625,14 @@
     // Tablas responsive
     ::ng-deep {
       .p-datatable {
-
-        .p-datatable-thead>tr>th,
-        .p-datatable-tbody>tr>td {
+        .p-datatable-thead > tr > th,
+        .p-datatable-tbody > tr > td {
           padding: 0.5rem;
           font-size: 0.85rem;
           white-space: nowrap;
         }
 
-        .p-datatable-thead>tr>th {
+        .p-datatable-thead > tr > th {
           font-size: 0.8rem;
         }
       }
@@ -535,7 +736,6 @@
       }
 
       .p-dialog {
-
         .p-dialog-header,
         .p-dialog-content {
           padding: 1rem;
@@ -550,13 +750,6 @@
       }
     }
 
-    // Botones en grupos
-    .flex {
-      &.gap-2 {
-        flex-wrap: wrap;
-        gap: 0.5rem !important;
-      }
-    }
 
     // Grid responsive
     .grid {
@@ -588,18 +781,6 @@
       }
     }
 
-    // Grupos de botones apilados
-    .mb-3 .flex {
-      flex-direction: column;
-      align-items: stretch !important;
-      gap: 0.75rem !important;
-
-      .p-button {
-        width: 100%;
-        margin: 0;
-      }
-    }
-
     // Contenedor de acciones de reservas (ajustes móvil)
     .acciones-reservas-container {
       gap: 0.5rem;
@@ -609,38 +790,38 @@
         p-button {
           flex: 1 1 auto;
           min-width: 0;
-          
+
           button.p-button {
             padding: 0.5rem 0.75rem !important;
             font-size: 0.8rem !important;
             min-height: auto;
-            
+
             .p-button-label {
               font-size: 0.8rem !important;
               white-space: nowrap;
             }
-            
+
             .p-button-icon {
               font-size: 0.85rem !important;
               margin-right: 0.25rem;
             }
           }
         }
-        
+
         app-async-button {
           flex: 1 1 auto;
           min-width: 0;
-          
+
           p-button button.p-button {
             padding: 0.5rem 0.75rem !important;
             font-size: 0.8rem !important;
             min-height: auto;
-            
+
             .p-button-label {
               font-size: 0.8rem !important;
               white-space: nowrap;
             }
-            
+
             .p-button-icon {
               font-size: 0.85rem !important;
               margin-right: 0.25rem;
@@ -651,15 +832,7 @@
     }
 
     // Ajustes específicos para secciones
-    .flex.align-items-center.justify-content-between {
-      flex-direction: column;
-      align-items: flex-start !important;
-      gap: 1rem;
 
-      >div {
-        width: 100%;
-      }
-    }
 
     // Mejoras de espaciado general
     .mt-3 {
@@ -689,7 +862,6 @@
 
     // Inputs y dropdowns
     ::ng-deep {
-
       .p-dropdown,
       .p-inputnumber,
       .p-inputtext {
@@ -700,7 +872,6 @@
         width: 100%;
       }
     }
-
 
     // Estilos para detalles móviles (reutilizable)
     .horario-details-mobile {
@@ -737,12 +908,12 @@
             min-width: 0;
             padding: 0.5rem 0.75rem;
             font-size: 0.8rem;
-            
+
             .p-button-label {
               font-size: 0.8rem;
               white-space: nowrap;
             }
-            
+
             .p-button-icon {
               font-size: 0.85rem;
               margin-right: 0.25rem;
@@ -821,12 +992,10 @@
       }
     }
 
-
     ::ng-deep {
       .p-datatable {
-
-        .p-datatable-thead>tr>th,
-        .p-datatable-tbody>tr>td {
+        .p-datatable-thead > tr > th,
+        .p-datatable-tbody > tr > td {
           padding: 0.4rem;
           font-size: 0.8rem;
         }
@@ -846,12 +1015,12 @@
 
 ::ng-deep .p-inputnumber {
   height: fit-content !important;
-  
+
   .p-inputnumber-input {
     height: fit-content !important;
     min-height: auto !important;
   }
-  
+
   .p-inputnumber-button-group {
     height: fit-content !important;
     max-height: 100% !important;
@@ -874,7 +1043,7 @@
   align-items: center;
   justify-content: center;
   line-height: 1 !important;
-  
+
   .p-button-icon {
     font-size: 0.65rem !important;
     margin: 0 !important;

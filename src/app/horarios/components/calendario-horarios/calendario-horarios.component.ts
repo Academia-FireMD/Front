@@ -21,6 +21,7 @@ export class CalendarioHorariosComponent {
   utils = inject(HorariosUtilsService);
   
   diasEstados = input<DiaEstado[]>([]);
+  diasConReservas = input<string[]>([]);
   fechaSeleccionada = output<Date | null>();
   fechasSeleccionadas = output<Date[]>();
   modoMultiSeleccion = input<boolean>(false);
@@ -96,21 +97,37 @@ export class CalendarioHorariosComponent {
     }
   }
 
+  diasConReservasSet = computed(() => {
+    return new Set(this.diasConReservas());
+  });
+
   getDateClass = (date: any): string => {
     const fecha = new Date(date.year, date.month, date.day);
     const key = this.utils.getDateKey(fecha);
     const estado = this.diasConEstado().get(key);
+    const tieneReserva = this.diasConReservasSet().has(key);
+    
+    let clases = '';
     
     switch (estado) {
       case 'disponible':
-        return 'dia-disponible';
+        clases = 'dia-disponible';
+        break;
       case 'parcial':
-        return 'dia-parcial';
+        clases = 'dia-parcial';
+        break;
       case 'completo':
-        return 'dia-completo';
+        clases = 'dia-completo';
+        break;
       default:
-        return '';
+        clases = '';
     }
+    
+    if (tieneReserva) {
+      clases += ' dia-con-reserva';
+    }
+    
+    return clases;
   }
 
   isDateDisabled = (date: Date): boolean => {

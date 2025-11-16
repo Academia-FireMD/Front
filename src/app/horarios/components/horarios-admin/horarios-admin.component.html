@@ -1,687 +1,494 @@
 <div class="horarios-admin-container">
-  <h2>Gestión de Horarios</h2>
-
   <div class="grid">
-    <div class="col-12 md:col-4">
-      <div class="card calendar-card">
-        <h3>Calendario</h3>
-        <app-calendario-horarios [diasEstados]="diasEstados()" [modoMultiSeleccion]="activeTab() === 0"
+    <div class="col-12 lg:col-4">
+      <div class="card calendar-card sticky-calendar">
+        <app-calendario-horarios
+          [diasEstados]="diasEstados()"
+          [modoMultiSeleccion]="modoCreacion()"
           [fechasExternas]="fechasSeleccionadasHorarios()"
-          [fechaExterna]="activeTab() !== 0 ? fechaSeleccionada() : null"
-          (fechaSeleccionada)="onFechaSeleccionada($event)" (fechasSeleccionadas)="onFechasSeleccionadas($event)">
+          [fechaExterna]="!modoCreacion() ? fechaSeleccionada() : null"
+          (fechaSeleccionada)="onFechaSeleccionada($event)"
+          (fechasSeleccionadas)="onFechasSeleccionadas($event)"
+        >
         </app-calendario-horarios>
-        <div class="leyenda-calendario">
-          <h4>Leyenda:</h4>
+
+        <div class="modo-selector mt-3">
+          <p-selectButton
+            [options]="modoOpciones"
+            [ngModel]="modoCreacion()"
+            (ngModelChange)="modoCreacion.set($event)"
+            optionLabel="label"
+            optionValue="value"
+            [style]="{ width: '100%' }"
+          >
+          </p-selectButton>
+        </div>
+
+        <div class="leyenda-compacta mt-3">
           <div class="leyenda-item">
-            <span class="color-indicator disponible"></span>
-            <span>Día con todos los horarios disponibles</span>
+            <span class="dot disponible"></span>
+            <span>Disponible</span>
           </div>
           <div class="leyenda-item">
-            <span class="color-indicator parcial"></span>
-            <span>Día parcialmente reservado</span>
+            <span class="dot parcial"></span>
+            <span>Parcial</span>
           </div>
           <div class="leyenda-item">
-            <span class="color-indicator completo"></span>
-            <span>Día completamente reservado</span>
+            <span class="dot completo"></span>
+            <span>Completo</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-12 md:col-8">
+    <div class="col-12 lg:col-8">
+      <!-- MODO CREACIÓN -->
+      @if (modoCreacion()) {
       <div class="card">
-        <p-tabView [activeIndex]="activeTab()" (activeIndexChange)="onTabChange($event)">
-          <p-tabPanel header="Establecer Horarios">
-            <div class="p-fluid">
-              <div class="card">
-                <h4 class="mt-0 mb-3">Configuración de Horarios</h4>
+        <div class="flex align-items-center justify-content-between mb-3">
+          <h3 class="m-0">Crear Horarios</h3>
+          <p-chip
+            [label]="fechasSeleccionadasHorarios().length + ' días'"
+            icon="pi pi-calendar"
+          ></p-chip>
+        </div>
 
-                <!-- Selección de fechas -->
-                <div class="field mb-3">
-                  <div class="flex align-items-center justify-content-between mb-2">
-                    <label class="font-semibold mb-0">Fechas en el calendario</label>
-                    <div class="flex align-items-center gap-2">
-                      <span class="text-sm text-color-secondary">
-                        {{ fechasSeleccionadasHorarios().length }} fecha(s) seleccionada(s)
-                      </span>
-                      @if (fechasSeleccionadasHorarios().length > 0) {
-                      <p-button label="Desmarcar todas" icon="pi pi-times" [outlined]="true" severity="secondary"
-                        size="small" (click)="desmarcarTodasLasFechas()">
-                      </p-button>
-                      }
-                    </div>
-                  </div>
-                  <small class="text-color-secondary">Selecciona múltiples fechas en el calendario de la
-                    izquierda</small>
-                </div>
+        <div class="grid mb-3" style="align-items: self-end">
+          <div class="col-12 md:col-3">
+            <label class="text-sm font-semibold mb-2 block">Inicio</label>
+            <p-dropdown
+              [options]="horas"
+              [ngModel]="horaInicio()"
+              (ngModelChange)="horaInicio.set($event)"
+              optionLabel="label"
+              optionValue="value"
+              [style]="{ width: '100%' }"
+            >
+            </p-dropdown>
+          </div>
+          <div class="col-12 md:col-3">
+            <label class="text-sm font-semibold mb-2 block">Fin</label>
+            <p-dropdown
+              [options]="horas"
+              [ngModel]="horaFin()"
+              (ngModelChange)="horaFin.set($event)"
+              optionLabel="label"
+              optionValue="value"
+              [style]="{ width: '100%' }"
+            >
+            </p-dropdown>
+          </div>
+          <div class="col-12 md:col-3">
+            <label class="text-sm font-semibold mb-2 block">Capacidad</label>
+            <p-inputNumber class="w-full"
+              [ngModel]="capacidad()"
+              (ngModelChange)="capacidad.set($event)"
+              [min]="1"
+              [showButtons]="true"
+              styleClass="w-full"
+              [style]="{ width: '100%' }"
+            >
+            </p-inputNumber>
+          </div>
+          <div class="col-12 md:col-3 flex align-items-end">
+            <app-async-button
+              [action]="establecerHorarios"
+              [disabled]="totalHorariosACrear() === 0"
+              styleClass="p-button-primary"
+              [style]="{ width: '100%' }"
+              label="Crear horarios"
+            >
+            </app-async-button>
+          </div>
+        </div>
 
-                <!-- Configuración de horarios -->
-                <div class="grid mb-2">
-                  <div class="col-12 md:col-4">
-                    <div class="field mb-2">
-                      <label>Hora inicio</label>
-                      <p-dropdown [options]="horas" [ngModel]="horaInicio()" (ngModelChange)="horaInicio.set($event)"
-                        optionLabel="label" optionValue="value" [style]="{width: '100%'}">
-                      </p-dropdown>
-                    </div>
-                  </div>
-                  <div class="col-12 md:col-4">
-                    <div class="field mb-2">
-                      <label>Hora fin</label>
-                      <p-dropdown [options]="horas" [ngModel]="horaFin()" (ngModelChange)="horaFin.set($event)"
-                        optionLabel="label" optionValue="value" [style]="{width: '100%'}">
-                      </p-dropdown>
-                    </div>
-                  </div>
-                  <div class="col-12 md:col-4">
-                    <div class="field mb-2">
-                      <label>Capacidad por hora</label>
-                      <p-inputNumber [ngModel]="capacidad()" (ngModelChange)="capacidad.set($event)" [min]="1"
-                        [max]="100" [showButtons]="true" [style]="{width: '100%', height: 'fit-content'}">
-                      </p-inputNumber>
-                      <small class="text-color-secondary">Cantidad de alumnos por cada hora en los días seleccionados</small>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Campo de descripción opcional -->
-                <div class="field mb-3">
-                  <label>Descripción (opcional)</label>
-                  <textarea pInputTextarea [ngModel]="descripcionHorarios()" (ngModelChange)="descripcionHorarios.set($event)"
-                    [rows]="3" [autoResize]="true" placeholder="Añade una descripción para estos horarios..."></textarea>
-                  <small class="text-color-secondary">Esta descripción se aplicará a todos los horarios creados</small>
-                </div>
-
-                <!-- Vista previa de horarios a crear -->
-                @if (vistaPreviaHorarios(); as vistaPrevia) {
-                <div class="border-top-1 surface-border pt-3 mt-3">
-                  <div class="flex align-items-center justify-content-between mb-3">
-                    <h5 class="mt-0 mb-0">Vista Previa</h5>
-                    <span class="text-sm text-color-secondary">
-                      {{ totalHorariosACrear() }} horario(s) a crear
-                    </span>
-                  </div>
-                  <div class="vista-previa-horarios">
-                    <div class="vista-previa-info">
-                      <div class="flex align-items-center gap-2 mb-2">
-                        <i class="pi pi-calendar text-primary"></i>
-                        <span class="font-semibold">Días: {{ vistaPrevia.dias }}</span>
-                        <span class="text-sm text-color-secondary">({{ vistaPrevia.diasCount }} día(s))</span>
-                      </div>
-                      @if (vistaPrevia.diasConHorarios.length > 0) {
-                      <div class="mb-2">
-                        <div class="flex align-items-center gap-2 mb-1">
-                          <i class="pi pi-info-circle text-warning" style="font-size: 0.75rem;"></i>
-                          <span class="text-xs font-semibold text-warning">
-                            Días con horarios existentes: {{ vistaPrevia.diasConHorarios.join(', ') }}
-                          </span>
-                        </div>
-                      </div>
-                      }
-                      @if (vistaPrevia.diasSinHorarios.length > 0) {
-                      <div class="mb-2">
-                        <div class="flex align-items-center gap-2 mb-1">
-                          <i class="pi pi-calendar-plus text-primary" style="font-size: 0.75rem;"></i>
-                          <span class="text-xs font-semibold text-primary">
-                            Días sin horarios existentes: {{ vistaPrevia.diasSinHorarios.join(', ') }}
-                          </span>
-                        </div>
-                      </div>
-                      }
-                      @if (vistaPrevia.horariosExistentes.length > 0) {
-                      <div class="vista-previa-horarios-section mb-2">
-                        <div class="flex align-items-center gap-2 mb-1">
-                          <i class="pi pi-info-circle text-warning" style="font-size: 0.75rem;"></i>
-                          <span class="text-xs font-semibold text-warning">Horarios ya existentes ({{ vistaPrevia.horariosExistentes.length }}):</span>
-                        </div>
-                        <div class="horarios-badges-container">
-                          @for (horario of vistaPrevia.horariosExistentes; track horario.horaInicioStr) {
-                          <span class="horario-badge horario-existente">
-                            <i class="pi pi-check"></i>
-                            {{ horario.horaInicioStr }} - {{ horario.horaFinStr }}
-                          </span>
-                          }
-                        </div>
-                        <small class="text-color-secondary text-xs mt-1 block">Estos horarios ya existen y no se crearán de nuevo</small>
-                      </div>
-                      }
-                      @if (vistaPrevia.horariosNuevos.length > 0) {
-                      <div class="vista-previa-horarios-section mb-2">
-                        <div class="flex align-items-center gap-2 mb-1">
-                          <i class="pi pi-plus-circle text-primary" style="font-size: 0.75rem;"></i>
-                          <span class="text-xs font-semibold">Horarios a crear ({{ vistaPrevia.horariosNuevos.length }}):</span>
-                        </div>
-                        <div class="horarios-badges-container">
-                          @for (horario of vistaPrevia.horariosNuevos; track horario.horaInicioStr) {
-                          <span class="horario-badge horario-nuevo">
-                            {{ horario.horaInicioStr }} - {{ horario.horaFinStr }}
-                          </span>
-                          }
-                        </div>
-                      </div>
-                      } @else if (vistaPrevia.horariosExistentes.length > 0) {
-                      <div class="vista-previa-horarios-section mb-2">
-                        <div class="flex align-items-center gap-2 mb-1">
-                          <i class="pi pi-exclamation-triangle text-warning" style="font-size: 0.75rem;"></i>
-                          <span class="text-xs font-semibold text-warning">Todos los horarios del rango seleccionado ya existen</span>
-                        </div>
-                        <small class="text-color-secondary text-xs">No se crearán nuevos horarios. Usa el botón "Editar" en la tabla de Disponibilidad para modificar horarios existentes.</small>
-                      </div>
-                      }
-                      <div class="flex align-items-center gap-2 mt-2 pt-2 border-top-1 surface-border">
-                        <i class="pi pi-users text-primary"></i>
-                        <span class="text-sm">Con <strong>{{ vistaPrevia.capacidad }} plaza(s)</strong> por hora</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        @if (vistaPreviaHorarios(); as vp) {
+        <div class="preview-compact p-3 surface-100 border-round">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-sm">
+              <i class="pi pi-info-circle mr-2"></i>
+              <strong>{{ totalHorariosACrear() }}</strong> nuevos ·
+              <strong>{{ vp.horariosExistentes.length }}</strong> ya existen
+            </span>
+          </div>
+          <div class="preview-detalle mt-3 pt-3 border-top-1 surface-border">
+            @if (vp.horariosNuevos.length > 0) {
+            <div class="mb-2">
+              <span class="text-xs font-semibold text-primary">
+                <i class="pi pi-plus-circle mr-1"></i>
+                A crear:
+              </span>
+              <div class="horarios-badges-container mt-1">
+                @for (horario of vp.horariosNuevos; track horario.horaInicioStr)
+                {
+                <span class="horario-badge-sm nuevo"
+                  >{{ horario.horaInicioStr }}-{{ horario.horaFinStr }}</span
+                >
                 }
-
-                <!-- Botón crear -->
-                <div class="mt-3">
-                  <app-async-button
-                    label="Crear Horarios"
-                    icon="pi pi-plus"
-                    [action]="establecerHorarios"
-                    [disabled]="fechasSeleccionadasHorarios().length === 0 || totalHorariosACrear() === 0"
-                    styleClass="p-button-primary">
-                  </app-async-button>
-                  <small class="text-color-secondary block mt-2">
-                    @if (totalHorariosACrear() > 0) {
-                      Se crearán {{ totalHorariosACrear() }} horario(s) nuevo(s) para cada hora (desde hora inicio hasta hora fin) en cada una de las fechas seleccionadas, con la capacidad indicada por hora
-                    } @else {
-                      Todos los horarios del rango seleccionado ya existen. Usa el botón "Editar" en la tabla de Disponibilidad para modificar horarios existentes.
-                    }
-                  </small>
-                </div>
               </div>
             </div>
-          </p-tabPanel>
-
-          <p-tabPanel header="Disponibilidad">
-            <div class="disponibilidad-container">
-              <!-- Filtros Desktop -->
-              <div class="card mb-3 filters-desktop">
-                <div class="flex align-items-center justify-content-between flex-wrap gap-2">
-                  <div class="flex align-items-center gap-2">
-                    <p-checkbox [binary]="true" [ngModel]="mostrarHorariosPasados()"
-                      (ngModelChange)="mostrarHorariosPasados.set($event)" inputId="mostrarPasados">
-                    </p-checkbox>
-                    <label for="mostrarPasados" class="cursor-pointer">Mostrar horarios pasados</label>
-                  </div>
-                  <div class="flex align-items-center gap-2">
-                    @if (horariosSeleccionadosEliminar().length > 0) {
-                    <app-async-button
-                      [label]="'Eliminar seleccionados (' + horariosSeleccionadosEliminar().length + ')'"
-                      icon="pi pi-trash"
-                      [action]="eliminarHorariosSeleccionados"
-                      styleClass="p-button-danger"
-                      [style]="{width: 'auto'}">
-                    </app-async-button>
-                    }
-                    @if (mostrarHorariosPasados()) {
-                    <app-async-button
-                      label="Eliminar horarios pasados"
-                      icon="pi pi-trash"
-                      [action]="eliminarHorariosPasados"
-                      styleClass="p-button-danger p-button-outlined"
-                      [style]="{width: 'auto'}">
-                    </app-async-button>
-                    }
-                  </div>
-                </div>
+            } @if (vp.horariosExistentes.length > 0) {
+            <div>
+              <span class="text-xs font-semibold text-color-secondary">
+                <i class="pi pi-check mr-1"></i>
+                Ya existen:
+              </span>
+              <div class="horarios-badges-container mt-1">
+                @for (horario of vp.horariosExistentes; track
+                horario.horaInicioStr) {
+                <span class="horario-badge-sm existente"
+                  >{{ horario.horaInicioStr }}-{{ horario.horaFinStr }}</span
+                >
+                }
               </div>
-
-              <!-- Filtros Móvil -->
-              <div class="filters-mobile mb-3">
-                <p-accordion>
-                  <p-accordionTab>
-                    <ng-template pTemplate="header">
-                      <div class="flex align-items-center gap-2">
-                        <i class="pi pi-filter"></i>
-                        <span>Filtros</span>
-                      </div>
-                    </ng-template>
-                    <div class="filters-content">
-                      <div class="field mb-3">
-                        <div class="flex align-items-center gap-2">
-                          <p-checkbox [binary]="true" [ngModel]="mostrarHorariosPasados()"
-                            (ngModelChange)="mostrarHorariosPasados.set($event)" inputId="mostrarPasadosMobile">
-                          </p-checkbox>
-                          <label for="mostrarPasadosMobile" class="cursor-pointer">Mostrar horarios pasados</label>
-                        </div>
-                      </div>
-                      @if (horariosSeleccionadosEliminar().length > 0) {
-                      <div class="field mb-3">
-                        <app-async-button
-                          [label]="'Eliminar seleccionados (' + horariosSeleccionadosEliminar().length + ')'"
-                          icon="pi pi-trash"
-                          [action]="eliminarHorariosSeleccionados"
-                          styleClass="p-button-danger">
-                        </app-async-button>
-                      </div>
-                      }
-                      @if (mostrarHorariosPasados()) {
-                      <div class="field mb-3">
-                        <app-async-button
-                          label="Eliminar horarios pasados"
-                          icon="pi pi-trash"
-                          [action]="eliminarHorariosPasados"
-                          styleClass="p-button-danger p-button-outlined">
-                        </app-async-button>
-                      </div>
-                      }
-                      @if (fechaSeleccionada()) {
-                      <div class="field">
-                        <div class="flex align-items-center justify-content-between">
-                          <span><strong>Filtrado por fecha:</strong> {{ fechaSeleccionada() | date:'fullDate':'es-ES'
-                            }}</span>
-                          <p-button icon="pi pi-times" [outlined]="true" severity="secondary" size="small"
-                            (click)="limpiarFiltroFecha()" pTooltip="Limpiar filtro">
-                          </p-button>
-                        </div>
-                      </div>
-                      } @else {
-                      <div class="field">
-                        <p class="text-sm text-color-secondary">Selecciona un día en el calendario para filtrar los
-                          horarios</p>
-                      </div>
-                      }
-                    </div>
-                  </p-accordionTab>
-                </p-accordion>
-              </div>
-
-              <!-- Filtro de fecha Desktop -->
-              @if (fechaSeleccionada()) {
-              <div class="mb-3 fecha-filtro-desktop">
-                <strong>Filtrado por fecha:</strong> {{ fechaSeleccionada() | date:'fullDate':'es-ES' }}
-                <p-button label="Limpiar filtro" icon="pi pi-times" [outlined]="true" severity="secondary" size="small"
-                  class="ml-2" (click)="limpiarFiltroFecha()">
-                </p-button>
-              </div>
-              } @else {
-              <div class="mb-3 fecha-filtro-desktop">
-                <p class="text-sm text-color-secondary">Selecciona un día en el calendario para filtrar los horarios</p>
-              </div>
-              }
-              <!-- Vista Desktop: Tabla -->
-              <div class="desktop-view">
-                <div class="table-container">
-                  <p-table [value]="horariosFiltrados()" [paginator]="true" [rows]="10">
-                    <ng-template pTemplate="header">
-                      <tr>
-                        <th style="width: 3rem">
-                          <p-checkbox [binary]="true"
-                            [ngModel]="horariosSeleccionadosEliminar().length === horariosFiltrados().length && horariosFiltrados().length > 0"
-                            (onChange)="toggleTodosHorariosEliminar()">
-                          </p-checkbox>
-                        </th>
-                        <th>Fecha</th>
-                        <th>Hora Inicio</th>
-                        <th>Hora Fin</th>
-                        <th>Capacidad</th>
-                        <th>Disponibles</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-horario>
-                      <tr [class.horario-pasado]="esHorarioPasado(horario)" [class.horario-seleccionado]="horariosSeleccionadosEliminar().includes(horario.id)">
-                        <td>
-                          <p-checkbox [binary]="true" [ngModel]="horariosSeleccionadosEliminar().includes(horario.id)"
-                            (onChange)="toggleHorarioEliminar(horario.id)">
-                          </p-checkbox>
-                        </td>
-                        <td>
-                          {{ horario.fecha | date:'dd/MM/yyyy' }}
-                          @if (esHorarioPasado(horario)) {
-                          <span class="badge-pasado ml-2">Pasado</span>
-                          }
-                        </td>
-                        <td>{{ horario.horaInicio | date:'HH:mm' }}</td>
-                        <td>{{ horario.horaFin | date:'HH:mm' }}</td>
-                        <td>{{ horario.capacidad }}</td>
-                        <td>
-                          {{ getDisponibles(horario) }}
-                        </td>
-                        <td>
-                          <span [class]="'badge-' + horario.estado.toLowerCase()">
-                            {{ horario.estado }}
-                          </span>
-                        </td>
-                        <td>
-                          <div class="flex gap-1">
-                            @if (!esHorarioPasado(horario)) {
-                            <p-button icon="pi pi-pencil" [outlined]="true" size="small"
-                              (click)="abrirDialogEditar(horario)" pTooltip="Editar horario">
-                            </p-button>
-                            }
-                            <p-button icon="pi pi-trash" [outlined]="true" severity="danger" size="small"
-                              (click)="confirmarEliminarHorario(horario)" pTooltip="Eliminar horario">
-                            </p-button>
-                          </div>
-                        </td>
-                      </tr>
-                    </ng-template>
-                  </p-table>
-                </div>
-              </div>
-
-              <!-- Vista Móvil: Acordeón -->
-              <div class="mobile-view">
-                <p-accordion [multiple]="true">
-                  @for (horario of horariosFiltrados(); track horario.id) {
-                  <p-accordionTab>
-                    <ng-template pTemplate="header">
-                      <div class="accordion-header-mobile">
-                        <div class="flex align-items-center gap-2">
-                          <p-checkbox [binary]="true"
-                            [ngModel]="horariosSeleccionadosEliminar().includes(horario.id)"
-                            (onChange)="toggleHorarioEliminar(horario.id)" (click)="$event.stopPropagation()">
-                          </p-checkbox>
-                          <div class="horario-header-info">
-                            <div class="horario-fecha-mobile">{{ horario.fecha | date:'dd/MM/yyyy' }}</div>
-                            <div class="horario-hora-mobile">{{ horario.horaInicio | date:'HH:mm' }} - {{ horario.horaFin
-                              | date:'HH:mm' }}</div>
-                            @if (esHorarioPasado(horario)) {
-                            <span class="badge-pasado">Pasado</span>
-                            }
-                          </div>
-                        </div>
-                        <span [class]="'badge-' + horario.estado.toLowerCase()">
-                          {{ horario.estado }}
-                        </span>
-                      </div>
-                    </ng-template>
-                    <div class="horario-details-mobile">
-                      <div class="detail-row">
-                        <span class="detail-label">Capacidad:</span>
-                        <span class="detail-value">{{ horario.capacidad }}</span>
-                      </div>
-                      <div class="detail-row">
-                        <span class="detail-label">Disponibles:</span>
-                        <span class="detail-value">{{ getDisponibles(horario) }}</span>
-                      </div>
-                      <div class="detail-row">
-                        <span class="detail-label">Estado:</span>
-                        <span [class]="'badge-' + horario.estado.toLowerCase()">
-                          {{ horario.estado }}
-                        </span>
-                      </div>
-                      <div class="detail-row actions-row">
-                        @if (!esHorarioPasado(horario)) {
-                        <p-button label="Editar" icon="pi pi-pencil" [outlined]="true" size="small"
-                          (click)="abrirDialogEditar(horario)">
-                        </p-button>
-                        }
-                        <p-button label="Eliminar" icon="pi pi-trash" [outlined]="true" severity="danger" size="small"
-                          (click)="confirmarEliminarHorario(horario)">
-                        </p-button>
-                      </div>
-                    </div>
-                  </p-accordionTab>
-                  }
-                </p-accordion>
-              </div>
-            </div>
-          </p-tabPanel>
-
-          <p-tabPanel header="Tutorías">
-            @if (fechaSeleccionada()) {
-            <div class="tutorias-container">
-              <div class="mb-3">
-                <strong>Fecha seleccionada:</strong> {{ fechaSeleccionada() | date:'fullDate':'es-ES' }}
-              </div>
-
-              @if (reservasDelDia().length > 0) {
-              <div class="mb-3">
-                <p-iconField iconPosition="left">
-                  <p-inputIcon styleClass="pi pi-search" />
-                  <input type="text" pInputText placeholder="Buscar por email, nombre o apellidos..."
-                    [ngModel]="busquedaAlumno()" (ngModelChange)="busquedaAlumno.set($event)" class="w-full" />
-                </p-iconField>
-              </div>
-
-              <div class="mb-3 acciones-reservas-container">
-                <p-button label="Seleccionar todas" icon="pi pi-check-square" [outlined]="true"
-                  (click)="toggleTodasLasReservas()">
-                </p-button>
-                <app-async-button
-                  label="Confirmar seleccionadas"
-                  icon="pi pi-check"
-                  [action]="confirmarReservas"
-                  styleClass="p-button-success">
-                </app-async-button>
-                <p-button label="Cancelar seleccionadas" icon="pi pi-times" severity="danger"
-                  (click)="abrirDialogCancelacion()">
-                </p-button>
-              </div>
-
-              <!-- Vista Desktop: Tabla -->
-              <div class="table-container desktop-view">
-                <p-table [value]="reservasDelDiaFiltradas()" [paginator]="true" [rows]="10">
-                  <ng-template pTemplate="header">
-                    <tr>
-                      <th style="width: 3rem">
-                        <p-checkbox [binary]="true" [ngModel]="todasLasReservasCancelablesSeleccionadas()"
-                          (onChange)="toggleTodasLasReservas()">
-                        </p-checkbox>
-                      </th>
-                      <th>Alumno</th>
-                      <th>Hora</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-reserva>
-                    <tr>
-                      <td>
-                        <p-checkbox [binary]="true" [ngModel]="reservasSeleccionadas().includes(reserva.id)"
-                          [disabled]="!puedeCambiarEstado(reserva)" (onChange)="toggleReservaSeleccionada(reserva.id)"
-                          [pTooltip]="!puedeCambiarEstado(reserva) ? getTooltipCheckboxReserva(reserva) : ''"
-                          tooltipPosition="top">
-                        </p-checkbox>
-                      </td>
-                      <td>
-                        {{ reserva.alumno?.nombre }} {{ reserva.alumno?.apellidos }}
-                        <br>
-                        <small>{{ reserva.alumno?.email }}</small>
-                      </td>
-                      <td>
-                        @if (reserva.horarioDisponible) {
-                        {{ reserva.horarioDisponible.horaInicio | date:'HH:mm' }} -
-                        {{ reserva.horarioDisponible.horaFin | date:'HH:mm' }}
-                        }
-                      </td>
-                      <td>
-                        <span [class]="'badge-' + reserva.estado.toLowerCase()"
-                          [pTooltip]="getEstadoTooltip(reserva.estado)"
-                          tooltipPosition="top">
-                          {{ getEstadoLabel(reserva.estado) }}
-                        </span>
-                        @if (reserva.estado === EstadoReserva.CANCELADA) {
-                        <br>
-                        @if (reserva.canceladoPor) {
-                        <small class="text-color-secondary mt-1 block">
-                          <strong>Cancelado por:</strong> {{ reserva.canceladoPor.nombre }} {{ reserva.canceladoPor.apellidos }}
-                        </small>
-                        }
-                        @if (reserva.motivoCancelacion) {
-                        <small class="text-color-secondary mt-1 block">
-                          <strong>Motivo:</strong> {{ reserva.motivoCancelacion }}
-                        </small>
-                        }
-                        }
-                      </td>
-                      <td>
-                        @if (reserva.estado === EstadoReserva.CONFIRMADA)
-                        {
-                        <div class="flex gap-2">
-                          <app-async-button
-                            icon="pi pi-check-circle"
-                            [action]="getMarcarCompletadaAction(reserva.id)"
-                            styleClass="p-button-success p-button-outlined p-button-sm"
-                            tooltip="Marcar como completada">
-                          </app-async-button>
-                          <app-async-button
-                            icon="pi pi-user-minus"
-                            [action]="getMarcarAusenteAction(reserva.id)"
-                            styleClass="p-button-warning p-button-outlined p-button-sm"
-                            tooltip="Marcar como ausente">
-                          </app-async-button>
-                        </div>
-                        } @else {
-                        <span [pTooltip]="getTooltipAccionReserva(reserva)" tooltipPosition="top" class="text-color-secondary text-sm">
-                          <i class="pi pi-info-circle"></i>
-                        </span>
-                        }
-                      </td>
-                    </tr>
-                  </ng-template>
-                </p-table>
-              </div>
-
-              <!-- Vista Móvil: Acordeón -->
-              <div class="mobile-view">
-                <p-accordion [multiple]="true">
-                  @for (reserva of reservasDelDiaFiltradas(); track reserva.id) {
-                  <p-accordionTab>
-                    <ng-template pTemplate="header">
-                      <div class="accordion-header-mobile">
-                        <div class="flex align-items-center gap-2">
-                          <p-checkbox [binary]="true" [ngModel]="reservasSeleccionadas().includes(reserva.id)"
-                            [disabled]="!puedeCambiarEstado(reserva)" (onChange)="toggleReservaSeleccionada(reserva.id)"
-                            (click)="$event.stopPropagation()"
-                            [pTooltip]="!puedeCambiarEstado(reserva) ? getTooltipCheckboxReserva(reserva) : ''"
-                            tooltipPosition="top">
-                          </p-checkbox>
-                          <div class="horario-header-info">
-                            <div class="horario-fecha-mobile">{{ reserva.alumno?.nombre }} {{ reserva.alumno?.apellidos
-                              }}</div>
-                            @if (reserva.horarioDisponible) {
-                            <div class="horario-hora-mobile">{{ reserva.horarioDisponible.horaInicio | date:'HH:mm' }} -
-                              {{ reserva.horarioDisponible.horaFin | date:'HH:mm' }}</div>
-                            }
-                          </div>
-                        </div>
-                        <span [class]="'badge-' + reserva.estado.toLowerCase()"
-                          [pTooltip]="getEstadoTooltip(reserva.estado)"
-                          tooltipPosition="top">
-                          {{ getEstadoLabel(reserva.estado) }}
-                        </span>
-                      </div>
-                    </ng-template>
-                    <div class="horario-details-mobile">
-                      <div class="detail-row">
-                        <span class="detail-label">Email:</span>
-                        <span class="detail-value">{{ reserva.alumno?.email }}</span>
-                      </div>
-                      @if (reserva.estado === EstadoReserva.CANCELADA) {
-                      @if (reserva.canceladoPor) {
-                      <div class="detail-row">
-                        <span class="detail-label">Cancelado por:</span>
-                        <span class="detail-value">{{ reserva.canceladoPor.nombre }} {{ reserva.canceladoPor.apellidos }}</span>
-                      </div>
-                      }
-                      @if (reserva.motivoCancelacion) {
-                      <div class="detail-row">
-                        <span class="detail-label">Motivo de cancelación:</span>
-                        <span class="detail-value">{{ reserva.motivoCancelacion }}</span>
-                      </div>
-                      }
-                      }
-                      @if (reserva.estado === EstadoReserva.CONFIRMADA) {
-                      <div class="detail-row actions-row">
-                        <app-async-button
-                          label="Completada"
-                          icon="pi pi-check-circle"
-                          [action]="getMarcarCompletadaAction(reserva.id)"
-                          styleClass="p-button-success p-button-outlined"
-                          [style]="{width: 'auto'}"
-                          tooltip="Marcar como completada">
-                        </app-async-button>
-                        <app-async-button
-                          label="Ausente"
-                          icon="pi pi-user-minus"
-                          [action]="getMarcarAusenteAction(reserva.id)"
-                          styleClass="p-button-warning p-button-outlined"
-                          [style]="{width: 'auto'}"
-                          tooltip="Marcar como ausente">
-                        </app-async-button>
-                      </div>
-                      } @else {
-                      <div class="detail-row">
-                        <span class="text-color-secondary text-sm" [pTooltip]="getTooltipAccionReserva(reserva)" tooltipPosition="top">
-                          <i class="pi pi-info-circle mr-2"></i>
-                          {{ getTooltipAccionReserva(reserva) }}
-                        </span>
-                      </div>
-                      }
-                    </div>
-                  </p-accordionTab>
-                  }
-                </p-accordion>
-              </div>
-              } @else {
-              <div class="no-reservas-mensaje">
-                <p>No hay reservas para este día</p>
-              </div>
-              }
-            </div>
-            } @else {
-            <div class="no-fecha-seleccionada">
-              <p>Selecciona un día en el calendario para ver las reservas</p>
             </div>
             }
-          </p-tabPanel>
-        </p-tabView>
+          </div>
+        </div>
+        }
       </div>
+      }
+
+      <!-- MODO VER -->
+      @if (!modoCreacion()) {
+      <div class="card">
+        <div
+          class="flex align-items-center justify-content-between mb-3 flex-wrap gap-2"
+        >
+          <h3 class="m-0">
+            @if (fechaSeleccionada()) {
+            {{ fechaSeleccionada() | date : "d MMM yyyy" : "" : "es-ES" }}
+            } @else { Todos los horarios }
+          </h3>
+
+          <div class="flex gap-2 align-items-center flex-wrap">
+            @if (fechaSeleccionada()) {
+            <p-button
+              icon="pi pi-filter-slash"
+              [text]="true"
+              size="small"
+              (click)="limpiarFiltroFecha()"
+              pTooltip="Ver todos"
+            >
+            </p-button>
+            }
+            <p-button
+              [icon]="
+                mostrarHorariosPasados() ? 'pi pi-eye-slash' : 'pi pi-eye'
+              "
+              [outlined]="!mostrarHorariosPasados()"
+              size="small"
+              (click)="togglePasados()"
+              [pTooltip]="
+                mostrarHorariosPasados() ? 'Ocultar pasados' : 'Mostrar pasados'
+              "
+            >
+            </p-button>
+            @if (horariosSeleccionadosEliminar().length > 0) {
+            <app-async-button
+              [label]="horariosSeleccionadosEliminar().length + ''"
+              icon="pi pi-trash"
+              [action]="eliminarHorariosSeleccionados"
+              styleClass="p-button-danger p-button-sm"
+            >
+            </app-async-button>
+            }
+          </div>
+        </div>
+
+        <p-divider></p-divider>
+
+        <!-- Buscador -->
+        <div class="flex align-items-center gap-2 mb-3">
+          <input
+            type="text"
+            pInputText
+            placeholder="Buscar alumno..."
+            [ngModel]="busquedaAlumno()"
+            (ngModelChange)="busquedaAlumno.set($event)"
+            class="w-full"
+          />
+
+          <div class="flex align-items-center justify-content-end">
+            <p-button
+              icon="pi pi-check"
+              [rounded]="true"
+              size="small"
+              severity="success"
+              (click)="confirmarReservas()"
+              [disabled]="reservasSeleccionadas().length === 0"
+              pTooltip="Confirmar seleccionadas"
+            >
+            </p-button>
+            <p-button
+              icon="pi pi-times"
+              [rounded]="true"
+              size="small"
+              severity="danger"
+              (click)="abrirDialogCancelacion()"
+              [disabled]="reservasSeleccionadas().length === 0"
+              pTooltip="Cancelar seleccionadas"
+            >
+            </p-button>
+          </div>
+        </div>
+
+        <!-- Tabla unificada -->
+        @if (horariosConReservas().length > 0) {
+        <div class="horarios-tabla-unificada">
+          @for (item of horariosConReservas(); track item.horario.id) {
+          <div
+            class="horario-row mb-3 p-3 border-1 surface-border border-round-md"
+            [class.horario-seleccionado]="
+              horariosSeleccionadosEliminar().includes(item.horario.id)
+            "
+          >
+            <!-- Header del horario -->
+            <div
+              class="horario-header flex align-items-center justify-content-between mb-3 pb-2 border-bottom-1 surface-border"
+            >
+              <div class="flex align-items-center gap-2 flex-1">
+                <p-checkbox
+                  [binary]="true"
+                  [ngModel]="
+                    horariosSeleccionadosEliminar().includes(item.horario.id)
+                  "
+                  (onChange)="toggleHorarioEliminar(item.horario.id)"
+                >
+                </p-checkbox>
+                <span class="font-semibold text-lg">{{
+                  item.horario.horaInicio | date : "HH:mm"
+                }}</span>
+                <span class="text-color-secondary">-</span>
+                <span class="font-semibold">{{
+                  item.horario.horaFin | date : "HH:mm"
+                }}</span>
+                <p-tag
+                  [value]="
+                    getDisponibles(item.horario) + '/' + item.horario.capacidad
+                  "
+                  [severity]="
+                    getDisponibles(item.horario) === 0
+                      ? 'danger'
+                      : getDisponibles(item.horario) < item.horario.capacidad
+                      ? 'warning'
+                      : 'success'
+                  "
+                >
+                </p-tag>
+                @if (esHorarioPasado(item.horario)) {
+                <p-tag
+                  value="Pasado"
+                  severity="secondary"
+                  [style]="{ fontSize: '0.75rem' }"
+                ></p-tag>
+                }
+              </div>
+              <div class="flex gap-1">
+                @if (!esHorarioPasado(item.horario)) {
+                <p-button
+                  icon="pi pi-pencil"
+                  [text]="true"
+                  size="small"
+                  (click)="abrirDialogEditar(item.horario)"
+                  pTooltip="Editar horario"
+                ></p-button>
+                }
+                <p-button
+                  icon="pi pi-trash"
+                  [text]="true"
+                  severity="danger"
+                  size="small"
+                  (click)="confirmarEliminarHorario(item.horario)"
+                  pTooltip="Eliminar horario"
+                ></p-button>
+              </div>
+            </div>
+
+            <!-- Reservas del horario -->
+            <div class="reservas-del-horario">
+              @if (item.reservas.length > 0) { @for (reserva of item.reservas;
+              track reserva.id) {
+              <div
+                class="reserva-item mb-2 p-2 surface-50 border-round"
+                [class.reserva-seleccionada]="
+                  reservasSeleccionadas().includes(reserva.id)
+                "
+              >
+                <div class="flex align-items-start gap-2">
+                  <p-checkbox
+                    [binary]="true"
+                    [ngModel]="reservasSeleccionadas().includes(reserva.id)"
+                    (onChange)="toggleReservaSeleccionada(reserva.id)"
+                    [disabled]="!puedeCambiarEstado(reserva)"
+                    [pTooltip]="
+                      !puedeCambiarEstado(reserva)
+                        ? getTooltipCheckboxReserva(reserva)
+                        : ''
+                    "
+                    tooltipPosition="top"
+                  >
+                  </p-checkbox>
+                  <div class="flex-1">
+                    <div
+                      class="flex align-items-center justify-content-between mb-1"
+                    >
+                      <span class="font-semibold"
+                        >{{ reserva.alumno?.nombre }}
+                        {{ reserva.alumno?.apellidos }}</span
+                      >
+                      <p-tag
+                        [value]="getEstadoLabel(reserva.estado)"
+                        [severity]="getEstadoSeverity(reserva.estado)"
+                        [pTooltip]="getEstadoTooltip(reserva.estado)"
+                        tooltipPosition="top"
+                        [style]="{ fontSize: '0.75rem' }"
+                      >
+                      </p-tag>
+                    </div>
+                    <div class="text-sm text-color-secondary mb-1">
+                      <i class="pi pi-envelope mr-1"></i>
+                      {{ reserva.alumno?.email }}
+                    </div>
+                    @if (reserva.estado === EstadoReserva.CONFIRMADA) {
+                    <div class="flex gap-1 mt-2">
+                      <app-async-button
+                        label="Completada"
+                        icon="pi pi-check"
+                        size="small"
+                        [action]="getMarcarCompletadaAction(reserva.id)"
+                        styleClass="p-button-success p-button-outlined p-button-sm"
+                        [style]="{
+                          fontSize: '0.75rem',
+                          padding: '0.35rem 0.6rem'
+                        }"
+                      >
+                      </app-async-button>
+                      <app-async-button
+                        label="Ausente"
+                        icon="pi pi-user-minus"
+                        size="small"
+                        [action]="getMarcarAusenteAction(reserva.id)"
+                        styleClass="p-button-warning p-button-outlined p-button-sm"
+                        [style]="{
+                          fontSize: '0.75rem',
+                          padding: '0.35rem 0.6rem'
+                        }"
+                      >
+                      </app-async-button>
+                    </div>
+                    } @if (reserva.estado === EstadoReserva.CANCELADA) {
+                    <div class="mt-2 p-2 surface-100 border-round">
+                      @if (reserva.canceladoPor) {
+                      <div class="text-xs text-color-secondary mb-1">
+                        <strong>Cancelado por:</strong>
+                        {{ reserva.canceladoPor.nombre }}
+                        {{ reserva.canceladoPor.apellidos }}
+                      </div>
+                      } @if (reserva.motivoCancelacion) {
+                      <div class="text-xs text-color-secondary">
+                        <strong>Motivo:</strong> {{ reserva.motivoCancelacion }}
+                      </div>
+                      }
+                    </div>
+                    }
+                  </div>
+                </div>
+              </div>
+              } } @else {
+              <div class="text-center text-color-secondary py-2">
+                <span class="text-sm">Sin reservas</span>
+              </div>
+              }
+            </div>
+          </div>
+          }
+        </div>
+        } @else {
+        <div class="text-center text-color-secondary py-5">
+          <i class="pi pi-clock text-5xl mb-3 block"></i>
+          <p>No hay horarios</p>
+        </div>
+        }
+      </div>
+      }
     </div>
   </div>
 </div>
 
-<p-dialog header="Motivo de Cancelación" [visible]="mostrarDialogCancelacion()"
-  (visibleChange)="mostrarDialogCancelacion.set($event)" [modal]="true" [style]="{width: '450px'}">
+<p-dialog
+  header="Motivo de Cancelación"
+  [visible]="mostrarDialogCancelacion()"
+  (visibleChange)="mostrarDialogCancelacion.set($event)"
+  [modal]="true"
+  [style]="{ width: '450px' }"
+>
   <div class="p-fluid">
     <div class="field">
       <label>Motivo</label>
-      <textarea pInputTextarea [ngModel]="motivoCancelacion()" (ngModelChange)="motivoCancelacion.set($event)" rows="4"
-        placeholder="Ingresa el motivo de cancelación">
+      <textarea
+        pInputTextarea
+        [ngModel]="motivoCancelacion()"
+        (ngModelChange)="motivoCancelacion.set($event)"
+        rows="4"
+        placeholder="Ingresa el motivo de cancelación"
+      >
       </textarea>
     </div>
   </div>
   <ng-template pTemplate="footer">
-    <p-button label="Cancelar" icon="pi pi-times" [outlined]="true" (click)="mostrarDialogCancelacion.set(false)">
+    <p-button
+      label="Cancelar"
+      icon="pi pi-times"
+      [outlined]="true"
+      (click)="mostrarDialogCancelacion.set(false)"
+    >
     </p-button>
     <app-async-button
       label="Confirmar"
       icon="pi pi-check"
       [action]="cancelarReservas"
-      styleClass="p-button-danger">
+      styleClass="p-button-danger"
+    >
     </app-async-button>
   </ng-template>
 </p-dialog>
 
-<p-dialog header="Editar Horario" [visible]="mostrarDialogEditar()" (visibleChange)="mostrarDialogEditar.set($event)"
-  [modal]="true" [style]="{width: '450px'}">
+<p-dialog
+  header="Editar Horario"
+  [visible]="mostrarDialogEditar()"
+  (visibleChange)="mostrarDialogEditar.set($event)"
+  [modal]="true"
+  [style]="{ width: '450px' }"
+>
   <div class="p-fluid">
     @if (horarioEditando()) {
     <div class="grid">
       <div class="col-12 md:col-6">
         <div class="field">
           <label>Hora inicio</label>
-          <p-dropdown [options]="horas" [ngModel]="horarioEditHoraInicio()"
-            (ngModelChange)="horarioEditHoraInicio.set($event)" optionLabel="label" optionValue="value"
-            [style]="{width: '100%'}">
+          <p-dropdown
+            [options]="horas"
+            [ngModel]="horarioEditHoraInicio()"
+            (ngModelChange)="horarioEditHoraInicio.set($event)"
+            optionLabel="label"
+            optionValue="value"
+            [style]="{ width: '100%' }"
+          >
           </p-dropdown>
         </div>
       </div>
       <div class="col-12 md:col-6">
         <div class="field">
           <label>Hora fin</label>
-          <p-dropdown [options]="horas" [ngModel]="horarioEditHoraFin()" (ngModelChange)="horarioEditHoraFin.set($event)"
-            optionLabel="label" optionValue="value" [style]="{width: '100%'}">
+          <p-dropdown
+            [options]="horas"
+            [ngModel]="horarioEditHoraFin()"
+            (ngModelChange)="horarioEditHoraFin.set($event)"
+            optionLabel="label"
+            optionValue="value"
+            [style]="{ width: '100%' }"
+          >
           </p-dropdown>
         </div>
       </div>
@@ -695,14 +502,17 @@
         [min]="capacidadMinimaHorarioEditando()"
         [max]="100"
         [showButtons]="true"
-        [style]="{width: '100%'}">
+        [style]="{ width: '100%' }"
+      >
       </p-inputNumber>
       @if (reservasActivasHorarioEditando() > 0) {
       <small class="text-color-secondary mt-1 block">
         <i class="pi pi-info-circle mr-1"></i>
-        Este horario tiene <strong>{{ reservasActivasHorarioEditando() }}</strong> reserva(s) activa(s) (pendientes o confirmadas).
-        La capacidad mínima permitida es <strong>{{ reservasActivasHorarioEditando() }}</strong>.
-        Las reservas completadas o ausentes no cuentan hacia la capacidad.
+        Este horario tiene
+        <strong>{{ reservasActivasHorarioEditando() }}</strong> reserva(s)
+        activa(s) (pendientes o confirmadas). La capacidad mínima permitida es
+        <strong>{{ reservasActivasHorarioEditando() }}</strong
+        >. Las reservas completadas o ausentes no cuentan hacia la capacidad.
       </small>
       }
     </div>
@@ -715,20 +525,27 @@
         (ngModelChange)="horarioEditDescripcion.set($event)"
         [rows]="3"
         [autoResize]="true"
-        placeholder="Añade una descripción para este horario...">
+        placeholder="Añade una descripción para este horario..."
+      >
       </textarea>
     </div>
     }
   </div>
   <ng-template pTemplate="footer">
     <div class="flex justify-content-end gap-2">
-      <p-button label="Cancelar" icon="pi pi-times" [outlined]="true" (click)="mostrarDialogEditar.set(false)">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        [outlined]="true"
+        (click)="mostrarDialogEditar.set(false)"
+      >
       </p-button>
       <app-async-button
         label="Guardar"
         icon="pi pi-check"
         [action]="guardarHorarioEditado"
-        styleClass="p-button-primary">
+        styleClass="p-button-primary"
+      >
       </app-async-button>
     </div>
   </ng-template>

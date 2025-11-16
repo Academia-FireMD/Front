@@ -1,28 +1,30 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
+import { AccordionModule } from 'primeng/accordion';
+import { AvatarModule } from 'primeng/avatar';
+import { BadgeModule } from 'primeng/badge';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { CheckboxModule } from 'primeng/checkbox';
+import { ChipModule } from 'primeng/chip';
 import { DialogModule } from 'primeng/dialog';
-import { InputTextareaModule } from 'primeng/inputtextarea';
-import { TooltipModule } from 'primeng/tooltip';
 import { DropdownModule } from 'primeng/dropdown';
-import { AccordionModule } from 'primeng/accordion';
-import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
-import { BadgeModule } from 'primeng/badge';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { TabViewModule } from 'primeng/tabview';
-import { AvatarModule } from 'primeng/avatar';
-import { ToastrService } from 'ngx-toastr';
-import { CalendarioHorariosComponent, DiaEstado } from '../calendario-horarios/calendario-horarios.component';
-import { HorariosService } from '../../servicios/horarios.service';
-import { HorariosUtilsService } from '../../servicios/horarios-utils.service';
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
+import { firstValueFrom } from 'rxjs';
 import { UserService } from '../../../services/user.service';
-import { EstadoReserva, HorarioDisponible, Reserva, Usuario } from '../../models/horario.model';
 import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
+import { EstadoReserva, HorarioDisponible, Reserva, Usuario } from '../../models/horario.model';
+import { HorariosUtilsService } from '../../servicios/horarios-utils.service';
+import { HorariosService } from '../../servicios/horarios.service';
+import { CalendarioHorariosComponent } from '../calendario-horarios/calendario-horarios.component';
 
 interface HorarioPorProfesor {
     profesor: Usuario;
@@ -41,6 +43,7 @@ interface HorarioPorProfesor {
         ButtonModule,
         CalendarModule,
         CheckboxModule,
+        ChipModule,
         DialogModule,
         InputTextareaModule,
         TooltipModule,
@@ -51,6 +54,7 @@ interface HorarioPorProfesor {
         InputIconModule,
         BadgeModule,
         TabViewModule,
+        TagModule,
         AvatarModule,
         CalendarioHorariosComponent,
         AsyncButtonComponent
@@ -61,7 +65,7 @@ export class HorariosAlumnoComponent {
     utils = inject(HorariosUtilsService);
     userService = inject(UserService);
     toast = inject(ToastrService);
-    
+
     EstadoReserva = EstadoReserva;
 
     horariosDisponibles = signal<HorarioDisponible[]>([]);
@@ -84,7 +88,34 @@ export class HorariosAlumnoComponent {
     }
 
     diasEstados = computed(() => {
-        return this.utils.calcularDiasEstados(this.horariosDisponibles(), [], true);
+        const horariosDisponibles = this.horariosDisponibles();
+        const reservasActivas = this.reservas().filter(reserva => reserva.estado !== EstadoReserva.CANCELADA);
+
+        // Combinar horarios disponibles con los horarios ya reservados (para conocer el estado real del día)
+        const horariosMap = new Map<number, HorarioDisponible>();
+        horariosDisponibles.forEach(horario => horariosMap.set(horario.id, horario));
+
+        reservasActivas.forEach(reserva => {
+            const horario = reserva.horarioDisponible;
+            if (horario && !horariosMap.has(horario.id)) {
+                horariosMap.set(horario.id, horario);
+            }
+        });
+
+        const horariosTotales = Array.from(horariosMap.values());
+        return this.utils.calcularDiasEstados(horariosTotales, reservasActivas, true);
+    });
+
+    diasConReservasAlumno = computed(() => {
+        const diasSet = new Set<string>();
+        this.reservas().forEach(reserva => {
+            if (reserva.horarioDisponible?.fecha) {
+                const fecha = this.utils.toDate(reserva.horarioDisponible.fecha);
+                const fechaKey = this.utils.getDateKey(fecha);
+                diasSet.add(fechaKey);
+            }
+        });
+        return Array.from(diasSet);
     });
 
     todosLosProfesores = computed(() => {
@@ -92,10 +123,9 @@ export class HorariosAlumnoComponent {
         // Esto asegura que tengamos todos los profesores aunque no tengan horarios activos
         return this.todosLosProfesoresDisponibles();
     });
-
     horariosPorProfesor = computed(() => {
         const fecha = this.fechaSeleccionada();
-        
+
         // Si no hay fecha seleccionada, no retornar nada
         if (!fecha) {
             return [];
@@ -121,7 +151,7 @@ export class HorariosAlumnoComponent {
                     });
                 }
             }
-            
+
             if (map.has(adminId)) {
                 map.get(adminId)!.horarios.push(horario);
             }
@@ -168,14 +198,18 @@ export class HorariosAlumnoComponent {
             });
     });
 
+    totalHorariosDisponibles = computed(() => {
+        return this.horariosPorProfesor().reduce((acc, p) => acc + p.horarios.length, 0);
+    });
+
     reservasFiltradas = computed(() => {
         let reservas = this.reservas();
-        
+
         // Filtrar por estado
         if (this.filtroEstado() !== 'TODAS') {
             reservas = reservas.filter(r => r.estado === this.filtroEstado());
         }
-        
+
         // Filtrar por búsqueda de profesor
         const busqueda = this.busquedaProfesor().toLowerCase().trim();
         if (busqueda) {
@@ -185,11 +219,11 @@ export class HorariosAlumnoComponent {
                 return nombre.includes(busqueda) || email.includes(busqueda);
             });
         }
-        
+
         if (!this.mostrarPasadas()) {
             reservas = reservas.filter(r => !this.utils.esReservaPasada(r));
         }
-        
+
         return reservas.sort((a, b) => {
             const fechaA = this.utils.toDate(a.horarioDisponible?.fecha || new Date()).getTime();
             const fechaB = this.utils.toDate(b.horarioDisponible?.fecha || new Date()).getTime();
@@ -201,8 +235,8 @@ export class HorariosAlumnoComponent {
     });
 
     reservasPendientes = computed(() => {
-        return this.reservas().filter(r => 
-            r.estado !== EstadoReserva.CANCELADA && 
+        return this.reservas().filter(r =>
+            r.estado !== EstadoReserva.CANCELADA &&
             r.estado !== EstadoReserva.COMPLETADA
         ).sort((a, b) => {
             const fechaA = this.utils.toDate(a.horarioDisponible?.fecha || new Date()).getTime();
@@ -217,7 +251,7 @@ export class HorariosAlumnoComponent {
     contadoresReservas = computed(() => {
         const reservas = this.reservas();
         const ahora = new Date();
-        
+
         return {
             todas: reservas.length,
             pendientes: reservas.filter(r => r.estado === EstadoReserva.PENDIENTE).length,
@@ -226,33 +260,71 @@ export class HorariosAlumnoComponent {
             canceladas: reservas.filter(r => r.estado === EstadoReserva.CANCELADA).length,
             proximas: reservas.filter(r => {
                 if (!r.horarioDisponible?.fecha || !r.horarioDisponible?.horaInicio) return false;
-                return !this.utils.esReservaPasada(r) && 
-                       r.estado !== EstadoReserva.CANCELADA && 
+                return !this.utils.esReservaPasada(r) &&
+                       r.estado !== EstadoReserva.CANCELADA &&
                        r.estado !== EstadoReserva.COMPLETADA;
             }).length
         };
     });
 
-    reservasAgrupadasPorFecha = computed(() => {
-        const reservas = this.reservasFiltradas();
+    reservasParaMostrar = computed(() => {
+        // Si hay filtros activos, mostrar reservas filtradas, sino todas
+        if (this.tieneFiltrosActivos()) {
+            return this.reservasFiltradas();
+        }
+        return this.reservas();
+    });
+
+    reservasAgrupadasParaMostrar = computed(() => {
+        const reservas = this.reservasParaMostrar();
         const grupos = new Map<string, Reserva[]>();
-        
+
         reservas.forEach(reserva => {
             if (!reserva.horarioDisponible?.fecha) return;
             const fecha = this.utils.toDate(reserva.horarioDisponible.fecha);
-            const fechaKey = fecha.toLocaleDateString('es-ES', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            const fechaKey = fecha.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             });
-            
+
             if (!grupos.has(fechaKey)) {
                 grupos.set(fechaKey, []);
             }
             grupos.get(fechaKey)!.push(reserva);
         });
-        
+
+        return Array.from(grupos.entries()).map(([fecha, reservas]) => ({
+            fecha,
+            reservas: reservas.sort((a, b) => {
+                const horaA = this.utils.toDate(a.horarioDisponible?.horaInicio || new Date()).getTime();
+                const horaB = this.utils.toDate(b.horarioDisponible?.horaInicio || new Date()).getTime();
+                return horaA - horaB;
+            })
+        }));
+    });
+
+    reservasAgrupadasPorFecha = computed(() => {
+        const reservas = this.reservasFiltradas();
+        const grupos = new Map<string, Reserva[]>();
+
+        reservas.forEach(reserva => {
+            if (!reserva.horarioDisponible?.fecha) return;
+            const fecha = this.utils.toDate(reserva.horarioDisponible.fecha);
+            const fechaKey = fecha.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            if (!grupos.has(fechaKey)) {
+                grupos.set(fechaKey, []);
+            }
+            grupos.get(fechaKey)!.push(reserva);
+        });
+
         return Array.from(grupos.entries()).map(([fecha, reservas]) => ({
             fecha,
             reservas: reservas.sort((a, b) => {
@@ -350,9 +422,9 @@ export class HorariosAlumnoComponent {
     }
 
     tieneReservaActiva(horarioId: number): boolean {
-        return this.reservas().some(r => 
-            r.horarioDisponibleId === horarioId && 
-            r.estado !== EstadoReserva.CANCELADA && 
+        return this.reservas().some(r =>
+            r.horarioDisponibleId === horarioId &&
+            r.estado !== EstadoReserva.CANCELADA &&
             r.estado !== EstadoReserva.COMPLETADA
         );
     }
@@ -463,8 +535,8 @@ export class HorariosAlumnoComponent {
     }
 
     tieneFiltrosActivos(): boolean {
-        return this.filtroEstado() !== 'TODAS' || 
-               this.busquedaProfesor().trim().length > 0 || 
+        return this.filtroEstado() !== 'TODAS' ||
+               this.busquedaProfesor().trim().length > 0 ||
                this.mostrarPasadas();
     }
 
@@ -488,6 +560,23 @@ export class HorariosAlumnoComponent {
         const nombre = profesor.nombre?.charAt(0) || '';
         const apellidos = profesor.apellidos?.charAt(0) || '';
         return (nombre + apellidos).toUpperCase();
+    }
+
+    getEstadoSeverity(estado: EstadoReserva): 'success' | 'info' | 'warning' | 'danger' | 'secondary' {
+        switch (estado) {
+            case EstadoReserva.CONFIRMADA:
+                return 'success';
+            case EstadoReserva.PENDIENTE:
+                return 'warning';
+            case EstadoReserva.COMPLETADA:
+                return 'info';
+            case EstadoReserva.AUSENTE:
+                return 'secondary';
+            case EstadoReserva.CANCELADA:
+                return 'danger';
+            default:
+                return 'secondary';
+        }
     }
 }
 
