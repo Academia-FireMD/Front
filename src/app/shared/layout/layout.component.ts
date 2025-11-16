@@ -172,8 +172,8 @@ export class LayoutComponent {
             routerLink: '/app/documentacion/publicaciones',
           },
           {
-            label: 'Gestionar Tutorías',
-            icon: 'pi pi-file-edit',
+            label: 'Tutorías',
+            icon: 'pi pi-calendar',
             routerLink: '/app/horarios',
           },
         ],
