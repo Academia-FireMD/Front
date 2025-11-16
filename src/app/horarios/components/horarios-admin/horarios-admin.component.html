@@ -154,7 +154,6 @@
                         <div class="horarios-badges-container">
                           @for (horario of vistaPrevia.horariosNuevos; track horario.horaInicioStr) {
                           <span class="horario-badge horario-nuevo">
-                            <i class="pi pi-plus"></i>
                             {{ horario.horaInicioStr }} - {{ horario.horaFinStr }}
                           </span>
                           }
@@ -180,8 +179,8 @@
 
                 <!-- Botón crear -->
                 <div class="mt-3">
-                  <app-async-button 
-                    label="Crear Horarios" 
+                  <app-async-button
+                    label="Crear Horarios"
                     icon="pi pi-plus"
                     [action]="establecerHorarios"
                     [disabled]="fechasSeleccionadasHorarios().length === 0 || totalHorariosACrear() === 0"
@@ -212,8 +211,8 @@
                   </div>
                   <div class="flex align-items-center gap-2">
                     @if (horariosSeleccionadosEliminar().length > 0) {
-                    <app-async-button 
-                      [label]="'Eliminar seleccionados (' + horariosSeleccionadosEliminar().length + ')'" 
+                    <app-async-button
+                      [label]="'Eliminar seleccionados (' + horariosSeleccionadosEliminar().length + ')'"
                       icon="pi pi-trash"
                       [action]="eliminarHorariosSeleccionados"
                       styleClass="p-button-danger"
@@ -221,8 +220,8 @@
                     </app-async-button>
                     }
                     @if (mostrarHorariosPasados()) {
-                    <app-async-button 
-                      label="Eliminar horarios pasados" 
+                    <app-async-button
+                      label="Eliminar horarios pasados"
                       icon="pi pi-trash"
                       [action]="eliminarHorariosPasados"
                       styleClass="p-button-danger p-button-outlined"
@@ -254,8 +253,8 @@
                       </div>
                       @if (horariosSeleccionadosEliminar().length > 0) {
                       <div class="field mb-3">
-                        <app-async-button 
-                          [label]="'Eliminar seleccionados (' + horariosSeleccionadosEliminar().length + ')'" 
+                        <app-async-button
+                          [label]="'Eliminar seleccionados (' + horariosSeleccionadosEliminar().length + ')'"
                           icon="pi pi-trash"
                           [action]="eliminarHorariosSeleccionados"
                           styleClass="p-button-danger">
@@ -264,8 +263,8 @@
                       }
                       @if (mostrarHorariosPasados()) {
                       <div class="field mb-3">
-                        <app-async-button 
-                          label="Eliminar horarios pasados" 
+                        <app-async-button
+                          label="Eliminar horarios pasados"
                           icon="pi pi-trash"
                           [action]="eliminarHorariosPasados"
                           styleClass="p-button-danger p-button-outlined">
@@ -448,8 +447,8 @@
                 <p-button label="Seleccionar todas" icon="pi pi-check-square" [outlined]="true"
                   (click)="toggleTodasLasReservas()">
                 </p-button>
-                <app-async-button 
-                  label="Confirmar seleccionadas" 
+                <app-async-button
+                  label="Confirmar seleccionadas"
                   icon="pi pi-check"
                   [action]="confirmarReservas"
                   styleClass="p-button-success">
@@ -519,13 +518,13 @@
                         @if (reserva.estado === EstadoReserva.CONFIRMADA)
                         {
                         <div class="flex gap-2">
-                          <app-async-button 
+                          <app-async-button
                             icon="pi pi-check-circle"
                             [action]="getMarcarCompletadaAction(reserva.id)"
                             styleClass="p-button-success p-button-outlined p-button-sm"
                             tooltip="Marcar como completada">
                           </app-async-button>
-                          <app-async-button 
+                          <app-async-button
                             icon="pi pi-user-minus"
                             [action]="getMarcarAusenteAction(reserva.id)"
                             styleClass="p-button-warning p-button-outlined p-button-sm"
@@ -594,16 +593,16 @@
                       }
                       @if (reserva.estado === EstadoReserva.CONFIRMADA) {
                       <div class="detail-row actions-row">
-                        <app-async-button 
-                          label="Completada" 
+                        <app-async-button
+                          label="Completada"
                           icon="pi pi-check-circle"
                           [action]="getMarcarCompletadaAction(reserva.id)"
                           styleClass="p-button-success p-button-outlined"
                           [style]="{width: 'auto'}"
                           tooltip="Marcar como completada">
                         </app-async-button>
-                        <app-async-button 
-                          label="Ausente" 
+                        <app-async-button
+                          label="Ausente"
                           icon="pi pi-user-minus"
                           [action]="getMarcarAusenteAction(reserva.id)"
                           styleClass="p-button-warning p-button-outlined"
@@ -655,8 +654,8 @@
   <ng-template pTemplate="footer">
     <p-button label="Cancelar" icon="pi pi-times" [outlined]="true" (click)="mostrarDialogCancelacion.set(false)">
     </p-button>
-    <app-async-button 
-      label="Confirmar" 
+    <app-async-button
+      label="Confirmar"
       icon="pi pi-check"
       [action]="cancelarReservas"
       styleClass="p-button-danger">
@@ -690,12 +689,12 @@
 
     <div class="field">
       <label>Capacidad</label>
-      <p-inputNumber 
-        [ngModel]="horarioEditCapacidad()" 
-        (ngModelChange)="horarioEditCapacidad.set($event)" 
+      <p-inputNumber
+        [ngModel]="horarioEditCapacidad()"
+        (ngModelChange)="horarioEditCapacidad.set($event)"
         [min]="capacidadMinimaHorarioEditando()"
-        [max]="100" 
-        [showButtons]="true" 
+        [max]="100"
+        [showButtons]="true"
         [style]="{width: '100%'}">
       </p-inputNumber>
       @if (reservasActivasHorarioEditando() > 0) {
@@ -710,12 +709,12 @@
 
     <div class="field">
       <label>Descripción (opcional)</label>
-      <textarea 
-        pInputTextarea 
-        [ngModel]="horarioEditDescripcion()" 
-        (ngModelChange)="horarioEditDescripcion.set($event)" 
-        [rows]="3" 
-        [autoResize]="true" 
+      <textarea
+        pInputTextarea
+        [ngModel]="horarioEditDescripcion()"
+        (ngModelChange)="horarioEditDescripcion.set($event)"
+        [rows]="3"
+        [autoResize]="true"
         placeholder="Añade una descripción para este horario...">
       </textarea>
     </div>
@@ -725,8 +724,8 @@
     <div class="flex justify-content-end gap-2">
       <p-button label="Cancelar" icon="pi pi-times" [outlined]="true" (click)="mostrarDialogEditar.set(false)">
       </p-button>
-      <app-async-button 
-        label="Guardar" 
+      <app-async-button
+        label="Guardar"
         icon="pi pi-check"
         [action]="guardarHorarioEditado"
         styleClass="p-button-primary">
