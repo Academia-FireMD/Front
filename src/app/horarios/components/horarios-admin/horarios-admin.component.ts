@@ -252,13 +252,30 @@ export class HorariosAdminComponent {
     const diasNumeros = fechas.map(fecha => fecha.getDate()).sort((a, b) => a - b);
     const diasFormateados = diasNumeros.join(', ');
 
+    // Obtener TODOS los horarios existentes para las fechas seleccionadas (sin filtrar por rango)
+    const horariosExistentesTodosSet = new Set<string>();
+    const fechasKeys = fechas.map(f => this.utils.getDateKey(f));
+    
+    horariosExistentesData.forEach(h => {
+      const fechaH = this.utils.toDate(h.fecha);
+      const fechaHKey = this.utils.getDateKey(fechaH);
+      if (fechasKeys.includes(fechaHKey)) {
+        const horaInicioH = this.utils.toDate(h.horaInicio);
+        const horaFinH = this.utils.toDate(h.horaFin);
+        const horaInicioStr = `${horaInicioH.getHours().toString().padStart(2, '0')}:00`;
+        const horaFinStr = `${horaFinH.getHours().toString().padStart(2, '0')}:00`;
+        const horarioKey = `${horaInicioStr}-${horaFinStr}`;
+        horariosExistentesTodosSet.add(horarioKey);
+      }
+    });
+
     // Agrupar días por si tienen o no horarios existentes
     const diasConHorarios: number[] = [];
     const diasSinHorarios: number[] = [];
     
-    // Obtener horarios únicos (sin repetir por día)
+    // Obtener horarios nuevos y existentes dentro del rango seleccionado
     const horariosNuevosSet = new Set<string>();
-    const horariosExistentesSet = new Set<string>();
+    const horariosExistentesEnRangoSet = new Set<string>();
     
     fechas.forEach(fecha => {
       const fechaKey = this.utils.getDateKey(fecha);
@@ -281,7 +298,7 @@ export class HorariosAdminComponent {
         
         if (horarioExiste) {
           tieneHorarios = true;
-          horariosExistentesSet.add(horarioKey);
+          horariosExistentesEnRangoSet.add(horarioKey);
         } else {
           horariosNuevosSet.add(horarioKey);
         }
@@ -300,7 +317,8 @@ export class HorariosAdminComponent {
       return { horaInicioStr, horaFinStr };
     });
     
-    const horariosExistentesList = Array.from(horariosExistentesSet).sort().map(key => {
+    // Mostrar TODOS los horarios existentes, no solo los del rango
+    const horariosExistentesList = Array.from(horariosExistentesTodosSet).sort().map(key => {
       const [horaInicioStr, horaFinStr] = key.split('-');
       return { horaInicioStr, horaFinStr };
     });
@@ -428,7 +446,7 @@ export class HorariosAdminComponent {
 
     // Solo crear nuevos horarios, NO actualizar existentes automáticamente
     fechas.forEach(fecha => {
-      for (let hora = this.horaInicio(); hora <= this.horaFin(); hora++) {
+      for (let hora = this.horaInicio(); hora < this.horaFin(); hora++) {
         const horaInicio = new Date(fecha);
         horaInicio.setHours(hora, 0, 0, 0);
         
