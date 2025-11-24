@@ -68,14 +68,29 @@ export class CambioSuscripcionComponent implements OnInit {
       },
       error: (error) => {
         this.validandoPlazo.set(false);
+        console.error('Error al validar plazo:', error);
+        
+        let errorMessage = 'No se pudo validar el plazo de modificación. ';
+        
+        if (error.error?.message) {
+          errorMessage += error.error.message;
+        } else if (error.status === 0) {
+          errorMessage += 'Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.';
+        } else if (error.status === 404) {
+          errorMessage += 'No se encontró tu suscripción. Por favor, contacta con soporte.';
+        } else if (error.status >= 500) {
+          errorMessage += 'Hay un problema en el servidor. Por favor, intenta más tarde.';
+        } else {
+          errorMessage += 'Por favor, intenta de nuevo o contacta con soporte.';
+        }
+        
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail:
-            error.error?.message ||
-            'No se pudo validar el plazo de modificación',
+          detail: errorMessage,
+          life: 6000,
         });
-        setTimeout(() => this.cerrar.emit(), 2000);
+        setTimeout(() => this.cerrar.emit(), 3000);
       },
     });
   }
@@ -84,16 +99,39 @@ export class CambioSuscripcionComponent implements OnInit {
     this.cargandoPlanes.set(true);
     this.suscripcionService.obtenerPlanesDisponibles().subscribe({
       next: (planes) => {
-        this.planesDisponibles = planes;
+        this.planesDisponibles = planes || [];
         this.cargandoPlanes.set(false);
+        
+        if (this.planesDisponibles.length === 0) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Sin planes disponibles',
+            detail: 'No hay planes disponibles en este momento. Por favor, intenta más tarde o contacta con soporte.',
+            life: 5000,
+          });
+        }
       },
       error: (error) => {
         this.cargandoPlanes.set(false);
+        console.error('Error al cargar planes:', error);
+        
+        let errorMessage = 'No se pudieron cargar los planes disponibles. ';
+        
+        if (error.error?.message) {
+          errorMessage += error.error.message;
+        } else if (error.status === 0) {
+          errorMessage += 'Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.';
+        } else if (error.status >= 500) {
+          errorMessage += 'Hay un problema en el servidor. Por favor, intenta más tarde.';
+        } else {
+          errorMessage += 'Por favor, intenta recargar o contacta con soporte.';
+        }
+        
         this.messageService.add({
           severity: 'error',
-          summary: 'Error',
-          detail:
-            error.error?.message || 'No se pudieron cargar los planes disponibles',
+          summary: 'Error al cargar planes',
+          detail: errorMessage,
+          life: 8000,
         });
       },
     });

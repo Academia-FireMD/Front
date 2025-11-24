@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
-import { Observable, filter, firstValueFrom } from 'rxjs';
+import { Observable, filter, firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { PlanificacionesService } from '../services/planificaciones.service';
 import {
@@ -28,6 +28,7 @@ import {
 } from '../store/user/user.selectors';
 import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.component';
 import { CambioSuscripcionComponent } from './cambio-suscripcion/cambio-suscripcion.component';
+import { ContratarPlanComponent } from './contratar-plan/contratar-plan.component';
 
 @Component({
   selector: 'app-profile',
@@ -38,6 +39,7 @@ export class ProfileComponent implements OnInit {
   // ViewChild para acceder a componentes hijos
   @ViewChild(CambioSuscripcionComponent) cambioSuscripcionComponent?: CambioSuscripcionComponent;
   @ViewChild(BajaSuscripcionComponent) bajaSuscripcionComponent?: BajaSuscripcionComponent;
+  @ViewChild(ContratarPlanComponent) contratarPlanComponent?: ContratarPlanComponent;
 
   // Servicios
   private userService = inject(UserService);
@@ -71,6 +73,7 @@ export class ProfileComponent implements OnInit {
   // Control de dialogs de suscripción
   showCambioSuscripcionDialog = false;
   showBajaSuscripcionDialog = false;
+  showContratarPlanDialog = false;
 
   // Control de subdialogs
   showConfirmacionCambio = false;
@@ -316,6 +319,30 @@ export class ProfileComponent implements OnInit {
   }
 
   navegarACambioSuscripcion(): void {
+    // Si el usuario no está vinculado a WordPress, mostrar alerta y ofrecer vincular
+    if (!this.isLinkedToWordPress()) {
+      const confirmed = confirm(
+        '⚠️ ATENCIÓN: Para cambiar tu plan necesitas vincular tu cuenta con WordPress.\n\n' +
+        '• Tu suscripción actual en la plataforma será CANCELADA\n' +
+        '• Deberás contratar un nuevo plan a través de WooCommerce\n' +
+        '• Tus datos y progreso se mantendrán intactos\n\n' +
+        '¿Deseas vincular tu cuenta ahora?'
+      );
+
+      if (confirmed) {
+        // Pasar true para indicar que ya se mostró la confirmación
+        this.linkToWordPress(true);
+      }
+      return;
+    }
+
+    // Si está vinculado pero no tiene suscripción activa de WooCommerce, mostrar modal de contratación
+    if (!this.hasActiveWooCommerceSubscription()) {
+      this.showContratarPlanDialog = true;
+      return;
+    }
+
+    // Si está vinculado y tiene suscripción activa, mostrar diálogo de cambio
     this.showCambioSuscripcionDialog = true;
   }
 
@@ -440,26 +467,48 @@ export class ProfileComponent implements OnInit {
   }
 
   hasActiveWooCommerceSubscription(): boolean {
-    // Verificar si tiene suscripción activa de WooCommerce
-    // Una suscripción es activa si tiene status ACTIVE y está vinculado a WordPress
-    if (!this.user?.suscripcion || !this.user?.woocommerceCustomerId) {
+    try {
+      // Verificar si tiene suscripción activa de WooCommerce
+      // Una suscripción es activa si tiene status ACTIVE y está vinculado a WordPress
+      if (!this.user?.woocommerceCustomerId) {
+        return false;
+      }
+
+      // Si no tiene suscripción en absoluto, retornar false
+      if (!this.user?.suscripcion) {
+        return false;
+      }
+
+      const subscription = this.user.suscripcion;
+
+      // Verificar por status
+      if (subscription.status === SuscripcionStatus.ACTIVE) {
+        // Verificar también que no haya expirado por fechaFin
+        if (subscription.fechaFin) {
+          try {
+            const endDate = new Date(subscription.fechaFin);
+            const today = new Date();
+            // Asegurarse de que la fecha es válida
+            if (isNaN(endDate.getTime())) {
+              console.warn('Fecha de fin de suscripción inválida:', subscription.fechaFin);
+              return true; // Si la fecha es inválida, asumir que está activa
+            }
+            return endDate > today;
+          } catch (dateError) {
+            console.error('Error al validar fecha de fin:', dateError);
+            // En caso de error, asumir que está activa para no bloquear al usuario
+            return true;
+          }
+        }
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error al verificar suscripción activa:', error);
+      // En caso de error, retornar false para mostrar opciones de contratación
       return false;
     }
-
-    const subscription = this.user.suscripcion;
-
-    // Verificar por status
-    if (subscription.status === SuscripcionStatus.ACTIVE) {
-      // Verificar también que no haya expirado por fechaFin
-      if (subscription.fechaFin) {
-        const endDate = new Date(subscription.fechaFin);
-        const today = new Date();
-        return endDate > today;
-      }
-      return true;
-    }
-
-    return false;
   }
 
   getSubscriptionButtonLabel(): string {
@@ -487,30 +536,50 @@ export class ProfileComponent implements OnInit {
   }
 
   handleSubscriptionAction(): void {
-    if (!this.isLinkedToWordPress()) {
-      this.linkToWordPress();
-      return;
-    }
+    try {
+      if (!this.isLinkedToWordPress()) {
+        this.linkToWordPress();
+        return;
+      }
 
-    if (!this.hasActiveWooCommerceSubscription()) {
-      // Redirigir a página de WooCommerce para contratar
-      this.obtenerPlan();
-      return;
-    }
+      if (!this.hasActiveWooCommerceSubscription()) {
+        // Abrir modal de contratación
+        this.showContratarPlanDialog = true;
+        return;
+      }
 
-    // Ya tiene suscripción, puede cambiar
-    this.navegarACambioSuscripcion();
+      // Ya tiene suscripción, puede cambiar
+      this.navegarACambioSuscripcion();
+    } catch (error) {
+      console.error('Error en handleSubscriptionAction:', error);
+      this.toastService.error(
+        'Ocurrió un error al procesar la acción. Por favor, intenta de nuevo o contacta con soporte.'
+      );
+    }
   }
 
   obtenerPlan(): void {
-    const wooCommerceUrl = environment.wooCommerceUrl;
-    window.open(wooCommerceUrl, '_blank');
+    // Este método ya no se usa, pero lo mantenemos por compatibilidad
+    this.showContratarPlanDialog = true;
+  }
 
-    this.toastService.info('Serás redirigido a nuestra tienda para seleccionar tu plan');
+  cerrarDialogContratarPlan(): void {
+    this.showContratarPlanDialog = false;
   }
 
   canUnsubscribe(): boolean {
     return this.isLinkedToWordPress() && this.hasActiveWooCommerceSubscription();
+  }
+
+  hasActiveSubscription(): boolean {
+    // Verificar si tiene suscripción activa (tanto WooCommerce como "por negro")
+    if (!this.user?.suscripcion) {
+      return false;
+    }
+
+    // Verificar si está activa
+    const status = this.user.suscripcion.status;
+    return status === SuscripcionStatus.ACTIVE;
   }
 
   getMotivoLabel(motivo: MotivoBaja): string {
@@ -527,9 +596,9 @@ export class ProfileComponent implements OnInit {
     return motivosMap[motivo] || motivo;
   }
 
-  linkToWordPress(): void {
-    // Si tiene suscripción local, mostrar advertencia
-    if (this.user?.suscripcion) {
+  linkToWordPress(skipConfirmation: boolean = false): void {
+    // Si tiene suscripción local y no se saltó la confirmación, mostrar advertencia
+    if (this.user?.suscripcion && !skipConfirmation) {
       const confirmed = confirm(
         '⚠️ ATENCIÓN: Al vincular tu cuenta con WordPress:\n\n' +
         '• Tu suscripción actual en la plataforma será CANCELADA\n' +
@@ -553,31 +622,61 @@ export class ProfileComponent implements OnInit {
           // Recargar datos del usuario desde el store
           this.store.dispatch(UserActions.loadUser());
 
-          // Esperar a que el store se actualice y actualizar el usuario local
-          const updatedUser = await firstValueFrom(
-            this.user$.pipe(filter(user => user !== null && !!user.woocommerceCustomerId))
-          );
-          this.user = cloneDeep(updatedUser);
+          // Esperar a que el store se actualice con timeout
+          try {
+            const updatedUser = await firstValueFrom(
+              this.user$.pipe(
+                filter(user => user !== null && !!user.woocommerceCustomerId),
+                // Timeout de 10 segundos
+                timeout(10000)
+              )
+            );
+            this.user = cloneDeep(updatedUser);
 
-          // Si no tiene suscripción WP, mostrar mensaje
-          if (!this.hasActiveWooCommerceSubscription()) {
+            // Si no tiene suscripción WP, abrir modal de contratación automáticamente
+            if (!this.hasActiveWooCommerceSubscription()) {
+              setTimeout(() => {
+                this.showContratarPlanDialog = true;
+              }, 500);
+            }
+          } catch (timeoutError) {
+            console.error('Timeout esperando actualización del usuario:', timeoutError);
+            // Recargar manualmente el usuario como fallback
+            this.store.dispatch(UserActions.loadUser());
+            this.toastService.warning(
+              'La vinculación fue exitosa, pero hay un retraso en la actualización. ' +
+              'Por favor, recarga la página o contacta con soporte si el problema persiste.'
+            );
+            // Intentar abrir el modal de todas formas
             setTimeout(() => {
-              alert(
-                '✅ Vinculación exitosa!\n\n' +
-                'Para completar el proceso, necesitas contratar un plan.\n' +
-                'Haz clic en "Obtener plan" para ver las opciones disponibles.'
-              );
+              this.showContratarPlanDialog = true;
             }, 1000);
           }
         } else {
-          this.toastService.warning(response.message);
+          this.toastService.warning(
+            response.message || 'No se pudo completar la vinculación. Por favor, intenta de nuevo.'
+          );
         }
       },
       error: (error) => {
         console.error('Error al vincular con WordPress:', error);
-        this.toastService.error(
-          'No se pudo vincular la cuenta. Por favor, contacta con soporte.'
-        );
+        
+        // Mensajes de error más específicos
+        let errorMessage = 'No se pudo vincular la cuenta. ';
+        
+        if (error.error?.message) {
+          errorMessage += error.error.message;
+        } else if (error.status === 0) {
+          errorMessage += 'Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.';
+        } else if (error.status === 404) {
+          errorMessage += 'El servicio no está disponible. Por favor, contacta con soporte.';
+        } else if (error.status >= 500) {
+          errorMessage += 'Hay un problema en el servidor. Por favor, intenta más tarde o contacta con soporte.';
+        } else {
+          errorMessage += 'Por favor, contacta con soporte si el problema persiste.';
+        }
+        
+        this.toastService.error(errorMessage);
       },
     });
   }

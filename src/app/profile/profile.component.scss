@@ -247,62 +247,66 @@
 
 // Banner de vinculación con WordPress
 .link-banner {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background-color: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  color: var(--text-color);
 
   i {
-    color: white;
+    color: var(--primary-color);
   }
 
   h4 {
     font-size: 1rem;
     font-weight: 600;
+    color: var(--text-color);
   }
 
   p {
-    opacity: 0.95;
+    color: var(--text-color-secondary);
     line-height: 1.5;
   }
 
   ::ng-deep .p-button {
-    background-color: white;
-    color: #667eea;
-    border-color: white;
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.9);
-      border-color: rgba(255, 255, 255, 0.9);
+      background-color: var(--primary-600);
+      border-color: var(--primary-600);
     }
   }
 }
 
 // Banner sin plan activo
 .no-plan-banner {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
+  background-color: var(--orange-50);
+  border: 1px solid var(--orange-200);
+  color: var(--text-color);
 
   i {
-    color: white;
+    color: var(--orange-500);
   }
 
   h4 {
     font-size: 1rem;
     font-weight: 600;
+    color: var(--text-color);
   }
 
   p {
-    opacity: 0.95;
+    color: var(--text-color-secondary);
     line-height: 1.5;
   }
 
   ::ng-deep .p-button {
-    background-color: white;
-    color: #f5576c;
-    border-color: white;
+    background-color: var(--orange-500);
+    color: white;
+    border-color: var(--orange-500);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.9);
-      border-color: rgba(255, 255, 255, 0.9);
+      background-color: var(--orange-600);
+      border-color: var(--orange-600);
     }
   }
 }

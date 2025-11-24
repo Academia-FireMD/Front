@@ -243,7 +243,7 @@
                   </span>
                 </div>
 
-                <div class="subscription-item">
+                <div class="subscription-item" *ngIf="isLinkedToWordPress()">
                   <label class="mb-0">Precio mensual:</label>
                   <span>{{ user.suscripcion.monthlyPrice || 0 }} €</span>
                 </div>
@@ -275,41 +275,6 @@
               </div>
 
               <div class="subscription-actions mt-4">
-                <!-- Banner de vinculación si no está vinculado -->
-                <div
-                  class="link-banner mb-3 p-3 border-round"
-                  *ngIf="!isLinkedToWordPress()"
-                >
-                  <div class="flex align-items-start gap-3">
-                    <i class="pi pi-info-circle text-2xl"></i>
-                    <div class="flex-1">
-                      <h4 class="m-0 mb-2">Vincula tu cuenta con WordPress</h4>
-                      <p class="m-0 mb-2 text-sm">
-                        Para gestionar tu suscripción y pagos, vincula tu cuenta
-                        con WordPress.
-                      </p>
-                      <p
-                        class="m-0 mb-3 text-sm font-semibold"
-                        style="color: #ffd700"
-                        *ngIf="user?.suscripcion"
-                      >
-                        ⚠️ Atención: Tu suscripción actual será cancelada al
-                        vincular.
-                      </p>
-                      <p class="m-0 mb-3 text-sm" *ngIf="!user?.suscripcion">
-                        Después podrás seleccionar el plan que mejor se adapte a
-                        ti.
-                      </p>
-                      <p-button
-                        label="Vincular ahora"
-                        icon="pi pi-link"
-                        styleClass="p-button-sm"
-                        (onClick)="handleSubscriptionAction()"
-                      ></p-button>
-                    </div>
-                  </div>
-                </div>
-
                 <!-- Banner sin plan activo -->
                 <div
                   class="no-plan-banner mb-3 p-3 border-round"
@@ -336,14 +301,16 @@
                 <!-- Botones de gestión cuando tiene plan activo -->
                 <div
                   class="flex flex-column gap-2"
-                  *ngIf="isLinkedToWordPress() && hasActiveWooCommerceSubscription()"
+                  *ngIf="hasActiveSubscription()"
                 >
+                  <!-- Botón cambiar plan para todos los usuarios con suscripción activa -->
                   <p-button
                     label="Cambiar plan"
                     icon="pi pi-sync"
                     styleClass="p-button-outlined w-full"
                     (onClick)="navegarACambioSuscripcion()"
                   ></p-button>
+                  <!-- Botón dar de baja para todos los usuarios con suscripción activa -->
                   <p-button
                     label="Dar de baja"
                     icon="pi pi-sign-out"
@@ -535,6 +502,23 @@
     (solicitarConfirmacion)="onSolicitarConfirmacionBaja($event)"
     (mostrarFueraDePlazo)="onFueraDePlazoBaja($event)"
   ></app-baja-suscripcion>
+</p-dialog>
+
+<!-- Dialog para Contratar Plan -->
+<p-dialog
+  header="Contratar Plan"
+  [(visible)]="showContratarPlanDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '95vw', maxWidth: '1400px' }"
+  (onHide)="cerrarDialogContratarPlan()"
+>
+  <app-contratar-plan
+    *ngIf="showContratarPlanDialog"
+    (cerrar)="cerrarDialogContratarPlan()"
+  ></app-contratar-plan>
 </p-dialog>
 
 <!-- Dialog de Confirmación Cambio -->

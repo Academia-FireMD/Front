@@ -38,6 +38,8 @@ export interface ProductoWooCommerce {
   description: string;
   type: string;
   imageUrl?: string | null;
+  permalink?: string | null; // URL completa del producto en WooCommerce
+  slug?: string | null; // Slug del producto
 }
 
 export interface ResultadoCambioSuscripcion {
