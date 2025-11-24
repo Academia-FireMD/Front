@@ -1,0 +1,106 @@
+:host {
+  display: block;
+}
+
+::ng-deep {
+  .calendario-horarios {
+    width: 100%;
+
+    .p-calendar {
+      width: 100%;
+    }
+
+    .p-datepicker-calendar {
+      td {
+        .date-cell {
+          display: inline-block;
+          width: 100%;
+          height: 100%;
+          padding: 0.5rem;
+          border-radius: 4px;
+          
+          &.dia-disponible {
+            background-color: #4caf50 !important;
+            color: white !important;
+          }
+
+          &.dia-parcial {
+            background-color: #2196f3 !important;
+            color: white !important;
+          }
+
+          &.dia-completo {
+            background-color: #ff9800 !important;
+            color: white !important;
+          }
+
+          &.dia-con-reserva {
+            position: relative;
+            
+            &::after {
+              content: '';
+              position: absolute;
+              bottom: 2px;
+              right: 2px;
+              width: 8px;
+              height: 8px;
+              background-color: #9c27b0;
+              border-radius: 50%;
+              border: 1px solid white;
+              box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+            }
+          }
+        }
+        
+        &.dia-disponible,
+        &.dia-parcial,
+        &.dia-completo {
+          color: white !important;
+          border-radius: 4px;
+        }
+
+        &.dia-disponible {
+          background-color: #4caf50 !important;
+        }
+
+        &.dia-parcial {
+          background-color: #2196f3 !important;
+        }
+
+        &.dia-completo {
+          background-color: #ff9800 !important;
+        }
+
+        // Estilos para fechas seleccionadas
+        &.p-highlight {
+          background-color: #9c27b0 !important;
+          color: white !important;
+          border: 2px solid #7b1fa2 !important;
+          box-shadow: 0 0 8px rgba(156, 39, 176, 0.5) !important;
+          font-weight: bold !important;
+          
+          // Si la fecha seleccionada también tiene un estado, mantener el color del estado pero con borde
+          &.dia-disponible,
+          &.dia-parcial,
+          &.dia-completo {
+            border: 3px solid #9c27b0 !important;
+            box-shadow: 0 0 8px rgba(156, 39, 176, 0.7) !important;
+          }
+
+          &.dia-disponible {
+            background-color: #4caf50 !important;
+          }
+
+          &.dia-parcial {
+            background-color: #2196f3 !important;
+          }
+
+          &.dia-completo {
+            background-color: #ff9800 !important;
+          }
+        }
+      }
+    }
+  }
+}
+
