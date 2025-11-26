@@ -198,6 +198,12 @@ export class ExamenesService extends ApiBaseService {
     });
   }
 
+  public impugnarPreguntaDesdeTest$(testId: number, preguntaId: number, motivoImpugnacion: string) {
+    return this.post(`/tests/${testId}/preguntas/${preguntaId}/impugnar`, {
+      motivoImpugnacion
+    });
+  }
+
   public getExamenesRealizados$(pagination: PaginationFilter): Observable<PaginatedResult<any>> {
     return this.post('/realizados', pagination) as Observable<PaginatedResult<any>>;
   }
