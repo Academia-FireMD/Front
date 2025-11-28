@@ -468,42 +468,42 @@ export class ProfileComponent implements OnInit {
 
   hasActiveWooCommerceSubscription(): boolean {
     try {
-      // Verificar si tiene suscripción activa de WooCommerce
-      // Una suscripción es activa si tiene status ACTIVE y está vinculado a WordPress
+    // Verificar si tiene suscripción activa de WooCommerce
+    // Una suscripción es activa si tiene status ACTIVE y está vinculado a WordPress
       if (!this.user?.woocommerceCustomerId) {
         return false;
       }
 
       // Si no tiene suscripción en absoluto, retornar false
       if (!this.user?.suscripcion) {
-        return false;
-      }
+      return false;
+    }
 
-      const subscription = this.user.suscripcion;
+    const subscription = this.user.suscripcion;
 
-      // Verificar por status
-      if (subscription.status === SuscripcionStatus.ACTIVE) {
-        // Verificar también que no haya expirado por fechaFin
-        if (subscription.fechaFin) {
+    // Verificar por status
+    if (subscription.status === SuscripcionStatus.ACTIVE) {
+      // Verificar también que no haya expirado por fechaFin
+      if (subscription.fechaFin) {
           try {
-            const endDate = new Date(subscription.fechaFin);
-            const today = new Date();
+        const endDate = new Date(subscription.fechaFin);
+        const today = new Date();
             // Asegurarse de que la fecha es válida
             if (isNaN(endDate.getTime())) {
               console.warn('Fecha de fin de suscripción inválida:', subscription.fechaFin);
               return true; // Si la fecha es inválida, asumir que está activa
             }
-            return endDate > today;
+        return endDate > today;
           } catch (dateError) {
             console.error('Error al validar fecha de fin:', dateError);
             // En caso de error, asumir que está activa para no bloquear al usuario
             return true;
           }
-        }
-        return true;
       }
+      return true;
+    }
 
-      return false;
+    return false;
     } catch (error) {
       console.error('Error al verificar suscripción activa:', error);
       // En caso de error, retornar false para mostrar opciones de contratación
@@ -537,19 +537,19 @@ export class ProfileComponent implements OnInit {
 
   handleSubscriptionAction(): void {
     try {
-      if (!this.isLinkedToWordPress()) {
-        this.linkToWordPress();
-        return;
-      }
+    if (!this.isLinkedToWordPress()) {
+      this.linkToWordPress();
+      return;
+    }
 
-      if (!this.hasActiveWooCommerceSubscription()) {
+    if (!this.hasActiveWooCommerceSubscription()) {
         // Abrir modal de contratación
         this.showContratarPlanDialog = true;
-        return;
-      }
+      return;
+    }
 
-      // Ya tiene suscripción, puede cambiar
-      this.navegarACambioSuscripcion();
+    // Ya tiene suscripción, puede cambiar
+    this.navegarACambioSuscripcion();
     } catch (error) {
       console.error('Error en handleSubscriptionAction:', error);
       this.toastService.error(
@@ -624,18 +624,18 @@ export class ProfileComponent implements OnInit {
 
           // Esperar a que el store se actualice con timeout
           try {
-            const updatedUser = await firstValueFrom(
+          const updatedUser = await firstValueFrom(
               this.user$.pipe(
                 filter(user => user !== null && !!user.woocommerceCustomerId),
                 // Timeout de 10 segundos
                 timeout(10000)
               )
-            );
-            this.user = cloneDeep(updatedUser);
+          );
+          this.user = cloneDeep(updatedUser);
 
             // Si no tiene suscripción WP, abrir modal de contratación automáticamente
-            if (!this.hasActiveWooCommerceSubscription()) {
-              setTimeout(() => {
+          if (!this.hasActiveWooCommerceSubscription()) {
+            setTimeout(() => {
                 this.showContratarPlanDialog = true;
               }, 500);
             }
