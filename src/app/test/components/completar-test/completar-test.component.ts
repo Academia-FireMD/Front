@@ -26,6 +26,7 @@ import { AuthService } from '../../../services/auth.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TestService } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
+import { ExamenesService } from '../../../examen/servicios/examen.service';
 import {
     Dificultad,
     Pregunta,
@@ -51,6 +52,7 @@ export class CompletarTestComponent {
   router = inject(Router);
   reporteFallo = inject(ReportesFalloService);
   viewportService = inject(ViewportService);
+  examenesService = inject(ExamenesService);
   @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
   public location = inject(Location);
   auth = inject(AuthService);
@@ -68,6 +70,8 @@ export class CompletarTestComponent {
   public displayNavegador = false;
   public displayClonacion = false;
   public displayFalloDialog = false;
+  public displayImpugnacionDialog = false;
+  public motivoImpugnacion = new FormControl('', [Validators.required, Validators.minLength(10)]);
   public indiceSeleccionado = new BehaviorSubject(-1);
   public seguroDeLaPregunta = new FormControl(
     SeguridadAlResponder.CIEN_POR_CIENTO
@@ -385,6 +389,43 @@ export class CompletarTestComponent {
       'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.'
     );
     this.displayFalloDialog = false;
+  }
+
+  public showImpugnacionDialog() {
+    if (!this.isModoExamen()) {
+      this.toast.warning('Solo se pueden impugnar preguntas en exámenes');
+      return;
+    }
+    this.motivoImpugnacion.reset();
+    this.displayImpugnacionDialog = true;
+  }
+
+  public async submitImpugnacion() {
+    if (this.motivoImpugnacion.invalid) {
+      this.toast.error('El motivo de impugnación debe tener al menos 10 caracteres');
+      return;
+    }
+
+    try {
+      await firstValueFrom(
+        this.examenesService.impugnarPreguntaDesdeTest$(
+          this.lastLoadedTest.id,
+          this.lastLoadedTest.preguntas[this.indicePregunta()].id,
+          this.motivoImpugnacion.value ?? ''
+        )
+      );
+      this.toast.success(
+        'Pregunta impugnada exitosamente. Los administradores han sido notificados y revisarán tu solicitud.'
+      );
+      this.displayImpugnacionDialog = false;
+      this.motivoImpugnacion.reset();
+      // Recargar el test para mostrar la pregunta como impugnada
+      await firstValueFrom(this.loadTest());
+    } catch (error: any) {
+      this.toast.error(
+        error?.error?.message || 'Error al impugnar la pregunta. Intenta de nuevo.'
+      );
+    }
   }
 
   public siguiente() {
