@@ -25,7 +25,7 @@
   </div>
 </p-overlayPanel>
 
-<div class="contenedor-comunidades">
+<div class="contenedor-comunidades" [class.preseleccionada]="preseleccionada">
   <div class="list flex align-items-center gap-1">
     @if (comunidades.length==0) {
     <span>Relevancia: </span>
@@ -33,6 +33,7 @@
     <img
       src="{{ map[comunidad].image }}"
       class="img-flag"
+      [class.flag-preseleccionada]="preseleccionada"
       *ngFor="let comunidad of comunidades"
     />
   </div>

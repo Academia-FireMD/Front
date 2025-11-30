@@ -3,6 +3,13 @@
   align-items: center;
   gap: 5px;
   justify-content: center;
+
+  &.preseleccionada {
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: rgba(25, 135, 84, 0.1); // Verde claro para indicar preselección
+    border: 1px solid rgba(25, 135, 84, 0.3);
+  }
 }
 :host ::ng-deep {
   .p-button-icon {
@@ -13,5 +20,12 @@
 .list {
   @media (max-width: 768px) {
     flex-wrap: wrap;
+  }
+}
+
+.img-flag {
+  &.flag-preseleccionada {
+    box-shadow: 0 0 0 2px rgba(25, 135, 84, 0.5);
+    border-radius: 2px;
   }
 }

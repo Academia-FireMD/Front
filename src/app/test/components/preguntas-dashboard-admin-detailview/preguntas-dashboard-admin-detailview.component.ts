@@ -25,6 +25,7 @@ import {
   Observable,
   tap,
 } from 'rxjs';
+import { Store } from '@ngrx/store';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
@@ -36,6 +37,8 @@ import {
   Pregunta,
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
+import { AppState } from '../../../store/app.state';
+import { selectCurrentUser } from '../../../store/user/user.selectors';
 import {
   getLetter,
   getStarsBasedOnDifficulty,
@@ -59,7 +62,9 @@ export class PreguntasDashboardAdminDetailviewComponent {
   viewportService = inject(ViewportService);
   examenesService = inject(ExamenesService);
   confirmationService = inject(ConfirmationService);
+  store = inject(Store<AppState>);
   @Input() expectedRole: Rol = Rol.ADMIN;
+  public isRelevanciaPreseleccionada = false;
   crearOtroControl = new FormControl(false);
   editorSolucion!: any;
   editorEnunciado!: any;
@@ -195,6 +200,18 @@ export class PreguntasDashboardAdminDetailviewComponent {
       }
 
       this.esReserva = this.activedRoute.snapshot.queryParamMap.get('esReserva') === 'true';
+
+      // Obtener usuario y establecer relevancia si es alumno
+      firstValueFrom(this.store.select(selectCurrentUser)).then((user) => {
+        if (user && user.rol === Rol.ALUMNO) {
+          // Si es nueva pregunta, establecer relevancia desde el perfil
+          if (this.getId() === 'new' && user.comunidad) {
+            this.relevancia.clear();
+            this.relevancia.push(new FormControl(user.comunidad));
+            this.isRelevanciaPreseleccionada = true;
+          }
+        }
+      });
     }
 
     // Cargar exámenes colaborativos activos
@@ -289,6 +306,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public updateCommunitySelection(communities: Comunidad[]) {
     this.relevancia.clear();
     communities.forEach((code) => this.relevancia.push(new FormControl(code)));
+    // Si se modifica manualmente, ya no está preseleccionada
+    this.isRelevanciaPreseleccionada = false;
   }
 
   public addNewPregunta() {
