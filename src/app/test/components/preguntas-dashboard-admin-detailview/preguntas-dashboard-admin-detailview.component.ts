@@ -37,6 +37,7 @@ import {
   Pregunta,
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
+import { RelevanciaHelperService } from '../../../shared/services/relevancia-helper.service';
 import { AppState } from '../../../store/app.state';
 import { selectCurrentUser } from '../../../store/user/user.selectors';
 import {
@@ -63,8 +64,15 @@ export class PreguntasDashboardAdminDetailviewComponent {
   examenesService = inject(ExamenesService);
   confirmationService = inject(ConfirmationService);
   store = inject(Store<AppState>);
+  relevanciaHelper = inject(RelevanciaHelperService);
   @Input() expectedRole: Rol = Rol.ADMIN;
-  public isRelevanciaPreseleccionada = false;
+  
+  // Helper para manejar la preselección de relevancia
+  relevanciaPreseleccionHelper!: ReturnType<typeof this.relevanciaHelper.crearHelper>;
+  
+  public get isRelevanciaPreseleccionada() {
+    return this.relevanciaPreseleccionHelper?.isRelevanciaPreseleccionada ?? false;
+  }
   crearOtroControl = new FormControl(false);
   editorSolucion!: any;
   editorEnunciado!: any;
@@ -75,7 +83,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
     cloned.id = undefined as any;
     cloned.dificultad = Dificultad.PRIVADAS;
     cloned.identificador = null as any;
-    this.setLoadedPregunta(cloned);
+    this.setLoadedPregunta(cloned).catch(console.error);
   }
   @Output() preguntaCreada = new EventEmitter<Pregunta>();
 
@@ -86,17 +94,14 @@ export class PreguntasDashboardAdminDetailviewComponent {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
   }
 
-  private processPreguntaRequest(
+  private async processPreguntaRequest(
     requestFn: (identificador: string) => Observable<Pregunta>
-  ): void {
-    firstValueFrom(
-      requestFn(this.formGroup.value.identificador ?? '').pipe(
-        tap((e) => {
-          this.setLoadedPregunta(e);
-          this.navigatetoPregunta(e.id + '');
-        })
-      )
+  ): Promise<void> {
+    const e = await firstValueFrom(
+      requestFn(this.formGroup.value.identificador ?? '')
     );
+    await this.setLoadedPregunta(e);
+    this.navigatetoPregunta(e.id + '');
   }
 
   public siguientePregunta() {
@@ -187,6 +192,9 @@ export class PreguntasDashboardAdminDetailviewComponent {
   private esReserva = false;
 
   ngOnInit(): void {
+    // Inicializar el helper después de que el FormArray esté disponible
+    this.relevanciaPreseleccionHelper = this.relevanciaHelper.crearHelper(this.relevancia);
+    
     if (this.mode == 'edit') {
       this.loadPregunta();
       firstValueFrom(this.getRole());
@@ -201,17 +209,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
       this.esReserva = this.activedRoute.snapshot.queryParamMap.get('esReserva') === 'true';
 
-      // Obtener usuario y establecer relevancia si es alumno
-      firstValueFrom(this.store.select(selectCurrentUser)).then((user) => {
-        if (user && user.rol === Rol.ALUMNO) {
-          // Si es nueva pregunta, establecer relevancia desde el perfil
-          if (this.getId() === 'new' && user.comunidad) {
-            this.relevancia.clear();
-            this.relevancia.push(new FormControl(user.comunidad));
-            this.isRelevanciaPreseleccionada = true;
-          }
-        }
-      });
+      // Preseleccionar relevancia según rol
+      this.preseleccionarRelevancia();
     }
 
     // Cargar exámenes colaborativos activos
@@ -256,13 +255,10 @@ export class PreguntasDashboardAdminDetailviewComponent {
     );
   }
 
-  private setLoadedPregunta(pregunta: Pregunta) {
+  private async setLoadedPregunta(pregunta: Pregunta) {
     this.lastLoadedPregunta.set(pregunta);
     this.formGroup.patchValue(pregunta);
-    this.relevancia.clear();
-    pregunta.relevancia.forEach((relevancia) =>
-      this.relevancia.push(new FormControl(relevancia))
-    );
+    await this.relevanciaPreseleccionHelper.cargarRelevanciaExistente(pregunta.relevancia);
     this.respuestas.clear();
     pregunta.respuestas.forEach((respuesta) =>
       this.respuestas.push(
@@ -278,19 +274,16 @@ export class PreguntasDashboardAdminDetailviewComponent {
     this.formGroup.markAsPristine();
   }
 
-  private loadPregunta() {
+  private async loadPregunta() {
     const itemId = this.getId();
     if (itemId === 'new') {
       this.formGroup.reset();
       this.initEditor('', '');
     } else {
-      firstValueFrom(
-        this.preguntasService.getPreguntaById(itemId).pipe(
-          tap((entry) => {
-            this.setLoadedPregunta(entry);
-          })
-        )
+      const entry = await firstValueFrom(
+        this.preguntasService.getPreguntaById(itemId)
       );
+      await this.setLoadedPregunta(entry);
     }
   }
 
@@ -303,11 +296,16 @@ export class PreguntasDashboardAdminDetailviewComponent {
     this.respuestas.markAsPristine();
   }
 
+  /**
+   * Preselecciona la relevancia según el rol del usuario
+   */
+  private async preseleccionarRelevancia() {
+    const isNew = this.getId() === 'new';
+    await this.relevanciaPreseleccionHelper.preseleccionar(isNew);
+  }
+
   public updateCommunitySelection(communities: Comunidad[]) {
-    this.relevancia.clear();
-    communities.forEach((code) => this.relevancia.push(new FormControl(code)));
-    // Si se modifica manualmente, ya no está preseleccionada
-    this.isRelevanciaPreseleccionada = false;
+    this.relevanciaPreseleccionHelper.actualizarSeleccion(communities);
   }
 
   public addNewPregunta() {

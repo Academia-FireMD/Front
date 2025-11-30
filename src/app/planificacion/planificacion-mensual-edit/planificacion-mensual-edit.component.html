@@ -148,6 +148,7 @@
         <div class="relevancia">
           <app-comunidad-picker
             [allowAdd]="true"
+            [preseleccionada]="isRelevanciaPreseleccionada"
             [comunidades]="relevancia.value"
             (updateSelection)="updateCommunitySelection($event)"
           ></app-comunidad-picker>

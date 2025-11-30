@@ -31,6 +31,7 @@ import {
   Dificultad,
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
+import { RelevanciaHelperService } from '../../../shared/services/relevancia-helper.service';
 import { AppState } from '../../../store/app.state';
 import { selectCurrentUser } from '../../../store/user/user.selectors';
 import {
@@ -53,8 +54,15 @@ export class FlashcardDetailviewAdminComponent {
   flashCardService = inject(FlashcardDataService);
   confirmationService = inject(ConfirmationService);
   store = inject(Store<AppState>);
+  relevanciaHelper = inject(RelevanciaHelperService);
   public expectedRole: Rol = Rol.ADMIN;
-  public isRelevanciaPreseleccionada = false;
+  
+  // Helper para manejar la preselección de relevancia
+  relevanciaPreseleccionHelper!: ReturnType<typeof this.relevanciaHelper.crearHelper>;
+  
+  public get isRelevanciaPreseleccionada() {
+    return this.relevanciaPreseleccionHelper?.isRelevanciaPreseleccionada ?? false;
+  }
   editor!: any;
   editorEnunciado!: any;
   crearOtroControl = new FormControl(false);
@@ -65,20 +73,17 @@ export class FlashcardDetailviewAdminComponent {
     cloned.id = undefined as any;
     cloned.dificultad = Dificultad.PRIVADAS;
     cloned.identificador = null as any;
-    this.setFlashcard(cloned);
+    this.setFlashcard(cloned).catch(console.error);
   }
   @Output() flashcardCreada = new EventEmitter<FlashcardData>();
-  private processFlashcardRequest(
+  private async processFlashcardRequest(
     requestFn: (identificador: string) => Observable<FlashcardData>
-  ): void {
-    firstValueFrom(
-      requestFn(this.formGroup.value.identificador ?? '').pipe(
-        tap((flashcard) => {
-          this.setFlashcard(flashcard);
-          this.navigateToFlashcard(flashcard.id + '');
-        })
-      )
+  ): Promise<void> {
+    const flashcard = await firstValueFrom(
+      requestFn(this.formGroup.value.identificador ?? '')
     );
+    await this.setFlashcard(flashcard);
+    this.navigateToFlashcard(flashcard.id + '');
   }
 
   public siguienteFlashcard() {
@@ -158,21 +163,15 @@ export class FlashcardDetailviewAdminComponent {
   public getAllDifficultades = getAllDifficultades;
 
   ngOnInit(): void {
+    // Inicializar el helper después de que el FormArray esté disponible
+    this.relevanciaPreseleccionHelper = this.relevanciaHelper.crearHelper(this.relevancia);
+    
     if (this.mode == 'edit') {
       this.loadFlashcard();
       firstValueFrom(this.getRole());
 
-      // Obtener usuario y establecer relevancia si es alumno
-      firstValueFrom(this.store.select(selectCurrentUser)).then((user) => {
-        if (user && user.rol === Rol.ALUMNO) {
-          // Si es nueva flashcard, establecer relevancia desde el perfil
-          if (this.getId() === 'new' && user.comunidad) {
-            this.relevancia.clear();
-            this.relevancia.push(new FormControl(user.comunidad));
-            this.isRelevanciaPreseleccionada = true;
-          }
-        }
-      });
+      // Preseleccionar relevancia según rol
+      this.preseleccionarRelevancia();
     }
   }
 
@@ -201,11 +200,16 @@ export class FlashcardDetailviewAdminComponent {
     seguridad: [''],
   });
 
+  /**
+   * Preselecciona la relevancia según el rol del usuario
+   */
+  private async preseleccionarRelevancia() {
+    const isNew = this.getId() === 'new';
+    await this.relevanciaPreseleccionHelper.preseleccionar(isNew);
+  }
+
   public updateCommunitySelection(communities: Comunidad[]) {
-    this.relevancia.clear();
-    communities.forEach((code) => this.relevancia.push(new FormControl(code)));
-    // Si se modifica manualmente, ya no está preseleccionada
-    this.isRelevanciaPreseleccionada = false;
+    this.relevanciaPreseleccionHelper.actualizarSeleccion(communities);
   }
 
   public handleBackButton() {
@@ -220,13 +224,10 @@ export class FlashcardDetailviewAdminComponent {
     }
   }
 
-  private setFlashcard(flashcard: FlashcardData) {
+  private async setFlashcard(flashcard: FlashcardData) {
     this.lastLoadedFlashcard.set(flashcard);
     this.formGroup.patchValue(flashcard);
-    this.relevancia.clear();
-    flashcard.relevancia.forEach((relevancia) =>
-      this.relevancia.push(new FormControl(relevancia))
-    );
+    await this.relevanciaPreseleccionHelper.cargarRelevanciaExistente(flashcard.relevancia);
     this.formGroup.markAsPristine();
     setTimeout(() => {
       this.initEditor(
@@ -236,19 +237,16 @@ export class FlashcardDetailviewAdminComponent {
     }, 0);
   }
 
-  private loadFlashcard() {
+  private async loadFlashcard() {
     const itemId = this.getId();
     if (itemId === 'new') {
       this.formGroup.reset();
       this.initEditor('', '');
     } else {
-      firstValueFrom(
-        this.flashCardService.getFlashcardById(itemId).pipe(
-          tap((entry) => {
-            this.setFlashcard(entry);
-          })
-        )
+      const entry = await firstValueFrom(
+        this.flashCardService.getFlashcardById(itemId)
       );
+      await this.setFlashcard(entry);
     }
   }
 

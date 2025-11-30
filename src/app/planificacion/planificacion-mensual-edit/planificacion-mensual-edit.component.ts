@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Store } from '@ngrx/store';
 import {
     FormArray,
     FormBuilder,
@@ -30,8 +31,12 @@ import {
     duracionesDisponibles,
 } from '../../shared/models/pregunta.model';
 import {
+    Rol,
     TipoDePlanificacionDeseada
 } from '../../shared/models/user.model';
+import { RelevanciaHelperService } from '../../shared/services/relevancia-helper.service';
+import { AppState } from '../../store/app.state';
+import { selectCurrentUser } from '../../store/user/user.selectors';
 import { getNextWeekIfFriday, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 
@@ -63,9 +68,17 @@ export class PlanificacionMensualEditComponent {
   public get tipoDePlanificacion() {
     return this.formGroup.get('tipoDePlanificacion') as FormControl;
   }
+
+  /**
+   * Preselecciona la relevancia según el rol del usuario
+   */
+  private async preseleccionarRelevancia() {
+    const isNew = this.getId() === 'new';
+    await this.relevanciaPreseleccionHelper.preseleccionar(isNew);
+  }
+
   public updateCommunitySelection(communities: Comunidad[]) {
-    this.relevancia.clear();
-    communities.forEach((code) => this.relevancia.push(new FormControl(code)));
+    this.relevanciaPreseleccionHelper.actualizarSeleccion(communities);
   }
   lastLoadedPlanification = signal(null as PlanificacionMensual | null);
   viewportService = inject(ViewportService);
@@ -75,6 +88,15 @@ export class PlanificacionMensualEditComponent {
   userService = inject(UserService);
   toast = inject(ToastrService);
   router = inject(Router);
+  store = inject(Store<AppState>);
+  relevanciaHelper = inject(RelevanciaHelperService);
+  
+  // Helper para manejar la preselección de relevancia
+  relevanciaPreseleccionHelper!: ReturnType<typeof this.relevanciaHelper.crearHelper>;
+  
+  public get isRelevanciaPreseleccionada() {
+    return this.relevanciaPreseleccionHelper?.isRelevanciaPreseleccionada ?? false;
+  }
   events: CalendarEvent[] = [];
   viewDate = new Date();
   view: CalendarView = CalendarView.Week;
@@ -423,10 +445,12 @@ export class PlanificacionMensualEditComponent {
 
 
   ngOnInit(): void {
+    // Inicializar el helper después de que el FormArray esté disponible
+    this.relevanciaPreseleccionHelper = this.relevanciaHelper.crearHelper(this.relevancia);
     this.load();
   }
 
-  private load() {
+  private async load() {
     const itemId = this.getId();
     if (itemId === 'new') {
       this.formGroup.reset();
@@ -434,66 +458,65 @@ export class PlanificacionMensualEditComponent {
         ano: new Date().getFullYear(),
         mes: new Date().getMonth() + 1,
       });
+      
+      // Preseleccionar relevancia según rol
+      await this.preseleccionarRelevancia();
     } else {
-      firstValueFrom(
-        this.planificacionesService.getPlanificacionMensualById$(itemId).pipe(
-          tap((entry) => {
-            this.lastLoadedPlanification.set(entry);
-            const subBloques = entry.subBloques;
-
-            // Convertir los subbloques a eventos
-            this.events = this.eventsService.fromSubbloquesToEvents(subBloques);
-
-            // Para alumnos, cargar también los eventos personalizados
-            if (this.expectedRole === 'ALUMNO') {
-              this.loadEventosPersonalizados(Number(itemId));
-            }
-
-            // Configurar eventos para alumnos
-            if (this.expectedRole === 'ALUMNO') {
-              this.events.forEach((event) => {
-                // Permitir arrastre para alumnos
-                event.draggable = true;
-                // Pero no permitir redimensionar
-                event.resizable = {
-                  beforeStart: false,
-                  afterEnd: false,
-                };
-
-                // Aplicar posiciones personalizadas si existen
-                if (event.meta?.subBloque?.posicionPersonalizada) {
-                  const posicion = new Date(
-                    event.meta.subBloque.posicionPersonalizada
-                  );
-                  // Mantener la duración original
-                  const duracion = event.end
-                    ? event.end.getTime() - event.start.getTime()
-                    : 0;
-                  // Establecer la nueva posición
-                  event.start = posicion;
-                  event.end = new Date(posicion.getTime() + duracion);
-                }
-              });
-
-              this.userService.getCurrentUser$().subscribe((user: any) => {
-                this.startDate = user.validatedAt
-                  ? new Date(user.validatedAt)
-                  : new Date(user.createdAt);
-                this.endDate = getNextWeekIfFriday(new Date());
-              });
-            }
-
-            this.relevancia.clear();
-            entry.relevancia.forEach((e) =>
-              this.relevancia.push(new FormControl(e))
-            );
-
-            this.usuariosSeleccionadosId = [];
-            this.formGroup.patchValue(entry);
-            this.formGroup.markAsPristine();
-          })
-        )
+      const entry = await firstValueFrom(
+        this.planificacionesService.getPlanificacionMensualById$(itemId)
       );
+      
+      this.lastLoadedPlanification.set(entry);
+      const subBloques = entry.subBloques;
+
+      // Convertir los subbloques a eventos
+      this.events = this.eventsService.fromSubbloquesToEvents(subBloques);
+
+      // Para alumnos, cargar también los eventos personalizados
+      if (this.expectedRole === 'ALUMNO') {
+        this.loadEventosPersonalizados(Number(itemId));
+      }
+
+      // Configurar eventos para alumnos
+      if (this.expectedRole === 'ALUMNO') {
+        this.events.forEach((event) => {
+          // Permitir arrastre para alumnos
+          event.draggable = true;
+          // Pero no permitir redimensionar
+          event.resizable = {
+            beforeStart: false,
+            afterEnd: false,
+          };
+
+          // Aplicar posiciones personalizadas si existen
+          if (event.meta?.subBloque?.posicionPersonalizada) {
+            const posicion = new Date(
+              event.meta.subBloque.posicionPersonalizada
+            );
+            // Mantener la duración original
+            const duracion = event.end
+              ? event.end.getTime() - event.start.getTime()
+              : 0;
+            // Establecer la nueva posición
+            event.start = posicion;
+            event.end = new Date(posicion.getTime() + duracion);
+          }
+        });
+
+        this.userService.getCurrentUser$().subscribe((user: any) => {
+          this.startDate = user.validatedAt
+            ? new Date(user.validatedAt)
+            : new Date(user.createdAt);
+          this.endDate = getNextWeekIfFriday(new Date());
+        });
+      }
+
+      // Cargar relevancia existente
+      await this.relevanciaPreseleccionHelper.cargarRelevanciaExistente(entry.relevancia || []);
+
+      this.usuariosSeleccionadosId = [];
+      this.formGroup.patchValue(entry);
+      this.formGroup.markAsPristine();
     }
   }
 

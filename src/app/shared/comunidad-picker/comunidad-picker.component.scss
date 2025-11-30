@@ -9,6 +9,7 @@
     border-radius: 4px;
     background-color: rgba(25, 135, 84, 0.1); // Verde claro para indicar preselección
     border: 1px solid rgba(25, 135, 84, 0.3);
+    position: relative;
   }
 }
 :host ::ng-deep {
@@ -23,9 +24,34 @@
   }
 }
 
+.preseleccionada-label {
+  font-size: 0.85rem;
+  color: rgba(25, 135, 84, 0.8);
+  font-weight: 500;
+  font-style: italic;
+}
+
 .img-flag {
   &.flag-preseleccionada {
     box-shadow: 0 0 0 2px rgba(25, 135, 84, 0.5);
     border-radius: 2px;
+    position: relative;
+    
+    &::after {
+      content: '✓';
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background-color: rgba(25, 135, 84, 0.9);
+      color: white;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: bold;
+    }
   }
 }

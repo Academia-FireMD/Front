@@ -30,11 +30,15 @@
     @if (comunidades.length==0) {
     <span>Relevancia: </span>
     }
+    @if (preseleccionada && comunidades.length > 0) {
+      <span class="preseleccionada-label">Preseleccionada: </span>
+    }
     <img
       src="{{ map[comunidad].image }}"
       class="img-flag"
       [class.flag-preseleccionada]="preseleccionada"
       *ngFor="let comunidad of comunidades"
+      [title]="preseleccionada ? 'Relevancia preseleccionada automáticamente' : ''"
     />
   </div>
 

@@ -55,6 +55,7 @@
               />
               <app-comunidad-picker
                 [allowAdd]="true"
+                [preseleccionada]="isRelevanciaPreseleccionada"
                 [comunidades]="relevancia.value"
                 (updateSelection)="updateCommunitySelection($event)"
               />

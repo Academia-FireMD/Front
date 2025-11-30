@@ -29,9 +29,10 @@ import { ViewportService } from '../../../services/viewport.service';
 import { ConfidenceAnalysis } from '../../../shared/components/confidence-analysis-cards/confidence-analysis-cards.component';
 import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
 import { MetodoCalificacion, Rol } from '../../../shared/models/user.model';
+import { RelevanciaHelperService } from '../../../shared/services/relevancia-helper.service';
 import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-test.component';
 import { AppState } from '../../../store/app.state';
-import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
+import { selectUserMetodoCalificacion, selectCurrentUser } from '../../../store/user/user.selectors';
 import {
     calcular100,
     calcular100y50,
@@ -63,8 +64,16 @@ export class ExamenesDashboardAdminDetailviewComponent {
   viewportService = inject(ViewportService);
   cdr = inject(ChangeDetectorRef);
   store = inject(Store<AppState>);
+  relevanciaHelper = inject(RelevanciaHelperService);
   public expectedRole: Rol = Rol.ADMIN;
   crearOtroControl = new FormControl(false);
+  
+  // Helper para manejar la preselección de relevancia
+  relevanciaPreseleccionHelper!: ReturnType<typeof this.relevanciaHelper.crearHelper>;
+  
+  public get isRelevanciaPreseleccionada() {
+    return this.relevanciaPreseleccionHelper?.isRelevanciaPreseleccionada ?? false;
+  }
 
   // Selector para obtener el método de calificación del usuario
   userMetodoCalificacion$ = this.store.select(selectUserMetodoCalificacion);
@@ -293,11 +302,16 @@ export class ExamenesDashboardAdminDetailviewComponent {
   }
 
   ngOnInit(): void {
+    // Inicializar el helper después de que el FormArray esté disponible
+    this.relevanciaPreseleccionHelper = this.relevanciaHelper.crearHelper(this.relevancia);
+    
     // Suscribirse al método de calificación del usuario
     this.userMetodoCalificacion$.subscribe((metodo) => {
       this.currentMetodoCalificacion = metodo;
     });
 
+    // Preseleccionar relevancia si es nuevo examen
+    this.preseleccionarRelevancia();
 
     if (this.mode == 'edit') {
       this.loadExamen();
@@ -372,7 +386,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     );
   }
 
-  private setLoadedExamen(examen: Examen) {
+  private async setLoadedExamen(examen: Examen) {
     this.lastLoadedExamen.set(examen);
     this.formGroup.patchValue({
       titulo: examen.titulo,
@@ -403,12 +417,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
 
     // Cargar relevancia
-    this.relevancia.clear();
-    if (examen.relevancia && examen.relevancia.length) {
-      examen.relevancia.forEach((rel) =>
-        this.relevancia.push(new FormControl(rel))
-      );
-    }
+    await this.relevanciaPreseleccionHelper.cargarRelevanciaExistente(examen.relevancia || []);
 
     setTimeout(() => {
       this.initEditor(examen.descripcion || '');
@@ -434,13 +443,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.initEditor('');
     } else {
       try {
-        firstValueFrom(
-          this.examenesService.getExamenById$(itemId).pipe(
-            tap((entry) => {
-              this.setLoadedExamen(entry);
-            })
-          )
+        const entry = await firstValueFrom(
+          this.examenesService.getExamenById$(itemId)
         );
+        await this.setLoadedExamen(entry);
 
         // Actualizar la URL del simulacro si es necesario
         if (
@@ -455,9 +461,16 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
   }
 
+  /**
+   * Preselecciona la relevancia según el rol del usuario
+   */
+  private async preseleccionarRelevancia() {
+    const isNew = this.getId() === 'new';
+    await this.relevanciaPreseleccionHelper.preseleccionar(isNew);
+  }
+
   public updateCommunitySelection(communities: Comunidad[]) {
-    this.relevancia.clear();
-    communities.forEach((code) => this.relevancia.push(new FormControl(code)));
+    this.relevanciaPreseleccionHelper.actualizarSeleccion(communities);
   }
 
   private async updateExamen() {
