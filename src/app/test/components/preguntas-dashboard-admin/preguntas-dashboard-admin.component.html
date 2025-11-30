@@ -44,13 +44,11 @@
       ></p-button>
       <p-button
         label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Importar'
+          viewportService.screenWidth == 'xs' ? undefined : 'Ficheros'
         }}"
-        icon="pi pi-upload"
-        [loading]="uploadingFile"
-        (click)="
-          importForm.reset(); selectedFile = null; mostrarImportDialog = true
-        "
+        icon="pi pi-file"
+        [link]="true"
+        (click)="abrirDialogoFicheros()"
       ></p-button>
     </div>
   </div>
@@ -61,12 +59,31 @@
 </app-generic-list>
 
 <p-dialog
-  header="Importar preguntas desde Excel"
-  [(visible)]="mostrarImportDialog"
+  header="Gestión de ficheros"
+  [(visible)]="mostrarFicherosDialog"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
+  [style]="{ width: '50vw' }"
+  [breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
 >
+  <!-- Toggle para elegir modo -->
+  <div class="flex justify-content-center mb-4">
+    <p-selectButton
+      [options]="[
+        { label: 'Importar', value: 'importar', icon: 'pi pi-upload' },
+        { label: 'Exportar', value: 'exportar', icon: 'pi pi-download' }
+      ]"
+      [(ngModel)]="modoFicheros"
+      (ngModelChange)="cambiarModoFicheros($event)"
+      optionLabel="label"
+      optionValue="value"
+      [style]="{ width: '100%' }"
+    ></p-selectButton>
+  </div>
+
+  <!-- Formulario de Importar -->
+  <div *ngIf="modoFicheros === 'importar'">
   <div class="flex flex-column gap-3" [formGroup]="importForm">
     <div class="grid">
       <div class="col-12 md:col-8 h-full">
@@ -129,18 +146,92 @@
       </div>
     </div>
   </div>
-  <div class="flex justify-content-end gap-2 mt-3">
-    <p-button
-      label="Cancelar"
-      styleClass="p-button-outlined"
-      (click)="mostrarImportDialog = false"
-    ></p-button>
-    <p-button
-      label="Importar"
-      icon="pi pi-upload"
-      (click)="importarPreguntas()"
-      [disabled]="!selectedFile || importForm.invalid"
-    ></p-button>
+    <div class="flex justify-content-end gap-2 mt-3">
+      <p-button
+        label="Cancelar"
+        styleClass="p-button-outlined"
+        (click)="mostrarFicherosDialog = false"
+      ></p-button>
+      <p-button
+        label="Importar"
+        icon="pi pi-upload"
+        (click)="importarPreguntas()"
+        [disabled]="!selectedFile || importForm.invalid"
+      ></p-button>
+    </div>
+  </div>
+
+  <!-- Formulario de Exportar -->
+  <div *ngIf="modoFicheros === 'exportar'">
+    <div class="flex flex-column gap-3" [formGroup]="exportForm">
+      <div class="grid">
+        <div class="col-12 md:col-8 h-full">
+          <label class="block mb-2">Tema</label>
+          <app-tema-select
+            [multiple]="false"
+            [formControl]="exportForm.controls['temaId']"
+          ></app-tema-select>
+        </div>
+        <div class="col-12 md:col-4 h-full">
+          <label class="block mb-2">Dificultad</label>
+          <app-dificultad-dropdown
+            [formControlDificultad]="exportForm.controls['dificultad']"
+            [isDoingTest]="expectedRole == 'ADMIN'"
+          ></app-dificultad-dropdown>
+        </div>
+      </div>
+
+      <div>
+        <label class="block mb-2">Formato de exportación</label>
+        <p-dropdown
+          [formControl]="exportForm.controls['formato']"
+          [options]="[
+            { label: 'Excel (.xlsx)', value: 'excel' },
+            { label: 'Word (.docx)', value: 'word' }
+          ]"
+          placeholder="Seleccionar formato"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+        ></p-dropdown>
+      </div>
+
+      <div class="grid">
+        <div class="col-12 md:col-6">
+          <h4>Información incluida</h4>
+          <ul>
+            <li>Identificador de la pregunta</li>
+            <li>Tema</li>
+            <li>Descripción</li>
+            <li>Todas las respuestas</li>
+            <li>Respuesta correcta (marcada)</li>
+          </ul>
+        </div>
+        <div class="col-12 md:col-6">
+          <h4>Información adicional</h4>
+          <ul>
+            <li>Solución/explicación</li>
+            <li>Dificultad</li>
+            <li>Relevancia/Comunidad</li>
+            <li>Información del creador</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-content-end gap-2 mt-3">
+      <p-button
+        label="Cancelar"
+        styleClass="p-button-outlined"
+        (click)="mostrarFicherosDialog = false"
+      ></p-button>
+      <p-button
+        [label]="exportForm.value.formato === 'excel' ? 'Exportar Excel' : 'Exportar Word'"
+        [icon]="exportForm.value.formato === 'excel' ? 'pi pi-file-excel' : 'pi pi-file-word'"
+        (click)="exportarPreguntas()"
+        [loading]="exportando"
+        [disabled]="exportForm.invalid"
+      ></p-button>
+    </div>
   </div>
 </p-dialog>
 

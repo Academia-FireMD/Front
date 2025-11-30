@@ -87,4 +87,42 @@ export class PreguntasService extends ApiBaseService {
       { responseType: 'blob' }
     );
   }
+
+  public exportarPreguntasExcel(temaIds?: number[], soloAlumnos?: boolean): Observable<Blob> {
+    let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/excel`;
+    const params: string[] = [];
+    
+    if (temaIds && temaIds.length > 0) {
+      params.push(`temaIds=${temaIds.join(',')}`);
+    }
+    
+    if (soloAlumnos !== undefined) {
+      params.push(`soloAlumnos=${soloAlumnos}`);
+    }
+    
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+    
+    return this._http.get(url, { responseType: 'blob' });
+  }
+
+  public exportarPreguntasWord(temaIds?: number[], soloAlumnos?: boolean): Observable<Blob> {
+    let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/word`;
+    const params: string[] = [];
+    
+    if (temaIds && temaIds.length > 0) {
+      params.push(`temaIds=${temaIds.join(',')}`);
+    }
+    
+    if (soloAlumnos !== undefined) {
+      params.push(`soloAlumnos=${soloAlumnos}`);
+    }
+    
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+    
+    return this._http.get(url, { responseType: 'blob' });
+  }
 }

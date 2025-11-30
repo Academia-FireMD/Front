@@ -20,6 +20,7 @@ import {
   Observable,
   tap,
 } from 'rxjs';
+import { Store } from '@ngrx/store';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
@@ -30,6 +31,8 @@ import {
   Dificultad,
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
+import { AppState } from '../../../store/app.state';
+import { selectCurrentUser } from '../../../store/user/user.selectors';
 import {
   getAllDifficultades,
   universalEditorConfig
@@ -49,7 +52,9 @@ export class FlashcardDetailviewAdminComponent {
   viewportService = inject(ViewportService);
   flashCardService = inject(FlashcardDataService);
   confirmationService = inject(ConfirmationService);
+  store = inject(Store<AppState>);
   public expectedRole: Rol = Rol.ADMIN;
+  public isRelevanciaPreseleccionada = false;
   editor!: any;
   editorEnunciado!: any;
   crearOtroControl = new FormControl(false);
@@ -156,6 +161,18 @@ export class FlashcardDetailviewAdminComponent {
     if (this.mode == 'edit') {
       this.loadFlashcard();
       firstValueFrom(this.getRole());
+
+      // Obtener usuario y establecer relevancia si es alumno
+      firstValueFrom(this.store.select(selectCurrentUser)).then((user) => {
+        if (user && user.rol === Rol.ALUMNO) {
+          // Si es nueva flashcard, establecer relevancia desde el perfil
+          if (this.getId() === 'new' && user.comunidad) {
+            this.relevancia.clear();
+            this.relevancia.push(new FormControl(user.comunidad));
+            this.isRelevanciaPreseleccionada = true;
+          }
+        }
+      });
     }
   }
 
@@ -187,6 +204,8 @@ export class FlashcardDetailviewAdminComponent {
   public updateCommunitySelection(communities: Comunidad[]) {
     this.relevancia.clear();
     communities.forEach((code) => this.relevancia.push(new FormControl(code)));
+    // Si se modifica manualmente, ya no está preseleccionada
+    this.isRelevanciaPreseleccionada = false;
   }
 
   public handleBackButton() {
