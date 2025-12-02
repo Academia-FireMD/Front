@@ -153,7 +153,7 @@ export class FlashcardDataService extends ApiBaseService {
     );
   }
 
-  public exportarFlashcardsExcel(temaIds?: number[], soloAlumnos?: boolean): Observable<Blob> {
+  public exportarFlashcardsExcel(temaIds?: number[], soloAlumnos?: boolean, dificultad?: Dificultad): Observable<Blob> {
     let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/excel`;
     const params: string[] = [];
     
@@ -164,7 +164,10 @@ export class FlashcardDataService extends ApiBaseService {
     if (soloAlumnos !== undefined) {
       params.push(`soloAlumnos=${soloAlumnos}`);
     }
-    
+
+    if (dificultad) {
+      params.push(`dificultad=${dificultad}`);
+    }
     if (params.length > 0) {
       url += `?${params.join('&')}`;
     }
@@ -172,7 +175,7 @@ export class FlashcardDataService extends ApiBaseService {
     return this._http.get(url, { responseType: 'blob' });
   }
 
-  public exportarFlashcardsWord(temaIds?: number[], soloAlumnos?: boolean): Observable<Blob> {
+  public exportarFlashcardsWord(temaIds?: number[], soloAlumnos?: boolean, dificultad?: Dificultad): Observable<Blob> {
     let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/word`;
     const params: string[] = [];
     
@@ -183,7 +186,10 @@ export class FlashcardDataService extends ApiBaseService {
     if (soloAlumnos !== undefined) {
       params.push(`soloAlumnos=${soloAlumnos}`);
     }
-    
+
+    if (dificultad) {
+      params.push(`dificultad=${dificultad}`);
+    }
     if (params.length > 0) {
       url += `?${params.join('&')}`;
     }
