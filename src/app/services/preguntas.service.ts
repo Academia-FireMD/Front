@@ -6,7 +6,7 @@ import {
   PaginatedResult,
   PaginationFilter,
 } from '../shared/models/pagination.model';
-import { Pregunta } from '../shared/models/pregunta.model';
+import { Dificultad, Pregunta } from '../shared/models/pregunta.model';
 import { ApiBaseService } from './api-base.service';
 import { GenerarTestDto } from './test.service';
 
@@ -86,5 +86,50 @@ export class PreguntasService extends ApiBaseService {
       environment.apiUrl + this.controllerPrefix + '/plantilla-importacion',
       { responseType: 'blob' }
     );
+  }
+
+  public exportarPreguntasExcel(temaIds?: number[], soloAlumnos?: boolean, dificultad?: Dificultad): Observable<Blob> {
+    let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/excel`;
+    const params: string[] = [];
+
+    if (temaIds && temaIds.length > 0) {
+      params.push(`temaIds=${temaIds.join(',')}`);
+    }
+
+    if (soloAlumnos !== undefined) {
+      params.push(`soloAlumnos=${soloAlumnos}`);
+    }
+
+    if (dificultad) {
+      params.push(`dificultad=${dificultad}`);
+    }
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+
+    return this._http.get(url, { responseType: 'blob' });
+  }
+
+  public exportarPreguntasWord(temaIds?: number[], soloAlumnos?: boolean, dificultad?: Dificultad): Observable<Blob> {
+    let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/word`;
+    const params: string[] = [];
+
+    if (temaIds && temaIds.length > 0) {
+      params.push(`temaIds=${temaIds.join(',')}`);
+    }
+
+    if (soloAlumnos !== undefined) {
+      params.push(`soloAlumnos=${soloAlumnos}`);
+    }
+
+    if (dificultad) {
+      params.push(`dificultad=${dificultad}`);
+    }
+
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+
+    return this._http.get(url, { responseType: 'blob' });
   }
 }
