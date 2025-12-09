@@ -27,7 +27,8 @@ import { TemaService } from '../../../services/tema.service';
 import { GenerarTestDto } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { ConfidenceAnalysis } from '../../../shared/components/confidence-analysis-cards/confidence-analysis-cards.component';
-import { Comunidad, Pregunta } from '../../../shared/models/pregunta.model';
+import { Pregunta } from '../../../shared/models/pregunta.model';
+import { Oposicion } from '../../../shared/models/subscription.model';
 import { MetodoCalificacion, Rol } from '../../../shared/models/user.model';
 import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-test.component';
 import { AppState } from '../../../store/app.state';
@@ -191,7 +192,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     temasColaborativos: [[]] as Array<any>,
     condicionesColaborativas: this.fb.array([]),
     metodoCalificacion: [null as MetodoCalificacion | null], // Opcional, si es null usa el del usuario
-    relevancia: this.fb.array([] as Array<Comunidad>),
+    relevancia: this.fb.array([] as Array<Oposicion>),
   });
 
   public get relevancia() {
@@ -455,9 +456,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
   }
 
-  public updateCommunitySelection(communities: Comunidad[]) {
+  public updateOposicionSelection(oposiciones: Oposicion[]) {
     this.relevancia.clear();
-    communities.forEach((code) => this.relevancia.push(new FormControl(code)));
+    oposiciones.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
 
   private async updateExamen() {

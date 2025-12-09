@@ -1,4 +1,5 @@
-import { Comunidad, Pregunta } from "../../shared/models/pregunta.model";
+import { Pregunta } from "../../shared/models/pregunta.model";
+import { Oposicion } from "../../shared/models/subscription.model";
 import { Test } from "../../shared/models/test.model";
 import { MetodoCalificacion } from "../../shared/models/user.model";
 
@@ -39,7 +40,7 @@ export interface Examen {
   temasColaborativos?: number[];
   condicionesColaborativas?: CondicionColaborativa[];
   metodoCalificacion?: MetodoCalificacion;
-  relevancia: Comunidad[];
+  relevancia: Oposicion[];
   creadorId: number;
   testId?: number;
   test?: Test;

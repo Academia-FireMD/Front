@@ -22,8 +22,11 @@ export class SubscriptionGuard implements CanActivate {
     return this.store.select(selectCurrentUser).pipe(
       take(1),
       map(user => {
-        const subscriptionType = user?.suscripcion?.tipo;
-        const hasAccess = this.hasAccess(subscriptionType, allowedSubscriptions);
+        // Obtener el tipo de suscripción más alto de todas las suscripciones activas
+        const subscriptionTypes = user?.suscripciones
+          ?.filter(s => s.status === 'ACTIVE')
+          ?.map(s => s.tipo) || [];
+        const hasAccess = this.hasAccess(subscriptionTypes, allowedSubscriptions);
 
         if (!hasAccess) {
           this.router.navigate(['/app/profile']);
@@ -36,11 +39,12 @@ export class SubscriptionGuard implements CanActivate {
     );
   }
 
-  private hasAccess(subscriptionType?: SuscripcionTipo, allowedSubscriptions?: SuscripcionTipo[]): boolean {
+  private hasAccess(subscriptionTypes: SuscripcionTipo[], allowedSubscriptions?: SuscripcionTipo[]): boolean {
     if (!allowedSubscriptions || allowedSubscriptions.length === 0) {
       return true; // Si no se especifican restricciones, permitir acceso
     }
 
-    return subscriptionType ? allowedSubscriptions.includes(subscriptionType) : false;
+    // Verificar si alguna de las suscripciones activas está permitida
+    return subscriptionTypes.some(type => allowedSubscriptions.includes(type));
   }
 }

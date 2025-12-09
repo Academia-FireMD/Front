@@ -1,5 +1,5 @@
-import { Comunidad, NivelOposicion, TipoOposicion } from './pregunta.model';
-import { Suscripcion } from './subscription.model';
+import { NivelOposicion, TipoOposicion } from './pregunta.model';
+import { Oposicion, Suscripcion } from './subscription.model';
 import { Test } from './test.model';
 
 
@@ -16,14 +16,14 @@ export interface Usuario {
   apellidos: string;
   esTutor: boolean;
   tutorId?: number;
-  comunidad: Comunidad;
   avatarUrl: string;
   sub?: number;
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
   metodoCalificacion: MetodoCalificacion;
   woocommerceCustomerId?: string;
-  suscripcion?: Suscripcion;
+  suscripciones?: Suscripcion[];  // Usuario puede tener múltiples suscripciones
   consumibles?: Consumible[];
+  oposiciones?: Oposicion[];  // Oposiciones activas (derivado de suscripciones activas)
   labels?: { labelId: string; label: { id: string; key: string; value?: string } }[];
 
   // Campos de onboarding

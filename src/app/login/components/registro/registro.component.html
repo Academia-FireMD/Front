@@ -16,92 +16,10 @@
   <div class="grid">
     <p-card class="col-12">
       <div class="card-login py-4 flex flex-column gap-4">
-        <!-- Loading indicator -->
-        <div *ngIf="isLoading" class="loading-overlay">
-          <p-progressSpinner></p-progressSpinner>
-        </div>
-
-        <!-- Activation Info -->
-        <div
-          *ngIf="mode === 'activation' && registroTemporal"
-          class="activation-info mb-4"
-        >
-          <h3>Completa tu activación</h3>
-
-          <!-- Info para Suscripciones -->
-          <div
-            *ngIf="registroTemporal.tipoRegistro === 'SUSCRIPCION'"
-            class="plan-details"
-          >
-            <p>
-              <strong>Plan seleccionado:</strong>
-              {{ registroTemporal.planType }}
-            </p>
-            <p>
-              <strong>Precio mensual:</strong>
-              {{ registroTemporal.monthlyPrice | number : "1.2-2" }}€
-            </p>
-          </div>
-
-          <!-- Info para Consumibles -->
-          <div
-            *ngIf="registroTemporal.tipoRegistro === 'CONSUMIBLE'"
-            class="product-details"
-          >
-            <p>
-              <strong>Producto:</strong>
-              <span [ngSwitch]="registroTemporal.tipoConsumible">
-                <span *ngSwitchCase="'SIMULACRO'">Simulacro de examen</span>
-                <span *ngSwitchCase="'EXAMEN'">Examen</span>
-                <span *ngSwitchCase="'CURSO'">Curso</span>
-                <span *ngSwitchDefault>Producto</span>
-              </span>
-            </p>
-            <p>
-              <strong>Precio:</strong>
-              {{ registroTemporal.precio | number : "1.2-2" }}€
-            </p>
-            <p class="text-sm text-secondary mt-2">
-              <i class="pi pi-info-circle mr-2"></i>
-              Una vez completes el registro, podrás acceder a tu producto desde
-              tu panel personal.
-            </p>
-          </div>
-
-          <div class="alert alert-info mt-3">
-            <i class="pi pi-check-circle mr-2"></i>
-            Rellena los siguientes datos para activar tu
-            {{
-              registroTemporal.tipoRegistro === "SUSCRIPCION"
-                ? "suscripción"
-                : "producto"
-            }}.
-          </div>
-
-          <!-- Botón "Ya tengo cuenta" para consumibles -->
-          <div
-            *ngIf="registroTemporal?.tipoRegistro === 'CONSUMIBLE'"
-            class="mt-3"
-          >
-            <button
-              pButton
-              type="button"
-              class="p-button-secondary p-button-text"
-              (click)="irALoginConActivacion()"
-            >
-              <i class="pi pi-user mr-2"></i>
-              Ya tengo una cuenta
-            </button>
-          </div>
-        </div>
-
-        <!-- Formulario básico de registro -->
+        <!-- Formulario de registro -->
         <div
           class="form-login"
-          [ngClass]="{
-            'injected-form-login': mode == 'injected',
-            'activation-form-login': mode == 'activation'
-          }"
+          [ngClass]="{ 'injected-form-login': mode == 'injected' }"
           [formGroup]="formGroup"
         >
           <div class="imagen">
@@ -118,7 +36,6 @@
             />
             <label for="nombre">Nombre</label>
           </p-floatLabel>
-          <!-- Error: nombre requerido -->
           <div
             *ngIf="
               formGroup.get('nombre')?.hasError('required') &&
@@ -139,7 +56,6 @@
             />
             <label for="apellidos">Apellidos</label>
           </p-floatLabel>
-          <!-- Error: apellidos requerido -->
           <div
             *ngIf="
               formGroup.get('apellidos')?.hasError('required') &&
@@ -157,7 +73,6 @@
             [placeholder]="'Comunidad'"
             [multiple]="false"
           ></app-comunidad-dropdown>
-          <!-- Error: relevancia requerida -->
           <div
             *ngIf="
               formGroup.get('relevancia')?.hasError('required') &&
@@ -178,7 +93,6 @@
             />
             <label for="email">Email</label>
           </p-floatLabel>
-          <!-- Error: formato de email inválido -->
           <div
             *ngIf="
               formGroup.get('email')?.hasError('email') &&
@@ -188,7 +102,6 @@
           >
             <small class="p-error">El formato del email no es válido.</small>
           </div>
-          <!-- Error: email requerido -->
           <div
             *ngIf="
               formGroup.get('email')?.hasError('required') &&
@@ -202,14 +115,12 @@
           <app-password-input
             formControlName="contrasenya"
           ></app-password-input>
-          <!-- Error: contraseña requerida -->
           <div
             *ngIf="contrasenya?.hasError('required') && contrasenya?.touched"
             class="error-message"
           >
             <small class="p-error">La contraseña es requerida.</small>
           </div>
-          <!-- Error: contraseña no segura -->
           <div
             *ngIf="
               contrasenya?.hasError('passwordStrength') && contrasenya?.touched
@@ -226,8 +137,6 @@
             formControlName="repetirContrasenya"
             [label]="'Repetir Contraseña'"
           ></app-password-input>
-
-          <!-- Error: repetir contraseña requerida -->
           <div
             *ngIf="
               repetirContrasenya?.hasError('required') &&
@@ -237,7 +146,6 @@
           >
             <small class="p-error">Repetir la contraseña es requerido.</small>
           </div>
-          <!-- Error: las contraseñas no coinciden -->
           <div
             *ngIf="
               formGroup.hasError('passwordsDontMatch') &&
@@ -248,7 +156,7 @@
             <small class="p-error">Las contraseñas no coinciden.</small>
           </div>
 
-          <!-- Tutor -->
+          <!-- Tutor (solo en modo default) -->
           <p-dropdown
             *ngIf="mode == 'default'"
             class="w-full"
@@ -302,7 +210,6 @@
                 ></strong
               >
             </label>
-            <!-- Error: política de privacidad no aceptada -->
             <div
               *ngIf="
                 !formGroup.get('politicaDePrivacidadAceptada')?.value &&
@@ -315,11 +222,10 @@
               >
             </div>
           </div>
+
           <!-- Botón de registro -->
           <app-async-button
-            [label]="
-              mode === 'activation' ? 'Completar registro' : 'Registrarse'
-            "
+            label="Registrarse"
             [action]="register.bind(this)"
             [disabled]="formGroup.invalid"
             styleClass="p-button dark-button p-button-raised"

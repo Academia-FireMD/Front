@@ -4,7 +4,7 @@ import { UserService } from '../../services/user.service';
 import { Group } from '../../shared/models/group.model';
 import { Label } from '../../shared/models/label.model';
 import { AudienceType, CreateAudienceRuleDto, Release, ReleaseItemType, RuleEffect } from '../../shared/models/release.model';
-import { SuscripcionTipo } from '../../shared/models/subscription.model';
+import { Oposicion, SuscripcionTipo } from '../../shared/models/subscription.model';
 import { GroupsService } from '../../shared/services/groups.service';
 import { LabelsService } from '../../shared/services/labels.service';
 import { ReleaseService } from '../../shared/services/release.service';
@@ -50,6 +50,7 @@ export class ReleaseManagementComponent implements OnInit {
   RuleEffect = RuleEffect;
   ReleaseItemType = ReleaseItemType;
   SuscripcionTipo = SuscripcionTipo;
+  Oposicion = Oposicion;
 
   constructor(
     private fb: FormBuilder,
@@ -510,6 +511,13 @@ export class ReleaseManagementComponent implements OnInit {
     return Object.values(SuscripcionTipo);
   }
 
+  getOposiciones(): { label: string; value: string }[] {
+    return [
+      { label: 'Valencia Ayuntamiento', value: Oposicion.VALENCIA_AYUNTAMIENTO },
+      { label: 'CPBA Alicante', value: Oposicion.ALICANTE_CPBA }
+    ];
+  }
+
   // Métodos para selector de usuarios
   onRuleTypeChange(rule: CreateAudienceRuleDto): void {
     // Limpiar el valor cuando cambia el tipo
@@ -561,6 +569,7 @@ export class ReleaseManagementComponent implements OnInit {
     const map = {
       [AudienceType.ALL]: 'Todos',
       [AudienceType.SUBSCRIPTION]: 'Suscripción',
+      [AudienceType.OPOSICION]: 'Oposición',
       [AudienceType.GROUP]: 'Grupo',
       [AudienceType.LABEL]: 'Etiqueta',
       [AudienceType.INDIVIDUAL]: 'Individual'
@@ -588,6 +597,11 @@ export class ReleaseManagementComponent implements OnInit {
       case AudienceType.SUBSCRIPTION:
         // Mostrar el tipo de suscripción
         return rule.value;
+
+      case AudienceType.OPOSICION:
+        // Mostrar el nombre de la oposición
+        const oposicion = this.getOposiciones().find(o => o.value === rule.value);
+        return oposicion ? oposicion.label : rule.value;
 
       case AudienceType.GROUP:
         // Mostrar el nombre del grupo

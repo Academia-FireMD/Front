@@ -8,6 +8,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { environment } from '../../../environments/environment';
 import {
   MotivoBaja,
   SuscripcionManagementService,
@@ -49,6 +50,9 @@ export class BajaSuscripcionComponent implements OnInit {
   validacion: ValidacionPlazo | null = null;
   motivosSeleccionados: MotivoBaja[] = [];
   comentarioAdicional: string = '';
+  
+  // URL de WordPress para el enlace
+  wordpressUrl = environment.wordpressUrl;
 
   motivosOptions: MotivoOption[] = [
     {

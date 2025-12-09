@@ -1,9 +1,9 @@
 import {
-    Component,
-    computed,
-    ElementRef,
-    inject,
-    ViewChild,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  ViewChild,
 } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -13,14 +13,14 @@ import { PreguntasService } from '../../../services/preguntas.service';
 import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
 import {
-    Dificultad,
-    Pregunta
+  Dificultad,
+  Pregunta
 } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
-    getAlumnoDificultad,
-    getStarsBasedOnDifficulty,
+  getAlumnoDificultad,
+  getStarsBasedOnDifficulty,
 } from '../../../utils/utils';
 
 @Component({
@@ -73,9 +73,12 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
     },
     {
       key: 'relevancia',
-      label: 'Comunidad',
-      type: 'comunidad-dropdown',
-      placeholder: 'Seleccionar comunidad',
+      label: 'Oposición',
+      type: 'oposicion-picker',
+      placeholder: 'Seleccionar oposición',
+      filterInterpolation: (value) => ({
+        relevancia: value,
+      }),
     },
   ];
 
@@ -245,25 +248,25 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.href = url;
-      
+
       const fecha = new Date().toISOString().split('T')[0];
-      const tipo = soloAlumnosValue === undefined 
-        ? 'todas' 
-        : soloAlumnosValue 
-          ? 'alumnos' 
+      const tipo = soloAlumnosValue === undefined
+        ? 'todas'
+        : soloAlumnosValue
+          ? 'alumnos'
           : 'academia';
       const extension = formato === 'excel' ? 'xlsx' : 'docx';
       link.download = `preguntas_${tipo}_${fecha}.${extension}`;
-      
+
       link.click();
       URL.revokeObjectURL(url);
-      
+
       this.toast.success('Archivo exportado correctamente');
       this.mostrarFicherosDialog = false;
-      this.exportForm.reset({ 
-        temaId: null, 
-        dificultad: null, 
-        formato: 'excel' 
+      this.exportForm.reset({
+        temaId: null,
+        dificultad: null,
+        formato: 'excel'
       });
     } catch (error) {
       this.toast.error('Error al exportar');

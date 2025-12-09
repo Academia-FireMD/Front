@@ -6,6 +6,7 @@ export enum ReleaseItemType {
 export enum AudienceType {
   ALL = 'ALL',
   SUBSCRIPTION = 'SUBSCRIPTION',
+  OPOSICION = 'OPOSICION',
   GROUP = 'GROUP',
   LABEL = 'LABEL',
   INDIVIDUAL = 'INDIVIDUAL'

@@ -36,7 +36,6 @@
           viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
         }}"
         icon="pi pi-plus"
-        [link]="true"
         (click)="navigateToDetailview('new')"
       ></p-button>
     </div>
@@ -62,7 +61,7 @@
             >{{ item.identificador }}</strong
           >
         </div>
-        <div class="flex gap-1">
+        <div class="flex gap-1 align-items-center">
           <p-chip
             *ngIf="item.esPorDefecto"
             label="Por defecto"
@@ -103,6 +102,11 @@
     </div>
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <app-oposicion-picker
+          *ngIf="item.relevancia?.length"
+          [oposiciones]="item.relevancia"
+          [allowAdd]="false"
+        ></app-oposicion-picker>
         <span
           class="text-xs hidden md:block unbreakable-text"
           pTooltip="Fecha de creación: {{

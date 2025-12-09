@@ -1,16 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputTextModule } from 'primeng/inputtext';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
-import { SharedModule } from '../../../shared/shared.module';
-import { ButtonModule } from 'primeng/button';
 import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
+import { SharedModule } from '../../../shared/shared.module';
 
 @Component({
   selector: 'app-login',
@@ -30,9 +30,8 @@ import { AsyncButtonComponent } from '../../../shared/components/async-button/as
     AsyncButtonComponent
   ]
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent {
   formGroup: FormGroup;
-  activationToken: string | null = null;
 
   @Input() mode: 'default' | 'injected' = 'default';
   @Output() loginCompletado = new EventEmitter<void>();
@@ -41,7 +40,6 @@ export class LoginComponent implements OnInit {
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
-    private route: ActivatedRoute,
     private toast: ToastrService
   ) {
     this.formGroup = this.fb.group({
@@ -50,37 +48,11 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
-    // Verificar si estamos en modo activación
-    if (this.route.snapshot.data['activationMode']) {
-      this.activationToken = this.route.snapshot.queryParams['token'];
-      if (!this.activationToken) {
-        this.toast.error('Token de activación no válido');
-        this.router.navigate(['/auth/login']);
-      }
-    }
-  }
-
   async login() {
     if (this.formGroup.valid) {
       try {
         const { email, contrasenya } = this.formGroup.value;
         await firstValueFrom(this.auth.login$(email, contrasenya));
-        const user = await firstValueFrom(this.auth.currentUser$);
-
-        // Si hay un token de activación, activar el consumible
-        if (this.activationToken && user?.id) {
-          try {
-            await firstValueFrom(
-              this.auth.activateConsumible$(this.activationToken, user.id)
-            );
-            this.toast.success('Producto activado correctamente');
-          } catch (error) {
-            this.toast.error('Error al activar el producto');
-            console.error('Error activating consumible:', error);
-            return;
-          }
-        }
 
         // Si estamos en modo injected, emitir evento de login completado
         if (this.mode === 'injected') {

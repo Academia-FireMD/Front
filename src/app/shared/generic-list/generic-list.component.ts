@@ -33,7 +33,7 @@ export interface FilterConfig {
   | 'text'
   | 'tema-select'
   | 'dificultad-dropdown'
-  | 'comunidad-picker'
+  | 'oposicion-picker'
   | 'comunidad-dropdown'
   | 'toggle';
   options?: FilterOption[];
@@ -229,15 +229,16 @@ export type GenericListMode = 'overview' | 'selection';
             [isFlashcards]="filter.isFlashcards || false"
           ></app-dificultad-dropdown>
 
-          <!-- Comunidad Picker Filter -->
-          <app-comunidad-picker
+          <!-- Oposicion Picker Filter -->
+          <app-oposicion-picker
             *ngIf="
-              filter.type === 'comunidad-picker' &&
+        filter.type === 'oposicion-picker' &&
               getFilterControl(filter.key) as control
             "
-            [comunidades]="control.value || []"
+            [oposiciones]="control.value || []"
+                [allowAdd]="true"
             (updateSelection)="control.setValue($event)"
-          ></app-comunidad-picker>
+          ></app-oposicion-picker>
 
           <!-- Comunidad Dropdown Filter -->
           <app-comunidad-dropdown
@@ -471,7 +472,7 @@ export class GenericListComponent<T>
     }
 
     // Arrays - manejar tanto strings como números
-    if (filter.type === 'tema-select') {
+    if (filter.type === 'tema-select' || filter.type === 'oposicion-picker') {
       const values = encodedValue.split(',');
       return values
         .map((v) => {

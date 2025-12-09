@@ -1,24 +1,25 @@
 import { Location } from '@angular/common';
 import {
-  Component,
-  EventEmitter,
-  inject,
-  Input,
-  Output,
-  signal
+    Component,
+    EventEmitter,
+    inject,
+    Input,
+    Output,
+    signal
 } from '@angular/core';
 import { FormArray, FormBuilder, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import {
-  combineLatest,
-  filter,
-  firstValueFrom,
-  Observable,
-  tap,
+    combineLatest,
+    filter,
+    firstValueFrom,
+    Observable,
+    tap,
 } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
@@ -26,13 +27,15 @@ import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
 import {
-  Comunidad,
-  Dificultad,
+    Dificultad,
 } from '../../../shared/models/pregunta.model';
+import { Oposicion, SuscripcionStatus } from '../../../shared/models/subscription.model';
 import { Rol } from '../../../shared/models/user.model';
+import { AppState } from '../../../store/app.state';
+import { selectCurrentUser } from '../../../store/user/user.selectors';
 import {
-  getAllDifficultades,
-  universalEditorConfig
+    getAllDifficultades,
+    universalEditorConfig
 } from '../../../utils/utils';
 @Component({
   selector: 'app-flashcard-detailview-admin',
@@ -49,6 +52,7 @@ export class FlashcardDetailviewAdminComponent {
   viewportService = inject(ViewportService);
   flashCardService = inject(FlashcardDataService);
   confirmationService = inject(ConfirmationService);
+  private store = inject(Store<AppState>);
   public expectedRole: Rol = Rol.ADMIN;
   editor!: any;
   editorEnunciado!: any;
@@ -176,7 +180,7 @@ export class FlashcardDetailviewAdminComponent {
 
   formGroup = this.fb.group({
     identificador: [''],
-    relevancia: this.fb.array([] as Array<Comunidad>),
+    relevancia: this.fb.array([] as Array<Oposicion>),
     dificultad: [''],
     temaId: [0],
     descripcion: [''],
@@ -184,7 +188,7 @@ export class FlashcardDetailviewAdminComponent {
     seguridad: [''],
   });
 
-  public updateCommunitySelection(communities: Comunidad[]) {
+  public updateOposicionSelection(communities: Oposicion[]) {
     this.relevancia.clear();
     communities.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
@@ -222,6 +226,8 @@ export class FlashcardDetailviewAdminComponent {
     if (itemId === 'new') {
       this.formGroup.reset();
       this.initEditor('', '');
+      // Autoseleccionar oposiciones del alumno
+      this.autoSelectOposicionesFromSubscriptions();
     } else {
       firstValueFrom(
         this.flashCardService.getFlashcardById(itemId).pipe(
@@ -230,6 +236,24 @@ export class FlashcardDetailviewAdminComponent {
           })
         )
       );
+    }
+  }
+
+  /**
+   * Autoselecciona las oposiciones basadas en las suscripciones activas del usuario
+   */
+  private async autoSelectOposicionesFromSubscriptions() {
+    if (this.expectedRole === Rol.ADMIN) return; // Solo para alumnos
+
+    const user = await firstValueFrom(this.store.select(selectCurrentUser));
+    if (!user?.suscripciones?.length) return;
+
+    const oposicionesActivas = user.suscripciones
+      .filter(s => s.status === SuscripcionStatus.ACTIVE)
+      .map(s => s.oposicion);
+
+    if (oposicionesActivas.length > 0) {
+      this.updateOposicionSelection(oposicionesActivas);
     }
   }
 

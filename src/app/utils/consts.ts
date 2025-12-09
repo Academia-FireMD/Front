@@ -1,6 +1,8 @@
 import { Comunidad } from "../shared/models/pregunta.model";
+import { Oposicion } from "../shared/models/subscription.model";
 
-export const comunidades = {
+// Mapping para Comunidades geográficas (perfil de usuario)
+export const comunidades: Record<Comunidad, { image: string; name: string }> = {
   [Comunidad.MADRID]: {
     image: 'comunidades/MADRID.png',
     name: 'Madrid',
@@ -69,7 +71,21 @@ export const comunidades = {
     image: 'comunidades/EXTREMADURA.png',
     name: 'Extremadura',
   },
-} as any;
+};
+
+// Mapping para Oposiciones (suscripciones y contenido)
+export const oposiciones: Record<Oposicion, { icon: string; name: string; image: string }> = {
+  [Oposicion.VALENCIA_AYUNTAMIENTO]: {
+    icon: '🏛️',
+    name: 'Valencia Ayuntamiento',
+    image: 'oposiciones/valencia.png',
+  },
+  [Oposicion.ALICANTE_CPBA]: {
+    icon: '🏢',
+    name: 'CPBA Alicante',
+    image: 'oposiciones/alicante.png',
+  },
+};
 
 export const provinciasEspanolas = [
   { name: 'Álava', code: 'VI' },

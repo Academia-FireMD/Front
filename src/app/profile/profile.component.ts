@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
+import { Memoize } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, filter, firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -13,10 +13,9 @@ import {
 import { UserService } from '../services/user.service';
 import { ViewportService } from '../services/viewport.service';
 import {
-  Comunidad,
   duracionesDisponibles,
 } from '../shared/models/pregunta.model';
-import { SuscripcionStatus, SuscripcionTipo } from '../shared/models/subscription.model';
+import { Oposicion, Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../shared/models/subscription.model';
 import { Rol, Usuario } from '../shared/models/user.model';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { AppState } from '../store/app.state';
@@ -26,9 +25,8 @@ import {
   selectUserError,
   selectUserLoading,
 } from '../store/user/user.selectors';
+import { oposiciones } from '../utils/consts';
 import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.component';
-import { CambioSuscripcionComponent } from './cambio-suscripcion/cambio-suscripcion.component';
-import { ContratarPlanComponent } from './contratar-plan/contratar-plan.component';
 
 @Component({
   selector: 'app-profile',
@@ -37,18 +35,21 @@ import { ContratarPlanComponent } from './contratar-plan/contratar-plan.componen
 })
 export class ProfileComponent implements OnInit {
   // ViewChild para acceder a componentes hijos
-  @ViewChild(CambioSuscripcionComponent) cambioSuscripcionComponent?: CambioSuscripcionComponent;
   @ViewChild(BajaSuscripcionComponent) bajaSuscripcionComponent?: BajaSuscripcionComponent;
-  @ViewChild(ContratarPlanComponent) contratarPlanComponent?: ContratarPlanComponent;
 
   // Servicios
   private userService = inject(UserService);
   private planificacionService = inject(PlanificacionesService);
   private toastService = inject(ToastrService);
   private store = inject(Store<AppState>);
-  private router = inject(Router);
   private suscripcionManagementService = inject(SuscripcionManagementService);
   viewportService = inject(ViewportService);
+
+  oposiciones = oposiciones;
+
+  // URLs de WordPress desde environment
+  tiendaUrl = environment.wooCommerceUrl;
+  wordpressUrl = environment.wordpressUrl;
 
   // Propiedades del store
   user$ = this.store.select(selectCurrentUser);
@@ -71,33 +72,23 @@ export class ProfileComponent implements OnInit {
   public Rol = Rol;
 
   // Control de dialogs de suscripción
-  showCambioSuscripcionDialog = false;
-  showBajaSuscripcionDialog = false;
-  showContratarPlanDialog = false;
+  showCambioSuscripcionDialog = false; // Solo para vincular cuenta (usuarios "en negro")
+  showBajaSuscripcionDialog = false;   // Solo para usuarios "en negro"
 
-  // Control de subdialogs
-  showConfirmacionCambio = false;
+  // Control de subdialogs para baja
   showConfirmacionBaja = false;
-  showFueraDePlazoCambio = false;
   showFueraDePlazoBaja = false;
 
   // Estados de procesamiento
-  procesandoCambio = false;
   procesandoBaja = false;
 
   // Datos temporales para confirmación
-  datosConfirmacionCambio: any = null;
   datosConfirmacionBaja: any = null;
   validacionPlazo: any = null;
 
   // Enums para los templates
   SuscripcionTipo = SuscripcionTipo;
-
-  public comunidades = Object.keys(Comunidad).map((entry) => ({
-    code: entry,
-    name: entry,
-    value: entry,
-  }));
+  Oposicion = Oposicion;
 
   constructor() { }
 
@@ -138,7 +129,6 @@ export class ProfileComponent implements OnInit {
           nombre: this.user.nombre,
           apellidos: this.user.apellidos,
           dni: this.user.dni,
-          comunidad: this.user.comunidad,
           tutorId: this.user.tutorId,
           tipoDePlanificacionDuracionDeseada:
             this.user.tipoDePlanificacionDuracionDeseada,
@@ -187,10 +177,17 @@ export class ProfileComponent implements OnInit {
     }
   }
 
-  getSubscriptionEndDate(): string {
-    if (!this.user?.suscripcion?.fechaFin) return 'No disponible';
+  // Helper para obtener la suscripción principal (primera activa)
+  private getPrimarySuscripcion() {
+    if (!this.user?.suscripciones?.length) return null;
+    return this.user.suscripciones.find(s => s.status === SuscripcionStatus.ACTIVE) || this.user.suscripciones[0];
+  }
 
-    const endDate = new Date(this.user.suscripcion.fechaFin);
+  getSubscriptionEndDate(): string {
+    const suscripcion = this.getPrimarySuscripcion();
+    if (!suscripcion?.fechaFin) return 'No disponible';
+
+    const endDate = new Date(suscripcion.fechaFin);
     return endDate.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: 'long',
@@ -199,9 +196,10 @@ export class ProfileComponent implements OnInit {
   }
 
   getRemainingDays(): number {
-    if (!this.user?.suscripcion?.fechaFin) return 0;
+    const suscripcion = this.getPrimarySuscripcion();
+    if (!suscripcion?.fechaFin) return 0;
 
-    const endDate = new Date(this.user.suscripcion.fechaFin);
+    const endDate = new Date(suscripcion.fechaFin);
     const today = new Date();
     const diffTime = endDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -210,7 +208,8 @@ export class ProfileComponent implements OnInit {
   }
 
   getSubscriptionStatusClass(): string {
-    if (!this.user?.suscripcion) return 'subscription-status-inactive';
+    const suscripcion = this.getPrimarySuscripcion();
+    if (!suscripcion) return 'subscription-status-inactive';
 
     const remainingDays = this.getRemainingDays();
     if (remainingDays <= 0) return 'subscription-status-expired';
@@ -301,48 +300,45 @@ export class ProfileComponent implements OnInit {
     return this.getOnboardingCompletionPercentage() > 0;
   }
 
+  /**
+   * Verifica si es el primer acceso y si debe mostrar el modal de onboarding.
+   *
+   * IMPORTANTE: Los usuarios de WordPress se auto-registran sin datos de onboarding,
+   * por lo que este modal es crucial para que completen su perfil.
+   */
   private checkFirstTimeAccess(): void {
     if (!this.user) return;
+    if (this.user.rol === Rol.ADMIN) return;
 
-    const storageKey = `profile_first_access_${this.user.id}`;
-    const hasAccessedBefore = localStorage.getItem(storageKey);
+    const storageKey = `onboarding_shown_${this.user.id}`;
+    const hasSeenOnboarding = localStorage.getItem(storageKey);
+    const onboardingComplete = this.isOnboardingComplete();
 
-    // Si no ha accedido antes y el onboarding no está completo, abrir modal
-    if (!hasAccessedBefore && !this.isOnboardingComplete() && this.user.rol !== Rol.ADMIN) {
+    // Mostrar modal si:
+    // 1. Nunca ha visto el onboarding Y no está completo
+    // 2. O si el onboarding está muy incompleto (< 20%) incluso si ya lo vio
+    const completionPercentage = this.getOnboardingCompletionPercentage();
+    const shouldShowModal = (!hasSeenOnboarding && !onboardingComplete) ||
+                           (completionPercentage < 20);
+
+    if (shouldShowModal) {
       setTimeout(() => {
-        this.firstTimeShowingOnboardingModal = true;
+        this.firstTimeShowingOnboardingModal = !hasSeenOnboarding;
         this.showOnboardingModal = true;
-      }, 2000);
-      // Marcar que ya ha accedido al perfil
+      }, 1500);
+      // Marcar que ya ha visto el modal de onboarding
       localStorage.setItem(storageKey, 'true');
     }
   }
 
   navegarACambioSuscripcion(): void {
-    // Si el usuario no está vinculado a WordPress, mostrar alerta y ofrecer vincular
-    if (!this.isLinkedToWordPress()) {
-      const confirmed = confirm(
-        '⚠️ ATENCIÓN: Para cambiar tu plan necesitas vincular tu cuenta con WordPress.\n\n' +
-        '• Tu suscripción actual en la plataforma será CANCELADA\n' +
-        '• Deberás contratar un nuevo plan a través de WooCommerce\n' +
-        '• Tus datos y progreso se mantendrán intactos\n\n' +
-        '¿Deseas vincular tu cuenta ahora?'
-      );
-
-      if (confirmed) {
-        // Pasar true para indicar que ya se mostró la confirmación
-        this.linkToWordPress(true);
-      }
+    // Si el usuario está vinculado a WordPress, redirigir a la tienda
+    if (this.isLinkedToWordPress()) {
+      this.abrirTiendaWordPress();
       return;
     }
 
-    // Si está vinculado pero no tiene suscripción activa de WooCommerce, mostrar modal de contratación
-    if (!this.hasActiveWooCommerceSubscription()) {
-      this.showContratarPlanDialog = true;
-      return;
-    }
-
-    // Si está vinculado y tiene suscripción activa, mostrar diálogo de cambio
+    // Si no está vinculado, mostrar el dialog para vincular cuenta
     this.showCambioSuscripcionDialog = true;
   }
 
@@ -352,11 +348,6 @@ export class ProfileComponent implements OnInit {
 
   cerrarDialogCambioSuscripcion(): void {
     this.showCambioSuscripcionDialog = false;
-    this.showConfirmacionCambio = false;
-    this.showFueraDePlazoCambio = false;
-    this.datosConfirmacionCambio = null;
-    this.validacionPlazo = null;
-    this.procesandoCambio = false;
     // Recargar usuario por si cambió algo
     this.store.dispatch(UserActions.loadUser());
   }
@@ -372,50 +363,13 @@ export class ProfileComponent implements OnInit {
     this.store.dispatch(UserActions.loadUser());
   }
 
-  // Eventos de cambio de suscripción
-  onSolicitarConfirmacionCambio(datos: any): void {
-    this.datosConfirmacionCambio = datos;
-    this.showConfirmacionCambio = true;
+  onSolicitarVinculacionDesdeDialog(): void {
+    // Cerrar el dialog actual
+    this.showCambioSuscripcionDialog = false;
+    // Iniciar proceso de vinculación
+    this.linkToWordPress();
   }
 
-  onFueraDePlazoCambio(validacion: any): void {
-    this.validacionPlazo = validacion;
-    this.showFueraDePlazoCambio = true;
-  }
-
-  cerrarFueraDePlazoCambio(): void {
-    this.showFueraDePlazoCambio = false;
-    this.validacionPlazo = null;
-    this.cerrarDialogCambioSuscripcion();
-  }
-
-  confirmarCambioDesdePadre(): void {
-    if (!this.datosConfirmacionCambio?.planSeleccionado) return;
-
-    this.procesandoCambio = true;
-
-    this.suscripcionManagementService
-      .cambiarSuscripcion({
-        nuevoSkuProducto: this.datosConfirmacionCambio.planSeleccionado.sku,
-        comentario: this.datosConfirmacionCambio.comentario || undefined,
-      })
-      .subscribe({
-        next: (response) => {
-          this.procesandoCambio = false;
-          this.showConfirmacionCambio = false;
-          this.toastService.success(response.mensaje || 'Cambio de suscripción procesado correctamente');
-          this.cerrarDialogCambioSuscripcion();
-          // Recargar usuario
-          this.store.dispatch(UserActions.loadUser());
-        },
-        error: (error) => {
-          this.procesandoCambio = false;
-          this.toastService.error(
-            error.error?.message || 'No se pudo procesar el cambio de suscripción'
-          );
-        },
-      });
-  }
 
   confirmarBajaDesdePadre(): void {
     if (!this.datosConfirmacionBaja?.motivos) return;
@@ -426,6 +380,7 @@ export class ProfileComponent implements OnInit {
       .solicitarBaja({
         motivos: this.datosConfirmacionBaja.motivos,
         comentarioAdicional: this.datosConfirmacionBaja.comentario || undefined,
+        suscripcionId: this.datosConfirmacionBaja.suscripcionId, // ID de la suscripción específica
       })
       .subscribe({
         next: (response) => {
@@ -468,42 +423,41 @@ export class ProfileComponent implements OnInit {
 
   hasActiveWooCommerceSubscription(): boolean {
     try {
-    // Verificar si tiene suscripción activa de WooCommerce
-    // Una suscripción es activa si tiene status ACTIVE y está vinculado a WordPress
+      // Verificar si tiene suscripción activa de WooCommerce
+      // Una suscripción es activa si tiene status ACTIVE y está vinculado a WordPress
       if (!this.user?.woocommerceCustomerId) {
         return false;
       }
 
-      // Si no tiene suscripción en absoluto, retornar false
-      if (!this.user?.suscripcion) {
-      return false;
-    }
+      // Si no tiene suscripciones en absoluto, retornar false
+      if (!this.user?.suscripciones?.length) {
+        return false;
+      }
 
-    const subscription = this.user.suscripcion;
+      // Buscar cualquier suscripción activa
+      const activeSubscription = this.user.suscripciones.find(s => s.status === SuscripcionStatus.ACTIVE);
+      if (!activeSubscription) {
+        return false;
+      }
 
-    // Verificar por status
-    if (subscription.status === SuscripcionStatus.ACTIVE) {
       // Verificar también que no haya expirado por fechaFin
-      if (subscription.fechaFin) {
-          try {
-        const endDate = new Date(subscription.fechaFin);
-        const today = new Date();
-            // Asegurarse de que la fecha es válida
-            if (isNaN(endDate.getTime())) {
-              console.warn('Fecha de fin de suscripción inválida:', subscription.fechaFin);
-              return true; // Si la fecha es inválida, asumir que está activa
-            }
-        return endDate > today;
-          } catch (dateError) {
-            console.error('Error al validar fecha de fin:', dateError);
-            // En caso de error, asumir que está activa para no bloquear al usuario
-            return true;
+      if (activeSubscription.fechaFin) {
+        try {
+          const endDate = new Date(activeSubscription.fechaFin);
+          const today = new Date();
+          // Asegurarse de que la fecha es válida
+          if (isNaN(endDate.getTime())) {
+            console.warn('Fecha de fin de suscripción inválida:', activeSubscription.fechaFin);
+            return true; // Si la fecha es inválida, asumir que está activa
           }
+          return endDate > today;
+        } catch (dateError) {
+          console.error('Error al validar fecha de fin:', dateError);
+          // En caso de error, asumir que está activa para no bloquear al usuario
+          return true;
+        }
       }
       return true;
-    }
-
-    return false;
     } catch (error) {
       console.error('Error al verificar suscripción activa:', error);
       // En caso de error, retornar false para mostrar opciones de contratación
@@ -537,19 +491,13 @@ export class ProfileComponent implements OnInit {
 
   handleSubscriptionAction(): void {
     try {
-    if (!this.isLinkedToWordPress()) {
-      this.linkToWordPress();
-      return;
-    }
+      if (!this.isLinkedToWordPress()) {
+        this.linkToWordPress();
+        return;
+      }
 
-    if (!this.hasActiveWooCommerceSubscription()) {
-        // Abrir modal de contratación
-        this.showContratarPlanDialog = true;
-      return;
-    }
-
-    // Ya tiene suscripción, puede cambiar
-    this.navegarACambioSuscripcion();
+      // Si está vinculado, redirigir a la tienda de WordPress
+      this.abrirTiendaWordPress();
     } catch (error) {
       console.error('Error en handleSubscriptionAction:', error);
       this.toastService.error(
@@ -558,28 +506,18 @@ export class ProfileComponent implements OnInit {
     }
   }
 
-  obtenerPlan(): void {
-    // Este método ya no se usa, pero lo mantenemos por compatibilidad
-    this.showContratarPlanDialog = true;
-  }
-
-  cerrarDialogContratarPlan(): void {
-    this.showContratarPlanDialog = false;
-  }
-
   canUnsubscribe(): boolean {
     return this.isLinkedToWordPress() && this.hasActiveWooCommerceSubscription();
   }
 
   hasActiveSubscription(): boolean {
     // Verificar si tiene suscripción activa (tanto WooCommerce como "por negro")
-    if (!this.user?.suscripcion) {
+    if (!this.user?.suscripciones?.length) {
       return false;
     }
 
-    // Verificar si está activa
-    const status = this.user.suscripcion.status;
-    return status === SuscripcionStatus.ACTIVE;
+    // Verificar si alguna está activa
+    return this.user.suscripciones.some(s => s.status === SuscripcionStatus.ACTIVE);
   }
 
   getMotivoLabel(motivo: MotivoBaja): string {
@@ -597,11 +535,11 @@ export class ProfileComponent implements OnInit {
   }
 
   linkToWordPress(skipConfirmation: boolean = false): void {
-    // Si tiene suscripción local y no se saltó la confirmación, mostrar advertencia
-    if (this.user?.suscripcion && !skipConfirmation) {
+    // Si tiene suscripciones locales y no se saltó la confirmación, mostrar advertencia
+    if (this.user?.suscripciones?.length && !skipConfirmation) {
       const confirmed = confirm(
         '⚠️ ATENCIÓN: Al vincular tu cuenta con WordPress:\n\n' +
-        '• Tu suscripción actual en la plataforma será CANCELADA\n' +
+        '• Tus suscripciones actuales en la plataforma serán CANCELADAS\n' +
         '• Deberás contratar un nuevo plan a través de WooCommerce\n' +
         '• Tus datos y progreso se mantendrán intactos\n\n' +
         '¿Estás seguro de que deseas continuar?'
@@ -624,19 +562,19 @@ export class ProfileComponent implements OnInit {
 
           // Esperar a que el store se actualice con timeout
           try {
-          const updatedUser = await firstValueFrom(
+            const updatedUser = await firstValueFrom(
               this.user$.pipe(
                 filter(user => user !== null && !!user.woocommerceCustomerId),
                 // Timeout de 10 segundos
                 timeout(10000)
               )
-          );
-          this.user = cloneDeep(updatedUser);
+            );
+            this.user = cloneDeep(updatedUser);
 
-            // Si no tiene suscripción WP, abrir modal de contratación automáticamente
-          if (!this.hasActiveWooCommerceSubscription()) {
-            setTimeout(() => {
-                this.showContratarPlanDialog = true;
+            // Si no tiene suscripción WP, abrir modal de gestión automáticamente
+            if (!this.hasActiveWooCommerceSubscription()) {
+              setTimeout(() => {
+                this.showCambioSuscripcionDialog = true;
               }, 500);
             }
           } catch (timeoutError) {
@@ -649,7 +587,7 @@ export class ProfileComponent implements OnInit {
             );
             // Intentar abrir el modal de todas formas
             setTimeout(() => {
-              this.showContratarPlanDialog = true;
+              this.showCambioSuscripcionDialog = true;
             }, 1000);
           }
         } else {
@@ -660,10 +598,10 @@ export class ProfileComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al vincular con WordPress:', error);
-        
+
         // Mensajes de error más específicos
         let errorMessage = 'No se pudo vincular la cuenta. ';
-        
+
         if (error.error?.message) {
           errorMessage += error.error.message;
         } else if (error.status === 0) {
@@ -675,9 +613,86 @@ export class ProfileComponent implements OnInit {
         } else {
           errorMessage += 'Por favor, contacta con soporte si el problema persiste.';
         }
-        
+
         this.toastService.error(errorMessage);
       },
     });
+  }
+
+  // Método para obtener los items del menú de cada suscripción
+  @Memoize()
+  getSubscriptionMenuItems(suscripcion: Suscripcion) {
+    // Usuarios WP: redirigir a WordPress para gestionar
+    if (this.isLinkedToWordPress()) {
+      return [
+        {
+          label: 'Gestionar en WordPress',
+          icon: 'pi pi-external-link',
+          command: () => this.gestionarEnWordPress()
+        }
+      ];
+    }
+
+    // Usuarios "en negro": permitir dar de baja localmente
+    return [
+      {
+        label: 'Dar de baja',
+        icon: 'pi pi-sign-out',
+        command: () => this.cancelarSuscripcionIndividual(suscripcion)
+      }
+    ];
+  }
+
+  // Abrir página de gestión de suscripciones en WordPress
+  gestionarEnWordPress(): void {
+    window.open(`${environment.wordpressUrl}/mi-cuenta/subscriptions`, '_blank');
+  }
+
+  // Abrir tienda de WordPress
+  abrirTiendaWordPress(): void {
+    window.open(environment.wooCommerceUrl, '_blank');
+  }
+
+  // Método para cancelar una suscripción individual
+  cancelarSuscripcionIndividual(suscripcion: Suscripcion): void {
+    const confirmed = confirm(
+      `¿Estás seguro de que deseas darte de baja de la suscripción "${oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion}"?\n\n` +
+      `• Plan: ${suscripcion.tipo}\n` +
+      `• Esta acción no se puede deshacer.\n` +
+      `• Perderás acceso al contenido de esta oposición.`
+    );
+
+    if (!confirmed) return;
+
+    // Abrir el dialog de baja pasando la suscripción específica
+    this.showBajaSuscripcionDialog = true;
+    // Almacenamos la suscripción seleccionada para procesarla
+    this.datosConfirmacionBaja = {
+      suscripcionId: suscripcion.id,
+      oposicion: suscripcion.oposicion
+    };
+  }
+
+  // Genera el tooltip con info de la suscripción
+  getSubscriptionTooltip(suscripcion: Suscripcion): string {
+    const nombre = oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion;
+    const plan = suscripcion.tipo === 'BASIC' ? 'Básico' : suscripcion.tipo === 'ADVANCED' ? 'Avanzado' : 'Premium';
+
+    let estado = '';
+    if (suscripcion.status === 'ACTIVE' && suscripcion.fechaFin) {
+      estado = `⏳ Baja pendiente (${new Date(suscripcion.fechaFin).toLocaleDateString('es-ES')})`;
+    } else if (suscripcion.status === 'ACTIVE') {
+      estado = '✅ Activo';
+    } else {
+      estado = '❌ Cancelado';
+    }
+
+    let tooltip = `${nombre}\n${plan}\n${estado}`;
+
+    if (suscripcion.monthlyPrice) {
+      tooltip += `\n💰 ${suscripcion.monthlyPrice}€/mes`;
+    }
+
+    return tooltip;
   }
 }

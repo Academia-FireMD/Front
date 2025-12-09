@@ -34,14 +34,7 @@
         [link]="true"
         (click)="descargarPreguntasDeAlumnos()"
       ></p-button>
-      <p-button
-        label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
-        }}"
-        icon="pi pi-plus"
-        [link]="true"
-        (click)="navigateToDetailview('new')"
-      ></p-button>
+
       <p-button
         label="{{
           viewportService.screenWidth == 'xs' ? undefined : 'Ficheros'
@@ -49,6 +42,13 @@
         icon="pi pi-file"
         [link]="true"
         (click)="abrirDialogoFicheros()"
+      ></p-button>
+      <p-button
+        label="{{
+          viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
+        }}"
+        icon="pi pi-plus"
+        (click)="navigateToDetailview('new')"
       ></p-button>
     </div>
   </div>
@@ -84,68 +84,67 @@
 
   <!-- Formulario de Importar -->
   <div *ngIf="modoFicheros === 'importar'">
-  <div class="flex flex-column gap-3" [formGroup]="importForm">
-    <div class="grid">
-      <div class="col-12 md:col-8 h-full">
-        <label class="block mb-2">Tema</label>
-        <app-tema-select
+    <div class="flex flex-column gap-3" [formGroup]="importForm">
+      <div class="grid">
+        <div class="col-12 md:col-8 h-full">
+          <label class="block mb-2">Tema</label>
+          <app-tema-select
+            [multiple]="false"
+            [formControl]="importForm.controls['temaId']"
+          ></app-tema-select>
+        </div>
+        <div class="col-12 md:col-4 h-full">
+          <label class="block mb-2">Dificultad</label>
+          <app-dificultad-dropdown
+            [formControlDificultad]="importForm.controls['dificultad']"
+            [isDoingTest]="expectedRole == 'ADMIN'"
+          ></app-dificultad-dropdown>
+        </div>
+      </div>
+
+      <div>
+        <label class="block mb-2">Archivo (.xlsx, .xls)</label>
+        <p-fileUpload
+          mode="advanced"
+          [auto]="false"
           [multiple]="false"
-          [formControl]="importForm.controls['temaId']"
-        ></app-tema-select>
+          [showUploadButton]="false"
+          [showCancelButton]="false"
+          accept=".xlsx,.xls"
+          (onSelect)="onPrimeFileSelect($event)"
+          chooseLabel="Seleccionar / Arrastrar aquí"
+          [style]="{ width: '100%' }"
+        ></p-fileUpload>
       </div>
-      <div class="col-12 md:col-4 h-full">
-        <label class="block mb-2">Dificultad</label>
-        <app-dificultad-dropdown
-          [formControlDificultad]="importForm.controls['dificultad']"
-          [isDoingTest]="expectedRole == 'ADMIN'"
-        ></app-dificultad-dropdown>
-      </div>
-    </div>
 
-    <div>
-      <label class="block mb-2">Archivo (.xlsx, .xls)</label>
-      <p-fileUpload
-        mode="advanced"
-        [auto]="false"
-        [multiple]="false"
-        [showUploadButton]="false"
-        [showCancelButton]="false"
-        accept=".xlsx,.xls"
-        (onSelect)="onPrimeFileSelect($event)"
-        chooseLabel="Seleccionar / Arrastrar aquí"
-        [style]="{ width: '100%' }"
-      ></p-fileUpload>
-
-    </div>
-
-    <div class="grid">
-      <div class="col-12 md:col-6">
-        <h4>Estructura esperada</h4>
-        <p>Columnas mínimas (en español):</p>
-        <ul>
-          <li><code>Descripción</code></li>
-          <li><code>Solución</code></li>
-          <li><code>Respuesta correcta</code> (1, 2, 3...)</li>
-          <li><code>Respuesta 1</code>, <code>Respuesta 2</code>, ...</li>
-        </ul>
-      </div>
-      <div class="col-12 md:col-6">
-        <h4>Notas</h4>
-        <ul>
-          <li>Puedes incluir más columnas, se ignorarán.</li>
-          <li>Las respuestas se leerán en orden por número (1..N).</li>
-        </ul>
-        <div class="mt-2">
-          <p-button
-            label="Descargar plantilla Excel"
-            icon="pi pi-download"
-            styleClass="p-button-text"
-            (click)="descargarPlantillaPreguntas()"
-          ></p-button>
+      <div class="grid">
+        <div class="col-12 md:col-6">
+          <h4>Estructura esperada</h4>
+          <p>Columnas mínimas (en español):</p>
+          <ul>
+            <li><code>Descripción</code></li>
+            <li><code>Solución</code></li>
+            <li><code>Respuesta correcta</code> (1, 2, 3...)</li>
+            <li><code>Respuesta 1</code>, <code>Respuesta 2</code>, ...</li>
+          </ul>
+        </div>
+        <div class="col-12 md:col-6">
+          <h4>Notas</h4>
+          <ul>
+            <li>Puedes incluir más columnas, se ignorarán.</li>
+            <li>Las respuestas se leerán en orden por número (1..N).</li>
+          </ul>
+          <div class="mt-2">
+            <p-button
+              label="Descargar plantilla Excel"
+              icon="pi pi-download"
+              styleClass="p-button-text"
+              (click)="descargarPlantillaPreguntas()"
+            ></p-button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
     <div class="flex justify-content-end gap-2 mt-3">
       <p-button
         label="Cancelar"
@@ -225,8 +224,16 @@
         (click)="mostrarFicherosDialog = false"
       ></p-button>
       <p-button
-        [label]="exportForm.value.formato === 'excel' ? 'Exportar Excel' : 'Exportar Word'"
-        [icon]="exportForm.value.formato === 'excel' ? 'pi pi-file-excel' : 'pi pi-file-word'"
+        [label]="
+          exportForm.value.formato === 'excel'
+            ? 'Exportar Excel'
+            : 'Exportar Word'
+        "
+        [icon]="
+          exportForm.value.formato === 'excel'
+            ? 'pi pi-file-excel'
+            : 'pi pi-file-word'
+        "
         (click)="exportarPreguntas()"
         [loading]="exportando"
         [disabled]="exportForm.invalid"
@@ -271,9 +278,9 @@
     </div>
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
-        <app-comunidad-picker
-          [comunidades]="item.relevancia"
-        ></app-comunidad-picker>
+        <app-oposicion-picker
+          [oposiciones]="item.relevancia"
+        ></app-oposicion-picker>
         <span
           class="text-xs hidden md:block unbreakable-text"
           pTooltip="Fecha de creación: {{

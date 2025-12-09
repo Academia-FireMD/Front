@@ -10,7 +10,7 @@ import { PlanificacionesService } from '../../../services/planificaciones.servic
 import { UserService } from '../../../services/user.service';
 import { FilterConfig, GenericListComponent, GenericListMode } from '../../../shared/generic-list/generic-list.component';
 import { Label, UsuarioLabel } from '../../../shared/models/label.model';
-import { SuscripcionTipo } from '../../../shared/models/subscription.model';
+import { Oposicion, OPOSICION_LABELS, Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../../../shared/models/subscription.model';
 import { Usuario } from '../../../shared/models/user.model';
 import { PrimengModule } from '../../../shared/primeng.module';
 import { LabelsService } from '../../../shared/services/labels.service';
@@ -47,7 +47,20 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   subscriptionDialogVisible = false;
   selectedUser!: Usuario;
   selectedSubscriptionType = SuscripcionTipo.BASIC;
+  selectedOposicion = Oposicion.VALENCIA_AYUNTAMIENTO;
   public decodedUser = this.authService.decodeToken() as Usuario;
+
+  // Opciones para selects de oposición
+  oposicionOptions = Object.values(Oposicion).map(op => ({
+    label: OPOSICION_LABELS[op] || op,
+    value: op
+  }));
+
+  subscriptionTypeOptions = [
+    { label: 'Básica', value: SuscripcionTipo.BASIC },
+    { label: 'Avanzada', value: SuscripcionTipo.ADVANCED },
+    { label: 'Premium', value: SuscripcionTipo.PREMIUM },
+  ];
 
   // Etiquetas management
   labelsDialogVisible = false;
@@ -128,12 +141,12 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           { label: 'Premium', value: SuscripcionTipo.PREMIUM },
           { label: 'Avanzado', value: SuscripcionTipo.ADVANCED },
         ],
-        filterInterpolation: (value) => {
+        filterInterpolation: (value: string) => {
           if (value === 'todas') return {};
           if (value === 'sin_suscripcion') {
-            return { suscripcion: { is: null } };
+            return { suscripciones: { none: {} } };
           }
-          return { suscripcion: { tipo: { equals: value } } };
+          return { suscripciones: { some: { tipo: { equals: value }, status: 'ACTIVE' } } };
         },
       },
       {
@@ -236,7 +249,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     }
   }
 
-  getSubscriptionBadgeClass(suscripcion: any): string {
+  getSubscriptionBadgeClass(suscripcion: Suscripcion | null | undefined): string {
     if (!suscripcion) return 'no-subscription-chip';
 
     switch (suscripcion.tipo) {
@@ -251,45 +264,160 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     }
   }
 
-  getSubscriptionLabel(suscripcion: any): string {
+  getSubscriptionLabel(suscripcion: Suscripcion | null | undefined): string {
     if (!suscripcion) return 'Sin suscripción';
 
-    switch (suscripcion.tipo) {
-      case SuscripcionTipo.BASIC:
-        return 'Básica';
-      case SuscripcionTipo.PREMIUM:
-        return 'Premium';
-      case SuscripcionTipo.ADVANCED:
-        return 'Pro';
-      default:
-        return 'Sin suscripción';
-    }
+    const tipoLabel = {
+      [SuscripcionTipo.BASIC]: 'Básica',
+      [SuscripcionTipo.ADVANCED]: 'Avanzada',
+      [SuscripcionTipo.PREMIUM]: 'Premium',
+    }[suscripcion.tipo] || suscripcion.tipo;
+
+    const oposicionLabel = OPOSICION_LABELS[suscripcion.oposicion] || suscripcion.oposicion;
+    return `${tipoLabel} - ${oposicionLabel}`;
+  }
+
+  // Obtener la suscripción de mayor nivel para mostrar como badge principal
+  getHighestSubscription(suscripciones?: Suscripcion[]): Suscripcion | null {
+    if (!suscripciones || suscripciones.length === 0) return null;
+
+    const activeSubs = suscripciones.filter(s => s.status === SuscripcionStatus.ACTIVE);
+    if (activeSubs.length === 0) return null;
+
+    const tierPriority: Record<SuscripcionTipo, number> = {
+      [SuscripcionTipo.PREMIUM]: 3,
+      [SuscripcionTipo.ADVANCED]: 2,
+      [SuscripcionTipo.BASIC]: 1,
+    };
+
+    return activeSubs.reduce((highest, sub) => {
+      if (!highest) return sub;
+      return (tierPriority[sub.tipo] || 0) > (tierPriority[highest.tipo] || 0) ? sub : highest;
+    }, null as Suscripcion | null);
+  }
+
+  getActiveSuscripciones(user: Usuario): Suscripcion[] {
+    return (user.suscripciones || []).filter(s => s.status === SuscripcionStatus.ACTIVE);
+  }
+
+  /**
+   * Verifica si el usuario está vinculado a WordPress/WooCommerce
+   */
+  isWordPressUser(user: Usuario): boolean {
+    return !!user?.woocommerceCustomerId;
   }
 
   openSubscriptionDialog(user: Usuario) {
+    if (this.isWordPressUser(user)) {
+      this.toast.info('Los usuarios de WordPress deben gestionar sus suscripciones desde su panel en la tienda.');
+      return;
+    }
     this.selectedUser = { ...user };
-    this.selectedSubscriptionType =
-      user.suscripcion?.tipo || SuscripcionTipo.BASIC;
+    // Inicializar con la primera oposición disponible (que no tenga suscripción)
+    this.selectedSubscriptionType = SuscripcionTipo.BASIC;
+    this.selectedOposicion = this.getFirstAvailableOposicion();
     this.subscriptionDialogVisible = true;
   }
 
+  /**
+   * Verifica si ya existe una suscripción activa para la oposición seleccionada
+   */
+  hasSubscriptionForOposicion(oposicion: Oposicion): boolean {
+    if (!this.selectedUser?.suscripciones) return false;
+    return this.selectedUser.suscripciones.some(
+      s => s.oposicion === oposicion && s.status === SuscripcionStatus.ACTIVE
+    );
+  }
+
+  /**
+   * Obtiene la primera oposición que no tiene suscripción activa
+   */
+  getFirstAvailableOposicion(): Oposicion {
+    for (const op of Object.values(Oposicion)) {
+      if (!this.hasSubscriptionForOposicion(op)) {
+        return op;
+      }
+    }
+    return Oposicion.VALENCIA_AYUNTAMIENTO;
+  }
+
+  /**
+   * Verifica si se puede añadir la suscripción seleccionada
+   */
+  canAddSubscription(): boolean {
+    return this.selectedOposicion &&
+           this.selectedSubscriptionType &&
+           !this.hasSubscriptionForOposicion(this.selectedOposicion);
+  }
+
   updateUserSubscription() {
+    if (this.hasSubscriptionForOposicion(this.selectedOposicion)) {
+      this.toast.warning('Ya existe una suscripción activa para esta oposición');
+      return;
+    }
+
     this.userService
-      .updateUserSubscription(
+      .createUserSubscription(
         this.selectedUser.id,
-        this.selectedSubscriptionType
+        this.selectedSubscriptionType,
+        this.selectedOposicion
       )
       .subscribe({
-        next: () => {
-          this.toast.success('Suscripción actualizada correctamente');
-          this.subscriptionDialogVisible = false;
-          this.selectedUser = null as any;
+        next: (response: any) => {
+          this.toast.success('Suscripción añadida correctamente');
+          // Actualizar el usuario seleccionado con las nuevas suscripciones
+          if (response?.suscripciones) {
+            this.selectedUser = { ...this.selectedUser, suscripciones: response.suscripciones };
+          } else if (response?.id) {
+            // Si devuelve la suscripción creada, añadirla localmente
+            const newSub: Suscripcion = response;
+            this.selectedUser = {
+              ...this.selectedUser,
+              suscripciones: [...(this.selectedUser.suscripciones || []), newSub]
+            };
+          }
+          // Actualizar la oposición seleccionada a la siguiente disponible
+          this.selectedOposicion = this.getFirstAvailableOposicion();
           this.refresh();
         },
-        error: () => {
-          this.toast.error('No se pudo actualizar la suscripción');
+        error: (err) => {
+          const message = err?.error?.message || 'No se pudo añadir la suscripción';
+          this.toast.error(message);
         },
       });
+  }
+
+  deleteSubscription(subscription: Suscripcion) {
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de que deseas eliminar la suscripción "${this.getSubscriptionLabel(subscription)}"?`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.userService.deleteUserSubscription(this.selectedUser.id, subscription.id).subscribe({
+          next: (updatedUser) => {
+            this.toast.success('Suscripción eliminada correctamente');
+            // Actualizar el usuario seleccionado
+            if (updatedUser?.suscripciones) {
+              this.selectedUser = { ...this.selectedUser, suscripciones: updatedUser.suscripciones };
+            } else {
+              // Si no devuelve las suscripciones, eliminarla localmente
+              this.selectedUser = {
+                ...this.selectedUser,
+                suscripciones: (this.selectedUser.suscripciones || []).filter(s => s.id !== subscription.id)
+              };
+            }
+            this.refresh();
+          },
+          error: (err) => {
+            const message = err?.error?.message || 'No se pudo eliminar la suscripción';
+            this.toast.error(message);
+          },
+        });
+      }
+    });
   }
 
   editarUsuario(user: Usuario) {
@@ -516,6 +644,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   @Memoize()
   getActionItems(user: Usuario): MenuItem[] {
     const items: MenuItem[] = [];
+    const isWP = this.isWordPressUser(user);
 
     if (this.decodedUser.rol === 'ADMIN') {
       items.push({
@@ -527,9 +656,11 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
     items.push(
       {
-        label: 'Suscripción',
-        icon: 'pi pi-credit-card',
+        label: isWP ? 'Suscripción (WP)' : 'Suscripción',
+        icon: isWP ? 'pi pi-lock' : 'pi pi-credit-card',
+        disabled: isWP,
         command: () => this.openSubscriptionDialog(user),
+        tooltipOptions: isWP ? { tooltipLabel: 'Usuario de WordPress - gestiona sus suscripciones desde su panel' } : undefined,
       },
       {
         label: 'Gestionar etiquetas',

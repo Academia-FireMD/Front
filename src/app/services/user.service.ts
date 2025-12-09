@@ -71,6 +71,27 @@ export class UserService extends ApiBaseService {
     return this.post('/update-subscription/' + userId, { subscriptionType });
   }
 
+  /**
+   * Crear o actualizar una suscripción para un usuario con oposición específica
+   */
+  public createUserSubscription(userId: number, subscriptionType: string, oposicion: string) {
+    return this.post('/create-subscription/' + userId, { subscriptionType, oposicion });
+  }
+
+  /**
+   * Cancelar una suscripción específica por ID
+   */
+  public cancelUserSubscription(subscriptionId: number) {
+    return this.post('/cancel-subscription/' + subscriptionId, {});
+  }
+
+  /**
+   * Eliminar una suscripción específica de un usuario (solo admin)
+   */
+  public deleteUserSubscription(userId: number, subscriptionId: number): Observable<Usuario> {
+    return this.delete(`/subscription/${userId}/${subscriptionId}`) as Observable<Usuario>;
+  }
+
   public getAvailableSubscriptions() {
     return this.get('/obtain-avaliable-subscriptions');
   }

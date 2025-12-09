@@ -1,0 +1,53 @@
+.contenedor-oposiciones {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+}
+
+:host ::ng-deep {
+  .p-button-icon {
+    font-size: 20px;
+  }
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+  }
+}
+
+.oposicion-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 6px;
+  background: var(--surface-100);
+  border: 1px solid var(--surface-border);
+  cursor: default;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--surface-200);
+    transform: scale(1.05);
+  }
+}
+
+.oposicion-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.oposicion-img-dropdown {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+}

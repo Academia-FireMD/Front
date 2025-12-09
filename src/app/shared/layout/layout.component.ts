@@ -4,12 +4,35 @@ import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { MenuItem } from 'primeng/api';
 import { firstValueFrom, Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
 import { selectCurrentUser } from '../../store/user/user.selectors';
-import { SuscripcionTipo } from '../models/subscription.model';
+import { Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../models/subscription.model';
 import { Usuario } from '../models/user.model';
+
+/**
+ * Obtiene el nivel de suscripción más alto de un array de suscripciones
+ * PREMIUM > ADVANCED > BASIC
+ */
+function getHighestSubscriptionTier(suscripciones?: Suscripcion[]): SuscripcionTipo | null {
+  if (!suscripciones || suscripciones.length === 0) return null;
+
+  const activeSubs = suscripciones.filter(s => s.status === SuscripcionStatus.ACTIVE);
+  if (activeSubs.length === 0) return null;
+
+  const tierPriority: Record<SuscripcionTipo, number> = {
+    [SuscripcionTipo.PREMIUM]: 3,
+    [SuscripcionTipo.ADVANCED]: 2,
+    [SuscripcionTipo.BASIC]: 1,
+  };
+
+  return activeSubs.reduce((highest, sub) => {
+    if (!highest) return sub.tipo;
+    return (tierPriority[sub.tipo] || 0) > (tierPriority[highest] || 0) ? sub.tipo : highest;
+  }, null as SuscripcionTipo | null);
+}
 
 @Component({
   selector: 'app-layout',
@@ -285,10 +308,11 @@ export class LayoutComponent {
   }
 
   private getStudentMenu(user: Usuario | null): MenuItem[] {
-    const subscriptionType = user?.suscripcion?.tipo;
-    const isBasic = subscriptionType === SuscripcionTipo.BASIC;
-    const isAdvanced = subscriptionType === SuscripcionTipo.ADVANCED;
-    const isPremium = subscriptionType === SuscripcionTipo.PREMIUM;
+    // Obtener el nivel más alto de todas las suscripciones activas
+    const highestTier = getHighestSubscriptionTier(user?.suscripciones);
+    const isBasic = highestTier === SuscripcionTipo.BASIC;
+    const isAdvanced = highestTier === SuscripcionTipo.ADVANCED;
+    const isPremium = highestTier === SuscripcionTipo.PREMIUM;
     const hasValidSubscription = isBasic || isAdvanced || isPremium;
 
     const menu: MenuItem[] = [];
@@ -447,7 +471,7 @@ export class LayoutComponent {
 
   // Método para abrir la página de tarifas
   openUpgradePage(): void {
-    window.open('https://tecnikafire.com/tarifas/', '_blank');
+    window.open(environment.wooCommerceUrl, '_blank');
   }
 
   // Método para detener impersonación

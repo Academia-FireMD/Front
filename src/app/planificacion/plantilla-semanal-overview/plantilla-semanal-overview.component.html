@@ -28,7 +28,6 @@
         viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
       }}"
       icon="pi pi-plus"
-      [link]="true"
       (click)="navigateToDetailview('new')"
     ></p-button>
   </div>
@@ -45,24 +44,24 @@
   <div class="flex flex-row align-items-between">
     <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
       <div class="text-lg font-medium flex gap-2 align-items-center">
-        <span 
-          class="identifier" 
-          pTooltip="{{ item.identificador }}" 
+        <span
+          class="identifier"
+          pTooltip="{{ item.identificador }}"
           tooltipPosition="top"
         >
           {{ item.identificador }}
         </span>
-        <span 
-          class="badge bg-primary text-white" 
-          pTooltip="Número de sub-bloques" 
+        <span
+          class="badge bg-primary text-white"
+          pTooltip="Número de sub-bloques"
           tooltipPosition="top"
         >
           {{ item.subBloques?.length || 0 }} sub-bloques
         </span>
       </div>
-      <span 
-        class="descripcion" 
-        pTooltip="{{ item.descripcion }}" 
+      <span
+        class="descripcion"
+        pTooltip="{{ item.descripcion }}"
         tooltipPosition="top"
       >
         {{ item.descripcion }}
@@ -70,9 +69,9 @@
     </div>
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
-        <span 
-          class="text-xs hidden md:block unbreakable-text" 
-          pTooltip="Fecha de creación: {{ item.createdAt | date : 'dd/MM/yyyy HH:mm' }}" 
+        <span
+          class="text-xs hidden md:block unbreakable-text"
+          pTooltip="Fecha de creación: {{ item.createdAt | date : 'dd/MM/yyyy HH:mm' }}"
           tooltipPosition="top"
         >
           {{ item.createdAt | date : "short" }}

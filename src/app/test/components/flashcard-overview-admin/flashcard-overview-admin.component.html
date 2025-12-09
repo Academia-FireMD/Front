@@ -35,14 +35,7 @@
         [link]="true"
         (click)="descargarFlashcardsDeAlumnos()"
       ></p-button>
-      <p-button
-        label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
-        }}"
-        icon="pi pi-plus"
-        [link]="true"
-        (click)="navigateToDetailview('new')"
-      ></p-button>
+
       <p-button
         label="{{
           viewportService.screenWidth == 'xs' ? undefined : 'Ficheros'
@@ -51,6 +44,13 @@
         [link]="true"
         (click)="abrirDialogoFicheros()"
       ></p-button>
+      <p-button
+      label="{{
+        viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
+      }}"
+      icon="pi pi-plus"
+      (click)="navigateToDetailview('new')"
+    ></p-button>
     </div>
   </div>
 
@@ -276,9 +276,9 @@
     </div>
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
-        <app-comunidad-picker
-          [comunidades]="item.relevancia"
-        ></app-comunidad-picker>
+        <app-oposicion-picker
+          [oposiciones]="item.relevancia"
+        ></app-oposicion-picker>
         <span
           class="text-xs hidden md:block unbreakable-text"
           pTooltip="Fecha de creación: {{

@@ -81,12 +81,31 @@
             pTooltip="Usuario tutor"
             tooltipPosition="top"
           />
-          <p-chip
-            [styleClass]="getSubscriptionBadgeClass(item.suscripcion)"
-            [label]="getSubscriptionLabel(item.suscripcion)"
-            pTooltip="Tipo de suscripción"
-            tooltipPosition="top"
-          />
+          @if (item.woocommerceCustomerId) {
+            <p-chip
+              styleClass="wp-chip"
+              label="WP"
+              pTooltip="Usuario vinculado a WordPress - gestiona sus suscripciones desde su panel"
+              tooltipPosition="top"
+            />
+          }
+          @if (item.suscripciones && item.suscripciones.length > 0) {
+            @for (sub of item.suscripciones; track sub.id) {
+              <p-chip
+                [styleClass]="getSubscriptionBadgeClass(sub)"
+                [label]="getSubscriptionLabel(sub)"
+                [pTooltip]="'Suscripción: ' + getSubscriptionLabel(sub)"
+                tooltipPosition="top"
+              />
+            }
+          } @else {
+            <p-chip
+              styleClass="no-subscription-chip"
+              label="Sin suscripción"
+              pTooltip="Usuario sin suscripción"
+              tooltipPosition="top"
+            />
+          }
           @if (item.labels && item.labels.length > 0) {
             @for (userLabel of item.labels; track userLabel.labelId) {
               <p-chip
@@ -620,60 +639,131 @@
   }
 </ng-template>
 
-<!-- Diálogo para cambiar suscripción -->
+<!-- Diálogo para gestionar suscripciones -->
 <p-dialog
-  header="Cambiar Suscripción"
+  header="Gestionar Suscripciones"
   [(visible)]="subscriptionDialogVisible"
   [modal]="true"
-  [style]="{ width: '450px' }"
+  [style]="{ width: '550px' }"
   [draggable]="false"
   [resizable]="false"
 >
-  <div class="flex flex-column gap-3">
+  <div class="flex flex-column gap-4">
+    <!-- Info del usuario -->
     <div class="flex flex-column gap-2">
       <label class="font-medium">Usuario:</label>
-      <span
-        >{{ selectedUser?.nombre }} {{ selectedUser?.apellidos }} ({{
-          selectedUser?.email
-        }})</span
-      >
+      <span class="text-700">
+        {{ selectedUser?.nombre }} {{ selectedUser?.apellidos }}
+        <span class="text-500">({{ selectedUser?.email }})</span>
+      </span>
     </div>
 
+    <!-- Suscripciones actuales -->
     <div class="flex flex-column gap-2">
-      <label class="font-medium">Suscripción actual:</label>
-      <p-chip
-        [ngClass]="getSubscriptionBadgeClass(selectedUser?.suscripcion)"
-        [label]="getSubscriptionLabel(selectedUser?.suscripcion)"
-      />
+      <label class="font-medium">Suscripciones actuales:</label>
+      @if (selectedUser?.suscripciones?.length) {
+        <div class="flex flex-column gap-2">
+          @for (sub of selectedUser?.suscripciones || []; track sub.id) {
+            <div class="flex align-items-center justify-content-between p-3 surface-50 border-round">
+              <div class="flex align-items-center gap-2">
+                <p-chip
+                  [styleClass]="getSubscriptionBadgeClass(sub)"
+                  [label]="getSubscriptionLabel(sub)"
+                />
+                <span
+                  class="text-xs px-2 py-1 border-round"
+                  [ngClass]="{
+                    'bg-green-100 text-green-700': sub.status === 'ACTIVE',
+                    'bg-red-100 text-red-700': sub.status === 'CANCELLED'
+                  }"
+                >
+                  {{ sub.status === 'ACTIVE' ? 'Activa' : 'Cancelada' }}
+                </span>
+              </div>
+              <p-button
+                icon="pi pi-trash"
+                styleClass="p-button-danger p-button-text p-button-sm"
+                pTooltip="Eliminar suscripción"
+                tooltipPosition="left"
+                (onClick)="deleteSubscription(sub)"
+              />
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="p-3 surface-50 border-round text-center text-500">
+          <i class="pi pi-info-circle mr-2"></i>
+          Sin suscripciones
+        </div>
+      }
     </div>
 
-    <div class="flex flex-column gap-2">
-      <label class="font-medium">Nueva suscripción:</label>
-      <p-dropdown
-        [options]="availableSubscriptions"
-        [(ngModel)]="selectedSubscriptionType"
-        optionLabel="name"
-        optionValue="id"
-        placeholder="Selecciona una suscripción"
-        [style]="{ width: '100%' }"
-        appendTo="body"
+    <p-divider />
+
+    <!-- Añadir nueva suscripción -->
+    <div class="flex flex-column gap-3">
+      <label class="font-medium">Añadir nueva suscripción:</label>
+
+      <div class="grid">
+        <div class="col-6">
+          <label class="text-sm text-600 block mb-2">Oposición</label>
+          <p-dropdown
+            [options]="oposicionOptions"
+            [(ngModel)]="selectedOposicion"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecciona oposición"
+            [style]="{ width: '100%' }"
+            appendTo="body"
+          >
+            <ng-template let-option pTemplate="item">
+              <div class="flex align-items-center justify-content-between w-full">
+                <span>{{ option.label }}</span>
+                <i *ngIf="hasSubscriptionForOposicion(option.value)"
+                   class="pi pi-check-circle text-green-500 ml-2"
+                   pTooltip="Ya tiene suscripción"
+                   tooltipPosition="left"></i>
+              </div>
+            </ng-template>
+          </p-dropdown>
+          <small *ngIf="hasSubscriptionForOposicion(selectedOposicion)" class="text-orange-500">
+            <i class="pi pi-exclamation-triangle mr-1"></i>
+            Ya existe suscripción para esta oposición
+          </small>
+        </div>
+        <div class="col-6">
+          <label class="text-sm text-600 block mb-2">Tipo de plan</label>
+          <p-dropdown
+            [options]="subscriptionTypeOptions"
+            [(ngModel)]="selectedSubscriptionType"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecciona plan"
+            [style]="{ width: '100%' }"
+            appendTo="body"
+          />
+        </div>
+      </div>
+
+      <p-button
+        label="Añadir suscripción"
+        icon="pi pi-plus"
+        styleClass="w-full"
+        (onClick)="updateUserSubscription()"
+        [disabled]="!canAddSubscription()"
+        [pTooltip]="hasSubscriptionForOposicion(selectedOposicion) ? 'Ya existe una suscripción para esta oposición' : ''"
+        tooltipPosition="top"
       />
     </div>
   </div>
 
   <ng-template pTemplate="footer">
-    <div class="flex justify-content-end gap-2">
+    <div class="flex justify-content-end">
       <p-button
-        label="Cancelar"
+        label="Cerrar"
         icon="pi pi-times"
         (click)="subscriptionDialogVisible = false"
         [text]="true"
-      />
-      <p-button
-        label="Actualizar"
-        icon="pi pi-check"
-        (click)="updateUserSubscription()"
-        [loading]="false"
       />
     </div>
   </ng-template>

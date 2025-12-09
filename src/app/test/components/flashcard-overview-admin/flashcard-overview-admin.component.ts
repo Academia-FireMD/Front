@@ -1,9 +1,9 @@
 import {
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  ViewChild,
+    Component,
+    computed,
+    ElementRef,
+    inject,
+    ViewChild,
 } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -17,8 +17,8 @@ import { Dificultad } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
-  getAlumnoDificultad,
-  getStarsBasedOnDifficulty,
+    getAlumnoDificultad,
+    getStarsBasedOnDifficulty,
 } from '../../../utils/utils';
 
 @Component({
@@ -73,9 +73,12 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
     },
     {
       key: 'relevancia',
-      label: 'Comunidad',
-      type: 'comunidad-dropdown',
-      placeholder: 'Seleccionar comunidad',
+      label: 'Oposición',
+      type: 'oposicion-picker',
+      placeholder: 'Seleccionar oposición',
+      filterInterpolation: (value) => ({
+        relevancia: value,
+      }),
     },
   ];
 
@@ -264,25 +267,25 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.href = url;
-      
+
       const fecha = new Date().toISOString().split('T')[0];
-      const tipo = soloAlumnosValue === undefined 
-        ? 'todas' 
-        : soloAlumnosValue 
-          ? 'alumnos' 
+      const tipo = soloAlumnosValue === undefined
+        ? 'todas'
+        : soloAlumnosValue
+          ? 'alumnos'
           : 'academia';
       const extension = formato === 'excel' ? 'xlsx' : 'docx';
       link.download = `flashcards_${tipo}_${fecha}.${extension}`;
-      
+
       link.click();
       URL.revokeObjectURL(url);
-      
+
       this.toast.success('Archivo exportado correctamente');
       this.mostrarFicherosDialog = false;
-      this.exportForm.reset({ 
-        temaId: null, 
-        dificultad: null, 
-        formato: 'excel' 
+      this.exportForm.reset({
+        temaId: null,
+        dificultad: null,
+        formato: 'excel'
       });
     } catch (error) {
       this.toast.error('Error al exportar');

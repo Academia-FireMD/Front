@@ -14,6 +14,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
@@ -31,11 +32,13 @@ import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
 import {
-  Comunidad,
   Dificultad,
   Pregunta,
 } from '../../../shared/models/pregunta.model';
+import { Oposicion, SuscripcionStatus } from '../../../shared/models/subscription.model';
 import { Rol } from '../../../shared/models/user.model';
+import { AppState } from '../../../store/app.state';
+import { selectCurrentUser } from '../../../store/user/user.selectors';
 import {
   getLetter,
   getStarsBasedOnDifficulty,
@@ -59,6 +62,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
   viewportService = inject(ViewportService);
   examenesService = inject(ExamenesService);
   confirmationService = inject(ConfirmationService);
+  private store = inject(Store<AppState>);
   @Input() expectedRole: Rol = Rol.ADMIN;
   crearOtroControl = new FormControl(false);
   editorSolucion!: any;
@@ -150,7 +154,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   formGroup = this.fb.group({
     identificador: [''],
-    relevancia: this.fb.array([] as Array<Comunidad>),
+    relevancia: this.fb.array([] as Array<Oposicion>),
     dificultad: [''],
     temaId: [0],
     descripcion: [''],
@@ -266,6 +270,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
     if (itemId === 'new') {
       this.formGroup.reset();
       this.initEditor('', '');
+      // Autoseleccionar oposiciones del alumno
+      this.autoSelectOposicionesFromSubscriptions();
     } else {
       firstValueFrom(
         this.preguntasService.getPreguntaById(itemId).pipe(
@@ -274,6 +280,24 @@ export class PreguntasDashboardAdminDetailviewComponent {
           })
         )
       );
+    }
+  }
+
+  /**
+   * Autoselecciona las oposiciones basadas en las suscripciones activas del usuario
+   */
+  private async autoSelectOposicionesFromSubscriptions() {
+    if (this.expectedRole === Rol.ADMIN) return; // Solo para alumnos
+
+    const user = await firstValueFrom(this.store.select(selectCurrentUser));
+    if (!user?.suscripciones?.length) return;
+
+    const oposicionesActivas = user.suscripciones
+      .filter(s => s.status === SuscripcionStatus.ACTIVE)
+      .map(s => s.oposicion);
+
+    if (oposicionesActivas.length > 0) {
+      this.updateOposicionSelection(oposicionesActivas);
     }
   }
 
@@ -286,9 +310,9 @@ export class PreguntasDashboardAdminDetailviewComponent {
     this.respuestas.markAsPristine();
   }
 
-  public updateCommunitySelection(communities: Comunidad[]) {
+  public updateOposicionSelection(oposiciones: Oposicion[]) {
     this.relevancia.clear();
-    communities.forEach((code) => this.relevancia.push(new FormControl(code)));
+    oposiciones.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
 
   public addNewPregunta() {

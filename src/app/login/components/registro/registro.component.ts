@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
 import { FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -16,33 +16,21 @@ import { firstValueFrom, map } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { UserService } from '../../../services/user.service';
 import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
-import { Comunidad } from '../../../shared/models/pregunta.model';
-import { OnboardingFormComponent } from '../../../shared/onboarding-form/onboarding-form.component';
 import { SharedModule } from '../../../shared/shared.module';
-import { comunidades } from '../../../utils/consts';
 import {
   passwordMatchValidator,
   passwordStrengthValidator,
 } from '../../../utils/validators';
 
-interface RegistroTemporal {
-  email: string;
-  nombre: string;
-  apellidos: string;
-  woocommerceCustomerId: string;
-
-  // Campos de suscripción
-  planType?: string;
-  monthlyPrice?: number;
-
-  // Campos de consumible
-  tipoRegistro: 'SUSCRIPCION' | 'CONSUMIBLE';
-  tipoConsumible?: string;
-  precio?: number;
-  productId?: string;
-  sku?: string;
-}
-
+/**
+ * Componente de registro simplificado.
+ *
+ * NOTA: El registro desde WordPress ahora es automático (auto-registro).
+ * Los usuarios de WP se crean directamente cuando compran una suscripción.
+ * Este componente se mantiene solo para:
+ * - Registro manual de admins
+ * - Casos edge de fallback
+ */
 @Component({
   selector: 'app-registro',
   templateUrl: './registro.component.html',
@@ -61,25 +49,21 @@ interface RegistroTemporal {
     DialogModule,
     ProgressSpinnerModule,
     AsyncButtonComponent,
-    OnboardingFormComponent
   ]
 })
-export class RegistroComponent implements OnInit {
+export class RegistroComponent {
   fb = inject(FormBuilder);
   auth = inject(AuthService);
   toast = inject(ToastrService);
   router = inject(Router);
-  route = inject(ActivatedRoute);
   http = inject(HttpClient);
   sanitizer = inject(DomSanitizer);
   users = inject(UserService);
 
-  @Input() mode: 'default' | 'injected' | 'activation' = 'default';
+  @Input() mode: 'default' | 'injected' = 'default';
   @Output() registroCompletado = new EventEmitter<{ email: string, password: string }>();
 
   tutores$ = this.users.getAllTutores$();
-  registroTemporal: RegistroTemporal | null = null;
-  isLoading = false;
 
   formGroup = this.fb.group(
     {
@@ -97,18 +81,9 @@ export class RegistroComponent implements OnInit {
         false,
         [Validators.required, Validators.requiredTrue],
       ],
-      woocommerceCustomerId: [''],
-      planType: ['']
     },
     { validators: passwordMatchValidator }
   );
-
-  public comunidades = Object.keys(Comunidad).map((entry) => {
-    return {
-      code: entry,
-      ...comunidades[entry],
-    };
-  });
 
   get contrasenya() {
     return this.formGroup.get('contrasenya');
@@ -132,83 +107,27 @@ export class RegistroComponent implements OnInit {
     })
     .pipe(map((res) => this.sanitizer.bypassSecurityTrustHtml(res)));
 
-  async ngOnInit() {
-    // Obtener el modo de la ruta
-    this.mode = this.route.snapshot.data['mode'] || this.mode;
-
-    if (this.mode === 'activation') {
-      const token = this.route.snapshot.queryParams['token'];
-      if (token) {
-        await this.cargarDatosTemporales(token);
-      } else {
-        this.toast.error('Token de activación no válido');
-        this.router.navigate(['/auth/registro']);
-      }
-    }
-  }
-
-  private async cargarDatosTemporales(token: string) {
-    try {
-      this.isLoading = true;
-      const response = await firstValueFrom(
-        this.auth.registroTemporal$(token)
-      );
-
-      if (response) {
-        this.registroTemporal = response;
-        // Rellenar el formulario con los datos temporales
-        this.formGroup.patchValue({
-          email: response.email,
-          nombre: response.nombre,
-          apellidos: response.apellidos,
-          woocommerceCustomerId: response.woocommerceCustomerId,
-          planType: response.planType,
-          relevancia: '' // Default, el usuario puede cambiarlo
-        });
-
-        // Deshabilitar el campo de email ya que viene de WooCommerce
-        this.formGroup.get('email')?.disable();
-      }
-    } catch (error) {
-      console.error('Error al cargar datos temporales:', error);
-      this.toast.error('Error al cargar los datos de registro');
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
   public async register() {
     try {
-      const formValue = this.formGroup.getRawValue(); // getRawValue incluye campos disabled
+      const formValue = this.formGroup.getRawValue();
       const email = formValue.email ?? '';
       const password = formValue.contrasenya ?? '';
 
-      const res = await firstValueFrom(
+      await firstValueFrom(
         this.auth.register$(
-          email ?? '',
-          password ?? '',
-          (formValue.relevancia as Comunidad) ?? Comunidad.VALENCIA,
+          email,
+          password,
           formValue.nombre ?? '',
           formValue.apellidos ?? '',
           formValue.tutor as any,
-          formValue.woocommerceCustomerId ?? '', // Aseguramos que sea un string
-          formValue.planType ?? '' // Aseguramos que sea un string
         )
       );
 
       this.registroCompletado.emit({ email, password });
 
-      if(this.mode == 'default'){
-        this.toast.success(
-          'Cuenta creada correctamente.'
-        );
-      }else if(this.mode == 'activation'){
-        this.toast.success(
-          'Producto activado correctamente. Ya puedes acceder a tu cuenta.'
-        );
-      }
+      this.toast.success('Cuenta creada correctamente.');
 
-      if (this.mode === 'default' || this.mode === 'activation') {
+      if (this.mode === 'default') {
         setTimeout(() => {
           this.router.navigate(['/auth/login']);
         }, 0);
@@ -227,12 +146,5 @@ export class RegistroComponent implements OnInit {
 
   closePoliticaDialog() {
     this.politicaDialogVisible = false;
-  }
-
-  irALoginConActivacion() {
-    const token = this.route.snapshot.queryParams['token'];
-    this.router.navigate(['/auth/login-with-activation'], {
-      queryParams: { token }
-    });
   }
 }
