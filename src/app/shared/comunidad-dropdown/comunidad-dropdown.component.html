@@ -13,14 +13,14 @@
 >
   <ng-template let-item pTemplate="selectedItem">
     <div class="flex align-items-center gap-2 h-full">
-      <img src="{{ item.image }}" class="img-flag" />
+      <img [src]="item.image" class="img-flag" *ngIf="item.image" />
       <div>{{ item.name }}</div>
     </div>
   </ng-template>
   <ng-template let-item let-index pTemplate="item">
     <div class="flex align-items-center gap-2 h-full">
-      <img src="{{ item.image }}" class="img-flag" />
+      <img [src]="item.image" class="img-flag" *ngIf="item.image" />
       <div>{{ item.name }}</div>
     </div>
   </ng-template>
-</p-dropdown> 
+</p-dropdown>

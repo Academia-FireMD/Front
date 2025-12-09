@@ -1,11 +1,15 @@
 import { Modulo } from '../services/modulo.service';
+import { Oposicion } from './subscription.model';
 import { Test } from './test.model';
 import { TipoDePlanificacionDeseada, Usuario } from './user.model';
+
+// Re-export Oposicion from subscription model for backwards compatibility
+export { Oposicion } from './subscription.model';
 
 export interface Pregunta {
   id: number;
   identificador: string;
-  relevancia: Comunidad[];
+  relevancia: Oposicion[];
   dificultad: Dificultad;
   tema: Tema;
   temaId: number;
@@ -60,6 +64,7 @@ export enum SeguridadAlResponder {
   CIEN_POR_CIENTO = 'CIEN_POR_CIENTO',
 }
 
+// Comunidad = Región geográfica del usuario (para perfil)
 export enum Comunidad {
   MADRID = 'MADRID',
   VALENCIA = 'VALENCIA',

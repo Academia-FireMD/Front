@@ -13,7 +13,7 @@
             <label for="identificadorModulo">Identificador del módulo</label>
           </p-floatLabel>
         </div>
-        <div class="col-12 md:col-6 lg:col-4">
+        <div class="col-12 md:col-6 lg:col-3">
           <p-floatLabel>
             <input
               type="text"
@@ -24,8 +24,16 @@
             <label for="nombre">Nombre</label>
           </p-floatLabel>
         </div>
+        <div class="col-12 md:col-6 lg:col-3">
+          <label class="block mb-2 text-sm text-600">Oposiciones</label>
+          <app-oposicion-picker
+            [allowAdd]="true"
+            [oposiciones]="relevancia.value"
+            (updateSelection)="updateOposicionSelection($event)"
+          ></app-oposicion-picker>
+        </div>
         <div
-          class="col-12 md:col-6 lg:col-4 flex align-items-center justify-content-start"
+          class="col-12 md:col-6 lg:col-2 flex align-items-center justify-content-start"
         >
           <div class="flex align-items-center gap-2">
             <p-inputSwitch formControlName="esPublico"></p-inputSwitch>

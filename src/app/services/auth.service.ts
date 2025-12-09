@@ -3,7 +3,6 @@ import { Injectable, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Comunidad } from '../shared/models/pregunta.model';
 import { Usuario } from '../shared/models/user.model';
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
@@ -50,25 +49,24 @@ export class AuthService extends ApiBaseService {
     }
   }
 
+  /**
+   * Registro manual de usuario.
+   * NOTA: Los usuarios de WordPress se auto-registran desde el webhook.
+   * Este método se mantiene solo para admins o casos edge.
+   */
   public register$(
     email: string,
     password: string,
-    comunidad: Comunidad,
     nombre: string,
     apellidos: string,
     tutorId?: number,
-    woocommerceCustomerId?: string,
-    planType?: string
   ) {
     return this.post('/register', {
       email,
       password,
-      comunidad,
       nombre,
       apellidos,
       tutorId,
-      woocommerceCustomerId,
-      planType,
     });
   }
 
@@ -184,10 +182,18 @@ export class AuthService extends ApiBaseService {
     return !!this.getCurrentUser();
   }
 
+  /**
+   * @deprecated Ya no se usa para suscripciones nuevas.
+   * El auto-registro desde WordPress crea usuarios directamente.
+   * Solo se mantiene para consumibles y compatibilidad histórica.
+   */
   public registroTemporal$(token: string): Observable<any> {
     return this.get(`/registro-temporal/${token}`);
   }
 
+  /**
+   * @deprecated Solo se mantiene para consumibles existentes.
+   */
   activateConsumible$(token: string, userId: number) {
     return this.http.post<any>(`${environment.apiUrl}/auth/activate-consumible`, {
       token,

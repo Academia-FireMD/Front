@@ -131,7 +131,16 @@
           [entidadId]="Number(getId())"
           [mode]="expectedRole === 'ADMIN' ? 'admin' : 'view'"
         ></app-attachments-manager>
-        } @if (expectedRole == 'ADMIN') {
+        }
+        @if (expectedRole == 'ALUMNO' && relevancia.value?.length) {
+        <div class="relevancia">
+          <app-oposicion-picker
+            [allowAdd]="false"
+            [oposiciones]="relevancia.value"
+          ></app-oposicion-picker>
+        </div>
+        }
+        @if (expectedRole == 'ADMIN') {
         <div class="duracion">
           <p-dropdown
             class="w-full"
@@ -146,11 +155,11 @@
           </p-dropdown>
         </div>
         <div class="relevancia">
-          <app-comunidad-picker
+          <app-oposicion-picker
             [allowAdd]="true"
-            [comunidades]="relevancia.value"
-            (updateSelection)="updateCommunitySelection($event)"
-          ></app-comunidad-picker>
+            [oposiciones]="relevancia.value"
+            (updateSelection)="updateOposicionSelection($event)"
+          ></app-oposicion-picker>
         </div>
         <div class="por-defecto gap-2">
           <label for="switch1">Por defecto</label>

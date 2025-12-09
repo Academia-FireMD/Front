@@ -1,0 +1,58 @@
+<p-overlayPanel #op>
+  <div class="flex flex-column gap-3">
+    <p-listbox
+      [options]="keysEnum"
+      optionLabel="label"
+      [className]="'oposicion-picker-listbox'"
+      [listStyle]="{ 'max-height': '250px' }"
+      [style]="{ width: '18rem' }"
+      [multiple]="multiple"
+      (onChange)="parseOutput($event.value)"
+    >
+      <ng-template let-item pTemplate="item">
+        <div class="flex align-items-center gap-2">
+          <img
+            *ngIf="item.image"
+            [src]="item.image"
+            [alt]="item.label"
+            class="oposicion-img-dropdown"
+          />
+          <span *ngIf="!item.image" class="text-lg">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </div>
+      </ng-template>
+    </p-listbox>
+  </div>
+</p-overlayPanel>
+
+<div class="contenedor-oposiciones">
+  <div class="list flex align-items-center gap-1">
+    @if (oposiciones.length === 0) {
+      <span class="text-sm text-600">Sin oposiciones</span>
+    }
+    @for (oposicion of oposiciones; track oposicion) {
+      <span
+        class="oposicion-badge"
+        [pTooltip]="getName(oposicion)"
+        tooltipPosition="top"
+      >
+        <img
+          *ngIf="getImage(oposicion)"
+          [src]="getImage(oposicion)"
+          [alt]="getName(oposicion)"
+          class="oposicion-img"
+        />
+        <span *ngIf="!getImage(oposicion)">{{ getIcon(oposicion) }}</span>
+      </span>
+    }
+  </div>
+
+  <p-button
+    [link]="true"
+    *ngIf="allowAdd"
+    (onClick)="op.toggle($event)"
+    icon="pi pi-plus-circle"
+    pTooltip="Asignar oposiciones"
+    tooltipPosition="top"
+  />
+</div>

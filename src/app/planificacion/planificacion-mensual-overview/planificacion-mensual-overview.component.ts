@@ -90,7 +90,16 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
           esPorDefecto: Boolean(value),
         }
       }
-    }
+    },
+    {
+      key: 'relevancia',
+      label: 'Oposición',
+      type: 'oposicion-picker',
+      placeholder: 'Seleccionar oposición',
+      filterInterpolation: (value) => ({
+        relevancia: value,
+      }),
+    },
   ];
 
   commMap = (pagination: PaginationFilter) => {

@@ -9,10 +9,21 @@ export enum SuscripcionStatus {
   CANCELLED = 'CANCELLED'
 }
 
+export enum Oposicion {
+  VALENCIA_AYUNTAMIENTO = 'VALENCIA_AYUNTAMIENTO',
+  ALICANTE_CPBA = 'ALICANTE_CPBA'
+}
+
+export const OPOSICION_LABELS: Record<Oposicion, string> = {
+  [Oposicion.VALENCIA_AYUNTAMIENTO]: 'Valencia Ayuntamiento',
+  [Oposicion.ALICANTE_CPBA]: 'CPBA Alicante'
+};
+
 export interface Suscripcion {
   id: number;
   usuarioId: number;
   tipo: SuscripcionTipo;
+  oposicion: Oposicion;  // A qué oposición pertenece
   fechaInicio: Date;
   fechaFin?: Date;
   woocommerceSubscriptionId?: string;

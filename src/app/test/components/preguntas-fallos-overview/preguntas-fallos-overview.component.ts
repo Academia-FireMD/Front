@@ -33,6 +33,17 @@ export class PreguntasFallosOverviewComponent extends SharedGridComponent<Pregun
         selectionMode: 'range',
       },
     },
+    {
+      key: 'pregunta',
+      label: 'Oposición',
+      type: 'oposicion-picker',
+      placeholder: 'Seleccionar oposición',
+      filterInterpolation: (value) => ({
+        pregunta: {
+          relevancia: value,
+        },
+      }),
+    },
   ];
 
   constructor() {

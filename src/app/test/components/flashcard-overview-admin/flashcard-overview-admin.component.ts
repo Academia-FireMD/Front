@@ -1,9 +1,9 @@
 import {
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  ViewChild,
+    Component,
+    computed,
+    ElementRef,
+    inject,
+    ViewChild,
 } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -17,8 +17,8 @@ import { Dificultad } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
-  getAlumnoDificultad,
-  getStarsBasedOnDifficulty,
+    getAlumnoDificultad,
+    getStarsBasedOnDifficulty,
 } from '../../../utils/utils';
 
 @Component({
@@ -37,12 +37,19 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
   public getStarsBasedOnDifficulty = getStarsBasedOnDifficulty;
   public getAlumnoDificultad = getAlumnoDificultad;
   private fb = inject(FormBuilder);
-  public mostrarImportDialog = false;
+  public mostrarFicherosDialog = false;
+  public modoFicheros: 'importar' | 'exportar' = 'importar';
   public importForm = this.fb.group({
     temaId: [null as number | null, [Validators.required]],
     dificultad: [null as Dificultad | null, [Validators.required]],
   });
+  public exportForm = this.fb.group({
+    temaId: [null as number | null],
+    dificultad: [null as Dificultad | null],
+    formato: ['excel' as 'excel' | 'word', [Validators.required]],
+  });
   public selectedFile: File | null = null;
+  public exportando = false;
 
   // Configuración de filtros para el GenericListComponent
   public filters: FilterConfig[] = [
@@ -66,9 +73,12 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
     },
     {
       key: 'relevancia',
-      label: 'Comunidad',
-      type: 'comunidad-dropdown',
-      placeholder: 'Seleccionar comunidad',
+      label: 'Oposición',
+      type: 'oposicion-picker',
+      placeholder: 'Seleccionar oposición',
+      filterInterpolation: (value) => ({
+        relevancia: value,
+      }),
     },
   ];
 
@@ -152,7 +162,7 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
           response.ignoradas ?? 0
         } ignoradas.`
       );
-      this.mostrarImportDialog = false;
+      this.mostrarFicherosDialog = false;
       this.selectedFile = null;
       this.importForm.reset({ temaId: null, dificultad: null });
     } catch (error) {
@@ -221,5 +231,66 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
         })
       )
     );
+  }
+
+  abrirDialogoFicheros() {
+    this.modoFicheros = 'importar';
+    this.importForm.reset({ temaId: null, dificultad: null });
+    this.exportForm.reset({ temaId: null, dificultad: null, formato: 'excel' });
+    this.selectedFile = null;
+    this.mostrarFicherosDialog = true;
+  }
+
+  cambiarModoFicheros(modo: 'importar' | 'exportar') {
+    this.modoFicheros = modo;
+    if (modo === 'importar') {
+      this.importForm.reset({ temaId: null, dificultad: null });
+      this.selectedFile = null;
+    } else {
+      this.exportForm.reset({ temaId: null, dificultad: null, formato: 'excel' });
+    }
+  }
+
+  async exportarFlashcards() {
+    const { temaId, dificultad, formato } = this.exportForm.value;
+    const temaIdsArray = temaId ? [temaId] : undefined;
+    const soloAlumnosValue = undefined; // Export all flashcards matching filters
+
+    this.exportando = true;
+    try {
+      const blob = await firstValueFrom(
+        formato === 'excel'
+          ? this.flashcardService.exportarFlashcardsExcel(temaIdsArray, soloAlumnosValue)
+          : this.flashcardService.exportarFlashcardsWord(temaIdsArray, soloAlumnosValue)
+      );
+
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+
+      const fecha = new Date().toISOString().split('T')[0];
+      const tipo = soloAlumnosValue === undefined
+        ? 'todas'
+        : soloAlumnosValue
+          ? 'alumnos'
+          : 'academia';
+      const extension = formato === 'excel' ? 'xlsx' : 'docx';
+      link.download = `flashcards_${tipo}_${fecha}.${extension}`;
+
+      link.click();
+      URL.revokeObjectURL(url);
+
+      this.toast.success('Archivo exportado correctamente');
+      this.mostrarFicherosDialog = false;
+      this.exportForm.reset({
+        temaId: null,
+        dificultad: null,
+        formato: 'excel'
+      });
+    } catch (error) {
+      this.toast.error('Error al exportar');
+    } finally {
+      this.exportando = false;
+    }
   }
 }

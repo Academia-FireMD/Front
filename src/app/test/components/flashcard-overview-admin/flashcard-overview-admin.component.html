@@ -35,22 +35,22 @@
         [link]="true"
         (click)="descargarFlashcardsDeAlumnos()"
       ></p-button>
+
       <p-button
         label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
+          viewportService.screenWidth == 'xs' ? undefined : 'Ficheros'
         }}"
-        icon="pi pi-plus"
+        icon="pi pi-file"
         [link]="true"
-        (click)="navigateToDetailview('new')"
+        (click)="abrirDialogoFicheros()"
       ></p-button>
       <p-button
-        label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Importar'
-        }}"
-        icon="pi pi-upload"
-        (click)="mostrarImportDialog = true"
-        [loading]="uploadingFile"
-      ></p-button>
+      label="{{
+        viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
+      }}"
+      icon="pi pi-plus"
+      (click)="navigateToDetailview('new')"
+    ></p-button>
     </div>
   </div>
 
@@ -60,79 +60,173 @@
 </app-generic-list>
 
 <p-dialog
-  header="Importar flashcards desde Excel"
-  [(visible)]="mostrarImportDialog"
+  header="Gestión de ficheros"
+  [(visible)]="mostrarFicherosDialog"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
+  [style]="{ width: '50vw' }"
+  [breakpoints]="{ '960px': '75vw', '640px': '90vw' }"
 >
-  <div class="flex flex-column gap-3" [formGroup]="importForm">
-    <div class="grid">
-      <div class="col-6">
-        <app-tema-select
-          [multiple]="false"
-          [formControl]="importForm.controls['temaId']"
-        ></app-tema-select>
-      </div>
-      <div class="col-6">
-        <app-dificultad-dropdown
-          [formControlDificultad]="importForm.controls['dificultad']"
-          [isFlashcards]="true"
-        ></app-dificultad-dropdown>
-      </div>
-    </div>
-    <div>
-      <label class="block mb-2">Archivo (.xlsx, .xls)</label>
-      <p-fileUpload
-        mode="advanced"
-        [auto]="false"
-        [multiple]="false"
-        [showUploadButton]="false"
-        [showCancelButton]="false"
-        accept=".xlsx,.xls"
-        (onSelect)="onPrimeFileSelect($event)"
-        chooseLabel="Seleccionar / Arrastrar aquí"
-        [style]="{ width: '100%' }"
-      ></p-fileUpload>
-    </div>
+  <!-- Toggle para elegir modo -->
+  <div class="flex justify-content-center mb-4">
+    <p-selectButton
+      [options]="[
+        { label: 'Importar', value: 'importar', icon: 'pi pi-upload' },
+        { label: 'Exportar', value: 'exportar', icon: 'pi pi-download' }
+      ]"
+      [(ngModel)]="modoFicheros"
+      (ngModelChange)="cambiarModoFicheros($event)"
+      optionLabel="label"
+      optionValue="value"
+      [style]="{ width: '100%' }"
+    ></p-selectButton>
+  </div>
 
-    <div class="grid">
-      <div class="col-12 md:col-6">
-        <h4>Estructura esperada</h4>
-        <p>Columnas mínimas (en español):</p>
-        <ul>
-          <li><code>Descripción</code></li>
-          <li><code>Solución</code></li>
-        </ul>
+  <!-- Formulario de Importar -->
+  <div *ngIf="modoFicheros === 'importar'">
+    <div class="flex flex-column gap-3" [formGroup]="importForm">
+      <div class="grid">
+        <div class="col-12 md:col-8 h-full">
+          <label class="block mb-2">Tema</label>
+          <app-tema-select
+            [multiple]="false"
+            [formControl]="importForm.controls['temaId']"
+          ></app-tema-select>
+        </div>
+        <div class="col-12 md:col-4 h-full">
+          <label class="block mb-2">Dificultad</label>
+          <app-dificultad-dropdown
+            [formControlDificultad]="importForm.controls['dificultad']"
+            [isFlashcards]="true"
+          ></app-dificultad-dropdown>
+        </div>
       </div>
-      <div class="col-12 md:col-6">
-        <h4>Notas</h4>
-        <ul>
-          <li>Puedes incluir más columnas, se ignorarán.</li>
-        </ul>
-        <div class="mt-2">
-          <p-button
-            label="Descargar plantilla Excel"
-            icon="pi pi-download"
-            styleClass="p-button-text"
-            (click)="descargarPlantillaFlashcards()"
-          ></p-button>
+
+      <div>
+        <label class="block mb-2">Archivo (.xlsx, .xls)</label>
+        <p-fileUpload
+          mode="advanced"
+          [auto]="false"
+          [multiple]="false"
+          [showUploadButton]="false"
+          [showCancelButton]="false"
+          accept=".xlsx,.xls"
+          (onSelect)="onPrimeFileSelect($event)"
+          chooseLabel="Seleccionar / Arrastrar aquí"
+          [style]="{ width: '100%' }"
+        ></p-fileUpload>
+      </div>
+
+      <div class="grid">
+        <div class="col-12 md:col-6">
+          <h4>Estructura esperada</h4>
+          <p>Columnas mínimas (en español):</p>
+          <ul>
+            <li><code>Descripción</code></li>
+            <li><code>Solución</code></li>
+          </ul>
+        </div>
+        <div class="col-12 md:col-6">
+          <h4>Notas</h4>
+          <ul>
+            <li>Puedes incluir más columnas, se ignorarán.</li>
+          </ul>
+          <div class="mt-2">
+            <p-button
+              label="Descargar plantilla Excel"
+              icon="pi pi-download"
+              styleClass="p-button-text"
+              (click)="descargarPlantillaFlashcards()"
+            ></p-button>
+          </div>
         </div>
       </div>
     </div>
+    <div class="flex justify-content-end gap-2 mt-3">
+      <p-button
+        label="Cancelar"
+        styleClass="p-button-outlined"
+        (click)="mostrarFicherosDialog = false"
+      ></p-button>
+      <p-button
+        label="Importar"
+        icon="pi pi-upload"
+        (click)="importarFlashcards()"
+        [disabled]="!selectedFile || importForm.invalid"
+      ></p-button>
+    </div>
   </div>
-  <div class="flex justify-content-end gap-2 mt-3">
-    <p-button
-      label="Cancelar"
-      styleClass="p-button-outlined"
-      (click)="mostrarImportDialog = false"
-    ></p-button>
-    <p-button
-      label="Importar"
-      icon="pi pi-upload"
-      (click)="importarFlashcards()"
-      [disabled]="!selectedFile || importForm.invalid"
-    ></p-button>
+
+  <!-- Formulario de Exportar -->
+  <div *ngIf="modoFicheros === 'exportar'">
+    <div class="flex flex-column gap-3" [formGroup]="exportForm">
+      <div class="grid">
+        <div class="col-12 md:col-8 h-full">
+          <label class="block mb-2">Tema</label>
+          <app-tema-select
+            [multiple]="false"
+            [formControl]="exportForm.controls['temaId']"
+          ></app-tema-select>
+        </div>
+        <div class="col-12 md:col-4 h-full">
+          <label class="block mb-2">Dificultad</label>
+          <app-dificultad-dropdown
+            [formControlDificultad]="exportForm.controls['dificultad']"
+            [isFlashcards]="true"
+          ></app-dificultad-dropdown>
+        </div>
+      </div>
+
+      <div>
+        <label class="block mb-2">Formato de exportación</label>
+        <p-dropdown
+          [formControl]="exportForm.controls['formato']"
+          [options]="[
+            { label: 'Excel (.xlsx)', value: 'excel' },
+            { label: 'Word (.docx)', value: 'word' }
+          ]"
+          placeholder="Seleccionar formato"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+        ></p-dropdown>
+      </div>
+
+      <div class="grid">
+        <div class="col-12 md:col-6">
+          <h4>Información incluida</h4>
+          <ul>
+            <li>Identificador de la flashcard</li>
+            <li>Tema</li>
+            <li>Descripción</li>
+            <li>Solución</li>
+          </ul>
+        </div>
+        <div class="col-12 md:col-6">
+          <h4>Información adicional</h4>
+          <ul>
+            <li>Dificultad</li>
+            <li>Relevancia/Comunidad</li>
+            <li>Información del creador</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-content-end gap-2 mt-3">
+      <p-button
+        label="Cancelar"
+        styleClass="p-button-outlined"
+        (click)="mostrarFicherosDialog = false"
+      ></p-button>
+      <p-button
+        [label]="exportForm.value.formato === 'excel' ? 'Exportar Excel' : 'Exportar Word'"
+        [icon]="exportForm.value.formato === 'excel' ? 'pi pi-file-excel' : 'pi pi-file-word'"
+        (click)="exportarFlashcards()"
+        [loading]="exportando"
+        [disabled]="exportForm.invalid"
+      ></p-button>
+    </div>
   </div>
 </p-dialog>
 
@@ -182,9 +276,9 @@
     </div>
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
-        <app-comunidad-picker
-          [comunidades]="item.relevancia"
-        ></app-comunidad-picker>
+        <app-oposicion-picker
+          [oposiciones]="item.relevancia"
+        ></app-oposicion-picker>
         <span
           class="text-xs hidden md:block unbreakable-text"
           pTooltip="Fecha de creación: {{

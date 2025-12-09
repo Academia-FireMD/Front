@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiBaseService } from '../../services/api-base.service';
 import { PaginatedResult, PaginationFilter } from '../models/pagination.model';
+import { Oposicion } from '../models/subscription.model';
 
 export interface Modulo {
   id: number;
@@ -11,6 +12,7 @@ export interface Modulo {
   esPublico: boolean;
   createdAt: Date;
   updatedAt: Date;
+  relevancia: Oposicion[];
   _count?: {
     temas: number;
   };
@@ -26,6 +28,7 @@ export interface ModuloDto {
   nombre: string;
   descripcion?: string;
   esPublico: boolean;
+  relevancia?: Oposicion[];
 }
 
 @Injectable({

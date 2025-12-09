@@ -17,41 +17,13 @@ export enum MotivoBaja {
 export interface SolicitarBajaDto {
   motivos: MotivoBaja[];
   comentarioAdicional?: string;
-}
-
-export interface CambiarSuscripcionDto {
-  nuevoSkuProducto: string;
-  comentario?: string;
+  suscripcionId?: number;
 }
 
 export interface ValidacionPlazo {
   valido: boolean;
   diasRestantes: number;
   proximoPago?: Date;
-}
-
-export interface ProductoWooCommerce {
-  id: number;
-  name: string;
-  sku: string;
-  price: string;
-  description: string;
-  type: string;
-  imageUrl?: string | null;
-  permalink?: string | null; // URL completa del producto en WooCommerce
-  slug?: string | null; // Slug del producto
-}
-
-export interface ResultadoCambioSuscripcion {
-  mensaje: string;
-  detalles: {
-    planAnterior: string;
-    planNuevo: string;
-    precioAnterior: number;
-    precioNuevo: number;
-    diferencia: number;
-    proximaFacturacion: Date;
-  };
 }
 
 @Injectable({
@@ -65,32 +37,17 @@ export class SuscripcionManagementService extends ApiBaseService {
 
   /**
    * Valida si el usuario puede realizar cambios en su suscripción
+   * Solo para usuarios "en negro"
    */
   validarPlazo(): Observable<ValidacionPlazo> {
     return this.get('/validar-plazo') as Observable<ValidacionPlazo>;
   }
 
   /**
-   * Solicita la baja de la suscripción
+   * Solicita la baja de la suscripción (solo usuarios "en negro")
    */
   solicitarBaja(dto: SolicitarBajaDto): Observable<{ mensaje: string }> {
     return this.post('/solicitar-baja', dto) as Observable<{ mensaje: string }>;
-  }
-
-  /**
-   * Obtiene los planes disponibles
-   */
-  obtenerPlanesDisponibles(): Observable<ProductoWooCommerce[]> {
-    return this.get('/planes-disponibles') as Observable<ProductoWooCommerce[]>;
-  }
-
-  /**
-   * Cambia la suscripción del usuario
-   */
-  cambiarSuscripcion(
-    dto: CambiarSuscripcionDto
-  ): Observable<ResultadoCambioSuscripcion> {
-    return this.post('/cambiar-suscripcion', dto) as Observable<ResultadoCambioSuscripcion>;
   }
 
   /**

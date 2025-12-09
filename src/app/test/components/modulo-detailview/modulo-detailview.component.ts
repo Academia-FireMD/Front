@@ -1,9 +1,10 @@
 import { Location } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom } from 'rxjs';
+import { Oposicion } from '../../../shared/models/subscription.model';
 import { Modulo, ModuloDto, ModuloService } from '../../../shared/services/modulo.service';
 
 @Component({
@@ -28,8 +29,13 @@ export class ModuloDetailviewComponent implements OnInit {
       nombre: ['', [Validators.required]],
       identificadorModulo: [''],
       descripcion: [''],
-      esPublico: [true]
+      esPublico: [true],
+      relevancia: this.fb.array([] as Array<Oposicion>)
     });
+  }
+
+  public get relevancia() {
+    return this.moduloForm.get('relevancia') as FormArray;
   }
 
   async ngOnInit() {
@@ -46,12 +52,25 @@ export class ModuloDetailviewComponent implements OnInit {
       const modulo = await firstValueFrom(this.service.getModulo$(id));
       this.moduloForm.patchValue(modulo);
       this.lastLoadedModulo = modulo;
+
+      // Llenar el FormArray de relevancia
+      this.relevancia.clear();
+      if (modulo.relevancia && modulo.relevancia.length > 0) {
+        modulo.relevancia.forEach((oposicion: Oposicion) => {
+          this.relevancia.push(new FormControl(oposicion));
+        });
+      }
     } catch (error) {
       console.error('Error al cargar el módulo:', error);
       this.toast.error('Error al cargar el módulo');
     } finally {
       this.loading = false;
     }
+  }
+
+  public updateOposicionSelection(oposiciones: Oposicion[]) {
+    this.relevancia.clear();
+    oposiciones.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
 
   async guardar() {

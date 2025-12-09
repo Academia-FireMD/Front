@@ -325,6 +325,7 @@
             [options]="[
               { label: 'Todos', value: AudienceType.ALL },
               { label: 'Suscripción', value: AudienceType.SUBSCRIPTION },
+              { label: 'Oposición', value: AudienceType.OPOSICION },
               { label: 'Etiqueta', value: AudienceType.LABEL },
               { label: 'Individual', value: AudienceType.INDIVIDUAL }
             ]"
@@ -342,6 +343,18 @@
             [(ngModel)]="rule.value"
             *ngIf="rule.type === AudienceType.SUBSCRIPTION"
             [options]="getSubscriptionTypes()"
+            styleClass="w-full"
+            appendTo="body"
+          ></p-dropdown>
+
+          <!-- Oposición -->
+          <p-dropdown
+            [(ngModel)]="rule.value"
+            *ngIf="rule.type === AudienceType.OPOSICION"
+            [options]="getOposiciones()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecciona una oposición"
             styleClass="w-full"
             appendTo="body"
           ></p-dropdown>

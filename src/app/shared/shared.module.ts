@@ -22,10 +22,10 @@ import { MetodoCalificacionPickerComponent } from './components/metodo-calificac
 import { QrCodeShareComponent } from './components/qr-code-share/qr-code-share.component';
 import { ScoreChartCardComponent } from './components/score-chart-card/score-chart-card.component';
 import { ComunidadDropdownComponent } from './comunidad-dropdown/comunidad-dropdown.component';
-import { ComunidadPickerComponent } from './comunidad-picker/comunidad-picker.component';
 import { DificultadDropdownComponent } from './dificultad-dropdown/dificultad-dropdown.component';
 import { GenericListComponent } from './generic-list/generic-list.component';
 import { OnboardingFormComponent } from './onboarding-form/onboarding-form.component';
+import { OposicionPickerComponent } from './oposicion-picker/oposicion-picker.component';
 import { PasswordInputComponent } from './password-input/password-input.component';
 import { PieChartComponent } from './pie-chart/pie-chart.component';
 import { CountdownPipe } from './pipes/countdown.pipe';
@@ -38,8 +38,8 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
 @NgModule({
   declarations: [
     SharedGridComponent,
-    ComunidadPickerComponent,
     ComunidadDropdownComponent,
+    OposicionPickerComponent,
     PieChartComponent,
     CountdownPipe,
     DificultadDropdownComponent,
@@ -77,8 +77,8 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
   ],
   exports: [
     SharedGridComponent,
-    ComunidadPickerComponent,
     ComunidadDropdownComponent,
+    OposicionPickerComponent,
     PieChartComponent,
     CountdownPipe,
     PrimengModule,

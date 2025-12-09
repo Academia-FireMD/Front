@@ -1,19 +1,19 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import {
-    FormArray,
-    FormBuilder,
-    FormControl,
-    Validators,
+  FormArray,
+  FormBuilder,
+  FormControl,
+  Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CalendarEvent, CalendarView } from 'angular-calendar';
 import { ToastrService } from 'ngx-toastr';
 import { PrimeNGConfig } from 'primeng/api';
 import {
-    combineLatest,
-    filter,
-    firstValueFrom,
-    tap
+  combineLatest,
+  filter,
+  firstValueFrom,
+  tap
 } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
@@ -21,16 +21,16 @@ import { ViewportService } from '../../services/viewport.service';
 import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { EntidadTipo } from '../../shared/models/attachment.model';
 import {
-    PlanificacionMensual,
-    PlantillaSemanal,
-    SubBloque,
+  PlanificacionMensual,
+  PlantillaSemanal,
+  SubBloque,
 } from '../../shared/models/planificacion.model';
 import {
-    Comunidad,
-    duracionesDisponibles,
+  duracionesDisponibles,
 } from '../../shared/models/pregunta.model';
+import { Oposicion } from '../../shared/models/subscription.model';
 import {
-    TipoDePlanificacionDeseada
+  TipoDePlanificacionDeseada
 } from '../../shared/models/user.model';
 import { getNextWeekIfFriday, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
@@ -47,7 +47,7 @@ export class PlanificacionMensualEditComponent {
     descripcion: ['', Validators.required],
     mes: [0, Validators.required],
     ano: [0, Validators.required],
-    relevancia: this.fb.array([] as Array<Comunidad>),
+    relevancia: this.fb.array([] as Array<Oposicion>),
     esPorDefecto: [false],
     tipoDePlanificacion: [
       TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
@@ -63,9 +63,9 @@ export class PlanificacionMensualEditComponent {
   public get tipoDePlanificacion() {
     return this.formGroup.get('tipoDePlanificacion') as FormControl;
   }
-  public updateCommunitySelection(communities: Comunidad[]) {
+  public updateOposicionSelection(oposiciones: Oposicion[]) {
     this.relevancia.clear();
-    communities.forEach((code) => this.relevancia.push(new FormControl(code)));
+    oposiciones.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
   lastLoadedPlanification = signal(null as PlanificacionMensual | null);
   viewportService = inject(ViewportService);
@@ -525,7 +525,7 @@ export class PlanificacionMensualEditComponent {
         mes: this.formGroup.value.mes ?? new Date().getMonth() + 1,
         id: this.getId() == 'new' ? undefined : Number(this.getId()),
         relevancia:
-          (this.formGroup?.value?.relevancia as Array<Comunidad>) ?? [],
+          (this.formGroup?.value?.relevancia as Array<Oposicion>) ?? [],
         esPorDefecto: this.formGroup.value.esPorDefecto ?? false,
         tipoDePlanificacion:
           this.formGroup.value.tipoDePlanificacion ??

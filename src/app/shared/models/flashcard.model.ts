@@ -1,4 +1,5 @@
-import { Comunidad, Dificultad, Tema } from './pregunta.model';
+import { Dificultad, Tema } from './pregunta.model';
+import { Oposicion } from './subscription.model';
 import { TestStatus } from './test.model';
 import { Usuario } from './user.model';
 
@@ -33,7 +34,7 @@ export interface FlashcardRespuesta {
 export interface FlashcardData {
   id: number;
   identificador: string;
-  relevancia: Comunidad[]; // Array de enum Comunidad
+  relevancia: Oposicion[]; // Array de oposiciones
   dificultad: Dificultad; // Enum DificultadFlashcards
   temaId: number; // Relación con Tema
   descripcion: string;

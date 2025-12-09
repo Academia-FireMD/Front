@@ -1,4 +1,4 @@
-import { Comunidad } from './pregunta.model';
+import { Oposicion } from './subscription.model';
 import { TipoDePlanificacionDeseada, Usuario } from './user.model';
 
 export interface PlanificacionBloque {
@@ -54,7 +54,7 @@ export interface PlanificacionMensual {
   createdAt: Date;
   esPorDefecto: boolean;
   tipoDePlanificacion?: TipoDePlanificacionDeseada;
-  relevancia: Array<Comunidad>;
+  relevancia: Array<Oposicion>;
   updatedAt: Date;
 }
 
