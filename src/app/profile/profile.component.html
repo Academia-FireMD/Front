@@ -226,8 +226,8 @@
                   />
                   <div class="subscription-title">
                     <span class="oposicion-name">
-                      {{ oposiciones[suscripcion.oposicion]?.name }}
-                    </span>
+                    {{ oposiciones[suscripcion.oposicion]?.name }}
+                  </span>
                     <span
                       class="plan-badge"
                       [ngClass]="'plan-' + suscripcion.tipo.toLowerCase()"
@@ -300,45 +300,45 @@
                       {{ suscripcion.monthlyPrice }}€/mes
                     </span>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="subscription-actions mt-4">
-              <!-- Banner sin plan activo para usuarios WP -->
-              <div
-                class="no-plan-banner mb-3 p-3 border-round"
-                *ngIf="
-                  isLinkedToWordPress() && !hasActiveWooCommerceSubscription()
-                "
-              >
-                <div class="flex align-items-start gap-3">
-                  <i class="pi pi-exclamation-triangle text-2xl"></i>
-                  <div class="flex-1">
-                    <h4 class="m-0 mb-2">No tienes un plan activo</h4>
-                    <p class="m-0 mb-3 text-sm">
-                      Para acceder a todo el contenido, necesitas contratar un
-                      plan en nuestra tienda.
-                    </p>
-                    <p-button
-                      label="Ir a la tienda"
-                      icon="pi pi-external-link"
-                      styleClass="p-button-sm"
-                      (onClick)="abrirTiendaWordPress()"
-                    ></p-button>
                   </div>
                 </div>
               </div>
 
+              <div class="subscription-actions mt-4">
+              <!-- Banner sin plan activo para usuarios WP -->
+                <div
+                  class="no-plan-banner mb-3 p-3 border-round"
+                *ngIf="
+                  isLinkedToWordPress() && !hasActiveWooCommerceSubscription()
+                "
+                >
+                  <div class="flex align-items-start gap-3">
+                    <i class="pi pi-exclamation-triangle text-2xl"></i>
+                    <div class="flex-1">
+                      <h4 class="m-0 mb-2">No tienes un plan activo</h4>
+                      <p class="m-0 mb-3 text-sm">
+                        Para acceder a todo el contenido, necesitas contratar un
+                      plan en nuestra tienda.
+                      </p>
+                      <p-button
+                      label="Ir a la tienda"
+                      icon="pi pi-external-link"
+                        styleClass="p-button-sm"
+                      (onClick)="abrirTiendaWordPress()"
+                      ></p-button>
+                    </div>
+                  </div>
+                </div>
+
               <!-- Botones para usuarios WP con plan activo -->
-              <div
-                class="flex flex-column gap-2"
+                <div
+                  class="flex flex-column gap-2"
                 *ngIf="isLinkedToWordPress() && hasActiveSubscription()"
-              >
-                <p-button
+                >
+                  <p-button
                   label="Gestionar suscripciones"
                   icon="pi pi-external-link"
-                  styleClass="p-button-outlined w-full"
+                    styleClass="p-button-outlined w-full"
                   (onClick)="gestionarEnWordPress()"
                   pTooltip="Abre tu cuenta de WordPress para gestionar tus suscripciones"
                   tooltipPosition="top"
@@ -348,8 +348,8 @@
                   icon="pi pi-shopping-cart"
                   styleClass="p-button-text w-full"
                   (onClick)="abrirTiendaWordPress()"
-                ></p-button>
-              </div>
+                  ></p-button>
+                </div>
 
               <!-- Botones para usuarios "en negro" -->
               <div
@@ -368,96 +368,96 @@
                   Para añadir o cambiar planes, vincula tu cuenta con WordPress
                 </small>
               </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Card de Información Personal / Onboarding -->
-      <div class="onboarding-card mt-4" *ngIf="user.rol === Rol.ALUMNO">
-        <div class="card-header">
-          <h2><i class="pi pi-user-plus"></i> Información Personal</h2>
-        </div>
+        <!-- Card de Información Personal / Onboarding -->
+        <div class="onboarding-card mt-4" *ngIf="user.rol === Rol.ALUMNO">
+          <div class="card-header">
+            <h2><i class="pi pi-user-plus"></i> Información Personal</h2>
+          </div>
 
-        <div class="card-content">
-          <div class="onboarding-status mb-3">
-            <div class="completion-info">
+          <div class="card-content">
+            <div class="onboarding-status mb-3">
+              <div class="completion-info">
               <div class="flex justify-content-between align-items-center mb-2">
-                <span class="completion-text"> Información completada: </span>
-                <span class="completion-percentage font-semibold">
-                  {{ getOnboardingCompletionPercentage() }}%
+                  <span class="completion-text"> Información completada: </span>
+                  <span class="completion-percentage font-semibold">
+                    {{ getOnboardingCompletionPercentage() }}%
+                  </span>
+                </div>
+                <div class="completion-bar">
+                  <div
+                    class="completion-fill"
+                    [style.width.%]="getOnboardingCompletionPercentage()"
+                    [ngClass]="{
+                      low: getOnboardingCompletionPercentage() < 30,
+                      medium:
+                        getOnboardingCompletionPercentage() >= 30 &&
+                        getOnboardingCompletionPercentage() < 70,
+                      high:
+                        getOnboardingCompletionPercentage() >= 70 &&
+                        getOnboardingCompletionPercentage() < 80,
+                      complete: getOnboardingCompletionPercentage() >= 80
+                    }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="onboarding-help"
+              *ngIf="getOnboardingCompletionPercentage() < 100"
+            >
+              <div class="help-message">
+                <i class="pi pi-info-circle mr-2"></i>
+                <span>
+                  Completar esta información nos ayuda a personalizar tu
+                  experiencia de aprendizaje
                 </span>
               </div>
-              <div class="completion-bar">
-                <div
-                  class="completion-fill"
-                  [style.width.%]="getOnboardingCompletionPercentage()"
-                  [ngClass]="{
-                    low: getOnboardingCompletionPercentage() < 30,
-                    medium:
-                      getOnboardingCompletionPercentage() >= 30 &&
-                      getOnboardingCompletionPercentage() < 70,
-                    high:
-                      getOnboardingCompletionPercentage() >= 70 &&
-                      getOnboardingCompletionPercentage() < 80,
-                    complete: getOnboardingCompletionPercentage() >= 80
-                  }"
-                ></div>
-              </div>
             </div>
-          </div>
 
-          <div
-            class="onboarding-help"
-            *ngIf="getOnboardingCompletionPercentage() < 100"
-          >
-            <div class="help-message">
-              <i class="pi pi-info-circle mr-2"></i>
-              <span>
-                Completar esta información nos ayuda a personalizar tu
-                experiencia de aprendizaje
+            <div class="completed-message" *ngIf="isOnboardingComplete()">
+              <i class="pi pi-check-circle mr-2"></i>
+              <span *ngIf="getOnboardingCompletionPercentage() >= 100">
+                ¡Información completa! Gracias por ayudarnos a conocerte mejor.
               </span>
-            </div>
-          </div>
-
-          <div class="completed-message" *ngIf="isOnboardingComplete()">
-            <i class="pi pi-check-circle mr-2"></i>
-            <span *ngIf="getOnboardingCompletionPercentage() >= 100">
-              ¡Información completa! Gracias por ayudarnos a conocerte mejor.
-            </span>
-            <span
-              *ngIf="
-                getOnboardingCompletionPercentage() >= 80 &&
-                getOnboardingCompletionPercentage() < 100
-              "
-            >
+              <span
+                *ngIf="
+                  getOnboardingCompletionPercentage() >= 80 &&
+                  getOnboardingCompletionPercentage() < 100
+                "
+              >
               ¡Lo tienes bastante bien! Aunque todavía puedes mejorar tu perfil
               completando el
-              {{ 100 - getOnboardingCompletionPercentage() }}% restante.
-            </span>
-          </div>
+                {{ 100 - getOnboardingCompletionPercentage() }}% restante.
+              </span>
+            </div>
 
-          <div class="onboarding-actions mt-4">
-            <p-button
-              label="Completar información"
-              icon="pi pi-pencil"
-              styleClass="p-button-outlined w-full"
-              (click)="openOnboardingModal()"
-            ></p-button>
+            <div class="onboarding-actions mt-4">
+              <p-button
+                label="Completar información"
+                icon="pi pi-pencil"
+                styleClass="p-button-outlined w-full"
+                (click)="openOnboardingModal()"
+              ></p-button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Mostrar errores -->
-  <div class="error-container" *ngIf="errors.length > 0">
-    <div class="error-card">
-      <div class="error-list">
-        <h3>Errores:</h3>
-        <ul>
-          <li *ngFor="let error of errors">{{ error }}</li>
-        </ul>
+    <!-- Mostrar errores -->
+    <div class="error-container" *ngIf="errors.length > 0">
+      <div class="error-card">
+        <div class="error-list">
+          <h3>Errores:</h3>
+          <ul>
+            <li *ngFor="let error of errors">{{ error }}</li>
+          </ul>
       </div>
     </div>
   </div>
@@ -526,6 +526,7 @@
 >
   <app-cambio-suscripcion
     *ngIf="showCambioSuscripcionDialog"
+    [isUserLinkedToWP]="isLinkedToWordPress()"
     (cerrar)="cerrarDialogCambioSuscripcion()"
     (solicitarVinculacion)="onSolicitarVinculacionDesdeDialog()"
   ></app-cambio-suscripcion>

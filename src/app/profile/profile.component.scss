@@ -215,14 +215,14 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-          }
+        }
 
           .plan-badge {
             display: inline-block;
             padding: 0.15rem 0.5rem;
             border-radius: 4px;
             font-size: 0.7rem;
-            font-weight: 600;
+          font-weight: 600;
             text-transform: uppercase;
             width: fit-content;
 
@@ -249,7 +249,7 @@
           border-radius: 50%;
           background: transparent;
           border: none;
-          color: var(--text-color-secondary);
+        color: var(--text-color-secondary);
           cursor: pointer;
           display: flex;
           align-items: center;

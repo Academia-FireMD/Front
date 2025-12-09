@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
@@ -27,11 +27,12 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./cambio-suscripcion.component.scss'],
 })
 export class CambioSuscripcionComponent implements OnInit {
+  @Input() isUserLinkedToWP: boolean = false;
   @Output() cerrar = new EventEmitter<void>();
   @Output() solicitarVinculacion = new EventEmitter<void>();
 
   validandoPlazo = signal(false);
-  
+
   // URLs de WordPress para el FAQ
   wordpressUrl = environment.wordpressUrl;
   wooCommerceUrl = environment.wooCommerceUrl;
@@ -43,6 +44,14 @@ export class CambioSuscripcionComponent implements OnInit {
 
   vincularCuenta(): void {
     this.solicitarVinculacion.emit();
+  }
+
+  visitarMiCuenta(): void {
+    window.open(`${this.wordpressUrl}/mi-cuenta`, '_blank');
+  }
+
+  visitarTienda(): void {
+    window.open(this.wooCommerceUrl, '_blank');
   }
 
   cancelar(): void {

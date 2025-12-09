@@ -4,7 +4,7 @@
     <p-progressSpinner />
     <p class="text-lg mt-3">Cargando...</p>
   </div>
-  } @else {
+  } @else if (!isUserLinkedToWP) {
   <!-- Usuario NO vinculado a WordPress - Mostrar opciones de vinculación -->
   <div class="vincular-content">
     <div class="header-section">
@@ -199,6 +199,177 @@
         icon="pi pi-link"
         (onClick)="vincularCuenta()"
         styleClass="confirm-button"
+      />
+    </div>
+  </div>
+  } @else {
+  <!-- Usuario vinculado a WordPress - Mostrar guía de gestión -->
+  <div class="gestionar-content">
+    <div class="header-section">
+      <div class="header-icon wordpress">
+        <i class="pi pi-cog"></i>
+      </div>
+      <h1 class="header-title">Gestionar Suscripciones</h1>
+      <p class="header-subtitle">
+        Tu cuenta está vinculada con WordPress. Desde aquí puedes gestionar todas tus suscripciones,
+        añadir nuevas oposiciones, cambiar tu plan y mucho más.
+      </p>
+    </div>
+
+    <!-- Actions Section -->
+    <div class="actions-section">
+      <div class="action-card primary">
+        <div class="action-icon">
+          <i class="pi pi-user"></i>
+        </div>
+        <div class="action-content">
+          <h3>Mi Cuenta en WordPress</h3>
+          <p>Gestiona tus suscripciones activas, actualiza tu método de pago, descarga facturas y más.</p>
+        </div>
+        <p-button
+          label="Ir a Mi Cuenta"
+          icon="pi pi-external-link"
+          (onClick)="visitarMiCuenta()"
+          styleClass="p-button-raised"
+        />
+      </div>
+
+      <div class="action-card secondary">
+        <div class="action-icon">
+          <i class="pi pi-shopping-cart"></i>
+        </div>
+        <div class="action-content">
+          <h3>Añadir Más Planes</h3>
+          <p>Contrata planes de otras oposiciones o mejora tu plan actual desde nuestra tienda.</p>
+        </div>
+        <p-button
+          label="Visitar Tienda"
+          icon="pi pi-external-link"
+          (onClick)="visitarTienda()"
+          [outlined]="true"
+        />
+      </div>
+    </div>
+
+    <!-- FAQ Section (reutilizar el mismo FAQ) -->
+    <div class="faq-section">
+      <h3 class="faq-title">
+        <i class="pi pi-question-circle"></i>
+        Preguntas Frecuentes
+      </h3>
+      <p-accordion [multiple]="true" expandIcon="pi pi-plus" collapseIcon="pi pi-minus">
+        <p-accordionTab header="¿Ya compré en la tienda pero no tengo contraseña?">
+          <div class="faq-content">
+            <p><strong>Si compraste como invitado anteriormente:</strong></p>
+            <ol>
+              <li>Ve a nuestra <a [href]="wordpressUrl + '/mi-cuenta'" target="_blank">página de inicio de sesión</a></li>
+              <li>Haz clic en <strong>"¿Olvidaste tu contraseña?"</strong></li>
+              <li>Introduce tu email (el que usaste para comprar)</li>
+              <li>Recibirás un correo para crear tu contraseña</li>
+              <li>Una vez creada, podrás acceder con tu email y nueva contraseña</li>
+            </ol>
+            <p class="mt-2">
+              <i class="pi pi-info-circle"></i>
+              <strong>Nota:</strong> Tu cuenta de WordPress ya existe con tu email, solo necesitas activar tu contraseña.
+            </p>
+          </div>
+        </p-accordionTab>
+
+        <p-accordionTab header="¿Cómo accedo a 'Mi cuenta' en WordPress?">
+          <div class="faq-content">
+            <p>Hay dos formas de acceder:</p>
+            <ul>
+              <li>
+                <strong>Desde aquí:</strong> Haz clic en el botón "Ir a Mi Cuenta" arriba
+              </li>
+              <li>
+                <strong>Directo:</strong> Visita <a [href]="wordpressUrl + '/mi-cuenta'" target="_blank">{{wordpressUrl}}/mi-cuenta</a>
+              </li>
+            </ul>
+            <p class="mt-2">Inicia sesión con:</p>
+            <ul>
+              <li><strong>Usuario:</strong> Tu dirección de email</li>
+              <li><strong>Contraseña:</strong> La misma que usas en la plataforma de estudio</li>
+            </ul>
+          </div>
+        </p-accordionTab>
+
+        <p-accordionTab header="¿Qué puedo hacer en 'Mi cuenta' de WordPress?">
+          <div class="faq-content">
+            <p>Desde <strong>Mi cuenta → Suscripciones</strong> podrás:</p>
+            <ul>
+              <li><i class="pi pi-shopping-cart"></i> Contratar planes de nuevas oposiciones</li>
+              <li><i class="pi pi-sync"></i> Cambiar tu plan actual (básico ↔ avanzado ↔ premium)</li>
+              <li><i class="pi pi-times-circle"></i> Cancelar suscripciones individuales</li>
+              <li><i class="pi pi-credit-card"></i> Actualizar tu método de pago</li>
+              <li><i class="pi pi-file"></i> Descargar tus facturas</li>
+              <li><i class="pi pi-calendar"></i> Ver próximas fechas de renovación</li>
+            </ul>
+          </div>
+        </p-accordionTab>
+
+        <p-accordionTab header="¿Puedo tener suscripciones de múltiples oposiciones?">
+          <div class="faq-content">
+            <p><strong>¡Sí!</strong> Ahora puedes tener planes activos de:</p>
+            <ul>
+              <li><i class="pi pi-map-marker"></i> <strong>Valencia Ayuntamiento</strong></li>
+              <li><i class="pi pi-map-marker"></i> <strong>CPBA Alicante</strong></li>
+            </ul>
+            <p class="mt-2">
+              Cada oposición es independiente. Puedes tener un plan Básico de Valencia y un plan Premium de Alicante simultáneamente.
+            </p>
+            <p class="mt-2">
+              <strong>Para añadir otra oposición:</strong> Ve a <a [href]="wooCommerceUrl" target="_blank">nuestra tienda</a>
+              y contrata el plan que necesites.
+            </p>
+          </div>
+        </p-accordionTab>
+
+        <p-accordionTab header="¿Cuándo puedo modificar o cancelar mi suscripción?">
+          <div class="faq-content">
+            <p><strong>Plazo de modificación:</strong></p>
+            <p>
+              Puedes modificar o cancelar tu suscripción hasta <strong>10 días antes</strong> de tu próxima fecha de renovación.
+            </p>
+            <p class="mt-2"><strong>Ejemplo:</strong></p>
+            <ul>
+              <li>Si tu suscripción se renueva el día <strong>25 de enero</strong></li>
+              <li>Podrás hacer cambios hasta el <strong>15 de enero</strong></li>
+              <li>Después del día 15, deberás esperar al siguiente ciclo</li>
+            </ul>
+            <p class="mt-2">
+              <i class="pi pi-info-circle"></i>
+              Esta política protege tu acceso y evita cobros inesperados.
+            </p>
+          </div>
+        </p-accordionTab>
+
+        <p-accordionTab header="¿Qué pasa si cancelo mi suscripción?">
+          <div class="faq-content">
+            <p><strong>Al cancelar una suscripción:</strong></p>
+            <ul>
+              <li><i class="pi pi-check"></i> Mantendrás acceso hasta el final del período pagado</li>
+              <li><i class="pi pi-check"></i> No se realizarán más cobros automáticos</li>
+              <li><i class="pi pi-check"></i> Tus datos y progreso se conservan por si vuelves</li>
+              <li><i class="pi pi-times"></i> Al finalizar el período, perderás acceso a esa oposición</li>
+            </ul>
+            <p class="mt-3">
+              <strong>¿Tienes múltiples suscripciones?</strong><br>
+              Puedes cancelar solo una oposición y mantener las demás activas.
+            </p>
+          </div>
+        </p-accordionTab>
+      </p-accordion>
+    </div>
+
+    <div class="footer-actions">
+      <p-button
+        label="Cerrar"
+        icon="pi pi-times"
+        (onClick)="cancelar()"
+        [outlined]="true"
+        severity="secondary"
+        styleClass="cancel-button"
       />
     </div>
   </div>

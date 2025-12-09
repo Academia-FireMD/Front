@@ -7,13 +7,13 @@ import { Observable, filter, firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { PlanificacionesService } from '../services/planificaciones.service';
 import {
-  MotivoBaja,
-  SuscripcionManagementService,
+    MotivoBaja,
+    SuscripcionManagementService,
 } from '../services/suscripcion-management.service';
 import { UserService } from '../services/user.service';
 import { ViewportService } from '../services/viewport.service';
 import {
-  duracionesDisponibles,
+    duracionesDisponibles,
 } from '../shared/models/pregunta.model';
 import { Oposicion, Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../shared/models/subscription.model';
 import { Rol, Usuario } from '../shared/models/user.model';
@@ -21,9 +21,9 @@ import { OnboardingData } from '../shared/onboarding-form/onboarding-form.compon
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
 import {
-  selectCurrentUser,
-  selectUserError,
-  selectUserLoading,
+    selectCurrentUser,
+    selectUserError,
+    selectUserLoading,
 } from '../store/user/user.selectors';
 import { oposiciones } from '../utils/consts';
 import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.component';
@@ -643,9 +643,9 @@ export class ProfileComponent implements OnInit {
     ];
   }
 
-  // Abrir página de gestión de suscripciones en WordPress
+  // Abrir dialog con contexto para gestionar suscripciones en WordPress
   gestionarEnWordPress(): void {
-    window.open(`${environment.wordpressUrl}/mi-cuenta/subscriptions`, '_blank');
+    this.showCambioSuscripcionDialog = true;
   }
 
   // Abrir tienda de WordPress
