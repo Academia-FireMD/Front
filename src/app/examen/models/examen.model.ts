@@ -46,6 +46,12 @@ export interface Examen {
   test?: Test;
   preguntas?: Pregunta[];
   preguntasReserva?: Pregunta[];
+  
+  // Campos de vinculación con WooCommerce para simulacros
+  woocommerceProductId?: string;
+  woocommerceSku?: string;
+  woocommerceProductName?: string;
+  
   createdAt: Date;
   updatedAt: Date;
 }

@@ -445,3 +445,186 @@
     }
   }
 }
+
+// ===== Estilos para la sección de Consumibles =====
+.consumibles-list {
+  max-height: 350px; // Altura máxima para 3-4 items
+  overflow-y: auto; // Scroll vertical
+  overflow-x: hidden;
+  padding-right: 0.5rem; // Espacio para scrollbar
+
+  // Estilos personalizados para scrollbar
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--surface-ground);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--surface-300);
+    border-radius: 4px;
+    transition: background 0.2s;
+
+    &:hover {
+      background: var(--surface-400);
+    }
+  }
+
+  // Para Firefox
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-300) var(--surface-ground);
+
+  .consumible-item {
+    background: var(--surface-card);
+    border-radius: 12px;
+    border: 2px solid var(--surface-border);
+    overflow: hidden;
+    transition: all 0.2s ease;
+    margin-bottom: 1rem; // Gap entre items
+
+    &:last-child {
+      margin-bottom: 0; // Sin margen en el último
+    }
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transform: translateY(-2px);
+    }
+
+    &.consumible-activado {
+      border-color: var(--green-500);
+      background: linear-gradient(to right, var(--green-50), transparent);
+    }
+
+    &.consumible-usado {
+      border-color: var(--gray-400);
+      background: var(--surface-ground);
+      opacity: 0.7;
+    }
+
+    &.consumible-expirado {
+      border-color: var(--red-400);
+      background: var(--red-50);
+      opacity: 0.6;
+    }
+
+    .consumible-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--surface-border);
+
+      .consumible-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+
+        i {
+          font-size: 1.5rem;
+        }
+      }
+
+      .consumible-info {
+        flex: 1;
+        min-width: 0;
+
+        .consumible-titulo {
+          margin: 0 0 0.25rem 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--text-color);
+          word-break: break-word;
+        }
+
+        .consumible-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+
+          &.badge-activado {
+            background: var(--green-100);
+            color: var(--green-700);
+          }
+
+          &.badge-usado {
+            background: var(--gray-200);
+            color: var(--gray-700);
+          }
+
+          &.badge-expirado {
+            background: var(--red-100);
+            color: var(--red-700);
+          }
+        }
+      }
+    }
+
+    .consumible-details {
+      padding: 1rem 1.25rem;
+      background: var(--surface-ground);
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        font-size: 0.9rem;
+
+        &:not(:last-child) {
+          border-bottom: 1px solid var(--surface-border);
+        }
+
+        .detail-label {
+          color: var(--text-color-secondary);
+          font-weight: 500;
+        }
+
+        .detail-value {
+          color: var(--text-color);
+          font-weight: 600;
+          text-align: right;
+        }
+      }
+    }
+
+    .consumible-action {
+      padding: 1rem 1.25rem;
+    }
+  }
+}
+
+// Colores específicos para iconos de consumibles
+.consumible-activado .consumible-icon {
+  background: linear-gradient(135deg, var(--green-500), var(--green-600));
+  color: white;
+}
+
+.consumible-usado .consumible-icon {
+  background: var(--gray-300);
+  color: var(--gray-700);
+}
+
+.consumible-expirado .consumible-icon {
+  background: var(--red-200);
+  color: var(--red-700);
+}
+
+.no-consumibles-activos {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-color-secondary);
+}

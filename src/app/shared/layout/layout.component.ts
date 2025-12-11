@@ -433,13 +433,15 @@ export class LayoutComponent {
       });
     }
 
-    // Tutorías - disponible para todos los alumnos
-    menu.push({
-      label: 'Tutorías',
-      icon: 'pi pi-calendar',
-      routerLink: '/app/horarios/alumno',
-      items: [],
-    });
+    // Tutorías - disponible solo para alumnos con suscripción activa
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Tutorías',
+        icon: 'pi pi-calendar',
+        routerLink: '/app/horarios/alumno',
+        items: [],
+      });
+    }
 
     // Menú de perfil siempre disponible
     menu.push({
@@ -449,11 +451,6 @@ export class LayoutComponent {
           label: 'Mi Perfil',
           icon: 'pi pi-user',
           routerLink: '/app/profile',
-        },
-        {
-          label: 'Ajustes',
-          icon: 'pi pi-cog',
-          routerLink: '/app/test/ajustes/alumno',
         },
         {
           label: 'Desconectarse',

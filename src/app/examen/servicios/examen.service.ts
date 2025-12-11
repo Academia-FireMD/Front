@@ -216,4 +216,39 @@ export class ExamenesService extends ApiBaseService {
   public getPreguntasColaborativas$(examenId: number): Observable<any[]> {
     return this.get(`/${examenId}/preguntas-colaborativas`) as Observable<any[]>;
   }
+
+  /**
+   * Obtiene productos de WooCommerce que son simulacros
+   * @returns Observable con la lista de productos simulacro
+   */
+  public getWooCommerceSimulacros$(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/woocommerce/products/simulacros`);
+  }
+
+  /**
+   * Verifica si el usuario tiene acceso a un simulacro por consumible
+   * @param examenId ID del examen
+   * @returns Observable con información de acceso
+   */
+  public verificarAccesoSimulacro$(examenId: number): Observable<{
+    tieneAcceso: boolean;
+    necesitaCodigo: boolean;
+    consumible?: any;
+    examen?: any;
+  }> {
+    return this.get(`/verificar-acceso-simulacro/${examenId}`) as Observable<any>;
+  }
+
+  /**
+   * Busca un simulacro por SKU (sin consumir)
+   * @param sku SKU del producto WooCommerce
+   * @returns Observable con el examen encontrado
+   */
+  public buscarSimulacroPorSku$(sku: string): Observable<{
+    examen: { id: number; titulo: string; descripcion: string; duracion: number; codigoAcceso?: string };
+    consumible: { id: number; sku: string };
+    message: string;
+  }> {
+    return this.post('/buscar-simulacro-por-sku', { sku }) as Observable<any>;
+  }
 }

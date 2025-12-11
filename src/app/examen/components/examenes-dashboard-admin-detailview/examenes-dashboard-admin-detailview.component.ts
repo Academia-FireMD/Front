@@ -1,19 +1,19 @@
 import { Location } from '@angular/common';
 import {
-    ChangeDetectorRef,
-    Component,
-    computed,
-    inject,
-    Input,
-    signal,
-    ViewChild,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  inject,
+  Input,
+  signal,
+  ViewChild,
 } from '@angular/core';
 import {
-    AbstractControl,
-    FormArray,
-    FormBuilder,
-    FormControl,
-    Validators,
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormControl,
+  Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -34,15 +34,15 @@ import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-te
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
-    calcular100,
-    calcular100y50,
-    calcular100y75y50,
-    createConfidenceAnalysisForResult,
-    duracionOptions,
-    estadoExamenOptions,
-    getAllDifficultades,
-    tipoAccesoOptions,
-    universalEditorConfig,
+  calcular100,
+  calcular100y50,
+  calcular100y75y50,
+  createConfidenceAnalysisForResult,
+  duracionOptions,
+  estadoExamenOptions,
+  getAllDifficultades,
+  tipoAccesoOptions,
+  universalEditorConfig,
 } from '../../../utils/utils';
 import { CondicionColaborativa, EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
 import { ExamenesService } from '../../servicios/examen.service';
@@ -78,6 +78,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
   metodosAgregarDialogVisible = false;
   public TipoAcceso = TipoAcceso;
   public agregarComoReserva = false;
+
+  // WooCommerce products for simulacros
+  public productosWooCommerce = signal<any[]>([]);
+  public loadingProductos = signal<boolean>(false);
 
   // Tab management
   public activeTabIndex = 0;
@@ -193,6 +197,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
     condicionesColaborativas: this.fb.array([]),
     metodoCalificacion: [null as MetodoCalificacion | null], // Opcional, si es null usa el del usuario
     relevancia: this.fb.array([] as Array<Oposicion>),
+    // Campos WooCommerce para simulacros
+    woocommerceProductId: [null as any],
+    woocommerceSku: [null as any],
+    woocommerceProductName: [null as any],
   });
 
   public get relevancia() {
@@ -303,24 +311,31 @@ export class ExamenesDashboardAdminDetailviewComponent {
     if (this.mode == 'edit') {
       this.loadExamen();
       firstValueFrom(this.getRole());
+      this.loadWooCommerceProducts(); // Cargar productos de WooCommerce
     }
 
     // Mostrar/ocultar campo de código según el tipo de acceso
     this.formGroup.get('tipoAcceso')?.valueChanges.subscribe((value) => {
       const codigoControl = this.formGroup.get('codigoAcceso');
       const fechaPreparatoriaControl = this.formGroup.get('fechaPreparatoria');
+      const woocommerceProductIdControl = this.formGroup.get('woocommerceProductId');
 
       if (value === TipoAcceso.SIMULACRO) {
         codigoControl?.setValidators([
-          Validators.required,
           Validators.minLength(6),
           Validators.maxLength(6),
         ]);
         codigoControl?.enable();
+
+        // Hacer obligatorio el producto WooCommerce para simulacros
+        woocommerceProductIdControl?.setValidators([Validators.required]);
       } else {
         codigoControl?.clearValidators();
         codigoControl?.setValue('');
         codigoControl?.disable();
+
+        // Producto WooCommerce opcional para otros tipos
+        woocommerceProductIdControl?.clearValidators();
       }
 
       if (value === TipoAcceso.COLABORATIVO) {
@@ -332,6 +347,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
       codigoControl?.updateValueAndValidity();
       fechaPreparatoriaControl?.updateValueAndValidity();
+      woocommerceProductIdControl?.updateValueAndValidity();
     });
 
     // Si es un simulacro existente, generar el QR
@@ -381,6 +397,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
       duracion: examen.duracion || 60,
       estado: examen.estado,
       tipoAcceso: examen.tipoAcceso,
+      woocommerceProductId: examen.woocommerceProductId ? examen.woocommerceProductId + '' : null,
+      woocommerceSku: examen.woocommerceSku || null,
+      woocommerceProductName: examen.woocommerceProductName || null,
       codigoAcceso: examen.codigoAcceso || '',
       fechaActivacion: (examen.fechaActivacion
         ? new Date(examen.fechaActivacion)
@@ -409,6 +428,13 @@ export class ExamenesDashboardAdminDetailviewComponent {
       examen.relevancia.forEach((rel) =>
         this.relevancia.push(new FormControl(rel))
       );
+    }
+
+    // Aplicar validaciones según el tipo de acceso cargado
+    const woocommerceProductIdControl = this.formGroup.get('woocommerceProductId');
+    if (examen.tipoAcceso === TipoAcceso.SIMULACRO) {
+      woocommerceProductIdControl?.setValidators([Validators.required]);
+      woocommerceProductIdControl?.updateValueAndValidity();
     }
 
     setTimeout(() => {
@@ -474,6 +500,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
     const examenData = {
       ...formValues,
+      woocommerceProductId: formValues.woocommerceProductId ? formValues.woocommerceProductId + '' : null,
       fechaActivacion: formValues.fechaActivacion
         ? new Date(formValues.fechaActivacion).toISOString()
         : null,
@@ -1204,6 +1231,46 @@ export class ExamenesDashboardAdminDetailviewComponent {
         }
       }
     });
+  }
+
+  /**
+   * Carga productos de WooCommerce para vincular a simulacros
+   */
+  public async loadWooCommerceProducts() {
+    try {
+      this.loadingProductos.set(true);
+      const productos = await firstValueFrom(
+        this.examenesService.getWooCommerceSimulacros$()
+      );
+      this.productosWooCommerce.set(productos);
+    } catch (error) {
+      console.error('Error cargando productos WooCommerce:', error);
+      this.toast.error('Error al cargar productos de WooCommerce');
+    } finally {
+      this.loadingProductos.set(false);
+    }
+  }
+
+  /**
+   * Maneja la selección de un producto de WooCommerce
+   */
+  public onProductoWooCommerceSelected(event: any) {
+    const productId = event.value;
+    if (!productId) {
+      this.formGroup.patchValue({
+        woocommerceSku: null,
+        woocommerceProductName: null
+      });
+      return;
+    }
+
+    const product = this.productosWooCommerce().find(p => p.id === productId);
+    if (product) {
+      this.formGroup.patchValue({
+        woocommerceSku: product.sku,
+        woocommerceProductName: product.name
+      });
+    }
   }
 
 }

@@ -70,10 +70,21 @@ export interface Usuario {
 
 export interface Consumible {
   id: number;
-  tipo: string;
-  estado: string;
+  tipo: 'SIMULACRO' | 'EXAMEN' | 'CURSO' | 'OTRO';
+  estado: 'ACTIVADO' | 'USADO' | 'EXPIRADO';
   sku: string;
   orderId: string;
+  examenId?: number;
+  activadoEn: Date;
+  expiraEn?: Date;
+  usadoEn?: Date;
+  // Relación con examen (puede venir populated)
+  examen?: {
+    id: number;
+    titulo: string;
+    descripcion?: string;
+    codigoAcceso?: string;
+  };
 }
 
 export enum Rol {

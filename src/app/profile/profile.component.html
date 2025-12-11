@@ -184,8 +184,9 @@
           </div>
         </div>
       </div>
-      <!-- Información de suscripciones (lado derecho) -->
+      <!-- Información de suscripciones y consumibles (lado derecho) -->
       <div class="col-12 md:col-4" *ngIf="user.rol !== 'ADMIN'">
+        <!-- Card de Suscripciones -->
         <div class="subscription-card">
           <div class="card-header">
             <h2><i class="pi pi-credit-card"></i> Mis Suscripciones</h2>
@@ -207,13 +208,18 @@
             </div>
 
             <!-- Si hay suscripciones -->
-            <div class="subscription-details" *ngIf="user.suscripciones?.length">
+            <div
+              class="subscription-details"
+              *ngIf="user.suscripciones?.length"
+            >
               <div
                 *ngFor="let suscripcion of user.suscripciones"
                 class="subscription-card-item"
                 [ngClass]="{
-                  'status-active': suscripcion.status === 'ACTIVE' && !suscripcion.fechaFin,
-                  'status-pending': suscripcion.status === 'ACTIVE' && suscripcion.fechaFin,
+                  'status-active':
+                    suscripcion.status === 'ACTIVE' && !suscripcion.fechaFin,
+                  'status-pending':
+                    suscripcion.status === 'ACTIVE' && suscripcion.fechaFin,
                   'status-cancelled': suscripcion.status === 'CANCELLED'
                 }"
               >
@@ -226,13 +232,19 @@
                   />
                   <div class="subscription-title">
                     <span class="oposicion-name">
-                    {{ oposiciones[suscripcion.oposicion]?.name }}
-                  </span>
+                      {{ oposiciones[suscripcion.oposicion]?.name }}
+                    </span>
                     <span
                       class="plan-badge"
                       [ngClass]="'plan-' + suscripcion.tipo.toLowerCase()"
                     >
-                      {{ suscripcion.tipo === 'BASIC' ? 'Básico' : suscripcion.tipo === 'ADVANCED' ? 'Avanzado' : 'Premium' }}
+                      {{
+                        suscripcion.tipo === "BASIC"
+                          ? "Básico"
+                          : suscripcion.tipo === "ADVANCED"
+                          ? "Avanzado"
+                          : "Premium"
+                      }}
                     </span>
                   </div>
                   <!-- Menú de opciones -->
@@ -257,18 +269,24 @@
                   <!-- Estado -->
                   <div class="info-row">
                     <span class="info-label">Estado</span>
-                    <span class="info-value" [ngClass]="{
-                      'text-green-600': suscripcion.status === 'ACTIVE' && !suscripcion.fechaFin,
-                      'text-orange-600': suscripcion.status === 'ACTIVE' && suscripcion.fechaFin,
-                      'text-red-500': suscripcion.status === 'CANCELLED'
-                    }">
-                      @if (suscripcion.status === 'ACTIVE' && suscripcion.fechaFin) {
-                        <i class="pi pi-clock mr-1"></i> Baja pendiente
-                      } @else if (suscripcion.status === 'ACTIVE') {
-                        <i class="pi pi-check-circle mr-1"></i> Activo
-                      } @else {
-                        <i class="pi pi-times-circle mr-1"></i> Cancelado
-                      }
+                    <span
+                      class="info-value"
+                      [ngClass]="{
+                        'text-green-600':
+                          suscripcion.status === 'ACTIVE' &&
+                          !suscripcion.fechaFin,
+                        'text-orange-600':
+                          suscripcion.status === 'ACTIVE' &&
+                          suscripcion.fechaFin,
+                        'text-red-500': suscripcion.status === 'CANCELLED'
+                      }"
+                    >
+                      @if (suscripcion.status === 'ACTIVE' &&
+                      suscripcion.fechaFin) {
+                      <i class="pi pi-clock mr-1"></i> Baja pendiente } @else if
+                      (suscripcion.status === 'ACTIVE') {
+                      <i class="pi pi-check-circle mr-1"></i> Activo } @else {
+                      <i class="pi pi-times-circle mr-1"></i> Cancelado }
                     </span>
                   </div>
 
@@ -276,20 +294,27 @@
                   <div class="info-row" *ngIf="suscripcion.fechaInicio">
                     <span class="info-label">Desde</span>
                     <span class="info-value">
-                      {{ suscripcion.fechaInicio | date:'d MMM yyyy' }}
+                      {{ suscripcion.fechaInicio | date : "d MMM yyyy" }}
                     </span>
                   </div>
 
                   <!-- Fecha fin / renovación -->
                   <div class="info-row" *ngIf="suscripcion.fechaFin">
                     <span class="info-label">
-                      {{ suscripcion.status === 'CANCELLED' ? 'Finalizó' : 'Finaliza' }}
+                      {{
+                        suscripcion.status === "CANCELLED"
+                          ? "Finalizó"
+                          : "Finaliza"
+                      }}
                     </span>
-                    <span class="info-value" [ngClass]="{
-                      'text-orange-600': suscripcion.status === 'ACTIVE',
-                      'text-red-500': suscripcion.status === 'CANCELLED'
-                    }">
-                      {{ suscripcion.fechaFin | date:'d MMM yyyy' }}
+                    <span
+                      class="info-value"
+                      [ngClass]="{
+                        'text-orange-600': suscripcion.status === 'ACTIVE',
+                        'text-red-500': suscripcion.status === 'CANCELLED'
+                      }"
+                    >
+                      {{ suscripcion.fechaFin | date : "d MMM yyyy" }}
                     </span>
                   </div>
 
@@ -300,45 +325,45 @@
                       {{ suscripcion.monthlyPrice }}€/mes
                     </span>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="subscription-actions mt-4">
+              <!-- Banner sin plan activo para usuarios WP -->
+              <div
+                class="no-plan-banner mb-3 p-3 border-round"
+                *ngIf="
+                  isLinkedToWordPress() && !hasActiveWooCommerceSubscription()
+                "
+              >
+                <div class="flex align-items-start gap-3">
+                  <i class="pi pi-exclamation-triangle text-2xl"></i>
+                  <div class="flex-1">
+                    <h4 class="m-0 mb-2">No tienes un plan activo</h4>
+                    <p class="m-0 mb-3 text-sm">
+                      Para acceder a todo el contenido, necesitas contratar un
+                      plan en nuestra tienda.
+                    </p>
+                    <p-button
+                      label="Ir a la tienda"
+                      icon="pi pi-external-link"
+                      styleClass="p-button-sm"
+                      (onClick)="abrirTiendaWordPress()"
+                    ></p-button>
                   </div>
                 </div>
               </div>
 
-              <div class="subscription-actions mt-4">
-              <!-- Banner sin plan activo para usuarios WP -->
-                <div
-                  class="no-plan-banner mb-3 p-3 border-round"
-                *ngIf="
-                  isLinkedToWordPress() && !hasActiveWooCommerceSubscription()
-                "
-                >
-                  <div class="flex align-items-start gap-3">
-                    <i class="pi pi-exclamation-triangle text-2xl"></i>
-                    <div class="flex-1">
-                      <h4 class="m-0 mb-2">No tienes un plan activo</h4>
-                      <p class="m-0 mb-3 text-sm">
-                        Para acceder a todo el contenido, necesitas contratar un
-                      plan en nuestra tienda.
-                      </p>
-                      <p-button
-                      label="Ir a la tienda"
-                      icon="pi pi-external-link"
-                        styleClass="p-button-sm"
-                      (onClick)="abrirTiendaWordPress()"
-                      ></p-button>
-                    </div>
-                  </div>
-                </div>
-
               <!-- Botones para usuarios WP con plan activo -->
-                <div
-                  class="flex flex-column gap-2"
+              <div
+                class="flex flex-column gap-2"
                 *ngIf="isLinkedToWordPress() && hasActiveSubscription()"
-                >
-                  <p-button
+              >
+                <p-button
                   label="Gestionar suscripciones"
                   icon="pi pi-external-link"
-                    styleClass="p-button-outlined w-full"
+                  styleClass="p-button-outlined w-full"
                   (onClick)="gestionarEnWordPress()"
                   pTooltip="Abre tu cuenta de WordPress para gestionar tus suscripciones"
                   tooltipPosition="top"
@@ -348,8 +373,8 @@
                   icon="pi pi-shopping-cart"
                   styleClass="p-button-text w-full"
                   (onClick)="abrirTiendaWordPress()"
-                  ></p-button>
-                </div>
+                ></p-button>
+              </div>
 
               <!-- Botones para usuarios "en negro" -->
               <div
@@ -368,7 +393,6 @@
                   Para añadir o cambiar planes, vincula tu cuenta con WordPress
                 </small>
               </div>
-              </div>
             </div>
           </div>
         </div>
@@ -382,7 +406,9 @@
           <div class="card-content">
             <div class="onboarding-status mb-3">
               <div class="completion-info">
-              <div class="flex justify-content-between align-items-center mb-2">
+                <div
+                  class="flex justify-content-between align-items-center mb-2"
+                >
                   <span class="completion-text"> Información completada: </span>
                   <span class="completion-percentage font-semibold">
                     {{ getOnboardingCompletionPercentage() }}%
@@ -431,8 +457,8 @@
                   getOnboardingCompletionPercentage() < 100
                 "
               >
-              ¡Lo tienes bastante bien! Aunque todavía puedes mejorar tu perfil
-              completando el
+                ¡Lo tienes bastante bien! Aunque todavía puedes mejorar tu
+                perfil completando el
                 {{ 100 - getOnboardingCompletionPercentage() }}% restante.
               </span>
             </div>
@@ -447,17 +473,158 @@
             </div>
           </div>
         </div>
+
+        <!-- Card de Consumibles (Simulacros) - SIEMPRE VISIBLE -->
+        <div class="subscription-card mt-4">
+          <div class="card-header">
+            <h2><i class="pi pi-ticket"></i> Mis Accesos</h2>
+          </div>
+
+          <div class="card-content">
+            <!-- Si NO hay consumibles - Mostrar placeholder -->
+            <div
+              class="no-subscription"
+              *ngIf="!user.consumibles || user.consumibles.length === 0"
+            >
+              <i class="pi pi-ticket"></i>
+              <h3>Sin accesos disponibles</h3>
+              <p>No tienes simulacros o accesos activos en este momento.</p>
+              <a
+                [href]="tiendaUrl + '?s=simulacro'"
+                target="_blank"
+                *ngIf="isLinkedToWordPress()"
+              >
+                <p-button
+                  label="Ver simulacros disponibles"
+                  icon="pi pi-shopping-cart"
+                  styleClass="p-button-outlined mt-3"
+                ></p-button>
+              </a>
+            </div>
+
+            <!-- Si hay consumibles - Mostrar lista -->
+            <div
+              class="consumibles-list"
+              *ngIf="user.consumibles && user.consumibles.length > 0"
+            >
+              <div
+                *ngFor="let consumible of getConsumiblesActivos()"
+                class="consumible-item"
+                [ngClass]="{
+                  'consumible-activado': consumible.estado === 'ACTIVADO',
+                  'consumible-usado': consumible.estado === 'USADO',
+                  'consumible-expirado': consumible.estado === 'EXPIRADO'
+                }"
+              >
+                <!-- Header del consumible -->
+                <div class="consumible-header">
+                  <div class="consumible-icon">
+                    <i
+                      class="pi"
+                      [ngClass]="{
+                        'pi-ticket': consumible.estado === 'ACTIVADO',
+                        'pi-check-circle': consumible.estado === 'USADO',
+                        'pi-times-circle': consumible.estado === 'EXPIRADO'
+                      }"
+                    ></i>
+                  </div>
+                  <div class="consumible-info">
+                    <h4 class="consumible-titulo">
+                      {{ consumible.examen?.titulo || "Simulacro" }}
+                    </h4>
+                    <span
+                      class="consumible-badge"
+                      [ngClass]="{
+                        'badge-activado': consumible.estado === 'ACTIVADO',
+                        'badge-usado': consumible.estado === 'USADO',
+                        'badge-expirado': consumible.estado === 'EXPIRADO'
+                      }"
+                    >
+                      {{
+                        consumible.estado === "ACTIVADO"
+                          ? "Disponible"
+                          : consumible.estado === "USADO"
+                          ? "Usado"
+                          : "Expirado"
+                      }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Info adicional -->
+                <div class="consumible-details">
+                  <div class="detail-row">
+                    <span class="detail-label">SKU:</span>
+                    <span class="detail-value">{{ consumible.sku }}</span>
+                  </div>
+
+                  <div
+                    class="detail-row"
+                    *ngIf="consumible.examen?.codigoAcceso"
+                  >
+                    <span class="detail-label">Código:</span>
+                    <span class="detail-value">{{
+                      consumible.examen.codigoAcceso
+                    }}</span>
+                  </div>
+
+                  <div class="detail-row">
+                    <span class="detail-label">Tipo:</span>
+                    <span class="detail-value">{{
+                      getTipoConsumibleLabel(consumible.tipo)
+                    }}</span>
+                  </div>
+
+                  <div
+                    class="detail-row"
+                    *ngIf="consumible.usadoEn && consumible.estado === 'USADO'"
+                  >
+                    <span class="detail-label">Usado el:</span>
+                    <span class="detail-value">{{
+                      consumible.usadoEn | date : "dd/MM/yyyy HH:mm"
+                    }}</span>
+                  </div>
+
+                  <div class="detail-row" *ngIf="consumible.expiraEn">
+                    <span class="detail-label">Expira el:</span>
+                    <span class="detail-value">{{
+                      consumible.expiraEn | date : "dd/MM/yyyy"
+                    }}</span>
+                  </div>
+                </div>
+
+                <!-- Acción -->
+                <div
+                  class="consumible-action"
+                  *ngIf="consumible.estado === 'ACTIVADO'"
+                >
+                  <div class="flex gap-2">
+                    <!-- Botón para usar el consumible directamente -->
+                    <app-async-button
+                      label="Usar"
+                      icon="pi pi-play"
+                      styleClass="p-button-sm flex-1"
+                      [action]="usarConsumible.bind(this, consumible)"
+                    ></app-async-button>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  </div>
 
-    <!-- Mostrar errores -->
-    <div class="error-container" *ngIf="errors.length > 0">
-      <div class="error-card">
-        <div class="error-list">
-          <h3>Errores:</h3>
-          <ul>
-            <li *ngFor="let error of errors">{{ error }}</li>
-          </ul>
+  <!-- Mostrar errores -->
+  <div class="error-container" *ngIf="errors.length > 0">
+    <div class="error-card">
+      <div class="error-list">
+        <h3>Errores:</h3>
+        <ul>
+          <li *ngFor="let error of errors">{{ error }}</li>
+        </ul>
       </div>
     </div>
   </div>

@@ -1,19 +1,21 @@
 import { Component, OnInit, ViewChild, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
 import { Memoize } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, filter, firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { ExamenesService } from '../examen/servicios/examen.service';
 import { PlanificacionesService } from '../services/planificaciones.service';
 import {
-    MotivoBaja,
-    SuscripcionManagementService,
+  MotivoBaja,
+  SuscripcionManagementService,
 } from '../services/suscripcion-management.service';
 import { UserService } from '../services/user.service';
 import { ViewportService } from '../services/viewport.service';
 import {
-    duracionesDisponibles,
+  duracionesDisponibles,
 } from '../shared/models/pregunta.model';
 import { Oposicion, Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../shared/models/subscription.model';
 import { Rol, Usuario } from '../shared/models/user.model';
@@ -21,9 +23,9 @@ import { OnboardingData } from '../shared/onboarding-form/onboarding-form.compon
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
 import {
-    selectCurrentUser,
-    selectUserError,
-    selectUserLoading,
+  selectCurrentUser,
+  selectUserError,
+  selectUserLoading,
 } from '../store/user/user.selectors';
 import { oposiciones } from '../utils/consts';
 import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.component';
@@ -44,6 +46,8 @@ export class ProfileComponent implements OnInit {
   private store = inject(Store<AppState>);
   private suscripcionManagementService = inject(SuscripcionManagementService);
   viewportService = inject(ViewportService);
+  private router = inject(Router);
+  private examenesService = inject(ExamenesService);
 
   oposiciones = oposiciones;
 
@@ -694,5 +698,91 @@ export class ProfileComponent implements OnInit {
     }
 
     return tooltip;
+  }
+
+  // ===== Métodos para consumibles =====
+
+  /**
+   * Obtiene consumibles activos (disponibles para usar)
+   */
+  getConsumiblesActivos(): any[] {
+    if (!this.user?.consumibles) return [];
+
+    // Ordenar: ACTIVADO primero, luego USADO, luego EXPIRADO
+    const orden = { 'ACTIVADO': 1, 'USADO': 2, 'EXPIRADO': 3 };
+
+    return this.user.consumibles
+      .slice()
+      .sort((a, b) => {
+        const ordenA = orden[a.estado as keyof typeof orden] || 999;
+        const ordenB = orden[b.estado as keyof typeof orden] || 999;
+        return ordenA - ordenB;
+      });
+  }
+
+  /**
+   * Obtiene el label legible del tipo de consumible
+   */
+  getTipoConsumibleLabel(tipo: string): string {
+    const tipos: Record<string, string> = {
+      'SIMULACRO': 'Simulacro',
+      'EXAMEN': 'Examen',
+      'CURSO': 'Curso',
+      'OTRO': 'Otro'
+    };
+    return tipos[tipo] || tipo;
+  }
+
+  /**
+   * Verifica si el consumible está expirado
+   */
+  isConsumibleExpirado(consumible: any): boolean {
+    if (!consumible.expiraEn) return false;
+    return new Date(consumible.expiraEn) < new Date();
+  }
+
+  /**
+   * Obtiene los días restantes antes de que expire un consumible
+   */
+  getDiasRestantesConsumible(consumible: any): number {
+    if (!consumible.expiraEn) return Infinity;
+    const expira = new Date(consumible.expiraEn);
+    const ahora = new Date();
+    const diff = expira.getTime() - ahora.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
+
+  /**
+   * Usa un consumible navegando al simulacro correspondiente
+   * Busca el simulacro por SKU y redirige (el consumible se consumirá al iniciar el test)
+   */
+  async usarConsumible(consumible: any): Promise<void> {
+    if (!consumible || !consumible.sku) {
+      this.toastService.error('Consumible inválido');
+      return;
+    }
+
+    try {
+      // Llamar al endpoint que busca el simulacro por SKU (sin consumir)
+      const resultado = await firstValueFrom(
+        this.examenesService.buscarSimulacroPorSku$(consumible.sku)
+      );
+
+      // Navegar a la página de realizar simulacro
+      // El consumible se consumirá automáticamente cuando el usuario inicie el test
+      await this.router.navigate([
+        '/simulacros/realizar-simulacro',
+        resultado.examen.id
+      ]);
+    } catch (error: any) {
+      console.error('Error al buscar simulacro:', error);
+
+      // Mostrar mensaje de error específico del backend
+      const errorMessage = error.error?.message ||
+                          error.message ||
+                          'Error al buscar el simulacro. Por favor, intenta de nuevo.';
+
+      this.toastService.error(errorMessage);
+    }
   }
 }

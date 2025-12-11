@@ -102,16 +102,50 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     }
   }
 
-  public iniciarSimulacro() {
+  public async iniciarSimulacro() {
     if (!this.lastLoadedExamen()) return;
 
-    // Si el usuario ya está autenticado, solicitar código de acceso
+    // Si el usuario ya está autenticado, verificar acceso
     if (this.currentUser()) {
-      this.mostrarDialogoCodigoAcceso();
+      await this.verificarYProcederConSimulacro();
     } else {
       // Mostrar diálogo de registro/login
       this.mostrarRegistro = true; // Por defecto mostrar registro
       this.mostrarDialogoRegistro();
+    }
+  }
+
+  /**
+   * Verifica el acceso del usuario y procede según las condiciones del simulacro
+   */
+  private async verificarYProcederConSimulacro() {
+    try {
+      const examenId = this.lastLoadedExamen()?.id;
+      if (!examenId) return;
+
+      // Verificar acceso por consumible
+      const accesoInfo = await firstValueFrom(
+        this.examenService.verificarAccesoSimulacro$(examenId)
+      );
+
+      if (!accesoInfo.tieneAcceso) {
+        this.toastr.error(
+          'No tienes un consumible de simulacro activo para este examen',
+          'Error'
+        );
+        return;
+      }
+
+      // Si tiene acceso y necesita código, mostrarlo
+      if (accesoInfo.necesitaCodigo) {
+        this.mostrarDialogoCodigoAcceso();
+      } else {
+        // Si no necesita código, iniciar directamente
+        this.confirmarInicioSimulacro();
+      }
+    } catch (error) {
+      console.error('Error al verificar acceso:', error);
+      this.toastr.error('Error al verificar acceso al simulacro', 'Error');
     }
   }
 
@@ -133,9 +167,9 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
 
       this.toastr.success('Has iniciado sesión correctamente', 'Bienvenido');
 
-      // Continuar solicitando el código de acceso
+      // Continuar con la verificación de acceso
       setTimeout(() => {
-        this.mostrarDialogoCodigoAcceso();
+        this.verificarYProcederConSimulacro();
       }, 500);
     } catch (error) {
       console.error('Error al iniciar sesión automáticamente:', error);
@@ -148,9 +182,9 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
 
     this.toastr.success('Has iniciado sesión correctamente', 'Bienvenido');
 
-    // Continuar solicitando el código de acceso
+    // Continuar con la verificación de acceso
     setTimeout(() => {
-      this.mostrarDialogoCodigoAcceso();
+      this.verificarYProcederConSimulacro();
     }, 500);
   }
 
@@ -184,24 +218,6 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       );
 
       if (verificado) {
-        // Verificar si el usuario tiene un consumible de simulacro activo
-        const user = this.currentUser();
-        if (
-          !user ||
-          !user.consumibles ||
-          !user.consumibles.find(
-            (consumible) =>
-              consumible.tipo === 'SIMULACRO' &&
-              consumible.estado === 'ACTIVADO'
-          )
-        ) {
-          this.toastr.error(
-            'No tienes un consumible de simulacro activo en tu cuenta',
-            'Error'
-          );
-          return;
-        }
-
         this.codigoAccesoDialogVisible = false;
         this.confirmarInicioSimulacro(codigo);
       } else {
@@ -232,7 +248,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     });
   }
 
-  private confirmarInicioSimulacro(codigo: string): void {
+  private confirmarInicioSimulacro(codigo?: string): void {
     this.confirmationService.confirm({
       message:
         '¿Estás listo para comenzar el simulacro? Una vez iniciado, el tiempo comenzará a contar.',
@@ -247,7 +263,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     });
   }
 
-  private startCountdown(codigo: string) {
+  private startCountdown(codigo?: string) {
     this.iniciando = true;
     this.countdown = 3;
 
@@ -261,7 +277,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  private async comenzarExamen(codigo: string) {
+  private async comenzarExamen(codigo?: string) {
     try {
       if (!this.lastLoadedExamen() || !this.currentUser()) {
         throw new Error('No hay examen cargado o usuario autenticado');
