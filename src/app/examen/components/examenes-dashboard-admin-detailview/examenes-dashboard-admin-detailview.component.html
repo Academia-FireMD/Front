@@ -144,34 +144,6 @@
                     "
                   >
                     <p-floatLabel>
-                      <input
-                        type="text"
-                        pInputText
-                        class="w-full"
-                        formControlName="codigoAcceso"
-                        data-testid="codigo-acceso-input"
-                      />
-                      <label for="codigoAcceso">Código de acceso (opcional)</label>
-                    </p-floatLabel>
-                    <small
-                      class="text-red-500 block mt-1"
-                      *ngIf="formGroup.get('codigoAcceso')?.errors?.['minlength']"
-                    >
-                      El código debe tener 6 dígitos
-                    </small>
-                    <small class="text-gray-500 block mt-1">
-                      Si dejas vacío, el acceso será solo por consumible
-                    </small>
-                  </div>
-
-                  <div
-                    class="col-12 md:col-6"
-                    *ngIf="
-                      formGroup.get('tipoAcceso')?.value ===
-                      TipoAcceso.SIMULACRO
-                    "
-                  >
-                    <p-floatLabel>
                       <p-dropdown
                         formControlName="woocommerceProductId"
                         [options]="productosWooCommerce()"
@@ -198,9 +170,6 @@
                       </p-dropdown>
                       <label>Producto WooCommerce *</label>
                     </p-floatLabel>
-                    <small class="text-gray-500 block mt-1">
-                      Cada consumible debe estar vinculado a un simulacro específico
-                    </small>
                     <small
                       class="text-red-500 block mt-1"
                       *ngIf="formGroup.get('woocommerceProductId')?.invalid && formGroup.get('woocommerceProductId')?.touched"
@@ -1205,23 +1174,6 @@
           </p-tabView>
         </div>
 
-        <div
-          class="col-12 mt-3"
-          *ngIf="
-            formGroup.get('tipoAcceso')?.value === TipoAcceso.SIMULACRO &&
-            getId() !== 'new'
-          "
-        >
-          <p-divider></p-divider>
-
-          <app-qr-code-share
-            [url]="simulacroUrl"
-            title="Compartir simulacro"
-            description="Comparte este simulacro con tus alumnos mediante el siguiente código QR o enlaces directos."
-            [downloadFileName]="'simulacro-' + lastLoadedExamen()?.id"
-            data-testid="qr-code-share"
-          ></app-qr-code-share>
-        </div>
       </div>
     </p-card>
   </div>

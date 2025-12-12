@@ -1,19 +1,19 @@
 import { Location } from '@angular/common';
 import {
-  ChangeDetectorRef,
-  Component,
-  computed,
-  inject,
-  Input,
-  signal,
-  ViewChild,
+    ChangeDetectorRef,
+    Component,
+    computed,
+    inject,
+    Input,
+    signal,
+    ViewChild,
 } from '@angular/core';
 import {
-  AbstractControl,
-  FormArray,
-  FormBuilder,
-  FormControl,
-  Validators,
+    AbstractControl,
+    FormArray,
+    FormBuilder,
+    FormControl,
+    Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -34,15 +34,15 @@ import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-te
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
-  calcular100,
-  calcular100y50,
-  calcular100y75y50,
-  createConfidenceAnalysisForResult,
-  duracionOptions,
-  estadoExamenOptions,
-  getAllDifficultades,
-  tipoAccesoOptions,
-  universalEditorConfig,
+    calcular100,
+    calcular100y50,
+    calcular100y75y50,
+    createConfidenceAnalysisForResult,
+    duracionOptions,
+    estadoExamenOptions,
+    getAllDifficultades,
+    tipoAccesoOptions,
+    universalEditorConfig,
 } from '../../../utils/utils';
 import { CondicionColaborativa, EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
 import { ExamenesService } from '../../servicios/examen.service';
@@ -189,7 +189,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
     duracion: [60],
     estado: [EstadoExamen.BORRADOR],
     tipoAcceso: [TipoAcceso.PUBLICO],
-    codigoAcceso: [{ disabled: true, value: '' }],
     fechaActivacion: [null],
     fechaSolucion: [null],
     fechaPreparatoria: [null as any],
@@ -316,24 +315,13 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
     // Mostrar/ocultar campo de código según el tipo de acceso
     this.formGroup.get('tipoAcceso')?.valueChanges.subscribe((value) => {
-      const codigoControl = this.formGroup.get('codigoAcceso');
       const fechaPreparatoriaControl = this.formGroup.get('fechaPreparatoria');
       const woocommerceProductIdControl = this.formGroup.get('woocommerceProductId');
 
       if (value === TipoAcceso.SIMULACRO) {
-        codigoControl?.setValidators([
-          Validators.minLength(6),
-          Validators.maxLength(6),
-        ]);
-        codigoControl?.enable();
-
         // Hacer obligatorio el producto WooCommerce para simulacros
         woocommerceProductIdControl?.setValidators([Validators.required]);
       } else {
-        codigoControl?.clearValidators();
-        codigoControl?.setValue('');
-        codigoControl?.disable();
-
         // Producto WooCommerce opcional para otros tipos
         woocommerceProductIdControl?.clearValidators();
       }
@@ -345,12 +333,13 @@ export class ExamenesDashboardAdminDetailviewComponent {
         fechaPreparatoriaControl?.setValue(null);
       }
 
-      codigoControl?.updateValueAndValidity();
       fechaPreparatoriaControl?.updateValueAndValidity();
       woocommerceProductIdControl?.updateValueAndValidity();
     });
 
     // Si es un simulacro existente, generar el QR
+    // Comentado temporalmente - funcionalidad de QR
+    /*
     if (this.getId() !== 'new') {
       this.formGroup.get('tipoAcceso')?.valueChanges.subscribe((value) => {
         if (value === this.TipoAcceso.SIMULACRO) {
@@ -367,7 +356,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
         this.updateSimulacroUrl();
       }
     }
-
+    */
 
   }
 
@@ -400,7 +389,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       woocommerceProductId: examen.woocommerceProductId ? examen.woocommerceProductId + '' : null,
       woocommerceSku: examen.woocommerceSku || null,
       woocommerceProductName: examen.woocommerceProductName || null,
-      codigoAcceso: examen.codigoAcceso || '',
       fechaActivacion: (examen.fechaActivacion
         ? new Date(examen.fechaActivacion)
         : null) as any,
@@ -469,12 +457,15 @@ export class ExamenesDashboardAdminDetailviewComponent {
           )
         );
 
+        // Comentado temporalmente - funcionalidad de QR
+        /*
         // Actualizar la URL del simulacro si es necesario
         if (
           this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO
         ) {
           this.updateSimulacroUrl();
         }
+        */
       } catch (error) {
         console.error('Error al cargar el examen', error);
         this.toast.error('Error al cargar el examen');
@@ -853,7 +844,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
   }
 
-  // Propiedades para el QR
+  // Propiedades para el QR (comentado temporalmente)
+  /*
   public simulacroUrl: string = '';
 
   // Añadir este método para actualizar la URL
@@ -864,6 +856,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.simulacroUrl = `${baseUrl}/simulacros/realizar-simulacro/${examenId}`;
     }
   }
+  */
 
   // Propiedades para la impugnación
   public impugnacionDialogVisible = false;
