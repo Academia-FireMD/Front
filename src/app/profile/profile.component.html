@@ -529,19 +529,26 @@
                     ></i>
                   </div>
                   <div class="consumible-info">
-                    <h4 class="consumible-titulo">
-                      {{ consumible.examen?.titulo || "Simulacro" }}
+                    <h4
+                      class="consumible-titulo"
+                      [pTooltip]="!consumible.examen ? 'Contacta con el administrador para vincular este simulacro' : ''"
+                      tooltipPosition="top"
+                    >
+                      {{ consumible.examen?.titulo || "Simulacro sin vincular" }}
                     </h4>
                     <span
                       class="consumible-badge"
                       [ngClass]="{
                         'badge-activado': consumible.estado === 'ACTIVADO',
                         'badge-usado': consumible.estado === 'USADO',
-                        'badge-expirado': consumible.estado === 'EXPIRADO'
+                        'badge-expirado': consumible.estado === 'EXPIRADO',
+                        'badge-sin-vincular': !consumible.examen
                       }"
                     >
                       {{
-                        consumible.estado === "ACTIVADO"
+                        !consumible.examen
+                          ? "Sin vincular"
+                          : consumible.estado === "ACTIVADO"
                           ? "Disponible"
                           : consumible.estado === "USADO"
                           ? "Usado"
@@ -596,7 +603,7 @@
                 <!-- Acción -->
                 <div
                   class="consumible-action"
-                  *ngIf="consumible.estado === 'ACTIVADO'"
+                  *ngIf="consumible.estado === 'ACTIVADO' && consumible.examen"
                 >
                   <div class="flex gap-2">
                     <!-- Botón para usar el consumible directamente -->
@@ -606,7 +613,41 @@
                       styleClass="p-button-sm flex-1"
                       [action]="usarConsumible.bind(this, consumible)"
                     ></app-async-button>
+                  </div>
+                </div>
 
+                <!-- Acción para consumibles sin vincular -->
+                <div
+                  class="consumible-action"
+                  *ngIf="consumible.estado === 'ACTIVADO' && !consumible.examen"
+                >
+                  <div class="flex gap-2">
+                    <p-button
+                      label="Sin vincular"
+                      icon="pi pi-link"
+                      styleClass="p-button-sm p-button-outlined p-button-secondary flex-1"
+                      [disabled]="true"
+                      pTooltip="Este simulacro aún no ha sido vinculado. Espera a que el administrador lo vincule o contacta con soporte."
+                      tooltipPosition="top"
+                    ></p-button>
+                  </div>
+                </div>
+
+                <!-- Acción para consumibles usados -->
+                <div
+                  class="consumible-action"
+                  *ngIf="consumible.estado === 'USADO'"
+                >
+                  <div class="flex gap-2">
+                    <p-button
+                      label="Ver resultados"
+                      icon="pi pi-chart-line"
+                      styleClass="p-button-sm flex-1"
+                      [disabled]="!puedeVerResultados(consumible)"
+                      [pTooltip]="getMensajeAccesoResultados(consumible)"
+                      tooltipPosition="top"
+                      (onClick)="verResultadosConsumible(consumible)"
+                    ></p-button>
                   </div>
                 </div>
               </div>

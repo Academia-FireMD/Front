@@ -1,5 +1,5 @@
-import { Component, OnInit, ViewChild, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
 import { Memoize } from 'lodash-decorators';
@@ -35,7 +35,7 @@ import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.co
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss', './profile-onboarding.component.scss'],
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
   // ViewChild para acceder a componentes hijos
   @ViewChild(BajaSuscripcionComponent) bajaSuscripcionComponent?: BajaSuscripcionComponent;
 
@@ -94,6 +94,9 @@ export class ProfileComponent implements OnInit {
   SuscripcionTipo = SuscripcionTipo;
   Oposicion = Oposicion;
 
+  // Subscription para limpiar
+  private routerSubscription?: any;
+
   constructor() { }
 
   ngOnInit(): void {
@@ -109,7 +112,18 @@ export class ProfileComponent implements OnInit {
       this.checkFirstTimeAccess();
     });
 
+    // Suscribirse a cambios del usuario para refrescar cuando vuelve de usar un consumible
+    this.user$.pipe(filter(user => user !== null)).subscribe((user) => {
+      this.user = cloneDeep(user);
+    });
 
+    // Escuchar eventos de navegación para recargar cuando vuelve al perfil
+    this.routerSubscription = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd && event.url.includes('/profile')) {
+        // Recargar usuario cuando vuelve al perfil
+        this.store.dispatch(UserActions.loadUser());
+      }
+    });
 
     // Manejar errores
     this.error$.subscribe((error) => {
@@ -118,6 +132,13 @@ export class ProfileComponent implements OnInit {
         this.toastService.error('Error al cargar el perfil');
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    // Limpiar suscripción
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
   }
 
   async saveProfile(): Promise<void> {
@@ -784,5 +805,110 @@ export class ProfileComponent implements OnInit {
 
       this.toastService.error(errorMessage);
     }
+  }
+
+  /**
+   * Navega a la pantalla de resultados de un simulacro usado
+   */
+  async verResultadosConsumible(consumible: any): Promise<void> {
+    if (!consumible || !consumible.examen?.id) {
+      this.toastService.error('No se puede acceder a los resultados');
+      return;
+    }
+
+    try {
+      // Buscar el test del usuario para este examen
+      const resultados = await firstValueFrom(
+        this.examenesService.getSimulacroResultados$(consumible.examen.id)
+      );
+
+      // Encontrar el testId del usuario
+      let testId: number | null = null;
+
+      // Primero intentar con ultimoIntento
+      if (resultados.ultimoIntento && resultados.ultimoIntento.id) {
+        testId = resultados.ultimoIntento.id;
+      } else {
+        // Si no hay ultimoIntento, buscar en los resultados
+        const miResultado = resultados.resultados?.find((r: any) => r.usuario?.esTuResultado);
+        if (miResultado && miResultado.testId) {
+          testId = miResultado.testId;
+        }
+      }
+
+      if (!testId) {
+        this.toastService.error('No se encontraron resultados para este simulacro. Asegúrate de haber completado el test.');
+        return;
+      }
+
+      // Navegar a resultados
+      await this.router.navigate([
+        '/simulacros/resultado',
+        consumible.examen.id,
+        testId
+      ]);
+    } catch (error: any) {
+      console.error('Error al acceder a resultados:', error);
+      const errorMessage = error.error?.message || 'No se pudo acceder a los resultados';
+      this.toastService.error(errorMessage);
+    }
+  }
+
+  /**
+   * Verifica si un consumible usado permite ver resultados (5 días desde uso o después de fecha solución)
+   */
+  puedeVerResultados(consumible: any): boolean {
+    if (!consumible || consumible.estado !== 'USADO' || !consumible.usadoEn) {
+      return false;
+    }
+
+    const ahora = new Date();
+    const fechaUso = new Date(consumible.usadoEn);
+    const diasDesdeUso = Math.floor((ahora.getTime() - fechaUso.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Si han pasado menos de 5 días desde el uso, puede ver resultados
+    if (diasDesdeUso < 5) {
+      return true;
+    }
+
+    // Si tiene fecha de solución y ya pasó, puede ver resultados
+    if (consumible.examen?.fechaSolucion) {
+      const fechaSolucion = new Date(consumible.examen.fechaSolucion);
+      return ahora >= fechaSolucion;
+    }
+
+    return false;
+  }
+
+  /**
+   * Obtiene el mensaje de tooltip para consumibles usados
+   */
+  getMensajeAccesoResultados(consumible: any): string {
+    if (!consumible || consumible.estado !== 'USADO' || !consumible.usadoEn) {
+      return '';
+    }
+
+    const ahora = new Date();
+    const fechaUso = new Date(consumible.usadoEn);
+    const diasDesdeUso = Math.floor((ahora.getTime() - fechaUso.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Si han pasado menos de 5 días
+    if (diasDesdeUso < 5) {
+      const diasRestantes = 5 - diasDesdeUso;
+      return `Puedes ver tus resultados durante ${diasRestantes} día${diasRestantes !== 1 ? 's' : ''} más`;
+    }
+
+    // Si tiene fecha de solución
+    if (consumible.examen?.fechaSolucion) {
+      const fechaSolucion = new Date(consumible.examen.fechaSolucion);
+      if (ahora >= fechaSolucion) {
+        return 'Los resultados están disponibles desde la fecha de solución';
+      } else {
+        const diasHastaSolucion = Math.ceil((fechaSolucion.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24));
+        return `Los resultados estarán disponibles en ${diasHastaSolucion} día${diasHastaSolucion !== 1 ? 's' : ''} (${fechaSolucion.toLocaleDateString('es-ES')})`;
+      }
+    }
+
+    return 'Los resultados no están disponibles actualmente. Contacta con el administrador para más información.';
   }
 }
