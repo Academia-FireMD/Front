@@ -57,7 +57,12 @@ export class SuscripcionManagementService extends ApiBaseService {
     return this.post('/solicitar-baja', dto) as Observable<RespuestaBaja>;
   }
 
-
+  /**
+   * Cancela una cancelación programada
+   */
+  cancelarCancelacionProgramada(suscripcionId?: number): Observable<{ mensaje: string }> {
+    return this.post('/cancelar-cancelacion-programada', { suscripcionId }) as Observable<{ mensaje: string }>;
+  }
 
   /**
    * Vincula el usuario actual con WordPress/WooCommerce

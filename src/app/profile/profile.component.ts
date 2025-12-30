@@ -492,7 +492,29 @@ export class ProfileComponent implements OnInit, OnDestroy {
       });
   }
 
+  cancelarCancelacionProgramada(suscripcionId?: number): void {
+    const confirmed = confirm(
+      '¿Estás seguro de que deseas cancelar la baja programada?\n\n' +
+      'Tu suscripción continuará activa y se renovará normalmente.'
+    );
 
+    if (!confirmed) return;
+
+    this.suscripcionManagementService
+      .cancelarCancelacionProgramada(suscripcionId)
+      .subscribe({
+        next: (response) => {
+          this.toastService.success(response.mensaje);
+          // Recargar usuario
+          this.store.dispatch(UserActions.loadUser());
+        },
+        error: (error) => {
+          this.toastService.error(
+            error.error?.message || 'No se pudo cancelar la baja programada'
+          );
+        },
+      });
+  }
 
   isLinkedToWordPress(): boolean {
     return !!this.user?.woocommerceCustomerId;
@@ -713,7 +735,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
     // Usuarios "en negro": permitir dar de baja localmente
     const menuItems: any[] = [];
 
-    if (suscripcion.status === 'ACTIVE') {
+    // Si tiene cancelación programada, permitir cancelarla
+    if ((suscripcion as any).cancelacionProgramada) {
+      menuItems.push({
+        label: 'Cancelar baja programada',
+        icon: 'pi pi-undo',
+        command: () => this.cancelarCancelacionProgramada(suscripcion.id)
+      });
+    } else if (suscripcion.status === 'ACTIVE') {
       // Si está activa y sin cancelación programada, permitir dar de baja
       menuItems.push({
         label: 'Dar de baja',
