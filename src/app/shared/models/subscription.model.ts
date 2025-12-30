@@ -26,6 +26,7 @@ export interface Suscripcion {
   oposicion: Oposicion;  // A qué oposición pertenece
   fechaInicio: Date;
   fechaFin?: Date;
+  cancelacionProgramada?: Date;  // Fecha en la que se cancelará la suscripción (para cancelaciones fuera de plazo)
   woocommerceSubscriptionId?: string;
   sku?: string;
   productId?: string;

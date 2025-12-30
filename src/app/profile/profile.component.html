@@ -274,14 +274,19 @@
                       [ngClass]="{
                         'text-green-600':
                           suscripcion.status === 'ACTIVE' &&
-                          !suscripcion.fechaFin,
+                          !suscripcion.fechaFin &&
+                          !suscripcion.cancelacionProgramada,
                         'text-orange-600':
                           suscripcion.status === 'ACTIVE' &&
-                          suscripcion.fechaFin,
+                          (suscripcion.fechaFin ||
+                            suscripcion.cancelacionProgramada),
                         'text-red-500': suscripcion.status === 'CANCELLED'
                       }"
                     >
                       @if (suscripcion.status === 'ACTIVE' &&
+                      suscripcion.cancelacionProgramada) {
+                      <i class="pi pi-calendar-times mr-1"></i> Cancelación
+                      programada } @else if (suscripcion.status === 'ACTIVE' &&
                       suscripcion.fechaFin) {
                       <i class="pi pi-clock mr-1"></i> Baja pendiente } @else if
                       (suscripcion.status === 'ACTIVE') {
@@ -315,6 +320,19 @@
                       }"
                     >
                       {{ suscripcion.fechaFin | date : "d MMM yyyy" }}
+                    </span>
+                  </div>
+
+                  <!-- Cancelación programada -->
+                  <div
+                    class="info-row"
+                    *ngIf="suscripcion.cancelacionProgramada"
+                  >
+                    <span class="info-label">Se cancelará el</span>
+                    <span class="info-value text-orange-600 font-semibold">
+                      {{
+                        suscripcion.cancelacionProgramada | date : "d MMM yyyy"
+                      }}
                     </span>
                   </div>
 
@@ -374,6 +392,47 @@
                   styleClass="p-button-text w-full"
                   (onClick)="abrirTiendaWordPress()"
                 ></p-button>
+              </div>
+              <!-- Aviso informativo sobre cancelaciones -->
+              <div
+                class="info-banner p-2 border-round mb-3"
+                style="
+                  background: #f0f9ff;
+                  border: 1px solid #bae6fd;
+                  position: relative;
+                "
+                *ngIf="mostrarBannerCancelacion"
+              >
+                <div class="flex align-items-start gap-2">
+                  <i
+                    class="pi pi-info-circle text-blue-500"
+                    style="font-size: 0.9rem; margin-top: 2px"
+                  ></i>
+                  <small
+                    class="text-600 flex-1"
+                    style="font-size: 0.85rem; line-height: 1.4"
+                  >
+                    Recuerda: Las cancelaciones deben solicitarse con al menos 5
+                    días de antelación a tu próxima renovación.
+                  </small>
+                  <button
+                    type="button"
+                    class="p-button p-button-text p-button-rounded p-button-sm"
+                    (click)="cerrarBannerCancelacion()"
+                    style="
+                      min-width: auto;
+                      padding: 0.25rem;
+                      margin-left: 0.5rem;
+                    "
+                    pTooltip="Cerrar"
+                    tooltipPosition="top"
+                  >
+                    <i
+                      class="pi pi-times text-600"
+                      style="font-size: 0.85rem"
+                    ></i>
+                  </button>
+                </div>
               </div>
 
               <!-- Botones para usuarios "en negro" -->
@@ -531,10 +590,16 @@
                   <div class="consumible-info">
                     <h4
                       class="consumible-titulo"
-                      [pTooltip]="!consumible.examen ? 'Contacta con el administrador para vincular este simulacro' : ''"
+                      [pTooltip]="
+                        !consumible.examen
+                          ? 'Contacta con el administrador para vincular este simulacro'
+                          : ''
+                      "
                       tooltipPosition="top"
                     >
-                      {{ consumible.examen?.titulo || "Simulacro sin vincular" }}
+                      {{
+                        consumible.examen?.titulo || "Simulacro sin vincular"
+                      }}
                     </h4>
                     <span
                       class="consumible-badge"
@@ -861,9 +926,8 @@
     </div>
 
     <p class="text-700 line-height-3">
-      Te informamos de que la solicitud de baja de tu suscripción no se ha
-      podido tramitar, ya que debe realizarse con al menos
-      <strong>10 días de antelación</strong> a la fecha del próximo cobro.
+      Has solicitado la baja de tu suscripción con menos de
+      <strong>5 días de antelación</strong> a tu próximo cobro.
     </p>
 
     <div class="p-3 surface-100 border-round">
@@ -878,7 +942,7 @@
         <span
           class="font-bold"
           [class.text-red-500]="
-            validacionPlazo && validacionPlazo.diasRestantes < 10
+            validacionPlazo && validacionPlazo.diasRestantes < 5
           "
         >
           {{ validacionPlazo?.diasRestantes }} días
@@ -886,9 +950,26 @@
       </div>
     </div>
 
-    <p class="text-sm text-600 line-height-3">
-      En este caso, el pago ya programado se efectuará con normalidad, y tu
-      solicitud quedará registrada para aplicarse al periodo siguiente.
+    <div class="p-3 surface-50 border-round mt-3">
+      <h4 class="mt-0 mb-2">¿Qué significa esto?</h4>
+      <ul class="my-2 pl-3">
+        <li class="mb-2">
+          ✓ Se realizará el cobro programado para el
+          {{ validacionPlazo?.proximoPago | date : "dd/MM/yyyy" }}
+        </li>
+        <li class="mb-2">
+          ✓ Tu suscripción permanecerá activa durante ese mes
+        </li>
+        <li class="mb-2">
+          ✓ La cancelación se aplicará al <strong>siguiente periodo</strong>,
+          sin más cobros
+        </li>
+      </ul>
+    </div>
+
+    <p class="text-sm text-600 line-height-3 mt-3">
+      Esta política nos permite gestionar adecuadamente los cobros y garantizar
+      que mantengas acceso al servicio durante el periodo pagado.
     </p>
 
     <p class="text-sm text-600">
@@ -903,11 +984,19 @@
   </div>
 
   <ng-template pTemplate="footer">
-    <div class="flex justify-content-center">
+    <div class="flex justify-content-between w-full">
       <p-button
-        label="Entendido"
-        icon="pi pi-check"
+        label="Cancelar"
+        icon="pi pi-times"
         (onClick)="cerrarFueraDePlazoBaja()"
+        [outlined]="true"
+        severity="secondary"
+      />
+      <p-button
+        label="Programar cancelación"
+        icon="pi pi-calendar-plus"
+        (onClick)="confirmarCancelacionProgramada()"
+        severity="warning"
       />
     </div>
   </ng-template>

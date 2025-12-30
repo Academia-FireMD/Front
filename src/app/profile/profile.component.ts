@@ -89,6 +89,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Datos temporales para confirmación
   datosConfirmacionBaja: any = null;
   validacionPlazo: any = null;
+  cancelacionProgramadaActiva = false;
+
+  // Control del banner informativo
+  mostrarBannerCancelacion = true;
+  private readonly BANNER_CANCELACION_KEY = 'banner_cancelacion_oculto';
 
   // Enums para los templates
   SuscripcionTipo = SuscripcionTipo;
@@ -100,6 +105,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   constructor() { }
 
   ngOnInit(): void {
+    // Cargar preferencia del banner desde localStorage
+    const bannerOculto = localStorage.getItem(this.BANNER_CANCELACION_KEY);
+    this.mostrarBannerCancelacion = bannerOculto !== 'true';
+
     // Cargar usuario desde el store
     this.store.dispatch(UserActions.loadUser());
 
@@ -344,7 +353,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     // 2. O si el onboarding está muy incompleto (< 20%) incluso si ya lo vio
     const completionPercentage = this.getOnboardingCompletionPercentage();
     const shouldShowModal = (!hasSeenOnboarding && !onboardingComplete) ||
-                           (completionPercentage < 20);
+      (completionPercentage < 20);
 
     if (shouldShowModal) {
       setTimeout(() => {
@@ -405,13 +414,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .solicitarBaja({
         motivos: this.datosConfirmacionBaja.motivos,
         comentarioAdicional: this.datosConfirmacionBaja.comentario || undefined,
-        suscripcionId: this.datosConfirmacionBaja.suscripcionId, // ID de la suscripción específica
+        suscripcionId: this.datosConfirmacionBaja.suscripcionId,
+        forzarCancelacionProgramada: false,
       })
       .subscribe({
         next: (response) => {
           this.procesandoBaja = false;
           this.showConfirmacionBaja = false;
-          this.toastService.success(response.mensaje || 'Baja de suscripción procesada correctamente');
+
+          if (response.cancelacionProgramada) {
+            this.toastService.warning(response.mensaje, 'Cancelación programada', { timeOut: 8000 });
+          } else {
+            this.toastService.success(response.mensaje || 'Baja de suscripción procesada correctamente');
+          }
+
           this.cerrarDialogBajaSuscripcion();
           // Recargar usuario
           this.store.dispatch(UserActions.loadUser());
@@ -441,6 +457,42 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.validacionPlazo = null;
     this.cerrarDialogBajaSuscripcion();
   }
+
+  cerrarBannerCancelacion(): void {
+    this.mostrarBannerCancelacion = false;
+    localStorage.setItem(this.BANNER_CANCELACION_KEY, 'true');
+  }
+
+  confirmarCancelacionProgramada(): void {
+
+    this.procesandoBaja = true;
+    this.showFueraDePlazoBaja = false;
+
+    this.suscripcionManagementService
+      .solicitarBaja({
+        motivos: this.datosConfirmacionBaja.motivos ?? [MotivoBaja.OTROS],
+        comentarioAdicional: this.datosConfirmacionBaja.comentario || undefined,
+        suscripcionId: this.datosConfirmacionBaja.suscripcionId,
+        forzarCancelacionProgramada: true,
+      })
+      .subscribe({
+        next: (response) => {
+          this.procesandoBaja = false;
+          this.toastService.warning(response.mensaje, 'Cancelación programada', { timeOut: 10000 });
+          this.cerrarDialogBajaSuscripcion();
+          // Recargar usuario
+          this.store.dispatch(UserActions.loadUser());
+        },
+        error: (error) => {
+          this.procesandoBaja = false;
+          this.toastService.error(
+            error.error?.message || 'No se pudo procesar la solicitud de baja'
+          );
+        },
+      });
+  }
+
+
 
   isLinkedToWordPress(): boolean {
     return !!this.user?.woocommerceCustomerId;
@@ -659,13 +711,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     // Usuarios "en negro": permitir dar de baja localmente
-    return [
-      {
+    const menuItems: any[] = [];
+
+    if (suscripcion.status === 'ACTIVE') {
+      // Si está activa y sin cancelación programada, permitir dar de baja
+      menuItems.push({
         label: 'Dar de baja',
         icon: 'pi pi-sign-out',
         command: () => this.cancelarSuscripcionIndividual(suscripcion)
-      }
-    ];
+      });
+    }
+
+    return menuItems;
   }
 
   // Abrir dialog con contexto para gestionar suscripciones en WordPress
@@ -704,7 +761,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const plan = suscripcion.tipo === 'BASIC' ? 'Básico' : suscripcion.tipo === 'ADVANCED' ? 'Avanzado' : 'Premium';
 
     let estado = '';
-    if (suscripcion.status === 'ACTIVE' && suscripcion.fechaFin) {
+    if (suscripcion.status === 'ACTIVE' && (suscripcion as any).cancelacionProgramada) {
+      estado = `📅 Cancelación programada (${new Date((suscripcion as any).cancelacionProgramada).toLocaleDateString('es-ES')})`;
+    } else if (suscripcion.status === 'ACTIVE' && suscripcion.fechaFin) {
       estado = `⏳ Baja pendiente (${new Date(suscripcion.fechaFin).toLocaleDateString('es-ES')})`;
     } else if (suscripcion.status === 'ACTIVE') {
       estado = '✅ Activo';
@@ -800,8 +859,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       // Mostrar mensaje de error específico del backend
       const errorMessage = error.error?.message ||
-                          error.message ||
-                          'Error al buscar el simulacro. Por favor, intenta de nuevo.';
+        error.message ||
+        'Error al buscar el simulacro. Por favor, intenta de nuevo.';
 
       this.toastService.error(errorMessage);
     }

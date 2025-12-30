@@ -18,11 +18,18 @@ export interface SolicitarBajaDto {
   motivos: MotivoBaja[];
   comentarioAdicional?: string;
   suscripcionId?: number;
+  forzarCancelacionProgramada?: boolean;
 }
 
 export interface ValidacionPlazo {
   valido: boolean;
   diasRestantes: number;
+  proximoPago?: Date;
+}
+
+export interface RespuestaBaja {
+  mensaje: string;
+  cancelacionProgramada?: boolean;
   proximoPago?: Date;
 }
 
@@ -46,9 +53,11 @@ export class SuscripcionManagementService extends ApiBaseService {
   /**
    * Solicita la baja de la suscripción (solo usuarios "en negro")
    */
-  solicitarBaja(dto: SolicitarBajaDto): Observable<{ mensaje: string }> {
-    return this.post('/solicitar-baja', dto) as Observable<{ mensaje: string }>;
+  solicitarBaja(dto: SolicitarBajaDto): Observable<RespuestaBaja> {
+    return this.post('/solicitar-baja', dto) as Observable<RespuestaBaja>;
   }
+
+
 
   /**
    * Vincula el usuario actual con WordPress/WooCommerce
