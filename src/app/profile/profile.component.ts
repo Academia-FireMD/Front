@@ -4,6 +4,7 @@ import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
 import { Memoize } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
+import { ConfirmationService } from 'primeng/api';
 import { Observable, filter, firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ExamenesService } from '../examen/servicios/examen.service';
@@ -45,6 +46,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private toastService = inject(ToastrService);
   private store = inject(Store<AppState>);
   private suscripcionManagementService = inject(SuscripcionManagementService);
+  private confirmationService = inject(ConfirmationService);
   viewportService = inject(ViewportService);
   private router = inject(Router);
   private examenesService = inject(ExamenesService);
@@ -77,7 +79,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Control de dialogs de suscripción
   showCambioSuscripcionDialog = false; // Solo para vincular cuenta (usuarios "en negro")
-  showBajaSuscripcionDialog = false;   // Solo para usuarios "en negro"
+  showBajaSuscripcionDialog = false;   // Solo para usuarios "en negro")
+  showVerificacionPasswordDialog = false; // Dialog para verificar contraseña al vincular
 
   // Control de subdialogs para baja
   showConfirmacionBaja = false;
@@ -85,6 +88,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Estados de procesamiento
   procesandoBaja = false;
+  procesandoVinculacion = false;
+  passwordVerificacion = '';
 
   // Datos temporales para confirmación
   datosConfirmacionBaja: any = null;
@@ -493,27 +498,32 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   cancelarCancelacionProgramada(suscripcionId?: number): void {
-    const confirmed = confirm(
-      '¿Estás seguro de que deseas cancelar la baja programada?\n\n' +
-      'Tu suscripción continuará activa y se renovará normalmente.'
-    );
-
-    if (!confirmed) return;
-
-    this.suscripcionManagementService
-      .cancelarCancelacionProgramada(suscripcionId)
-      .subscribe({
-        next: (response) => {
-          this.toastService.success(response.mensaje);
-          // Recargar usuario
-          this.store.dispatch(UserActions.loadUser());
-        },
-        error: (error) => {
-          this.toastService.error(
-            error.error?.message || 'No se pudo cancelar la baja programada'
-          );
-        },
-      });
+    this.confirmationService.confirm({
+      header: 'Cancelar baja programada',
+      message:
+        '¿Estás seguro de que deseas cancelar la baja programada?<br><br>' +
+        'Tu suscripción continuará activa y se renovará normalmente.',
+      icon: 'pi pi-question-circle',
+      acceptLabel: 'Sí, cancelar baja',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => {
+        this.suscripcionManagementService
+          .cancelarCancelacionProgramada(suscripcionId)
+          .subscribe({
+            next: (response) => {
+              this.toastService.success(response.mensaje);
+              // Recargar usuario
+              this.store.dispatch(UserActions.loadUser());
+            },
+            error: (error) => {
+              this.toastService.error(
+                error.error?.message || 'No se pudo cancelar la baja programada'
+              );
+            },
+          });
+      }
+    });
   }
 
   isLinkedToWordPress(): boolean {
@@ -636,25 +646,66 @@ export class ProfileComponent implements OnInit, OnDestroy {
   linkToWordPress(skipConfirmation: boolean = false): void {
     // Si tiene suscripciones locales y no se saltó la confirmación, mostrar advertencia
     if (this.user?.suscripciones?.length && !skipConfirmation) {
-      const confirmed = confirm(
-        '⚠️ ATENCIÓN: Al vincular tu cuenta con WordPress:\n\n' +
-        '• Tus suscripciones actuales en la plataforma serán CANCELADAS\n' +
-        '• Deberás contratar un nuevo plan a través de WooCommerce\n' +
-        '• Tus datos y progreso se mantendrán intactos\n\n' +
-        '¿Estás seguro de que deseas continuar?'
-      );
-
-      if (!confirmed) return;
+      const ref = this.confirmationService.confirm({
+        header: '⚠️ Vincular cuenta con WordPress',
+        message:
+          '<strong>ATENCIÓN: Al vincular tu cuenta con WordPress:</strong><br><br>' +
+          '• Tus suscripciones actuales en la plataforma serán <strong>CANCELADAS</strong><br>' +
+          '• Deberás contratar un nuevo plan a través de WooCommerce<br>' +
+          '• Tus datos y progreso se mantendrán intactos<br><br>' +
+          '¿Estás seguro de que deseas continuar?',
+        acceptLabel: 'Sí, continuar',
+        rejectLabel: 'Cancelar',
+        rejectButtonStyleClass: 'p-button-outlined',
+        acceptButtonStyleClass: 'p-button-warning',
+        accept: () => {
+          setTimeout(() => {
+            this.mostrarDialogoVerificacionPassword();
+          }, 500);
+        }
+      });
+      return;
     }
 
-    this.toastService.info('Vinculando tu cuenta con WordPress...');
+    // Si no tiene suscripciones, ir directo al diálogo de verificación
+    this.mostrarDialogoVerificacionPassword();
+  }
 
-    this.suscripcionManagementService.linkToWordPress().subscribe({
+  private mostrarDialogoVerificacionPassword(): void {
+    this.passwordVerificacion = '';
+    this.showVerificacionPasswordDialog = true;
+  }
+
+  cerrarDialogoVerificacionPassword(): void {
+    this.showVerificacionPasswordDialog = false;
+    this.passwordVerificacion = '';
+    this.procesandoVinculacion = false;
+  }
+
+  confirmarVinculacionConPassword(): void {
+    if (!this.passwordVerificacion || this.passwordVerificacion.length < 6) {
+      this.toastService.error('Por favor, ingresa una contraseña válida (mínimo 6 caracteres)');
+      return;
+    }
+
+    this.vincularConWordPress(this.passwordVerificacion);
+  }
+
+  private vincularConWordPress(password: string): void {
+    this.procesandoVinculacion = true;
+    this.toastService.info('Verificando y vinculando tu cuenta...');
+
+    this.suscripcionManagementService.linkToWordPress(password).subscribe({
       next: async (response) => {
+        this.procesandoVinculacion = false;
+
         if (response.success) {
           this.toastService.success(
             response.message || 'Cuenta vinculada exitosamente.'
           );
+
+          // Cerrar el diálogo
+          this.cerrarDialogoVerificacionPassword();
 
           // Recargar datos del usuario desde el store
           this.store.dispatch(UserActions.loadUser());
@@ -696,13 +747,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
+        this.procesandoVinculacion = false;
         console.error('Error al vincular con WordPress:', error);
 
         // Mensajes de error más específicos
         let errorMessage = 'No se pudo vincular la cuenta. ';
 
         if (error.error?.message) {
-          errorMessage += error.error.message;
+          errorMessage = error.error.message;
+        } else if (error.status === 401) {
+          errorMessage = 'Contraseña incorrecta. Por favor, verifica tu contraseña e intenta de nuevo.';
         } else if (error.status === 0) {
           errorMessage += 'Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.';
         } else if (error.status === 404) {
@@ -766,22 +820,30 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Método para cancelar una suscripción individual
   cancelarSuscripcionIndividual(suscripcion: Suscripcion): void {
-    const confirmed = confirm(
-      `¿Estás seguro de que deseas darte de baja de la suscripción "${oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion}"?\n\n` +
-      `• Plan: ${suscripcion.tipo}\n` +
-      `• Esta acción no se puede deshacer.\n` +
-      `• Perderás acceso al contenido de esta oposición.`
-    );
+    const nombreOposicion = oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion;
+    const tipoPlan = suscripcion.tipo === 'BASIC' ? 'Básico' : suscripcion.tipo === 'ADVANCED' ? 'Avanzado' : 'Premium';
 
-    if (!confirmed) return;
-
-    // Abrir el dialog de baja pasando la suscripción específica
-    this.showBajaSuscripcionDialog = true;
-    // Almacenamos la suscripción seleccionada para procesarla
-    this.datosConfirmacionBaja = {
-      suscripcionId: suscripcion.id,
-      oposicion: suscripcion.oposicion
-    };
+    this.confirmationService.confirm({
+      header: 'Dar de baja suscripción',
+      message:
+        `¿Estás seguro de que deseas darte de baja de la suscripción "<strong>${nombreOposicion}</strong>"?<br><br>` +
+        `• <strong>Plan:</strong> ${tipoPlan}<br>` +
+        `• Esta acción no se puede deshacer<br>` +
+        `• Perderás acceso al contenido de esta oposición`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, dar de baja',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        // Abrir el dialog de baja pasando la suscripción específica
+        this.showBajaSuscripcionDialog = true;
+        // Almacenamos la suscripción seleccionada para procesarla
+        this.datosConfirmacionBaja = {
+          suscripcionId: suscripcion.id,
+          oposicion: suscripcion.oposicion
+        };
+      }
+    });
   }
 
   // Genera el tooltip con info de la suscripción

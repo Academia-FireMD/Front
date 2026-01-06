@@ -54,7 +54,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   oposicionOptions = Object.values(Oposicion).map(op => ({
     label: OPOSICION_LABELS[op] || op,
     value: op
-  }));
+  })).filter(op => op.value !== Oposicion.GENERAL);
 
   subscriptionTypeOptions = [
     { label: 'Básica', value: SuscripcionTipo.BASIC },

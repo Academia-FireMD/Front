@@ -74,7 +74,12 @@ export const comunidades: Record<Comunidad, { image: string; name: string }> = {
 };
 
 // Mapping para Oposiciones (suscripciones y contenido)
-export const oposiciones: Record<Oposicion, { icon: string; name: string; image: string }> = {
+export const oposiciones: Record<Oposicion, { icon: string; name: string; image: string | null }> = {
+  [Oposicion.GENERAL]: {
+    icon: '🔥',
+    name: 'General',
+    image: null,
+  },
   [Oposicion.VALENCIA_AYUNTAMIENTO]: {
     icon: '🏛️',
     name: 'Valencia Ayuntamiento',

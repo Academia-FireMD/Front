@@ -5,6 +5,53 @@
     margin-bottom: 0.5rem;
     color: var(--text-color);
   }
+
+  // Estilos para los ConfirmDialog
+  .p-confirm-dialog {
+    .p-dialog-content {
+      line-height: 1.6;
+      
+      strong {
+        color: var(--primary-color);
+      }
+
+      a {
+        color: var(--primary-color);
+        text-decoration: none;
+        
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      em {
+        color: var(--text-color-secondary);
+        font-size: 0.95em;
+      }
+
+      // Input de contraseña en el diálogo
+      input[type="password"] {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--surface-border);
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary-color);
+          box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.2);
+        }
+
+        &::placeholder {
+          color: var(--text-color-secondary);
+          opacity: 0.6;
+        }
+      }
+    }
+  }
 }
 
 .profile-container {

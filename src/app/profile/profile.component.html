@@ -1,3 +1,5 @@
+<p-confirmDialog [style]="{width: '50vw'}" [baseZIndex]="10000"></p-confirmDialog>
+
 <div class="profile-container">
   <!-- Spinner de carga -->
   <div class="loading-container" *ngIf="isLoading$ | async">
@@ -997,6 +999,66 @@
         icon="pi pi-calendar-plus"
         (onClick)="confirmarCancelacionProgramada()"
         severity="warning"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog de verificación de contraseña para vincular WordPress -->
+<p-dialog
+  [(visible)]="showVerificacionPasswordDialog"
+  [modal]="true"
+  [closable]="!procesandoVinculacion"
+  [closeOnEscape]="!procesandoVinculacion"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{width: '450px'}"
+  header="🔐 Verificación de seguridad"
+>
+  <div class="flex flex-column gap-4">
+    <div class="text-center mb-2">
+      <i class="pi pi-shield" style="font-size: 3rem; color: var(--primary-color);"></i>
+    </div>
+
+    <p class="m-0 text-center">
+      <strong>Por tu seguridad, verifica tu identidad</strong>
+    </p>
+
+    <p class="m-0">
+      Ingresa tu contraseña actual de la plataforma de estudio.
+      Esta contraseña se utilizará para:
+    </p>
+
+    <ul class="ml-3">
+      <li>✅ Verificar tu identidad</li>
+      <li>✅ Sincronizar automáticamente con WordPress</li>
+    </ul>
+
+    <div class="field">
+      <label for="password-verificacion">Contraseña</label>
+      <input
+        id="password-verificacion"
+        type="password"
+        pInputText
+        [(ngModel)]="passwordVerificacion"
+        [disabled]="procesandoVinculacion"
+        placeholder="Ingresa tu contraseña actual"
+        class="w-full"
+        (keyup.enter)="confirmarVinculacionConPassword()"
+        autofocus
+      />
+      <small class="text-500">Mínimo 6 caracteres</small>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Verificar y vincular"
+        icon="pi pi-check"
+        (onClick)="confirmarVinculacionConPassword()"
+        [loading]="procesandoVinculacion"
+        severity="success"
       />
     </div>
   </ng-template>

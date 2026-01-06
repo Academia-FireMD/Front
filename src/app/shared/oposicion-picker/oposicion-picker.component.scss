@@ -31,6 +31,8 @@
   border: 1px solid var(--surface-border);
   cursor: default;
   transition: all 0.2s;
+  width: 34px;
+  height: 34px;
 
   &:hover {
     background: var(--surface-200);
