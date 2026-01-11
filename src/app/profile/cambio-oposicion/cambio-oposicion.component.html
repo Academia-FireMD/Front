@@ -1,0 +1,115 @@
+<div class="cambio-oposicion-dialog">
+  <!-- Header -->
+  <div class="dialog-header">
+    <i class="pi pi-sync"></i>
+    <h2>Cambiar Oposición</h2>
+  </div>
+
+  <!-- Contenido -->
+  <div class="dialog-content">
+    <!-- Información de suscripción actual -->
+    <div class="subscription-info-box">
+      <div class="info-row">
+        <span class="label">Suscripción actual:</span>
+        <div class="current-subscription">
+          <img
+            [src]="getOposicionImagen(suscripcion.oposicion)"
+            [alt]="getOposicionNombre(suscripcion.oposicion)"
+            class="oposicion-logo"
+          />
+          <span class="oposicion-name">
+            {{ getOposicionNombre(suscripcion.oposicion) }}
+          </span>
+          <span class="plan-badge" [class]="'plan-' + suscripcion.tipo.toLowerCase()">
+            {{ suscripcion.tipo === 'BASIC' ? 'Básico' : suscripcion.tipo === 'ADVANCED' ? 'Avanzado' : 'Premium' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje de carga -->
+    <div class="loading-box" *ngIf="cargando">
+      <p-progressSpinner styleClass="w-4rem h-4rem" strokeWidth="4"></p-progressSpinner>
+      <p>Verificando elegibilidad...</p>
+    </div>
+
+    <!-- Mensaje si NO puede cambiar -->
+    <div class="warning-box" *ngIf="!cargando && !puedeRealizarCambio">
+      <i class="pi pi-exclamation-triangle"></i>
+      <h3>No puedes cambiar de oposición</h3>
+      <p>{{ razonNoPuede }}</p>
+      <p *ngIf="diasRestantes" class="days-remaining">
+        Te quedan <strong>{{ diasRestantes }} días</strong> antes de poder realizar otro cambio.
+      </p>
+    </div>
+
+    <!-- Formulario de cambio -->
+    <div class="change-form" *ngIf="!cargando && puedeRealizarCambio">
+      <p class="description">
+        Puedes cambiar tu suscripción a cualquiera de las siguientes oposiciones.
+        Este cambio no afectará tu precio ni duración de la suscripción.
+      </p>
+
+      <div class="oposiciones-selector">
+        <div
+          *ngFor="let oposicion of oposicionesDisponibles"
+          class="oposicion-option"
+          [class.selected]="oposicionSeleccionada === oposicion"
+          (click)="oposicionSeleccionada = oposicion"
+        >
+          <p-radioButton
+            [value]="oposicion"
+            [(ngModel)]="oposicionSeleccionada"
+            [inputId]="'oposicion-' + oposicion"
+          ></p-radioButton>
+          <label [for]="'oposicion-' + oposicion" class="oposicion-label">
+            <img
+              [src]="getOposicionImagen(oposicion)"
+              [alt]="getOposicionNombre(oposicion)"
+              class="oposicion-logo"
+            />
+            <span class="oposicion-name">
+              {{ getOposicionNombre(oposicion) }}
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Información importante -->
+      <div class="info-box mt-4">
+        <i class="pi pi-info-circle"></i>
+        <div>
+          <h4>Información importante:</h4>
+          <ul>
+            <li>El cambio es <strong>inmediato</strong></li>
+            <li>No afecta el precio de tu suscripción</li>
+            <li>Podrás cambiar nuevamente después de 30 días</li>
+            <li>Tu progreso actual se mantendrá</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer con botones -->
+  <div class="dialog-footer">
+    <button
+      pButton
+      label="Cancelar"
+      icon="pi pi-times"
+      class="p-button-text"
+      (click)="cancelar()"
+      [disabled]="cambiando"
+    ></button>
+    <button
+      pButton
+      label="Confirmar cambio"
+      icon="pi pi-check"
+      class="p-button-success"
+      (click)="confirmarCambio()"
+      [disabled]="!puedeRealizarCambio || !oposicionSeleccionada || cambiando || cargando"
+      [loading]="cambiando"
+    ></button>
+  </div>
+</div>
+

@@ -81,6 +81,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   showCambioSuscripcionDialog = false; // Solo para vincular cuenta (usuarios "en negro")
   showBajaSuscripcionDialog = false;   // Solo para usuarios "en negro")
   showVerificacionPasswordDialog = false; // Dialog para verificar contraseña al vincular
+  showCambioOposicionDialog = false; // Dialog para cambiar oposición
+  suscripcionParaCambio: Suscripcion | null = null; // Suscripción seleccionada para cambio
 
   // Control de subdialogs para baja
   showConfirmacionBaja = false;
@@ -777,13 +779,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
   getSubscriptionMenuItems(suscripcion: Suscripcion) {
     // Usuarios WP: redirigir a WordPress para gestionar
     if (this.isLinkedToWordPress()) {
-      return [
-        {
-          label: 'Gestionar en WordPress',
-          icon: 'pi pi-external-link',
-          command: () => this.gestionarEnWordPress()
-        }
-      ];
+      const menuItems: any[] = [];
+      
+      // Si la suscripción es genérica (intercambiable), añadir opción de cambio
+      if ((suscripcion as any).isGeneric && suscripcion.status === 'ACTIVE') {
+        menuItems.push({
+          label: 'Cambiar oposición',
+          icon: 'pi pi-sync',
+          command: () => this.abrirDialogCambioOposicion(suscripcion)
+        });
+      }
+      
+      menuItems.push({
+        label: 'Gestionar en WordPress',
+        icon: 'pi pi-external-link',
+        command: () => this.gestionarEnWordPress()
+      });
+      
+      return menuItems;
     }
 
     // Usuarios "en negro": permitir dar de baja localmente
@@ -1060,5 +1073,26 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     return 'Los resultados no están disponibles actualmente. Contacta con el administrador para más información.';
+  }
+
+  /**
+   * Abre el dialog para cambiar la oposición de una suscripción
+   */
+  abrirDialogCambioOposicion(suscripcion: Suscripcion): void {
+    this.suscripcionParaCambio = suscripcion;
+    this.showCambioOposicionDialog = true;
+  }
+
+  /**
+   * Handler cuando se cierra el dialog de cambio de oposición
+   */
+  onCambioOposicionDialogClose(event?: { changed: boolean }): void {
+    this.showCambioOposicionDialog = false;
+    this.suscripcionParaCambio = null;
+    
+    if (event?.changed) {
+      // Recargar datos del usuario
+      this.store.dispatch(UserActions.loadUser());
+    }
   }
 }

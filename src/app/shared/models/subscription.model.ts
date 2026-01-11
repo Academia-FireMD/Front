@@ -36,6 +36,7 @@ export interface Suscripcion {
   offerDuration?: number;
   monthlyPrice?: number;
   status: SuscripcionStatus;
+  isGeneric?: boolean;  // Indica si la suscripción es intercambiable entre oposiciones
   examenId?: number;
   createdAt: Date;
   updatedAt: Date;

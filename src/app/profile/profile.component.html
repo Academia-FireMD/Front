@@ -1063,3 +1063,21 @@
     </div>
   </ng-template>
 </p-dialog>
+
+<!-- Dialog para Cambio de Oposición -->
+<p-dialog
+  header="Cambiar Oposición"
+  [(visible)]="showCambioOposicionDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '95vw', maxWidth: '600px' }"
+  (onHide)="onCambioOposicionDialogClose()"
+>
+  <app-cambio-oposicion
+    *ngIf="showCambioOposicionDialog && suscripcionParaCambio"
+    [suscripcion]="suscripcionParaCambio"
+    (onClose)="onCambioOposicionDialogClose($event)"
+  ></app-cambio-oposicion>
+</p-dialog>

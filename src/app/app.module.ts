@@ -36,6 +36,7 @@ import { environment } from '../environments/environment';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { BajaSuscripcionComponent } from './profile/baja-suscripcion/baja-suscripcion.component';
+import { CambioOposicionComponent } from './profile/cambio-oposicion/cambio-oposicion.component';
 import { CambioSuscripcionComponent } from './profile/cambio-suscripcion/cambio-suscripcion.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AuthInterceptor } from './services/auth.interceptor';
@@ -111,7 +112,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
   }
 }
 @NgModule({
-  declarations: [AppComponent, LayoutComponent, ProfileComponent],
+  declarations: [AppComponent, LayoutComponent, ProfileComponent, CambioOposicionComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,
