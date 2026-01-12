@@ -12,8 +12,9 @@ export class AppInitializationService {
   private authService = inject(AuthService);
 
   initializeApp(): void {
-    // Si hay un token válido, cargar el usuario
-    if (this.authService.getToken()) {
+    // Si hay un token válido, cargar el usuario solo si tiene permisos
+    const token = this.authService.decodeToken();
+    if (token && token.rol !== 'SIN_APROBACION') {
       this.store.dispatch(UserActions.loadUser());
     }
   }

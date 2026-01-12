@@ -61,9 +61,18 @@ export class LoginComponent {
           // Continuar con el flujo normal de login
           this.router.navigate(['app/profile']);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Login error:', error);
-        this.toast.error('Error al iniciar sesión');
+        
+        // Manejar error de cuenta no aprobada
+        if (error?.status === 401 && error?.error?.message) {
+          this.toast.warning(error.error.message, 'Cuenta no aprobada', {
+            timeOut: 8000,
+            closeButton: true
+          });
+        } else {
+          this.toast.error('Error al iniciar sesión. Verifica tus credenciales.');
+        }
       }
     }
   }
