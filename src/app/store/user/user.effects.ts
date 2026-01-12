@@ -21,9 +21,11 @@ export class UserEffects {
         mergeMap(() =>
           this.userService.getUserProfile$().pipe(
             map((user) => UserActions.loadUserSuccess({ user })),
-            catchError((error) =>
-              of(UserActions.loadUserFailure({ error: error.message }))
-            )
+            catchError((error) => {
+              // Silenciar el error si es 403 (usuario sin permisos)
+              console.warn('Error loading user profile:', error);
+              return of(UserActions.loadUserFailure({ error: error.message }));
+            })
           )
         )
       )

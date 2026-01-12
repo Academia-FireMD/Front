@@ -46,6 +46,10 @@ export class AuthService extends ApiBaseService {
     const decodedToken = this.decodeToken();
     if (decodedToken) {
       this.currentDecodedUserSubject.next(decodedToken);
+      // Solo cargar el perfil si el usuario tiene permisos
+      if (decodedToken.rol !== 'SIN_APROBACION') {
+        this.store.dispatch(UserActions.loadUser());
+      }
     }
   }
 
@@ -81,8 +85,10 @@ export class AuthService extends ApiBaseService {
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
 
-          // Disparar acción para cargar el usuario en el store
-          this.store.dispatch(UserActions.loadUser());
+          // Solo cargar el perfil si el usuario tiene permisos
+          if (decodedUser.rol !== 'SIN_APROBACION') {
+            this.store.dispatch(UserActions.loadUser());
+          }
         }
       })
     );
@@ -102,6 +108,11 @@ export class AuthService extends ApiBaseService {
           // Actualizar el usuario actual después de refrescar el token
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
+
+          // Solo cargar el perfil si el usuario tiene permisos
+          if (decodedUser.rol !== 'SIN_APROBACION') {
+            this.store.dispatch(UserActions.loadUser());
+          }
         }
       })
     );
@@ -213,8 +224,10 @@ export class AuthService extends ApiBaseService {
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
 
-          // Disparar acción para cargar el nuevo usuario en el store
-          this.store.dispatch(UserActions.loadUser());
+          // Solo cargar el perfil si el usuario tiene permisos
+          if (decodedUser.rol !== 'SIN_APROBACION') {
+            this.store.dispatch(UserActions.loadUser());
+          }
         }
       })
     );
@@ -231,8 +244,10 @@ export class AuthService extends ApiBaseService {
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
 
-          // Disparar acción para cargar el nuevo usuario en el store
-          this.store.dispatch(UserActions.loadUser());
+          // Solo cargar el perfil si el usuario tiene permisos (siempre true al salir de impersonación)
+          if (decodedUser.rol !== 'SIN_APROBACION') {
+            this.store.dispatch(UserActions.loadUser());
+          }
         }
       })
     );
