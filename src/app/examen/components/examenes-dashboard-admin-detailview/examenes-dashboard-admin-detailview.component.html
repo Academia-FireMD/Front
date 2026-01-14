@@ -810,6 +810,7 @@
                               <p-sortIcon field="fechaRealizacion"></p-sortIcon>
                             </th>
                             <th style="width: 60px">Detalles</th>
+                            <th style="width: 80px">Acciones</th>
                           </tr>
                         </ng-template>
                         <ng-template
@@ -883,6 +884,18 @@
                                 }"
                                 pTooltip="Ver análisis por confianza"
                                 (click)="toggleRowExpansion(resultado)"
+                              ></p-button>
+                            </td>
+
+                            <td>
+                              <p-button
+                                icon="pi pi-trash"
+                                [text]="true"
+                                [rounded]="true"
+                                size="small"
+                                severity="danger"
+                                pTooltip="Eliminar intento"
+                                (click)="eliminarIntentoAlumno(resultado)"
                               ></p-button>
                             </td>
                           </tr>

@@ -300,4 +300,29 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
     this.examenColaborativoSeleccionado = null;
     this.progresoColaborativo = null;
   }
+
+  public eliminarIntentosExamen(id: number, event: Event) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: `Vas a eliminar TODOS los intentos de alumnos del examen con ID ${id}. Esta acción no se puede deshacer. ¿Estás seguro?`,
+      header: 'Confirmación - Eliminar Intentos',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí, eliminar',
+      rejectLabel: 'Cancelar',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        try {
+          const result = await firstValueFrom(this.examenesService.eliminarIntentosExamen$(id));
+          this.toast.success(result.message || 'Intentos eliminados exitosamente');
+          this.refresh();
+        } catch (error) {
+          this.toast.error('Error al eliminar los intentos');
+          console.error('Error:', error);
+        }
+      },
+      reject: () => { },
+    });
+  }
 }

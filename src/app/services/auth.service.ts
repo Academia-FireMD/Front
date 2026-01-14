@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -15,11 +15,12 @@ import { UserService } from './user.service';
 export class AuthService extends ApiBaseService {
   // BehaviorSubject para mantener el estado del usuario actual
   private currentDecodedUserSubject = new BehaviorSubject<any | null>(null);
+  private _userService!: UserService;
 
   public currentUser$ = this.currentDecodedUserSubject.pipe(
     switchMap((user) => {
       if (user) {
-        return this.userService.getByEmail$(user.email);
+        return this.getUserService().getByEmail$(user.email);
       }
       return of(null);
     }),
@@ -34,12 +35,20 @@ export class AuthService extends ApiBaseService {
   // Store para NgRx
   private store = inject(Store<AppState>);
 
-  constructor(private http: HttpClient, private userService: UserService) {
+  constructor(private http: HttpClient) {
     super(http);
     this.controllerPrefix = '/auth';
 
     // Inicializar el usuario actual desde el token si existe
     this.initCurrentUser();
+  }
+
+  // Obtener UserService de forma lazy para evitar dependencia circular
+  private getUserService(): UserService {
+    if (!this._userService) {
+      this._userService = this.injector.get(UserService);
+    }
+    return this._userService;
   }
 
   private initCurrentUser(): void {

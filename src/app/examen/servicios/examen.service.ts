@@ -251,4 +251,29 @@ export class ExamenesService extends ApiBaseService {
   }> {
     return this.post('/buscar-simulacro-por-sku', { sku }) as Observable<any>;
   }
+
+  /**
+   * Elimina todos los intentos de alumnos de un examen
+   * @param examenId ID del examen
+   * @returns Observable con el resultado de la eliminación
+   */
+  public eliminarIntentosExamen$(examenId: number): Observable<{
+    message: string;
+    intentosEliminados: number;
+  }> {
+    return this.delete(`/${examenId}/intentos`) as Observable<any>;
+  }
+
+  /**
+   * Elimina un intento individual de un alumno
+   * @param testId ID del test a eliminar
+   * @returns Observable con el resultado de la eliminación
+   */
+  public eliminarIntentoIndividual$(testId: number): Observable<{
+    message: string;
+    alumno: string;
+    examen: string;
+  }> {
+    return this.delete(`/intentos/${testId}`) as Observable<any>;
+  }
 }

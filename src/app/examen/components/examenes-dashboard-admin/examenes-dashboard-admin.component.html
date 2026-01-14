@@ -182,6 +182,16 @@
           ></p-button>
 
           <p-button
+            icon="pi pi-history"
+            severity="danger"
+            (click)="$event.stopPropagation(); $event.preventDefault(); eliminarIntentosExamen(item.id, $event)"
+            [text]="true"
+            pTooltip="Eliminar intentos de alumnos"
+            size="small"
+            data-testid="eliminar-intentos-btn"
+          ></p-button>
+
+          <p-button
             icon="pi pi-pencil"
             severity="info"
             (click)="$event.stopPropagation(); $event.preventDefault(); navigateToDetailview($event, item.id)"

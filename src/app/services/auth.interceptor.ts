@@ -5,20 +5,29 @@ import {
   HttpInterceptor,
   HttpRequest,
 } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  constructor(private authService: AuthService) {}
+  private authService!: AuthService;
+
+  constructor(private injector: Injector) {}
+
+  private getAuthService(): AuthService {
+    if (!this.authService) {
+      this.authService = this.injector.get(AuthService);
+    }
+    return this.authService;
+  }
 
   intercept(
     req: HttpRequest<any>,
     next: HttpHandler
   ): Observable<HttpEvent<any>> {
-    const authToken = this.authService.getToken();
+    const authToken = this.getAuthService().getToken();
 
     // Clonar la solicitud con el token si está presente
     let clonedRequest = req;
@@ -30,12 +39,13 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(clonedRequest).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401 && this.authService.getRefreshToken()) {
+        const authSvc = this.getAuthService();
+        if (error.status === 401 && authSvc.getRefreshToken()) {
           // Si el access token ha expirado, intenta renovar usando el refresh token
-          return this.authService.refreshToken$().pipe(
+          return authSvc.refreshToken$().pipe(
             switchMap(() => {
               // Obtén el nuevo token y clona nuevamente la solicitud original
-              const newToken = this.authService.getToken();
+              const newToken = authSvc.getToken();
               const newRequest = req.clone({
                 headers: req.headers.set('Authorization', `Bearer ${newToken}`),
               });
@@ -43,8 +53,8 @@ export class AuthInterceptor implements HttpInterceptor {
             }),
             catchError((refreshError) => {
               // Si el refresh token también falla, cierra sesión
-              this.authService.clearToken();
-              this.authService.clearRefreshToken();
+              authSvc.clearToken();
+              authSvc.clearRefreshToken();
               return throwError(refreshError);
             })
           );

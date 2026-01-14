@@ -992,6 +992,29 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.toast.success('Resultados exportados correctamente');
   }
 
+  public eliminarIntentoAlumno(resultado: any) {
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de eliminar el intento de ${resultado.usuario.nombre} ${resultado.usuario.apellidos}? Esta acción no se puede deshacer.`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, eliminar',
+      rejectLabel: 'Cancelar',
+      accept: async () => {
+        try {
+          const response = await firstValueFrom(
+            this.examenesService.eliminarIntentoIndividual$(resultado.testId)
+          );
+          this.toast.success(response.message || 'Intento eliminado exitosamente');
+          // Recargar resultados
+          await this.loadExamenResults();
+        } catch (error) {
+          this.toast.error('Error al eliminar el intento');
+          console.error('Error:', error);
+        }
+      }
+    });
+  }
+
 
   // Métodos para el desplegable de análisis de confianza
   public expandedRowKeys: { [key: string]: boolean } = {};

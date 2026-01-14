@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { isArray } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
@@ -8,8 +8,23 @@ import { environment } from '../../environments/environment';
 
 export class ApiBaseService {
   protected controllerPrefix = '';
-  protected toast = inject(ToastrService);
-  protected router = inject(Router);
+  private _toast?: ToastrService;
+  private _router?: Router;
+  protected injector = inject(Injector);
+
+  protected get toast(): ToastrService {
+    if (!this._toast) {
+      this._toast = this.injector.get(ToastrService);
+    }
+    return this._toast;
+  }
+
+  protected get router(): Router {
+    if (!this._router) {
+      this._router = this.injector.get(Router);
+    }
+    return this._router;
+  }
 
   constructor(protected _http: HttpClient) { }
 
