@@ -42,6 +42,7 @@ import { ProfileComponent } from './profile/profile.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { SpinnerInterceptor } from './services/spinner.interceptor';
 import { AsyncButtonComponent } from './shared/components/async-button/async-button.component';
+import { DateNormalizationInterceptor } from './shared/interceptors/date-normalization.interceptor';
 import { ErrorInterceptor } from './shared/interceptors/error.interceptor';
 import { LayoutComponent } from './shared/layout/layout.component';
 import { SharedModule } from './shared/shared.module';
@@ -157,6 +158,11 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
     {
       provide: HTTP_INTERCEPTORS,
       useClass: ErrorInterceptor,
+      multi: true,
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: DateNormalizationInterceptor,
       multi: true,
     },
     { provide: LOCALE_ID, useValue: 'es' },

@@ -26,7 +26,7 @@ export class SubscriptionGuard implements CanActivate {
         const subscriptionTypes = user?.suscripciones
           ?.filter(s => s.status === 'ACTIVE')
           ?.map(s => s.tipo) || [];
-        const hasAccess = this.hasAccess(subscriptionTypes, allowedSubscriptions);
+        const hasAccess = this.hasAccess(subscriptionTypes, allowedSubscriptions) || user?.rol == 'ADMIN';
 
         if (!hasAccess) {
           this.router.navigate(['/app/profile']);
