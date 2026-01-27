@@ -13,6 +13,11 @@ export class DateNormalizationInterceptor implements HttpInterceptor {
     req: HttpRequest<any>,
     next: HttpHandler
   ): Observable<HttpEvent<any>> {
+    // No procesar FormData (multipart/form-data)
+    if (req.body instanceof FormData) {
+      return next.handle(req);
+    }
+
     // Solo procesar POST, PUT, PATCH
     if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
       const normalizedBody = this.normalizeDates(req.body);
