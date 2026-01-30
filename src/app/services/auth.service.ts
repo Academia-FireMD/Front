@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, Injector, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { BehaviorSubject, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, of, switchMap, tap, throwError, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Usuario } from '../shared/models/user.model';
 import { AppState } from '../store/app.state';
@@ -20,7 +20,14 @@ export class AuthService extends ApiBaseService {
   public currentUser$ = this.currentDecodedUserSubject.pipe(
     switchMap((user) => {
       if (user) {
-        return this.getUserService().getByEmail$(user.email);
+        return this.getUserService().getByEmail$(user.email).pipe(
+          catchError((error) => {
+            console.error('Error loading user:', error);
+            // Si falla la carga del usuario, limpiar tokens y retornar null
+            this.clearToken();
+            return of(null);
+          })
+        );
       }
       return of(null);
     }),
