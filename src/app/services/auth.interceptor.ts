@@ -55,13 +55,13 @@ export class AuthInterceptor implements HttpInterceptor {
               // Si el refresh token también falla, cierra sesión
               authSvc.clearToken();
               authSvc.clearRefreshToken();
-              return throwError(refreshError);
+              return throwError(() => refreshError);
             })
           );
         }
 
         // Si el error no es 401, propaga el error
-        return throwError(error);
+        return throwError(() => error);
       })
     );
   }

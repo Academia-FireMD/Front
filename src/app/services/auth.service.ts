@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, Injector, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Usuario } from '../shared/models/user.model';
 import { AppState } from '../store/app.state';
@@ -106,7 +106,7 @@ export class AuthService extends ApiBaseService {
   public refreshToken$(): Observable<any> {
     const refreshToken = this.getRefreshToken();
     if (!refreshToken) {
-      throw new Error('No refresh token available');
+      return throwError(() => new Error('No refresh token available'));
     }
 
     return this.post('/refresh', { refresh_token: refreshToken }).pipe(
