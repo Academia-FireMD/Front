@@ -23,8 +23,8 @@ export class AuthService extends ApiBaseService {
         return this.getUserService().getByEmail$(user.email).pipe(
           catchError((error) => {
             console.error('Error loading user:', error);
-            // Si falla la carga del usuario, limpiar tokens y retornar null
-            this.clearToken();
+            // Solo retornar null, NO limpiar tokens aquí
+            // El interceptor ya maneja refresh de tokens
             return of(null);
           })
         );

@@ -27,7 +27,8 @@ export class AuthInterceptor implements HttpInterceptor {
     req: HttpRequest<any>,
     next: HttpHandler
   ): Observable<HttpEvent<any>> {
-    const authToken = this.getAuthService().getToken();
+    // Leer token directamente de sessionStorage para evitar dependencia circular
+    const authToken = sessionStorage.getItem('authToken');
 
     // Clonar la solicitud con el token si está presente
     let clonedRequest = req;
