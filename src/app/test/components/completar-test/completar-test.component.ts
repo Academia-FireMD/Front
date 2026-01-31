@@ -287,38 +287,44 @@ export class CompletarTestComponent {
         mode == 'omitir' ||
         ((mode == 'next' || mode == 'before') && !isAnswered);
 
-      const res: {
-        esCorrecta: boolean;
-        respuestaDada: number;
-        pregunta: { respuestaCorrectaIndex: number };
-      } = await firstValueFrom(
-        this.testService
-          .actualizarProgresoTest({
-            testId: this.lastLoadedTest.id,
-            preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
-            respuestaDada,
-            omitida: isOmitida,
-            indicePregunta: this.indicePregunta(),
-            seguridad:
-              this.seguroDeLaPregunta.value ??
-              SeguridadAlResponder.CIEN_POR_CIENTO,
-          })
-          .pipe(
-            catchError((err) => {
-              console.error('Error al procesar respuesta:', err);
-              this.toast.error(
-                'Error al procesar la respuesta. Intenta de nuevo.'
-              );
-              throw err;
-            }),
-            tap((res) => {
-              this.lastAnsweredQuestion = res as any;
-              if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
+    const res: Respuesta & { pregunta: { respuestaCorrectaIndex: number } } =
+        await firstValueFrom(
+          this.testService
+            .actualizarProgresoTest({
+              testId: this.lastLoadedTest.id,
+              preguntaId:
+                this.lastLoadedTest.preguntas[this.indicePregunta()].id,
+              respuestaDada,
+              omitida: isOmitida,
+              indicePregunta: this.indicePregunta(),
+              seguridad:
+                this.seguroDeLaPregunta.value ??
+                SeguridadAlResponder.CIEN_POR_CIENTO,
             })
-          )
-      );
+            .pipe(
+              catchError((err) => {
+                console.error('Error al procesar respuesta:', err);
+                this.toast.error(
+                  'Error al procesar la respuesta. Intenta de nuevo.'
+                );
+                throw err;
+              }),
+              tap((res) => {
+                this.lastAnsweredQuestion = res as any;
+                if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
+              })
+            )
+        );
 
-      await firstValueFrom(this.loadTest());
+      // Actualizar respuesta localmente sin hacer GET
+      const idx = this.lastLoadedTest.respuestas.findIndex(
+        (r) => r.preguntaId === res.preguntaId
+      );
+      if (idx >= 0) {
+        this.lastLoadedTest.respuestas[idx] = res;
+      } else {
+        this.lastLoadedTest.respuestas.push(res);
+      }
 
       this.indicePreguntaCorrecta = res?.pregunta?.respuestaCorrectaIndex ?? -1;
       this.answeredQuestion = this.indiceSeleccionado.getValue();
