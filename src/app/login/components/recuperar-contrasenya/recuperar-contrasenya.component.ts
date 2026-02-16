@@ -33,9 +33,20 @@ export class RecuperarContrasenyaComponent {
         const solicitud = await firstValueFrom(
           this.authService.requestPasswordReset(email)
         );
-        this.toast.success(
-          'Revisa tu email para seguir las instrucciones de recuperación.'
-        );
+        
+        // Si el usuario es de WordPress, redirigir al reset de WP
+        if (solicitud.redirectToWP) {
+          this.toast.info(solicitud.message || 'Serás redirigido a WordPress para recuperar tu contraseña.');
+          // Abrir enlace de WP en nueva pestaña
+          setTimeout(() => {
+            window.open(solicitud.wpResetUrl, '_blank');
+          }, 1500);
+        } else {
+          this.toast.success(
+            'Revisa tu email para seguir las instrucciones de recuperación.'
+          );
+        }
+        
         this.requestSent = true;
       } catch (error) {
         this.toast.error('No se pudo procesar la solicitud.');
