@@ -275,14 +275,28 @@ export class CompletarTestComponent {
       return;
     }
 
+    const existingAnswer = this.preguntaRespondida();
+    const hasValidAnswer =
+      existingAnswer != null &&
+      existingAnswer.estado === 'RESPONDIDA' &&
+      existingAnswer.respuestaDada != null &&
+      existingAnswer.respuestaDada !== -1;
+
+    if ((mode === 'next' || mode === 'before') && hasValidAnswer) {
+      if (mode === 'next') this.siguiente();
+      if (mode === 'before') this.atras();
+      return;
+    }
+
     this.isProcessingAnswer = true;
     this.answeredQuestion = -1;
     this.indicePreguntaCorrecta = -1;
     this.comunicating = true;
 
     try {
-      const answered = this.preguntaRespondida();
-      const isAnswered = !!answered?.respuestaDada;
+      const isAnswered =
+        existingAnswer?.respuestaDada != null &&
+        existingAnswer.respuestaDada !== -1;
       const isOmitida =
         mode == 'omitir' ||
         ((mode == 'next' || mode == 'before') && !isAnswered);
