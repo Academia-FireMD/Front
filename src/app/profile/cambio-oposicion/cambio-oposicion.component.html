@@ -21,7 +21,7 @@
             {{ getOposicionNombre(suscripcion.oposicion) }}
           </span>
           <span class="plan-badge" [class]="'plan-' + suscripcion.tipo.toLowerCase()">
-            {{ suscripcion.tipo === 'BASIC' ? 'Básico' : suscripcion.tipo === 'ADVANCED' ? 'Avanzado' : 'Premium' }}
+            {{ getPlanLabel(suscripcion.tipo) }}
           </span>
         </div>
       </div>

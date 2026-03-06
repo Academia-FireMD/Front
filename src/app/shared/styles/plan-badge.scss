@@ -1,0 +1,23 @@
+.plan-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.plan-basic {
+    background: var(--blue-100);
+    color: var(--blue-700);
+  }
+
+  &.plan-advanced {
+    background: var(--green-100);
+    color: var(--green-700);
+  }
+
+  &.plan-premium {
+    background: var(--purple-100);
+    color: var(--purple-700);
+  }
+}

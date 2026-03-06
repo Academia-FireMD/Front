@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { SuscripcionesService } from '../../services/suscripciones.service';
-import { Oposicion } from '../../shared/models/subscription.model';
+import { getPlanLabel, Oposicion } from '../../shared/models/subscription.model';
 import { AppState } from '../../store/app.state';
 import * as UserActions from '../../store/user/user.actions';
 import { oposiciones } from '../../utils/consts';
@@ -21,6 +21,8 @@ interface SuscripcionData {
   styleUrls: ['./cambio-oposicion.component.scss']
 })
 export class CambioOposicionComponent implements OnInit {
+  readonly getPlanLabel = getPlanLabel;
+
   private suscripcionesService = inject(SuscripcionesService);
   private toastService = inject(ToastrService);
   private store = inject(Store<AppState>);

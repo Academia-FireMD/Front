@@ -1,0 +1,244 @@
+.descuento-container {
+  width: 100%;
+  min-height: 400px;
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 1rem;
+  }
+
+  .descuento-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 0.5rem;
+  }
+
+  // ── Header ──────────────────────────────────
+  .header-section {
+    text-align: center;
+    padding: 1.5rem 0;
+    border-bottom: 2px solid var(--surface-border);
+
+    .header-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green-500), var(--teal-500));
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+      i { font-size: 2.5rem; color: white; }
+    }
+
+    .header-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      color: var(--text-color);
+    }
+
+    .header-subtitle {
+      font-size: 1.125rem;
+      color: var(--text-color-secondary);
+      margin: 0;
+      line-height: 1.6;
+    }
+  }
+
+  // ── Feedback inline ──────────────────────────
+  .feedback-mensaje {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+
+    i { font-size: 1.25rem; flex-shrink: 0; }
+
+    &.feedback-success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid var(--green-300);
+      color: var(--green-700);
+    }
+    &.feedback-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--red-300);
+      color: var(--red-700);
+    }
+  }
+
+  // ── Secciones ────────────────────────────────
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    i { color: var(--green-500); font-size: 1.125rem; }
+  }
+
+  .section-subtitle {
+    font-size: 0.9375rem;
+    color: var(--text-color-secondary);
+    margin: 0 0 1rem 0;
+  }
+
+  // ── Cupones activos ──────────────────────────
+  .sin-cupones {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--surface-100);
+    border-radius: 10px;
+    color: var(--text-color-secondary);
+    i { font-size: 1.25rem; color: var(--text-color-secondary); }
+  }
+
+  .cupones-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cupon-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    background: var(--surface-card);
+    border: 2px solid var(--surface-border);
+    border-radius: 10px;
+    transition: border-color 0.2s;
+
+    &:hover { border-color: var(--green-300); }
+
+    .cupon-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      > i { font-size: 1.25rem; color: var(--green-500); }
+
+      .cupon-detalle {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+
+        .cupon-codigo {
+          font-size: 1rem;
+          font-weight: 700;
+          color: var(--text-color);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .cupon-descuento {
+          font-size: 0.875rem;
+          color: var(--green-600);
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  // ── Aplicar cupón ────────────────────────────
+  .cupon-input-group {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+
+    .cupon-input {
+      flex: 1;
+      font-size: 1rem;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 600px) { flex-direction: column; }
+  }
+
+  // ── Nota informativa ─────────────────────────
+  .important-note {
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--blue-50);
+    border-radius: 12px;
+    border: 1px solid var(--blue-200);
+
+    > i { font-size: 1.5rem; color: var(--blue-500); flex-shrink: 0; margin-top: 0.125rem; }
+    .note-content {
+      color: var(--text-color-secondary);
+      line-height: 1.6;
+      strong { color: var(--text-color); }
+    }
+  }
+
+  // ── Footer ───────────────────────────────────
+  .footer-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--surface-border);
+  }
+}
+
+// ── Dialog confirmar eliminar ─────────────────
+.confirm-remover-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+
+  .confirm-icon {
+    font-size: 3rem;
+    color: var(--orange-500);
+  }
+
+  p { margin: 0; font-size: 1rem; color: var(--text-color); }
+  .confirm-aviso { font-size: 0.875rem; color: var(--text-color-secondary); }
+}
+
+:host ::ng-deep {
+  .p-dialog {
+    .p-dialog-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 2px solid var(--surface-border);
+      .p-dialog-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        &::before {
+          content: '';
+          display: inline-block;
+          width: 4px;
+          height: 22px;
+          background: linear-gradient(135deg, var(--green-500), var(--teal-500));
+          border-radius: 2px;
+        }
+      }
+    }
+    .p-dialog-content { padding: 1.5rem; }
+    .p-dialog-footer {
+      padding: 1rem 1.5rem;
+      border-top: 2px solid var(--surface-border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+  }
+}

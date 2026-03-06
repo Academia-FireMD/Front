@@ -38,6 +38,7 @@ import { AppComponent } from './app.component';
 import { BajaSuscripcionComponent } from './profile/baja-suscripcion/baja-suscripcion.component';
 import { CambioOposicionComponent } from './profile/cambio-oposicion/cambio-oposicion.component';
 import { CambioSuscripcionComponent } from './profile/cambio-suscripcion/cambio-suscripcion.component';
+import { DescuentoSuscripcionComponent } from './profile/descuento-suscripcion/descuento-suscripcion.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { SpinnerInterceptor } from './services/spinner.interceptor';
@@ -135,6 +136,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
     AsyncButtonComponent,
     BajaSuscripcionComponent,
     CambioSuscripcionComponent,
+    DescuentoSuscripcionComponent,
     StoreModule.forRoot({ user: userReducer }),
     EffectsModule.forRoot([UserEffects]),
     StoreDevtoolsModule.instrument({

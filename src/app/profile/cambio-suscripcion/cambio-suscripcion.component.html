@@ -1,190 +1,194 @@
 <div class="cambio-suscripcion-container">
-  @if (validandoPlazo()) {
+
+  <!-- Loading -->
+  @if (cargando()) {
   <div class="loading-container">
     <p-progressSpinner />
-    <p class="text-lg mt-3">Cargando...</p>
+    <p class="text-lg mt-3">Cargando planes disponibles...</p>
   </div>
-  } @else if (!isUserLinkedToWP) {
-  <!-- Usuario NO vinculado a WordPress - Mostrar opciones de vinculación -->
-  <div class="vincular-content">
+  }
+
+  <!-- Error de plazo -->
+  @else if (validacion && !validacion.valido) {
+  <div class="fuera-plazo-container">
     <div class="header-section">
-      <div class="header-icon link">
-        <i class="pi pi-link"></i>
+      <div class="header-icon header-icon--warning">
+        <i class="pi pi-calendar-times"></i>
       </div>
-      <h1 class="header-title">Vincular cuenta con WordPress</h1>
+      <h2 class="header-title">No puedes cambiar de plan ahora</h2>
       <p class="header-subtitle">
-        Para gestionar tus suscripciones, añadir nuevos planes o cambiar tu plan actual,
-        necesitas vincular tu cuenta con nuestra plataforma de WordPress.
+        Faltan solo <strong>{{ validacion.diasRestantes }} días</strong> para tu próxima renovación.
+        Necesitas al menos 5 días de antelación para cambiar de plan.
       </p>
     </div>
+    <div class="important-note">
+      <i class="pi pi-info-circle"></i>
+      <div class="note-content">
+        Tu próxima fecha de renovación es el
+        <strong>{{ validacion.proximoPago | date:'dd/MM/yyyy' }}</strong>.
+        Podrás cambiar de plan a partir del día
+        <strong>{{ getProximaFechaPermitida() | date:'dd/MM/yyyy' }}</strong>.
+      </div>
+    </div>
+    <div class="footer-actions">
+      <p-button label="Cerrar" icon="pi pi-times" (onClick)="cancelar()" [outlined]="true" severity="secondary" />
+    </div>
+  </div>
+  }
 
-    <div class="info-section">
-      <div class="info-card">
+  <!-- Error genérico -->
+  @else if (errorMensaje) {
+  <div class="fuera-plazo-container">
+    <div class="header-section">
+      <div class="header-icon header-icon--warning">
+        <i class="pi pi-exclamation-circle"></i>
+      </div>
+      <h2 class="header-title">Ha ocurrido un error</h2>
+      <p class="header-subtitle">{{ errorMensaje }}</p>
+    </div>
+    <div class="footer-actions">
+      <p-button label="Cerrar" icon="pi pi-times" (onClick)="cancelar()" [outlined]="true" severity="secondary" />
+    </div>
+  </div>
+  }
+
+  <!-- Contenido principal -->
+  @else if (validacion && validacion.valido) {
+  <div class="cambio-content">
+
+    <!-- Header -->
+    <div class="header-section">
+      <div class="header-icon header-icon--blue">
+        <i class="pi pi-refresh"></i>
+      </div>
+      <h1 class="header-title">Cambiar Plan</h1>
+      <p class="header-subtitle">Selecciona el nuevo plan que deseas contratar para tu suscripción</p>
+      <div class="plazo-info">
+        <i class="pi pi-calendar"></i>
+        Tu próxima renovación es el <strong>{{ validacion.proximoPago | date:'dd/MM/yyyy' }}</strong>
+        (en {{ validacion.diasRestantes }} días)
+      </div>
+    </div>
+
+    <!-- Plan actual -->
+    @if (planActual) {
+    <div class="plan-actual-section">
+      <h3 class="section-title"><i class="pi pi-tag"></i> Tu plan actual</h3>
+      <div class="plan-actual-card">
+        <div class="plan-actual-info">
+          <span class="plan-badge" [ngClass]="getTipoBadgeSeverity(planActual.tipo)">{{ getTipoBadge(planActual.tipo) }}</span>
+          <span class="plan-actual-nombre">{{ planActualNombre || planActual.sku }}</span>
+        </div>
+        <div class="plan-actual-precio" *ngIf="planActual.precio">
+          <span class="precio-valor">{{ planActual.precio | number:'1.2-2' }} €</span>
+          <span class="precio-periodo">/mes</span>
+        </div>
+      </div>
+    </div>
+    }
+
+    <!-- Planes disponibles -->
+    <div class="planes-section">
+      <h3 class="section-title"><i class="pi pi-list"></i> Planes disponibles</h3>
+      <p class="section-subtitle">Selecciona el plan al que deseas cambiar:</p>
+
+      @if (planes.length === 0) {
+      <div class="no-planes">
         <i class="pi pi-info-circle"></i>
-        <div class="info-content">
-          <h4>¿Qué significa vincular mi cuenta?</h4>
-          <p>
-            Al vincular tu cuenta, podrás gestionar tus suscripciones directamente desde nuestra tienda online,
-            acceder a más planes y oposiciones, y tener un control total sobre tu facturación.
-          </p>
+        <p>No hay otros planes disponibles para tu oposición en este momento.</p>
+      </div>
+      } @else {
+      <div class="planes-grid">
+        @for (plan of planes; track plan.id) {
+        <div
+          class="plan-card"
+          [class.selected]="esPlanSeleccionado(plan)"
+          (click)="seleccionarPlan(plan)"
+        >
+          <div class="plan-card-header">
+            <span class="plan-badge" [ngClass]="getTipoBadgeSeverity(plan.tipo)">{{ getTipoBadge(plan.tipo) }}</span>
+            @if (esPlanSeleccionado(plan)) {
+            <div class="plan-selected-badge"><i class="pi pi-check-circle"></i></div>
+            }
+          </div>
+          <div class="plan-card-nombre">{{ plan.nombre }}</div>
+          <div class="plan-card-precio">
+            @if (plan.precioOferta && plan.precioOferta !== plan.precioRegular) {
+            <span class="precio-tachado">{{ plan.precioRegular | number:'1.2-2' }} €</span>
+            <span class="precio-oferta">{{ plan.precioOferta | number:'1.2-2' }} €<span class="precio-periodo">/{{ getPeriodoLabel(plan) }}</span></span>
+            } @else if (plan.precio) {
+            <span class="precio-normal">{{ plan.precio | number:'1.2-2' }} €<span class="precio-periodo">/{{ getPeriodoLabel(plan) }}</span></span>
+            } @else {
+            <span class="precio-consultar">Consultar precio</span>
+            }
+          </div>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- Comparativa si hay plan seleccionado -->
+    @if (planSeleccionado && planActual) {
+    <div class="comparativa-section">
+      <h3 class="section-title"><i class="pi pi-chart-bar"></i> Resumen del cambio</h3>
+      <div class="comparativa-grid">
+        <div class="comparativa-item comparativa-actual">
+          <span class="comparativa-label">Plan actual</span>
+          <span class="comparativa-plan">{{ getTipoBadge(planActual.tipo) }}</span>
+          <span class="comparativa-precio" *ngIf="planActual.precio">{{ planActual.precio | number:'1.2-2' }} €/mes</span>
+        </div>
+        <div class="comparativa-flecha">
+          <i class="pi pi-arrow-right"></i>
+        </div>
+        <div class="comparativa-item comparativa-nuevo">
+          <span class="comparativa-label">Plan nuevo</span>
+          <span class="comparativa-plan">{{ getTipoBadge(planSeleccionado.tipo) }}</span>
+          <span class="comparativa-precio" *ngIf="planSeleccionado.precio">{{ planSeleccionado.precio | number:'1.2-2' }} €/{{ getPeriodoLabel(planSeleccionado) }}</span>
         </div>
       </div>
-
-      <div class="info-card success">
-        <i class="pi pi-check-circle"></i>
-        <div class="info-content">
-          <h4>Beneficios</h4>
-          <ul>
-            <li>Gestiona todas tus suscripciones desde un solo lugar</li>
-            <li>Contrata planes de múltiples oposiciones</li>
-            <li>Descarga tus facturas fácilmente</li>
-            <li>Cambia tu método de pago cuando quieras</li>
-            <li>Cancela o modifica tus suscripciones online</li>
-          </ul>
-        </div>
+      @if (diferenciaPrecio !== null) {
+      <div class="diferencia-precio" [class.diferencia-positiva]="diferenciaPrecio > 0" [class.diferencia-negativa]="diferenciaPrecio < 0">
+        <i [class]="diferenciaPrecio > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"></i>
+        {{ diferenciaPrecio > 0 ? 'Aumento' : 'Ahorro' }} de
+        <strong>{{ Math.abs(diferenciaPrecio) | number:'1.2-2' }} €/{{ getPeriodoLabel(planSeleccionado) }}</strong>
       </div>
+      }
+      <div class="fecha-efecto">
+        <i class="pi pi-calendar-plus"></i>
+        El cambio se aplicará en tu próximo ciclo de facturación (<strong>{{ validacion.proximoPago | date:'dd/MM/yyyy' }}</strong>)
+      </div>
+    </div>
+    }
 
-      <div class="info-card warning">
-        <i class="pi pi-exclamation-triangle"></i>
-        <div class="info-content">
-          <h4>Importante</h4>
-          <ul>
-            <li>Tus datos y progreso se mantendrán intactos</li>
-            <li>Tu suscripción actual continuará activa</li>
-            <li>Solo necesitas hacer esto una vez</li>
-          </ul>
-        </div>
+    <!-- Comentario -->
+    <div class="comentario-section">
+      <label for="comentario-cambio" class="comentario-label">
+        <i class="pi pi-comment"></i>
+        Comentario adicional (opcional)
+      </label>
+      <textarea
+        pInputTextarea
+        id="comentario-cambio"
+        [(ngModel)]="comentario"
+        rows="3"
+        class="w-full"
+        placeholder="¿Por qué deseas cambiar de plan? Tu opinión nos ayuda a mejorar..."
+        [maxLength]="1000"
+      ></textarea>
+      <small class="comentario-counter">{{ comentario.length }}/1000</small>
+    </div>
+
+    <!-- Nota informativa -->
+    <div class="important-note">
+      <i class="pi pi-info-circle"></i>
+      <div class="note-content">
+        <strong>Importante:</strong> El cambio de plan se aplicará en tu próximo ciclo de facturación.
+        Hasta entonces seguirás disfrutando de tu plan actual. No se realizan cobros adicionales por el cambio de plan.
       </div>
     </div>
 
-    <!-- FAQ Section -->
-    <div class="faq-section">
-      <h3 class="faq-title">
-        <i class="pi pi-question-circle"></i>
-        Preguntas Frecuentes
-      </h3>
-      <p-accordion [multiple]="true" expandIcon="pi pi-plus" collapseIcon="pi pi-minus">
-        <p-accordionTab header="¿Ya compré en la tienda pero no tengo contraseña?">
-          <div class="faq-content">
-            <p><strong>Si compraste como invitado anteriormente:</strong></p>
-            <ol>
-              <li>Ve a nuestra <a [href]="wordpressUrl + '/mi-cuenta'" target="_blank">página de inicio de sesión</a></li>
-              <li>Haz clic en <strong>"¿Olvidaste tu contraseña?"</strong></li>
-              <li>Introduce tu email (el que usaste para comprar)</li>
-              <li>Recibirás un correo para crear tu contraseña</li>
-              <li>Una vez creada, podrás acceder con tu email y nueva contraseña</li>
-            </ol>
-            <p class="mt-2">
-              <i class="pi pi-info-circle"></i>
-              <strong>Nota:</strong> Tu cuenta de WordPress ya existe con tu email, solo necesitas activar tu contraseña.
-            </p>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Cómo accedo a 'Mi cuenta' en WordPress?">
-          <div class="faq-content">
-            <p>Hay dos formas de acceder:</p>
-            <ul>
-              <li>
-                <strong>Desde aquí:</strong> Haz clic en el botón "Vincular cuenta" y te redirigiremos automáticamente
-              </li>
-              <li>
-                <strong>Directo:</strong> Visita <a [href]="wordpressUrl + '/mi-cuenta'" target="_blank">{{wordpressUrl}}/mi-cuenta</a>
-              </li>
-            </ul>
-            <p class="mt-2">Inicia sesión con:</p>
-            <ul>
-              <li><strong>Usuario:</strong> Tu dirección de email</li>
-              <li><strong>Contraseña:</strong> La misma que usas en la plataforma de estudio</li>
-            </ul>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Qué puedo hacer en 'Mi cuenta' de WordPress?">
-          <div class="faq-content">
-            <p>Desde <strong>Mi cuenta → Suscripciones</strong> podrás:</p>
-            <ul>
-              <li><i class="pi pi-shopping-cart"></i> Contratar planes de nuevas oposiciones</li>
-              <li><i class="pi pi-sync"></i> Cambiar tu plan actual (básico ↔ avanzado ↔ premium)</li>
-              <li><i class="pi pi-times-circle"></i> Cancelar suscripciones individuales</li>
-              <li><i class="pi pi-credit-card"></i> Actualizar tu método de pago</li>
-              <li><i class="pi pi-file"></i> Descargar tus facturas</li>
-              <li><i class="pi pi-calendar"></i> Ver próximas fechas de renovación</li>
-            </ul>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Puedo tener suscripciones de múltiples oposiciones?">
-          <div class="faq-content">
-            <p><strong>¡Sí!</strong> Ahora puedes tener planes activos de:</p>
-            <ul>
-              <li><i class="pi pi-map-marker"></i> <strong>Valencia Ayuntamiento</strong></li>
-              <li><i class="pi pi-map-marker"></i> <strong>CPBA Alicante</strong></li>
-            </ul>
-            <p class="mt-2">
-              Cada oposición es independiente. Puedes tener un plan Básico de Valencia y un plan Premium de Alicante simultáneamente.
-            </p>
-            <p class="mt-2">
-              <strong>Para añadir otra oposición:</strong> Ve a <a [href]="wooCommerceUrl" target="_blank">nuestra tienda</a>
-              y contrata el plan que necesites.
-            </p>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Mis datos y progreso se mantendrán?">
-          <div class="faq-content">
-            <p><strong>¡Por supuesto!</strong></p>
-            <ul>
-              <li><i class="pi pi-check"></i> Todo tu progreso de estudio se mantiene intacto</li>
-              <li><i class="pi pi-check"></i> Tus tests y flashcards realizados se conservan</li>
-              <li><i class="pi pi-check"></i> Tus planificaciones personalizadas permanecen</li>
-              <li><i class="pi pi-check"></i> Tus preguntas marcadas como favoritas se mantienen</li>
-            </ul>
-            <p class="mt-2">
-              <i class="pi pi-shield"></i>
-              <strong>Vincular tu cuenta solo conecta tu perfil con WordPress para gestionar suscripciones.</strong>
-              No afecta a tu contenido de estudio.
-            </p>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Cuándo puedo modificar o cancelar mi suscripción?">
-          <div class="faq-content">
-            <p><strong>Plazo de modificación:</strong></p>
-            <p>
-              Puedes modificar o cancelar tu suscripción hasta <strong>5 días antes</strong> de tu próxima fecha de renovación.
-            </p>
-            <p class="mt-2"><strong>Ejemplo:</strong></p>
-            <ul>
-              <li>Si tu suscripción se renueva el día <strong>25 de enero</strong></li>
-              <li>Podrás hacer cambios hasta el <strong>20 de enero</strong></li>
-              <li>Después del día 20, la cancelación se programará para el siguiente ciclo</li>
-            </ul>
-            <p class="mt-2">
-              <i class="pi pi-info-circle"></i>
-              Si solicitas la baja con menos de 5 días, se cobrará el siguiente mes pero la suscripción se cancelará después sin más cobros.
-            </p>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Qué pasa si cancelo mi suscripción?">
-          <div class="faq-content">
-            <p><strong>Al cancelar una suscripción:</strong></p>
-            <ul>
-              <li><i class="pi pi-check"></i> Mantendrás acceso hasta el final del período pagado</li>
-              <li><i class="pi pi-check"></i> No se realizarán más cobros automáticos</li>
-              <li><i class="pi pi-check"></i> Tus datos y progreso se conservan por si vuelves</li>
-              <li><i class="pi pi-times"></i> Al finalizar el período, perderás acceso a esa oposición</li>
-            </ul>
-            <p class="mt-3">
-              <strong>¿Tienes múltiples suscripciones?</strong><br>
-              Puedes cancelar solo una oposición y mantener las demás activas.
-            </p>
-          </div>
-        </p-accordionTab>
-      </p-accordion>
-    </div>
-
+    <!-- Footer -->
     <div class="footer-actions">
       <p-button
         label="Cancelar"
@@ -195,173 +199,60 @@
         styleClass="cancel-button"
       />
       <p-button
-        label="Vincular cuenta"
-        icon="pi pi-link"
-        (onClick)="vincularCuenta()"
+        label="Cambiar Plan"
+        icon="pi pi-check"
+        (onClick)="abrirConfirmacion()"
+        severity="primary"
+        [disabled]="!planSeleccionado || procesando()"
+        [loading]="procesando()"
         styleClass="confirm-button"
       />
     </div>
   </div>
-  } @else {
-  <!-- Usuario vinculado a WordPress - Mostrar guía de gestión -->
-  <div class="gestionar-content">
-    <div class="header-section">
-      <div class="header-icon wordpress">
-        <i class="pi pi-cog"></i>
-      </div>
-      <h1 class="header-title">Gestionar Suscripciones</h1>
-      <p class="header-subtitle">
-        Tu cuenta está vinculada con WordPress. Desde aquí puedes gestionar todas tus suscripciones,
-        añadir nuevas oposiciones, cambiar tu plan y mucho más.
-      </p>
-    </div>
-
-    <!-- Actions Section -->
-    <div class="actions-section">
-      <div class="action-card primary">
-        <div class="action-icon">
-          <i class="pi pi-user"></i>
-        </div>
-        <div class="action-content">
-          <h3>Mi Cuenta en WordPress</h3>
-          <p>Gestiona tus suscripciones activas, actualiza tu método de pago, descarga facturas y más.</p>
-        </div>
-        <p-button
-          label="Ir a Mi Cuenta"
-          icon="pi pi-external-link"
-          (onClick)="visitarMiCuenta()"
-          styleClass="p-button-raised"
-        />
-      </div>
-
-      <div class="action-card secondary">
-        <div class="action-icon">
-          <i class="pi pi-shopping-cart"></i>
-        </div>
-        <div class="action-content">
-          <h3>Añadir Más Planes</h3>
-          <p>Contrata planes de otras oposiciones o mejora tu plan actual desde nuestra tienda.</p>
-        </div>
-        <p-button
-          label="Visitar Tienda"
-          icon="pi pi-external-link"
-          (onClick)="visitarTienda()"
-          [outlined]="true"
-        />
-      </div>
-    </div>
-
-    <!-- FAQ Section (reutilizar el mismo FAQ) -->
-    <div class="faq-section">
-      <h3 class="faq-title">
-        <i class="pi pi-question-circle"></i>
-        Preguntas Frecuentes
-      </h3>
-      <p-accordion [multiple]="true" expandIcon="pi pi-plus" collapseIcon="pi pi-minus">
-        <p-accordionTab header="¿Ya compré en la tienda pero no tengo contraseña?">
-          <div class="faq-content">
-            <p><strong>Si compraste como invitado anteriormente:</strong></p>
-            <ol>
-              <li>Ve a nuestra <a [href]="wordpressUrl + '/mi-cuenta'" target="_blank">página de inicio de sesión</a></li>
-              <li>Haz clic en <strong>"¿Olvidaste tu contraseña?"</strong></li>
-              <li>Introduce tu email (el que usaste para comprar)</li>
-              <li>Recibirás un correo para crear tu contraseña</li>
-              <li>Una vez creada, podrás acceder con tu email y nueva contraseña</li>
-            </ol>
-            <p class="mt-2">
-              <i class="pi pi-info-circle"></i>
-              <strong>Nota:</strong> Tu cuenta de WordPress ya existe con tu email, solo necesitas activar tu contraseña.
-            </p>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Cómo accedo a 'Mi cuenta' en WordPress?">
-          <div class="faq-content">
-            <p>Hay dos formas de acceder:</p>
-            <ul>
-              <li>
-                <strong>Desde aquí:</strong> Haz clic en el botón "Ir a Mi Cuenta" arriba
-              </li>
-              <li>
-                <strong>Directo:</strong> Visita <a [href]="wordpressUrl + '/mi-cuenta'" target="_blank">{{wordpressUrl}}/mi-cuenta</a>
-              </li>
-            </ul>
-            <p class="mt-2">Inicia sesión con:</p>
-            <ul>
-              <li><strong>Usuario:</strong> Tu dirección de email</li>
-              <li><strong>Contraseña:</strong> La misma que usas en la plataforma de estudio</li>
-            </ul>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Qué puedo hacer en 'Mi cuenta' de WordPress?">
-          <div class="faq-content">
-            <p>Desde <strong>Mi cuenta → Suscripciones</strong> podrás:</p>
-            <ul>
-              <li><i class="pi pi-shopping-cart"></i> Contratar planes de nuevas oposiciones</li>
-              <li><i class="pi pi-sync"></i> Cambiar tu plan actual (básico ↔ avanzado ↔ premium)</li>
-              <li><i class="pi pi-times-circle"></i> Cancelar suscripciones individuales</li>
-              <li><i class="pi pi-credit-card"></i> Actualizar tu método de pago</li>
-              <li><i class="pi pi-file"></i> Descargar tus facturas</li>
-              <li><i class="pi pi-calendar"></i> Ver próximas fechas de renovación</li>
-            </ul>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Puedo tener suscripciones de múltiples oposiciones?">
-          <div class="faq-content">
-            <p><strong>¡Sí!</strong> Ahora puedes tener planes activos de:</p>
-            <ul>
-              <li><i class="pi pi-map-marker"></i> <strong>Valencia Ayuntamiento</strong></li>
-              <li><i class="pi pi-map-marker"></i> <strong>CPBA Alicante</strong></li>
-            </ul>
-            <p class="mt-2">
-              Cada oposición es independiente. Puedes tener un plan Básico de Valencia y un plan Premium de Alicante simultáneamente.
-            </p>
-            <p class="mt-2">
-              <strong>Para añadir otra oposición:</strong> Ve a <a [href]="wooCommerceUrl" target="_blank">nuestra tienda</a>
-              y contrata el plan que necesites.
-            </p>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Cuándo puedo modificar o cancelar mi suscripción?">
-          <div class="faq-content">
-            <p><strong>Plazo de modificación:</strong></p>
-            <p>
-              Puedes modificar o cancelar tu suscripción hasta <strong>5 días antes</strong> de tu próxima fecha de renovación.
-            </p>
-            <p class="mt-2"><strong>Ejemplo:</strong></p>
-            <ul>
-              <li>Si tu suscripción se renueva el día <strong>25 de enero</strong></li>
-              <li>Podrás hacer cambios hasta el <strong>20 de enero</strong></li>
-              <li>Después del día 20, la cancelación se programará para el siguiente ciclo</li>
-            </ul>
-            <p class="mt-2">
-              <i class="pi pi-info-circle"></i>
-              Si solicitas la baja con menos de 5 días, se cobrará el siguiente mes pero la suscripción se cancelará después sin más cobros.
-            </p>
-          </div>
-        </p-accordionTab>
-
-        <p-accordionTab header="¿Qué pasa si cancelo mi suscripción?">
-          <div class="faq-content">
-            <p><strong>Al cancelar una suscripción:</strong></p>
-            <ul>
-              <li><i class="pi pi-check"></i> Mantendrás acceso hasta el final del período pagado</li>
-              <li><i class="pi pi-check"></i> No se realizarán más cobros automáticos</li>
-              <li><i class="pi pi-check"></i> Tus datos y progreso se conservan por si vuelves</li>
-              <li><i class="pi pi-times"></i> Al finalizar el período, perderás acceso a esa oposición</li>
-            </ul>
-            <p class="mt-3">
-              <strong>¿Tienes múltiples suscripciones?</strong><br>
-              Puedes cancelar solo una oposición y mantener las demás activas.
-            </p>
-          </div>
-        </p-accordionTab>
-      </p-accordion>
-    </div>
-
-  </div>
   }
+
+  <!-- Dialog de confirmación -->
+  <p-dialog
+    header="Confirmar Cambio de Plan"
+    [visible]="mostrarConfirmacion()"
+    (visibleChange)="mostrarConfirmacion.set($event)"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [closable]="!procesando()"
+  >
+    @if (planSeleccionado) {
+    <div class="confirmacion-content">
+      <div class="confirmacion-resumen">
+        <div class="confirmacion-item">
+          <span class="conf-label">Plan actual</span>
+          <span class="conf-valor">{{ getTipoBadge(planActual?.tipo || null) }}</span>
+        </div>
+        <div class="conf-arrow"><i class="pi pi-arrow-right"></i></div>
+        <div class="confirmacion-item">
+          <span class="conf-label">Plan nuevo</span>
+          <span class="conf-valor conf-valor-nuevo">{{ planSeleccionado.nombre }}</span>
+        </div>
+      </div>
+      @if (planSeleccionado.precio) {
+      <p class="conf-precio">Nuevo precio: <strong>{{ planSeleccionado.precio | number:'1.2-2' }} €/{{ getPeriodoLabel(planSeleccionado) }}</strong></p>
+      }
+      <p class="conf-fecha">
+        <i class="pi pi-calendar"></i>
+        El cambio se aplicará el <strong>{{ validacion?.proximoPago | date:'dd/MM/yyyy' }}</strong>
+      </p>
+      @if (comentario) {
+      <div class="conf-comentario">
+        <i class="pi pi-comment"></i>
+        <em>{{ comentario }}</em>
+      </div>
+      }
+      <p class="conf-aviso">¿Confirmas el cambio de plan?</p>
+    </div>
+    }
+    <ng-template pTemplate="footer">
+      <p-button label="Volver" icon="pi pi-arrow-left" (onClick)="mostrarConfirmacion.set(false)" [outlined]="true" severity="secondary" />
+      <p-button label="Confirmar Cambio" icon="pi pi-check" (onClick)="confirmarCambio()" [loading]="procesando()" severity="primary" />
+    </ng-template>
+  </p-dialog>
+
 </div>

@@ -1,0 +1,141 @@
+<div class="descuento-container">
+
+  <!-- Loading -->
+  @if (cargando()) {
+  <div class="loading-container">
+    <p-progressSpinner />
+    <p class="text-lg mt-3">Cargando información de descuentos...</p>
+  </div>
+  } @else {
+
+  <div class="descuento-content">
+
+    <!-- Header -->
+    <div class="header-section">
+      <div class="header-icon">
+        <i class="pi pi-ticket"></i>
+      </div>
+      <h1 class="header-title">Gestionar Descuentos</h1>
+      <p class="header-subtitle">Aplica o elimina cupones de descuento en tu suscripción</p>
+    </div>
+
+    <!-- Feedback inline -->
+    @if (feedbackMensaje) {
+    <div class="feedback-mensaje" [class.feedback-success]="feedbackTipo === 'success'" [class.feedback-error]="feedbackTipo === 'error'">
+      <i [class]="feedbackTipo === 'success' ? 'pi pi-check-circle' : 'pi pi-times-circle'"></i>
+      <span>{{ feedbackMensaje }}</span>
+    </div>
+    }
+
+    <!-- Cupones activos -->
+    <div class="cupones-section">
+      <h3 class="section-title">
+        <i class="pi pi-tags"></i>
+        Cupones activos
+      </h3>
+
+      @if (cuponesActivos.length === 0) {
+      <div class="sin-cupones">
+        <i class="pi pi-info-circle"></i>
+        <p>No tienes ningún cupón de descuento aplicado en este momento.</p>
+      </div>
+      } @else {
+      <div class="cupones-lista">
+        @for (cupon of cuponesActivos; track cupon.code) {
+        <div class="cupon-item">
+          <div class="cupon-info">
+            <i class="pi pi-ticket"></i>
+            <div class="cupon-detalle">
+              <span class="cupon-codigo">{{ cupon.code }}</span>
+              <span class="cupon-descuento">{{ getDescuentoLabel(cupon) }}</span>
+            </div>
+          </div>
+          <p-button
+            icon="pi pi-trash"
+            [outlined]="true"
+            severity="danger"
+            size="small"
+            pTooltip="Eliminar cupón"
+            tooltipPosition="left"
+            [loading]="removiendo() === cupon.code"
+            (onClick)="confirmarRemoverCupon(cupon)"
+          />
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- Aplicar nuevo cupón -->
+    <div class="aplicar-section">
+      <h3 class="section-title">
+        <i class="pi pi-plus-circle"></i>
+        Aplicar cupón
+      </h3>
+      <p class="section-subtitle">Introduce el código del cupón que has recibido:</p>
+
+      <div class="cupon-input-group">
+        <input
+          pInputText
+          type="text"
+          [(ngModel)]="codigoNuevo"
+          placeholder="Ej: DESCUENTO10"
+          class="cupon-input"
+          (keyup.enter)="aplicarCupon()"
+          [disabled]="aplicando()"
+        />
+        <p-button
+          label="Aplicar"
+          icon="pi pi-check"
+          (onClick)="aplicarCupon()"
+          [loading]="aplicando()"
+          [disabled]="!codigoNuevo.trim()"
+          severity="success"
+        />
+      </div>
+    </div>
+
+    <!-- Nota informativa -->
+    <div class="important-note">
+      <i class="pi pi-info-circle"></i>
+      <div class="note-content">
+        <strong>Importante:</strong> Los cupones se aplican a partir de tu próximo ciclo de facturación.
+        Los cambios no afectan al pago actual. Contacta con soporte si tienes dudas sobre un cupón.
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-actions">
+      <p-button
+        label="Cerrar"
+        icon="pi pi-times"
+        (onClick)="cancelar()"
+        [outlined]="true"
+        severity="secondary"
+      />
+    </div>
+  </div>
+  }
+
+  <!-- Dialog confirmar eliminar cupón -->
+  <p-dialog
+    header="Eliminar Cupón"
+    [visible]="mostrarConfirmacionRemover()"
+    (visibleChange)="mostrarConfirmacionRemover.set($event)"
+    [modal]="true"
+    [style]="{ width: '400px' }"
+  >
+    @if (cuponARemover) {
+    <div class="confirm-remover-content">
+      <i class="pi pi-exclamation-triangle confirm-icon"></i>
+      <p>¿Seguro que deseas eliminar el cupón <strong>{{ cuponARemover.code }}</strong>?</p>
+      <p class="confirm-aviso">Esta acción no se puede deshacer. Perderás el descuento en tu próxima renovación.</p>
+    </div>
+    }
+    <ng-template pTemplate="footer">
+      <p-button label="Cancelar" icon="pi pi-times" (onClick)="mostrarConfirmacionRemover.set(false)" [outlined]="true" severity="secondary" />
+      <p-button label="Sí, eliminar" icon="pi pi-trash" (onClick)="removerCupon()" severity="danger" />
+    </ng-template>
+  </p-dialog>
+
+</div>

@@ -1,7 +1,7 @@
 export enum SuscripcionTipo {
-  PREMIUM = 'PREMIUM',     // Plan Premium
-  ADVANCED = 'ADVANCED',    // Plan Avanzado
-  BASIC = 'BASIC'       // Plan Básico
+  PREMIUM = 'PREMIUM',
+  ADVANCED = 'ADVANCED',
+  BASIC = 'BASIC'
 }
 
 export enum SuscripcionStatus {
@@ -20,6 +20,32 @@ export const OPOSICION_LABELS: Record<Oposicion, string> = {
   [Oposicion.VALENCIA_AYUNTAMIENTO]: 'Valencia Ayuntamiento',
   [Oposicion.ALICANTE_CPBA]: 'CPBA Alicante'
 };
+
+export const PLAN_LABELS: Record<string, string> = {
+  PREMIUM: 'Premium',
+  ADVANCED: 'Avanzado',
+  BASIC: 'Básico',
+};
+
+export const PLAN_CSS_CLASS: Record<string, string> = {
+  PREMIUM: 'plan-premium',
+  ADVANCED: 'plan-advanced',
+  BASIC: 'plan-basic',
+};
+
+export const PLAN_SORT_ORDER: Record<string, number> = {
+  BASIC: 1,
+  ADVANCED: 2,
+  PREMIUM: 3,
+};
+
+export function getPlanLabel(tipo: string | null | undefined): string {
+  return tipo ? (PLAN_LABELS[tipo] || tipo) : '';
+}
+
+export function getPlanCssClass(tipo: string | null | undefined): string {
+  return tipo ? (PLAN_CSS_CLASS[tipo] || '') : '';
+}
 
 export interface Suscripcion {
   id: number;

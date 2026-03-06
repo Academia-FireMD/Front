@@ -18,7 +18,7 @@ import { ViewportService } from '../services/viewport.service';
 import {
   duracionesDisponibles,
 } from '../shared/models/pregunta.model';
-import { Oposicion, Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../shared/models/subscription.model';
+import { getPlanLabel, Oposicion, Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../shared/models/subscription.model';
 import { Rol, Usuario } from '../shared/models/user.model';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { AppState } from '../store/app.state';
@@ -37,7 +37,8 @@ import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.co
   styleUrls: ['./profile.component.scss', './profile-onboarding.component.scss'],
 })
 export class ProfileComponent implements OnInit, OnDestroy {
-  // ViewChild para acceder a componentes hijos
+  readonly getPlanLabel = getPlanLabel;
+
   @ViewChild(BajaSuscripcionComponent) bajaSuscripcionComponent?: BajaSuscripcionComponent;
 
   // Servicios
@@ -79,10 +80,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Control de dialogs de suscripción
   showCambioSuscripcionDialog = false; // Solo para vincular cuenta (usuarios "en negro")
-  showBajaSuscripcionDialog = false;   // Solo para usuarios "en negro")
-  showVerificacionPasswordDialog = false; // Dialog para verificar contraseña al vincular
-  showCambioOposicionDialog = false; // Dialog para cambiar oposición
-  suscripcionParaCambio: Suscripcion | null = null; // Suscripción seleccionada para cambio
+  showBajaSuscripcionDialog = false;
+  showVerificacionPasswordDialog = false;
+  showCambioOposicionDialog = false;
+  suscripcionParaCambio: Suscripcion | null = null;
+
+  // Dialogs nuevos para usuarios WooCommerce
+  showCambioPlanDialog = false;
+  showDescuentoDialog = false;
+  suscripcionGestionWC: Suscripcion | null = null; // Suscripción activa en gestión WC
 
   // Control de subdialogs para baja
   showConfirmacionBaja = false;
@@ -400,7 +406,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.datosConfirmacionBaja = null;
     this.validacionPlazo = null;
     this.procesandoBaja = false;
-    // Recargar usuario por si cambió algo
+    this.suscripcionGestionWC = null;
     this.store.dispatch(UserActions.loadUser());
   }
 
@@ -777,11 +783,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Método para obtener los items del menú de cada suscripción
   @Memoize()
   getSubscriptionMenuItems(suscripcion: Suscripcion) {
-    // Usuarios WP: redirigir a WordPress para gestionar
     if (this.isLinkedToWordPress()) {
       const menuItems: any[] = [];
-      
-      // Si la suscripción es genérica (intercambiable), añadir opción de cambio
+
       if ((suscripcion as any).isGeneric && suscripcion.status === 'ACTIVE') {
         menuItems.push({
           label: 'Cambiar oposición',
@@ -789,20 +793,39 @@ export class ProfileComponent implements OnInit, OnDestroy {
           command: () => this.abrirDialogCambioOposicion(suscripcion)
         });
       }
-      
-      menuItems.push({
-        label: 'Gestionar en WordPress',
-        icon: 'pi pi-external-link',
-        command: () => this.gestionarEnWordPress()
-      });
-      
+
+      if (suscripcion.status === 'ACTIVE') {
+        menuItems.push({
+          label: 'Cambiar plan',
+          icon: 'pi pi-refresh',
+          command: () => this.abrirCambioPlanWC(suscripcion)
+        });
+        menuItems.push({
+          label: 'Aplicar descuento',
+          icon: 'pi pi-ticket',
+          command: () => this.abrirDescuentoWC(suscripcion)
+        });
+        if (!(suscripcion as any).cancelacionProgramada) {
+          menuItems.push({
+            label: 'Dar de baja',
+            icon: 'pi pi-sign-out',
+            command: () => this.cancelarSuscripcionIndividual(suscripcion)
+          });
+        } else {
+          menuItems.push({
+            label: 'Cancelar baja programada',
+            icon: 'pi pi-undo',
+            command: () => this.cancelarCancelacionProgramada(suscripcion.id)
+          });
+        }
+      }
+
       return menuItems;
     }
 
-    // Usuarios "en negro": permitir dar de baja localmente
+    // Usuarios "en negro"
     const menuItems: any[] = [];
 
-    // Si tiene cancelación programada, permitir cancelarla
     if ((suscripcion as any).cancelacionProgramada) {
       menuItems.push({
         label: 'Cancelar baja programada',
@@ -810,7 +833,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
         command: () => this.cancelarCancelacionProgramada(suscripcion.id)
       });
     } else if (suscripcion.status === 'ACTIVE') {
-      // Si está activa y sin cancelación programada, permitir dar de baja
       menuItems.push({
         label: 'Dar de baja',
         icon: 'pi pi-sign-out',
@@ -821,7 +843,28 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return menuItems;
   }
 
-  // Abrir dialog con contexto para gestionar suscripciones en WordPress
+  abrirCambioPlanWC(suscripcion: Suscripcion): void {
+    this.suscripcionGestionWC = suscripcion;
+    this.showCambioPlanDialog = true;
+  }
+
+  abrirDescuentoWC(suscripcion: Suscripcion): void {
+    this.suscripcionGestionWC = suscripcion;
+    this.showDescuentoDialog = true;
+  }
+
+  cerrarCambioPlanDialog(): void {
+    this.showCambioPlanDialog = false;
+    this.suscripcionGestionWC = null;
+    this.store.dispatch(UserActions.loadUser());
+  }
+
+  cerrarDescuentoDialog(): void {
+    this.showDescuentoDialog = false;
+    this.suscripcionGestionWC = null;
+    this.store.dispatch(UserActions.loadUser());
+  }
+
   gestionarEnWordPress(): void {
     this.showCambioSuscripcionDialog = true;
   }
@@ -833,30 +876,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Método para cancelar una suscripción individual
   cancelarSuscripcionIndividual(suscripcion: Suscripcion): void {
-    const nombreOposicion = oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion;
-    const tipoPlan = suscripcion.tipo === 'BASIC' ? 'Básico' : suscripcion.tipo === 'ADVANCED' ? 'Avanzado' : 'Premium';
-
-    this.confirmationService.confirm({
-      header: 'Dar de baja suscripción',
-      message:
-        `¿Estás seguro de que deseas darte de baja de la suscripción "<strong>${nombreOposicion}</strong>"?<br><br>` +
-        `• <strong>Plan:</strong> ${tipoPlan}<br>` +
-        `• Esta acción no se puede deshacer<br>` +
-        `• Perderás acceso al contenido de esta oposición`,
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí, dar de baja',
-      rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        // Abrir el dialog de baja pasando la suscripción específica
-        this.showBajaSuscripcionDialog = true;
-        // Almacenamos la suscripción seleccionada para procesarla
-        this.datosConfirmacionBaja = {
-          suscripcionId: suscripcion.id,
-          oposicion: suscripcion.oposicion
-        };
-      }
-    });
+    this.suscripcionGestionWC = suscripcion;
+    this.datosConfirmacionBaja = {
+      suscripcionId: suscripcion.id,
+      oposicion: suscripcion.oposicion
+    };
+    this.showBajaSuscripcionDialog = true;
   }
 
   // Genera el tooltip con info de la suscripción

@@ -240,13 +240,7 @@
                       class="plan-badge"
                       [ngClass]="'plan-' + suscripcion.tipo.toLowerCase()"
                     >
-                      {{
-                        suscripcion.tipo === "BASIC"
-                          ? "Básico"
-                          : suscripcion.tipo === "ADVANCED"
-                          ? "Avanzado"
-                          : "Premium"
-                      }}
+                      {{ getPlanLabel(suscripcion.tipo) }}
                     </span>
                   </div>
                   <!-- Menú de opciones -->
@@ -788,26 +782,49 @@
   </ng-template>
 </p-dialog>
 
-<!-- Dialog para vincular cuenta con WordPress -->
+<!-- Dialog para vincular cuenta con WordPress (usuarios "en negro") -->
 <p-dialog
-  header="Vincular cuenta"
+  header="Vincular cuenta con WordPress"
   [(visible)]="showCambioSuscripcionDialog"
   [modal]="true"
   [closable]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '95vw', maxWidth: '700px' }"
+  [style]="{ width: '95vw', maxWidth: '600px' }"
   (onHide)="cerrarDialogCambioSuscripcion()"
 >
-  <app-cambio-suscripcion
-    *ngIf="showCambioSuscripcionDialog"
-    [isUserLinkedToWP]="isLinkedToWordPress()"
-    (cerrar)="cerrarDialogCambioSuscripcion()"
-    (solicitarVinculacion)="onSolicitarVinculacionDesdeDialog()"
-  ></app-cambio-suscripcion>
+  <div class="flex flex-column align-items-center gap-4 p-4">
+    <div class="flex align-items-center justify-content-center border-circle bg-blue-100" style="width: 80px; height: 80px;">
+      <i class="pi pi-link text-blue-600" style="font-size: 2rem;"></i>
+    </div>
+    <div class="text-center">
+      <h3 class="text-900 font-semibold mt-0 mb-2">Gestión de suscripción</h3>
+      <p class="text-600 line-height-3 m-0">
+        Para cambiar tu plan de suscripción necesitas vincular tu cuenta con WordPress.
+        Una vez vinculada, podrás gestionar tus suscripciones directamente desde la plataforma.
+      </p>
+    </div>
+    <div class="flex align-items-start gap-2 p-3 border-round bg-blue-50 border-1 border-blue-200 w-full">
+      <i class="pi pi-info-circle text-blue-500 mt-1"></i>
+      <span class="text-sm text-blue-700 line-height-3">Al vincular tu cuenta podrás cambiar de plan, aplicar descuentos y gestionar tu suscripción sin salir de la plataforma.</span>
+    </div>
+    <div class="flex gap-3 w-full justify-content-center">
+      <p-button
+        label="Cancelar"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="cerrarDialogCambioSuscripcion()"
+      />
+      <p-button
+        label="Vincular con WordPress"
+        icon="pi pi-link"
+        (onClick)="onSolicitarVinculacionDesdeDialog()"
+      />
+    </div>
+  </div>
 </p-dialog>
 
-<!-- Dialog para Baja de Suscripción -->
+<!-- Dialog para Baja de Suscripción (usuarios "en negro" y WooCommerce) -->
 <p-dialog
   header="Baja de Suscripción"
   [(visible)]="showBajaSuscripcionDialog"
@@ -820,10 +837,51 @@
 >
   <app-baja-suscripcion
     *ngIf="showBajaSuscripcionDialog"
+    [suscripcionId]="datosConfirmacionBaja?.suscripcionId ?? suscripcionGestionWC?.id"
     (cerrar)="cerrarDialogBajaSuscripcion()"
     (solicitarConfirmacion)="onSolicitarConfirmacionBaja($event)"
     (mostrarFueraDePlazo)="onFueraDePlazoBaja($event)"
   ></app-baja-suscripcion>
+</p-dialog>
+
+<!-- Dialog Cambio de Plan WooCommerce -->
+<p-dialog
+  header="Cambiar Plan"
+  [(visible)]="showCambioPlanDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '95vw', maxWidth: '1100px' }"
+  (onHide)="cerrarCambioPlanDialog()"
+>
+  <app-cambio-suscripcion
+    *ngIf="showCambioPlanDialog && suscripcionGestionWC"
+    [suscripcionId]="suscripcionGestionWC!.id"
+    [oposicion]="suscripcionGestionWC!.oposicion"
+    [planActual]="{ sku: suscripcionGestionWC!.sku ?? null, tipo: suscripcionGestionWC!.tipo, precio: suscripcionGestionWC!.monthlyPrice ?? null }"
+    (cerrar)="cerrarCambioPlanDialog()"
+    (cambioRealizado)="cerrarCambioPlanDialog()"
+  ></app-cambio-suscripcion>
+</p-dialog>
+
+<!-- Dialog Descuento WooCommerce -->
+<p-dialog
+  header="Gestionar Descuento"
+  [(visible)]="showDescuentoDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '95vw', maxWidth: '700px' }"
+  (onHide)="cerrarDescuentoDialog()"
+>
+  <app-descuento-suscripcion
+    *ngIf="showDescuentoDialog && suscripcionGestionWC"
+    [suscripcionId]="suscripcionGestionWC!.id"
+    (cerrar)="cerrarDescuentoDialog()"
+    (descuentoCambiado)="cerrarDescuentoDialog()"
+  ></app-descuento-suscripcion>
 </p-dialog>
 
 <!-- Dialog de Confirmación Baja -->

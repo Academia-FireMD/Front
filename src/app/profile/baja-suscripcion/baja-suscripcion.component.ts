@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -39,6 +39,7 @@ interface MotivoOption {
   styleUrls: ['./baja-suscripcion.component.scss'],
 })
 export class BajaSuscripcionComponent implements OnInit {
+  @Input() suscripcionId?: number;
   @Output() cerrar = new EventEmitter<void>();
   @Output() solicitarConfirmacion = new EventEmitter<any>();
   @Output() mostrarFueraDePlazo = new EventEmitter<any>();
@@ -50,8 +51,7 @@ export class BajaSuscripcionComponent implements OnInit {
   validacion: ValidacionPlazo | null = null;
   motivosSeleccionados: MotivoBaja[] = [];
   comentarioAdicional: string = '';
-  
-  // URL de WordPress para el enlace
+
   wordpressUrl = environment.wordpressUrl;
 
   motivosOptions: MotivoOption[] = [
@@ -108,7 +108,7 @@ export class BajaSuscripcionComponent implements OnInit {
 
   validarPlazo(): void {
     this.validandoPlazo.set(true);
-    this.suscripcionService.validarPlazo().subscribe({
+    this.suscripcionService.validarPlazo(this.suscripcionId).subscribe({
       next: (result) => {
         this.validacion = result;
         this.validandoPlazo.set(false);
@@ -169,6 +169,7 @@ export class BajaSuscripcionComponent implements OnInit {
       .solicitarBaja({
         motivos: datos.motivos,
         comentarioAdicional: datos.comentario || undefined,
+        suscripcionId: this.suscripcionId,
       })
       .subscribe({
         next: (response) => {
