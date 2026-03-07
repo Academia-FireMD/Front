@@ -12,13 +12,15 @@ export enum SuscripcionStatus {
 export enum Oposicion {
   GENERAL = 'GENERAL',
   VALENCIA_AYUNTAMIENTO = 'VALENCIA_AYUNTAMIENTO',
-  ALICANTE_CPBA = 'ALICANTE_CPBA'
+  ALICANTE_CPBA = 'ALICANTE_CPBA',
+  MADRID = 'MADRID'
 }
 
 export const OPOSICION_LABELS: Record<Oposicion, string> = {
   [Oposicion.GENERAL]: 'General',
   [Oposicion.VALENCIA_AYUNTAMIENTO]: 'Valencia Ayuntamiento',
-  [Oposicion.ALICANTE_CPBA]: 'CPBA Alicante'
+  [Oposicion.ALICANTE_CPBA]: 'CPBA Alicante',
+  [Oposicion.MADRID]: 'Madrid'
 };
 
 export const PLAN_LABELS: Record<string, string> = {

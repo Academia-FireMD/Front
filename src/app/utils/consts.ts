@@ -90,6 +90,11 @@ export const oposiciones: Record<Oposicion, { icon: string; name: string; image:
     name: 'CPBA Alicante',
     image: 'oposiciones/alicante.png',
   },
+  [Oposicion.MADRID]: {
+    icon: '🏙️',
+    name: 'Madrid',
+    image: 'oposiciones/madrid.png',
+  },
 };
 
 export const provinciasEspanolas = [
