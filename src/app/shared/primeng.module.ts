@@ -36,6 +36,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { RippleModule } from 'primeng/ripple';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { MenuModule } from 'primeng/menu';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { TableModule } from 'primeng/table';
 import { TabViewModule } from 'primeng/tabview';
@@ -88,6 +89,7 @@ const modules = [
   TabViewModule,
   KeyComponent,
   NgxSpinnerModule,
+  MenuModule,
   SplitButtonModule,
   ProgressSpinnerModule
 ];

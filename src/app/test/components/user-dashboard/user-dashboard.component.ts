@@ -82,16 +82,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   public filters = computed(() => {
     const baseFilters = [
       {
-        key: 'createdAt',
-        specialCaseKey: 'rangeDate',
-        label: 'Rango de fechas',
-        type: 'calendar',
-        placeholder: 'Seleccionar rango de fechas',
-        dateConfig: {
-          selectionMode: 'range',
-        },
-      },
-      {
         key: 'tipoUsuario',
         label: 'Tipo de Usuario',
         type: 'dropdown',
@@ -165,6 +155,22 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         },
       },
       {
+        key: 'estadoActividad',
+        label: 'Estado de actividad',
+        type: 'dropdown',
+        placeholder: 'Seleccionar estado',
+        options: [
+          { label: 'Todos', value: 'todos' },
+          { label: 'Activos (Verde)', value: 'activo' },
+          { label: 'Parciales (Amarillo)', value: 'parcial' },
+          { label: 'Inactivos (Rojo)', value: 'inactivo' },
+        ],
+        filterInterpolation: (value) => {
+          if (value === 'todos') return {};
+          return { estadoActividad: value };
+        },
+      },
+      {
         key: 'rol',
         label: 'Rol',
         type: 'dropdown',
@@ -177,28 +183,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         filterInterpolation: (value) => {
           if (value === 'todos') return {};
           return { rol: value };
-        },
-      },
-      {
-        key: 'labels',
-        label: 'Etiquetas',
-        type: 'multi-select',
-        placeholder: 'Filtrar por etiquetas',
-        options: this.availableLabels.map(label => ({
-          label: `${label.key}${label.value ? ': ' + label.value : ''}`,
-          value: label.id
-        })),
-        filterInterpolation: (value: string[]) => {
-          if (!value || value.length === 0) return {};
-          return {
-            labels: {
-              some: {
-                labelId: {
-                  in: value
-                }
-              }
-            }
-          };
         },
       },
     ] as FilterConfig[];
@@ -298,6 +282,19 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   getActiveSuscripciones(user: Usuario): Suscripcion[] {
     return (user.suscripciones || []).filter(s => s.status === SuscripcionStatus.ACTIVE);
+  }
+
+  getUserStatus(user: Usuario): 'active' | 'partial' | 'inactive' {
+    const hasActiveSub = user.suscripciones?.some(s => s.status === SuscripcionStatus.ACTIVE);
+    if (hasActiveSub) return 'active';
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const hasActiveConsumible = user.consumibles?.some(c => c.estado === 'ACTIVADO');
+    const recentActivity = user.updatedAt && new Date(user.updatedAt) > thirtyDaysAgo;
+    if (hasActiveConsumible || recentActivity) return 'partial';
+
+    return 'inactive';
   }
 
   /**
@@ -587,6 +584,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     );
     this.refresh();
   }
+
   // Métodos para expansión de filas
   toggleUserExpansion(userId: number, event: Event) {
     event.stopPropagation();
@@ -645,6 +643,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   getActionItems(user: Usuario): MenuItem[] {
     const items: MenuItem[] = [];
     const isWP = this.isWordPressUser(user);
+    const status = this.getUserStatus(user);
 
     if (this.decodedUser.rol === 'ADMIN') {
       items.push({
@@ -666,16 +665,20 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         label: 'Gestionar etiquetas',
         icon: 'pi pi-tag',
         command: () => this.openLabelsDialog(user),
-      },
+      }
+    );
+
+    items.push(
       {
-        label: user.validated ? 'Verificar' : 'Denegar',
-        icon: user.validated ? 'pi pi-check' : 'pi pi-times',
+        label: !user.validated ? 'Verificar' : status === 'active' ? 'Dar de baja' : 'Denegar',
+        icon: !user.validated ? 'pi pi-check' : 'pi pi-ban',
+        styleClass: !user.validated ? '' : 'p-menuitem-danger',
         command: () => {
           const event = new MouseEvent('click');
           if (user.validated) {
-            this.permitir(user.id);
-          } else {
             this.denegar(user.id, event);
+          } else {
+            this.permitir(user.id);
           }
         },
       },

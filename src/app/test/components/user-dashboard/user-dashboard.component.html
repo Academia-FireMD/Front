@@ -44,6 +44,12 @@
     >
       <div class="text-lg font-medium flex gap-2 align-items-center">
         <span
+          class="status-dot"
+          [ngClass]="'status-dot-' + getUserStatus(item)"
+          [pTooltip]="getUserStatus(item) === 'active' ? 'Activo' : getUserStatus(item) === 'partial' ? 'Parcial (sin suscripción activa)' : 'Inactivo'"
+          tooltipPosition="top"
+        ></span>
+        <span
           class="identifier"
           pTooltip="{{ item.email }}"
           tooltipPosition="top"
@@ -89,8 +95,8 @@
               tooltipPosition="top"
             />
           }
-          @if (item.suscripciones && item.suscripciones.length > 0) {
-            @for (sub of item.suscripciones; track sub.id) {
+          @if (getActiveSuscripciones(item).length > 0) {
+            @for (sub of getActiveSuscripciones(item); track sub.id) {
               <p-chip
                 [styleClass]="getSubscriptionBadgeClass(sub)"
                 [label]="getSubscriptionLabel(sub)"
@@ -152,15 +158,24 @@
           tooltipPosition="top"
         />
         }
-        <p-splitButton
-          [label]="viewportService.screenWidth != 'xs' ? (item.validated ? 'Dar de baja' : 'Verificar') : ''"
-          [icon]="item.validated ? 'pi pi-ban' : 'pi pi-check'"
-          [model]="getActionItems(item)"
-          (onClick)="item.validated ? denegar(item.id, $event) : permitir(item.id)"
-          [styleClass]="'p-button-sm p-button-raised action-split-button no-wrap-button ' + (item.validated ? 'p-button-danger' : 'p-button-success')"
-          appendTo="body"
+        @if (!item.validated) {
+          <p-button
+            label="Verificar"
+            icon="pi pi-check"
+            styleClass="p-button-sm p-button-raised p-button-success no-wrap-button"
+            (onClick)="permitir(item.id)"
+            (click)="$event.stopPropagation()"
+          />
+        }
+        <p-menu #actionMenu [model]="getActionItems(item)" [popup]="true" appendTo="body"></p-menu>
+        <p-button
+          icon="pi pi-ellipsis-v"
+          styleClass="p-button-sm p-button-text p-button-rounded"
+          (onClick)="actionMenu.toggle($event)"
           (click)="$event.stopPropagation()"
-        ></p-splitButton>
+          pTooltip="Opciones"
+          tooltipPosition="top"
+        ></p-button>
       </div>
     </div>
   </div>
