@@ -199,6 +199,11 @@ export class LayoutComponent {
             icon: 'pi pi-calendar',
             routerLink: '/app/horarios',
           },
+          {
+            label: 'Campañas',
+            icon: 'pi pi-send',
+            routerLink: '/app/campaigns',
+          },
         ],
       },
       {

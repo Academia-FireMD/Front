@@ -59,6 +59,11 @@ const routes: Routes = [
         loadChildren: () =>
           import('./horarios/horarios-routing.module').then((m) => m.routes),
       },
+      {
+        path: 'campaigns',
+        loadChildren: () =>
+          import('./campaigns/campaigns.module').then((m) => m.CampaignsModule),
+      },
     ],
   },
   {

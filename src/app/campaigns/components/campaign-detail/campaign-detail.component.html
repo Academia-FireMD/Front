@@ -1,0 +1,130 @@
+<div class="campaign-detail p-4" *ngIf="campaign">
+  <div class="flex justify-content-between align-items-center mb-4">
+    <h2 class="m-0">{{ campaign.name }}</h2>
+    <p-button label="Volver" icon="pi pi-arrow-left" (click)="volver()"></p-button>
+  </div>
+
+  <p-card header="Configuración">
+    <form [formGroup]="form" (ngSubmit)="guardar()">
+      <div class="grid">
+        <div class="col-12 md:col-6">
+          <label class="block mb-2">Nombre</label>
+          <input pInputText formControlName="name" class="w-full" />
+        </div>
+        <div class="col-12 md:col-6 flex align-items-center">
+          <p-inputSwitch formControlName="enabled"></p-inputSwitch>
+          <label class="ml-2">Activa</label>
+        </div>
+      </div>
+
+      <div class="mt-4" *ngIf="campaign.type === 'PROGRAM_DATE'">
+        <h4 class="mt-0">Aviso de fecha</h4>
+        <div class="grid">
+          <div class="col-12 md:col-6 flex align-items-center">
+            <p-inputSwitch formControlName="hasDate"></p-inputSwitch>
+            <label class="ml-2">Tiene fecha</label>
+          </div>
+          <div class="col-12 md:col-3" *ngIf="form.get('hasDate')?.value">
+            <label class="block mb-2">Fecha inicio</label>
+            <p-calendar formControlName="startDate" dateFormat="yy-mm-dd"></p-calendar>
+          </div>
+          <div class="col-12 md:col-3" *ngIf="form.get('hasDate')?.value">
+            <label class="block mb-2">Fecha fin (opcional)</label>
+            <p-calendar formControlName="endDate" dateFormat="yy-mm-dd"></p-calendar>
+          </div>
+        </div>
+        <div class="grid mt-3">
+          <div class="col-12">
+            <label class="block mb-2">Mensaje con fecha</label>
+            <textarea pInputTextarea formControlName="messageWithDate" rows="2" class="w-full"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="block mb-2">Mensaje sin fecha</label>
+            <textarea pInputTextarea formControlName="messageWithoutDate" rows="2" class="w-full"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <p-button label="Guardar" type="submit" [loading]="loading"></p-button>
+      </div>
+    </form>
+  </p-card>
+
+  <p-card header="Enviar aviso" class="mt-4" *ngIf="campaign.type === 'PROGRAM_DATE'">
+    <p *ngIf="subscribedCount > 0">
+      {{ subscribedCount }} suscriptor(es) pendientes de recibir el aviso.
+    </p>
+    <p *ngIf="subscribedCount === 0" class="text-500">
+      No hay suscriptores pendientes.
+    </p>
+    <div class="flex gap-2 mt-3">
+      <p-button
+        label="Enviar aviso"
+        icon="pi pi-send"
+        [disabled]="subscribedCount === 0 || !(form.get('hasDate')?.value && form.get('startDate')?.value) || form.dirty"
+        [loading]="sending"
+        pTooltip="Guarda los cambios antes de enviar si has editado"
+        (click)="enviarAviso()"
+      ></p-button>
+      <p-button
+        label="Resetear notificados"
+        icon="pi pi-refresh"
+        severity="secondary"
+        (click)="resetearNotificados()"
+      ></p-button>
+    </div>
+  </p-card>
+
+  <p-card header="Suscriptores" class="mt-4">
+    <div class="flex justify-content-between align-items-center mb-3">
+      <span>Total: {{ subscribersTotal }}</span>
+      <p-button label="Exportar CSV" icon="pi pi-download" (click)="exportar()"></p-button>
+    </div>
+    <p-table [value]="subscribers" [paginator]="false" styleClass="p-datatable-sm">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Email</th>
+          <th>Estado</th>
+          <th>Fecha suscripción</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-sub>
+        <tr>
+          <td>{{ sub.email }}</td>
+          <td><p-tag [value]="getStatusLabel(sub.status)"></p-tag></td>
+          <td>{{ sub.subscribedAt | date:'short' }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="3">Sin suscriptores</td></tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-card header="Historial de envíos" class="mt-4">
+    <p-table [value]="sends" [paginator]="false" styleClass="p-datatable-sm">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Email</th>
+          <th>Estado</th>
+          <th>Fecha</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-s>
+        <tr>
+          <td>{{ s.subscriber?.email }}</td>
+          <td><p-tag [value]="s.status" [severity]="s.status === 'SENT' ? 'success' : s.status === 'FAILED' ? 'danger' : 'warning'"></p-tag></td>
+          <td>{{ s.sentAt ? (s.sentAt | date:'short') : '-' }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="3">Sin envíos</td></tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</div>
+
+<div *ngIf="!campaign && !loading" class="p-4">
+  <p>Campaña no encontrada</p>
+</div>

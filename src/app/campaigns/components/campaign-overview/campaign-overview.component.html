@@ -1,0 +1,74 @@
+<p-confirmDialog></p-confirmDialog>
+
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="campaignItemTemplate"
+  [filters]="filters"
+  (onItemClick)="onItemClick($event)"
+  (filtersChanged)="onFiltersChanged($event)"
+>
+  <div left-actions>
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar por nombre o slug"
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+        class="w-full"
+      />
+    </p-iconField>
+  </div>
+
+  <div right-actions>
+    <p-button
+      [label]="viewportService.screenWidth === 'xs' ? undefined : 'Nueva campaña'"
+      icon="pi pi-plus"
+      [link]="true"
+      (click)="navigateToNew()"
+    ></p-button>
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4">No hay campañas</div>
+  </div>
+</app-generic-list>
+
+<ng-template #campaignItemTemplate let-item>
+  <div class="flex flex-row align-items-between">
+    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <span pTooltip="{{ item.name }}" tooltipPosition="top">
+          {{ item.name }}
+        </span>
+        <p-tag
+          [value]="getTypeLabel(item.type)"
+          severity="info"
+        ></p-tag>
+        <p-tag
+          [value]="item.slug"
+          severity="secondary"
+          pTooltip="Slug para API"
+        ></p-tag>
+        <p-badge
+          [value]="item._count?.subscribers?.toString() ?? '0'"
+          severity="primary"
+          pTooltip="Suscriptores"
+        ></p-badge>
+        <p-tag
+          [value]="item.enabled ? 'Activa' : 'Desactivada'"
+          [severity]="item.enabled ? 'success' : 'warning'"
+        ></p-tag>
+      </div>
+    </div>
+    <div class="right-side col-3 flex align-items-center justify-content-end">
+      <p-button
+        icon="pi pi-trash"
+        styleClass="p-button-danger"
+        pTooltip="Eliminar"
+        (click)="eliminarCampaign(item, $event)"
+      ></p-button>
+    </div>
+  </div>
+</ng-template>
