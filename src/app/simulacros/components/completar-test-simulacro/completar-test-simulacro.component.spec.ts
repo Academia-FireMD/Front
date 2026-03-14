@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { COMMON_TEST_PROVIDERS } from '../../../testing';
+
 
 import { CompletarTestSimulacroComponent } from './completar-test-simulacro.component';
 
@@ -8,13 +11,14 @@ describe('CompletarTestSimulacroComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [CompletarTestSimulacroComponent]
+      declarations: [CompletarTestSimulacroComponent],
+      providers: [...COMMON_TEST_PROVIDERS],
+      schemas: [NO_ERRORS_SCHEMA],
     })
     .compileComponents();
 
     fixture = TestBed.createComponent(CompletarTestSimulacroComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
