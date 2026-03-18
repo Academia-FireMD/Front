@@ -23,7 +23,6 @@ import { QrCodeShareComponent } from './components/qr-code-share/qr-code-share.c
 import { ScoreChartCardComponent } from './components/score-chart-card/score-chart-card.component';
 import { ComunidadDropdownComponent } from './comunidad-dropdown/comunidad-dropdown.component';
 import { DificultadDropdownComponent } from './dificultad-dropdown/dificultad-dropdown.component';
-import { GenericListComponent } from './generic-list/generic-list.component';
 import { OnboardingFormComponent } from './onboarding-form/onboarding-form.component';
 import { OposicionPickerComponent } from './oposicion-picker/oposicion-picker.component';
 import { PasswordInputComponent } from './password-input/password-input.component';
@@ -71,7 +70,6 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     DataViewModule,
     PaginatorModule,
     NgxEchartsModule,
-    GenericListComponent,
     OnboardingFormComponent,
     AsyncButtonComponent
   ],

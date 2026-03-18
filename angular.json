@@ -99,8 +99,7 @@
         "test": {
           "builder": "@angular-builders/jest:run",
           "options": {
-            "tsConfig": "tsconfig.spec.json",
-            "testPathIgnorePatterns": ["facturacion-admin.component.spec"]
+            "tsConfig": "tsconfig.spec.json"
           }
         }
       }

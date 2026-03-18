@@ -1,15 +1,10 @@
-import { Component, NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { CommonModule } from '@angular/common';
 import { of } from 'rxjs';
 import { UserService } from '../../../services/user.service';
 import { COMMON_TEST_PROVIDERS } from '../../../testing';
 import { FacturacionService } from '../../servicios/facturacion.service';
 import { FacturacionAdminComponent } from './facturacion-admin.component';
-
-
-@Component({ selector: 'app-facturacion-admin', template: '<div></div>', standalone: true, imports: [CommonModule] })
-class TestFacturacionAdminComponent extends FacturacionAdminComponent {}
 
 const mockFacturacionService = {
   listar$: jest.fn(() =>
@@ -45,12 +40,12 @@ const mockUserService = {
 };
 
 describe('FacturacionAdminComponent', () => {
-  let component: TestFacturacionAdminComponent;
-  let fixture: ComponentFixture<TestFacturacionAdminComponent>;
+  let component: FacturacionAdminComponent;
+  let fixture: ComponentFixture<FacturacionAdminComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestFacturacionAdminComponent],
+      imports: [FacturacionAdminComponent],
       providers: [
         ...COMMON_TEST_PROVIDERS,
         { provide: FacturacionService, useValue: mockFacturacionService },
@@ -59,7 +54,7 @@ describe('FacturacionAdminComponent', () => {
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(TestFacturacionAdminComponent);
+    fixture = TestBed.createComponent(FacturacionAdminComponent);
     component = fixture.componentInstance;
   });
 
