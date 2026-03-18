@@ -1,0 +1,303 @@
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="facturaItemTemplate"
+  [filters]="filters"
+  (onItemClick)="onItemClickHandler($event)"
+  (filtersChanged)="onFiltersChanged($event)"
+>
+  <div left-actions>
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar por cliente, nº factura..."
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+        class="w-full"
+      />
+    </p-iconField>
+  </div>
+
+  <div right-actions>
+    <p-button
+      label="Nueva factura"
+      icon="pi pi-plus"
+      [link]="true"
+      (click)="abrirDialogManual()"
+    ></p-button>
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4">No hay facturas que mostrar</div>
+  </div>
+</app-generic-list>
+
+<!-- Template para el item de factura -->
+<ng-template #facturaItemTemplate let-item>
+  <div class="flex flex-row align-items-between" [class.dry-run-row]="item.dryRun">
+    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <strong
+          class="identifier"
+          pTooltip="Nº {{ item.numero }}"
+          tooltipPosition="top"
+        >{{ item.numero || '—' }}</strong>
+
+        <div class="flex gap-1 align-items-center">
+          <p-chip
+            *ngIf="item.dryRun"
+            label="TEST"
+            pTooltip="Modo test (dry-run)"
+            tooltipPosition="top"
+          ></p-chip>
+          <p-chip
+            [styleClass]="item.tipo === 'NORMAL' ? 'tipo-normal-chip' : 'tipo-rectificativa-chip'"
+            [label]="item.tipo === 'NORMAL' ? 'Normal' : 'Rectificativa'"
+            [pTooltip]="item.tipo === 'NORMAL' ? 'Factura normal' : 'Factura rectificativa (devolución)'"
+            tooltipPosition="top"
+          ></p-chip>
+          <p-chip
+            [styleClass]="getEstadoChipClass(item.estado)"
+            [label]="item.estado"
+            [pTooltip]="'Estado: ' + item.estado"
+            tooltipPosition="top"
+          ></p-chip>
+        </div>
+      </div>
+      <span
+        class="descripcion"
+        pTooltip="{{ item.clienteNombre }}"
+        tooltipPosition="top"
+      >
+        {{ item.clienteNombre }}
+        <span *ngIf="item.clienteNif"> — {{ item.clienteNif }}</span>
+      </span>
+      <span
+        class="descripcion"
+        pTooltip="{{ item.concepto }}"
+        tooltipPosition="top"
+      >{{ item.concepto }}</span>
+    </div>
+
+    <div class="right-side col-3 flex align-items-center justify-content-end">
+      <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <span
+          class="total-cell hidden md:block unbreakable-text"
+          [ngClass]="{
+            'text-danger': item.tipo === 'RECTIFICATIVA'
+          }"
+        >{{ item.total | number:'1.2-2' }} €</span>
+
+        <span
+          class="text-xs hidden md:block unbreakable-text"
+          pTooltip="Fecha de creación: {{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}"
+          tooltipPosition="top"
+        >
+          {{ item.createdAt | date:'short' }}
+          <span *ngIf="item.woocommerceOrderId" class="text-xs"> · #{{ item.woocommerceOrderId }}</span>
+        </span>
+
+        <div class="admin-controls">
+          <p-button
+            icon="pi pi-file-pdf"
+            severity="danger"
+            [text]="true"
+            size="small"
+            pTooltip="Descargar PDF"
+            [loading]="descargandoPdf() === item.id"
+            (click)="descargarPdf(item, $event)"
+          ></p-button>
+          <p-button
+            *ngIf="item.tipo === 'NORMAL' && item.estado === 'EMITIDA'"
+            icon="pi pi-arrow-circle-left"
+            severity="warning"
+            [text]="true"
+            size="small"
+            pTooltip="Devolver"
+            (click)="abrirDevolver(item, $event)"
+          ></p-button>
+          <span
+            *ngIf="item.errorMessage"
+            class="pi pi-exclamation-circle text-red-500"
+            [pTooltip]="item.errorMessage"
+          ></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<!-- Dialog: Nueva factura manual (paso 1: seleccionar alumno, paso 2: datos) -->
+<p-dialog
+  header="Nueva factura manual"
+  [visible]="mostrarDialogManual()"
+  (visibleChange)="mostrarDialogManual.set($event)"
+  [modal]="true"
+  [style]="{ width: '90vw', height: '85vh' }"
+  [dismissableMask]="true"
+  [draggable]="false"
+>
+  <!-- Paso 1: Seleccionar alumno -->
+  <div *ngIf="pasoDialogManual() === 'seleccionar'" class="h-full flex flex-column">
+    <app-user-dashboard
+      mode="selection"
+      [selectedUserIds]="selectedUserIds"
+      (selectionChange)="onUserSelectionChange($event)"
+    ></app-user-dashboard>
+
+    <div class="flex justify-content-between pt-3 border-top-1 surface-border mt-3">
+      <p-button
+        label="Saltar (cliente externo)"
+        styleClass="p-button-text"
+        icon="pi pi-arrow-right"
+        (click)="saltarSeleccionUsuario()"
+      ></p-button>
+      <p-button
+        label="Confirmar selección"
+        icon="pi pi-check"
+        [disabled]="selectedUserIds.length !== 1"
+        (click)="confirmarSeleccionUsuario()"
+      ></p-button>
+    </div>
+  </div>
+
+  <!-- Paso 2: Datos de la factura -->
+  <div *ngIf="pasoDialogManual() === 'datos'" class="form-grid">
+    <div class="flex align-items-center gap-2 mb-3">
+      <p-button
+        icon="pi pi-arrow-left"
+        [text]="true"
+        size="small"
+        pTooltip="Volver a selección"
+        (click)="pasoDialogManual.set('seleccionar')"
+      ></p-button>
+      <span class="text-sm text-color-secondary" *ngIf="formManual.clienteNombre">
+        Cliente: <strong>{{ formManual.clienteNombre }}</strong>
+      </span>
+    </div>
+
+    <div class="form-section">
+      <h4>Datos del cliente</h4>
+      <div class="field">
+        <label>Nombre / Razón social <span class="required">*</span></label>
+        <input pInputText [(ngModel)]="formManual.clienteNombre" placeholder="Nombre completo o empresa" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>NIF / CIF</label>
+          <input pInputText [(ngModel)]="formManual.clienteNif" placeholder="12345678A" />
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input pInputText [(ngModel)]="formManual.clienteEmail" type="email" placeholder="cliente@email.com" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Dirección</label>
+        <input pInputText [(ngModel)]="formManual.clienteDireccion" placeholder="Calle, número..." />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Población</label>
+          <input pInputText [(ngModel)]="formManual.clientePoblacion" placeholder="Ciudad" />
+        </div>
+        <div class="field">
+          <label>Código Postal</label>
+          <input pInputText [(ngModel)]="formManual.clienteCodigoPostal" placeholder="46000" />
+        </div>
+        <div class="field">
+          <label>País</label>
+          <input pInputText [(ngModel)]="formManual.clientePais" placeholder="ES" maxlength="2" />
+        </div>
+      </div>
+    </div>
+
+    <p-divider></p-divider>
+
+    <div class="form-section">
+      <h4>Datos de la factura</h4>
+      <div class="field">
+        <label>Concepto <span class="required">*</span></label>
+        <textarea pInputTextarea [(ngModel)]="formManual.concepto" rows="2" placeholder="Descripción del servicio..."></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Base imponible (€) <span class="required">*</span></label>
+          <p-inputNumber
+            [(ngModel)]="formManual.baseImponible"
+            mode="currency"
+            currency="EUR"
+            locale="es-ES"
+            [minFractionDigits]="2"
+          ></p-inputNumber>
+        </div>
+        <div class="field">
+          <label>IVA (%)</label>
+          <p-inputNumber [(ngModel)]="formManual.tipoIva" suffix="%" [min]="0" [max]="100"></p-inputNumber>
+        </div>
+        <div class="field">
+          <label>Total estimado</label>
+          <div class="total-estimado">
+            {{ calcularTotal(formManual.baseImponible || 0, formManual.tipoIva || 21) | number:'1.2-2' }} €
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Serie (dejar vacío para usar la por defecto)</label>
+        <input pInputText [(ngModel)]="formManual.serie" placeholder="TEST, FACT..." />
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <ng-container *ngIf="pasoDialogManual() === 'datos'">
+      <button pButton label="Cancelar" class="p-button-text" (click)="mostrarDialogManual.set(false)"></button>
+      <button pButton label="Crear factura" icon="pi pi-check" [loading]="guardandoManual()" (click)="guardarFacturaManual()"></button>
+    </ng-container>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog: Devolver factura -->
+<p-dialog
+  header="Devolver factura"
+  [visible]="mostrarDialogRectificativa()"
+  (visibleChange)="mostrarDialogRectificativa.set($event)"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false"
+>
+  <div *ngIf="facturaSeleccionada() as factura" class="rectificativa-info">
+    <div class="factura-ref">
+      <span class="label">Factura original:</span>
+      <strong>{{ factura.numero }}</strong>
+      <span>— {{ factura.total | number:'1.2-2' }} €</span>
+    </div>
+    <div class="factura-ref">
+      <span class="label">Cliente:</span>
+      <span>{{ factura.clienteNombre }}</span>
+    </div>
+  </div>
+
+  <div class="field" style="margin-top: 1rem;">
+    <label>Motivo de la devolución <span class="required">*</span></label>
+    <textarea
+      pInputTextarea
+      [(ngModel)]="motivoRectificativa"
+      rows="3"
+      placeholder="Describe el motivo de la devolución..."
+    ></textarea>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button pButton label="Cancelar" class="p-button-text" (click)="mostrarDialogRectificativa.set(false)"></button>
+    <button
+      pButton
+      label="Confirmar devolución"
+      icon="pi pi-check"
+      class="p-button-warning"
+      [loading]="guardandoRectificativa()"
+      (click)="guardarRectificativa()"
+    ></button>
+  </ng-template>
+</p-dialog>

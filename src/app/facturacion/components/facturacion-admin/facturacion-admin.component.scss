@@ -1,0 +1,122 @@
+@import '../../../shared/styles/list-styles.scss';
+
+// Chips de tipo
+.tipo-normal-chip {
+  background-color: var(--green-100);
+  color: var(--green-800);
+}
+
+.tipo-rectificativa-chip {
+  background-color: var(--red-100);
+  color: var(--red-800);
+}
+
+// Chips de estado
+.estado-emitida-chip {
+  background-color: var(--green-100);
+  color: var(--green-800);
+}
+
+.estado-pendiente-chip {
+  background-color: var(--orange-100);
+  color: var(--orange-800);
+}
+
+.estado-anulada-chip {
+  background-color: var(--blue-100);
+  color: var(--blue-800);
+}
+
+.estado-error-chip {
+  background-color: var(--red-100);
+  color: var(--red-800);
+}
+
+.total-cell {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+// Dialog forms
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-section {
+  h4 {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-color-secondary);
+
+    .required {
+      color: var(--red-500);
+      margin-left: 2px;
+    }
+  }
+
+  input,
+  textarea {
+    width: 100%;
+  }
+}
+
+.field-row {
+  display: flex;
+  gap: 0.75rem;
+
+  .field {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.total-estimado {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  padding: 0.5rem 0;
+}
+
+.rectificativa-info {
+  background: var(--surface-hover);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .factura-ref {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+
+    .label {
+      color: var(--text-color-secondary);
+      font-size: 0.8rem;
+    }
+  }
+}

@@ -59,6 +59,11 @@ const routes: Routes = [
         loadChildren: () =>
           import('./horarios/horarios-routing.module').then((m) => m.routes),
       },
+      {
+        path: 'facturacion',
+        loadChildren: () =>
+          import('./facturacion/facturacion-routing.module').then((m) => m.routes),
+      },
     ],
   },
   {

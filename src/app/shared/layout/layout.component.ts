@@ -199,6 +199,11 @@ export class LayoutComponent {
             icon: 'pi pi-calendar',
             routerLink: '/app/horarios',
           },
+          {
+            label: 'Facturación',
+            icon: 'pi pi-receipt',
+            routerLink: '/app/facturacion',
+          },
         ],
       },
       {

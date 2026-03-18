@@ -33,6 +33,7 @@ import { EventsService } from '../planificacion/services/events.service';
 import { ModuloService } from '../shared/services/modulo.service';
 import { LabelsService } from '../shared/services/labels.service';
 import { DocumentosService } from '../documentacion/services/documentacion.service';
+import { FacturacionService } from '../facturacion/servicios/facturacion.service';
 
 const mockStore = {
   dispatch: jest.fn(),
@@ -98,4 +99,5 @@ export const COMMON_TEST_PROVIDERS: Provider[] = [
   { provide: ModuloService, useValue: mockService() },
   { provide: LabelsService, useValue: mockService() },
   { provide: DocumentosService, useValue: mockService() },
+  { provide: FacturacionService, useValue: mockService() },
 ];
