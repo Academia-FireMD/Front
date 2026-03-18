@@ -237,4 +237,47 @@ describe('FacturacionService', () => {
       req.flush(new Blob(['%PDF']));
     });
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // misFacturas$
+  // ─────────────────────────────────────────────────────────────
+  describe('misFacturas$', () => {
+    it('hace GET a /mis-facturas y mapea la respuesta', () => {
+      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      let result: any;
+
+      service.misFacturas$(pagination).subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne((r) => r.url.includes(`${BASE}/mis-facturas`));
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('pagina')).toBe('1');
+      expect(req.request.params.get('porPagina')).toBe('20');
+      req.flush(apiResponse);
+
+      expect(result.data).toEqual(facturasMock);
+      expect(result.pagination.count).toBe(1);
+    });
+
+    it('pasa searchTerm como query param', () => {
+      service.misFacturas$({ skip: 0, take: 20, searchTerm: 'test' }).subscribe();
+
+      const req = httpMock.expectOne((r) => r.url.includes(`${BASE}/mis-facturas`));
+      expect(req.request.params.get('searchTerm')).toBe('test');
+      req.flush(apiResponse);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // descargarMiPdf$
+  // ─────────────────────────────────────────────────────────────
+  describe('descargarMiPdf$', () => {
+    it('hace GET a /mis-facturas/:id/pdf con responseType blob', () => {
+      service.descargarMiPdf$(5).subscribe();
+
+      const req = httpMock.expectOne(`${BASE}/mis-facturas/5/pdf`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('blob');
+      req.flush(new Blob(['%PDF']));
+    });
+  });
 });

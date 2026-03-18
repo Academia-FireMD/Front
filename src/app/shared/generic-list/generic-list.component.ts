@@ -68,7 +68,7 @@ export type GenericListMode = 'overview' | 'selection';
           <div class="left-actions">
             <ng-content select="[left-actions]"></ng-content>
           </div>
-          <div *ngIf="mode === 'selection'" class="flex align-items-center gap-2 ml-2">
+          <div *ngIf="mode === 'selection' && !singleSelection" class="flex align-items-center gap-2 ml-2">
               <p-checkbox
                 [binary]="true"
                 [ngModel]="isAllSelected()"
@@ -294,6 +294,7 @@ export class GenericListComponent<T>
   @Input() showPagination: boolean = true;
   @Input() filters?: FilterConfig[];
   @Input() mode: GenericListMode = 'overview';
+  @Input() singleSelection = false;
   @Input() selectedItemIds: (string | number)[] = [];
   @Input() getItemId: (item: T) => string | number = (item: any) => item.id;
   @Output() onItemClick = new EventEmitter<T>();
@@ -685,13 +686,17 @@ export class GenericListComponent<T>
     const currentSelection = [...this.selectedItemIds];
     const index = currentSelection.indexOf(itemId);
 
-    if (index > -1) {
-      currentSelection.splice(index, 1);
+    if (this.singleSelection) {
+      const newSelection = index > -1 ? [] : [itemId];
+      this.selectionChange.emit(newSelection);
     } else {
-      currentSelection.push(itemId);
+      if (index > -1) {
+        currentSelection.splice(index, 1);
+      } else {
+        currentSelection.push(itemId);
+      }
+      this.selectionChange.emit(currentSelection);
     }
-
-    this.selectionChange.emit(currentSelection);
   }
 
   isItemSelected(item: T): boolean {

@@ -90,6 +90,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   showDescuentoDialog = false;
   suscripcionGestionWC: Suscripcion | null = null; // Suscripción activa en gestión WC
 
+  mostrarDialogFacturas = false;
+
   // Control de subdialogs para baja
   showConfirmacionBaja = false;
   showFueraDePlazoBaja = false;

@@ -38,6 +38,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   labelsService = inject(LabelsService);
 
   @Input() mode: GenericListMode = 'overview';
+  @Input() singleSelection = false;
   @Input() selectedUserIds: number[] = [];
   extraFilters = input<FilterConfig[]>();
   @Output() selectionChange = new EventEmitter<number[]>();

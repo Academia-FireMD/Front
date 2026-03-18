@@ -35,6 +35,7 @@ import { PanelMenuModule } from 'primeng/panelmenu';
 import { environment } from '../environments/environment';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { MisFacturasComponent } from './facturacion/components/mis-facturas/mis-facturas.component';
 import { BajaSuscripcionComponent } from './profile/baja-suscripcion/baja-suscripcion.component';
 import { CambioOposicionComponent } from './profile/cambio-oposicion/cambio-oposicion.component';
 import { CambioSuscripcionComponent } from './profile/cambio-suscripcion/cambio-suscripcion.component';
@@ -134,6 +135,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
       useFactory: adapterFactory,
     }),
     AsyncButtonComponent,
+    MisFacturasComponent,
     BajaSuscripcionComponent,
     CambioSuscripcionComponent,
     DescuentoSuscripcionComponent,

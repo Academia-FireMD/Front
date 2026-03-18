@@ -157,7 +157,7 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   }
 
   async guardarFacturaManual() {
-    if (!this.formManual.clienteNombre || !this.formManual.concepto || !this.formManual.baseImponible) {
+    if (!this.formManual.clienteNombre?.trim() || !this.formManual.concepto?.trim() || this.formManual.baseImponible == null) {
       this.toast.warning('Nombre del cliente, concepto e importe son obligatorios');
       return;
     }

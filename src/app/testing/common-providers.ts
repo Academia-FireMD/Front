@@ -79,7 +79,7 @@ export const COMMON_TEST_PROVIDERS: Provider[] = [
   { provide: HttpClient, useValue: mockService() },
   { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn(), markForCheck: jest.fn() } },
   { provide: Store, useValue: mockStore },
-  { provide: PrimeNGConfig, useValue: { ripple: false, setTranslation: jest.fn() } },
+  { provide: PrimeNGConfig, useValue: { ripple: false, setTranslation: jest.fn(), inputStyle: () => 'outlined' } },
   { provide: ConfirmationService, useValue: { confirm: jest.fn(), close: jest.fn() } },
   { provide: ToastrService, useValue: { success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn() } },
   { provide: AppInitializationService, useValue: mockService() },

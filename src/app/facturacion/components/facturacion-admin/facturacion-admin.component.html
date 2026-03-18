@@ -142,24 +142,10 @@
   <div *ngIf="pasoDialogManual() === 'seleccionar'" class="h-full flex flex-column">
     <app-user-dashboard
       mode="selection"
+      [singleSelection]="true"
       [selectedUserIds]="selectedUserIds"
       (selectionChange)="onUserSelectionChange($event)"
     ></app-user-dashboard>
-
-    <div class="flex justify-content-between pt-3 border-top-1 surface-border mt-3">
-      <p-button
-        label="Saltar (cliente externo)"
-        styleClass="p-button-text"
-        icon="pi pi-arrow-right"
-        (click)="saltarSeleccionUsuario()"
-      ></p-button>
-      <p-button
-        label="Confirmar selección"
-        icon="pi pi-check"
-        [disabled]="selectedUserIds.length !== 1"
-        (click)="confirmarSeleccionUsuario()"
-      ></p-button>
-    </div>
   </div>
 
   <!-- Paso 2: Datos de la factura -->
@@ -251,6 +237,20 @@
   </div>
 
   <ng-template pTemplate="footer">
+    <ng-container *ngIf="pasoDialogManual() === 'seleccionar'">
+      <p-button
+        label="Saltar (cliente externo)"
+        styleClass="p-button-text"
+        icon="pi pi-arrow-right"
+        (click)="saltarSeleccionUsuario()"
+      ></p-button>
+      <p-button
+        label="Confirmar selección"
+        icon="pi pi-check"
+        [disabled]="selectedUserIds.length !== 1"
+        (click)="confirmarSeleccionUsuario()"
+      ></p-button>
+    </ng-container>
     <ng-container *ngIf="pasoDialogManual() === 'datos'">
       <button pButton label="Cancelar" class="p-button-text" (click)="mostrarDialogManual.set(false)"></button>
       <button pButton label="Crear factura" icon="pi pi-check" [loading]="guardandoManual()" (click)="guardarFacturaManual()"></button>

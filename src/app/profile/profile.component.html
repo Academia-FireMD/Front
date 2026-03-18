@@ -190,8 +190,16 @@
       <div class="col-12 md:col-4" *ngIf="user.rol !== 'ADMIN'">
         <!-- Card de Suscripciones -->
         <div class="subscription-card">
-          <div class="card-header">
+          <div class="card-header flex align-items-center justify-content-between">
             <h2><i class="pi pi-credit-card"></i> Mis Suscripciones</h2>
+            <p-button
+              icon="pi pi-file-invoice"
+              [text]="true"
+              size="small"
+              pTooltip="Mis facturas"
+              tooltipPosition="left"
+              (click)="mostrarDialogFacturas = true"
+            ></p-button>
           </div>
 
           <div class="card-content">
@@ -1138,4 +1146,15 @@
     [suscripcion]="suscripcionParaCambio"
     (onClose)="onCambioOposicionDialogClose($event)"
   ></app-cambio-oposicion>
+</p-dialog>
+
+<p-dialog
+  header="Mis Facturas"
+  [(visible)]="mostrarDialogFacturas"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [style]="{ width: '90vw', maxWidth: '800px', height: '70vh' }"
+>
+  <app-mis-facturas *ngIf="mostrarDialogFacturas"></app-mis-facturas>
 </p-dialog>

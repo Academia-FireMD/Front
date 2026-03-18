@@ -1,0 +1,91 @@
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="facturaItemTemplate"
+  [filters]="[]"
+  [showPagination]="true"
+  (onItemClick)="onItemClickHandler($event)"
+  (filtersChanged)="onFiltersChanged($event)"
+>
+  <div left-actions>
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+      <input
+        type="text"
+        pInputText
+        placeholder="Buscar por concepto, nº factura..."
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+        class="w-full"
+      />
+    </p-iconField>
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4">No tienes facturas</div>
+  </div>
+</app-generic-list>
+
+<ng-template #facturaItemTemplate let-item>
+  <div class="flex flex-row align-items-between" [class.dry-run-row]="item.dryRun">
+    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <strong
+          class="identifier"
+          pTooltip="Nº {{ item.numero }}"
+          tooltipPosition="top"
+        >{{ item.numero || '—' }}</strong>
+
+        <div class="flex gap-1 align-items-center">
+          <p-chip
+            *ngIf="item.dryRun"
+            label="TEST"
+            pTooltip="Modo test (dry-run)"
+            tooltipPosition="top"
+          ></p-chip>
+          <p-chip
+            [styleClass]="item.tipo === 'NORMAL' ? 'tipo-normal-chip' : 'tipo-rectificativa-chip'"
+            [label]="item.tipo === 'NORMAL' ? 'Normal' : 'Rectificativa'"
+            [pTooltip]="item.tipo === 'NORMAL' ? 'Factura normal' : 'Factura rectificativa'"
+            tooltipPosition="top"
+          ></p-chip>
+          <p-chip
+            [styleClass]="getEstadoChipClass(item.estado)"
+            [label]="item.estado"
+            [pTooltip]="'Estado: ' + item.estado"
+            tooltipPosition="top"
+          ></p-chip>
+        </div>
+      </div>
+      <span
+        class="descripcion"
+        pTooltip="{{ item.concepto }}"
+        tooltipPosition="top"
+      >{{ item.concepto }}</span>
+    </div>
+
+    <div class="right-side col-3 flex align-items-center justify-content-end">
+      <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <span
+          class="total-cell hidden md:block unbreakable-text"
+          [ngClass]="{ 'text-danger': item.tipo === 'RECTIFICATIVA' }"
+        >{{ item.total | number:'1.2-2' }} €</span>
+
+        <span
+          class="text-xs hidden md:block unbreakable-text"
+          pTooltip="Fecha: {{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}"
+          tooltipPosition="top"
+        >{{ item.createdAt | date:'short' }}</span>
+
+        <p-button
+          icon="pi pi-file-pdf"
+          severity="danger"
+          [text]="true"
+          size="small"
+          pTooltip="Descargar PDF"
+          [loading]="descargandoPdf() === item.id"
+          (click)="descargarPdf(item, $event)"
+        ></p-button>
+      </div>
+    </div>
+  </div>
+</ng-template>

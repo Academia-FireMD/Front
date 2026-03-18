@@ -43,6 +43,10 @@ describe('FacturacionAdminComponent', () => {
   let component: FacturacionAdminComponent;
   let fixture: ComponentFixture<FacturacionAdminComponent>;
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [FacturacionAdminComponent],
@@ -188,5 +192,37 @@ describe('FacturacionAdminComponent', () => {
     const p = component.pagination();
     expect(p.skip).toBe(0);
     expect(p.take).toBe(10);
+  });
+
+  it('guardarFacturaManual acepta baseImponible 0', async () => {
+    component.formManual = {
+      clienteNombre: 'Cliente Test',
+      concepto: 'Servicio gratuito',
+      baseImponible: 0,
+      tipoIva: 21,
+    } as any;
+    component.pasoDialogManual.set('datos');
+    mockFacturacionService.crearManual$.mockReturnValueOnce(of({ id: 1, numero: 'TEST-001' }));
+    const warnSpy = jest.spyOn(component.toast, 'warning');
+
+    await component.guardarFacturaManual();
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(mockFacturacionService.crearManual$).toHaveBeenCalled();
+  });
+
+  it('guardarFacturaManual muestra warning si falta nombre', async () => {
+    component.formManual = {
+      clienteNombre: '   ',
+      concepto: 'Test',
+      baseImponible: 100,
+      tipoIva: 21,
+    } as any;
+    const warnSpy = jest.spyOn(component.toast, 'warning');
+
+    await component.guardarFacturaManual();
+
+    expect(warnSpy).toHaveBeenCalledWith('Nombre del cliente, concepto e importe son obligatorios');
+    expect(mockFacturacionService.crearManual$).not.toHaveBeenCalled();
   });
 });

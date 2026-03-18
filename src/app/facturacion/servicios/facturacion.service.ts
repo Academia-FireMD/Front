@@ -72,4 +72,43 @@ export class FacturacionService extends ApiBaseService {
       { responseType: 'blob', withCredentials: true }
     );
   }
+
+  misFacturas$(pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' }): Observable<PaginatedResult<Factura>> {
+    const pagina = Math.floor(pagination.skip / pagination.take) + 1;
+    const where = pagination.where ?? {};
+
+    let params = new HttpParams()
+      .set('pagina', String(pagina))
+      .set('porPagina', String(pagination.take));
+
+    if (where['desde']) params = params.set('desde', where['desde']);
+    if (where['hasta']) params = params.set('hasta', where['hasta']);
+    if (where['tipo']) params = params.set('tipo', where['tipo']);
+    if (where['estado']) params = params.set('estado', where['estado']);
+    if (pagination.searchTerm?.trim()) params = params.set('searchTerm', pagination.searchTerm.trim());
+
+    return this._http
+      .get<FacturasResponse>(`${environment.apiUrl}${this.controllerPrefix}/mis-facturas`, {
+        params,
+        withCredentials: true,
+      })
+      .pipe(
+        map((res) => ({
+          data: res.facturas,
+          pagination: {
+            skip: pagination.skip,
+            take: pagination.take,
+            searchTerm: pagination.searchTerm ?? '',
+            count: res.total,
+          },
+        }))
+      );
+  }
+
+  descargarMiPdf$(id: number): Observable<Blob> {
+    return this._http.get(
+      `${environment.apiUrl}${this.controllerPrefix}/mis-facturas/${id}/pdf`,
+      { responseType: 'blob', withCredentials: true }
+    );
+  }
 }
