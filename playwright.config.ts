@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: process.env['CI'] ? 'dot' : 'html',
   timeout: 30_000,
   use: {
-    baseURL: 'http://localhost:4200',
+    baseURL: 'http://localhost:4201',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -20,8 +20,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm start',
-    url: 'http://localhost:4200',
+    command: 'npx ng serve --port 4201',
+    url: 'http://localhost:4201',
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,
   },

@@ -1,0 +1,17 @@
+{
+  "id": 5,
+  "titulo": "Simulacro Bomberos 2024 - Convocatoria Estatal",
+  "descripcion": "Simulacro oficial para la preparación de las pruebas de bomberos. Incluye preguntas de conocimientos específicos y materias generales.",
+  "duracion": 90,
+  "estado": "PUBLICADO",
+  "tipoAcceso": "SIMULACRO",
+  "codigoAcceso": null,
+  "fechaActivacion": "2024-01-01T00:00:00Z",
+  "fechaSolucion": null,
+  "numeroPreguntas": 60,
+  "relevancia": ["BOMBEROS_ESTADO"],
+  "creadorId": 99,
+  "testId": null,
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z"
+}

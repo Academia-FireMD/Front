@@ -1,1 +1,7 @@
 pnpm test:ci
+
+# Playwright E2E — omitir con: SKIP_E2E=1 git push
+if [ -z "$SKIP_E2E" ]; then
+  echo "▶ Ejecutando Playwright E2E (usa SKIP_E2E=1 git push para saltar)..."
+  pnpm e2e:ci
+fi

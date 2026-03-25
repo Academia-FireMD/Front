@@ -1,0 +1,73 @@
+{
+  "id": 1,
+  "usuarioId": 1,
+  "status": "EMPEZADO",
+  "esDeRepaso": false,
+  "createdAt": "2024-01-15T10:00:00Z",
+  "updatedAt": "2024-01-15T10:00:00Z",
+  "flashcards": [
+    {
+      "id": 101,
+      "flashcardId": 201,
+      "testId": 1,
+      "createdAt": "2024-01-15T10:00:00Z",
+      "respuesta": [],
+      "mostrarSolucion": false,
+      "flashcard": {
+        "id": 201,
+        "identificador": "FC-001",
+        "descripcion": "¿Cuáles son los tres principales tipos de músculos en el cuerpo humano?",
+        "solucion": "Los tres tipos son: músculo esquelético (voluntario), músculo liso (involuntario) y músculo cardíaco.",
+        "dificultad": "BASICO",
+        "temaId": 1,
+        "relevancia": [],
+        "tema": { "id": 1, "numero": 1, "descripcion": "Anatomía General" },
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z",
+        "ReporteFallo": []
+      }
+    },
+    {
+      "id": 102,
+      "flashcardId": 202,
+      "testId": 1,
+      "createdAt": "2024-01-15T10:00:00Z",
+      "respuesta": [],
+      "mostrarSolucion": false,
+      "flashcard": {
+        "id": 202,
+        "identificador": "FC-002",
+        "descripcion": "¿Qué es la homeostasis?",
+        "solucion": "La homeostasis es el proceso por el que los organismos mantienen un ambiente interno estable y equilibrado.",
+        "dificultad": "INTERMEDIO",
+        "temaId": 1,
+        "relevancia": [],
+        "tema": { "id": 1, "numero": 1, "descripcion": "Anatomía General" },
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z",
+        "ReporteFallo": []
+      }
+    },
+    {
+      "id": 103,
+      "flashcardId": 203,
+      "testId": 1,
+      "createdAt": "2024-01-15T10:00:00Z",
+      "respuesta": [],
+      "mostrarSolucion": false,
+      "flashcard": {
+        "id": 203,
+        "identificador": "FC-003",
+        "descripcion": "¿Qué es el sistema nervioso autónomo?",
+        "solucion": "El sistema nervioso autónomo controla las funciones involuntarias del cuerpo, como la frecuencia cardíaca y la digestión.",
+        "dificultad": "DIFICIL",
+        "temaId": 2,
+        "relevancia": [],
+        "tema": { "id": 2, "numero": 2, "descripcion": "Sistema Nervioso" },
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z",
+        "ReporteFallo": []
+      }
+    }
+  ]
+}

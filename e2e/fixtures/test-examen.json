@@ -1,0 +1,68 @@
+{
+  "id": 456,
+  "realizadorId": 1,
+  "status": "EMPEZADO",
+  "duration": 30,
+  "endsAt": "2099-01-15T10:30:00Z",
+  "createdAt": "2024-01-15T10:00:00Z",
+  "respuestasCount": 0,
+  "testPreguntasCount": 3,
+  "esDeRepaso": false,
+  "preguntas": [
+    {
+      "id": 10,
+      "identificador": "EXAM-001",
+      "descripcion": "En una emergencia cardiovascular, ¿cuál es la primera acción prioritaria?",
+      "solucion": "Evaluar la vía aérea, respiración y circulación (ABC).",
+      "respuestaCorrectaIndex": 0,
+      "dificultad": "DIFICIL",
+      "tema": { "id": 3, "numero": 3, "descripcion": "Urgencias Cardiovasculares" },
+      "temaId": 3,
+      "respuestas": [
+        "Evaluar ABC (vía aérea, respiración, circulación)",
+        "Administrar medicación inmediatamente",
+        "Trasladar al hospital sin evaluación",
+        "Tomar constantes vitales"
+      ],
+      "relevancia": [],
+      "ReporteFallo": []
+    },
+    {
+      "id": 11,
+      "identificador": "EXAM-002",
+      "descripcion": "¿Qué indica un ritmo sinusal normal en un ECG?",
+      "solucion": "Un ritmo sinusal normal indica que el impulso eléctrico se origina en el nodo sinusal.",
+      "respuestaCorrectaIndex": 1,
+      "dificultad": "DIFICIL",
+      "tema": { "id": 3, "numero": 3, "descripcion": "Urgencias Cardiovasculares" },
+      "temaId": 3,
+      "respuestas": [
+        "Arritmia ventricular",
+        "Impulso eléctrico del nodo sinusal",
+        "Bloqueo AV completo",
+        "Fibrilación auricular"
+      ],
+      "relevancia": [],
+      "ReporteFallo": []
+    },
+    {
+      "id": 12,
+      "identificador": "EXAM-003",
+      "descripcion": "En caso de parada cardiorrespiratoria, ¿cuál es la relación de compresiones/ventilaciones?",
+      "solucion": "La relación recomendada es 30 compresiones por 2 ventilaciones.",
+      "respuestaCorrectaIndex": 2,
+      "dificultad": "INTERMEDIO",
+      "tema": { "id": 3, "numero": 3, "descripcion": "Urgencias Cardiovasculares" },
+      "temaId": 3,
+      "respuestas": [
+        "15:2",
+        "20:2",
+        "30:2",
+        "40:2"
+      ],
+      "relevancia": [],
+      "ReporteFallo": []
+    }
+  ],
+  "respuestas": []
+}

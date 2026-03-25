@@ -1,0 +1,20 @@
+{
+  "id": 99,
+  "email": "admin@test.com",
+  "contrasenya": "",
+  "nombre": "Admin",
+  "apellidos": "User",
+  "rol": "ADMIN",
+  "validated": true,
+  "esTutor": false,
+  "avatarUrl": "",
+  "tests": [],
+  "tipoDePlanificacionDuracionDeseada": "FRANJA_CUATRO_A_SEIS_HORAS",
+  "metodoCalificacion": "A1_E1_3_B0",
+  "onboardingCompletado": true,
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z",
+  "suscripciones": [],
+  "consumibles": [],
+  "oposiciones": []
+}

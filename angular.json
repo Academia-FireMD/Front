@@ -99,7 +99,8 @@
         "test": {
           "builder": "@angular-builders/jest:run",
           "options": {
-            "tsConfig": "tsconfig.spec.json"
+            "tsConfig": "tsconfig.spec.json",
+            "testPathIgnorePatterns": ["/node_modules/", "<rootDir>/e2e/"]
           }
         }
       }

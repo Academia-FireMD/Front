@@ -11,6 +11,9 @@
     "test:watch": "ng test --watch",
     "e2e": "npx playwright test",
     "e2e:ui": "npx playwright test --ui",
+    "e2e:ci": "npx playwright test --reporter=list",
+    "e2e:smoke": "npx playwright test e2e/completar-test-practica e2e/completar-flashcards e2e/realizar-simulacro-alumno --reporter=list",
+    "test:all": "pnpm test:ci && pnpm e2e:ci",
     "prepare": "husky || true"
   },
   "private": true,
