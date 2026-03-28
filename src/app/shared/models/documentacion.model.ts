@@ -1,6 +1,7 @@
 export interface Documento {
   id: number;
   identificador: string;
+  fileName?: string | null;
   descripcion?: string; // Este campo es opcional
   url: string; // URL donde se hospeda el documento
   esPublico: boolean; // Indica si es público o privado

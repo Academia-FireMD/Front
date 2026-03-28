@@ -5,6 +5,7 @@ import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { UserService } from '../../services/user.service';
+import { buildDocumentDownloadFileName } from '../../shared/utils/document-download-file-name';
 import { FilterConfig, GenericListMode } from '../../shared/generic-list/generic-list.component';
 import { Documento } from '../../shared/models/documentacion.model';
 import { PaginationFilter } from '../../shared/models/pagination.model';
@@ -305,7 +306,11 @@ export class DocumentationOverviewComponent
     });
   }
 
-  async descargarDocumento(documentoId: number, fileName: string) {
+  async descargarDocumento(
+    documentoId: number,
+    identificador: string,
+    fileName?: string | null,
+  ) {
     try {
       this.notificationService.info('Descargando documento...');
 
@@ -316,7 +321,7 @@ export class DocumentationOverviewComponent
 
           const link = document.createElement('a');
           link.href = blobUrl;
-          link.download = fileName;
+          link.download = buildDocumentDownloadFileName(identificador, fileName);
 
           document.body.appendChild(link);
           link.click();
@@ -396,7 +401,10 @@ export class DocumentationOverviewComponent
       const url = window.URL.createObjectURL(blob);
       const a = window.document.createElement('a');
       a.href = url;
-      a.download = documento.fileName || documento.identificador;
+      a.download = buildDocumentDownloadFileName(
+        documento.identificador,
+        documento.fileName,
+      );
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

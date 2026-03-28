@@ -288,7 +288,7 @@
     <div
       class="flex flex-row align-items-between"
       [ngClass]="{'selected-item': mode === 'selection' && isSelected}"
-      (click)="mode === 'overview' ? descargarDocumento(document.id, document.fileName || document.identificador) : null"
+      (click)="mode === 'overview' ? descargarDocumento(document.id, document.identificador, document.fileName) : null"
     >
       <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
         <div class="text-lg font-medium flex gap-2 align-items-center">
