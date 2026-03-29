@@ -43,6 +43,7 @@ import { DescuentoSuscripcionComponent } from './profile/descuento-suscripcion/d
 import { ProfileComponent } from './profile/profile.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { SpinnerInterceptor } from './services/spinner.interceptor';
+import { AiAssistantWidgetComponent } from './shared/components/ai-assistant-widget/ai-assistant-widget.component';
 import { AsyncButtonComponent } from './shared/components/async-button/async-button.component';
 import { DateNormalizationInterceptor } from './shared/interceptors/date-normalization.interceptor';
 import { ErrorInterceptor } from './shared/interceptors/error.interceptor';
@@ -134,6 +135,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
       provide: DateAdapter,
       useFactory: adapterFactory,
     }),
+    AiAssistantWidgetComponent,
     AsyncButtonComponent,
     MisFacturasComponent,
     BajaSuscripcionComponent,
