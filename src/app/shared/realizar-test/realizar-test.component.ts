@@ -97,7 +97,7 @@ export class RealizarTestComponent {
     });
   }
 
-  public generateDto() {
+  public generateDto(sobreescribir = false) {
     const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
     const payload = {
       numPreguntas,
@@ -109,24 +109,46 @@ export class RealizarTestComponent {
       duracion: this.formGroup.value.generarTestDeExamen
         ? this.formGroup.value.tiempoLimiteEnMinutos ?? numPreguntas
         : undefined,
+      sobreescribir,
     } as GenerarTestDto;
     return payload;
   }
 
-  public async generarTest(autoRedirect = false) {
+  public async generarTest(autoRedirect = false, sobreescribir = false) {
     try {
       this.generandoTest = true;
-      const payload = this.generateDto();
+      const payload = this.generateDto(sobreescribir);
       const res = await firstValueFrom(this.testService.generarTest(payload));
       this.toast.success('Test generado exitosamente!', 'Generación exitosa');
       this.getAllTestsComenzados$ = this.testService.getAllTest();
       this.generandoTest = false;
       if (!!autoRedirect)
         this.router.navigate(['/app/test/alumno/realizar-test/' + res.id]);
-    } catch (error) {
-      this.toast.error('Error al generar el test.', 'Error');
+    } catch (error: any) {
       this.generandoTest = false;
+      const mensaje = error?.error?.message || '';
+      if (mensaje.includes('test ya empezado o creado')) {
+        this.confirmarSobreescribirTest(autoRedirect);
+      } else {
+        this.toast.error(mensaje || 'Error al generar el test.', 'Error');
+      }
     }
+  }
+
+  private confirmarSobreescribirTest(autoRedirect: boolean) {
+    this.confirmationService.confirm({
+      message: 'Ya tienes un test en curso. ¿Quieres descartarlo y generar uno nuevo?',
+      header: 'Test existente',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí, generar nuevo',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: () => {
+        this.generarTest(autoRedirect, true);
+      },
+    });
   }
 
   public eliminarTest(idTest: number, event: Event) {

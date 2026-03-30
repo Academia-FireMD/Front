@@ -25,6 +25,7 @@ export interface GenerarTestDto {
   temas: Array<number>;
   generarTestDeRepaso: boolean;
   duracion?: number;
+  sobreescribir?: boolean;
 }
 
 export interface DateRangeDto {

@@ -40,27 +40,61 @@ export class RealizarFlashCardTestComponent {
   public getAllDifficultades = getAllDifficultades(true, true);
   public generandoTest = false;
 
+  private buildPayload(sobreescribir = false): GenerarFlashcardTestDto {
+    return {
+      numPreguntas: this.formGroup.value.numPreguntas ?? 60,
+      dificultades: this.formGroup.value.dificultad ?? [Dificultad.BASICO],
+      temas: this.formGroup.value.temas ?? [],
+      generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
+      sobreescribir,
+    } as GenerarFlashcardTestDto;
+  }
+
   public async generarTest() {
     try {
       this.generandoTest = true;
-      const numPreguntas = this.formGroup.value.numPreguntas ?? 60;
-      const payload = {
-        numPreguntas,
-        dificultades: this.formGroup.value.dificultad ?? [Dificultad.BASICO],
-        temas: this.formGroup.value.temas ?? [],
-        generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
-      } as GenerarFlashcardTestDto;
-
       const res = await firstValueFrom(
-        this.flashcardService.generarTest(payload)
+        this.flashcardService.generarTest(this.buildPayload())
       );
       this.generandoTest = false;
       this.toast.success('Test generado exitosamente!', 'Generación exitosa');
       this.getAllTestsComenzados$ = this.flashcardService.getAllTest();
-    } catch (error) {
+    } catch (error: any) {
       this.generandoTest = false;
-      this.toast.error('Error al generar el test.', 'Error');
+      const mensaje = error?.error?.message || '';
+      if (mensaje.includes('test ya empezado o creado')) {
+        this.confirmarSobreescribir();
+      } else {
+        this.toast.error(mensaje || 'Error al generar el test.', 'Error');
+      }
     }
+  }
+
+  private confirmarSobreescribir() {
+    this.confirmationService.confirm({
+      message: 'Ya tienes un test en curso. ¿Quieres descartarlo y generar uno nuevo?',
+      header: 'Test existente',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí, generar nuevo',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        try {
+          this.generandoTest = true;
+          await firstValueFrom(
+            this.flashcardService.generarTest(this.buildPayload(true))
+          );
+          this.generandoTest = false;
+          this.toast.success('Test generado exitosamente!', 'Generación exitosa');
+          this.getAllTestsComenzados$ = this.flashcardService.getAllTest();
+        } catch (err: any) {
+          this.generandoTest = false;
+          this.toast.error(err?.error?.message || 'Error al generar el test.', 'Error');
+        }
+      },
+    });
   }
 
   public eliminarTest(idTest: number, event: Event) {

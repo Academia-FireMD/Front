@@ -25,6 +25,7 @@ export interface GenerarFlashcardTestDto {
   dificultades: Dificultad[];
   temas: Array<number>;
   generarTestDeRepaso: boolean;
+  sobreescribir?: boolean;
 }
 @Injectable({
   providedIn: 'root',
