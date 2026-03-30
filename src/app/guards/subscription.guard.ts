@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivate, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
-import { Observable, map, take } from 'rxjs';
+import { Observable, filter, map, take } from 'rxjs';
 import { SuscripcionTipo } from '../shared/models/subscription.model';
 import { selectCurrentUser } from '../store/user/user.selectors';
 
@@ -20,6 +20,7 @@ export class SubscriptionGuard implements CanActivate {
     const allowedSubscriptions = route.data['allowedSubscriptions'] as SuscripcionTipo[];
 
     return this.store.select(selectCurrentUser).pipe(
+      filter(user => !!user),
       take(1),
       map(user => {
         // Obtener el tipo de suscripción más alto de todas las suscripciones activas
