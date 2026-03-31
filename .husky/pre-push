@@ -1,5 +1,4 @@
 #!/bin/sh
-source ~/.nvm/nvm.sh 2>/dev/null
-nvm use 20 2>/dev/null
+. ~/.nvm/nvm.sh 2>/dev/null || true
 cd "$(git rev-parse --show-toplevel)"
 npx ng build --configuration production 2>&1
