@@ -1,4 +1,12 @@
-import { Component, computed, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import {
+  Component,
+  computed,
+  EventEmitter,
+  inject,
+  Input,
+  OnInit,
+  Output,
+} from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
@@ -6,7 +14,10 @@ import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { UserService } from '../../services/user.service';
 import { buildDocumentDownloadFileName } from '../../shared/utils/document-download-file-name';
-import { FilterConfig, GenericListMode } from '../../shared/generic-list/generic-list.component';
+import {
+  FilterConfig,
+  GenericListMode,
+} from '../../shared/generic-list/generic-list.component';
 import { Documento } from '../../shared/models/documentacion.model';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
@@ -80,13 +91,15 @@ export class DocumentationOverviewComponent
       key: 'isLocked',
       label: 'Solo documentos premium (isLocked)',
       type: 'toggle',
-      filterInterpolation: (value: boolean) => value ? { isLocked: true } : {},
+      filterInterpolation: (value: boolean) =>
+        value ? { isLocked: true } : {},
     },
     {
       key: 'requireWatermark',
       label: 'Solo documentos con marca de agua',
       type: 'toggle',
-      filterInterpolation: (value: boolean) => value ? { requireWatermark: true } : {},
+      filterInterpolation: (value: boolean) =>
+        value ? { requireWatermark: true } : {},
     },
   ];
 
@@ -94,7 +107,7 @@ export class DocumentationOverviewComponent
     super();
     this.fetchItems$ = computed(() => {
       return this.getDocumentacion({ ...this.pagination() }).pipe(
-        tap((entry) => (this.lastLoadedPagination = entry))
+        tap((entry) => (this.lastLoadedPagination = entry)),
       );
     });
   }
@@ -104,7 +117,7 @@ export class DocumentationOverviewComponent
 
     // Si mode es 'overview' y viene de la ruta, detectar rol
     if (this.mode === 'overview') {
-      this.activatedRoute.data.subscribe(data => {
+      this.activatedRoute.data.subscribe((data) => {
         const { expectedRole } = data;
         this.expectedRole = expectedRole;
 
@@ -123,7 +136,9 @@ export class DocumentationOverviewComponent
   toggleItemSelection(documento: Documento): void {
     const index = this.selectedDocumentIds.indexOf(documento.id);
     if (index > -1) {
-      this.selectedDocumentIds = this.selectedDocumentIds.filter(id => id !== documento.id);
+      this.selectedDocumentIds = this.selectedDocumentIds.filter(
+        (id) => id !== documento.id,
+      );
     } else {
       this.selectedDocumentIds = [...this.selectedDocumentIds, documento.id];
     }
@@ -132,7 +147,12 @@ export class DocumentationOverviewComponent
 
   isAllSelected(): boolean {
     const currentPageDocs = this.lastLoadedPagination?.data || [];
-    return currentPageDocs.length > 0 && currentPageDocs.every((doc: Documento) => this.selectedDocumentIds.includes(doc.id));
+    return (
+      currentPageDocs.length > 0 &&
+      currentPageDocs.every((doc: Documento) =>
+        this.selectedDocumentIds.includes(doc.id),
+      )
+    );
   }
 
   toggleSelectAll(): void {
@@ -140,12 +160,14 @@ export class DocumentationOverviewComponent
     if (this.isAllSelected()) {
       // Deseleccionar todos los de la página actual
       this.selectedDocumentIds = this.selectedDocumentIds.filter(
-        id => !currentPageDocs.some((doc: Documento) => doc.id === id)
+        (id) => !currentPageDocs.some((doc: Documento) => doc.id === id),
       );
     } else {
       // Seleccionar todos los de la página actual
       const newIds = currentPageDocs.map((doc: Documento) => doc.id);
-      this.selectedDocumentIds = [...new Set([...this.selectedDocumentIds, ...newIds])];
+      this.selectedDocumentIds = [
+        ...new Set([...this.selectedDocumentIds, ...newIds]),
+      ];
     }
     this.selectionChange.emit(this.selectedDocumentIds);
   }
@@ -177,7 +199,7 @@ export class DocumentationOverviewComponent
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
         return this.service.getDocumentosPublicos$(pagination);
-      })
+      }),
     );
   }
 
@@ -188,7 +210,6 @@ export class DocumentationOverviewComponent
       skip: 0, // Resetear a la primera página cuando cambian los filtros
     });
   }
-
 
   onSelect(event: any) {
     this.uploadedFiles = event.currentFiles;
@@ -205,15 +226,21 @@ export class DocumentationOverviewComponent
     formData.append('file', selectedFile);
     formData.append(
       'identificador',
-      this.uploadingFileFormGroup.value.identificador ?? ''
+      this.uploadingFileFormGroup.value.identificador ?? '',
     );
     formData.append(
       'descripcion',
-      this.uploadingFileFormGroup.value.descripcion ?? ''
+      this.uploadingFileFormGroup.value.descripcion ?? '',
     );
     formData.append('esPublico', true + '');
-    formData.append('isLocked', String(this.uploadingFileFormGroup.value.isLocked ?? false));
-    formData.append('requireWatermark', String(this.uploadingFileFormGroup.value.requireWatermark ?? false));
+    formData.append(
+      'isLocked',
+      String(this.uploadingFileFormGroup.value.isLocked ?? false),
+    );
+    formData.append(
+      'requireWatermark',
+      String(this.uploadingFileFormGroup.value.requireWatermark ?? false),
+    );
 
     const temaId = (this.uploadingFileFormGroup.value.temaIds ?? [])[0];
     if (temaId !== undefined) {
@@ -223,7 +250,7 @@ export class DocumentationOverviewComponent
     this.uploadingFile = true;
     try {
       const response = await firstValueFrom(
-        this.service.uploadDocumento$(formData)
+        this.service.uploadDocumento$(formData),
       );
       this.toast.success(`Archivo subido exitosamente`);
       this.uploadingFile = false;
@@ -261,7 +288,8 @@ export class DocumentationOverviewComponent
     const temaIds = this.editarDocumentoForm.value.temaIds ?? [];
     const temaId = temaIds.length > 0 ? temaIds[0] : null;
     const isLocked = this.editarDocumentoForm.value.isLocked ?? false;
-    const requireWatermark = this.editarDocumentoForm.value.requireWatermark ?? false;
+    const requireWatermark =
+      this.editarDocumentoForm.value.requireWatermark ?? false;
 
     try {
       await firstValueFrom(
@@ -271,8 +299,8 @@ export class DocumentationOverviewComponent
           descripcion,
           temaId,
           isLocked,
-          requireWatermark
-        })
+          requireWatermark,
+        }),
       );
       this.toast.success('Documento actualizado correctamente');
       this.mostrarEditarDocumento = false;
@@ -321,7 +349,10 @@ export class DocumentationOverviewComponent
 
           const link = document.createElement('a');
           link.href = blobUrl;
-          link.download = buildDocumentDownloadFileName(identificador, fileName);
+          link.download = buildDocumentDownloadFileName(
+            identificador,
+            fileName,
+          );
 
           document.body.appendChild(link);
           link.click();
@@ -329,7 +360,9 @@ export class DocumentationOverviewComponent
 
           window.URL.revokeObjectURL(blobUrl);
 
-          this.notificationService.success('Documento descargado correctamente');
+          this.notificationService.success(
+            'Documento descargado correctamente',
+          );
         },
         error: (error) => {
           console.error('Error al descargar el documento:', error);
@@ -339,7 +372,9 @@ export class DocumentationOverviewComponent
     } catch (error) {
       console.error('Error al descargar el documento:', error);
       const errorMessage =
-        error instanceof Error ? error.message : 'Error al descargar el documento';
+        error instanceof Error
+          ? error.message
+          : 'Error al descargar el documento';
       this.notificationService.error(errorMessage);
     }
   }
@@ -356,7 +391,7 @@ export class DocumentationOverviewComponent
         console.error('Error al cargar árbol de documentos:', err);
         this.toast.error('Error al cargar documentos');
         this.loadingTree = false;
-      }
+      },
     });
   }
 
@@ -369,12 +404,14 @@ export class DocumentationOverviewComponent
     // Si el documento requiere watermark, validar datos del usuario
     if (documento.requireWatermark) {
       try {
-        const usuario = await firstValueFrom(this.userService.getCurrentUser$());
+        const usuario = await firstValueFrom(
+          this.userService.getCurrentUser$(),
+        );
 
         if (!usuario.nombre || !usuario.apellidos || !usuario.dni) {
           this.toast.error(
             'Para descargar este documento debes completar tu perfil con nombre, apellidos y DNI/NIE',
-            'Datos incompletos'
+            'Datos incompletos',
           );
           return;
         }
@@ -396,7 +433,7 @@ export class DocumentationOverviewComponent
     try {
       this.toast.info('Descargando documento...');
       const blob = await firstValueFrom(
-        this.service.downloadWithWatermark$(documento.id)
+        this.service.downloadWithWatermark$(documento.id),
       );
       const url = window.URL.createObjectURL(blob);
       const a = window.document.createElement('a');
@@ -412,8 +449,8 @@ export class DocumentationOverviewComponent
 
       this.toast.success('Documento descargado correctamente');
 
-      // Recargar árbol para actualizar badge NEW
-      this.loadDocumentTree();
+      // Actualizar badge NEW localmente sin recargar el árbol
+      documento.isNew = false;
     } catch (error) {
       console.error('Error al descargar:', error);
       this.toast.error('Error al descargar el documento');
