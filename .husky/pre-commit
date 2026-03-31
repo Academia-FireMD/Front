@@ -1,1 +1,4 @@
+#!/bin/sh
+source ~/.nvm/nvm.sh 2>/dev/null
+nvm use 20 2>/dev/null
 npx lint-staged
