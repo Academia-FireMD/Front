@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-ai-assistant-widget',
@@ -19,10 +20,23 @@ import { environment } from '../../../../environments/environment';
 export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private document = inject<Document>(DOCUMENT);
+  private authService = inject(AuthService);
   private scriptElement: HTMLScriptElement | null = null;
 
   ngOnInit(): void {
     this.loadWidget();
+  }
+
+  private getEmbedToken(): string {
+    try {
+      const decodedToken = this.authService.decodeToken();
+      const isAdmin = decodedToken?.rol === 'ADMIN';
+      return isAdmin
+        ? environment.aiAssistant.adminEmbedToken
+        : environment.aiAssistant.embedToken;
+    } catch {
+      return environment.aiAssistant.embedToken;
+    }
   }
 
   private async loadWidget(): Promise<void> {
@@ -53,7 +67,7 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
     );
     this.scriptElement.setAttribute(
       'data-embed-token',
-      environment.aiAssistant.embedToken
+      this.getEmbedToken()
     );
     this.scriptElement.setAttribute('data-token', preAuthToken);
     this.scriptElement.setAttribute('data-mode', 'floating');
