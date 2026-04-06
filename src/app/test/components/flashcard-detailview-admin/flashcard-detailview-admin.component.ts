@@ -1,11 +1,11 @@
 import { Location } from '@angular/common';
 import {
-    Component,
-    EventEmitter,
-    inject,
-    Input,
-    Output,
-    signal
+  Component,
+  EventEmitter,
+  inject,
+  Input,
+  Output,
+  signal,
 } from '@angular/core';
 import { FormArray, FormBuilder, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,28 +14,24 @@ import { Editor } from '@toast-ui/editor';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import {
-    combineLatest,
-    filter,
-    firstValueFrom,
-    Observable,
-    tap,
-} from 'rxjs';
+import { combineLatest, filter, firstValueFrom, Observable, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { FlashcardData } from '../../../shared/models/flashcard.model';
+import { Dificultad } from '../../../shared/models/pregunta.model';
 import {
-    Dificultad,
-} from '../../../shared/models/pregunta.model';
-import { Oposicion, SuscripcionStatus } from '../../../shared/models/subscription.model';
+  isSubscriptionAccessible,
+  Oposicion,
+  SuscripcionStatus,
+} from '../../../shared/models/subscription.model';
 import { Rol } from '../../../shared/models/user.model';
 import { AppState } from '../../../store/app.state';
 import { selectCurrentUser } from '../../../store/user/user.selectors';
 import {
-    getAllDifficultades,
-    universalEditorConfig
+  getAllDifficultades,
+  universalEditorConfig,
 } from '../../../utils/utils';
 @Component({
   selector: 'app-flashcard-detailview-admin',
@@ -68,39 +64,39 @@ export class FlashcardDetailviewAdminComponent {
   }
   @Output() flashcardCreada = new EventEmitter<FlashcardData>();
   private processFlashcardRequest(
-    requestFn: (identificador: string) => Observable<FlashcardData>
+    requestFn: (identificador: string) => Observable<FlashcardData>,
   ): void {
     firstValueFrom(
       requestFn(this.formGroup.value.identificador ?? '').pipe(
         tap((flashcard) => {
           this.setFlashcard(flashcard);
           this.navigateToFlashcard(flashcard.id + '');
-        })
-      )
+        }),
+      ),
     );
   }
 
   public siguienteFlashcard() {
     this.processFlashcardRequest(
-      this.flashCardService.nextFlashcard.bind(this.flashCardService)
+      this.flashCardService.nextFlashcard.bind(this.flashCardService),
     );
   }
 
   public anteriorFlashcard() {
     this.processFlashcardRequest(
-      this.flashCardService.prevFlashcard.bind(this.flashCardService)
+      this.flashCardService.prevFlashcard.bind(this.flashCardService),
     );
   }
 
   public anteriorForwardFlashcard() {
     this.processFlashcardRequest(
-      this.flashCardService.prevFlashcardForward.bind(this.flashCardService)
+      this.flashCardService.prevFlashcardForward.bind(this.flashCardService),
     );
   }
 
   public siguienteForwardFlashcard() {
     this.processFlashcardRequest(
-      this.flashCardService.nextFlashcardForward.bind(this.flashCardService)
+      this.flashCardService.nextFlashcardForward.bind(this.flashCardService),
     );
   }
 
@@ -120,7 +116,9 @@ export class FlashcardDetailviewAdminComponent {
         initialValue: initialValue || '',
         events: {
           change: () => {
-            this.formGroup.get('solucion')?.patchValue(this.editor.getMarkdown());
+            this.formGroup
+              .get('solucion')
+              ?.patchValue(this.editor.getMarkdown());
           },
         },
       });
@@ -138,7 +136,7 @@ export class FlashcardDetailviewAdminComponent {
         },
       });
     }, 0);
-    }
+  }
 
   private getRole() {
     return combineLatest([
@@ -150,7 +148,7 @@ export class FlashcardDetailviewAdminComponent {
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
-      })
+      }),
     );
   }
 
@@ -210,13 +208,13 @@ export class FlashcardDetailviewAdminComponent {
     this.formGroup.patchValue(flashcard);
     this.relevancia.clear();
     flashcard.relevancia.forEach((relevancia) =>
-      this.relevancia.push(new FormControl(relevancia))
+      this.relevancia.push(new FormControl(relevancia)),
     );
     this.formGroup.markAsPristine();
     setTimeout(() => {
       this.initEditor(
         this.formGroup.value.solucion ?? '',
-        this.formGroup.value.descripcion ?? ''
+        this.formGroup.value.descripcion ?? '',
       );
     }, 0);
   }
@@ -233,8 +231,8 @@ export class FlashcardDetailviewAdminComponent {
         this.flashCardService.getFlashcardById(itemId).pipe(
           tap((entry) => {
             this.setFlashcard(entry);
-          })
-        )
+          }),
+        ),
       );
     }
   }
@@ -249,8 +247,8 @@ export class FlashcardDetailviewAdminComponent {
     if (!user?.suscripciones?.length) return;
 
     const oposicionesActivas = user.suscripciones
-      .filter(s => s.status === SuscripcionStatus.ACTIVE)
-      .map(s => s.oposicion);
+      .filter((s) => isSubscriptionAccessible(s.status))
+      .map((s) => s.oposicion);
 
     if (oposicionesActivas.length > 0) {
       this.updateOposicionSelection(oposicionesActivas);
@@ -263,7 +261,7 @@ export class FlashcardDetailviewAdminComponent {
       ...this.formGroup.getRawValue(),
     };
     const result = await firstValueFrom(
-      this.flashCardService.updateFlashcard$(merged as FlashcardData)
+      this.flashCardService.updateFlashcard$(merged as FlashcardData),
     );
     return result;
   }
@@ -287,7 +285,8 @@ export class FlashcardDetailviewAdminComponent {
   public eliminarFallo(id: number, event: Event) {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
-      message: '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.',
+      message:
+        '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.',
       header: 'Marcar como solucionado',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',
@@ -301,7 +300,7 @@ export class FlashcardDetailviewAdminComponent {
         // Recargar la flashcard para actualizar la lista de fallos
         this.loadFlashcard();
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 

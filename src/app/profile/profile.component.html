@@ -1,4 +1,7 @@
-<p-confirmDialog [style]="{width: '50vw'}" [baseZIndex]="10000"></p-confirmDialog>
+<p-confirmDialog
+  [style]="{ width: '50vw' }"
+  [baseZIndex]="10000"
+></p-confirmDialog>
 
 <div class="profile-container">
   <!-- Spinner de carga -->
@@ -14,7 +17,7 @@
         class="col-12"
         [ngClass]="{
           'md:col-8': user.rol !== 'ADMIN',
-          'md:col-12': user.rol === 'ADMIN'
+          'md:col-12': user.rol === 'ADMIN',
         }"
       >
         <div class="profile-card">
@@ -190,7 +193,9 @@
       <div class="col-12 md:col-4" *ngIf="user.rol !== 'ADMIN'">
         <!-- Card de Suscripciones -->
         <div class="subscription-card">
-          <div class="card-header flex align-items-center justify-content-between">
+          <div
+            class="card-header flex align-items-center justify-content-between"
+          >
             <h2><i class="pi pi-credit-card"></i> Mis Suscripciones</h2>
             <p-button
               icon="pi pi-file-invoice"
@@ -227,10 +232,14 @@
                 class="subscription-card-item"
                 [ngClass]="{
                   'status-active':
-                    suscripcion.status === 'ACTIVE' && !suscripcion.fechaFin,
+                    (suscripcion.status === 'ACTIVE' ||
+                      suscripcion.status === 'PENDING_CANCEL') &&
+                    !suscripcion.fechaFin,
                   'status-pending':
-                    suscripcion.status === 'ACTIVE' && suscripcion.fechaFin,
-                  'status-cancelled': suscripcion.status === 'CANCELLED'
+                    (suscripcion.status === 'ACTIVE' ||
+                      suscripcion.status === 'PENDING_CANCEL') &&
+                    suscripcion.fechaFin,
+                  'status-cancelled': suscripcion.status === 'CANCELLED',
                 }"
               >
                 <!-- Header con logo y nombre -->
@@ -277,25 +286,39 @@
                       class="info-value"
                       [ngClass]="{
                         'text-green-600':
-                          suscripcion.status === 'ACTIVE' &&
+                          (suscripcion.status === 'ACTIVE' ||
+                            suscripcion.status === 'PENDING_CANCEL') &&
                           !suscripcion.fechaFin &&
                           !suscripcion.cancelacionProgramada,
                         'text-orange-600':
-                          suscripcion.status === 'ACTIVE' &&
+                          (suscripcion.status === 'ACTIVE' ||
+                            suscripcion.status === 'PENDING_CANCEL') &&
                           (suscripcion.fechaFin ||
                             suscripcion.cancelacionProgramada),
-                        'text-red-500': suscripcion.status === 'CANCELLED'
+                        'text-red-500': suscripcion.status === 'CANCELLED',
                       }"
                     >
-                      @if (suscripcion.status === 'ACTIVE' &&
-                      suscripcion.cancelacionProgramada) {
-                      <i class="pi pi-calendar-times mr-1"></i> Cancelación
-                      programada } @else if (suscripcion.status === 'ACTIVE' &&
-                      suscripcion.fechaFin) {
-                      <i class="pi pi-clock mr-1"></i> Baja pendiente } @else if
-                      (suscripcion.status === 'ACTIVE') {
-                      <i class="pi pi-check-circle mr-1"></i> Activo } @else {
-                      <i class="pi pi-times-circle mr-1"></i> Cancelado }
+                      @if (
+                        (suscripcion.status === "ACTIVE" ||
+                          suscripcion.status === "PENDING_CANCEL") &&
+                        suscripcion.cancelacionProgramada
+                      ) {
+                        <i class="pi pi-calendar-times mr-1"></i> Baja
+                        programada
+                      } @else if (
+                        (suscripcion.status === "ACTIVE" ||
+                          suscripcion.status === "PENDING_CANCEL") &&
+                        suscripcion.fechaFin
+                      ) {
+                        <i class="pi pi-clock mr-1"></i> Baja pendiente
+                      } @else if (
+                        suscripcion.status === "ACTIVE" ||
+                        suscripcion.status === "PENDING_CANCEL"
+                      ) {
+                        <i class="pi pi-check-circle mr-1"></i> Activo
+                      } @else {
+                        <i class="pi pi-times-circle mr-1"></i> Cancelado
+                      }
                     </span>
                   </div>
 
@@ -303,7 +326,7 @@
                   <div class="info-row" *ngIf="suscripcion.fechaInicio">
                     <span class="info-label">Desde</span>
                     <span class="info-value">
-                      {{ suscripcion.fechaInicio | date : "d MMM yyyy" }}
+                      {{ suscripcion.fechaInicio | date: "d MMM yyyy" }}
                     </span>
                   </div>
 
@@ -319,11 +342,13 @@
                     <span
                       class="info-value"
                       [ngClass]="{
-                        'text-orange-600': suscripcion.status === 'ACTIVE',
-                        'text-red-500': suscripcion.status === 'CANCELLED'
+                        'text-orange-600':
+                          suscripcion.status === 'ACTIVE' ||
+                          suscripcion.status === 'PENDING_CANCEL',
+                        'text-red-500': suscripcion.status === 'CANCELLED',
                       }"
                     >
-                      {{ suscripcion.fechaFin | date : "d MMM yyyy" }}
+                      {{ suscripcion.fechaFin | date: "d MMM yyyy" }}
                     </span>
                   </div>
 
@@ -335,7 +360,7 @@
                     <span class="info-label">Se cancelará el</span>
                     <span class="info-value text-orange-600 font-semibold">
                       {{
-                        suscripcion.cancelacionProgramada | date : "d MMM yyyy"
+                        suscripcion.cancelacionProgramada | date: "d MMM yyyy"
                       }}
                     </span>
                   </div>
@@ -489,7 +514,7 @@
                       high:
                         getOnboardingCompletionPercentage() >= 70 &&
                         getOnboardingCompletionPercentage() < 80,
-                      complete: getOnboardingCompletionPercentage() >= 80
+                      complete: getOnboardingCompletionPercentage() >= 80,
                     }"
                   ></div>
                 </div>
@@ -576,7 +601,7 @@
                 [ngClass]="{
                   'consumible-activado': consumible.estado === 'ACTIVADO',
                   'consumible-usado': consumible.estado === 'USADO',
-                  'consumible-expirado': consumible.estado === 'EXPIRADO'
+                  'consumible-expirado': consumible.estado === 'EXPIRADO',
                 }"
               >
                 <!-- Header del consumible -->
@@ -587,7 +612,7 @@
                       [ngClass]="{
                         'pi-ticket': consumible.estado === 'ACTIVADO',
                         'pi-check-circle': consumible.estado === 'USADO',
-                        'pi-times-circle': consumible.estado === 'EXPIRADO'
+                        'pi-times-circle': consumible.estado === 'EXPIRADO',
                       }"
                     ></i>
                   </div>
@@ -611,17 +636,17 @@
                         'badge-activado': consumible.estado === 'ACTIVADO',
                         'badge-usado': consumible.estado === 'USADO',
                         'badge-expirado': consumible.estado === 'EXPIRADO',
-                        'badge-sin-vincular': !consumible.examen
+                        'badge-sin-vincular': !consumible.examen,
                       }"
                     >
                       {{
                         !consumible.examen
                           ? "Sin vincular"
                           : consumible.estado === "ACTIVADO"
-                          ? "Disponible"
-                          : consumible.estado === "USADO"
-                          ? "Usado"
-                          : "Expirado"
+                            ? "Disponible"
+                            : consumible.estado === "USADO"
+                              ? "Usado"
+                              : "Expirado"
                       }}
                     </span>
                   </div>
@@ -657,14 +682,14 @@
                   >
                     <span class="detail-label">Usado el:</span>
                     <span class="detail-value">{{
-                      consumible.usadoEn | date : "dd/MM/yyyy HH:mm"
+                      consumible.usadoEn | date: "dd/MM/yyyy HH:mm"
                     }}</span>
                   </div>
 
                   <div class="detail-row" *ngIf="consumible.expiraEn">
                     <span class="detail-label">Expira el:</span>
                     <span class="detail-value">{{
-                      consumible.expiraEn | date : "dd/MM/yyyy"
+                      consumible.expiraEn | date: "dd/MM/yyyy"
                     }}</span>
                   </div>
                 </div>
@@ -802,19 +827,28 @@
   (onHide)="cerrarDialogCambioSuscripcion()"
 >
   <div class="flex flex-column align-items-center gap-4 p-4">
-    <div class="flex align-items-center justify-content-center border-circle bg-blue-100" style="width: 80px; height: 80px;">
-      <i class="pi pi-link text-blue-600" style="font-size: 2rem;"></i>
+    <div
+      class="flex align-items-center justify-content-center border-circle bg-blue-100"
+      style="width: 80px; height: 80px"
+    >
+      <i class="pi pi-link text-blue-600" style="font-size: 2rem"></i>
     </div>
     <div class="text-center">
       <h3 class="text-900 font-semibold mt-0 mb-2">Gestión de suscripción</h3>
       <p class="text-600 line-height-3 m-0">
-        Para cambiar tu plan de suscripción necesitas vincular tu cuenta con WordPress.
-        Una vez vinculada, podrás gestionar tus suscripciones directamente desde la plataforma.
+        Para cambiar tu plan de suscripción necesitas vincular tu cuenta con
+        WordPress. Una vez vinculada, podrás gestionar tus suscripciones
+        directamente desde la plataforma.
       </p>
     </div>
-    <div class="flex align-items-start gap-2 p-3 border-round bg-blue-50 border-1 border-blue-200 w-full">
+    <div
+      class="flex align-items-start gap-2 p-3 border-round bg-blue-50 border-1 border-blue-200 w-full"
+    >
       <i class="pi pi-info-circle text-blue-500 mt-1"></i>
-      <span class="text-sm text-blue-700 line-height-3">Al vincular tu cuenta podrás cambiar de plan, aplicar descuentos y gestionar tu suscripción sin salir de la plataforma.</span>
+      <span class="text-sm text-blue-700 line-height-3"
+        >Al vincular tu cuenta podrás cambiar de plan, aplicar descuentos y
+        gestionar tu suscripción sin salir de la plataforma.</span
+      >
     </div>
     <div class="flex gap-3 w-full justify-content-center">
       <p-button
@@ -845,7 +879,9 @@
 >
   <app-baja-suscripcion
     *ngIf="showBajaSuscripcionDialog"
-    [suscripcionId]="datosConfirmacionBaja?.suscripcionId ?? suscripcionGestionWC?.id"
+    [suscripcionId]="
+      datosConfirmacionBaja?.suscripcionId ?? suscripcionGestionWC?.id
+    "
     (cerrar)="cerrarDialogBajaSuscripcion()"
     (solicitarConfirmacion)="onSolicitarConfirmacionBaja($event)"
     (mostrarFueraDePlazo)="onFueraDePlazoBaja($event)"
@@ -867,7 +903,11 @@
     *ngIf="showCambioPlanDialog && suscripcionGestionWC"
     [suscripcionId]="suscripcionGestionWC!.id"
     [oposicion]="suscripcionGestionWC!.oposicion"
-    [planActual]="{ sku: suscripcionGestionWC!.sku ?? null, tipo: suscripcionGestionWC!.tipo, precio: suscripcionGestionWC!.monthlyPrice ?? null }"
+    [planActual]="{
+      sku: suscripcionGestionWC!.sku ?? null,
+      tipo: suscripcionGestionWC!.tipo,
+      precio: suscripcionGestionWC!.monthlyPrice ?? null,
+    }"
     (cerrar)="cerrarCambioPlanDialog()"
     (cambioRealizado)="cerrarCambioPlanDialog()"
   ></app-cambio-suscripcion>
@@ -903,76 +943,79 @@
   [closable]="!procesandoBaja"
 >
   @if (procesandoBaja) {
-  <div
-    class="flex flex-column align-items-center justify-content-center gap-3"
-    style="min-height: 200px"
-  >
-    <p-progressSpinner />
-    <p class="text-lg font-medium">Procesando baja de suscripción...</p>
-    <p class="text-sm text-600">Por favor, espera un momento</p>
-  </div>
+    <div
+      class="flex flex-column align-items-center justify-content-center gap-3"
+      style="min-height: 200px"
+    >
+      <p-progressSpinner />
+      <p class="text-lg font-medium">Procesando baja de suscripción...</p>
+      <p class="text-sm text-600">Por favor, espera un momento</p>
+    </div>
   } @else {
-  <div class="flex flex-column gap-3">
-    <p class="text-lg">
-      <i class="pi pi-exclamation-triangle text-orange-500 mr-2"></i>
-      ¿Estás seguro de que deseas dar de baja tu suscripción?
-    </p>
-
-    <div class="p-3 surface-100 border-round">
-      <p class="font-medium mb-2">Tu suscripción permanecerá activa hasta:</p>
-      <p class="text-xl font-bold text-primary">
-        {{
-          datosConfirmacionBaja?.validacion?.proximoPago | date : "dd/MM/yyyy"
-        }}
+    <div class="flex flex-column gap-3">
+      <p class="text-lg">
+        <i class="pi pi-exclamation-triangle text-orange-500 mr-2"></i>
+        ¿Estás seguro de que deseas dar de baja tu suscripción?
       </p>
-    </div>
 
-    <p class="text-sm text-600">
-      Una vez confirmada, tu suscripción se cancelará y no se renovará
-      automáticamente. Podrás seguir disfrutando del servicio hasta la fecha
-      indicada.
-    </p>
-
-    @if (datosConfirmacionBaja?.motivos && datosConfirmacionBaja.motivos.length
-    > 0) {
-    <div class="mt-2">
-      <p class="font-medium text-sm mb-1">Motivos seleccionados:</p>
-      <div class="flex flex-wrap gap-2">
-        @for (motivo of datosConfirmacionBaja.motivos; track motivo) {
-        <span class="p-2 surface-100 border-round text-sm">
-          {{ getMotivoLabel(motivo) }}
-        </span>
-        }
+      <div class="p-3 surface-100 border-round">
+        <p class="font-medium mb-2">Tu suscripción permanecerá activa hasta:</p>
+        <p class="text-xl font-bold text-primary">
+          {{
+            datosConfirmacionBaja?.validacion?.proximoPago | date: "dd/MM/yyyy"
+          }}
+        </p>
       </div>
-    </div>
-    } @if (datosConfirmacionBaja?.comentario) {
-    <div class="mt-2">
-      <p class="font-medium text-sm mb-1">Tu comentario:</p>
-      <p class="text-sm text-600 p-2 surface-100 border-round">
-        {{ datosConfirmacionBaja.comentario }}
+
+      <p class="text-sm text-600">
+        Una vez confirmada, tu suscripción se cancelará y no se renovará
+        automáticamente. Podrás seguir disfrutando del servicio hasta la fecha
+        indicada.
       </p>
+
+      @if (
+        datosConfirmacionBaja?.motivos &&
+        datosConfirmacionBaja.motivos.length > 0
+      ) {
+        <div class="mt-2">
+          <p class="font-medium text-sm mb-1">Motivos seleccionados:</p>
+          <div class="flex flex-wrap gap-2">
+            @for (motivo of datosConfirmacionBaja.motivos; track motivo) {
+              <span class="p-2 surface-100 border-round text-sm">
+                {{ getMotivoLabel(motivo) }}
+              </span>
+            }
+          </div>
+        </div>
+      }
+      @if (datosConfirmacionBaja?.comentario) {
+        <div class="mt-2">
+          <p class="font-medium text-sm mb-1">Tu comentario:</p>
+          <p class="text-sm text-600 p-2 surface-100 border-round">
+            {{ datosConfirmacionBaja.comentario }}
+          </p>
+        </div>
+      }
     </div>
-    }
-  </div>
   }
 
   <ng-template pTemplate="footer">
     @if (!procesandoBaja) {
-    <div class="flex justify-content-end gap-2">
-      <p-button
-        label="Volver"
-        icon="pi pi-arrow-left"
-        (onClick)="showConfirmacionBaja = false"
-        [text]="true"
-        styleClass="p-button-text"
-      />
-      <p-button
-        label="Confirmar Baja"
-        icon="pi pi-check"
-        (onClick)="confirmarBajaDesdePadre()"
-        severity="danger"
-      />
-    </div>
+      <div class="flex justify-content-end gap-2">
+        <p-button
+          label="Volver"
+          icon="pi pi-arrow-left"
+          (onClick)="showConfirmacionBaja = false"
+          [text]="true"
+          styleClass="p-button-text"
+        />
+        <p-button
+          label="Confirmar Baja"
+          icon="pi pi-check"
+          (onClick)="confirmarBajaDesdePadre()"
+          severity="danger"
+        />
+      </div>
     }
   </ng-template>
 </p-dialog>
@@ -1002,7 +1045,7 @@
       <div class="flex justify-content-between mb-2">
         <span class="font-medium">Próximo cobro:</span>
         <span class="font-bold">{{
-          validacionPlazo?.proximoPago | date : "dd/MM/yyyy"
+          validacionPlazo?.proximoPago | date: "dd/MM/yyyy"
         }}</span>
       </div>
       <div class="flex justify-content-between">
@@ -1023,7 +1066,7 @@
       <ul class="my-2 pl-3">
         <li class="mb-2">
           ✓ Se realizará el cobro programado para el
-          {{ validacionPlazo?.proximoPago | date : "dd/MM/yyyy" }}
+          {{ validacionPlazo?.proximoPago | date: "dd/MM/yyyy" }}
         </li>
         <li class="mb-2">
           ✓ Tu suscripción permanecerá activa durante ese mes
@@ -1078,12 +1121,15 @@
   [closeOnEscape]="!procesandoVinculacion"
   [draggable]="false"
   [resizable]="false"
-  [style]="{width: '450px'}"
+  [style]="{ width: '450px' }"
   header="🔐 Verificación de seguridad"
 >
   <div class="flex flex-column gap-4">
     <div class="text-center mb-2">
-      <i class="pi pi-shield" style="font-size: 3rem; color: var(--primary-color);"></i>
+      <i
+        class="pi pi-shield"
+        style="font-size: 3rem; color: var(--primary-color)"
+      ></i>
     </div>
 
     <p class="m-0 text-center">
@@ -1091,8 +1137,8 @@
     </p>
 
     <p class="m-0">
-      Ingresa tu contraseña actual de la plataforma de estudio.
-      Esta contraseña se utilizará para:
+      Ingresa tu contraseña actual de la plataforma de estudio. Esta contraseña
+      se utilizará para:
     </p>
 
     <ul class="ml-3">

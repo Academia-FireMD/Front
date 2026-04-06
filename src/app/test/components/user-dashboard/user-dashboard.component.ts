@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, EventEmitter, inject, input, Input, Output } from '@angular/core';
+import {
+  Component,
+  computed,
+  EventEmitter,
+  inject,
+  input,
+  Input,
+  Output,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { cloneDeep } from 'lodash';
 import { Memoize } from 'lodash-decorators';
@@ -8,9 +16,20 @@ import { firstValueFrom, tap } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { PlanificacionesService } from '../../../services/planificaciones.service';
 import { UserService } from '../../../services/user.service';
-import { FilterConfig, GenericListComponent, GenericListMode } from '../../../shared/generic-list/generic-list.component';
+import {
+  FilterConfig,
+  GenericListComponent,
+  GenericListMode,
+} from '../../../shared/generic-list/generic-list.component';
 import { Label, UsuarioLabel } from '../../../shared/models/label.model';
-import { Oposicion, OPOSICION_LABELS, Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../../../shared/models/subscription.model';
+import {
+  isSubscriptionAccessible,
+  Oposicion,
+  OPOSICION_LABELS,
+  Suscripcion,
+  SuscripcionStatus,
+  SuscripcionTipo,
+} from '../../../shared/models/subscription.model';
 import { Usuario } from '../../../shared/models/user.model';
 import { PrimengModule } from '../../../shared/primeng.module';
 import { LabelsService } from '../../../shared/services/labels.service';
@@ -25,10 +44,13 @@ import { SharedModule } from '../../../shared/shared.module';
     FormsModule,
     PrimengModule,
     SharedModule,
-    GenericListComponent
+    GenericListComponent,
   ],
   templateUrl: './user-dashboard.component.html',
-  styleUrls: ['./user-dashboard.component.scss', './user-dashboard-onboarding.component.scss'],
+  styleUrls: [
+    './user-dashboard.component.scss',
+    './user-dashboard-onboarding.component.scss',
+  ],
 })
 export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   userService = inject(UserService);
@@ -52,10 +74,12 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   public decodedUser = this.authService.decodeToken() as Usuario;
 
   // Opciones para selects de oposición
-  oposicionOptions = Object.values(Oposicion).map(op => ({
-    label: OPOSICION_LABELS[op] || op,
-    value: op
-  })).filter(op => op.value !== Oposicion.GENERAL);
+  oposicionOptions = Object.values(Oposicion)
+    .map((op) => ({
+      label: OPOSICION_LABELS[op] || op,
+      value: op,
+    }))
+    .filter((op) => op.value !== Oposicion.GENERAL);
 
   subscriptionTypeOptions = [
     { label: 'Básica', value: SuscripcionTipo.BASIC },
@@ -97,10 +121,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           if (value === 'todos') return {};
           if (value === 'admin') {
             return {
-              OR: [
-                { rol: { equals: 'ADMIN' } },
-                { esTutor: { equals: true } }
-              ]
+              OR: [{ rol: { equals: 'ADMIN' } }, { esTutor: { equals: true } }],
             };
           }
           if (value === 'particulares') {
@@ -108,13 +129,13 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
               AND: [
                 { woocommerceCustomerId: { equals: null } },
                 { rol: { equals: 'ALUMNO' } },
-                { esTutor: { equals: false } }
-              ]
+                { esTutor: { equals: false } },
+              ],
             };
           }
           if (value === 'woocommerce') {
             return {
-              woocommerceCustomerId: { not: null }
+              woocommerceCustomerId: { not: null },
             };
           }
           return {};
@@ -137,7 +158,11 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           if (value === 'sin_suscripcion') {
             return { suscripciones: { none: {} } };
           }
-          return { suscripciones: { some: { tipo: { equals: value }, status: 'ACTIVE' } } };
+          return {
+            suscripciones: {
+              some: { tipo: { equals: value }, status: 'ACTIVE' },
+            },
+          };
         },
       },
       {
@@ -187,10 +212,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         },
       },
     ] as FilterConfig[];
-    return [...baseFilters, ...this.extraFilters() || []];
+    return [...baseFilters, ...(this.extraFilters() || [])];
   });
-
-
 
   constructor() {
     super();
@@ -201,7 +224,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       return this.userService.getAllUsers$(this.pagination()).pipe(
         tap((entry) => {
           this.lastLoadedPagination = entry;
-        })
+        }),
       );
     });
   }
@@ -227,14 +250,16 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   async loadAvailableSubscriptions() {
     try {
       this.availableSubscriptions = await firstValueFrom(
-        this.userService.getAvailableSubscriptions()
+        this.userService.getAvailableSubscriptions(),
       );
     } catch (error) {
       console.error('Error loading subscriptions:', error);
     }
   }
 
-  getSubscriptionBadgeClass(suscripcion: Suscripcion | null | undefined): string {
+  getSubscriptionBadgeClass(
+    suscripcion: Suscripcion | null | undefined,
+  ): string {
     if (!suscripcion) return 'no-subscription-chip';
 
     switch (suscripcion.tipo) {
@@ -252,13 +277,15 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   getSubscriptionLabel(suscripcion: Suscripcion | null | undefined): string {
     if (!suscripcion) return 'Sin suscripción';
 
-    const tipoLabel = {
-      [SuscripcionTipo.BASIC]: 'Básica',
-      [SuscripcionTipo.ADVANCED]: 'Avanzada',
-      [SuscripcionTipo.PREMIUM]: 'Premium',
-    }[suscripcion.tipo] || suscripcion.tipo;
+    const tipoLabel =
+      {
+        [SuscripcionTipo.BASIC]: 'Básica',
+        [SuscripcionTipo.ADVANCED]: 'Avanzada',
+        [SuscripcionTipo.PREMIUM]: 'Premium',
+      }[suscripcion.tipo] || suscripcion.tipo;
 
-    const oposicionLabel = OPOSICION_LABELS[suscripcion.oposicion] || suscripcion.oposicion;
+    const oposicionLabel =
+      OPOSICION_LABELS[suscripcion.oposicion] || suscripcion.oposicion;
     return `${tipoLabel} - ${oposicionLabel}`;
   }
 
@@ -266,7 +293,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   getHighestSubscription(suscripciones?: Suscripcion[]): Suscripcion | null {
     if (!suscripciones || suscripciones.length === 0) return null;
 
-    const activeSubs = suscripciones.filter(s => s.status === SuscripcionStatus.ACTIVE);
+    const activeSubs = suscripciones.filter((s) =>
+      isSubscriptionAccessible(s.status),
+    );
     if (activeSubs.length === 0) return null;
 
     const tierPriority: Record<SuscripcionTipo, number> = {
@@ -275,24 +304,36 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       [SuscripcionTipo.BASIC]: 1,
     };
 
-    return activeSubs.reduce((highest, sub) => {
-      if (!highest) return sub;
-      return (tierPriority[sub.tipo] || 0) > (tierPriority[highest.tipo] || 0) ? sub : highest;
-    }, null as Suscripcion | null);
+    return activeSubs.reduce(
+      (highest, sub) => {
+        if (!highest) return sub;
+        return (tierPriority[sub.tipo] || 0) > (tierPriority[highest.tipo] || 0)
+          ? sub
+          : highest;
+      },
+      null as Suscripcion | null,
+    );
   }
 
   getActiveSuscripciones(user: Usuario): Suscripcion[] {
-    return (user.suscripciones || []).filter(s => s.status === SuscripcionStatus.ACTIVE);
+    return (user.suscripciones || []).filter((s) =>
+      isSubscriptionAccessible(s.status),
+    );
   }
 
   getUserStatus(user: Usuario): 'active' | 'partial' | 'inactive' {
-    const hasActiveSub = user.suscripciones?.some(s => s.status === SuscripcionStatus.ACTIVE);
+    const hasActiveSub = user.suscripciones?.some((s) =>
+      isSubscriptionAccessible(s.status),
+    );
     if (hasActiveSub) return 'active';
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const hasActiveConsumible = user.consumibles?.some(c => c.estado === 'ACTIVADO');
-    const recentActivity = user.updatedAt && new Date(user.updatedAt) > thirtyDaysAgo;
+    const hasActiveConsumible = user.consumibles?.some(
+      (c) => c.estado === 'ACTIVADO',
+    );
+    const recentActivity =
+      user.updatedAt && new Date(user.updatedAt) > thirtyDaysAgo;
     if (hasActiveConsumible || recentActivity) return 'partial';
 
     return 'inactive';
@@ -307,7 +348,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   openSubscriptionDialog(user: Usuario) {
     if (this.isWordPressUser(user)) {
-      this.toast.info('Los usuarios de WordPress deben gestionar sus suscripciones desde su panel en la tienda.');
+      this.toast.info(
+        'Los usuarios de WordPress deben gestionar sus suscripciones desde su panel en la tienda.',
+      );
       return;
     }
     this.selectedUser = { ...user };
@@ -323,7 +366,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   hasSubscriptionForOposicion(oposicion: Oposicion): boolean {
     if (!this.selectedUser?.suscripciones) return false;
     return this.selectedUser.suscripciones.some(
-      s => s.oposicion === oposicion && s.status === SuscripcionStatus.ACTIVE
+      (s) => s.oposicion === oposicion && isSubscriptionAccessible(s.status),
     );
   }
 
@@ -343,14 +386,18 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
    * Verifica si se puede añadir la suscripción seleccionada
    */
   canAddSubscription(): boolean {
-    return this.selectedOposicion &&
-           this.selectedSubscriptionType &&
-           !this.hasSubscriptionForOposicion(this.selectedOposicion);
+    return (
+      this.selectedOposicion &&
+      this.selectedSubscriptionType &&
+      !this.hasSubscriptionForOposicion(this.selectedOposicion)
+    );
   }
 
   updateUserSubscription() {
     if (this.hasSubscriptionForOposicion(this.selectedOposicion)) {
-      this.toast.warning('Ya existe una suscripción activa para esta oposición');
+      this.toast.warning(
+        'Ya existe una suscripción activa para esta oposición',
+      );
       return;
     }
 
@@ -358,20 +405,26 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       .createUserSubscription(
         this.selectedUser.id,
         this.selectedSubscriptionType,
-        this.selectedOposicion
+        this.selectedOposicion,
       )
       .subscribe({
         next: (response: any) => {
           this.toast.success('Suscripción añadida correctamente');
           // Actualizar el usuario seleccionado con las nuevas suscripciones
           if (response?.suscripciones) {
-            this.selectedUser = { ...this.selectedUser, suscripciones: response.suscripciones };
+            this.selectedUser = {
+              ...this.selectedUser,
+              suscripciones: response.suscripciones,
+            };
           } else if (response?.id) {
             // Si devuelve la suscripción creada, añadirla localmente
             const newSub: Suscripcion = response;
             this.selectedUser = {
               ...this.selectedUser,
-              suscripciones: [...(this.selectedUser.suscripciones || []), newSub]
+              suscripciones: [
+                ...(this.selectedUser.suscripciones || []),
+                newSub,
+              ],
             };
           }
           // Actualizar la oposición seleccionada a la siguiente disponible
@@ -379,7 +432,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           this.refresh();
         },
         error: (err) => {
-          const message = err?.error?.message || 'No se pudo añadir la suscripción';
+          const message =
+            err?.error?.message || 'No se pudo añadir la suscripción';
           this.toast.error(message);
         },
       });
@@ -394,27 +448,35 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       rejectLabel: 'Cancelar',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.userService.deleteUserSubscription(this.selectedUser.id, subscription.id).subscribe({
-          next: (updatedUser) => {
-            this.toast.success('Suscripción eliminada correctamente');
-            // Actualizar el usuario seleccionado
-            if (updatedUser?.suscripciones) {
-              this.selectedUser = { ...this.selectedUser, suscripciones: updatedUser.suscripciones };
-            } else {
-              // Si no devuelve las suscripciones, eliminarla localmente
-              this.selectedUser = {
-                ...this.selectedUser,
-                suscripciones: (this.selectedUser.suscripciones || []).filter(s => s.id !== subscription.id)
-              };
-            }
-            this.refresh();
-          },
-          error: (err) => {
-            const message = err?.error?.message || 'No se pudo eliminar la suscripción';
-            this.toast.error(message);
-          },
-        });
-      }
+        this.userService
+          .deleteUserSubscription(this.selectedUser.id, subscription.id)
+          .subscribe({
+            next: (updatedUser) => {
+              this.toast.success('Suscripción eliminada correctamente');
+              // Actualizar el usuario seleccionado
+              if (updatedUser?.suscripciones) {
+                this.selectedUser = {
+                  ...this.selectedUser,
+                  suscripciones: updatedUser.suscripciones,
+                };
+              } else {
+                // Si no devuelve las suscripciones, eliminarla localmente
+                this.selectedUser = {
+                  ...this.selectedUser,
+                  suscripciones: (this.selectedUser.suscripciones || []).filter(
+                    (s) => s.id !== subscription.id,
+                  ),
+                };
+              }
+              this.refresh();
+            },
+            error: (err) => {
+              const message =
+                err?.error?.message || 'No se pudo eliminar la suscripción';
+              this.toast.error(message);
+            },
+          });
+      },
     });
   }
 
@@ -426,7 +488,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   // Etiquetas
   async loadAvailableLabels() {
     try {
-      this.availableLabels = await firstValueFrom(this.labelsService.getLabels());
+      this.availableLabels = await firstValueFrom(
+        this.labelsService.getLabels(),
+      );
     } catch (e) {
       console.error('Error cargando etiquetas:', e);
     }
@@ -451,7 +515,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   async loadUserLabels(userId: number) {
     try {
-      this.userLabels = await firstValueFrom(this.labelsService.getUserLabels(userId));
+      this.userLabels = await firstValueFrom(
+        this.labelsService.getUserLabels(userId),
+      );
     } catch (e) {
       console.error('Error cargando etiquetas del usuario:', e);
     }
@@ -460,7 +526,12 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   async assignSelectedLabelToUser() {
     if (!this.selectedUser || !this.selectedLabelId) return;
     try {
-      await firstValueFrom(this.labelsService.assignLabelToUser(this.selectedUser.id, this.selectedLabelId));
+      await firstValueFrom(
+        this.labelsService.assignLabelToUser(
+          this.selectedUser.id,
+          this.selectedLabelId,
+        ),
+      );
       this.toast.success('Etiqueta asignada correctamente');
       this.selectedLabelId = '';
       await this.loadUserLabels(this.selectedUser.id);
@@ -473,7 +544,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   async removeUserLabel(labelId: string) {
     if (!this.selectedUser) return;
     try {
-      await firstValueFrom(this.labelsService.removeLabelFromUser(this.selectedUser.id, labelId));
+      await firstValueFrom(
+        this.labelsService.removeLabelFromUser(this.selectedUser.id, labelId),
+      );
       this.toast.success('Etiqueta eliminada correctamente');
       await this.loadUserLabels(this.selectedUser.id);
       this.refresh(); // Refrescar la lista de usuarios para ver el cambio
@@ -493,8 +566,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         this.labelsService.assignLabelByKeyValue(
           this.selectedUser.id,
           this.newLabelKey.trim(),
-          this.newLabelValue.trim() || undefined
-        )
+          this.newLabelValue.trim() || undefined,
+        ),
       );
       this.toast.success('Etiqueta creada y asignada correctamente');
       this.newLabelKey = '';
@@ -554,7 +627,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         this.toast.info('Usuario denegado exitosamente');
         this.refresh();
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 
@@ -574,14 +647,14 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         this.toast.info('Usuario eliminado exitosamente');
         this.refresh();
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 
   public async permitir(id: number) {
     await firstValueFrom(this.userService.permitirUsuario(id));
     this.toast.info(
-      'Usuario aprobado exitosamente, ahora puede comenzar a utilizar su cuenta.'
+      'Usuario aprobado exitosamente, ahora puede comenzar a utilizar su cuenta.',
     );
     this.refresh();
   }
@@ -607,7 +680,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   async loadUserPlanifications(userId: number) {
     this.loadingPlanifications.add(userId);
     try {
-      const planifications = await firstValueFrom(this.userService.getUserPlanifications$(userId));
+      const planifications = await firstValueFrom(
+        this.userService.getUserPlanifications$(userId),
+      );
       this.userPlanifications.set(userId, planifications);
     } catch (error) {
       console.error('Error loading user planifications:', error);
@@ -627,7 +702,12 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   async desvincularPlanificacion(planificationId: number, userId: number) {
     try {
-      await firstValueFrom(this.planificacionesService.desvincularPlanificacionMensualAdmin$(planificationId, userId));
+      await firstValueFrom(
+        this.planificacionesService.desvincularPlanificacionMensualAdmin$(
+          planificationId,
+          userId,
+        ),
+      );
       this.toast.success('Planificación desvinculada correctamente');
       this.loadUserPlanifications(userId);
     } catch (error) {
@@ -637,7 +717,10 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   verPlanificacion(planificationId: number) {
-    this.router.navigate(['/app/planificacion/planificacion-mensual', planificationId]);
+    this.router.navigate([
+      '/app/planificacion/planificacion-mensual',
+      planificationId,
+    ]);
   }
 
   @Memoize()
@@ -660,18 +743,27 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         icon: isWP ? 'pi pi-lock' : 'pi pi-credit-card',
         disabled: isWP,
         command: () => this.openSubscriptionDialog(user),
-        tooltipOptions: isWP ? { tooltipLabel: 'Usuario de WordPress - gestiona sus suscripciones desde su panel' } : undefined,
+        tooltipOptions: isWP
+          ? {
+              tooltipLabel:
+                'Usuario de WordPress - gestiona sus suscripciones desde su panel',
+            }
+          : undefined,
       },
       {
         label: 'Gestionar etiquetas',
         icon: 'pi pi-tag',
         command: () => this.openLabelsDialog(user),
-      }
+      },
     );
 
     items.push(
       {
-        label: !user.validated ? 'Verificar' : status === 'active' ? 'Dar de baja' : 'Denegar',
+        label: !user.validated
+          ? 'Verificar'
+          : status === 'active'
+            ? 'Dar de baja'
+            : 'Denegar',
         icon: !user.validated ? 'pi pi-check' : 'pi pi-ban',
         styleClass: !user.validated ? '' : 'p-menuitem-danger',
         command: () => {
@@ -690,7 +782,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           const event = new MouseEvent('click');
           this.deleteUser(user.id, event);
         },
-      }
+      },
     );
 
     return items;
@@ -733,14 +825,15 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       user.tiempoDedicableEstudio,
       user.diasSemanaDisponibles,
       user.otraInformacionLaboral,
-      user.comentariosAdicionales
+      user.comentariosAdicionales,
     ];
 
-    const filledFields = onboardingFields.filter(field =>
-      field !== null &&
-      field !== '' &&
-      field !== false &&
-      field !== undefined
+    const filledFields = onboardingFields.filter(
+      (field) =>
+        field !== null &&
+        field !== '' &&
+        field !== false &&
+        field !== undefined,
     ).length;
 
     return Math.round((filledFields / onboardingFields.length) * 100);
@@ -750,14 +843,16 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   impersonateUser(user: Usuario) {
     this.authService.impersonateUser$(user.id).subscribe({
       next: (response) => {
-        this.toast.success(`Ahora estás accediendo como ${user.nombre} ${user.apellidos}`);
+        this.toast.success(
+          `Ahora estás accediendo como ${user.nombre} ${user.apellidos}`,
+        );
         // Redirigir al dashboard principal para que vean la vista de alumno
         this.router.navigate(['/app/profile']);
       },
       error: (error) => {
         this.toast.error('Error al acceder como el usuario');
         console.error('Impersonation error:', error);
-      }
+      },
     });
   }
 }

@@ -1,26 +1,37 @@
 export enum SuscripcionTipo {
   PREMIUM = 'PREMIUM',
   ADVANCED = 'ADVANCED',
-  BASIC = 'BASIC'
+  BASIC = 'BASIC',
 }
 
 export enum SuscripcionStatus {
   ACTIVE = 'ACTIVE',
-  CANCELLED = 'CANCELLED'
+  PENDING_CANCEL = 'PENDING_CANCEL',
+  CANCELLED = 'CANCELLED',
+}
+
+/** Returns true if the subscription still grants access */
+export function isSubscriptionAccessible(
+  status: SuscripcionStatus | string,
+): boolean {
+  return (
+    status === SuscripcionStatus.ACTIVE ||
+    status === SuscripcionStatus.PENDING_CANCEL
+  );
 }
 
 export enum Oposicion {
   GENERAL = 'GENERAL',
   VALENCIA_AYUNTAMIENTO = 'VALENCIA_AYUNTAMIENTO',
   ALICANTE_CPBA = 'ALICANTE_CPBA',
-  MADRID = 'MADRID'
+  MADRID = 'MADRID',
 }
 
 export const OPOSICION_LABELS: Record<Oposicion, string> = {
   [Oposicion.GENERAL]: 'General',
   [Oposicion.VALENCIA_AYUNTAMIENTO]: 'Valencia Ayuntamiento',
   [Oposicion.ALICANTE_CPBA]: 'CPBA Alicante',
-  [Oposicion.MADRID]: 'Madrid'
+  [Oposicion.MADRID]: 'Madrid',
 };
 
 export const PLAN_LABELS: Record<string, string> = {
@@ -42,21 +53,21 @@ export const PLAN_SORT_ORDER: Record<string, number> = {
 };
 
 export function getPlanLabel(tipo: string | null | undefined): string {
-  return tipo ? (PLAN_LABELS[tipo] || tipo) : '';
+  return tipo ? PLAN_LABELS[tipo] || tipo : '';
 }
 
 export function getPlanCssClass(tipo: string | null | undefined): string {
-  return tipo ? (PLAN_CSS_CLASS[tipo] || '') : '';
+  return tipo ? PLAN_CSS_CLASS[tipo] || '' : '';
 }
 
 export interface Suscripcion {
   id: number;
   usuarioId: number;
   tipo: SuscripcionTipo;
-  oposicion: Oposicion;  // A qué oposición pertenece
+  oposicion: Oposicion; // A qué oposición pertenece
   fechaInicio: Date;
   fechaFin?: Date;
-  cancelacionProgramada?: Date;  // Fecha en la que se cancelará la suscripción (para cancelaciones fuera de plazo)
+  cancelacionProgramada?: Date; // Fecha en la que se cancelará la suscripción (para cancelaciones fuera de plazo)
   woocommerceSubscriptionId?: string;
   sku?: string;
   productId?: string;
@@ -64,7 +75,7 @@ export interface Suscripcion {
   offerDuration?: number;
   monthlyPrice?: number;
   status: SuscripcionStatus;
-  isGeneric?: boolean;  // Indica si la suscripción es intercambiable entre oposiciones
+  isGeneric?: boolean; // Indica si la suscripción es intercambiable entre oposiciones
   examenId?: number;
   createdAt: Date;
   updatedAt: Date;

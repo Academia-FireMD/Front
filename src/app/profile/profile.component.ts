@@ -15,10 +15,15 @@ import {
 } from '../services/suscripcion-management.service';
 import { UserService } from '../services/user.service';
 import { ViewportService } from '../services/viewport.service';
+import { duracionesDisponibles } from '../shared/models/pregunta.model';
 import {
-  duracionesDisponibles,
-} from '../shared/models/pregunta.model';
-import { getPlanLabel, Oposicion, Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../shared/models/subscription.model';
+  getPlanLabel,
+  isSubscriptionAccessible,
+  Oposicion,
+  Suscripcion,
+  SuscripcionStatus,
+  SuscripcionTipo,
+} from '../shared/models/subscription.model';
 import { Rol, Usuario } from '../shared/models/user.model';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { AppState } from '../store/app.state';
@@ -34,12 +39,16 @@ import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.co
 @Component({
   selector: 'app-profile',
   templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.scss', './profile-onboarding.component.scss'],
+  styleUrls: [
+    './profile.component.scss',
+    './profile-onboarding.component.scss',
+  ],
 })
 export class ProfileComponent implements OnInit, OnDestroy {
   readonly getPlanLabel = getPlanLabel;
 
-  @ViewChild(BajaSuscripcionComponent) bajaSuscripcionComponent?: BajaSuscripcionComponent;
+  @ViewChild(BajaSuscripcionComponent)
+  bajaSuscripcionComponent?: BajaSuscripcionComponent;
 
   // Servicios
   private userService = inject(UserService);
@@ -117,7 +126,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Subscription para limpiar
   private routerSubscription?: any;
 
-  constructor() { }
+  constructor() {}
 
   ngOnInit(): void {
     // Cargar preferencia del banner desde localStorage
@@ -128,16 +137,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.store.dispatch(UserActions.loadUser());
 
     // Suscribirse al usuario del store
-    firstValueFrom(this.user$.pipe(filter(user => user !== null))).then((user) => {
-      this.user = cloneDeep(user);
-      this.loadOnboardingData();
+    firstValueFrom(this.user$.pipe(filter((user) => user !== null))).then(
+      (user) => {
+        this.user = cloneDeep(user);
+        this.loadOnboardingData();
 
-      // Verificar si es primer acceso y abrir modal automáticamente
-      this.checkFirstTimeAccess();
-    });
+        // Verificar si es primer acceso y abrir modal automáticamente
+        this.checkFirstTimeAccess();
+      },
+    );
 
     // Suscribirse a cambios del usuario para refrescar cuando vuelve de usar un consumible
-    this.user$.pipe(filter(user => user !== null)).subscribe((user) => {
+    this.user$.pipe(filter((user) => user !== null)).subscribe((user) => {
       this.user = cloneDeep(user);
     });
 
@@ -184,7 +195,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           metodoCalificacion: this.user.metodoCalificacion,
           esTutor: this.user.esTutor,
         },
-      })
+      }),
     );
 
     // Escuchar el resultado de la actualización
@@ -210,11 +221,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
     try {
       await firstValueFrom(
         this.planificacionService.autoAssignPlanificacionMensual(
-          this.user.tipoDePlanificacionDuracionDeseada
-        )
+          this.user.tipoDePlanificacionDuracionDeseada,
+        ),
       );
       this.toastService.success(
-        'Planificación por defecto asignada automáticamente'
+        'Planificación por defecto asignada automáticamente',
       );
 
       // Recargar planificaciones asignadas
@@ -229,7 +240,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Helper para obtener la suscripción principal (primera activa)
   private getPrimarySuscripcion() {
     if (!this.user?.suscripciones?.length) return null;
-    return this.user.suscripciones.find(s => s.status === SuscripcionStatus.ACTIVE) || this.user.suscripciones[0];
+    return (
+      this.user.suscripciones.find((s) => isSubscriptionAccessible(s.status)) ||
+      this.user.suscripciones[0]
+    );
   }
 
   getSubscriptionEndDate(): string {
@@ -272,7 +286,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     // Mapear datos del usuario a formato de onboarding
     this.onboardingData = {
       dni: this.user.dni,
-      fechaNacimiento: this.user.fechaNacimiento ? new Date(this.user.fechaNacimiento) : undefined,
+      fechaNacimiento: this.user.fechaNacimiento
+        ? new Date(this.user.fechaNacimiento)
+        : undefined,
       nombreEmpresa: this.user.nombreEmpresa,
       paisRegion: this.user.paisRegion,
       direccionCalle: this.user.direccionCalle,
@@ -306,7 +322,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       comentariosAdicionales: this.user.comentariosAdicionales,
       tipoOposicion: this.user.tipoOposicion,
       nivelOposicion: this.user.nivelOposicion,
-      tipoDePlanificacionDuracionDeseada: this.user.tipoDePlanificacionDuracionDeseada,
+      tipoDePlanificacionDuracionDeseada:
+        this.user.tipoDePlanificacionDuracionDeseada,
     };
   }
 
@@ -333,14 +350,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   isOnboardingComplete(): boolean {
     if (!this.user) return false;
-    return this.user.onboardingCompletado || this.getOnboardingCompletionPercentage() >= 80;
+    return (
+      this.user.onboardingCompletado ||
+      this.getOnboardingCompletionPercentage() >= 80
+    );
   }
 
   getOnboardingCompletionPercentage(): number {
     const data = this.onboardingData;
     const fields = Object.values(data);
-    const filledFields = fields.filter(value =>
-      value !== null && value !== '' && value !== false && value !== undefined
+    const filledFields = fields.filter(
+      (value) =>
+        value !== null &&
+        value !== '' &&
+        value !== false &&
+        value !== undefined,
     ).length;
     return Math.round((filledFields / fields.length) * 100);
   }
@@ -367,8 +391,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     // 1. Nunca ha visto el onboarding Y no está completo
     // 2. O si el onboarding está muy incompleto (< 20%) incluso si ya lo vio
     const completionPercentage = this.getOnboardingCompletionPercentage();
-    const shouldShowModal = (!hasSeenOnboarding && !onboardingComplete) ||
-      (completionPercentage < 20);
+    const shouldShowModal =
+      (!hasSeenOnboarding && !onboardingComplete) || completionPercentage < 20;
 
     if (shouldShowModal) {
       setTimeout(() => {
@@ -419,7 +443,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.linkToWordPress();
   }
 
-
   confirmarBajaDesdePadre(): void {
     if (!this.datosConfirmacionBaja?.motivos) return;
 
@@ -438,9 +461,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
           this.showConfirmacionBaja = false;
 
           if (response.cancelacionProgramada) {
-            this.toastService.warning(response.mensaje, 'Cancelación programada', { timeOut: 8000 });
+            this.toastService.warning(
+              response.mensaje,
+              'Cancelación programada',
+              { timeOut: 8000 },
+            );
           } else {
-            this.toastService.success(response.mensaje || 'Baja de suscripción procesada correctamente');
+            this.toastService.success(
+              response.mensaje || 'Baja de suscripción procesada correctamente',
+            );
           }
 
           this.cerrarDialogBajaSuscripcion();
@@ -450,7 +479,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         error: (error) => {
           this.procesandoBaja = false;
           this.toastService.error(
-            error.error?.message || 'No se pudo procesar la solicitud de baja'
+            error.error?.message || 'No se pudo procesar la solicitud de baja',
           );
         },
       });
@@ -479,7 +508,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   confirmarCancelacionProgramada(): void {
-
     this.procesandoBaja = true;
     this.showFueraDePlazoBaja = false;
 
@@ -493,7 +521,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.procesandoBaja = false;
-          this.toastService.warning(response.mensaje, 'Cancelación programada', { timeOut: 10000 });
+          this.toastService.warning(
+            response.mensaje,
+            'Cancelación programada',
+            { timeOut: 10000 },
+          );
           this.cerrarDialogBajaSuscripcion();
           // Recargar usuario
           this.store.dispatch(UserActions.loadUser());
@@ -501,7 +533,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         error: (error) => {
           this.procesandoBaja = false;
           this.toastService.error(
-            error.error?.message || 'No se pudo procesar la solicitud de baja'
+            error.error?.message || 'No se pudo procesar la solicitud de baja',
           );
         },
       });
@@ -528,11 +560,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
             },
             error: (error) => {
               this.toastService.error(
-                error.error?.message || 'No se pudo cancelar la baja programada'
+                error.error?.message ||
+                  'No se pudo cancelar la baja programada',
               );
             },
           });
-      }
+      },
     });
   }
 
@@ -554,7 +587,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
 
       // Buscar cualquier suscripción activa
-      const activeSubscription = this.user.suscripciones.find(s => s.status === SuscripcionStatus.ACTIVE);
+      const activeSubscription = this.user.suscripciones.find((s) =>
+        isSubscriptionAccessible(s.status),
+      );
       if (!activeSubscription) {
         return false;
       }
@@ -566,7 +601,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
           const today = new Date();
           // Asegurarse de que la fecha es válida
           if (isNaN(endDate.getTime())) {
-            console.warn('Fecha de fin de suscripción inválida:', activeSubscription.fechaFin);
+            console.warn(
+              'Fecha de fin de suscripción inválida:',
+              activeSubscription.fechaFin,
+            );
             return true; // Si la fecha es inválida, asumir que está activa
           }
           return endDate > today;
@@ -620,13 +658,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Error en handleSubscriptionAction:', error);
       this.toastService.error(
-        'Ocurrió un error al procesar la acción. Por favor, intenta de nuevo o contacta con soporte.'
+        'Ocurrió un error al procesar la acción. Por favor, intenta de nuevo o contacta con soporte.',
       );
     }
   }
 
   canUnsubscribe(): boolean {
-    return this.isLinkedToWordPress() && this.hasActiveWooCommerceSubscription();
+    return (
+      this.isLinkedToWordPress() && this.hasActiveWooCommerceSubscription()
+    );
   }
 
   hasActiveSubscription(): boolean {
@@ -636,7 +676,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     // Verificar si alguna está activa
-    return this.user.suscripciones.some(s => s.status === SuscripcionStatus.ACTIVE);
+    return this.user.suscripciones.some((s) =>
+      isSubscriptionAccessible(s.status),
+    );
   }
 
   getMotivoLabel(motivo: MotivoBaja): string {
@@ -644,8 +686,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       [MotivoBaja.APROBADO]: '🧑‍🚒 Ya he aprobado la oposición',
       [MotivoBaja.CAMBIO_ACADEMIA]: '🔄 He decidido cambiar de academia',
       [MotivoBaja.PREPARACION_PROPIA]: '💪 Voy a prepararlo por mi cuenta',
-      [MotivoBaja.TRATO_NO_COMODO]: '🤝 No me he sentido cómodo/a con el trato recibido',
-      [MotivoBaja.MATERIAL_INADECUADO]: '📚 El material no me ha resultado suficiente o adecuado',
+      [MotivoBaja.TRATO_NO_COMODO]:
+        '🤝 No me he sentido cómodo/a con el trato recibido',
+      [MotivoBaja.MATERIAL_INADECUADO]:
+        '📚 El material no me ha resultado suficiente o adecuado',
       [MotivoBaja.FALTA_TIEMPO]: '🕒 No dispongo del tiempo necesario',
       [MotivoBaja.MOTIVOS_ECONOMICOS]: '💰 Motivos económicos o personales',
       [MotivoBaja.OTROS]: '❓ Otros motivos',
@@ -672,7 +716,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           setTimeout(() => {
             this.mostrarDialogoVerificacionPassword();
           }, 500);
-        }
+        },
       });
       return;
     }
@@ -694,7 +738,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   confirmarVinculacionConPassword(): void {
     if (!this.passwordVerificacion || this.passwordVerificacion.length < 6) {
-      this.toastService.error('Por favor, ingresa una contraseña válida (mínimo 6 caracteres)');
+      this.toastService.error(
+        'Por favor, ingresa una contraseña válida (mínimo 6 caracteres)',
+      );
       return;
     }
 
@@ -711,7 +757,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
         if (response.success) {
           this.toastService.success(
-            response.message || 'Cuenta vinculada exitosamente.'
+            response.message || 'Cuenta vinculada exitosamente.',
           );
 
           // Cerrar el diálogo
@@ -724,10 +770,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
           try {
             const updatedUser = await firstValueFrom(
               this.user$.pipe(
-                filter(user => user !== null && !!user.woocommerceCustomerId),
+                filter((user) => user !== null && !!user.woocommerceCustomerId),
                 // Timeout de 10 segundos
-                timeout(10000)
-              )
+                timeout(10000),
+              ),
             );
             this.user = cloneDeep(updatedUser);
 
@@ -738,12 +784,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
               }, 500);
             }
           } catch (timeoutError) {
-            console.error('Timeout esperando actualización del usuario:', timeoutError);
+            console.error(
+              'Timeout esperando actualización del usuario:',
+              timeoutError,
+            );
             // Recargar manualmente el usuario como fallback
             this.store.dispatch(UserActions.loadUser());
             this.toastService.warning(
               'La vinculación fue exitosa, pero hay un retraso en la actualización. ' +
-              'Por favor, recarga la página o contacta con soporte si el problema persiste.'
+                'Por favor, recarga la página o contacta con soporte si el problema persiste.',
             );
             // Intentar abrir el modal de todas formas
             setTimeout(() => {
@@ -752,7 +801,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
           }
         } else {
           this.toastService.warning(
-            response.message || 'No se pudo completar la vinculación. Por favor, intenta de nuevo.'
+            response.message ||
+              'No se pudo completar la vinculación. Por favor, intenta de nuevo.',
           );
         }
       },
@@ -766,15 +816,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
         if (error.error?.message) {
           errorMessage = error.error.message;
         } else if (error.status === 401) {
-          errorMessage = 'Contraseña incorrecta. Por favor, verifica tu contraseña e intenta de nuevo.';
+          errorMessage =
+            'Contraseña incorrecta. Por favor, verifica tu contraseña e intenta de nuevo.';
         } else if (error.status === 0) {
-          errorMessage += 'Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.';
+          errorMessage +=
+            'Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.';
         } else if (error.status === 404) {
-          errorMessage += 'El servicio no está disponible. Por favor, contacta con soporte.';
+          errorMessage +=
+            'El servicio no está disponible. Por favor, contacta con soporte.';
         } else if (error.status >= 500) {
-          errorMessage += 'Hay un problema en el servidor. Por favor, intenta más tarde o contacta con soporte.';
+          errorMessage +=
+            'Hay un problema en el servidor. Por favor, intenta más tarde o contacta con soporte.';
         } else {
-          errorMessage += 'Por favor, contacta con soporte si el problema persiste.';
+          errorMessage +=
+            'Por favor, contacta con soporte si el problema persiste.';
         }
 
         this.toastService.error(errorMessage);
@@ -788,36 +843,39 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (this.isLinkedToWordPress()) {
       const menuItems: any[] = [];
 
-      if ((suscripcion as any).isGeneric && suscripcion.status === 'ACTIVE') {
+      if (
+        (suscripcion as any).isGeneric &&
+        isSubscriptionAccessible(suscripcion.status)
+      ) {
         menuItems.push({
           label: 'Cambiar oposición',
           icon: 'pi pi-sync',
-          command: () => this.abrirDialogCambioOposicion(suscripcion)
+          command: () => this.abrirDialogCambioOposicion(suscripcion),
         });
       }
 
-      if (suscripcion.status === 'ACTIVE') {
+      if (isSubscriptionAccessible(suscripcion.status)) {
         menuItems.push({
           label: 'Cambiar plan',
           icon: 'pi pi-refresh',
-          command: () => this.abrirCambioPlanWC(suscripcion)
+          command: () => this.abrirCambioPlanWC(suscripcion),
         });
         menuItems.push({
           label: 'Aplicar descuento',
           icon: 'pi pi-ticket',
-          command: () => this.abrirDescuentoWC(suscripcion)
+          command: () => this.abrirDescuentoWC(suscripcion),
         });
         if (!(suscripcion as any).cancelacionProgramada) {
           menuItems.push({
             label: 'Dar de baja',
             icon: 'pi pi-sign-out',
-            command: () => this.cancelarSuscripcionIndividual(suscripcion)
+            command: () => this.cancelarSuscripcionIndividual(suscripcion),
           });
         } else {
           menuItems.push({
             label: 'Cancelar baja programada',
             icon: 'pi pi-undo',
-            command: () => this.cancelarCancelacionProgramada(suscripcion.id)
+            command: () => this.cancelarCancelacionProgramada(suscripcion.id),
           });
         }
       }
@@ -832,13 +890,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
       menuItems.push({
         label: 'Cancelar baja programada',
         icon: 'pi pi-undo',
-        command: () => this.cancelarCancelacionProgramada(suscripcion.id)
+        command: () => this.cancelarCancelacionProgramada(suscripcion.id),
       });
-    } else if (suscripcion.status === 'ACTIVE') {
+    } else if (isSubscriptionAccessible(suscripcion.status)) {
       menuItems.push({
         label: 'Dar de baja',
         icon: 'pi pi-sign-out',
-        command: () => this.cancelarSuscripcionIndividual(suscripcion)
+        command: () => this.cancelarSuscripcionIndividual(suscripcion),
       });
     }
 
@@ -881,22 +939,34 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.suscripcionGestionWC = suscripcion;
     this.datosConfirmacionBaja = {
       suscripcionId: suscripcion.id,
-      oposicion: suscripcion.oposicion
+      oposicion: suscripcion.oposicion,
     };
     this.showBajaSuscripcionDialog = true;
   }
 
   // Genera el tooltip con info de la suscripción
   getSubscriptionTooltip(suscripcion: Suscripcion): string {
-    const nombre = oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion;
-    const plan = suscripcion.tipo === 'BASIC' ? 'Básico' : suscripcion.tipo === 'ADVANCED' ? 'Avanzado' : 'Premium';
+    const nombre =
+      oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion;
+    const plan =
+      suscripcion.tipo === 'BASIC'
+        ? 'Básico'
+        : suscripcion.tipo === 'ADVANCED'
+          ? 'Avanzado'
+          : 'Premium';
 
     let estado = '';
-    if (suscripcion.status === 'ACTIVE' && (suscripcion as any).cancelacionProgramada) {
-      estado = `📅 Cancelación programada (${new Date((suscripcion as any).cancelacionProgramada).toLocaleDateString('es-ES')})`;
+    if (
+      suscripcion.status === SuscripcionStatus.PENDING_CANCEL ||
+      (suscripcion.status === 'ACTIVE' &&
+        (suscripcion as any).cancelacionProgramada)
+    ) {
+      const fecha =
+        (suscripcion as any).cancelacionProgramada || suscripcion.fechaFin;
+      estado = `📅 Baja programada (${fecha ? new Date(fecha).toLocaleDateString('es-ES') : ''})`;
     } else if (suscripcion.status === 'ACTIVE' && suscripcion.fechaFin) {
       estado = `⏳ Baja pendiente (${new Date(suscripcion.fechaFin).toLocaleDateString('es-ES')})`;
-    } else if (suscripcion.status === 'ACTIVE') {
+    } else if (isSubscriptionAccessible(suscripcion.status)) {
       estado = '✅ Activo';
     } else {
       estado = '❌ Cancelado';
@@ -920,15 +990,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (!this.user?.consumibles) return [];
 
     // Ordenar: ACTIVADO primero, luego USADO, luego EXPIRADO
-    const orden = { 'ACTIVADO': 1, 'USADO': 2, 'EXPIRADO': 3 };
+    const orden = { ACTIVADO: 1, USADO: 2, EXPIRADO: 3 };
 
-    return this.user.consumibles
-      .slice()
-      .sort((a, b) => {
-        const ordenA = orden[a.estado as keyof typeof orden] || 999;
-        const ordenB = orden[b.estado as keyof typeof orden] || 999;
-        return ordenA - ordenB;
-      });
+    return this.user.consumibles.slice().sort((a, b) => {
+      const ordenA = orden[a.estado as keyof typeof orden] || 999;
+      const ordenB = orden[b.estado as keyof typeof orden] || 999;
+      return ordenA - ordenB;
+    });
   }
 
   /**
@@ -936,10 +1004,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
    */
   getTipoConsumibleLabel(tipo: string): string {
     const tipos: Record<string, string> = {
-      'SIMULACRO': 'Simulacro',
-      'EXAMEN': 'Examen',
-      'CURSO': 'Curso',
-      'OTRO': 'Otro'
+      SIMULACRO: 'Simulacro',
+      EXAMEN: 'Examen',
+      CURSO: 'Curso',
+      OTRO: 'Otro',
     };
     return tipos[tipo] || tipo;
   }
@@ -976,20 +1044,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
     try {
       // Llamar al endpoint que busca el simulacro por SKU (sin consumir)
       const resultado = await firstValueFrom(
-        this.examenesService.buscarSimulacroPorSku$(consumible.sku)
+        this.examenesService.buscarSimulacroPorSku$(consumible.sku),
       );
 
       // Navegar a la página de realizar simulacro
       // El consumible se consumirá automáticamente cuando el usuario inicie el test
       await this.router.navigate([
         '/simulacros/realizar-simulacro',
-        resultado.examen.id
+        resultado.examen.id,
       ]);
     } catch (error: any) {
       console.error('Error al buscar simulacro:', error);
 
       // Mostrar mensaje de error específico del backend
-      const errorMessage = error.error?.message ||
+      const errorMessage =
+        error.error?.message ||
         error.message ||
         'Error al buscar el simulacro. Por favor, intenta de nuevo.';
 
@@ -1009,7 +1078,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     try {
       // Buscar el test del usuario para este examen
       const resultados = await firstValueFrom(
-        this.examenesService.getSimulacroResultados$(consumible.examen.id)
+        this.examenesService.getSimulacroResultados$(consumible.examen.id),
       );
 
       // Encontrar el testId del usuario
@@ -1020,14 +1089,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
         testId = resultados.ultimoIntento.id;
       } else {
         // Si no hay ultimoIntento, buscar en los resultados
-        const miResultado = resultados.resultados?.find((r: any) => r.usuario?.esTuResultado);
+        const miResultado = resultados.resultados?.find(
+          (r: any) => r.usuario?.esTuResultado,
+        );
         if (miResultado && miResultado.testId) {
           testId = miResultado.testId;
         }
       }
 
       if (!testId) {
-        this.toastService.error('No se encontraron resultados para este simulacro. Asegúrate de haber completado el test.');
+        this.toastService.error(
+          'No se encontraron resultados para este simulacro. Asegúrate de haber completado el test.',
+        );
         return;
       }
 
@@ -1035,11 +1108,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
       await this.router.navigate([
         '/simulacros/resultado',
         consumible.examen.id,
-        testId
+        testId,
       ]);
     } catch (error: any) {
       console.error('Error al acceder a resultados:', error);
-      const errorMessage = error.error?.message || 'No se pudo acceder a los resultados';
+      const errorMessage =
+        error.error?.message || 'No se pudo acceder a los resultados';
       this.toastService.error(errorMessage);
     }
   }
@@ -1054,7 +1128,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     const ahora = new Date();
     const fechaUso = new Date(consumible.usadoEn);
-    const diasDesdeUso = Math.floor((ahora.getTime() - fechaUso.getTime()) / (1000 * 60 * 60 * 24));
+    const diasDesdeUso = Math.floor(
+      (ahora.getTime() - fechaUso.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
     // Si han pasado menos de 5 días desde el uso, puede ver resultados
     if (diasDesdeUso < 5) {
@@ -1080,7 +1156,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     const ahora = new Date();
     const fechaUso = new Date(consumible.usadoEn);
-    const diasDesdeUso = Math.floor((ahora.getTime() - fechaUso.getTime()) / (1000 * 60 * 60 * 24));
+    const diasDesdeUso = Math.floor(
+      (ahora.getTime() - fechaUso.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
     // Si han pasado menos de 5 días
     if (diasDesdeUso < 5) {
@@ -1094,7 +1172,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
       if (ahora >= fechaSolucion) {
         return 'Los resultados están disponibles desde la fecha de solución';
       } else {
-        const diasHastaSolucion = Math.ceil((fechaSolucion.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24));
+        const diasHastaSolucion = Math.ceil(
+          (fechaSolucion.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24),
+        );
         return `Los resultados estarán disponibles en ${diasHastaSolucion} día${diasHastaSolucion !== 1 ? 's' : ''} (${fechaSolucion.toLocaleDateString('es-ES')})`;
       }
     }
@@ -1116,7 +1196,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   onCambioOposicionDialogClose(event?: { changed: boolean }): void {
     this.showCambioOposicionDialog = false;
     this.suscripcionParaCambio = null;
-    
+
     if (event?.changed) {
       // Recargar datos del usuario
       this.store.dispatch(UserActions.loadUser());

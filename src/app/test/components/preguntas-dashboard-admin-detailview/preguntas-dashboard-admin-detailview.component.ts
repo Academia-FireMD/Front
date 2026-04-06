@@ -5,7 +5,7 @@ import {
   inject,
   Input,
   Output,
-  signal
+  signal,
 } from '@angular/core';
 import {
   FormArray,
@@ -19,30 +19,25 @@ import { Editor } from '@toast-ui/editor';
 import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import {
-  combineLatest,
-  filter,
-  firstValueFrom,
-  Observable,
-  tap,
-} from 'rxjs';
+import { combineLatest, filter, firstValueFrom, Observable, tap } from 'rxjs';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
 import { ViewportService } from '../../../services/viewport.service';
+import { Dificultad, Pregunta } from '../../../shared/models/pregunta.model';
 import {
-  Dificultad,
-  Pregunta,
-} from '../../../shared/models/pregunta.model';
-import { Oposicion, SuscripcionStatus } from '../../../shared/models/subscription.model';
+  isSubscriptionAccessible,
+  Oposicion,
+  SuscripcionStatus,
+} from '../../../shared/models/subscription.model';
 import { Rol } from '../../../shared/models/user.model';
 import { AppState } from '../../../store/app.state';
 import { selectCurrentUser } from '../../../store/user/user.selectors';
 import {
   getLetter,
   getStarsBasedOnDifficulty,
-  universalEditorConfig
+  universalEditorConfig,
 } from '../../../utils/utils';
 
 @Component({
@@ -80,32 +75,35 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   public checked = {};
 
-
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
   }
 
   private processPreguntaRequest(
-    requestFn: (identificador: string) => Observable<Pregunta>
+    requestFn: (identificador: string) => Observable<Pregunta>,
   ): void {
     firstValueFrom(
       requestFn(this.formGroup.value.identificador ?? '').pipe(
         tap((e) => {
           this.setLoadedPregunta(e);
           this.navigatetoPregunta(e.id + '');
-        })
-      )
+        }),
+      ),
     );
   }
 
   public siguientePregunta() {
     if (this.mode == 'examen') {
       this.processPreguntaRequest(
-        this.examenesService.nextPregunta.bind(this.examenesService, this.examenId ?? '', this.lastLoadedPregunta().id + '')
+        this.examenesService.nextPregunta.bind(
+          this.examenesService,
+          this.examenId ?? '',
+          this.lastLoadedPregunta().id + '',
+        ),
       );
     } else {
       this.processPreguntaRequest(
-        this.preguntasService.nextPregunta.bind(this.preguntasService)
+        this.preguntasService.nextPregunta.bind(this.preguntasService),
       );
     }
   }
@@ -113,11 +111,15 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public anteriorPregunta() {
     if (this.mode == 'examen') {
       this.processPreguntaRequest(
-        this.examenesService.prevPregunta.bind(this.examenesService, this.examenId ?? '', this.lastLoadedPregunta().id + '')
+        this.examenesService.prevPregunta.bind(
+          this.examenesService,
+          this.examenId ?? '',
+          this.lastLoadedPregunta().id + '',
+        ),
       );
     } else {
       this.processPreguntaRequest(
-        this.preguntasService.prevPregunta.bind(this.preguntasService)
+        this.preguntasService.prevPregunta.bind(this.preguntasService),
       );
     }
   }
@@ -125,11 +127,15 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public anteriorForwardPregunta() {
     if (this.mode == 'examen') {
       this.processPreguntaRequest(
-        this.examenesService.prevPreguntaForward.bind(this.examenesService, this.examenId ?? '', this.lastLoadedPregunta().id + '')
+        this.examenesService.prevPreguntaForward.bind(
+          this.examenesService,
+          this.examenId ?? '',
+          this.lastLoadedPregunta().id + '',
+        ),
       );
     } else {
       this.processPreguntaRequest(
-        this.preguntasService.prevPreguntaForward.bind(this.preguntasService)
+        this.preguntasService.prevPreguntaForward.bind(this.preguntasService),
       );
     }
   }
@@ -137,11 +143,15 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public siguienteForwardPregunta() {
     if (this.mode == 'examen') {
       this.processPreguntaRequest(
-        this.examenesService.nextPreguntaForward.bind(this.examenesService, this.examenId ?? '', this.lastLoadedPregunta().id + '')
+        this.examenesService.nextPreguntaForward.bind(
+          this.examenesService,
+          this.examenId ?? '',
+          this.lastLoadedPregunta().id + '',
+        ),
       );
     } else {
       this.processPreguntaRequest(
-        this.preguntasService.nextPreguntaForward.bind(this.preguntasService)
+        this.preguntasService.nextPreguntaForward.bind(this.preguntasService),
       );
     }
   }
@@ -198,7 +208,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
         this.formGroup.get('dificultad')?.disable();
       }
 
-      this.esReserva = this.activedRoute.snapshot.queryParamMap.get('esReserva') === 'true';
+      this.esReserva =
+        this.activedRoute.snapshot.queryParamMap.get('esReserva') === 'true';
     }
 
     // Cargar exámenes colaborativos activos
@@ -217,11 +228,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   private cargarExamenesColaborativos() {
-    firstValueFrom(this.examenesService.getExamenesColaborativosActivos$()).then(
-      (examenes) => {
-        this.examenesColaborativosActivos.set(examenes);
-      }
-    );
+    firstValueFrom(
+      this.examenesService.getExamenesColaborativosActivos$(),
+    ).then((examenes) => {
+      this.examenesColaborativosActivos.set(examenes);
+    });
   }
 
   public getId() {
@@ -239,7 +250,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
         console.log(this.expectedRole);
-      })
+      }),
     );
   }
 
@@ -248,18 +259,18 @@ export class PreguntasDashboardAdminDetailviewComponent {
     this.formGroup.patchValue(pregunta);
     this.relevancia.clear();
     pregunta.relevancia.forEach((relevancia) =>
-      this.relevancia.push(new FormControl(relevancia))
+      this.relevancia.push(new FormControl(relevancia)),
     );
     this.respuestas.clear();
     pregunta.respuestas.forEach((respuesta) =>
       this.respuestas.push(
-        new FormControl({ value: respuesta, disabled: true })
-      )
+        new FormControl({ value: respuesta, disabled: true }),
+      ),
     );
     setTimeout(() => {
       this.initEditor(
         this.formGroup.value.solucion ?? '',
-        this.formGroup.value.descripcion ?? ''
+        this.formGroup.value.descripcion ?? '',
       );
     }, 0);
     this.formGroup.markAsPristine();
@@ -277,8 +288,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
         this.preguntasService.getPreguntaById(itemId).pipe(
           tap((entry) => {
             this.setLoadedPregunta(entry);
-          })
-        )
+          }),
+        ),
       );
     }
   }
@@ -293,8 +304,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
     if (!user?.suscripciones?.length) return;
 
     const oposicionesActivas = user.suscripciones
-      .filter(s => s.status === SuscripcionStatus.ACTIVE)
-      .map(s => s.oposicion);
+      .filter((s) => isSubscriptionAccessible(s.status))
+      .map((s) => s.oposicion);
 
     if (oposicionesActivas.length > 0) {
       this.updateOposicionSelection(oposicionesActivas);
@@ -325,7 +336,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
       ...this.formGroup.getRawValue(),
     };
     const result = await firstValueFrom(
-      this.preguntasService.updatePregunta$(merged as Pregunta)
+      this.preguntasService.updatePregunta$(merged as Pregunta),
     );
     return result;
   }
@@ -346,8 +357,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
         this.examenesService.addPreguntasToExamen$(
           parseInt(this.examenId),
           [res.id],
-          this.esReserva
-        )
+          this.esReserva,
+        ),
       );
 
       // Redirigir de vuelta al examen
@@ -411,12 +422,12 @@ export class PreguntasDashboardAdminDetailviewComponent {
     if (this.expectedRole == 'ADMIN') {
       await this.router.navigate(['app/test/preguntas/' + id], {
         replaceUrl: true,
-        queryParams: currentQueryParams
+        queryParams: currentQueryParams,
       });
     } else {
       await this.router.navigate(['/app/test/alumno/preguntas/' + id], {
         replaceUrl: true,
-        queryParams: currentQueryParams
+        queryParams: currentQueryParams,
       });
     }
   }
@@ -424,7 +435,8 @@ export class PreguntasDashboardAdminDetailviewComponent {
   public eliminarFallo(id: number, event: Event) {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
-      message: '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.',
+      message:
+        '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.',
       header: 'Marcar como solucionado',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',
@@ -438,7 +450,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
         // Recargar la pregunta para actualizar la lista de fallos
         this.loadPregunta();
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 

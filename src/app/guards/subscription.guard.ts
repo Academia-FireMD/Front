@@ -3,31 +3,39 @@ import { ActivatedRouteSnapshot, CanActivate, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, filter, map, take } from 'rxjs';
-import { SuscripcionTipo } from '../shared/models/subscription.model';
+import {
+  SuscripcionTipo,
+  isSubscriptionAccessible,
+} from '../shared/models/subscription.model';
 import { selectCurrentUser } from '../store/user/user.selectors';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SubscriptionGuard implements CanActivate {
   constructor(
     private store: Store,
     private router: Router,
-    private toast: ToastrService
-  ) { }
+    private toast: ToastrService,
+  ) {}
 
   canActivate(route: ActivatedRouteSnapshot): Observable<boolean> {
-    const allowedSubscriptions = route.data['allowedSubscriptions'] as SuscripcionTipo[];
+    const allowedSubscriptions = route.data[
+      'allowedSubscriptions'
+    ] as SuscripcionTipo[];
 
     return this.store.select(selectCurrentUser).pipe(
-      filter(user => !!user),
+      filter((user) => !!user),
       take(1),
-      map(user => {
+      map((user) => {
         // Obtener el tipo de suscripción más alto de todas las suscripciones activas
-        const subscriptionTypes = user?.suscripciones
-          ?.filter(s => s.status === 'ACTIVE')
-          ?.map(s => s.tipo) || [];
-        const hasAccess = this.hasAccess(subscriptionTypes, allowedSubscriptions) || user?.rol == 'ADMIN';
+        const subscriptionTypes =
+          user?.suscripciones
+            ?.filter((s) => isSubscriptionAccessible(s.status))
+            ?.map((s) => s.tipo) || [];
+        const hasAccess =
+          this.hasAccess(subscriptionTypes, allowedSubscriptions) ||
+          user?.rol == 'ADMIN';
 
         if (!hasAccess) {
           this.router.navigate(['/app/profile']);
@@ -36,16 +44,21 @@ export class SubscriptionGuard implements CanActivate {
         }
 
         return true;
-      })
+      }),
     );
   }
 
-  private hasAccess(subscriptionTypes: SuscripcionTipo[], allowedSubscriptions?: SuscripcionTipo[]): boolean {
+  private hasAccess(
+    subscriptionTypes: SuscripcionTipo[],
+    allowedSubscriptions?: SuscripcionTipo[],
+  ): boolean {
     if (!allowedSubscriptions || allowedSubscriptions.length === 0) {
       return true; // Si no se especifican restricciones, permitir acceso
     }
 
     // Verificar si alguna de las suscripciones activas está permitida
-    return subscriptionTypes.some(type => allowedSubscriptions.includes(type));
+    return subscriptionTypes.some((type) =>
+      allowedSubscriptions.includes(type),
+    );
   }
 }

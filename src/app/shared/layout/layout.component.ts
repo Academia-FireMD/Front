@@ -9,17 +9,26 @@ import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
 import { selectCurrentUser } from '../../store/user/user.selectors';
-import { Suscripcion, SuscripcionStatus, SuscripcionTipo } from '../models/subscription.model';
+import {
+  Suscripcion,
+  SuscripcionStatus,
+  SuscripcionTipo,
+  isSubscriptionAccessible,
+} from '../models/subscription.model';
 import { Usuario } from '../models/user.model';
 
 /**
  * Obtiene el nivel de suscripción más alto de un array de suscripciones
  * PREMIUM > ADVANCED > BASIC
  */
-function getHighestSubscriptionTier(suscripciones?: Suscripcion[]): SuscripcionTipo | null {
+function getHighestSubscriptionTier(
+  suscripciones?: Suscripcion[],
+): SuscripcionTipo | null {
   if (!suscripciones || suscripciones.length === 0) return null;
 
-  const activeSubs = suscripciones.filter(s => s.status === SuscripcionStatus.ACTIVE);
+  const activeSubs = suscripciones.filter((s) =>
+    isSubscriptionAccessible(s.status),
+  );
   if (activeSubs.length === 0) return null;
 
   const tierPriority: Record<SuscripcionTipo, number> = {
@@ -28,10 +37,15 @@ function getHighestSubscriptionTier(suscripciones?: Suscripcion[]): SuscripcionT
     [SuscripcionTipo.BASIC]: 1,
   };
 
-  return activeSubs.reduce((highest, sub) => {
-    if (!highest) return sub.tipo;
-    return (tierPriority[sub.tipo] || 0) > (tierPriority[highest] || 0) ? sub.tipo : highest;
-  }, null as SuscripcionTipo | null);
+  return activeSubs.reduce(
+    (highest, sub) => {
+      if (!highest) return sub.tipo;
+      return (tierPriority[sub.tipo] || 0) > (tierPriority[highest] || 0)
+        ? sub.tipo
+        : highest;
+    },
+    null as SuscripcionTipo | null,
+  );
 }
 
 @Component({
@@ -143,10 +157,13 @@ export class LayoutComponent {
       if (!user) return;
 
       // Preservar el estado de colapso antes de reconstruir el menú
-      const collapsedStates = this.items.reduce((acc, item, index) => {
-        acc[index] = item.collapsed;
-        return acc;
-      }, {} as Record<number, boolean>);
+      const collapsedStates = this.items.reduce(
+        (acc, item, index) => {
+          acc[index] = item.collapsed;
+          return acc;
+        },
+        {} as Record<number, boolean>,
+      );
 
       if (user?.rol == 'ADMIN') {
         this.items = this.getAdminMenu();
@@ -285,7 +302,6 @@ export class LayoutComponent {
         ],
       },
 
-
       {
         label: 'Perfil',
         items: [
@@ -374,7 +390,7 @@ export class LayoutComponent {
               routerLink: '/app/test/alumno/flashcards',
             },
           ],
-        }
+        },
       );
     }
 
@@ -492,8 +508,10 @@ export class LayoutComponent {
   }
 
   public isParentCollapsed(itemChild: MenuItem) {
-    const index = this.items.findIndex((parentItem) =>
-      parentItem?.items && (parentItem.items as Array<MenuItem>).find((e) => e == itemChild)
+    const index = this.items.findIndex(
+      (parentItem) =>
+        parentItem?.items &&
+        (parentItem.items as Array<MenuItem>).find((e) => e == itemChild),
     );
     if (index === -1) {
       return false; // Si no se encuentra un padre, no está colapsado
