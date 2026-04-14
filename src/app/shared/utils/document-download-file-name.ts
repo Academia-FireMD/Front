@@ -8,10 +8,13 @@ export function buildDocumentDownloadFileName(
   if (!id) {
     return fn || 'documento.pdf';
   }
-  if (/\.[a-z0-9]{2,8}$/i.test(id)) {
+  // Solo tratamos como extensión real si contiene al menos una letra.
+  // Esto evita falsos positivos con códigos tipo "I01.001" o versiones "v2.3".
+  const idExtMatch = id.match(/\.([a-z0-9]{2,8})$/i);
+  if (idExtMatch && /[a-z]/i.test(idExtMatch[1])) {
     return id;
   }
   const m = fn.match(/(\.[a-z0-9]{2,8})$/i);
-  const ext = m ? m[1] : '.pdf';
+  const ext = m && /[a-z]/i.test(m[1]) ? m[1] : '.pdf';
   return `${id}${ext}`;
 }
