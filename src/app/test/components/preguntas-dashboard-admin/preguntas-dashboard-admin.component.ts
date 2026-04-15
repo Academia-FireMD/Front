@@ -12,10 +12,7 @@ import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { FilterConfig } from '../../../shared/generic-list/generic-list.component';
 import { PaginationFilter } from '../../../shared/models/pagination.model';
-import {
-  Dificultad,
-  Pregunta
-} from '../../../shared/models/pregunta.model';
+import { Dificultad, Pregunta } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
@@ -80,6 +77,19 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
         relevancia: value,
       }),
     },
+    {
+      key: 'generadoPorIA',
+      label: 'Origen',
+      type: 'dropdown',
+      placeholder: 'Todas',
+      options: [
+        { label: 'Solo generadas por IA', value: true },
+        { label: 'Solo creadas manualmente', value: false },
+      ],
+      filterInterpolation: (value) => ({
+        generadoPorIA: value,
+      }),
+    },
   ];
 
   commMap = (pagination: PaginationFilter) => {
@@ -111,7 +121,7 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
         return this.commMap(pagination)[this.expectedRole];
-      })
+      }),
     );
   }
 
@@ -145,8 +155,8 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
 
           // Limpia el URL temporal
           URL.revokeObjectURL(url);
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -160,8 +170,8 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
           link.download = `plantilla_preguntas.xlsx`;
           link.click();
           URL.revokeObjectURL(url);
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -187,18 +197,18 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
     formData.append('temaId', String(this.importForm.value.temaId));
     formData.append(
       'dificultad',
-      String(this.importForm.value.dificultad ?? 'PUBLICAS')
+      String(this.importForm.value.dificultad ?? 'PUBLICAS'),
     );
 
     this.uploadingFile = true;
     try {
       const response: any = await firstValueFrom(
-        this.preguntasService.importarPreguntasExcel(formData)
+        this.preguntasService.importarPreguntasExcel(formData),
       );
       this.toast.success(
         `Archivo importado: ${response.count ?? 0} insertadas, ${
           response.ignoradas ?? 0
-        } ignoradas.`
+        } ignoradas.`,
       );
       this.mostrarFicherosDialog = false;
       this.selectedFile = null;
@@ -225,7 +235,11 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
       this.importForm.reset({ temaId: null, dificultad: null });
       this.selectedFile = null;
     } else {
-      this.exportForm.reset({ temaId: null, dificultad: null, formato: 'excel' });
+      this.exportForm.reset({
+        temaId: null,
+        dificultad: null,
+        formato: 'excel',
+      });
     }
   }
 
@@ -241,8 +255,14 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
     try {
       const blob = await firstValueFrom(
         formato === 'excel'
-          ? this.preguntasService.exportarPreguntasExcel(temaIdsArray, soloAlumnosValue)
-          : this.preguntasService.exportarPreguntasWord(temaIdsArray, soloAlumnosValue)
+          ? this.preguntasService.exportarPreguntasExcel(
+              temaIdsArray,
+              soloAlumnosValue,
+            )
+          : this.preguntasService.exportarPreguntasWord(
+              temaIdsArray,
+              soloAlumnosValue,
+            ),
       );
 
       const link = document.createElement('a');
@@ -250,11 +270,12 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
       link.href = url;
 
       const fecha = new Date().toISOString().split('T')[0];
-      const tipo = soloAlumnosValue === undefined
-        ? 'todas'
-        : soloAlumnosValue
-          ? 'alumnos'
-          : 'academia';
+      const tipo =
+        soloAlumnosValue === undefined
+          ? 'todas'
+          : soloAlumnosValue
+            ? 'alumnos'
+            : 'academia';
       const extension = formato === 'excel' ? 'xlsx' : 'docx';
       link.download = `preguntas_${tipo}_${fecha}.${extension}`;
 
@@ -266,7 +287,7 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
       this.exportForm.reset({
         temaId: null,
         dificultad: null,
-        formato: 'excel'
+        formato: 'excel',
       });
     } catch (error) {
       this.toast.error('Error al exportar');

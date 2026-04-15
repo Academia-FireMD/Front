@@ -41,8 +41,9 @@ export interface FlashcardData {
   solucion: string;
   createdAt: Date;
   updatedAt: Date;
-  tema?:Tema;
+  tema?: Tema;
   ReporteFallo: FlashcardDataFallo[];
+  generadoPorIA?: boolean;
 }
 
 export interface FlashcardDataFallo {

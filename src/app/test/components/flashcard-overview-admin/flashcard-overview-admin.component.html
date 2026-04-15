@@ -45,12 +45,12 @@
         (click)="abrirDialogoFicheros()"
       ></p-button>
       <p-button
-      label="{{
-        viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
-      }}"
-      icon="pi pi-plus"
-      (click)="navigateToDetailview('new')"
-    ></p-button>
+        label="{{
+          viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
+        }}"
+        icon="pi pi-plus"
+        (click)="navigateToDetailview('new')"
+      ></p-button>
     </div>
   </div>
 
@@ -73,7 +73,7 @@
     <p-selectButton
       [options]="[
         { label: 'Importar', value: 'importar', icon: 'pi pi-upload' },
-        { label: 'Exportar', value: 'exportar', icon: 'pi pi-download' }
+        { label: 'Exportar', value: 'exportar', icon: 'pi pi-download' },
       ]"
       [(ngModel)]="modoFicheros"
       (ngModelChange)="cambiarModoFicheros($event)"
@@ -184,7 +184,7 @@
           [formControl]="exportForm.controls['formato']"
           [options]="[
             { label: 'Excel (.xlsx)', value: 'excel' },
-            { label: 'Word (.docx)', value: 'word' }
+            { label: 'Word (.docx)', value: 'word' },
           ]"
           placeholder="Seleccionar formato"
           optionLabel="label"
@@ -220,8 +220,16 @@
         (click)="mostrarFicherosDialog = false"
       ></p-button>
       <p-button
-        [label]="exportForm.value.formato === 'excel' ? 'Exportar Excel' : 'Exportar Word'"
-        [icon]="exportForm.value.formato === 'excel' ? 'pi pi-file-excel' : 'pi pi-file-word'"
+        [label]="
+          exportForm.value.formato === 'excel'
+            ? 'Exportar Excel'
+            : 'Exportar Word'
+        "
+        [icon]="
+          exportForm.value.formato === 'excel'
+            ? 'pi pi-file-excel'
+            : 'pi pi-file-word'
+        "
         (click)="exportarFlashcards()"
         [loading]="exportando"
         [disabled]="exportForm.invalid"
@@ -261,6 +269,15 @@
           >
             Tema {{ item.tema.numero }}
           </span>
+          @if (item.generadoPorIA) {
+            <span
+              class="badge badge-ai"
+              pTooltip="Generada por el asistente IA"
+              tooltipPosition="top"
+            >
+              <i class="pi pi-sparkles mr-1"></i>IA
+            </span>
+          }
         </div>
       </div>
       <span
@@ -282,11 +299,11 @@
         <span
           class="text-xs hidden md:block unbreakable-text"
           pTooltip="Fecha de creación: {{
-            item.createdAt | date : 'dd/MM/yyyy HH:mm'
+            item.createdAt | date: 'dd/MM/yyyy HH:mm'
           }}"
           tooltipPosition="top"
         >
-          {{ item.createdAt | date : "short" }}</span
+          {{ item.createdAt | date: "short" }}</span
         >
         <p-button
           (click)="

@@ -1,9 +1,9 @@
 import {
-    Component,
-    computed,
-    ElementRef,
-    inject,
-    ViewChild,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  ViewChild,
 } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -17,8 +17,8 @@ import { Dificultad } from '../../../shared/models/pregunta.model';
 import { Rol } from '../../../shared/models/user.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import {
-    getAlumnoDificultad,
-    getStarsBasedOnDifficulty,
+  getAlumnoDificultad,
+  getStarsBasedOnDifficulty,
 } from '../../../utils/utils';
 
 @Component({
@@ -80,6 +80,19 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
         relevancia: value,
       }),
     },
+    {
+      key: 'generadoPorIA',
+      label: 'Origen',
+      type: 'dropdown',
+      placeholder: 'Todas',
+      options: [
+        { label: 'Solo generadas por IA', value: true },
+        { label: 'Solo creadas manualmente', value: false },
+      ],
+      filterInterpolation: (value) => ({
+        generadoPorIA: value,
+      }),
+    },
   ];
 
   commMap = (pagination: PaginationFilter) => {
@@ -111,7 +124,7 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
         return this.commMap(pagination)[this.expectedRole];
-      })
+      }),
     );
   }
 
@@ -149,18 +162,18 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
     formData.append('temaId', String(temaId));
     formData.append(
       'dificultad',
-      String(this.importForm.value.dificultad ?? 'PUBLICAS')
+      String(this.importForm.value.dificultad ?? 'PUBLICAS'),
     );
 
     this.uploadingFile = true;
     try {
       const response: any = await firstValueFrom(
-        this.flashcardService.importarExcel(formData)
+        this.flashcardService.importarExcel(formData),
       );
       this.toast.success(
         `Archivo importado: ${response.count ?? 0} insertadas, ${
           response.ignoradas ?? 0
-        } ignoradas.`
+        } ignoradas.`,
       );
       this.mostrarFicherosDialog = false;
       this.selectedFile = null;
@@ -213,8 +226,8 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
 
           // Limpia el URL temporal
           URL.revokeObjectURL(url);
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -228,8 +241,8 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
           link.download = `plantilla_flashcards.xlsx`;
           link.click();
           URL.revokeObjectURL(url);
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -247,7 +260,11 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
       this.importForm.reset({ temaId: null, dificultad: null });
       this.selectedFile = null;
     } else {
-      this.exportForm.reset({ temaId: null, dificultad: null, formato: 'excel' });
+      this.exportForm.reset({
+        temaId: null,
+        dificultad: null,
+        formato: 'excel',
+      });
     }
   }
 
@@ -260,8 +277,14 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
     try {
       const blob = await firstValueFrom(
         formato === 'excel'
-          ? this.flashcardService.exportarFlashcardsExcel(temaIdsArray, soloAlumnosValue)
-          : this.flashcardService.exportarFlashcardsWord(temaIdsArray, soloAlumnosValue)
+          ? this.flashcardService.exportarFlashcardsExcel(
+              temaIdsArray,
+              soloAlumnosValue,
+            )
+          : this.flashcardService.exportarFlashcardsWord(
+              temaIdsArray,
+              soloAlumnosValue,
+            ),
       );
 
       const link = document.createElement('a');
@@ -269,11 +292,12 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
       link.href = url;
 
       const fecha = new Date().toISOString().split('T')[0];
-      const tipo = soloAlumnosValue === undefined
-        ? 'todas'
-        : soloAlumnosValue
-          ? 'alumnos'
-          : 'academia';
+      const tipo =
+        soloAlumnosValue === undefined
+          ? 'todas'
+          : soloAlumnosValue
+            ? 'alumnos'
+            : 'academia';
       const extension = formato === 'excel' ? 'xlsx' : 'docx';
       link.download = `flashcards_${tipo}_${fecha}.${extension}`;
 
@@ -285,7 +309,7 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
       this.exportForm.reset({
         temaId: null,
         dificultad: null,
-        formato: 'excel'
+        formato: 'excel',
       });
     } catch (error) {
       this.toast.error('Error al exportar');

@@ -25,6 +25,7 @@ export interface Pregunta {
   orden?: number;
   examenId?: number;
   ReporteFallo: PreguntaFallo[];
+  generadoPorIA?: boolean;
 }
 
 export interface PreguntaFallo {
@@ -93,23 +94,23 @@ export const duracionesDisponibles = [
 export enum TipoOposicion {
   CPBA = 'CPBA',
   AYTO_VLC = 'AYTO_VLC',
-  GENERAL_CV = 'GENERAL_CV'
+  GENERAL_CV = 'GENERAL_CV',
 }
 
 export const tiposOposicionDisponibles = [
   { label: 'CPBA', value: 'CPBA' },
   { label: 'Ayto. Vlc', value: 'AYTO_VLC' },
-  { label: 'General CV', value: 'GENERAL_CV' }
+  { label: 'General CV', value: 'GENERAL_CV' },
 ];
 
 export enum NivelOposicion {
   INICIACION = 'INICIACION',
-  AVANZADO = 'AVANZADO'
+  AVANZADO = 'AVANZADO',
 }
 
 export const nivelesDisponibles = [
   { label: 'Iniciación', value: 'INICIACION' },
-  { label: 'Avanzado', value: 'AVANZADO' }
+  { label: 'Avanzado', value: 'AVANZADO' },
 ];
 
 export const matchKeyWithLabel = (key: TipoDePlanificacionDeseada) => {

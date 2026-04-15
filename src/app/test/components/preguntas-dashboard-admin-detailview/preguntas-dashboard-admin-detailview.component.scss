@@ -1,3 +1,10 @@
+// Import the shared badge styles so the IA badge in the header picks up the
+// purple gradient + rounded pill styling that the list views already use.
+// styles.scss already imports this globally, but importing here too makes the
+// intent explicit and guarantees the style applies even if global style load
+// order changes in the future.
+@import "../../../shared/styles/list-styles.scss";
+
 .actions {
   width: 100%;
   display: flex;

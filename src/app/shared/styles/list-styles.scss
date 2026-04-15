@@ -19,25 +19,39 @@
   font-size: 0.7rem;
   font-weight: 600;
   color: white;
-  
+
   &.bg-primary {
     background-color: var(--primary-color) !important;
   }
-  
+
   &.bg-success {
     background-color: var(--green-500) !important;
   }
-  
+
   &.bg-warning {
     background-color: var(--orange-500) !important;
   }
-  
+
   &.bg-info {
     background-color: var(--blue-500) !important;
   }
-  
+
   &.bg-danger {
     background-color: var(--red-500) !important;
+  }
+
+  &.badge-ai {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
+    color: #fff !important;
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: 0.02em;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.25);
+
+    i {
+      font-size: 0.65rem;
+    }
   }
 }
 
@@ -49,19 +63,19 @@
   font-weight: 600;
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
-  
+
   &.p-chip-danger {
     background-color: var(--red-500) !important;
   }
-  
+
   &.p-chip-success {
     background-color: var(--green-500) !important;
   }
-  
+
   &.p-chip-warning {
     background-color: var(--orange-500) !important;
   }
-  
+
   &.p-chip-info {
     background-color: var(--blue-500) !important;
   }
@@ -91,7 +105,7 @@
   display: flex;
   gap: 0.2rem;
   align-items: center;
-  
+
   .p-button {
     padding: 0.2rem;
     font-size: 0.8rem;
@@ -123,33 +137,33 @@
   .identifier {
     font-size: 0.85rem;
   }
-  
+
   .badge {
     padding: 0.15rem 0.3rem;
     font-size: 0.65rem;
   }
-  
+
   .p-chip {
     font-size: 0.65rem;
     padding: 0.15rem 0.3rem;
   }
-  
+
   .descripcion {
     font-size: 0.75rem;
     line-height: 1.1;
   }
-  
+
   .text-xs {
     font-size: 0.65rem;
   }
-  
+
   .pi {
     font-size: 0.7rem;
   }
-  
+
   .admin-controls {
     gap: 0.15rem;
-    
+
     .p-button {
       padding: 0.15rem;
       font-size: 0.75rem;
@@ -164,33 +178,33 @@
   .identifier {
     font-size: 0.8rem;
   }
-  
+
   .badge {
     padding: 0.1rem 0.25rem;
     font-size: 0.6rem;
   }
-  
+
   .p-chip {
     font-size: 0.6rem;
     padding: 0.1rem 0.25rem;
   }
-  
+
   .descripcion {
     font-size: 0.7rem;
   }
-  
+
   .text-xs {
     font-size: 0.6rem;
   }
-  
+
   .pi {
     font-size: 0.65rem;
   }
-  
+
   .admin-controls {
     .p-button {
       padding: 0.1rem;
       font-size: 0.7rem;
     }
   }
-} 
+}

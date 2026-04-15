@@ -22,9 +22,7 @@
   </div>
 
   <div empty-template>
-    <div class="text-center p-4">
-      No hay fallos reportados disponibles
-    </div>
+    <div class="text-center p-4">No hay fallos reportados disponibles</div>
   </div>
 </app-generic-list>
 
@@ -47,12 +45,22 @@
         >
           {{ item.pregunta.tema.numero }}
         </span>
+        @if (item.pregunta.generadoPorIA) {
+          <span
+            class="badge badge-ai"
+            pTooltip="Generada por el asistente IA"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-sparkles mr-1"></i>IA
+          </span>
+        }
         <span
           class="badge bg-orange-500 text-white"
           pTooltip="Usuario que reportó"
           tooltipPosition="top"
         >
-          {{ item.usuario?.nombre || 'Usuario' }} {{ item.usuario?.apellidos || '' }}
+          {{ item.usuario?.nombre || "Usuario" }}
+          {{ item.usuario?.apellidos || "" }}
         </span>
       </div>
       <span
@@ -67,10 +75,12 @@
       <div class="flex flex-row align-items-center justify-content-end gap-2">
         <span
           class="text-xs hidden md:block unbreakable-text"
-          pTooltip="Fecha del reporte: {{ item.createdAt | date : 'dd/MM/yyyy HH:mm' }}"
+          pTooltip="Fecha del reporte: {{
+            item.createdAt | date: 'dd/MM/yyyy HH:mm'
+          }}"
           tooltipPosition="top"
         >
-          {{ item.createdAt | date : "short" }}
+          {{ item.createdAt | date: "short" }}
         </span>
         <p-button
           *ngIf="mode == 'overview'"
@@ -116,7 +126,9 @@
       <div class="text-sm">
         <strong>Reportado por:</strong>
         <span class="ml-1">
-          {{ item.usuario?.nombre }} {{ item.usuario?.apellidos }} ({{ item.usuario?.email }})
+          {{ item.usuario?.nombre }} {{ item.usuario?.apellidos }} ({{
+            item.usuario?.email
+          }})
         </span>
       </div>
     </div>
