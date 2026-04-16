@@ -1,4 +1,4 @@
-@import '../../../shared/styles/list-styles.scss';
+@import "../../../shared/styles/list-styles.scss";
 
 // Chips de tipo
 .tipo-normal-chip {
@@ -25,6 +25,15 @@
 .estado-anulada-chip {
   background-color: var(--blue-100);
   color: var(--blue-800);
+}
+
+// Anulada detectada por reconciliación con Contasimple (origen externo).
+// Color distinto del ANULADA local (azul) para que el admin distinga de un
+// vistazo que la anulación vino de fuera.
+.estado-anulada-externa-chip {
+  background-color: var(--yellow-100);
+  color: var(--yellow-800);
+  border: 1px dashed var(--yellow-500);
 }
 
 .estado-error-chip {

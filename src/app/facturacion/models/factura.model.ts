@@ -1,5 +1,11 @@
 export type FacturaTipo = 'NORMAL' | 'RECTIFICATIVA';
-export type FacturaEstado = 'PENDIENTE' | 'EMITIDA' | 'ANULADA' | 'ERROR';
+export type FacturaEstado =
+  | 'PENDIENTE'
+  | 'EMITIDA'
+  | 'ANULADA'
+  | 'ELIMINADA_LOCAL'
+  | 'ERROR';
+export type OrigenAnulacion = 'LOCAL' | 'CONTASIMPLE';
 
 export interface Factura {
   id: number;
@@ -18,6 +24,7 @@ export interface Factura {
   clienteNif?: string;
   clienteDireccion?: string;
   clientePoblacion?: string;
+  clienteProvincia?: string;
   clienteCodigoPostal?: string;
   clientePais?: string;
   concepto?: string;
@@ -28,6 +35,9 @@ export interface Factura {
   pdfUrl?: string;
   errorMessage?: string;
   dryRun: boolean;
+  origenAnulacion?: OrigenAnulacion;
+  fechaAnulacion?: string;
+  requiereRevisionFiscal: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,9 +53,10 @@ export interface FacturasResponse {
 export interface CrearFacturaManualDto {
   clienteNombre: string;
   clienteEmail?: string;
-  clienteNif?: string;
+  clienteNif: string;
   clienteDireccion?: string;
   clientePoblacion?: string;
+  clienteProvincia: string;
   clienteCodigoPostal?: string;
   clientePais?: string;
   concepto: string;
@@ -55,8 +66,33 @@ export interface CrearFacturaManualDto {
   serie?: string;
 }
 
+export interface CompletarFiscalDto {
+  clienteNif: string;
+  clienteNombre?: string;
+  clienteDireccion?: string;
+  clientePoblacion?: string;
+  clienteProvincia?: string;
+  clienteCodigoPostal?: string;
+  clientePais?: string;
+}
+
 export interface CrearRectificativaDto {
   motivo: string;
+}
+
+export interface ReconciliacionResult {
+  logId: number;
+  totalRevisadas: number;
+  anuladas: number;
+  errores: number;
+  estado: 'OK' | 'ABORTED' | 'ERROR';
+  duracionMs: number;
+  lockSkipped?: boolean;
+}
+
+export interface EliminarFacturaResult {
+  id: number;
+  remoteStatus: 'deleted' | 'not_found' | 'skipped';
 }
 
 export interface ListarFacturasParams {

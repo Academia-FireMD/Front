@@ -21,6 +21,16 @@
 
   <div right-actions>
     <p-button
+      label="Sincronizar"
+      icon="pi pi-refresh"
+      severity="secondary"
+      [text]="true"
+      [loading]="sincronizando()"
+      pTooltip="Revisar facturas contra Contasimple (detecta borradas)"
+      tooltipPosition="bottom"
+      (click)="sincronizarConContasimple()"
+    ></p-button>
+    <p-button
       label="Nueva factura"
       icon="pi pi-plus"
       [link]="true"
@@ -35,14 +45,18 @@
 
 <!-- Template para el item de factura -->
 <ng-template #facturaItemTemplate let-item>
-  <div class="flex flex-row align-items-between" [class.dry-run-row]="item.dryRun">
+  <div
+    class="flex flex-row align-items-between"
+    [class.dry-run-row]="item.dryRun"
+  >
     <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
       <div class="text-lg font-medium flex gap-2 align-items-center">
         <strong
           class="identifier"
           pTooltip="Nº {{ item.numero }}"
           tooltipPosition="top"
-        >{{ item.numero || '—' }}</strong>
+          >{{ item.numero || "—" }}</strong
+        >
 
         <div class="flex gap-1 align-items-center">
           <p-chip
@@ -52,15 +66,34 @@
             tooltipPosition="top"
           ></p-chip>
           <p-chip
-            [styleClass]="item.tipo === 'NORMAL' ? 'tipo-normal-chip' : 'tipo-rectificativa-chip'"
+            [styleClass]="
+              item.tipo === 'NORMAL'
+                ? 'tipo-normal-chip'
+                : 'tipo-rectificativa-chip'
+            "
             [label]="item.tipo === 'NORMAL' ? 'Normal' : 'Rectificativa'"
-            [pTooltip]="item.tipo === 'NORMAL' ? 'Factura normal' : 'Factura rectificativa (devolución)'"
+            [pTooltip]="
+              item.tipo === 'NORMAL'
+                ? 'Factura normal'
+                : 'Factura rectificativa (devolución)'
+            "
             tooltipPosition="top"
           ></p-chip>
           <p-chip
-            [styleClass]="getEstadoChipClass(item.estado)"
-            [label]="item.estado"
-            [pTooltip]="'Estado: ' + item.estado"
+            [styleClass]="getEstadoChipClass(item.estado, item)"
+            [label]="getEstadoLabel(item)"
+            [pTooltip]="
+              item.origenAnulacion === 'CONTASIMPLE'
+                ? 'Anulada en Contasimple (detectada por sincronización)'
+                : 'Estado: ' + item.estado
+            "
+            tooltipPosition="top"
+          ></p-chip>
+          <p-chip
+            *ngIf="item.requiereRevisionFiscal"
+            styleClass="estado-pendiente-chip"
+            label="Revisión fiscal"
+            pTooltip="Esta factura necesita completarse con un NIF válido antes de emitirse"
             tooltipPosition="top"
           ></p-chip>
         </div>
@@ -77,7 +110,8 @@
         class="descripcion"
         pTooltip="{{ item.concepto }}"
         tooltipPosition="top"
-      >{{ item.concepto }}</span>
+        >{{ item.concepto }}</span
+      >
     </div>
 
     <div class="right-side col-3 flex align-items-center justify-content-end">
@@ -85,17 +119,22 @@
         <span
           class="total-cell hidden md:block unbreakable-text"
           [ngClass]="{
-            'text-danger': item.tipo === 'RECTIFICATIVA'
+            'text-danger': item.tipo === 'RECTIFICATIVA',
           }"
-        >{{ item.total | number:'1.2-2' }} €</span>
+          >{{ item.total | number: "1.2-2" }} €</span
+        >
 
         <span
           class="text-xs hidden md:block unbreakable-text"
-          pTooltip="Fecha de creación: {{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}"
+          pTooltip="Fecha de creación: {{
+            item.createdAt | date: 'dd/MM/yyyy HH:mm'
+          }}"
           tooltipPosition="top"
         >
-          {{ item.createdAt | date:'short' }}
-          <span *ngIf="item.woocommerceOrderId" class="text-xs"> · #{{ item.woocommerceOrderId }}</span>
+          {{ item.createdAt | date: "short" }}
+          <span *ngIf="item.woocommerceOrderId" class="text-xs">
+            · #{{ item.woocommerceOrderId }}</span
+          >
         </span>
 
         <div class="admin-controls">
@@ -116,6 +155,24 @@
             size="small"
             pTooltip="Devolver"
             (click)="abrirDevolver(item, $event)"
+          ></p-button>
+          <p-button
+            *ngIf="item.requiereRevisionFiscal"
+            icon="pi pi-user-edit"
+            severity="info"
+            [text]="true"
+            size="small"
+            pTooltip="Completar datos fiscales y emitir"
+            (click)="abrirDialogCompletarFiscal(item, $event)"
+          ></p-button>
+          <p-button
+            *ngIf="!verifactuEnabled() && item.estado !== 'ELIMINADA_LOCAL'"
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            size="small"
+            pTooltip="Eliminar factura"
+            (click)="abrirDialogEliminar(item, $event)"
           ></p-button>
           <span
             *ngIf="item.errorMessage"
@@ -139,7 +196,10 @@
   [draggable]="false"
 >
   <!-- Paso 1: Seleccionar alumno -->
-  <div *ngIf="pasoDialogManual() === 'seleccionar'" class="h-full flex flex-column">
+  <div
+    *ngIf="pasoDialogManual() === 'seleccionar'"
+    class="h-full flex flex-column"
+  >
     <app-user-dashboard
       mode="selection"
       [singleSelection]="true"
@@ -158,7 +218,10 @@
         pTooltip="Volver a selección"
         (click)="pasoDialogManual.set('seleccionar')"
       ></p-button>
-      <span class="text-sm text-color-secondary" *ngIf="formManual.clienteNombre">
+      <span
+        class="text-sm text-color-secondary"
+        *ngIf="formManual.clienteNombre"
+      >
         Cliente: <strong>{{ formManual.clienteNombre }}</strong>
       </span>
     </div>
@@ -167,34 +230,72 @@
       <h4>Datos del cliente</h4>
       <div class="field">
         <label>Nombre / Razón social <span class="required">*</span></label>
-        <input pInputText [(ngModel)]="formManual.clienteNombre" placeholder="Nombre completo o empresa" />
+        <input
+          pInputText
+          [(ngModel)]="formManual.clienteNombre"
+          placeholder="Nombre completo o empresa"
+        />
       </div>
       <div class="field-row">
         <div class="field">
-          <label>NIF / CIF</label>
-          <input pInputText [(ngModel)]="formManual.clienteNif" placeholder="12345678A" />
+          <label>NIF / CIF <span class="required">*</span></label>
+          <input
+            pInputText
+            [(ngModel)]="formManual.clienteNif"
+            placeholder="12345678Z"
+          />
         </div>
         <div class="field">
           <label>Email</label>
-          <input pInputText [(ngModel)]="formManual.clienteEmail" type="email" placeholder="cliente@email.com" />
+          <input
+            pInputText
+            [(ngModel)]="formManual.clienteEmail"
+            type="email"
+            placeholder="cliente@email.com"
+          />
         </div>
       </div>
       <div class="field">
         <label>Dirección</label>
-        <input pInputText [(ngModel)]="formManual.clienteDireccion" placeholder="Calle, número..." />
+        <input
+          pInputText
+          [(ngModel)]="formManual.clienteDireccion"
+          placeholder="Calle, número..."
+        />
       </div>
       <div class="field-row">
         <div class="field">
           <label>Población</label>
-          <input pInputText [(ngModel)]="formManual.clientePoblacion" placeholder="Ciudad" />
+          <input
+            pInputText
+            [(ngModel)]="formManual.clientePoblacion"
+            placeholder="Ciudad"
+          />
+        </div>
+        <div class="field">
+          <label>Provincia <span class="required">*</span></label>
+          <input
+            pInputText
+            [(ngModel)]="formManual.clienteProvincia"
+            placeholder="Valencia"
+          />
         </div>
         <div class="field">
           <label>Código Postal</label>
-          <input pInputText [(ngModel)]="formManual.clienteCodigoPostal" placeholder="46000" />
+          <input
+            pInputText
+            [(ngModel)]="formManual.clienteCodigoPostal"
+            placeholder="46000"
+          />
         </div>
         <div class="field">
           <label>País</label>
-          <input pInputText [(ngModel)]="formManual.clientePais" placeholder="ES" maxlength="2" />
+          <input
+            pInputText
+            [(ngModel)]="formManual.clientePais"
+            placeholder="ES"
+            maxlength="2"
+          />
         </div>
       </div>
     </div>
@@ -205,7 +306,12 @@
       <h4>Datos de la factura</h4>
       <div class="field">
         <label>Concepto <span class="required">*</span></label>
-        <textarea pInputTextarea [(ngModel)]="formManual.concepto" rows="2" placeholder="Descripción del servicio..."></textarea>
+        <textarea
+          pInputTextarea
+          [(ngModel)]="formManual.concepto"
+          rows="2"
+          placeholder="Descripción del servicio..."
+        ></textarea>
       </div>
       <div class="field-row">
         <div class="field">
@@ -220,18 +326,33 @@
         </div>
         <div class="field">
           <label>IVA (%)</label>
-          <p-inputNumber [(ngModel)]="formManual.tipoIva" suffix="%" [min]="0" [max]="100"></p-inputNumber>
+          <p-inputNumber
+            [(ngModel)]="formManual.tipoIva"
+            suffix="%"
+            [min]="0"
+            [max]="100"
+          ></p-inputNumber>
         </div>
         <div class="field">
           <label>Total estimado</label>
           <div class="total-estimado">
-            {{ calcularTotal(formManual.baseImponible || 0, formManual.tipoIva || 21) | number:'1.2-2' }} €
+            {{
+              calcularTotal(
+                formManual.baseImponible || 0,
+                formManual.tipoIva || 21
+              ) | number: "1.2-2"
+            }}
+            €
           </div>
         </div>
       </div>
       <div class="field">
         <label>Serie (dejar vacío para usar la por defecto)</label>
-        <input pInputText [(ngModel)]="formManual.serie" placeholder="TEST, FACT..." />
+        <input
+          pInputText
+          [(ngModel)]="formManual.serie"
+          placeholder="TEST, FACT..."
+        />
       </div>
     </div>
   </div>
@@ -252,8 +373,19 @@
       ></p-button>
     </ng-container>
     <ng-container *ngIf="pasoDialogManual() === 'datos'">
-      <button pButton label="Cancelar" class="p-button-text" (click)="mostrarDialogManual.set(false)"></button>
-      <button pButton label="Crear factura" icon="pi pi-check" [loading]="guardandoManual()" (click)="guardarFacturaManual()"></button>
+      <button
+        pButton
+        label="Cancelar"
+        class="p-button-text"
+        (click)="mostrarDialogManual.set(false)"
+      ></button>
+      <button
+        pButton
+        label="Crear factura"
+        icon="pi pi-check"
+        [loading]="guardandoManual()"
+        (click)="guardarFacturaManual()"
+      ></button>
     </ng-container>
   </ng-template>
 </p-dialog>
@@ -271,7 +403,7 @@
     <div class="factura-ref">
       <span class="label">Factura original:</span>
       <strong>{{ factura.numero }}</strong>
-      <span>— {{ factura.total | number:'1.2-2' }} €</span>
+      <span>— {{ factura.total | number: "1.2-2" }} €</span>
     </div>
     <div class="factura-ref">
       <span class="label">Cliente:</span>
@@ -279,7 +411,7 @@
     </div>
   </div>
 
-  <div class="field" style="margin-top: 1rem;">
+  <div class="field" style="margin-top: 1rem">
     <label>Motivo de la devolución <span class="required">*</span></label>
     <textarea
       pInputTextarea
@@ -290,7 +422,12 @@
   </div>
 
   <ng-template pTemplate="footer">
-    <button pButton label="Cancelar" class="p-button-text" (click)="mostrarDialogRectificativa.set(false)"></button>
+    <button
+      pButton
+      label="Cancelar"
+      class="p-button-text"
+      (click)="mostrarDialogRectificativa.set(false)"
+    ></button>
     <button
       pButton
       label="Confirmar devolución"
@@ -298,6 +435,126 @@
       class="p-button-warning"
       [loading]="guardandoRectificativa()"
       (click)="guardarRectificativa()"
+    ></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog: Eliminar factura (confirmación) -->
+<p-dialog
+  header="Eliminar factura"
+  [visible]="mostrarDialogEliminar()"
+  (visibleChange)="mostrarDialogEliminar.set($event)"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [dismissableMask]="true"
+  [draggable]="false"
+>
+  <div class="flex flex-column gap-3 py-2" *ngIf="facturaAEliminar() as fact">
+    <p class="m-0">
+      ¿Borrar la factura <strong>{{ fact.numero || fact.id }}</strong
+      >?
+    </p>
+    <p class="m-0 text-sm">
+      Se eliminará <strong>en Contasimple</strong> y también en la plataforma.
+      Esta acción no se puede deshacer.
+    </p>
+    <p class="m-0 text-sm text-color-secondary" *ngIf="!fact.contasimpleId">
+      (Esta factura no tenía contrapartida en Contasimple, solo se borrará
+      localmente.)
+    </p>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      label="Cancelar"
+      class="p-button-text"
+      (click)="mostrarDialogEliminar.set(false)"
+    ></button>
+    <button
+      pButton
+      label="Eliminar"
+      icon="pi pi-trash"
+      severity="danger"
+      [loading]="eliminandoFactura()"
+      (click)="confirmarEliminar()"
+    ></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog: Completar datos fiscales (para facturas con requiereRevisionFiscal) -->
+<p-dialog
+  header="Completar datos fiscales"
+  [visible]="mostrarDialogCompletarFiscal()"
+  (visibleChange)="mostrarDialogCompletarFiscal.set($event)"
+  [modal]="true"
+  [style]="{ width: '560px' }"
+  [dismissableMask]="true"
+  [draggable]="false"
+>
+  <div
+    class="flex flex-column gap-3 py-2"
+    *ngIf="facturaParaCompletar() as fact"
+  >
+    <p class="m-0 text-sm text-color-secondary">
+      Esta factura entró desde un pedido sin NIF válido. Completa los datos
+      fiscales del cliente para emitirla en Contasimple.
+    </p>
+    <p class="m-0 text-sm">
+      Pedido: <strong>#{{ fact.woocommerceOrderId || "—" }}</strong> · Total:
+      <strong>{{ fact.total | number: "1.2-2" }} €</strong>
+    </p>
+
+    <div class="field">
+      <label for="cfNif">NIF (DNI / NIE / CIF) *</label>
+      <input
+        id="cfNif"
+        type="text"
+        pInputText
+        [(ngModel)]="formCompletarFiscal.clienteNif"
+        placeholder="12345678Z"
+        class="w-full"
+      />
+    </div>
+
+    <div class="formgrid grid">
+      <div class="field col-12 md:col-8">
+        <label for="cfNombre">Nombre</label>
+        <input
+          id="cfNombre"
+          type="text"
+          pInputText
+          [(ngModel)]="formCompletarFiscal.clienteNombre"
+          class="w-full"
+        />
+      </div>
+      <div class="field col-12 md:col-4">
+        <label for="cfProvincia">Provincia</label>
+        <input
+          id="cfProvincia"
+          type="text"
+          pInputText
+          [(ngModel)]="formCompletarFiscal.clienteProvincia"
+          class="w-full"
+        />
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      label="Cancelar"
+      class="p-button-text"
+      (click)="mostrarDialogCompletarFiscal.set(false)"
+    ></button>
+    <button
+      pButton
+      label="Emitir en Contasimple"
+      icon="pi pi-check"
+      severity="success"
+      [loading]="guardandoCompletarFiscal()"
+      (click)="guardarCompletarFiscal()"
     ></button>
   </ng-template>
 </p-dialog>

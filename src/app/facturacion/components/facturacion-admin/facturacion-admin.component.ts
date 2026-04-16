@@ -1,10 +1,20 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { ChangeDetectorRef, ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom, tap } from 'rxjs';
-import { FilterConfig, GenericListComponent } from '../../../shared/generic-list/generic-list.component';
+import {
+  FilterConfig,
+  GenericListComponent,
+} from '../../../shared/generic-list/generic-list.component';
 import { PrimengModule } from '../../../shared/primeng.module';
 import { SharedModule } from '../../../shared/shared.module';
 import { UserDashboardComponent } from '../../../test/components/user-dashboard/user-dashboard.component';
@@ -16,7 +26,10 @@ import {
 } from '../../models/factura.model';
 import { FacturacionService } from '../../servicios/facturacion.service';
 import { UserService } from '../../../services/user.service';
+import { ConfigService } from '../../../services/config.service';
 import { Usuario } from '../../../shared/models/user.model';
+import { CompletarFiscalDto } from '../../models/factura.model';
+import { looksLikeSpanishNif } from '../../utils/nif.util';
 
 @Component({
   selector: 'app-facturacion-admin',
@@ -38,7 +51,10 @@ import { Usuario } from '../../../shared/models/user.model';
 export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   private facturacionService = inject(FacturacionService);
   private userService = inject(UserService);
+  private configService = inject(ConfigService);
   override toast = inject(ToastrService);
+
+  readonly verifactuEnabled = this.configService.verifactuEnabled;
 
   override filters: FilterConfig[] = [
     {
@@ -49,7 +65,8 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       placeholder: 'Seleccionar rango de fechas',
       dateConfig: { selectionMode: 'range' },
       filterInterpolation: (value: Date[] | null) => {
-        if (!value || !Array.isArray(value) || !value[0] || !value[1]) return {};
+        if (!value || !Array.isArray(value) || !value[0] || !value[1])
+          return {};
         return { dateRange: value };
       },
     },
@@ -75,6 +92,7 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
         { label: 'Pendiente', value: 'PENDIENTE' },
         { label: 'Emitida', value: 'EMITIDA' },
         { label: 'Anulada', value: 'ANULADA' },
+        { label: 'Eliminada (local)', value: 'ELIMINADA_LOCAL' },
         { label: 'Error', value: 'ERROR' },
       ],
       filterInterpolation: (v: string) => (v ? { estado: v } : {}),
@@ -94,12 +112,23 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
 
   descargandoPdf = signal<number | null>(null);
 
+  mostrarDialogEliminar = signal(false);
+  eliminandoFactura = signal(false);
+  facturaAEliminar = signal<Factura | null>(null);
+
+  sincronizando = signal(false);
+
+  mostrarDialogCompletarFiscal = signal(false);
+  guardandoCompletarFiscal = signal(false);
+  facturaParaCompletar = signal<Factura | null>(null);
+  formCompletarFiscal: CompletarFiscalDto = this.emptyCompletarFiscalForm();
+
   constructor() {
     super(inject(Router), inject(ActivatedRoute), inject(ChangeDetectorRef));
     this.fetchItems$ = computed(() =>
-      this.facturacionService.listar$(this.pagination()).pipe(
-        tap((entry) => (this.lastLoadedPagination = entry as any))
-      )
+      this.facturacionService
+        .listar$(this.pagination())
+        .pipe(tap((entry) => (this.lastLoadedPagination = entry as any))),
     );
   }
 
@@ -127,7 +156,12 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
     }
     try {
       const res = await firstValueFrom(
-        this.userService.getAllUsers$({ skip: 0, take: 1, searchTerm: '', where: { id: this.selectedUserIds[0] } })
+        this.userService.getAllUsers$({
+          skip: 0,
+          take: 1,
+          searchTerm: '',
+          where: { id: this.selectedUserIds[0] },
+        }),
       );
       const usuario = res.data?.[0];
       if (usuario) {
@@ -146,29 +180,54 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   }
 
   rellenarDatosDesdeUsuario(usuario: Usuario) {
-    this.formManual.clienteNombre = ([usuario.nombre, usuario.apellidos].filter(Boolean).join(' ') || usuario.email) ?? '';
+    this.formManual.clienteNombre =
+      ([usuario.nombre, usuario.apellidos].filter(Boolean).join(' ') ||
+        usuario.email) ??
+      '';
     this.formManual.clienteEmail = usuario.email ?? '';
     this.formManual.clienteNif = usuario.dni ?? '';
     this.formManual.clienteDireccion = usuario.direccionCalle ?? '';
     this.formManual.clientePoblacion = usuario.poblacion ?? '';
+    this.formManual.clienteProvincia = (usuario as any).provincia ?? '';
     this.formManual.clienteCodigoPostal = usuario.codigoPostal ?? '';
     this.formManual.clientePais = usuario.paisRegion ?? 'ES';
     this.formManual.usuarioId = usuario.id;
   }
 
   async guardarFacturaManual() {
-    if (!this.formManual.clienteNombre?.trim() || !this.formManual.concepto?.trim() || this.formManual.baseImponible == null) {
-      this.toast.warning('Nombre del cliente, concepto e importe son obligatorios');
+    if (
+      !this.formManual.clienteNombre?.trim() ||
+      !this.formManual.concepto?.trim() ||
+      this.formManual.baseImponible == null
+    ) {
+      this.toast.warning(
+        'Nombre del cliente, concepto e importe son obligatorios',
+      );
+      return;
+    }
+    if (!this.formManual.clienteNif?.trim()) {
+      this.toast.warning('El NIF del cliente es obligatorio');
+      return;
+    }
+    if (!looksLikeSpanishNif(this.formManual.clienteNif)) {
+      this.toast.warning('El NIF no tiene un formato válido (DNI, NIE o CIF)');
+      return;
+    }
+    if (!this.formManual.clienteProvincia?.trim()) {
+      this.toast.warning('La provincia es obligatoria');
       return;
     }
     this.guardandoManual.set(true);
     try {
-      await firstValueFrom(this.facturacionService.crearManual$(this.formManual));
+      await firstValueFrom(
+        this.facturacionService.crearManual$(this.formManual),
+      );
       this.toast.success('Factura creada correctamente');
       this.mostrarDialogManual.set(false);
       this.refresh();
     } catch {
-      this.toast.error('Error al crear la factura');
+      // El toast de error ya lo gestiona ApiBaseService.handleError con el
+      // mensaje específico del backend (ej: "NIF español inválido").
     } finally {
       this.guardandoManual.set(false);
     }
@@ -189,7 +248,9 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
     this.guardandoRectificativa.set(true);
     try {
       await firstValueFrom(
-        this.facturacionService.crearRectificativa$(factura.id, { motivo: this.motivoRectificativa })
+        this.facturacionService.crearRectificativa$(factura.id, {
+          motivo: this.motivoRectificativa,
+        }),
       );
       this.toast.success('Factura rectificativa creada correctamente');
       this.mostrarDialogRectificativa.set(false);
@@ -204,12 +265,16 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   async descargarPdf(factura: Factura, event: Event) {
     event.stopPropagation();
     if (!factura.contasimpleId) {
-      this.toast.warning('Esta factura aún no tiene PDF disponible (puede estar en modo dry-run)');
+      this.toast.warning(
+        'Esta factura aún no tiene PDF disponible (puede estar en modo dry-run)',
+      );
       return;
     }
     this.descargandoPdf.set(factura.id);
     try {
-      const blob = await firstValueFrom(this.facturacionService.descargarPdf$(factura.id));
+      const blob = await firstValueFrom(
+        this.facturacionService.descargarPdf$(factura.id),
+      );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -228,14 +293,143 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
     this.abrirDialogRectificativa(factura);
   }
 
-  getEstadoChipClass(estado: FacturaEstado): string {
+  abrirDialogEliminar(factura: Factura, event: Event) {
+    event.stopPropagation();
+    this.facturaAEliminar.set(factura);
+    this.mostrarDialogEliminar.set(true);
+  }
+
+  async confirmarEliminar() {
+    const factura = this.facturaAEliminar();
+    if (!factura) return;
+    this.eliminandoFactura.set(true);
+    try {
+      const result = await firstValueFrom(
+        this.facturacionService.eliminar$(factura.id),
+      );
+      if (result.remoteStatus === 'not_found') {
+        this.toast.warning(
+          'La factura no existía en Contasimple; solo se eliminó localmente',
+        );
+      } else if (result.remoteStatus === 'skipped') {
+        this.toast.success('Factura eliminada localmente');
+      } else {
+        this.toast.success(
+          'Factura eliminada de Contasimple y de la plataforma',
+        );
+      }
+      this.mostrarDialogEliminar.set(false);
+      this.facturaAEliminar.set(null);
+      this.refresh();
+    } catch {
+      // handleError ya muestra el toast con el mensaje del backend (típicamente
+      // "No se pudo borrar en Contasimple: ..." o 403 de VerifactuGuard).
+    } finally {
+      this.eliminandoFactura.set(false);
+    }
+  }
+
+  async sincronizarConContasimple() {
+    this.sincronizando.set(true);
+    try {
+      const result = await firstValueFrom(
+        this.facturacionService.reconciliar$(),
+      );
+      if (result.lockSkipped) {
+        this.toast.info(
+          'Ya hay una sincronización en curso, espera al siguiente ciclo',
+        );
+      } else {
+        const partes = [
+          `${result.totalRevisadas} revisadas`,
+          `${result.anuladas} anuladas`,
+        ];
+        if (result.errores > 0) partes.push(`${result.errores} errores`);
+        const mensaje = `Sincronización ${result.estado}: ${partes.join(', ')}`;
+        if (result.estado === 'OK') {
+          this.toast.success(mensaje);
+        } else {
+          this.toast.warning(mensaje);
+        }
+      }
+      this.refresh();
+    } catch {
+      // handleError muestra el toast con el detalle del backend
+    } finally {
+      this.sincronizando.set(false);
+    }
+  }
+
+  abrirDialogCompletarFiscal(factura: Factura, event: Event) {
+    event.stopPropagation();
+    this.facturaParaCompletar.set(factura);
+    this.formCompletarFiscal = {
+      clienteNif: '',
+      clienteNombre: factura.clienteNombre ?? '',
+      clienteDireccion: factura.clienteDireccion ?? '',
+      clientePoblacion: factura.clientePoblacion ?? '',
+      clienteProvincia: factura.clienteProvincia ?? '',
+      clienteCodigoPostal: factura.clienteCodigoPostal ?? '',
+      clientePais: factura.clientePais ?? 'ES',
+    };
+    this.mostrarDialogCompletarFiscal.set(true);
+  }
+
+  async guardarCompletarFiscal() {
+    const factura = this.facturaParaCompletar();
+    if (!factura) return;
+    if (!this.formCompletarFiscal.clienteNif?.trim()) {
+      this.toast.warning('El NIF es obligatorio');
+      return;
+    }
+    if (!looksLikeSpanishNif(this.formCompletarFiscal.clienteNif)) {
+      this.toast.warning('El NIF no tiene un formato válido');
+      return;
+    }
+    this.guardandoCompletarFiscal.set(true);
+    try {
+      await firstValueFrom(
+        this.facturacionService.completarFiscal$(
+          factura.id,
+          this.formCompletarFiscal,
+        ),
+      );
+      this.toast.success('Factura completada y emitida en Contasimple');
+      this.mostrarDialogCompletarFiscal.set(false);
+      this.facturaParaCompletar.set(null);
+      this.refresh();
+    } catch {
+      // handleError gestiona el toast
+    } finally {
+      this.guardandoCompletarFiscal.set(false);
+    }
+  }
+
+  getEstadoChipClass(estado: FacturaEstado, factura?: Factura): string {
+    // "Anulada desde Contasimple" tiene color distinto (amarillo/naranja)
+    // para diferenciar del estado ANULADA manual (rojo).
+    if (estado === 'ANULADA' && factura?.origenAnulacion === 'CONTASIMPLE') {
+      return 'estado-anulada-externa-chip';
+    }
     const map: Record<FacturaEstado, string> = {
       EMITIDA: 'estado-emitida-chip',
       PENDIENTE: 'estado-pendiente-chip',
       ANULADA: 'estado-anulada-chip',
+      ELIMINADA_LOCAL: 'estado-anulada-chip',
       ERROR: 'estado-error-chip',
     };
     return map[estado] ?? 'estado-pendiente-chip';
+  }
+
+  getEstadoLabel(factura: Factura): string {
+    if (
+      factura.estado === 'ANULADA' &&
+      factura.origenAnulacion === 'CONTASIMPLE'
+    ) {
+      return 'Anulada desde Contasimple';
+    }
+    if (factura.estado === 'ELIMINADA_LOCAL') return 'Eliminada';
+    return factura.estado;
   }
 
   calcularTotal(base: number, iva: number): number {
@@ -249,12 +443,25 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       clienteNif: '',
       clienteDireccion: '',
       clientePoblacion: '',
+      clienteProvincia: '',
       clienteCodigoPostal: '',
       clientePais: 'ES',
       concepto: '',
       baseImponible: 0,
       tipoIva: 21,
       serie: '',
+    };
+  }
+
+  private emptyCompletarFiscalForm(): CompletarFiscalDto {
+    return {
+      clienteNif: '',
+      clienteNombre: '',
+      clienteDireccion: '',
+      clientePoblacion: '',
+      clienteProvincia: '',
+      clienteCodigoPostal: '',
+      clientePais: 'ES',
     };
   }
 }

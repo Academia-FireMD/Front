@@ -1,5 +1,12 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { ChangeDetectorRef, ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
@@ -16,7 +23,14 @@ import { FacturacionService } from '../../servicios/facturacion.service';
   styleUrl: './mis-facturas.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePipe, GenericListComponent, PrimengModule, SharedModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DatePipe,
+    GenericListComponent,
+    PrimengModule,
+    SharedModule,
+  ],
 })
 export class MisFacturasComponent extends GenericListComponent<Factura> {
   private facturacionService = inject(FacturacionService);
@@ -27,9 +41,9 @@ export class MisFacturasComponent extends GenericListComponent<Factura> {
   constructor() {
     super(inject(Router), inject(ActivatedRoute), inject(ChangeDetectorRef));
     this.fetchItems$ = computed(() =>
-      this.facturacionService.misFacturas$(this.pagination()).pipe(
-        tap((entry) => (this.lastLoadedPagination = entry as any))
-      )
+      this.facturacionService
+        .misFacturas$(this.pagination())
+        .pipe(tap((entry) => (this.lastLoadedPagination = entry as any))),
     );
   }
 
@@ -45,7 +59,9 @@ export class MisFacturasComponent extends GenericListComponent<Factura> {
     }
     this.descargandoPdf.set(factura.id);
     try {
-      const blob = await firstValueFrom(this.facturacionService.descargarMiPdf$(factura.id));
+      const blob = await firstValueFrom(
+        this.facturacionService.descargarMiPdf$(factura.id),
+      );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -64,6 +80,7 @@ export class MisFacturasComponent extends GenericListComponent<Factura> {
       EMITIDA: 'estado-emitida-chip',
       PENDIENTE: 'estado-pendiente-chip',
       ANULADA: 'estado-anulada-chip',
+      ELIMINADA_LOCAL: 'estado-anulada-chip',
       ERROR: 'estado-error-chip',
     };
     return map[estado] ?? 'estado-pendiente-chip';

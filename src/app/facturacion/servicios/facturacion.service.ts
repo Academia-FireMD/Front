@@ -4,12 +4,18 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
-import { PaginatedResult, PaginationFilter } from '../../shared/models/pagination.model';
 import {
+  PaginatedResult,
+  PaginationFilter,
+} from '../../shared/models/pagination.model';
+import {
+  CompletarFiscalDto,
   CrearFacturaManualDto,
   CrearRectificativaDto,
+  EliminarFacturaResult,
   Factura,
   FacturasResponse,
+  ReconciliacionResult,
 } from '../models/factura.model';
 
 @Injectable({ providedIn: 'root' })
@@ -19,7 +25,9 @@ export class FacturacionService extends ApiBaseService {
     this.controllerPrefix = '/admin/facturas';
   }
 
-  listar$(pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' }): Observable<PaginatedResult<Factura>> {
+  listar$(
+    pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' },
+  ): Observable<PaginatedResult<Factura>> {
     const pagina = Math.floor(pagination.skip / pagination.take) + 1;
     const where = pagination.where ?? {};
 
@@ -27,18 +35,32 @@ export class FacturacionService extends ApiBaseService {
       .set('pagina', String(pagina))
       .set('porPagina', String(pagination.take));
 
-    if (where['dateRange'] && Array.isArray(where['dateRange']) && where['dateRange'].length >= 2) {
+    if (
+      where['dateRange'] &&
+      Array.isArray(where['dateRange']) &&
+      where['dateRange'].length >= 2
+    ) {
       const [d0, d1] = where['dateRange'];
-      if (d0) params = params.set('desde', d0 instanceof Date ? d0.toISOString().split('T')[0] : String(d0));
-      if (d1) params = params.set('hasta', d1 instanceof Date ? d1.toISOString().split('T')[0] : String(d1));
+      if (d0)
+        params = params.set(
+          'desde',
+          d0 instanceof Date ? d0.toISOString().split('T')[0] : String(d0),
+        );
+      if (d1)
+        params = params.set(
+          'hasta',
+          d1 instanceof Date ? d1.toISOString().split('T')[0] : String(d1),
+        );
     } else {
       if (where['desde']) params = params.set('desde', where['desde']);
       if (where['hasta']) params = params.set('hasta', where['hasta']);
     }
     if (where['tipo']) params = params.set('tipo', where['tipo']);
     if (where['estado']) params = params.set('estado', where['estado']);
-    if (where['usuarioId']) params = params.set('usuarioId', String(where['usuarioId']));
-    if (pagination.searchTerm?.trim()) params = params.set('searchTerm', pagination.searchTerm.trim());
+    if (where['usuarioId'])
+      params = params.set('usuarioId', String(where['usuarioId']));
+    if (pagination.searchTerm?.trim())
+      params = params.set('searchTerm', pagination.searchTerm.trim());
 
     return this._http
       .get<FacturasResponse>(`${environment.apiUrl}${this.controllerPrefix}`, {
@@ -54,7 +76,7 @@ export class FacturacionService extends ApiBaseService {
             searchTerm: pagination.searchTerm ?? '',
             count: res.total,
           },
-        }))
+        })),
       );
   }
 
@@ -62,18 +84,23 @@ export class FacturacionService extends ApiBaseService {
     return this.post('/manual', dto) as Observable<Factura>;
   }
 
-  crearRectificativa$(id: number, dto: CrearRectificativaDto): Observable<Factura> {
+  crearRectificativa$(
+    id: number,
+    dto: CrearRectificativaDto,
+  ): Observable<Factura> {
     return this.post(`/${id}/rectificativa`, dto) as Observable<Factura>;
   }
 
   descargarPdf$(id: number): Observable<Blob> {
     return this._http.get(
       `${environment.apiUrl}${this.controllerPrefix}/${id}/pdf`,
-      { responseType: 'blob', withCredentials: true }
+      { responseType: 'blob', withCredentials: true },
     );
   }
 
-  misFacturas$(pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' }): Observable<PaginatedResult<Factura>> {
+  misFacturas$(
+    pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' },
+  ): Observable<PaginatedResult<Factura>> {
     const pagina = Math.floor(pagination.skip / pagination.take) + 1;
     const where = pagination.where ?? {};
 
@@ -85,13 +112,17 @@ export class FacturacionService extends ApiBaseService {
     if (where['hasta']) params = params.set('hasta', where['hasta']);
     if (where['tipo']) params = params.set('tipo', where['tipo']);
     if (where['estado']) params = params.set('estado', where['estado']);
-    if (pagination.searchTerm?.trim()) params = params.set('searchTerm', pagination.searchTerm.trim());
+    if (pagination.searchTerm?.trim())
+      params = params.set('searchTerm', pagination.searchTerm.trim());
 
     return this._http
-      .get<FacturasResponse>(`${environment.apiUrl}${this.controllerPrefix}/mis-facturas`, {
-        params,
-        withCredentials: true,
-      })
+      .get<FacturasResponse>(
+        `${environment.apiUrl}${this.controllerPrefix}/mis-facturas`,
+        {
+          params,
+          withCredentials: true,
+        },
+      )
       .pipe(
         map((res) => ({
           data: res.facturas,
@@ -101,14 +132,30 @@ export class FacturacionService extends ApiBaseService {
             searchTerm: pagination.searchTerm ?? '',
             count: res.total,
           },
-        }))
+        })),
       );
   }
 
   descargarMiPdf$(id: number): Observable<Blob> {
     return this._http.get(
       `${environment.apiUrl}${this.controllerPrefix}/mis-facturas/${id}/pdf`,
-      { responseType: 'blob', withCredentials: true }
+      { responseType: 'blob', withCredentials: true },
     );
+  }
+
+  eliminar$(id: number): Observable<EliminarFacturaResult> {
+    return this.delete(`/${id}`) as Observable<EliminarFacturaResult>;
+  }
+
+  reconciliar$(): Observable<ReconciliacionResult> {
+    return this.post('/reconciliar', {}) as Observable<ReconciliacionResult>;
+  }
+
+  listarPendientesRevisionFiscal$(): Observable<Factura[]> {
+    return this.get('/pendientes-revision-fiscal') as Observable<Factura[]>;
+  }
+
+  completarFiscal$(id: number, dto: CompletarFiscalDto): Observable<Factura> {
+    return this.post(`/${id}/completar-fiscal`, dto) as Observable<Factura>;
   }
 }

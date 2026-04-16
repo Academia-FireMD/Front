@@ -1,4 +1,9 @@
-import { APP_INITIALIZER, Injectable, LOCALE_ID, NgModule } from '@angular/core';
+import {
+  APP_INITIALIZER,
+  Injectable,
+  LOCALE_ID,
+  NgModule,
+} from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
@@ -42,6 +47,7 @@ import { CambioSuscripcionComponent } from './profile/cambio-suscripcion/cambio-
 import { DescuentoSuscripcionComponent } from './profile/descuento-suscripcion/descuento-suscripcion.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AuthInterceptor } from './services/auth.interceptor';
+import { ConfigService, configInitFactory } from './services/config.service';
 import { SpinnerInterceptor } from './services/spinner.interceptor';
 import { AiAssistantWidgetComponent } from './shared/components/ai-assistant-widget/ai-assistant-widget.component';
 import { AsyncButtonComponent } from './shared/components/async-button/async-button.component';
@@ -58,11 +64,45 @@ export function primengInitFactory(primeng: PrimeNGConfig) {
   return () => {
     primeng.ripple = true; // opcional
     primeng.setTranslation({
-      dayNames: ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'],
-      dayNamesShort: ['dom','lun','mar','mié','jue','vie','sáb'],
-      dayNamesMin: ['D','L','M','X','J','V','S'],
-      monthNames: ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],
-      monthNamesShort: ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'],
+      dayNames: [
+        'domingo',
+        'lunes',
+        'martes',
+        'miércoles',
+        'jueves',
+        'viernes',
+        'sábado',
+      ],
+      dayNamesShort: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'],
+      dayNamesMin: ['D', 'L', 'M', 'X', 'J', 'V', 'S'],
+      monthNames: [
+        'enero',
+        'febrero',
+        'marzo',
+        'abril',
+        'mayo',
+        'junio',
+        'julio',
+        'agosto',
+        'septiembre',
+        'octubre',
+        'noviembre',
+        'diciembre',
+      ],
+      monthNamesShort: [
+        'ene',
+        'feb',
+        'mar',
+        'abr',
+        'may',
+        'jun',
+        'jul',
+        'ago',
+        'sep',
+        'oct',
+        'nov',
+        'dic',
+      ],
       firstDayOfWeek: 1,
       dateFormat: 'dd/mm/yy', // dd/mm/yyyy en PrimeNG
       today: 'Hoy',
@@ -111,12 +151,17 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
     // Devuelve el rango con el número de la semana
     return `Semana ${weekNumber}: ${formattedStart} - ${formattedEnd} ${format(
       start,
-      'yyyy'
+      'yyyy',
     )}`;
   }
 }
 @NgModule({
-  declarations: [AppComponent, LayoutComponent, ProfileComponent, CambioOposicionComponent],
+  declarations: [
+    AppComponent,
+    LayoutComponent,
+    ProfileComponent,
+    CambioOposicionComponent,
+  ],
   imports: [
     BrowserModule,
     AppRoutingModule,
@@ -175,7 +220,13 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
     {
       provide: APP_INITIALIZER,
       useFactory: primengInitFactory,
-      deps: [PrimeNGConfig],   // <- IMPORTANTE
+      deps: [PrimeNGConfig], // <- IMPORTANTE
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: configInitFactory,
+      deps: [ConfigService],
       multi: true,
     },
     {
@@ -186,4 +237,4 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
   ],
   bootstrap: [AppComponent],
 })
-export class AppModule { }
+export class AppModule {}
