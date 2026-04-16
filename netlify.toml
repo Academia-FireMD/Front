@@ -1,0 +1,20 @@
+# Netlify build config. Overrides per-site settings en el dashboard.
+# Staging y producción usan el mismo repo pero ramas distintas y build distinto:
+#   - main    → https://app.tecnikafire.com     → configuración "production"
+#   - staging → https://app-staging.tecnikafire.com → configuración "staging" (apiUrl → api-staging)
+
+[build]
+  publish = "dist/front/browser"
+  command = "npm run build"
+
+[context.production]
+  command = "npm run build"
+
+[context.staging]
+  command = "npm run build:staging"
+
+[context.deploy-preview]
+  command = "npm run build"
+
+[context.branch-deploy]
+  command = "npm run build"
