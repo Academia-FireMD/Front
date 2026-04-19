@@ -260,7 +260,6 @@ export class DocumentationOverviewComponent
       this.refresh();
     } catch (error) {
       this.uploadingFile = false;
-      this.toast.error('Error al subir el archivo');
     }
 
     this.refresh();
@@ -306,9 +305,7 @@ export class DocumentationOverviewComponent
       this.mostrarEditarDocumento = false;
       this.documentoEditando = null;
       this.refresh();
-    } catch (error) {
-      this.toast.error('Error al actualizar el documento');
-    }
+    } catch (error) {}
   }
 
   confirmarEliminacion(document: Documento) {
@@ -328,9 +325,7 @@ export class DocumentationOverviewComponent
         this.toast.success('Documento eliminado correctamente');
         this.refresh();
       },
-      error: (error) => {
-        this.toast.error('Error al eliminar el documento');
-      },
+      error: (error) => {},
     });
   }
 
@@ -389,7 +384,6 @@ export class DocumentationOverviewComponent
       },
       error: (err) => {
         console.error('Error al cargar árbol de documentos:', err);
-        this.toast.error('Error al cargar documentos');
         this.loadingTree = false;
       },
     });
@@ -417,7 +411,6 @@ export class DocumentationOverviewComponent
         }
       } catch (err) {
         console.error('Error al validar usuario:', err);
-        this.toast.error('Error al validar tu perfil');
         return;
       }
     }
@@ -453,7 +446,6 @@ export class DocumentationOverviewComponent
       documento.isNew = false;
     } catch (error) {
       console.error('Error al descargar:', error);
-      this.toast.error('Error al descargar el documento');
     }
   }
 

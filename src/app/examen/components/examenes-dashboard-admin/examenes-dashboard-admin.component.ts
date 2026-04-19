@@ -1,9 +1,9 @@
 import {
-    Component,
-    computed,
-    ElementRef,
-    inject,
-    ViewChild,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  ViewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
@@ -56,11 +56,11 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
           testPreguntas: {
             some: {
               pregunta: {
-                temaId: { in: value }
-              }
-            }
-          }
-        }
+                temaId: { in: value },
+              },
+            },
+          },
+        },
       }),
     },
     // {
@@ -118,7 +118,7 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
         this.expectedRole = expectedRole;
         this.type = type;
         return this.commMap(pagination)[this.expectedRole];
-      })
+      }),
     );
   }
 
@@ -132,7 +132,10 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
 
   public onItemClick(item: Examen) {
     // Si es un examen colaborativo y el usuario es alumno, mostrar popup de progreso
-    if (item.tipoAcceso === TipoAcceso.COLABORATIVO && this.expectedRole === 'ALUMNO') {
+    if (
+      item.tipoAcceso === TipoAcceso.COLABORATIVO &&
+      this.expectedRole === 'ALUMNO'
+    ) {
       this.mostrarProgresoColaborativo(item);
       return;
     }
@@ -142,11 +145,15 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
     this.navigateToDetailview(syntheticEvent, item.id, item.test?.id);
   }
 
-  public navigateToDetailview = (event: Event, id: number | 'new', idTest?: number) => {
+  public navigateToDetailview = (
+    event: Event,
+    id: number | 'new',
+    idTest?: number,
+  ) => {
     if (this.expectedRole == 'ADMIN') {
       this.router.navigate(['/app/examen/' + id]);
     } else {
-      const mensaje = `Estás a punto de comenzar un examen. El tiempo empezará a descontarse automáticamente y serás dirigido a él. ¿Deseas continuar?`
+      const mensaje = `Estás a punto de comenzar un examen. El tiempo empezará a descontarse automáticamente y serás dirigido a él. ¿Deseas continuar?`;
       this.confirmationService.confirm({
         target: event.target as EventTarget,
         message: mensaje,
@@ -158,15 +165,22 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
         rejectIcon: 'none',
         rejectButtonStyleClass: 'p-button-text',
         accept: async () => {
-          const test = await firstValueFrom(this.examenesService.startExamen$(id as number));
+          const test = await firstValueFrom(
+            this.examenesService.startExamen$(id as number),
+          );
           if (test) {
-            this.router.navigate(['/app/test/alumno/realizar-test/' + (test.id)],{queryParams:{
-              idExamen:id,
-              modoSimulacro:true
-            }});
+            this.router.navigate(
+              ['/app/test/alumno/realizar-test/' + test.id],
+              {
+                queryParams: {
+                  idExamen: id,
+                  modoSimulacro: true,
+                },
+              },
+            );
           }
         },
-        reject: () => { },
+        reject: () => {},
       });
     }
   };
@@ -206,7 +220,7 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
         this.toast.info('Examen eliminado exitosamente');
         this.refresh();
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 
@@ -226,7 +240,7 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
         this.toast.info('Examen publicado exitosamente');
         this.refresh();
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 
@@ -246,7 +260,7 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
         this.toast.info('Examen archivado exitosamente');
         this.refresh();
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 
@@ -259,11 +273,10 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
 
     try {
       const progreso = await firstValueFrom(
-        this.examenesService.getProgresoExamenColaborativo$(examen.id)
+        this.examenesService.getProgresoExamenColaborativo$(examen.id),
       );
       this.progresoColaborativo = progreso;
     } catch (error) {
-      this.toast.error('Error al cargar el progreso del examen colaborativo');
       console.error('Error:', error);
     } finally {
       this.loadingProgreso = false;
@@ -271,13 +284,18 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
   }
 
   public async realizarExamenColaborativo() {
-    if (!this.examenColaborativoSeleccionado || !this.progresoColaborativo?.progreso?.puedeAcceder) {
+    if (
+      !this.examenColaborativoSeleccionado ||
+      !this.progresoColaborativo?.progreso?.puedeAcceder
+    ) {
       return;
     }
 
     try {
       const test = await firstValueFrom(
-        this.examenesService.startExamen$(this.examenColaborativoSeleccionado.id)
+        this.examenesService.startExamen$(
+          this.examenColaborativoSeleccionado.id,
+        ),
       );
 
       if (test) {
@@ -285,12 +303,11 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
         this.router.navigate(['/app/test/alumno/realizar-test/' + test.id], {
           queryParams: {
             idExamen: this.examenColaborativoSeleccionado.id,
-            modoSimulacro: true
-          }
+            modoSimulacro: true,
+          },
         });
       }
     } catch (error) {
-      this.toast.error('Error al iniciar el examen colaborativo');
       console.error('Error:', error);
     }
   }
@@ -314,15 +331,18 @@ export class ExamenesDashboardAdminComponent extends SharedGridComponent<Examen>
       rejectButtonStyleClass: 'p-button-text',
       accept: async () => {
         try {
-          const result = await firstValueFrom(this.examenesService.eliminarIntentosExamen$(id));
-          this.toast.success(result.message || 'Intentos eliminados exitosamente');
+          const result = await firstValueFrom(
+            this.examenesService.eliminarIntentosExamen$(id),
+          );
+          this.toast.success(
+            result.message || 'Intentos eliminados exitosamente',
+          );
           this.refresh();
         } catch (error) {
-          this.toast.error('Error al eliminar los intentos');
           console.error('Error:', error);
         }
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 }

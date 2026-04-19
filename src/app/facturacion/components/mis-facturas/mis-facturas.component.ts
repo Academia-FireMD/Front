@@ -69,7 +69,6 @@ export class MisFacturasComponent extends GenericListComponent<Factura> {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      this.toast.error('Error al descargar el PDF');
     } finally {
       this.descargandoPdf.set(null);
     }

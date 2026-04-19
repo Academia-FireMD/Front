@@ -1,9 +1,9 @@
 import {
-    Component,
-    computed,
-    ElementRef,
-    inject,
-    ViewChild,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  ViewChild,
 } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
@@ -76,12 +76,12 @@ export class BloquesOverviewComponent extends SharedGridComponent<PlanificacionB
         this.uploadingFile = true;
         try {
           const response = await firstValueFrom(
-            this.planificacionesService.importarExcel(formData)
+            this.planificacionesService.importarExcel(formData),
           );
           this.toast.success(
             `Archivo importado exitosamente con ${
               response.count ?? 0
-            } insertadas y ${response.ignoradas ?? 0} ignoradas.`
+            } insertadas y ${response.ignoradas ?? 0} ignoradas.`,
           );
           this.uploadingFile = false;
         } catch (error) {
@@ -120,8 +120,6 @@ export class BloquesOverviewComponent extends SharedGridComponent<PlanificacionB
       await firstValueFrom(this.planificacionesService.clonarBloque$(id));
       this.toast.success('Bloque clonado exitosamente');
       this.refresh();
-    } catch (error) {
-      this.toast.error('Error al clonar el bloque');
-    }
+    } catch (error) {}
   }
 }

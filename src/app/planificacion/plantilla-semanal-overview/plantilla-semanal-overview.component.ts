@@ -1,12 +1,12 @@
 import {
-    Component,
-    computed,
-    ElementRef,
-    EventEmitter,
-    inject,
-    Input,
-    Output,
-    ViewChild,
+  Component,
+  computed,
+  ElementRef,
+  EventEmitter,
+  inject,
+  Input,
+  Output,
+  ViewChild,
 } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
@@ -85,7 +85,7 @@ export class PlantillaSemanalOverviewComponent extends SharedGridComponent<Plant
       rejectButtonStyleClass: 'p-button-text',
       accept: async () => {
         await firstValueFrom(
-          this.planificacionesService.deletePlantillaSemanal$(id)
+          this.planificacionesService.deletePlantillaSemanal$(id),
         );
         this.toast.info('Planificación semanal eliminada exitosamente');
         this.refresh();
@@ -96,11 +96,11 @@ export class PlantillaSemanalOverviewComponent extends SharedGridComponent<Plant
 
   public async clonarPlantillaSemanal(id: number) {
     try {
-      await firstValueFrom(this.planificacionesService.clonarPlantillaSemanal$(id));
+      await firstValueFrom(
+        this.planificacionesService.clonarPlantillaSemanal$(id),
+      );
       this.toast.success('Plantilla semanal clonada exitosamente');
       this.refresh();
-    } catch (error) {
-      this.toast.error('Error al clonar la plantilla semanal');
-    }
+    } catch (error) {}
   }
 }

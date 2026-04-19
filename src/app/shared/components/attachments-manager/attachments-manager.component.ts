@@ -45,13 +45,12 @@ export class AttachmentsManagerComponent implements OnInit {
       const adjuntos = await firstValueFrom(
         this.attachmentsService.getAdjuntosByEntidad$(
           this.entidadTipo(),
-          this.entidadId()
-        )
+          this.entidadId(),
+        ),
       );
       this.adjuntos.set(adjuntos);
     } catch (error) {
       console.error('Error al cargar adjuntos:', error);
-      this.toast.error('Error al cargar los adjuntos');
     }
   }
 
@@ -90,8 +89,8 @@ export class AttachmentsManagerComponent implements OnInit {
           this.entidadTipo(),
           this.entidadId(),
           file,
-          this.uploadForm.value.descripcion ?? undefined
-        )
+          this.uploadForm.value.descripcion ?? undefined,
+        ),
       );
 
       this.toast.success('Adjunto subido exitosamente');
@@ -101,7 +100,6 @@ export class AttachmentsManagerComponent implements OnInit {
       await this.loadAdjuntos();
     } catch (error) {
       console.error('Error al subir adjunto:', error);
-      this.toast.error('Error al subir el adjunto');
     } finally {
       this.uploadingFile.set(false);
     }
@@ -112,7 +110,7 @@ export class AttachmentsManagerComponent implements OnInit {
       this.toast.info('Descargando adjunto...');
 
       const blob = await firstValueFrom(
-        this.attachmentsService.descargarAdjunto$(adjunto.id)
+        this.attachmentsService.descargarAdjunto$(adjunto.id),
       );
 
       const blobUrl = window.URL.createObjectURL(blob);
@@ -127,7 +125,6 @@ export class AttachmentsManagerComponent implements OnInit {
       this.toast.success('Adjunto descargado correctamente');
     } catch (error) {
       console.error('Error al descargar adjunto:', error);
-      this.toast.error('Error al descargar el adjunto');
     }
   }
 
@@ -149,7 +146,6 @@ export class AttachmentsManagerComponent implements OnInit {
       await this.loadAdjuntos();
     } catch (error) {
       console.error('Error al eliminar adjunto:', error);
-      this.toast.error('Error al eliminar el adjunto');
     }
   }
 

@@ -214,7 +214,6 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
       this.selectedFile = null;
       this.importForm.reset({ temaId: null, dificultad: null });
     } catch (error) {
-      this.toast.error('Error al importar');
     } finally {
       this.uploadingFile = false;
       this.refresh();
@@ -290,7 +289,6 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
         formato: 'excel',
       });
     } catch (error) {
-      this.toast.error('Error al exportar');
     } finally {
       this.exportando = false;
     }

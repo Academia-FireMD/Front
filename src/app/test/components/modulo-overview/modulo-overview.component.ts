@@ -98,13 +98,12 @@ export class ModuloOverviewComponent extends SharedGridComponent<Modulo> {
                       response.temasEliminados === 1 ? '' : 's'
                     } asociado${response.temasEliminados === 1 ? '' : 's'}.`
                   : ''
-              }`
+              }`,
             );
             this.refresh();
           },
           error: (err) => {
             console.error(err);
-            this.toast.error('Error al eliminar el módulo');
           },
         });
       },

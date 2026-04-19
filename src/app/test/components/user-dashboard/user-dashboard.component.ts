@@ -503,7 +503,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       this.labelsDialogVisible = true;
     } catch (e) {
       console.error(e);
-      this.toast.error('Error al cargar las etiquetas');
     }
   }
 
@@ -680,7 +679,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       this.userPlanifications.set(userId, planifications);
     } catch (error) {
       console.error('Error loading user planifications:', error);
-      this.toast.error('Error al cargar planificaciones del usuario');
     } finally {
       this.loadingPlanifications.delete(userId);
     }
@@ -706,7 +704,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       this.loadUserPlanifications(userId);
     } catch (error) {
       console.error('Error desvinculating planification:', error);
-      this.toast.error('Error al desvincular planificación');
     }
   }
 
@@ -843,7 +840,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         this.router.navigate(['/app/profile']);
       },
       error: (error) => {
-        this.toast.error('Error al acceder como el usuario');
         console.error('Impersonation error:', error);
       },
     });

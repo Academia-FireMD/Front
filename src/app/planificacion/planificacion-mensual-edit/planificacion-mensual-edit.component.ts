@@ -307,7 +307,6 @@ export class PlanificacionMensualEditComponent {
       }
     } catch (error) {
       console.error('Error al cargar la plantilla:', error);
-      this.toast.error('Error al cargar la plantilla seleccionada');
       this.pickedEvents = [];
       this.pickedEventsViewDate = new Date();
     }

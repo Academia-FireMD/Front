@@ -179,7 +179,6 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
       this.selectedFile = null;
       this.importForm.reset({ temaId: null, dificultad: null });
     } catch (error) {
-      this.toast.error('Error al importar');
     } finally {
       this.uploadingFile = false;
       this.refresh();
@@ -312,7 +311,6 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
         formato: 'excel',
       });
     } catch (error) {
-      this.toast.error('Error al exportar');
     } finally {
       this.exportando = false;
     }

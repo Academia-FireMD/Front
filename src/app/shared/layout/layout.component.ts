@@ -498,7 +498,6 @@ export class LayoutComponent {
         this.router.navigate(['/app/test/user-dashboard']);
       },
       error: (error) => {
-        this.toast.error('Error al salir de la impersonación');
         console.error('Stop impersonation error:', error);
       },
     });

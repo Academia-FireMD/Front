@@ -40,7 +40,6 @@ export class TemaDetailviewComponent {
       this.modulos = await firstValueFrom(this.moduloService.getModulos$());
     } catch (error) {
       console.error('Error al cargar módulos:', error);
-      this.toast.error('Error al cargar los módulos');
     }
   }
 
@@ -71,8 +70,8 @@ export class TemaDetailviewComponent {
             this.lastLoadedTema = entry;
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();
-          })
-        )
+          }),
+        ),
       );
     }
   }
@@ -83,7 +82,7 @@ export class TemaDetailviewComponent {
       ...this.formGroup.getRawValue(),
     };
     const result = await firstValueFrom(
-      this.temaService.updateTema$(merged as any as Tema)
+      this.temaService.updateTema$(merged as any as Tema),
     );
     return result;
   }

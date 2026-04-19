@@ -26,12 +26,12 @@ export class ApiBaseService {
     return this._router;
   }
 
-  constructor(protected _http: HttpClient) { }
+  constructor(protected _http: HttpClient) {}
 
   public get(
     endpoint: string,
     ignoreError?: boolean,
-    withCredentials = true
+    withCredentials = true,
   ): Observable<any> {
     return this._http
       .get(environment.apiUrl + this.controllerPrefix + endpoint, {
@@ -43,7 +43,7 @@ export class ApiBaseService {
   public delete(
     endpoint: string,
     ignoreError?: boolean,
-    withCredentials = true
+    withCredentials = true,
   ): Observable<any> {
     return this._http
       .delete(environment.apiUrl + this.controllerPrefix + endpoint, {
@@ -55,15 +55,18 @@ export class ApiBaseService {
   public put(
     endpoint: string,
     body: any,
-    ignoreError?: boolean
+    ignoreError?: boolean,
   ): Observable<any> {
-    return this._http.put(environment.apiUrl + this.controllerPrefix + endpoint, body, { withCredentials: true })
+    return this._http
+      .put(environment.apiUrl + this.controllerPrefix + endpoint, body, {
+        withCredentials: true,
+      })
       .pipe(catchError((err) => this.handleError(err, ignoreError)));
   }
   public post(
     endpoint: string,
     body: any,
-    ignoreError?: boolean
+    ignoreError?: boolean,
   ): Observable<any> {
     return this._http
       .post(environment.apiUrl + this.controllerPrefix + endpoint, body, {
@@ -74,7 +77,7 @@ export class ApiBaseService {
 
   protected handleError(
     response: HttpErrorResponse,
-    ignoreError: boolean = false
+    ignoreError: boolean = false,
   ): Observable<Object> {
     let message: any;
 
@@ -88,8 +91,12 @@ export class ApiBaseService {
       }
     }
 
-    if (response.status !== 500 && !!message) {
-      if (!ignoreError) this.toast.error(message);
+    if (!ignoreError) {
+      const toastMessage =
+        response.status === 500
+          ? 'Ocurrió un error interno. Vuelve a intentarlo en unos segundos.'
+          : message || 'Ocurrió un error procesando la petición.';
+      this.toast.error(toastMessage);
     }
     if (response.status == 401 || response.status == 403) {
       this.router.navigate(['/auth']);

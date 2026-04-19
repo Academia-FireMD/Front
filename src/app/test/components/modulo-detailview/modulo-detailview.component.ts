@@ -1,11 +1,21 @@
 import { Location } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
-import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom } from 'rxjs';
 import { Oposicion } from '../../../shared/models/subscription.model';
-import { Modulo, ModuloDto, ModuloService } from '../../../shared/services/modulo.service';
+import {
+  Modulo,
+  ModuloDto,
+  ModuloService,
+} from '../../../shared/services/modulo.service';
 
 @Component({
   selector: 'app-modulo-detailview',
@@ -30,7 +40,7 @@ export class ModuloDetailviewComponent implements OnInit {
       identificadorModulo: [''],
       descripcion: [''],
       esPublico: [true],
-      relevancia: this.fb.array([] as Array<Oposicion>)
+      relevancia: this.fb.array([] as Array<Oposicion>),
     });
   }
 
@@ -62,7 +72,6 @@ export class ModuloDetailviewComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error al cargar el módulo:', error);
-      this.toast.error('Error al cargar el módulo');
     } finally {
       this.loading = false;
     }
@@ -89,12 +98,13 @@ export class ModuloDetailviewComponent implements OnInit {
       await firstValueFrom(this.service.updateModulo$(moduloDto));
 
       this.toast.success(
-        this.isNew ? 'Módulo creado correctamente' : 'Módulo actualizado correctamente'
+        this.isNew
+          ? 'Módulo creado correctamente'
+          : 'Módulo actualizado correctamente',
       );
       this.router.navigate(['/app/test/modulos']);
     } catch (error) {
       console.error('Error al guardar el módulo:', error);
-      this.toast.error('Error al guardar el módulo');
     } finally {
       this.loading = false;
     }

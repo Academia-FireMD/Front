@@ -454,7 +454,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
         );
       } catch (error) {
         console.error('Error al cargar el examen', error);
-        this.toast.error('Error al cargar el examen');
       }
     }
   }
@@ -754,7 +753,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
         },
         error: (error) => {
           console.error('Error al descargar el examen', error);
-          this.toast.error('Error al descargar el examen');
         },
       });
   }
@@ -781,7 +779,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
         this.preguntaEncontrada = null;
       }
     } catch (error) {
-      this.toast.error('Error al buscar la pregunta');
       this.preguntaEncontrada = null;
     }
   }
@@ -806,9 +803,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.semiAutomaticDialogVisible = false;
       this.loadExamen();
       this.agregarComoReserva = false;
-    } catch (error) {
-      this.toast.error('Error al añadir la pregunta');
-    }
+    } catch (error) {}
   }
 
   public async actualizarEstadoReserva(testPregunta: any, esReserva: boolean) {
@@ -832,7 +827,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
         `Pregunta ${esReserva ? 'marcada' : 'desmarcada'} como de reserva`,
       );
     } catch (error) {
-      this.toast.error('Error al actualizar el estado de la pregunta');
       console.error('Error al actualizar estado de reserva:', error);
     }
   }
@@ -866,9 +860,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.preguntaAImpugnar = null;
       this.motivoImpugnacion = '';
       this.loadExamen();
-    } catch (error) {
-      this.toast.error('Error al impugnar/desimpugnar la pregunta');
-    }
+    } catch (error) {}
   }
 
   // Results and analytics methods
@@ -883,7 +875,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.examenResultados.set(response);
     } catch (error) {
       console.error('Error loading exam results:', error);
-      this.toast.error('Error al cargar los resultados del examen');
     } finally {
       this.loadingResults.set(false);
     }
@@ -901,7 +892,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.preguntasColaborativas.set(preguntas);
     } catch (error) {
       console.error('Error loading collaborative questions:', error);
-      this.toast.error('Error al cargar las preguntas colaborativas');
     } finally {
       this.loadingPreguntasColaborativas.set(false);
     }
@@ -996,7 +986,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
           // Recargar resultados
           await this.loadExamenResults();
         } catch (error) {
-          this.toast.error('Error al eliminar el intento');
           console.error('Error:', error);
         }
       },
@@ -1273,9 +1262,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
           );
           this.toast.success('Pregunta eliminada correctamente');
           this.loadPreguntasColaborativas();
-        } catch (error) {
-          this.toast.error('Error al eliminar la pregunta');
-        }
+        } catch (error) {}
       },
     });
   }
@@ -1292,7 +1279,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.productosWooCommerce.set(productos);
     } catch (error) {
       console.error('Error cargando productos WooCommerce:', error);
-      this.toast.error('Error al cargar productos de WooCommerce');
     } finally {
       this.loadingProductos.set(false);
     }

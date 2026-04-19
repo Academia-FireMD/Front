@@ -167,9 +167,7 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       if (usuario) {
         this.rellenarDatosDesdeUsuario(usuario);
       }
-    } catch {
-      this.toast.error('Error al cargar datos del usuario');
-    }
+    } catch {}
     this.pasoDialogManual.set('datos');
   }
 
@@ -256,7 +254,6 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       this.mostrarDialogRectificativa.set(false);
       this.refresh();
     } catch {
-      this.toast.error('Error al crear la rectificativa');
     } finally {
       this.guardandoRectificativa.set(false);
     }
@@ -282,7 +279,6 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      this.toast.error('Error al descargar el PDF');
     } finally {
       this.descargandoPdf.set(null);
     }

@@ -1,7 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
-import { FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormControl,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
@@ -49,7 +55,7 @@ import {
     DialogModule,
     ProgressSpinnerModule,
     AsyncButtonComponent,
-  ]
+  ],
 })
 export class RegistroComponent {
   fb = inject(FormBuilder);
@@ -61,7 +67,10 @@ export class RegistroComponent {
   users = inject(UserService);
 
   @Input() mode: 'default' | 'injected' = 'default';
-  @Output() registroCompletado = new EventEmitter<{ email: string, password: string }>();
+  @Output() registroCompletado = new EventEmitter<{
+    email: string;
+    password: string;
+  }>();
 
   tutores$ = this.users.getAllTutores$();
 
@@ -70,10 +79,7 @@ export class RegistroComponent {
       nombre: ['', Validators.required],
       apellidos: ['', Validators.required],
       email: ['', [Validators.email, Validators.required]],
-      contrasenya: ['', [
-        Validators.required,
-        passwordStrengthValidator()
-      ]],
+      contrasenya: ['', [Validators.required, passwordStrengthValidator()]],
       repetirContrasenya: ['', [Validators.required]],
       relevancia: [null as any, Validators.required],
       tutor: [],
@@ -82,7 +88,7 @@ export class RegistroComponent {
         [Validators.required, Validators.requiredTrue],
       ],
     },
-    { validators: passwordMatchValidator }
+    { validators: passwordMatchValidator },
   );
 
   get contrasenya() {
@@ -120,7 +126,7 @@ export class RegistroComponent {
           formValue.nombre ?? '',
           formValue.apellidos ?? '',
           formValue.tutor as any,
-        )
+        ),
       );
 
       this.registroCompletado.emit({ email, password });
@@ -134,7 +140,6 @@ export class RegistroComponent {
       }
     } catch (error) {
       console.error(error);
-      this.toast.error('Error al crear la cuenta');
     }
   }
 

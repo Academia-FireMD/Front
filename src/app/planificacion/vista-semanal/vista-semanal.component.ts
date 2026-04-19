@@ -470,7 +470,6 @@ export class VistaSemanalComponent {
         .subscribe({
           next: () => {},
           error: (err) => {
-            this.toast.error('Error al guardar la posición personalizada');
             console.error('Error al guardar posición:', err);
           },
         });
@@ -547,7 +546,6 @@ export class VistaSemanalComponent {
             this.toast.success('Comentario guardado correctamente');
           },
           error: (err) => {
-            this.toast.error('Error al guardar el comentario');
             console.error('Error al guardar comentario:', err);
             this.isCommentDialogVisible = false;
           },
@@ -693,7 +691,6 @@ export class VistaSemanalComponent {
           this.toast.success('Evento personal eliminado correctamente');
         },
         error: (err) => {
-          this.toast.error('Error al eliminar el evento personal');
           console.error('Error:', err);
         },
       });
@@ -739,7 +736,6 @@ export class VistaSemanalComponent {
           },
           error: (err) => {
             console.error('Error al actualizar el evento:', err);
-            this.toast.error('Error al actualizar el estado del evento');
           },
         });
     } else {

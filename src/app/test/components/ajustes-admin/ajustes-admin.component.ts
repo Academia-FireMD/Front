@@ -47,43 +47,43 @@ export class AjustesAdminComponent {
       this.factorsService.updateFactor$({
         name: FactorName.PREGUNTAS_MALAS_PIVOT,
         value: this.factors.value.preguntasFallidasPivote ?? 0,
-      })
+      }),
     );
     await firstValueFrom(
       this.factorsService.updateFactor$({
         name: FactorName.FLASHCARDS_MAL_PRIVOT,
         value: this.factors.value.flashcardsMalPivote ?? 0,
-      })
+      }),
     );
     await firstValueFrom(
       this.factorsService.updateFactor$({
         name: FactorName.FLASHCARDS_REPASAR_PIVOT,
         value: this.factors.value.flashcardsRepasarPivote ?? 0,
-      })
+      }),
     );
     await firstValueFrom(
       this.factorsService.updateFactor$({
         name: FactorName.FLASHCARDS_BALANCE_NO_RESPONDIDAS,
         value: this.factors.value.flashcardsBalanceNoRespondidas ?? 0,
-      })
+      }),
     );
     await firstValueFrom(
       this.factorsService.updateFactor$({
         name: FactorName.FLASHCARDS_BALANCE_MAL,
         value: this.factors.value.flashcardsBalanceMal ?? 0,
-      })
+      }),
     );
     await firstValueFrom(
       this.factorsService.updateFactor$({
         name: FactorName.FLASHCARDS_BALANCE_REVISAR,
         value: this.factors.value.flashcardsBalanceRevisar ?? 0,
-      })
+      }),
     );
     await firstValueFrom(
       this.factorsService.updateFactor$({
         name: FactorName.FLASHCARDS_BALANCE_BIEN,
         value: this.factors.value.flashcardsBalanceBien ?? 0,
-      })
+      }),
     );
     this.toast.success('Ajustes actualizados exitosamente!');
   }
@@ -91,19 +91,20 @@ export class AjustesAdminComponent {
   public async ejecutarAsignacionTotal() {
     try {
       const res = await firstValueFrom(
-        this.planificacionService.autoAssignPlanificacionMensualAll()
+        this.planificacionService.autoAssignPlanificacionMensualAll(),
       );
       this.toast.success(
-        `Asignados automaticamente a ${res.length} alumnos con exito!`
+        `Asignados automaticamente a ${res.length} alumnos con exito!`,
       );
     } catch (error) {}
   }
 
   public copiarEnlace() {
-    navigator.clipboard.writeText(this.registroUrl).then(() => {
-      this.toast.success('Enlace copiado al portapapeles');
-    }).catch(() => {
-      this.toast.error('Error al copiar el enlace');
-    });
+    navigator.clipboard
+      .writeText(this.registroUrl)
+      .then(() => {
+        this.toast.success('Enlace copiado al portapapeles');
+      })
+      .catch(() => {});
   }
 }
