@@ -1,5 +1,4 @@
 import {
-  EstadoFlashcard,
   FlashcardData,
   FlashcardTest,
   FlashcardTestItem,
@@ -8,7 +7,9 @@ import { Dificultad } from '../../shared/models/pregunta.model';
 import { TestStatus } from '../../shared/models/test.model';
 
 /** Creates a minimal mock FlashcardData card. */
-export function createMockFlashcardData(overrides: Partial<FlashcardData> = {}): FlashcardData {
+export function createMockFlashcardData(
+  overrides: Partial<FlashcardData> = {},
+): FlashcardData {
   return {
     id: 201,
     identificador: 'FC-001',
@@ -26,7 +27,9 @@ export function createMockFlashcardData(overrides: Partial<FlashcardData> = {}):
 }
 
 /** Creates a mock FlashcardTestItem (a card within a test session). */
-export function createMockFlashcardTestItem(overrides: Partial<FlashcardTestItem> = {}): FlashcardTestItem {
+export function createMockFlashcardTestItem(
+  overrides: Partial<FlashcardTestItem> = {},
+): FlashcardTestItem {
   const flashcard = overrides.flashcard ?? createMockFlashcardData();
   return {
     id: 101,
@@ -46,19 +49,21 @@ export function createMockFlashcardTestItem(overrides: Partial<FlashcardTestItem
  */
 export function createMockFlashcardTest(
   numCards = 3,
-  overrides: Partial<FlashcardTest> = {}
+  overrides: Partial<FlashcardTest> = {},
 ): FlashcardTest {
-  const flashcards: FlashcardTestItem[] = Array.from({ length: numCards }, (_, i) =>
-    createMockFlashcardTestItem({
-      id: 100 + i + 1,
-      flashcardId: 200 + i + 1,
-      flashcard: createMockFlashcardData({
-        id: 200 + i + 1,
-        identificador: `FC-00${i + 1}`,
-        descripcion: `Pregunta de flashcard ${i + 1}`,
-        solucion: `Solución ${i + 1}`,
+  const flashcards: FlashcardTestItem[] = Array.from(
+    { length: numCards },
+    (_, i) =>
+      createMockFlashcardTestItem({
+        id: 100 + i + 1,
+        flashcardId: 200 + i + 1,
+        flashcard: createMockFlashcardData({
+          id: 200 + i + 1,
+          identificador: `FC-00${i + 1}`,
+          descripcion: `Pregunta de flashcard ${i + 1}`,
+          solucion: `Solución ${i + 1}`,
+        }),
       }),
-    })
   );
 
   return {
@@ -71,32 +76,4 @@ export function createMockFlashcardTest(
     esDeRepaso: false,
     ...overrides,
   };
-}
-
-/** Creates a FlashcardTest where the first N cards are already answered. */
-export function createMockFlashcardTestPartiallyAnswered(
-  totalCards = 3,
-  answeredCount = 1
-): FlashcardTest {
-  return createMockFlashcardTest(totalCards, {
-    flashcards: Array.from({ length: totalCards }, (_, i) =>
-      createMockFlashcardTestItem({
-        id: 100 + i + 1,
-        flashcardId: 200 + i + 1,
-        flashcard: createMockFlashcardData({ id: 200 + i + 1 }),
-        respuesta:
-          i < answeredCount
-            ? [
-                {
-                  id: 1000 + i,
-                  flashcardId: 200 + i + 1,
-                  testItemId: 100 + i + 1,
-                  estado: EstadoFlashcard.BIEN,
-                  createdAt: new Date('2024-01-15T10:00:00Z'),
-                },
-              ]
-            : [],
-      })
-    ),
-  });
 }

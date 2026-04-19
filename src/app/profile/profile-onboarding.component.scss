@@ -11,7 +11,11 @@
   }
 
   .card-header {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-700));
+    background: linear-gradient(
+      135deg,
+      var(--primary-color),
+      var(--primary-700)
+    );
     color: white;
     padding: 1.25rem 1.5rem;
     position: relative;
@@ -63,15 +67,27 @@
           }
 
           &.medium {
-            background: linear-gradient(90deg, var(--orange-400), var(--orange-500));
+            background: linear-gradient(
+              90deg,
+              var(--orange-400),
+              var(--orange-500)
+            );
           }
 
           &.high {
-            background: linear-gradient(90deg, var(--green-400), var(--green-500));
+            background: linear-gradient(
+              90deg,
+              var(--green-400),
+              var(--green-500)
+            );
           }
 
           &.complete {
-            background: linear-gradient(90deg, var(--green-500), var(--green-600));
+            background: linear-gradient(
+              90deg,
+              var(--green-500),
+              var(--green-600)
+            );
           }
         }
       }
@@ -111,7 +127,6 @@
   }
 }
 
-// Estilos para la sección de onboarding (legacy)
 .onboarding-section {
   .onboarding-card {
     background-color: var(--surface-hover);
@@ -154,15 +169,27 @@
             transition: width 0.4s ease;
 
             &.low {
-              background: linear-gradient(90deg, var(--red-400), var(--red-500));
+              background: linear-gradient(
+                90deg,
+                var(--red-400),
+                var(--red-500)
+              );
             }
 
             &.medium {
-              background: linear-gradient(90deg, var(--orange-400), var(--orange-500));
+              background: linear-gradient(
+                90deg,
+                var(--orange-400),
+                var(--orange-500)
+              );
             }
 
             &.high {
-              background: linear-gradient(90deg, var(--green-400), var(--green-500));
+              background: linear-gradient(
+                90deg,
+                var(--green-400),
+                var(--green-500)
+              );
             }
           }
         }

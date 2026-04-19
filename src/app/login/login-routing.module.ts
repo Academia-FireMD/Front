@@ -14,19 +14,6 @@ const routes: Routes = [
     path: 'registro',
     component: RegistroComponent,
   },
-  // @deprecated - Ya no se usa, redirige a login
-  // El auto-registro desde WordPress crea usuarios directamente
-  {
-    path: 'activate-product',
-    redirectTo: 'login',
-    pathMatch: 'full'
-  },
-  // @deprecated - Ya no se usa, redirige a login
-  {
-    path: 'login-with-activation',
-    redirectTo: 'login',
-    pathMatch: 'full'
-  },
   {
     path: 'recuperar-contrasenya',
     component: RecuperarContrasenyaComponent,

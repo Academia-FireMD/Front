@@ -1,19 +1,19 @@
 import { Location } from '@angular/common';
 import {
-    ChangeDetectorRef,
-    Component,
-    computed,
-    inject,
-    Input,
-    signal,
-    ViewChild,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  inject,
+  Input,
+  signal,
+  ViewChild,
 } from '@angular/core';
 import {
-    AbstractControl,
-    FormArray,
-    FormBuilder,
-    FormControl,
-    Validators,
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormControl,
+  Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -34,17 +34,22 @@ import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-te
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
-    calcular100,
-    calcular100y50,
-    calcular100y75y50,
-    createConfidenceAnalysisForResult,
-    duracionOptions,
-    estadoExamenOptions,
-    getAllDifficultades,
-    tipoAccesoOptions,
-    universalEditorConfig,
+  calcular100,
+  calcular100y50,
+  calcular100y75y50,
+  createConfidenceAnalysisForResult,
+  duracionOptions,
+  estadoExamenOptions,
+  getAllDifficultades,
+  tipoAccesoOptions,
+  universalEditorConfig,
 } from '../../../utils/utils';
-import { CondicionColaborativa, EstadoExamen, Examen, TipoAcceso } from '../../models/examen.model';
+import {
+  CondicionColaborativa,
+  EstadoExamen,
+  Examen,
+  TipoAcceso,
+} from '../../models/examen.model';
 import { ExamenesService } from '../../servicios/examen.service';
 
 @Component({
@@ -94,17 +99,17 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public preguntasColaborativas = signal<any[]>([]);
   public loadingPreguntasColaborativas = signal<boolean>(false);
   public resultadosData = computed(
-    () => this.examenResultados()?.resultados || []
+    () => this.examenResultados()?.resultados || [],
   );
   public totalParticipantes = computed(
-    () => this.examenResultados()?.totalParticipantes || 0
+    () => this.examenResultados()?.totalParticipantes || 0,
   );
   public notaPromedio = computed(() => {
     const resultados = this.resultadosData();
     if (resultados.length === 0) return 0;
     const suma = resultados.reduce(
       (acc: number, r: any) => acc + r.estadisticas.nota,
-      0
+      0,
     );
     return parseFloat((suma / resultados.length).toFixed(2));
   });
@@ -125,13 +130,13 @@ export class ExamenesDashboardAdminDetailviewComponent {
         (
           correctas.reduce((a: number, b: number) => a + b, 0) /
           correctas.length
-        ).toFixed(1)
+        ).toFixed(1),
       ),
       incorrectasPromedio: parseFloat(
         (
           incorrectas.reduce((a: number, b: number) => a + b, 0) /
           incorrectas.length
-        ).toFixed(1)
+        ).toFixed(1),
       ),
       aprobados: resultados.filter((r: any) => r.estadisticas.nota >= 5).length,
       suspensos: resultados.filter((r: any) => r.estadisticas.nota < 5).length,
@@ -148,7 +153,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
           !this.filtroIdentificador() ||
           tp.pregunta.identificador
             .toLowerCase()
-            .includes(this.filtroIdentificador().toLowerCase())
+            .includes(this.filtroIdentificador().toLowerCase()),
       );
   });
 
@@ -161,7 +166,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
           !this.filtroIdentificador() ||
           tp.pregunta.identificador
             .toLowerCase()
-            .includes(this.filtroIdentificador().toLowerCase())
+            .includes(this.filtroIdentificador().toLowerCase()),
       );
   });
 
@@ -235,8 +240,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
               tap((res) => {
                 this.toast.success(res.message);
                 this.loadExamen();
-              })
-            )
+              }),
+            ),
         );
       },
     });
@@ -247,11 +252,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public lastLoadedExamen = signal<Examen>(null as any);
 
   public lastLoadedTestPreguntas = computed(
-    () => this.lastLoadedExamen()?.test?.testPreguntas ?? []
+    () => this.lastLoadedExamen()?.test?.testPreguntas ?? [],
   );
 
   public lastLoadedPreguntas = computed(
-    () => this.lastLoadedTestPreguntas().map((tp) => tp.pregunta) ?? []
+    () => this.lastLoadedTestPreguntas().map((tp) => tp.pregunta) ?? [],
   );
 
   @ViewChild('realizarTest') realizarTest!: RealizarTestComponent;
@@ -277,7 +282,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     return this.lastLoadedTestPreguntas().filter((testPregunta) =>
       testPregunta.pregunta.identificador
         .toLowerCase()
-        .includes(this.filtroIdentificador().toLowerCase())
+        .includes(this.filtroIdentificador().toLowerCase()),
     );
   });
 
@@ -306,7 +311,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.currentMetodoCalificacion = metodo;
     });
 
-
     if (this.mode == 'edit') {
       this.loadExamen();
       firstValueFrom(this.getRole());
@@ -316,7 +320,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
     // Mostrar/ocultar campo de código según el tipo de acceso
     this.formGroup.get('tipoAcceso')?.valueChanges.subscribe((value) => {
       const fechaPreparatoriaControl = this.formGroup.get('fechaPreparatoria');
-      const woocommerceProductIdControl = this.formGroup.get('woocommerceProductId');
+      const woocommerceProductIdControl = this.formGroup.get(
+        'woocommerceProductId',
+      );
 
       if (value === TipoAcceso.SIMULACRO) {
         // Hacer obligatorio el producto WooCommerce para simulacros
@@ -336,28 +342,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       fechaPreparatoriaControl?.updateValueAndValidity();
       woocommerceProductIdControl?.updateValueAndValidity();
     });
-
-    // Si es un simulacro existente, generar el QR
-    // Comentado temporalmente - funcionalidad de QR
-    /*
-    if (this.getId() !== 'new') {
-      this.formGroup.get('tipoAcceso')?.valueChanges.subscribe((value) => {
-        if (value === this.TipoAcceso.SIMULACRO) {
-          this.updateSimulacroUrl();
-        } else {
-          this.simulacroUrl = '';
-        }
-      });
-
-      // Generar QR si ya es un simulacro
-      if (
-        this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO
-      ) {
-        this.updateSimulacroUrl();
-      }
-    }
-    */
-
   }
 
   public getId() {
@@ -374,7 +358,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
-      })
+      }),
     );
   }
 
@@ -386,7 +370,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
       duracion: examen.duracion || 60,
       estado: examen.estado,
       tipoAcceso: examen.tipoAcceso,
-      woocommerceProductId: examen.woocommerceProductId ? examen.woocommerceProductId + '' : null,
+      woocommerceProductId: examen.woocommerceProductId
+        ? examen.woocommerceProductId + ''
+        : null,
       woocommerceSku: examen.woocommerceSku || null,
       woocommerceProductName: examen.woocommerceProductName || null,
       fechaActivacion: (examen.fechaActivacion
@@ -395,18 +381,27 @@ export class ExamenesDashboardAdminDetailviewComponent {
       fechaSolucion: (examen.fechaSolucion
         ? new Date(examen.fechaSolucion)
         : null) as any,
-      fechaPreparatoria: examen.fechaPreparatoria && examen.fechaFinPreparatoria
-        ? [new Date(examen.fechaPreparatoria), new Date(examen.fechaFinPreparatoria)]
-        : null,
+      fechaPreparatoria:
+        examen.fechaPreparatoria && examen.fechaFinPreparatoria
+          ? [
+              new Date(examen.fechaPreparatoria),
+              new Date(examen.fechaFinPreparatoria),
+            ]
+          : null,
       temasColaborativos: examen.temasColaborativos || [],
       metodoCalificacion: examen.metodoCalificacion || null,
     });
 
     // Cargar condiciones colaborativas
     this.condicionesColaborativas.clear();
-    if (examen.condicionesColaborativas && examen.condicionesColaborativas.length) {
+    if (
+      examen.condicionesColaborativas &&
+      examen.condicionesColaborativas.length
+    ) {
       examen.condicionesColaborativas.forEach((condicion) => {
-        this.condicionesColaborativas.push(this.crearCondicionFormGroup(condicion));
+        this.condicionesColaborativas.push(
+          this.crearCondicionFormGroup(condicion),
+        );
       });
     }
 
@@ -414,12 +409,14 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.relevancia.clear();
     if (examen.relevancia && examen.relevancia.length) {
       examen.relevancia.forEach((rel) =>
-        this.relevancia.push(new FormControl(rel))
+        this.relevancia.push(new FormControl(rel)),
       );
     }
 
     // Aplicar validaciones según el tipo de acceso cargado
-    const woocommerceProductIdControl = this.formGroup.get('woocommerceProductId');
+    const woocommerceProductIdControl = this.formGroup.get(
+      'woocommerceProductId',
+    );
     if (examen.tipoAcceso === TipoAcceso.SIMULACRO) {
       woocommerceProductIdControl?.setValidators([Validators.required]);
       woocommerceProductIdControl?.updateValueAndValidity();
@@ -453,19 +450,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
           this.examenesService.getExamenById$(itemId).pipe(
             tap((entry) => {
               this.setLoadedExamen(entry);
-            })
-          )
+            }),
+          ),
         );
-
-        // Comentado temporalmente - funcionalidad de QR
-        /*
-        // Actualizar la URL del simulacro si es necesario
-        if (
-          this.formGroup.get('tipoAcceso')?.value === this.TipoAcceso.SIMULACRO
-        ) {
-          this.updateSimulacroUrl();
-        }
-        */
       } catch (error) {
         console.error('Error al cargar el examen', error);
         this.toast.error('Error al cargar el examen');
@@ -484,35 +471,39 @@ export class ExamenesDashboardAdminDetailviewComponent {
       await firstValueFrom(
         this.examenesService.updatePreguntasOrder$(
           this.getId() as number,
-          this.preguntasNormales().map((p) => p.pregunta.id)
-        )
+          this.preguntasNormales().map((p) => p.pregunta.id),
+        ),
       );
     }
 
     const examenData = {
       ...formValues,
-      woocommerceProductId: formValues.woocommerceProductId ? formValues.woocommerceProductId + '' : null,
+      woocommerceProductId: formValues.woocommerceProductId
+        ? formValues.woocommerceProductId + ''
+        : null,
       fechaActivacion: formValues.fechaActivacion
         ? new Date(formValues.fechaActivacion).toISOString()
         : null,
       fechaSolucion: formValues.fechaSolucion
         ? new Date(formValues.fechaSolucion).toISOString()
         : null,
-      fechaPreparatoria: formValues.fechaPreparatoria && formValues.fechaPreparatoria[0]
-        ? new Date(formValues.fechaPreparatoria[0]).toISOString()
-        : null,
-      fechaFinPreparatoria: formValues.fechaPreparatoria && formValues.fechaPreparatoria[1]
-        ? new Date(formValues.fechaPreparatoria[1]).toISOString()
-        : null,
+      fechaPreparatoria:
+        formValues.fechaPreparatoria && formValues.fechaPreparatoria[0]
+          ? new Date(formValues.fechaPreparatoria[0]).toISOString()
+          : null,
+      fechaFinPreparatoria:
+        formValues.fechaPreparatoria && formValues.fechaPreparatoria[1]
+          ? new Date(formValues.fechaPreparatoria[1]).toISOString()
+          : null,
     };
 
     if (this.getId() === 'new') {
       return await firstValueFrom(
-        this.examenesService.createExamen$(examenData)
+        this.examenesService.createExamen$(examenData),
       );
     } else {
       return await firstValueFrom(
-        this.examenesService.updateExamen$(this.getId() as number, examenData)
+        this.examenesService.updateExamen$(this.getId() as number, examenData),
       );
     }
   }
@@ -623,7 +614,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
     { label: '100 preguntas', code: 100 },
   ];
 
-  public getAllDifficultades = getAllDifficultades(false, true, this.expectedRole);
+  public getAllDifficultades = getAllDifficultades(
+    false,
+    true,
+    this.expectedRole,
+  );
   public automaticPreguntas = [] as Pregunta[];
 
   // Métodos para el stepper
@@ -651,7 +646,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     firstValueFrom(this.preguntasService.getAllPreguntasByFilter$(config)).then(
       (preguntas) => {
         this.automaticPreguntas = preguntas;
-      }
+      },
     );
   }
 
@@ -683,11 +678,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
           tap(() => {
             this.toast.success(
               'Pregunta eliminada del examen',
-              'Pregunta eliminada'
+              'Pregunta eliminada',
             );
             this.loadExamen();
-          })
-        )
+          }),
+        ),
     );
   }
 
@@ -697,8 +692,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
         this.examenesService.addPreguntasToExamen$(
           this.getId() as number,
           this.selectedPreguntasToAdd.map((pregunta) => pregunta.id),
-          this.agregarComoReserva
-        )
+          this.agregarComoReserva,
+        ),
       );
 
       // Actualizar también los temas si es necesario
@@ -708,9 +703,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
       });
 
       this.toast.success(
-        `Se han añadido ${this.selectedPreguntasToAdd.length} preguntas ${this.agregarComoReserva ? 'de reserva' : ''
+        `Se han añadido ${this.selectedPreguntasToAdd.length} preguntas ${
+          this.agregarComoReserva ? 'de reserva' : ''
         } al examen`,
-        'Preguntas añadidas'
+        'Preguntas añadidas',
       );
       this.loadExamen();
       this.cancelarSeleccionPreguntas();
@@ -734,7 +730,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       .downloadExamenWithFilename$(
         this.getId() as number,
         this.lastLoadedExamen().titulo,
-        conSoluciones
+        conSoluciones,
       )
       .subscribe({
         next: ({ blob, filename }) => {
@@ -755,8 +751,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
           document.body.removeChild(a);
 
           this.toast.success(
-            `Documento ${conSoluciones ? 'con soluciones' : ''
-            } descargado correctamente`
+            `Documento ${
+              conSoluciones ? 'con soluciones' : ''
+            } descargado correctamente`,
           );
         },
         error: (error) => {
@@ -775,15 +772,15 @@ export class ExamenesDashboardAdminDetailviewComponent {
     try {
       const pregunta = await firstValueFrom(
         this.preguntasService.getPreguntaByIdentificador(
-          this.identificadorBusqueda
-        )
+          this.identificadorBusqueda,
+        ),
       );
 
       if (pregunta) {
         this.preguntaEncontrada = pregunta;
       } else {
         this.toast.warning(
-          'No se encontró ninguna pregunta con ese identificador'
+          'No se encontró ninguna pregunta con ese identificador',
         );
         this.preguntaEncontrada = null;
       }
@@ -801,13 +798,14 @@ export class ExamenesDashboardAdminDetailviewComponent {
         this.examenesService.addPreguntasToExamen$(
           this.getId() as number,
           [this.preguntaEncontrada.id],
-          this.agregarComoReserva
-        )
+          this.agregarComoReserva,
+        ),
       );
 
       this.toast.success(
-        `Pregunta ${this.agregarComoReserva ? 'de reserva' : ''
-        } añadida correctamente`
+        `Pregunta ${
+          this.agregarComoReserva ? 'de reserva' : ''
+        } añadida correctamente`,
       );
       this.semiAutomaticDialogVisible = false;
       this.loadExamen();
@@ -829,34 +827,20 @@ export class ExamenesDashboardAdminDetailviewComponent {
         this.examenesService.updatePreguntaReservaStatus$(
           this.getId() as number,
           testPregunta.pregunta.id,
-          esReserva
-        )
+          esReserva,
+        ),
       );
 
       this.loadExamen();
 
       this.toast.success(
-        `Pregunta ${esReserva ? 'marcada' : 'desmarcada'} como de reserva`
+        `Pregunta ${esReserva ? 'marcada' : 'desmarcada'} como de reserva`,
       );
     } catch (error) {
       this.toast.error('Error al actualizar el estado de la pregunta');
       console.error('Error al actualizar estado de reserva:', error);
     }
   }
-
-  // Propiedades para el QR (comentado temporalmente)
-  /*
-  public simulacroUrl: string = '';
-
-  // Añadir este método para actualizar la URL
-  private updateSimulacroUrl(): void {
-    const examenId = this.lastLoadedExamen()?.id;
-    if (examenId) {
-      const baseUrl = window.location.origin;
-      this.simulacroUrl = `${baseUrl}/simulacros/realizar-simulacro/${examenId}`;
-    }
-  }
-  */
 
   // Propiedades para la impugnación
   public impugnacionDialogVisible = false;
@@ -880,8 +864,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
           this.getId() as number,
           this.preguntaAImpugnar.pregunta.id,
           !this.preguntaAImpugnar.impugnada,
-          this.motivoImpugnacion
-        )
+          this.motivoImpugnacion,
+        ),
       );
 
       this.toast.success('Pregunta impugnada/desimpugnada correctamente');
@@ -901,7 +885,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.loadingResults.set(true);
     try {
       const response = await firstValueFrom(
-        this.examenesService.getSimulacroResultados$(this.getId() as number)
+        this.examenesService.getSimulacroResultados$(this.getId() as number),
       );
       this.examenResultados.set(response);
     } catch (error) {
@@ -919,7 +903,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.loadingPreguntasColaborativas.set(true);
     try {
       const preguntas = await firstValueFrom(
-        this.examenesService.getPreguntasColaborativas$(this.getId() as number)
+        this.examenesService.getPreguntasColaborativas$(this.getId() as number),
       );
       this.preguntasColaborativas.set(preguntas);
     } catch (error) {
@@ -939,7 +923,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
 
     // Load collaborative questions when switching to collaborative questions tab
-    if (event.index === 2 && this.esExamenColaborativo && !this.preguntasColaborativas().length) {
+    if (
+      event.index === 2 &&
+      this.esExamenColaborativo &&
+      !this.preguntasColaborativas().length
+    ) {
       this.loadPreguntasColaborativas();
     }
   }
@@ -960,29 +948,34 @@ export class ExamenesDashboardAdminDetailviewComponent {
       'Correctas',
       'Incorrectas',
       'No Contestadas',
-      'Fecha Realización'
+      'Fecha Realización',
     ];
 
     const csvContent = [
       headers.join(','),
-      ...resultados.map((resultado: any) => [
-        resultado.posicion,
-        `"${resultado.usuario.nombre}"`,
-        `"${resultado.usuario.apellidos}"`,
-        `"${resultado.usuario.email}"`,
-        resultado.estadisticas.nota,
-        resultado.estadisticas.correctas,
-        resultado.estadisticas.incorrectas,
-        resultado.estadisticas.noContestadas || 0,
-        `"${new Date(resultado.fechaRealizacion).toLocaleString()}"`
-      ].join(','))
+      ...resultados.map((resultado: any) =>
+        [
+          resultado.posicion,
+          `"${resultado.usuario.nombre}"`,
+          `"${resultado.usuario.apellidos}"`,
+          `"${resultado.usuario.email}"`,
+          resultado.estadisticas.nota,
+          resultado.estadisticas.correctas,
+          resultado.estadisticas.incorrectas,
+          resultado.estadisticas.noContestadas || 0,
+          `"${new Date(resultado.fechaRealizacion).toLocaleString()}"`,
+        ].join(','),
+      ),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `resultados-examen-${this.lastLoadedExamen().titulo}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute(
+      'download',
+      `resultados-examen-${this.lastLoadedExamen().titulo}-${new Date().toISOString().split('T')[0]}.csv`,
+    );
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -1002,19 +995,20 @@ export class ExamenesDashboardAdminDetailviewComponent {
       accept: async () => {
         try {
           const response = await firstValueFrom(
-            this.examenesService.eliminarIntentoIndividual$(resultado.testId)
+            this.examenesService.eliminarIntentoIndividual$(resultado.testId),
           );
-          this.toast.success(response.message || 'Intento eliminado exitosamente');
+          this.toast.success(
+            response.message || 'Intento eliminado exitosamente',
+          );
           // Recargar resultados
           await this.loadExamenResults();
         } catch (error) {
           this.toast.error('Error al eliminar el intento');
           console.error('Error:', error);
         }
-      }
+      },
     });
   }
-
 
   // Métodos para el desplegable de análisis de confianza
   public expandedRowKeys: { [key: string]: boolean } = {};
@@ -1058,22 +1052,31 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.getCorrectas.bind(this),
       this.getIncorrectas.bind(this),
       this.getNoContestadas.bind(this),
-      this.getAccuracyPercentage.bind(this)
+      this.getAccuracyPercentage.bind(this),
     );
   }
 
   // Helpers combinados
   private getCombinedCorrects(stats: any, tipos: string[]): number {
     if (!stats?.seguridad) return 0;
-    return tipos.reduce((total, tipo) => total + (stats.seguridad[tipo]?.correctas || 0), 0);
+    return tipos.reduce(
+      (total, tipo) => total + (stats.seguridad[tipo]?.correctas || 0),
+      0,
+    );
   }
   private getCombinedIncorrects(stats: any, tipos: string[]): number {
     if (!stats?.seguridad) return 0;
-    return tipos.reduce((total, tipo) => total + (stats.seguridad[tipo]?.incorrectas || 0), 0);
+    return tipos.reduce(
+      (total, tipo) => total + (stats.seguridad[tipo]?.incorrectas || 0),
+      0,
+    );
   }
   private getCombinedNoAnswered(stats: any, tipos: string[]): number {
     if (!stats?.seguridad) return 0;
-    return tipos.reduce((total, tipo) => total + (stats.seguridad[tipo]?.noRespondidas || 0), 0);
+    return tipos.reduce(
+      (total, tipo) => total + (stats.seguridad[tipo]?.noRespondidas || 0),
+      0,
+    );
   }
   private getCombinedTotal(stats: any, tipos: string[]): number {
     return (
@@ -1089,7 +1092,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
     return Math.round((correctas / total) * 100);
   }
 
-  public getCombinedConfidenceAnalysisFromSecurity(seguridad: any, totalPreguntas: number): ConfidenceAnalysis[] {
+  public getCombinedConfidenceAnalysisFromSecurity(
+    seguridad: any,
+    totalPreguntas: number,
+  ): ConfidenceAnalysis[] {
     if (!seguridad) return [];
 
     const stats100 = {
@@ -1098,7 +1104,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
     } as any;
     const stats75 = {
       correctas: this.getCorrectas({ seguridad }, 'SETENTA_Y_CINCO_POR_CIENTO'),
-      incorrectas: this.getIncorrectas({ seguridad }, 'SETENTA_Y_CINCO_POR_CIENTO'),
+      incorrectas: this.getIncorrectas(
+        { seguridad },
+        'SETENTA_Y_CINCO_POR_CIENTO',
+      ),
     } as any;
     const stats50 = {
       correctas: this.getCorrectas({ seguridad }, 'CINCUENTA_POR_CIENTO'),
@@ -1111,21 +1120,40 @@ export class ExamenesDashboardAdminDetailviewComponent {
         title: 'Solo 100% Seguro',
         icon: '⭐',
         tipos: ['CIEN_POR_CIENTO'],
-        score: calcular100(stats100, totalPreguntas, this.currentMetodoCalificacion),
+        score: calcular100(
+          stats100,
+          totalPreguntas,
+          this.currentMetodoCalificacion,
+        ),
       },
       {
         id: 'combined-100-50',
         title: '100% + 50% Seguro',
         icon: '🎯',
         tipos: ['CIEN_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
-        score: calcular100y50(stats100, stats50, totalPreguntas, this.currentMetodoCalificacion),
+        score: calcular100y50(
+          stats100,
+          stats50,
+          totalPreguntas,
+          this.currentMetodoCalificacion,
+        ),
       },
       {
         id: 'combined-100-75-50',
         title: '100% + 75% + 50% Seguro',
         icon: '📈',
-        tipos: ['CIEN_POR_CIENTO', 'SETENTA_Y_CINCO_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
-        score: calcular100y75y50(stats100, stats75, stats50, totalPreguntas, this.currentMetodoCalificacion),
+        tipos: [
+          'CIEN_POR_CIENTO',
+          'SETENTA_Y_CINCO_POR_CIENTO',
+          'CINCUENTA_POR_CIENTO',
+        ],
+        score: calcular100y75y50(
+          stats100,
+          stats75,
+          stats50,
+          totalPreguntas,
+          this.currentMetodoCalificacion,
+        ),
       },
     ];
 
@@ -1144,7 +1172,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   private getTotalPreguntasPorSeguridad(
     stats: any,
-    tipoSeguridad: string
+    tipoSeguridad: string,
   ): number {
     if (!stats?.seguridad?.[tipoSeguridad]) return 0;
     const seguridad = stats.seguridad[tipoSeguridad];
@@ -1177,8 +1205,14 @@ export class ExamenesDashboardAdminDetailviewComponent {
   // Métodos para gestión de condiciones colaborativas
   public crearCondicionFormGroup(condicion?: CondicionColaborativa) {
     return this.fb.group({
-      numeroPreguntas: [condicion?.numeroPreguntas || 1, [Validators.required, Validators.min(1)]],
-      temasRequeridos: [condicion?.temasRequeridos || [], [Validators.required, Validators.minLength(1)]],
+      numeroPreguntas: [
+        condicion?.numeroPreguntas || 1,
+        [Validators.required, Validators.min(1)],
+      ],
+      temasRequeridos: [
+        condicion?.temasRequeridos || [],
+        [Validators.required, Validators.minLength(1)],
+      ],
       orden: [condicion?.orden || 0],
     });
   }
@@ -1204,14 +1238,18 @@ export class ExamenesDashboardAdminDetailviewComponent {
   // Métodos auxiliares para preguntas colaborativas
   public getUniqueStudentsCount(): number {
     const uniqueStudents = new Set(
-      this.preguntasColaborativas().map(p => p.createdBy?.id).filter(id => id)
+      this.preguntasColaborativas()
+        .map((p) => p.createdBy?.id)
+        .filter((id) => id),
     );
     return uniqueStudents.size;
   }
 
   public getUniqueTopicsCount(): number {
     const uniqueTopics = new Set(
-      this.preguntasColaborativas().map(p => p.tema?.id).filter(id => id)
+      this.preguntasColaborativas()
+        .map((p) => p.tema?.id)
+        .filter((id) => id),
     );
     return uniqueTopics.size;
   }
@@ -1224,8 +1262,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public abrirPreguntaEnNuevaPestana(preguntaId: number) {
     const url = this.router.serializeUrl(
       this.router.createUrlTree(['/app/test/preguntas', preguntaId], {
-        queryParams: { examenId: this.getId(), goBack: true }
-      })
+        queryParams: { examenId: this.getId(), goBack: true },
+      }),
     );
     window.open(url, '_blank');
   }
@@ -1239,13 +1277,15 @@ export class ExamenesDashboardAdminDetailviewComponent {
       rejectButtonStyleClass: 'p-button-outlined',
       accept: async () => {
         try {
-          await firstValueFrom(this.preguntasService.deletePregunta$(pregunta.id));
+          await firstValueFrom(
+            this.preguntasService.deletePregunta$(pregunta.id),
+          );
           this.toast.success('Pregunta eliminada correctamente');
           this.loadPreguntasColaborativas();
         } catch (error) {
           this.toast.error('Error al eliminar la pregunta');
         }
-      }
+      },
     });
   }
 
@@ -1256,7 +1296,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
     try {
       this.loadingProductos.set(true);
       const productos = await firstValueFrom(
-        this.examenesService.getWooCommerceSimulacros$()
+        this.examenesService.getWooCommerceSimulacros$(),
       );
       this.productosWooCommerce.set(productos);
     } catch (error) {
@@ -1275,18 +1315,17 @@ export class ExamenesDashboardAdminDetailviewComponent {
     if (!productId) {
       this.formGroup.patchValue({
         woocommerceSku: null,
-        woocommerceProductName: null
+        woocommerceProductName: null,
       });
       return;
     }
 
-    const product = this.productosWooCommerce().find(p => p.id === productId);
+    const product = this.productosWooCommerce().find((p) => p.id === productId);
     if (product) {
       this.formGroup.patchValue({
         woocommerceSku: product.sku,
-        woocommerceProductName: product.name
+        woocommerceProductName: product.name,
       });
     }
   }
-
 }
