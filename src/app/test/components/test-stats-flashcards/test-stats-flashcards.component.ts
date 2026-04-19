@@ -71,7 +71,10 @@ export class TestStatsFlashcardsComponent {
     return Math.round((this.getAprendidas(stat) / total) * 100);
   }
 
-  public getPercentage(stat: any, type: 'aprendidas' | 'repasar' | 'dificultad'): number {
+  public getPercentage(
+    stat: any,
+    type: 'aprendidas' | 'repasar' | 'dificultad',
+  ): number {
     const total = this.getTotalFlashcards(stat);
     if (!total) return 0;
 
@@ -91,27 +94,26 @@ export class TestStatsFlashcardsComponent {
     return Math.round((value / total) * 100);
   }
 
-  // Método para los componentes reutilizables
   getKpiStatsForFlashcards(stat: any): KpiStat[] {
     return [
       {
         value: this.getAprendidas(stat),
         label: 'Aprendidas',
         type: 'correctas',
-        icon: 'pi-check'
+        icon: 'pi-check',
       },
       {
         value: this.getRepasar(stat),
         label: 'Para Repasar',
         type: 'repasar',
-        icon: 'pi-refresh'
+        icon: 'pi-refresh',
       },
       {
         value: this.getDificultad(stat),
         label: 'Con Dificultad',
         type: 'incorrectas',
-        icon: 'pi-times'
-      }
+        icon: 'pi-times',
+      },
     ];
   }
 
@@ -128,35 +130,34 @@ export class TestStatsFlashcardsComponent {
           radius: ['60%', '80%'],
           avoidLabelOverlap: false,
           label: {
-            show: false
+            show: false,
           },
           emphasis: {
-            scale: false
+            scale: false,
           },
           labelLine: {
-            show: false
+            show: false,
           },
           animation: false,
           data: [
             {
               value: aprendidas,
               name: 'Aprendidas',
-              itemStyle: { color: '#4caf50' }
+              itemStyle: { color: '#4caf50' },
             },
             {
               value: repasar,
               name: 'Para Repasar',
-              itemStyle: { color: '#ff9800' }
+              itemStyle: { color: '#ff9800' },
             },
             {
               value: dificultad,
               name: 'Con Dificultad',
-              itemStyle: { color: '#f44336' }
-            }
-          ]
-        }
-      ]
+              itemStyle: { color: '#f44336' },
+            },
+          ],
+        },
+      ],
     };
   }
-
 }

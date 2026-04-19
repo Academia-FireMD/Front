@@ -24,12 +24,12 @@ export interface ConfidenceAnalysis {
 })
 export class ConfidenceAnalysisCardsComponent implements OnInit, OnDestroy {
   @Input() analyses: ConfidenceAnalysis[] = [];
-  @Input() cardCol: string = "md:col-3";
+  @Input() cardCol: string = 'md:col-3';
   // Cache de IDs para evitar regeneración en cada detección de cambios
   private chartIdCache = new Map<string, string>();
   private componentId: string = '';
 
-  constructor(private elementRef: ElementRef) { }
+  constructor(private elementRef: ElementRef) {}
 
   ngOnInit(): void {
     // Generar ID único para este componente
@@ -38,14 +38,13 @@ export class ConfidenceAnalysisCardsComponent implements OnInit, OnDestroy {
     this.componentId = `conf-comp-${timestamp}-${random}`;
   }
 
-  // Método para generar IDs únicos para cada gráfico (solo una vez)
   getChartId(analysisId: string): string {
     if (!this.chartIdCache.has(analysisId)) {
       const timestamp = Date.now();
       const random = Math.random().toString(36).substr(2, 9);
       this.chartIdCache.set(
         analysisId,
-        `${this.componentId}-chart-${analysisId}-${timestamp}-${random}`
+        `${this.componentId}-chart-${analysisId}-${timestamp}-${random}`,
       );
     }
     return this.chartIdCache.get(analysisId)!;

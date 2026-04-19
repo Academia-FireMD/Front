@@ -1,10 +1,25 @@
 import { Component, OnInit } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { UserService } from '../../services/user.service';
 import { Group } from '../../shared/models/group.model';
 import { Label } from '../../shared/models/label.model';
-import { AudienceType, CreateAudienceRuleDto, Release, ReleaseItemType, RuleEffect } from '../../shared/models/release.model';
-import { Oposicion, SuscripcionTipo } from '../../shared/models/subscription.model';
+import {
+  AudienceType,
+  CreateAudienceRuleDto,
+  Release,
+  ReleaseItemType,
+  RuleEffect,
+} from '../../shared/models/release.model';
+import {
+  Oposicion,
+  SuscripcionTipo,
+} from '../../shared/models/subscription.model';
 import { GroupsService } from '../../shared/services/groups.service';
 import { LabelsService } from '../../shared/services/labels.service';
 import { ReleaseService } from '../../shared/services/release.service';
@@ -12,7 +27,7 @@ import { ReleaseService } from '../../shared/services/release.service';
 @Component({
   selector: 'app-release-management',
   templateUrl: './release-management.component.html',
-  styleUrls: ['./release-management.component.scss']
+  styleUrls: ['./release-management.component.scss'],
 })
 export class ReleaseManagementComponent implements OnInit {
   releases: Release[] = [];
@@ -57,15 +72,18 @@ export class ReleaseManagementComponent implements OnInit {
     private releaseService: ReleaseService,
     private labelsService: LabelsService,
     private groupsService: GroupsService,
-    private userService: UserService
+    private userService: UserService,
   ) {
-    this.releaseForm = this.fb.group({
-      name: ['', Validators.required],
-      startAt: [null, Validators.required],
-      endAt: [null, Validators.required]
-    }, {
-      validators: this.dateRangeValidator
-    });
+    this.releaseForm = this.fb.group(
+      {
+        name: ['', Validators.required],
+        startAt: [null, Validators.required],
+        endAt: [null, Validators.required],
+      },
+      {
+        validators: this.dateRangeValidator,
+      },
+    );
   }
 
   // Validador personalizado para verificar que startAt < endAt
@@ -102,7 +120,7 @@ export class ReleaseManagementComponent implements OnInit {
       error: (err) => {
         console.error('Error al cargar releases:', err);
         this.loading = false;
-      }
+      },
     });
   }
 
@@ -123,55 +141,55 @@ export class ReleaseManagementComponent implements OnInit {
     // Obtener IDs de documentos ya existentes en el release
     const existingDocIds = new Set(
       this.currentReleaseItems
-        .filter(item => item.itemType === 'DOCUMENTO' && item.documentoId)
-        .map(item => item.documentoId)
+        .filter((item) => item.itemType === 'DOCUMENTO' && item.documentoId)
+        .map((item) => item.documentoId),
     );
 
     // Filtrar solo los documentos nuevos (no duplicados)
     const newDocIds = this.selectedDocumentoIds.filter(
-      docId => !existingDocIds.has(docId)
+      (docId) => !existingDocIds.has(docId),
     );
 
     if (newDocIds.length === 0) {
-      // Todos los documentos seleccionados ya están en el release
-      console.log('⚠️ Todos los documentos ya están en esta publicación');
       this.showDocumentPickerDialog = false;
       return;
     }
 
     const items = newDocIds.map((documentoId) => ({
       itemType: this.ReleaseItemType.DOCUMENTO,
-      documentoId
+      documentoId,
     }));
 
-    console.log(`📝 Añadiendo ${newDocIds.length} documento(s) nuevo(s) de ${this.selectedDocumentoIds.length} seleccionado(s)`);
-
-    this.releaseService.addItems(this.selectedRelease.id, items as any).subscribe({
-      next: () => {
-        this.loadReleases();
-        this.showDocumentPickerDialog = false;
-        // Recargar items actuales y reconstruir el árbol
-        this.releaseService.getRelease(this.selectedRelease!.id).subscribe({
-          next: (release) => {
-            this.currentReleaseItems = release.items || [];
-            this.selectedRelease = release;
-            this.buildDocumentTree();
-          }
-        });
-      },
-      error: (err) => console.error('Error al guardar items:', err)
-    });
+    this.releaseService
+      .addItems(this.selectedRelease.id, items as any)
+      .subscribe({
+        next: () => {
+          this.loadReleases();
+          this.showDocumentPickerDialog = false;
+          // Recargar items actuales y reconstruir el árbol
+          this.releaseService.getRelease(this.selectedRelease!.id).subscribe({
+            next: (release) => {
+              this.currentReleaseItems = release.items || [];
+              this.selectedRelease = release;
+              this.buildDocumentTree();
+            },
+          });
+        },
+        error: (err) => console.error('Error al guardar items:', err),
+      });
   }
 
   removeReleaseItem(itemId: string): void {
     if (!this.selectedRelease) return;
     this.releaseService.removeItem(this.selectedRelease.id, itemId).subscribe({
       next: () => {
-        this.currentReleaseItems = this.currentReleaseItems.filter(item => item.id !== itemId);
+        this.currentReleaseItems = this.currentReleaseItems.filter(
+          (item) => item.id !== itemId,
+        );
         this.buildDocumentTree(); // Reconstruir el árbol
         this.loadReleases();
       },
-      error: (err) => console.error('Error al eliminar item:', err)
+      error: (err) => console.error('Error al eliminar item:', err),
     });
   }
 
@@ -196,31 +214,36 @@ export class ReleaseManagementComponent implements OnInit {
     this.labelsService.getLabels().subscribe({
       next: (labels) => {
         // Agregar displayLabel para el dropdown
-        this.labels = labels.map(label => ({
-          ...label,
-          displayLabel: `${label.key}${label.value ? ': ' + label.value : ''}`
-        } as any));
+        this.labels = labels.map(
+          (label) =>
+            ({
+              ...label,
+              displayLabel: `${label.key}${label.value ? ': ' + label.value : ''}`,
+            }) as any,
+        );
       },
-      error: (err) => console.error('Error al cargar labels:', err)
+      error: (err) => console.error('Error al cargar labels:', err),
     });
   }
 
   loadGroups(): void {
     this.groupsService.getGroups().subscribe({
-      next: (groups) => this.groups = groups,
-      error: (err) => console.error('Error al cargar grupos:', err)
+      next: (groups) => (this.groups = groups),
+      error: (err) => console.error('Error al cargar grupos:', err),
     });
   }
 
   loadUsers(): void {
     // Cargar todos los usuarios para el selector
-    this.userService.getAllUsers$({ skip: 0, take: 1000, searchTerm: '' }).subscribe({
-      next: (response) => {
-        this.users = response.data;
-        this.filteredUsers = response.data;
-      },
-      error: (err) => console.error('Error al cargar usuarios:', err)
-    });
+    this.userService
+      .getAllUsers$({ skip: 0, take: 1000, searchTerm: '' })
+      .subscribe({
+        next: (response) => {
+          this.users = response.data;
+          this.filteredUsers = response.data;
+        },
+        error: (err) => console.error('Error al cargar usuarios:', err),
+      });
   }
 
   openCreateReleaseDialog(): void {
@@ -238,7 +261,7 @@ export class ReleaseManagementComponent implements OnInit {
     this.releaseForm.patchValue({
       name: release.name,
       startAt: startDate,
-      endAt: endDate
+      endAt: endDate,
     });
     this.showReleaseDialog = true;
   }
@@ -253,50 +276,46 @@ export class ReleaseManagementComponent implements OnInit {
     const formValue = this.releaseForm.value;
 
     // Convertir las fechas a ISO string
-    const startAt = formValue.startAt instanceof Date
-      ? formValue.startAt
-      : new Date(formValue.startAt);
-    const endAt = formValue.endAt instanceof Date
-      ? formValue.endAt
-      : new Date(formValue.endAt);
+    const startAt =
+      formValue.startAt instanceof Date
+        ? formValue.startAt
+        : new Date(formValue.startAt);
+    const endAt =
+      formValue.endAt instanceof Date
+        ? formValue.endAt
+        : new Date(formValue.endAt);
 
     const dto = {
       name: formValue.name,
       startAt: startAt.toISOString(),
-      endAt: endAt.toISOString()
+      endAt: endAt.toISOString(),
     };
 
-    console.log('💾 Guardando release:', {
-      isEdit: !!this.selectedRelease,
-      id: this.selectedRelease?.id,
-      dto
-    });
-
     if (this.selectedRelease) {
-      this.releaseService.updateRelease(this.selectedRelease.id, dto).subscribe({
-        next: () => {
-          console.log('✅ Release actualizado');
-          this.loadReleases();
-          this.closeReleaseDialog();
-          this.savingRelease = false;
-        },
-        error: (err) => {
-          console.error('❌ Error al actualizar release:', err);
-          this.savingRelease = false;
-        }
-      });
+      this.releaseService
+        .updateRelease(this.selectedRelease.id, dto)
+        .subscribe({
+          next: () => {
+            this.loadReleases();
+            this.closeReleaseDialog();
+            this.savingRelease = false;
+          },
+          error: (err) => {
+            console.error('Error al actualizar release:', err);
+            this.savingRelease = false;
+          },
+        });
     } else {
       this.releaseService.createRelease(dto).subscribe({
         next: () => {
-          console.log('✅ Release creado');
           this.loadReleases();
           this.closeReleaseDialog();
           this.savingRelease = false;
         },
         error: (err) => {
-          console.error('❌ Error al crear release:', err);
+          console.error('Error al crear release:', err);
           this.savingRelease = false;
-        }
+        },
       });
     }
   }
@@ -306,7 +325,7 @@ export class ReleaseManagementComponent implements OnInit {
 
     this.releaseService.deleteRelease(id).subscribe({
       next: () => this.loadReleases(),
-      error: (err) => console.error('Error al eliminar release:', err)
+      error: (err) => console.error('Error al eliminar release:', err),
     });
   }
 
@@ -315,8 +334,8 @@ export class ReleaseManagementComponent implements OnInit {
     this.currentReleaseItems = release.items || [];
     // Preseleccionar los documentos que ya están en el release
     this.selectedDocumentoIds = this.currentReleaseItems
-      .filter(item => item.itemType === 'DOCUMENTO')
-      .map(item => item.documentoId);
+      .filter((item) => item.itemType === 'DOCUMENTO')
+      .map((item) => item.documentoId);
 
     // Construir el árbol de documentos para visualización
     this.buildDocumentTree();
@@ -329,7 +348,7 @@ export class ReleaseManagementComponent implements OnInit {
     const uniqueDocsMap = new Map<number, any>();
     const documentToItemMap = new Map<number, string>(); // Para el botón de eliminar
 
-    this.currentReleaseItems.forEach(item => {
+    this.currentReleaseItems.forEach((item) => {
       if (item.itemType === 'DOCUMENTO' && item.documento) {
         const doc = item.documento;
         if (!uniqueDocsMap.has(doc.id)) {
@@ -353,7 +372,7 @@ export class ReleaseManagementComponent implements OnInit {
       // Agregar el itemId al documento para poder eliminarlo
       const docWithItemId = {
         ...doc,
-        _itemId: documentToItemMap.get(doc.id)
+        _itemId: documentToItemMap.get(doc.id),
       };
 
       documentsByTema.get(temaId)!.push(docWithItemId);
@@ -375,14 +394,14 @@ export class ReleaseManagementComponent implements OnInit {
           moduleMap.set(0, {
             id: 0,
             nombre: 'Sin clasificar',
-            temas: []
+            temas: [],
           });
         }
         moduleMap.get(0)!.temas.push({
           id: 0,
           numero: 'N/A',
           descripcion: 'Sin tema',
-          documentos: docs
+          documentos: docs,
         });
       } else {
         const moduloId = tema.moduloId || 0;
@@ -399,7 +418,7 @@ export class ReleaseManagementComponent implements OnInit {
           moduleMap.set(moduloId, {
             id: moduloId,
             nombre: moduloNombre,
-            temas: []
+            temas: [],
           });
         }
 
@@ -412,7 +431,7 @@ export class ReleaseManagementComponent implements OnInit {
             id: temaId,
             numero: tema.numero,
             descripcion: tema.descripcion,
-            documentos: []
+            documentos: [],
           };
           modulo.temas.push(temaEntry);
         }
@@ -430,34 +449,33 @@ export class ReleaseManagementComponent implements OnInit {
         if (b.id === 0) return -1;
         return a.id - b.id;
       })
-      .map(modulo => ({
+      .map((modulo) => ({
         ...modulo,
         temas: modulo.temas.sort((a: any, b: any) => {
           // Ordenar temas por número
           if (a.numero === 'N/A') return 1;
           if (b.numero === 'N/A') return -1;
           return parseInt(a.numero) - parseInt(b.numero);
-        })
+        }),
       }));
-
-    console.log('📊 Document tree built:', this.documentTree);
   }
 
   openAudienceDialog(release: Release): void {
     this.selectedRelease = release;
     // Cargar las reglas existentes del release
-    this.audienceRules = release.audienceRules?.map(rule => ({
-      type: rule.type,
-      value: rule.value,
-      effect: rule.effect
-    })) || [];
+    this.audienceRules =
+      release.audienceRules?.map((rule) => ({
+        type: rule.type,
+        value: rule.value,
+        effect: rule.effect,
+      })) || [];
     this.showAudienceDialog = true;
   }
 
   addAudienceRule(): void {
     this.audienceRules.push({
       type: AudienceType.ALL,
-      effect: RuleEffect.ALLOW
+      effect: RuleEffect.ALLOW,
     });
   }
 
@@ -468,19 +486,21 @@ export class ReleaseManagementComponent implements OnInit {
   saveAudienceRules(): void {
     if (!this.selectedRelease || this.audienceRules.length === 0) return;
 
-    this.releaseService.addAudienceRules(this.selectedRelease.id, this.audienceRules).subscribe({
-      next: () => {
-        this.loadReleases();
-        this.closeAudienceDialog();
-      },
-      error: (err) => console.error('Error al guardar reglas:', err)
-    });
+    this.releaseService
+      .addAudienceRules(this.selectedRelease.id, this.audienceRules)
+      .subscribe({
+        next: () => {
+          this.loadReleases();
+          this.closeAudienceDialog();
+        },
+        error: (err) => console.error('Error al guardar reglas:', err),
+      });
   }
 
   deleteAudienceRuleFromRelease(releaseId: string, ruleId: string): void {
     this.releaseService.removeAudienceRule(releaseId, ruleId).subscribe({
       next: () => this.loadReleases(),
-      error: (err) => console.error('Error al eliminar regla:', err)
+      error: (err) => console.error('Error al eliminar regla:', err),
     });
   }
 
@@ -513,8 +533,11 @@ export class ReleaseManagementComponent implements OnInit {
 
   getOposiciones(): { label: string; value: string }[] {
     return [
-      { label: 'Valencia Ayuntamiento', value: Oposicion.VALENCIA_AYUNTAMIENTO },
-      { label: 'CPBA Alicante', value: Oposicion.ALICANTE_CPBA }
+      {
+        label: 'Valencia Ayuntamiento',
+        value: Oposicion.VALENCIA_AYUNTAMIENTO,
+      },
+      { label: 'CPBA Alicante', value: Oposicion.ALICANTE_CPBA },
     ];
   }
 
@@ -538,10 +561,11 @@ export class ReleaseManagementComponent implements OnInit {
 
   filterUsers(): void {
     const term = this.userSearchTerm.toLowerCase();
-    this.filteredUsers = this.users.filter(user =>
-      user.email.toLowerCase().includes(term) ||
-      (user.nombre && user.nombre.toLowerCase().includes(term)) ||
-      (user.apellidos && user.apellidos.toLowerCase().includes(term))
+    this.filteredUsers = this.users.filter(
+      (user) =>
+        user.email.toLowerCase().includes(term) ||
+        (user.nombre && user.nombre.toLowerCase().includes(term)) ||
+        (user.apellidos && user.apellidos.toLowerCase().includes(term)),
     );
   }
 
@@ -561,7 +585,7 @@ export class ReleaseManagementComponent implements OnInit {
 
   getSelectedUserEmail(userId: string | undefined): string {
     if (!userId) return '';
-    const user = this.users.find(u => u.id === parseInt(userId));
+    const user = this.users.find((u) => u.id === parseInt(userId));
     return user ? user.email : 'Usuario no encontrado';
   }
 
@@ -572,7 +596,7 @@ export class ReleaseManagementComponent implements OnInit {
       [AudienceType.OPOSICION]: 'Oposición',
       [AudienceType.GROUP]: 'Grupo',
       [AudienceType.LABEL]: 'Etiqueta',
-      [AudienceType.INDIVIDUAL]: 'Individual'
+      [AudienceType.INDIVIDUAL]: 'Individual',
     };
     return map[type] || type;
   }
@@ -583,7 +607,7 @@ export class ReleaseManagementComponent implements OnInit {
     switch (rule.type) {
       case AudienceType.LABEL:
         // Buscar la etiqueta por ID y mostrar su formato legible
-        const label = this.labels.find(l => l.id === rule.value);
+        const label = this.labels.find((l) => l.id === rule.value);
         if (label) {
           return `${label.key}${label.value ? ': ' + label.value : ''}`;
         }
@@ -591,7 +615,7 @@ export class ReleaseManagementComponent implements OnInit {
 
       case AudienceType.INDIVIDUAL:
         // Mostrar el email del usuario
-        const user = this.users.find(u => u.id === parseInt(rule.value));
+        const user = this.users.find((u) => u.id === parseInt(rule.value));
         return user ? user.email : rule.value;
 
       case AudienceType.SUBSCRIPTION:
@@ -600,12 +624,14 @@ export class ReleaseManagementComponent implements OnInit {
 
       case AudienceType.OPOSICION:
         // Mostrar el nombre de la oposición
-        const oposicion = this.getOposiciones().find(o => o.value === rule.value);
+        const oposicion = this.getOposiciones().find(
+          (o) => o.value === rule.value,
+        );
         return oposicion ? oposicion.label : rule.value;
 
       case AudienceType.GROUP:
         // Mostrar el nombre del grupo
-        const group = this.groups.find(g => g.id === rule.value);
+        const group = this.groups.find((g) => g.id === rule.value);
         return group ? group.name : rule.value;
 
       default:
@@ -613,4 +639,3 @@ export class ReleaseManagementComponent implements OnInit {
     }
   }
 }
-

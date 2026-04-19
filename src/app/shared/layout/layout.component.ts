@@ -329,7 +329,6 @@ export class LayoutComponent {
   }
 
   private getStudentMenu(user: Usuario | null): MenuItem[] {
-    // Obtener el nivel más alto de todas las suscripciones activas
     const highestTier = getHighestSubscriptionTier(user?.suscripciones);
     const isBasic = highestTier === SuscripcionTipo.BASIC;
     const isAdvanced = highestTier === SuscripcionTipo.ADVANCED;
@@ -487,12 +486,10 @@ export class LayoutComponent {
     return menu;
   }
 
-  // Método para abrir la página de tarifas
   openUpgradePage(): void {
     window.open(environment.wooCommerceUrl, '_blank');
   }
 
-  // Método para detener impersonación
   stopImpersonation() {
     this.authService.stopImpersonation$().subscribe({
       next: () => {

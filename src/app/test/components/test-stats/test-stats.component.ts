@@ -14,13 +14,13 @@ import { MetodoCalificacion } from '../../../shared/models/user.model';
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
-    calcular0,
-    calcular100,
-    calcular100y50,
-    calcular100y75y50,
-    calcular50,
-    calcular75,
-    getStats,
+  calcular0,
+  calcular100,
+  calcular100y50,
+  calcular100y75y50,
+  calcular50,
+  calcular75,
+  getStats,
 } from '../../../utils/utils';
 
 interface ConfidenceCard {
@@ -118,7 +118,7 @@ export class TestStatsComponent {
     return calcular100(
       stats100,
       this.lastLoadedTest.preguntas.length,
-      this.currentMetodoCalificacion
+      this.currentMetodoCalificacion,
     );
   }
 
@@ -128,7 +128,7 @@ export class TestStatsComponent {
     return calcular75(
       stats75,
       this.lastLoadedTest.preguntas.length,
-      this.currentMetodoCalificacion
+      this.currentMetodoCalificacion,
     );
   }
 
@@ -138,7 +138,7 @@ export class TestStatsComponent {
     return calcular50(
       stats50,
       this.lastLoadedTest.preguntas.length,
-      this.currentMetodoCalificacion
+      this.currentMetodoCalificacion,
     );
   }
 
@@ -148,7 +148,7 @@ export class TestStatsComponent {
     return calcular0(
       stats0,
       this.lastLoadedTest.preguntas.length,
-      this.currentMetodoCalificacion
+      this.currentMetodoCalificacion,
     );
   }
 
@@ -159,7 +159,7 @@ export class TestStatsComponent {
       stats100,
       stats50,
       this.lastLoadedTest.preguntas.length,
-      this.currentMetodoCalificacion
+      this.currentMetodoCalificacion,
     );
   }
 
@@ -171,7 +171,7 @@ export class TestStatsComponent {
       stats75,
       stats50,
       this.lastLoadedTest.preguntas.length,
-      this.currentMetodoCalificacion
+      this.currentMetodoCalificacion,
     );
   }
 
@@ -182,7 +182,7 @@ export class TestStatsComponent {
       (total: number, seguridad: any) => {
         return total + (seguridad.correctas || 0);
       },
-      0
+      0,
     );
   }
 
@@ -192,7 +192,7 @@ export class TestStatsComponent {
       (total: number, seguridad: any) => {
         return total + (seguridad.incorrectas || 0);
       },
-      0
+      0,
     );
   }
 
@@ -202,7 +202,7 @@ export class TestStatsComponent {
       (total: number, seguridad: any) => {
         return total + (seguridad.noRespondidas || 0);
       },
-      0
+      0,
     );
   }
 
@@ -258,9 +258,11 @@ export class TestStatsComponent {
   }
 
   public getCombinedTotal(stat: any, tipos: string[]): number {
-    return this.getCombinedCorrects(stat, tipos) +
+    return (
+      this.getCombinedCorrects(stat, tipos) +
       this.getCombinedIncorrects(stat, tipos) +
-      this.getCombinedNoAnswered(stat, tipos);
+      this.getCombinedNoAnswered(stat, tipos)
+    );
   }
 
   public getCombinedAccuracy(stat: any, tipos: string[]): number {
@@ -285,17 +287,14 @@ export class TestStatsComponent {
         queryParams: {
           goBack: true,
         },
-      }
+      },
     );
   }
-
-
 
   public toggleIndividualConfidence() {
     this.showIndividualConfidence = !this.showIndividualConfidence;
   }
 
-  // Método para optimizar el rendimiento del ngFor
   public trackByCardId(index: number, card: ConfidenceCard): string {
     return card.id;
   }
@@ -347,25 +346,29 @@ export class TestStatsComponent {
         title: 'Solo 100% Seguro',
         icon: '⭐',
         tipos: ['CIEN_POR_CIENTO'],
-        calcularNota: () => this.calcular100()
+        calcularNota: () => this.calcular100(),
       },
       {
         id: 'combined-100-50',
         title: '100% + 50% Seguro',
         icon: '🎯',
         tipos: ['CIEN_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
-        calcularNota: () => this.calcular100y50()
+        calcularNota: () => this.calcular100y50(),
       },
       {
         id: 'combined-100-75-50',
         title: '100% + 75% + 50% Seguro',
         icon: '📈',
-        tipos: ['CIEN_POR_CIENTO', 'SETENTA_Y_CINCO_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
-        calcularNota: () => this.calcular100y75y50()
-      }
+        tipos: [
+          'CIEN_POR_CIENTO',
+          'SETENTA_Y_CINCO_POR_CIENTO',
+          'CINCUENTA_POR_CIENTO',
+        ],
+        calcularNota: () => this.calcular100y75y50(),
+      },
     ];
 
-    return combinations.map(combination => ({
+    return combinations.map((combination) => ({
       id: combination.id,
       title: combination.title,
       icon: combination.icon,

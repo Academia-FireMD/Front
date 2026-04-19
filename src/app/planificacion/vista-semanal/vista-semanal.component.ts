@@ -468,9 +468,7 @@ export class VistaSemanalComponent {
           posicionPersonalizada: newStart,
         })
         .subscribe({
-          next: () => {
-            console.log('Posición personalizada guardada');
-          },
+          next: () => {},
           error: (err) => {
             this.toast.error('Error al guardar la posición personalizada');
             console.error('Error al guardar posición:', err);

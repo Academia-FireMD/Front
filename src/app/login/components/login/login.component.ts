@@ -1,6 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
@@ -27,8 +33,8 @@ import { SharedModule } from '../../../shared/shared.module';
     SharedModule,
     RouterModule,
     ButtonModule,
-    AsyncButtonComponent
-  ]
+    AsyncButtonComponent,
+  ],
 })
 export class LoginComponent {
   formGroup: FormGroup;
@@ -40,11 +46,11 @@ export class LoginComponent {
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
-    private toast: ToastrService
+    private toast: ToastrService,
   ) {
     this.formGroup = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      contrasenya: ['', Validators.required]
+      contrasenya: ['', Validators.required],
     });
   }
 
@@ -63,21 +69,22 @@ export class LoginComponent {
         }
       } catch (error: any) {
         console.error('Login error:', error);
-        
+
         // Manejar error de cuenta no aprobada
         if (error?.status === 401 && error?.error?.message) {
           this.toast.warning(error.error.message, 'Cuenta no aprobada', {
             timeOut: 8000,
-            closeButton: true
+            closeButton: true,
           });
         } else {
-          this.toast.error('Error al iniciar sesión. Verifica tus credenciales.');
+          this.toast.error(
+            'Error al iniciar sesión. Verifica tus credenciales.',
+          );
         }
       }
     }
   }
 
-  // Método para cambiar a registro (útil en modo injected)
   cambiarARegistro() {
     if (this.mode === 'default') {
       this.router.navigate(['/auth/registro']);

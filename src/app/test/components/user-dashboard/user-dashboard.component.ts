@@ -93,7 +93,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   userLabels: UsuarioLabel[] = [];
   selectedLabelId: string = '';
 
-  // Crear nueva etiqueta
   creatingNewLabel = false;
   newLabelKey = '';
   newLabelValue = '';
@@ -230,7 +229,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   public onFiltersChanged(where: any) {
-    // Actualizar la paginación con los nuevos filtros usando el método seguro
     this.updatePaginationSafe({
       where: where,
       skip: 0, // Resetear a la primera página cuando cambian los filtros
@@ -289,7 +287,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     return `${tipoLabel} - ${oposicionLabel}`;
   }
 
-  // Obtener la suscripción de mayor nivel para mostrar como badge principal
   getHighestSubscription(suscripciones?: Suscripcion[]): Suscripcion | null {
     if (!suscripciones || suscripciones.length === 0) return null;
 
@@ -410,7 +407,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       .subscribe({
         next: (response: any) => {
           this.toast.success('Suscripción añadida correctamente');
-          // Actualizar el usuario seleccionado con las nuevas suscripciones
           if (response?.suscripciones) {
             this.selectedUser = {
               ...this.selectedUser,
@@ -427,7 +423,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
               ],
             };
           }
-          // Actualizar la oposición seleccionada a la siguiente disponible
           this.selectedOposicion = this.getFirstAvailableOposicion();
           this.refresh();
         },
@@ -453,7 +448,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           .subscribe({
             next: (updatedUser) => {
               this.toast.success('Suscripción eliminada correctamente');
-              // Actualizar el usuario seleccionado
               if (updatedUser?.suscripciones) {
                 this.selectedUser = {
                   ...this.selectedUser,
@@ -839,7 +833,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     return Math.round((filledFields / onboardingFields.length) * 100);
   }
 
-  // Método para impersonar usuario
   impersonateUser(user: Usuario) {
     this.authService.impersonateUser$(user.id).subscribe({
       next: (response) => {

@@ -9,12 +9,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CalendarEvent, CalendarView } from 'angular-calendar';
 import { ToastrService } from 'ngx-toastr';
 import { PrimeNGConfig } from 'primeng/api';
-import {
-  combineLatest,
-  filter,
-  firstValueFrom,
-  tap
-} from 'rxjs';
+import { combineLatest, filter, firstValueFrom, tap } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
@@ -25,13 +20,9 @@ import {
   PlantillaSemanal,
   SubBloque,
 } from '../../shared/models/planificacion.model';
-import {
-  duracionesDisponibles,
-} from '../../shared/models/pregunta.model';
+import { duracionesDisponibles } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
-import {
-  TipoDePlanificacionDeseada
-} from '../../shared/models/user.model';
+import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import { getNextWeekIfFriday, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 
@@ -87,29 +78,34 @@ export class PlanificacionMensualEditComponent {
   public activeStepSeleccionPlantilla = 0;
   public usuariosSeleccionadosId = [] as Array<number>;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
-  public userFilters = computed(() => [{
-    key: 'asignaciones',
-    label: 'Planificación asignada',
-    type: 'toggle',
-    placeholder: 'Solo usuarios con esta planificación asignada',
-    defaultValue: false,
-    filterInterpolation: (value: boolean) => {
-      if (!value) {
-        return {};
-      }
-      const planificacionId = this.lastLoadedPlanification()?.id;
-      if (!planificacionId || planificacionId === 0) {
-        return {};
-      }
-      return {
-        asignaciones: {
-          some: {
-            planificacionId: { equals: planificacionId }
-          }
-        }
-      };
-    }
-  }] as FilterConfig[]);
+  public userFilters = computed(
+    () =>
+      [
+        {
+          key: 'asignaciones',
+          label: 'Planificación asignada',
+          type: 'toggle',
+          placeholder: 'Solo usuarios con esta planificación asignada',
+          defaultValue: false,
+          filterInterpolation: (value: boolean) => {
+            if (!value) {
+              return {};
+            }
+            const planificacionId = this.lastLoadedPlanification()?.id;
+            if (!planificacionId || planificacionId === 0) {
+              return {};
+            }
+            return {
+              asignaciones: {
+                some: {
+                  planificacionId: { equals: planificacionId },
+                },
+              },
+            };
+          },
+        },
+      ] as FilterConfig[],
+  );
   public getEventsForDay = this.eventsService.getEventsForDay;
   public getProgressBarColor = this.eventsService.getProgressBarColor;
   public getCompletedSubBlocksForDay =
@@ -127,10 +123,22 @@ export class PlanificacionMensualEditComponent {
   public Number = Number;
 
   planificationIdEffect = effect(() => {
-    if (this.lastLoadedPlanification() && this.lastLoadedPlanification() !== null && this.expectedRole === 'ADMIN') {
-      firstValueFrom(this.userService.getUsersByPlanification$(this.lastLoadedPlanification()?.id as number).pipe(tap((e) => {
-        this.usuariosSeleccionadosId = e.map((e) => e.id);
-      })));
+    if (
+      this.lastLoadedPlanification() &&
+      this.lastLoadedPlanification() !== null &&
+      this.expectedRole === 'ADMIN'
+    ) {
+      firstValueFrom(
+        this.userService
+          .getUsersByPlanification$(
+            this.lastLoadedPlanification()?.id as number,
+          )
+          .pipe(
+            tap((e) => {
+              this.usuariosSeleccionadosId = e.map((e) => e.id);
+            }),
+          ),
+      );
     }
   });
 
@@ -185,19 +193,22 @@ export class PlanificacionMensualEditComponent {
 
       lines.push(
         'BEGIN:VEVENT',
-        `UID:${event.id ||
-        `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
+        `UID:${
+          event.id ||
+          `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
         }`,
-        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
+        `DTSTAMP:${
+          new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
         }`,
         `DTSTART:${start}`,
         `DTEND:${end}`,
         `SUMMARY:${event.title}`,
-        `DESCRIPTION:${event.meta?.subBloque?.comentarios ||
-        'Evento exportado desde Tecnika Fire'
+        `DESCRIPTION:${
+          event.meta?.subBloque?.comentarios ||
+          'Evento exportado desde Tecnika Fire'
         }`,
         `LOCATION:${event.meta?.location || ''}`,
-        'END:VEVENT'
+        'END:VEVENT',
       );
     });
 
@@ -242,7 +253,7 @@ export class PlanificacionMensualEditComponent {
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
-      })
+      }),
     );
   }
 
@@ -252,12 +263,10 @@ export class PlanificacionMensualEditComponent {
       const res = await firstValueFrom(
         this.planificacionesService.asignarPlanificacionMensual$(
           Number(this.activedRoute.snapshot.paramMap.get('id')),
-          this.usuariosSeleccionadosId
-        )
+          this.usuariosSeleccionadosId,
+        ),
       );
-      this.toast.success(
-        `${res.message}`
-      );
+      this.toast.success(`${res.message}`);
       this.load();
       this.usuariosSeleccionadosId = [];
     } catch (error) {
@@ -273,8 +282,8 @@ export class PlanificacionMensualEditComponent {
 
       const fullPlantilla = await firstValueFrom(
         this.planificacionesService.getPlantillaSemanalById(
-          plantillaOverview.id ?? 0
-        )
+          plantillaOverview.id ?? 0,
+        ),
       );
 
       if (fullPlantilla && fullPlantilla.subBloques) {
@@ -292,7 +301,7 @@ export class PlanificacionMensualEditComponent {
         // Solo calcular la fecha mínima si hay eventos
         if (this.pickedEvents.length > 0) {
           this.pickedEventsViewDate = this.eventsService.calculateMinDate(
-            this.pickedEvents
+            this.pickedEvents,
           );
         }
       }
@@ -312,7 +321,7 @@ export class PlanificacionMensualEditComponent {
   }
 
   public applyEventsToCurrentWeek(
-    eventsToApplyToCurrentWeek: CalendarEvent[]
+    eventsToApplyToCurrentWeek: CalendarEvent[],
   ): void {
     const startOfWeek = getStartOfWeek(this.viewDate); // Inicio de la semana actual
     const endOfWeek = new Date(startOfWeek);
@@ -321,7 +330,7 @@ export class PlanificacionMensualEditComponent {
     // Filtrar eventos actuales que NO pertenecen a la semana actual
     const eventsOutsideCurrentWeek = this.events.filter(
       (event) =>
-        event.start < startOfWeek || (event.end && event.end > endOfWeek)
+        event.start < startOfWeek || (event.end && event.end > endOfWeek),
     );
 
     // Ajustar los eventos seleccionados a la semana actual
@@ -333,14 +342,14 @@ export class PlanificacionMensualEditComponent {
         event.start.getHours(),
         event.start.getMinutes(),
         0,
-        0
+        0,
       ); // Ajustar la hora exacta
 
       const adjustedEnd = event.end
         ? new Date(
-          adjustedStart.getTime() +
-          (event.end.getTime() - event.start.getTime())
-        ) // Mantener duración
+            adjustedStart.getTime() +
+              (event.end.getTime() - event.start.getTime()),
+          ) // Mantener duración
         : undefined;
 
       return {
@@ -421,7 +430,6 @@ export class PlanificacionMensualEditComponent {
     return this.activedRoute.snapshot.paramMap.get('id') as number | 'new';
   }
 
-
   ngOnInit(): void {
     this.load();
   }
@@ -463,7 +471,7 @@ export class PlanificacionMensualEditComponent {
                 // Aplicar posiciones personalizadas si existen
                 if (event.meta?.subBloque?.posicionPersonalizada) {
                   const posicion = new Date(
-                    event.meta.subBloque.posicionPersonalizada
+                    event.meta.subBloque.posicionPersonalizada,
                   );
                   // Mantener la duración original
                   const duracion = event.end
@@ -485,19 +493,18 @@ export class PlanificacionMensualEditComponent {
 
             this.relevancia.clear();
             entry.relevancia.forEach((e) =>
-              this.relevancia.push(new FormControl(e))
+              this.relevancia.push(new FormControl(e)),
             );
 
             this.usuariosSeleccionadosId = [];
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();
-          })
-        )
+          }),
+        ),
       );
     }
   }
 
-  // Método para cargar los eventos personalizados - refactorizado
   private loadEventosPersonalizados(planificacionId: number) {
     this.planificacionesService
       .getEventosPersonalizados$(planificacionId)
@@ -506,7 +513,7 @@ export class PlanificacionMensualEditComponent {
           // Agregar los eventos personalizados a la lista de eventos utilizando el servicio
           const nuevosEventos = this.eventsService.fromSubbloquesToEvents(
             [],
-            eventosPersonalizados
+            eventosPersonalizados,
           );
           this.events = [...this.events, ...nuevosEventos];
         },
@@ -531,9 +538,9 @@ export class PlanificacionMensualEditComponent {
           this.formGroup.value.tipoDePlanificacion ??
           TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
         subBloques: this.eventsService.fromEventsToSubbloques(
-          this.events
+          this.events,
         ) as SubBloque[],
-      })
+      }),
     );
     if (this.expectedRole == 'ADMIN') {
       this.toast.success('Planificacion mensual actualizada con exito');
@@ -549,13 +556,11 @@ export class PlanificacionMensualEditComponent {
     const year = selectedDate.getFullYear();
     const month = selectedDate.getMonth() + 1; // Mes empieza desde 0
 
-    // Actualizar los valores en el formulario reactivo
     this.formGroup.patchValue({
       mes: month,
       ano: year,
     });
 
-    // Actualizar la vista del calendario
     this.viewDate = new Date(year, month - 1, 1);
   }
 }

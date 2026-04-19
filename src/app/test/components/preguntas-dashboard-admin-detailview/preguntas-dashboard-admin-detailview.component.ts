@@ -249,7 +249,6 @@ export class PreguntasDashboardAdminDetailviewComponent {
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
-        console.log(this.expectedRole);
       }),
     );
   }

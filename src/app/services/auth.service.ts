@@ -1,7 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, Injector, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { BehaviorSubject, Observable, of, switchMap, tap, throwError, catchError } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  of,
+  switchMap,
+  tap,
+  throwError,
+  catchError,
+} from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Usuario } from '../shared/models/user.model';
 import { AppState } from '../store/app.state';
@@ -20,20 +28,22 @@ export class AuthService extends ApiBaseService {
   public currentUser$ = this.currentDecodedUserSubject.pipe(
     switchMap((user) => {
       if (user) {
-        return this.getUserService().getByEmail$(user.email).pipe(
-          catchError((error) => {
-            console.error('Error loading user:', error);
-            // Solo retornar null, NO limpiar tokens aquí
-            // El interceptor ya maneja refresh de tokens
-            return of(null);
-          })
-        );
+        return this.getUserService()
+          .getByEmail$(user.email)
+          .pipe(
+            catchError((error) => {
+              console.error('Error loading user:', error);
+              // Solo retornar null, NO limpiar tokens aquí
+              // El interceptor ya maneja refresh de tokens
+              return of(null);
+            }),
+          );
       }
       return of(null);
     }),
     tap((user) => {
       this.lastUserLoaded = user;
-    })
+    }),
   );
 
   // Observable público que otros componentes pueden suscribirse
@@ -50,7 +60,6 @@ export class AuthService extends ApiBaseService {
     this.initCurrentUser();
   }
 
-  // Obtener UserService de forma lazy para evitar dependencia circular
   private getUserService(): UserService {
     if (!this._userService) {
       this._userService = this.injector.get(UserService);
@@ -97,7 +106,6 @@ export class AuthService extends ApiBaseService {
           this.setToken(tokens.access_token);
           this.setRefreshToken(tokens.refresh_token);
 
-          // Actualizar el usuario actual después del login
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
 
@@ -106,7 +114,7 @@ export class AuthService extends ApiBaseService {
             this.store.dispatch(UserActions.loadUser());
           }
         }
-      })
+      }),
     );
   }
 
@@ -121,7 +129,6 @@ export class AuthService extends ApiBaseService {
         if (tokens && tokens.access_token) {
           this.setToken(tokens.access_token);
 
-          // Actualizar el usuario actual después de refrescar el token
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
 
@@ -130,7 +137,7 @@ export class AuthService extends ApiBaseService {
             this.store.dispatch(UserActions.loadUser());
           }
         }
-      })
+      }),
     );
   }
 
@@ -145,7 +152,7 @@ export class AuthService extends ApiBaseService {
 
         // Limpiar el store de NgRx
         this.store.dispatch(UserActions.clearUser());
-      })
+      }),
     );
   }
 
@@ -199,12 +206,10 @@ export class AuthService extends ApiBaseService {
     return this.post('/reset-password', { token, newPassword });
   }
 
-  // Método para obtener el usuario actual de forma síncrona
   public getCurrentUser(): Usuario | null {
     return this.lastUserLoaded;
   }
 
-  // Método para verificar si el usuario está autenticado
   public isAuthenticated(): boolean {
     return !!this.getCurrentUser();
   }
@@ -222,10 +227,13 @@ export class AuthService extends ApiBaseService {
    * @deprecated Solo se mantiene para consumibles existentes.
    */
   activateConsumible$(token: string, userId: number) {
-    return this.http.post<any>(`${environment.apiUrl}/auth/activate-consumible`, {
-      token,
-      userId
-    });
+    return this.http.post<any>(
+      `${environment.apiUrl}/auth/activate-consumible`,
+      {
+        token,
+        userId,
+      },
+    );
   }
 
   // Métodos para impersonación
@@ -236,7 +244,6 @@ export class AuthService extends ApiBaseService {
           this.setToken(tokens.access_token);
           this.setRefreshToken(tokens.refresh_token);
 
-          // Actualizar el usuario actual después de la impersonación
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
 
@@ -245,7 +252,7 @@ export class AuthService extends ApiBaseService {
             this.store.dispatch(UserActions.loadUser());
           }
         }
-      })
+      }),
     );
   }
 
@@ -256,7 +263,6 @@ export class AuthService extends ApiBaseService {
           this.setToken(tokens.access_token);
           this.setRefreshToken(tokens.refresh_token);
 
-          // Actualizar el usuario actual después de detener la impersonación
           const decodedUser = this.decodeToken();
           this.currentDecodedUserSubject.next(decodedUser);
 
@@ -265,17 +271,15 @@ export class AuthService extends ApiBaseService {
             this.store.dispatch(UserActions.loadUser());
           }
         }
-      })
+      }),
     );
   }
 
-  // Método para verificar si estamos impersonando
   public isImpersonating(): boolean {
     const token = this.decodeToken();
     return token?.isImpersonating || false;
   }
 
-  // Método para obtener información de impersonación
   public getImpersonationInfo(): any {
     const token = this.decodeToken();
     if (token?.isImpersonating) {
@@ -287,6 +291,4 @@ export class AuthService extends ApiBaseService {
     }
     return { isImpersonating: false };
   }
-
-
 }

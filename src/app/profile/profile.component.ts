@@ -237,7 +237,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Helper para obtener la suscripción principal (primera activa)
   private getPrimarySuscripcion() {
     if (!this.user?.suscripciones?.length) return null;
     return (
@@ -337,7 +336,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.toastService.success('Información actualizada correctamente');
       this.showOnboardingModal = false;
 
-      // Actualizar datos locales inmediatamente
       this.onboardingData = { ...data };
 
       // Recargar usuario
@@ -837,7 +835,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Método para obtener los items del menú de cada suscripción
   @Memoize()
   getSubscriptionMenuItems(suscripcion: Suscripcion) {
     if (this.isLinkedToWordPress()) {
@@ -934,7 +931,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     window.open(environment.wooCommerceUrl, '_blank');
   }
 
-  // Método para cancelar una suscripción individual
   cancelarSuscripcionIndividual(suscripcion: Suscripcion): void {
     this.suscripcionGestionWC = suscripcion;
     this.datosConfirmacionBaja = {

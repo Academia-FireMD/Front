@@ -8,7 +8,7 @@ import {
   OnDestroy,
   OnInit,
   Output,
-  TemplateRef
+  TemplateRef,
 } from '@angular/core';
 import { FormBuilder, FormControl, FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -28,14 +28,14 @@ export interface FilterConfig {
   label: string;
   specialCaseKey?: 'rangeDate';
   type:
-  | 'dropdown'
-  | 'calendar'
-  | 'text'
-  | 'tema-select'
-  | 'dificultad-dropdown'
-  | 'oposicion-picker'
-  | 'comunidad-dropdown'
-  | 'toggle';
+    | 'dropdown'
+    | 'calendar'
+    | 'text'
+    | 'tema-select'
+    | 'dificultad-dropdown'
+    | 'oposicion-picker'
+    | 'comunidad-dropdown'
+    | 'toggle';
   options?: FilterOption[];
   placeholder?: string;
   defaultValue?: any;
@@ -53,12 +53,7 @@ export type GenericListMode = 'overview' | 'selection';
 @Component({
   selector: 'app-generic-list',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    PrimengModule,
-    SharedModule,
-  ],
+  imports: [CommonModule, FormsModule, PrimengModule, SharedModule],
   template: `
     <div class="shared-grid grid">
       <!-- Top Action Bar -->
@@ -68,15 +63,20 @@ export type GenericListMode = 'overview' | 'selection';
           <div class="left-actions">
             <ng-content select="[left-actions]"></ng-content>
           </div>
-          <div *ngIf="mode === 'selection' && !singleSelection" class="flex align-items-center gap-2 ml-2">
-              <p-checkbox
-                [binary]="true"
-                [ngModel]="isAllSelected()"
-                (ngModelChange)="toggleSelectAll()"
-                styleClass="select-all-checkbox"
-              />
-              <label class="text-sm" *ngIf="viewportService.screenWidth != 'xs'">Seleccionar todo</label>
-            </div>
+          <div
+            *ngIf="mode === 'selection' && !singleSelection"
+            class="flex align-items-center gap-2 ml-2"
+          >
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="isAllSelected()"
+              (ngModelChange)="toggleSelectAll()"
+              styleClass="select-all-checkbox"
+            />
+            <label class="text-sm" *ngIf="viewportService.screenWidth != 'xs'"
+              >Seleccionar todo</label
+            >
+          </div>
           <!-- Right Actions - Siempre visible -->
           <div class="right-actions">
             <ng-content select="[right-actions]"></ng-content>
@@ -111,12 +111,18 @@ export type GenericListMode = 'overview' | 'selection';
             <div class="grid grid-nogutter">
               <div
                 class="col-12 item-container"
-                [ngClass]="{'pointer': mode === 'overview', 'selection-mode': mode === 'selection'}"
+                [ngClass]="{
+                  pointer: mode === 'overview',
+                  'selection-mode': mode === 'selection',
+                }"
                 *ngFor="let item of data"
                 (click)="handleItemClick(item)"
               >
                 <!-- Checkbox para modo selección -->
-                <div *ngIf="mode === 'selection'" class="selection-checkbox-container">
+                <div
+                  *ngIf="mode === 'selection'"
+                  class="selection-checkbox-container"
+                >
                   <p-checkbox
                     [binary]="true"
                     [ngModel]="isItemSelected(item)"
@@ -126,10 +132,17 @@ export type GenericListMode = 'overview' | 'selection';
                   />
                 </div>
 
-                <div class="item-content" [ngClass]="{'with-checkbox': mode === 'selection'}">
+                <div
+                  class="item-content"
+                  [ngClass]="{ 'with-checkbox': mode === 'selection' }"
+                >
                   <ng-container
                     [ngTemplateOutlet]="itemTemplate"
-                    [ngTemplateOutletContext]="{ $implicit: item, mode: mode, isSelected: isItemSelected(item) }"
+                    [ngTemplateOutletContext]="{
+                      $implicit: item,
+                      mode: mode,
+                      isSelected: isItemSelected(item),
+                    }"
                   >
                   </ng-container>
                 </div>
@@ -232,11 +245,11 @@ export type GenericListMode = 'overview' | 'selection';
           <!-- Oposicion Picker Filter -->
           <app-oposicion-picker
             *ngIf="
-        filter.type === 'oposicion-picker' &&
+              filter.type === 'oposicion-picker' &&
               getFilterControl(filter.key) as control
             "
             [oposiciones]="control.value || []"
-                [allowAdd]="true"
+            [allowAdd]="true"
             (updateSelection)="control.setValue($event)"
           ></app-oposicion-picker>
 
@@ -260,7 +273,9 @@ export type GenericListMode = 'overview' | 'selection';
             class="flex align-items-center gap-2"
           >
             <p-inputSwitch [formControl]="control"></p-inputSwitch>
-            <label class="text-sm">{{ filter.placeholder || 'Activar filtro' }}</label>
+            <label class="text-sm">{{
+              filter.placeholder || 'Activar filtro'
+            }}</label>
           </div>
         </div>
 
@@ -289,7 +304,8 @@ export type GenericListMode = 'overview' | 'selection';
 })
 export class GenericListComponent<T>
   extends SharedGridComponent<T>
-  implements OnInit, OnDestroy {
+  implements OnInit, OnDestroy
+{
   @Input() itemTemplate!: TemplateRef<any>;
   @Input() showPagination: boolean = true;
   @Input() filters?: FilterConfig[];
@@ -314,14 +330,14 @@ export class GenericListComponent<T>
         if (res) {
           this.lastLoadedPagination = res as any;
         }
-      })
+      }),
     );
   });
 
   constructor(
     override router: Router,
     override route: ActivatedRoute,
-    private changeDetectorRef: ChangeDetectorRef
+    private changeDetectorRef: ChangeDetectorRef,
   ) {
     super();
   }
@@ -331,27 +347,23 @@ export class GenericListComponent<T>
     this.initializeFilters();
 
     // Suscribirse a cambios en queryParams para recargar filtros automáticamente
-    firstValueFrom(this.route.queryParams).then(
-      (params) => {
-        // Solo recargar si hay parámetros de filtros
-        const hasFilterParams = Object.keys(params).some((key) =>
-          this.filterControls.has(key)
-        );
+    firstValueFrom(this.route.queryParams).then((params) => {
+      // Solo recargar si hay parámetros de filtros
+      const hasFilterParams = Object.keys(params).some((key) =>
+        this.filterControls.has(key),
+      );
 
-        if (hasFilterParams) {
-          // Solo cargar los valores en los controles, sin aplicar automáticamente
-          this.loadFiltersFromQueryParams();
-        }
+      if (hasFilterParams) {
+        // Solo cargar los valores en los controles, sin aplicar automáticamente
+        this.loadFiltersFromQueryParams();
       }
-    );
+    });
 
     // Usar setTimeout para asegurar que los controles estén inicializados
     setTimeout(() => {
       this.loadFiltersFromQueryParams();
     }, 0);
   }
-
-
 
   private initializeFilters() {
     if (this.filters) {
@@ -384,7 +396,6 @@ export class GenericListComponent<T>
     if (hasLoadedFilters) {
       // Usar setTimeout para asegurar que los controles estén inicializados
       setTimeout(() => {
-        // Crear el objeto where con los filtros cargados
         const where: any = {};
         this.filterControls.forEach((control, key) => {
           const value = control.value;
@@ -408,7 +419,7 @@ export class GenericListComponent<T>
 
         // Emitir los filtros al componente padre
         this.filtersChanged.emit(
-          Object.keys(where).length > 0 ? where : undefined
+          Object.keys(where).length > 0 ? where : undefined,
         );
 
         this.forceControlSync();
@@ -441,7 +452,7 @@ export class GenericListComponent<T>
     // Arrays - filtrar valores nulos y convertir a string
     if (Array.isArray(value)) {
       const validValues = value.filter(
-        (v) => v !== null && v !== undefined && v !== ''
+        (v) => v !== null && v !== undefined && v !== '',
       );
       return validValues.map((v) => v.toString()).join(',');
     }
@@ -533,7 +544,6 @@ export class GenericListComponent<T>
   }
 
   updateQueryParamsFilters(queryParams: any) {
-    // Obtener todos los queryParams actuales
     const currentQueryParams = { ...this.route.snapshot.queryParams };
 
     // Limpiar TODOS los filtros anteriores
@@ -598,7 +608,6 @@ export class GenericListComponent<T>
     this.updateFilters();
     this.showFiltersDialog = false;
 
-    // Crear el objeto where completo con todos los valores actuales
     const where: any = {};
     this.filterControls.forEach((control, key) => {
       const value = control.value;
@@ -667,7 +676,6 @@ export class GenericListComponent<T>
     }).length;
   }
 
-  // Método para verificar si hay filtros activos
   hasActiveFilters(): boolean {
     return this.getActiveFiltersCount() > 0;
   }

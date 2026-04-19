@@ -175,7 +175,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
     // Implementa la lógica para marcar/desmarcar como reserva
     await this.actualizarEstadoReserva(testPregunta, esReserva);
   }
-  // Método para mostrar el diálogo de métodos de agregar preguntas
   mostrarOpcionesAgregarPreguntas(event: Event) {
     this.metodosAgregarDialogVisible = true;
   }
@@ -696,7 +695,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
         ),
       );
 
-      // Actualizar también los temas si es necesario
       const temasSeleccionados = new Set<number>();
       this.selectedPreguntasToAdd.forEach((pregunta) => {
         temasSeleccionados.add(pregunta.temaId);
@@ -734,10 +732,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
       )
       .subscribe({
         next: ({ blob, filename }) => {
-          // Crear un objeto URL para el blob
           const url = window.URL.createObjectURL(blob);
 
-          // Crear un elemento <a> para descargar el archivo
           const a = document.createElement('a');
           a.href = url;
           a.download = filename;
@@ -815,7 +811,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
     }
   }
 
-  // Método para actualizar el estado de reserva de una pregunta
   public async actualizarEstadoReserva(testPregunta: any, esReserva: boolean) {
     if (!this.getId() || this.getId() === 'new') {
       this.toast.warning('Debe guardar el examen antes de modificar preguntas');
@@ -847,14 +842,12 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public preguntaAImpugnar: any = null;
   public motivoImpugnacion: string = '';
 
-  // Método para abrir el diálogo de impugnación
   public abrirDialogoImpugnacion(testPregunta: any) {
     this.preguntaAImpugnar = testPregunta;
     this.motivoImpugnacion = testPregunta.motivoImpugnacion || '';
     this.impugnacionDialogVisible = true;
   }
 
-  // Método para confirmar la impugnación
   public async confirmarImpugnacion() {
     if (!this.preguntaAImpugnar) return;
 
@@ -1019,12 +1012,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
     // Alternar el estado de expansión de esta fila específica
     if (this.expandedRowKeys[key]) {
-      // Crear nuevo objeto sin esta key para forzar detección de cambios
       const newExpandedRowKeys = { ...this.expandedRowKeys };
       delete newExpandedRowKeys[key];
       this.expandedRowKeys = newExpandedRowKeys;
     } else {
-      // Crear nuevo objeto agregando esta key para forzar detección de cambios
       this.expandedRowKeys = { ...this.expandedRowKeys, [key]: true };
 
       // Forzar detección de cambios y múltiples timeouts para gráficos
