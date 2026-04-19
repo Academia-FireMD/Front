@@ -2,13 +2,13 @@ import { Component, HostListener, inject } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, firstValueFrom, of, switchMap, tap } from 'rxjs';
+import { firstValueFrom, switchMap, tap } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { ViewportService } from '../../../services/viewport.service';
 import {
-    EstadoFlashcard,
-    FlashcardTest,
+  EstadoFlashcard,
+  FlashcardTest,
 } from '../../../shared/models/flashcard.model';
 
 @Component({
@@ -22,15 +22,24 @@ export class CompletarFlashCardTestComponent {
     if (this.comunicating) return;
     switch (event.key) {
       case 'ArrowLeft':
-        if (!this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion) return;
+        if (
+          !this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion
+        )
+          return;
         this.selectedEstado(EstadoFlashcard.MAL);
         break;
       case 'ArrowRight':
-        if (!this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion) return;
+        if (
+          !this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion
+        )
+          return;
         this.selectedEstado(EstadoFlashcard.BIEN);
         break;
       case 'ArrowDown':
-        if (!this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion) return;
+        if (
+          !this.lastLoadedTest.flashcards[this.indicePregunta].mostrarSolucion
+        )
+          return;
         this.selectedEstado(EstadoFlashcard.REVISAR);
         break;
       case ' ':
@@ -62,7 +71,7 @@ export class CompletarFlashCardTestComponent {
     await firstValueFrom(
       this.flashcardService
         .finalizarTest(this.lastLoadedTest.id)
-        .pipe(switchMap(() => this.cargarTest$()))
+        .pipe(switchMap(() => this.cargarTest$())),
     );
     this.router.navigate([
       'app/test/alumno/stats-test-flashcard/' + this.lastLoadedTest.id,
@@ -74,34 +83,32 @@ export class CompletarFlashCardTestComponent {
     return this.flashcardService.getTestById(Number(this.getId())).pipe(
       tap((entry: FlashcardTest) => {
         this.indicePregunta = entry.flashcards.findIndex(
-          (entry) => !entry.respuesta
+          (entry) => !entry.respuesta,
         );
         if (this.indicePregunta < 0) this.indicePregunta = 0;
         this.lastLoadedTest = entry;
-      })
+      }),
     );
   }
 
-  ngOnInit(): void { }
+  ngOnInit(): void {}
 
   public async selectedEstado(estado: EstadoFlashcard) {
     this.comunicating = true;
-    await firstValueFrom(
-      this.flashcardService
-        .actualizarProgresoTest({
+    try {
+      await firstValueFrom(
+        this.flashcardService.actualizarProgresoTest({
           testId: this.lastLoadedTest.id,
           testItemId: this.lastLoadedTest.flashcards[this.indicePregunta].id,
           flashcardId:
             this.lastLoadedTest.flashcards[this.indicePregunta].flashcard.id,
           estado: estado,
-        })
-        .pipe(
-          catchError((err) => {
-            this.comunicating = false;
-            return of(err);
-          })
-        )
-    );
+        }),
+      );
+    } catch (err) {
+      this.comunicating = false;
+      return;
+    }
     this.indicePregunta++;
     this.comunicating = false;
     if (this.indicePregunta == this.lastLoadedTest.flashcards.length) {
@@ -117,10 +124,10 @@ export class CompletarFlashCardTestComponent {
         flashcardDataId:
           this.lastLoadedTest.flashcards[this.indicePregunta].flashcardId,
         descripcion: reportDesc ?? '',
-      })
+      }),
     );
     this.toast.success(
-      'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.'
+      'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.',
     );
     this.displayFalloDialog = false;
   }
