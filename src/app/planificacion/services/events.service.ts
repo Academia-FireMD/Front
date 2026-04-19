@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { CalendarEvent } from 'angular-calendar';
 import { cloneDeep } from 'lodash';
 import { SubBloque } from '../../shared/models/planificacion.model';
-import { colors } from '../vista-semanal/vista-semanal.component';
+import { colors } from '../vista-semanal/calendar-colors';
 
 @Injectable({
   providedIn: 'root',
@@ -36,7 +36,7 @@ export class EventsService {
 
   public fromSubbloquesToEvents(
     subbloques: SubBloque[],
-    eventosPersonalizados: any[] = []
+    eventosPersonalizados: any[] = [],
   ): CalendarEvent[] {
     const eventos = [];
 
@@ -49,7 +49,7 @@ export class EventsService {
           start: new Date(subBloque.horaInicio),
           end: new Date(
             new Date(subBloque.horaInicio).getTime() +
-              subBloque.duracion * 60000
+              subBloque.duracion * 60000,
           ),
           color: {
             primary: subBloque.color || colors.yellow.primary,
@@ -63,7 +63,7 @@ export class EventsService {
               esPersonalizado: false,
             },
           },
-        }))
+        })),
       );
     }
 
@@ -75,7 +75,7 @@ export class EventsService {
           title: evento.nombre,
           start: new Date(evento.horaInicio),
           end: new Date(
-            new Date(evento.horaInicio).getTime() + evento.duracion * 60000
+            new Date(evento.horaInicio).getTime() + evento.duracion * 60000,
           ),
           color: {
             primary: evento.color || '#4caf50',
@@ -98,7 +98,7 @@ export class EventsService {
               esPersonalizado: true,
             },
           },
-        }))
+        })),
       );
     }
 
@@ -152,7 +152,7 @@ export class EventsService {
       (eventsForDay.length > 0
         ? (completed / eventsForDay.length) * 100
         : 0
-      ).toFixed(2)
+      ).toFixed(2),
     );
   }
 }

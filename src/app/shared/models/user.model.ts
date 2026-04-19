@@ -1,7 +1,6 @@
-import { NivelOposicion, TipoOposicion } from './pregunta.model';
-import { Oposicion, Suscripcion } from './subscription.model';
-import { Test } from './test.model';
-
+import type { NivelOposicion, TipoOposicion } from './pregunta.model';
+import type { Oposicion, Suscripcion } from './subscription.model';
+import type { Test } from './test.model';
 
 export interface Usuario {
   id: number;
@@ -21,10 +20,13 @@ export interface Usuario {
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
   metodoCalificacion: MetodoCalificacion;
   woocommerceCustomerId?: string;
-  suscripciones?: Suscripcion[];  // Usuario puede tener múltiples suscripciones
+  suscripciones?: Suscripcion[]; // Usuario puede tener múltiples suscripciones
   consumibles?: Consumible[];
-  oposiciones?: Oposicion[];  // Oposiciones activas (derivado de suscripciones activas)
-  labels?: { labelId: string; label: { id: string; key: string; value?: string } }[];
+  oposiciones?: Oposicion[]; // Oposiciones activas (derivado de suscripciones activas)
+  labels?: {
+    labelId: string;
+    label: { id: string; key: string; value?: string };
+  }[];
 
   // Campos de onboarding
   dni?: string;

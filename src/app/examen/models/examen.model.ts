@@ -1,7 +1,7 @@
-import { Pregunta } from "../../shared/models/pregunta.model";
-import { Oposicion } from "../../shared/models/subscription.model";
-import { Test } from "../../shared/models/test.model";
-import { MetodoCalificacion } from "../../shared/models/user.model";
+import type { Pregunta } from '../../shared/models/pregunta.model';
+import type { Oposicion } from '../../shared/models/subscription.model';
+import type { Test } from '../../shared/models/test.model';
+import type { MetodoCalificacion } from '../../shared/models/user.model';
 
 export enum EstadoExamen {
   BORRADOR = 'BORRADOR',
@@ -15,7 +15,6 @@ export enum TipoAcceso {
   SIMULACRO = 'SIMULACRO',
   COLABORATIVO = 'COLABORATIVO',
 }
-
 
 export interface CondicionColaborativa {
   id?: number;
@@ -46,12 +45,12 @@ export interface Examen {
   test?: Test;
   preguntas?: Pregunta[];
   preguntasReserva?: Pregunta[];
-  
+
   // Campos de vinculación con WooCommerce para simulacros
   woocommerceProductId?: string;
   woocommerceSku?: string;
   woocommerceProductName?: string;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }

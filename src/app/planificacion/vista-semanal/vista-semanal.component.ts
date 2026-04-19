@@ -23,21 +23,9 @@ import {
   PlanificacionBloque,
   SubBloque,
 } from '../../shared/models/planificacion.model';
-import {
-  getDateForDayOfWeek,
-  getStartOfWeek
-} from '../../utils/utils';
+import { getDateForDayOfWeek, getStartOfWeek } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
-export const colors: any = {
-  yellow: {
-    primary: '#e3bc08',
-    secondary: '#fdf1ba',
-  },
-  blue: {
-    primary: '#1e90ff',
-    secondary: '#d1e8ff',
-  },
-};
+import { colors } from './calendar-colors';
 @Component({
   selector: 'app-vista-semanal',
   templateUrl: './vista-semanal.component.html',
@@ -76,9 +64,9 @@ export class VistaSemanalComponent {
   private _events: CalendarEvent[] = [];
   @Output() eventsChange = new EventEmitter<CalendarEvent[]>();
   @Output() saveChanges = new EventEmitter<void>();
-  
+
   private _viewDate = new Date();
-  @Input() 
+  @Input()
   set viewDate(value: Date) {
     // Validar que la fecha sea válida
     if (value && value instanceof Date && !isNaN(value.getTime())) {
@@ -88,11 +76,11 @@ export class VistaSemanalComponent {
       this._viewDate = new Date();
     }
   }
-  
+
   get viewDate(): Date {
     return this._viewDate;
   }
-  
+
   @Input() mode: 'picker' | 'edit' = 'edit';
   private onTimeClickedDate!: Date;
   public triggerSaveUpdateProgress = new Subject();
@@ -112,7 +100,7 @@ export class VistaSemanalComponent {
           descripcion: '',
           color: '#4caf50', // Color diferente para distinguir
           planificacionId: Number(
-            this.activatedRoute?.snapshot?.paramMap?.get('id')
+            this.activatedRoute?.snapshot?.paramMap?.get('id'),
           ),
         };
 
@@ -121,7 +109,7 @@ export class VistaSemanalComponent {
           start: this.onTimeClickedDate,
           draggable: true,
           end: new Date(
-            this.onTimeClickedDate.getTime() + nuevoEvento.duracion * 60000
+            this.onTimeClickedDate.getTime() + nuevoEvento.duracion * 60000,
           ),
           color: {
             primary: nuevoEvento.color,
@@ -156,7 +144,7 @@ export class VistaSemanalComponent {
           start: this.onTimeClickedDate,
           draggable: true,
           end: new Date(
-            this.onTimeClickedDate.getTime() + nuevoSubBloque.duracion * 60000
+            this.onTimeClickedDate.getTime() + nuevoSubBloque.duracion * 60000,
           ),
           meta: {
             subBloque: {
@@ -219,17 +207,17 @@ export class VistaSemanalComponent {
     const weekStart = getStartOfWeek(this.viewDate); // Inicio de la semana actual
     const targetDayDate = getDateForDayOfWeek(
       this.targetDayForCloning,
-      weekStart
+      weekStart,
     );
 
     // Obtener eventos del día seleccionado
     const eventsToClone = cloneDeep(
-      this.getEventsForDay(this.events, this.selectedDayForCloning)
+      this.getEventsForDay(this.events, this.selectedDayForCloning),
     );
 
     if (eventsToClone.length === 0) {
       console.warn(
-        `No hay eventos para clonar desde ${this.selectedDayForCloning}.`
+        `No hay eventos para clonar desde ${this.selectedDayForCloning}.`,
       );
       this.isCloneDialogVisible = false;
       return;
@@ -245,14 +233,14 @@ export class VistaSemanalComponent {
           targetDayDate.getMonth(),
           targetDayDate.getDate(),
           event.start.getHours(),
-          event.start.getMinutes()
+          event.start.getMinutes(),
         ),
         end: new Date(
           targetDayDate.getFullYear(),
           targetDayDate.getMonth(),
           targetDayDate.getDate(),
           event.end.getHours(),
-          event.end.getMinutes()
+          event.end.getMinutes(),
         ),
         id: undefined, // Eliminar el ID para que el backend cree uno nuevo
       };
@@ -264,7 +252,6 @@ export class VistaSemanalComponent {
       ...cloneDeep(clonedEvents),
     ]);
     this.eventsChange.emit(this.events);
-
 
     // Cerrar el diálogo y reiniciar las variables
     this.isCloneDialogVisible = false;
@@ -284,7 +271,7 @@ export class VistaSemanalComponent {
         map((e) => {
           e.data.forEach((e: any) => (e['tieneTemplate'] = true));
           return e;
-        })
+        }),
       );
   });
   public valueChanged = (event: any) => {
@@ -337,7 +324,7 @@ export class VistaSemanalComponent {
         },
         end: new Date(
           new Date(this.selectedEvent.start).getTime() +
-            subbloque.duracion * 60000
+            subbloque.duracion * 60000,
         ),
         meta: {
           ...this.selectedEvent.meta,
@@ -386,7 +373,7 @@ export class VistaSemanalComponent {
 
   private applyPlanificacionBloque(
     planificacionBloque: PlanificacionBloque,
-    newStart: Date
+    newStart: Date,
   ) {
     // Supongamos que el `CalendarEvent` tiene una referencia al `PlanificacionBloque`
 
@@ -405,7 +392,7 @@ export class VistaSemanalComponent {
           },
           start: new Date(currentStartDate),
           end: new Date(
-            currentStartDate.getTime() + subBloque.duracion * 60000
+            currentStartDate.getTime() + subBloque.duracion * 60000,
           ),
           meta: { subBloque },
           draggable: true,
@@ -422,7 +409,7 @@ export class VistaSemanalComponent {
 
   eventDropped(
     { event, newStart, newEnd, allDay }: CalendarEventTimesChangedEvent,
-    autoSave = false
+    autoSave = false,
   ): void {
     if (event instanceof MouseEvent) {
       event.preventDefault();
@@ -453,7 +440,7 @@ export class VistaSemanalComponent {
             duracion: subBloque.duracion,
             color: subBloque.color,
             importante: subBloque.importante || false,
-            tiempoAviso: subBloque.tiempoAviso
+            tiempoAviso: subBloque.tiempoAviso,
           })
           .subscribe({
             next: () => {
@@ -463,7 +450,7 @@ export class VistaSemanalComponent {
             },
             error: (err) => {
               this.toast.error(
-                'Error al guardar la posición del evento personal'
+                'Error al guardar la posición del evento personal',
               );
               console.error('Error:', err);
             },
@@ -532,7 +519,8 @@ export class VistaSemanalComponent {
   async saveComment(): Promise<void> {
     const event = this.events.find(
       (event) =>
-        event?.meta?.subBloque?.id === (this.selectedSubBloque as SubBloque)?.id
+        event?.meta?.subBloque?.id ===
+        (this.selectedSubBloque as SubBloque)?.id,
     );
 
     const subBloque = event?.meta.subBloque;
@@ -625,7 +613,7 @@ export class VistaSemanalComponent {
           start: new Date(eventoData.horaInicio),
           end: new Date(
             new Date(eventoData.horaInicio).getTime() +
-              eventoData.duracion * 60000
+              eventoData.duracion * 60000,
           ),
           color: {
             primary: eventoData.color || '#4caf50',
@@ -644,7 +632,9 @@ export class VistaSemanalComponent {
               importante: eventoData.importante || false,
               tiempoAviso: eventoData.tiempoAviso,
               realizado: eventoData.realizado || false,
-              planificacionId: Number(this.activatedRoute.snapshot.params['id']),
+              planificacionId: Number(
+                this.activatedRoute.snapshot.params['id'],
+              ),
               esPersonalizado: true,
             },
           },
@@ -669,12 +659,12 @@ export class VistaSemanalComponent {
         this.refresh.next();
         this.isEventoPersonalizadoDialogVisible = false;
         this.toast.success(
-          `Evento personal ${isNew ? 'creado' : 'actualizado'} correctamente`
+          `Evento personal ${isNew ? 'creado' : 'actualizado'} correctamente`,
         );
       },
       error: (err) => {
         this.toast.error(
-          `Error al ${isNew ? 'crear' : 'actualizar'} el evento personal`
+          `Error al ${isNew ? 'crear' : 'actualizar'} el evento personal`,
         );
         console.error('Error:', err);
       },
@@ -699,7 +689,7 @@ export class VistaSemanalComponent {
               !(
                 e.meta?.esPersonalizado &&
                 e.meta?.subBloque?.id === event.meta?.subBloque?.id
-              )
+              ),
           );
           this.refresh.next();
           this.toast.success('Evento personal eliminado correctamente');
@@ -738,7 +728,7 @@ export class VistaSemanalComponent {
         .actualizarEventoPersonalizadoRealizado$(
           dto.id,
           dto.planificacionId,
-          dto.realizado
+          dto.realizado,
         )
         .subscribe({
           next: () => {
@@ -746,7 +736,7 @@ export class VistaSemanalComponent {
             event.meta.subBloque.realizado = nuevoEstado;
             this.refresh.next();
             this.toast.success(
-              `Evento marcado como ${nuevoEstado ? 'realizado' : 'pendiente'}`
+              `Evento marcado como ${nuevoEstado ? 'realizado' : 'pendiente'}`,
             );
           },
           error: (err) => {
@@ -772,7 +762,7 @@ export class VistaSemanalComponent {
               event.meta.subBloque.realizado = !nuevoEstado;
               this.refresh.next();
               this.toast.error(
-                'Error al actualizar el progreso. Inténtalo de nuevo.'
+                'Error al actualizar el progreso. Inténtalo de nuevo.',
               );
               console.error('Error actualizar progreso:', err);
             },

@@ -1,6 +1,6 @@
-import { Examen } from '../../examen/models/examen.model';
-import { Pregunta, SeguridadAlResponder } from './pregunta.model';
-import { Usuario } from './user.model';
+import type { Examen } from '../../examen/models/examen.model';
+import type { Pregunta, SeguridadAlResponder } from './pregunta.model';
+import type { Usuario } from './user.model';
 
 export enum TestStatus {
   CREADO = 'CREADO',

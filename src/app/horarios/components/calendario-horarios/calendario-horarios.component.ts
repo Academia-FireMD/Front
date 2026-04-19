@@ -1,13 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CalendarModule } from 'primeng/calendar';
 import { FormsModule } from '@angular/forms';
 import { HorariosUtilsService } from '../../servicios/horarios-utils.service';
-
-export interface DiaEstado {
-  fecha: Date;
-  estado: 'disponible' | 'parcial' | 'completo' | 'sin-datos';
-}
+import { DiaEstado } from '../../models/dia-estado.model';
 
 @Component({
   selector: 'app-calendario-horarios',
@@ -15,11 +20,11 @@ export interface DiaEstado {
   styleUrl: './calendario-horarios.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, CalendarModule, FormsModule]
+  imports: [CommonModule, CalendarModule, FormsModule],
 })
 export class CalendarioHorariosComponent {
   utils = inject(HorariosUtilsService);
-  
+
   diasEstados = input<DiaEstado[]>([]);
   diasConReservas = input<string[]>([]);
   fechaSeleccionada = output<Date | null>();
@@ -49,35 +54,41 @@ export class CalendarioHorariosComponent {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     this.fechaMinima.set(hoy);
-    
-    effect(() => {
-      if (this.modoMultiSeleccion()) {
-        const fechasExt = this.fechasExternas();
-        if (Array.isArray(fechasExt)) {
-          this.fechasMultiples.set(fechasExt);
+
+    effect(
+      () => {
+        if (this.modoMultiSeleccion()) {
+          const fechasExt = this.fechasExternas();
+          if (Array.isArray(fechasExt)) {
+            this.fechasMultiples.set(fechasExt);
+          } else {
+            this.fechasMultiples.set([]);
+          }
+        } else {
+          const fechaExt = this.fechaExterna();
+          this.fecha.set(fechaExt);
+        }
+      },
+      { allowSignalWrites: true },
+    );
+
+    effect(
+      () => {
+        const modoMulti = this.modoMultiSeleccion();
+        if (modoMulti) {
+          this.fecha.set(null);
         } else {
           this.fechasMultiples.set([]);
         }
-      } else {
-        const fechaExt = this.fechaExterna();
-        this.fecha.set(fechaExt);
-      }
-    }, { allowSignalWrites: true });
-
-    effect(() => {
-      const modoMulti = this.modoMultiSeleccion();
-      if (modoMulti) {
-        this.fecha.set(null);
-      } else {
-        this.fechasMultiples.set([]);
-      }
-    }, { allowSignalWrites: true });
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   diasConEstado = computed(() => {
     const estados = this.diasEstados();
     const mapa = new Map<string, DiaEstado['estado']>();
-    estados.forEach(dia => {
+    estados.forEach((dia) => {
       const key = this.utils.getDateKey(dia.fecha);
       mapa.set(key, dia.estado);
     });
@@ -106,9 +117,9 @@ export class CalendarioHorariosComponent {
     const key = this.utils.getDateKey(fecha);
     const estado = this.diasConEstado().get(key);
     const tieneReserva = this.diasConReservasSet().has(key);
-    
+
     let clases = '';
-    
+
     switch (estado) {
       case 'disponible':
         clases = 'dia-disponible';
@@ -122,13 +133,13 @@ export class CalendarioHorariosComponent {
       default:
         clases = '';
     }
-    
+
     if (tieneReserva) {
       clases += ' dia-con-reserva';
     }
-    
+
     return clases;
-  }
+  };
 
   isDateDisabled = (date: Date): boolean => {
     const hoy = new Date();
@@ -136,6 +147,5 @@ export class CalendarioHorariosComponent {
     const fechaComparar = new Date(date);
     fechaComparar.setHours(0, 0, 0, 0);
     return fechaComparar < hoy;
-  }
+  };
 }
-

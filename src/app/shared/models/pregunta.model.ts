@@ -1,7 +1,7 @@
-import { Modulo } from '../services/modulo.service';
-import { Oposicion } from './subscription.model';
-import { Test } from './test.model';
-import { TipoDePlanificacionDeseada, Usuario } from './user.model';
+import type { Modulo } from '../services/modulo.service';
+import type { Oposicion } from './subscription.model';
+import type { Test } from './test.model';
+import type { TipoDePlanificacionDeseada, Usuario } from './user.model';
 
 // Re-export Oposicion from subscription model for backwards compatibility
 export { Oposicion } from './subscription.model';
