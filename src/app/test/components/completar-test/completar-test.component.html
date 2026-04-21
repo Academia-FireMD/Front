@@ -426,9 +426,13 @@
                           indiceRespuesta &&
                           isModoExamen()),
                       'respuesta-descartada':
-                        maxCandidatas() > 0 && !esCandidata(indiceRespuesta),
+                        maxCandidatas() > 0 &&
+                        !esCandidata(indiceRespuesta) &&
+                        !modoVerRespuestas,
                       'respuesta-candidata':
-                        maxCandidatas() > 0 && esCandidata(indiceRespuesta),
+                        maxCandidatas() > 0 &&
+                        esCandidata(indiceRespuesta) &&
+                        !modoVerRespuestas,
                     }"
                     (click)="
                       !vistaPrevia &&
