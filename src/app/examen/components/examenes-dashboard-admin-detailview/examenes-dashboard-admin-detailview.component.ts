@@ -3,6 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   computed,
+  ElementRef,
   inject,
   Input,
   signal,
@@ -596,12 +597,24 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.agregarComoReserva = false;
   }
 
+  @ViewChild('importarExcelFileInputRef')
+  private importarExcelFileInputRef?: ElementRef<HTMLInputElement>;
+
   public abrirDialogoImportarExcel() {
     this.importarExcelFile = null;
     this.importarExcelTemaIdControl.setValue(null);
     this.importarExcelDificultadControl.setValue(null);
     this.importarExcelComoReserva = this.agregarComoReserva;
     this.importarExcelDialogVisible = true;
+    // El <input type="file"> retiene su .value aunque el binding a
+    // importarExcelFile se reinicie. Si el alumno elige el mismo archivo
+    // otra vez (p.ej. tras un error), el browser no dispara 'change'
+    // y el form queda disabled. Reset defensivo del DOM.
+    setTimeout(() => {
+      if (this.importarExcelFileInputRef?.nativeElement) {
+        this.importarExcelFileInputRef.nativeElement.value = '';
+      }
+    }, 0);
   }
 
   public onImportarExcelFileChange(event: Event) {
@@ -640,6 +653,9 @@ export class ExamenesDashboardAdminDetailviewComponent {
       );
       this.toast.success(res.message);
       this.importarExcelDialogVisible = false;
+      // Reset del flag compartido para no contagiar a siguientes flujos de
+      // "Añadir preguntas" (manual/semi/automático) con reserva sticky.
+      this.agregarComoReserva = false;
       this.loadExamen();
     } catch (err) {
       console.error('Error al importar preguntas:', err);
