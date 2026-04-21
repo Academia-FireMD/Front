@@ -16,9 +16,12 @@ import {
   BehaviorSubject,
   catchError,
   combineLatest,
+  debounceTime,
   delay,
+  EMPTY,
   filter,
   firstValueFrom,
+  Subject,
   switchMap,
   tap,
 } from 'rxjs';
@@ -68,6 +71,7 @@ export class CompletarTestComponent {
   });
 
   public candidatasPorPregunta = signal<number[]>([]);
+  private candidatasTrigger$ = new Subject<void>();
 
   public candidatasSyncEffect = effect(() => {
     const respuesta = this.preguntaRespondida(this.indicePregunta());
@@ -263,6 +267,7 @@ export class CompletarTestComponent {
       .subscribe(async (data) => {
         this.processAnswer(data);
       });
+    this.initCandidatasPersistence();
     firstValueFrom(this.getRole());
   }
 
@@ -355,36 +360,53 @@ export class CompletarTestComponent {
   }
 
   private persistirCandidatas() {
-    // Persiste siempre (incluso sin respuesta dada) para cumplir RF6:
-    // al navegar o recargar, las candidatas deben estar en BD. El backend
-    // acepta respuestaDada opcional — crea la Respuesta con null.
-    const respuesta = this.preguntaRespondida();
-    const respuestaDada = respuesta?.respuestaDada;
-    firstValueFrom(
-      this.testService
-        .actualizarProgresoTest({
-          testId: this.lastLoadedTest.id,
-          preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
-          respuestaDada,
-          indicePregunta: this.indicePregunta(),
-          seguridad:
-            this.seguroDeLaPregunta.value ??
-            SeguridadAlResponder.CIEN_POR_CIENTO,
-          respuestasCandidatas: this.candidatasPorPregunta(),
-        })
-        .pipe(
-          tap((res) => {
-            const idx = this.lastLoadedTest.respuestas.findIndex(
-              (r) => r.preguntaId === res.preguntaId,
+    // Dispara el pipeline debounced. No hace el POST directamente para
+    // evitar overlapping/races si el alumno toggle rápido.
+    this.candidatasTrigger$.next();
+  }
+
+  private initCandidatasPersistence() {
+    this.candidatasTrigger$
+      .pipe(
+        debounceTime(300),
+        switchMap(() => {
+          const respuesta = this.preguntaRespondida();
+          const respuestaDada = respuesta?.respuestaDada;
+          return this.testService
+            .actualizarProgresoTest({
+              testId: this.lastLoadedTest.id,
+              preguntaId:
+                this.lastLoadedTest.preguntas[this.indicePregunta()].id,
+              respuestaDada,
+              indicePregunta: this.indicePregunta(),
+              seguridad:
+                this.seguroDeLaPregunta.value ??
+                SeguridadAlResponder.CIEN_POR_CIENTO,
+              respuestasCandidatas: this.candidatasPorPregunta(),
+            })
+            .pipe(
+              tap((res) => {
+                const idx = this.lastLoadedTest.respuestas.findIndex(
+                  (r) => r.preguntaId === res.preguntaId,
+                );
+                if (idx >= 0) {
+                  this.lastLoadedTest.respuestas[idx] = res as any;
+                } else {
+                  this.lastLoadedTest.respuestas.push(res as any);
+                }
+              }),
+              catchError((err) => {
+                console.error('Error al persistir candidatas:', err);
+                this.toast.error(
+                  'No se pudieron guardar las respuestas candidatas. Se reintentará con el próximo cambio.',
+                );
+                // NO re-throw: el stream debe sobrevivir para futuros triggers
+                return EMPTY;
+              }),
             );
-            if (idx >= 0) {
-              this.lastLoadedTest.respuestas[idx] = res as any;
-            } else {
-              this.lastLoadedTest.respuestas.push(res as any);
-            }
-          }),
-        ),
-    );
+        }),
+      )
+      .subscribe();
   }
 
   public async processAnswer(
