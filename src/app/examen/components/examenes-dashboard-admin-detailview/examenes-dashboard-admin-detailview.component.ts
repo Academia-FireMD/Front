@@ -249,8 +249,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public addPreguntasDialogVisible = false;
   public importarExcelDialogVisible = false;
   public importarExcelFile: File | null = null;
-  public importarExcelTemaId: number | null = null;
-  public importarExcelDificultad: Dificultad | null = null;
   public importarExcelTemaIdControl = new FormControl<number | null>(null);
   public importarExcelDificultadControl = new FormControl<Dificultad | null>(
     null,
@@ -600,8 +598,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
   public abrirDialogoImportarExcel() {
     this.importarExcelFile = null;
-    this.importarExcelTemaId = null;
-    this.importarExcelDificultad = null;
     this.importarExcelTemaIdControl.setValue(null);
     this.importarExcelDificultadControl.setValue(null);
     this.importarExcelComoReserva = this.agregarComoReserva;
@@ -647,7 +643,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
       this.loadExamen();
     } catch (err) {
       console.error('Error al importar preguntas:', err);
-      this.toast.error('Error al importar preguntas del Excel');
     } finally {
       this.importarExcelEnProgreso = false;
     }
