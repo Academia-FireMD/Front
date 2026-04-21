@@ -44,6 +44,15 @@ import {
   obtainSecurityEmojiBasedOnEnum,
 } from '../../../utils/utils';
 
+interface CandidatasSnapshot {
+  testId: number;
+  preguntaId: number;
+  indicePregunta: number;
+  respuestaDada: number | null | undefined;
+  seguridad: SeguridadAlResponder;
+  respuestasCandidatas: number[];
+}
+
 @Component({
   selector: 'app-completar-test',
   templateUrl: './completar-test.component.html',
@@ -74,7 +83,7 @@ export class CompletarTestComponent {
   });
 
   public candidatasPorPregunta = signal<number[]>([]);
-  private candidatasTrigger$ = new Subject<void>();
+  private candidatasTrigger$ = new Subject<CandidatasSnapshot>();
 
   public candidatasSyncEffect = effect(() => {
     const respuesta = this.preguntaRespondida(this.indicePregunta());
@@ -369,30 +378,47 @@ export class CompletarTestComponent {
   }
 
   private persistirCandidatas() {
-    // Dispara el pipeline debounced. No hace el POST directamente para
-    // evitar overlapping/races si el alumno toggle rápido.
-    this.candidatasTrigger$.next();
+    // Captura snapshot inmutable al momento del toggle/cambio de seguridad.
+    // Sin snapshot, el debounce leería el estado 300ms más tarde y podría
+    // persistir contra la pregunta equivocada si el alumno navegó rápido.
+    const indice = this.indicePregunta();
+    const pregunta = this.lastLoadedTest?.preguntas?.[indice];
+    if (!pregunta) return;
+    const respuesta = this.preguntaRespondida(indice);
+    this.candidatasTrigger$.next({
+      testId: this.lastLoadedTest.id,
+      preguntaId: pregunta.id,
+      indicePregunta: indice,
+      respuestaDada: respuesta?.respuestaDada,
+      seguridad:
+        this.seguroDeLaPregunta.value ?? SeguridadAlResponder.CIEN_POR_CIENTO,
+      respuestasCandidatas: [...this.candidatasPorPregunta()],
+    });
   }
 
   private initCandidatasPersistence() {
     this.candidatasTrigger$
       .pipe(
         debounceTime(300),
+        // Solo persistir cuando el alumno ya eligió respuesta. Persistir sin
+        // respuestaDada crearía una Respuesta con respuestaDada=null que en
+        // modo práctica bloquearía la selección posterior (preguntaRespondida
+        // devolvería truthy y clickedAnswer la rechazaría) e inflaría
+        // respuestas.length permitiendo finalizar sin responder.
+        filter(
+          (snap): snap is CandidatasSnapshot & { respuestaDada: number } =>
+            snap.respuestaDada != null && snap.respuestaDada >= 0,
+        ),
         takeUntilDestroyed(this.destroyRef),
-        switchMap(() => {
-          const respuesta = this.preguntaRespondida();
-          const respuestaDada = respuesta?.respuestaDada;
+        switchMap((snap) => {
           return this.testService
             .actualizarProgresoTest({
-              testId: this.lastLoadedTest.id,
-              preguntaId:
-                this.lastLoadedTest.preguntas[this.indicePregunta()].id,
-              respuestaDada,
-              indicePregunta: this.indicePregunta(),
-              seguridad:
-                this.seguroDeLaPregunta.value ??
-                SeguridadAlResponder.CIEN_POR_CIENTO,
-              respuestasCandidatas: this.candidatasPorPregunta(),
+              testId: snap.testId,
+              preguntaId: snap.preguntaId,
+              respuestaDada: snap.respuestaDada,
+              indicePregunta: snap.indicePregunta,
+              seguridad: snap.seguridad,
+              respuestasCandidatas: snap.respuestasCandidatas,
             })
             .pipe(
               tap((res) => {
