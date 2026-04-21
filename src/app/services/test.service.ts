@@ -18,6 +18,7 @@ export interface RegistrarRespuestaDto {
   omitida?: boolean;
   seguridad?: SeguridadAlResponder;
   indicePregunta?: number;
+  respuestasCandidatas?: number[];
 }
 export interface GenerarTestDto {
   numPreguntas: number;

@@ -4034,6 +4034,7 @@ export interface components {
       indicePregunta?: number;
       omitida?: boolean;
       seguridad?: Record<string, never>;
+      respuestasCandidatas?: number[];
     };
     DateRangeDto: {
       /** Format: date-time */

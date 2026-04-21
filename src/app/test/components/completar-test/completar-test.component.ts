@@ -1,26 +1,26 @@
 import { Location } from '@angular/common';
 import {
-    Component,
-    effect,
-    ElementRef,
-    inject,
-    Input,
-    QueryList,
-    signal,
-    ViewChildren,
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  Input,
+  QueryList,
+  signal,
+  ViewChildren,
 } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import {
-    BehaviorSubject,
-    catchError,
-    combineLatest,
-    delay,
-    filter,
-    firstValueFrom,
-    switchMap,
-    tap,
+  BehaviorSubject,
+  catchError,
+  combineLatest,
+  delay,
+  filter,
+  firstValueFrom,
+  switchMap,
+  tap,
 } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
@@ -28,15 +28,15 @@ import { TestService } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import {
-    Dificultad,
-    Pregunta,
-    SeguridadAlResponder,
+  Dificultad,
+  Pregunta,
+  SeguridadAlResponder,
 } from '../../../shared/models/pregunta.model';
 import { Respuesta, Test } from '../../../shared/models/test.model';
 import { esRolPlataforma, Rol } from '../../../shared/models/user.model';
 import {
-    getLetter,
-    obtainSecurityEmojiBasedOnEnum,
+  getLetter,
+  obtainSecurityEmojiBasedOnEnum,
 } from '../../../utils/utils';
 
 @Component({
@@ -63,22 +63,37 @@ export class CompletarTestComponent {
     this.seguroDeLaPregunta.patchValue(
       respuesta && respuesta.seguridad
         ? respuesta.seguridad
-        : SeguridadAlResponder.CIEN_POR_CIENTO
+        : SeguridadAlResponder.CIEN_POR_CIENTO,
     );
   });
+
+  public candidatasPorPregunta = signal<number[]>([]);
+
+  public candidatasSyncEffect = effect(() => {
+    const respuesta = this.preguntaRespondida(this.indicePregunta());
+    this.candidatasPorPregunta.set(
+      respuesta?.respuestasCandidatas
+        ? [...respuesta.respuestasCandidatas]
+        : [],
+    );
+  });
+
   public displayFeedbackDialog = false;
   public displayNavegador = false;
   public displayClonacion = false;
   public displayFalloDialog = false;
   public displayImpugnacionDialog = false;
-  public motivoImpugnacion = new FormControl('', [Validators.required, Validators.minLength(10)]);
+  public motivoImpugnacion = new FormControl('', [
+    Validators.required,
+    Validators.minLength(10),
+  ]);
   public indiceSeleccionado = new BehaviorSubject(-1);
   public seguroDeLaPregunta = new FormControl(
-    SeguridadAlResponder.CIEN_POR_CIENTO
+    SeguridadAlResponder.CIEN_POR_CIENTO,
   );
   public dificultadPercibida = new FormControl(
     Dificultad.INTERMEDIO,
-    Validators.required
+    Validators.required,
   );
 
   public feedback = new FormControl('', Validators.required);
@@ -107,17 +122,23 @@ export class CompletarTestComponent {
   }
 
   public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
-    const respuesta = this.modoVerRespuestas ? this.preguntaRespondidaPorId(pregunta.id) : this.preguntaRespondida();
+    const respuesta = this.modoVerRespuestas
+      ? this.preguntaRespondidaPorId(pregunta.id)
+      : this.preguntaRespondida();
     return (
       (!this.isModoExamen() || this.modoVerRespuestas || this.vistaPrevia) &&
       (!!respuesta || this.vistaPrevia) &&
-      (respuesta?.estado != 'OMITIDA' || this.vistaPrevia || this.modoVerRespuestas) &&
+      (respuesta?.estado != 'OMITIDA' ||
+        this.vistaPrevia ||
+        this.modoVerRespuestas) &&
       pregunta.respuestaCorrectaIndex == indiceRespuesta
     );
   }
 
   public respuestaIncorrecta(pregunta: Pregunta, indiceRespuesta: number) {
-    const respuesta = this.modoVerRespuestas ? this.preguntaRespondidaPorId(pregunta.id) : this.preguntaRespondida();
+    const respuesta = this.modoVerRespuestas
+      ? this.preguntaRespondidaPorId(pregunta.id)
+      : this.preguntaRespondida();
     return (
       (!this.isModoExamen() || this.modoVerRespuestas) &&
       !!respuesta &&
@@ -144,16 +165,16 @@ export class CompletarTestComponent {
   }
 
   public preguntaRespondida(
-    specificIndex: number = this.indicePregunta()
+    specificIndex: number = this.indicePregunta(),
   ): Respuesta | undefined {
     return (this.lastLoadedTest?.respuestas ?? []).find(
-      (r) => r.indicePregunta == specificIndex
+      (r) => r.indicePregunta == specificIndex,
     );
   }
 
   public preguntaRespondidaPorId(preguntaId: number): Respuesta | undefined {
     return (this.lastLoadedTest?.respuestas ?? []).find(
-      (r) => r.preguntaId == preguntaId
+      (r) => r.preguntaId == preguntaId,
     );
   }
 
@@ -253,14 +274,122 @@ export class CompletarTestComponent {
       return;
     }
     this.seguroDeLaPregunta.patchValue(value);
-    if (respuesta) {
-      this.indiceSeleccionado.next(respuesta.respuestaDada);
+
+    // Ajustar candidatas según la nueva seguridad
+    if (
+      value === SeguridadAlResponder.CIEN_POR_CIENTO ||
+      value === SeguridadAlResponder.CERO_POR_CIENTO
+    ) {
+      this.candidatasPorPregunta.set([]);
+    } else {
+      const max = value === SeguridadAlResponder.CINCUENTA_POR_CIENTO ? 2 : 3;
+      const actuales = this.candidatasPorPregunta();
+      // Si había elegida y no estaba incluida, pre-marcarla
+      const elegida =
+        respuesta?.respuestaDada ?? this.indiceSeleccionado.getValue();
+      let base = actuales;
+      if (elegida != null && elegida >= 0 && !base.includes(elegida)) {
+        base = [...base, elegida];
+      }
+      // Si excede el máximo, recortar preservando las más recientes
+      if (base.length > max) {
+        base = base.slice(base.length - max);
+      }
+      this.candidatasPorPregunta.set(base);
     }
+
+    if (respuesta) {
+      // processAnswer incluirá respuestasCandidatas en el payload
+      this.indiceSeleccionado.next(respuesta.respuestaDada);
+    } else {
+      // Sin respuesta aún: persistir el cambio de candidatas derivado del
+      // cambio de seguridad (o su limpieza) para cumplir RF6 tras recarga
+      this.persistirCandidatas();
+    }
+  }
+
+  public esCandidata(indice: number): boolean {
+    const seguridad = this.seguroDeLaPregunta.value;
+    if (
+      seguridad !== SeguridadAlResponder.CINCUENTA_POR_CIENTO &&
+      seguridad !== SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
+    ) {
+      return true;
+    }
+    return this.candidatasPorPregunta().includes(indice);
+  }
+
+  public maxCandidatas(): number {
+    const seguridad = this.seguroDeLaPregunta.value;
+    if (seguridad === SeguridadAlResponder.CINCUENTA_POR_CIENTO) return 2;
+    if (seguridad === SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO) return 3;
+    return 0;
+  }
+
+  public toggleCandidata(indice: number, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (this.vistaPrevia || this.modoVerRespuestas) return;
+    const max = this.maxCandidatas();
+    if (max === 0) return;
+    const actuales = this.candidatasPorPregunta();
+    if (actuales.includes(indice)) {
+      this.candidatasPorPregunta.set(actuales.filter((i) => i !== indice));
+    } else {
+      const siguientes = [...actuales, indice];
+      const recortadas =
+        siguientes.length > max
+          ? siguientes.slice(siguientes.length - max)
+          : siguientes;
+      this.candidatasPorPregunta.set(recortadas);
+    }
+    this.persistirCandidatas();
+  }
+
+  public rescatarDescartada(indice: number, event: Event) {
+    event.stopPropagation();
+    if (!this.candidatasPorPregunta().includes(indice)) {
+      this.toggleCandidata(indice);
+    }
+  }
+
+  private persistirCandidatas() {
+    // Persiste siempre (incluso sin respuesta dada) para cumplir RF6:
+    // al navegar o recargar, las candidatas deben estar en BD. El backend
+    // acepta respuestaDada opcional — crea la Respuesta con null.
+    const respuesta = this.preguntaRespondida();
+    const respuestaDada = respuesta?.respuestaDada;
+    firstValueFrom(
+      this.testService
+        .actualizarProgresoTest({
+          testId: this.lastLoadedTest.id,
+          preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
+          respuestaDada,
+          indicePregunta: this.indicePregunta(),
+          seguridad:
+            this.seguroDeLaPregunta.value ??
+            SeguridadAlResponder.CIEN_POR_CIENTO,
+          respuestasCandidatas: this.candidatasPorPregunta(),
+        })
+        .pipe(
+          tap((res) => {
+            const idx = this.lastLoadedTest.respuestas.findIndex(
+              (r) => r.preguntaId === res.preguntaId,
+            );
+            if (idx >= 0) {
+              this.lastLoadedTest.respuestas[idx] = res as any;
+            } else {
+              this.lastLoadedTest.respuestas.push(res as any);
+            }
+          }),
+        ),
+    );
   }
 
   public async processAnswer(
     respuestaDada?: number,
-    mode: 'none' | 'next' | 'before' | 'omitir' = 'none'
+    mode: 'none' | 'next' | 'before' | 'omitir' = 'none',
   ) {
     if (this.vistaPrevia || this.modoVerRespuestas) {
       if (mode === 'next' || mode === 'omitir') this.siguiente();
@@ -270,7 +399,7 @@ export class CompletarTestComponent {
 
     if (this.isProcessingAnswer) {
       console.warn(
-        'Ya se está procesando una respuesta, ignorando nueva llamada'
+        'Ya se está procesando una respuesta, ignorando nueva llamada',
       );
       return;
     }
@@ -288,6 +417,22 @@ export class CompletarTestComponent {
       return;
     }
 
+    const max = this.maxCandidatas();
+    if (
+      max > 0 &&
+      respuestaDada != null &&
+      respuestaDada >= 0 &&
+      !this.candidatasPorPregunta().includes(respuestaDada)
+    ) {
+      const actuales = this.candidatasPorPregunta();
+      const siguientes = [...actuales, respuestaDada];
+      this.candidatasPorPregunta.set(
+        siguientes.length > max
+          ? siguientes.slice(siguientes.length - max)
+          : siguientes,
+      );
+    }
+
     this.isProcessingAnswer = true;
     this.answeredQuestion = -1;
     this.indicePreguntaCorrecta = -1;
@@ -301,7 +446,7 @@ export class CompletarTestComponent {
         mode == 'omitir' ||
         ((mode == 'next' || mode == 'before') && !isAnswered);
 
-    const res: Respuesta & { pregunta: { respuestaCorrectaIndex: number } } =
+      const res: Respuesta & { pregunta: { respuestaCorrectaIndex: number } } =
         await firstValueFrom(
           this.testService
             .actualizarProgresoTest({
@@ -314,25 +459,26 @@ export class CompletarTestComponent {
               seguridad:
                 this.seguroDeLaPregunta.value ??
                 SeguridadAlResponder.CIEN_POR_CIENTO,
+              respuestasCandidatas: this.candidatasPorPregunta(),
             })
             .pipe(
               catchError((err) => {
                 console.error('Error al procesar respuesta:', err);
                 this.toast.error(
-                  'Error al procesar la respuesta. Intenta de nuevo.'
+                  'Error al procesar la respuesta. Intenta de nuevo.',
                 );
                 throw err;
               }),
               tap((res) => {
                 this.lastAnsweredQuestion = res as any;
                 if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
-              })
-            )
+              }),
+            ),
         );
 
       // Actualizar respuesta localmente sin hacer GET
       const idx = this.lastLoadedTest.respuestas.findIndex(
-        (r) => r.preguntaId === res.preguntaId
+        (r) => r.preguntaId === res.preguntaId,
       );
       if (idx >= 0) {
         this.lastLoadedTest.respuestas[idx] = res;
@@ -373,7 +519,7 @@ export class CompletarTestComponent {
         dificultadPercibida:
           this.dificultadPercibida.value ?? Dificultad.INTERMEDIO,
         comentario: this.feedback.value ?? '',
-      })
+      }),
     );
     this.toast.success('Feedback enviado exitosamente');
     this.feedback.reset();
@@ -394,7 +540,7 @@ export class CompletarTestComponent {
         if (!!idExamen) this.idExamenSimulacro = idExamen;
         if (!!modoSimulacro) this.modoSimulacro = !!modoSimulacro;
         this.expectedRole = expectedRole;
-      })
+      }),
     );
   }
 
@@ -403,10 +549,10 @@ export class CompletarTestComponent {
       this.reporteFallo.reportarFallo({
         preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
         descripcion: reportDesc ?? '',
-      })
+      }),
     );
     this.toast.success(
-      'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.'
+      'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.',
     );
     this.displayFalloDialog = false;
   }
@@ -422,7 +568,9 @@ export class CompletarTestComponent {
 
   public async submitImpugnacion() {
     if (this.motivoImpugnacion.invalid) {
-      this.toast.error('El motivo de impugnación debe tener al menos 10 caracteres');
+      this.toast.error(
+        'El motivo de impugnación debe tener al menos 10 caracteres',
+      );
       return;
     }
 
@@ -431,11 +579,11 @@ export class CompletarTestComponent {
         this.examenesService.impugnarPreguntaDesdeTest$(
           this.lastLoadedTest.id,
           this.lastLoadedTest.preguntas[this.indicePregunta()].id,
-          this.motivoImpugnacion.value ?? ''
-        )
+          this.motivoImpugnacion.value ?? '',
+        ),
       );
       this.toast.success(
-        'Pregunta impugnada exitosamente. Los administradores han sido notificados y revisarán tu solicitud.'
+        'Pregunta impugnada exitosamente. Los administradores han sido notificados y revisarán tu solicitud.',
       );
       this.displayImpugnacionDialog = false;
       this.motivoImpugnacion.reset();
@@ -443,7 +591,8 @@ export class CompletarTestComponent {
       await firstValueFrom(this.loadTest());
     } catch (error: any) {
       this.toast.error(
-        error?.error?.message || 'Error al impugnar la pregunta. Intenta de nuevo.'
+        error?.error?.message ||
+          'Error al impugnar la pregunta. Intenta de nuevo.',
       );
     }
   }
@@ -456,7 +605,7 @@ export class CompletarTestComponent {
         this.lastLoadedTest.respuestas.length
       ) {
         this.toast.info(
-          'Todavia no has terminado el test, te faltan preguntas por responder!'
+          'Todavia no has terminado el test, te faltan preguntas por responder!',
         );
       } else {
         // if(this.modoSimulacro && this.idExamenSimulacro) {}
@@ -481,9 +630,7 @@ export class CompletarTestComponent {
     }
     const respuesta = this.preguntaRespondida();
     return (
-      !!respuesta &&
-      respuesta.estado === 'RESPONDIDA' &&
-      !this.comunicating
+      !!respuesta && respuesta.estado === 'RESPONDIDA' && !this.comunicating
     );
   }
 
@@ -515,7 +662,7 @@ export class CompletarTestComponent {
             this.idExamenSimulacro,
             this.lastLoadedTest.id,
           ],
-          { queryParams: { goBack: true } }
+          { queryParams: { goBack: true } },
         );
       } else {
         this.router.navigate([
@@ -535,7 +682,7 @@ export class CompletarTestComponent {
     await firstValueFrom(
       this.testService
         .finalizarTest(this.lastLoadedTest.id)
-        .pipe(switchMap(() => this.loadTest()))
+        .pipe(switchMap(() => this.loadTest())),
     );
 
     this.navegarAResultados();
@@ -558,7 +705,7 @@ export class CompletarTestComponent {
         }
       }),
       delay(100),
-      tap(() => this.scrollToActiveBlock())
+      tap(() => this.scrollToActiveBlock()),
     );
   }
 }
