@@ -39,6 +39,7 @@ export interface Respuesta {
   respuestaDada: number;
   esCorrecta: boolean;
   seguridad?: SeguridadAlResponder;
+  respuestasCandidatas?: number[];
   createdAt: Date;
   updatedAt: Date;
   indicePregunta: number;
