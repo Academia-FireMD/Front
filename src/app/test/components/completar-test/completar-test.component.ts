@@ -152,6 +152,12 @@ export class CompletarTestComponent {
     );
   }
 
+  public fueCandidata(pregunta: Pregunta, indiceRespuesta: number): boolean {
+    if (!this.modoVerRespuestas) return false;
+    const respuesta = this.preguntaRespondidaPorId(pregunta.id);
+    return !!respuesta?.respuestasCandidatas?.includes(indiceRespuesta);
+  }
+
   public respuestaIncorrectaBlock(indiceRespuesta: number) {
     return (
       (!this.isModoExamen() || this.modoVerRespuestas) &&

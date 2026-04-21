@@ -112,3 +112,19 @@
   color: var(--text-color-secondary, #64748b);
   font-style: italic;
 }
+
+.respuesta-correcta.fue-candidata,
+.respuesta-incorrecta.fue-candidata,
+.fue-candidata:not(.respuesta-correcta):not(.respuesta-incorrecta) {
+  position: relative;
+
+  &::after {
+    content: "?";
+    position: absolute;
+    top: 0.25rem;
+    right: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-color-secondary, #64748b);
+    opacity: 0.7;
+  }
+}
