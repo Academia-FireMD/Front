@@ -77,3 +77,38 @@
     border: 1px solid $primaryColor;
   }
 }
+
+.respuesta-descartada {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  transition:
+    opacity 0.15s ease,
+    filter 0.15s ease;
+}
+
+.respuesta-candidata {
+  box-shadow: inset 0 0 0 1px var(--primary-color, #3b82f6);
+}
+
+.rescatar-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-color-secondary, #64748b);
+
+  &.activa {
+    color: var(--primary-color, #3b82f6);
+  }
+
+  &:hover {
+    background: var(--surface-100, rgba(0, 0, 0, 0.05));
+    border-radius: 4px;
+  }
+}
+
+.candidatas-contador {
+  color: var(--text-color-secondary, #64748b);
+  font-style: italic;
+}

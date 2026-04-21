@@ -22,11 +22,13 @@
       (click)="clickedPreguntaFromNavegador(i)"
     >
       <div class="content flex align-items-center justify-content-center">
-        @if ( !!preguntaRespondida( i) && preguntaRespondida(i)?.seguridad !=
-        'CIEN_POR_CIENTO') {
-        {{ obtainSecurityEmojiBasedOnEnum(preguntaRespondida(i)?.seguridad) }}
-        }@else {
-        {{ i + 1 }}
+        @if (
+          !!preguntaRespondida(i) &&
+          preguntaRespondida(i)?.seguridad != "CIEN_POR_CIENTO"
+        ) {
+          {{ obtainSecurityEmojiBasedOnEnum(preguntaRespondida(i)?.seguridad) }}
+        } @else {
+          {{ i + 1 }}
         }
       </div>
     </p-card>
@@ -37,7 +39,7 @@
   [(visible)]="displayNavegador"
   header="Navegador de preguntas"
   [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
-  [style]="{ width: '75vw', }"
+  [style]="{ width: '75vw' }"
   [closable]="true"
   *ngIf="viewportService.screenWidth == 'xs'"
 >
@@ -53,7 +55,7 @@
   modal="modal"
   header="Clona la pregunta actual"
   [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
-  [style]="{ width: '75vw', }"
+  [style]="{ width: '75vw' }"
   [closable]="true"
 >
   <div class="flex flex-column gap-3 py-3" *ngIf="displayClonacion">
@@ -71,7 +73,7 @@
   modal="modal"
   header="Feedback"
   [breakpoints]="{ '1199px': '85vw', '575px': '90vw' }"
-  [style]="{ width: '75vw', }"
+  [style]="{ width: '75vw' }"
   [closable]="false"
 >
   <div class="flex flex-column gap-3 py-3">
@@ -119,8 +121,9 @@
   <div class="flex flex-column gap-3 py-3">
     <h4 class="m-0">Impugnar esta pregunta</h4>
     <p class="m-0">
-      Si consideras que esta pregunta tiene algún error o problema, puedes impugnarla. 
-      Los administradores revisarán tu solicitud y tomarán las medidas necesarias.
+      Si consideras que esta pregunta tiene algún error o problema, puedes
+      impugnarla. Los administradores revisarán tu solicitud y tomarán las
+      medidas necesarias.
     </p>
     <p class="m-0 text-sm text-gray-600">
       Describe el motivo de la impugnación (mínimo 10 caracteres):
@@ -162,7 +165,7 @@
       [ngClass]="{
         'selected-difficulty':
           control.value == SeguridadAlResponder.CIEN_POR_CIENTO,
-        'lower-opacity': control.value != SeguridadAlResponder.CIEN_POR_CIENTO
+        'lower-opacity': control.value != SeguridadAlResponder.CIEN_POR_CIENTO,
       }"
     >
       <div class="seguridad-box">
@@ -179,7 +182,7 @@
         'selected-difficulty':
           control.value == SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
         'lower-opacity':
-          control.value != SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
+          control.value != SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
       }"
     >
       <div class="seguridad-box">
@@ -196,7 +199,7 @@
         'selected-difficulty':
           control.value == SeguridadAlResponder.CINCUENTA_POR_CIENTO,
         'lower-opacity':
-          control.value != SeguridadAlResponder.CINCUENTA_POR_CIENTO
+          control.value != SeguridadAlResponder.CINCUENTA_POR_CIENTO,
       }"
     >
       <div class="seguridad-box">
@@ -212,7 +215,7 @@
       [ngClass]="{
         'selected-difficulty':
           control.value == SeguridadAlResponder.CERO_POR_CIENTO,
-        'lower-opacity': control.value != SeguridadAlResponder.CERO_POR_CIENTO
+        'lower-opacity': control.value != SeguridadAlResponder.CERO_POR_CIENTO,
       }"
     >
       <div class="seguridad-box">
@@ -235,8 +238,8 @@
           severity: 'info',
           summary: 'Visualización de respuestas',
           detail:
-            'Estás viendo tus respuestas. Las respuestas correctas están marcadas en verde y las incorrectas en rojo.'
-        }
+            'Estás viendo tus respuestas. Las respuestas correctas están marcadas en verde y las incorrectas en rojo.',
+        },
       ]"
       data-testid="modo-ver-respuestas-mensaje"
     ></p-messages>
@@ -251,8 +254,8 @@
           severity: 'info',
           summary: 'Modo vista previa',
           detail:
-            'Solo puedes navegar entre las preguntas sin registrar respuestas.'
-        }
+            'Solo puedes navegar entre las preguntas sin registrar respuestas.',
+        },
       ]"
       data-testid="modo-vista-previa-mensaje"
     ></p-messages>
@@ -267,259 +270,395 @@
           severity: 'warn',
           summary: 'Importante',
           detail:
-            'Solo el primer intento del examen será tenido en cuenta para la puntuación. Los intentos posteriores no afectarán a tu calificación final.'
-        }
+            'Solo el primer intento del examen será tenido en cuenta para la puntuación. Los intentos posteriores no afectarán a tu calificación final.',
+        },
       ]"
       data-testid="modo-simulacro-mensaje"
     ></p-messages>
 
-    @if(testCargado.preguntas[indicePregunta()]){
-
-    <p-card
-      class="col-12"
-      *ngIf="testCargado.preguntas[indicePregunta()] as pregunta"
-      data-testid="pregunta-card"
-    >
-      <div class="grid">
-        <div class="col-12 header justify-content-between flex">
-          <div class="identificador" data-testid="pregunta-identificador">
-            Identificador:
-            {{ pregunta.identificador }}
-          </div>
-          <div class="index-pregunta" data-testid="numero-pregunta">
-            Pregunta
-            {{ indicePregunta() + 1 }}/{{ testCargado.preguntas.length }}
-          </div>
-        </div>
-        <div class="col-12">
-          <p-panel data-testid="pregunta-panel">
-            <ng-template pTemplate="header">
-              <div
-                class="flex justify-content-between w-full font-bold align-items-center"
-              >
-                <div class="flex align-items-center gap-2">
-                  <span data-testid="tema-pregunta">{{
-                    pregunta.tema.numero + " - " + pregunta.tema.descripcion
-                  }}</span>
-                  @if (pregunta.impugnada && (vistaPrevia || modoVerRespuestas))
-                  {
-                  <p-tag
-                    severity="danger"
-                    [pTooltip]="pregunta.motivoImpugnacion"
-                    tooltipPosition="right"
-                    value="IMPUGNADA"
-                    data-testid="impugnada-tag"
-                  ></p-tag>
-                  } @if (pregunta.deReserva) {
-                  <p-tag
-                    severity="info"
-                    value="DE RESERVA"
-                    data-testid="de-reserva-tag"
-                  ></p-tag>
-                  }
-                </div>
-                <span
-                  *ngIf="
-                    !!testCargado.duration && !vistaPrevia && !modoVerRespuestas
-                  "
-                  data-testid="cronometro"
-                  >{{ testCargado.endsAt | countdown }}</span
-                >
-                <div class="actions" data-testid="acciones-pregunta">
-                  <p-button
-                    label="{{
-                      viewportService.screenWidth == 'xs' ? '' : 'Navegador'
-                    }}"
-                    [link]="true"
-                    icon="pi pi-compass"
-                    *ngIf="viewportService.screenWidth == 'xs'"
-                    (click)="displayNavegadorFn()"
-                    data-testid="navegador-btn"
-                  />
-                  <p-button
-                    label="{{
-                      viewportService.screenWidth == 'xs'
-                        ? ''
-                        : 'Reportar fallo'
-                    }}"
-                    [link]="true"
-                    icon="pi pi-exclamation-triangle"
-                    (click)="displayFalloDialog = true"
-                    *ngIf="!vistaPrevia && !modoVerRespuestas"
-                    data-testid="reportar-fallo-btn"
-                  />
-                  <p-button
-                    label="{{
-                      viewportService.screenWidth == 'xs'
-                        ? ''
-                        : 'Impugnar pregunta'
-                    }}"
-                    [link]="true"
-                    icon="pi pi-flag"
-                    (click)="showImpugnacionDialog()"
-                    *ngIf="!vistaPrevia && !modoVerRespuestas && isModoExamen() && expectedRole === 'ALUMNO'"
-                    data-testid="impugnar-pregunta-btn"
-                  />
-                  <p-button
-                    label="{{
-                      viewportService.screenWidth == 'xs' ? '' : 'Clonar'
-                    }}"
-                    [link]="true"
-                    icon="pi pi-clone"
-                    (click)="displayClonacion = true"
-                    *ngIf="!vistaPrevia && !modoVerRespuestas && !modoSimulacro"
-                    data-testid="clonar-pregunta-btn"
-                  />
-                </div>
-              </div>
-            </ng-template>
-
-            <div class="grid">
-              <div
-                class="{{
-                  viewportService.screenWidth == 'xs' ? 'col-12' : 'col-9'
-                }}  "
-              >
-                <p data-testid="enunciado-pregunta">
-                  <markdown
-                    [data]="
-                      pregunta.descripcion && pregunta.descripcion.length > 0
-                        ? pregunta.descripcion
-                        : 'No hay un enunciado definido.'
-                    "
-                  ></markdown>
-                </p>
-                <div
-                  class="col-12 respuestas-list pointer"
-                  [class.pointer]="!vistaPrevia && !modoVerRespuestas"
-                  [class.disabled]="vistaPrevia || modoVerRespuestas"
-                  pRipple
-                  *ngFor="
-                    let respuesta of pregunta.respuestas;
-                    let indiceRespuesta = index
-                  "
-                  [ngClass]="{
-                    'respuesta-correcta': respuestaCorrecta(
-                      pregunta,
-                      indiceRespuesta
-                    ),
-                    'respuesta-incorrecta': respuestaIncorrecta(
-                      pregunta,
-                      indiceRespuesta
-                    ),
-                    'respuesta-seleccionada':
-                      this.indiceSeleccionado.getValue() == indiceRespuesta ||
-                      (preguntaRespondida()?.respuestaDada == indiceRespuesta &&
-                        isModoExamen())
-                  }"
-                  (click)="
-                    !vistaPrevia &&
-                      !modoVerRespuestas &&
-                      clickedAnswer(indiceRespuesta)
-                  "
-                  data-testid="opcion-respuesta"
-                  [attr.data-respuesta-index]="indiceRespuesta"
-                >
-                  <p-inputGroup>
-                    <p-inputGroupAddon
-                      >{{ getLetter(indiceRespuesta) }})
-                    </p-inputGroupAddon>
-                    <div class="flex w-full align-items-center">
-                      <span>{{ respuesta }}</span>
-                    </div>
-                  </p-inputGroup>
-                </div>
-              </div>
-              <div class="col-3" *ngIf="viewportService.screenWidth != 'xs'">
-                <div class="lateral-navegador" data-testid="navegador-lateral">
-                  <ng-container
-                    *ngTemplateOutlet="contentNavegador"
-                  ></ng-container>
-                </div>
-              </div>
+    @if (testCargado.preguntas[indicePregunta()]) {
+      <p-card
+        class="col-12"
+        *ngIf="testCargado.preguntas[indicePregunta()] as pregunta"
+        data-testid="pregunta-card"
+      >
+        <div class="grid">
+          <div class="col-12 header justify-content-between flex">
+            <div class="identificador" data-testid="pregunta-identificador">
+              Identificador:
+              {{ pregunta.identificador }}
             </div>
-
-            <div
-              class="grid w-full footer flex justify-content-between align-items-center mt-2"
-              *ngIf="
-                (answeredCurrentQuestion() && !modoVerRespuestas) ||
-                vistaPrevia ||
-                modoVerRespuestas
-              "
-              data-testid="footer-respuesta"
-            >
-              <div
-                class="solution col-12 align-items-center flex flex-column"
-                *ngIf="!isModoExamen() || modoVerRespuestas"
-                data-testid="solucion-container"
-              >
-                <strong>Solución:</strong>
-                <p class="m-0" data-testid="solucion-texto">
-                  <markdown
-                    [data]="
-                      pregunta.solucion && pregunta.solucion.length > 0
-                        ? pregunta.solucion
-                        : 'No hay una solución definida.'
-                    "
-                  ></markdown>
-                </p>
-              </div>
-
-              <div
-                class="next-button col-12 w-full"
-                *ngIf="!vistaPrevia && !modoVerRespuestas"
-              >
-                <button
-                  pButton
-                  class="p-button p-button-raised w-full"
-                  (click)="siguiente()"
-                  data-testid="continuar-btn"
-                >
-                  <span class="w-full">Continuar</span>
-                </button>
-              </div>
+            <div class="index-pregunta" data-testid="numero-pregunta">
+              Pregunta
+              {{ indicePregunta() + 1 }}/{{ testCargado.preguntas.length }}
             </div>
-          </p-panel>
-          <div
-            class="col-12 bottom-bar-no-content"
-            *ngIf="
-              (!answeredCurrentQuestion() ||
-                (answeredCurrentQuestion() && isModoExamen())) &&
-              !vistaPrevia &&
-              !modoVerRespuestas
-            "
-            data-testid="barra-navegacion"
-          >
-            <p-panel>
+          </div>
+          <div class="col-12">
+            <p-panel data-testid="pregunta-panel">
               <ng-template pTemplate="header">
-                <div class="seguridad w-full">
+                <div
+                  class="flex justify-content-between w-full font-bold align-items-center"
+                >
+                  <div class="flex align-items-center gap-2">
+                    <span data-testid="tema-pregunta">{{
+                      pregunta.tema.numero + " - " + pregunta.tema.descripcion
+                    }}</span>
+                    @if (
+                      pregunta.impugnada && (vistaPrevia || modoVerRespuestas)
+                    ) {
+                      <p-tag
+                        severity="danger"
+                        [pTooltip]="pregunta.motivoImpugnacion"
+                        tooltipPosition="right"
+                        value="IMPUGNADA"
+                        data-testid="impugnada-tag"
+                      ></p-tag>
+                    }
+                    @if (pregunta.deReserva) {
+                      <p-tag
+                        severity="info"
+                        value="DE RESERVA"
+                        data-testid="de-reserva-tag"
+                      ></p-tag>
+                    }
+                  </div>
+                  <span
+                    *ngIf="
+                      !!testCargado.duration &&
+                      !vistaPrevia &&
+                      !modoVerRespuestas
+                    "
+                    data-testid="cronometro"
+                    >{{ testCargado.endsAt | countdown }}</span
+                  >
+                  <div class="actions" data-testid="acciones-pregunta">
+                    <p-button
+                      label="{{
+                        viewportService.screenWidth == 'xs' ? '' : 'Navegador'
+                      }}"
+                      [link]="true"
+                      icon="pi pi-compass"
+                      *ngIf="viewportService.screenWidth == 'xs'"
+                      (click)="displayNavegadorFn()"
+                      data-testid="navegador-btn"
+                    />
+                    <p-button
+                      label="{{
+                        viewportService.screenWidth == 'xs'
+                          ? ''
+                          : 'Reportar fallo'
+                      }}"
+                      [link]="true"
+                      icon="pi pi-exclamation-triangle"
+                      (click)="displayFalloDialog = true"
+                      *ngIf="!vistaPrevia && !modoVerRespuestas"
+                      data-testid="reportar-fallo-btn"
+                    />
+                    <p-button
+                      label="{{
+                        viewportService.screenWidth == 'xs'
+                          ? ''
+                          : 'Impugnar pregunta'
+                      }}"
+                      [link]="true"
+                      icon="pi pi-flag"
+                      (click)="showImpugnacionDialog()"
+                      *ngIf="
+                        !vistaPrevia &&
+                        !modoVerRespuestas &&
+                        isModoExamen() &&
+                        expectedRole === 'ALUMNO'
+                      "
+                      data-testid="impugnar-pregunta-btn"
+                    />
+                    <p-button
+                      label="{{
+                        viewportService.screenWidth == 'xs' ? '' : 'Clonar'
+                      }}"
+                      [link]="true"
+                      icon="pi pi-clone"
+                      (click)="displayClonacion = true"
+                      *ngIf="
+                        !vistaPrevia && !modoVerRespuestas && !modoSimulacro
+                      "
+                      data-testid="clonar-pregunta-btn"
+                    />
+                  </div>
+                </div>
+              </ng-template>
+
+              <div class="grid">
+                <div
+                  class="{{
+                    viewportService.screenWidth == 'xs' ? 'col-12' : 'col-9'
+                  }}  "
+                >
+                  <p data-testid="enunciado-pregunta">
+                    <markdown
+                      [data]="
+                        pregunta.descripcion && pregunta.descripcion.length > 0
+                          ? pregunta.descripcion
+                          : 'No hay un enunciado definido.'
+                      "
+                    ></markdown>
+                  </p>
+                  <div
+                    class="col-12 respuestas-list pointer"
+                    [class.pointer]="!vistaPrevia && !modoVerRespuestas"
+                    [class.disabled]="vistaPrevia || modoVerRespuestas"
+                    pRipple
+                    *ngFor="
+                      let respuesta of pregunta.respuestas;
+                      let indiceRespuesta = index
+                    "
+                    [ngClass]="{
+                      'respuesta-correcta': respuestaCorrecta(
+                        pregunta,
+                        indiceRespuesta
+                      ),
+                      'respuesta-incorrecta': respuestaIncorrecta(
+                        pregunta,
+                        indiceRespuesta
+                      ),
+                      'respuesta-seleccionada':
+                        this.indiceSeleccionado.getValue() == indiceRespuesta ||
+                        (preguntaRespondida()?.respuestaDada ==
+                          indiceRespuesta &&
+                          isModoExamen()),
+                      'respuesta-descartada':
+                        maxCandidatas() > 0 && !esCandidata(indiceRespuesta),
+                      'respuesta-candidata':
+                        maxCandidatas() > 0 && esCandidata(indiceRespuesta),
+                    }"
+                    (click)="
+                      !vistaPrevia &&
+                        !modoVerRespuestas &&
+                        clickedAnswer(indiceRespuesta)
+                    "
+                    data-testid="opcion-respuesta"
+                    [attr.data-respuesta-index]="indiceRespuesta"
+                  >
+                    <p-inputGroup>
+                      <p-inputGroupAddon
+                        >{{ getLetter(indiceRespuesta) }})
+                      </p-inputGroupAddon>
+                      <div
+                        class="flex w-full align-items-center justify-content-between"
+                      >
+                        <span>{{ respuesta }}</span>
+                        <button
+                          type="button"
+                          *ngIf="
+                            maxCandidatas() > 0 &&
+                            !esCandidata(indiceRespuesta) &&
+                            !vistaPrevia &&
+                            !modoVerRespuestas
+                          "
+                          class="rescatar-btn p-button-text"
+                          (click)="rescatarDescartada(indiceRespuesta, $event)"
+                          data-testid="rescatar-btn"
+                          aria-label="Rescatar respuesta"
+                        >
+                          <i class="pi pi-times"></i>
+                        </button>
+                        <button
+                          type="button"
+                          *ngIf="
+                            maxCandidatas() > 0 &&
+                            esCandidata(indiceRespuesta) &&
+                            !vistaPrevia &&
+                            !modoVerRespuestas
+                          "
+                          class="rescatar-btn p-button-text activa"
+                          (click)="toggleCandidata(indiceRespuesta, $event)"
+                          data-testid="descartar-btn"
+                          aria-label="Descartar respuesta"
+                        >
+                          <i class="pi pi-check"></i>
+                        </button>
+                      </div>
+                    </p-inputGroup>
+                  </div>
+                </div>
+                <div class="col-3" *ngIf="viewportService.screenWidth != 'xs'">
+                  <div
+                    class="lateral-navegador"
+                    data-testid="navegador-lateral"
+                  >
+                    <ng-container
+                      *ngTemplateOutlet="contentNavegador"
+                    ></ng-container>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="grid w-full footer flex justify-content-between align-items-center mt-2"
+                *ngIf="
+                  (answeredCurrentQuestion() && !modoVerRespuestas) ||
+                  vistaPrevia ||
+                  modoVerRespuestas
+                "
+                data-testid="footer-respuesta"
+              >
+                <div
+                  class="solution col-12 align-items-center flex flex-column"
+                  *ngIf="!isModoExamen() || modoVerRespuestas"
+                  data-testid="solucion-container"
+                >
+                  <strong>Solución:</strong>
+                  <p class="m-0" data-testid="solucion-texto">
+                    <markdown
+                      [data]="
+                        pregunta.solucion && pregunta.solucion.length > 0
+                          ? pregunta.solucion
+                          : 'No hay una solución definida.'
+                      "
+                    ></markdown>
+                  </p>
+                </div>
+
+                <div
+                  class="next-button col-12 w-full"
+                  *ngIf="!vistaPrevia && !modoVerRespuestas"
+                >
+                  <button
+                    pButton
+                    class="p-button p-button-raised w-full"
+                    (click)="siguiente()"
+                    data-testid="continuar-btn"
+                  >
+                    <span class="w-full">Continuar</span>
+                  </button>
+                </div>
+              </div>
+            </p-panel>
+            <div
+              class="col-12 bottom-bar-no-content"
+              *ngIf="
+                (!answeredCurrentQuestion() ||
+                  (answeredCurrentQuestion() && isModoExamen())) &&
+                !vistaPrevia &&
+                !modoVerRespuestas
+              "
+              data-testid="barra-navegacion"
+            >
+              <p-panel>
+                <ng-template pTemplate="header">
+                  <div class="seguridad w-full">
+                    <div
+                      class="flex justify-content-between align-items-center w-full"
+                    >
+                      <span>Confianza al responder</span>
+                      <div class="actions" data-testid="acciones-navegacion">
+                        <p-button
+                          label="{{
+                            viewportService.screenWidth == 'xs' ? '' : 'Atrás'
+                          }}"
+                          [link]="true"
+                          icon="pi pi-angle-double-left"
+                          (click)="processAnswer(undefined, 'before')"
+                          [disabled]="indicePregunta() == 0"
+                          data-testid="anterior-pregunta-btn"
+                        />
+                        <p-button
+                          label="{{
+                            viewportService.screenWidth == 'xs' ? '' : 'Omitir'
+                          }}"
+                          [link]="true"
+                          icon="pi pi-forward"
+                          (click)="processAnswer(undefined, 'omitir')"
+                          [disabled]="
+                            (!isModoExamen() && !!preguntaRespondida()) ||
+                            comunicating
+                          "
+                          data-testid="omitir-pregunta-btn"
+                        />
+                        <p-button
+                          label="{{
+                            viewportService.screenWidth == 'xs'
+                              ? ''
+                              : 'Adelante'
+                          }}"
+                          [link]="true"
+                          icon="pi pi-angle-double-right"
+                          (click)="processAnswer(undefined, 'next')"
+                          [disabled]="
+                            indicePregunta() == testCargado.preguntas.length - 1
+                          "
+                          data-testid="siguiente-pregunta-btn"
+                        />
+
+                        <p-button
+                          label="{{
+                            viewportService.screenWidth == 'xs'
+                              ? ''
+                              : 'Finalizar'
+                          }}"
+                          [link]="true"
+                          [disabled]="lastLoadedTest.status == 'FINALIZADO'"
+                          icon="pi pi-flag"
+                          (click)="finalizarTest()"
+                          data-testid="finalizar-test-btn"
+                        />
+                      </div>
+                    </div>
+
+                    <ng-container
+                      *ngTemplateOutlet="
+                        seguridadPicker;
+                        context: {
+                          control: seguroDeLaPregunta,
+                        }
+                      "
+                    ></ng-container>
+                    <div
+                      class="candidatas-contador text-sm mt-1"
+                      *ngIf="
+                        maxCandidatas() > 0 &&
+                        !vistaPrevia &&
+                        !modoVerRespuestas
+                      "
+                      data-testid="candidatas-contador"
+                    >
+                      {{ candidatasPorPregunta().length }} /
+                      {{ maxCandidatas() }} candidatas
+                    </div>
+                  </div>
+                </ng-template>
+              </p-panel>
+            </div>
+
+            <!-- Barra de navegación simplificada para vista previa -->
+            <div
+              class="col-12 bottom-bar-no-content"
+              *ngIf="vistaPrevia || modoVerRespuestas"
+              data-testid="barra-navegacion-vista-previa"
+            >
+              <p-panel>
+                <ng-template pTemplate="header">
                   <div
                     class="flex justify-content-between align-items-center w-full"
                   >
-                    <span>Confianza al responder</span>
-                    <div class="actions" data-testid="acciones-navegacion">
+                    <div class="actions" data-testid="acciones-vista-previa">
+                      <p-button
+                        label="{{
+                          viewportService.screenWidth == 'xs' ? '' : 'Volver'
+                        }}"
+                        [link]="true"
+                        icon="pi pi-arrow-left"
+                        (click)="location.back()"
+                        data-testid="volver-btn"
+                      />
                       <p-button
                         label="{{
                           viewportService.screenWidth == 'xs' ? '' : 'Atrás'
                         }}"
                         [link]="true"
                         icon="pi pi-angle-double-left"
-                        (click)="processAnswer(undefined, 'before')"
+                        (click)="atras()"
                         [disabled]="indicePregunta() == 0"
-                        data-testid="anterior-pregunta-btn"
-                      />
-                      <p-button
-                        label="{{
-                          viewportService.screenWidth == 'xs' ? '' : 'Omitir'
-                        }}"
-                        [link]="true"
-                        icon="pi pi-forward"
-                        (click)="processAnswer(undefined, 'omitir')"
-                        [disabled]="
-                          (!isModoExamen() && !!preguntaRespondida()) ||
-                          comunicating
-                        "
-                        data-testid="omitir-pregunta-btn"
+                        data-testid="atras-vista-previa-btn"
                       />
                       <p-button
                         label="{{
@@ -527,107 +666,36 @@
                         }}"
                         [link]="true"
                         icon="pi pi-angle-double-right"
-                        (click)="processAnswer(undefined, 'next')"
+                        (click)="adelante()"
                         [disabled]="
                           indicePregunta() == testCargado.preguntas.length - 1
                         "
-                        data-testid="siguiente-pregunta-btn"
-                      />
-
-                      <p-button
-                        label="{{
-                          viewportService.screenWidth == 'xs' ? '' : 'Finalizar'
-                        }}"
-                        [link]="true"
-                        [disabled]="lastLoadedTest.status == 'FINALIZADO'"
-                        icon="pi pi-flag"
-                        (click)="finalizarTest()"
-                        data-testid="finalizar-test-btn"
+                        data-testid="adelante-vista-previa-btn"
                       />
                     </div>
                   </div>
-
-                  <ng-container
-                    *ngTemplateOutlet="
-                      seguridadPicker;
-                      context: {
-                        control: seguroDeLaPregunta
-                      }
-                    "
-                  ></ng-container>
-                </div>
-              </ng-template>
-            </p-panel>
-          </div>
-
-          <!-- Barra de navegación simplificada para vista previa -->
-          <div
-            class="col-12 bottom-bar-no-content"
-            *ngIf="vistaPrevia || modoVerRespuestas"
-            data-testid="barra-navegacion-vista-previa"
-          >
-            <p-panel>
-              <ng-template pTemplate="header">
-                <div
-                  class="flex justify-content-between align-items-center w-full"
-                >
-                  <div class="actions" data-testid="acciones-vista-previa">
-                    <p-button
-                      label="{{
-                        viewportService.screenWidth == 'xs' ? '' : 'Volver'
-                      }}"
-                      [link]="true"
-                      icon="pi pi-arrow-left"
-                      (click)="location.back()"
-                      data-testid="volver-btn"
-                    />
-                    <p-button
-                      label="{{
-                        viewportService.screenWidth == 'xs' ? '' : 'Atrás'
-                      }}"
-                      [link]="true"
-                      icon="pi pi-angle-double-left"
-                      (click)="atras()"
-                      [disabled]="indicePregunta() == 0"
-                      data-testid="atras-vista-previa-btn"
-                    />
-                    <p-button
-                      label="{{
-                        viewportService.screenWidth == 'xs' ? '' : 'Adelante'
-                      }}"
-                      [link]="true"
-                      icon="pi pi-angle-double-right"
-                      (click)="adelante()"
-                      [disabled]="
-                        indicePregunta() == testCargado.preguntas.length - 1
-                      "
-                      data-testid="adelante-vista-previa-btn"
-                    />
-                  </div>
-                </div>
-              </ng-template>
-            </p-panel>
-          </div>
-        </div>
-      </div>
-    </p-card>
-
-    }@else {
-    <p-card class="col-12" data-testid="pregunta-no-encontrada">
-      <div class="info">
-        <div class="flex gap-2 info-card">
-          <div class="icon">
-            <i class="pi pi-info-circle"></i>
-          </div>
-          <div class="content">
-            <div class="body">
-              ¡La pregunta que intentas visualizar no existe!
+                </ng-template>
+              </p-panel>
             </div>
           </div>
         </div>
-        <br />
-      </div>
-    </p-card>
+      </p-card>
+    } @else {
+      <p-card class="col-12" data-testid="pregunta-no-encontrada">
+        <div class="info">
+          <div class="flex gap-2 info-card">
+            <div class="icon">
+              <i class="pi pi-info-circle"></i>
+            </div>
+            <div class="content">
+              <div class="body">
+                ¡La pregunta que intentas visualizar no existe!
+              </div>
+            </div>
+          </div>
+          <br />
+        </div>
+      </p-card>
     }
   </ng-container>
   <ng-template #testNoCargado>
