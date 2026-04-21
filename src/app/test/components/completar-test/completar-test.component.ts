@@ -1,6 +1,7 @@
 import { Location } from '@angular/common';
 import {
   Component,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
@@ -9,6 +10,7 @@ import {
   signal,
   ViewChildren,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
@@ -56,6 +58,7 @@ export class CompletarTestComponent {
   reporteFallo = inject(ReportesFalloService);
   viewportService = inject(ViewportService);
   examenesService = inject(ExamenesService);
+  private destroyRef = inject(DestroyRef);
   @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
   public location = inject(Location);
   auth = inject(AuthService);
@@ -375,6 +378,7 @@ export class CompletarTestComponent {
     this.candidatasTrigger$
       .pipe(
         debounceTime(300),
+        takeUntilDestroyed(this.destroyRef),
         switchMap(() => {
           const respuesta = this.preguntaRespondida();
           const respuestaDada = respuesta?.respuestaDada;

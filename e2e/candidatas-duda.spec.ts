@@ -106,13 +106,29 @@ test.describe('Candidatas de duda', () => {
     await picker.locator('.seguridad-box').nth(1).click(); // 👍 SETENTA_Y_CINCO_POR_CIENTO
 
     await expect(page.locator('[data-testid="candidatas-contador"]')).toBeVisible();
-    // All 4 answers start as candidatas when no pre-selection; toggle one out
-    // descartar-btn appears on candidata answers → click the first one
-    const descartarBtns = page.locator('[data-testid="descartar-btn"]');
-    await expect(descartarBtns.first()).toBeVisible({ timeout: 5_000 });
-    await descartarBtns.first().click();
 
-    // Counter should now show 3 / 3 candidatas (initial state with 4 options, then one toggled off, leaving 3)
+    // All 4 answers start as descartadas when candidatasPorPregunta is empty:
+    // esCandidata() returns false for all indices → all 4 render rescatar-btn, zero descartar-btn.
+    const rescatarBtns = page.locator('[data-testid="rescatar-btn"]');
+    await expect(rescatarBtns.first()).toBeVisible({ timeout: 5_000 });
+    await expect(rescatarBtns).toHaveCount(4);
+
+    // Rescue 3 of them (indices 0, 1, 2) → they become candidatas
+    await rescatarBtns.nth(0).click();
+    await rescatarBtns.nth(1).click();
+    await rescatarBtns.nth(2).click();
+
+    // Now 3 answers are candidatas → 3 descartar-btn visible; 1 still descartada → 1 rescatar-btn
+    const descartarBtns = page.locator('[data-testid="descartar-btn"]');
+    await expect(descartarBtns).toHaveCount(3);
+    await expect(rescatarBtns).toHaveCount(1);
+
+    // Counter should now show 3 / 3 candidatas
+    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('/ 3');
+
+    // Toggle one candidata back to descartada
+    await descartarBtns.first().click();
+    await expect(descartarBtns).toHaveCount(2);
     await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('/ 3');
   });
 
