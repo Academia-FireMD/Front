@@ -251,6 +251,10 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public importarExcelFile: File | null = null;
   public importarExcelTemaId: number | null = null;
   public importarExcelDificultad: Dificultad | null = null;
+  public importarExcelTemaIdControl = new FormControl<number | null>(null);
+  public importarExcelDificultadControl = new FormControl<Dificultad | null>(
+    null,
+  );
   public importarExcelComoReserva = false;
   public importarExcelEnProgreso = false;
   public selectedPreguntasToAdd: Array<Pregunta> = [];
@@ -598,6 +602,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.importarExcelFile = null;
     this.importarExcelTemaId = null;
     this.importarExcelDificultad = null;
+    this.importarExcelTemaIdControl.setValue(null);
+    this.importarExcelDificultadControl.setValue(null);
     this.importarExcelComoReserva = this.agregarComoReserva;
     this.importarExcelDialogVisible = true;
   }
@@ -610,8 +616,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public puedeEjecutarImportacionExcel(): boolean {
     return (
       !!this.importarExcelFile &&
-      !!this.importarExcelTemaId &&
-      !!this.importarExcelDificultad &&
+      !!this.importarExcelTemaIdControl.value &&
+      !!this.importarExcelDificultadControl.value &&
       !this.importarExcelEnProgreso
     );
   }
@@ -622,8 +628,11 @@ export class ExamenesDashboardAdminDetailviewComponent {
 
     const formData = new FormData();
     formData.append('file', this.importarExcelFile!);
-    formData.append('temaId', String(this.importarExcelTemaId));
-    formData.append('dificultad', String(this.importarExcelDificultad));
+    formData.append('temaId', String(this.importarExcelTemaIdControl.value));
+    formData.append(
+      'dificultad',
+      String(this.importarExcelDificultadControl.value),
+    );
     formData.append('esReserva', String(this.importarExcelComoReserva));
 
     try {

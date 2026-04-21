@@ -36,7 +36,7 @@
                 styleClass="p-button-outlined"
                 [routerLink]="[
                   '/app/test/realizar-test/vista-previa',
-                  lastLoadedExamen()?.testId
+                  lastLoadedExamen()?.testId,
                 ]"
                 data-testid="vista-previa-btn"
               />
@@ -163,7 +163,8 @@
                           <div>
                             <div class="font-semibold">{{ product.name }}</div>
                             <small class="text-gray-500">
-                              SKU: {{ product.sku }} | Precio: {{ product.price }}€
+                              SKU: {{ product.sku }} | Precio:
+                              {{ product.price }}€
                             </small>
                           </div>
                         </ng-template>
@@ -172,7 +173,10 @@
                     </p-floatLabel>
                     <small
                       class="text-red-500 block mt-1"
-                      *ngIf="formGroup.get('woocommerceProductId')?.invalid && formGroup.get('woocommerceProductId')?.touched"
+                      *ngIf="
+                        formGroup.get('woocommerceProductId')?.invalid &&
+                        formGroup.get('woocommerceProductId')?.touched
+                      "
                     >
                       El producto WooCommerce es obligatorio para simulacros
                     </small>
@@ -199,7 +203,13 @@
                     </p-floatLabel>
                   </div>
 
-                  <div class="col-12" [ngClass]="{'md:col-4': esExamenColaborativo, 'md:col-6': !esExamenColaborativo}">
+                  <div
+                    class="col-12"
+                    [ngClass]="{
+                      'md:col-4': esExamenColaborativo,
+                      'md:col-6': !esExamenColaborativo,
+                    }"
+                  >
                     <p-floatLabel>
                       <p-calendar
                         [showTime]="true"
@@ -212,7 +222,13 @@
                     </p-floatLabel>
                   </div>
 
-                  <div class="col-12" [ngClass]="{'md:col-4': esExamenColaborativo, 'md:col-6': !esExamenColaborativo}">
+                  <div
+                    class="col-12"
+                    [ngClass]="{
+                      'md:col-4': esExamenColaborativo,
+                      'md:col-6': !esExamenColaborativo,
+                    }"
+                  >
                     <p-floatLabel>
                       <p-calendar
                         [showTime]="true"
@@ -304,9 +320,7 @@
                 </div>
 
                 <!-- Description -->
-                <div
-                  class="grid mb-4"
-                >
+                <div class="grid mb-4">
                   <div class="col-12">
                     <h4 class="mb-3 text-primary">Descripción</h4>
                     <div class="markdown-container">
@@ -866,7 +880,7 @@
                             </td>
                             <td>
                               <small>{{
-                                resultado.fechaRealizacion | date : "short"
+                                resultado.fechaRealizacion | date: "short"
                               }}</small>
                             </td>
 
@@ -880,7 +894,7 @@
                                   ]
                                     ? 'rotate(180deg)'
                                     : 'rotate(0deg)',
-                                  transition: 'transform 0.3s'
+                                  transition: 'transform 0.3s',
                                 }"
                                 pTooltip="Ver análisis por confianza"
                                 (click)="toggleRowExpansion(resultado)"
@@ -904,29 +918,72 @@
                           <tr>
                             <td colspan="8">
                               <div class="p-3">
-                                <h5 class="mb-3">Análisis por Nivel de Confianza</h5>
+                                <h5 class="mb-3">
+                                  Análisis por Nivel de Confianza
+                                </h5>
                                 <!-- Cards combinadas -->
                                 <app-confidence-analysis-cards
-                                  *ngIf="resultado.estadisticas?.detalles?.seguridad"
-                                  [analyses]="getCombinedConfidenceAnalysisFromSecurity(resultado.estadisticas.detalles.seguridad, resultado.estadisticas.totalPreguntas)"
+                                  *ngIf="
+                                    resultado.estadisticas?.detalles?.seguridad
+                                  "
+                                  [analyses]="
+                                    getCombinedConfidenceAnalysisFromSecurity(
+                                      resultado.estadisticas.detalles.seguridad,
+                                      resultado.estadisticas.totalPreguntas
+                                    )
+                                  "
                                   [cardCol]="'col-12 md:col-4'"
                                 ></app-confidence-analysis-cards>
                                 <!-- Desplegable con análisis individual -->
                                 <div
                                   class="flex align-items-center mb-3 cursor-pointer justify-content-between"
-                                  *ngIf="resultado.estadisticas?.detalles?.seguridad"
-                                  (click)="showIndividualConfidenceByUserId[resultado.usuario.id] = !showIndividualConfidenceByUserId[resultado.usuario.id]"
+                                  *ngIf="
+                                    resultado.estadisticas?.detalles?.seguridad
+                                  "
+                                  (click)="
+                                    showIndividualConfidenceByUserId[
+                                      resultado.usuario.id
+                                    ] =
+                                      !showIndividualConfidenceByUserId[
+                                        resultado.usuario.id
+                                      ]
+                                  "
                                 >
-                                  <h6 class="text-lg font-semibold text-700 mr-2">Detalle por nivel</h6>
+                                  <h6
+                                    class="text-lg font-semibold text-700 mr-2"
+                                  >
+                                    Detalle por nivel
+                                  </h6>
                                   <i
                                     class="pi"
-                                    [class.pi-chevron-down]="!showIndividualConfidenceByUserId[resultado.usuario.id]"
-                                    [class.pi-chevron-up]="showIndividualConfidenceByUserId[resultado.usuario.id]"
+                                    [class.pi-chevron-down]="
+                                      !showIndividualConfidenceByUserId[
+                                        resultado.usuario.id
+                                      ]
+                                    "
+                                    [class.pi-chevron-up]="
+                                      showIndividualConfidenceByUserId[
+                                        resultado.usuario.id
+                                      ]
+                                    "
                                   ></i>
                                 </div>
-                                <div *ngIf="resultado.estadisticas?.detalles?.seguridad && showIndividualConfidenceByUserId[resultado.usuario.id]">
+                                <div
+                                  *ngIf="
+                                    resultado.estadisticas?.detalles
+                                      ?.seguridad &&
+                                    showIndividualConfidenceByUserId[
+                                      resultado.usuario.id
+                                    ]
+                                  "
+                                >
                                   <app-confidence-analysis-cards
-                                    [analyses]="getConfidenceAnalysisForResult(resultado.estadisticas.detalles.seguridad)"
+                                    [analyses]="
+                                      getConfidenceAnalysisForResult(
+                                        resultado.estadisticas.detalles
+                                          .seguridad
+                                      )
+                                    "
                                   ></app-confidence-analysis-cards>
                                 </div>
                                 <div
@@ -979,36 +1036,50 @@
             >
               <div class="collaborative-questions-content">
                 <!-- Loading state -->
-                <div *ngIf="loadingPreguntasColaborativas()" class="text-center p-4">
+                <div
+                  *ngIf="loadingPreguntasColaborativas()"
+                  class="text-center p-4"
+                >
                   <p-progressSpinner />
                   <p class="mt-2">Cargando preguntas colaborativas...</p>
                 </div>
 
                 <!-- No questions state -->
                 <div
-                  *ngIf="!loadingPreguntasColaborativas() && preguntasColaborativas().length === 0"
+                  *ngIf="
+                    !loadingPreguntasColaborativas() &&
+                    preguntasColaborativas().length === 0
+                  "
                   class="text-center p-4"
                 >
                   <i class="pi pi-info-circle text-6xl text-gray-400 mb-3"></i>
                   <h4 class="text-gray-600">No hay preguntas colaborativas</h4>
                   <p class="text-gray-500">
-                    Los alumnos aún no han creado preguntas para este examen colaborativo.
+                    Los alumnos aún no han creado preguntas para este examen
+                    colaborativo.
                   </p>
                 </div>
 
                 <!-- Questions content -->
                 <div
-                  *ngIf="!loadingPreguntasColaborativas() && preguntasColaborativas().length > 0"
+                  *ngIf="
+                    !loadingPreguntasColaborativas() &&
+                    preguntasColaborativas().length > 0
+                  "
                   class="grid"
                 >
                   <!-- Statistics Overview -->
                   <div class="col-12 mb-4">
-                    <h4 class="mb-3 text-primary">Resumen de preguntas colaborativas</h4>
+                    <h4 class="mb-3 text-primary">
+                      Resumen de preguntas colaborativas
+                    </h4>
                     <div class="grid">
                       <div class="col-12 lg:col-4 md:col-6">
                         <p-card styleClass="h-full">
                           <div class="text-center">
-                            <i class="pi pi-question-circle text-4xl text-blue-500 mb-2"></i>
+                            <i
+                              class="pi pi-question-circle text-4xl text-blue-500 mb-2"
+                            ></i>
                             <h3 class="m-0 text-blue-600">
                               {{ preguntasColaborativas().length }}
                             </h3>
@@ -1020,11 +1091,15 @@
                       <div class="col-12 lg:col-4 md:col-6">
                         <p-card styleClass="h-full">
                           <div class="text-center">
-                            <i class="pi pi-users text-4xl text-green-500 mb-2"></i>
+                            <i
+                              class="pi pi-users text-4xl text-green-500 mb-2"
+                            ></i>
                             <h3 class="m-0 text-green-600">
                               {{ getUniqueStudentsCount() }}
                             </h3>
-                            <p class="text-gray-600 m-0">Alumnos participantes</p>
+                            <p class="text-gray-600 m-0">
+                              Alumnos participantes
+                            </p>
                           </div>
                         </p-card>
                       </div>
@@ -1032,7 +1107,9 @@
                       <div class="col-12 lg:col-4 md:col-6">
                         <p-card styleClass="h-full">
                           <div class="text-center">
-                            <i class="pi pi-book text-4xl text-orange-500 mb-2"></i>
+                            <i
+                              class="pi pi-book text-4xl text-orange-500 mb-2"
+                            ></i>
                             <h3 class="m-0 text-orange-600">
                               {{ getUniqueTopicsCount() }}
                             </h3>
@@ -1056,10 +1133,18 @@
                         [sortOrder]="-1"
                         styleClass="p-datatable-sm"
                         dataKey="id"
-                        [globalFilterFields]="['identificador', 'descripcion', 'createdBy.nombre', 'createdBy.apellidos', 'tema.numero']"
+                        [globalFilterFields]="[
+                          'identificador',
+                          'descripcion',
+                          'createdBy.nombre',
+                          'createdBy.apellidos',
+                          'tema.numero',
+                        ]"
                       >
                         <ng-template pTemplate="caption">
-                          <div class="flex justify-content-between align-items-center">
+                          <div
+                            class="flex justify-content-between align-items-center"
+                          >
                             <span class="p-input-icon-left">
                               <i class="pi pi-search"></i>
                               <input
@@ -1107,8 +1192,10 @@
                             </td>
                             <td>
                               <div class="max-w-20rem">
-                                {{ pregunta.descripcion | slice:0:100 }}
-                                <span *ngIf="pregunta.descripcion.length > 100">...</span>
+                                {{ pregunta.descripcion | slice: 0 : 100 }}
+                                <span *ngIf="pregunta.descripcion.length > 100"
+                                  >...</span
+                                >
                               </div>
                             </td>
                             <td>
@@ -1123,7 +1210,8 @@
                                 <i class="pi pi-user text-gray-500"></i>
                                 <div>
                                   <div class="font-semibold">
-                                    {{ pregunta.createdBy.nombre }} {{ pregunta.createdBy.apellidos }}
+                                    {{ pregunta.createdBy.nombre }}
+                                    {{ pregunta.createdBy.apellidos }}
                                   </div>
                                   <div class="text-sm text-gray-500">
                                     {{ pregunta.createdBy.email }}
@@ -1132,7 +1220,9 @@
                               </div>
                             </td>
                             <td>
-                              <small>{{ pregunta.createdAt | date:'short' }}</small>
+                              <small>{{
+                                pregunta.createdAt | date: "short"
+                              }}</small>
                             </td>
                             <td>
                               <div class="flex gap-1">
@@ -1151,7 +1241,9 @@
                                   [rounded]="true"
                                   size="small"
                                   pTooltip="Abrir en nueva pestaña"
-                                  (click)="abrirPreguntaEnNuevaPestana(pregunta.id)"
+                                  (click)="
+                                    abrirPreguntaEnNuevaPestana(pregunta.id)
+                                  "
                                   severity="secondary"
                                 />
                                 <p-button
@@ -1160,7 +1252,9 @@
                                   [rounded]="true"
                                   size="small"
                                   pTooltip="Eliminar definitivamente"
-                                  (click)="eliminarPreguntaColaborativa(pregunta)"
+                                  (click)="
+                                    eliminarPreguntaColaborativa(pregunta)
+                                  "
                                   severity="danger"
                                 />
                               </div>
@@ -1186,7 +1280,6 @@
             </p-tabPanel>
           </p-tabView>
         </div>
-
       </div>
     </p-card>
   </div>
@@ -1467,6 +1560,21 @@
         <p>Crea preguntas manualmente para este examen</p>
       </div>
     </div>
+    <div class="col-12 md:col-4 p-2" *ngIf="!esExamenColaborativo">
+      <div
+        class="metodo-card"
+        (click)="
+          abrirDialogoImportarExcel(); metodosAgregarDialogVisible = false
+        "
+        data-testid="metodo-importar-excel-card"
+      >
+        <div class="metodo-icon">
+          <i class="pi pi-file-excel"></i>
+        </div>
+        <h4>Importar Excel</h4>
+        <p>Sube un Excel y crea varias preguntas nuevas en el examen</p>
+      </div>
+    </div>
   </div>
   <div class="col-12 mb-3">
     <p-checkbox
@@ -1475,6 +1583,73 @@
       label="Agregar como preguntas de reserva"
     ></p-checkbox>
   </div>
+</p-dialog>
+
+<p-dialog
+  [(visible)]="importarExcelDialogVisible"
+  header="Importar preguntas desde Excel"
+  [style]="{ width: '600px' }"
+  [breakpoints]="{ '960px': '90vw' }"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  data-testid="importar-excel-dialog"
+>
+  <div class="flex flex-column gap-3 p-3">
+    <div>
+      <label class="block mb-2 font-semibold">Archivo Excel (.xlsx)</label>
+      <input
+        type="file"
+        accept=".xlsx"
+        (change)="onImportarExcelFileChange($event)"
+        data-testid="importar-excel-file-input"
+      />
+    </div>
+
+    <div>
+      <label class="block mb-2 font-semibold">Tema</label>
+      <app-tema-select
+        [formControl]="importarExcelTemaIdControl"
+        [multiple]="false"
+        data-testid="importar-excel-tema"
+      ></app-tema-select>
+    </div>
+
+    <div>
+      <label class="block mb-2 font-semibold">Dificultad</label>
+      <app-dificultad-dropdown
+        [formControlDificultad]="importarExcelDificultadControl"
+        [isDoingTest]="true"
+        data-testid="importar-excel-dificultad"
+      ></app-dificultad-dropdown>
+    </div>
+
+    <div>
+      <p-checkbox
+        [(ngModel)]="importarExcelComoReserva"
+        [binary]="true"
+        label="Agregar como preguntas de reserva"
+        data-testid="importar-excel-reserva"
+      ></p-checkbox>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      [outlined]="true"
+      (click)="importarExcelDialogVisible = false"
+      [disabled]="importarExcelEnProgreso"
+    ></p-button>
+    <p-button
+      label="Importar"
+      icon="pi pi-upload"
+      [disabled]="!puedeEjecutarImportacionExcel()"
+      [loading]="importarExcelEnProgreso"
+      (click)="ejecutarImportacionExcel()"
+      data-testid="importar-excel-submit"
+    ></p-button>
+  </ng-template>
 </p-dialog>
 
 <p-menu #menuDescarga [popup]="true" [model]="opcionesDescargaMenu"></p-menu>
