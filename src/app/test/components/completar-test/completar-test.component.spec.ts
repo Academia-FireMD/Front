@@ -1,16 +1,29 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { ComponentFixture, TestBed, fakeAsync, tick, flushMicrotasks } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+  flushMicrotasks,
+} from '@angular/core/testing';
 import { of, switchMap, throwError, timer } from 'rxjs';
 import { TestService } from '../../../services/test.service';
+import { SeguridadAlResponder } from '../../../shared/models/pregunta.model';
 import { EstadoPregunta } from '../../../shared/models/test.model';
-import { COMMON_TEST_PROVIDERS, createMockRespuesta, createMockTest } from '../../../testing';
+import {
+  COMMON_TEST_PROVIDERS,
+  createMockRespuesta,
+  createMockTest,
+} from '../../../testing';
 import { CompletarTestComponent } from './completar-test.component';
 
-function buildTestServiceMock(overrides: Partial<Record<keyof TestService, jest.Mock>> = {}) {
+function buildTestServiceMock(
+  overrides: Partial<Record<keyof TestService, jest.Mock>> = {},
+) {
   return {
     getTestById: jest.fn(() => of(createMockTest())),
     actualizarProgresoTest: jest.fn(() =>
-      of({ ...createMockRespuesta(), pregunta: { respuestaCorrectaIndex: 0 } })
+      of({ ...createMockRespuesta(), pregunta: { respuestaCorrectaIndex: 0 } }),
     ),
     finalizarTest: jest.fn(() => of({})),
     sendFeedback: jest.fn(() => of({})),
@@ -80,13 +93,17 @@ describe('CompletarTestComponent — integration', () => {
           preguntaId: component.lastLoadedTest.preguntas[0].id,
           respuestaDada: 0,
           indicePregunta: 0,
-        })
+        }),
       );
     }));
 
     it('clickedAnswer en pregunta ya respondida NO llama al servicio de nuevo (idempotencia)', fakeAsync(() => {
       component.lastLoadedTest.respuestas = [
-        createMockRespuesta({ indicePregunta: 0, estado: EstadoPregunta.RESPONDIDA, respuestaDada: 0 }),
+        createMockRespuesta({
+          indicePregunta: 0,
+          estado: EstadoPregunta.RESPONDIDA,
+          respuestaDada: 0,
+        }),
       ];
 
       component.clickedAnswer(1);
@@ -100,7 +117,7 @@ describe('CompletarTestComponent — integration', () => {
       tick(200);
 
       expect(testServiceMock.actualizarProgresoTest).toHaveBeenCalledWith(
-        expect.objectContaining({ omitida: true })
+        expect.objectContaining({ omitida: true }),
       );
     }));
 
@@ -160,7 +177,7 @@ describe('CompletarTestComponent — integration', () => {
 
       expect(testServiceMock.finalizarTest).toHaveBeenCalledWith(123);
       expect(routerSpy.navigate).toHaveBeenCalledWith(
-        expect.arrayContaining([expect.stringContaining('stats-test')])
+        expect.arrayContaining([expect.stringContaining('stats-test')]),
       );
     });
   });
@@ -174,7 +191,9 @@ describe('CompletarTestComponent — integration', () => {
       component.vistaPrevia = true;
 
       const pregunta = component.lastLoadedTest.preguntas[0];
-      expect(component.respuestaCorrecta(pregunta, pregunta.respuestaCorrectaIndex)).toBe(true);
+      expect(
+        component.respuestaCorrecta(pregunta, pregunta.respuestaCorrectaIndex),
+      ).toBe(true);
     });
 
     it('en modoVerRespuestas=true, respuestaIncorrecta() detecta la respuesta equivocada', async () => {
@@ -195,7 +214,106 @@ describe('CompletarTestComponent — integration', () => {
       ];
 
       expect(component.respuestaIncorrecta(pregunta, 1)).toBe(true);
-      expect(component.respuestaCorrecta(pregunta, pregunta.respuestaCorrectaIndex)).toBe(true);
+      expect(
+        component.respuestaCorrecta(pregunta, pregunta.respuestaCorrectaIndex),
+      ).toBe(true);
+    });
+  });
+
+  describe('candidatas de duda', () => {
+    beforeEach(() => {
+      component.lastLoadedTest = {
+        id: 1,
+        preguntas: [
+          {
+            id: 10,
+            respuestas: ['A', 'B', 'C', 'D'],
+            respuestaCorrectaIndex: 0,
+          } as any,
+        ],
+        respuestas: [],
+      } as any;
+      component.indicePregunta.set(0);
+      component.candidatasPorPregunta.set([]);
+    });
+
+    it('maxCandidatas devuelve 2 con seguridad 50%', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+      );
+      expect(component.maxCandidatas()).toBe(2);
+    });
+
+    it('maxCandidatas devuelve 3 con seguridad 75%', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      expect(component.maxCandidatas()).toBe(3);
+    });
+
+    it('maxCandidatas devuelve 0 con seguridad 100%', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CIEN_POR_CIENTO,
+      );
+      expect(component.maxCandidatas()).toBe(0);
+    });
+
+    it('toggleCandidata marca índice cuando cabe', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+      );
+      component.toggleCandidata(1);
+      expect(component.candidatasPorPregunta()).toEqual([1]);
+    });
+
+    it('toggleCandidata desmarca si ya está marcado', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+      );
+      component.candidatasPorPregunta.set([0, 1]);
+      component.toggleCandidata(1);
+      expect(component.candidatasPorPregunta()).toEqual([0]);
+    });
+
+    it('toggleCandidata descarta la más antigua cuando excede el máximo', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+      );
+      component.candidatasPorPregunta.set([0, 1]);
+      component.toggleCandidata(2);
+      expect(component.candidatasPorPregunta()).toEqual([1, 2]);
+    });
+
+    it('updateSecurity a 100% limpia candidatas', () => {
+      component.candidatasPorPregunta.set([0, 1]);
+      component.updateSecurity(SeguridadAlResponder.CIEN_POR_CIENTO);
+      expect(component.candidatasPorPregunta()).toEqual([]);
+    });
+
+    it('updateSecurity de 50% a 75% preserva candidatas', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+      );
+      component.candidatasPorPregunta.set([0, 2]);
+      component.updateSecurity(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO);
+      expect(component.candidatasPorPregunta()).toEqual([0, 2]);
+    });
+
+    it('updateSecurity de 75% a 50% recorta a 2', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.candidatasPorPregunta.set([0, 1, 2]);
+      component.updateSecurity(SeguridadAlResponder.CINCUENTA_POR_CIENTO);
+      expect(component.candidatasPorPregunta().length).toBe(2);
+    });
+
+    it('esCandidata devuelve true para todas cuando seguridad no es intermedia', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CIEN_POR_CIENTO,
+      );
+      expect(component.esCandidata(0)).toBe(true);
+      expect(component.esCandidata(3)).toBe(true);
     });
   });
 });
