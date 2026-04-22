@@ -353,15 +353,23 @@ describe('CompletarTestComponent — integration', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
-    it('handleRespuestaClick cierra el modo al alcanzar el cap', () => {
+    it('handleRespuestaClick NO cierra el modo al alcanzar el cap (requiere "Listo" explícito)', () => {
       component.seguroDeLaPregunta.setValue(
         SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
       );
       component.modoSeleccionCandidatas.set(true);
       component.handleRespuestaClick(0);
-      expect(component.modoSeleccionCandidatas()).toBe(true);
       component.handleRespuestaClick(2);
       expect(component.candidatasPorPregunta()).toEqual([0, 2]);
+      expect(component.modoSeleccionCandidatas()).toBe(true);
+    });
+
+    it('terminarSeleccionCandidatas cierra el modo manualmente', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.modoSeleccionCandidatas.set(true);
+      component.terminarSeleccionCandidatas();
       expect(component.modoSeleccionCandidatas()).toBe(false);
     });
 

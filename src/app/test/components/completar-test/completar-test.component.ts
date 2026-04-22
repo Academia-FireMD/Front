@@ -350,12 +350,10 @@ export class CompletarTestComponent {
   public handleRespuestaClick(indice: number) {
     if (this.vistaPrevia || this.modoVerRespuestas) return;
     if (this.modoSeleccionCandidatas()) {
+      // En modo, los clicks togglean candidatas. El modo permanece
+      // abierto hasta que el alumno pulse "Listo" explícitamente —
+      // así sabe que está cambiando de modo intencionalmente.
       this.toggleCandidata(indice);
-      // Auto-cerrar el modo al completar el cap para que el siguiente
-      // click sirva para elegir la respuesta final.
-      if (this.candidatasPorPregunta().length >= this.maxCandidatas()) {
-        this.modoSeleccionCandidatas.set(false);
-      }
       return;
     }
     this.clickedAnswer(indice);
