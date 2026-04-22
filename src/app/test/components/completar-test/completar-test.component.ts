@@ -284,13 +284,8 @@ export class CompletarTestComponent {
   }
 
   public clickedPreguntaFromNavegador(indicePregunta: number) {
-    this.seguroDeLaPregunta.reset(SeguridadAlResponder.CIEN_POR_CIENTO);
-    this.indiceSeleccionado.next(-1);
-    this.answeredQuestion = -1; // Corrección en la asignación
-    this.indicePreguntaCorrecta = -1;
-    // if (this.answeredCurrentQuestion() && this.isModoExamen()) {
-    // return;
-    //}
+    // Los resets de UI (seguridad/indiceSeleccionado/answeredQuestion/
+    // indicePreguntaCorrecta) los hace sincronizarEstadoPregunta.
     this.indicePregunta.set(indicePregunta);
     this.sincronizarEstadoPregunta(indicePregunta);
     this.displayNavegador = false;
@@ -477,9 +472,15 @@ export class CompletarTestComponent {
    */
   private sincronizarEstadoPregunta(indice: number) {
     // Reset inmediato para garantizar que no quede state residual de la
-    // pregunta anterior mientras resolvemos el estado nuevo.
+    // pregunta anterior mientras resolvemos el estado nuevo. Incluye los
+    // flags de UI (indice seleccionado, answered, índice correcto) que
+    // antes se reseteaban en siguiente()/clickedPreguntaFromNavegador y
+    // pisaban el estado que esta función restauraba.
     this.modoSeleccionCandidatas.set(false);
     this.candidatasPorPregunta.set([]);
+    this.indiceSeleccionado.next(-1);
+    this.answeredQuestion = -1;
+    this.indicePreguntaCorrecta = -1;
 
     // Al restaurar estado, INCLUIMOS drafts (incluirDrafts=true) para
     // recuperar candidatas/seguridad guardadas sin respuesta final.
@@ -780,10 +781,12 @@ export class CompletarTestComponent {
       //   this.showFeedbackDialog();
       // }
     }
-    this.seguroDeLaPregunta.reset(SeguridadAlResponder.CIEN_POR_CIENTO);
-    this.indiceSeleccionado.next(-1);
-    this.answeredQuestion = -1; // Corrección en la asignación
-    this.indicePreguntaCorrecta = -1;
+    // Los resets de UI (seguridad/indiceSeleccionado/answeredQuestion/
+    // indicePreguntaCorrecta) ahora viven dentro de sincronizarEstadoPregunta
+    // para no pisar la seguridad/candidatas restauradas de la pregunta
+    // destino (era bug: al volver a una pregunta con seguridad!=CIEN
+    // guardada, el reset posterior forzaba CIEN y la auto-omitía al
+    // siguiente Adelante).
   }
 
   public showSolution() {
