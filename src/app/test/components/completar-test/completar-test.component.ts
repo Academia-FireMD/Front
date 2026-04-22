@@ -747,10 +747,14 @@ export class CompletarTestComponent {
   public siguiente() {
     if (this.indicePregunta() == this.lastLoadedTest.preguntas.length - 1) {
       //completado
-      if (
-        this.lastLoadedTest.preguntas.length !=
-        this.lastLoadedTest.respuestas.length
-      ) {
+      // Contar solo respuestas REALES (excluir drafts con estado='NO_RESPONDIDA',
+      // que son borradores de candidatas sin respuesta final). Si los
+      // incluyéramos, un alumno con 59 respondidas + 1 draft vería el test
+      // como completo aunque falte 1 por responder.
+      const respuestasReales = (this.lastLoadedTest.respuestas ?? []).filter(
+        (r: any) => r.estado !== 'NO_RESPONDIDA',
+      ).length;
+      if (this.lastLoadedTest.preguntas.length != respuestasReales) {
         this.toast.info(
           'Todavia no has terminado el test, te faltan preguntas por responder!',
         );
