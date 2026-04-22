@@ -292,9 +292,27 @@ describe('CompletarTestComponent — integration', () => {
       expect(component.modoSeleccionCandidatas()).toBe(false);
     });
 
-    it('updateSecurity a 75% (Dudo entre 2) abre el modo selección', () => {
+    it('updateSecurity a 75% NO abre el modo automáticamente (activación manual)', () => {
       component.updateSecurity(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO);
+      expect(component.modoSeleccionCandidatas()).toBe(false);
+      expect(component.maxCandidatas()).toBe(2);
+    });
+
+    it('abrirSeleccionCandidatas activa el modo cuando hay cap > 0', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.modoSeleccionCandidatas.set(false);
+      component.abrirSeleccionCandidatas();
       expect(component.modoSeleccionCandidatas()).toBe(true);
+    });
+
+    it('abrirSeleccionCandidatas no abre si seguridad es 100%', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CIEN_POR_CIENTO,
+      );
+      component.abrirSeleccionCandidatas();
+      expect(component.modoSeleccionCandidatas()).toBe(false);
     });
 
     it('updateSecurity de 50% (cap 3) a 75% (cap 2) recorta candidatas a 2', () => {

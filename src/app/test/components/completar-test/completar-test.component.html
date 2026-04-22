@@ -435,26 +435,34 @@
                     *ngIf="
                       maxCandidatas() > 0 &&
                       !modoSeleccionCandidatas() &&
-                      candidatasPorPregunta().length > 0 &&
                       !vistaPrevia &&
                       !modoVerRespuestas
                     "
                     class="candidatas-hint flex align-items-center justify-content-between p-2 mb-3"
                   >
                     <span class="text-sm">
-                      Dudas marcadas:
-                      <strong
-                        >{{ candidatasPorPregunta().length }} /
-                        {{ maxCandidatas() }}</strong
-                      >. Elige tu respuesta final tocando una opción.
+                      @if (candidatasPorPregunta().length > 0) {
+                        Dudas marcadas:
+                        <strong
+                          >{{ candidatasPorPregunta().length }} /
+                          {{ maxCandidatas() }}</strong
+                        >.
+                      } @else {
+                        ¿Quieres marcar las {{ maxCandidatas() }} respuestas
+                        entre las que dudas?
+                      }
                     </span>
                     <p-button
-                      label="Editar dudas"
+                      [label]="
+                        candidatasPorPregunta().length > 0
+                          ? 'Editar dudas'
+                          : 'Marcar las que dudo'
+                      "
                       icon="pi pi-pencil"
                       [text]="true"
                       size="small"
-                      (click)="reabrirSeleccionCandidatas()"
-                      data-testid="reabrir-seleccion-candidatas"
+                      (click)="abrirSeleccionCandidatas()"
+                      data-testid="abrir-seleccion-candidatas"
                     ></p-button>
                   </div>
                   <div
@@ -467,21 +475,22 @@
                       let indiceRespuesta = index
                     "
                     [ngClass]="{
-                      'respuesta-correcta': respuestaCorrecta(
-                        pregunta,
-                        indiceRespuesta
-                      ),
-                      'respuesta-incorrecta': respuestaIncorrecta(
-                        pregunta,
-                        indiceRespuesta
-                      ),
+                      'respuesta-correcta':
+                        !modoSeleccionCandidatas() &&
+                        respuestaCorrecta(pregunta, indiceRespuesta),
+                      'respuesta-incorrecta':
+                        !modoSeleccionCandidatas() &&
+                        respuestaIncorrecta(pregunta, indiceRespuesta),
                       'respuesta-seleccionada':
-                        this.indiceSeleccionado.getValue() == indiceRespuesta ||
-                        (preguntaRespondida()?.respuestaDada ==
-                          indiceRespuesta &&
-                          isModoExamen()),
+                        !modoSeleccionCandidatas() &&
+                        (this.indiceSeleccionado.getValue() ==
+                          indiceRespuesta ||
+                          (preguntaRespondida()?.respuestaDada ==
+                            indiceRespuesta &&
+                            isModoExamen())),
                       'respuesta-descartada':
                         maxCandidatas() > 0 &&
+                        candidatasPorPregunta().length > 0 &&
                         !esCandidata(indiceRespuesta) &&
                         !modoVerRespuestas,
                       'respuesta-candidata':

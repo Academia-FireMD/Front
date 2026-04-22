@@ -307,35 +307,29 @@ export class CompletarTestComponent {
     }
     this.seguroDeLaPregunta.patchValue(value);
 
-    // Ajustar candidatas + modo de selección según la nueva seguridad
+    // Ajustar candidatas según la nueva seguridad. El modo selección NO
+    // se activa automáticamente aquí — debe pulsarse "Marcar las que
+    // dudo" explícitamente. Cambiar la seguridad sí cierra el modo
+    // (por si estaba abierto) para que el alumno vea el cambio con claridad.
+    this.modoSeleccionCandidatas.set(false);
     if (
       value === SeguridadAlResponder.CIEN_POR_CIENTO ||
       value === SeguridadAlResponder.CERO_POR_CIENTO
     ) {
       this.candidatasPorPregunta.set([]);
-      this.modoSeleccionCandidatas.set(false);
     } else {
       // 75% → cap 2, 50% → cap 3 (alineado con los labels UI)
       const max =
         value === SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO ? 2 : 3;
       const actuales = this.candidatasPorPregunta();
-      // Si había elegida y no estaba incluida, pre-marcarla
-      const elegida =
-        respuesta?.respuestaDada ?? this.indiceSeleccionado.getValue();
-      let base = actuales;
-      if (elegida != null && elegida >= 0 && !base.includes(elegida)) {
-        base = [...base, elegida];
-      }
-      // Si excede el máximo, recortar preservando las más recientes
-      if (base.length > max) {
-        base = base.slice(base.length - max);
-      }
+      // Si excede el máximo del nuevo nivel, recortar preservando las
+      // más recientes. No pre-marcamos la elegida porque el modo no
+      // se abre automáticamente: el alumno decide cuándo y qué marcar.
+      const base =
+        actuales.length > max
+          ? actuales.slice(actuales.length - max)
+          : actuales;
       this.candidatasPorPregunta.set(base);
-      // Entrar en modo selección si todavía faltan candidatas por marcar.
-      // Si ya están todas marcadas (por ejemplo tras un cambio 75%→50%
-      // con 2 candidatas ya seleccionadas y capacidad para 3), abrimos
-      // el modo igual para permitir completar la tercera.
-      this.modoSeleccionCandidatas.set(true);
     }
 
     if (respuesta) {
@@ -368,13 +362,18 @@ export class CompletarTestComponent {
   }
 
   /**
-   * Reabre el modo para re-editar las candidatas sin tocar la seguridad.
-   * Útil cuando el alumno ya completó el cap pero quiere cambiar una
-   * candidata después.
+   * Activa el modo selección de candidatas. Requiere haber elegido antes
+   * un nivel de seguridad intermedio (50% o 75%). En modo, los clicks en
+   * las respuestas togglean candidatas sin registrar respuesta final.
    */
-  public reabrirSeleccionCandidatas() {
+  public abrirSeleccionCandidatas() {
     if (this.maxCandidatas() === 0) return;
     this.modoSeleccionCandidatas.set(true);
+  }
+
+  // Alias retenido por si hay llamadores externos del template antiguo.
+  public reabrirSeleccionCandidatas() {
+    this.abrirSeleccionCandidatas();
   }
 
   public terminarSeleccionCandidatas() {
