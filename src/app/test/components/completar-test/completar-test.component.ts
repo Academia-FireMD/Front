@@ -196,27 +196,20 @@ export class CompletarTestComponent {
   }
 
   /**
-   * Devuelve la seguridad efectiva de una pregunta (BD > localStorage >
-   * null). Usado por el navegador lateral para pintar el emoji.
+   * Devuelve la seguridad efectiva de una pregunta desde BD (incluye
+   * drafts con estado='NO_RESPONDIDA'). Usado por el navegador lateral
+   * para pintar el emoji.
    */
   public getSeguridadDePregunta(
     indice: number,
   ): SeguridadAlResponder | undefined {
-    const respuesta = this.preguntaRespondida(indice);
-    if (respuesta?.seguridad) return respuesta.seguridad;
-    const borrador = this.leerBorradorLocal(indice);
-    return borrador?.seguridad ?? undefined;
+    return this.preguntaRespondida(indice)?.seguridad ?? undefined;
   }
 
-  /**
-   * True si la pregunta tiene candidatas marcadas (persistidas en BD o
-   * en localStorage como borrador).
-   */
+  /** True si la pregunta tiene candidatas marcadas (persistidas en BD). */
   public tieneCandidatasMarcadas(indice: number): boolean {
     const respuesta = this.preguntaRespondida(indice);
-    if (respuesta?.respuestasCandidatas?.length) return true;
-    const borrador = this.leerBorradorLocal(indice);
-    return !!borrador?.candidatas?.length;
+    return !!respuesta?.respuestasCandidatas?.length;
   }
 
   private scrollToActiveBlock(): void {
@@ -450,12 +443,6 @@ export class CompletarTestComponent {
       this.seguroDeLaPregunta.value ?? SeguridadAlResponder.CIEN_POR_CIENTO;
     const candidatas = [...this.candidatasPorPregunta()];
 
-    // Persistir siempre en localStorage como backup (sobrevive a reloads
-    // y navegación aunque no haya respuestaDada todavía). El backend solo
-    // se toca si ya hay respuesta — esto evita crear Respuestas draft
-    // con estado inconsistente.
-    this.guardarBorradorLocal(indice, candidatas, seguridad);
-
     this.candidatasTrigger$.next({
       testId: this.lastLoadedTest.id,
       preguntaId: pregunta.id,
@@ -468,9 +455,10 @@ export class CompletarTestComponent {
 
   /**
    * Carga el estado completo (seguridad + candidatas) de la pregunta en
-   * `indice`, con prioridad BD > localStorage > defaults. Siempre cierra
-   * el modo selección y limpia el signal antes de aplicar el nuevo
-   * estado, evitando que datos de la pregunta anterior "se peguen".
+   * `indice` desde las respuestas persistidas en BD (incluye drafts con
+   * estado='NO_RESPONDIDA'). Siempre cierra el modo selección y limpia
+   * el signal antes de aplicar el nuevo estado, evitando que datos de
+   * la pregunta anterior "se peguen".
    */
   private sincronizarEstadoPregunta(indice: number) {
     // Reset inmediato para garantizar que no quede state residual de la
@@ -479,102 +467,31 @@ export class CompletarTestComponent {
     this.candidatasPorPregunta.set([]);
 
     const respuesta = this.preguntaRespondida(indice);
-    let seguridad: SeguridadAlResponder =
+    const seguridad: SeguridadAlResponder =
       respuesta?.seguridad ?? SeguridadAlResponder.CIEN_POR_CIENTO;
-    let candidatas: number[] = respuesta?.respuestasCandidatas
+    const candidatas: number[] = respuesta?.respuestasCandidatas
       ? [...respuesta.respuestasCandidatas]
       : [];
 
-    // Si no hay respuesta persistida en BD, probamos localStorage (estado
-    // que el alumno marcó antes de responder y que no pudo guardarse al
-    // backend por falta de respuestaDada).
-    if (!respuesta) {
-      const borrador = this.leerBorradorLocal(indice);
-      if (borrador) {
-        seguridad = borrador.seguridad;
-        candidatas = borrador.candidatas;
-      }
-    }
-
     this.seguroDeLaPregunta.patchValue(seguridad);
     this.candidatasPorPregunta.set(candidatas);
-  }
-
-  private borradorStorageKey(indice: number): string {
-    const testId = this.lastLoadedTest?.id ?? 'unknown';
-    return `candidatas-draft-test-${testId}-q-${indice}`;
-  }
-
-  private guardarBorradorLocal(
-    indice: number,
-    candidatas: number[],
-    seguridad: SeguridadAlResponder,
-  ) {
-    // Nada que guardar si es el estado por defecto
-    const esDefault =
-      candidatas.length === 0 &&
-      seguridad === SeguridadAlResponder.CIEN_POR_CIENTO;
-    try {
-      if (esDefault) {
-        localStorage.removeItem(this.borradorStorageKey(indice));
-      } else {
-        localStorage.setItem(
-          this.borradorStorageKey(indice),
-          JSON.stringify({ candidatas, seguridad }),
-        );
-      }
-    } catch {
-      // localStorage deshabilitado o lleno — ignoramos silenciosamente
-    }
-  }
-
-  private leerBorradorLocal(
-    indice: number,
-  ): { candidatas: number[]; seguridad: SeguridadAlResponder } | null {
-    try {
-      const raw = localStorage.getItem(this.borradorStorageKey(indice));
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (
-        !Array.isArray(parsed?.candidatas) ||
-        typeof parsed?.seguridad !== 'string'
-      ) {
-        return null;
-      }
-      return parsed;
-    } catch {
-      return null;
-    }
-  }
-
-  private limpiarBorradorLocal(indice: number) {
-    try {
-      localStorage.removeItem(this.borradorStorageKey(indice));
-    } catch {
-      /* noop */
-    }
   }
 
   private initCandidatasPersistence() {
     this.candidatasTrigger$
       .pipe(
         debounceTime(300),
-        // Solo persistir cuando el alumno ya eligió respuesta. Persistir sin
-        // respuestaDada crearía una Respuesta con respuestaDada=null que en
-        // modo práctica bloquearía la selección posterior (preguntaRespondida
-        // devolvería truthy y clickedAnswer la rechazaría) e inflaría
-        // respuestas.length permitiendo finalizar sin responder.
-        filter(
-          (snap): snap is CandidatasSnapshot & { respuestaDada: number } =>
-            snap.respuestaDada != null && snap.respuestaDada >= 0,
-        ),
         takeUntilDestroyed(this.destroyRef),
         switchMap((snap) => {
+          // Persistimos SIEMPRE — el backend acepta drafts (respuestaDada
+          // null con estado='NO_RESPONDIDA') para guardar candidatas
+          // antes de elegir respuesta final. Esto permite cross-device y
+          // sobrevivir a recargas sin localStorage.
           return this.testService
             .actualizarProgresoTest({
               testId: snap.testId,
               preguntaId: snap.preguntaId,
-              respuestaDada: snap.respuestaDada,
+              respuestaDada: snap.respuestaDada ?? undefined,
               indicePregunta: snap.indicePregunta,
               seguridad: snap.seguridad,
               respuestasCandidatas: snap.respuestasCandidatas,
@@ -582,15 +499,15 @@ export class CompletarTestComponent {
             .pipe(
               tap((res) => {
                 const idx = this.lastLoadedTest.respuestas.findIndex(
-                  (r) => r.preguntaId === res.preguntaId,
+                  (r) =>
+                    r.preguntaId === res.preguntaId &&
+                    r.indicePregunta === res.indicePregunta,
                 );
                 if (idx >= 0) {
                   this.lastLoadedTest.respuestas[idx] = res as any;
                 } else {
                   this.lastLoadedTest.respuestas.push(res as any);
                 }
-                // Ya está en BD: podemos limpiar el borrador local.
-                this.limpiarBorradorLocal(snap.indicePregunta);
               }),
               catchError((err) => {
                 console.error('Error al persistir candidatas:', err);

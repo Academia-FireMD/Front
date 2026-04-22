@@ -426,27 +426,45 @@ describe('CompletarTestComponent — integration', () => {
       expect(component.modoSeleccionCandidatas()).toBe(false);
     });
 
-    it('candidatas sin respuesta se persisten en localStorage y se restauran al volver', () => {
-      localStorage.clear();
-      // Pregunta 0: marcar candidatas con seguridad 75%
-      component.indicePregunta.set(0);
-      component.seguroDeLaPregunta.setValue(
-        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
-      );
-      component.candidatasPorPregunta.set([2, 3]);
-      (component as any).persistirCandidatas();
+    it('sincronizarEstadoPregunta restaura candidatas desde la respuesta en BD', () => {
+      // Simulamos una respuesta guardada en BD (drafts o reales)
+      component.lastLoadedTest = {
+        id: 1,
+        preguntas: [
+          {
+            id: 10,
+            respuestas: ['A', 'B', 'C', 'D'],
+            respuestaCorrectaIndex: 0,
+          } as any,
+          {
+            id: 11,
+            respuestas: ['A', 'B', 'C', 'D'],
+            respuestaCorrectaIndex: 0,
+          } as any,
+        ],
+        respuestas: [
+          {
+            indicePregunta: 0,
+            preguntaId: 10,
+            seguridad: SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+            respuestasCandidatas: [2, 3],
+            estado: 'NO_RESPONDIDA',
+            respuestaDada: null,
+          } as any,
+        ],
+      } as any;
 
-      // Navegar a pregunta 1 → candidatas se limpian
       (component as any).sincronizarEstadoPregunta(1);
       expect(component.candidatasPorPregunta()).toEqual([]);
+      expect(component.seguroDeLaPregunta.value).toBe(
+        SeguridadAlResponder.CIEN_POR_CIENTO,
+      );
 
-      // Volver a pregunta 0 → candidatas restauradas desde localStorage
       (component as any).sincronizarEstadoPregunta(0);
       expect(component.candidatasPorPregunta()).toEqual([2, 3]);
       expect(component.seguroDeLaPregunta.value).toBe(
         SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
       );
-      localStorage.clear();
     });
   });
 });
