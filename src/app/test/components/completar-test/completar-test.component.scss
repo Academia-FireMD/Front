@@ -131,6 +131,28 @@
   color: var(--text-color-secondary, #64748b);
 }
 
+// Indicador de candidatas en el navegador lateral. Se coloca en la
+// esquina superior derecha de cada card de pregunta.
+.list-blocks {
+  p-card {
+    position: relative;
+  }
+  .candidatas-block {
+    border: 1px dashed var(--primary-color, #3b82f6);
+    border-radius: 8px;
+  }
+  .candidatas-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary-color, #3b82f6);
+    box-shadow: 0 0 0 2px var(--surface-0, #fff);
+  }
+}
+
 .respuesta-correcta.fue-candidata,
 .respuesta-incorrecta.fue-candidata,
 .fue-candidata:not(.respuesta-correcta):not(.respuesta-incorrecta) {

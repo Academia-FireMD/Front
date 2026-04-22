@@ -10,6 +10,7 @@
         'impugnada-block':
           pregunta?.impugnada && (vistaPrevia || modoVerRespuestas),
         'reserva-block': pregunta?.deReserva,
+        'candidatas-block': tieneCandidatasMarcadas(i),
         respondida:
           !!isModoExamen() &&
           !!preguntaRespondida(i) &&
@@ -23,14 +24,17 @@
     >
       <div class="content flex align-items-center justify-content-center">
         @if (
-          !!preguntaRespondida(i) &&
-          preguntaRespondida(i)?.seguridad != "CIEN_POR_CIENTO"
+          getSeguridadDePregunta(i) &&
+          getSeguridadDePregunta(i) !== "CIEN_POR_CIENTO"
         ) {
-          {{ obtainSecurityEmojiBasedOnEnum(preguntaRespondida(i)?.seguridad) }}
+          {{ obtainSecurityEmojiBasedOnEnum(getSeguridadDePregunta(i)) }}
         } @else {
           {{ i + 1 }}
         }
       </div>
+      @if (tieneCandidatasMarcadas(i)) {
+        <span class="candidatas-dot" aria-label="Tiene dudas marcadas"></span>
+      }
     </p-card>
   </div>
 </ng-template>

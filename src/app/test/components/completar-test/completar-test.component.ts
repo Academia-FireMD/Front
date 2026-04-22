@@ -81,14 +81,13 @@ export class CompletarTestComponent {
   public modoSeleccionCandidatas = signal(false);
   private candidatasTrigger$ = new Subject<CandidatasSnapshot>();
 
-  // Effect único que sincroniza TODO el estado derivado de indicePregunta:
-  // seguridad, candidatas y modo. Sincroniza desde BD primero, y si no hay
-  // respuesta persistida, cae a localStorage (para candidatas marcadas
-  // antes de responder que no se pueden guardar en BD sin respuestaDada).
-  public preguntaSyncEffect = effect(() => {
-    const idx = this.indicePregunta();
-    this.sincronizarEstadoPregunta(idx);
-  });
+  // Nota: la sincronización del estado derivado de indicePregunta
+  // (seguridad, candidatas, modo) NO se hace con un effect() — Angular 18
+  // prohíbe escrituras a signals dentro de effects por defecto (NG0600) y
+  // el error abortaría el set silenciosamente. En su lugar llamamos
+  // `sincronizarEstadoPregunta` explícitamente en los handlers de
+  // navegación: atras(), adelante(), clickedPreguntaFromNavegador() y
+  // tras la carga inicial del test.
 
   public displayFeedbackDialog = false;
   public displayNavegador = false;
@@ -196,6 +195,30 @@ export class CompletarTestComponent {
     );
   }
 
+  /**
+   * Devuelve la seguridad efectiva de una pregunta (BD > localStorage >
+   * null). Usado por el navegador lateral para pintar el emoji.
+   */
+  public getSeguridadDePregunta(
+    indice: number,
+  ): SeguridadAlResponder | undefined {
+    const respuesta = this.preguntaRespondida(indice);
+    if (respuesta?.seguridad) return respuesta.seguridad;
+    const borrador = this.leerBorradorLocal(indice);
+    return borrador?.seguridad ?? undefined;
+  }
+
+  /**
+   * True si la pregunta tiene candidatas marcadas (persistidas en BD o
+   * en localStorage como borrador).
+   */
+  public tieneCandidatasMarcadas(indice: number): boolean {
+    const respuesta = this.preguntaRespondida(indice);
+    if (respuesta?.respuestasCandidatas?.length) return true;
+    const borrador = this.leerBorradorLocal(indice);
+    return !!borrador?.candidatas?.length;
+  }
+
   private scrollToActiveBlock(): void {
     const activeElement = this.activeBlocks.toArray()[this.indicePregunta()];
     if (activeElement) {
@@ -261,6 +284,7 @@ export class CompletarTestComponent {
     // return;
     //}
     this.indicePregunta.set(indicePregunta);
+    this.sincronizarEstadoPregunta(indicePregunta);
     this.displayNavegador = false;
   }
 
@@ -685,11 +709,15 @@ export class CompletarTestComponent {
   }
 
   public atras() {
-    this.indicePregunta.set(this.indicePregunta() - 1);
+    const nuevo = this.indicePregunta() - 1;
+    this.indicePregunta.set(nuevo);
+    this.sincronizarEstadoPregunta(nuevo);
   }
 
   public adelante() {
-    this.indicePregunta.set(this.indicePregunta() + 1);
+    const nuevo = this.indicePregunta() + 1;
+    this.indicePregunta.set(nuevo);
+    this.sincronizarEstadoPregunta(nuevo);
   }
 
   showFeedbackDialog() {
@@ -888,6 +916,10 @@ export class CompletarTestComponent {
           this.lastLoadedTest = entry;
           this.indicePregunta.set(initialIndex);
         }
+        // Sincronizar estado (seguridad + candidatas) tras la carga.
+        // Se llama explícitamente porque no hay effect reactivo
+        // (ver nota en el signal indicePregunta).
+        this.sincronizarEstadoPregunta(this.indicePregunta());
       }),
       delay(100),
       tap(() => this.scrollToActiveBlock()),
