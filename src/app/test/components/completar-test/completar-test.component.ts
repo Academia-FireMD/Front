@@ -585,9 +585,20 @@ export class CompletarTestComponent {
       const isAnswered =
         existingAnswer?.respuestaDada != null &&
         existingAnswer.respuestaDada !== -1;
+      // Si el alumno dejó candidatas o marcó seguridad distinta de 100%,
+      // es un draft intencional (intención de dudar). Al navegar NO se
+      // auto-omite — se persiste como draft (NO_RESPONDIDA). Sin esta
+      // guardia, el backend recibe omitida:true y descarta las candidatas.
+      const tieneIntencionDeDudar =
+        (this.candidatasPorPregunta() ?? []).length > 0 ||
+        (this.seguroDeLaPregunta.value != null &&
+          this.seguroDeLaPregunta.value !==
+            SeguridadAlResponder.CIEN_POR_CIENTO);
       const isOmitida =
         mode == 'omitir' ||
-        ((mode == 'next' || mode == 'before') && !isAnswered);
+        ((mode == 'next' || mode == 'before') &&
+          !isAnswered &&
+          !tieneIntencionDeDudar);
 
       const res: Respuesta & { pregunta: { respuestaCorrectaIndex: number } } =
         await firstValueFrom(
