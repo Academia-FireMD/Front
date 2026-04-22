@@ -113,6 +113,24 @@
   font-style: italic;
 }
 
+.candidatas-banner {
+  background: var(--primary-50, #eff6ff);
+  border: 1px solid var(--primary-200, #bfdbfe);
+  border-radius: 8px;
+  color: var(--primary-700, #1d4ed8);
+  font-size: 0.95rem;
+
+  i.pi-question-circle {
+    font-size: 1.25rem;
+  }
+}
+
+.candidatas-hint {
+  background: var(--surface-100, rgba(0, 0, 0, 0.035));
+  border-radius: 6px;
+  color: var(--text-color-secondary, #64748b);
+}
+
 .respuesta-correcta.fue-candidata,
 .respuesta-incorrecta.fue-candidata,
 .fue-candidata:not(.respuesta-correcta):not(.respuesta-incorrecta) {

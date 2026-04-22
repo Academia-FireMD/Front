@@ -403,6 +403,61 @@
                     ></markdown>
                   </p>
                   <div
+                    *ngIf="
+                      modoSeleccionCandidatas() &&
+                      !vistaPrevia &&
+                      !modoVerRespuestas
+                    "
+                    class="candidatas-banner flex align-items-center justify-content-between p-3 mb-3"
+                    data-testid="candidatas-banner"
+                  >
+                    <div class="flex align-items-center gap-2">
+                      <i class="pi pi-question-circle"></i>
+                      <span>
+                        ¿Entre qué {{ maxCandidatas() }} dudas? Selecciónalas
+                        tocando las respuestas.
+                        <strong
+                          >({{ candidatasPorPregunta().length }} /
+                          {{ maxCandidatas() }})</strong
+                        >
+                      </span>
+                    </div>
+                    <p-button
+                      label="Listo"
+                      icon="pi pi-check"
+                      [text]="true"
+                      size="small"
+                      (click)="terminarSeleccionCandidatas()"
+                      data-testid="terminar-seleccion-candidatas"
+                    ></p-button>
+                  </div>
+                  <div
+                    *ngIf="
+                      maxCandidatas() > 0 &&
+                      !modoSeleccionCandidatas() &&
+                      candidatasPorPregunta().length > 0 &&
+                      !vistaPrevia &&
+                      !modoVerRespuestas
+                    "
+                    class="candidatas-hint flex align-items-center justify-content-between p-2 mb-3"
+                  >
+                    <span class="text-sm">
+                      Dudas marcadas:
+                      <strong
+                        >{{ candidatasPorPregunta().length }} /
+                        {{ maxCandidatas() }}</strong
+                      >. Elige tu respuesta final tocando una opción.
+                    </span>
+                    <p-button
+                      label="Editar dudas"
+                      icon="pi pi-pencil"
+                      [text]="true"
+                      size="small"
+                      (click)="reabrirSeleccionCandidatas()"
+                      data-testid="reabrir-seleccion-candidatas"
+                    ></p-button>
+                  </div>
+                  <div
                     class="col-12 respuestas-list pointer"
                     [class.pointer]="!vistaPrevia && !modoVerRespuestas"
                     [class.disabled]="vistaPrevia || modoVerRespuestas"
@@ -435,11 +490,7 @@
                         !modoVerRespuestas,
                       'fue-candidata': fueCandidata(pregunta, indiceRespuesta),
                     }"
-                    (click)="
-                      !vistaPrevia &&
-                        !modoVerRespuestas &&
-                        clickedAnswer(indiceRespuesta)
-                    "
+                    (click)="handleRespuestaClick(indiceRespuesta)"
                     data-testid="opcion-respuesta"
                     [attr.data-respuesta-index]="indiceRespuesta"
                   >
@@ -447,40 +498,8 @@
                       <p-inputGroupAddon
                         >{{ getLetter(indiceRespuesta) }})
                       </p-inputGroupAddon>
-                      <div
-                        class="flex w-full align-items-center justify-content-between"
-                      >
+                      <div class="flex w-full align-items-center">
                         <span>{{ respuesta }}</span>
-                        <button
-                          type="button"
-                          *ngIf="
-                            maxCandidatas() > 0 &&
-                            !esCandidata(indiceRespuesta) &&
-                            !vistaPrevia &&
-                            !modoVerRespuestas
-                          "
-                          class="rescatar-btn p-button-text"
-                          (click)="rescatarDescartada(indiceRespuesta, $event)"
-                          data-testid="rescatar-btn"
-                          aria-label="Rescatar respuesta"
-                        >
-                          <i class="pi pi-times"></i>
-                        </button>
-                        <button
-                          type="button"
-                          *ngIf="
-                            maxCandidatas() > 0 &&
-                            esCandidata(indiceRespuesta) &&
-                            !vistaPrevia &&
-                            !modoVerRespuestas
-                          "
-                          class="rescatar-btn p-button-text activa"
-                          (click)="toggleCandidata(indiceRespuesta, $event)"
-                          data-testid="descartar-btn"
-                          aria-label="Descartar respuesta"
-                        >
-                          <i class="pi pi-check"></i>
-                        </button>
                       </div>
                     </p-inputGroup>
                   </div>

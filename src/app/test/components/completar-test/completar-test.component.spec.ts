@@ -237,18 +237,18 @@ describe('CompletarTestComponent — integration', () => {
       component.candidatasPorPregunta.set([]);
     });
 
-    it('maxCandidatas devuelve 2 con seguridad 50%', () => {
+    it('maxCandidatas devuelve 3 con seguridad 50% (Dudo entre 3)', () => {
       component.seguroDeLaPregunta.setValue(
         SeguridadAlResponder.CINCUENTA_POR_CIENTO,
       );
-      expect(component.maxCandidatas()).toBe(2);
+      expect(component.maxCandidatas()).toBe(3);
     });
 
-    it('maxCandidatas devuelve 3 con seguridad 75%', () => {
+    it('maxCandidatas devuelve 2 con seguridad 75% (Dudo entre 2)', () => {
       component.seguroDeLaPregunta.setValue(
         SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
       );
-      expect(component.maxCandidatas()).toBe(3);
+      expect(component.maxCandidatas()).toBe(2);
     });
 
     it('maxCandidatas devuelve 0 con seguridad 100%', () => {
@@ -260,7 +260,7 @@ describe('CompletarTestComponent — integration', () => {
 
     it('toggleCandidata marca índice cuando cabe', () => {
       component.seguroDeLaPregunta.setValue(
-        SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
       );
       component.toggleCandidata(1);
       expect(component.candidatasPorPregunta()).toEqual([1]);
@@ -268,44 +268,52 @@ describe('CompletarTestComponent — integration', () => {
 
     it('toggleCandidata desmarca si ya está marcado', () => {
       component.seguroDeLaPregunta.setValue(
-        SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
       );
       component.candidatasPorPregunta.set([0, 1]);
       component.toggleCandidata(1);
       expect(component.candidatasPorPregunta()).toEqual([0]);
     });
 
-    it('toggleCandidata descarta la más antigua cuando excede el máximo', () => {
+    it('toggleCandidata descarta la más antigua cuando excede el máximo (75%, cap 2)', () => {
       component.seguroDeLaPregunta.setValue(
-        SeguridadAlResponder.CINCUENTA_POR_CIENTO,
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
       );
       component.candidatasPorPregunta.set([0, 1]);
       component.toggleCandidata(2);
       expect(component.candidatasPorPregunta()).toEqual([1, 2]);
     });
 
-    it('updateSecurity a 100% limpia candidatas', () => {
+    it('updateSecurity a 100% limpia candidatas y cierra el modo', () => {
       component.candidatasPorPregunta.set([0, 1]);
+      component.modoSeleccionCandidatas.set(true);
       component.updateSecurity(SeguridadAlResponder.CIEN_POR_CIENTO);
       expect(component.candidatasPorPregunta()).toEqual([]);
+      expect(component.modoSeleccionCandidatas()).toBe(false);
     });
 
-    it('updateSecurity de 50% a 75% preserva candidatas', () => {
+    it('updateSecurity a 75% (Dudo entre 2) abre el modo selección', () => {
+      component.updateSecurity(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO);
+      expect(component.modoSeleccionCandidatas()).toBe(true);
+    });
+
+    it('updateSecurity de 50% (cap 3) a 75% (cap 2) recorta candidatas a 2', () => {
       component.seguroDeLaPregunta.setValue(
         SeguridadAlResponder.CINCUENTA_POR_CIENTO,
       );
-      component.candidatasPorPregunta.set([0, 2]);
+      component.candidatasPorPregunta.set([0, 1, 2]);
       component.updateSecurity(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO);
-      expect(component.candidatasPorPregunta()).toEqual([0, 2]);
+      expect(component.candidatasPorPregunta().length).toBe(2);
     });
 
-    it('updateSecurity de 75% a 50% recorta a 2', () => {
+    it('updateSecurity de 75% a 50% permite añadir una tercera candidata', () => {
       component.seguroDeLaPregunta.setValue(
         SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
       );
-      component.candidatasPorPregunta.set([0, 1, 2]);
+      component.candidatasPorPregunta.set([0, 2]);
       component.updateSecurity(SeguridadAlResponder.CINCUENTA_POR_CIENTO);
-      expect(component.candidatasPorPregunta().length).toBe(2);
+      expect(component.candidatasPorPregunta()).toEqual([0, 2]);
+      expect(component.maxCandidatas()).toBe(3);
     });
 
     it('esCandidata devuelve true para todas cuando seguridad no es intermedia', () => {
@@ -314,6 +322,59 @@ describe('CompletarTestComponent — integration', () => {
       );
       expect(component.esCandidata(0)).toBe(true);
       expect(component.esCandidata(3)).toBe(true);
+    });
+
+    it('handleRespuestaClick en modo selección togglea candidata y no llama a clickedAnswer', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.modoSeleccionCandidatas.set(true);
+      const spy = jest.spyOn(component, 'clickedAnswer');
+      component.handleRespuestaClick(2);
+      expect(component.candidatasPorPregunta()).toEqual([2]);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('handleRespuestaClick cierra el modo al alcanzar el cap', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.modoSeleccionCandidatas.set(true);
+      component.handleRespuestaClick(0);
+      expect(component.modoSeleccionCandidatas()).toBe(true);
+      component.handleRespuestaClick(2);
+      expect(component.candidatasPorPregunta()).toEqual([0, 2]);
+      expect(component.modoSeleccionCandidatas()).toBe(false);
+    });
+
+    it('handleRespuestaClick fuera de modo llama a clickedAnswer', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.modoSeleccionCandidatas.set(false);
+      const spy = jest
+        .spyOn(component, 'clickedAnswer')
+        .mockImplementation(() => {});
+      component.handleRespuestaClick(1);
+      expect(spy).toHaveBeenCalledWith(1);
+    });
+
+    it('reabrirSeleccionCandidatas activa el modo cuando hay cap > 0', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.modoSeleccionCandidatas.set(false);
+      component.reabrirSeleccionCandidatas();
+      expect(component.modoSeleccionCandidatas()).toBe(true);
+    });
+
+    it('reabrirSeleccionCandidatas no hace nada cuando cap es 0', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.CIEN_POR_CIENTO,
+      );
+      component.modoSeleccionCandidatas.set(false);
+      component.reabrirSeleccionCandidatas();
+      expect(component.modoSeleccionCandidatas()).toBe(false);
     });
   });
 });

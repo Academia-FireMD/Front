@@ -83,6 +83,11 @@ export class CompletarTestComponent {
   });
 
   public candidatasPorPregunta = signal<number[]>([]);
+  // Modo dedicado de selección de candidatas: cuando está activo, los clicks
+  // en las respuestas togglean candidatas en vez de registrar la respuesta
+  // final. Se activa al pulsar "Dudo entre N" y se desactiva al completar
+  // el cap, al pulsar "No dudo"/"Dudo entre todas", o al pulsar "Listo".
+  public modoSeleccionCandidatas = signal(false);
   private candidatasTrigger$ = new Subject<CandidatasSnapshot>();
 
   public candidatasSyncEffect = effect(() => {
@@ -92,6 +97,10 @@ export class CompletarTestComponent {
         ? [...respuesta.respuestasCandidatas]
         : [],
     );
+    // Al navegar a otra pregunta siempre cerramos el modo selección. Si el
+    // alumno quiere reabrirlo, tiene el botón "Editar candidatas" o puede
+    // re-pulsar el nivel de seguridad.
+    this.modoSeleccionCandidatas.set(false);
   });
 
   public displayFeedbackDialog = false;
@@ -298,14 +307,17 @@ export class CompletarTestComponent {
     }
     this.seguroDeLaPregunta.patchValue(value);
 
-    // Ajustar candidatas según la nueva seguridad
+    // Ajustar candidatas + modo de selección según la nueva seguridad
     if (
       value === SeguridadAlResponder.CIEN_POR_CIENTO ||
       value === SeguridadAlResponder.CERO_POR_CIENTO
     ) {
       this.candidatasPorPregunta.set([]);
+      this.modoSeleccionCandidatas.set(false);
     } else {
-      const max = value === SeguridadAlResponder.CINCUENTA_POR_CIENTO ? 2 : 3;
+      // 75% → cap 2, 50% → cap 3 (alineado con los labels UI)
+      const max =
+        value === SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO ? 2 : 3;
       const actuales = this.candidatasPorPregunta();
       // Si había elegida y no estaba incluida, pre-marcarla
       const elegida =
@@ -319,6 +331,11 @@ export class CompletarTestComponent {
         base = base.slice(base.length - max);
       }
       this.candidatasPorPregunta.set(base);
+      // Entrar en modo selección si todavía faltan candidatas por marcar.
+      // Si ya están todas marcadas (por ejemplo tras un cambio 75%→50%
+      // con 2 candidatas ya seleccionadas y capacidad para 3), abrimos
+      // el modo igual para permitir completar la tercera.
+      this.modoSeleccionCandidatas.set(true);
     }
 
     if (respuesta) {
@@ -329,6 +346,39 @@ export class CompletarTestComponent {
       // cambio de seguridad (o su limpieza) para cumplir RF6 tras recarga
       this.persistirCandidatas();
     }
+  }
+
+  /**
+   * Handler unificado para clicks en una opción de respuesta.
+   * Si estamos en modo selección de candidatas, toggle candidata.
+   * Si no, selecciona la respuesta como contestación final.
+   */
+  public handleRespuestaClick(indice: number) {
+    if (this.vistaPrevia || this.modoVerRespuestas) return;
+    if (this.modoSeleccionCandidatas()) {
+      this.toggleCandidata(indice);
+      // Auto-cerrar el modo al completar el cap para que el siguiente
+      // click sirva para elegir la respuesta final.
+      if (this.candidatasPorPregunta().length >= this.maxCandidatas()) {
+        this.modoSeleccionCandidatas.set(false);
+      }
+      return;
+    }
+    this.clickedAnswer(indice);
+  }
+
+  /**
+   * Reabre el modo para re-editar las candidatas sin tocar la seguridad.
+   * Útil cuando el alumno ya completó el cap pero quiere cambiar una
+   * candidata después.
+   */
+  public reabrirSeleccionCandidatas() {
+    if (this.maxCandidatas() === 0) return;
+    this.modoSeleccionCandidatas.set(true);
+  }
+
+  public terminarSeleccionCandidatas() {
+    this.modoSeleccionCandidatas.set(false);
   }
 
   public esCandidata(indice: number): boolean {
@@ -343,9 +393,12 @@ export class CompletarTestComponent {
   }
 
   public maxCandidatas(): number {
+    // Alineado con los labels del UI:
+    //   75% → "Dudo entre 2" → cap 2.
+    //   50% → "Dudo entre 3" → cap 3.
     const seguridad = this.seguroDeLaPregunta.value;
-    if (seguridad === SeguridadAlResponder.CINCUENTA_POR_CIENTO) return 2;
-    if (seguridad === SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO) return 3;
+    if (seguridad === SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO) return 2;
+    if (seguridad === SeguridadAlResponder.CINCUENTA_POR_CIENTO) return 3;
     return 0;
   }
 
