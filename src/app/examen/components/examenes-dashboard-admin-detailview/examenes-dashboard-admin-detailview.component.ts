@@ -3,6 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   computed,
+  ElementRef,
   inject,
   Input,
   signal,
@@ -27,7 +28,7 @@ import { TemaService } from '../../../services/tema.service';
 import { GenerarTestDto } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { ConfidenceAnalysis } from '../../../shared/components/confidence-analysis-cards/confidence-analysis-cards.component';
-import { Pregunta } from '../../../shared/models/pregunta.model';
+import { Dificultad, Pregunta } from '../../../shared/models/pregunta.model';
 import { Oposicion } from '../../../shared/models/subscription.model';
 import { MetodoCalificacion, Rol } from '../../../shared/models/user.model';
 import { RealizarTestComponent } from '../../../shared/realizar-test/realizar-test.component';
@@ -247,6 +248,14 @@ export class ExamenesDashboardAdminDetailviewComponent {
   }
 
   public addPreguntasDialogVisible = false;
+  public importarExcelDialogVisible = false;
+  public importarExcelFile: File | null = null;
+  public importarExcelTemaIdControl = new FormControl<number | null>(null);
+  public importarExcelDificultadControl = new FormControl<Dificultad | null>(
+    null,
+  );
+  public importarExcelComoReserva = false;
+  public importarExcelEnProgreso = false;
   public selectedPreguntasToAdd: Array<Pregunta> = [];
   public lastLoadedExamen = signal<Examen>(null as any);
 
@@ -586,6 +595,73 @@ export class ExamenesDashboardAdminDetailviewComponent {
       },
     });
     this.agregarComoReserva = false;
+  }
+
+  @ViewChild('importarExcelFileInputRef')
+  private importarExcelFileInputRef?: ElementRef<HTMLInputElement>;
+
+  public abrirDialogoImportarExcel() {
+    this.importarExcelFile = null;
+    this.importarExcelTemaIdControl.setValue(null);
+    this.importarExcelDificultadControl.setValue(null);
+    this.importarExcelComoReserva = this.agregarComoReserva;
+    this.importarExcelDialogVisible = true;
+    // El <input type="file"> retiene su .value aunque el binding a
+    // importarExcelFile se reinicie. Si el alumno elige el mismo archivo
+    // otra vez (p.ej. tras un error), el browser no dispara 'change'
+    // y el form queda disabled. Reset defensivo del DOM.
+    setTimeout(() => {
+      if (this.importarExcelFileInputRef?.nativeElement) {
+        this.importarExcelFileInputRef.nativeElement.value = '';
+      }
+    }, 0);
+  }
+
+  public onImportarExcelFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.importarExcelFile = input.files?.[0] ?? null;
+  }
+
+  public puedeEjecutarImportacionExcel(): boolean {
+    return (
+      !!this.importarExcelFile &&
+      !!this.importarExcelTemaIdControl.value &&
+      !!this.importarExcelDificultadControl.value &&
+      !this.importarExcelEnProgreso
+    );
+  }
+
+  public async ejecutarImportacionExcel() {
+    if (!this.puedeEjecutarImportacionExcel()) return;
+    this.importarExcelEnProgreso = true;
+
+    const formData = new FormData();
+    formData.append('file', this.importarExcelFile!);
+    formData.append('temaId', String(this.importarExcelTemaIdControl.value));
+    formData.append(
+      'dificultad',
+      String(this.importarExcelDificultadControl.value),
+    );
+    formData.append('esReserva', String(this.importarExcelComoReserva));
+
+    try {
+      const res = await firstValueFrom(
+        this.examenesService.importarPreguntasExcelAlExamen$(
+          this.getId() as number,
+          formData,
+        ),
+      );
+      this.toast.success(res.message);
+      this.importarExcelDialogVisible = false;
+      // Reset del flag compartido para no contagiar a siguientes flujos de
+      // "Añadir preguntas" (manual/semi/automático) con reserva sticky.
+      this.agregarComoReserva = false;
+      this.loadExamen();
+    } catch (err) {
+      console.error('Error al importar preguntas:', err);
+    } finally {
+      this.importarExcelEnProgreso = false;
+    }
   }
 
   // Stepper
