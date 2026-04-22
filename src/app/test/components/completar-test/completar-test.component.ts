@@ -1,5 +1,6 @@
 import { Location } from '@angular/common';
 import {
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   effect,
@@ -68,6 +69,7 @@ export class CompletarTestComponent {
   viewportService = inject(ViewportService);
   examenesService = inject(ExamenesService);
   private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
   @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
   public location = inject(Location);
   auth = inject(AuthService);
@@ -493,6 +495,12 @@ export class CompletarTestComponent {
 
     this.seguroDeLaPregunta.patchValue(seguridad);
     this.candidatasPorPregunta.set(candidatas);
+    // Forzar CD por si el template se renderizó antes de que el signal
+    // fuera actualizado (p.ej. primer load: el componente ya renderizó
+    // con datos vacíos y sincronizarEstadoPregunta se invoca async tras
+    // la respuesta del API). Sin markForCheck, maxCandidatas() lee el
+    // FormControl.value (no-signal) con valor stale del render anterior.
+    this.cdr.markForCheck();
   }
 
   private initCandidatasPersistence() {
