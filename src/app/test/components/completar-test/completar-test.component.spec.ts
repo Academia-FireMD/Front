@@ -377,6 +377,17 @@ describe('CompletarTestComponent — integration', () => {
       expect(spy).toHaveBeenCalledWith(1);
     });
 
+    it('handleRespuestaClick fuera de modo NO modifica candidatas aunque la respuesta elegida no esté entre ellas', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.candidatasPorPregunta.set([0, 2]);
+      component.modoSeleccionCandidatas.set(false);
+      jest.spyOn(component, 'clickedAnswer').mockImplementation(() => {});
+      component.handleRespuestaClick(1);
+      expect(component.candidatasPorPregunta()).toEqual([0, 2]);
+    });
+
     it('reabrirSeleccionCandidatas activa el modo cuando hay cap > 0', () => {
       component.seguroDeLaPregunta.setValue(
         SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,

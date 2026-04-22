@@ -527,21 +527,11 @@ export class CompletarTestComponent {
       return;
     }
 
-    const max = this.maxCandidatas();
-    if (
-      max > 0 &&
-      respuestaDada != null &&
-      respuestaDada >= 0 &&
-      !this.candidatasPorPregunta().includes(respuestaDada)
-    ) {
-      const actuales = this.candidatasPorPregunta();
-      const siguientes = [...actuales, respuestaDada];
-      this.candidatasPorPregunta.set(
-        siguientes.length > max
-          ? siguientes.slice(siguientes.length - max)
-          : siguientes,
-      );
-    }
+    // Nota: NO tocamos candidatasPorPregunta aquí. Elegir respuesta final
+    // no debe modificar las candidatas marcadas. Las candidatas solo se
+    // tocan en modo selección (handleRespuestaClick → toggleCandidata).
+    // Esto permite que el alumno tenga candidatas [A, C] marcadas y
+    // elija finalmente B sin que eso "rote" las candidatas.
 
     this.isProcessingAnswer = true;
     this.answeredQuestion = -1;
