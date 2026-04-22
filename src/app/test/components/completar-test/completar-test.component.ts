@@ -181,12 +181,27 @@ export class CompletarTestComponent {
     );
   }
 
+  /**
+   * Devuelve la Respuesta REAL de la pregunta (respondida u omitida).
+   * Por defecto excluye drafts (estado='NO_RESPONDIDA'). Los drafts son
+   * filas que guardan candidatas/seguridad antes de responder; no son
+   * respuestas desde la óptica de la UI (no deben bloquear clickedAnswer
+   * ni pintar colores). Para leer un draft, pasa `incluirDrafts = true`.
+   */
   public preguntaRespondida(
     specificIndex: number = this.indicePregunta(),
+    incluirDrafts = false,
   ): Respuesta | undefined {
     return (this.lastLoadedTest?.respuestas ?? []).find(
-      (r) => r.indicePregunta == specificIndex,
+      (r) =>
+        r.indicePregunta == specificIndex &&
+        (incluirDrafts || (r as any).estado !== 'NO_RESPONDIDA'),
     );
+  }
+
+  /** Incluye drafts. Uso: restaurar candidatas/seguridad al navegar. */
+  public respuestaOBorrador(indice: number): Respuesta | undefined {
+    return this.preguntaRespondida(indice, true);
   }
 
   public preguntaRespondidaPorId(preguntaId: number): Respuesta | undefined {
@@ -203,12 +218,12 @@ export class CompletarTestComponent {
   public getSeguridadDePregunta(
     indice: number,
   ): SeguridadAlResponder | undefined {
-    return this.preguntaRespondida(indice)?.seguridad ?? undefined;
+    return this.respuestaOBorrador(indice)?.seguridad ?? undefined;
   }
 
   /** True si la pregunta tiene candidatas marcadas (persistidas en BD). */
   public tieneCandidatasMarcadas(indice: number): boolean {
-    const respuesta = this.preguntaRespondida(indice);
+    const respuesta = this.respuestaOBorrador(indice);
     return !!respuesta?.respuestasCandidatas?.length;
   }
 
@@ -466,7 +481,9 @@ export class CompletarTestComponent {
     this.modoSeleccionCandidatas.set(false);
     this.candidatasPorPregunta.set([]);
 
-    const respuesta = this.preguntaRespondida(indice);
+    // Al restaurar estado, INCLUIMOS drafts (incluirDrafts=true) para
+    // recuperar candidatas/seguridad guardadas sin respuesta final.
+    const respuesta = this.respuestaOBorrador(indice);
     const seguridad: SeguridadAlResponder =
       respuesta?.seguridad ?? SeguridadAlResponder.CIEN_POR_CIENTO;
     const candidatas: number[] = respuesta?.respuestasCandidatas
