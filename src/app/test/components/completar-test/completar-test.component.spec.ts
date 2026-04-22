@@ -413,5 +413,40 @@ describe('CompletarTestComponent — integration', () => {
       component.reabrirSeleccionCandidatas();
       expect(component.modoSeleccionCandidatas()).toBe(false);
     });
+
+    it('navegar a otra pregunta limpia candidatas del signal (no leak)', () => {
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.candidatasPorPregunta.set([2, 3]);
+      component.modoSeleccionCandidatas.set(true);
+      // Simular navegación
+      (component as any).sincronizarEstadoPregunta(1);
+      expect(component.candidatasPorPregunta()).toEqual([]);
+      expect(component.modoSeleccionCandidatas()).toBe(false);
+    });
+
+    it('candidatas sin respuesta se persisten en localStorage y se restauran al volver', () => {
+      localStorage.clear();
+      // Pregunta 0: marcar candidatas con seguridad 75%
+      component.indicePregunta.set(0);
+      component.seguroDeLaPregunta.setValue(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      component.candidatasPorPregunta.set([2, 3]);
+      (component as any).persistirCandidatas();
+
+      // Navegar a pregunta 1 → candidatas se limpian
+      (component as any).sincronizarEstadoPregunta(1);
+      expect(component.candidatasPorPregunta()).toEqual([]);
+
+      // Volver a pregunta 0 → candidatas restauradas desde localStorage
+      (component as any).sincronizarEstadoPregunta(0);
+      expect(component.candidatasPorPregunta()).toEqual([2, 3]);
+      expect(component.seguroDeLaPregunta.value).toBe(
+        SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+      );
+      localStorage.clear();
+    });
   });
 });

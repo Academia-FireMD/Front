@@ -73,34 +73,21 @@ export class CompletarTestComponent {
   auth = inject(AuthService);
 
   public indicePregunta = signal(0);
-  public indicePreguntaChanged = effect(() => {
-    const respuesta = this.preguntaRespondida(this.indicePregunta());
-    this.seguroDeLaPregunta.patchValue(
-      respuesta && respuesta.seguridad
-        ? respuesta.seguridad
-        : SeguridadAlResponder.CIEN_POR_CIENTO,
-    );
-  });
-
   public candidatasPorPregunta = signal<number[]>([]);
   // Modo dedicado de selección de candidatas: cuando está activo, los clicks
   // en las respuestas togglean candidatas en vez de registrar la respuesta
-  // final. Se activa al pulsar "Dudo entre N" y se desactiva al completar
-  // el cap, al pulsar "No dudo"/"Dudo entre todas", o al pulsar "Listo".
+  // final. Se activa al pulsar "Marcar las que dudo" y se desactiva al
+  // pulsar "Listo" explícitamente o al navegar a otra pregunta.
   public modoSeleccionCandidatas = signal(false);
   private candidatasTrigger$ = new Subject<CandidatasSnapshot>();
 
-  public candidatasSyncEffect = effect(() => {
-    const respuesta = this.preguntaRespondida(this.indicePregunta());
-    this.candidatasPorPregunta.set(
-      respuesta?.respuestasCandidatas
-        ? [...respuesta.respuestasCandidatas]
-        : [],
-    );
-    // Al navegar a otra pregunta siempre cerramos el modo selección. Si el
-    // alumno quiere reabrirlo, tiene el botón "Editar candidatas" o puede
-    // re-pulsar el nivel de seguridad.
-    this.modoSeleccionCandidatas.set(false);
+  // Effect único que sincroniza TODO el estado derivado de indicePregunta:
+  // seguridad, candidatas y modo. Sincroniza desde BD primero, y si no hay
+  // respuesta persistida, cae a localStorage (para candidatas marcadas
+  // antes de responder que no se pueden guardar en BD sin respuestaDada).
+  public preguntaSyncEffect = effect(() => {
+    const idx = this.indicePregunta();
+    this.sincronizarEstadoPregunta(idx);
   });
 
   public displayFeedbackDialog = false;
@@ -435,15 +422,113 @@ export class CompletarTestComponent {
     const pregunta = this.lastLoadedTest?.preguntas?.[indice];
     if (!pregunta) return;
     const respuesta = this.preguntaRespondida(indice);
+    const seguridad =
+      this.seguroDeLaPregunta.value ?? SeguridadAlResponder.CIEN_POR_CIENTO;
+    const candidatas = [...this.candidatasPorPregunta()];
+
+    // Persistir siempre en localStorage como backup (sobrevive a reloads
+    // y navegación aunque no haya respuestaDada todavía). El backend solo
+    // se toca si ya hay respuesta — esto evita crear Respuestas draft
+    // con estado inconsistente.
+    this.guardarBorradorLocal(indice, candidatas, seguridad);
+
     this.candidatasTrigger$.next({
       testId: this.lastLoadedTest.id,
       preguntaId: pregunta.id,
       indicePregunta: indice,
       respuestaDada: respuesta?.respuestaDada,
-      seguridad:
-        this.seguroDeLaPregunta.value ?? SeguridadAlResponder.CIEN_POR_CIENTO,
-      respuestasCandidatas: [...this.candidatasPorPregunta()],
+      seguridad,
+      respuestasCandidatas: candidatas,
     });
+  }
+
+  /**
+   * Carga el estado completo (seguridad + candidatas) de la pregunta en
+   * `indice`, con prioridad BD > localStorage > defaults. Siempre cierra
+   * el modo selección y limpia el signal antes de aplicar el nuevo
+   * estado, evitando que datos de la pregunta anterior "se peguen".
+   */
+  private sincronizarEstadoPregunta(indice: number) {
+    // Reset inmediato para garantizar que no quede state residual de la
+    // pregunta anterior mientras resolvemos el estado nuevo.
+    this.modoSeleccionCandidatas.set(false);
+    this.candidatasPorPregunta.set([]);
+
+    const respuesta = this.preguntaRespondida(indice);
+    let seguridad: SeguridadAlResponder =
+      respuesta?.seguridad ?? SeguridadAlResponder.CIEN_POR_CIENTO;
+    let candidatas: number[] = respuesta?.respuestasCandidatas
+      ? [...respuesta.respuestasCandidatas]
+      : [];
+
+    // Si no hay respuesta persistida en BD, probamos localStorage (estado
+    // que el alumno marcó antes de responder y que no pudo guardarse al
+    // backend por falta de respuestaDada).
+    if (!respuesta) {
+      const borrador = this.leerBorradorLocal(indice);
+      if (borrador) {
+        seguridad = borrador.seguridad;
+        candidatas = borrador.candidatas;
+      }
+    }
+
+    this.seguroDeLaPregunta.patchValue(seguridad);
+    this.candidatasPorPregunta.set(candidatas);
+  }
+
+  private borradorStorageKey(indice: number): string {
+    const testId = this.lastLoadedTest?.id ?? 'unknown';
+    return `candidatas-draft-test-${testId}-q-${indice}`;
+  }
+
+  private guardarBorradorLocal(
+    indice: number,
+    candidatas: number[],
+    seguridad: SeguridadAlResponder,
+  ) {
+    // Nada que guardar si es el estado por defecto
+    const esDefault =
+      candidatas.length === 0 &&
+      seguridad === SeguridadAlResponder.CIEN_POR_CIENTO;
+    try {
+      if (esDefault) {
+        localStorage.removeItem(this.borradorStorageKey(indice));
+      } else {
+        localStorage.setItem(
+          this.borradorStorageKey(indice),
+          JSON.stringify({ candidatas, seguridad }),
+        );
+      }
+    } catch {
+      // localStorage deshabilitado o lleno — ignoramos silenciosamente
+    }
+  }
+
+  private leerBorradorLocal(
+    indice: number,
+  ): { candidatas: number[]; seguridad: SeguridadAlResponder } | null {
+    try {
+      const raw = localStorage.getItem(this.borradorStorageKey(indice));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (
+        !Array.isArray(parsed?.candidatas) ||
+        typeof parsed?.seguridad !== 'string'
+      ) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  private limpiarBorradorLocal(indice: number) {
+    try {
+      localStorage.removeItem(this.borradorStorageKey(indice));
+    } catch {
+      /* noop */
+    }
   }
 
   private initCandidatasPersistence() {
@@ -480,6 +565,8 @@ export class CompletarTestComponent {
                 } else {
                   this.lastLoadedTest.respuestas.push(res as any);
                 }
+                // Ya está en BD: podemos limpiar el borrador local.
+                this.limpiarBorradorLocal(snap.indicePregunta);
               }),
               catchError((err) => {
                 console.error('Error al persistir candidatas:', err);
