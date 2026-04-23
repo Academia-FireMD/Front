@@ -1,26 +1,32 @@
 import { Location } from '@angular/common';
 import {
-    Component,
-    effect,
-    ElementRef,
-    inject,
-    Input,
-    QueryList,
-    signal,
-    ViewChildren,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  Input,
+  QueryList,
+  signal,
+  ViewChildren,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import {
-    BehaviorSubject,
-    catchError,
-    combineLatest,
-    delay,
-    filter,
-    firstValueFrom,
-    switchMap,
-    tap,
+  BehaviorSubject,
+  catchError,
+  combineLatest,
+  debounceTime,
+  delay,
+  EMPTY,
+  filter,
+  firstValueFrom,
+  Subject,
+  switchMap,
+  tap,
 } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
@@ -28,16 +34,25 @@ import { TestService } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import {
-    Dificultad,
-    Pregunta,
-    SeguridadAlResponder,
+  Dificultad,
+  Pregunta,
+  SeguridadAlResponder,
 } from '../../../shared/models/pregunta.model';
 import { Respuesta, Test } from '../../../shared/models/test.model';
 import { esRolPlataforma, Rol } from '../../../shared/models/user.model';
 import {
-    getLetter,
-    obtainSecurityEmojiBasedOnEnum,
+  getLetter,
+  obtainSecurityEmojiBasedOnEnum,
 } from '../../../utils/utils';
+
+interface CandidatasSnapshot {
+  testId: number;
+  preguntaId: number;
+  indicePregunta: number;
+  respuestaDada: number | null | undefined;
+  seguridad: SeguridadAlResponder;
+  respuestasCandidatas: number[];
+}
 
 @Component({
   selector: 'app-completar-test',
@@ -53,32 +68,45 @@ export class CompletarTestComponent {
   reporteFallo = inject(ReportesFalloService);
   viewportService = inject(ViewportService);
   examenesService = inject(ExamenesService);
+  private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
   @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
   public location = inject(Location);
   auth = inject(AuthService);
 
   public indicePregunta = signal(0);
-  public indicePreguntaChanged = effect(() => {
-    const respuesta = this.preguntaRespondida(this.indicePregunta());
-    this.seguroDeLaPregunta.patchValue(
-      respuesta && respuesta.seguridad
-        ? respuesta.seguridad
-        : SeguridadAlResponder.CIEN_POR_CIENTO
-    );
-  });
+  public candidatasPorPregunta = signal<number[]>([]);
+  // Modo dedicado de selección de candidatas: cuando está activo, los clicks
+  // en las respuestas togglean candidatas en vez de registrar la respuesta
+  // final. Se activa al pulsar "Marcar las que dudo" y se desactiva al
+  // pulsar "Listo" explícitamente o al navegar a otra pregunta.
+  public modoSeleccionCandidatas = signal(false);
+  private candidatasTrigger$ = new Subject<CandidatasSnapshot>();
+
+  // Nota: la sincronización del estado derivado de indicePregunta
+  // (seguridad, candidatas, modo) NO se hace con un effect() — Angular 18
+  // prohíbe escrituras a signals dentro de effects por defecto (NG0600) y
+  // el error abortaría el set silenciosamente. En su lugar llamamos
+  // `sincronizarEstadoPregunta` explícitamente en los handlers de
+  // navegación: atras(), adelante(), clickedPreguntaFromNavegador() y
+  // tras la carga inicial del test.
+
   public displayFeedbackDialog = false;
   public displayNavegador = false;
   public displayClonacion = false;
   public displayFalloDialog = false;
   public displayImpugnacionDialog = false;
-  public motivoImpugnacion = new FormControl('', [Validators.required, Validators.minLength(10)]);
+  public motivoImpugnacion = new FormControl('', [
+    Validators.required,
+    Validators.minLength(10),
+  ]);
   public indiceSeleccionado = new BehaviorSubject(-1);
   public seguroDeLaPregunta = new FormControl(
-    SeguridadAlResponder.CIEN_POR_CIENTO
+    SeguridadAlResponder.CIEN_POR_CIENTO,
   );
   public dificultadPercibida = new FormControl(
     Dificultad.INTERMEDIO,
-    Validators.required
+    Validators.required,
   );
 
   public feedback = new FormControl('', Validators.required);
@@ -107,17 +135,23 @@ export class CompletarTestComponent {
   }
 
   public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
-    const respuesta = this.modoVerRespuestas ? this.preguntaRespondidaPorId(pregunta.id) : this.preguntaRespondida();
+    const respuesta = this.modoVerRespuestas
+      ? this.preguntaRespondidaPorId(pregunta.id)
+      : this.preguntaRespondida();
     return (
       (!this.isModoExamen() || this.modoVerRespuestas || this.vistaPrevia) &&
       (!!respuesta || this.vistaPrevia) &&
-      (respuesta?.estado != 'OMITIDA' || this.vistaPrevia || this.modoVerRespuestas) &&
+      (respuesta?.estado != 'OMITIDA' ||
+        this.vistaPrevia ||
+        this.modoVerRespuestas) &&
       pregunta.respuestaCorrectaIndex == indiceRespuesta
     );
   }
 
   public respuestaIncorrecta(pregunta: Pregunta, indiceRespuesta: number) {
-    const respuesta = this.modoVerRespuestas ? this.preguntaRespondidaPorId(pregunta.id) : this.preguntaRespondida();
+    const respuesta = this.modoVerRespuestas
+      ? this.preguntaRespondidaPorId(pregunta.id)
+      : this.preguntaRespondida();
     return (
       (!this.isModoExamen() || this.modoVerRespuestas) &&
       !!respuesta &&
@@ -125,6 +159,12 @@ export class CompletarTestComponent {
       pregunta.respuestaCorrectaIndex != indiceRespuesta &&
       respuesta?.respuestaDada == indiceRespuesta
     );
+  }
+
+  public fueCandidata(pregunta: Pregunta, indiceRespuesta: number): boolean {
+    if (!this.modoVerRespuestas) return false;
+    const respuesta = this.preguntaRespondidaPorId(pregunta.id);
+    return !!respuesta?.respuestasCandidatas?.includes(indiceRespuesta);
   }
 
   public respuestaIncorrectaBlock(indiceRespuesta: number) {
@@ -143,18 +183,50 @@ export class CompletarTestComponent {
     );
   }
 
+  /**
+   * Devuelve la Respuesta REAL de la pregunta (respondida u omitida).
+   * Por defecto excluye drafts (estado='NO_RESPONDIDA'). Los drafts son
+   * filas que guardan candidatas/seguridad antes de responder; no son
+   * respuestas desde la óptica de la UI (no deben bloquear clickedAnswer
+   * ni pintar colores). Para leer un draft, pasa `incluirDrafts = true`.
+   */
   public preguntaRespondida(
-    specificIndex: number = this.indicePregunta()
+    specificIndex: number = this.indicePregunta(),
+    incluirDrafts = false,
   ): Respuesta | undefined {
     return (this.lastLoadedTest?.respuestas ?? []).find(
-      (r) => r.indicePregunta == specificIndex
+      (r) =>
+        r.indicePregunta == specificIndex &&
+        (incluirDrafts || (r as any).estado !== 'NO_RESPONDIDA'),
     );
+  }
+
+  /** Incluye drafts. Uso: restaurar candidatas/seguridad al navegar. */
+  public respuestaOBorrador(indice: number): Respuesta | undefined {
+    return this.preguntaRespondida(indice, true);
   }
 
   public preguntaRespondidaPorId(preguntaId: number): Respuesta | undefined {
     return (this.lastLoadedTest?.respuestas ?? []).find(
-      (r) => r.preguntaId == preguntaId
+      (r) => r.preguntaId == preguntaId,
     );
+  }
+
+  /**
+   * Devuelve la seguridad efectiva de una pregunta desde BD (incluye
+   * drafts con estado='NO_RESPONDIDA'). Usado por el navegador lateral
+   * para pintar el emoji.
+   */
+  public getSeguridadDePregunta(
+    indice: number,
+  ): SeguridadAlResponder | undefined {
+    return this.respuestaOBorrador(indice)?.seguridad ?? undefined;
+  }
+
+  /** True si la pregunta tiene candidatas marcadas (persistidas en BD). */
+  public tieneCandidatasMarcadas(indice: number): boolean {
+    const respuesta = this.respuestaOBorrador(indice);
+    return !!respuesta?.respuestasCandidatas?.length;
   }
 
   private scrollToActiveBlock(): void {
@@ -214,14 +286,10 @@ export class CompletarTestComponent {
   }
 
   public clickedPreguntaFromNavegador(indicePregunta: number) {
-    this.seguroDeLaPregunta.reset(SeguridadAlResponder.CIEN_POR_CIENTO);
-    this.indiceSeleccionado.next(-1);
-    this.answeredQuestion = -1; // Corrección en la asignación
-    this.indicePreguntaCorrecta = -1;
-    // if (this.answeredCurrentQuestion() && this.isModoExamen()) {
-    // return;
-    //}
+    // Los resets de UI (seguridad/indiceSeleccionado/answeredQuestion/
+    // indicePreguntaCorrecta) los hace sincronizarEstadoPregunta.
     this.indicePregunta.set(indicePregunta);
+    this.sincronizarEstadoPregunta(indicePregunta);
     this.displayNavegador = false;
   }
 
@@ -242,6 +310,7 @@ export class CompletarTestComponent {
       .subscribe(async (data) => {
         this.processAnswer(data);
       });
+    this.initCandidatasPersistence();
     firstValueFrom(this.getRole());
   }
 
@@ -253,14 +322,236 @@ export class CompletarTestComponent {
       return;
     }
     this.seguroDeLaPregunta.patchValue(value);
-    if (respuesta) {
-      this.indiceSeleccionado.next(respuesta.respuestaDada);
+
+    // Ajustar candidatas según la nueva seguridad. El modo selección NO
+    // se activa automáticamente aquí — debe pulsarse "Marcar las que
+    // dudo" explícitamente. Cambiar la seguridad sí cierra el modo
+    // (por si estaba abierto) para que el alumno vea el cambio con claridad.
+    this.modoSeleccionCandidatas.set(false);
+    if (
+      value === SeguridadAlResponder.CIEN_POR_CIENTO ||
+      value === SeguridadAlResponder.CERO_POR_CIENTO
+    ) {
+      this.candidatasPorPregunta.set([]);
+    } else {
+      // 75% → cap 2, 50% → cap 3 (alineado con los labels UI)
+      const max =
+        value === SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO ? 2 : 3;
+      const actuales = this.candidatasPorPregunta();
+      // Si excede el máximo del nuevo nivel, recortar preservando las
+      // más recientes. No pre-marcamos la elegida porque el modo no
+      // se abre automáticamente: el alumno decide cuándo y qué marcar.
+      const base =
+        actuales.length > max
+          ? actuales.slice(actuales.length - max)
+          : actuales;
+      this.candidatasPorPregunta.set(base);
     }
+
+    if (respuesta) {
+      // processAnswer incluirá respuestasCandidatas en el payload
+      this.indiceSeleccionado.next(respuesta.respuestaDada);
+    } else {
+      // Sin respuesta aún: persistir el cambio de candidatas derivado del
+      // cambio de seguridad (o su limpieza) para cumplir RF6 tras recarga
+      this.persistirCandidatas();
+    }
+  }
+
+  /**
+   * Handler unificado para clicks en una opción de respuesta.
+   * Si estamos en modo selección de candidatas, toggle candidata.
+   * Si no, selecciona la respuesta como contestación final.
+   */
+  public handleRespuestaClick(indice: number) {
+    if (this.vistaPrevia || this.modoVerRespuestas) return;
+    if (this.modoSeleccionCandidatas()) {
+      // En modo, los clicks togglean candidatas. El modo permanece
+      // abierto hasta que el alumno pulse "Listo" explícitamente —
+      // así sabe que está cambiando de modo intencionalmente.
+      this.toggleCandidata(indice);
+      return;
+    }
+    this.clickedAnswer(indice);
+  }
+
+  /**
+   * Activa el modo selección de candidatas. Requiere haber elegido antes
+   * un nivel de seguridad intermedio (50% o 75%). En modo, los clicks en
+   * las respuestas togglean candidatas sin registrar respuesta final.
+   */
+  public abrirSeleccionCandidatas() {
+    if (this.maxCandidatas() === 0) return;
+    this.modoSeleccionCandidatas.set(true);
+  }
+
+  // Alias retenido por si hay llamadores externos del template antiguo.
+  public reabrirSeleccionCandidatas() {
+    this.abrirSeleccionCandidatas();
+  }
+
+  public terminarSeleccionCandidatas() {
+    this.modoSeleccionCandidatas.set(false);
+  }
+
+  public esCandidata(indice: number): boolean {
+    const seguridad = this.seguroDeLaPregunta.value;
+    if (
+      seguridad !== SeguridadAlResponder.CINCUENTA_POR_CIENTO &&
+      seguridad !== SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO
+    ) {
+      return true;
+    }
+    return this.candidatasPorPregunta().includes(indice);
+  }
+
+  public maxCandidatas(): number {
+    // Alineado con los labels del UI:
+    //   75% → "Dudo entre 2" → cap 2.
+    //   50% → "Dudo entre 3" → cap 3.
+    const seguridad = this.seguroDeLaPregunta.value;
+    if (seguridad === SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO) return 2;
+    if (seguridad === SeguridadAlResponder.CINCUENTA_POR_CIENTO) return 3;
+    return 0;
+  }
+
+  public toggleCandidata(indice: number, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (this.vistaPrevia || this.modoVerRespuestas) return;
+    const max = this.maxCandidatas();
+    if (max === 0) return;
+    const actuales = this.candidatasPorPregunta();
+    if (actuales.includes(indice)) {
+      this.candidatasPorPregunta.set(actuales.filter((i) => i !== indice));
+    } else {
+      const siguientes = [...actuales, indice];
+      const recortadas =
+        siguientes.length > max
+          ? siguientes.slice(siguientes.length - max)
+          : siguientes;
+      this.candidatasPorPregunta.set(recortadas);
+    }
+    this.persistirCandidatas();
+  }
+
+  public rescatarDescartada(indice: number, event: Event) {
+    event.stopPropagation();
+    if (!this.candidatasPorPregunta().includes(indice)) {
+      this.toggleCandidata(indice);
+    }
+  }
+
+  private persistirCandidatas() {
+    // Captura snapshot inmutable al momento del toggle/cambio de seguridad.
+    // Sin snapshot, el debounce leería el estado 300ms más tarde y podría
+    // persistir contra la pregunta equivocada si el alumno navegó rápido.
+    const indice = this.indicePregunta();
+    const pregunta = this.lastLoadedTest?.preguntas?.[indice];
+    if (!pregunta) return;
+    const respuesta = this.preguntaRespondida(indice);
+    const seguridad =
+      this.seguroDeLaPregunta.value ?? SeguridadAlResponder.CIEN_POR_CIENTO;
+    const candidatas = [...this.candidatasPorPregunta()];
+
+    this.candidatasTrigger$.next({
+      testId: this.lastLoadedTest.id,
+      preguntaId: pregunta.id,
+      indicePregunta: indice,
+      respuestaDada: respuesta?.respuestaDada,
+      seguridad,
+      respuestasCandidatas: candidatas,
+    });
+  }
+
+  /**
+   * Carga el estado completo (seguridad + candidatas) de la pregunta en
+   * `indice` desde las respuestas persistidas en BD (incluye drafts con
+   * estado='NO_RESPONDIDA'). Siempre cierra el modo selección y limpia
+   * el signal antes de aplicar el nuevo estado, evitando que datos de
+   * la pregunta anterior "se peguen".
+   */
+  private sincronizarEstadoPregunta(indice: number) {
+    // Reset inmediato para garantizar que no quede state residual de la
+    // pregunta anterior mientras resolvemos el estado nuevo. Incluye los
+    // flags de UI (indice seleccionado, answered, índice correcto) que
+    // antes se reseteaban en siguiente()/clickedPreguntaFromNavegador y
+    // pisaban el estado que esta función restauraba.
+    this.modoSeleccionCandidatas.set(false);
+    this.candidatasPorPregunta.set([]);
+    this.indiceSeleccionado.next(-1);
+    this.answeredQuestion = -1;
+    this.indicePreguntaCorrecta = -1;
+
+    // Al restaurar estado, INCLUIMOS drafts (incluirDrafts=true) para
+    // recuperar candidatas/seguridad guardadas sin respuesta final.
+    const respuesta = this.respuestaOBorrador(indice);
+    const seguridad: SeguridadAlResponder =
+      respuesta?.seguridad ?? SeguridadAlResponder.CIEN_POR_CIENTO;
+    const candidatas: number[] = respuesta?.respuestasCandidatas
+      ? [...respuesta.respuestasCandidatas]
+      : [];
+
+    this.seguroDeLaPregunta.patchValue(seguridad);
+    this.candidatasPorPregunta.set(candidatas);
+    // Forzar CD por si el template se renderizó antes de que el signal
+    // fuera actualizado (p.ej. primer load: el componente ya renderizó
+    // con datos vacíos y sincronizarEstadoPregunta se invoca async tras
+    // la respuesta del API). Sin markForCheck, maxCandidatas() lee el
+    // FormControl.value (no-signal) con valor stale del render anterior.
+    this.cdr.markForCheck();
+  }
+
+  private initCandidatasPersistence() {
+    this.candidatasTrigger$
+      .pipe(
+        debounceTime(300),
+        takeUntilDestroyed(this.destroyRef),
+        switchMap((snap) => {
+          // Persistimos SIEMPRE — el backend acepta drafts (respuestaDada
+          // null con estado='NO_RESPONDIDA') para guardar candidatas
+          // antes de elegir respuesta final. Esto permite cross-device y
+          // sobrevivir a recargas sin localStorage.
+          return this.testService
+            .actualizarProgresoTest({
+              testId: snap.testId,
+              preguntaId: snap.preguntaId,
+              respuestaDada: snap.respuestaDada ?? undefined,
+              indicePregunta: snap.indicePregunta,
+              seguridad: snap.seguridad,
+              respuestasCandidatas: snap.respuestasCandidatas,
+            })
+            .pipe(
+              tap((res) => {
+                const idx = this.lastLoadedTest.respuestas.findIndex(
+                  (r) =>
+                    r.preguntaId === res.preguntaId &&
+                    r.indicePregunta === res.indicePregunta,
+                );
+                if (idx >= 0) {
+                  this.lastLoadedTest.respuestas[idx] = res as any;
+                } else {
+                  this.lastLoadedTest.respuestas.push(res as any);
+                }
+              }),
+              catchError((err) => {
+                console.error('Error al persistir candidatas:', err);
+                this.toast.error(
+                  'No se pudieron guardar las respuestas candidatas. Se reintentará con el próximo cambio.',
+                );
+                // NO re-throw: el stream debe sobrevivir para futuros triggers
+                return EMPTY;
+              }),
+            );
+        }),
+      )
+      .subscribe();
   }
 
   public async processAnswer(
     respuestaDada?: number,
-    mode: 'none' | 'next' | 'before' | 'omitir' = 'none'
+    mode: 'none' | 'next' | 'before' | 'omitir' = 'none',
   ) {
     if (this.vistaPrevia || this.modoVerRespuestas) {
       if (mode === 'next' || mode === 'omitir') this.siguiente();
@@ -270,7 +561,7 @@ export class CompletarTestComponent {
 
     if (this.isProcessingAnswer) {
       console.warn(
-        'Ya se está procesando una respuesta, ignorando nueva llamada'
+        'Ya se está procesando una respuesta, ignorando nueva llamada',
       );
       return;
     }
@@ -288,6 +579,12 @@ export class CompletarTestComponent {
       return;
     }
 
+    // Nota: NO tocamos candidatasPorPregunta aquí. Elegir respuesta final
+    // no debe modificar las candidatas marcadas. Las candidatas solo se
+    // tocan en modo selección (handleRespuestaClick → toggleCandidata).
+    // Esto permite que el alumno tenga candidatas [A, C] marcadas y
+    // elija finalmente B sin que eso "rote" las candidatas.
+
     this.isProcessingAnswer = true;
     this.answeredQuestion = -1;
     this.indicePreguntaCorrecta = -1;
@@ -297,11 +594,22 @@ export class CompletarTestComponent {
       const isAnswered =
         existingAnswer?.respuestaDada != null &&
         existingAnswer.respuestaDada !== -1;
+      // Si el alumno dejó candidatas o marcó seguridad distinta de 100%,
+      // es un draft intencional (intención de dudar). Al navegar NO se
+      // auto-omite — se persiste como draft (NO_RESPONDIDA). Sin esta
+      // guardia, el backend recibe omitida:true y descarta las candidatas.
+      const tieneIntencionDeDudar =
+        (this.candidatasPorPregunta() ?? []).length > 0 ||
+        (this.seguroDeLaPregunta.value != null &&
+          this.seguroDeLaPregunta.value !==
+            SeguridadAlResponder.CIEN_POR_CIENTO);
       const isOmitida =
         mode == 'omitir' ||
-        ((mode == 'next' || mode == 'before') && !isAnswered);
+        ((mode == 'next' || mode == 'before') &&
+          !isAnswered &&
+          !tieneIntencionDeDudar);
 
-    const res: Respuesta & { pregunta: { respuestaCorrectaIndex: number } } =
+      const res: Respuesta & { pregunta: { respuestaCorrectaIndex: number } } =
         await firstValueFrom(
           this.testService
             .actualizarProgresoTest({
@@ -314,25 +622,26 @@ export class CompletarTestComponent {
               seguridad:
                 this.seguroDeLaPregunta.value ??
                 SeguridadAlResponder.CIEN_POR_CIENTO,
+              respuestasCandidatas: this.candidatasPorPregunta(),
             })
             .pipe(
               catchError((err) => {
                 console.error('Error al procesar respuesta:', err);
                 this.toast.error(
-                  'Error al procesar la respuesta. Intenta de nuevo.'
+                  'Error al procesar la respuesta. Intenta de nuevo.',
                 );
                 throw err;
               }),
               tap((res) => {
                 this.lastAnsweredQuestion = res as any;
                 if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
-              })
-            )
+              }),
+            ),
         );
 
       // Actualizar respuesta localmente sin hacer GET
       const idx = this.lastLoadedTest.respuestas.findIndex(
-        (r) => r.preguntaId === res.preguntaId
+        (r) => r.preguntaId === res.preguntaId,
       );
       if (idx >= 0) {
         this.lastLoadedTest.respuestas[idx] = res;
@@ -354,11 +663,15 @@ export class CompletarTestComponent {
   }
 
   public atras() {
-    this.indicePregunta.set(this.indicePregunta() - 1);
+    const nuevo = this.indicePregunta() - 1;
+    this.indicePregunta.set(nuevo);
+    this.sincronizarEstadoPregunta(nuevo);
   }
 
   public adelante() {
-    this.indicePregunta.set(this.indicePregunta() + 1);
+    const nuevo = this.indicePregunta() + 1;
+    this.indicePregunta.set(nuevo);
+    this.sincronizarEstadoPregunta(nuevo);
   }
 
   showFeedbackDialog() {
@@ -373,7 +686,7 @@ export class CompletarTestComponent {
         dificultadPercibida:
           this.dificultadPercibida.value ?? Dificultad.INTERMEDIO,
         comentario: this.feedback.value ?? '',
-      })
+      }),
     );
     this.toast.success('Feedback enviado exitosamente');
     this.feedback.reset();
@@ -394,7 +707,7 @@ export class CompletarTestComponent {
         if (!!idExamen) this.idExamenSimulacro = idExamen;
         if (!!modoSimulacro) this.modoSimulacro = !!modoSimulacro;
         this.expectedRole = expectedRole;
-      })
+      }),
     );
   }
 
@@ -403,10 +716,10 @@ export class CompletarTestComponent {
       this.reporteFallo.reportarFallo({
         preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
         descripcion: reportDesc ?? '',
-      })
+      }),
     );
     this.toast.success(
-      'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.'
+      'Reporte de fallo enviado exitosamente. Los administradores revisarán la pregunta.',
     );
     this.displayFalloDialog = false;
   }
@@ -422,7 +735,9 @@ export class CompletarTestComponent {
 
   public async submitImpugnacion() {
     if (this.motivoImpugnacion.invalid) {
-      this.toast.error('El motivo de impugnación debe tener al menos 10 caracteres');
+      this.toast.error(
+        'El motivo de impugnación debe tener al menos 10 caracteres',
+      );
       return;
     }
 
@@ -431,11 +746,11 @@ export class CompletarTestComponent {
         this.examenesService.impugnarPreguntaDesdeTest$(
           this.lastLoadedTest.id,
           this.lastLoadedTest.preguntas[this.indicePregunta()].id,
-          this.motivoImpugnacion.value ?? ''
-        )
+          this.motivoImpugnacion.value ?? '',
+        ),
       );
       this.toast.success(
-        'Pregunta impugnada exitosamente. Los administradores han sido notificados y revisarán tu solicitud.'
+        'Pregunta impugnada exitosamente. Los administradores han sido notificados y revisarán tu solicitud.',
       );
       this.displayImpugnacionDialog = false;
       this.motivoImpugnacion.reset();
@@ -443,7 +758,8 @@ export class CompletarTestComponent {
       await firstValueFrom(this.loadTest());
     } catch (error: any) {
       this.toast.error(
-        error?.error?.message || 'Error al impugnar la pregunta. Intenta de nuevo.'
+        error?.error?.message ||
+          'Error al impugnar la pregunta. Intenta de nuevo.',
       );
     }
   }
@@ -451,12 +767,16 @@ export class CompletarTestComponent {
   public siguiente() {
     if (this.indicePregunta() == this.lastLoadedTest.preguntas.length - 1) {
       //completado
-      if (
-        this.lastLoadedTest.preguntas.length !=
-        this.lastLoadedTest.respuestas.length
-      ) {
+      // Contar solo respuestas REALES (excluir drafts con estado='NO_RESPONDIDA',
+      // que son borradores de candidatas sin respuesta final). Si los
+      // incluyéramos, un alumno con 59 respondidas + 1 draft vería el test
+      // como completo aunque falte 1 por responder.
+      const respuestasReales = (this.lastLoadedTest.respuestas ?? []).filter(
+        (r: any) => r.estado !== 'NO_RESPONDIDA',
+      ).length;
+      if (this.lastLoadedTest.preguntas.length != respuestasReales) {
         this.toast.info(
-          'Todavia no has terminado el test, te faltan preguntas por responder!'
+          'Todavia no has terminado el test, te faltan preguntas por responder!',
         );
       } else {
         // if(this.modoSimulacro && this.idExamenSimulacro) {}
@@ -469,10 +789,12 @@ export class CompletarTestComponent {
       //   this.showFeedbackDialog();
       // }
     }
-    this.seguroDeLaPregunta.reset(SeguridadAlResponder.CIEN_POR_CIENTO);
-    this.indiceSeleccionado.next(-1);
-    this.answeredQuestion = -1; // Corrección en la asignación
-    this.indicePreguntaCorrecta = -1;
+    // Los resets de UI (seguridad/indiceSeleccionado/answeredQuestion/
+    // indicePreguntaCorrecta) ahora viven dentro de sincronizarEstadoPregunta
+    // para no pisar la seguridad/candidatas restauradas de la pregunta
+    // destino (era bug: al volver a una pregunta con seguridad!=CIEN
+    // guardada, el reset posterior forzaba CIEN y la auto-omitía al
+    // siguiente Adelante).
   }
 
   public showSolution() {
@@ -481,9 +803,7 @@ export class CompletarTestComponent {
     }
     const respuesta = this.preguntaRespondida();
     return (
-      !!respuesta &&
-      respuesta.estado === 'RESPONDIDA' &&
-      !this.comunicating
+      !!respuesta && respuesta.estado === 'RESPONDIDA' && !this.comunicating
     );
   }
 
@@ -515,7 +835,7 @@ export class CompletarTestComponent {
             this.idExamenSimulacro,
             this.lastLoadedTest.id,
           ],
-          { queryParams: { goBack: true } }
+          { queryParams: { goBack: true } },
         );
       } else {
         this.router.navigate([
@@ -535,7 +855,7 @@ export class CompletarTestComponent {
     await firstValueFrom(
       this.testService
         .finalizarTest(this.lastLoadedTest.id)
-        .pipe(switchMap(() => this.loadTest()))
+        .pipe(switchMap(() => this.loadTest())),
     );
 
     this.navegarAResultados();
@@ -556,9 +876,13 @@ export class CompletarTestComponent {
           this.lastLoadedTest = entry;
           this.indicePregunta.set(initialIndex);
         }
+        // Sincronizar estado (seguridad + candidatas) tras la carga.
+        // Se llama explícitamente porque no hay effect reactivo
+        // (ver nota en el signal indicePregunta).
+        this.sincronizarEstadoPregunta(this.indicePregunta());
       }),
       delay(100),
-      tap(() => this.scrollToActiveBlock())
+      tap(() => this.scrollToActiveBlock()),
     );
   }
 }

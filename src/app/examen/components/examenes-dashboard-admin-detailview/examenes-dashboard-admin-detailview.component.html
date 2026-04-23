@@ -1518,8 +1518,8 @@
   [resizable]="false"
   header="Añadir preguntas al examen"
 >
-  <div class="grid">
-    <div class="col-12 md:col-4 p-2" *ngIf="!esExamenColaborativo">
+  <div class="grid justify-content-center">
+    <div class="col-12 sm:col-6 md:col-3 p-2" *ngIf="!esExamenColaborativo">
       <div
         class="metodo-card"
         (click)="abrirDialogoAutomatico(); metodosAgregarDialogVisible = false"
@@ -1534,7 +1534,7 @@
         </p>
       </div>
     </div>
-    <div class="col-12 md:col-4 p-2" *ngIf="!esExamenColaborativo">
+    <div class="col-12 sm:col-6 md:col-3 p-2" *ngIf="!esExamenColaborativo">
       <div
         class="metodo-card"
         (click)="
@@ -1548,7 +1548,7 @@
         <p>Importa preguntas mediante un identificador</p>
       </div>
     </div>
-    <div class="col-12 md:col-4 p-2" *ngIf="!esExamenColaborativo">
+    <div class="col-12 sm:col-6 md:col-3 p-2" *ngIf="!esExamenColaborativo">
       <div
         class="metodo-card"
         (click)="abrirDialogoManual(); metodosAgregarDialogVisible = false"
@@ -1560,7 +1560,7 @@
         <p>Crea preguntas manualmente para este examen</p>
       </div>
     </div>
-    <div class="col-12 md:col-4 p-2" *ngIf="!esExamenColaborativo">
+    <div class="col-12 sm:col-6 md:col-3 p-2" *ngIf="!esExamenColaborativo">
       <div
         class="metodo-card"
         (click)="
@@ -1604,7 +1604,20 @@
         accept=".xlsx"
         (change)="onImportarExcelFileChange($event)"
         data-testid="importar-excel-file-input"
+        class="hidden"
       />
+      <div class="flex align-items-center gap-2 flex-wrap">
+        <p-button
+          label="Seleccionar archivo"
+          icon="pi pi-paperclip"
+          [outlined]="true"
+          (click)="importarExcelFileInputRef.click()"
+          data-testid="importar-excel-file-trigger"
+        ></p-button>
+        <span class="text-color-secondary text-sm">
+          {{ importarExcelFile?.name ?? "Ningún archivo seleccionado" }}
+        </span>
+      </div>
     </div>
 
     <div>
@@ -1623,15 +1636,6 @@
         [isDoingTest]="true"
         data-testid="importar-excel-dificultad"
       ></app-dificultad-dropdown>
-    </div>
-
-    <div>
-      <p-checkbox
-        [(ngModel)]="importarExcelComoReserva"
-        [binary]="true"
-        label="Agregar como preguntas de reserva"
-        data-testid="importar-excel-reserva"
-      ></p-checkbox>
     </div>
   </div>
 

@@ -98,7 +98,7 @@ export const getStartOfWeek = (date: Date): Date => {
 
 export const getDateForDayOfWeek = (
   dayIndex: number,
-  startOfWeek: Date
+  startOfWeek: Date,
 ): Date => {
   const targetDate = new Date(startOfWeek);
   targetDate.setDate(startOfWeek.getDate() + dayIndex);
@@ -138,7 +138,7 @@ export const getDataFromFlashcards = (data: any) => {
 };
 
 export const obtainSecurityEmojiBasedOnEnum = (
-  data: SeguridadAlResponder | undefined
+  data: SeguridadAlResponder | undefined,
 ) => {
   switch (data) {
     case SeguridadAlResponder.CIEN_POR_CIENTO:
@@ -155,7 +155,7 @@ export const obtainSecurityEmojiBasedOnEnum = (
 export const obtenerTemas = (
   testItem: (Test & any) | FlashcardTest,
   type: 'TESTS' | 'FLASHCARDS',
-  simplified = false
+  simplified = false,
 ) => {
   if (type == 'TESTS') {
     const preguntasTest = (testItem.testPreguntas ?? []) as Array<any>;
@@ -173,11 +173,11 @@ export const obtenerTemas = (
     return listaUnicaTemas.length > 3
       ? 'Temas variados'
       : listaUnicaTemas
-        .map(
-          (tema: any) =>
-            `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `
-        )
-        .join(', ');
+          .map(
+            (tema: any) =>
+              `Tema ${tema.numero} ${simplified ? '' : '- ' + tema.nombre} `,
+          )
+          .join(', ');
   } else {
     const preguntasTest = (testItem.flashcards ?? []) as Array<any>;
     const temas = preguntasTest.reduce((prev, next) => {
@@ -194,22 +194,23 @@ export const obtenerTemas = (
     return listaUnicaTemas.length > 3
       ? 'Temas variados'
       : listaUnicaTemas
-        .map(
-          (tema: any) =>
-            `Tema ${tema.numero} ${simplified
-              ? ''
-              : !!tema?.modulo?.nombre
-                ? '- ' + tema?.modulo?.nombre
-                : ''
-            } `
-        )
-        .join(', ');
+          .map(
+            (tema: any) =>
+              `Tema ${tema.numero} ${
+                simplified
+                  ? ''
+                  : !!tema?.modulo?.nombre
+                    ? '- ' + tema?.modulo?.nombre
+                    : ''
+              } `,
+          )
+          .join(', ');
   }
 };
 
 export const obtenerTipoDeTest = (
   testItem: Test | FlashcardTest,
-  type: 'TESTS' | 'FLASHCARDS'
+  type: 'TESTS' | 'FLASHCARDS',
 ): 'Practica' | 'Examen' | 'Repaso' => {
   if (type == 'TESTS') {
     testItem = testItem as Test;
@@ -248,7 +249,7 @@ export const calcularCalificacionA1E1_3B0 = (
   A: number,
   E: number,
   N: number,
-  identificador?: string
+  identificador?: string,
 ): number => {
   if (identificador) console.table([identificador, A, E, N]);
   if (A == 0 && E == 0 && N == 0) return 0;
@@ -271,7 +272,7 @@ export const calcularCalificacionA1E1_4B0 = (
   A: number,
   E: number,
   N: number,
-  identificador?: string
+  identificador?: string,
 ): number => {
   if (identificador) console.table([identificador, A, E, N]);
   if (A == 0 && E == 0 && N == 0) return 0;
@@ -299,7 +300,7 @@ export const calcularCalificacionBasico = (
   A: number,
   E: number,
   N: number,
-  identificador?: string
+  identificador?: string,
 ): number => {
   if (identificador) console.table([identificador, A, E, N]);
   if (A == 0 && E == 0 && N == 0) return 0;
@@ -324,7 +325,7 @@ export const calcularCalificacionPorMetodo = (
   E: number,
   N: number,
   metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
-  identificador?: string
+  identificador?: string,
 ): number => {
   switch (metodoCalificacion) {
     case 'A1_E1_4_B0':
@@ -374,7 +375,7 @@ export const getNumeroDePreguntas = () => {
 
 export const toPascalCase = (str: string): string => {
   return str.replace(/(^\w|[\s_-]\w)/g, (match) =>
-    match.replace(/[\s_-]/, '').toUpperCase()
+    match.replace(/[\s_-]/, '').toUpperCase(),
   );
 };
 
@@ -384,20 +385,27 @@ export const getLetter = (index: number) => {
 
 export const groupedTemas = (temas: Array<Tema>, isAdmin: boolean = false) => {
   return Object.entries(
-    temas.reduce((acc, tema) => {
-      const categoria = tema.modulo?.nombre;
-      if (tema.modulo?.esPublico || isAdmin) {
-        if (!acc[categoria as any]) {
-          acc[categoria as any] = [];
+    temas.reduce(
+      (acc, tema) => {
+        const categoria = tema.modulo?.nombre;
+        if (tema.modulo?.esPublico || isAdmin) {
+          if (!acc[categoria as any]) {
+            acc[categoria as any] = [];
+          }
+          acc[categoria as any].push({
+            label: tema.descripcion
+              ? `${tema.numero} - ${tema.descripcion}`
+              : `Tema ${tema.numero}`,
+            value: tema.id,
+            numero: tema.numero,
+          });
         }
-        acc[categoria as any].push({
-          label: tema.numero + ' - ' + tema.descripcion,
-          value: tema.id,
-          numero: tema.numero,
-        });
-      }
-      return acc;
-    }, {} as { [key: string]: { label: string; value: number; numero: number }[] })
+        return acc;
+      },
+      {} as {
+        [key: string]: { label: string; value: number; numero: number }[];
+      },
+    ),
   ).map(([categoria, items]) => ({
     label: categoria,
     value: categoria.toLowerCase(), // Puedes ajustar el valor según tus necesidades
@@ -408,7 +416,7 @@ export const groupedTemas = (temas: Array<Tema>, isAdmin: boolean = false) => {
 export const getAllDifficultades = (
   isFlashcards = false,
   isCreatingTest = false,
-  rol?: Rol
+  rol?: Rol,
 ) => {
   const privada = getAlumnoDificultad(Dificultad.PRIVADAS);
   const publica = getAlumnoDificultad(Dificultad.PUBLICAS);
@@ -480,11 +488,14 @@ export const getAllDifficultades = (
         return [...dificultadesBasicas, ...opcionesVisibilidad];
       } else {
         // Alumno no creando test de flashcards: solo privado + público
-        return [...opcionesVisibilidad, {
-          label: 'Colaborativa',
-          icon: 'pi-users',
-          value: Dificultad.COLABORATIVA,
-        }];
+        return [
+          ...opcionesVisibilidad,
+          {
+            label: 'Colaborativa',
+            icon: 'pi-users',
+            value: Dificultad.COLABORATIVA,
+          },
+        ];
       }
     } else {
       // Alumno con preguntas normales
@@ -540,7 +551,7 @@ export const getAllDifficultades = (
 
 export const crearEventoCalendario = (
   evento: any,
-  esPersonalizado: boolean = false
+  esPersonalizado: boolean = false,
 ): CalendarEvent => {
   const inicio = new Date(evento.horaInicio);
   const duracion = evento.duracion || 60;
@@ -577,7 +588,7 @@ export const crearEventoCalendario = (
 export function isDateInRange(
   date: Date,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
 ): boolean {
   const dateToCheck = new Date(date);
   return dateToCheck >= startDate && dateToCheck <= endDate;
@@ -602,29 +613,27 @@ export function getNextWeekIfFriday(date: Date): Date {
 export const calcular100 = (
   stats100: StatType,
   total: number,
-  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
 ) => {
   return calcularCalificacionPorMetodo(
     stats100.correctas,
     stats100.incorrectas,
     total,
-    metodoCalificacion
+    metodoCalificacion,
   );
 };
-
-
 
 export const calcular100y50 = (
   stats100: StatType,
   stats50: StatType,
   total: number,
-  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
 ) => {
   return calcularCalificacionPorMetodo(
     stats100.correctas + stats50.correctas,
     stats100.incorrectas + stats50.incorrectas,
     total,
-    metodoCalificacion
+    metodoCalificacion,
   );
 };
 
@@ -634,54 +643,53 @@ export const calcular100y75y50 = (
   stats50: StatType,
   total: number,
   metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
-  identifier?: string
+  identifier?: string,
 ) => {
   return calcularCalificacionPorMetodo(
     stats100.correctas + stats75.correctas + stats50.correctas,
     stats100.incorrectas + stats75.incorrectas + stats50.incorrectas,
     total,
     metodoCalificacion,
-    identifier
+    identifier,
   );
 };
-
 
 export const calcular75 = (
   stats75: StatType,
   total: number,
-  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
 ) => {
   return calcularCalificacionPorMetodo(
     stats75.correctas,
     stats75.incorrectas,
     total,
-    metodoCalificacion
+    metodoCalificacion,
   );
 };
 
 export const calcular50 = (
   stats50: StatType,
   total: number,
-  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
 ) => {
   return calcularCalificacionPorMetodo(
     stats50.correctas,
     stats50.incorrectas,
     total,
-    metodoCalificacion
+    metodoCalificacion,
   );
 };
 
 export const calcular0 = (
   stats0: StatType,
   total: number,
-  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0'
+  metodoCalificacion: 'A1_E1_3_B0' | 'A1_E1_4_B0' | 'BASICO' = 'A1_E1_3_B0',
 ) => {
   return calcularCalificacionPorMetodo(
     stats0.correctas,
     stats0.incorrectas,
     total,
-    metodoCalificacion
+    metodoCalificacion,
   );
 };
 
@@ -693,7 +701,7 @@ export const createConfidenceAnalysisForResult = (
   getCorrectas: (stats: any, tipo: string) => number,
   getIncorrectas: (stats: any, tipo: string) => number,
   getNoContestadas: (stats: any, tipo: string) => number,
-  getAccuracyPercentage: (stats: any, tipo: string) => number
+  getAccuracyPercentage: (stats: any, tipo: string) => number,
 ) => {
   if (!seguridad) return [];
 
@@ -703,49 +711,47 @@ export const createConfidenceAnalysisForResult = (
       title: '100% Seguro',
       icon: '⭐',
       key: 'CIEN_POR_CIENTO',
-      calculator: calcular100
+      calculator: calcular100,
     },
     {
       id: 'setenta-cinco',
       title: '75% Seguro',
       icon: '👍',
       key: 'SETENTA_Y_CINCO_POR_CIENTO',
-      calculator: calcular75
+      calculator: calcular75,
     },
     {
       id: 'cincuenta',
       title: '50% Seguro',
       icon: '👎',
       key: 'CINCUENTA_POR_CIENTO',
-      calculator: calcular50
+      calculator: calcular50,
     },
     {
       id: 'cero',
       title: '0% Seguro',
       icon: '❌',
       key: 'CERO_POR_CIENTO',
-      calculator: calcular0  // Usar mismo cálculo que 50%
-    }
+      calculator: calcular0, // Usar mismo cálculo que 50%
+    },
   ];
 
-  return types.map(type => ({
+  return types.map((type) => ({
     id: type.id,
     title: type.title,
     icon: type.icon,
     score: type.calculator(
       {
         correctas: getCorrectas({ seguridad }, type.key),
-        incorrectas: getIncorrectas({ seguridad }, type.key)
+        incorrectas: getIncorrectas({ seguridad }, type.key),
       },
       getTotalPreguntasPorSeguridad({ seguridad }, type.key),
-      metodoCalificacion
+      metodoCalificacion,
     ),
     totalPreguntas: getTotalPreguntasPorSeguridad({ seguridad }, type.key),
     correctas: getCorrectas({ seguridad }, type.key),
     incorrectas: getIncorrectas({ seguridad }, type.key),
     noContestadas: getNoContestadas({ seguridad }, type.key),
-    accuracyPercentage: getAccuracyPercentage({ seguridad }, type.key)
+    accuracyPercentage: getAccuracyPercentage({ seguridad }, type.key),
   }));
 };
-
-

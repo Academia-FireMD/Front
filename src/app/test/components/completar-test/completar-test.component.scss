@@ -77,3 +77,94 @@
     border: 1px solid $primaryColor;
   }
 }
+
+.respuesta-descartada {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  transition:
+    opacity 0.15s ease,
+    filter 0.15s ease;
+}
+
+.respuesta-candidata {
+  box-shadow: inset 0 0 0 1px var(--primary-color, #3b82f6);
+}
+
+.rescatar-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-color-secondary, #64748b);
+
+  &.activa {
+    color: var(--primary-color, #3b82f6);
+  }
+
+  &:hover {
+    background: var(--surface-100, rgba(0, 0, 0, 0.05));
+    border-radius: 4px;
+  }
+}
+
+.candidatas-contador {
+  color: var(--text-color-secondary, #64748b);
+  font-style: italic;
+}
+
+.candidatas-banner {
+  background: var(--primary-50, #eff6ff);
+  border: 1px solid var(--primary-200, #bfdbfe);
+  border-radius: 8px;
+  color: var(--primary-700, #1d4ed8);
+  font-size: 0.95rem;
+
+  i.pi-question-circle {
+    font-size: 1.25rem;
+  }
+}
+
+.candidatas-hint {
+  background: var(--surface-100, rgba(0, 0, 0, 0.035));
+  border-radius: 6px;
+  color: var(--text-color-secondary, #64748b);
+}
+
+// Indicador de candidatas en el navegador lateral. Se coloca en la
+// esquina superior derecha de cada card de pregunta.
+.list-blocks {
+  p-card {
+    position: relative;
+  }
+  .candidatas-block {
+    border: 1px dashed var(--primary-color, #3b82f6);
+    border-radius: 8px;
+  }
+  .candidatas-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary-color, #3b82f6);
+    box-shadow: 0 0 0 2px var(--surface-0, #fff);
+  }
+}
+
+.respuesta-correcta.fue-candidata,
+.respuesta-incorrecta.fue-candidata,
+.fue-candidata:not(.respuesta-correcta):not(.respuesta-incorrecta) {
+  position: relative;
+
+  &::after {
+    content: "?";
+    position: absolute;
+    top: 0.25rem;
+    right: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-color-secondary, #64748b);
+    opacity: 0.7;
+  }
+}
