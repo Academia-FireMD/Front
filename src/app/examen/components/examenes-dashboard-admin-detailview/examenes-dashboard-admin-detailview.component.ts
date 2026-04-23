@@ -254,7 +254,6 @@ export class ExamenesDashboardAdminDetailviewComponent {
   public importarExcelDificultadControl = new FormControl<Dificultad | null>(
     null,
   );
-  public importarExcelComoReserva = false;
   public importarExcelEnProgreso = false;
   public selectedPreguntasToAdd: Array<Pregunta> = [];
   public lastLoadedExamen = signal<Examen>(null as any);
@@ -604,7 +603,8 @@ export class ExamenesDashboardAdminDetailviewComponent {
     this.importarExcelFile = null;
     this.importarExcelTemaIdControl.setValue(null);
     this.importarExcelDificultadControl.setValue(null);
-    this.importarExcelComoReserva = this.agregarComoReserva;
+    // El flag de reserva viene del diálogo de selección de método
+    // (agregarComoReserva). No duplicamos el checkbox aquí.
     this.importarExcelDialogVisible = true;
     // El <input type="file"> retiene su .value aunque el binding a
     // importarExcelFile se reinicie. Si el alumno elige el mismo archivo
@@ -642,7 +642,7 @@ export class ExamenesDashboardAdminDetailviewComponent {
       'dificultad',
       String(this.importarExcelDificultadControl.value),
     );
-    formData.append('esReserva', String(this.importarExcelComoReserva));
+    formData.append('esReserva', String(this.agregarComoReserva));
 
     try {
       const res = await firstValueFrom(

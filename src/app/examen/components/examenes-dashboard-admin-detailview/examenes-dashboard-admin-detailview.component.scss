@@ -23,6 +23,18 @@
     border: 1px solid #ddd;
     border-radius: 4px;
   }
+
+  // El tema actual de PrimeNG deja los p-button disabled con fondo
+  // transparente, lo que hace que parezcan "HTML plano". En el diálogo
+  // de importar Excel, forzamos el color primario con opacidad para
+  // que el botón se vea como botón (pero claramente inactivo).
+  p-button[data-testid="importar-excel-submit"] button.p-button:disabled,
+  p-button[data-testid="importar-excel-submit"] button.p-disabled {
+    background-color: var(--primary-color) !important;
+    color: #fff !important;
+    border-color: var(--primary-color) !important;
+    opacity: 0.45;
+  }
 }
 
 .metodo-card {
@@ -137,9 +149,9 @@
   right: 2rem;
   width: 4rem;
   height: 4rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 1000;
-  
+
   &:hover {
     transform: scale(1.1);
     transition: transform 0.2s ease;
@@ -163,7 +175,7 @@
   align-items: center;
   padding: 0.75rem 0;
   border-bottom: 1px solid var(--surface-border);
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -183,7 +195,7 @@
   .p-card {
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
-    
+
     .p-card-content {
       padding: 1.5rem;
     }
@@ -196,7 +208,7 @@
     color: var(--primary-color);
     margin-bottom: 1rem;
     font-weight: 600;
-    
+
     &::before {
       margin-right: 0.5rem;
     }
@@ -208,12 +220,12 @@
   .actions-header {
     flex-direction: column;
     gap: 0.5rem;
-    
+
     .p-button {
       width: 100%;
     }
   }
-  
+
   .stat-item {
     flex-direction: column;
     align-items: flex-start;
@@ -234,20 +246,20 @@
     .p-datatable-tbody > tr > td {
       padding: 0.75rem;
     }
-    
+
     .p-tag {
       min-width: 2.5rem;
       text-align: center;
     }
   }
-  
+
   // Tab styling improvements
   .p-tabview {
     .p-tabview-nav {
       background: var(--surface-50);
       border-radius: 8px 8px 0 0;
     }
-    
+
     .p-tabview-panels {
       background: transparent;
       border-radius: 0 0 8px 8px;
