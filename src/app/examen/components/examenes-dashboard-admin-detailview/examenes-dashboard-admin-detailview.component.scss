@@ -23,18 +23,6 @@
     border: 1px solid #ddd;
     border-radius: 4px;
   }
-
-  // El tema actual de PrimeNG deja los p-button disabled con fondo
-  // transparente, lo que hace que parezcan "HTML plano". En el diálogo
-  // de importar Excel, forzamos el color primario con opacidad para
-  // que el botón se vea como botón (pero claramente inactivo).
-  p-button[data-testid="importar-excel-submit"] button.p-button:disabled,
-  p-button[data-testid="importar-excel-submit"] button.p-disabled {
-    background-color: var(--primary-color) !important;
-    color: #fff !important;
-    border-color: var(--primary-color) !important;
-    opacity: 0.45;
-  }
 }
 
 .metodo-card {

@@ -1604,7 +1604,20 @@
         accept=".xlsx"
         (change)="onImportarExcelFileChange($event)"
         data-testid="importar-excel-file-input"
+        class="hidden"
       />
+      <div class="flex align-items-center gap-2 flex-wrap">
+        <p-button
+          label="Seleccionar archivo"
+          icon="pi pi-paperclip"
+          [outlined]="true"
+          (click)="importarExcelFileInputRef.click()"
+          data-testid="importar-excel-file-trigger"
+        ></p-button>
+        <span class="text-color-secondary text-sm">
+          {{ importarExcelFile?.name ?? "Ningún archivo seleccionado" }}
+        </span>
+      </div>
     </div>
 
     <div>
