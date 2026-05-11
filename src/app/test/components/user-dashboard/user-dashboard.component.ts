@@ -337,14 +337,24 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   /**
-   * Verifica si el usuario está vinculado a WordPress/WooCommerce
+   * Verifica si el usuario tiene al menos una suscripción ACTIVA gestionada por
+   * WooCommerce (con `woocommerceSubscriptionId` real). NO basta con
+   * `woocommerceCustomerId`, porque casos como Luis Moltó tienen el customerId
+   * pero sus suscripciones activas son manuales (sin wooSubId) y se pueden
+   * gestionar localmente.
+   *
+   * Refactor del antiguo `isWordPressUser` (Fase 1 plan 2026-05-11).
    */
-  isWordPressUser(user: Usuario): boolean {
-    return !!user?.woocommerceCustomerId;
+  hasWooManagedSubscriptions(user: Usuario): boolean {
+    return (
+      user?.suscripciones?.some(
+        (s) => s.status === 'ACTIVE' && !!s.woocommerceSubscriptionId,
+      ) ?? false
+    );
   }
 
   openSubscriptionDialog(user: Usuario) {
-    if (this.isWordPressUser(user)) {
+    if (this.hasWooManagedSubscriptions(user)) {
       this.toast.info(
         'Los usuarios de WordPress deben gestionar sus suscripciones desde su panel en la tienda.',
       );
@@ -470,6 +480,50 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
               this.toast.error(message);
             },
           });
+      },
+    });
+  }
+
+  /**
+   * Cancela una suscripción (status -> CANCELLED) sin borrarla. Conserva el
+   * histórico. Si la suscripción tiene `woocommerceSubscriptionId`, el backend
+   * cancela también en WooCommerce (D6 + 1A del plan 2026-05-11). Si WC falla,
+   * el backend devuelve BadGateway y el toast muestra la instrucción del runbook.
+   */
+  cancelSubscription(subscription: Suscripcion) {
+    this.confirmationService.confirm({
+      message: `¿Cancelar la suscripción "${this.getSubscriptionLabel(subscription)}"? El usuario perderá el acceso pero el histórico se conserva.`,
+      header: 'Cancelar suscripción',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, cancelar',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-warning',
+      accept: () => {
+        this.userService.cancelUserSubscription(subscription.id).subscribe({
+          next: (updatedSub: any) => {
+            this.toast.success('Suscripción cancelada');
+            // Actualizar localmente la sub para reflejar el cambio en el dialog
+            if (this.selectedUser?.suscripciones) {
+              this.selectedUser = {
+                ...this.selectedUser,
+                suscripciones: this.selectedUser.suscripciones.map((s) =>
+                  s.id === subscription.id
+                    ? {
+                        ...s,
+                        ...(updatedSub || {}),
+                        status: 'CANCELLED' as SuscripcionStatus,
+                      }
+                    : s,
+                ),
+              };
+            }
+            this.refresh();
+          },
+          error: (err) => {
+            const message = err?.error?.message || 'Error al cancelar';
+            this.toast.error(message);
+          },
+        });
       },
     });
   }
@@ -603,27 +657,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       });
   }
 
-  public denegar(id: number, event: Event) {
-    this.confirmationService.confirm({
-      target: event.target as EventTarget,
-      message:
-        'Vas a quitar el permiso de acceso a la plataforma del usuario, ¿estás seguro?',
-      header: 'Confirmación',
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'none',
-      acceptLabel: 'Sí',
-      rejectLabel: 'No',
-      rejectIcon: 'none',
-      rejectButtonStyleClass: 'p-button-text',
-      accept: async () => {
-        await firstValueFrom(this.userService.denegarUsuario(id));
-        this.toast.info('Usuario denegado exitosamente');
-        this.refresh();
-      },
-      reject: () => {},
-    });
-  }
-
   public deleteUser(id: number, event: Event) {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
@@ -642,14 +675,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       },
       reject: () => {},
     });
-  }
-
-  public async permitir(id: number) {
-    await firstValueFrom(this.userService.permitirUsuario(id));
-    this.toast.info(
-      'Usuario aprobado exitosamente, ahora puede comenzar a utilizar su cuenta.',
-    );
-    this.refresh();
   }
 
   // Métodos para expansión de filas
@@ -717,8 +742,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   @Memoize()
   getActionItems(user: Usuario): MenuItem[] {
     const items: MenuItem[] = [];
-    const isWP = this.isWordPressUser(user);
-    const status = this.getUserStatus(user);
+    const hasWooSubs = this.hasWooManagedSubscriptions(user);
 
     if (this.decodedUser.rol === 'ADMIN') {
       items.push({
@@ -730,11 +754,11 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
     items.push(
       {
-        label: isWP ? 'Suscripción (WP)' : 'Suscripción',
-        icon: isWP ? 'pi pi-lock' : 'pi pi-credit-card',
-        disabled: isWP,
+        label: hasWooSubs ? 'Suscripción (WP)' : 'Suscripción',
+        icon: hasWooSubs ? 'pi pi-lock' : 'pi pi-credit-card',
+        disabled: hasWooSubs,
         command: () => this.openSubscriptionDialog(user),
-        tooltipOptions: isWP
+        tooltipOptions: hasWooSubs
           ? {
               tooltipLabel:
                 'Usuario de WordPress - gestiona sus suscripciones desde su panel',
@@ -748,33 +772,16 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       },
     );
 
-    items.push(
-      {
-        label: !user.validated
-          ? 'Verificar'
-          : status === 'active'
-            ? 'Dar de baja'
-            : 'Denegar',
-        icon: !user.validated ? 'pi pi-check' : 'pi pi-ban',
-        styleClass: !user.validated ? '' : 'p-menuitem-danger',
-        command: () => {
-          const event = new MouseEvent('click');
-          if (user.validated) {
-            this.denegar(user.id, event);
-          } else {
-            this.permitir(user.id);
-          }
-        },
+    // Fase 1 plan 2026-05-11: eliminados los ítems "Verificar/Dar de baja/Denegar".
+    // El flujo de baja se hace ahora vía el botón "Suscripción" → Cancelar (Fase 2).
+    items.push({
+      label: 'Eliminar',
+      icon: 'pi pi-trash',
+      command: () => {
+        const event = new MouseEvent('click');
+        this.deleteUser(user.id, event);
       },
-      {
-        label: 'Eliminar',
-        icon: 'pi pi-trash',
-        command: () => {
-          const event = new MouseEvent('click');
-          this.deleteUser(user.id, event);
-        },
-      },
-    );
+    });
 
     return items;
   }
