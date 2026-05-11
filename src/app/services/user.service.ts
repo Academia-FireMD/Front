@@ -51,13 +51,9 @@ export class UserService extends ApiBaseService {
     return this.get('/tutores') as Observable<Usuario[]>;
   }
 
-  public permitirUsuario(userId: number) {
-    return this.get('/approve/' + userId);
-  }
-
-  public denegarUsuario(userId: number) {
-    return this.get('/deny/' + userId);
-  }
+  // permitirUsuario / denegarUsuario eliminados en Fase 1 (plan 2026-05-11).
+  // Los endpoints GET /user/approve/:id y /user/deny/:id devuelven 410 Gone.
+  // La baja de usuario se gestiona ahora vía cancelación de suscripción (Fase 2).
 
   public eliminarUsuario(userId: number) {
     return this.get('/delete/' + userId);
@@ -74,8 +70,15 @@ export class UserService extends ApiBaseService {
   /**
    * Crear o actualizar una suscripción para un usuario con oposición específica
    */
-  public createUserSubscription(userId: number, subscriptionType: string, oposicion: string) {
-    return this.post('/create-subscription/' + userId, { subscriptionType, oposicion });
+  public createUserSubscription(
+    userId: number,
+    subscriptionType: string,
+    oposicion: string,
+  ) {
+    return this.post('/create-subscription/' + userId, {
+      subscriptionType,
+      oposicion,
+    });
   }
 
   /**
@@ -88,16 +91,23 @@ export class UserService extends ApiBaseService {
   /**
    * Eliminar una suscripción específica de un usuario (solo admin)
    */
-  public deleteUserSubscription(userId: number, subscriptionId: number): Observable<Usuario> {
-    return this.delete(`/subscription/${userId}/${subscriptionId}`) as Observable<Usuario>;
+  public deleteUserSubscription(
+    userId: number,
+    subscriptionId: number,
+  ): Observable<Usuario> {
+    return this.delete(
+      `/subscription/${userId}/${subscriptionId}`,
+    ) as Observable<Usuario>;
   }
 
   public getAvailableSubscriptions() {
     return this.get('/obtain-avaliable-subscriptions');
   }
 
-  public getUsersByPlanification$(planificationId: number,) {
-    return this.post(`/by-planification/${planificationId}`, {}) as Observable<Usuario[]>;
+  public getUsersByPlanification$(planificationId: number) {
+    return this.post(`/by-planification/${planificationId}`, {}) as Observable<
+      Usuario[]
+    >;
   }
 
   public getUserPlanifications$(userId: number) {
