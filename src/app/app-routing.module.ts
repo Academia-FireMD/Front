@@ -33,26 +33,42 @@ const routes: Routes = [
         path: 'planificacion',
         loadChildren: () =>
           import('./planificacion/planificacion.module').then(
-            (m) => m.PlanificacionModule
+            (m) => m.PlanificacionModule,
           ),
         canActivate: [SubscriptionGuard],
-        data: { allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] }
+        data: {
+          allowedSubscriptions: [
+            SuscripcionTipo.ADVANCED,
+            SuscripcionTipo.PREMIUM,
+          ],
+        },
       },
       {
         path: 'documentacion',
         loadChildren: () =>
           import('./documentacion/documentacion.module').then(
-            (m) => m.DocumentacionModule
+            (m) => m.DocumentacionModule,
           ),
         canActivate: [SubscriptionGuard],
-        data: { allowedSubscriptions: [SuscripcionTipo.BASIC, SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] }
+        data: {
+          allowedSubscriptions: [
+            SuscripcionTipo.BASIC,
+            SuscripcionTipo.ADVANCED,
+            SuscripcionTipo.PREMIUM,
+          ],
+        },
       },
       {
         path: 'examen',
         loadChildren: () =>
           import('./examen/examen.module').then((m) => m.ExamenModule),
         canActivate: [SubscriptionGuard],
-        data: { allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] }
+        data: {
+          allowedSubscriptions: [
+            SuscripcionTipo.ADVANCED,
+            SuscripcionTipo.PREMIUM,
+          ],
+        },
       },
       {
         path: 'horarios',
@@ -62,7 +78,14 @@ const routes: Routes = [
       {
         path: 'facturacion',
         loadChildren: () =>
-          import('./facturacion/facturacion-routing.module').then((m) => m.routes),
+          import('./facturacion/facturacion-routing.module').then(
+            (m) => m.routes,
+          ),
+      },
+      {
+        path: 'cursos-admin',
+        loadChildren: () =>
+          import('./cursos/cursos-routing.module').then((m) => m.routes),
       },
     ],
   },
@@ -81,4 +104,4 @@ const routes: Routes = [
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule],
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}
