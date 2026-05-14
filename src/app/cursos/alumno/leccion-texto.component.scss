@@ -1,0 +1,63 @@
+.texto-container {
+  padding: 0.5rem 0;
+}
+
+.markdown-content {
+  line-height: 1.7;
+  color: var(--text-color);
+
+  ::ng-deep {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      color: var(--text-color);
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    p {
+      margin-bottom: 0.75rem;
+    }
+
+    code {
+      background: var(--surface-ground);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.875em;
+    }
+
+    pre {
+      background: var(--surface-ground);
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+
+    blockquote {
+      border-left: 3px solid var(--primary-color);
+      padding-left: 1rem;
+      color: var(--text-color-secondary);
+      margin: 1rem 0;
+    }
+
+    ul,
+    ol {
+      padding-left: 1.5rem;
+    }
+  }
+}
+
+.no-content {
+  color: var(--text-color-secondary);
+  font-style: italic;
+}
+
+.texto-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border);
+  display: flex;
+  justify-content: flex-end;
+}

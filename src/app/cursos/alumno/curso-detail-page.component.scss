@@ -1,0 +1,166 @@
+.curso-detail-container {
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--text-color-secondary);
+
+  i {
+    font-size: 3rem;
+    color: var(--primary-color);
+  }
+
+  p {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+}
+
+.back-btn {
+  margin-bottom: 1rem;
+}
+
+.curso-header {
+  margin-bottom: 2rem;
+}
+
+.header-content {
+  display: flex;
+  gap: 1.5rem;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+  }
+}
+
+.curso-cover {
+  width: 200px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.header-info {
+  flex: 1;
+
+  h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+}
+
+.descripcion {
+  margin: 0 0 0.75rem;
+  color: var(--text-color-secondary);
+  line-height: 1.5;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+}
+
+.secciones-container {
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+  }
+}
+
+.seccion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1rem;
+}
+
+.seccion-titulo {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.seccion-count {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+}
+
+.lecciones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.leccion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover,
+  &:focus {
+    background: var(--surface-hover);
+    outline: none;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.tipo-icon {
+  color: var(--primary-color);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.leccion-titulo {
+  flex: 1;
+  font-size: 0.95rem;
+  color: var(--text-color);
+}
+
+.leccion-tipo {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  background: var(--surface-ground);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.leccion-duracion {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.text-secondary {
+  color: var(--text-color-secondary);
+}

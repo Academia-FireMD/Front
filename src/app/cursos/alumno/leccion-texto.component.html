@@ -1,0 +1,18 @@
+<div class="texto-container">
+  @if (leccion().contenidoMarkdown) {
+    <div class="markdown-content">
+      <markdown [data]="leccion().contenidoMarkdown"></markdown>
+    </div>
+  } @else {
+    <p class="no-content">Esta lección no tiene contenido todavía.</p>
+  }
+  <div class="texto-footer">
+    <button
+      pButton
+      label="Marcar como leída"
+      icon="pi pi-check"
+      class="p-button-success p-button-sm"
+      (click)="marcarComoVista()"
+    ></button>
+  </div>
+</div>

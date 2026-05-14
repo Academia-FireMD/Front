@@ -1,0 +1,94 @@
+<div class="leccion-page-container">
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Cargando lección...</p>
+    </div>
+  } @else if (error() || !leccionData()) {
+    <div class="empty-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>No se pudo cargar la lección.</p>
+      <button
+        pButton
+        label="Volver al curso"
+        icon="pi pi-arrow-left"
+        class="p-button-outlined"
+        (click)="volver()"
+      ></button>
+    </div>
+  } @else {
+    <div class="leccion-header">
+      <button
+        pButton
+        icon="pi pi-arrow-left"
+        class="p-button-text p-button-sm back-btn"
+        (click)="volver()"
+      >
+        Volver al curso
+      </button>
+      <h2 class="leccion-titulo">{{ leccionData()!.leccion.titulo }}</h2>
+    </div>
+
+    <div class="leccion-body">
+      @switch (leccionData()!.leccion.tipo) {
+        @case ("VIDEO") {
+          @if (leccionData()!.playbackUrl) {
+            <app-leccion-video
+              [leccion]="leccionData()!.leccion"
+              [playbackUrl]="leccionData()!.playbackUrl!"
+            ></app-leccion-video>
+          } @else {
+            <div class="no-url-state">
+              <i class="pi pi-video"></i>
+              <p>El vídeo no está disponible todavía.</p>
+            </div>
+          }
+        }
+        @case ("TEXTO") {
+          <app-leccion-texto
+            [leccion]="leccionData()!.leccion"
+          ></app-leccion-texto>
+        }
+        @case ("TEST") {
+          <div class="external-action">
+            <i class="pi pi-question-circle action-icon"></i>
+            <p>Esta lección es un test de preguntas.</p>
+            @if (leccionData()!.leccion.testPlantillaId) {
+              <button
+                pButton
+                label="Abrir test"
+                icon="pi pi-external-link"
+                class="p-button-primary"
+                (click)="abrirTest(leccionData()!.leccion.testPlantillaId!)"
+              ></button>
+            } @else {
+              <p class="text-secondary">Test no configurado.</p>
+            }
+          </div>
+        }
+        @case ("FLASHCARDS") {
+          <div class="external-action">
+            <i class="pi pi-clone action-icon"></i>
+            <p>Esta lección es un mazo de flashcards.</p>
+            @if (leccionData()!.leccion.mazoFlashcardsId) {
+              <button
+                pButton
+                label="Abrir flashcards"
+                icon="pi pi-external-link"
+                class="p-button-primary"
+                (click)="
+                  abrirFlashcards(leccionData()!.leccion.mazoFlashcardsId!)
+                "
+              ></button>
+            } @else {
+              <p class="text-secondary">Mazo no configurado.</p>
+            }
+          </div>
+        }
+        @default {
+          <p class="text-secondary">Tipo de lección desconocido.</p>
+        }
+      }
+    </div>
+  }
+</div>
