@@ -1,0 +1,70 @@
+<div class="catalogo-container">
+  <div class="page-header">
+    <h1>Catálogo de Cursos</h1>
+    <a routerLink="/app/cursos" class="p-button p-button-text p-button-sm">
+      <i class="pi pi-arrow-left"></i> Mis cursos
+    </a>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Cargando catálogo...</p>
+    </div>
+  } @else if (error()) {
+    <div class="empty-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>Error al cargar el catálogo. Inténtalo de nuevo.</p>
+    </div>
+  } @else if (cursos().length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-inbox"></i>
+      <p>No hay cursos disponibles en este momento.</p>
+    </div>
+  } @else {
+    <div class="cursos-grid">
+      @for (curso of cursos(); track curso.id) {
+        <div class="curso-card">
+          @if (curso.thumbnailUrl) {
+            <img
+              [src]="curso.thumbnailUrl"
+              [alt]="curso.titulo"
+              class="curso-thumbnail"
+            />
+          } @else {
+            <div class="curso-thumbnail-placeholder">
+              <i class="pi pi-play-circle"></i>
+            </div>
+          }
+          <div class="curso-body">
+            <h3 class="curso-titulo">{{ curso.titulo }}</h3>
+            @if (curso.descripcion) {
+              <p class="curso-descripcion">{{ curso.descripcion }}</p>
+            }
+            <div class="curso-meta">
+              @if (curso.duracionEstimadaMinutos) {
+                <span class="meta-item"
+                  ><i class="pi pi-clock"></i>
+                  {{ curso.duracionEstimadaMinutos }} min</span
+                >
+              }
+              @if (curso.precio != null) {
+                <span class="meta-item precio"
+                  >{{ curso.precio | number: "1.2-2" }} €</span
+                >
+              }
+            </div>
+            <button
+              pButton
+              label="Comprar"
+              icon="pi pi-shopping-cart"
+              class="p-button-sm comprar-btn"
+              [disabled]="!curso.wooProductId"
+              (click)="comprar(curso)"
+            ></button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
