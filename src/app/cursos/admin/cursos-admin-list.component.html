@@ -1,0 +1,79 @@
+<div class="cursos-admin-list">
+  <div class="cursos-admin-list__toolbar">
+    <h2>Cursos</h2>
+    <div class="cursos-admin-list__toolbar-actions">
+      <span class="p-input-icon-left">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          type="text"
+          placeholder="Buscar curso..."
+          [ngModel]="searchTerm()"
+          (ngModelChange)="searchTerm.set($event)"
+        />
+      </span>
+      <p-button
+        label="Nuevo curso"
+        icon="pi pi-plus"
+        (onClick)="navigateToNew()"
+      />
+    </div>
+  </div>
+
+  <p-table
+    [value]="cursos()"
+    [loading]="loading()"
+    [globalFilterFields]="['titulo', 'slug', 'estado']"
+    [paginator]="true"
+    [rows]="10"
+    [rowsPerPageOptions]="[10, 25, 50]"
+    styleClass="p-datatable-sm p-datatable-striped"
+    [rowHover]="true"
+    (onRowSelect)="onRowClick($event.data)"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="titulo">
+          Título
+          <p-sortIcon field="titulo" />
+        </th>
+        <th pSortableColumn="slug">
+          Slug
+          <p-sortIcon field="slug" />
+        </th>
+        <th pSortableColumn="estado">
+          Estado
+          <p-sortIcon field="estado" />
+        </th>
+        <th pSortableColumn="createdAt">
+          Creado
+          <p-sortIcon field="createdAt" />
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-curso>
+      <tr
+        class="cursos-admin-list__row"
+        (click)="onRowClick(curso)"
+        style="cursor: pointer"
+      >
+        <td>{{ curso.titulo }}</td>
+        <td>
+          <code>{{ curso.slug }}</code>
+        </td>
+        <td>
+          <p-tag
+            [value]="curso.estado"
+            [severity]="estadoSeverity(curso.estado)"
+          />
+        </td>
+        <td>{{ curso.createdAt | date: "dd/MM/yyyy" }}</td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="4" class="text-center">No hay cursos registrados.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

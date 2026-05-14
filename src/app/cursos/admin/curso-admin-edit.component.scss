@@ -1,0 +1,158 @@
+.curso-edit {
+  padding: 1.5rem;
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__toolbar-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+  }
+
+  &__titulo {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  &__spinner {
+    display: flex;
+    justify-content: center;
+    padding: 3rem;
+  }
+
+  &__form {
+    max-width: 800px;
+  }
+
+  &__form-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__estructura-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h3 {
+      margin: 0;
+    }
+  }
+
+  &__acceso {
+    max-width: 500px;
+
+    h3 {
+      margin-top: 0;
+    }
+  }
+
+  &__acceso-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+
+  .field--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.field {
+  label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+  }
+}
+
+.seccion-card {
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface-section);
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__orden {
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  &__lecciones {
+    padding: 0.5rem 1rem;
+  }
+}
+
+.leccion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--surface-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &__orden {
+    color: var(--text-color-secondary);
+    font-size: 0.8rem;
+    min-width: 1.5rem;
+  }
+
+  &__tipo {
+    font-size: 1rem;
+    color: var(--primary-color);
+  }
+
+  &__titulo {
+    flex: 1;
+    font-size: 0.9rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.1rem;
+  }
+}
