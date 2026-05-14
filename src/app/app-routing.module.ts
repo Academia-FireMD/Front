@@ -87,6 +87,11 @@ const routes: Routes = [
         loadChildren: () =>
           import('./cursos/cursos-routing.module').then((m) => m.routes),
       },
+      {
+        path: 'cursos',
+        loadChildren: () =>
+          import('./cursos/cursos-alumno.routes').then((m) => m.routes),
+      },
     ],
   },
   {
