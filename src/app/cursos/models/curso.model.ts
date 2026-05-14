@@ -66,3 +66,44 @@ export interface LeccionReorderItem {
   id: number;
   orden: number;
 }
+
+// ---- Alumno-facing types ----
+
+export interface ProgresoLeccion {
+  id: number;
+  leccionId: number;
+  usuarioId: number;
+  segundosVisto: number;
+  porcentajeVisto: number;
+  completada: boolean;
+  updatedAt?: string;
+}
+
+export interface AccesoConCurso {
+  id: number;
+  cursoId: number;
+  usuarioId: number;
+  curso: CursoDetail & { wooProductId?: number };
+  progreso?: ProgresoLeccion[];
+  createdAt?: string;
+}
+
+export interface CursoPublico extends Curso {
+  wooProductId?: number;
+}
+
+export interface CursoSlugResponse {
+  curso: CursoDetail & { wooProductId?: number };
+  tieneAcceso: boolean;
+}
+
+export interface LeccionResponse {
+  leccion: Leccion;
+  playbackUrl?: string;
+}
+
+export interface UpsertProgresoDto {
+  segundosVisto: number;
+  porcentajeVisto: number;
+  completada?: boolean;
+}
