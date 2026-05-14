@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { catchError, Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import {
   AccesoConCurso,
@@ -29,14 +30,25 @@ export class CursosAlumnoService extends ApiBaseService {
     return this.get(`/${slug}`) as Observable<CursoSlugResponse>;
   }
 
+  // /lecciones lives on its own controller (not under /cursos), so we
+  // bypass the inherited /cursos prefix and call the backend directly.
   getLeccion(id: number): Observable<LeccionResponse> {
-    return this.get(`/lecciones/${id}`) as Observable<LeccionResponse>;
+    return this.http
+      .get<LeccionResponse>(`${environment.apiUrl}/lecciones/${id}`, {
+        withCredentials: true,
+      })
+      .pipe(
+        catchError((err) => this.handleError(err)),
+      ) as Observable<LeccionResponse>;
   }
 
   upsertProgreso(leccionId: number, dto: UpsertProgresoDto): Observable<void> {
-    return this.post(
-      `/lecciones/${leccionId}/progreso`,
-      dto,
-    ) as Observable<void>;
+    return this.http
+      .post<void>(
+        `${environment.apiUrl}/lecciones/${leccionId}/progreso`,
+        dto,
+        { withCredentials: true },
+      )
+      .pipe(catchError((err) => this.handleError(err))) as Observable<void>;
   }
 }
