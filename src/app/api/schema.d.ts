@@ -4019,7 +4019,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos': {
+  '/cursos': {
     parameters: {
       query?: never;
       header?: never;
@@ -4035,7 +4035,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/admin': {
+  '/cursos/admin': {
     parameters: {
       query?: never;
       header?: never;
@@ -4051,7 +4051,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/admin/{id}': {
+  '/cursos/admin/{id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -4067,7 +4067,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/{id}': {
+  '/cursos/{id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -4083,7 +4083,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/{id}/publicar': {
+  '/cursos/{id}/publicar': {
     parameters: {
       query?: never;
       header?: never;
@@ -4099,7 +4099,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/{id}/archivar': {
+  '/cursos/{id}/archivar': {
     parameters: {
       query?: never;
       header?: never;
@@ -4115,7 +4115,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/{id}/grant-access': {
+  '/cursos/{id}/grant-access': {
     parameters: {
       query?: never;
       header?: never;
@@ -4131,7 +4131,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/{id}/access/{usuarioId}': {
+  '/cursos/{id}/access/{usuarioId}': {
     parameters: {
       query?: never;
       header?: never;
@@ -4147,7 +4147,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/{id}/secciones': {
+  '/cursos/{id}/secciones': {
     parameters: {
       query?: never;
       header?: never;
@@ -4163,7 +4163,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/secciones/{id}': {
+  '/cursos/secciones/{id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -4179,7 +4179,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/secciones/reorder': {
+  '/cursos/secciones/reorder': {
     parameters: {
       query?: never;
       header?: never;
@@ -4195,7 +4195,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/secciones/{id}/lecciones': {
+  '/cursos/secciones/{id}/lecciones': {
     parameters: {
       query?: never;
       header?: never;
@@ -4211,7 +4211,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/lecciones/{id}': {
+  '/cursos/lecciones/{id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -4227,7 +4227,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/lecciones/reorder': {
+  '/cursos/lecciones/reorder': {
     parameters: {
       query?: never;
       header?: never;
@@ -4243,7 +4243,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/videos/upload-url': {
+  '/cursos/videos/upload-url': {
     parameters: {
       query?: never;
       header?: never;
@@ -4259,7 +4259,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/mios': {
+  '/cursos/mios': {
     parameters: {
       query?: never;
       header?: never;
@@ -4275,7 +4275,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/catalogo': {
+  '/cursos/catalogo': {
     parameters: {
       query?: never;
       header?: never;
@@ -4291,7 +4291,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/cursos/{slug}': {
+  '/cursos/{slug}': {
     parameters: {
       query?: never;
       header?: never;
@@ -4307,7 +4307,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/lecciones/{id}': {
+  '/lecciones/{id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -4323,7 +4323,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/lecciones/{id}/progreso': {
+  '/lecciones/{id}/progreso': {
     parameters: {
       query?: never;
       header?: never;
@@ -4339,7 +4339,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/tutorias': {
+  '/tutorias': {
     parameters: {
       query?: never;
       header?: never;
@@ -4355,7 +4355,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/tutorias/admin': {
+  '/tutorias/admin': {
     parameters: {
       query?: never;
       header?: never;
@@ -4371,7 +4371,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/tutorias/{id}': {
+  '/tutorias/{id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -4387,7 +4387,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/tutorias/{id}/invitados': {
+  '/tutorias/{id}/invitados': {
     parameters: {
       query?: never;
       header?: never;
@@ -4403,7 +4403,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/tutorias/{id}/invitados/{usuarioId}': {
+  '/tutorias/{id}/invitados/{usuarioId}': {
     parameters: {
       query?: never;
       header?: never;
