@@ -35,6 +35,10 @@ export class LeccionVideoComponent implements OnInit, OnDestroy {
   safeUrl = signal<SafeResourceUrl>('');
   segundosVisto = signal(0);
   marcando = signal(false);
+  // Set true once the user marks the lesson complete (manually or by
+  // reaching 100% playback). Stops the heartbeat from clobbering the
+  // server-side completed state with a later partial update.
+  completada = signal(false);
 
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -51,6 +55,12 @@ export class LeccionVideoComponent implements OnInit, OnDestroy {
 
   private startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
+      if (this.completada()) {
+        // Already marked complete on the server. Stop heartbeating so a
+        // later partial tick doesn't overwrite completada back to false.
+        this.clearHeartbeat();
+        return;
+      }
       const segs = this.segundosVisto() + HEARTBEAT_INTERVAL_MS / 1000;
       this.segundosVisto.set(segs);
       const duracion = this.leccion().duracionSegundos;
@@ -94,6 +104,8 @@ export class LeccionVideoComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.marcando.set(false);
+          this.completada.set(true);
+          this.clearHeartbeat();
           this.toastr.success('Lección marcada como vista');
         },
         error: () => {

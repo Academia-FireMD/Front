@@ -1,12 +1,12 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   input,
   output,
   OnChanges,
   inject,
   signal,
-  computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -82,8 +82,14 @@ export interface LeccionFormResult {
             optionLabel="label"
             optionValue="value"
             placeholder="Seleccionar tipo"
+            [disabled]="esEdicion()"
             class="w-full"
           />
+          @if (esEdicion()) {
+            <small class="text-color-secondary">
+              El tipo no se puede cambiar tras crear la lección.
+            </small>
+          }
         </div>
 
         @if (tipoSeleccionado() === 'VIDEO') {
@@ -200,6 +206,9 @@ export class LeccionFormDialogComponent implements OnChanges {
   });
 
   tipoSeleccionado = signal<TipoLeccion>('VIDEO');
+  // Tipo is immutable after creation: the update DTO doesn't carry it
+  // and the conditional fields wouldn't migrate cleanly anyway.
+  readonly esEdicion = computed(() => this.leccion() !== null);
 
   constructor() {
     this.form.get('tipo')?.valueChanges.subscribe((val) => {

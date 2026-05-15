@@ -58,10 +58,13 @@ export class LeccionPageComponent implements OnInit {
   }
 
   abrirTest(testId: number): void {
-    this.router.navigate(['/app/test/realizar-test', testId]);
+    this.router.navigate(['/app/test/alumno/realizar-test', testId]);
   }
 
   abrirFlashcards(mazoId: number): void {
-    this.router.navigate(['/app/test/realizar-flash-cards-test', mazoId]);
+    this.router.navigate([
+      '/app/test/alumno/realizar-flash-cards-test',
+      mazoId,
+    ]);
   }
 }

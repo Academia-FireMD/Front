@@ -9,10 +9,9 @@ import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
+import { environment } from '../../../environments/environment';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { CursoPublico } from '../models/curso.model';
-
-const WOO_STAGING_BASE = 'https://staging2.tecnikafire.com/?p=';
 
 @Component({
   selector: 'app-catalogo-page',
@@ -43,8 +42,17 @@ export class CatalogoPageComponent implements OnInit {
   }
 
   comprar(curso: CursoPublico): void {
-    if (curso.wooProductId) {
-      window.open(`${WOO_STAGING_BASE}${curso.wooProductId}`, '_blank');
-    }
+    if (!curso.wooProductId) return;
+    // Resolve the WooCommerce host from environment so prod and staging
+    // open the right storefront. wordpressUrl is the same WP install
+    // WooCommerce is mounted on.
+    const base =
+      (environment as { wooCommerceUrl?: string; wordpressUrl?: string })
+        .wooCommerceUrl ??
+      (environment as { wordpressUrl?: string }).wordpressUrl ??
+      '';
+    if (!base) return;
+    const sep = base.includes('?') ? '&' : '/?';
+    window.open(`${base}${sep}p=${curso.wooProductId}`, '_blank');
   }
 }
