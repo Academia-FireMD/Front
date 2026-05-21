@@ -1,0 +1,56 @@
+{
+  "id": 1,
+  "titulo": "Curso QA Test",
+  "slug": "curso-qa-test",
+  "descripcion": "Curso usado por la suite E2E de cursos",
+  "estado": "PUBLICADO",
+  "precio": 99.99,
+  "wooProductId": 1234,
+  "oposicion": "GENERAL",
+  "thumbnailUrl": null,
+  "duracionEstimadaMinutos": 120,
+  "createdAt": "2026-05-21T19:00:00.000Z",
+  "updatedAt": "2026-05-21T19:05:00.000Z",
+  "secciones": [
+    {
+      "id": 10,
+      "cursoId": 1,
+      "titulo": "Introducción",
+      "orden": 0,
+      "lecciones": [
+        {
+          "id": 100,
+          "seccionId": 10,
+          "titulo": "Bienvenida",
+          "orden": 0,
+          "tipo": "TEXTO",
+          "duracionSegundos": null
+        },
+        {
+          "id": 101,
+          "seccionId": 10,
+          "titulo": "Vídeo de presentación",
+          "orden": 1,
+          "tipo": "VIDEO",
+          "duracionSegundos": 300
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "cursoId": 1,
+      "titulo": "Profundización",
+      "orden": 1,
+      "lecciones": [
+        {
+          "id": 102,
+          "seccionId": 11,
+          "titulo": "Capítulo avanzado",
+          "orden": 0,
+          "tipo": "VIDEO",
+          "duracionSegundos": 1200
+        }
+      ]
+    }
+  ]
+}
