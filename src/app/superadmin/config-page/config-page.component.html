@@ -1,0 +1,142 @@
+<div class="config-page p-4">
+  <h1 class="text-2xl font-bold mb-4">Configuración white-label</h1>
+
+  <!-- Sección 1: Branding -->
+  <section class="config-section mb-4" data-testid="section-branding">
+    <h2 class="text-xl font-semibold mb-3">Branding</h2>
+    <form [formGroup]="brandingForm" (ngSubmit)="onSaveBranding()">
+      <div class="field mb-3">
+        <label for="appName" class="block mb-1 font-medium">Nombre de la app</label>
+        <input
+          id="appName"
+          pInputText
+          formControlName="appName"
+          class="w-full"
+          maxlength="60"
+          data-testid="input-appName"
+        />
+        @if (brandingForm.get('appName')?.touched && brandingForm.get('appName')?.invalid) {
+          <small class="p-error block mt-1">Debe tener entre 2 y 60 caracteres</small>
+        }
+      </div>
+
+      <div class="field mb-3">
+        <label for="primaryColor" class="block mb-1 font-medium">Color primario</label>
+        <div class="flex align-items-center gap-2">
+          <p-colorPicker
+            formControlName="primaryColor"
+            data-testid="colorpicker-primary"
+          ></p-colorPicker>
+          <input
+            pInputText
+            formControlName="primaryColor"
+            class="w-12rem"
+            placeholder="#FF6B35"
+            data-testid="input-primaryColor"
+          />
+        </div>
+        @if (brandingForm.get('primaryColor')?.touched && brandingForm.get('primaryColor')?.invalid) {
+          <small class="p-error block mt-1">Formato hex inválido (ej: #FF6B35)</small>
+        }
+      </div>
+
+      <div class="field mb-3">
+        <label for="secondaryColor" class="block mb-1 font-medium">Color secundario</label>
+        <div class="flex align-items-center gap-2">
+          <p-colorPicker
+            formControlName="secondaryColor"
+            data-testid="colorpicker-secondary"
+          ></p-colorPicker>
+          <input
+            pInputText
+            formControlName="secondaryColor"
+            class="w-12rem"
+            placeholder="#004E89"
+            data-testid="input-secondaryColor"
+          />
+        </div>
+        @if (brandingForm.get('secondaryColor')?.touched && brandingForm.get('secondaryColor')?.invalid) {
+          <small class="p-error block mt-1">Formato hex inválido (ej: #004E89)</small>
+        }
+      </div>
+
+      <p-button
+        type="submit"
+        label="Guardar branding"
+        icon="pi pi-save"
+        [loading]="savingBranding()"
+        [disabled]="brandingForm.invalid"
+        data-testid="btn-save-branding"
+      ></p-button>
+    </form>
+  </section>
+
+  <!-- Sección 2: Logo -->
+  <section class="config-section mb-4" data-testid="section-logo">
+    <h2 class="text-xl font-semibold mb-3">Logo</h2>
+    <div class="flex align-items-start gap-4 mb-3">
+      <div class="logo-preview-box">
+        <img
+          [src]="logoPreview() ?? appConfigService.appConfig().logoUrl ?? fallbackLogo"
+          alt="Logo actual"
+          class="logo-preview-img"
+          (error)="onLogoError($event)"
+          data-testid="img-logo-preview"
+        />
+      </div>
+      <div class="flex flex-column gap-2">
+        <p-fileUpload
+          mode="basic"
+          name="logo"
+          [accept]="logoMimes"
+          [maxFileSize]="logoMaxBytes"
+          [auto]="false"
+          chooseLabel="Elegir archivo"
+          (onSelect)="onLogoSelected($event)"
+          data-testid="fileupload-logo"
+        ></p-fileUpload>
+        <p-button
+          label="Subir"
+          icon="pi pi-upload"
+          [loading]="uploadingLogo()"
+          [disabled]="!logoPreview()"
+          (onClick)="onUploadLogo()"
+          data-testid="btn-upload-logo"
+        ></p-button>
+        @if (appConfigService.appConfig().logoUrl) {
+          <p-button
+            label="Eliminar logo"
+            icon="pi pi-trash"
+            severity="danger"
+            [loading]="deletingLogo()"
+            (onClick)="onDeleteLogo()"
+            data-testid="btn-delete-logo"
+          ></p-button>
+        }
+      </div>
+    </div>
+    <small class="block text-color-secondary">
+      JPG, PNG o WEBP. Max 2MB. SVG no soportado.
+    </small>
+  </section>
+
+  <!-- Sección 3: Módulos -->
+  <section class="config-section mb-4" data-testid="section-modulos">
+    <h2 class="text-xl font-semibold mb-3">Módulos</h2>
+    <div class="grid">
+      @for (row of modulos(); track row.modulo) {
+        <div class="col-12 md:col-6 flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <span class="font-medium">{{ row.label }}</span>
+          <p-inputSwitch
+            [ngModel]="row.enabled"
+            (onChange)="onToggleModulo(row.modulo, $event.checked)"
+            [disabled]="togglingModulo() === row.modulo"
+            [attr.data-testid]="'switch-modulo-' + row.modulo"
+          ></p-inputSwitch>
+        </div>
+      }
+    </div>
+  </section>
+
+  <p-confirmDialog></p-confirmDialog>
+</div>

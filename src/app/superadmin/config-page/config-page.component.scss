@@ -1,0 +1,29 @@
+.config-page {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.config-section {
+  background: var(--surface-card, #fff);
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid var(--surface-border, #e5e7eb);
+}
+
+.logo-preview-box {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  border: 1px dashed var(--surface-border, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-ground, #f8f9fa);
+  overflow: hidden;
+}
+
+.logo-preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
