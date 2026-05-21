@@ -1,0 +1,14 @@
+{
+  "id": 1,
+  "titulo": "Curso QA Test",
+  "slug": "curso-qa-test",
+  "descripcion": "Curso usado por la suite E2E de cursos",
+  "estado": "BORRADOR",
+  "precio": 99.99,
+  "wooProductId": null,
+  "oposicion": "GENERAL",
+  "thumbnailUrl": null,
+  "duracionEstimadaMinutos": 120,
+  "createdAt": "2026-05-21T19:00:00.000Z",
+  "updatedAt": "2026-05-21T19:00:00.000Z"
+}
