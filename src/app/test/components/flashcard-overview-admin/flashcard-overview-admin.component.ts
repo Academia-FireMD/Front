@@ -123,7 +123,10 @@ export class FlashcardOverviewAdminComponent extends SharedGridComponent<Flashca
         const [data, queryParams] = e;
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
-        return this.commMap(pagination)[this.expectedRole];
+        // SUPERADMIN no aplica aquí (componente solo Admin/Alumno).
+        return this.commMap(pagination)[
+          this.expectedRole as 'ADMIN' | 'ALUMNO'
+        ];
       }),
     );
   }
