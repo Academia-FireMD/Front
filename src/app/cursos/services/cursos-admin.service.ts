@@ -55,6 +55,11 @@ export class CursosAdminService extends ApiBaseService {
     return this.post(`/${id}/archivar`, {}) as Observable<Curso>;
   }
 
+  /** BUG-002 fix counterpart — PUBLICADO/ARCHIVADO → BORRADOR. */
+  despublicar(id: number): Observable<Curso> {
+    return this.post(`/${id}/despublicar`, {}) as Observable<Curso>;
+  }
+
   grantAccess(cursoId: number, usuarioId: number): Observable<unknown> {
     return this.post(`/${cursoId}/grant-access`, { usuarioId });
   }

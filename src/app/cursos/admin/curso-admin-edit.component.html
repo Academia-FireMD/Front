@@ -25,11 +25,27 @@
       }
       @if (c.estado === "PUBLICADO") {
         <p-button
+          label="Despublicar"
+          icon="pi pi-replay"
+          severity="secondary"
+          [loading]="saving()"
+          (onClick)="despublicar()"
+        />
+        <p-button
           label="Archivar"
           icon="pi pi-inbox"
           severity="warning"
           [loading]="saving()"
           (onClick)="archivar()"
+        />
+      }
+      @if (c.estado === "ARCHIVADO") {
+        <p-button
+          label="Despublicar"
+          icon="pi pi-replay"
+          severity="secondary"
+          [loading]="saving()"
+          (onClick)="despublicar()"
         />
       }
     }

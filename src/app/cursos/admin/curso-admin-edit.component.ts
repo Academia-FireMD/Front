@@ -220,6 +220,25 @@ export class CursoAdminEditComponent implements OnInit {
     }
   }
 
+  /** BUG-002 fix: vuelve a BORRADOR para edición o borrado. */
+  async despublicar(): Promise<void> {
+    const id = this.cursoId();
+    if (!id) return;
+    this.saving.set(true);
+    try {
+      const updated = await firstValueFrom(
+        this.cursosAdminService.despublicar(id),
+      );
+      this.curso.update((prev) =>
+        prev ? { ...prev, estado: updated.estado } : prev,
+      );
+      this.toast.success('Curso devuelto a BORRADOR');
+    } catch {
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
   // ---- Secciones ----
 
   openAddSeccion(): void {
