@@ -92,9 +92,10 @@ export interface Consumible {
 export enum Rol {
   ADMIN = 'ADMIN',
   ALUMNO = 'ALUMNO',
+  SUPERADMIN = 'SUPERADMIN',
 }
 
-export const rolesPlataforma = [Rol.ADMIN, Rol.ALUMNO];
+export const rolesPlataforma = [Rol.ADMIN, Rol.ALUMNO, Rol.SUPERADMIN];
 export const esRolPlataforma = (rol: Rol) => rolesPlataforma.includes(rol);
 
 export enum TipoDePlanificacionDeseada {
