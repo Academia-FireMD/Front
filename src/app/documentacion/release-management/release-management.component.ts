@@ -538,6 +538,7 @@ export class ReleaseManagementComponent implements OnInit {
         value: Oposicion.VALENCIA_AYUNTAMIENTO,
       },
       { label: 'CPBA Alicante', value: Oposicion.ALICANTE_CPBA },
+      { label: 'Madrid', value: Oposicion.MADRID },
     ];
   }
 
