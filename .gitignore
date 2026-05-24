@@ -46,3 +46,9 @@ Thumbs.db
 .netlify
 playwright-report/
 .gstack/
+
+# Session artifacts (Claude/codex sessions, custom-port QA configs)
+.codex
+playwright-report-wl/
+playwright.manual-qa.config.ts
+playwright.wl.config.ts
