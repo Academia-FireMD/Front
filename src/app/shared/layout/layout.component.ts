@@ -576,6 +576,31 @@ export class LayoutComponent {
       });
     }
 
+    // Cursos — disponible para todos los alumnos con sub activa. Las
+    // rutas alumno (/app/cursos = "Mis cursos", /app/cursos/catalogo)
+    // existían pero no estaban en el menú; el alumno solo podía
+    // llegar por URL directa. ModuloGuard se encarga del gating por
+    // tenant.
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Cursos',
+        collapsed: true,
+        modulo: ModuloApp.CURSOS,
+        items: [
+          {
+            label: 'Mis cursos',
+            icon: 'pi pi-book',
+            routerLink: '/app/cursos',
+          },
+          {
+            label: 'Catálogo',
+            icon: 'pi pi-th-large',
+            routerLink: '/app/cursos/catalogo',
+          },
+        ],
+      });
+    }
+
     // Menú de perfil siempre disponible
     menu.push({
       label: 'Perfil',
