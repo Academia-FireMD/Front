@@ -6,7 +6,7 @@
 }
 
 .selected-difficulty {
-  border: 1px solid $primaryColor;
+  border: 1px solid var(--primary-color);
   border-radius: 5px;
 }
 
@@ -74,7 +74,7 @@
   }
 
   .active-block > .p-card {
-    border: 1px solid $primaryColor;
+    border: 1px solid var(--primary-color);
   }
 }
 

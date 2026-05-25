@@ -16,7 +16,7 @@
 }
 
 .bar {
-  background-color: $primaryColor;
+  background-color: var(--primary-color);
   height: fit-content;
   position: fixed;
   z-index: 1000;
