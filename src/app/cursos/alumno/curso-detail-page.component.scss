@@ -4,6 +4,20 @@
   margin: 0 auto;
 }
 
+.preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--yellow-50, #fef9c3);
+  color: var(--yellow-900, #713f12);
+  border: 1px solid var(--yellow-300, #fde047);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 .loading-state,
 .empty-state {
   display: flex;

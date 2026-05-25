@@ -1,21 +1,18 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  OnInit,
-  signal,
-} from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
-import { ToastrService } from 'ngx-toastr';
-import { firstValueFrom } from 'rxjs';
-import { CursosAdminService } from '../services/cursos-admin.service';
+import { TagModule } from 'primeng/tag';
+import { Observable, tap } from 'rxjs';
+import {
+  PaginatedResult,
+  PaginationFilter,
+} from '../../shared/models/pagination.model';
+import { GenericListComponent } from '../../shared/generic-list/generic-list.component';
+import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
 import { CursoAdmin, EstadoCurso } from '../models/curso.model';
+import { CursosAdminService } from '../services/cursos-admin.service';
 
 type TagSeverity =
   | 'success'
@@ -26,44 +23,40 @@ type TagSeverity =
   | 'contrast'
   | undefined;
 
+/**
+ * Refactor 2026-05-25 (T9): extends `SharedGridComponent<CursoAdmin>` para
+ * reusar paginación, search debounced y query-param sync. Antes era un
+ * `p-table` ad-hoc. Renderiza via `<app-generic-list>` igual que
+ * preguntas-dashboard-admin.
+ */
 @Component({
   selector: 'app-cursos-admin-list',
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     FormsModule,
     ButtonModule,
-    TableModule,
-    TagModule,
     InputTextModule,
+    TagModule,
+    GenericListComponent,
   ],
   templateUrl: './cursos-admin-list.component.html',
   styleUrl: './cursos-admin-list.component.scss',
 })
-export class CursosAdminListComponent implements OnInit {
+export class CursosAdminListComponent extends SharedGridComponent<CursoAdmin> {
   private cursosAdminService = inject(CursosAdminService);
-  private router = inject(Router);
-  private toast = inject(ToastrService);
 
-  cursos = signal<CursoAdmin[]>([]);
-  loading = signal(true);
-  searchTerm = signal('');
-
-  ngOnInit(): void {
-    this.loadCursos();
+  constructor() {
+    super();
+    this.fetchItems$ = computed(() => this.fetchCursos(this.pagination()));
   }
 
-  async loadCursos(): Promise<void> {
-    this.loading.set(true);
-    try {
-      const data = await firstValueFrom(this.cursosAdminService.list());
-      this.cursos.set(data);
-    } catch {
-      // handleError already shows toast
-    } finally {
-      this.loading.set(false);
-    }
+  private fetchCursos(
+    pagination: PaginationFilter,
+  ): Observable<PaginatedResult<CursoAdmin>> {
+    return this.cursosAdminService
+      .list(pagination)
+      .pipe(tap((res) => (this.lastLoadedPagination = res)));
   }
 
   navigateToNew(): void {

@@ -6,6 +6,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
+import { ConfirmationService } from 'primeng/api';
 import { UserService } from '../../services/user.service';
 import { Group } from '../../shared/models/group.model';
 import { Label } from '../../shared/models/label.model';
@@ -73,6 +74,7 @@ export class ReleaseManagementComponent implements OnInit {
     private labelsService: LabelsService,
     private groupsService: GroupsService,
     private userService: UserService,
+    private confirmation: ConfirmationService,
   ) {
     this.releaseForm = this.fb.group(
       {
@@ -321,11 +323,24 @@ export class ReleaseManagementComponent implements OnInit {
   }
 
   deleteRelease(id: string): void {
-    if (!confirm('¿Estás seguro de eliminar este release?')) return;
-
-    this.releaseService.deleteRelease(id).subscribe({
-      next: () => this.loadReleases(),
-      error: (err) => console.error('Error al eliminar release:', err),
+    // T16 — Migrado de `confirm()` browser a `<p-confirmDialog>` consistente
+    // con el resto de la app.
+    this.confirmation.confirm({
+      header: 'Eliminar release',
+      message: '¿Estás seguro de eliminar este release?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.releaseService.deleteRelease(id).subscribe({
+          next: () => this.loadReleases(),
+          error: (err) => console.error('Error al eliminar release:', err),
+        });
+      },
+      reject: () => {
+        /* no-op */
+      },
     });
   }
 

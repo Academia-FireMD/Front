@@ -146,13 +146,40 @@ async function setupCursosAdminInterceptors(
   page: Page,
   state: AdminState,
 ): Promise<void> {
-  // GET /cursos/admin (list)
-  await page.route('**/cursos/admin', (route) => {
+  // Refactor 2026-05-25: WC product picker llama a este endpoint admin.
+  await page.route('**/woocommerce/products/cursos', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 7777,
+          name: 'Curso WC mock',
+          sku: 'CURSO-MOCK',
+          price: '49.00',
+          regular_price: '49.00',
+          sale_price: null,
+          status: 'publish',
+        },
+      ]),
+    }),
+  );
+
+  // GET /cursos/admin?skip&take&searchTerm (refactor 2026-05-25: paginado).
+  await page.route(/\/cursos\/admin(\?[^/]*)?$/, (route) => {
     if (route.request().method() === 'GET') {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(state.cursos),
+        body: JSON.stringify({
+          data: state.cursos,
+          pagination: {
+            skip: 0,
+            take: 10,
+            searchTerm: '',
+            count: state.cursos.length,
+          },
+        }),
       });
     }
     return route.continue();

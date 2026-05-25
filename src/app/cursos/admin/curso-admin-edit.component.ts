@@ -1,44 +1,58 @@
+import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   OnInit,
   signal,
-  computed,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
 import {
-  ReactiveFormsModule,
-  FormsModule,
   FormBuilder,
+  FormsModule,
+  ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DividerModule } from 'primeng/divider';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { TabViewModule } from 'primeng/tabview';
 import { TagModule } from 'primeng/tag';
-import { DividerModule } from 'primeng/divider';
-import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom } from 'rxjs';
-import { CursosAdminService } from '../services/cursos-admin.service';
+import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
+import { WooCommerceProductPickerComponent } from '../../shared/components/woocommerce-product-picker/woocommerce-product-picker.component';
+import { Oposicion } from '../../shared/models/subscription.model';
+import { CursoDetailPageComponent } from '../alumno/curso-detail-page.component';
 import {
-  Curso,
+  CursoCreatePayload,
   CursoDetail,
+  CursoSlugResponse,
+  CursoUpdatePayload,
   EstadoCurso,
   Leccion,
+  LeccionCreatePayload,
+  LeccionUpdatePayload,
   Seccion,
+  TipoLeccion,
+  WooCommerceProductSummary,
 } from '../models/curso.model';
-import {
-  SeccionFormDialogComponent,
-  SeccionFormResult,
-} from './seccion-form-dialog.component';
+import { CursosAdminService } from '../services/cursos-admin.service';
 import {
   LeccionFormDialogComponent,
   LeccionFormResult,
 } from './leccion-form-dialog.component';
+import {
+  SeccionFormDialogComponent,
+  SeccionFormResult,
+} from './seccion-form-dialog.component';
 
 type TagSeverity =
   | 'success'
@@ -49,6 +63,18 @@ type TagSeverity =
   | 'contrast'
   | undefined;
 
+/**
+ * Refactor 2026-05-25 (T10 / T16 / D7 / D15):
+ *  - Input `precio` eliminado del form; el precio se deriva del producto WC
+ *    vinculado (`<app-woocommerce-product-picker endpoint="cursos">`).
+ *  - Auto-llenado opcional al seleccionar producto (titulo/descripcion/thumb).
+ *  - Acciones de toolbar (publicar/archivar/despublicar/saveMetadata) usan
+ *    `<app-async-button>` para tener loading state consistente.
+ *  - Toggle "Ver como alumno" renderiza `<app-curso-detail-page [previewData]>`.
+ *  - Optimistic locking (D15): cliente envía `updatedAt`, backend devuelve 409
+ *    si está stale → toast warning + auto-reload.
+ *  - confirm() browser migrado a `<p-confirmDialog>` (T16).
+ */
 @Component({
   selector: 'app-curso-admin-edit',
   standalone: true,
@@ -61,12 +87,18 @@ type TagSeverity =
     InputTextModule,
     InputTextareaModule,
     InputNumberModule,
+    InputSwitchModule,
     TabViewModule,
     TagModule,
     DividerModule,
+    ConfirmDialogModule,
+    AsyncButtonComponent,
+    WooCommerceProductPickerComponent,
+    CursoDetailPageComponent,
     SeccionFormDialogComponent,
     LeccionFormDialogComponent,
   ],
+  providers: [ConfirmationService],
   templateUrl: './curso-admin-edit.component.html',
   styleUrl: './curso-admin-edit.component.scss',
 })
@@ -76,21 +108,23 @@ export class CursoAdminEditComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cursosAdminService = inject(CursosAdminService);
   private toast = inject(ToastrService);
+  private confirmation = inject(ConfirmationService);
 
   cursoId = signal<number | null>(null);
   curso = signal<CursoDetail | null>(null);
   loading = signal(true);
   saving = signal(false);
-  publishing = signal(false);
 
   // Estado computado para el toolbar
   esNuevo = computed(() => this.cursoId() === null);
   estadoCurso = computed(() => this.curso()?.estado ?? null);
 
+  // T10 — Preview "Ver como alumno"
+  previewMode = signal(false);
+
   // Sección dialogs
   seccionDialogVisible = signal(false);
   seccionEditando = signal<Seccion | null>(null);
-  seccionParentCursoId = signal<number | null>(null);
 
   // Lección dialogs
   leccionDialogVisible = signal(false);
@@ -101,11 +135,27 @@ export class CursoAdminEditComponent implements OnInit {
   usuarioIdAccesoValue: number | null = null;
   granting = signal(false);
 
+  /**
+   * Oposición actual del curso. Pasada al picker de tema dentro del leccion
+   * dialog (T11.1 / D6).
+   *
+   * HIGH-3 (codex review): validamos membresía del enum antes de devolverla.
+   * El backend devuelve el campo como string; si por algún drift de DTO
+   * llega un valor desconocido, preferimos devolver null que pasarle al
+   * picker un valor que rompería `OPOSICION_LABELS[...]` undefined.
+   */
+  oposicionCurso = computed<Oposicion | null>(() => {
+    const raw = this.curso()?.oposicion;
+    if (!raw) return null;
+    const validValues = Object.values(Oposicion) as string[];
+    return validValues.includes(raw as string) ? (raw as Oposicion) : null;
+  });
+
   metadataForm = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(2)]],
     slug: ['', Validators.required],
     descripcion: [''],
-    precio: [null as number | null],
+    wooProductId: [null as number | null],
     thumbnailUrl: [''],
     duracionEstimadaMinutos: [null as number | null],
   });
@@ -129,7 +179,7 @@ export class CursoAdminEditComponent implements OnInit {
         titulo: data.titulo,
         slug: data.slug,
         descripcion: data.descripcion ?? '',
-        precio: data.precio ?? null,
+        wooProductId: data.wooProductId ?? null,
         thumbnailUrl: data.thumbnailUrl ?? '',
         duracionEstimadaMinutos: data.duracionEstimadaMinutos ?? null,
       });
@@ -144,100 +194,180 @@ export class CursoAdminEditComponent implements OnInit {
     this.router.navigate(['/app/cursos-admin']);
   }
 
-  async saveMetadata(): Promise<void> {
+  /**
+   * D7 — auto-llenado al vincular WC product. Pregunta confirmación si el
+   * admin ya escribió campos manualmente (titulo/descripcion/thumbnail).
+   */
+  onWooProductSelected(product: WooCommerceProductSummary | null): void {
+    if (!product) return;
+    const current = this.metadataForm.getRawValue();
+    const hasUserText =
+      (current.titulo && current.titulo.trim() !== '') ||
+      (current.descripcion && current.descripcion.trim() !== '') ||
+      (current.thumbnailUrl && current.thumbnailUrl.trim() !== '');
+
+    const applySuggestions = () => {
+      const next = { ...current };
+      if (product.name) next.titulo = product.name;
+      // El producto WC actual sólo expone los campos mapeados en el endpoint
+      // (id/name/sku/price/status); descripción/thumbnail llegarán cuando el
+      // cache se enriquezca (TODO P2). Por ahora sólo el título.
+      this.metadataForm.patchValue(next);
+    };
+
+    if (hasUserText) {
+      this.confirmation.confirm({
+        header: 'Sobrescribir con datos de WooCommerce',
+        message:
+          'Has escrito datos en el formulario. ¿Quieres sustituirlos con los datos del producto WooCommerce?',
+        acceptLabel: 'Sobrescribir',
+        rejectLabel: 'Mantener actuales',
+        accept: () => applySuggestions(),
+        reject: () => {
+          /* no-op */
+        },
+      });
+    } else {
+      applySuggestions();
+    }
+  }
+
+  /** Helper: payload preview para `<app-curso-detail-page>` con datos del form. */
+  previewSlugResponse = computed<CursoSlugResponse | null>(() => {
+    if (!this.previewMode()) return null;
+    const c = this.curso();
+    const formValue = this.metadataForm.getRawValue();
+    if (!c) {
+      // Curso nuevo aún sin secciones; preview no tiene mucho sentido pero
+      // no crasheamos.
+      return {
+        curso: {
+          id: 0,
+          titulo: formValue.titulo ?? '',
+          slug: formValue.slug ?? '',
+          descripcion: formValue.descripcion ?? '',
+          thumbnailUrl: formValue.thumbnailUrl ?? '',
+          duracionEstimadaMinutos:
+            formValue.duracionEstimadaMinutos ?? undefined,
+          estado: 'BORRADOR',
+          secciones: [],
+        },
+        tieneAcceso: true,
+      };
+    }
+    return {
+      curso: {
+        ...c,
+        titulo: formValue.titulo ?? c.titulo,
+        descripcion: formValue.descripcion ?? c.descripcion,
+        thumbnailUrl: formValue.thumbnailUrl ?? c.thumbnailUrl,
+        duracionEstimadaMinutos:
+          formValue.duracionEstimadaMinutos ?? c.duracionEstimadaMinutos,
+      },
+      tieneAcceso: true,
+    };
+  });
+
+  togglePreview = (): void => {
+    this.previewMode.update((v) => !v);
+  };
+
+  /**
+   * D15 — Save con optimistic locking. El service `update()` no muestra
+   * toast en error (ignoreError=true); lo gestionamos aquí.
+   */
+  saveMetadata = async (): Promise<void> => {
     if (this.metadataForm.invalid) return;
     this.saving.set(true);
     const raw = this.metadataForm.getRawValue();
     try {
       const id = this.cursoId();
       if (id) {
+        const c = this.curso();
+        if (!c?.updatedAt) {
+          this.toast.error(
+            'No se ha podido determinar el estado del curso. Recarga la página.',
+          );
+          return;
+        }
+        const payload: CursoUpdatePayload = {
+          titulo: raw.titulo ?? undefined,
+          descripcion: raw.descripcion ?? undefined,
+          wooProductId: raw.wooProductId ?? null,
+          thumbnailUrl: raw.thumbnailUrl ?? undefined,
+          duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
+          updatedAt: c.updatedAt,
+        };
         const updated = await firstValueFrom(
-          this.cursosAdminService.update(id, {
-            titulo: raw.titulo ?? undefined,
-            descripcion: raw.descripcion ?? undefined,
-            precio: raw.precio ?? undefined,
-            thumbnailUrl: raw.thumbnailUrl ?? undefined,
-            duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
-          }),
+          this.cursosAdminService.update(id, payload),
         );
         this.curso.update((prev) => (prev ? { ...prev, ...updated } : prev));
         this.toast.success('Metadatos guardados correctamente');
       } else {
-        // Create new
+        const createPayload: CursoCreatePayload = {
+          titulo: raw.titulo ?? '',
+          slug: raw.slug ?? '',
+          descripcion: raw.descripcion ?? undefined,
+          wooProductId: raw.wooProductId ?? null,
+          thumbnailUrl: raw.thumbnailUrl ?? undefined,
+          duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
+        };
         const created = await firstValueFrom(
-          this.cursosAdminService.create({
-            titulo: raw.titulo ?? '',
-            slug: raw.slug ?? '',
-            descripcion: raw.descripcion ?? undefined,
-            precio: raw.precio ?? undefined,
-            thumbnailUrl: raw.thumbnailUrl ?? undefined,
-            duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
-          }),
+          this.cursosAdminService.create(createPayload),
         );
         this.toast.success('Curso creado correctamente');
         this.router.navigate(['/app/cursos-admin', created.id]);
       }
-    } catch {
-      // handleError shows toast
+    } catch (err) {
+      const httpErr = err as HttpErrorResponse;
+      if (httpErr?.status === 409) {
+        this.toast.warning(
+          'Otro admin modificó este curso. Recargando con los datos actuales…',
+        );
+        const id = this.cursoId();
+        if (id) await this.loadCurso(id);
+      } else {
+        // Fallback genérico: el service ignoró el toast, lo mostramos aquí.
+        this.toast.error(
+          httpErr?.error?.message ?? 'No se han podido guardar los cambios.',
+        );
+      }
     } finally {
       this.saving.set(false);
     }
-  }
+  };
 
-  async publicar(): Promise<void> {
+  publicar = async (): Promise<void> => {
     const id = this.cursoId();
     if (!id) return;
-    this.publishing.set(true);
-    try {
-      const updated = await firstValueFrom(
-        this.cursosAdminService.publicar(id),
-      );
-      this.curso.update((prev) =>
-        prev ? { ...prev, estado: updated.estado } : prev,
-      );
-      this.toast.success('Curso publicado');
-    } catch {
-    } finally {
-      this.publishing.set(false);
-    }
-  }
+    const updated = await firstValueFrom(this.cursosAdminService.publicar(id));
+    this.curso.update((prev) =>
+      prev ? { ...prev, estado: updated.estado } : prev,
+    );
+    this.toast.success('Curso publicado');
+  };
 
-  async archivar(): Promise<void> {
+  archivar = async (): Promise<void> => {
     const id = this.cursoId();
     if (!id) return;
-    this.saving.set(true);
-    try {
-      const updated = await firstValueFrom(
-        this.cursosAdminService.archivar(id),
-      );
-      this.curso.update((prev) =>
-        prev ? { ...prev, estado: updated.estado } : prev,
-      );
-      this.toast.success('Curso archivado');
-    } catch {
-    } finally {
-      this.saving.set(false);
-    }
-  }
+    const updated = await firstValueFrom(this.cursosAdminService.archivar(id));
+    this.curso.update((prev) =>
+      prev ? { ...prev, estado: updated.estado } : prev,
+    );
+    this.toast.success('Curso archivado');
+  };
 
-  /** BUG-002 fix: vuelve a BORRADOR para edición o borrado. */
-  async despublicar(): Promise<void> {
+  despublicar = async (): Promise<void> => {
     const id = this.cursoId();
     if (!id) return;
-    this.saving.set(true);
-    try {
-      const updated = await firstValueFrom(
-        this.cursosAdminService.despublicar(id),
-      );
-      this.curso.update((prev) =>
-        prev ? { ...prev, estado: updated.estado } : prev,
-      );
-      this.toast.success('Curso devuelto a BORRADOR');
-    } catch {
-    } finally {
-      this.saving.set(false);
-    }
-  }
+    const updated = await firstValueFrom(
+      this.cursosAdminService.despublicar(id),
+    );
+    this.curso.update((prev) =>
+      prev ? { ...prev, estado: updated.estado } : prev,
+    );
+    this.toast.success('Curso devuelto a BORRADOR');
+  };
 
   // ---- Secciones ----
 
@@ -294,13 +424,22 @@ export class CursoAdminEditComponent implements OnInit {
     }
   }
 
-  async deleteSeccion(seccion: Seccion): Promise<void> {
-    if (
-      !confirm(
-        `¿Eliminar la sección "${seccion.titulo}"? Se eliminarán todas sus lecciones.`,
-      )
-    )
-      return;
+  deleteSeccion(seccion: Seccion): void {
+    this.confirmation.confirm({
+      header: 'Eliminar sección',
+      message: `¿Eliminar la sección "${seccion.titulo}"? Se eliminarán también todas sus lecciones.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.doDeleteSeccion(seccion),
+      reject: () => {
+        /* no-op */
+      },
+    });
+  }
+
+  private async doDeleteSeccion(seccion: Seccion): Promise<void> {
     try {
       await firstValueFrom(this.cursosAdminService.deleteSeccion(seccion.id));
       this.curso.update((prev) => {
@@ -366,30 +505,36 @@ export class CursoAdminEditComponent implements OnInit {
     const editando = this.leccionEditando();
     try {
       if (editando) {
+        const updatePayload: LeccionUpdatePayload = {
+          titulo: result.titulo,
+          orden: result.orden,
+          bunnyVideoId: result.bunnyVideoId,
+          duracionSegundos: result.duracionSegundos,
+          contenidoMarkdown: result.contenidoMarkdown,
+          temaId: result.temaId,
+          numPreguntas: result.numPreguntas,
+          dificultad: result.dificultad,
+          esDeRepaso: result.esDeRepaso,
+        };
         const updated = await firstValueFrom(
-          this.cursosAdminService.updateLeccion(editando.id, {
-            titulo: result.titulo,
-            orden: result.orden,
-            bunnyVideoId: result.bunnyVideoId,
-            duracionSegundos: result.duracionSegundos,
-            testPlantillaId: result.testPlantillaId,
-            mazoFlashcardsId: result.mazoFlashcardsId,
-            contenidoMarkdown: result.contenidoMarkdown,
-          }),
+          this.cursosAdminService.updateLeccion(editando.id, updatePayload),
         );
         this.updateLeccionInState(updated);
       } else {
+        const createPayload: LeccionCreatePayload = {
+          titulo: result.titulo,
+          orden: result.orden,
+          tipo: result.tipo satisfies TipoLeccion,
+          bunnyVideoId: result.bunnyVideoId,
+          duracionSegundos: result.duracionSegundos,
+          contenidoMarkdown: result.contenidoMarkdown,
+          temaId: result.temaId,
+          numPreguntas: result.numPreguntas,
+          dificultad: result.dificultad,
+          esDeRepaso: result.esDeRepaso,
+        };
         const created = await firstValueFrom(
-          this.cursosAdminService.createLeccion(seccionId, {
-            titulo: result.titulo,
-            orden: result.orden,
-            tipo: result.tipo as never,
-            bunnyVideoId: result.bunnyVideoId,
-            duracionSegundos: result.duracionSegundos,
-            testPlantillaId: result.testPlantillaId,
-            mazoFlashcardsId: result.mazoFlashcardsId,
-            contenidoMarkdown: result.contenidoMarkdown,
-          }),
+          this.cursosAdminService.createLeccion(seccionId, createPayload),
         );
         this.curso.update((prev) => {
           if (!prev) return prev;
@@ -424,8 +569,22 @@ export class CursoAdminEditComponent implements OnInit {
     });
   }
 
-  async deleteLeccion(leccion: Leccion): Promise<void> {
-    if (!confirm(`¿Eliminar la lección "${leccion.titulo}"?`)) return;
+  deleteLeccion(leccion: Leccion): void {
+    this.confirmation.confirm({
+      header: 'Eliminar lección',
+      message: `¿Eliminar la lección "${leccion.titulo}"?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.doDeleteLeccion(leccion),
+      reject: () => {
+        /* no-op */
+      },
+    });
+  }
+
+  private async doDeleteLeccion(leccion: Leccion): Promise<void> {
     try {
       await firstValueFrom(this.cursosAdminService.deleteLeccion(leccion.id));
       this.curso.update((prev) => {
