@@ -317,174 +317,34 @@ export class AppConfigService {
     root.style.setProperty('--p-primary-hover-color', primaryPalette['600']);
     root.style.setProperty('--p-primary-active-color', primaryPalette['700']);
 
-    // Bug WL-A round 2 — el theme custom (`src/theme-firemd/*.scss`)
-    // interpola variables SCSS (`$primaryColor: #bb292a`) directo en el
-    // CSS compilado al build. Cambiar CSS vars no afecta a componentes
-    // PrimeNG porque sus reglas tienen color hardcoded. Inyectamos un
-    // `<style>` quirúrgico en `<head>` con `!important` que gana en
-    // cascade order.
-    this.injectPrimeNgOverrides(
-      cfg.primaryColor,
-      cfg.secondaryColor,
-      primaryPalette,
-    );
+    // Defensa: si el `<style id="wl-prime-overrides">` quedó en el DOM
+    // de una versión anterior (cache, deploy parcial), lo retiramos.
+    // El refactor SCSS proper (theme-firemd + theme-base + styles.scss
+    // → CSS vars) lo hace redundante.
+    const legacyOverride = document.getElementById('wl-prime-overrides');
+    if (legacyOverride) {
+      legacyOverride.remove();
+    }
 
     document.title = this.sanitizeAppName(cfg.appName);
   }
 
   /**
-   * Inyecta (o reemplaza) un `<style id="wl-prime-overrides">` que pinta
-   * los componentes PrimeNG con el branding del tenant.
+   * @deprecated Eliminado — placeholder mantenido por backward-compat con
+   * imports antiguos. El refactor SCSS proper (theme-firemd + theme-base
+   * + styles.scss usando `var(--primary-color)`) hace innecesario el
+   * override de PrimeNG quirúrgico. Si se reintroduce algún component
+   * con `\$primaryColor` SCSS hardcoded, migrarlo a CSS var en vez de
+   * resucitar este método.
    *
-   * Por qué hace falta: el theme-firemd tiene `$primaryColor` SCSS
-   * hardcoded en el CSS compilado, las CSS vars de :root no lo tocan.
-   * El override apunta a selectors específicos de PrimeNG con
-   * `!important` para ganarle al bundle del theme.
-   *
-   * Si el día de mañana se migra el theme entero a CSS vars (camino
-   * "correcto"), este método se puede borrar — los componentes
-   * agarrarán las CSS vars automáticamente.
+   * (Historic context — Bug WL-A round 2:
+   * el theme-firemd interpolaba `\$primaryColor` SCSS hardcoded en el
+   * CSS compilado. La solución temporal era inyectar `<style
+   * id="wl-prime-overrides">` con !important. El refactor proper a CSS
+   * vars hizo este override obsoleto. Si reaparece algún rojo
+   * hardcoded en el futuro, migrar ese archivo a CSS vars en vez de
+   * resucitar este método.)
    */
-  private injectPrimeNgOverrides(
-    primary: string,
-    secondary: string,
-    palette: Record<string, string>,
-  ): void {
-    const STYLE_ID = 'wl-prime-overrides';
-    const contrast = readableText(primary);
-    const hover = palette['600'];
-    const active = palette['700'];
-    const light = palette['100'];
-
-    const css = `
-/* WL-A round 2 — override runtime para que el branding tenant alcance
-   componentes PrimeNG cuyo theme está compilado con SCSS hardcoded.
-   Generado por AppConfigService.applyCssVars(). */
-
-/* Botón primario solid */
-.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-danger):not(.p-button-help):not(.p-button-contrast) {
-  background-color: ${primary} !important;
-  border-color: ${primary} !important;
-  color: ${contrast} !important;
-}
-.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-danger):not(.p-button-help):not(.p-button-contrast):hover {
-  background-color: ${hover} !important;
-  border-color: ${hover} !important;
-}
-.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-danger):not(.p-button-help):not(.p-button-contrast):active {
-  background-color: ${active} !important;
-  border-color: ${active} !important;
-}
-
-/* Botón outlined / text primario */
-.p-button.p-button-outlined:not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-danger):not(.p-button-help):not(.p-button-contrast),
-.p-button.p-button-text:not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-danger):not(.p-button-help):not(.p-button-contrast),
-.p-button.p-button-link {
-  color: ${primary} !important;
-  border-color: ${primary} !important;
-}
-
-/* Checkbox / RadioButton checked */
-.p-checkbox .p-checkbox-box.p-highlight {
-  background-color: ${primary} !important;
-  border-color: ${primary} !important;
-}
-.p-checkbox .p-checkbox-box.p-focus {
-  border-color: ${primary} !important;
-  box-shadow: 0 0 0 0.2rem ${primary}33 !important;
-}
-.p-radiobutton .p-radiobutton-box.p-highlight {
-  border-color: ${primary} !important;
-}
-.p-radiobutton .p-radiobutton-box.p-highlight .p-radiobutton-icon {
-  background-color: ${primary} !important;
-}
-
-/* InputSwitch checked */
-.p-inputswitch.p-inputswitch-checked .p-inputswitch-slider,
-.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider {
-  background-color: ${primary} !important;
-}
-
-/* Input focus ring */
-.p-inputtext:enabled:focus,
-.p-inputnumber-input:enabled:focus,
-.p-dropdown:not(.p-disabled).p-focus,
-.p-multiselect:not(.p-disabled).p-focus {
-  border-color: ${primary} !important;
-  box-shadow: 0 0 0 0.2rem ${primary}33 !important;
-}
-
-/* Tabs activo */
-.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-  border-color: ${primary} !important;
-  color: ${primary} !important;
-}
-
-/* Badge sin variante */
-.p-badge:not(.p-badge-secondary):not(.p-badge-success):not(.p-badge-info):not(.p-badge-warning):not(.p-badge-danger) {
-  background-color: ${primary} !important;
-  color: ${contrast} !important;
-}
-
-/* Paginator página activa */
-.p-paginator .p-paginator-page.p-highlight {
-  background-color: ${primary} !important;
-  border-color: ${primary} !important;
-  color: ${contrast} !important;
-}
-
-/* Menu item activo (sidebar) */
-.p-menuitem-link.p-menuitem-link-active,
-.p-menuitem.p-highlight > .p-menuitem-link {
-  background-color: ${primary}1f !important;
-  color: ${primary} !important;
-}
-
-/* Progress bar */
-.p-progressbar .p-progressbar-value {
-  background-color: ${primary} !important;
-}
-
-/* Calendar fecha seleccionada */
-.p-datepicker table td > span.p-highlight {
-  background-color: ${primary} !important;
-  color: ${contrast} !important;
-}
-
-/* Dropdown / MultiSelect item activo */
-.p-dropdown-item.p-highlight,
-.p-multiselect-item.p-highlight {
-  background-color: ${primary}1f !important;
-  color: ${primary} !important;
-}
-
-/* Tag default + Chip default */
-.p-tag,
-.p-chip {
-  background-color: ${light} !important;
-  color: ${active} !important;
-}
-
-/* Sidebar (LayoutComponent .bar) — usa SCSS \$primaryColor hardcoded */
-.bar {
-  background-color: ${primary} !important;
-}
-
-/* Selección de texto */
-::selection {
-  background-color: ${primary}33;
-}
-`;
-
-    let el = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
-    if (!el) {
-      el = document.createElement('style');
-      el.id = STYLE_ID;
-      document.head.appendChild(el);
-    }
-    el.textContent = css;
-  }
 
   /**
    * Saneo de appName: trim, fallback "TecnikaFire" si empty/whitespace,
