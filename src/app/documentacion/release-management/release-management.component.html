@@ -1,3 +1,5 @@
+<p-confirmDialog></p-confirmDialog>
+
 <div class="release-management">
   <div
     class="header flex flex-column md:flex-row justify-content-between align-items-center gap-3 mb-4"
@@ -27,8 +29,8 @@
       </div>
 
       <div class="release-dates">
-        <span>Desde: {{ release.startAt | date : "short" }}</span>
-        <span>Hasta: {{ release.endAt | date : "short" }}</span>
+        <span>Desde: {{ release.startAt | date: "short" }}</span>
+        <span>Hasta: {{ release.endAt | date: "short" }}</span>
       </div>
 
       <div class="release-stats">
@@ -58,7 +60,9 @@
         <h4>Reglas de Audiencia:</h4>
         <div class="rule-chip" *ngFor="let rule of release.audienceRules">
           <span class="rule-type">{{ getAudienceTypeDisplay(rule.type) }}</span>
-          <span class="rule-value" *ngIf="rule.value">: {{ getAudienceRuleValueDisplay(rule) }}</span>
+          <span class="rule-value" *ngIf="rule.value"
+            >: {{ getAudienceRuleValueDisplay(rule) }}</span
+          >
           <span
             class="rule-effect"
             [class.allow]="rule.effect === 'ALLOW'"
@@ -91,7 +95,9 @@
 >
   <div [formGroup]="releaseForm" class="flex flex-column gap-4">
     <div class="flex flex-column gap-2">
-      <label for="release-name" class="font-semibold">Nombre de la Publicación</label>
+      <label for="release-name" class="font-semibold"
+        >Nombre de la Publicación</label
+      >
       <input
         pInputText
         id="release-name"
@@ -106,7 +112,9 @@
     </div>
 
     <div class="flex flex-column gap-2">
-      <label for="release-start" class="font-semibold">Fecha y Hora de Inicio</label>
+      <label for="release-start" class="font-semibold"
+        >Fecha y Hora de Inicio</label
+      >
       <p-calendar
         inputId="release-start"
         formControlName="startAt"
@@ -198,9 +206,14 @@
     <!-- Acordeón de documentos (vista de alumno) -->
     <div class="flex-1 overflow-auto" *ngIf="documentTree.length > 0">
       <p-accordion>
-        <p-accordionTab *ngFor="let modulo of documentTree" [header]="modulo.nombre">
+        <p-accordionTab
+          *ngFor="let modulo of documentTree"
+          [header]="modulo.nombre"
+        >
           <div *ngFor="let tema of modulo.temas" class="tema-section mb-4">
-            <h5 class="tema-title mb-3">{{ tema.numero }} - {{ tema.descripcion }}</h5>
+            <h5 class="tema-title mb-3">
+              {{ tema.numero }} - {{ tema.descripcion }}
+            </h5>
             <div class="documentos-list flex flex-column gap-2">
               <div
                 *ngFor="let doc of tema.documentos"
@@ -208,7 +221,10 @@
               >
                 <div class="doc-info flex flex-column gap-1">
                   <span class="font-semibold">{{ doc.identificador }}</span>
-                  <span class="text-sm text-color-secondary" *ngIf="doc.descripcion">
+                  <span
+                    class="text-sm text-color-secondary"
+                    *ngIf="doc.descripcion"
+                  >
                     {{ doc.descripcion }}
                   </span>
                 </div>
@@ -327,7 +343,7 @@
               { label: 'Suscripción', value: AudienceType.SUBSCRIPTION },
               { label: 'Oposición', value: AudienceType.OPOSICION },
               { label: 'Etiqueta', value: AudienceType.LABEL },
-              { label: 'Individual', value: AudienceType.INDIVIDUAL }
+              { label: 'Individual', value: AudienceType.INDIVIDUAL },
             ]"
             optionLabel="label"
             optionValue="value"
@@ -374,12 +390,16 @@
           >
             <ng-template pTemplate="selectedItem" let-option>
               <span class="font-medium">{{ option.key }}</span>
-              <span *ngIf="option.value" class="ml-1 text-500">: {{ option.value }}</span>
+              <span *ngIf="option.value" class="ml-1 text-500"
+                >: {{ option.value }}</span
+              >
             </ng-template>
             <ng-template pTemplate="item" let-option>
               <div class="flex flex-column">
                 <span class="font-medium">{{ option.key }}</span>
-                <span *ngIf="option.value" class="text-sm text-500">{{ option.value }}</span>
+                <span *ngIf="option.value" class="text-sm text-500">{{
+                  option.value
+                }}</span>
               </div>
             </ng-template>
           </p-dropdown>
@@ -409,7 +429,7 @@
             [(ngModel)]="rule.effect"
             [options]="[
               { label: 'ALLOW', value: RuleEffect.ALLOW },
-              { label: 'DENY', value: RuleEffect.DENY }
+              { label: 'DENY', value: RuleEffect.DENY },
             ]"
             optionLabel="label"
             optionValue="value"
@@ -479,19 +499,26 @@
       />
     </p-iconField>
 
-    <div class="user-list" style="max-height: 400px; overflow-y: auto;">
+    <div class="user-list" style="max-height: 400px; overflow-y: auto">
       <div
         *ngFor="let user of filteredUsers"
         class="p-3 border-round border-1 surface-border mb-2 cursor-pointer hover:surface-hover"
-        [ngClass]="{ 'bg-primary-50 border-primary': selectedUserId === user.id }"
+        [ngClass]="{
+          'bg-primary-50 border-primary': selectedUserId === user.id,
+        }"
         (click)="selectUser(user)"
       >
         <div class="flex align-items-center justify-content-between">
           <div>
-            <div class="font-medium">{{ user.nombre }} {{ user.apellidos }}</div>
+            <div class="font-medium">
+              {{ user.nombre }} {{ user.apellidos }}
+            </div>
             <div class="text-sm text-500">{{ user.email }}</div>
           </div>
-          <i *ngIf="selectedUserId === user.id" class="pi pi-check text-primary"></i>
+          <i
+            *ngIf="selectedUserId === user.id"
+            class="pi pi-check text-primary"
+          ></i>
         </div>
       </div>
 
@@ -519,4 +546,3 @@
     </div>
   </ng-template>
 </p-dialog>
-

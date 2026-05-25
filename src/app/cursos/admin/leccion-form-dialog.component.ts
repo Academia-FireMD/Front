@@ -1,33 +1,59 @@
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  input,
-  output,
-  OnChanges,
+  effect,
   inject,
+  input,
+  OnChanges,
+  output,
   signal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormControl,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
-import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
+import { Dificultad } from '../../shared/models/pregunta.model';
+import { Oposicion } from '../../shared/models/subscription.model';
+import { SharedModule } from '../../shared/shared.module';
 import { Leccion, TipoLeccion } from '../models/curso.model';
 import { BunnyUploadComponent, UploadedEvent } from './bunny-upload.component';
 
+/**
+ * Refactor 2026-05-25 (T11 / T15 / D10):
+ *  - Tipos enum (`TipoLeccion`, `Dificultad`) tipados sin `as never`.
+ *  - Form reactivo por tipo: TEST/FLASHCARDS exigen `temaId` + `numPreguntas`
+ *    + opcional `dificultad` (null = "Todas las dificultades") + `esDeRepaso`.
+ *  - `testPlantillaId` y `mazoFlashcardsId` ELIMINADOS (entidades inexistentes
+ *    en backend; refactor previo Server staging).
+ */
 export interface LeccionFormResult {
   titulo: string;
   orden: number;
   tipo: TipoLeccion;
   bunnyVideoId?: string;
   duracionSegundos?: number;
-  testPlantillaId?: number;
-  mazoFlashcardsId?: number;
   contenidoMarkdown?: string;
+  temaId?: number;
+  numPreguntas?: number;
+  dificultad?: Dificultad;
+  esDeRepaso?: boolean;
+}
+
+interface DificultadOption {
+  label: string;
+  value: Dificultad | null;
 }
 
 @Component({
@@ -43,128 +69,13 @@ export interface LeccionFormResult {
     InputTextModule,
     InputNumberModule,
     InputTextareaModule,
+    CheckboxModule,
     BunnyUploadComponent,
+    SharedModule,
   ],
-  template: `
-    <p-dialog
-      [header]="leccion() ? 'Editar lección' : 'Nueva lección'"
-      [visible]="visible()"
-      (visibleChange)="onVisibleChange($event)"
-      [modal]="true"
-      [style]="{ width: '500px' }"
-    >
-      <form [formGroup]="form" class="leccion-form">
-        <div class="field">
-          <label for="lf-titulo">Título</label>
-          <input
-            id="lf-titulo"
-            pInputText
-            formControlName="titulo"
-            placeholder="Nombre de la lección"
-            class="w-full"
-          />
-        </div>
-        <div class="field">
-          <label for="lf-orden">Orden</label>
-          <p-inputNumber
-            inputId="lf-orden"
-            formControlName="orden"
-            [min]="0"
-            class="w-full"
-          />
-        </div>
-        <div class="field">
-          <label for="lf-tipo">Tipo</label>
-          <p-dropdown
-            inputId="lf-tipo"
-            formControlName="tipo"
-            [options]="tipoOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Seleccionar tipo"
-            [disabled]="esEdicion()"
-            class="w-full"
-          />
-          @if (esEdicion()) {
-            <small class="text-color-secondary">
-              El tipo no se puede cambiar tras crear la lección.
-            </small>
-          }
-        </div>
-
-        @if (tipoSeleccionado() === 'VIDEO') {
-          <div class="field">
-            <label>Vídeo</label>
-            <app-bunny-upload
-              [videoTitle]="form.get('titulo')?.value ?? ''"
-              (uploaded)="onVideoUploaded($event)"
-            />
-            @if (form.get('bunnyVideoId')?.value) {
-              <small class="text-color-secondary">
-                Video ID: {{ form.get('bunnyVideoId')?.value }}
-              </small>
-            }
-          </div>
-          <div class="field">
-            <label for="lf-duracion">Duración (segundos)</label>
-            <p-inputNumber
-              inputId="lf-duracion"
-              formControlName="duracionSegundos"
-              [min]="0"
-              class="w-full"
-            />
-          </div>
-        }
-
-        @if (tipoSeleccionado() === 'TEST') {
-          <div class="field">
-            <label for="lf-test">ID de plantilla de test</label>
-            <p-inputNumber
-              inputId="lf-test"
-              formControlName="testPlantillaId"
-              [min]="1"
-              class="w-full"
-            />
-          </div>
-        }
-
-        @if (tipoSeleccionado() === 'FLASHCARDS') {
-          <div class="field">
-            <label for="lf-mazo">ID de mazo de flashcards</label>
-            <p-inputNumber
-              inputId="lf-mazo"
-              formControlName="mazoFlashcardsId"
-              [min]="1"
-              class="w-full"
-            />
-          </div>
-        }
-
-        @if (tipoSeleccionado() === 'TEXTO') {
-          <div class="field">
-            <label for="lf-contenido">Contenido (Markdown)</label>
-            <textarea
-              id="lf-contenido"
-              pInputTextarea
-              formControlName="contenidoMarkdown"
-              rows="6"
-              class="w-full"
-              placeholder="Escribe el contenido en Markdown..."
-            ></textarea>
-          </div>
-        }
-      </form>
-      <ng-template pTemplate="footer">
-        <p-button label="Cancelar" severity="secondary" (onClick)="cancel()" />
-        <p-button
-          label="Guardar"
-          icon="pi pi-check"
-          [disabled]="form.invalid"
-          (onClick)="save()"
-        />
-      </ng-template>
-    </p-dialog>
-  `,
+  templateUrl: './leccion-form-dialog.component.html',
+  // Cuando se monte en cursos-admin, los estilos viven inline para no añadir
+  // un archivo más. El componente es pequeño y único en su feature.
   styles: [
     `
       .leccion-form .field {
@@ -175,17 +86,29 @@ export interface LeccionFormResult {
         margin-bottom: 0.25rem;
         font-weight: 600;
       }
+      .leccion-form__hint {
+        display: block;
+        color: var(--text-color-secondary);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+      }
     `,
   ],
 })
 export class LeccionFormDialogComponent implements OnChanges {
   readonly visible = input<boolean>(false);
   readonly leccion = input<Leccion | null>(null);
+  /**
+   * Oposición del curso, se propaga al `<app-tema-select>` para filtrar los
+   * temas a los del módulo cuya relevancia incluye esta oposición.
+   */
+  readonly oposicion = input<Oposicion | null>(null);
 
   readonly saved = output<LeccionFormResult>();
   readonly cancelled = output<void>();
 
   private fb = inject(FormBuilder);
+  private toast = inject(ToastrService);
 
   readonly tipoOptions: { label: string; value: TipoLeccion }[] = [
     { label: 'Vídeo', value: 'VIDEO' },
@@ -194,26 +117,96 @@ export class LeccionFormDialogComponent implements OnChanges {
     { label: 'Texto', value: 'TEXTO' },
   ];
 
+  readonly dificultadOptions: DificultadOption[] = [
+    { label: 'Todas las dificultades', value: null },
+    { label: 'Básico', value: Dificultad.BASICO },
+    { label: 'Intermedio', value: Dificultad.INTERMEDIO },
+    { label: 'Difícil', value: Dificultad.DIFICIL },
+  ];
+
   form = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(2)]],
     orden: [0, [Validators.required, Validators.min(0)]],
-    tipo: ['VIDEO' as TipoLeccion, Validators.required],
+    tipo: this.fb.control<TipoLeccion>('VIDEO', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
     bunnyVideoId: [''],
     duracionSegundos: [null as number | null],
-    testPlantillaId: [null as number | null],
-    mazoFlashcardsId: [null as number | null],
     contenidoMarkdown: [''],
+    temaId: [null as number | null],
+    numPreguntas: [10 as number | null],
+    dificultad: [null as Dificultad | null],
+    esDeRepaso: [false],
   });
 
+  /**
+   * `app-tema-select` consume un FormControl directo, no funciona con
+   * formControlName porque accede a `.value` y `.setValue` directos.
+   */
+  get temaIdControl(): FormControl<number | null> {
+    return this.form.controls.temaId as FormControl<number | null>;
+  }
+
   tipoSeleccionado = signal<TipoLeccion>('VIDEO');
-  // Tipo is immutable after creation: the update DTO doesn't carry it
-  // and the conditional fields wouldn't migrate cleanly anyway.
+  // Tipo is immutable after creation: the update DTO doesn't carry it.
   readonly esEdicion = computed(() => this.leccion() !== null);
 
   constructor() {
-    this.form.get('tipo')?.valueChanges.subscribe((val) => {
-      if (val) this.tipoSeleccionado.set(val as TipoLeccion);
+    this.form.controls.tipo.valueChanges.subscribe((val) => {
+      if (!val) return;
+      this.tipoSeleccionado.set(val);
+      this.applyValidatorsForTipo(val);
+      this.resetFieldsForTipo(val);
     });
+
+    // Set validators on initial load
+    effect(() => {
+      this.applyValidatorsForTipo(this.tipoSeleccionado());
+    });
+  }
+
+  private applyValidatorsForTipo(tipo: TipoLeccion): void {
+    const temaCtrl = this.form.controls.temaId;
+    const numCtrl = this.form.controls.numPreguntas;
+
+    if (tipo === 'TEST' || tipo === 'FLASHCARDS') {
+      temaCtrl.setValidators([Validators.required]);
+      numCtrl.setValidators([
+        Validators.required,
+        Validators.min(1),
+        Validators.max(50),
+      ]);
+    } else {
+      temaCtrl.clearValidators();
+      numCtrl.clearValidators();
+    }
+    temaCtrl.updateValueAndValidity({ emitEvent: false });
+    numCtrl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private resetFieldsForTipo(tipo: TipoLeccion): void {
+    // Limpia los campos del tipo previo para evitar payloads contaminados.
+    if (tipo !== 'VIDEO') {
+      this.form.patchValue(
+        { bunnyVideoId: '', duracionSegundos: null },
+        { emitEvent: false },
+      );
+    }
+    if (tipo !== 'TEXTO') {
+      this.form.patchValue({ contenidoMarkdown: '' }, { emitEvent: false });
+    }
+    if (tipo !== 'TEST' && tipo !== 'FLASHCARDS') {
+      this.form.patchValue(
+        {
+          temaId: null,
+          numPreguntas: null,
+          dificultad: null,
+          esDeRepaso: false,
+        },
+        { emitEvent: false },
+      );
+    }
   }
 
   ngOnChanges(): void {
@@ -225,11 +218,14 @@ export class LeccionFormDialogComponent implements OnChanges {
         tipo: l.tipo,
         bunnyVideoId: l.bunnyVideoId ?? '',
         duracionSegundos: l.duracionSegundos ?? null,
-        testPlantillaId: l.testPlantillaId ?? null,
-        mazoFlashcardsId: l.mazoFlashcardsId ?? null,
         contenidoMarkdown: l.contenidoMarkdown ?? '',
+        temaId: l.temaId ?? null,
+        numPreguntas: l.numPreguntas ?? 10,
+        dificultad: l.dificultad ?? null,
+        esDeRepaso: l.esDeRepaso ?? false,
       });
       this.tipoSeleccionado.set(l.tipo);
+      this.applyValidatorsForTipo(l.tipo);
     } else {
       this.form.reset({
         titulo: '',
@@ -237,11 +233,14 @@ export class LeccionFormDialogComponent implements OnChanges {
         tipo: 'VIDEO',
         bunnyVideoId: '',
         duracionSegundos: null,
-        testPlantillaId: null,
-        mazoFlashcardsId: null,
         contenidoMarkdown: '',
+        temaId: null,
+        numPreguntas: 10,
+        dificultad: null,
+        esDeRepaso: false,
       });
       this.tipoSeleccionado.set('VIDEO');
+      this.applyValidatorsForTipo('VIDEO');
     }
   }
 
@@ -266,17 +265,47 @@ export class LeccionFormDialogComponent implements OnChanges {
     const result: LeccionFormResult = {
       titulo: raw.titulo ?? '',
       orden: raw.orden ?? 0,
-      tipo: (raw.tipo ?? 'VIDEO') as TipoLeccion,
+      tipo: raw.tipo,
     };
-    if (result.tipo === 'VIDEO') {
-      result.bunnyVideoId = raw.bunnyVideoId ?? undefined;
-      result.duracionSegundos = raw.duracionSegundos ?? undefined;
-    } else if (result.tipo === 'TEST') {
-      result.testPlantillaId = raw.testPlantillaId ?? undefined;
-    } else if (result.tipo === 'FLASHCARDS') {
-      result.mazoFlashcardsId = raw.mazoFlashcardsId ?? undefined;
-    } else if (result.tipo === 'TEXTO') {
-      result.contenidoMarkdown = raw.contenidoMarkdown ?? undefined;
+    switch (result.tipo) {
+      case 'VIDEO':
+        result.bunnyVideoId = raw.bunnyVideoId ?? undefined;
+        result.duracionSegundos = raw.duracionSegundos ?? undefined;
+        break;
+      case 'TEXTO':
+        result.contenidoMarkdown = raw.contenidoMarkdown ?? undefined;
+        break;
+      case 'TEST':
+      case 'FLASHCARDS':
+        // BLOCKING-2 (codex review): validar explícitamente antes de emitir.
+        // Los reactive validators ya marcan el form invalid, pero un cambio
+        // futuro en la lógica de validators podría hacer que el form pase
+        // como valid y el backend devuelva 400. Esta guard cliente-side
+        // garantiza UX clara y bloquea el emit incluso si los validators
+        // se relajan accidentalmente.
+        if (raw.temaId == null) {
+          this.toast.warning(
+            'Selecciona un tema para lecciones TEST/FLASHCARDS',
+          );
+          return;
+        }
+        if (
+          raw.numPreguntas == null ||
+          raw.numPreguntas < 1 ||
+          raw.numPreguntas > 50
+        ) {
+          this.toast.warning('Indica número de preguntas entre 1 y 50');
+          return;
+        }
+        result.temaId = raw.temaId;
+        result.numPreguntas = raw.numPreguntas;
+        // null en dificultad significa "todas" — el backend lo interpreta
+        // como ausente. NO mandar el campo cuando es null.
+        if (raw.dificultad != null) {
+          result.dificultad = raw.dificultad;
+        }
+        result.esDeRepaso = !!raw.esDeRepaso;
+        break;
     }
     this.saved.emit(result);
   }

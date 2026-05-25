@@ -1,4 +1,15 @@
 <div class="leccion-page-container">
+  @if (isPreview()) {
+    <div
+      class="preview-banner"
+      data-testid="leccion-page-preview-banner"
+      role="status"
+    >
+      <i class="pi pi-eye"></i>
+      <span>Vista previa — sin permisos/progreso reales.</span>
+    </div>
+  }
+
   @if (loading()) {
     <div class="loading-state">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
@@ -50,40 +61,16 @@
           ></app-leccion-texto>
         }
         @case ("TEST") {
-          <div class="external-action">
-            <i class="pi pi-question-circle action-icon"></i>
-            <p>Esta lección es un test de preguntas.</p>
-            @if (leccionData()!.leccion.testPlantillaId) {
-              <button
-                pButton
-                label="Abrir test"
-                icon="pi pi-external-link"
-                class="p-button-primary"
-                (click)="abrirTest(leccionData()!.leccion.testPlantillaId!)"
-              ></button>
-            } @else {
-              <p class="text-secondary">Test no configurado.</p>
-            }
-          </div>
+          <app-leccion-test
+            [leccion]="leccionData()!.leccion"
+            [preview]="isPreview()"
+          ></app-leccion-test>
         }
         @case ("FLASHCARDS") {
-          <div class="external-action">
-            <i class="pi pi-clone action-icon"></i>
-            <p>Esta lección es un mazo de flashcards.</p>
-            @if (leccionData()!.leccion.mazoFlashcardsId) {
-              <button
-                pButton
-                label="Abrir flashcards"
-                icon="pi pi-external-link"
-                class="p-button-primary"
-                (click)="
-                  abrirFlashcards(leccionData()!.leccion.mazoFlashcardsId!)
-                "
-              ></button>
-            } @else {
-              <p class="text-secondary">Mazo no configurado.</p>
-            }
-          </div>
+          <app-leccion-flashcards
+            [leccion]="leccionData()!.leccion"
+            [preview]="isPreview()"
+          ></app-leccion-flashcards>
         }
         @default {
           <p class="text-secondary">Tipo de lección desconocido.</p>

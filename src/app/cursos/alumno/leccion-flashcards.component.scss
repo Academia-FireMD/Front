@@ -1,0 +1,32 @@
+.leccion-flashcards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+
+  &__cta,
+  &__repaso-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    max-width: 540px;
+    text-align: center;
+  }
+
+  &__icon,
+  &__repaso-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+  }
+
+  &__repaso-empty h3 {
+    margin: 0;
+    color: var(--text-color);
+  }
+
+  &__preview-hint {
+    color: var(--text-color-secondary);
+    font-size: 0.85rem;
+  }
+}

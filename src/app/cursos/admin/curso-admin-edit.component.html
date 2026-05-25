@@ -1,3 +1,5 @@
+<p-confirmDialog></p-confirmDialog>
+
 <div class="curso-edit">
   <!-- Toolbar -->
   <div class="curso-edit__toolbar">
@@ -14,40 +16,50 @@
         <p-tag [value]="c.estado" [severity]="estadoSeverity(c.estado)" />
       </div>
 
-      @if (c.estado === "BORRADOR") {
-        <p-button
-          label="Publicar"
-          icon="pi pi-send"
-          severity="success"
-          [loading]="publishing()"
-          (onClick)="publicar()"
-        />
-      }
-      @if (c.estado === "PUBLICADO") {
-        <p-button
-          label="Despublicar"
-          icon="pi pi-replay"
-          severity="secondary"
-          [loading]="saving()"
-          (onClick)="despublicar()"
-        />
-        <p-button
-          label="Archivar"
-          icon="pi pi-inbox"
-          severity="warning"
-          [loading]="saving()"
-          (onClick)="archivar()"
-        />
-      }
-      @if (c.estado === "ARCHIVADO") {
-        <p-button
-          label="Despublicar"
-          icon="pi pi-replay"
-          severity="secondary"
-          [loading]="saving()"
-          (onClick)="despublicar()"
-        />
-      }
+      <div class="curso-edit__toolbar-actions">
+        @if (c.estado === "BORRADOR") {
+          <app-async-button
+            label="Publicar"
+            icon="pi pi-send"
+            styleClass="p-button-success"
+            [action]="publicar"
+          ></app-async-button>
+        }
+        @if (c.estado === "PUBLICADO") {
+          <app-async-button
+            label="Despublicar"
+            icon="pi pi-replay"
+            styleClass="p-button-secondary"
+            [action]="despublicar"
+          ></app-async-button>
+          <app-async-button
+            label="Archivar"
+            icon="pi pi-inbox"
+            styleClass="p-button-warning"
+            [action]="archivar"
+          ></app-async-button>
+        }
+        @if (c.estado === "ARCHIVADO") {
+          <app-async-button
+            label="Despublicar"
+            icon="pi pi-replay"
+            styleClass="p-button-secondary"
+            [action]="despublicar"
+          ></app-async-button>
+        }
+
+        <div
+          class="curso-edit__preview-toggle"
+          data-testid="curso-edit-preview-toggle"
+        >
+          <label for="ce-preview-toggle">Ver como alumno</label>
+          <p-inputSwitch
+            inputId="ce-preview-toggle"
+            [ngModel]="previewMode()"
+            (ngModelChange)="togglePreview()"
+          ></p-inputSwitch>
+        </div>
+      </div>
     }
 
     @if (esNuevo()) {
@@ -59,6 +71,12 @@
     <div class="curso-edit__spinner">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
     </div>
+  } @else if (previewMode() && previewSlugResponse()) {
+    <app-curso-detail-page
+      [previewData]="previewSlugResponse()"
+      [previewMode]="true"
+      data-testid="curso-edit-preview"
+    ></app-curso-detail-page>
   } @else {
     <p-tabView>
       <!-- Tab 1: Metadatos -->
@@ -87,9 +105,9 @@
                 [attr.disabled]="!esNuevo() ? true : null"
               />
               @if (!esNuevo()) {
-                <small class="text-color-secondary"
-                  >El slug no se puede modificar después de la creación.</small
-                >
+                <small class="text-color-secondary">
+                  El slug no se puede modificar después de la creación.
+                </small>
               }
             </div>
 
@@ -106,15 +124,16 @@
             </div>
 
             <div class="field">
-              <label for="ce-precio">Precio (€)</label>
-              <p-inputNumber
-                inputId="ce-precio"
-                formControlName="precio"
-                mode="currency"
-                currency="EUR"
-                locale="es-ES"
-                class="w-full"
-              />
+              <label>Producto WooCommerce</label>
+              <app-woocommerce-product-picker
+                endpoint="cursos"
+                formControlName="wooProductId"
+                (selectionChange)="onWooProductSelected($event)"
+                data-testid="curso-edit-wc-picker"
+              ></app-woocommerce-product-picker>
+              <small class="text-color-secondary">
+                El precio se sincroniza desde WooCommerce automáticamente.
+              </small>
             </div>
 
             <div class="field">
@@ -140,13 +159,13 @@
           </div>
 
           <div class="curso-edit__form-actions">
-            <p-button
+            <app-async-button
               [label]="esNuevo() ? 'Crear curso' : 'Guardar cambios'"
               icon="pi pi-save"
-              [loading]="saving()"
               [disabled]="metadataForm.invalid"
-              (onClick)="saveMetadata()"
-            />
+              [action]="saveMetadata"
+              data-testid="curso-edit-save"
+            ></app-async-button>
           </div>
         </form>
       </p-tabPanel>
@@ -328,6 +347,7 @@
 <app-leccion-form-dialog
   [visible]="leccionDialogVisible()"
   [leccion]="leccionEditando()"
+  [oposicion]="oposicionCurso()"
   (saved)="onLeccionSaved($event)"
   (cancelled)="leccionDialogVisible.set(false)"
 />

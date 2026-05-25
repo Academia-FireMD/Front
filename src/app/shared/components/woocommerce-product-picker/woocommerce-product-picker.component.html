@@ -1,0 +1,51 @@
+<div class="wc-product-picker">
+  <p-dropdown
+    [options]="products()"
+    optionLabel="name"
+    optionValue="id"
+    [ngModel]="value()"
+    (ngModelChange)="onModelChange($event)"
+    [placeholder]="loading() ? 'Cargando productos…' : placeholder()"
+    [disabled]="isDisabled || loading()"
+    [showClear]="true"
+    [filter]="true"
+    filterBy="name,sku"
+    appendTo="body"
+    class="w-full"
+    [style]="{ width: '100%' }"
+    data-testid="wc-picker-dropdown"
+  >
+    <ng-template let-product pTemplate="item">
+      <div class="wc-product-picker__item">
+        <span class="wc-product-picker__name">{{ product.name }}</span>
+        @if (product.sku) {
+          <small class="wc-product-picker__sku">SKU {{ product.sku }}</small>
+        }
+      </div>
+    </ng-template>
+  </p-dropdown>
+
+  @if (selectedProduct() && precioFormateado()) {
+    <div class="wc-product-picker__price" data-testid="wc-picker-price">
+      Precio: {{ precioFormateado() }}
+    </div>
+  }
+
+  @if (error() && !loading()) {
+    <div
+      class="wc-product-picker__error"
+      role="alert"
+      data-testid="wc-picker-error"
+    >
+      <span>No se han podido cargar los productos.</span>
+      <button
+        type="button"
+        class="wc-product-picker__retry"
+        (click)="retry()"
+        data-testid="wc-picker-retry"
+      >
+        Reintentar
+      </button>
+    </div>
+  }
+</div>

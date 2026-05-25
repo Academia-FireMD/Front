@@ -1,0 +1,44 @@
+.wc-product-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.wc-product-picker__item {
+  display: flex;
+  flex-direction: column;
+}
+
+.wc-product-picker__name {
+  font-weight: 500;
+}
+
+.wc-product-picker__sku {
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+}
+
+.wc-product-picker__price {
+  font-size: 0.9rem;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.wc-product-picker__error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--red-500, #ef4444);
+  font-size: 0.85rem;
+}
+
+.wc-product-picker__retry {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 0.15rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}

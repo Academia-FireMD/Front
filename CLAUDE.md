@@ -73,3 +73,18 @@ src/app/
 - Login: si WP auth esta habilitado, intenta primero contra WP y luego local
 - Recuperar contrasena: detecta si el usuario es `WORDPRESS` y redirige a WP
 - Los datos de `authSource` vienen del backend
+
+## Norma: reutilizar antes de crear
+
+Antes de crear cualquier componente, directiva, pipe o service nuevo, audita el repo:
+
+1. `grep -rn "selector.*'app-X'" src/app/shared/` — ¿existe ya algo similar?
+2. Inspecciona modulos analogos al tuyo (examen, planificacion, test-de-preguntas).
+3. Si existe → reusa. Si va a usarse en >1 lugar → ponlo en `src/app/shared/`. Si es ad-hoc → vive en modulo local pero respetando patrones:
+   - `SharedGridComponent` para listas paginadas admin.
+   - `<app-async-button>` para acciones con loading state.
+   - `<p-confirmDialog>` para confirmaciones destructivas (NO `confirm()` nativo del navegador).
+   - `<p-dialog>` para modales (NO modales custom).
+   - `<app-tema-select>` para selectores de tema (acepta input `[oposicion]` para filtrar).
+   - `<app-woocommerce-product-picker>` para dropdowns de productos WC (ControlValueAccessor).
+4. Si vas a romper esta regla, justifica en code review con motivo concreto.

@@ -1,4 +1,14 @@
 <div class="curso-detail-container">
+  @if (isPreview()) {
+    <div
+      class="preview-banner"
+      data-testid="curso-detail-preview-banner"
+      role="status"
+    >
+      <i class="pi pi-eye"></i>
+      <span>Vista previa — sin permisos/progreso reales.</span>
+    </div>
+  }
   @if (loading()) {
     <div class="loading-state">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
@@ -95,9 +105,7 @@
                     }}</span>
                     @if (leccion.duracionSegundos) {
                       <span class="leccion-duracion">
-                        {{
-                          leccion.duracionSegundos / 60 | number: "1.0-0"
-                        }}
+                        {{ leccion.duracionSegundos / 60 | number: "1.0-0" }}
                         min
                       </span>
                     }

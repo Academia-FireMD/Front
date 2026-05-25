@@ -1,0 +1,41 @@
+<div class="leccion-flashcards">
+  @if (noFailedQuestions(); as payload) {
+    <div
+      class="leccion-flashcards__repaso-empty"
+      data-testid="leccion-flashcards-no-failed"
+      role="alert"
+    >
+      <i class="pi pi-book leccion-flashcards__repaso-icon"></i>
+      <h3>Esta lección es de repaso</h3>
+      <p>{{ payload.message }}</p>
+      <button
+        pButton
+        label="Ir a flashcards del tema"
+        icon="pi pi-arrow-right"
+        class="p-button-primary"
+        (click)="irAlTema()"
+        data-testid="leccion-flashcards-cta-tema"
+      ></button>
+    </div>
+  } @else {
+    <div class="leccion-flashcards__cta">
+      <i class="pi pi-clone leccion-flashcards__icon"></i>
+      <p>Esta lección es un mazo de flashcards.</p>
+      <button
+        pButton
+        label="Empezar flashcards"
+        icon="pi pi-play"
+        class="p-button-primary"
+        [loading]="starting()"
+        [disabled]="starting() || preview()"
+        (click)="empezar()"
+        data-testid="leccion-flashcards-start"
+      ></button>
+      @if (preview()) {
+        <small class="leccion-flashcards__preview-hint">
+          (Vista previa: la acción está deshabilitada.)
+        </small>
+      }
+    </div>
+  }
+</div>
