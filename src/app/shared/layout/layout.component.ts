@@ -212,12 +212,7 @@ export class LayoutComponent {
     isSuperadmin: boolean,
   ): AppMenuItem[] {
     return items
-      .filter(
-        (i) =>
-          isSuperadmin ||
-          !i.modulo ||
-          modulos[i.modulo] === true,
-      )
+      .filter((i) => isSuperadmin || !i.modulo || modulos[i.modulo] === true)
       .map((i) =>
         i.items
           ? {
@@ -368,6 +363,28 @@ export class LayoutComponent {
             label: 'Gestión de exámenes',
             icon: 'pi pi-file-edit',
             routerLink: '/app/examen',
+          },
+        ],
+      },
+      // Bug WL-admin-cursos (2026-05-25): las rutas /app/cursos-admin
+      // existen (lista + nuevo + editar) pero no estaban en el menú,
+      // por lo que admin no podía crear ni gestionar cursos desde la UI.
+      // Cada sub-curso puede tener lecciones tipo VIDEO con bunnyVideoId,
+      // que es la forma de subir "histórico de sesiones/tutorías".
+      {
+        label: 'Cursos',
+        collapsed: true,
+        modulo: ModuloApp.CURSOS,
+        items: [
+          {
+            label: 'Lista de cursos',
+            icon: 'pi pi-list',
+            routerLink: '/app/cursos-admin',
+          },
+          {
+            label: 'Crear curso',
+            icon: 'pi pi-plus',
+            routerLink: '/app/cursos-admin/nuevo',
           },
         ],
       },
