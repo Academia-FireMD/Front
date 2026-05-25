@@ -124,15 +124,14 @@ export class AppConfigService {
   }
 
   private async tryFetchConfig(): Promise<AppConfig | null> {
-    return this.fetchWithRetry<AppConfig>(
-      () => this.http.get<AppConfig>(`${environment.apiUrl}${APP_CONFIG_ENDPOINT}`),
+    return this.fetchWithRetry<AppConfig>(() =>
+      this.http.get<AppConfig>(`${environment.apiUrl}${APP_CONFIG_ENDPOINT}`),
     );
   }
 
   private async tryFetchModulos(): Promise<EstadoModulos | null> {
-    return this.fetchWithRetry<EstadoModulos>(
-      () =>
-        this.http.get<EstadoModulos>(`${environment.apiUrl}${MODULOS_ENDPOINT}`),
+    return this.fetchWithRetry<EstadoModulos>(() =>
+      this.http.get<EstadoModulos>(`${environment.apiUrl}${MODULOS_ENDPOINT}`),
     );
   }
 
@@ -271,13 +270,53 @@ export class AppConfigService {
   /**
    * Re-aplica CSS vars en `:root` y settea `document.title` con el appName
    * saneado. Llamado tras `load()` y tras cada `updateConfig()` exitoso.
+   *
+   * Bug WL-A — el código previo solo seteaba `--primary-color` y
+   * `--secondary-color`, pero PrimeNG (Aura/Lara theme) consume sus propias
+   * vars (`--p-primary-color`, `--primary-500`, etc) y la app combina vars
+   * legacy (`--primary-100..900`) en botones, gradientes, etc. Sin
+   * propagación, el branding solo afectaba algunos degradados de marketing
+   * pero NO botones, chips ni inputs.
+   *
+   * Estrategia: del hex base derivamos 11 shades (50-950) con curva de
+   * luminosidad simple, y los aplicamos a TODOS los aliases que el bundle
+   * referencia. PrimeNG Aura usa `--p-primary-{shade}`; legacy CSS usa
+   * `--primary-{shade}`; aplicamos ambos para coverage total.
    */
   applyCssVars(): void {
     if (typeof document === 'undefined') return;
     const cfg = this._appConfig();
     const root = document.documentElement;
+
+    // Legacy aliases (mantener para CSS existente que use --primary-color).
     root.style.setProperty('--primary-color', cfg.primaryColor);
     root.style.setProperty('--secondary-color', cfg.secondaryColor);
+
+    // PrimeNG + paleta full: 50..950 derivadas + alias single-color.
+    const primaryPalette = generateShades(cfg.primaryColor);
+    const secondaryPalette = generateShades(cfg.secondaryColor);
+    for (const [shade, value] of Object.entries(primaryPalette)) {
+      // PrimeNG Aura/Lara
+      root.style.setProperty(`--p-primary-${shade}`, value);
+      // legacy (PrimeFlex/PrimeNG v17 token style)
+      root.style.setProperty(`--primary-${shade}`, value);
+    }
+    for (const [shade, value] of Object.entries(secondaryPalette)) {
+      root.style.setProperty(`--p-secondary-${shade}`, value);
+      root.style.setProperty(`--secondary-${shade}`, value);
+    }
+
+    // Single-color aliases. PrimeNG button "primary" + similar usan
+    // `--p-primary-color` (texto del shade más oscuro) y
+    // `--p-primary-contrast-color` (texto encima del bg primario).
+    root.style.setProperty('--p-primary-color', cfg.primaryColor);
+    root.style.setProperty(
+      '--p-primary-contrast-color',
+      readableText(cfg.primaryColor),
+    );
+    root.style.setProperty('--p-primary-hover-color', primaryPalette['600']);
+    root.style.setProperty('--p-primary-active-color', primaryPalette['700']);
+
     document.title = this.sanitizeAppName(cfg.appName);
   }
 
@@ -288,7 +327,9 @@ export class AppConfigService {
   sanitizeAppName(name: string | null | undefined): string {
     const fallback = 'TecnikaFire';
     if (!name) return fallback;
-    const stripped = String(name).replace(/<[^>]*>/g, '').trim();
+    const stripped = String(name)
+      .replace(/<[^>]*>/g, '')
+      .trim();
     if (!stripped) return fallback;
     return stripped.length > 60 ? stripped.slice(0, 60) : stripped;
   }
@@ -326,4 +367,102 @@ export class AppConfigService {
 /** Factory para APP_INITIALIZER (multi). */
 export function appConfigInitFactory(service: AppConfigService) {
   return () => service.load();
+}
+
+/**
+ * Genera 11 shades (50..950) de un color hex base usando interpolación
+ * lineal sobre HSL. Devuelve un object con claves string. NO depende de
+ * librerías para no inflar bundle.
+ *
+ * shade 500 = color base.
+ * shade <500: interpolar hacia blanco (L=98 para 50, L=88 para 200, etc).
+ * shade >500: interpolar hacia negro (L=10 para 950, L=22 para 800, etc).
+ *
+ * Bug WL-A — necesario para que PrimeNG genere botones/chips coherentes
+ * con el branding del tenant.
+ */
+function generateShades(hex: string): Record<string, string> {
+  const { h, s, l: baseL } = hexToHsl(hex);
+  // Curva de luminosidad típica (Tailwind / PrimeNG Aura aprox).
+  const shades = {
+    '50': 96,
+    '100': 92,
+    '200': 84,
+    '300': 72,
+    '400': 60,
+    '500': baseL, // color base
+    '600': Math.max(0, baseL - 10),
+    '700': Math.max(0, baseL - 20),
+    '800': Math.max(0, baseL - 30),
+    '900': Math.max(0, baseL - 38),
+    '950': Math.max(0, baseL - 44),
+  };
+  const out: Record<string, string> = {};
+  for (const [k, l] of Object.entries(shades)) {
+    out[k] = hslToHex(h, s, l);
+  }
+  return out;
+}
+
+/**
+ * Devuelve `#000` o `#fff` según contraste con el color de fondo. Usado
+ * para `--p-primary-contrast-color` (texto sobre botón primario).
+ * Threshold YIQ (luma perceptual) en 128.
+ */
+function readableText(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? '#000000' : '#ffffff';
+}
+
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100;
+  l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  const toHex = (v: number) =>
+    Math.round((v + m) * 255)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }

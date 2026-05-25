@@ -14,6 +14,7 @@ import { CardModule } from 'primeng/card';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputTextModule } from 'primeng/inputtext';
 import { firstValueFrom } from 'rxjs';
+import { AppConfigService } from '../../../services/app-config.service';
 import { AuthService } from '../../../services/auth.service';
 import { AsyncButtonComponent } from '../../../shared/components/async-button/async-button.component';
 import { SharedModule } from '../../../shared/shared.module';
@@ -47,6 +48,7 @@ export class LoginComponent {
     private auth: AuthService,
     private router: Router,
     private toast: ToastrService,
+    private appConfigService: AppConfigService,
   ) {
     this.formGroup = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -59,6 +61,14 @@ export class LoginComponent {
       try {
         const { email, contrasenya } = this.formGroup.value;
         await firstValueFrom(this.auth.login$(email, contrasenya));
+
+        // Re-fetch app-config + modulos tras login. APP_INITIALIZER corrió
+        // con la sesión anterior (anon o ex-usuario) y el signal `estadoModulos`
+        // puede tener un snapshot stale — sin esto, el alumno seguía viendo
+        // tabs de módulos que el SUPERADMIN había deshabilitado mientras el
+        // alumno aún no había abierto la app. Bug WL-D detectado en QA
+        // 2026-05-25.
+        await this.appConfigService.load();
 
         // Si estamos en modo injected, emitir evento de login completado
         if (this.mode === 'injected') {

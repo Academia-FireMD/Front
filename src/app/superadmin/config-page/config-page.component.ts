@@ -15,7 +15,6 @@ import {
 } from '@angular/forms';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { ColorPickerModule } from 'primeng/colorpicker';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { FileUploadModule } from 'primeng/fileupload';
 import { InputSwitchModule } from 'primeng/inputswitch';
@@ -46,7 +45,6 @@ interface ModuloRow {
     FormsModule,
     ButtonModule,
     InputTextModule,
-    ColorPickerModule,
     FileUploadModule,
     InputSwitchModule,
     ConfirmDialogModule,
@@ -68,11 +66,7 @@ export class ConfigPageComponent {
   readonly brandingForm: FormGroup = this.fb.group({
     appName: [
       this.appConfigService.appConfig().appName,
-      [
-        Validators.required,
-        Validators.minLength(2),
-        Validators.maxLength(60),
-      ],
+      [Validators.required, Validators.minLength(2), Validators.maxLength(60)],
     ],
     primaryColor: [
       this.appConfigService.appConfig().primaryColor,

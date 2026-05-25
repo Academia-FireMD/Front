@@ -27,3 +27,28 @@
   max-height: 100%;
   object-fit: contain;
 }
+
+// Native <input type="color"> styling: Chrome/Firefox por defecto pinta
+// un swatch tamaño botón con borde gris feo. Reset visual mínimo para que
+// se vea como un swatch redondeado del color seleccionado.
+.color-swatch {
+  width: 44px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--surface-border, #cbd5e0);
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+
+  &::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+  &::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
+  }
+  &::-moz-color-swatch {
+    border: none;
+    border-radius: 5px;
+  }
+}

@@ -6,7 +6,9 @@
     <h2 class="text-xl font-semibold mb-3">Branding</h2>
     <form [formGroup]="brandingForm" (ngSubmit)="onSaveBranding()">
       <div class="field mb-3">
-        <label for="appName" class="block mb-1 font-medium">Nombre de la app</label>
+        <label for="appName" class="block mb-1 font-medium"
+          >Nombre de la app</label
+        >
         <input
           id="appName"
           pInputText
@@ -15,18 +17,36 @@
           maxlength="60"
           data-testid="input-appName"
         />
-        @if (brandingForm.get('appName')?.touched && brandingForm.get('appName')?.invalid) {
-          <small class="p-error block mt-1">Debe tener entre 2 y 60 caracteres</small>
+        @if (
+          brandingForm.get("appName")?.touched &&
+          brandingForm.get("appName")?.invalid
+        ) {
+          <small class="p-error block mt-1"
+            >Debe tener entre 2 y 60 caracteres</small
+          >
         }
       </div>
 
+      <!--
+        Bug WL-B: p-colorPicker formControlName="primaryColor" emite hex
+        SIN el `#` prefix, lo cual rompía el regex validator
+        `/^#[0-9A-Fa-f]{6}$/` y el FormControl quedaba INVALID en cuanto
+        movías el slider del picker — efectivamente "no funciona, siempre
+        muestra el mismo color".
+        Fix: usar `<input type="color">` nativo del browser que SIEMPRE
+        emite "#rrggbb" y mantiene perfecta sincronía con el FormControl.
+      -->
       <div class="field mb-3">
-        <label for="primaryColor" class="block mb-1 font-medium">Color primario</label>
+        <label for="primaryColor" class="block mb-1 font-medium"
+          >Color primario</label
+        >
         <div class="flex align-items-center gap-2">
-          <p-colorPicker
+          <input
+            type="color"
             formControlName="primaryColor"
+            class="color-swatch"
             data-testid="colorpicker-primary"
-          ></p-colorPicker>
+          />
           <input
             pInputText
             formControlName="primaryColor"
@@ -35,18 +55,27 @@
             data-testid="input-primaryColor"
           />
         </div>
-        @if (brandingForm.get('primaryColor')?.touched && brandingForm.get('primaryColor')?.invalid) {
-          <small class="p-error block mt-1">Formato hex inválido (ej: #FF6B35)</small>
+        @if (
+          brandingForm.get("primaryColor")?.touched &&
+          brandingForm.get("primaryColor")?.invalid
+        ) {
+          <small class="p-error block mt-1"
+            >Formato hex inválido (ej: #FF6B35)</small
+          >
         }
       </div>
 
       <div class="field mb-3">
-        <label for="secondaryColor" class="block mb-1 font-medium">Color secundario</label>
+        <label for="secondaryColor" class="block mb-1 font-medium"
+          >Color secundario</label
+        >
         <div class="flex align-items-center gap-2">
-          <p-colorPicker
+          <input
+            type="color"
             formControlName="secondaryColor"
+            class="color-swatch"
             data-testid="colorpicker-secondary"
-          ></p-colorPicker>
+          />
           <input
             pInputText
             formControlName="secondaryColor"
@@ -55,8 +84,13 @@
             data-testid="input-secondaryColor"
           />
         </div>
-        @if (brandingForm.get('secondaryColor')?.touched && brandingForm.get('secondaryColor')?.invalid) {
-          <small class="p-error block mt-1">Formato hex inválido (ej: #004E89)</small>
+        @if (
+          brandingForm.get("secondaryColor")?.touched &&
+          brandingForm.get("secondaryColor")?.invalid
+        ) {
+          <small class="p-error block mt-1"
+            >Formato hex inválido (ej: #004E89)</small
+          >
         }
       </div>
 
@@ -77,7 +111,11 @@
     <div class="flex align-items-start gap-4 mb-3">
       <div class="logo-preview-box">
         <img
-          [src]="logoPreview() ?? appConfigService.appConfig().logoUrl ?? fallbackLogo"
+          [src]="
+            logoPreview() ??
+            appConfigService.appConfig().logoUrl ??
+            fallbackLogo
+          "
           alt="Logo actual"
           class="logo-preview-img"
           (error)="onLogoError($event)"
@@ -125,7 +163,9 @@
     <h2 class="text-xl font-semibold mb-3">Módulos</h2>
     <div class="grid">
       @for (row of modulos(); track row.modulo) {
-        <div class="col-12 md:col-6 flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+        <div
+          class="col-12 md:col-6 flex align-items-center justify-content-between p-3 border-bottom-1 surface-border"
+        >
           <span class="font-medium">{{ row.label }}</span>
           <p-inputSwitch
             [ngModel]="row.enabled"
