@@ -18,6 +18,7 @@ import {
 } from '../../shared/models/release.model';
 import {
   Oposicion,
+  OPOSICION_LABELS,
   SuscripcionTipo,
 } from '../../shared/models/subscription.model';
 import { GroupsService } from '../../shared/services/groups.service';
@@ -532,13 +533,9 @@ export class ReleaseManagementComponent implements OnInit {
   }
 
   getOposiciones(): { label: string; value: string }[] {
-    return [
-      {
-        label: 'Valencia Ayuntamiento',
-        value: Oposicion.VALENCIA_AYUNTAMIENTO,
-      },
-      { label: 'CPBA Alicante', value: Oposicion.ALICANTE_CPBA },
-    ];
+    return Object.values(Oposicion)
+      .filter((op) => op !== Oposicion.GENERAL)
+      .map((op) => ({ label: OPOSICION_LABELS[op] || op, value: op }));
   }
 
   // Métodos para selector de usuarios
