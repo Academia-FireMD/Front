@@ -1,5 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -7,12 +14,16 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import {
-  CambiarPlanDto,
+  DetalleSuscripcion,
   PlanDisponible,
   SuscripcionManagementService,
+  SwitchOperationProgramada,
   ValidacionPlazo,
 } from '../../services/suscripcion-management.service';
-import { getPlanCssClass, getPlanLabel } from '../../shared/models/subscription.model';
+import {
+  getPlanCssClass,
+  getPlanLabel,
+} from '../../shared/models/subscription.model';
 
 @Component({
   selector: 'app-cambio-suscripcion',
@@ -32,7 +43,11 @@ import { getPlanCssClass, getPlanLabel } from '../../shared/models/subscription.
 export class CambioSuscripcionComponent implements OnInit {
   @Input() suscripcionId!: number;
   @Input() oposicion?: string;
-  @Input() planActual?: { sku: string | null; tipo: string; precio: number | null };
+  @Input() planActual?: {
+    sku: string | null;
+    tipo: string;
+    precio: number | null;
+  };
 
   @Output() cerrar = new EventEmitter<void>();
   @Output() cambioRealizado = new EventEmitter<void>();
@@ -40,6 +55,11 @@ export class CambioSuscripcionComponent implements OnInit {
   cargando = signal(true);
   procesando = signal(false);
   mostrarConfirmacion = signal(false);
+  mostrarConfirmacionCancelar = signal(false);
+  cancelando = signal(false);
+
+  /** Cambio programado pendiente (downgrade diferido). null si no hay ninguno. */
+  cambioProgramado = signal<SwitchOperationProgramada | null>(null);
 
   validacion: ValidacionPlazo | null = null;
   planes: PlanDisponible[] = [];
@@ -59,6 +79,7 @@ export class CambioSuscripcionComponent implements OnInit {
 
   private cargarDatos(): void {
     this.cargando.set(true);
+    this.cargarCambioProgramado();
     this.suscripcionService.validarPlazo(this.suscripcionId).subscribe({
       next: (v) => {
         this.validacion = v;
@@ -69,20 +90,36 @@ export class CambioSuscripcionComponent implements OnInit {
         }
       },
       error: (e) => {
-        this.errorMensaje = e.error?.message || 'No se pudo validar el plazo de modificación.';
+        this.errorMensaje =
+          e.error?.message || 'No se pudo validar el plazo de modificación.';
         this.cargando.set(false);
       },
     });
   }
 
+  /** Carga el detalle para detectar si hay un cambio programado (downgrade diferido). */
+  private cargarCambioProgramado(): void {
+    this.suscripcionService
+      .obtenerDetalleSuscripcion(this.suscripcionId)
+      .subscribe({
+        next: (detalle: DetalleSuscripcion) => {
+          this.cambioProgramado.set(detalle.switchOperationProgramada);
+        },
+        // Silencioso: el banner es informativo, no debe bloquear el flujo de cambio.
+        error: () => this.cambioProgramado.set(null),
+      });
+  }
+
   private cargarPlanes(): void {
     this.suscripcionService.obtenerPlanesDisponibles(this.oposicion).subscribe({
       next: (planes) => {
-        const planActualEnLista = planes.find(p => p.sku === this.planActual?.sku);
+        const planActualEnLista = planes.find(
+          (p) => p.sku === this.planActual?.sku,
+        );
         if (planActualEnLista) {
           this.planActualNombre = planActualEnLista.nombre;
         }
-        this.planes = planes.filter(p => p.sku !== this.planActual?.sku);
+        this.planes = planes.filter((p) => p.sku !== this.planActual?.sku);
         this.cargando.set(false);
       },
       error: () => {
@@ -114,22 +151,87 @@ export class CambioSuscripcionComponent implements OnInit {
     this.procesando.set(true);
     this.mostrarConfirmacion.set(false);
 
-    const dto: CambiarPlanDto = {
-      suscripcionId: this.suscripcionId,
-      nuevoSku: this.planSeleccionado.sku,
-      comentario: this.comentario || undefined,
-    };
+    this.suscripcionService
+      .cambiarSuscripcion(
+        this.suscripcionId,
+        this.planSeleccionado.sku,
+        this.comentario || undefined,
+      )
+      .subscribe({
+        next: (res) => {
+          this.procesando.set(false);
+          const summary =
+            res.modo === 'INMEDIATO'
+              ? 'Tu plan ya está activo'
+              : 'Cambio programado';
+          const detail =
+            res.modo === 'PROGRAMADO' && res.fechaAplicacion
+              ? `Se aplicará el ${new Date(res.fechaAplicacion).toLocaleDateString('es-ES')}. ${res.mensaje}`
+              : res.mensaje;
+          this.messageService.add({
+            severity: 'success',
+            summary,
+            detail,
+            life: 6000,
+          });
+          setTimeout(() => {
+            this.cambioRealizado.emit();
+            this.cerrar.emit();
+          }, 2000);
+        },
+        error: (e) => {
+          this.procesando.set(false);
+          const detalle =
+            e.error?.descripcion ||
+            e.error?.message ||
+            'No se pudo cambiar el plan.';
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error al cambiar plan',
+            detail: detalle,
+            life: 6000,
+          });
+        },
+      });
+  }
 
-    this.suscripcionService.cambiarPlan(dto).subscribe({
+  // ── Cancelar cambio programado ──────────────────
+  abrirConfirmacionCancelar(): void {
+    if (!this.cambioProgramado()) return;
+    this.mostrarConfirmacionCancelar.set(true);
+  }
+
+  confirmarCancelarCambioProgramado(): void {
+    const op = this.cambioProgramado();
+    if (!op) return;
+    this.cancelando.set(true);
+
+    this.suscripcionService.cancelarCambioProgramado(op.id).subscribe({
       next: (res) => {
-        this.procesando.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Plan actualizado', detail: res.mensaje, life: 6000 });
-        setTimeout(() => { this.cambioRealizado.emit(); this.cerrar.emit(); }, 2000);
+        this.cancelando.set(false);
+        this.mostrarConfirmacionCancelar.set(false);
+        this.cambioProgramado.set(null);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Cambio cancelado',
+          detail: res.mensaje,
+          life: 6000,
+        });
+        // Refrescar el detalle para reflejar el estado real (el banner ya desapareció).
+        this.cargarCambioProgramado();
       },
       error: (e) => {
-        this.procesando.set(false);
-        const detalle = e.error?.descripcion || e.error?.message || 'No se pudo cambiar el plan.';
-        this.messageService.add({ severity: 'error', summary: 'Error al cambiar plan', detail: detalle, life: 6000 });
+        this.cancelando.set(false);
+        const detalle =
+          e.error?.descripcion ||
+          e.error?.message ||
+          'No se pudo cancelar el cambio programado.';
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error al cancelar',
+          detail: detalle,
+          life: 6000,
+        });
       },
     });
   }
@@ -142,9 +244,16 @@ export class CambioSuscripcionComponent implements OnInit {
   getTipoBadgeSeverity = getPlanCssClass;
 
   getPeriodoLabel(plan: PlanDisponible): string {
-    const periodos: Record<string, string> = { month: 'mes', year: 'año', week: 'semana', day: 'día' };
+    const periodos: Record<string, string> = {
+      month: 'mes',
+      year: 'año',
+      week: 'semana',
+      day: 'día',
+    };
     const periodo = periodos[plan.billingPeriod] || 'mes';
-    return plan.billingInterval > 1 ? `${plan.billingInterval} ${periodo}s` : periodo;
+    return plan.billingInterval > 1
+      ? `${plan.billingInterval} ${periodo}s`
+      : periodo;
   }
 
   getProximaFechaPermitida(): Date | null {
