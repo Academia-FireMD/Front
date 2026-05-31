@@ -138,7 +138,7 @@ export class BunnyUploadComponent {
           this.uploading.set(false);
           this.toast.error(`Error al subir el vídeo: ${err.message ?? err}`);
         },
-        onProgress: (sent, total) => {
+        onProgress: (sent: number, total: number) => {
           this.progress.set(Math.round((sent / total) * 100));
         },
         onSuccess: () => {
