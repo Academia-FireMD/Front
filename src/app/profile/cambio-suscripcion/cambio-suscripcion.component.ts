@@ -16,6 +16,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import {
   DetalleSuscripcion,
   PlanDisponible,
+  PreviewCambioResponse,
   SuscripcionManagementService,
   SwitchOperationProgramada,
   ValidacionPlazo,
@@ -60,6 +61,9 @@ export class CambioSuscripcionComponent implements OnInit {
 
   /** Cambio programado pendiente (downgrade diferido). null si no hay ninguno. */
   cambioProgramado = signal<SwitchOperationProgramada | null>(null);
+
+  preview = signal<PreviewCambioResponse | null>(null);
+  cargandoPreview = signal(false);
 
   validacion: ValidacionPlazo | null = null;
   planes: PlanDisponible[] = [];
@@ -130,6 +134,26 @@ export class CambioSuscripcionComponent implements OnInit {
 
   seleccionarPlan(plan: PlanDisponible): void {
     this.planSeleccionado = plan;
+    this.preview.set(null);
+    if (!plan.sku) return;
+    this.cargandoPreview.set(true);
+    this.suscripcionService
+      .previewCambioSuscripcion(this.suscripcionId, plan.sku)
+      .subscribe({
+        next: (p) => {
+          this.preview.set(p);
+          this.cargandoPreview.set(false);
+        },
+        error: () => {
+          this.cargandoPreview.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'No se pudo calcular el cambio',
+            detail: 'Inténtalo de nuevo en unos segundos.',
+            life: 6000,
+          });
+        },
+      });
   }
 
   esPlanSeleccionado(plan: PlanDisponible): boolean {
@@ -261,6 +285,30 @@ export class CambioSuscripcionComponent implements OnInit {
     const d = new Date(this.validacion.proximoPago);
     d.setDate(d.getDate() - 5);
     return d;
+  }
+
+  puedeConfirmar(): boolean {
+    const p = this.preview();
+    if (!p) return false;
+    if (p.switchType === 'UPGRADE') {
+      // No dejar confirmar un upgrade cuyo coste no se pudo calcular (precio
+      // destino o fechas de ciclo no disponibles): requiereCobro:false NO es "gratis".
+      if (!p.costeCalculable) return false;
+      if (p.requiereCobro && !p.metodoPago.usable) return false;
+    }
+    return true;
+  }
+
+  labelBotonConfirmar(): string {
+    const p = this.preview();
+    if (!p) return 'Confirmar';
+    if (p.switchType === 'UPGRADE' && p.requiereCobro && p.prorrateo) {
+      return `Pagar ${p.prorrateo.importe
+        .toFixed(2)
+        .replace('.', ',')} € y cambiar`;
+    }
+    if (p.modo === 'PROGRAMADO') return 'Programar cambio';
+    return 'Cambiar';
   }
 
   readonly Math = Math;
