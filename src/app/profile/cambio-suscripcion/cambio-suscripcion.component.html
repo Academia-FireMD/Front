@@ -289,13 +289,14 @@
               >
             </div>
           }
-          <div class="fecha-efecto">
-            <i class="pi pi-calendar-plus"></i>
-            El cambio se aplicará en tu próximo ciclo de facturación (<strong>{{
-              validacion.proximoPago | date: "dd/MM/yyyy"
-            }}</strong
-            >)
-          </div>
+          @if (!preview() || preview()?.modo === "PROGRAMADO") {
+            <div class="fecha-efecto">
+              <i class="pi pi-calendar-plus"></i>
+              El cambio se aplicará en tu próximo ciclo de facturación (<strong
+                >{{ validacion.proximoPago | date: "dd/MM/yyyy" }}</strong
+              >)
+            </div>
+          }
         </div>
       }
 
