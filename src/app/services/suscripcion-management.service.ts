@@ -54,6 +54,34 @@ export interface CambioSuscripcionResponse {
   fechaAplicacion?: string;
 }
 
+export type AvisoCambioCodigo =
+  | 'FUERA_DE_PLAZO'
+  | 'COOLDOWN'
+  | 'LIMITE_CAMBIOS'
+  | 'OPOSICION_DUPLICADA'
+  | 'SIN_FECHAS_CICLO'
+  | 'PRECIO_NO_DISPONIBLE';
+
+export interface PreviewCambioResponse {
+  switchType: SwitchType;
+  modo: ModoCambio;
+  requiereCobro: boolean;
+  /**
+   * true = coste autoritativo (sea 0 o >0). false = no se pudo determinar el coste
+   * de un upgrade (precio destino NaN/ausente o fechas de ciclo inválidas). NUNCA
+   * tratar requiereCobro:false como "gratis": si costeCalculable es false en un
+   * UPGRADE, el confirmar DEBE bloquearse.
+   */
+  costeCalculable: boolean;
+  prorrateo?: { importe: number; diasRestantes: number; diasCiclo: number };
+  precioActual: number | null;
+  precioNuevo: number | null;
+  /** ISO date string; presente si modo === 'PROGRAMADO'. */
+  fechaAplicacion: string | null;
+  metodoPago: { usable: boolean; tarjetaMasked: string | null };
+  avisos: Array<{ codigo: AvisoCambioCodigo; mensaje: string }>;
+}
+
 /** Operación de cambio programada (downgrade diferido) pendiente de aplicar. */
 export interface SwitchOperationProgramada {
   id: string;
@@ -145,6 +173,17 @@ export class SuscripcionManagementService extends ApiBaseService {
     ) as Observable<CambioSuscripcionResponse>;
   }
 
+  /** Preview read-only del cambio: importe de prorrateo, tipo, método de pago. */
+  previewCambioSuscripcion(
+    suscripcionId: number,
+    nuevoSku: string,
+  ): Observable<PreviewCambioResponse> {
+    return this.post('/preview-cambio', {
+      suscripcionId,
+      nuevoSku,
+    }) as Observable<PreviewCambioResponse>;
+  }
+
   /**
    * @deprecated Usar `cambiarSuscripcion`. Se mantiene como alias para no romper
    * llamadas existentes; ahora devuelve la respuesta tipada completa.
@@ -199,9 +238,7 @@ export class SuscripcionManagementService extends ApiBaseService {
     ) as Observable<DetalleSuscripcion>;
   }
 
-  linkToWordPress(
-    password: string,
-  ): Observable<{
+  linkToWordPress(password: string): Observable<{
     success: boolean;
     message: string;
     woocommerceCustomerId?: string;
