@@ -452,11 +452,38 @@
             >
           </p>
         }
-        <p class="conf-fecha">
-          <i class="pi pi-calendar"></i>
-          El cambio se aplicará el
-          <strong>{{ validacion?.proximoPago | date: "dd/MM/yyyy" }}</strong>
-        </p>
+        @if (preview(); as p) {
+          @if (p.modo === "PROGRAMADO") {
+            <p class="conf-fecha">
+              <i class="pi pi-calendar"></i>
+              El cambio se aplicará el
+              <strong>{{ p.fechaAplicacion | date: "dd/MM/yyyy" }}</strong>
+              (tu próximo cobro). No se realiza ningún cobro ahora.
+            </p>
+          } @else if (p.requiereCobro && p.prorrateo) {
+            <p class="conf-fecha">
+              <i class="pi pi-credit-card"></i>
+              Se cobrarán
+              <strong>{{ p.prorrateo.importe | number: "1.2-2" }} €</strong>
+              ahora a tu tarjeta
+              @if (p.metodoPago.tarjetaMasked) {
+                <strong> {{ p.metodoPago.tarjetaMasked }}</strong>
+              }
+              y tu plan se activa al instante.
+            </p>
+          } @else {
+            <p class="conf-fecha">
+              <i class="pi pi-bolt"></i>
+              Tu plan se activa al instante, sin coste adicional.
+            </p>
+          }
+        } @else {
+          <p class="conf-fecha">
+            <i class="pi pi-calendar"></i>
+            El cambio se aplicará el
+            <strong>{{ validacion?.proximoPago | date: "dd/MM/yyyy" }}</strong>
+          </p>
+        }
         @if (comentario) {
           <div class="conf-comentario">
             <i class="pi pi-comment"></i>
