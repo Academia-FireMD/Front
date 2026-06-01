@@ -299,6 +299,13 @@
         </div>
       }
 
+      @if (cargandoPreview()) {
+        <div class="loading-preview">
+          <p-progressSpinner styleClass="small-spinner" />
+          <p>Calculando el coste de tu cambio…</p>
+        </div>
+      }
+
       <!-- Comentario -->
       <div class="comentario-section">
         <label for="comentario-cambio" class="comentario-label">
@@ -317,16 +324,74 @@
         <small class="comentario-counter">{{ comentario.length }}/1000</small>
       </div>
 
-      <!-- Nota informativa -->
-      <div class="important-note">
-        <i class="pi pi-info-circle"></i>
-        <div class="note-content">
-          <strong>Importante:</strong> El cambio de plan se aplicará en tu
-          próximo ciclo de facturación. Hasta entonces seguirás disfrutando de
-          tu plan actual. No se realizan cobros adicionales por el cambio de
-          plan.
-        </div>
-      </div>
+      <!-- Nota informativa dinámica según preview -->
+      @if (preview(); as p) {
+        @if (p.switchType === "UPGRADE" && !p.costeCalculable) {
+          <div class="important-note error">
+            <i class="pi pi-exclamation-triangle"></i>
+            <div class="note-content">
+              No pudimos calcular el coste de este cambio ahora mismo. Inténtalo
+              de nuevo en unos minutos o contacta con soporte.
+            </div>
+          </div>
+        } @else if (
+          p.switchType === "UPGRADE" && p.requiereCobro && p.prorrateo
+        ) {
+          <div class="important-note cobro">
+            <i class="pi pi-credit-card"></i>
+            <div class="note-content">
+              Se te cobrarán
+              <strong>{{ p.prorrateo.importe | number: "1.2-2" }} €</strong>
+              ahora (prorrateo de {{ p.prorrateo.diasRestantes }}/{{
+                p.prorrateo.diasCiclo
+              }}
+              días)
+              @if (p.metodoPago.tarjetaMasked) {
+                a tu tarjeta <strong>{{ p.metodoPago.tarjetaMasked }}</strong
+                >.
+              }
+              Tu plan se activa al instante.
+            </div>
+          </div>
+          @if (!p.metodoPago.usable) {
+            <div class="important-note error">
+              <i class="pi pi-exclamation-triangle"></i>
+              <div class="note-content">
+                No tienes una tarjeta guardada válida para el cobro. Actualiza
+                tu método de pago para mejorar tu plan.
+                <a
+                  [href]="wpBaseUrl + '/mi-cuenta/metodos-pago/'"
+                  target="_blank"
+                  rel="noopener"
+                  >Gestionar método de pago</a
+                >
+              </div>
+            </div>
+          }
+        } @else if (p.modo === "PROGRAMADO") {
+          <div class="important-note">
+            <i class="pi pi-calendar-plus"></i>
+            <div class="note-content">
+              El cambio se aplicará el
+              <strong>{{ p.fechaAplicacion | date: "dd/MM/yyyy" }}</strong>
+              (tu próximo cobro). No se realiza ningún cobro ahora.
+            </div>
+          </div>
+        } @else {
+          <div class="important-note">
+            <i class="pi pi-info-circle"></i>
+            <div class="note-content">
+              Tu cambio se aplica al instante, sin coste adicional.
+            </div>
+          </div>
+        }
+        @for (aviso of p.avisos; track aviso.codigo) {
+          <div class="important-note warning">
+            <i class="pi pi-exclamation-circle"></i>
+            <div class="note-content">{{ aviso.mensaje }}</div>
+          </div>
+        }
+      }
 
       <!-- Footer -->
       <div class="footer-actions">
@@ -410,9 +475,10 @@
         severity="secondary"
       />
       <p-button
-        label="Confirmar Cambio"
+        [label]="labelBotonConfirmar()"
         icon="pi pi-check"
         (onClick)="confirmarCambio()"
+        [disabled]="!puedeConfirmar() || procesando()"
         [loading]="procesando()"
         severity="primary"
       />

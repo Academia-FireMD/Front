@@ -21,6 +21,7 @@ import {
   SwitchOperationProgramada,
   ValidacionPlazo,
 } from '../../services/suscripcion-management.service';
+import { environment } from '../../../environments/environment';
 import {
   getPlanCssClass,
   getPlanLabel,
@@ -52,6 +53,8 @@ export class CambioSuscripcionComponent implements OnInit {
 
   @Output() cerrar = new EventEmitter<void>();
   @Output() cambioRealizado = new EventEmitter<void>();
+
+  wpBaseUrl = environment.wordpressUrl;
 
   cargando = signal(true);
   procesando = signal(false);
