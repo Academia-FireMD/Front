@@ -344,6 +344,20 @@
               de nuevo en unos minutos o contacta con soporte.
             </div>
           </div>
+        } @else if (p.credito && p.credito > 0) {
+          <div class="important-note cobro">
+            <i class="pi pi-wallet"></i>
+            <div class="note-content">
+              Tienes
+              <strong>{{ p.credito | number: "1.2-2" }} €</strong>
+              de crédito por tu plan actual. Cubre tu nuevo plan hasta el
+              <strong>{{ p.cubiertoHasta | date: "dd/MM/yyyy" }}</strong
+              >. <strong>No se te cobra nada ahora.</strong>
+              @if (p.precioNuevo) {
+                Después, {{ p.precioNuevo | number: "1.2-2" }} €.
+              }
+            </div>
+          </div>
         } @else if (
           p.switchType === "UPGRADE" && p.requiereCobro && p.prorrateo
         ) {

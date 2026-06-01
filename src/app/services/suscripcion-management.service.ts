@@ -80,6 +80,10 @@ export interface PreviewCambioResponse {
   fechaAplicacion: string | null;
   metodoPago: { usable: boolean; tarjetaMasked: string | null };
   avisos: Array<{ codigo: AvisoCambioCodigo; mensaje: string }>;
+  /** Cross-periodo (crédito→cobertura): crédito no consumido del plan actual (€). undefined si no aplica. */
+  credito?: number;
+  /** Cross-periodo: fecha ISO hasta la que el crédito cubre el plan nuevo. null si no se pudo calcular. */
+  cubiertoHasta?: string | null;
 }
 
 /** Operación de cambio programada (downgrade diferido) pendiente de aplicar. */

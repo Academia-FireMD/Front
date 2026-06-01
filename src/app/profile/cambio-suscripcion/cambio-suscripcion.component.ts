@@ -308,6 +308,7 @@ export class CambioSuscripcionComponent implements OnInit {
   labelBotonConfirmar(): string {
     const p = this.preview();
     if (!p) return 'Confirmar';
+    if (p.credito && p.credito > 0) return 'Cambiar (sin coste ahora)';
     if (p.switchType === 'UPGRADE' && p.requiereCobro && p.prorrateo) {
       return `Pagar ${p.prorrateo.importe
         .toFixed(2)
