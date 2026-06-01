@@ -72,6 +72,8 @@ export class CambioSuscripcionComponent implements OnInit {
   planes: PlanDisponible[] = [];
   planSeleccionado: PlanDisponible | null = null;
   planActualNombre: string | null = null;
+  /** Plan actual completo (de planes-disponibles) — para el periodo de facturación real. */
+  planActualPlan: PlanDisponible | null = null;
   comentario = '';
   errorMensaje = '';
 
@@ -125,6 +127,7 @@ export class CambioSuscripcionComponent implements OnInit {
         );
         if (planActualEnLista) {
           this.planActualNombre = planActualEnLista.nombre;
+          this.planActualPlan = planActualEnLista;
         }
         this.planes = planes.filter((p) => p.sku !== this.planActual?.sku);
         this.cargando.set(false);

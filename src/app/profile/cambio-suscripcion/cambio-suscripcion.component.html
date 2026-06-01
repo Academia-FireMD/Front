@@ -165,7 +165,11 @@
               <span class="precio-valor"
                 >{{ planActual.precio | number: "1.2-2" }} €</span
               >
-              <span class="precio-periodo">/mes</span>
+              <span class="precio-periodo"
+                >/{{
+                  planActualPlan ? getPeriodoLabel(planActualPlan) : "mes"
+                }}</span
+              >
             </div>
           </div>
         </div>
@@ -252,7 +256,9 @@
                 getTipoBadge(planActual.tipo)
               }}</span>
               <span class="comparativa-precio" *ngIf="planActual.precio"
-                >{{ planActual.precio | number: "1.2-2" }} €/mes</span
+                >{{ planActual.precio | number: "1.2-2" }} €/{{
+                  planActualPlan ? getPeriodoLabel(planActualPlan) : "mes"
+                }}</span
               >
             </div>
             <div class="comparativa-flecha">
