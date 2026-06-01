@@ -270,7 +270,10 @@
               >
             </div>
           </div>
-          @if (diferenciaPrecio !== null) {
+          @if (
+            diferenciaPrecio !== null &&
+            !(preview()?.requiereCobro && diferenciaPrecio <= 0)
+          ) {
             <div
               class="diferencia-precio"
               [class.diferencia-positiva]="diferenciaPrecio > 0"
