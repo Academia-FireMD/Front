@@ -96,7 +96,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Dialogs nuevos para usuarios WooCommerce
   showCambioPlanDialog = false;
-  showDescuentoDialog = false;
   suscripcionGestionWC: Suscripcion | null = null; // Suscripción activa en gestión WC
 
   mostrarDialogFacturas = false;
@@ -857,11 +856,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
           icon: 'pi pi-refresh',
           command: () => this.abrirCambioPlanWC(suscripcion),
         });
-        menuItems.push({
-          label: 'Aplicar descuento',
-          icon: 'pi pi-ticket',
-          command: () => this.abrirDescuentoWC(suscripcion),
-        });
+        // "Aplicar descuento" retirado del menú (Spec A 2026-06-02). El componente
+        // y los endpoints se conservan en el código por si vuelve.
         if (!(suscripcion as any).cancelacionProgramada) {
           menuItems.push({
             label: 'Dar de baja',
@@ -905,25 +901,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.showCambioPlanDialog = true;
   }
 
-  abrirDescuentoWC(suscripcion: Suscripcion): void {
-    this.suscripcionGestionWC = suscripcion;
-    this.showDescuentoDialog = true;
-  }
-
   cerrarCambioPlanDialog(): void {
     this.showCambioPlanDialog = false;
     this.suscripcionGestionWC = null;
     this.store.dispatch(UserActions.loadUser());
-  }
-
-  cerrarDescuentoDialog(): void {
-    this.showDescuentoDialog = false;
-    this.suscripcionGestionWC = null;
-    this.store.dispatch(UserActions.loadUser());
-  }
-
-  gestionarEnWordPress(): void {
-    this.showCambioSuscripcionDialog = true;
   }
 
   // Abrir tienda de WordPress

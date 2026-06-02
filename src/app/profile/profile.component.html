@@ -407,14 +407,6 @@
                 class="flex flex-column gap-2"
                 *ngIf="isLinkedToWordPress() && hasActiveSubscription()"
               >
-                <!-- <p-button
-                  label="Gestionar suscripciones"
-                  icon="pi pi-external-link"
-                  styleClass="p-button-outlined w-full"
-                  (onClick)="gestionarEnWordPress()"
-                  pTooltip="Abre tu cuenta de WordPress para gestionar tus suscripciones"
-                  tooltipPosition="top"
-                ></p-button> -->
                 <p-button
                   label="Añadir más planes"
                   icon="pi pi-shopping-cart"
@@ -846,8 +838,8 @@
     >
       <i class="pi pi-info-circle text-blue-500 mt-1"></i>
       <span class="text-sm text-blue-700 line-height-3"
-        >Al vincular tu cuenta podrás cambiar de plan, aplicar descuentos y
-        gestionar tu suscripción sin salir de la plataforma.</span
+        >Al vincular tu cuenta podrás cambiar de plan y gestionar tu suscripción
+        sin salir de la plataforma.</span
       >
     </div>
     <div class="flex gap-3 w-full justify-content-center">
@@ -913,24 +905,9 @@
   ></app-cambio-suscripcion>
 </p-dialog>
 
-<!-- Dialog Descuento WooCommerce -->
-<p-dialog
-  header="Gestionar Descuento"
-  [(visible)]="showDescuentoDialog"
-  [modal]="true"
-  [closable]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '95vw', maxWidth: '700px' }"
-  (onHide)="cerrarDescuentoDialog()"
->
-  <app-descuento-suscripcion
-    *ngIf="showDescuentoDialog && suscripcionGestionWC"
-    [suscripcionId]="suscripcionGestionWC!.id"
-    (cerrar)="cerrarDescuentoDialog()"
-    (descuentoCambiado)="cerrarDescuentoDialog()"
-  ></app-descuento-suscripcion>
-</p-dialog>
+<!-- Dialog "Gestionar Descuento" retirado (Spec A 2026-06-02): el flujo de cupones
+     se oculta por ahora. El componente DescuentoSuscripcionComponent y los endpoints
+     /aplicar-descuento se conservan en el código por si vuelve. -->
 
 <!-- Dialog de Confirmación Baja -->
 <p-dialog
