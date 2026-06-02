@@ -165,11 +165,7 @@
               <span class="precio-valor"
                 >{{ planActual.precio | number: "1.2-2" }} €</span
               >
-              <span class="precio-periodo"
-                >/{{
-                  planActualPlan ? getPeriodoLabel(planActualPlan) : "mes"
-                }}</span
-              >
+              <span class="precio-periodo">/{{ getPeriodoLabelActual() }}</span>
             </div>
           </div>
         </div>
@@ -257,7 +253,7 @@
               }}</span>
               <span class="comparativa-precio" *ngIf="planActual.precio"
                 >{{ planActual.precio | number: "1.2-2" }} €/{{
-                  planActualPlan ? getPeriodoLabel(planActualPlan) : "mes"
+                  getPeriodoLabelActual()
                 }}</span
               >
             </div>
@@ -277,6 +273,7 @@
             </div>
           </div>
           @if (
+            !cargandoPreview() &&
             diferenciaPrecio !== null &&
             !(preview()?.requiereCobro && diferenciaPrecio <= 0) &&
             !preview()?.credito

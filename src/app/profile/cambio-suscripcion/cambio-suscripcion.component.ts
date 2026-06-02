@@ -286,6 +286,20 @@ export class CambioSuscripcionComponent implements OnInit {
       : periodo;
   }
 
+  /**
+   * Etiqueta de periodo del plan ACTUAL. Si está en la lista de planes disponibles usa
+   * su billingPeriod; si no (p.ej. VALENCIA-BASIC-YEARLY-GENERIC, que no es destino
+   * seleccionable y no está en la lista), deriva del SKU para no etiquetar un plan anual
+   * como "/mes".
+   */
+  getPeriodoLabelActual(): string {
+    if (this.planActualPlan) return this.getPeriodoLabel(this.planActualPlan);
+    const sku = (this.planActual?.sku || '').toUpperCase();
+    if (sku.includes('YEARLY') || sku.includes('ANUAL')) return 'año';
+    if (sku.includes('MONTHLY') || sku.includes('MENSUAL')) return 'mes';
+    return 'mes';
+  }
+
   getProximaFechaPermitida(): Date | null {
     if (!this.validacion?.proximoPago) return null;
     const d = new Date(this.validacion.proximoPago);
