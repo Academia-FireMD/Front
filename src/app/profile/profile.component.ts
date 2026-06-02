@@ -928,6 +928,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .map((s) => s.oposicion);
   }
 
+  /**
+   * Suscripciones que se muestran en el listado del perfil: solo las "vivas"
+   * (ACTIVE + PENDING_CANCEL = cancelación programada). Las CANCELLED/EXPIRED
+   * se ocultan porque ya no dan acceso y solo ensucian la vista.
+   */
+  get suscripcionesVisibles(): Suscripcion[] {
+    return (this.user?.suscripciones ?? []).filter((s) =>
+      isSubscriptionAccessible(s.status),
+    );
+  }
+
   // Abrir tienda de WordPress
   abrirTiendaWordPress(): void {
     window.open(environment.wooCommerceUrl, '_blank');

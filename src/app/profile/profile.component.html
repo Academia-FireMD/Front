@@ -208,8 +208,8 @@
           </div>
 
           <div class="card-content">
-            <!-- Si no hay suscripciones -->
-            <div class="no-subscription" *ngIf="!user.suscripciones?.length">
+            <!-- Si no hay suscripciones VIVAS (activas o con cancelación programada) -->
+            <div class="no-subscription" *ngIf="!suscripcionesVisibles.length">
               <i class="pi pi-info-circle"></i>
               <h3>Sin suscripción activa</h3>
               <p>No tienes ninguna suscripción activa en este momento.</p>
@@ -222,13 +222,14 @@
               </a>
             </div>
 
-            <!-- Si hay suscripciones -->
+            <!-- Si hay suscripciones VIVAS. Las CANCELLED/EXPIRED se ocultan (solo se
+                 muestran ACTIVE y PENDING_CANCEL = cancelación programada). -->
             <div
               class="subscription-details"
-              *ngIf="user.suscripciones?.length"
+              *ngIf="suscripcionesVisibles.length"
             >
               <div
-                *ngFor="let suscripcion of user.suscripciones"
+                *ngFor="let suscripcion of suscripcionesVisibles"
                 class="subscription-card-item"
                 [ngClass]="{
                   'status-active':
