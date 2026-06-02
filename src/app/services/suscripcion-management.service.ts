@@ -60,7 +60,8 @@ export type AvisoCambioCodigo =
   | 'LIMITE_CAMBIOS'
   | 'OPOSICION_DUPLICADA'
   | 'SIN_FECHAS_CICLO'
-  | 'PRECIO_NO_DISPONIBLE';
+  | 'PRECIO_NO_DISPONIBLE'
+  | 'CAMBIO_NO_DISPONIBLE';
 
 export interface PreviewCambioResponse {
   switchType: SwitchType;

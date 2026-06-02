@@ -314,7 +314,8 @@ export class CambioSuscripcionComponent implements OnInit {
       (a) =>
         a.codigo === 'COOLDOWN' ||
         a.codigo === 'LIMITE_CAMBIOS' ||
-        a.codigo === 'FUERA_DE_PLAZO',
+        a.codigo === 'FUERA_DE_PLAZO' ||
+        a.codigo === 'CAMBIO_NO_DISPONIBLE',
     );
     if (bloqueado) return false;
     if (p.switchType === 'UPGRADE') {

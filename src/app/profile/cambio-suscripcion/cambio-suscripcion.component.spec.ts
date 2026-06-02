@@ -122,6 +122,18 @@ describe('CambioSuscripcionComponent', () => {
     expect(component.puedeConfirmar()).toBe(false);
   });
 
+  // gating: aviso CAMBIO_NO_DISPONIBLE (downgrade/cross con prorrateo off) → bloquea (codex P2)
+  it('aviso CAMBIO_NO_DISPONIBLE bloquea el confirmar', () => {
+    component.preview.set({
+      ...UPGRADE_PREVIEW,
+      switchType: 'DOWNGRADE',
+      costeCalculable: false,
+      requiereCobro: false,
+      avisos: [{ codigo: 'CAMBIO_NO_DISPONIBLE', mensaje: 'no disponible' }],
+    });
+    expect(component.puedeConfirmar()).toBe(false);
+  });
+
   // label del botón por tipo
   it('etiqueta del botón: upgrade muestra "Pagar X,XX € y cambiar"', () => {
     component.preview.set({
