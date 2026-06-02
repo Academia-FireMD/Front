@@ -891,23 +891,19 @@
   [style]="{ width: '95vw', maxWidth: '1100px' }"
   (onHide)="cerrarCambioPlanDialog()"
 >
-  <app-cambio-suscripcion
+  <app-gestionar-plan
     *ngIf="showCambioPlanDialog && suscripcionGestionWC"
-    [suscripcionId]="suscripcionGestionWC!.id"
-    [oposicion]="suscripcionGestionWC!.oposicion"
-    [planActual]="{
-      sku: suscripcionGestionWC!.sku ?? null,
-      tipo: suscripcionGestionWC!.tipo,
-      precio: suscripcionGestionWC!.monthlyPrice ?? null,
-    }"
+    modo="cambiar"
+    [suscripcion]="suscripcionGestionWC"
+    [oposicionesContratadas]="oposicionesContratadas"
     (cerrar)="cerrarCambioPlanDialog()"
-    (cambioRealizado)="cerrarCambioPlanDialog()"
-  ></app-cambio-suscripcion>
+    (realizado)="cerrarCambioPlanDialog()"
+  ></app-gestionar-plan>
 </p-dialog>
 
-<!-- Dialog "Añadir más planes" (alta in-app en oposición no contratada, COF Redsys) -->
+<!-- Dialog "Añadir plan" (alta in-app en oposición no contratada, COF Redsys) -->
 <p-dialog
-  header="Añadir más planes"
+  header="Añadir plan"
   [(visible)]="showAnadirPlanDialog"
   [modal]="true"
   [closable]="true"
@@ -916,12 +912,13 @@
   [style]="{ width: '95vw', maxWidth: '720px' }"
   (onHide)="cerrarAnadirPlanDialog()"
 >
-  <app-anadir-plan
+  <app-gestionar-plan
     *ngIf="showAnadirPlanDialog"
+    modo="anadir"
     [oposicionesContratadas]="oposicionesContratadas"
     (cerrar)="cerrarAnadirPlanDialog()"
-    (planAnadido)="cerrarAnadirPlanDialog()"
-  ></app-anadir-plan>
+    (realizado)="cerrarAnadirPlanDialog()"
+  ></app-gestionar-plan>
 </p-dialog>
 
 <!-- Dialog "Gestionar Descuento" retirado (Spec A 2026-06-02): el flujo de cupones
