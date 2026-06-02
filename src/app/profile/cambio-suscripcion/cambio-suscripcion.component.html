@@ -278,7 +278,8 @@
           </div>
           @if (
             diferenciaPrecio !== null &&
-            !(preview()?.requiereCobro && diferenciaPrecio <= 0)
+            !(preview()?.requiereCobro && diferenciaPrecio <= 0) &&
+            !preview()?.credito
           ) {
             <div
               class="diferencia-precio"
