@@ -117,6 +117,16 @@ export interface CuponActivo {
   discount: string;
 }
 
+/** Respuesta del endpoint POST /suscripcion-management/anadir-plan. */
+export interface AnadirPlanResponse {
+  success: boolean;
+  /** true = el alumno NO tiene COF usable → hay que llevarlo al checkout de WC. */
+  requiereCheckout?: boolean;
+  /** Id de la `Suscripcion` local creada cuando success && !requiereCheckout. */
+  suscripcionId?: number;
+  mensaje: string;
+}
+
 export interface DetalleSuscripcion {
   id: number;
   tipo: string;
@@ -235,6 +245,17 @@ export class SuscripcionManagementService extends ApiBaseService {
     return this.get(`/planes-disponibles${params}`) as Observable<
       PlanDisponible[]
     >;
+  }
+
+  /**
+   * Da de alta al alumno en una oposición que aún NO tiene, cobrando la 1ª cuota
+   * con su tarjeta guardada (COF Redsys) en 1 clic. Si el alumno no tiene COF usable,
+   * el backend responde `{ requiereCheckout: true }` y el front lo lleva al checkout de WC.
+   */
+  anadirPlan(nuevoSku: string): Observable<AnadirPlanResponse> {
+    return this.post('/anadir-plan', {
+      nuevoSku,
+    }) as Observable<AnadirPlanResponse>;
   }
 
   obtenerDetalleSuscripcion(

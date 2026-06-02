@@ -98,6 +98,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   showCambioPlanDialog = false;
   suscripcionGestionWC: Suscripcion | null = null; // Suscripción activa en gestión WC
 
+  // Dialog "Añadir más planes" (alta in-app en una oposición no contratada, COF Redsys)
+  showAnadirPlanDialog = false;
+
   mostrarDialogFacturas = false;
 
   // Control de subdialogs para baja
@@ -905,6 +908,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.showCambioPlanDialog = false;
     this.suscripcionGestionWC = null;
     this.store.dispatch(UserActions.loadUser());
+  }
+
+  // ── Diálogo "Añadir más planes" (alta in-app COF) ──────────────────
+  abrirAnadirPlanDialog(): void {
+    this.showAnadirPlanDialog = true;
+  }
+
+  cerrarAnadirPlanDialog(): void {
+    this.showAnadirPlanDialog = false;
+    this.store.dispatch(UserActions.loadUser());
+  }
+
+  /** Oposiciones en las que el alumno ya tiene una suscripción activa (ACTIVE/PENDING_CANCEL). */
+  get oposicionesContratadas(): Oposicion[] {
+    const subs = this.user?.suscripciones ?? [];
+    return subs
+      .filter((s) => isSubscriptionAccessible(s.status))
+      .map((s) => s.oposicion);
   }
 
   // Abrir tienda de WordPress

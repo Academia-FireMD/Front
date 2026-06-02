@@ -1,0 +1,204 @@
+.anadir-plan-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: 0.5rem;
+
+  // ── Header ──────────────────────────────────
+  .header-section {
+    text-align: center;
+    padding: 1.25rem 0;
+    border-bottom: 2px solid var(--surface-border);
+
+    .header-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+      i {
+        font-size: 2.25rem;
+        color: white;
+      }
+
+      &--blue {
+        background: linear-gradient(135deg, var(--red-500), var(--red-400));
+      }
+    }
+
+    .header-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      color: var(--text-color);
+    }
+
+    .header-subtitle {
+      font-size: 1rem;
+      color: var(--text-color-secondary);
+      margin: 0;
+      line-height: 1.6;
+    }
+  }
+
+  // ── Pasos del selector ──────────────────────
+  .paso-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    .paso-label {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text-color);
+
+      .paso-numero {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--red-500);
+        color: white;
+        font-size: 0.875rem;
+        font-weight: 700;
+      }
+    }
+  }
+
+  // ── Carga inline ────────────────────────────
+  .loading-inline {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-color-secondary);
+
+    .small-spinner {
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  // ── Sin planes ──────────────────────────────
+  .no-planes {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--surface-100);
+    border-radius: 12px;
+    color: var(--text-color-secondary);
+
+    p {
+      margin: 0;
+    }
+
+    i {
+      font-size: 1.5rem;
+      color: var(--blue-400);
+    }
+  }
+
+  // ── Resumen del plan elegido ────────────────
+  .plan-resumen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--surface-100);
+    border-radius: 12px;
+    border: 2px solid var(--surface-border);
+
+    .plan-resumen-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .plan-resumen-nombre {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    .plan-resumen-precio {
+      .precio-valor {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-color);
+      }
+      .precio-periodo {
+        font-size: 0.875rem;
+        color: var(--text-color-secondary);
+        margin-left: 2px;
+      }
+    }
+  }
+
+  // ── Nota informativa (fallback sin COF) ─────
+  .important-note {
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--blue-50);
+    border-radius: 12px;
+    border: 1px solid var(--blue-200);
+
+    &.cobro {
+      background: var(--orange-50);
+      border-color: var(--orange-200);
+      > i {
+        color: var(--orange-500);
+      }
+    }
+
+    > i {
+      font-size: 1.5rem;
+      color: var(--blue-500);
+      flex-shrink: 0;
+      margin-top: 0.125rem;
+    }
+
+    .note-content {
+      color: var(--text-color-secondary);
+      line-height: 1.6;
+      strong {
+        color: var(--text-color);
+        font-weight: 600;
+      }
+    }
+  }
+
+  // ── Footer ───────────────────────────────────
+  .footer-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--surface-border);
+
+    .cancel-button,
+    .confirm-button {
+      min-width: 180px;
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      .cancel-button,
+      .confirm-button {
+        width: 100%;
+      }
+    }
+  }
+
+  @import "../../shared/styles/plan-badge";
+}

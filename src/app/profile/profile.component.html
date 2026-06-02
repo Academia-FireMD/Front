@@ -411,7 +411,7 @@
                   label="Añadir más planes"
                   icon="pi pi-shopping-cart"
                   styleClass="p-button-text w-full"
-                  (onClick)="abrirTiendaWordPress()"
+                  (onClick)="abrirAnadirPlanDialog()"
                 ></p-button>
               </div>
               <!-- Aviso informativo sobre cancelaciones -->
@@ -903,6 +903,25 @@
     (cerrar)="cerrarCambioPlanDialog()"
     (cambioRealizado)="cerrarCambioPlanDialog()"
   ></app-cambio-suscripcion>
+</p-dialog>
+
+<!-- Dialog "Añadir más planes" (alta in-app en oposición no contratada, COF Redsys) -->
+<p-dialog
+  header="Añadir más planes"
+  [(visible)]="showAnadirPlanDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '95vw', maxWidth: '720px' }"
+  (onHide)="cerrarAnadirPlanDialog()"
+>
+  <app-anadir-plan
+    *ngIf="showAnadirPlanDialog"
+    [oposicionesContratadas]="oposicionesContratadas"
+    (cerrar)="cerrarAnadirPlanDialog()"
+    (planAnadido)="cerrarAnadirPlanDialog()"
+  ></app-anadir-plan>
 </p-dialog>
 
 <!-- Dialog "Gestionar Descuento" retirado (Spec A 2026-06-02): el flujo de cupones
