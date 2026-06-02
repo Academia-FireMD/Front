@@ -84,6 +84,8 @@ export interface PreviewCambioResponse {
   credito?: number;
   /** Cross-periodo: fecha ISO hasta la que el crédito cubre el plan nuevo. null si no se pudo calcular. */
   cubiertoHasta?: string | null;
+  cambiosRestantes?: number;
+  horasRestantesCooldown?: number;
 }
 
 /** Operación de cambio programada (downgrade diferido) pendiente de aplicar. */

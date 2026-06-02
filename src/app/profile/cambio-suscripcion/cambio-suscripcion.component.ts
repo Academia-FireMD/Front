@@ -310,6 +310,13 @@ export class CambioSuscripcionComponent implements OnInit {
   puedeConfirmar(): boolean {
     const p = this.preview();
     if (!p) return false;
+    const bloqueado = p.avisos?.some(
+      (a) =>
+        a.codigo === 'COOLDOWN' ||
+        a.codigo === 'LIMITE_CAMBIOS' ||
+        a.codigo === 'FUERA_DE_PLAZO',
+    );
+    if (bloqueado) return false;
     if (p.switchType === 'UPGRADE') {
       // No dejar confirmar un upgrade cuyo coste no se pudo calcular (precio
       // destino o fechas de ciclo no disponibles): requiereCobro:false NO es "gratis".

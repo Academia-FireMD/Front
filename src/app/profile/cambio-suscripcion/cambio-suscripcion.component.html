@@ -407,6 +407,23 @@
             </div>
           </div>
         }
+        @if (p.cambiosRestantes !== undefined && p.cambiosRestantes <= 1) {
+          <div class="important-note warning">
+            <i class="pi pi-exclamation-circle"></i>
+            <div class="note-content">
+              @if (p.cambiosRestantes === 0) {
+                Has alcanzado el máximo de cambios de plan este mes.
+              } @else {
+                Te queda <strong>{{ p.cambiosRestantes }}</strong> cambio de
+                plan este mes.
+              }
+              @if (p.horasRestantesCooldown && p.horasRestantesCooldown > 0) {
+                Podrás cambiar de nuevo en
+                <strong>{{ p.horasRestantesCooldown }}h</strong>.
+              }
+            </div>
+          </div>
+        }
         @for (aviso of p.avisos; track aviso.codigo) {
           <div class="important-note warning">
             <i class="pi pi-exclamation-circle"></i>
