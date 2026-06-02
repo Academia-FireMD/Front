@@ -11,7 +11,8 @@
     </h1>
     <p class="header-subtitle">
       @if (modo === "cambiar") {
-        Elige la oposición y el plan al que deseas cambiar tu suscripción.
+        Elige el nuevo plan para tu suscripción. Para cambiar de oposición, usa
+        "Cambiar oposición".
       } @else {
         Date de alta en una nueva oposición sin salir de la plataforma. Pagas la
         primera cuota con tu tarjeta guardada en 1 clic.
@@ -19,36 +20,47 @@
     </p>
   </div>
 
-  <!-- Paso 1: chips de oposición -->
-  <div class="paso-section">
-    <span class="paso-label">
-      <span class="paso-numero">1</span> Elige la oposición
-    </span>
-    @if (chipsOposicion.length === 0) {
-      <div class="no-planes">
-        <i class="pi pi-info-circle"></i>
-        <p>No hay oposiciones disponibles para esta acción ahora mismo.</p>
-      </div>
-    } @else {
-      <div class="chips-grid">
-        @for (chip of chipsOposicion; track chip.value) {
-          <button
-            type="button"
-            class="oposicion-chip"
-            [class.selected]="esChipSeleccionado(chip.value)"
-            [disabled]="procesando()"
-            (click)="seleccionarOposicion(chip.value)"
-          >
-            <i class="pi pi-map-marker"></i>
-            <span>{{ chip.label }}</span>
-            @if (esChipSeleccionado(chip.value)) {
-              <i class="pi pi-check-circle chip-check"></i>
-            }
-          </button>
-        }
-      </div>
-    }
-  </div>
+  <!-- Paso 1: chips de oposición. SOLO en modo AÑADIR: en cambiar la oposición es FIJA
+       (la de la suscripción) y el cambio de oposición es la acción separada. -->
+  @if (modo === "anadir") {
+    <div class="paso-section">
+      <span class="paso-label">
+        <span class="paso-numero">1</span> Elige la oposición
+      </span>
+      @if (chipsOposicion.length === 0) {
+        <div class="no-planes">
+          <i class="pi pi-info-circle"></i>
+          <p>No hay oposiciones disponibles para esta acción ahora mismo.</p>
+        </div>
+      } @else {
+        <div class="chips-grid">
+          @for (chip of chipsOposicion; track chip.value) {
+            <button
+              type="button"
+              class="oposicion-chip"
+              [class.selected]="esChipSeleccionado(chip.value)"
+              [disabled]="procesando()"
+              (click)="seleccionarOposicion(chip.value)"
+            >
+              <i class="pi pi-map-marker"></i>
+              <span>{{ chip.label }}</span>
+              @if (esChipSeleccionado(chip.value)) {
+                <i class="pi pi-check-circle chip-check"></i>
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+  } @else if (suscripcion) {
+    <!-- Modo cambiar: contexto (oposición fija), no es una elección. -->
+    <div class="paso-section">
+      <span class="oposicion-actual">
+        <i class="pi pi-map-marker"></i>
+        Tu suscripción de <strong>{{ oposicionLabel }}</strong>
+      </span>
+    </div>
+  }
 
   <!-- Carga de planes -->
   @if (cargandoPlanes()) {
@@ -70,7 +82,8 @@
   @if (gruposPeriodo.length > 0) {
     <div class="paso-section">
       <span class="paso-label">
-        <span class="paso-numero">2</span> Elige el plan
+        <span class="paso-numero">{{ modo === "cambiar" ? "1" : "2" }}</span>
+        {{ modo === "cambiar" ? "Elige el nuevo plan" : "Elige el plan" }}
       </span>
 
       @for (grupo of gruposPeriodo; track grupo.periodo) {

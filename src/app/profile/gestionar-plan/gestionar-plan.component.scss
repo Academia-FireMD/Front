@@ -526,3 +526,20 @@
     }
   }
 }
+
+// Contexto de la oposición fija en modo cambiar (no es un chip seleccionable).
+.oposicion-actual {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-color-secondary, #6b7280);
+
+  i {
+    color: var(--primary-color, #b91c1c);
+  }
+
+  strong {
+    color: var(--text-color, #111827);
+  }
+}

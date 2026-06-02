@@ -130,18 +130,22 @@ export class GestionarPlanComponent implements OnInit {
         (op) => !this.oposicionesContratadas.includes(op),
       );
     } else {
-      // cambiar: la actual + las no contratadas (crossgrade). La actual no se "excluye"
-      // aunque esté contratada.
-      const actual = this.suscripcion?.oposicion ?? null;
-      disponibles = todas.filter(
-        (op) => op === actual || !this.oposicionesContratadas.includes(op),
-      );
+      // cambiar: la oposición es FIJA (la de la suscripción). "Cambiar plan" solo cambia
+      // tier/periodo DENTRO de esa oposición; el cambio de oposición (crossgrade) es la
+      // acción separada "Cambiar oposición".
+      const actual = this.suscripcion?.oposicion;
+      disponibles = actual ? [actual] : [];
     }
 
     return disponibles.map((op) => ({
       value: op,
       label: OPOSICION_LABELS[op],
     }));
+  }
+
+  /** Etiqueta legible de la oposición de la suscripción (contexto en modo cambiar). */
+  get oposicionLabel(): string {
+    return this.suscripcion ? OPOSICION_LABELS[this.suscripcion.oposicion] : '';
   }
 
   esChipSeleccionado(op: Oposicion): boolean {

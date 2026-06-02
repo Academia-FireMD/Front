@@ -151,14 +151,14 @@ describe('GestionarPlanComponent', () => {
     expect(values).toContain(Oposicion.MADRID);
   });
 
-  // ── Chips: en cambiar muestran la actual + las no contratadas ────
-  it('modo cambiar: muestra la oposición actual aunque esté contratada + las demás no contratadas', () => {
+  // ── Chips: en cambiar SOLO la oposición de la sub (crossgrade = acción separada) ──
+  it('modo cambiar: solo la oposición de la suscripción (no otras)', () => {
     createCambiar();
     const values = component.chipsOposicion.map((c) => c.value);
-    // La actual (contratada) NO se excluye en modo cambiar.
-    expect(values).toContain(Oposicion.VALENCIA_AYUNTAMIENTO);
-    expect(values).toContain(Oposicion.ALICANTE_CPBA);
-    expect(values).not.toContain(Oposicion.GENERAL);
+    expect(values).toEqual([Oposicion.VALENCIA_AYUNTAMIENTO]);
+    expect(values).not.toContain(Oposicion.ALICANTE_CPBA);
+    expect(values).not.toContain(Oposicion.MADRID);
+    expect(component.oposicionLabel).toBe('Valencia Ayuntamiento');
   });
 
   // ── Elegir chip carga planes y los agrupa por periodo ────────────
