@@ -124,6 +124,48 @@ export interface UpsertProgresoDto {
 }
 
 /**
+ * Códigos de error del cobro COF de un curso (`POST /cursos/:id/comprar-cof`).
+ * Unión literal cerrada — NO usar `string` suelto.
+ *  - `PAGO_RECHAZADO`: la tarjeta fue rechazada (sin fondos / banco / 3DS). NO
+ *    es reintentable con 1-clic → empuja al alumno a la tienda con otra tarjeta.
+ *  - `ERROR_TEMPORAL`: fallo técnico (SSH timeout / WP error). SÍ reintentable.
+ *  - `YA_TIENES`: el alumno ya posee el curso.
+ */
+export type ComprarCursoCofError =
+  | 'PAGO_RECHAZADO'
+  | 'ERROR_TEMPORAL'
+  | 'YA_TIENES';
+
+/**
+ * Respuesta de `POST /cursos/:id/comprar-cof`. Discriminada por `success`:
+ *  - `{ success: true }`: comprado, el alumno ya tiene acceso (grant in-app).
+ *  - `{ success: false, requiereCheckout: true }`: alumno SIN COF usable → hay
+ *    que llevarlo al checkout WC (`?add-to-cart=<wooProductId>`).
+ *  - `{ success: false, error }`: fallo clasificado (ver `ComprarCursoCofError`).
+ *
+ * Espeja el contrato de `AnadirPlanResponse` (flujo COF de altas).
+ */
+export type ComprarCursoCofResponse =
+  | {
+      success: true;
+      /** Id del `AccesoCurso` concedido (grant in-app inmediato). */
+      accesoId?: number;
+      mensaje: string;
+    }
+  | {
+      success: false;
+      requiereCheckout: true;
+      /** Producto WooCommerce del curso para el `?add-to-cart=`. */
+      wooProductId: number;
+      mensaje: string;
+    }
+  | {
+      success: false;
+      error: ComprarCursoCofError;
+      mensaje: string;
+    };
+
+/**
  * Refactor 2026-05-25 — DTOs locales que sustituyen al schema OpenAPI stale
  * (regenerarlo requiere arrancar el backend, no disponible en este flow).
  * Mantenemos los nombres y la forma que expone el Server actual en

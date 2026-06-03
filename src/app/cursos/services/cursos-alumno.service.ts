@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import {
   AccesoConCurso,
+  ComprarCursoCofResponse,
   CursoPublico,
   CursoSlugResponse,
   LeccionResponse,
@@ -40,6 +41,21 @@ export class CursosAlumnoService extends ApiBaseService {
       .pipe(
         catchError((err) => this.handleError(err)),
       ) as Observable<LeccionResponse>;
+  }
+
+  /**
+   * Compra un curso en 1 clic contra el COF (tarjeta guardada) del alumno.
+   * El backend tarda ~2,5-5s (cobro vía SSH→WP), así que el caller DEBE mostrar
+   * estado de carga. `ignoreError: true` → no disparamos el toast genérico de
+   * `ApiBaseService`; la UX de error (decline vs técnico vs requiereCheckout) la
+   * decide el componente según el `ComprarCursoCofResponse`. Espeja `anadirPlan`.
+   */
+  comprarCursoCof(cursoId: number): Observable<ComprarCursoCofResponse> {
+    return this.post(
+      `/${cursoId}/comprar-cof`,
+      {},
+      true,
+    ) as Observable<ComprarCursoCofResponse>;
   }
 
   upsertProgreso(leccionId: number, dto: UpsertProgresoDto): Observable<void> {

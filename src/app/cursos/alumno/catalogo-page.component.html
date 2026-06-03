@@ -54,17 +54,76 @@
                 >
               }
             </div>
-            <button
-              pButton
-              label="Comprar"
-              icon="pi pi-shopping-cart"
-              class="p-button-sm comprar-btn"
-              [disabled]="!curso.wooProductId"
-              (click)="comprar(curso)"
-            ></button>
+            @if (yaComprado(curso)) {
+              <a
+                pButton
+                label="Ver curso"
+                icon="pi pi-arrow-right"
+                class="p-button-sm comprar-btn"
+                [routerLink]="['/app/cursos', curso.slug]"
+              ></a>
+            } @else {
+              <button
+                pButton
+                label="Comprar (1 clic)"
+                icon="pi pi-bolt"
+                class="p-button-sm comprar-btn"
+                [loading]="comprandoId() === curso.id"
+                [disabled]="!curso.wooProductId || comprandoId() !== null"
+                (click)="comprar(curso)"
+              ></button>
+            }
           </div>
         </div>
       }
     </div>
   }
+
+  <p-dialog
+    [visible]="checkoutDialogVisible()"
+    (visibleChange)="checkoutDialogVisible.set($event)"
+    [modal]="true"
+    [dismissableMask]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '28rem', maxWidth: '92vw' }"
+    [header]="
+      checkoutEsRechazo()
+        ? 'Tarjeta rechazada'
+        : 'Completa el alta en la tienda'
+    "
+    data-testid="catalogo-checkout-dialog"
+  >
+    <div class="checkout-dialog-body">
+      <i
+        class="pi"
+        [class.pi-credit-card]="checkoutEsRechazo()"
+        [class.pi-shopping-cart]="!checkoutEsRechazo()"
+      ></i>
+      <p>
+        {{
+          checkoutMensaje() ||
+            (checkoutEsRechazo()
+              ? "Tu tarjeta fue rechazada (fondos/banco). Cómpralo en la tienda con otra tarjeta."
+              : "No tienes una tarjeta guardada para el pago instantáneo. Completa el alta en la tienda.")
+        }}
+      </p>
+    </div>
+    <ng-template pTemplate="footer">
+      <button
+        pButton
+        label="Cancelar"
+        class="p-button-text p-button-sm"
+        (click)="checkoutDialogVisible.set(false)"
+      ></button>
+      <button
+        pButton
+        label="Completar en la tienda"
+        icon="pi pi-external-link"
+        class="p-button-sm"
+        [disabled]="!checkoutWooProductId()"
+        (click)="completarEnTienda()"
+      ></button>
+    </ng-template>
+  </p-dialog>
 </div>
