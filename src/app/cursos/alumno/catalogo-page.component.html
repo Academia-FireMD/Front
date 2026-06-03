@@ -90,7 +90,7 @@
     [header]="
       checkoutEsRechazo()
         ? 'Tarjeta rechazada'
-        : 'Completa el alta en la tienda'
+        : 'Completa la compra en la tienda'
     "
     data-testid="catalogo-checkout-dialog"
   >
@@ -105,7 +105,7 @@
           checkoutMensaje() ||
             (checkoutEsRechazo()
               ? "Tu tarjeta fue rechazada (fondos/banco). Cómpralo en la tienda con otra tarjeta."
-              : "No tienes una tarjeta guardada para el pago instantáneo. Completa el alta en la tienda.")
+              : "No tienes una tarjeta guardada para el pago instantáneo. Completa la compra en la tienda.")
         }}
       </p>
     </div>
