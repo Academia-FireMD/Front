@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { MessageService } from 'primeng/api';
 
 import { GestionarPlanComponent } from './gestionar-plan.component';
@@ -151,14 +151,52 @@ describe('GestionarPlanComponent', () => {
     expect(values).toContain(Oposicion.MADRID);
   });
 
-  // ── Chips: en cambiar SOLO la oposición de la sub (crossgrade = acción separada) ──
-  it('modo cambiar: solo la oposición de la suscripción (no otras)', () => {
-    createCambiar();
+  // ── Chips: en cambiar, la actual (preseleccionada) + otras NO contratadas (crossgrade) ──
+  it('modo cambiar: incluye la oposición actual y otras no contratadas (crossgrade)', () => {
+    createCambiar(); // contratadas = [VALENCIA]
     const values = component.chipsOposicion.map((c) => c.value);
-    expect(values).toEqual([Oposicion.VALENCIA_AYUNTAMIENTO]);
-    expect(values).not.toContain(Oposicion.ALICANTE_CPBA);
-    expect(values).not.toContain(Oposicion.MADRID);
+    expect(values).toContain(Oposicion.VALENCIA_AYUNTAMIENTO); // actual, preseleccionada
+    expect(values).toContain(Oposicion.ALICANTE_CPBA); // crossgrade disponible
+    expect(values).toContain(Oposicion.MADRID);
+    expect(values).not.toContain(Oposicion.GENERAL);
     expect(component.oposicionLabel).toBe('Valencia Ayuntamiento');
+  });
+
+  // ── Chips: en cambiar se excluyen las ya contratadas (evita OPOSICION_DUPLICADA) ──
+  it('modo cambiar: excluye oposiciones ya contratadas pero NUNCA la actual', () => {
+    component.modo = 'cambiar';
+    component.suscripcion = SUSCRIPCION_VALENCIA;
+    // Ya tiene Valencia (la que cambia) Y Alicante → Alicante no debe ofrecerse.
+    component.oposicionesContratadas = [
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      Oposicion.ALICANTE_CPBA,
+    ];
+    fixture.detectChanges();
+    const values = component.chipsOposicion.map((c) => c.value);
+    expect(values).toContain(Oposicion.VALENCIA_AYUNTAMIENTO); // actual NUNCA se excluye
+    expect(values).not.toContain(Oposicion.ALICANTE_CPBA); // ya contratada
+    expect(values).toContain(Oposicion.MADRID); // libre
+  });
+
+  // ── esCrossgrade refleja si la oposición elegida difiere de la de la sub ──
+  it('modo cambiar: esCrossgrade false en la propia, true al elegir otra', () => {
+    createCambiar();
+    expect(component.esCrossgrade).toBe(false); // preseleccionada = la actual
+    component.seleccionarOposicion(Oposicion.ALICANTE_CPBA);
+    expect(component.esCrossgrade).toBe(true);
+    expect(component.oposicionDestinoLabel).toBe('CPBA Alicante');
+  });
+
+  // ── Gating: aviso OPOSICION_DUPLICADA bloquea el confirmar ──
+  it('modo cambiar: aviso OPOSICION_DUPLICADA bloquea el confirmar', () => {
+    createCambiar();
+    component.preview.set({
+      ...UPGRADE_PREVIEW,
+      avisos: [
+        { codigo: 'OPOSICION_DUPLICADA', mensaje: 'ya tienes esa oposición' },
+      ],
+    });
+    expect(component.puedeConfirmar()).toBe(false);
   });
 
   // ── Elegir chip carga planes y los agrupa por periodo ────────────
@@ -264,6 +302,23 @@ describe('GestionarPlanComponent', () => {
       SUSCRIPCION_VALENCIA.id,
       PLAN_ADVANCED_MENSUAL.sku,
     );
+  });
+
+  // ── Anti-race: un preview que llega tarde NO pisa la selección vigente ──
+  it('modo cambiar: descarta el preview obsoleto que llega tras cambiar de plan', () => {
+    createCambiar();
+    const lento = new Subject<PreviewCambioResponse>();
+    // 1ª selección: preview en vuelo (Subject que aún no emite).
+    svc.previewCambioSuscripcion.mockReturnValueOnce(lento.asObservable());
+    component.seleccionarPlan(PLAN_ADVANCED_MENSUAL);
+    // 2ª selección ANTES de que responda la 1ª (usa el mock por defecto, síncrono).
+    component.seleccionarPlan(PLAN_ADVANCED_ANUAL);
+    expect(component.preview()?.precioNuevo).toBe(49.99); // el vigente (default)
+    // Ahora llega TARDE la respuesta de la 1ª con un coste distinto.
+    lento.next({ ...UPGRADE_PREVIEW, precioNuevo: 9999 });
+    lento.complete();
+    // No debe pisar al vigente.
+    expect(component.preview()?.precioNuevo).toBe(49.99);
   });
 
   // ── Label del botón cambiar (lógica money-critical preservada) ───

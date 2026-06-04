@@ -130,11 +130,19 @@ export class GestionarPlanComponent implements OnInit {
         (op) => !this.oposicionesContratadas.includes(op),
       );
     } else {
-      // cambiar: la oposición es FIJA (la de la suscripción). "Cambiar plan" solo cambia
-      // tier/periodo DENTRO de esa oposición; el cambio de oposición (crossgrade) es la
-      // acción separada "Cambiar oposición".
+      // cambiar: la oposición actual (preseleccionada, para cambiar tier/periodo dentro de
+      // ella) + las demás NO contratadas. El crossgrade se enruta al saga v3 (prorrateo +
+      // sync WC + guard OPOSICION_DUPLICADA). Se excluyen las ya contratadas para no
+      // ofrecer un destino que el guard rechazaría. La actual NUNCA se excluye.
       const actual = this.suscripcion?.oposicion;
-      disponibles = actual ? [actual] : [];
+      if (!actual) {
+        disponibles = [];
+      } else {
+        const otras = todas.filter(
+          (op) => op !== actual && !this.oposicionesContratadas.includes(op),
+        );
+        disponibles = [actual, ...otras];
+      }
     }
 
     return disponibles.map((op) => ({
@@ -146,6 +154,23 @@ export class GestionarPlanComponent implements OnInit {
   /** Etiqueta legible de la oposición de la suscripción (contexto en modo cambiar). */
   get oposicionLabel(): string {
     return this.suscripcion ? OPOSICION_LABELS[this.suscripcion.oposicion] : '';
+  }
+
+  /** true si la oposición elegida difiere de la de la sub → es un cambio de oposición. */
+  get esCrossgrade(): boolean {
+    return (
+      this.modo === 'cambiar' &&
+      !!this.suscripcion &&
+      !!this.oposicionSeleccionada &&
+      this.oposicionSeleccionada !== this.suscripcion.oposicion
+    );
+  }
+
+  /** Etiqueta de la oposición destino actualmente seleccionada. */
+  get oposicionDestinoLabel(): string {
+    return this.oposicionSeleccionada
+      ? OPOSICION_LABELS[this.oposicionSeleccionada]
+      : '';
   }
 
   esChipSeleccionado(op: Oposicion): boolean {
@@ -326,15 +351,28 @@ export class GestionarPlanComponent implements OnInit {
 
   private cargarPreview(plan: PlanDisponible): void {
     if (!plan.sku || !this.suscripcion) return;
+    // Identidad de esta petición. Si el usuario cambia de plan/oposición mientras
+    // está en vuelo, descartamos la respuesta obsoleta: repoblar `preview` con el
+    // coste de otro plan desbloquearía "Confirmar" con datos que no corresponden
+    // (codex P1). El cobro real lo recalcula el backend por sku, pero el preview
+    // debe reflejar SIEMPRE la selección vigente.
+    const reqSku = plan.sku;
+    const reqOposicion = this.oposicionSeleccionada;
+    const esObsoleta = () =>
+      this.planSeleccionado?.sku !== reqSku ||
+      this.oposicionSeleccionada !== reqOposicion;
+
     this.cargandoPreview.set(true);
     this.suscripcionService
       .previewCambioSuscripcion(this.suscripcion.id, plan.sku)
       .subscribe({
         next: (p) => {
+          if (esObsoleta()) return; // llegó tarde: hay otra selección vigente
           this.preview.set(p);
           this.cargandoPreview.set(false);
         },
         error: () => {
+          if (esObsoleta()) return;
           this.cargandoPreview.set(false);
           this.messageService.add({
             severity: 'error',
@@ -366,7 +404,8 @@ export class GestionarPlanComponent implements OnInit {
         a.codigo === 'COOLDOWN' ||
         a.codigo === 'LIMITE_CAMBIOS' ||
         a.codigo === 'FUERA_DE_PLAZO' ||
-        a.codigo === 'CAMBIO_NO_DISPONIBLE',
+        a.codigo === 'CAMBIO_NO_DISPONIBLE' ||
+        a.codigo === 'OPOSICION_DUPLICADA',
     );
     if (bloqueado) return false;
     if (p.switchType === 'UPGRADE') {
