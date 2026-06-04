@@ -1,0 +1,399 @@
+<div class="gestionar-plan-container">
+  <!-- Header -->
+  <div class="header-section">
+    <div class="header-icon header-icon--blue">
+      <i
+        [class]="modo === 'cambiar' ? 'pi pi-refresh' : 'pi pi-plus-circle'"
+      ></i>
+    </div>
+    <h1 class="header-title">
+      {{ modo === "cambiar" ? "Cambiar plan" : "Añadir plan" }}
+    </h1>
+    <p class="header-subtitle">
+      @if (modo === "cambiar") {
+        Elige la oposición y el plan al que quieres cambiar. Si cambias de
+        oposición, ajustamos tu facturación (prorrateo) automáticamente.
+      } @else {
+        Date de alta en una nueva oposición sin salir de la plataforma. Pagas la
+        primera cuota con tu tarjeta guardada en 1 clic.
+      }
+    </p>
+  </div>
+
+  <!-- Paso 1: chips de oposición (AMBOS modos). En AÑADIR: oposiciones nuevas. En CAMBIAR:
+       la actual (preseleccionada, para cambiar tier/periodo) + otras no contratadas →
+       crossgrade money-safe vía saga v3. -->
+  @if (chipsOposicion.length > 0) {
+    <div class="paso-section">
+      <span class="paso-label">
+        <span class="paso-numero">1</span> Elige la oposición
+      </span>
+      <div class="chips-grid">
+        @for (chip of chipsOposicion; track chip.value) {
+          <button
+            type="button"
+            class="oposicion-chip"
+            [class.selected]="esChipSeleccionado(chip.value)"
+            [disabled]="procesando()"
+            (click)="seleccionarOposicion(chip.value)"
+          >
+            @if (imagenOposicion(chip.value); as logo) {
+              <img class="oposicion-logo" [src]="logo" [alt]="chip.label" />
+            } @else {
+              <i class="pi pi-map-marker"></i>
+            }
+            <span>{{ chip.label }}</span>
+            @if (esChipSeleccionado(chip.value)) {
+              <i class="pi pi-check-circle chip-check"></i>
+            }
+          </button>
+        }
+      </div>
+    </div>
+  } @else if (modo === "anadir") {
+    <div class="paso-section">
+      <div class="no-planes">
+        <i class="pi pi-info-circle"></i>
+        <p>No hay oposiciones disponibles para esta acción ahora mismo.</p>
+      </div>
+    </div>
+  }
+
+  <!-- Carga de planes -->
+  @if (cargandoPlanes()) {
+    <div class="loading-inline">
+      <p-progressSpinner styleClass="small-spinner" />
+      <span>Cargando planes disponibles…</span>
+    </div>
+  }
+
+  <!-- Sin planes para la oposición elegida -->
+  @if (sinPlanes) {
+    <div class="no-planes">
+      <i class="pi pi-info-circle"></i>
+      <p>No hay planes disponibles para esta oposición.</p>
+    </div>
+  }
+
+  <!-- Paso 2: planes agrupados por periodo -->
+  @if (gruposPeriodo.length > 0) {
+    <div class="paso-section">
+      <span class="paso-label">
+        <span class="paso-numero">2</span>
+        {{ modo === "cambiar" ? "Elige el nuevo plan" : "Elige el plan" }}
+      </span>
+
+      @for (grupo of gruposPeriodo; track grupo.periodo) {
+        <div class="periodo-group">
+          <div class="periodo-titulo">
+            <span class="periodo-linea"></span>
+            <span class="periodo-texto">{{ grupo.titulo }}</span>
+            <span class="periodo-linea"></span>
+          </div>
+
+          <div class="planes-grid">
+            @for (plan of grupo.planes; track plan.id) {
+              <div
+                class="plan-card"
+                [class.selected]="esPlanSeleccionado(plan)"
+                (click)="seleccionarPlan(plan)"
+              >
+                <div class="plan-card-header">
+                  <span
+                    class="plan-badge"
+                    [ngClass]="getTipoBadgeSeverity(plan.tipo)"
+                    >{{ getTipoBadge(plan.tipo) }}</span
+                  >
+                  @if (esPlanSeleccionado(plan)) {
+                    <div class="plan-selected-badge">
+                      <i class="pi pi-check-circle"></i>
+                    </div>
+                  }
+                </div>
+                <div class="plan-card-nombre">{{ plan.nombre }}</div>
+                <div class="plan-card-precio">
+                  @if (
+                    plan.precioOferta &&
+                    plan.precioOferta !== plan.precioRegular
+                  ) {
+                    <span class="precio-tachado"
+                      >{{ plan.precioRegular | number: "1.2-2" }} €</span
+                    >
+                    <span class="precio-oferta"
+                      >{{ plan.precioOferta | number: "1.2-2" }} €<span
+                        class="precio-periodo"
+                        >/{{ getPeriodoLabel(plan) }}</span
+                      ></span
+                    >
+                  } @else if (plan.precio) {
+                    <span class="precio-normal"
+                      >{{ plan.precio | number: "1.2-2" }} €<span
+                        class="precio-periodo"
+                        >/{{ getPeriodoLabel(plan) }}</span
+                      ></span
+                    >
+                  } @else {
+                    <span class="precio-consultar">Consultar precio</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ════════════ MODO AÑADIR: resumen + activación ════════════ -->
+  @if (modo === "anadir" && planSeleccionado; as plan) {
+    <div class="plan-resumen">
+      <div class="plan-resumen-info">
+        <span class="plan-badge" [ngClass]="getTipoBadgeSeverity(plan.tipo)">{{
+          getTipoBadge(plan.tipo)
+        }}</span>
+        <span class="plan-resumen-nombre">{{ plan.nombre }}</span>
+      </div>
+      @if (plan.precio != null) {
+        <div class="plan-resumen-precio">
+          <span class="resumen-etiqueta">1ª cuota</span>
+          <span class="precio-valor"
+            >{{ plan.precio | number: "1.2-2" }} €</span
+          >
+          <span class="precio-periodo">/{{ getPeriodoLabel(plan) }}</span>
+        </div>
+      }
+    </div>
+
+    @if (requiereCheckout()) {
+      <div class="important-note cobro">
+        <i class="pi pi-credit-card"></i>
+        <div class="note-content">
+          No tienes una tarjeta guardada para el pago instantáneo. Completa el
+          alta en la tienda: introduces la tarjeta allí y queda guardada para la
+          próxima vez.
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ════════════ MODO CAMBIAR: preview prorrateo + avisos ════════════ -->
+  @if (modo === "cambiar" && planSeleccionado && suscripcion) {
+    @if (esCrossgrade) {
+      <div class="important-note">
+        <i class="pi pi-directions"></i>
+        <div class="note-content">
+          Vas a <strong>cambiar de oposición</strong>: de
+          <strong>{{ oposicionLabel }}</strong> a
+          <strong>{{ oposicionDestinoLabel }}</strong
+          >. Tu plan y tu facturación se ajustan automáticamente.
+        </div>
+      </div>
+    }
+    <div class="comparativa-section">
+      <h3 class="section-title">
+        <i class="pi pi-chart-bar"></i> Resumen del cambio
+      </h3>
+      <div class="comparativa-grid">
+        <div class="comparativa-item comparativa-actual">
+          <span class="comparativa-label">Plan actual</span>
+          <span class="comparativa-plan">{{
+            getTipoBadge(suscripcion.tipo)
+          }}</span>
+          <span class="comparativa-precio" *ngIf="suscripcion.monthlyPrice"
+            >{{ suscripcion.monthlyPrice | number: "1.2-2" }} €/mes</span
+          >
+        </div>
+        <div class="comparativa-flecha">
+          <i class="pi pi-arrow-right"></i>
+        </div>
+        <div class="comparativa-item comparativa-nuevo">
+          <span class="comparativa-label">Plan nuevo</span>
+          <span class="comparativa-plan">{{
+            getTipoBadge(planSeleccionado.tipo)
+          }}</span>
+          <span class="comparativa-precio" *ngIf="planSeleccionado.precio"
+            >{{ planSeleccionado.precio | number: "1.2-2" }} €/{{
+              getPeriodoLabel(planSeleccionado)
+            }}</span
+          >
+        </div>
+      </div>
+      @if (
+        !cargandoPreview() &&
+        diferenciaPrecio !== null &&
+        !(preview()?.requiereCobro && diferenciaPrecio <= 0) &&
+        !preview()?.credito
+      ) {
+        <div
+          class="diferencia-precio"
+          [class.diferencia-positiva]="diferenciaPrecio > 0"
+          [class.diferencia-negativa]="diferenciaPrecio < 0"
+        >
+          <i
+            [class]="
+              diferenciaPrecio > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'
+            "
+          ></i>
+          {{ diferenciaPrecio > 0 ? "Aumento" : "Ahorro" }} de
+          <strong
+            >{{ Math.abs(diferenciaPrecio) | number: "1.2-2" }} €/{{
+              getPeriodoLabel(planSeleccionado)
+            }}</strong
+          >
+        </div>
+      }
+    </div>
+
+    @if (cargandoPreview()) {
+      <div class="loading-preview">
+        <p-progressSpinner styleClass="small-spinner" />
+        <p>Calculando el coste de tu cambio…</p>
+      </div>
+    }
+
+    <!-- Nota informativa dinámica según preview (COPIADO de cambio-suscripcion) -->
+    @if (preview(); as p) {
+      @if (p.switchType === "UPGRADE" && !p.costeCalculable) {
+        <div class="important-note error">
+          <i class="pi pi-exclamation-triangle"></i>
+          <div class="note-content">
+            No pudimos calcular el coste de este cambio ahora mismo. Inténtalo
+            de nuevo en unos minutos o contacta con soporte.
+          </div>
+        </div>
+      } @else if (p.credito && p.credito > 0) {
+        <div class="important-note cobro">
+          <i class="pi pi-wallet"></i>
+          <div class="note-content">
+            Tienes
+            <strong>{{ p.credito | number: "1.2-2" }} €</strong>
+            de crédito por tu plan actual. Cubre tu nuevo plan hasta el
+            <strong>{{ p.cubiertoHasta | date: "dd/MM/yyyy" }}</strong
+            >. <strong>No se te cobra nada ahora.</strong>
+            @if (p.precioNuevo) {
+              Después, {{ p.precioNuevo | number: "1.2-2" }} €.
+            }
+          </div>
+        </div>
+      } @else if (
+        p.switchType === "UPGRADE" && p.requiereCobro && p.prorrateo
+      ) {
+        <div class="important-note cobro">
+          <i class="pi pi-credit-card"></i>
+          <div class="note-content">
+            Se te cobrarán
+            <strong>{{ p.prorrateo.importe | number: "1.2-2" }} €</strong>
+            ahora (prorrateo de {{ p.prorrateo.diasRestantes }}/{{
+              p.prorrateo.diasCiclo
+            }}
+            días)
+            @if (p.metodoPago.tarjetaMasked) {
+              a tu tarjeta <strong>{{ p.metodoPago.tarjetaMasked }}</strong
+              >.
+            }
+            Tu plan se activa al instante.
+          </div>
+        </div>
+        @if (!p.metodoPago.usable) {
+          <div class="important-note error">
+            <i class="pi pi-exclamation-triangle"></i>
+            <div class="note-content">
+              No tienes una tarjeta guardada válida para el cobro. Actualiza tu
+              método de pago para mejorar tu plan.
+              <a
+                [href]="wpBaseUrl + '/mi-cuenta/metodos-pago/'"
+                target="_blank"
+                rel="noopener"
+                >Gestionar método de pago</a
+              >
+            </div>
+          </div>
+        }
+      } @else if (p.modo === "PROGRAMADO") {
+        <div class="important-note">
+          <i class="pi pi-calendar-plus"></i>
+          <div class="note-content">
+            El cambio se aplicará el
+            <strong>{{ p.fechaAplicacion | date: "dd/MM/yyyy" }}</strong>
+            (tu próximo cobro). No se realiza ningún cobro ahora.
+          </div>
+        </div>
+      } @else {
+        <div class="important-note">
+          <i class="pi pi-info-circle"></i>
+          <div class="note-content">
+            Tu cambio se aplica al instante, sin coste adicional.
+          </div>
+        </div>
+      }
+      @if (p.cambiosRestantes !== undefined && p.cambiosRestantes <= 1) {
+        <div class="important-note warning">
+          <i class="pi pi-exclamation-circle"></i>
+          <div class="note-content">
+            @if (p.cambiosRestantes === 0) {
+              Has alcanzado el máximo de cambios de plan este mes.
+            } @else {
+              Te queda <strong>{{ p.cambiosRestantes }}</strong> cambio de plan
+              este mes.
+            }
+            @if (p.horasRestantesCooldown && p.horasRestantesCooldown > 0) {
+              Podrás cambiar de nuevo en
+              <strong>{{ p.horasRestantesCooldown }}h</strong>.
+            }
+          </div>
+        </div>
+      }
+      @for (aviso of p.avisos; track aviso.codigo) {
+        <div class="important-note warning">
+          <i class="pi pi-exclamation-circle"></i>
+          <div class="note-content">{{ aviso.mensaje }}</div>
+        </div>
+      }
+    }
+  }
+
+  <!-- Footer -->
+  <div class="footer-actions">
+    <p-button
+      label="Cancelar"
+      icon="pi pi-times"
+      (onClick)="cancelar()"
+      [outlined]="true"
+      severity="secondary"
+      [disabled]="procesando()"
+      styleClass="cancel-button"
+    />
+
+    @if (modo === "anadir") {
+      @if (requiereCheckout()) {
+        <p-button
+          label="Completar en la tienda"
+          icon="pi pi-external-link"
+          (onClick)="completarEnTienda()"
+          severity="primary"
+          styleClass="confirm-button"
+        />
+      } @else {
+        <p-button
+          [label]="labelBotonActivar()"
+          icon="pi pi-check"
+          (onClick)="activarPlan()"
+          severity="primary"
+          [disabled]="!puedeActivar()"
+          [loading]="procesando()"
+          styleClass="confirm-button"
+        />
+      }
+    } @else {
+      <p-button
+        [label]="labelBotonConfirmar()"
+        icon="pi pi-check"
+        (onClick)="confirmarCambio()"
+        severity="primary"
+        [disabled]="!planSeleccionado || !puedeConfirmar() || procesando()"
+        [loading]="procesando()"
+        styleClass="confirm-button"
+      />
+    }
+  </div>
+</div>

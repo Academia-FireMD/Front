@@ -1,0 +1,24 @@
+<div class="video-wrapper">
+  <iframe
+    [src]="safeUrl()"
+    allow="autoplay; encrypted-media; picture-in-picture"
+    allowfullscreen
+    class="video-iframe"
+    title="Vídeo de la lección"
+  ></iframe>
+</div>
+
+<div class="video-controls">
+  <span class="tiempo-visto">
+    <i class="pi pi-clock"></i>
+    Tiempo visto: {{ segundosVisto() | number: "1.0-0" }} s
+  </span>
+  <button
+    pButton
+    label="Marcar como vista"
+    icon="pi pi-check"
+    class="p-button-success p-button-sm"
+    [loading]="marcando()"
+    (click)="marcarComoVista()"
+  ></button>
+</div>

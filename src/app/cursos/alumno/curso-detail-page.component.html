@@ -1,0 +1,183 @@
+<div class="curso-detail-container">
+  @if (isPreview()) {
+    <div
+      class="preview-banner"
+      data-testid="curso-detail-preview-banner"
+      role="status"
+    >
+      <i class="pi pi-eye"></i>
+      <span>Vista previa — sin permisos/progreso reales.</span>
+    </div>
+  }
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Cargando curso...</p>
+    </div>
+  } @else if (error() || !cursoData()) {
+    <div class="empty-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>No se pudo cargar el curso.</p>
+      <button
+        pButton
+        label="Volver"
+        icon="pi pi-arrow-left"
+        class="p-button-outlined"
+        routerLink="/app/cursos"
+      ></button>
+    </div>
+  } @else {
+    <div class="curso-header">
+      <button
+        pButton
+        icon="pi pi-arrow-left"
+        class="p-button-text p-button-sm back-btn"
+        routerLink="/app/cursos"
+      ></button>
+      <div class="header-content">
+        @if (cursoData()!.curso.thumbnailUrl) {
+          <img
+            [src]="cursoData()!.curso.thumbnailUrl"
+            [alt]="cursoData()!.curso.titulo"
+            class="curso-cover"
+          />
+        }
+        <div class="header-info">
+          <h1>{{ cursoData()!.curso.titulo }}</h1>
+          @if (cursoData()!.curso.descripcion) {
+            <p class="descripcion">{{ cursoData()!.curso.descripcion }}</p>
+          }
+          <div class="meta">
+            @if (cursoData()!.curso.duracionEstimadaMinutos) {
+              <span
+                ><i class="pi pi-clock"></i>
+                {{ cursoData()!.curso.duracionEstimadaMinutos }} min</span
+              >
+            }
+            <span
+              ><i class="pi pi-list"></i> {{ totalLecciones() }} lecciones</span
+            >
+            @if (!cursoData()!.tieneAcceso) {
+              <p-tag severity="warning" value="Sin acceso"></p-tag>
+            }
+          </div>
+          @if (!cursoData()!.tieneAcceso && !isPreview()) {
+            <div class="header-cta">
+              <button
+                pButton
+                label="Comprar (1 clic)"
+                icon="pi pi-bolt"
+                class="comprar-btn"
+                [loading]="comprando()"
+                [disabled]="!cursoData()!.curso.wooProductId || comprando()"
+                (click)="comprar()"
+                data-testid="curso-detail-comprar-btn"
+              ></button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="secciones-container">
+      <h2>Contenido del curso</h2>
+      @if (!cursoData()!.curso.secciones?.length) {
+        <p class="text-secondary">Este curso no tiene contenido todavía.</p>
+      } @else {
+        <p-accordion [multiple]="true">
+          @for (seccion of cursoData()!.curso.secciones; track seccion.id) {
+            <p-accordionTab>
+              <ng-template pTemplate="header">
+                <div class="seccion-header">
+                  <span class="seccion-titulo">{{ seccion.titulo }}</span>
+                  <span class="seccion-count"
+                    >{{ seccion.lecciones.length }} lecciones</span
+                  >
+                </div>
+              </ng-template>
+              <div class="lecciones-list">
+                @for (leccion of seccion.lecciones; track leccion.id) {
+                  <div
+                    class="leccion-row"
+                    [class.disabled]="!cursoData()!.tieneAcceso"
+                    (click)="cursoData()!.tieneAcceso && openLeccion(leccion)"
+                    (keydown.enter)="
+                      cursoData()!.tieneAcceso && openLeccion(leccion)
+                    "
+                    [attr.tabindex]="cursoData()!.tieneAcceso ? 0 : -1"
+                    role="button"
+                    [pTooltip]="
+                      cursoData()!.tieneAcceso
+                        ? ''
+                        : 'Adquiere el curso para acceder'
+                    "
+                  >
+                    <i [class]="tipoIconos[leccion.tipo]" class="tipo-icon"></i>
+                    <span class="leccion-titulo">{{ leccion.titulo }}</span>
+                    <span class="leccion-tipo">{{
+                      tipoLabels[leccion.tipo]
+                    }}</span>
+                    @if (leccion.duracionSegundos) {
+                      <span class="leccion-duracion">
+                        {{ leccion.duracionSegundos / 60 | number: "1.0-0" }}
+                        min
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+            </p-accordionTab>
+          }
+        </p-accordion>
+      }
+    </div>
+  }
+
+  <p-dialog
+    [visible]="checkoutDialogVisible()"
+    (visibleChange)="checkoutDialogVisible.set($event)"
+    [modal]="true"
+    [dismissableMask]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '28rem', maxWidth: '92vw' }"
+    [header]="
+      checkoutEsRechazo()
+        ? 'Tarjeta rechazada'
+        : 'Completa la compra en la tienda'
+    "
+    data-testid="curso-detail-checkout-dialog"
+  >
+    <div class="checkout-dialog-body">
+      <i
+        class="pi"
+        [class.pi-credit-card]="checkoutEsRechazo()"
+        [class.pi-shopping-cart]="!checkoutEsRechazo()"
+      ></i>
+      <p>
+        {{
+          checkoutMensaje() ||
+            (checkoutEsRechazo()
+              ? "Tu tarjeta fue rechazada (fondos/banco). Cómpralo en la tienda con otra tarjeta."
+              : "No tienes una tarjeta guardada para el pago instantáneo. Completa la compra en la tienda.")
+        }}
+      </p>
+    </div>
+    <ng-template pTemplate="footer">
+      <button
+        pButton
+        label="Cancelar"
+        class="p-button-text p-button-sm"
+        (click)="checkoutDialogVisible.set(false)"
+      ></button>
+      <button
+        pButton
+        label="Completar en la tienda"
+        icon="pi pi-external-link"
+        class="p-button-sm"
+        [disabled]="!checkoutWooProductId()"
+        (click)="completarEnTienda()"
+      ></button>
+    </ng-template>
+  </p-dialog>
+</div>

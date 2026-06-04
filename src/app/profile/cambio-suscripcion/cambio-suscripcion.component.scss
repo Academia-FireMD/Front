@@ -35,10 +35,17 @@
       margin-bottom: 1rem;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 
-      i { font-size: 2.5rem; color: white; }
+      i {
+        font-size: 2.5rem;
+        color: white;
+      }
 
-    &--blue { background: linear-gradient(135deg, var(--red-500), var(--red-400)); }
-    &--warning { background: linear-gradient(135deg, var(--orange-500), var(--red-400)); }
+      &--blue {
+        background: linear-gradient(135deg, var(--red-500), var(--red-400));
+      }
+      &--warning {
+        background: linear-gradient(135deg, var(--orange-500), var(--red-400));
+      }
     }
 
     .header-title {
@@ -65,7 +72,9 @@
       background: var(--surface-100);
       border-radius: var(--border-radius);
 
-      i { color: var(--blue-500); }
+      i {
+        color: var(--blue-500);
+      }
     }
   }
 
@@ -93,9 +102,70 @@
       }
 
       .plan-actual-precio {
-        .precio-valor { font-size: 1.5rem; font-weight: 700; color: var(--text-color); }
-        .precio-periodo { font-size: 0.875rem; color: var(--text-color-secondary); margin-left: 2px; }
+        .precio-valor {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: var(--text-color);
+        }
+        .precio-periodo {
+          font-size: 0.875rem;
+          color: var(--text-color-secondary);
+          margin-left: 2px;
+        }
       }
+    }
+  }
+
+  // ── Banner cambio programado ─────────────────
+  .cambio-programado-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--orange-50, #fff7ed);
+    border: 1px solid var(--orange-200, #fed7aa);
+    border-left: 4px solid var(--orange-500, #f97316);
+    border-radius: 12px;
+
+    .banner-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--orange-100, #ffedd5);
+      flex-shrink: 0;
+      i {
+        font-size: 1.375rem;
+        color: var(--orange-600, #ea580c);
+      }
+    }
+
+    .banner-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex: 1;
+
+      .banner-title {
+        font-weight: 700;
+        color: var(--text-color);
+        font-size: 1rem;
+      }
+      .banner-text {
+        color: var(--text-color-secondary);
+        line-height: 1.5;
+        font-size: 0.9375rem;
+        strong {
+          color: var(--text-color);
+        }
+      }
+    }
+
+    @media (max-width: 600px) {
+      flex-direction: column;
+      align-items: flex-start;
     }
   }
 
@@ -109,7 +179,10 @@
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      i { color: var(--blue-500); font-size: 1.25rem; }
+      i {
+        color: var(--blue-500);
+        font-size: 1.25rem;
+      }
     }
     .section-subtitle {
       font-size: 0.9375rem;
@@ -125,7 +198,10 @@
       background: var(--surface-100);
       border-radius: 12px;
       color: var(--text-color-secondary);
-      i { font-size: 1.5rem; color: var(--blue-400); }
+      i {
+        font-size: 1.5rem;
+        color: var(--blue-400);
+      }
     }
 
     .planes-grid {
@@ -133,7 +209,9 @@
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 1rem;
 
-      @media (max-width: 768px) { grid-template-columns: 1fr; }
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
     }
 
     .plan-card {
@@ -157,7 +235,11 @@
       &.selected {
         border-color: var(--blue-500);
         border-width: 3px;
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), var(--surface-card));
+        background: linear-gradient(
+          135deg,
+          rgba(59, 130, 246, 0.08),
+          var(--surface-card)
+        );
         box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
       }
 
@@ -201,15 +283,27 @@
           font-size: 1.5rem;
           font-weight: 700;
           color: var(--green-600);
-          .precio-periodo { font-size: 0.875rem; font-weight: 400; color: var(--text-color-secondary); }
+          .precio-periodo {
+            font-size: 0.875rem;
+            font-weight: 400;
+            color: var(--text-color-secondary);
+          }
         }
         .precio-normal {
           font-size: 1.5rem;
           font-weight: 700;
           color: var(--text-color);
-          .precio-periodo { font-size: 0.875rem; font-weight: 400; color: var(--text-color-secondary); }
+          .precio-periodo {
+            font-size: 0.875rem;
+            font-weight: 400;
+            color: var(--text-color-secondary);
+          }
         }
-        .precio-consultar { font-size: 0.9375rem; color: var(--text-color-secondary); font-style: italic; }
+        .precio-consultar {
+          font-size: 0.9375rem;
+          color: var(--text-color-secondary);
+          font-style: italic;
+        }
       }
 
       .plan-card-sku {
@@ -233,7 +327,10 @@
       margin: 1rem 0;
       flex-wrap: wrap;
 
-      @media (max-width: 600px) { flex-direction: column; gap: 0.5rem; }
+      @media (max-width: 600px) {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
     }
 
     .comparativa-item {
@@ -244,16 +341,36 @@
       padding: 1rem;
       border-radius: 8px;
 
-      &.comparativa-actual { background: var(--surface-100); }
-      &.comparativa-nuevo { background: rgba(59, 130, 246, 0.08); border: 1px solid var(--blue-200); }
+      &.comparativa-actual {
+        background: var(--surface-100);
+      }
+      &.comparativa-nuevo {
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid var(--blue-200);
+      }
 
-      .comparativa-label { font-size: 0.75rem; color: var(--text-color-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
-      .comparativa-plan { font-size: 1.125rem; font-weight: 700; color: var(--text-color); }
-      .comparativa-precio { font-size: 0.9375rem; color: var(--text-color-secondary); }
+      .comparativa-label {
+        font-size: 0.75rem;
+        color: var(--text-color-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .comparativa-plan {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-color);
+      }
+      .comparativa-precio {
+        font-size: 0.9375rem;
+        color: var(--text-color-secondary);
+      }
     }
 
     .comparativa-flecha {
-      i { font-size: 1.5rem; color: var(--blue-400); }
+      i {
+        font-size: 1.5rem;
+        color: var(--blue-400);
+      }
     }
 
     .diferencia-precio {
@@ -265,8 +382,20 @@
       font-size: 0.9375rem;
       margin-bottom: 0.75rem;
 
-      &.diferencia-positiva { background: rgba(239, 68, 68, 0.1); color: var(--red-600); i { color: var(--red-500); } }
-      &.diferencia-negativa { background: rgba(34, 197, 94, 0.1); color: var(--green-700); i { color: var(--green-500); } }
+      &.diferencia-positiva {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--red-600);
+        i {
+          color: var(--red-500);
+        }
+      }
+      &.diferencia-negativa {
+        background: rgba(34, 197, 94, 0.1);
+        color: var(--green-700);
+        i {
+          color: var(--green-500);
+        }
+      }
     }
 
     .fecha-efecto {
@@ -275,12 +404,14 @@
       gap: 0.5rem;
       font-size: 0.9375rem;
       color: var(--text-color-secondary);
-      i { color: var(--blue-500); }
+      i {
+        color: var(--blue-500);
+      }
     }
   }
 
   // ── Badges de plan ───────────────────────────
-  @import '../../shared/styles/plan-badge';
+  @import "../../shared/styles/plan-badge";
 
   // ── Comentario ───────────────────────────────
   .comentario-section {
@@ -295,7 +426,9 @@
       margin-bottom: 0.75rem;
       color: var(--text-color);
       font-size: 1rem;
-      i { color: var(--blue-500); }
+      i {
+        color: var(--blue-500);
+      }
     }
     .comentario-counter {
       display: block;
@@ -315,12 +448,20 @@
     border-radius: 12px;
     border: 1px solid var(--blue-200);
 
-    > i { font-size: 1.5rem; color: var(--blue-500); flex-shrink: 0; margin-top: 0.125rem; }
+    > i {
+      font-size: 1.5rem;
+      color: var(--blue-500);
+      flex-shrink: 0;
+      margin-top: 0.125rem;
+    }
 
     .note-content {
       color: var(--text-color-secondary);
       line-height: 1.6;
-      strong { color: var(--text-color); font-weight: 600; }
+      strong {
+        color: var(--text-color);
+        font-weight: 600;
+      }
     }
   }
 
@@ -332,11 +473,17 @@
     padding-top: 1.5rem;
     border-top: 2px solid var(--surface-border);
 
-    .cancel-button, .confirm-button { min-width: 180px; }
+    .cancel-button,
+    .confirm-button {
+      min-width: 180px;
+    }
 
     @media (max-width: 768px) {
       flex-direction: column;
-      .cancel-button, .confirm-button { width: 100%; }
+      .cancel-button,
+      .confirm-button {
+        width: 100%;
+      }
     }
   }
 }
@@ -361,15 +508,34 @@
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
-      .conf-label { font-size: 0.75rem; color: var(--text-color-secondary); text-transform: uppercase; }
-      .conf-valor { font-size: 1rem; font-weight: 600; color: var(--text-color); }
-      .conf-valor-nuevo { color: var(--blue-600); }
+      .conf-label {
+        font-size: 0.75rem;
+        color: var(--text-color-secondary);
+        text-transform: uppercase;
+      }
+      .conf-valor {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-color);
+      }
+      .conf-valor-nuevo {
+        color: var(--blue-600);
+      }
     }
 
-    .conf-arrow { i { font-size: 1.25rem; color: var(--blue-400); } }
+    .conf-arrow {
+      i {
+        font-size: 1.25rem;
+        color: var(--blue-400);
+      }
+    }
   }
 
-  .conf-precio { font-size: 1rem; color: var(--text-color); margin: 0; }
+  .conf-precio {
+    font-size: 1rem;
+    color: var(--text-color);
+    margin: 0;
+  }
   .conf-fecha {
     display: flex;
     align-items: center;
@@ -377,7 +543,9 @@
     font-size: 0.9375rem;
     color: var(--text-color-secondary);
     margin: 0;
-    i { color: var(--blue-500); }
+    i {
+      color: var(--blue-500);
+    }
   }
   .conf-comentario {
     display: flex;
@@ -387,7 +555,11 @@
     padding: 0.75rem;
     background: var(--surface-100);
     border-radius: 8px;
-    i { color: var(--text-color-secondary); flex-shrink: 0; margin-top: 2px; }
+    i {
+      color: var(--text-color-secondary);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
   }
   .conf-aviso {
     font-size: 1rem;
@@ -409,7 +581,7 @@
         align-items: center;
         gap: 0.75rem;
         &::before {
-          content: '';
+          content: "";
           display: inline-block;
           width: 4px;
           height: 24px;
@@ -418,7 +590,9 @@
         }
       }
     }
-    .p-dialog-content { padding: 1.5rem; }
+    .p-dialog-content {
+      padding: 1.5rem;
+    }
     .p-dialog-footer {
       padding: 1rem 1.5rem;
       border-top: 2px solid var(--surface-border);

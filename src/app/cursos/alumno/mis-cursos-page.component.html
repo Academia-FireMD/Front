@@ -1,0 +1,77 @@
+<div class="mis-cursos-container">
+  <div class="page-header">
+    <h1>Mis Cursos</h1>
+    <a routerLink="catalogo" class="p-button p-button-outlined p-button-sm"
+      >Ver catálogo</a
+    >
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Cargando tus cursos...</p>
+    </div>
+  } @else if (error()) {
+    <div class="empty-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>Error al cargar los cursos. Inténtalo de nuevo.</p>
+    </div>
+  } @else if (accesos().length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-book"></i>
+      <p>No tienes cursos todavía.</p>
+      <button
+        pButton
+        label="Explorar catálogo"
+        routerLink="catalogo"
+        class="p-button-outlined"
+      ></button>
+    </div>
+  } @else {
+    <div class="cursos-grid">
+      @for (acceso of accesos(); track acceso.id) {
+        <div
+          class="curso-card"
+          (click)="openCurso(acceso.curso.slug)"
+          (keydown.enter)="openCurso(acceso.curso.slug)"
+          tabindex="0"
+          role="button"
+        >
+          @if (acceso.curso.thumbnailUrl) {
+            <img
+              [src]="acceso.curso.thumbnailUrl"
+              [alt]="acceso.curso.titulo"
+              class="curso-thumbnail"
+            />
+          } @else {
+            <div class="curso-thumbnail-placeholder">
+              <i class="pi pi-play-circle"></i>
+            </div>
+          }
+          <div class="curso-body">
+            <h3 class="curso-titulo">{{ acceso.curso.titulo }}</h3>
+            @if (acceso.curso.descripcion) {
+              <p class="curso-descripcion">{{ acceso.curso.descripcion }}</p>
+            }
+            @if (acceso.curso.duracionEstimadaMinutos) {
+              <span class="curso-duracion">
+                <i class="pi pi-clock"></i>
+                {{ acceso.curso.duracionEstimadaMinutos }} min
+              </span>
+            }
+            <div class="curso-progreso">
+              <div class="progreso-label">
+                <span>Progreso</span>
+                <span>{{ calcularProgreso(acceso) }}%</span>
+              </div>
+              <p-progressBar
+                [value]="calcularProgreso(acceso)"
+                [showValue]="false"
+              ></p-progressBar>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

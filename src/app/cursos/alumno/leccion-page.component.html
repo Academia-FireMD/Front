@@ -1,0 +1,81 @@
+<div class="leccion-page-container">
+  @if (isPreview()) {
+    <div
+      class="preview-banner"
+      data-testid="leccion-page-preview-banner"
+      role="status"
+    >
+      <i class="pi pi-eye"></i>
+      <span>Vista previa — sin permisos/progreso reales.</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Cargando lección...</p>
+    </div>
+  } @else if (error() || !leccionData()) {
+    <div class="empty-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>No se pudo cargar la lección.</p>
+      <button
+        pButton
+        label="Volver al curso"
+        icon="pi pi-arrow-left"
+        class="p-button-outlined"
+        (click)="volver()"
+      ></button>
+    </div>
+  } @else {
+    <div class="leccion-header">
+      <button
+        pButton
+        icon="pi pi-arrow-left"
+        class="p-button-text p-button-sm back-btn"
+        (click)="volver()"
+      >
+        Volver al curso
+      </button>
+      <h2 class="leccion-titulo">{{ leccionData()!.leccion.titulo }}</h2>
+    </div>
+
+    <div class="leccion-body">
+      @switch (leccionData()!.leccion.tipo) {
+        @case ("VIDEO") {
+          @if (leccionData()!.playbackUrl) {
+            <app-leccion-video
+              [leccion]="leccionData()!.leccion"
+              [playbackUrl]="leccionData()!.playbackUrl!"
+            ></app-leccion-video>
+          } @else {
+            <div class="no-url-state">
+              <i class="pi pi-video"></i>
+              <p>El vídeo no está disponible todavía.</p>
+            </div>
+          }
+        }
+        @case ("TEXTO") {
+          <app-leccion-texto
+            [leccion]="leccionData()!.leccion"
+          ></app-leccion-texto>
+        }
+        @case ("TEST") {
+          <app-leccion-test
+            [leccion]="leccionData()!.leccion"
+            [preview]="isPreview()"
+          ></app-leccion-test>
+        }
+        @case ("FLASHCARDS") {
+          <app-leccion-flashcards
+            [leccion]="leccionData()!.leccion"
+            [preview]="isPreview()"
+          ></app-leccion-flashcards>
+        }
+        @default {
+          <p class="text-secondary">Tipo de lección desconocido.</p>
+        }
+      }
+    </div>
+  }
+</div>

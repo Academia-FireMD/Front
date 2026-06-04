@@ -1,8 +1,19 @@
-import { Component, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  Component,
+  inject,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  SimpleChanges,
+  ViewChild,
+} from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { OverlayPanel } from 'primeng/overlaypanel';
 import { map, Subscription } from 'rxjs';
 import { TemaService } from '../../services/tema.service';
+import { Tema } from '../models/pregunta.model';
+import { Oposicion } from '../models/subscription.model';
 import { groupedTemas } from '../../utils/utils';
 
 @Component({
@@ -10,33 +21,66 @@ import { groupedTemas } from '../../utils/utils';
   templateUrl: './tema-select.component.html',
   styleUrl: './tema-select.component.scss',
 })
-export class TemaSelectComponent implements OnInit, OnDestroy {
+export class TemaSelectComponent implements OnInit, OnChanges, OnDestroy {
   @Input() formControl!: FormControl;
   @Input() multiple: boolean = true;
+  /**
+   * Refactor 2026-05-25 (T11.1 / D6): filtra los temas a los que aparecen en
+   * un Modulo cuya `relevancia` incluye esta oposición. `null`, `undefined` o
+   * `Oposicion.GENERAL` desactivan el filtro (muestra todos). El filtrado es
+   * client-side sobre el dataset que `getAllTemas$()` ya devuelve (sin nuevo
+   * endpoint backend).
+   */
+  @Input() oposicion: Oposicion | null = null;
   @ViewChild('op') overlayPanel!: OverlayPanel;
   private subs = new Subscription();
 
   temaService = inject(TemaService);
   public collapsedGroups = new Map<string, boolean>();
 
+  /** Temas crudos antes del groupedTemas, para poder re-filtrar por oposición. */
+  private temasOriginales: Tema[] = [];
   private gruposOriginal: Array<any> = [];
   public grupos: Array<any> = [];
   private lastLoadedTemas: Array<any> = [];
   public filterQuery = '';
 
   ngOnInit() {
-    const s = this.temaService
-      .getAllTemas$()
-      .pipe(map((temas) => groupedTemas(temas)))
-      .subscribe((groups) => {
-        this.gruposOriginal = groups;
-        this.grupos = groups;
-        this.lastLoadedTemas = groups;
-        groups.forEach((g) => {
-          if (!this.collapsedGroups.has(g.label)) this.collapsedGroups.set(g.label, true);
-        });
-      });
+    const s = this.temaService.getAllTemas$().subscribe((temas) => {
+      this.temasOriginales = temas;
+      this.rebuildGroups();
+    });
     this.subs.add(s);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['oposicion'] && !changes['oposicion'].firstChange) {
+      this.rebuildGroups();
+    }
+  }
+
+  private rebuildGroups(): void {
+    const filtered = this.filterByOposicion(this.temasOriginales);
+    const groups = groupedTemas(filtered);
+    this.gruposOriginal = groups;
+    this.grupos = groups;
+    this.lastLoadedTemas = groups;
+    groups.forEach((g) => {
+      if (!this.collapsedGroups.has(g.label))
+        this.collapsedGroups.set(g.label, true);
+    });
+    // Reaplica el filtro de búsqueda activo si lo hubiera.
+    this.recompute();
+  }
+
+  private filterByOposicion(temas: Tema[]): Tema[] {
+    const op = this.oposicion;
+    if (!op || op === Oposicion.GENERAL) return temas;
+    return temas.filter((t) => {
+      const relevancia = t.modulo?.relevancia;
+      if (!relevancia || relevancia.length === 0) return true; // sin restricción → mostrar
+      return relevancia.includes(op);
+    });
   }
 
   ngOnDestroy() {
@@ -48,7 +92,9 @@ export class TemaSelectComponent implements OnInit, OnDestroy {
   }
 
   private getAllValues(): any[] {
-    return this.lastLoadedTemas.flatMap((g) => g.items.map((i: any) => i.value));
+    return this.lastLoadedTemas.flatMap((g) =>
+      g.items.map((i: any) => i.value),
+    );
   }
 
   private isValidSingleSelection(value: any): boolean {
@@ -108,7 +154,9 @@ export class TemaSelectComponent implements OnInit, OnDestroy {
         const groupMatches = (group.label ?? '').toLowerCase().includes(q);
         const items = groupMatches
           ? group.items
-          : group.items.filter((i: any) => (i.label ?? '').toLowerCase().includes(q));
+          : group.items.filter((i: any) =>
+              (i.label ?? '').toLowerCase().includes(q),
+            );
         return { ...group, items };
       })
       .filter((g) => g.items.length > 0);
@@ -126,7 +174,7 @@ export class TemaSelectComponent implements OnInit, OnDestroy {
     if (!selected) return false;
 
     const allValues = this.lastLoadedTemas.flatMap((g) =>
-      g.items.map((i: any) => i.value)
+      g.items.map((i: any) => i.value),
     );
     return (
       allValues.length > 0 && allValues.every((val) => selected.includes(val))
@@ -136,7 +184,7 @@ export class TemaSelectComponent implements OnInit, OnDestroy {
   onSelectAll(checked: boolean) {
     if (!this.multiple) return;
     const allValues = this.lastLoadedTemas.flatMap((g) =>
-      g.items.map((i: any) => i.value)
+      g.items.map((i: any) => i.value),
     );
     const newValues = checked ? allValues : [];
     this.formControl?.setValue(newValues as any);
@@ -146,7 +194,9 @@ export class TemaSelectComponent implements OnInit, OnDestroy {
   isGroupSelected(groupItems: { value: any }[]): boolean {
     if (!this.multiple) return false;
     const selectedValues = (this.formControl?.value ?? []) as Array<string>;
-    return groupItems.every((item: any) => selectedValues?.includes(item.value));
+    return groupItems.every((item: any) =>
+      selectedValues?.includes(item.value),
+    );
   }
 
   onSelectGroup(checked: boolean, groupItems: { value: any }[]) {
@@ -173,7 +223,7 @@ export class TemaSelectComponent implements OnInit, OnDestroy {
       });
     } else {
       selected = selected.filter(
-        (val) => !groupItems.some((item) => item.value === val)
+        (val) => !groupItems.some((item) => item.value === val),
       );
     }
 

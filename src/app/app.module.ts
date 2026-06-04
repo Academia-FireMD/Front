@@ -41,11 +41,17 @@ import { environment } from '../environments/environment';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { MisFacturasComponent } from './facturacion/components/mis-facturas/mis-facturas.component';
+import { AnadirPlanComponent } from './profile/anadir-plan/anadir-plan.component';
 import { BajaSuscripcionComponent } from './profile/baja-suscripcion/baja-suscripcion.component';
 import { CambioOposicionComponent } from './profile/cambio-oposicion/cambio-oposicion.component';
 import { CambioSuscripcionComponent } from './profile/cambio-suscripcion/cambio-suscripcion.component';
 import { DescuentoSuscripcionComponent } from './profile/descuento-suscripcion/descuento-suscripcion.component';
+import { GestionarPlanComponent } from './profile/gestionar-plan/gestionar-plan.component';
 import { ProfileComponent } from './profile/profile.component';
+import {
+  AppConfigService,
+  appConfigInitFactory,
+} from './services/app-config.service';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { ConfigService, configInitFactory } from './services/config.service';
 import { SpinnerInterceptor } from './services/spinner.interceptor';
@@ -183,9 +189,11 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
     AiAssistantWidgetComponent,
     AsyncButtonComponent,
     MisFacturasComponent,
+    AnadirPlanComponent,
     BajaSuscripcionComponent,
     CambioSuscripcionComponent,
     DescuentoSuscripcionComponent,
+    GestionarPlanComponent,
     StoreModule.forRoot({ user: userReducer }),
     EffectsModule.forRoot([UserEffects]),
     StoreDevtoolsModule.instrument({
@@ -227,6 +235,12 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
       provide: APP_INITIALIZER,
       useFactory: configInitFactory,
       deps: [ConfigService],
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: appConfigInitFactory,
+      deps: [AppConfigService],
       multi: true,
     },
     {

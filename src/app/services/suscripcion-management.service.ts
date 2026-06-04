@@ -39,6 +39,66 @@ export interface CambiarPlanDto {
   comentario?: string;
 }
 
+/** Tipo de cambio calculado por el backend según diferencia de precio/plan. */
+export type SwitchType = 'UPGRADE' | 'DOWNGRADE' | 'CROSSGRADE';
+
+/** Modo de aplicación del cambio: inmediato o diferido al próximo ciclo. */
+export type ModoCambio = 'INMEDIATO' | 'PROGRAMADO';
+
+/** Respuesta del endpoint POST /cambiar-plan (cambiarSuscripcion). */
+export interface CambioSuscripcionResponse {
+  mensaje: string;
+  switchType: SwitchType;
+  modo: ModoCambio;
+  /** ISO date string. Presente cuando modo === 'PROGRAMADO'. */
+  fechaAplicacion?: string;
+}
+
+export type AvisoCambioCodigo =
+  | 'FUERA_DE_PLAZO'
+  | 'COOLDOWN'
+  | 'LIMITE_CAMBIOS'
+  | 'OPOSICION_DUPLICADA'
+  | 'SIN_FECHAS_CICLO'
+  | 'PRECIO_NO_DISPONIBLE'
+  | 'CAMBIO_NO_DISPONIBLE';
+
+export interface PreviewCambioResponse {
+  switchType: SwitchType;
+  modo: ModoCambio;
+  requiereCobro: boolean;
+  /**
+   * true = coste autoritativo (sea 0 o >0). false = no se pudo determinar el coste
+   * de un upgrade (precio destino NaN/ausente o fechas de ciclo inválidas). NUNCA
+   * tratar requiereCobro:false como "gratis": si costeCalculable es false en un
+   * UPGRADE, el confirmar DEBE bloquearse.
+   */
+  costeCalculable: boolean;
+  prorrateo?: { importe: number; diasRestantes: number; diasCiclo: number };
+  precioActual: number | null;
+  precioNuevo: number | null;
+  /** ISO date string; presente si modo === 'PROGRAMADO'. */
+  fechaAplicacion: string | null;
+  metodoPago: { usable: boolean; tarjetaMasked: string | null };
+  avisos: Array<{ codigo: AvisoCambioCodigo; mensaje: string }>;
+  /** Cross-periodo (crédito→cobertura): crédito no consumido del plan actual (€). undefined si no aplica. */
+  credito?: number;
+  /** Cross-periodo: fecha ISO hasta la que el crédito cubre el plan nuevo. null si no se pudo calcular. */
+  cubiertoHasta?: string | null;
+  cambiosRestantes?: number;
+  horasRestantesCooldown?: number;
+}
+
+/** Operación de cambio programada (downgrade diferido) pendiente de aplicar. */
+export interface SwitchOperationProgramada {
+  id: string;
+  skuNuevo: string;
+  tipoNuevo: string;
+  oposicionNueva: string;
+  /** ISO date string en la que el cron aplicará el cambio. */
+  fechaProgramada: string;
+}
+
 export interface PlanDisponible {
   id: string;
   nombre: string;
@@ -57,6 +117,16 @@ export interface CuponActivo {
   discount: string;
 }
 
+/** Respuesta del endpoint POST /suscripcion-management/anadir-plan. */
+export interface AnadirPlanResponse {
+  success: boolean;
+  /** true = el alumno NO tiene COF usable → hay que llevarlo al checkout de WC. */
+  requiereCheckout?: boolean;
+  /** Id de la `Suscripcion` local creada cuando success && !requiereCheckout. */
+  suscripcionId?: number;
+  mensaje: string;
+}
+
 export interface DetalleSuscripcion {
   id: number;
   tipo: string;
@@ -68,6 +138,13 @@ export interface DetalleSuscripcion {
   proximoPago: Date | null;
   diasRestantes: number | null;
   esWooCommerce: boolean;
+  // Campos de cambio programado (downgrade diferido). null si no hay cambio pendiente.
+  cambioProgramadoSku: string | null;
+  cambioProgramadoTipo: string | null;
+  cambioProgramadoOposicion: string | null;
+  /** ISO date string. */
+  cambioProgramadoFecha: string | null;
+  switchOperationProgramada: SwitchOperationProgramada | null;
 }
 
 @Injectable({
@@ -88,32 +165,116 @@ export class SuscripcionManagementService extends ApiBaseService {
     return this.post('/solicitar-baja', dto) as Observable<RespuestaBaja>;
   }
 
-  cancelarCancelacionProgramada(suscripcionId?: number): Observable<{ mensaje: string }> {
-    return this.post('/cancelar-cancelacion-programada', { suscripcionId }) as Observable<{ mensaje: string }>;
+  cancelarCancelacionProgramada(
+    suscripcionId?: number,
+  ): Observable<{ mensaje: string }> {
+    return this.post('/cancelar-cancelacion-programada', {
+      suscripcionId,
+    }) as Observable<{ mensaje: string }>;
   }
 
-  cambiarPlan(dto: CambiarPlanDto): Observable<{ mensaje: string }> {
-    return this.post('/cambiar-plan', dto) as Observable<{ mensaje: string }>;
+  /**
+   * Cambia la suscripción a un nuevo SKU. El backend devuelve el tipo de cambio
+   * (UPGRADE/DOWNGRADE/CROSSGRADE) y el modo (INMEDIATO/PROGRAMADO). La ruta sigue
+   * siendo /cambiar-plan aunque el método de negocio se renombró a cambiarSuscripcion.
+   */
+  cambiarSuscripcion(
+    suscripcionId: number,
+    nuevoSku: string,
+    comentario?: string,
+  ): Observable<CambioSuscripcionResponse> {
+    const dto: CambiarPlanDto = { suscripcionId, nuevoSku, comentario };
+    return this.post(
+      '/cambiar-plan',
+      dto,
+    ) as Observable<CambioSuscripcionResponse>;
   }
 
-  aplicarDescuento(suscripcionId: number, codigoDescuento: string): Observable<{ mensaje: string; cuponesActivos: CuponActivo[] }> {
-    return this.post('/aplicar-descuento', { suscripcionId, codigoDescuento }) as Observable<{ mensaje: string; cuponesActivos: CuponActivo[] }>;
+  /** Preview read-only del cambio: importe de prorrateo, tipo, método de pago. */
+  previewCambioSuscripcion(
+    suscripcionId: number,
+    nuevoSku: string,
+  ): Observable<PreviewCambioResponse> {
+    return this.post('/preview-cambio', {
+      suscripcionId,
+      nuevoSku,
+    }) as Observable<PreviewCambioResponse>;
   }
 
-  removerDescuento(suscripcionId: number, codigoDescuento: string): Observable<{ mensaje: string; cuponesActivos: CuponActivo[] }> {
-    return this.post('/remover-descuento', { suscripcionId, codigoDescuento }) as Observable<{ mensaje: string; cuponesActivos: CuponActivo[] }>;
+  /**
+   * @deprecated Usar `cambiarSuscripcion`. Se mantiene como alias para no romper
+   * llamadas existentes; ahora devuelve la respuesta tipada completa.
+   */
+  cambiarPlan(dto: CambiarPlanDto): Observable<CambioSuscripcionResponse> {
+    return this.cambiarSuscripcion(
+      dto.suscripcionId,
+      dto.nuevoSku,
+      dto.comentario,
+    );
+  }
+
+  /** Cancela un cambio programado (downgrade diferido) por id de SwitchOperation. */
+  cancelarCambioProgramado(opId: string): Observable<{ mensaje: string }> {
+    return this.delete(`/switches/${opId}`) as Observable<{ mensaje: string }>;
+  }
+
+  aplicarDescuento(
+    suscripcionId: number,
+    codigoDescuento: string,
+  ): Observable<{ mensaje: string; cuponesActivos: CuponActivo[] }> {
+    return this.post('/aplicar-descuento', {
+      suscripcionId,
+      codigoDescuento,
+    }) as Observable<{ mensaje: string; cuponesActivos: CuponActivo[] }>;
+  }
+
+  removerDescuento(
+    suscripcionId: number,
+    codigoDescuento: string,
+  ): Observable<{ mensaje: string; cuponesActivos: CuponActivo[] }> {
+    return this.post('/remover-descuento', {
+      suscripcionId,
+      codigoDescuento,
+    }) as Observable<{ mensaje: string; cuponesActivos: CuponActivo[] }>;
   }
 
   obtenerPlanesDisponibles(oposicion?: string): Observable<PlanDisponible[]> {
-    const params = oposicion ? `?oposicion=${encodeURIComponent(oposicion)}` : '';
-    return this.get(`/planes-disponibles${params}`) as Observable<PlanDisponible[]>;
+    const params = oposicion
+      ? `?oposicion=${encodeURIComponent(oposicion)}`
+      : '';
+    return this.get(`/planes-disponibles${params}`) as Observable<
+      PlanDisponible[]
+    >;
   }
 
-  obtenerDetalleSuscripcion(suscripcionId: number): Observable<DetalleSuscripcion> {
-    return this.get(`/detalle-suscripcion/${suscripcionId}`) as Observable<DetalleSuscripcion>;
+  /**
+   * Da de alta al alumno en una oposición que aún NO tiene, cobrando la 1ª cuota
+   * con su tarjeta guardada (COF Redsys) en 1 clic. Si el alumno no tiene COF usable,
+   * el backend responde `{ requiereCheckout: true }` y el front lo lleva al checkout de WC.
+   */
+  anadirPlan(nuevoSku: string): Observable<AnadirPlanResponse> {
+    return this.post('/anadir-plan', {
+      nuevoSku,
+    }) as Observable<AnadirPlanResponse>;
   }
 
-  linkToWordPress(password: string): Observable<{ success: boolean; message: string; woocommerceCustomerId?: string }> {
-    return this.post('/link-wordpress', { password }) as Observable<{ success: boolean; message: string; woocommerceCustomerId?: string }>;
+  obtenerDetalleSuscripcion(
+    suscripcionId: number,
+  ): Observable<DetalleSuscripcion> {
+    return this.get(
+      `/detalle-suscripcion/${suscripcionId}`,
+    ) as Observable<DetalleSuscripcion>;
+  }
+
+  linkToWordPress(password: string): Observable<{
+    success: boolean;
+    message: string;
+    woocommerceCustomerId?: string;
+  }> {
+    return this.post('/link-wordpress', { password }) as Observable<{
+      success: boolean;
+      message: string;
+      woocommerceCustomerId?: string;
+    }>;
   }
 }

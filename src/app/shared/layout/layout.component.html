@@ -20,15 +20,16 @@
     (mouseleave)="onMenuHover(false)"
   >
     <p-menu
-      [model]="items"
+      [model]="items()"
       styleClass="w-full h-full overflow-x-hidden"
       *ngIf="authService.currentUser$ | async as user"
     >
       <ng-template pTemplate="start">
         <div class="image-container py-3">
           <img
-            src="white_logo.png"
+            [src]="appConfigService.appConfig().logoUrl ?? fallbackLogo"
             alt="Logo"
+            (error)="onLogoError($event)"
             [class.small-logo]="
               !isMenuExpanded && viewportService.screenWidth !== 'xs'
             "

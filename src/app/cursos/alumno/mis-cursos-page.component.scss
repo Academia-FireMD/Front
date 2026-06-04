@@ -1,0 +1,129 @@
+.mis-cursos-container {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+}
+
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--text-color-secondary);
+
+  i {
+    font-size: 3rem;
+    color: var(--primary-color);
+  }
+
+  p {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+}
+
+.cursos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.curso-card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+
+  &:hover,
+  &:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    outline: none;
+  }
+}
+
+.curso-thumbnail {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.curso-thumbnail-placeholder {
+  width: 100%;
+  height: 180px;
+  background: var(--surface-ground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 3rem;
+    color: var(--primary-color);
+    opacity: 0.5;
+  }
+}
+
+.curso-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.curso-titulo {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.curso-descripcion {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.curso-duracion {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.curso-progreso {
+  margin-top: 0.5rem;
+}
+
+.progreso-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  margin-bottom: 0.25rem;
+}

@@ -16,8 +16,8 @@
       <div
         class="col-12"
         [ngClass]="{
-          'md:col-8': user.rol !== 'ADMIN',
-          'md:col-12': user.rol === 'ADMIN',
+          'md:col-8': !esAdminOSuperior,
+          'md:col-12': esAdminOSuperior,
         }"
       >
         <div class="profile-card">
@@ -36,9 +36,12 @@
                 <h3>{{ user.nombre }} {{ user.apellidos }}</h3>
                 <span
                   class="user-role"
-                  [ngClass]="{ 'admin-role': user.rol === 'ADMIN' }"
+                  [ngClass]="{
+                    'admin-role': esAdminOSuperior,
+                    'superadmin-role': esSuperadmin,
+                  }"
                 >
-                  {{ user.rol === "ADMIN" ? "Administrador" : "Alumno" }}
+                  {{ etiquetaRol }}
                 </span>
               </div>
             </div>
@@ -135,7 +138,7 @@
                 placeholder="Seleccione un método de calificación"
               ></app-metodo-calificacion-picker>
 
-              <div class="form-group mb-3" *ngIf="user.rol === 'ADMIN'">
+              <div class="form-group mb-3" *ngIf="esAdminOSuperior">
                 <label for="esTutor">Este usuario es tutor?</label>
                 <p-toggleButton
                   id="esTutor"
@@ -189,8 +192,10 @@
           </div>
         </div>
       </div>
-      <!-- Información de suscripciones y consumibles (lado derecho) -->
-      <div class="col-12 md:col-4" *ngIf="user.rol !== 'ADMIN'">
+      <!-- Información de suscripciones y consumibles (lado derecho).
+           Solo para ALUMNO: ADMIN/SUPERADMIN no tienen suscripción propia
+           relevante (antes el check `!== 'ADMIN'` se la mostraba a SUPERADMIN). -->
+      <div class="col-12 md:col-4" *ngIf="!esAdminOSuperior">
         <!-- Card de Suscripciones -->
         <div class="subscription-card">
           <div
@@ -208,8 +213,8 @@
           </div>
 
           <div class="card-content">
-            <!-- Si no hay suscripciones -->
-            <div class="no-subscription" *ngIf="!user.suscripciones?.length">
+            <!-- Si no hay suscripciones VIVAS (activas o con cancelación programada) -->
+            <div class="no-subscription" *ngIf="!suscripcionesVisibles.length">
               <i class="pi pi-info-circle"></i>
               <h3>Sin suscripción activa</h3>
               <p>No tienes ninguna suscripción activa en este momento.</p>
@@ -222,13 +227,14 @@
               </a>
             </div>
 
-            <!-- Si hay suscripciones -->
+            <!-- Si hay suscripciones VIVAS. Las CANCELLED/EXPIRED se ocultan (solo se
+                 muestran ACTIVE y PENDING_CANCEL = cancelación programada). -->
             <div
               class="subscription-details"
-              *ngIf="user.suscripciones?.length"
+              *ngIf="suscripcionesVisibles.length"
             >
               <div
-                *ngFor="let suscripcion of user.suscripciones"
+                *ngFor="let suscripcion of suscripcionesVisibles"
                 class="subscription-card-item"
                 [ngClass]="{
                   'status-active':
@@ -407,19 +413,11 @@
                 class="flex flex-column gap-2"
                 *ngIf="isLinkedToWordPress() && hasActiveSubscription()"
               >
-                <!-- <p-button
-                  label="Gestionar suscripciones"
-                  icon="pi pi-external-link"
-                  styleClass="p-button-outlined w-full"
-                  (onClick)="gestionarEnWordPress()"
-                  pTooltip="Abre tu cuenta de WordPress para gestionar tus suscripciones"
-                  tooltipPosition="top"
-                ></p-button> -->
                 <p-button
                   label="Añadir más planes"
                   icon="pi pi-shopping-cart"
                   styleClass="p-button-text w-full"
-                  (onClick)="abrirTiendaWordPress()"
+                  (onClick)="abrirAnadirPlanDialog()"
                 ></p-button>
               </div>
               <!-- Aviso informativo sobre cancelaciones -->
@@ -846,8 +844,8 @@
     >
       <i class="pi pi-info-circle text-blue-500 mt-1"></i>
       <span class="text-sm text-blue-700 line-height-3"
-        >Al vincular tu cuenta podrás cambiar de plan, aplicar descuentos y
-        gestionar tu suscripción sin salir de la plataforma.</span
+        >Al vincular tu cuenta podrás cambiar de plan y gestionar tu suscripción
+        sin salir de la plataforma.</span
       >
     </div>
     <div class="flex gap-3 w-full justify-content-center">
@@ -899,38 +897,39 @@
   [style]="{ width: '95vw', maxWidth: '1100px' }"
   (onHide)="cerrarCambioPlanDialog()"
 >
-  <app-cambio-suscripcion
+  <app-gestionar-plan
     *ngIf="showCambioPlanDialog && suscripcionGestionWC"
-    [suscripcionId]="suscripcionGestionWC!.id"
-    [oposicion]="suscripcionGestionWC!.oposicion"
-    [planActual]="{
-      sku: suscripcionGestionWC!.sku ?? null,
-      tipo: suscripcionGestionWC!.tipo,
-      precio: suscripcionGestionWC!.monthlyPrice ?? null,
-    }"
+    modo="cambiar"
+    [suscripcion]="suscripcionGestionWC"
+    [oposicionesContratadas]="oposicionesContratadas"
     (cerrar)="cerrarCambioPlanDialog()"
-    (cambioRealizado)="cerrarCambioPlanDialog()"
-  ></app-cambio-suscripcion>
+    (realizado)="cerrarCambioPlanDialog()"
+  ></app-gestionar-plan>
 </p-dialog>
 
-<!-- Dialog Descuento WooCommerce -->
+<!-- Dialog "Añadir plan" (alta in-app en oposición no contratada, COF Redsys) -->
 <p-dialog
-  header="Gestionar Descuento"
-  [(visible)]="showDescuentoDialog"
+  header="Añadir plan"
+  [(visible)]="showAnadirPlanDialog"
   [modal]="true"
   [closable]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '95vw', maxWidth: '700px' }"
-  (onHide)="cerrarDescuentoDialog()"
+  [style]="{ width: '95vw', maxWidth: '720px' }"
+  (onHide)="cerrarAnadirPlanDialog()"
 >
-  <app-descuento-suscripcion
-    *ngIf="showDescuentoDialog && suscripcionGestionWC"
-    [suscripcionId]="suscripcionGestionWC!.id"
-    (cerrar)="cerrarDescuentoDialog()"
-    (descuentoCambiado)="cerrarDescuentoDialog()"
-  ></app-descuento-suscripcion>
+  <app-gestionar-plan
+    *ngIf="showAnadirPlanDialog"
+    modo="anadir"
+    [oposicionesContratadas]="oposicionesContratadas"
+    (cerrar)="cerrarAnadirPlanDialog()"
+    (realizado)="cerrarAnadirPlanDialog()"
+  ></app-gestionar-plan>
 </p-dialog>
+
+<!-- Dialog "Gestionar Descuento" retirado (Spec A 2026-06-02): el flujo de cupones
+     se oculta por ahora. El componente DescuentoSuscripcionComponent y los endpoints
+     /aplicar-descuento se conservan en el código por si vuelve. -->
 
 <!-- Dialog de Confirmación Baja -->
 <p-dialog

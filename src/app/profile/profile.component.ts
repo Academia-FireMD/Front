@@ -25,6 +25,11 @@ import {
   SuscripcionTipo,
 } from '../shared/models/subscription.model';
 import { Rol, Usuario } from '../shared/models/user.model';
+import {
+  esAdminOSuperior,
+  esSuperadmin,
+  etiquetaRol,
+} from '../shared/utils/rol.utils';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
@@ -87,6 +92,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
   onboardingData: OnboardingData = {};
   public Rol = Rol;
 
+  /** True si el usuario logueado es ADMIN o SUPERADMIN (admin o superior).
+   * Los paneles de alumno (suscripciones, accesos, planificaciones) se ocultan
+   * para estos roles; antes el check era `!== 'ADMIN'` y SUPERADMIN caía en el
+   * lado alumno. */
+  get esAdminOSuperior(): boolean {
+    return esAdminOSuperior(this.user?.rol);
+  }
+
+  get esSuperadmin(): boolean {
+    return esSuperadmin(this.user?.rol);
+  }
+
+  /** Etiqueta del rol para el badge ("Superadministrador" / "Administrador" / "Alumno"). */
+  get etiquetaRol(): string {
+    return etiquetaRol(this.user?.rol);
+  }
+
   // Control de dialogs de suscripción
   showCambioSuscripcionDialog = false; // Solo para vincular cuenta (usuarios "en negro")
   showBajaSuscripcionDialog = false;
@@ -96,8 +118,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Dialogs nuevos para usuarios WooCommerce
   showCambioPlanDialog = false;
-  showDescuentoDialog = false;
   suscripcionGestionWC: Suscripcion | null = null; // Suscripción activa en gestión WC
+
+  // Dialog "Añadir más planes" (alta in-app en una oposición no contratada, COF Redsys)
+  showAnadirPlanDialog = false;
 
   mostrarDialogFacturas = false;
 
@@ -379,7 +403,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
    */
   private checkFirstTimeAccess(): void {
     if (!this.user) return;
-    if (this.user.rol === Rol.ADMIN) return;
+    if (esAdminOSuperior(this.user.rol)) return;
 
     const storageKey = `onboarding_shown_${this.user.id}`;
     const hasSeenOnboarding = localStorage.getItem(storageKey);
@@ -857,11 +881,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
           icon: 'pi pi-refresh',
           command: () => this.abrirCambioPlanWC(suscripcion),
         });
-        menuItems.push({
-          label: 'Aplicar descuento',
-          icon: 'pi pi-ticket',
-          command: () => this.abrirDescuentoWC(suscripcion),
-        });
+        // "Aplicar descuento" retirado del menú (Spec A 2026-06-02). El componente
+        // y los endpoints se conservan en el código por si vuelve.
         if (!(suscripcion as any).cancelacionProgramada) {
           menuItems.push({
             label: 'Dar de baja',
@@ -905,25 +926,39 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.showCambioPlanDialog = true;
   }
 
-  abrirDescuentoWC(suscripcion: Suscripcion): void {
-    this.suscripcionGestionWC = suscripcion;
-    this.showDescuentoDialog = true;
-  }
-
   cerrarCambioPlanDialog(): void {
     this.showCambioPlanDialog = false;
     this.suscripcionGestionWC = null;
     this.store.dispatch(UserActions.loadUser());
   }
 
-  cerrarDescuentoDialog(): void {
-    this.showDescuentoDialog = false;
-    this.suscripcionGestionWC = null;
+  // ── Diálogo "Añadir más planes" (alta in-app COF) ──────────────────
+  abrirAnadirPlanDialog(): void {
+    this.showAnadirPlanDialog = true;
+  }
+
+  cerrarAnadirPlanDialog(): void {
+    this.showAnadirPlanDialog = false;
     this.store.dispatch(UserActions.loadUser());
   }
 
-  gestionarEnWordPress(): void {
-    this.showCambioSuscripcionDialog = true;
+  /** Oposiciones en las que el alumno ya tiene una suscripción activa (ACTIVE/PENDING_CANCEL). */
+  get oposicionesContratadas(): Oposicion[] {
+    const subs = this.user?.suscripciones ?? [];
+    return subs
+      .filter((s) => isSubscriptionAccessible(s.status))
+      .map((s) => s.oposicion);
+  }
+
+  /**
+   * Suscripciones que se muestran en el listado del perfil: solo las "vivas"
+   * (ACTIVE + PENDING_CANCEL = cancelación programada). Las CANCELLED/EXPIRED
+   * se ocultan porque ya no dan acceso y solo ensucian la vista.
+   */
+  get suscripcionesVisibles(): Suscripcion[] {
+    return (this.user?.suscripciones ?? []).filter((s) =>
+      isSubscriptionAccessible(s.status),
+    );
   }
 
   // Abrir tienda de WordPress

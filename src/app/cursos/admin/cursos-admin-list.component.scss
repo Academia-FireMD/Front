@@ -1,0 +1,41 @@
+:host {
+  display: block;
+}
+
+.cursos-admin-list__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.5rem;
+  gap: 1rem;
+  width: 100%;
+}
+
+.cursos-admin-list__row-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.cursos-admin-list__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.cursos-admin-list__slug {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+}
+
+.cursos-admin-list__row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.cursos-admin-list__date {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+}

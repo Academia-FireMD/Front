@@ -1,0 +1,83 @@
+.leccion-page-container {
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--yellow-50, #fef9c3);
+  color: var(--yellow-900, #713f12);
+  border: 1px solid var(--yellow-300, #fde047);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--text-color-secondary);
+
+  i {
+    font-size: 3rem;
+    color: var(--primary-color);
+  }
+
+  p {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+}
+
+.leccion-header {
+  margin-bottom: 1.5rem;
+}
+
+.back-btn {
+  margin-bottom: 0.75rem;
+  padding-left: 0;
+}
+
+.leccion-titulo {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.leccion-body {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.no-url-state,
+.external-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  color: var(--text-color-secondary);
+}
+
+.action-icon {
+  font-size: 3rem;
+  color: var(--primary-color);
+}
+
+.text-secondary {
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}

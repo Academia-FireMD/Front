@@ -203,7 +203,7 @@ export async function setupAuthInterceptors(
   page: Page,
   opts: {
     email: string;
-    rol: 'ALUMNO' | 'ADMIN';
+    rol: 'ALUMNO' | 'ADMIN' | 'SUPERADMIN';
     statusCode?: number;
     errorBody?: Record<string, unknown>;
   }

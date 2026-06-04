@@ -1,0 +1,129 @@
+<div class="catalogo-container">
+  <div class="page-header">
+    <h1>Catálogo de Cursos</h1>
+    <a routerLink="/app/cursos" class="p-button p-button-text p-button-sm">
+      <i class="pi pi-arrow-left"></i> Mis cursos
+    </a>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Cargando catálogo...</p>
+    </div>
+  } @else if (error()) {
+    <div class="empty-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>Error al cargar el catálogo. Inténtalo de nuevo.</p>
+    </div>
+  } @else if (cursos().length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-inbox"></i>
+      <p>No hay cursos disponibles en este momento.</p>
+    </div>
+  } @else {
+    <div class="cursos-grid">
+      @for (curso of cursos(); track curso.id) {
+        <div class="curso-card">
+          @if (curso.thumbnailUrl) {
+            <img
+              [src]="curso.thumbnailUrl"
+              [alt]="curso.titulo"
+              class="curso-thumbnail"
+            />
+          } @else {
+            <div class="curso-thumbnail-placeholder">
+              <i class="pi pi-play-circle"></i>
+            </div>
+          }
+          <div class="curso-body">
+            <h3 class="curso-titulo">{{ curso.titulo }}</h3>
+            @if (curso.descripcion) {
+              <p class="curso-descripcion">{{ curso.descripcion }}</p>
+            }
+            <div class="curso-meta">
+              @if (curso.duracionEstimadaMinutos) {
+                <span class="meta-item"
+                  ><i class="pi pi-clock"></i>
+                  {{ curso.duracionEstimadaMinutos }} min</span
+                >
+              }
+              @if (curso.precio != null) {
+                <span class="meta-item precio"
+                  >{{ curso.precio | number: "1.2-2" }} €</span
+                >
+              }
+            </div>
+            @if (yaComprado(curso)) {
+              <a
+                pButton
+                label="Ver curso"
+                icon="pi pi-arrow-right"
+                class="p-button-sm comprar-btn"
+                [routerLink]="['/app/cursos', curso.slug]"
+              ></a>
+            } @else {
+              <button
+                pButton
+                label="Comprar (1 clic)"
+                icon="pi pi-bolt"
+                class="p-button-sm comprar-btn"
+                [loading]="comprandoId() === curso.id"
+                [disabled]="!curso.wooProductId || comprandoId() !== null"
+                (click)="comprar(curso)"
+              ></button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <p-dialog
+    [visible]="checkoutDialogVisible()"
+    (visibleChange)="checkoutDialogVisible.set($event)"
+    [modal]="true"
+    [dismissableMask]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '28rem', maxWidth: '92vw' }"
+    [header]="
+      checkoutEsRechazo()
+        ? 'Tarjeta rechazada'
+        : 'Completa la compra en la tienda'
+    "
+    data-testid="catalogo-checkout-dialog"
+  >
+    <div class="checkout-dialog-body">
+      <i
+        class="pi"
+        [class.pi-credit-card]="checkoutEsRechazo()"
+        [class.pi-shopping-cart]="!checkoutEsRechazo()"
+      ></i>
+      <p>
+        {{
+          checkoutMensaje() ||
+            (checkoutEsRechazo()
+              ? "Tu tarjeta fue rechazada (fondos/banco). Cómpralo en la tienda con otra tarjeta."
+              : "No tienes una tarjeta guardada para el pago instantáneo. Completa la compra en la tienda.")
+        }}
+      </p>
+    </div>
+    <ng-template pTemplate="footer">
+      <button
+        pButton
+        label="Cancelar"
+        class="p-button-text p-button-sm"
+        (click)="checkoutDialogVisible.set(false)"
+      ></button>
+      <button
+        pButton
+        label="Completar en la tienda"
+        icon="pi pi-external-link"
+        class="p-button-sm"
+        [disabled]="!checkoutWooProductId()"
+        (click)="completarEnTienda()"
+      ></button>
+    </ng-template>
+  </p-dialog>
+</div>

@@ -1,0 +1,49 @@
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="cursoItemTemplate"
+  (onItemClick)="onRowClick($any($event))"
+>
+  <div left-actions>
+    <span class="p-input-icon-left">
+      <i class="pi pi-search"></i>
+      <input
+        type="text"
+        pInputText
+        class="w-full"
+        placeholder="Buscar cursos"
+        [value]="pagination().searchTerm"
+        (input)="valueChanged($event)"
+      />
+    </span>
+  </div>
+
+  <div right-actions>
+    <p-button
+      label="Nuevo curso"
+      icon="pi pi-plus"
+      (onClick)="navigateToNew()"
+    ></p-button>
+  </div>
+
+  <div empty-template>
+    <div class="text-center p-4">No hay cursos registrados.</div>
+  </div>
+</app-generic-list>
+
+<ng-template #cursoItemTemplate let-item>
+  <div class="cursos-admin-list__row">
+    <div class="cursos-admin-list__row-main">
+      <div class="cursos-admin-list__title">{{ item.titulo }}</div>
+      <code class="cursos-admin-list__slug">{{ item.slug }}</code>
+    </div>
+    <div class="cursos-admin-list__row-meta">
+      <p-tag
+        [value]="item.estado"
+        [severity]="estadoSeverity(item.estado)"
+      ></p-tag>
+      <span class="cursos-admin-list__date">{{
+        item.createdAt | date: "dd/MM/yyyy"
+      }}</span>
+    </div>
+  </div>
+</ng-template>

@@ -11,7 +11,7 @@ const mockFacturacionService = {
     of({
       data: [],
       pagination: { skip: 0, take: 20, searchTerm: '', count: 0 },
-    })
+    }),
   ),
   crearManual$: jest.fn(() => of({ id: 1 })),
   crearRectificativa$: jest.fn(() => of({ id: 2, tipo: 'RECTIFICATIVA' })),
@@ -35,7 +35,7 @@ const mockUserService = {
         },
       ],
       pagination: { skip: 0, take: 1, count: 1 },
-    })
+    }),
   ),
 };
 
@@ -68,7 +68,9 @@ describe('FacturacionAdminComponent', () => {
 
   it('getEstadoChipClass devuelve la clase correcta por estado', () => {
     expect(component.getEstadoChipClass('EMITIDA')).toBe('estado-emitida-chip');
-    expect(component.getEstadoChipClass('PENDIENTE')).toBe('estado-pendiente-chip');
+    expect(component.getEstadoChipClass('PENDIENTE')).toBe(
+      'estado-pendiente-chip',
+    );
     expect(component.getEstadoChipClass('ANULADA')).toBe('estado-anulada-chip');
     expect(component.getEstadoChipClass('ERROR')).toBe('estado-error-chip');
   });
@@ -87,7 +89,7 @@ describe('FacturacionAdminComponent', () => {
       expect.objectContaining({
         skip: 0,
         where: { tipo: 'NORMAL', estado: 'EMITIDA' },
-      })
+      }),
     );
   });
 
@@ -96,7 +98,7 @@ describe('FacturacionAdminComponent', () => {
     component.onFiltersChanged(undefined);
 
     expect(updateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ where: {}, skip: 0 })
+      expect.objectContaining({ where: {}, skip: 0 }),
     );
   });
 
@@ -138,7 +140,12 @@ describe('FacturacionAdminComponent', () => {
     await component.confirmarSeleccionUsuario();
 
     expect(mockUserService.getAllUsers$).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 0, take: 1, searchTerm: '', where: { id: 10 } })
+      expect.objectContaining({
+        skip: 0,
+        take: 1,
+        searchTerm: '',
+        where: { id: 10 },
+      }),
     );
     expect(component.formManual.clienteNombre).toBe('Juan García');
     expect(component.formManual.clienteEmail).toBe('juan@test.com');
@@ -173,7 +180,12 @@ describe('FacturacionAdminComponent', () => {
   });
 
   it('abrirDialogRectificativa guarda la factura seleccionada y abre el dialog', () => {
-    const factura = { id: 5, numero: 'TEST-001', tipo: 'NORMAL', estado: 'EMITIDA' } as any;
+    const factura = {
+      id: 5,
+      numero: 'TEST-001',
+      tipo: 'NORMAL',
+      estado: 'EMITIDA',
+    } as any;
     component.abrirDialogRectificativa(factura);
 
     expect(component.facturaSeleccionada()).toEqual(factura);
@@ -197,12 +209,20 @@ describe('FacturacionAdminComponent', () => {
   it('guardarFacturaManual acepta baseImponible 0', async () => {
     component.formManual = {
       clienteNombre: 'Cliente Test',
+      // clienteNif + clienteProvincia are required by the validation added
+      // after this test was first written (2026-04 facturacion overhaul);
+      // without them the toast 'El NIF del cliente es obligatorio' fires
+      // and the crearManual$ call is short-circuited.
+      clienteNif: '12345678Z',
+      clienteProvincia: 'Valencia',
       concepto: 'Servicio gratuito',
       baseImponible: 0,
       tipoIva: 21,
     } as any;
     component.pasoDialogManual.set('datos');
-    mockFacturacionService.crearManual$.mockReturnValueOnce(of({ id: 1, numero: 'TEST-001' }));
+    mockFacturacionService.crearManual$.mockReturnValueOnce(
+      of({ id: 1, numero: 'TEST-001' }),
+    );
     const warnSpy = jest.spyOn(component.toast, 'warning');
 
     await component.guardarFacturaManual();
@@ -222,7 +242,9 @@ describe('FacturacionAdminComponent', () => {
 
     await component.guardarFacturaManual();
 
-    expect(warnSpy).toHaveBeenCalledWith('Nombre del cliente, concepto e importe son obligatorios');
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Nombre del cliente, concepto e importe son obligatorios',
+    );
     expect(mockFacturacionService.crearManual$).not.toHaveBeenCalled();
   });
 });

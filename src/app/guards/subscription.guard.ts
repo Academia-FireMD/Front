@@ -7,6 +7,7 @@ import {
   SuscripcionTipo,
   isSubscriptionAccessible,
 } from '../shared/models/subscription.model';
+import { esAdminOSuperior } from '../shared/utils/rol.utils';
 import { selectCurrentUser } from '../store/user/user.selectors';
 
 @Injectable({
@@ -35,7 +36,7 @@ export class SubscriptionGuard implements CanActivate {
             ?.map((s) => s.tipo) || [];
         const hasAccess =
           this.hasAccess(subscriptionTypes, allowedSubscriptions) ||
-          user?.rol == 'ADMIN';
+          esAdminOSuperior(user?.rol);
 
         if (!hasAccess) {
           this.router.navigate(['/app/profile']);

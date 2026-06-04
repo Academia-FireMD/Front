@@ -1,21 +1,38 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { MenuItem } from 'primeng/api';
 import { firstValueFrom, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AppConfigService } from '../../services/app-config.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
 import { selectCurrentUser } from '../../store/user/user.selectors';
+import { EstadoModulos } from '../models/app-config.model';
+import { ModuloApp } from '../models/modulo-app.enum';
 import {
   Suscripcion,
-  SuscripcionStatus,
   SuscripcionTipo,
   isSubscriptionAccessible,
 } from '../models/subscription.model';
-import { Usuario } from '../models/user.model';
+import { Rol, Usuario } from '../models/user.model';
+
+/**
+ * MenuItem PrimeNG extendido con metadata `modulo` (D11, §6.1).
+ * Si presente, el item se oculta cuando el módulo está OFF (salvo SUPERADMIN).
+ */
+export interface AppMenuItem extends MenuItem {
+  modulo?: ModuloApp;
+  items?: AppMenuItem[];
+}
+
+/**
+ * Fallback servido desde `public/` (mounted at root por angular.json).
+ * El spec menciona `/assets/white_logo.png` pero el repo usa `public/`.
+ */
+const FALLBACK_LOGO = '/white_logo.png';
 
 /**
  * Obtiene el nivel de suscripción más alto de un array de suscripciones
@@ -56,13 +73,33 @@ function getHighestSubscriptionTier(
 export class LayoutComponent {
   viewportService = inject(ViewportService);
   authService = inject(AuthService);
+  appConfigService = inject(AppConfigService);
   router = inject(Router);
   activatedRoute = inject(ActivatedRoute);
   userService = inject(UserService);
   toast = inject(ToastrService);
   store = inject(Store);
 
-  items = [] as Array<any>;
+  readonly fallbackLogo = FALLBACK_LOGO;
+  /** Snapshot del usuario actual para el computed `items` (D11). */
+  private readonly currentUserSignal = signal<Usuario | null>(null);
+
+  /**
+   * Menu filtrado por módulos habilitados + rol (computed §6.1). Reacciona
+   * a cambios en `estadoModulos` y al snapshot de usuario.
+   */
+  readonly items = computed<AppMenuItem[]>(() => {
+    const user = this.currentUserSignal();
+    if (!user) return [];
+    const all =
+      user.rol === Rol.ADMIN || user.rol === Rol.SUPERADMIN
+        ? this.buildAdminMenu(user)
+        : this.buildStudentMenu(user);
+    const modulos = this.appConfigService.estadoModulos();
+    const isSuper = user.rol === Rol.SUPERADMIN;
+    return this.filterByModulo(all, modulos, isSuper);
+  });
+
   isMenuVisible: boolean = false;
   isMenuExpanded: boolean = false;
   currentUser$: Observable<Usuario | null> =
@@ -153,35 +190,52 @@ export class LayoutComponent {
 
   ngOnInit(): void {
     this.currentUser$.subscribe((user) => {
-      // Solo reconstruir el menú si tenemos un usuario válido
       if (!user) return;
-
-      // Preservar el estado de colapso antes de reconstruir el menú
-      const collapsedStates = this.items.reduce(
-        (acc, item, index) => {
-          acc[index] = item.collapsed;
-          return acc;
-        },
-        {} as Record<number, boolean>,
-      );
-
-      if (user?.rol == 'ADMIN') {
-        this.items = this.getAdminMenu();
-      } else {
-        this.items = this.getStudentMenu(user);
-      }
-
-      // Restaurar el estado de colapso después de reconstruir el menú
-      this.items.forEach((item, index) => {
-        if (collapsedStates[index] !== undefined) {
-          item.collapsed = collapsedStates[index];
-        }
-      });
+      this.currentUserSignal.set(user);
     });
   }
 
-  private getAdminMenu(): MenuItem[] {
-    return [
+  onLogoError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img.src.endsWith(FALLBACK_LOGO)) return;
+    img.src = FALLBACK_LOGO;
+  }
+
+  /**
+   * Filtro recursivo D18: parent OFF → toda la rama oculta (top-down).
+   * SUPERADMIN siempre ve todo (bypass). Submenús que quedan vacíos
+   * se descartan para no mostrar headers huérfanos.
+   */
+  filterByModulo(
+    items: AppMenuItem[],
+    modulos: EstadoModulos,
+    isSuperadmin: boolean,
+  ): AppMenuItem[] {
+    return items
+      .filter((i) => isSuperadmin || !i.modulo || modulos[i.modulo] === true)
+      .map((i) =>
+        i.items
+          ? {
+              ...i,
+              items: this.filterByModulo(
+                i.items as AppMenuItem[],
+                modulos,
+                isSuperadmin,
+              ),
+            }
+          : i,
+      )
+      .filter((i) => {
+        const hadChildren =
+          (i as AppMenuItem).items !== undefined &&
+          Array.isArray((i as AppMenuItem).items);
+        if (!hadChildren) return true;
+        return ((i as AppMenuItem).items?.length ?? 0) > 0;
+      });
+  }
+
+  private buildAdminMenu(user: Usuario): AppMenuItem[] {
+    const items: AppMenuItem[] = [
       {
         label: 'Gestión',
         collapsed: false,
@@ -190,41 +244,49 @@ export class LayoutComponent {
             label: 'Usuarios',
             icon: 'pi pi-user',
             routerLink: '/app/test/user',
+            modulo: ModuloApp.TEST,
           },
           {
             label: 'Modulos',
             icon: 'pi pi-book',
             routerLink: '/app/test/modulos',
+            modulo: ModuloApp.TEST,
           },
           {
             label: 'Temas',
             icon: 'pi pi-book',
             routerLink: '/app/test/tema',
+            modulo: ModuloApp.TEST,
           },
           {
             label: 'Documentos',
             icon: 'pi pi-file',
             routerLink: '/app/documentacion',
+            modulo: ModuloApp.DOCUMENTACION,
           },
           {
             label: 'Publicaciones',
             icon: 'pi pi-calendar',
             routerLink: '/app/documentacion/publicaciones',
+            modulo: ModuloApp.DOCUMENTACION,
           },
           {
             label: 'Tutorías',
             icon: 'pi pi-calendar',
             routerLink: '/app/horarios',
+            modulo: ModuloApp.HORARIOS,
           },
           {
             label: 'Facturación',
             icon: 'pi pi-receipt',
             routerLink: '/app/facturacion',
+            modulo: ModuloApp.FACTURACION,
           },
         ],
       },
       {
         label: 'Planificación',
+        modulo: ModuloApp.PLANIFICACION,
         items: [
           {
             label: 'Bloques',
@@ -251,6 +313,7 @@ export class LayoutComponent {
       {
         label: 'Preguntas',
         collapsed: true,
+        modulo: ModuloApp.TEST,
         items: [
           {
             label: 'Lista',
@@ -272,6 +335,7 @@ export class LayoutComponent {
       {
         label: 'Flash Cards',
         collapsed: true,
+        modulo: ModuloApp.FLASHCARDS,
         items: [
           {
             label: 'Lista',
@@ -293,11 +357,34 @@ export class LayoutComponent {
       {
         label: 'Exámenes',
         collapsed: false,
+        modulo: ModuloApp.EXAMEN,
         items: [
           {
             label: 'Gestión de exámenes',
             icon: 'pi pi-file-edit',
             routerLink: '/app/examen',
+          },
+        ],
+      },
+      // Bug WL-admin-cursos (2026-05-25): las rutas /app/cursos-admin
+      // existen (lista + nuevo + editar) pero no estaban en el menú,
+      // por lo que admin no podía crear ni gestionar cursos desde la UI.
+      // Cada sub-curso puede tener lecciones tipo VIDEO con bunnyVideoId,
+      // que es la forma de subir "histórico de sesiones/tutorías".
+      {
+        label: 'Cursos',
+        collapsed: true,
+        modulo: ModuloApp.CURSOS,
+        items: [
+          {
+            label: 'Lista de cursos',
+            icon: 'pi pi-list',
+            routerLink: '/app/cursos-admin',
+          },
+          {
+            label: 'Crear curso',
+            icon: 'pi pi-plus',
+            routerLink: '/app/cursos-admin/nuevo',
           },
         ],
       },
@@ -314,6 +401,7 @@ export class LayoutComponent {
             label: 'Ajustes',
             icon: 'pi pi-cog',
             routerLink: '/app/test/ajustes',
+            modulo: ModuloApp.TEST,
           },
           {
             label: 'Desconectarse',
@@ -326,16 +414,35 @@ export class LayoutComponent {
         ],
       },
     ];
+
+    if (user.rol === Rol.SUPERADMIN) {
+      const configuracion = {
+        label: 'Configuración',
+        items: [
+          {
+            label: 'White-label',
+            icon: 'pi pi-palette',
+            routerLink: '/app/superadmin/config',
+          },
+        ],
+      };
+      // Insertar ANTES de "Perfil" (que contiene "Desconectarse"): la sección
+      // SUPERADMIN no debe quedar por debajo del logout, sino por encima.
+      const perfilIdx = items.findIndex((i) => i.label === 'Perfil');
+      items.splice(perfilIdx >= 0 ? perfilIdx : items.length, 0, configuracion);
+    }
+
+    return items;
   }
 
-  private getStudentMenu(user: Usuario | null): MenuItem[] {
+  private buildStudentMenu(user: Usuario | null): AppMenuItem[] {
     const highestTier = getHighestSubscriptionTier(user?.suscripciones);
     const isBasic = highestTier === SuscripcionTipo.BASIC;
     const isAdvanced = highestTier === SuscripcionTipo.ADVANCED;
     const isPremium = highestTier === SuscripcionTipo.PREMIUM;
     const hasValidSubscription = isBasic || isAdvanced || isPremium;
 
-    const menu: MenuItem[] = [];
+    const menu: AppMenuItem[] = [];
 
     if (hasValidSubscription) {
       menu.push(
@@ -343,10 +450,12 @@ export class LayoutComponent {
           label: 'Documentos',
           icon: 'pi pi-file',
           routerLink: '/app/documentacion/alumno',
+          modulo: ModuloApp.DOCUMENTACION,
           items: [],
         },
         {
           label: 'Test',
+          modulo: ModuloApp.TEST,
           items: [
             {
               label: 'Realizar tests',
@@ -362,6 +471,7 @@ export class LayoutComponent {
         },
         {
           label: 'Flashcards',
+          modulo: ModuloApp.FLASHCARDS,
           items: [
             {
               label: 'Realizar flashcards',
@@ -382,11 +492,13 @@ export class LayoutComponent {
               label: 'Test',
               icon: 'pi pi-question',
               routerLink: '/app/test/alumno/preguntas',
+              modulo: ModuloApp.TEST,
             },
             {
               label: 'Flashcards',
               icon: 'pi pi-id-card',
               routerLink: '/app/test/alumno/flashcards',
+              modulo: ModuloApp.FLASHCARDS,
             },
           ],
         },
@@ -399,6 +511,7 @@ export class LayoutComponent {
         label: 'Planificación mensual',
         icon: 'pi pi-calendar-plus',
         routerLink: '/app/planificacion/planificacion-mensual-alumno',
+        modulo: ModuloApp.PLANIFICACION,
         items: [],
       });
     } else if (hasValidSubscription) {
@@ -407,6 +520,7 @@ export class LayoutComponent {
         label: 'Planificación mensual',
         icon: 'pi pi-calendar-plus',
         items: [],
+        modulo: ModuloApp.PLANIFICACION,
         styleClass: 'locked-menu-item',
         state: { locked: true },
         command: () => this.openUpgradePage(),
@@ -417,6 +531,7 @@ export class LayoutComponent {
     if (hasValidSubscription && (isAdvanced || isPremium)) {
       menu.push({
         label: 'Exámenes',
+        modulo: ModuloApp.EXAMEN,
         items: [
           {
             label: 'Exámenes disponibles',
@@ -434,6 +549,7 @@ export class LayoutComponent {
       // Usuario BASIC - mostrar bloqueado
       menu.push({
         label: 'Exámenes',
+        modulo: ModuloApp.EXAMEN,
         items: [
           {
             label: 'Exámenes disponibles',
@@ -459,7 +575,33 @@ export class LayoutComponent {
         label: 'Tutorías',
         icon: 'pi pi-calendar',
         routerLink: '/app/horarios/alumno',
+        modulo: ModuloApp.HORARIOS,
         items: [],
+      });
+    }
+
+    // Cursos — disponible para todos los alumnos con sub activa. Las
+    // rutas alumno (/app/cursos = "Mis cursos", /app/cursos/catalogo)
+    // existían pero no estaban en el menú; el alumno solo podía
+    // llegar por URL directa. ModuloGuard se encarga del gating por
+    // tenant.
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Cursos',
+        collapsed: true,
+        modulo: ModuloApp.CURSOS,
+        items: [
+          {
+            label: 'Mis cursos',
+            icon: 'pi pi-book',
+            routerLink: '/app/cursos',
+          },
+          {
+            label: 'Catálogo',
+            icon: 'pi pi-th-large',
+            routerLink: '/app/cursos/catalogo',
+          },
+        ],
       });
     }
 
@@ -504,22 +646,23 @@ export class LayoutComponent {
   }
 
   public isParentCollapsed(itemChild: MenuItem) {
-    const index = this.items.findIndex(
+    const all = this.items();
+    const index = all.findIndex(
       (parentItem) =>
         parentItem?.items &&
         (parentItem.items as Array<MenuItem>).find((e) => e == itemChild),
     );
     if (index === -1) {
-      return false; // Si no se encuentra un padre, no está colapsado
+      return false;
     }
-    return !!this.items[index]?.collapsed;
+    return !!(all[index] as any)?.collapsed;
   }
 
   toggleMenu(): void {
-    this.isMenuVisible = !this.isMenuVisible; // Alterna la visibilidad del menú
+    this.isMenuVisible = !this.isMenuVisible;
   }
 
-  toggleCollapse(item: any): void {
-    item.collapsed = !item.collapsed; // Alterna la visibilidad del submenú
+  toggleCollapse(item: AppMenuItem): void {
+    (item as any).collapsed = !(item as any).collapsed;
   }
 }

@@ -12,6 +12,7 @@ import {
 } from '../shared/models/pregunta.model';
 import { Test } from '../shared/models/test.model';
 import { Rol } from '../shared/models/user.model';
+import { esAdminOSuperior } from '../shared/utils/rol.utils';
 
 export const colorCorrectas = '#00eb003d';
 export const colorIncorretas = '#ff9c9c';
@@ -462,8 +463,8 @@ export const getAllDifficultades = (
     },
   ];
 
-  // Si es admin
-  if (rol === Rol.ADMIN) {
+  // Si es admin o superior (SUPERADMIN hereda las opciones de admin)
+  if (esAdminOSuperior(rol)) {
     if (isFlashcards) {
       // Admin con flashcards: datos básicos + datos + tarjetas + privado + público
       return [...dificultadesBasicas, ...opcionesVisibilidad];

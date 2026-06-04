@@ -16,7 +16,7 @@
 }
 
 .bar {
-  background-color: $primaryColor;
+  background-color: var(--primary-color);
   height: fit-content;
   position: fixed;
   z-index: 1000;
@@ -53,7 +53,8 @@
           padding: 0.75rem;
         }
 
-        .menu-header, .p-menuitem-link {
+        .menu-header,
+        .p-menuitem-link {
           display: flex;
           justify-content: center;
           align-items: center;
@@ -82,7 +83,8 @@
         display: none;
       }
 
-      .menu-header, .p-menuitem-link {
+      .menu-header,
+      .p-menuitem-link {
         [class^="pi-"] {
           width: 1.5rem;
           text-align: center;
@@ -95,6 +97,11 @@
 
 .layout-content {
   height: 100%;
+  // Bug WL-C — el contenedor parent tiene `overflow:hidden` y .layout-content
+  // sin scroll propio causaba que cualquier página más alta que el viewport
+  // (config white-label, planificaciones largas) quedara cortada sin barra.
+  // overflow-y:auto crea su propio scroll container.
+  overflow-y: auto;
   transition: all 0.3s ease;
   padding: 0.5rem;
 
@@ -240,12 +247,22 @@
     opacity: 0.6;
     cursor: pointer !important;
     transition: all 0.3s ease;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 193, 7, 0.1) 50%, transparent 100%) !important;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 193, 7, 0.1) 50%,
+      transparent 100%
+    ) !important;
     border-left: 3px solid transparent;
 
     &:hover {
       opacity: 0.8;
-      background: linear-gradient(90deg, transparent 0%, rgba(255, 193, 7, 0.2) 50%, transparent 100%) !important;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 193, 7, 0.2) 50%,
+        transparent 100%
+      ) !important;
       border-left-color: #ffc107;
       transform: translateX(2px);
 
@@ -263,7 +280,12 @@
 
     // Prevenir que se active el routerLinkActive
     &.router-link-active {
-      background: linear-gradient(90deg, transparent 0%, rgba(255, 193, 7, 0.1) 50%, transparent 100%) !important;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 193, 7, 0.1) 50%,
+        transparent 100%
+      ) !important;
     }
   }
 
@@ -297,13 +319,21 @@
 
 // Animación de candado
 @keyframes shake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
-  10%, 30%, 50%, 70%, 90% {
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
     transform: translateX(-2px);
   }
-  20%, 40%, 60%, 80% {
+  20%,
+  40%,
+  60%,
+  80% {
     transform: translateX(2px);
   }
 }
@@ -321,8 +351,8 @@
 
     // En modo colapsado, mostrar un pequeño candado en el icono
     &::after {
-      content: '\e97d'; // Unicode para pi-lock
-      font-family: 'primeicons';
+      content: "\e97d"; // Unicode para pi-lock
+      font-family: "primeicons";
       position: absolute;
       top: 0.25rem;
       right: 0.25rem;
