@@ -153,18 +153,19 @@ export class AppConfigService {
   }
 
   /**
-   * Fail-safe módulos (§5.1): pre-login y SUPERADMIN → todos true, autenticado
-   * no-SUPERADMIN → todos false + banner.
+   * Fail-safe módulos: FAIL-OPEN (todos true) en TODOS los casos.
+   *
+   * Motivo (incidente 2026-06-04): si la carga de flags falla en el arranque (p.ej.
+   * durante un redeploy del Server, API reiniciándose ~60-90s), el fallback anterior
+   * para alumno autenticado era todos-FALSE → ocultaba TODOS los módulos gateados
+   * (planificación, documentos…) a alumnos que pagan, hasta recargar. Eso es peor que
+   * el riesgo que cubría: la flag del front es solo UX de navegación; el gating REAL
+   * lo impone el backend (`@RequiereModulo`/`ModuloGuard` → 403 si el módulo está off).
+   * Así que ante un fallo transitorio mostramos los items (si alguno está deshabilitado
+   * de verdad, el backend lo bloquea igual) en vez de dejar al alumno sin nada.
    */
   private computeModulosFailSafe(): { map: EstadoModulos; banner: boolean } {
-    const decoded = this.getAuthService().decodeToken?.();
-    if (!decoded) {
-      return { map: buildModulosMap(true), banner: false };
-    }
-    if (decoded.rol === 'SUPERADMIN') {
-      return { map: buildModulosMap(true), banner: false };
-    }
-    return { map: buildModulosMap(false), banner: true };
+    return { map: buildModulosMap(true), banner: false };
   }
 
   /**

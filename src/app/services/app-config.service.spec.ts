@@ -105,6 +105,11 @@ describe('AppConfigService', () => {
     await promise;
     expect(service.appConfig().appName).toBe('TecnikaFire');
     expect(service.isLoaded()).toBe(true);
+    // Fail-open (incidente 2026-06-04): si los módulos no cargan NO se ocultan al
+    // alumno — quedan todos true (el backend ModuloGuard impone el gating real).
+    expect(service.estadoModulos()[ModuloApp.PLANIFICACION]).toBe(true);
+    expect(service.estadoModulos()[ModuloApp.DOCUMENTACION]).toBe(true);
+    expect(service.modulosFailedToLoad()).toBe(false);
   }, 10_000);
 
   it('load() retry path (T2): primer GET 500, retry succeed popula signal', async () => {
@@ -192,10 +197,12 @@ describe('AppConfigService', () => {
     httpMock.expectOne(CONFIG_URL).flush(sampleConfig);
     httpMock.expectOne(MODULOS_URL).flush(sampleModulos);
     await init;
-    expect(document.documentElement.style.getPropertyValue('--primary-color'))
-      .toBe('#123456');
-    expect(document.documentElement.style.getPropertyValue('--secondary-color'))
-      .toBe('#abcdef');
+    expect(
+      document.documentElement.style.getPropertyValue('--primary-color'),
+    ).toBe('#123456');
+    expect(
+      document.documentElement.style.getPropertyValue('--secondary-color'),
+    ).toBe('#abcdef');
   });
 
   it('sanitizeAppName edge cases T4', () => {
@@ -203,7 +210,9 @@ describe('AppConfigService', () => {
     expect(service.sanitizeAppName('   ')).toBe('TecnikaFire');
     expect(service.sanitizeAppName(null)).toBe('TecnikaFire');
     expect(service.sanitizeAppName('A'.repeat(200))).toHaveLength(60);
-    expect(service.sanitizeAppName('<script>evil</script>Acme')).toBe('evilAcme');
+    expect(service.sanitizeAppName('<script>evil</script>Acme')).toBe(
+      'evilAcme',
+    );
     expect(service.sanitizeAppName('  My App  ')).toBe('My App');
   });
 });
