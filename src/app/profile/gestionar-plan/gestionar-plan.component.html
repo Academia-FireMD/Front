@@ -37,7 +37,11 @@
             [disabled]="procesando()"
             (click)="seleccionarOposicion(chip.value)"
           >
-            <i class="pi pi-map-marker"></i>
+            @if (imagenOposicion(chip.value); as logo) {
+              <img class="oposicion-logo" [src]="logo" [alt]="chip.label" />
+            } @else {
+              <i class="pi pi-map-marker"></i>
+            }
             <span>{{ chip.label }}</span>
             @if (esChipSeleccionado(chip.value)) {
               <i class="pi pi-check-circle chip-check"></i>

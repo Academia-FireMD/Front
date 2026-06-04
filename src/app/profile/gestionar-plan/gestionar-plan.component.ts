@@ -25,6 +25,7 @@ import {
   OPOSICION_LABELS,
   Suscripcion,
 } from '../../shared/models/subscription.model';
+import { oposiciones } from '../../utils/consts';
 
 /** Modo de operación del diálogo unificado. */
 export type GestionarPlanModo = 'cambiar' | 'anadir';
@@ -97,6 +98,11 @@ export class GestionarPlanComponent implements OnInit {
 
   getTipoBadge = getPlanLabel;
   getTipoBadgeSeverity = getPlanCssClass;
+
+  /** Logo de la oposición para el chip (null en GENERAL → fallback al icono). */
+  imagenOposicion(op: Oposicion): string | null {
+    return oposiciones[op]?.image ?? null;
+  }
 
   constructor(
     private suscripcionService: SuscripcionManagementService,
