@@ -134,6 +134,38 @@ describe('LayoutComponent', () => {
     expect(findItemByLabel(filtered, 'Test')).toBeUndefined();
   });
 
+  it('filterByModulo: enlace directo con items:[] sobrevive (regresión Documentos/Planificación 2026-06-04)', () => {
+    const items: AppMenuItem[] = [
+      {
+        label: 'Documentos',
+        routerLink: '/app/documentacion/alumno',
+        modulo: ModuloApp.DOCUMENTACION,
+        items: [],
+      },
+      {
+        label: 'Planificación mensual',
+        routerLink: '/app/planificacion/planificacion-mensual-alumno',
+        modulo: ModuloApp.PLANIFICACION,
+        items: [],
+      },
+      { label: 'Submenú vacío', items: [] }, // sin routerLink → debe podarse
+    ];
+    const modulos = appConfigService.estadoModulos();
+    const filtered = component.filterByModulo(
+      items,
+      {
+        ...modulos,
+        [ModuloApp.DOCUMENTACION]: true,
+        [ModuloApp.PLANIFICACION]: true,
+      },
+      false,
+    );
+    // Enlaces directos con items:[] NO se podan; el submenú vacío sí.
+    expect(findItemByLabel(filtered, 'Documentos')).toBeDefined();
+    expect(findItemByLabel(filtered, 'Planificación mensual')).toBeDefined();
+    expect(findItemByLabel(filtered, 'Submenú vacío')).toBeUndefined();
+  });
+
   it('SUPERADMIN ve todo incluso si módulos OFF', () => {
     appConfigService.setEstado({
       ...appConfigService.estadoModulos(),

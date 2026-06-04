@@ -226,11 +226,14 @@ export class LayoutComponent {
           : i,
       )
       .filter((i) => {
-        const hadChildren =
-          (i as AppMenuItem).items !== undefined &&
-          Array.isArray((i as AppMenuItem).items);
-        if (!hadChildren) return true;
-        return ((i as AppMenuItem).items?.length ?? 0) > 0;
+        // Descartar SOLO submenús de verdad vacíos (header sin destino). Un item con
+        // routerLink/command es un ENLACE DIRECTO y se mantiene aunque tenga items:[].
+        // Bug 2026-06-04: Documentos y Planificación (alumno) se definen con
+        // routerLink + items:[] y el filtro anterior los borraba como "submenú vacío".
+        const it = i as AppMenuItem;
+        if (it.routerLink || it.command) return true;
+        if (!Array.isArray(it.items)) return true;
+        return (it.items?.length ?? 0) > 0;
       });
   }
 
