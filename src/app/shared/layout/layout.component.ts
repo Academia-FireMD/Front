@@ -416,7 +416,7 @@ export class LayoutComponent {
     ];
 
     if (user.rol === Rol.SUPERADMIN) {
-      items.push({
+      const configuracion = {
         label: 'Configuración',
         items: [
           {
@@ -425,7 +425,11 @@ export class LayoutComponent {
             routerLink: '/app/superadmin/config',
           },
         ],
-      });
+      };
+      // Insertar ANTES de "Perfil" (que contiene "Desconectarse"): la sección
+      // SUPERADMIN no debe quedar por debajo del logout, sino por encima.
+      const perfilIdx = items.findIndex((i) => i.label === 'Perfil');
+      items.splice(perfilIdx >= 0 ? perfilIdx : items.length, 0, configuracion);
     }
 
     return items;
