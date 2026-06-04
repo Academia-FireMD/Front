@@ -454,7 +454,6 @@ export class LayoutComponent {
           icon: 'pi pi-file',
           routerLink: '/app/documentacion/alumno',
           modulo: ModuloApp.DOCUMENTACION,
-          items: [],
         },
         {
           label: 'Test',
@@ -515,14 +514,12 @@ export class LayoutComponent {
         icon: 'pi pi-calendar-plus',
         routerLink: '/app/planificacion/planificacion-mensual-alumno',
         modulo: ModuloApp.PLANIFICACION,
-        items: [],
       });
     } else if (hasValidSubscription) {
       // Usuario BASIC - mostrar bloqueado
       menu.push({
         label: 'Planificación mensual',
         icon: 'pi pi-calendar-plus',
-        items: [],
         modulo: ModuloApp.PLANIFICACION,
         styleClass: 'locked-menu-item',
         state: { locked: true },
@@ -579,7 +576,6 @@ export class LayoutComponent {
         icon: 'pi pi-calendar',
         routerLink: '/app/horarios/alumno',
         modulo: ModuloApp.HORARIOS,
-        items: [],
       });
     }
 
