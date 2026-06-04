@@ -30,8 +30,13 @@ import {
   SuscripcionStatus,
   SuscripcionTipo,
 } from '../../../shared/models/subscription.model';
-import { Usuario } from '../../../shared/models/user.model';
+import { Rol, Usuario } from '../../../shared/models/user.model';
 import { PrimengModule } from '../../../shared/primeng.module';
+import {
+  esAdminOSuperior,
+  etiquetaRol,
+  etiquetaRolCorta,
+} from '../../../shared/utils/rol.utils';
 import { LabelsService } from '../../../shared/services/labels.service';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
 import { SharedModule } from '../../../shared/shared.module';
@@ -72,6 +77,26 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   selectedSubscriptionType = SuscripcionTipo.BASIC;
   selectedOposicion = Oposicion.VALENCIA_AYUNTAMIENTO;
   public decodedUser = this.authService.decodeToken() as Usuario;
+
+  /** El usuario que mira el dashboard es admin o superior (incluye SUPERADMIN). */
+  get viewerEsAdminOSuperior(): boolean {
+    return esAdminOSuperior(this.decodedUser?.rol);
+  }
+
+  /** Clase del chip de rol para un usuario del listado. */
+  chipRolClase(rol: Rol | string | null | undefined): string {
+    return esAdminOSuperior(rol) ? 'admin-chip' : 'alumno-chip';
+  }
+
+  /** Etiqueta corta del chip de rol (Super / Admin / Alumno). */
+  chipRolLabel(rol: Rol | string | null | undefined): string {
+    return etiquetaRolCorta(rol);
+  }
+
+  /** Tooltip del chip de rol ("Usuario superadministrador", etc.). */
+  chipRolTooltip(rol: Rol | string | null | undefined): string {
+    return `Usuario ${etiquetaRol(rol).toLowerCase()}`;
+  }
 
   // Opciones para selects de oposición
   oposicionOptions = Object.values(Oposicion)
@@ -744,7 +769,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     const items: MenuItem[] = [];
     const hasWooSubs = this.hasWooManagedSubscriptions(user);
 
-    if (this.decodedUser.rol === 'ADMIN') {
+    if (esAdminOSuperior(this.decodedUser.rol)) {
       items.push({
         label: 'Acceder como usuario',
         icon: 'pi pi-user-edit',

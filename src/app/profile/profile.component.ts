@@ -25,6 +25,11 @@ import {
   SuscripcionTipo,
 } from '../shared/models/subscription.model';
 import { Rol, Usuario } from '../shared/models/user.model';
+import {
+  esAdminOSuperior,
+  esSuperadmin,
+  etiquetaRol,
+} from '../shared/utils/rol.utils';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
@@ -86,6 +91,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
   firstTimeShowingOnboardingModal = false;
   onboardingData: OnboardingData = {};
   public Rol = Rol;
+
+  /** True si el usuario logueado es ADMIN o SUPERADMIN (admin o superior).
+   * Los paneles de alumno (suscripciones, accesos, planificaciones) se ocultan
+   * para estos roles; antes el check era `!== 'ADMIN'` y SUPERADMIN caía en el
+   * lado alumno. */
+  get esAdminOSuperior(): boolean {
+    return esAdminOSuperior(this.user?.rol);
+  }
+
+  get esSuperadmin(): boolean {
+    return esSuperadmin(this.user?.rol);
+  }
+
+  /** Etiqueta del rol para el badge ("Superadministrador" / "Administrador" / "Alumno"). */
+  get etiquetaRol(): string {
+    return etiquetaRol(this.user?.rol);
+  }
 
   // Control de dialogs de suscripción
   showCambioSuscripcionDialog = false; // Solo para vincular cuenta (usuarios "en negro")
@@ -381,7 +403,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
    */
   private checkFirstTimeAccess(): void {
     if (!this.user) return;
-    if (this.user.rol === Rol.ADMIN) return;
+    if (esAdminOSuperior(this.user.rol)) return;
 
     const storageKey = `onboarding_shown_${this.user.id}`;
     const hasSeenOnboarding = localStorage.getItem(storageKey);

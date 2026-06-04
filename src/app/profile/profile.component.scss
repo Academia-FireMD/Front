@@ -10,7 +10,7 @@
   .p-confirm-dialog {
     .p-dialog-content {
       line-height: 1.6;
-      
+
       strong {
         color: var(--primary-color);
       }
@@ -18,7 +18,7 @@
       a {
         color: var(--primary-color);
         text-decoration: none;
-        
+
         &:hover {
           text-decoration: underline;
         }
@@ -37,7 +37,9 @@
         border-radius: 6px;
         font-family: inherit;
         font-size: 1rem;
-        transition: border-color 0.2s, box-shadow 0.2s;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
 
         &:focus {
           outline: none;
@@ -162,6 +164,13 @@
         background-color: var(--primary-color);
         color: white;
       }
+
+      // SUPERADMIN: distinto del admin para reconocerlo de un vistazo. Va
+      // después de .admin-role (misma especificidad) → gana cuando ambos aplican.
+      &.superadmin-role {
+        background-color: #6d28d9; // violeta "elevado"
+        color: white;
+      }
     }
   }
 }
@@ -262,9 +271,9 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
+          }
 
-          @import '../shared/styles/plan-badge';
+          @import "../shared/styles/plan-badge";
 
           .plan-badge {
             width: fit-content;
@@ -277,7 +286,7 @@
           border-radius: 50%;
           background: transparent;
           border: none;
-        color: var(--text-color-secondary);
+          color: var(--text-color-secondary);
           cursor: pointer;
           display: flex;
           align-items: center;

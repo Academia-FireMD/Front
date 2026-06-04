@@ -16,8 +16,8 @@
       <div
         class="col-12"
         [ngClass]="{
-          'md:col-8': user.rol !== 'ADMIN',
-          'md:col-12': user.rol === 'ADMIN',
+          'md:col-8': !esAdminOSuperior,
+          'md:col-12': esAdminOSuperior,
         }"
       >
         <div class="profile-card">
@@ -36,9 +36,12 @@
                 <h3>{{ user.nombre }} {{ user.apellidos }}</h3>
                 <span
                   class="user-role"
-                  [ngClass]="{ 'admin-role': user.rol === 'ADMIN' }"
+                  [ngClass]="{
+                    'admin-role': esAdminOSuperior,
+                    'superadmin-role': esSuperadmin,
+                  }"
                 >
-                  {{ user.rol === "ADMIN" ? "Administrador" : "Alumno" }}
+                  {{ etiquetaRol }}
                 </span>
               </div>
             </div>
@@ -135,7 +138,7 @@
                 placeholder="Seleccione un método de calificación"
               ></app-metodo-calificacion-picker>
 
-              <div class="form-group mb-3" *ngIf="user.rol === 'ADMIN'">
+              <div class="form-group mb-3" *ngIf="esAdminOSuperior">
                 <label for="esTutor">Este usuario es tutor?</label>
                 <p-toggleButton
                   id="esTutor"
@@ -189,8 +192,10 @@
           </div>
         </div>
       </div>
-      <!-- Información de suscripciones y consumibles (lado derecho) -->
-      <div class="col-12 md:col-4" *ngIf="user.rol !== 'ADMIN'">
+      <!-- Información de suscripciones y consumibles (lado derecho).
+           Solo para ALUMNO: ADMIN/SUPERADMIN no tienen suscripción propia
+           relevante (antes el check `!== 'ADMIN'` se la mostraba a SUPERADMIN). -->
+      <div class="col-12 md:col-4" *ngIf="!esAdminOSuperior">
         <!-- Card de Suscripciones -->
         <div class="subscription-card">
           <div
