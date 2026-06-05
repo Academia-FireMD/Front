@@ -12,6 +12,7 @@ import {
 } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Usuario } from '../shared/models/user.model';
+import { decodeJwtPayload } from '../shared/utils/jwt.util';
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
 import { ApiBaseService } from './api-base.service';
@@ -110,7 +111,7 @@ export class AuthService extends ApiBaseService {
           this.currentDecodedUserSubject.next(decodedUser);
 
           // Solo cargar el perfil si el usuario tiene permisos
-          if (decodedUser.rol !== 'SIN_APROBACION') {
+          if (decodedUser && decodedUser.rol !== 'SIN_APROBACION') {
             this.store.dispatch(UserActions.loadUser());
           }
         }
@@ -133,7 +134,7 @@ export class AuthService extends ApiBaseService {
           this.currentDecodedUserSubject.next(decodedUser);
 
           // Solo cargar el perfil si el usuario tiene permisos
-          if (decodedUser.rol !== 'SIN_APROBACION') {
+          if (decodedUser && decodedUser.rol !== 'SIN_APROBACION') {
             this.store.dispatch(UserActions.loadUser());
           }
         }
@@ -180,14 +181,10 @@ export class AuthService extends ApiBaseService {
   }
 
   decodeToken(): any {
-    const token = this.getToken();
-
-    if (!token) {
-      return null;
-    }
-
-    const payload = token.split('.')[1];
-    return JSON.parse(atob(payload));
+    // JWT va en base64url; usar el helper compartido en vez de atob directo
+    // (atob peta con '-'/'_', incidente prod 2026-06-05). Devuelve null ante
+    // token inválido para no romper el flujo de la app.
+    return decodeJwtPayload(this.getToken());
   }
 
   clearToken(): void {
@@ -248,7 +245,7 @@ export class AuthService extends ApiBaseService {
           this.currentDecodedUserSubject.next(decodedUser);
 
           // Solo cargar el perfil si el usuario tiene permisos
-          if (decodedUser.rol !== 'SIN_APROBACION') {
+          if (decodedUser && decodedUser.rol !== 'SIN_APROBACION') {
             this.store.dispatch(UserActions.loadUser());
           }
         }
@@ -267,7 +264,7 @@ export class AuthService extends ApiBaseService {
           this.currentDecodedUserSubject.next(decodedUser);
 
           // Solo cargar el perfil si el usuario tiene permisos (siempre true al salir de impersonación)
-          if (decodedUser.rol !== 'SIN_APROBACION') {
+          if (decodedUser && decodedUser.rol !== 'SIN_APROBACION') {
             this.store.dispatch(UserActions.loadUser());
           }
         }
