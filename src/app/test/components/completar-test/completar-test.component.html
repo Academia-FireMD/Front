@@ -396,6 +396,7 @@
                   class="{{
                     viewportService.screenWidth == 'xs' ? 'col-12' : 'col-9'
                   }}  "
+                  [appSeleccionCrearRegla]="modoVerRespuestas"
                 >
                   <p data-testid="enunciado-pregunta">
                     <markdown
@@ -542,6 +543,7 @@
                   class="solution col-12 align-items-center flex flex-column"
                   *ngIf="!isModoExamen() || modoVerRespuestas"
                   data-testid="solucion-container"
+                  [appSeleccionCrearRegla]="modoVerRespuestas"
                 >
                   <strong>Solución:</strong>
                   <p class="m-0" data-testid="solucion-texto">
