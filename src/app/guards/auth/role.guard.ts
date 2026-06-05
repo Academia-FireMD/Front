@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { decodeJwtPayload } from '../../shared/utils/jwt.util';
 
 /**
  * Jerarquía de roles. Cualquier rol con nivel >= al expectedRole pasa.
@@ -32,8 +33,10 @@ export const roleGuard: CanActivateFn = (route, state) => {
     return false;
   }
 
-  const payload = JSON.parse(atob(token.split('.')[1]));
-  const userRole = payload.rol as string | undefined;
+  // JWT va en base64url; usar el helper compartido en vez de atob directo
+  // (atob peta con '-'/'_', incidente prod 2026-06-05 que dejaba sin acceso).
+  const payload = decodeJwtPayload<{ rol?: string }>(token);
+  const userRole = payload?.rol as string | undefined;
   const expectedRole = route.data['expectedRole'] as string | undefined;
 
   if (!userRole || userRole === 'SIN_APROBACION') {
