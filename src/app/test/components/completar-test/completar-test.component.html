@@ -396,7 +396,6 @@
                   class="{{
                     viewportService.screenWidth == 'xs' ? 'col-12' : 'col-9'
                   }}  "
-                  [appSeleccionCrearRegla]="modoVerRespuestas"
                 >
                   <p data-testid="enunciado-pregunta">
                     <markdown
@@ -407,6 +406,15 @@
                       "
                     ></markdown>
                   </p>
+                  <button
+                    *ngIf="modoVerRespuestas"
+                    pButton
+                    type="button"
+                    label="🧠 Crear regla para memorizar la respuesta"
+                    class="p-button-sm p-button-text"
+                    data-testid="crear-regla-pregunta"
+                    (click)="crearReglaPregunta(pregunta)"
+                  ></button>
                   <div
                     *ngIf="
                       modoSeleccionCandidatas() &&
@@ -543,7 +551,6 @@
                   class="solution col-12 align-items-center flex flex-column"
                   *ngIf="!isModoExamen() || modoVerRespuestas"
                   data-testid="solucion-container"
-                  [appSeleccionCrearRegla]="modoVerRespuestas"
                 >
                   <strong>Solución:</strong>
                   <p class="m-0" data-testid="solucion-texto">

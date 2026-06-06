@@ -1,3 +1,4 @@
+import { Pregunta } from '../../../shared/models/pregunta.model';
 import { EstadoPregunta, Test } from '../../../shared/models/test.model';
 
 export interface PreguntaFallada {
@@ -24,6 +25,22 @@ export function extraerPreguntasFalladas(
       correcta: p.respuestas?.[p.respuestaCorrectaIndex] ?? '',
       tema: p.tema?.descripcion ?? '',
     }));
+}
+
+export function construirMensajePregunta(pregunta: Pregunta): string {
+  const opciones = (pregunta.respuestas ?? [])
+    .map((r, i) => `${String.fromCharCode(97 + i)}) ${r}`)
+    .join('\n');
+  const correcta = pregunta.respuestas?.[pregunta.respuestaCorrectaIndex] ?? '';
+  const tema = pregunta.tema?.descripcion ?? '';
+  return (
+    'Quiero memorizar la respuesta correcta de esta pregunta de test para el examen.\n\n' +
+    `Pregunta: ${pregunta.descripcion}\n` +
+    (opciones ? `Opciones:\n${opciones}\n` : '') +
+    `Respuesta correcta: ${correcta}` +
+    (tema ? `\nTema: ${tema}` : '') +
+    `\n\nMóntame una nemotécnica para recordar que la respuesta correcta es "${correcta}". Usa SOLO esa respuesta correcta; no la cambies ni elijas otra.`
+  );
 }
 
 export function construirMensajeFallos(falladas: PreguntaFallada[]): string {

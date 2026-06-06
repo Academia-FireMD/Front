@@ -33,6 +33,7 @@ import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TestService } from '../../../services/test.service';
 import { ViewportService } from '../../../services/viewport.service';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
+import { StudyAssistantService } from '../../../shared/services/study-assistant.service';
 import {
   Dificultad,
   Pregunta,
@@ -44,6 +45,7 @@ import {
   getLetter,
   obtainSecurityEmojiBasedOnEnum,
 } from '../../../utils/utils';
+import { construirMensajePregunta } from '../../components/test-stats/preguntas-falladas.util';
 
 interface CandidatasSnapshot {
   testId: number;
@@ -73,6 +75,7 @@ export class CompletarTestComponent {
   @ViewChildren('activeBlock') activeBlocks!: QueryList<ElementRef>;
   public location = inject(Location);
   auth = inject(AuthService);
+  private studyAssistant = inject(StudyAssistantService);
 
   public indicePregunta = signal(0);
   public candidatasPorPregunta = signal<number[]>([]);
@@ -795,6 +798,17 @@ export class CompletarTestComponent {
     // destino (era bug: al volver a una pregunta con seguridad!=CIEN
     // guardada, el reset posterior forzaba CIEN y la auto-omitía al
     // siguiente Adelante).
+  }
+
+  public crearReglaPregunta(pregunta: Pregunta): void {
+    const ok = this.studyAssistant.openWithMessage(
+      construirMensajePregunta(pregunta),
+    );
+    if (!ok) {
+      console.warn(
+        '[Asistente de Estudio] widget no montado; no se pudo abrir el chat',
+      );
+    }
   }
 
   public showSolution() {

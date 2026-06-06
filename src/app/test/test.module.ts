@@ -28,7 +28,6 @@ import { ToolbarModule } from 'primeng/toolbar';
 import { TooltipModule } from 'primeng/tooltip';
 import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 import { GenericListComponent } from '../shared/generic-list/generic-list.component';
-import { SeleccionCrearReglaDirective } from '../shared/directives/seleccion-crear-regla.directive';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
 import { CompletarFlashCardTestComponent } from './components/completar-flash-card-test/completar-flash-card-test.component';
@@ -111,7 +110,6 @@ import { TestRoutingModule } from './test-routing.module';
     AsyncButtonComponent,
     UserDashboardComponent,
     GenericListComponent,
-    SeleccionCrearReglaDirective,
   ],
   providers: [ConfirmationService],
   exports: [

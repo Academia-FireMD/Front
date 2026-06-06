@@ -2,6 +2,7 @@ import { EstadoPregunta, Test } from '../../../shared/models/test.model';
 import {
   extraerPreguntasFalladas,
   construirMensajeFallos,
+  construirMensajePregunta,
 } from './preguntas-falladas.util';
 
 function testFixture(): Test {
@@ -82,6 +83,23 @@ describe('extraerPreguntasFalladas', () => {
 
   it('devuelve [] si no hay test o respuestas', () => {
     expect(extraerPreguntasFalladas(undefined as any)).toEqual([]);
+  });
+});
+
+describe('construirMensajePregunta', () => {
+  it('incluye enunciado, opciones y la respuesta correcta indicada', () => {
+    const pregunta = {
+      id: 1,
+      descripcion: 'Altura de los pulsadores',
+      respuestas: ['80-150', '90-120', '100-150', '80-120'],
+      respuestaCorrectaIndex: 3,
+      tema: { descripcion: 'RIPCI' },
+    } as any;
+    const msg = construirMensajePregunta(pregunta);
+    expect(msg).toContain('Altura de los pulsadores');
+    expect(msg).toContain('Respuesta correcta: 80-120');
+    expect(msg).toContain('d) 80-120');
+    expect(msg.toLowerCase()).toContain('no la cambies');
   });
 });
 
