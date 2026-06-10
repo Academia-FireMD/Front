@@ -14,6 +14,25 @@
       </div>
     </div>
 
+    <!-- Banner Asistente de Estudio (gancho principal — arriba para que sea lo primero que ve el alumno tras la cabecera) -->
+    <div class="col-12 mb-4" *ngIf="preguntasFalladas.length > 0">
+      <div class="study-banner">
+        <span class="study-banner__icon">🧠</span>
+        <div class="study-banner__text">
+          Has fallado {{ preguntasFalladas.length }}
+          {{ preguntasFalladas.length === 1 ? "pregunta" : "preguntas" }}. ¿Te
+          monto una regla para recordarlas la próxima vez?
+        </div>
+        <button
+          pButton
+          type="button"
+          label="Sí, vamos"
+          class="p-button-sm"
+          (click)="abrirAsistenteConFallos()"
+        ></button>
+      </div>
+    </div>
+
     <!-- Overview Principal -->
     <div class="col-12 mb-4">
       <div class="grid">
@@ -74,25 +93,6 @@
         <app-confidence-analysis-cards
           [analyses]="getConfidenceAnalysisForTestStats(stat)"
         ></app-confidence-analysis-cards>
-      </div>
-    </div>
-
-    <!-- Banner Asistente de Estudio -->
-    <div class="col-12" *ngIf="preguntasFalladas.length > 0">
-      <div class="study-banner">
-        <span class="study-banner__icon">🧠</span>
-        <div class="study-banner__text">
-          Has fallado {{ preguntasFalladas.length }}
-          {{ preguntasFalladas.length === 1 ? "pregunta" : "preguntas" }}. ¿Te
-          monto una regla para recordarlas la próxima vez?
-        </div>
-        <button
-          pButton
-          type="button"
-          label="Sí, vamos"
-          class="p-button-sm"
-          (click)="abrirAsistenteConFallos()"
-        ></button>
       </div>
     </div>
   </div>
