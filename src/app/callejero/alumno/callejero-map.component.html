@@ -1,0 +1,186 @@
+<div class="callejero" data-testid="callejero-page">
+  <!-- ===== Barra de controles ===== -->
+  <div class="callejero__controls">
+    <div class="callejero__selectores">
+      <span class="callejero__field">
+        <label class="callejero__label">Ciudad</label>
+        <p-dropdown
+          data-testid="selector-ciudad"
+          [options]="ciudades()"
+          [ngModel]="ciudadSel()"
+          (ngModelChange)="seleccionarCiudad($event)"
+          optionLabel="nombre"
+          placeholder="Selecciona ciudad"
+          [disabled]="loadingCiudades()"
+          appendTo="body"
+        ></p-dropdown>
+      </span>
+
+      <span class="callejero__field">
+        <label class="callejero__label">Zona</label>
+        <p-dropdown
+          data-testid="selector-zona"
+          [options]="zonas()"
+          [ngModel]="zonaSel()"
+          (ngModelChange)="seleccionarZona($event)"
+          optionLabel="nombre"
+          placeholder="Selecciona zona"
+          [disabled]="zonas().length === 0"
+          appendTo="body"
+        ></p-dropdown>
+      </span>
+    </div>
+
+    <!-- Selector de modo -->
+    <div class="callejero__modos" data-testid="selector-modo">
+      @for (m of modos; track m.value) {
+        <button
+          type="button"
+          pButton
+          class="p-button-sm"
+          [attr.data-testid]="'modo-' + m.value"
+          [label]="m.label"
+          [outlined]="modo() !== m.value"
+          [disabled]="!hayZona()"
+          (click)="cambiarModo(m.value)"
+        ></button>
+      }
+    </div>
+  </div>
+
+  <div class="callejero__body">
+    <!-- ===== Mapa ===== -->
+    <div class="callejero__map-wrap">
+      <div #mapEl class="callejero__map" data-testid="callejero-map"></div>
+
+      @if (loadingZona()) {
+        <div class="callejero__overlay" data-testid="callejero-loading">
+          Cargando calles…
+        </div>
+      }
+
+      @if (!hayZona() && !loadingCiudades()) {
+        <div class="callejero__overlay callejero__overlay--hint">
+          Selecciona una zona para empezar.
+        </div>
+      }
+    </div>
+
+    <!-- ===== Panel lateral ===== -->
+    <aside class="callejero__side">
+      <!-- Panel de modo activo -->
+      @if (hayZona()) {
+        <p-card class="callejero__panel" data-testid="panel-modo">
+          <!-- Explorar -->
+          @if (modo() === 'EXPLORAR') {
+            <p class="callejero__hint">
+              Pasa el ratón o haz click sobre una calle para ver su nombre.
+            </p>
+          }
+
+          <!-- Mapa mudo -->
+          @if (modo() === 'MAPA_MUDO') {
+            <p class="callejero__hint">
+              Identifica las calles de memoria. Cuando quieras, revélalas.
+            </p>
+            <button
+              type="button"
+              pButton
+              data-testid="btn-revelar"
+              [label]="mudoRevelado() ? 'Ocultar nombres' : 'Revelar nombres'"
+              (click)="toggleRevelarMudo()"
+            ></button>
+          }
+
+          <!-- Encuentra la calle X -->
+          @if (modo() === 'ENCUENTRA_CALLE') {
+            @if (retoCalle(); as reto) {
+              <p class="callejero__reto" data-testid="reto-encuentra">
+                Encuentra: <strong>{{ reto.nombre }}</strong>
+              </p>
+            }
+            <button
+              type="button"
+              pButton
+              class="p-button-text"
+              data-testid="btn-otra-encuentra"
+              label="Otra calle"
+              (click)="nuevoRetoEncuentraCalle()"
+            ></button>
+          }
+
+          <!-- ¿Qué calle es esta? -->
+          @if (modo() === 'QUE_CALLE_ES') {
+            <p class="callejero__reto">
+              ¿Qué calle está <strong>resaltada</strong> en el mapa?
+            </p>
+            <div class="callejero__opciones" data-testid="quiz-opciones">
+              @for (op of opcionesQuiz(); track op.calleId) {
+                <button
+                  type="button"
+                  pButton
+                  class="callejero__opcion"
+                  [outlined]="true"
+                  [attr.data-testid]="'quiz-opcion-' + op.calleId"
+                  [label]="op.nombre"
+                  (click)="responderQuiz(op)"
+                ></button>
+              }
+            </div>
+            <button
+              type="button"
+              pButton
+              class="p-button-text"
+              data-testid="btn-otra-quecalle"
+              label="Otra calle"
+              (click)="nuevoRetoQueCalleEs()"
+            ></button>
+          }
+
+          <!-- Ubicar POI -->
+          @if (modo() === 'UBICAR_POI') {
+            @if (retoPoi(); as poi) {
+              <p class="callejero__reto" data-testid="reto-poi">
+                Haz click en la ubicación de: <strong>{{ poi.nombre }}</strong>
+              </p>
+            } @else {
+              <p class="callejero__hint" data-testid="reto-poi-vacio">
+                No hay puntos de interés en esta zona.
+              </p>
+            }
+            <button
+              type="button"
+              pButton
+              class="p-button-text"
+              data-testid="btn-otro-poi"
+              label="Otro punto"
+              [disabled]="pois().length === 0"
+              (click)="nuevoRetoUbicarPoi()"
+            ></button>
+          }
+
+          <!-- Feedback (acierto/fallo) -->
+          @if (feedback(); as fb) {
+            <p
+              class="callejero__feedback"
+              [class.callejero__feedback--ok]="fb.tipo === 'acierto'"
+              [class.callejero__feedback--ko]="fb.tipo === 'fallo'"
+              data-testid="feedback"
+              [attr.data-feedback-tipo]="fb.tipo"
+            >
+              {{ fb.texto }}
+            </p>
+          }
+        </p-card>
+      }
+
+      <!-- Panel de progreso -->
+      <p-card class="callejero__panel">
+        <app-progreso-panel
+          [zonas]="progreso()"
+          [zonaActivaId]="zonaSel()?.id ?? null"
+        ></app-progreso-panel>
+      </p-card>
+    </aside>
+  </div>
+</div>
