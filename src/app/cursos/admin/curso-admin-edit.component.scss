@@ -211,4 +211,57 @@
     display: flex;
     gap: 0.05rem;
   }
+
+  &__drag {
+    display: inline-flex;
+    align-items: center;
+    color: var(--cursos-text-soft, #6b7280);
+    cursor: grab;
+    padding: 0 0.15rem;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &:hover {
+      color: var(--cursos-brand, #bb292a);
+    }
+  }
+}
+
+// ---- Drag & drop (CDK) ----
+.seccion-card__drag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--cursos-brand, #bb292a);
+  cursor: grab;
+  padding: 0 0.25rem;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.cdk-drag-preview {
+  border-radius: var(--cursos-radius, 12px);
+  box-shadow: var(--cursos-shadow-hover, 0 6px 16px rgba(0, 0, 0, 0.18));
+  background: var(--cursos-surface, #fff);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.4;
+  border: 2px dashed var(--cursos-brand, #bb292a);
+  border-radius: var(--cursos-radius-sm, 8px);
+  background: var(--cursos-brand-soft, #fbe9e9);
+}
+
+.cdk-drag-animating {
+  transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.secciones-droplist.cdk-drop-list-dragging
+  .seccion-card:not(.cdk-drag-placeholder),
+.seccion-card__lecciones.cdk-drop-list-dragging
+  .leccion-row:not(.cdk-drag-placeholder) {
+  transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
 }

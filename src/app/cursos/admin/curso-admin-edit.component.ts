@@ -1,3 +1,8 @@
+import {
+  CdkDragDrop,
+  DragDropModule,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
@@ -83,6 +88,7 @@ type TagSeverity =
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
+    DragDropModule,
     ButtonModule,
     InputTextModule,
     InputTextareaModule,
@@ -484,6 +490,26 @@ export class CursoAdminEditComponent implements OnInit {
     }
   }
 
+  /** Drag-and-drop de secciones (CDK). Reusa la persistencia de reorder. */
+  async dropSeccion(event: CdkDragDrop<Seccion[]>): Promise<void> {
+    if (event.previousIndex === event.currentIndex) return;
+    const prev = this.curso();
+    if (!prev) return;
+    const secciones = [...prev.secciones];
+    moveItemInArray(secciones, event.previousIndex, event.currentIndex);
+    const reordered = secciones.map((s, idx) => ({ ...s, orden: idx }));
+    this.curso.set({ ...prev, secciones: reordered });
+    try {
+      await firstValueFrom(
+        this.cursosAdminService.reorderSecciones(
+          reordered.map((s) => ({ id: s.id, orden: s.orden })),
+        ),
+      );
+    } catch {
+      this.curso.set(prev);
+    }
+  }
+
   // ---- Lecciones ----
 
   openAddLeccion(seccion: Seccion): void {
@@ -622,6 +648,36 @@ export class CursoAdminEditComponent implements OnInit {
     if (!prev) return;
     const lecciones = [...seccion.lecciones];
     [lecciones[i], lecciones[j]] = [lecciones[j], lecciones[i]];
+    const reordered = lecciones.map((l, idx) => ({ ...l, orden: idx }));
+    const newSecciones = prev.secciones.map((s) =>
+      s.id === seccion.id ? { ...s, lecciones: reordered } : s,
+    );
+    this.curso.set({ ...prev, secciones: newSecciones });
+    try {
+      await firstValueFrom(
+        this.cursosAdminService.reorderLecciones(
+          reordered.map((l) => ({ id: l.id, orden: l.orden })),
+        ),
+      );
+    } catch {
+      this.curso.set(prev);
+    }
+  }
+
+  /**
+   * Drag-and-drop de lecciones DENTRO de una sección (CDK). El reorder
+   * cross-sección no se soporta (cada sección es su propia lista). Reusa la
+   * persistencia de reorderLecciones.
+   */
+  async dropLeccion(
+    event: CdkDragDrop<Leccion[]>,
+    seccion: Seccion,
+  ): Promise<void> {
+    if (event.previousIndex === event.currentIndex) return;
+    const prev = this.curso();
+    if (!prev) return;
+    const lecciones = [...seccion.lecciones];
+    moveItemInArray(lecciones, event.previousIndex, event.currentIndex);
     const reordered = lecciones.map((l, idx) => ({ ...l, orden: idx }));
     const newSecciones = prev.secciones.map((s) =>
       s.id === seccion.id ? { ...s, lecciones: reordered } : s,

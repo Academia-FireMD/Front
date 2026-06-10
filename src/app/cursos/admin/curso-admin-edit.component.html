@@ -191,118 +191,142 @@
             </p>
           }
 
-          @for (seccion of secciones; track seccion.id; let i = $index) {
-            <div class="seccion-card">
-              <div class="seccion-card__header">
-                <div class="seccion-card__title">
-                  <span class="seccion-card__orden">{{ i + 1 }}.</span>
-                  <strong>{{ seccion.titulo }}</strong>
-                </div>
-                <div class="seccion-card__actions">
-                  <p-button
-                    icon="pi pi-arrow-up"
-                    severity="secondary"
-                    [text]="true"
-                    [disabled]="i === 0"
-                    (onClick)="moveSeccionUp(i)"
-                    pTooltip="Mover arriba"
-                  />
-                  <p-button
-                    icon="pi pi-arrow-down"
-                    severity="secondary"
-                    [text]="true"
-                    [disabled]="i === secciones.length - 1"
-                    (onClick)="moveSeccionDown(i)"
-                    pTooltip="Mover abajo"
-                  />
-                  <p-button
-                    icon="pi pi-pencil"
-                    severity="secondary"
-                    [text]="true"
-                    (onClick)="openEditSeccion(seccion)"
-                    pTooltip="Editar sección"
-                  />
-                  <p-button
-                    icon="pi pi-trash"
-                    severity="danger"
-                    [text]="true"
-                    (onClick)="deleteSeccion(seccion)"
-                    pTooltip="Eliminar sección"
-                  />
-                  <p-button
-                    label="Añadir lección"
-                    icon="pi pi-plus"
-                    severity="secondary"
-                    size="small"
-                    (onClick)="openAddLeccion(seccion)"
-                  />
-                </div>
-              </div>
-
-              <div class="seccion-card__lecciones">
-                @for (
-                  leccion of seccion.lecciones;
-                  track leccion.id;
-                  let li = $index
-                ) {
-                  <div class="leccion-row">
-                    <span class="leccion-row__orden">{{ li + 1 }}.</span>
+          <div
+            cdkDropList
+            (cdkDropListDropped)="dropSeccion($event)"
+            class="secciones-droplist"
+          >
+            @for (seccion of secciones; track seccion.id; let i = $index) {
+              <div class="seccion-card" cdkDrag>
+                <div class="seccion-card__header">
+                  <div class="seccion-card__title">
                     <span
-                      class="leccion-row__tipo pi"
-                      [class.pi-video]="leccion.tipo === 'VIDEO'"
-                      [class.pi-check-square]="leccion.tipo === 'TEST'"
-                      [class.pi-clone]="leccion.tipo === 'FLASHCARDS'"
-                      [class.pi-align-left]="leccion.tipo === 'TEXTO'"
-                    ></span>
-                    <span class="leccion-row__titulo">{{
-                      leccion.titulo
-                    }}</span>
-                    <div class="leccion-row__actions">
-                      <p-button
-                        icon="pi pi-arrow-up"
-                        severity="secondary"
-                        [text]="true"
-                        size="small"
-                        [disabled]="li === 0"
-                        (onClick)="moveLeccionUp(seccion, li)"
-                      />
-                      <p-button
-                        icon="pi pi-arrow-down"
-                        severity="secondary"
-                        [text]="true"
-                        size="small"
-                        [disabled]="li === seccion.lecciones.length - 1"
-                        (onClick)="moveLeccionDown(seccion, li)"
-                      />
-                      <p-button
-                        icon="pi pi-pencil"
-                        severity="secondary"
-                        [text]="true"
-                        size="small"
-                        (onClick)="openEditLeccion(leccion, seccion)"
-                      />
-                      <p-button
-                        icon="pi pi-trash"
-                        severity="danger"
-                        [text]="true"
-                        size="small"
-                        (onClick)="deleteLeccion(leccion)"
-                      />
-                    </div>
+                      class="seccion-card__drag"
+                      cdkDragHandle
+                      title="Arrastrar para reordenar"
+                    >
+                      <i class="pi pi-bars"></i>
+                    </span>
+                    <span class="seccion-card__orden">{{ i + 1 }}.</span>
+                    <strong>{{ seccion.titulo }}</strong>
                   </div>
-                }
+                  <div class="seccion-card__actions">
+                    <p-button
+                      icon="pi pi-arrow-up"
+                      severity="secondary"
+                      [text]="true"
+                      [disabled]="i === 0"
+                      (onClick)="moveSeccionUp(i)"
+                      pTooltip="Mover arriba"
+                    />
+                    <p-button
+                      icon="pi pi-arrow-down"
+                      severity="secondary"
+                      [text]="true"
+                      [disabled]="i === secciones.length - 1"
+                      (onClick)="moveSeccionDown(i)"
+                      pTooltip="Mover abajo"
+                    />
+                    <p-button
+                      icon="pi pi-pencil"
+                      severity="secondary"
+                      [text]="true"
+                      (onClick)="openEditSeccion(seccion)"
+                      pTooltip="Editar sección"
+                    />
+                    <p-button
+                      icon="pi pi-trash"
+                      severity="danger"
+                      [text]="true"
+                      (onClick)="deleteSeccion(seccion)"
+                      pTooltip="Eliminar sección"
+                    />
+                    <p-button
+                      label="Añadir lección"
+                      icon="pi pi-plus"
+                      severity="secondary"
+                      size="small"
+                      (onClick)="openAddLeccion(seccion)"
+                    />
+                  </div>
+                </div>
 
-                @if (seccion.lecciones.length === 0) {
-                  <p
-                    class="text-color-secondary"
-                    style="font-size: 0.875rem; padding: 0.5rem 0"
-                  >
-                    Sin lecciones. Añade una con el botón de arriba.
-                  </p>
-                }
+                <div
+                  class="seccion-card__lecciones"
+                  cdkDropList
+                  (cdkDropListDropped)="dropLeccion($event, seccion)"
+                >
+                  @for (
+                    leccion of seccion.lecciones;
+                    track leccion.id;
+                    let li = $index
+                  ) {
+                    <div class="leccion-row" cdkDrag>
+                      <span
+                        class="leccion-row__drag"
+                        cdkDragHandle
+                        title="Arrastrar"
+                      >
+                        <i class="pi pi-bars"></i>
+                      </span>
+                      <span class="leccion-row__orden">{{ li + 1 }}.</span>
+                      <span
+                        class="leccion-row__tipo pi"
+                        [class.pi-video]="leccion.tipo === 'VIDEO'"
+                        [class.pi-check-square]="leccion.tipo === 'TEST'"
+                        [class.pi-clone]="leccion.tipo === 'FLASHCARDS'"
+                        [class.pi-align-left]="leccion.tipo === 'TEXTO'"
+                      ></span>
+                      <span class="leccion-row__titulo">{{
+                        leccion.titulo
+                      }}</span>
+                      <div class="leccion-row__actions">
+                        <p-button
+                          icon="pi pi-arrow-up"
+                          severity="secondary"
+                          [text]="true"
+                          size="small"
+                          [disabled]="li === 0"
+                          (onClick)="moveLeccionUp(seccion, li)"
+                        />
+                        <p-button
+                          icon="pi pi-arrow-down"
+                          severity="secondary"
+                          [text]="true"
+                          size="small"
+                          [disabled]="li === seccion.lecciones.length - 1"
+                          (onClick)="moveLeccionDown(seccion, li)"
+                        />
+                        <p-button
+                          icon="pi pi-pencil"
+                          severity="secondary"
+                          [text]="true"
+                          size="small"
+                          (onClick)="openEditLeccion(leccion, seccion)"
+                        />
+                        <p-button
+                          icon="pi pi-trash"
+                          severity="danger"
+                          [text]="true"
+                          size="small"
+                          (onClick)="deleteLeccion(leccion)"
+                        />
+                      </div>
+                    </div>
+                  }
+
+                  @if (seccion.lecciones.length === 0) {
+                    <p
+                      class="text-color-secondary"
+                      style="font-size: 0.875rem; padding: 0.5rem 0"
+                    >
+                      Sin lecciones. Añade una con el botón de arriba.
+                    </p>
+                  }
+                </div>
               </div>
-            </div>
-          }
+            }
+          </div>
         </div>
       </p-tabPanel>
 
