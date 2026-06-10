@@ -20,19 +20,32 @@ import { expect, test, type Page } from '@playwright/test';
 import userAlumnoFixture from './fixtures/user-alumno.json';
 import cursoDetailFixture from './fixtures/curso-detail.json';
 
+interface ProgresoMock {
+  id?: number;
+  leccionId: number;
+  completada: boolean;
+  porcentajeVisto: number;
+  ultimaVez?: string;
+}
+
 interface AlumnoState {
   tieneAcceso: boolean;
   catalogoCount: number;
   misCursosCount: number;
   progresoCalls: { id: number; body: unknown }[];
+  /** Progreso del alumno en el curso (alimenta checkmarks/% /continuar). */
+  progreso: ProgresoMock[];
 }
 
-function freshState(opts: { tieneAcceso?: boolean } = {}): AlumnoState {
+function freshState(
+  opts: { tieneAcceso?: boolean; progreso?: ProgresoMock[] } = {},
+): AlumnoState {
   return {
     tieneAcceso: opts.tieneAcceso ?? true,
     catalogoCount: 0,
     misCursosCount: 0,
     progresoCalls: [],
+    progreso: opts.progreso ?? [],
   };
 }
 
@@ -46,9 +59,10 @@ async function setupAppConfigStubs(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        nombreAcademia: 'Test Academia',
+        appName: 'Test Academia',
         logoUrl: null,
-        primaryColor: '#000000',
+        primaryColor: '#FF6B35',
+        secondaryColor: '#1F2937',
         updatedAt: new Date().toISOString(),
       }),
     }),
@@ -115,7 +129,7 @@ async function setupCursosAlumnoInterceptors(
           cursoId: cursoDetailFixture.id,
           usuarioId: 1,
           curso: { ...cursoDetailFixture, wooProductId: 1234 },
-          progreso: [],
+          progreso: state.progreso,
           createdAt: new Date().toISOString(),
         },
       ]),
@@ -131,6 +145,8 @@ async function setupCursosAlumnoInterceptors(
       body: JSON.stringify({
         curso: { ...cursoDetailFixture, wooProductId: 1234 },
         tieneAcceso: state.tieneAcceso,
+        // El backend solo expone progreso cuando hay acceso.
+        ...(state.tieneAcceso ? { progreso: state.progreso } : {}),
       }),
     });
   });
@@ -316,7 +332,7 @@ test.describe('Cursos alumno — flujo completo', () => {
     await expect(page.getByText('Profundización')).toBeVisible();
   });
 
-  test('4) sin acceso → muestra tag "Sin acceso" y lecciones quedan deshabilitadas', async ({
+  test('4) sin acceso → aviso de bloqueo + CTA Comprar y lecciones no navegables', async ({
     page,
   }) => {
     state.tieneAcceso = false;
@@ -324,62 +340,72 @@ test.describe('Cursos alumno — flujo completo', () => {
     await expect(
       page.getByRole('heading', { name: /Curso QA Test/i }),
     ).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/Sin acceso/i)).toBeVisible();
-    // Expand the first accordion section so we can verify the lessons render
-    // with the "disabled" class. The accordion header is the section title.
-    await page.getByText('Introducción').click();
+    // El hero muestra el CTA de compra cuando no hay acceso.
+    await expect(page.getByTestId('curso-detail-comprar-btn')).toBeVisible();
+    // El currículum muestra el aviso de bloqueo.
+    await expect(
+      page.getByText(/Adquiere el curso para acceder/i),
+    ).toBeVisible();
+    // Las lecciones se renderizan pero NO son interactivas (modo lectura).
     const firstLeccionRow = page.locator('.leccion-row').first();
     await expect(firstLeccionRow).toBeVisible({ timeout: 5_000 });
-    await expect(firstLeccionRow).toHaveClass(/disabled/);
-    // Clicking should not navigate
+    await expect(firstLeccionRow).toHaveClass(/no-interactivo/);
+    // Click no navega.
     const beforeUrl = page.url();
     await firstLeccionRow.click();
     await page.waitForTimeout(500);
     expect(page.url()).toBe(beforeUrl);
   });
 
-  test('5) abrir lección TEXTO renderiza el contenido markdown', async ({
+  test('5) abrir lección TEXTO en el aula: breadcrumb + contenido + currículum', async ({
     page,
   }) => {
     await page.goto(`/app/cursos/${cursoDetailFixture.slug}/leccion/100`);
-    // The leccion-page renders an <h2 class="leccion-titulo"> with the title.
-    await expect(page.locator('h2.leccion-titulo')).toHaveText(/Bienvenida/i, {
+    // El título de la lección activa aparece en el breadcrumb del aula.
+    await expect(page.locator('.bc-leccion')).toHaveText(/Bienvenida/i, {
       timeout: 10_000,
     });
+    // El contenido markdown se renderiza.
+    await expect(page.getByText(/Contenido E2E/i)).toBeVisible();
+    // El aula tiene el sidebar de currículum y el botón volver.
     await expect(page.getByText(/Volver al curso/i)).toBeVisible();
+    await expect(page.locator('app-curriculum-sidebar')).toBeVisible();
   });
 
-  test('6) abrir lección VIDEO muestra el player y botón "Marcar como vista"', async ({
+  test('6) abrir lección VIDEO en el aula: player + footer "Marcar completada"', async ({
     page,
   }) => {
     await page.goto(`/app/cursos/${cursoDetailFixture.slug}/leccion/101`);
-    await expect(page.locator('h2.leccion-titulo')).toHaveText(
+    await expect(page.locator('.bc-leccion')).toHaveText(
       /Vídeo de presentación/i,
       { timeout: 10_000 },
     );
     await expect(page.locator('iframe.video-iframe')).toBeVisible({
       timeout: 5_000,
     });
+    // En el aula la completitud la dueña el footer del shell, NO el botón
+    // interno del vídeo (que queda oculto con enAula=true).
     await expect(
-      page.getByRole('button', { name: /Marcar como vista/i }),
+      page.getByRole('button', { name: /Marcar completada/i }),
     ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /^Marcar como vista$/i }),
+    ).toHaveCount(0);
   });
 
-  test('7) "Marcar como vista" envía POST progreso con completada=true', async ({
+  test('7) "Marcar completada" envía POST progreso completada=true al 100%', async ({
     page,
   }) => {
     await page.goto(`/app/cursos/${cursoDetailFixture.slug}/leccion/101`);
-    await expect(
-      page.getByRole('button', { name: /Marcar como vista/i }),
-    ).toBeVisible({ timeout: 10_000 });
-    await page.getByRole('button', { name: /Marcar como vista/i }).click();
+    const btn = page.getByRole('button', { name: /Marcar completada/i });
+    await expect(btn).toBeVisible({ timeout: 10_000 });
+    await btn.click();
 
     await expect
       .poll(() => state.progresoCalls.length, { timeout: 5_000 })
       .toBeGreaterThan(0);
-    const last = state.progresoCalls[state.progresoCalls.length - 1];
-    expect(last.id).toBe(101);
-    expect(last.body).toMatchObject({
+    const call101 = state.progresoCalls.find((c) => c.id === 101);
+    expect(call101?.body).toMatchObject({
       completada: true,
       porcentajeVisto: 100,
     });
@@ -397,5 +423,63 @@ test.describe('Cursos alumno — flujo completo', () => {
     // Curso card should be visible (not clipped) on mobile
     const card = page.locator('.curso-card').first();
     await expect(card).toBeVisible();
+  });
+
+  test('9) aula: sidebar marca la lección completada, resalta la activa y muestra nav', async ({
+    page,
+  }) => {
+    state.progreso = [
+      {
+        id: 1,
+        leccionId: 100,
+        completada: true,
+        porcentajeVisto: 100,
+        ultimaVez: new Date().toISOString(),
+      },
+    ];
+    await page.goto(`/app/cursos/${cursoDetailFixture.slug}/leccion/101`);
+    await expect(page.locator('app-curriculum-sidebar')).toBeVisible({
+      timeout: 10_000,
+    });
+    // La 100 (vista) aparece completada; la 101 (abierta) resaltada como activa.
+    await expect(page.locator('.leccion-row.completada')).toHaveCount(1);
+    await expect(page.locator('.leccion-row.activa')).toHaveCount(1);
+    // Footer de navegación del aula.
+    await expect(page.getByRole('button', { name: /Anterior/i })).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: /Siguiente/i }),
+    ).toBeEnabled();
+  });
+
+  test('10) "Marcar completada" auto-avanza a la siguiente lección', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos/${cursoDetailFixture.slug}/leccion/100`);
+    const btn = page.getByRole('button', { name: /Marcar completada/i });
+    await expect(btn).toBeVisible({ timeout: 10_000 });
+    await btn.click();
+    // La 100 es la primera; tras completar avanza a la 101.
+    await expect(page).toHaveURL(/\/leccion\/101$/, { timeout: 8_000 });
+  });
+
+  test('11) mis cursos muestra hero "Continuar aprendiendo" si hay curso en progreso', async ({
+    page,
+  }) => {
+    state.progreso = [
+      {
+        id: 1,
+        leccionId: 100,
+        completada: true,
+        porcentajeVisto: 100,
+        ultimaVez: new Date().toISOString(),
+      },
+    ];
+    await page.goto('/app/cursos');
+    await expect(page.getByText(/Continuar aprendiendo/i)).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(
+      page.getByRole('button', { name: /Continuar/i }).first(),
+    ).toBeVisible();
   });
 });

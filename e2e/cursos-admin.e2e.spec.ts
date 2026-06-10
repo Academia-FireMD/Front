@@ -116,9 +116,10 @@ async function setupAppConfigStubs(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        nombreAcademia: 'Test Academia',
+        appName: 'Test Academia',
         logoUrl: null,
-        primaryColor: '#000000',
+        primaryColor: '#FF6B35',
+        secondaryColor: '#1F2937',
         updatedAt: new Date().toISOString(),
       }),
     }),
