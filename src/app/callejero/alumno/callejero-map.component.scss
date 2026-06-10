@@ -93,6 +93,26 @@
     display: block;
   }
 
+  &__zona-activa {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--surface-border, #e5e7eb);
+  }
+
+  &__zona-nombre {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color, #111827);
+  }
+
+  &__zona-progreso {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary, #6b7280);
+  }
+
   &__hint {
     margin: 0 0 0.75rem;
     font-size: 0.85rem;

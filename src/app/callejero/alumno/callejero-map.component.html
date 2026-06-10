@@ -72,6 +72,18 @@
       <!-- Panel de modo activo -->
       @if (hayZona()) {
         <p-card class="callejero__panel" data-testid="panel-modo">
+          <!-- Barrio que se está practicando ahora -->
+          @if (zonaSel(); as z) {
+            <div class="callejero__zona-activa" data-testid="zona-activa">
+              <span class="callejero__zona-nombre">{{ z.nombre }}</span>
+              @if (progresoZonaActiva(); as p) {
+                <span class="callejero__zona-progreso">
+                  {{ p.callesDominadas }}/{{ p.totalCalles }} dominadas
+                </span>
+              }
+            </div>
+          }
+
           <!-- Explorar -->
           @if (modo() === 'EXPLORAR') {
             <p class="callejero__hint">

@@ -133,6 +133,12 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   readonly esModoScoring = computed(() =>
     ['ENCUENTRA_CALLE', 'QUE_CALLE_ES', 'UBICAR_POI'].includes(this.modo()),
   );
+  /** Progreso del barrio que se está practicando ahora (para dar contexto). */
+  readonly progresoZonaActiva = computed<ResumenProgresoZona | null>(() => {
+    const id = this.zonaSel()?.id;
+    if (id == null) return null;
+    return this.progreso().find((z) => z.zonaId === id) ?? null;
+  });
 
   // ---- Leaflet (imperativo, fuera de signals) ----
   private map?: L.Map;
@@ -213,6 +219,8 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   seleccionarZona(zona: Zona | null): void {
     if (!zona) return;
     this.zonaSel.set(zona);
+    // Resalta el contorno del barrio recién seleccionado sobre el heatmap.
+    this.pintarHeatmapZonas(this.progreso());
     this.loadingZona.set(true);
     this.limpiarReto();
     this.service.listarCalles(zona.id).subscribe({
@@ -295,13 +303,21 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
    */
   private pintarHeatmapZonas(zonas: ResumenProgresoZona[]): void {
     if (this.layerPorZonaId.size === 0) return;
+    const activaId = this.zonaSel()?.id;
     for (const z of zonas) {
       const layer = this.layerPorZonaId.get(z.zonaId);
       if (!layer) continue;
+      const esActiva = z.zonaId === activaId;
       layer.setStyle({
         fillColor: this.colorPorcentaje(z.porcentaje),
         fillOpacity: z.porcentaje > 0 ? 0.45 : 0.12,
-        color: z.porcentaje > 0 ? this.colorPorcentaje(z.porcentaje) : '#94a3b8',
+        // El barrio que se practica ahora destaca con borde azul y grueso.
+        color: esActiva
+          ? '#2563eb'
+          : z.porcentaje > 0
+            ? this.colorPorcentaje(z.porcentaje)
+            : '#94a3b8',
+        weight: esActiva ? 3.5 : 1.5,
       });
     }
   }
