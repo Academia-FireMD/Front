@@ -61,7 +61,8 @@
 
       @if (!hayZona() && !loadingCiudades()) {
         <div class="callejero__overlay callejero__overlay--hint">
-          Selecciona una zona para empezar.
+          <strong>Haz click en un barrio</strong> del mapa (o elígelo arriba)
+          para empezar a practicar sus calles.
         </div>
       }
     </div>
@@ -170,6 +171,24 @@
             >
               {{ fb.texto }}
             </p>
+          }
+
+          <!-- Contador de sesión (gamificación) -->
+          @if (esModoScoring()) {
+            <div class="callejero__contador" data-testid="contador-sesion">
+              <span class="callejero__stat callejero__stat--ok" title="Aciertos">
+                ✓ {{ aciertosSesion() }}
+              </span>
+              <span class="callejero__stat callejero__stat--ko" title="Fallos">
+                ✗ {{ fallosSesion() }}
+              </span>
+              <span
+                class="callejero__stat callejero__stat--racha"
+                title="Racha actual (mejor: {{ mejorRacha() }})"
+              >
+                🔥 {{ racha() }}
+              </span>
+            </div>
           }
         </p-card>
       }

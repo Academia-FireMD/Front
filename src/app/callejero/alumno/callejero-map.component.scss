@@ -133,6 +133,38 @@
       color: #b91c1c;
     }
   }
+
+  &__contador {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--surface-border, #e5e7eb);
+  }
+
+  &__stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: var(--surface-100, #f3f4f6);
+
+    &--ok {
+      color: #15803d;
+      background: rgba(22, 163, 74, 0.1);
+    }
+    &--ko {
+      color: #b91c1c;
+      background: rgba(220, 38, 38, 0.1);
+    }
+    &--racha {
+      color: #b45309;
+      background: rgba(245, 158, 11, 0.12);
+    }
+  }
 }
 
 @media (max-width: 900px) {

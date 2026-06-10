@@ -27,10 +27,17 @@ import {
 } from '../models/callejero.model';
 import { ProgresoPanelComponent } from './components/progreso-panel.component';
 
-/** Atribución obligatoria (OSM ODbL + IGN CartoCiudad). */
+/** Atribución obligatoria (OSM ODbL + IGN CartoCiudad + CARTO basemap). */
 const ATRIBUCION =
-  '© OpenStreetMap contributors · © IGN CartoCiudad';
-const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  '© OpenStreetMap contributors · © IGN CartoCiudad · © CARTO';
+/**
+ * Tiles claros (CartoDB Positron): fondo gris neutro para que el callejero (las
+ * calles en azul) resalte con fuerza, a diferencia del OSM estándar recargado.
+ */
+const MAP_TILES = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+/** Pausa (ms) entre acertar un reto y cargar el siguiente automáticamente. */
+const AUTO_AVANCE_MS = 1300;
 
 /** Umbral de proximidad (m) para acertar la ubicación de un POI. */
 const POI_UMBRAL_METROS = 90;
@@ -112,6 +119,14 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   readonly feedback = signal<FeedbackEstado | null>(null);
   readonly mudoRevelado = signal<boolean>(false);
 
+  // ---- Contadores de sesión (gamificación) ----
+  readonly aciertosSesion = signal<number>(0);
+  readonly fallosSesion = signal<number>(0);
+  readonly racha = signal<number>(0);
+  readonly mejorRacha = signal<number>(0);
+  /** Timer del auto-avance entre retos; se cancela al cambiar de modo/destruir. */
+  private autoAvanceTimer?: ReturnType<typeof setTimeout>;
+
   readonly hayZona = computed(() => this.zonaSel() !== null);
   readonly esModoScoring = computed(() =>
     ['ENCUENTRA_CALLE', 'QUE_CALLE_ES', 'UBICAR_POI'].includes(this.modo()),
@@ -133,6 +148,7 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    clearTimeout(this.autoAvanceTimer);
     try {
       this.map?.remove();
     } catch {
@@ -148,8 +164,9 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
       center: [39.47, -0.376], // Valencia centro (fallback)
       zoom: 14,
     });
-    L.tileLayer(OSM_TILES, {
+    L.tileLayer(MAP_TILES, {
       maxZoom: 19,
+      subdomains: 'abcd',
       attribution: ATRIBUCION,
     }).addTo(map);
     // Click en mapa vacío → modo Ubicar POI evalúa la proximidad.
@@ -373,6 +390,7 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private aplicarModoActual(): void {
+    clearTimeout(this.autoAvanceTimer);
     this.limpiarFeedback();
     this.mudoRevelado.set(false);
     this.retoCalle.set(null);
@@ -419,11 +437,15 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
     if (!reto) return;
     const acierto = clic.codigoExterno === reto.codigoExterno;
     this.registrar(reto.id, acierto);
+    this.contabilizar(acierto);
     this.feedback.set(
       acierto
         ? { tipo: 'acierto', texto: `¡Correcto! Es ${reto.nombre}.` }
         : { tipo: 'fallo', texto: `No. Has marcado ${clic.nombre}.` },
     );
+    if (acierto) {
+      this.programarAutoAvance(() => this.nuevoRetoEncuentraCalle());
+    }
   }
 
   // ============ Modo 4: ¿Qué calle es esta? ============
@@ -441,11 +463,15 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
     if (!reto) return;
     const acierto = opcion.calleId === reto.id;
     this.registrar(reto.id, acierto);
+    this.contabilizar(acierto);
     this.feedback.set(
       acierto
         ? { tipo: 'acierto', texto: `¡Correcto! Es ${reto.nombre}.` }
         : { tipo: 'fallo', texto: `No. Era ${reto.nombre}.` },
     );
+    if (acierto) {
+      this.programarAutoAvance(() => this.nuevoRetoQueCalleEs());
+    }
   }
 
   /** 4 opciones: la correcta + 3 distractores reales de la misma zona. */
@@ -480,6 +506,7 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   private resolverUbicarPoi(clic: L.LatLng, reto: Poi): void {
     const distancia = clic.distanceTo(L.latLng(reto.lat, reto.lng));
     const acierto = distancia <= POI_UMBRAL_METROS;
+    this.contabilizar(acierto);
     this.feedback.set(
       acierto
         ? {
@@ -491,6 +518,9 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
             texto: `Lejos: a ${Math.round(distancia)} m de ${reto.nombre}.`,
           },
     );
+    if (acierto) {
+      this.programarAutoAvance(() => this.nuevoRetoUbicarPoi());
+    }
   }
 
   // ============ Mapa mudo ============
@@ -533,6 +563,24 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
         if (ciudad) this.cargarProgreso(ciudad.id);
       },
     });
+  }
+
+  /** Actualiza los contadores de sesión (aciertos/fallos/racha). */
+  private contabilizar(acierto: boolean): void {
+    if (acierto) {
+      this.aciertosSesion.update((n) => n + 1);
+      this.racha.update((n) => n + 1);
+      if (this.racha() > this.mejorRacha()) this.mejorRacha.set(this.racha());
+    } else {
+      this.fallosSesion.update((n) => n + 1);
+      this.racha.set(0);
+    }
+  }
+
+  /** Tras un acierto, encadena el siguiente reto para que la práctica fluya. */
+  private programarAutoAvance(siguiente: () => void): void {
+    clearTimeout(this.autoAvanceTimer);
+    this.autoAvanceTimer = setTimeout(() => siguiente(), AUTO_AVANCE_MS);
   }
 
   // ============ Helpers genéricos ============
