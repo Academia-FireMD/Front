@@ -9,6 +9,38 @@
     font-weight: 600;
   }
 
+  &__global {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    background: var(--surface-100, #f3f4f6);
+  }
+
+  &__global-cifra {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--text-color-secondary, #6b7280);
+
+    strong {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--primary-color, #dc2626);
+    }
+  }
+
+  &__subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-color-secondary, #6b7280);
+  }
+
   &__empty {
     margin: 0;
     font-size: 0.85rem;

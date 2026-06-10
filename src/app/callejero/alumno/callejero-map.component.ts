@@ -22,6 +22,7 @@ import {
   Ciudad,
   ModoCallejero,
   Poi,
+  ResumenGlobalCiudad,
   ResumenProgresoZona,
   Zona,
 } from '../models/callejero.model';
@@ -99,6 +100,7 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   readonly calles = signal<Calle[]>([]);
   readonly pois = signal<Poi[]>([]);
   readonly progreso = signal<ResumenProgresoZona[]>([]);
+  readonly progresoCiudad = signal<ResumenGlobalCiudad | null>(null);
   readonly loadingCiudades = signal<boolean>(true);
   readonly loadingZona = signal<boolean>(false);
 
@@ -139,6 +141,8 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   private capaPois?: L.LayerGroup;
   /** id de calle → layer Leaflet, para resaltar el reto de "¿Qué calle es?". */
   private readonly layerPorCalleId = new Map<number, L.Path>();
+  /** id de zona → layer del contorno, para el heatmap de progreso por barrio. */
+  private readonly layerPorZonaId = new Map<number, L.Path>();
 
   // ============ Lifecycle ============
 
@@ -227,7 +231,11 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
 
   private cargarProgreso(ciudadId: number): void {
     this.service.resumenProgreso(ciudadId).subscribe({
-      next: (res) => this.progreso.set(res.zonas),
+      next: (res) => {
+        this.progreso.set(res.zonas);
+        this.progresoCiudad.set(res.ciudad);
+        this.pintarHeatmapZonas(res.zonas);
+      },
       error: () => {
         /* progreso es secundario: silencioso */
       },
@@ -239,6 +247,7 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   private pintarContornosZonas(zonas: Zona[]): void {
     if (!this.map) return;
     this.capaZona?.remove();
+    this.layerPorZonaId.clear();
     const fc = {
       type: 'FeatureCollection' as const,
       features: zonas.map((z) => ({
@@ -249,18 +258,61 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
     };
     this.capaZona = L.geoJSON(fc, {
       style: {
-        color: '#dc2626',
+        color: '#94a3b8',
         weight: 1.5,
-        fillOpacity: 0.04,
+        fillColor: '#cbd5e1',
+        fillOpacity: 0.12,
       },
       onEachFeature: (feature, layer) => {
+        const zonaId = feature.properties?.['zonaId'] as number | undefined;
+        if (zonaId != null && layer instanceof L.Path) {
+          this.layerPorZonaId.set(zonaId, layer);
+        }
         layer.on('click', () => {
-          const zonaId = feature.properties?.['zonaId'] as number | undefined;
           const zona = this.zonas().find((z) => z.id === zonaId) ?? null;
           this.seleccionarZona(zona);
         });
+        layer.on('mouseover', () => {
+          if (layer instanceof L.Path) layer.setStyle({ weight: 3 });
+          (layer as L.Path).bindTooltip(
+            feature.properties?.['nombre'] as string,
+          );
+        });
+        layer.on('mouseout', () => {
+          if (layer instanceof L.Path) layer.setStyle({ weight: 1.5 });
+        });
       },
     }).addTo(this.map);
+    // Aplica el heatmap con el progreso ya conocido (el orden de carga
+    // contornos↔progreso no está garantizado; aquí cubrimos ambos).
+    this.pintarHeatmapZonas(this.progreso());
+  }
+
+  /**
+   * Heatmap de barrios: colorea el relleno de cada contorno según el % de
+   * calles dominadas (rojo→ámbar→verde). El diferenciador visual frente a los
+   * bancos de test: ves de un vistazo qué zonas dominas y cuáles flojean.
+   */
+  private pintarHeatmapZonas(zonas: ResumenProgresoZona[]): void {
+    if (this.layerPorZonaId.size === 0) return;
+    for (const z of zonas) {
+      const layer = this.layerPorZonaId.get(z.zonaId);
+      if (!layer) continue;
+      layer.setStyle({
+        fillColor: this.colorPorcentaje(z.porcentaje),
+        fillOpacity: z.porcentaje > 0 ? 0.45 : 0.12,
+        color: z.porcentaje > 0 ? this.colorPorcentaje(z.porcentaje) : '#94a3b8',
+      });
+    }
+  }
+
+  /** Escala de color de dominio: 0% gris/rojo → 50% ámbar → 100% verde. */
+  private colorPorcentaje(p: number): string {
+    if (p <= 0) return '#cbd5e1';
+    if (p < 34) return '#f87171'; // rojo
+    if (p < 67) return '#fbbf24'; // ámbar
+    if (p < 100) return '#a3e635'; // lima
+    return '#22c55e'; // verde (dominado)
   }
 
   private pintarCalles(calles: Calle[]): void {
@@ -549,20 +601,17 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   // ============ Helpers de scoring / progreso ============
 
   private registrar(calleId: number, acierto: boolean): void {
+    // El endpoint de progreso devuelve el registro puntual; el resumen (global
+    // + por zona + heatmap) se recarga siempre para reflejar el avance.
     this.service.registrarProgreso(calleId, acierto).subscribe({
-      next: (res) => {
-        if (res && 'zonas' in res) {
-          this.progreso.set(res.zonas);
-        } else {
-          const ciudad = this.ciudadSel();
-          if (ciudad) this.cargarProgreso(ciudad.id);
-        }
-      },
-      error: () => {
-        const ciudad = this.ciudadSel();
-        if (ciudad) this.cargarProgreso(ciudad.id);
-      },
+      next: () => this.refrescarProgreso(),
+      error: () => this.refrescarProgreso(),
     });
+  }
+
+  private refrescarProgreso(): void {
+    const ciudad = this.ciudadSel();
+    if (ciudad) this.cargarProgreso(ciudad.id);
   }
 
   /** Actualiza los contadores de sesión (aciertos/fallos/racha). */

@@ -91,7 +91,10 @@ describe('CallejeroService', () => {
     const req = httpMock.expectOne(`${API}/callejero/progreso`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ calleId: 42, acierto: true });
-    const res: ResumenProgreso = { zonas: [] };
+    const res: ResumenProgreso = {
+      ciudad: { totalCalles: 0, callesDominadas: 0, porcentaje: 0 },
+      zonas: [],
+    };
     req.flush(res);
 
     expect(received).toEqual(res);
@@ -99,7 +102,17 @@ describe('CallejeroService', () => {
 
   it('GET /callejero/ciudades/:id/progreso devuelve el resumen', () => {
     const res: ResumenProgreso = {
-      zonas: [{ zonaId: 1, nombre: 'el Carme', totalCalles: 10, dominadas: 3 }],
+      ciudad: { totalCalles: 10, callesDominadas: 3, porcentaje: 30 },
+      zonas: [
+        {
+          zonaId: 1,
+          codigo: 'el-carme',
+          nombre: 'el Carme',
+          totalCalles: 10,
+          callesDominadas: 3,
+          porcentaje: 30,
+        },
+      ],
     };
     let received: ResumenProgreso | undefined;
 

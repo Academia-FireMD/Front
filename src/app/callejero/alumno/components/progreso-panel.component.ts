@@ -6,12 +6,15 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { ResumenProgresoZona } from '../../models/callejero.model';
+import {
+  ResumenGlobalCiudad,
+  ResumenProgresoZona,
+} from '../../models/callejero.model';
 
 /**
- * Panel de progreso por zona (% de calles dominadas). Presentacional: recibe el
- * resumen del backend y, opcionalmente, la zona activa para resaltarla. Se
- * refresca tras cada acierto/fallo de los modos con scoring.
+ * Panel de progreso. Presentacional: recibe el resumen global de la ciudad
+ * ("dominas X/Y calles") y el desglose por barrio (% dominado), y opcionalmente
+ * la zona activa para resaltarla. Se refresca tras cada acierto/fallo.
  */
 @Component({
   selector: 'app-progreso-panel',
@@ -22,6 +25,8 @@ import { ResumenProgresoZona } from '../../models/callejero.model';
   styleUrl: './progreso-panel.component.scss',
 })
 export class ProgresoPanelComponent {
+  /** Resumen global de la ciudad (agregado). Null hasta que carga el backend. */
+  readonly ciudad = input<ResumenGlobalCiudad | null>(null);
   /** Filas de progreso por zona (de `GET /ciudades/:id/progreso`). */
   readonly zonas = input<ResumenProgresoZona[] | null | undefined>([]);
   /** Id de la zona seleccionada, para resaltarla en la lista. */
@@ -33,9 +38,4 @@ export class ProgresoPanelComponent {
    * `undefined` explícito. Normalizamos a `[]` para no romper el render.
    */
   readonly zonasSafe = computed<ResumenProgresoZona[]>(() => this.zonas() ?? []);
-
-  porcentaje(z: ResumenProgresoZona): number {
-    if (z.totalCalles <= 0) return 0;
-    return Math.round((z.dominadas / z.totalCalles) * 100);
-  }
 }

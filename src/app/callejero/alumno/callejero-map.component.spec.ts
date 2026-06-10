@@ -28,13 +28,21 @@ function buildServiceMock(fx: ReturnType<typeof loadValenciaFixture>) {
     calles: fx.callesPorZona.get(zona.id) ?? [],
     pois: fx.pois,
   };
+  const zonasProgreso = zonas.map((z) => ({
+    zonaId: z.id,
+    codigo: z.codigo,
+    nombre: z.nombre,
+    totalCalles: fx.callesPorZona.get(z.id)?.length ?? 0,
+    callesDominadas: 0,
+    porcentaje: 0,
+  }));
   const progreso: ResumenProgreso = {
-    zonas: zonas.map((z) => ({
-      zonaId: z.id,
-      nombre: z.nombre,
-      totalCalles: fx.callesPorZona.get(z.id)?.length ?? 0,
-      dominadas: 0,
-    })),
+    ciudad: {
+      totalCalles: zonasProgreso.reduce((s, z) => s + z.totalCalles, 0),
+      callesDominadas: 0,
+      porcentaje: 0,
+    },
+    zonas: zonasProgreso,
   };
 
   return {

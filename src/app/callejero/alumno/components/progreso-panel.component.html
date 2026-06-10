@@ -1,5 +1,18 @@
 <div class="progreso-panel" data-testid="progreso-panel">
-  <h3 class="progreso-panel__title">Progreso por zona</h3>
+  <h3 class="progreso-panel__title">Tu progreso</h3>
+
+  <!-- Resumen global de la ciudad -->
+  @if (ciudad(); as c) {
+    <div class="progreso-panel__global" data-testid="progreso-global">
+      <div class="progreso-panel__global-cifra">
+        <strong>{{ c.callesDominadas }}</strong>
+        <span>/ {{ c.totalCalles }} calles dominadas</span>
+      </div>
+      <p-progressBar [value]="c.porcentaje" [showValue]="true"></p-progressBar>
+    </div>
+  }
+
+  <h4 class="progreso-panel__subtitle">Por barrio</h4>
 
   @if (zonasSafe().length === 0) {
     <p class="progreso-panel__empty" data-testid="progreso-vacio">
@@ -16,13 +29,10 @@
           <div class="progreso-panel__row">
             <span class="progreso-panel__nombre">{{ z.nombre }}</span>
             <span class="progreso-panel__cifras">
-              {{ z.dominadas }}/{{ z.totalCalles }}
+              {{ z.callesDominadas }}/{{ z.totalCalles }}
             </span>
           </div>
-          <p-progressBar
-            [value]="porcentaje(z)"
-            [showValue]="true"
-          ></p-progressBar>
+          <p-progressBar [value]="z.porcentaje" [showValue]="false"></p-progressBar>
         </li>
       }
     </ul>

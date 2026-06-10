@@ -74,13 +74,23 @@ export interface RegistrarProgresoDto {
 
 export interface ResumenProgresoZona {
   zonaId: number;
+  codigo: string;
   nombre: string;
   totalCalles: number;
-  dominadas: number;
+  callesDominadas: number;
+  porcentaje: number;
+}
+
+/** Resumen global de la ciudad (agregado de todas sus zonas). */
+export interface ResumenGlobalCiudad {
+  totalCalles: number;
+  callesDominadas: number;
+  porcentaje: number;
 }
 
 /** Respuesta de `GET /callejero/ciudades/:id/progreso`. */
 export interface ResumenProgreso {
+  ciudad: ResumenGlobalCiudad;
   zonas: ResumenProgresoZona[];
 }
 

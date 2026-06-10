@@ -196,6 +196,7 @@
       <!-- Panel de progreso -->
       <p-card class="callejero__panel">
         <app-progreso-panel
+          [ciudad]="progresoCiudad()"
           [zonas]="progreso()"
           [zonaActivaId]="zonaSel()?.id ?? null"
         ></app-progreso-panel>
