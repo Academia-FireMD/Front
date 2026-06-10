@@ -102,6 +102,12 @@
     gap: 0.45rem;
     background: var(--cursos-brand);
     border-color: var(--cursos-brand);
+
+    // Estado "ya completada": verde para distinguirlo del CTA de marcar.
+    &.is-done {
+      background: var(--cursos-ok);
+      border-color: var(--cursos-ok);
+    }
   }
 }
 

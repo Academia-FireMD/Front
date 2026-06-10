@@ -93,7 +93,11 @@ export interface ProgresoLeccion {
   segundosVisto: number;
   porcentajeVisto: number;
   completada: boolean;
-  updatedAt?: string;
+  /**
+   * Timestamp de última actividad. El backend (Prisma) lo expone como
+   * `ultimaVez` (no `updatedAt`); se usa para "continuar donde lo dejaste".
+   */
+  ultimaVez?: string;
 }
 
 export interface AccesoConCurso {

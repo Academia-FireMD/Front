@@ -52,7 +52,7 @@ export function leccionContinuar(
   if (!incompletas.length) return lecciones[lecciones.length - 1];
   const conActividad = incompletas
     .map((l) => ({ l, p: prog.find((p) => p.leccionId === l.id) }))
-    .filter((x) => x.p?.updatedAt)
-    .sort((a, b) => +new Date(b.p!.updatedAt!) - +new Date(a.p!.updatedAt!));
+    .filter((x) => x.p?.ultimaVez)
+    .sort((a, b) => +new Date(b.p!.ultimaVez!) - +new Date(a.p!.ultimaVez!));
   return conActividad[0]?.l ?? incompletas[0];
 }

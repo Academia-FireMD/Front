@@ -64,7 +64,7 @@
         pButton
         type="button"
         class="completar-btn"
-        [class.p-button-success]="completada()"
+        [class.is-done]="completada()"
         [loading]="marcando()"
         (click)="marcarCompletada.emit()"
       >

@@ -54,10 +54,10 @@ describe('progreso.util', () => {
     ).toBe(0);
   });
 
-  it('leccionContinuar = incompleta con updatedAt más reciente', () => {
+  it('leccionContinuar = incompleta con ultimaVez más reciente', () => {
     const prog = [
-      { leccionId: 10, completada: true, updatedAt: '2026-06-01T00:00:00Z' },
-      { leccionId: 11, completada: false, updatedAt: '2026-06-05T00:00:00Z' },
+      { leccionId: 10, completada: true, ultimaVez: '2026-06-01T00:00:00Z' },
+      { leccionId: 11, completada: false, ultimaVez: '2026-06-05T00:00:00Z' },
     ] as ProgresoLeccion[];
     expect(leccionContinuar(curso, prog)?.id).toBe(11);
   });

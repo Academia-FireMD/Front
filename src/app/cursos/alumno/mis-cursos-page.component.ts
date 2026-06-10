@@ -71,7 +71,7 @@ export class MisCursosPageComponent implements OnInit {
     const prog = acceso.progreso ?? [];
     const continuar = leccionContinuar(curso, prog);
     const ultima = prog
-      .map((p) => (p.updatedAt ? +new Date(p.updatedAt) : 0))
+      .map((p) => (p.ultimaVez ? +new Date(p.ultimaVez) : 0))
       .reduce((max, t) => Math.max(max, t), 0);
     return {
       acceso,
