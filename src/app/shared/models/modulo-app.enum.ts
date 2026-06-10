@@ -2,7 +2,7 @@
  * Espejo TS del enum Prisma `ModuloApp` (Server `feature/white-label-config`).
  * Único source-of-truth en el frontend (D6, §4.1, §6.3).
  *
- * 9 valores totales. Cualquier ampliación requiere:
+ * 10 valores totales. Cualquier ampliación requiere:
  *  - migración Prisma `ALTER TYPE ... ADD VALUE`
  *  - decorar al menos un controller con `@RequiereModulo`
  *  - wirearlo en al menos un MenuItem o `data.modulo` de ruta
@@ -18,4 +18,5 @@ export enum ModuloApp {
   TEST = 'TEST',
   FLASHCARDS = 'FLASHCARDS',
   FACTURACION = 'FACTURACION',
+  CALLEJERO = 'CALLEJERO',
 }

@@ -26,6 +26,7 @@ function makeMockAppConfigService() {
     [ModuloApp.TEST]: true,
     [ModuloApp.FLASHCARDS]: true,
     [ModuloApp.FACTURACION]: true,
+    [ModuloApp.CALLEJERO]: true,
   });
 
   const updateConfig: jest.Mock<Promise<any>, any[]> = jest.fn(async () => ({
