@@ -1,0 +1,40 @@
+@if (variant() === "ring") {
+  <div
+    class="ring"
+    [style.width.px]="size()"
+    [style.height.px]="size()"
+    role="progressbar"
+    [attr.aria-valuenow]="clamped()"
+    aria-valuemin="0"
+    aria-valuemax="100"
+  >
+    <svg viewBox="0 0 40 40">
+      <circle class="ring-track" cx="20" cy="20" [attr.r]="radius" />
+      <circle
+        class="ring-fill"
+        cx="20"
+        cy="20"
+        [attr.r]="radius"
+        [attr.stroke-dasharray]="circ"
+        [attr.stroke-dashoffset]="circ - dash()"
+      />
+    </svg>
+    <span class="ring-label">{{ clamped() }}%</span>
+  </div>
+} @else {
+  <div class="bar-wrap">
+    <div class="bar-head">
+      <span class="bar-label">{{ label() }}</span>
+      <span class="bar-value">{{ clamped() }}%</span>
+    </div>
+    <div
+      class="bar-track"
+      role="progressbar"
+      [attr.aria-valuenow]="clamped()"
+      aria-valuemin="0"
+      aria-valuemax="100"
+    >
+      <div class="bar-fill" [style.width.%]="clamped()"></div>
+    </div>
+  </div>
+}

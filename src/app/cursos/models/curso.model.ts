@@ -110,6 +110,13 @@ export type CursoPublico = Curso;
 export interface CursoSlugResponse {
   curso: CursoDetail;
   tieneAcceso: boolean;
+  /**
+   * Progreso del alumno en este curso. Presente SOLO cuando `tieneAcceso`
+   * (el backend lo omite si no hay acceso). Alimenta checkmarks del sidebar,
+   * % del curso y "continuar donde lo dejaste". Espeja el `progreso[]` que
+   * `GET /cursos/mios` ya devuelve por curso.
+   */
+  progreso?: ProgresoLeccion[];
 }
 
 export interface LeccionResponse {

@@ -1,0 +1,58 @@
+<div class="curriculum">
+  @if (porcentaje() !== null) {
+    <div class="curriculum-progress">
+      <app-progress-ring [value]="porcentaje()!" label="del curso completado" />
+    </div>
+  }
+
+  @for (seccion of seccionesOrdenadas(); track seccion.id) {
+    <section class="seccion">
+      <button
+        type="button"
+        class="seccion-header"
+        (click)="toggle(seccion.id)"
+        [attr.aria-expanded]="!estaColapsada(seccion.id)"
+      >
+        <i
+          class="pi chevron"
+          [class.pi-chevron-down]="!estaColapsada(seccion.id)"
+          [class.pi-chevron-right]="estaColapsada(seccion.id)"
+        ></i>
+        <span class="seccion-titulo">{{ seccion.titulo }}</span>
+        <span class="seccion-count">{{ seccion.lecciones.length }}</span>
+      </button>
+
+      @if (!estaColapsada(seccion.id)) {
+        <ul class="lecciones">
+          @for (leccion of leccionesOrdenadas(seccion); track leccion.id) {
+            <li
+              class="leccion-row"
+              [class.completada]="completada(leccion.id)"
+              [class.activa]="leccion.id === leccionActivaId()"
+              [class.no-interactivo]="!interactivo()"
+              [attr.role]="interactivo() ? 'button' : null"
+              [attr.tabindex]="interactivo() ? 0 : null"
+              (click)="onLeccion(leccion)"
+              (keydown.enter)="onLeccion(leccion)"
+            >
+              <span class="estado">
+                @if (completada(leccion.id)) {
+                  <i class="pi pi-check-circle done"></i>
+                } @else {
+                  <i class="pi pi-circle pending"></i>
+                }
+              </span>
+              <i class="pi tipo" [class]="tipoIconos[leccion.tipo]"></i>
+              <span class="leccion-titulo">{{ leccion.titulo }}</span>
+              @if (leccion.duracionSegundos) {
+                <span class="leccion-dur">
+                  {{ (leccion.duracionSegundos / 60).toFixed(0) }} min
+                </span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</div>

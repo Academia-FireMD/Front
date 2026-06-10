@@ -1,0 +1,70 @@
+:host {
+  display: block;
+}
+
+// ---- variant: bar ----
+.bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+}
+
+.bar-label {
+  color: var(--cursos-text-soft);
+  font-weight: 500;
+}
+
+.bar-value {
+  color: var(--cursos-brand);
+  font-weight: 700;
+}
+
+.bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cursos-border);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--cursos-brand);
+  transition: width 0.35s ease;
+}
+
+// ---- variant: ring ----
+.ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+}
+
+.ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 4;
+}
+
+.ring-fill {
+  fill: none;
+  stroke: var(--cursos-brand);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.35s ease;
+}
+
+.ring-label {
+  position: absolute;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--cursos-text);
+}
