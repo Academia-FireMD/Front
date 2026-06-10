@@ -655,10 +655,11 @@ test.describe('Cursos admin — flujo completo', () => {
 
     await expect(page.locator('#lf-titulo')).toBeVisible({ timeout: 5_000 });
     await page.locator('#lf-titulo').fill('Lección E2E texto');
-    // Default tipo is VIDEO → switch to TEXTO via the p-dropdown.
-    // Use the dropdown UI: click and pick "Texto"
-    await page.locator('p-dropdown').first().click();
-    await page.getByRole('option', { name: /Texto/i }).click();
+    // Default tipo is VIDEO → switch to TEXTO via el dropdown del DIÁLOGO.
+    // Scope a `.leccion-form` para no matchear el p-dropdown oculto del
+    // woocommerce-product-picker (tab Metadatos, primero en el DOM).
+    await page.locator('.leccion-form p-dropdown').first().click();
+    await page.getByRole('option', { name: 'Texto', exact: true }).click();
     await page
       .locator('textarea[formControlName="contenidoMarkdown"]')
       .fill('# Hola E2E\n\nContenido de prueba');
