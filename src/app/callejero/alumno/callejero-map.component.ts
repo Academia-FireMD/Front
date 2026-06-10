@@ -509,10 +509,15 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
     this.feedback.set(
       acierto
         ? { tipo: 'acierto', texto: `¡Correcto! Es ${reto.nombre}.` }
-        : { tipo: 'fallo', texto: `No. Has marcado ${clic.nombre}.` },
+        : { tipo: 'fallo', texto: `No. Era ${reto.nombre} (resaltada).` },
     );
     if (acierto) {
       this.programarAutoAvance(() => this.nuevoRetoEncuentraCalle());
+    } else {
+      // Aprende del fallo: resalta dónde estaba la calle correcta y, tras unos
+      // segundos para verla, encadena el siguiente reto.
+      this.resaltarReto(reto.id);
+      this.programarAutoAvance(() => this.nuevoRetoEncuentraCalle(), 2600);
     }
   }
 
@@ -642,10 +647,10 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** Tras un acierto, encadena el siguiente reto para que la práctica fluya. */
-  private programarAutoAvance(siguiente: () => void): void {
+  /** Tras un acierto/fallo, encadena el siguiente reto para que la práctica fluya. */
+  private programarAutoAvance(siguiente: () => void, ms = AUTO_AVANCE_MS): void {
     clearTimeout(this.autoAvanceTimer);
-    this.autoAvanceTimer = setTimeout(() => siguiente(), AUTO_AVANCE_MS);
+    this.autoAvanceTimer = setTimeout(() => siguiente(), ms);
   }
 
   // ============ Helpers genéricos ============
