@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   input,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -22,9 +23,16 @@ import { ResumenProgresoZona } from '../../models/callejero.model';
 })
 export class ProgresoPanelComponent {
   /** Filas de progreso por zona (de `GET /ciudades/:id/progreso`). */
-  readonly zonas = input<ResumenProgresoZona[]>([]);
+  readonly zonas = input<ResumenProgresoZona[] | null | undefined>([]);
   /** Id de la zona seleccionada, para resaltarla en la lista. */
   readonly zonaActivaId = input<number | null>(null);
+
+  /**
+   * Vista segura: el padre puede pasar `undefined` antes de que cargue el
+   * resumen del backend, y un `input` con default no protege contra un
+   * `undefined` explícito. Normalizamos a `[]` para no romper el render.
+   */
+  readonly zonasSafe = computed<ResumenProgresoZona[]>(() => this.zonas() ?? []);
 
   porcentaje(z: ResumenProgresoZona): number {
     if (z.totalCalles <= 0) return 0;

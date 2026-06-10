@@ -1,13 +1,13 @@
 <div class="progreso-panel" data-testid="progreso-panel">
   <h3 class="progreso-panel__title">Progreso por zona</h3>
 
-  @if (zonas().length === 0) {
+  @if (zonasSafe().length === 0) {
     <p class="progreso-panel__empty" data-testid="progreso-vacio">
       Practica una zona para empezar a registrar progreso.
     </p>
   } @else {
     <ul class="progreso-panel__list">
-      @for (z of zonas(); track z.zonaId) {
+      @for (z of zonasSafe(); track z.zonaId) {
         <li
           class="progreso-panel__item"
           [class.progreso-panel__item--activa]="z.zonaId === zonaActivaId()"
