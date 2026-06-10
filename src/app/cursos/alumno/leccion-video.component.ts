@@ -27,6 +27,11 @@ const HEARTBEAT_INTERVAL_MS = 15_000;
 export class LeccionVideoComponent implements OnInit, OnDestroy {
   leccion = input.required<Leccion>();
   playbackUrl = input.required<string>();
+  /**
+   * Dentro del aula el control "Marcar completada" lo dueña el footer del shell
+   * (evita botón duplicado). El heartbeat de progreso sigue activo igualmente.
+   */
+  enAula = input<boolean>(false);
 
   private readonly sanitizer = inject(DomSanitizer);
   private readonly service = inject(CursosAlumnoService);

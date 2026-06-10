@@ -2,37 +2,51 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
   OnInit,
   signal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
+import { forkJoin } from 'rxjs';
+import {
+  CursoSlugResponse,
+  Leccion,
+  LeccionResponse,
+  ProgresoLeccion,
+} from '../models/curso.model';
+import { CursosAlumnoService } from '../services/cursos-alumno.service';
+import { CurriculumSidebarComponent } from '../ui/curriculum-sidebar.component';
+import { LeccionShellComponent } from '../ui/leccion-shell.component';
+import { estaCompletada, leccionesPlanas } from '../ui/progreso.util';
 import { LeccionFlashcardsComponent } from './leccion-flashcards.component';
-import { LeccionResponse } from '../models/curso.model';
 import { LeccionTestComponent } from './leccion-test.component';
 import { LeccionTextoComponent } from './leccion-texto.component';
 import { LeccionVideoComponent } from './leccion-video.component';
-import { CursosAlumnoService } from '../services/cursos-alumno.service';
 
 /**
- * Refactor 2026-05-25 (T12 / T13 / D4):
- *  - Acepta `previewData` para que el admin renderice una lección desde el
- *    form sin fetch HTTP ni AccesoCurso check. Banner siempre visible en preview.
- *  - Para TEST/FLASHCARDS, delega en `<app-leccion-test>` / `<app-leccion-flashcards>`
- *    que llaman al endpoint `iniciar-test`/`iniciar-flashcards` del backend.
+ * Aula del alumno. Reescrita 2026-06-10: layout de 2 columnas (currículum +
+ * contenido) con navegación anterior/siguiente, "marcar completada" y progreso.
+ * Carga el árbol del curso (GET /cursos/:slug, con progreso) para el sidebar y
+ * la lección activa (GET /lecciones/:id) para el reproductor.
  *
- * HIGH-4 (codex review): el modo preview requiere `previewMode=true`. Si
- * solo se pasa `previewData` sin `previewMode`, el componente hace fetch
- * normal (con AccesoCurso check del backend).
+ * Preview admin (previewMode=true): renderiza SOLO el contenido de la lección
+ * (sin el chrome del aula) usando previewData, sin fetch ni AccesoCurso check.
  */
 @Component({
   selector: 'app-leccion-page',
   standalone: true,
   imports: [
+    NgTemplateOutlet,
     ButtonModule,
+    LeccionShellComponent,
+    CurriculumSidebarComponent,
     LeccionVideoComponent,
     LeccionTextoComponent,
     LeccionTestComponent,
@@ -46,29 +60,39 @@ export class LeccionPageComponent implements OnInit {
   private readonly service = inject(CursosAlumnoService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastrService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  /**
-   * Datos pre-construidos para preview. Solo se usan si `previewMode=true`.
-   */
   readonly previewData = input<LeccionResponse | null>(null);
-  /**
-   * HIGH-4 (codex review): opt-in explícito. Sin `previewMode=true`,
-   * `previewData` se ignora y se hace el fetch HTTP normal con AccesoCurso.
-   */
   readonly previewMode = input<boolean>(false);
 
+  cursoData = signal<CursoSlugResponse | null>(null);
   leccionData = signal<LeccionResponse | null>(null);
+  progreso = signal<ProgresoLeccion[]>([]);
   loading = signal(true);
   error = signal(false);
+  marcando = signal(false);
+
+  private loadedSlug: string | null = null;
 
   readonly isPreview = computed(
     () => this.previewMode() && this.previewData() !== null,
   );
 
+  readonly secciones = computed(() => this.cursoData()?.curso.secciones ?? []);
+  readonly tituloCurso = computed(() => this.cursoData()?.curso.titulo ?? '');
+  readonly leccionActivaId = computed(
+    () => this.leccionData()?.leccion.id ?? null,
+  );
+  readonly tituloLeccion = computed(
+    () => this.leccionData()?.leccion.titulo ?? '',
+  );
+  readonly completadaActiva = computed(() => {
+    const id = this.leccionActivaId();
+    return id != null && estaCompletada(id, this.progreso());
+  });
+
   constructor() {
-    // `allowSignalWrites: true` — Angular 18 prohibe writes a signals dentro
-    // de effects por default; aquí necesitamos sincronizar el input
-    // (previewData) con el signal local (leccionData).
     effect(
       () => {
         if (!this.previewMode()) return;
@@ -88,30 +112,131 @@ export class LeccionPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.isPreview()) {
-      // effect ya cubre.
+    if (this.isPreview()) return;
+
+    // Reaccionar a cambios de :id (navegación anterior/siguiente reusa el
+    // componente sin re-ejecutar ngOnInit) recargando la lección y, si cambia
+    // el curso, el árbol completo.
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const slug = params.get('slug') ?? '';
+        const idParam = params.get('id');
+        const id = idParam ? parseInt(idParam, 10) : NaN;
+        if (isNaN(id) || !slug) {
+          this.error.set(true);
+          this.loading.set(false);
+          return;
+        }
+        this.cargar(slug, id);
+      });
+  }
+
+  private cargar(slug: string, id: number): void {
+    this.loading.set(true);
+    this.error.set(false);
+
+    // El árbol del curso solo se recarga si cambia el slug.
+    if (this.loadedSlug === slug && this.cursoData()) {
+      this.service.getLeccion(id).subscribe({
+        next: (lec) => {
+          this.leccionData.set(lec);
+          this.loading.set(false);
+        },
+        error: () => this.fallo(),
+      });
       return;
     }
-    const idParam = this.route.snapshot.paramMap.get('id');
-    const id = idParam ? parseInt(idParam, 10) : NaN;
-    if (isNaN(id)) {
-      this.error.set(true);
-      this.loading.set(false);
-      return;
-    }
-    this.service.getLeccion(id).subscribe({
-      next: (data) => {
-        this.leccionData.set(data);
+
+    forkJoin({
+      curso: this.service.getCurso(slug),
+      leccion: this.service.getLeccion(id),
+    }).subscribe({
+      next: ({ curso, leccion }) => {
+        this.loadedSlug = slug;
+        this.cursoData.set(curso);
+        this.progreso.set(curso.progreso ?? []);
+        this.leccionData.set(leccion);
         this.loading.set(false);
       },
-      error: () => {
-        this.loading.set(false);
-        this.error.set(true);
-      },
+      error: () => this.fallo(),
     });
+  }
+
+  private fallo(): void {
+    this.loading.set(false);
+    this.error.set(true);
+  }
+
+  irALeccion(leccion: Leccion): void {
+    this.router.navigate(['/app/cursos', this.slug, 'leccion', leccion.id]);
   }
 
   volver(): void {
     this.router.navigate(['/app/cursos', this.slug]);
+  }
+
+  /**
+   * Control único de completitud del aula (footer del shell). Funciona para
+   * cualquier tipo de lección: persiste progreso al 100%, actualiza el sidebar
+   * de forma optimista y auto-avanza a la siguiente lección si existe.
+   */
+  marcarCompletada(): void {
+    const id = this.leccionActivaId();
+    if (id == null || this.marcando()) return;
+    this.marcando.set(true);
+    this.service
+      .upsertProgreso(id, {
+        segundosVisto: 0,
+        porcentajeVisto: 100,
+        completada: true,
+      })
+      .subscribe({
+        next: () => {
+          this.marcando.set(false);
+          this.aplicarCompletadaLocal(id);
+          this.toast.success('Lección completada');
+          this.autoAvanzar(id);
+        },
+        error: () => {
+          this.marcando.set(false);
+          this.toast.error(
+            'No se pudo guardar el progreso, inténtalo de nuevo.',
+          );
+        },
+      });
+  }
+
+  /** Marca la lección como completada en el progreso local (sin refetch). */
+  private aplicarCompletadaLocal(leccionId: number): void {
+    this.progreso.update((prev) => {
+      const existe = prev.find((p) => p.leccionId === leccionId);
+      if (existe) {
+        return prev.map((p) =>
+          p.leccionId === leccionId
+            ? { ...p, completada: true, porcentajeVisto: 100 }
+            : p,
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: -leccionId, // placeholder local-only
+          leccionId,
+          usuarioId: 0,
+          segundosVisto: 0,
+          porcentajeVisto: 100,
+          completada: true,
+        },
+      ];
+    });
+  }
+
+  private autoAvanzar(actualId: number): void {
+    const planas = leccionesPlanas({ secciones: this.secciones() });
+    const idx = planas.findIndex((l) => l.id === actualId);
+    const siguiente =
+      idx >= 0 && idx < planas.length - 1 ? planas[idx + 1] : null;
+    if (siguiente) this.irALeccion(siguiente);
   }
 }

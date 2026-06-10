@@ -11,19 +11,18 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { TagModule } from 'primeng/tag';
-import { TooltipModule } from 'primeng/tooltip';
 import { environment } from '../../../environments/environment';
 import {
   ComprarCursoCofResponse,
   CursoSlugResponse,
   Leccion,
-  TipoLeccion,
 } from '../models/curso.model';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
+import { CurriculumSidebarComponent } from '../ui/curriculum-sidebar.component';
+import { ProgressRingComponent } from '../ui/progress-ring.component';
+import { calcularPorcentajeCurso, leccionContinuar } from '../ui/progreso.util';
 
 /**
  * Refactor 2026-05-25 (T12 / D4): acepta input opcional `previewData` para
@@ -40,13 +39,12 @@ import { CursosAlumnoService } from '../services/cursos-alumno.service';
   selector: 'app-curso-detail-page',
   standalone: true,
   imports: [
-    AccordionModule,
     ButtonModule,
     DialogModule,
-    TagModule,
-    TooltipModule,
     RouterLink,
     DecimalPipe,
+    CurriculumSidebarComponent,
+    ProgressRingComponent,
   ],
   templateUrl: './curso-detail-page.component.html',
   styleUrl: './curso-detail-page.component.scss',
@@ -93,19 +91,21 @@ export class CursoDetailPageComponent implements OnInit {
     () => this.previewMode() && this.previewData() !== null,
   );
 
-  tipoIconos: Record<TipoLeccion, string> = {
-    VIDEO: 'pi pi-play-circle',
-    TEXTO: 'pi pi-file',
-    TEST: 'pi pi-question-circle',
-    FLASHCARDS: 'pi pi-clone',
-  };
-
-  tipoLabels: Record<TipoLeccion, string> = {
-    VIDEO: 'Vídeo',
-    TEXTO: 'Lectura',
-    TEST: 'Test',
-    FLASHCARDS: 'Flashcards',
-  };
+  readonly secciones = computed(() => this.cursoData()?.curso.secciones ?? []);
+  readonly progreso = computed(() => this.cursoData()?.progreso ?? []);
+  readonly porcentaje = computed(() => {
+    const curso = this.cursoData()?.curso;
+    return curso ? calcularPorcentajeCurso(curso, this.progreso()) : 0;
+  });
+  /** Lección para "Empezar"/"Continuar" (solo si tiene acceso). */
+  readonly continuarLeccion = computed(() => {
+    const curso = this.cursoData()?.curso;
+    return curso ? leccionContinuar(curso, this.progreso()) : null;
+  });
+  /** Etiqueta del CTA principal cuando tiene acceso. */
+  readonly ctaLabel = computed(() =>
+    this.porcentaje() > 0 ? 'Continuar' : 'Empezar',
+  );
 
   constructor() {
     // Si llega previewData en runtime (admin lo cambia con toggle), refleja
@@ -161,6 +161,12 @@ export class CursoDetailPageComponent implements OnInit {
     return (
       this.cursoData()?.curso.secciones?.flatMap((s) => s.lecciones).length ?? 0
     );
+  }
+
+  /** CTA principal con acceso: abre la lección de "continuar" (o la primera). */
+  empezar(): void {
+    const leccion = this.continuarLeccion();
+    if (leccion) this.openLeccion(leccion);
   }
 
   // ── Compra 1-clic (COF) ──────────────────────────────────────────
