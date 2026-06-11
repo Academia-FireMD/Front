@@ -778,4 +778,57 @@ test.describe('Cursos admin — flujo completo', () => {
       .poll(() => state.grantAccessCalls, { timeout: 5_000 })
       .toBe(1);
   });
+
+  test('12) drag-and-drop reordena secciones (CDK) y llama el endpoint reorder', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+
+    const cards = page.locator('.seccion-card');
+    await expect(cards).toHaveCount(2, { timeout: 5_000 });
+    // Orden inicial: la 1ª sección es la del fixture con id 10 (Introducción).
+    const tituloInicial = await cards
+      .first()
+      .locator('.seccion-card__title strong')
+      .textContent();
+
+    // Arrastra la 2ª sección por encima de la 1ª usando el handle ≡.
+    // CDK arranca el drag tras unos px de movimiento, por eso movemos en pasos.
+    const handle = cards.nth(1).locator('.seccion-card__drag');
+    const handleBox = await handle.boundingBox();
+    const targetBox = await cards.first().boundingBox();
+    if (!handleBox || !targetBox) throw new Error('no bounding boxes');
+
+    await page.mouse.move(
+      handleBox.x + handleBox.width / 2,
+      handleBox.y + handleBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + targetBox.height / 2,
+      { steps: 12 },
+    );
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + 8, {
+      steps: 6,
+    });
+    await page.mouse.up();
+
+    // El endpoint de reorder se llama y el orden en la UI cambia.
+    await expect
+      .poll(() => state.reorderSeccionesCalls, { timeout: 5_000 })
+      .toBeGreaterThan(0);
+    await expect
+      .poll(
+        async () =>
+          await cards
+            .first()
+            .locator('.seccion-card__title strong')
+            .textContent(),
+        { timeout: 5_000 },
+      )
+      .not.toBe(tituloInicial);
+  });
 });
