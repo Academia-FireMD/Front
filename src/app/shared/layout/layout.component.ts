@@ -604,6 +604,17 @@ export class LayoutComponent {
       });
     }
 
+    // Tienda de simulacros — disponible para todos los alumnos con sub activa.
+    // El ModuloGuard se encarga del gating por tenant (módulo SIMULACROS).
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Simulacros',
+        icon: 'pi pi-file-edit',
+        routerLink: '/app/simulacros-tienda',
+        modulo: ModuloApp.SIMULACROS,
+      });
+    }
+
     // Menú de perfil siempre disponible
     menu.push({
       label: 'Perfil',

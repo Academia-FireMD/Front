@@ -63,6 +63,22 @@ export interface Examen {
 }
 
 /**
+ * Item de la tienda de simulacros: un simulacro comprable para el alumno con su
+ * precio (derivado del cache WC por el backend) y su estado de acceso.
+ */
+export interface SimulacroTienda {
+  id: number;
+  titulo: string;
+  descripcion?: string | null;
+  relevancia: Oposicion[];
+  precio: number;
+  woocommerceProductId: string;
+  woocommerceSku?: string | null;
+  /** INCLUIDO = el plan ADVANCED/PREMIUM ya lo incluye · COMPRADO = consumible activo · COMPRABLE = 1-clic COF */
+  estado: 'INCLUIDO' | 'COMPRADO' | 'COMPRABLE';
+}
+
+/**
  * Respuesta de la compra in-app de un simulacro por COF (1-clic). Misma forma
  * que la de cursos salvo que el éxito devuelve `consumibleId` y `wooProductId`
  * es un string (Examen.woocommerceProductId). No hay caso "YA_TIENES": un

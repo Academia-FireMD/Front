@@ -120,6 +120,15 @@ const routes: Routes = [
         data: { modulo: ModuloApp.CURSOS },
       },
       {
+        path: 'simulacros-tienda',
+        loadComponent: () =>
+          import('./simulacros/tienda/tienda-simulacros.component').then(
+            (m) => m.TiendaSimulacrosComponent,
+          ),
+        canActivate: [moduloGuard],
+        data: { modulo: ModuloApp.SIMULACROS, title: 'Tienda de simulacros' },
+      },
+      {
         path: 'callejero',
         loadChildren: () =>
           import('./callejero/callejero.routes').then((m) => m.routes),
