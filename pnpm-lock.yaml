@@ -74,6 +74,9 @@ importers:
       echarts:
         specifier: ^5.5.1
         version: 5.6.0
+      leaflet:
+        specifier: ^1.9.4
+        version: 1.9.4
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -138,9 +141,15 @@ importers:
       '@types/echarts':
         specifier: ^4.9.22
         version: 4.9.22
+      '@types/geojson':
+        specifier: ^7946.0.16
+        version: 7946.0.16
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
+      '@types/leaflet':
+        specifier: ^1.9.21
+        version: 1.9.21
       '@types/lodash':
         specifier: ^4.17.7
         version: 4.17.23
@@ -2008,6 +2017,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/leaflet@1.9.21':
+    resolution: {integrity: sha512-TbAd9DaPGSnzp6QvtYngntMZgcRk+igFELwR2N99XZn7RXUdKgsXMR+28bUO0rPsWp8MIu/f47luLIQuSLYv/w==}
 
   '@types/lodash@4.17.23':
     resolution: {integrity: sha512-RDvF6wTulMPjrNdCoYRC8gNR880JNGT8uB+REUpC2Ns4pRqQJhGz90wh7rgdXDPpCczF3VGktDuFGVnz8zP7HA==}
@@ -3997,6 +4009,9 @@ packages:
 
   layout-base@2.0.1:
     resolution: {integrity: sha512-dp3s92+uNI1hWIpPGH3jK2kxE2lMjdXdr+DH8ynZHpd6PUlH6x6cbuXnoMmiNumznqaNO31xu9e79F0uuZ0JFg==}
+
+  leaflet@1.9.4:
+    resolution: {integrity: sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==}
 
   less-loader@12.2.0:
     resolution: {integrity: sha512-MYUxjSQSBUQmowc0l5nPieOYwMzGPUaTzB6inNW/bdPEG9zOL3eAAD1Qw5ZxSPk7we5dMojHwNODYMV1hq4EVg==}
@@ -8152,8 +8167,7 @@ snapshots:
       '@types/qs': 6.14.0
       '@types/serve-static': 1.15.10
 
-  '@types/geojson@7946.0.16':
-    optional: true
+  '@types/geojson@7946.0.16': {}
 
   '@types/graceful-fs@4.1.9':
     dependencies:
@@ -8187,6 +8201,10 @@ snapshots:
       parse5: 7.3.0
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/leaflet@1.9.21':
+    dependencies:
+      '@types/geojson': 7946.0.16
 
   '@types/lodash@4.17.23': {}
 
@@ -10662,6 +10680,8 @@ snapshots:
 
   layout-base@2.0.1:
     optional: true
+
+  leaflet@1.9.4: {}
 
   less-loader@12.2.0(less@4.2.0)(webpack@5.94.0(esbuild@0.23.0)):
     dependencies:

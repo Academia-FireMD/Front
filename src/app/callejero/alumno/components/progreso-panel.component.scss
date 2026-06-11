@@ -1,0 +1,87 @@
+.progreso-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  &__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  &__global {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    background: var(--surface-100, #f3f4f6);
+  }
+
+  &__global-cifra {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--text-color-secondary, #6b7280);
+
+    strong {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--primary-color, #dc2626);
+    }
+  }
+
+  &__subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-color-secondary, #6b7280);
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-color-secondary, #6b7280);
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+
+  &__item {
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+
+    &--activa {
+      background: var(--highlight-bg, rgba(220, 38, 38, 0.08));
+    }
+  }
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+  }
+
+  &__nombre {
+    font-weight: 500;
+  }
+
+  &__cifras {
+    color: var(--text-color-secondary, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+}
