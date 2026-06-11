@@ -1,0 +1,90 @@
+<div class="aula" [class.drawer-open]="drawerAbierto()">
+  <!-- Currículum (columna izq en desktop, drawer en móvil) -->
+  <aside class="aula-sidebar">
+    <div class="sidebar-head">
+      <button
+        pButton
+        type="button"
+        class="p-button-text p-button-sm volver-btn"
+        (click)="volver.emit()"
+      >
+        <i class="pi pi-arrow-left"></i><span>Volver al curso</span>
+      </button>
+      <button
+        pButton
+        type="button"
+        class="p-button-text p-button-sm cerrar-drawer"
+        (click)="cerrarDrawer()"
+        aria-label="Cerrar"
+      >
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+    <ng-content select="[sidebar]"></ng-content>
+  </aside>
+
+  <!-- Backdrop del drawer en móvil -->
+  <div class="aula-backdrop" (click)="cerrarDrawer()"></div>
+
+  <!-- Contenido -->
+  <main class="aula-content">
+    <header class="aula-header">
+      <button
+        pButton
+        type="button"
+        class="p-button-text p-button-sm toggle-curriculo"
+        (click)="toggleDrawer()"
+        aria-label="Ver currículum"
+      >
+        <i class="pi pi-list"></i><span>Currículum</span>
+      </button>
+      <nav class="breadcrumb">
+        <span class="bc-curso">{{ tituloCurso() }}</span>
+        <i class="pi pi-angle-right"></i>
+        <span class="bc-leccion">{{ tituloLeccion() }}</span>
+      </nav>
+    </header>
+
+    <div class="aula-body">
+      <ng-content></ng-content>
+    </div>
+
+    <footer class="aula-footer">
+      <button
+        pButton
+        type="button"
+        class="p-button-outlined nav-btn"
+        [disabled]="!anteriorL()"
+        (click)="anterior()"
+      >
+        <i class="pi pi-arrow-left"></i><span>Anterior</span>
+      </button>
+
+      <button
+        pButton
+        type="button"
+        class="completar-btn"
+        [class.is-done]="completada()"
+        [loading]="marcando()"
+        (click)="marcarCompletada.emit()"
+      >
+        <i
+          class="pi"
+          [class.pi-check]="!completada()"
+          [class.pi-check-circle]="completada()"
+        ></i>
+        <span>{{ completada() ? "Completada" : "Marcar completada" }}</span>
+      </button>
+
+      <button
+        pButton
+        type="button"
+        class="nav-btn nav-next"
+        [disabled]="!siguienteL()"
+        (click)="siguiente()"
+      >
+        <span>Siguiente</span><i class="pi pi-arrow-right"></i>
+      </button>
+    </footer>
+  </main>
+</div>

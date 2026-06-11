@@ -6,13 +6,15 @@
   } @else {
     <p class="no-content">Esta lección no tiene contenido todavía.</p>
   }
-  <div class="texto-footer">
-    <button
-      pButton
-      label="Marcar como leída"
-      icon="pi pi-check"
-      class="p-button-success p-button-sm"
-      (click)="marcarComoVista()"
-    ></button>
-  </div>
+  @if (!enAula()) {
+    <div class="texto-footer">
+      <button
+        pButton
+        label="Marcar como leída"
+        icon="pi pi-check"
+        class="p-button-success p-button-sm"
+        (click)="marcarComoVista()"
+      ></button>
+    </div>
+  }
 </div>

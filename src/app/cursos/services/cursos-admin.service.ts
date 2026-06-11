@@ -8,6 +8,10 @@ import {
   PaginationFilter,
 } from '../../shared/models/pagination.model';
 import {
+  Bloque,
+  BloqueCreatePayload,
+  BloqueReorderItem,
+  BloqueUpdatePayload,
   Curso,
   CursoAdmin,
   CursoCreatePayload,
@@ -130,6 +134,30 @@ export class CursosAdminService extends ApiBaseService {
 
   reorderLecciones(items: LeccionReorderItem[]): Observable<void> {
     return this.put('/lecciones/reorder', { items }) as Observable<void>;
+  }
+
+  // ---- Bloques (widgets de la lección) ----
+
+  createBloque(
+    leccionId: number,
+    dto: BloqueCreatePayload,
+  ): Observable<Bloque> {
+    return this.post(
+      `/lecciones/${leccionId}/bloques`,
+      dto,
+    ) as Observable<Bloque>;
+  }
+
+  updateBloque(id: number, dto: BloqueUpdatePayload): Observable<Bloque> {
+    return this.put(`/bloques/${id}`, dto) as Observable<Bloque>;
+  }
+
+  deleteBloque(id: number): Observable<void> {
+    return this.delete(`/bloques/${id}`) as Observable<void>;
+  }
+
+  reorderBloques(items: BloqueReorderItem[]): Observable<void> {
+    return this.put('/bloques/reorder', { items }) as Observable<void>;
   }
 
   requestVideoUploadUrl(title: string): Observable<TusCredentials> {

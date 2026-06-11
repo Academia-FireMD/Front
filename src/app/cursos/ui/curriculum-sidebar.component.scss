@@ -1,0 +1,125 @@
+:host {
+  display: block;
+}
+
+.curriculum {
+  background: var(--cursos-surface);
+  border: 1px solid var(--cursos-border);
+  border-radius: var(--cursos-radius);
+  overflow: hidden;
+}
+
+.curriculum-progress {
+  padding: 1rem 1rem 0.85rem;
+  border-bottom: 1px solid var(--cursos-border);
+}
+
+.seccion {
+  border-bottom: 1px solid var(--cursos-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.seccion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.8rem 1rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--cursos-text);
+
+  &:hover {
+    background: var(--cursos-canvas);
+  }
+
+  .chevron {
+    font-size: 0.75rem;
+    color: var(--cursos-text-soft);
+  }
+
+  .seccion-titulo {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .seccion-count {
+    font-size: 0.72rem;
+    color: var(--cursos-text-soft);
+    background: var(--cursos-canvas);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+  }
+}
+
+.lecciones {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.4rem;
+}
+
+.leccion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 1rem 0.55rem 1.1rem;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--cursos-canvas);
+  }
+
+  &.no-interactivo {
+    cursor: default;
+  }
+
+  &.activa {
+    background: var(--cursos-brand-soft);
+    border-left-color: var(--cursos-brand);
+
+    .leccion-titulo {
+      color: var(--cursos-brand);
+      font-weight: 600;
+    }
+  }
+
+  .estado {
+    display: inline-flex;
+    font-size: 1rem;
+
+    .done {
+      color: var(--cursos-ok);
+    }
+
+    .pending {
+      color: var(--cursos-border);
+    }
+  }
+
+  .tipo {
+    font-size: 0.95rem;
+    color: var(--cursos-text-soft);
+  }
+
+  .leccion-titulo {
+    flex: 1;
+    font-size: 0.86rem;
+    color: var(--cursos-text);
+    line-height: 1.3;
+  }
+
+  .leccion-dur {
+    font-size: 0.72rem;
+    color: var(--cursos-text-soft);
+    white-space: nowrap;
+  }
+}

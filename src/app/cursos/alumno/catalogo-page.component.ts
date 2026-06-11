@@ -5,20 +5,19 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { TagModule } from 'primeng/tag';
 import { environment } from '../../../environments/environment';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { ComprarCursoCofResponse, CursoPublico } from '../models/curso.model';
+import { CursoCardComponent } from '../ui/curso-card.component';
 
 @Component({
   selector: 'app-catalogo-page',
   standalone: true,
-  imports: [ButtonModule, DialogModule, TagModule, RouterLink, DecimalPipe],
+  imports: [ButtonModule, DialogModule, RouterLink, CursoCardComponent],
   templateUrl: './catalogo-page.component.html',
   styleUrl: './catalogo-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +25,7 @@ import { ComprarCursoCofResponse, CursoPublico } from '../models/curso.model';
 export class CatalogoPageComponent implements OnInit {
   private readonly service = inject(CursosAlumnoService);
   private readonly toast = inject(ToastrService);
+  private readonly router = inject(Router);
 
   cursos = signal<CursoPublico[]>([]);
   loading = signal(true);
@@ -66,6 +66,11 @@ export class CatalogoPageComponent implements OnInit {
   /** true si el alumno ya posee el curso (compra de esta sesión). */
   yaComprado(curso: CursoPublico): boolean {
     return this.comprados().has(curso.id);
+  }
+
+  /** Abre el curso (tras comprarlo en esta sesión). */
+  verCurso(curso: CursoPublico): void {
+    this.router.navigate(['/app/cursos', curso.slug]);
   }
 
   /** Compra en 1 clic contra el COF. Estado de carga mientras el backend cobra. */

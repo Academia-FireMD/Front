@@ -1,0 +1,123 @@
+.bloques-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.bloques-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--cursos-text-soft, #6b7280);
+  border: 1px dashed var(--cursos-border, #e9ecef);
+  border-radius: var(--cursos-radius, 12px);
+
+  i {
+    font-size: 1.75rem;
+    color: var(--cursos-brand, #bb292a);
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    margin: 0.25rem 0;
+    font-weight: 600;
+    color: var(--cursos-text, #1f2429);
+  }
+
+  small {
+    display: block;
+  }
+}
+
+.bloques-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bloque-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--cursos-surface, #fff);
+  border: 1px solid var(--cursos-border, #e9ecef);
+  border-radius: var(--cursos-radius-sm, 8px);
+  box-shadow: var(--cursos-shadow);
+
+  &__handle {
+    cursor: grab;
+    color: var(--cursos-text-soft, #6b7280);
+    display: flex;
+    align-items: center;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &__icon {
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--cursos-brand-soft, #fbe9e9);
+    color: var(--cursos-brand, #bb292a);
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong {
+      color: var(--cursos-text, #1f2429);
+      font-size: 0.95rem;
+    }
+
+    small {
+      color: var(--cursos-text-soft, #6b7280);
+      font-size: 0.8rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.125rem;
+    flex: 0 0 auto;
+  }
+}
+
+// Estética CDK durante el arrastre.
+.cdk-drag-preview {
+  box-shadow: var(--cursos-shadow-hover);
+  border-radius: var(--cursos-radius-sm, 8px);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.35;
+}
+
+.cdk-drop-list-dragging .bloque-row:not(.cdk-drag-placeholder) {
+  transition: transform 150ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.bloques-add {
+  align-self: flex-start;
+}
+
+.bloque-form-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.bloque-form-back {
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+}

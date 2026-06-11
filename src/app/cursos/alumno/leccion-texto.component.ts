@@ -20,6 +20,8 @@ import { Leccion } from '../models/curso.model';
 })
 export class LeccionTextoComponent {
   leccion = input.required<Leccion>();
+  /** En el aula el footer del shell dueña "Marcar completada" (sin duplicar). */
+  enAula = input<boolean>(false);
 
   private readonly service = inject(CursosAlumnoService);
   private readonly toastr = inject(ToastrService);

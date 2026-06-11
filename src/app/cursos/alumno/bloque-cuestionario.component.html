@@ -1,0 +1,92 @@
+<div class="cuestionario" data-testid="bloque-cuestionario">
+  @if (corregido(); as _) {
+    <div
+      class="cuestionario__score"
+      [class.score--aprobado]="resultado()!.aciertos === resultado()!.total"
+      data-testid="cuestionario-score"
+    >
+      <i class="pi pi-check-circle"></i>
+      <strong>{{ resultado()!.aciertos }} / {{ resultado()!.total }}</strong>
+      <span>respuestas correctas</span>
+    </div>
+  }
+
+  @for (pregunta of preguntas(); track pregunta.id; let pi = $index) {
+    <div class="cuest-q" data-testid="cuest-q">
+      <p class="cuest-q__enunciado">
+        <span class="cuest-q__num">{{ pi + 1 }}.</span>
+        {{ pregunta.enunciado }}
+      </p>
+
+      <div class="cuest-q__opciones">
+        @for (opcion of pregunta.opciones; track $index) {
+          <button
+            type="button"
+            class="opcion"
+            [class.opcion--sel]="estaSeleccionada(pregunta.id, $index)"
+            [class]="claseOpcion(pregunta.id, $index)"
+            [disabled]="corregido()"
+            (click)="seleccionar(pregunta.id, $index)"
+            data-testid="cuest-opcion-btn"
+          >
+            <span class="opcion__marca">
+              @if (
+                corregido() &&
+                $index ===
+                  resultadoPorPregunta()[pregunta.id]?.respuestaCorrecta
+              ) {
+                <i class="pi pi-check"></i>
+              } @else if (
+                corregido() &&
+                $index === resultadoPorPregunta()[pregunta.id]?.opcionElegida &&
+                !resultadoPorPregunta()[pregunta.id]?.correcta
+              ) {
+                <i class="pi pi-times"></i>
+              } @else if (estaSeleccionada(pregunta.id, $index)) {
+                <i class="pi pi-circle-fill"></i>
+              } @else {
+                <i class="pi pi-circle"></i>
+              }
+            </span>
+            <span class="opcion__texto">{{ opcion }}</span>
+          </button>
+        }
+      </div>
+
+      @if (
+        corregido() && resultadoPorPregunta()[pregunta.id]?.explicacion;
+        as expl
+      ) {
+        <p class="cuest-q__explicacion">
+          <i class="pi pi-info-circle"></i> {{ expl }}
+        </p>
+      }
+    </div>
+  }
+
+  <div class="cuestionario__actions">
+    @if (!corregido()) {
+      <button
+        pButton
+        type="button"
+        label="Corregir"
+        icon="pi pi-check"
+        class="cuestionario__cta"
+        [loading]="corrigiendo()"
+        [disabled]="!todasRespondidas()"
+        (click)="corregir()"
+        data-testid="cuestionario-corregir"
+      ></button>
+    } @else {
+      <button
+        pButton
+        type="button"
+        label="Reintentar"
+        icon="pi pi-replay"
+        class="p-button-outlined"
+        (click)="reintentar()"
+        data-testid="cuestionario-reintentar"
+      ></button>
+    }
+  </div>
+</div>

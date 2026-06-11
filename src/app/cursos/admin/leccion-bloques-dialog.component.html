@@ -1,0 +1,95 @@
+<p-dialog
+  [header]="'Contenido · ' + leccionTitulo()"
+  [visible]="visible()"
+  (visibleChange)="onVisibleChange($event)"
+  [modal]="true"
+  [style]="{ width: '640px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  @if (mode() === "list") {
+    <div class="bloques-builder" data-testid="bloques-builder">
+      @if (vacio()) {
+        <div class="bloques-empty" data-testid="bloques-empty">
+          <i class="pi pi-th-large"></i>
+          <p>Esta lección aún no tiene bloques.</p>
+          <small>Combina vídeo, texto y tests en una sola lección.</small>
+        </div>
+      } @else {
+        <ul
+          class="bloques-list"
+          cdkDropList
+          (cdkDropListDropped)="drop($event)"
+          data-testid="bloques-list"
+        >
+          @for (bloque of bloques(); track bloque.id) {
+            <li class="bloque-row" cdkDrag data-testid="bloque-row">
+              <span class="bloque-row__handle" cdkDragHandle title="Arrastrar">
+                <i class="pi pi-bars"></i>
+              </span>
+              <span class="bloque-row__icon" [attr.data-tipo]="bloque.tipo">
+                <i [class]="meta(bloque.tipo).icon"></i>
+              </span>
+              <span class="bloque-row__body">
+                <strong>{{ meta(bloque.tipo).label }}</strong>
+                <small>{{ resumen(bloque) }}</small>
+              </span>
+              <span class="bloque-row__actions">
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-pencil"
+                  class="p-button-text p-button-rounded p-button-sm"
+                  title="Editar bloque"
+                  (click)="openEdit(bloque)"
+                ></button>
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-trash"
+                  class="p-button-text p-button-rounded p-button-sm p-button-danger"
+                  title="Eliminar bloque"
+                  (click)="deleteBloque(bloque)"
+                ></button>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      <button
+        pButton
+        type="button"
+        label="Añadir bloque"
+        icon="pi pi-plus"
+        class="bloques-add"
+        (click)="openAdd()"
+        data-testid="bloques-add"
+      ></button>
+    </div>
+  } @else {
+    <div class="bloque-form-wrap">
+      <button
+        pButton
+        type="button"
+        label="Volver a la pila"
+        icon="pi pi-arrow-left"
+        class="p-button-text p-button-sm bloque-form-back"
+        (click)="backToList()"
+      ></button>
+      <app-bloque-form
+        [bloque]="editando()"
+        [oposicion]="oposicion()"
+        [saving]="saving()"
+        (saved)="onFormSaved($event)"
+        (cancelled)="backToList()"
+      ></app-bloque-form>
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    @if (mode() === "list") {
+      <p-button label="Cerrar" severity="secondary" (onClick)="close()" />
+    }
+  </ng-template>
+</p-dialog>

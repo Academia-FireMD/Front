@@ -1,0 +1,135 @@
+:host {
+  display: block;
+}
+
+.cuestionario {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  &__score {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--cursos-radius, 12px);
+    background: var(--cursos-brand-soft, #fbe9e9);
+    color: var(--cursos-brand, #bb292a);
+
+    strong {
+      font-size: 1.25rem;
+    }
+
+    &.score--aprobado {
+      background: #e6f6ed;
+      color: var(--cursos-ok, #1f9d55);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  &__cta {
+    background: var(--cursos-brand, #bb292a);
+    border-color: var(--cursos-brand, #bb292a);
+  }
+}
+
+.cuest-q {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__enunciado {
+    margin: 0;
+    font-weight: 600;
+    color: var(--cursos-text, #1f2429);
+    line-height: 1.4;
+  }
+
+  &__num {
+    color: var(--cursos-brand, #bb292a);
+    margin-right: 0.25rem;
+  }
+
+  &__opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  &__explicacion {
+    margin: 0.25rem 0 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--cursos-text-soft, #6b7280);
+
+    i {
+      color: var(--cursos-brand, #bb292a);
+      margin-top: 0.15rem;
+    }
+  }
+}
+
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--cursos-border, #e9ecef);
+  border-radius: var(--cursos-radius-sm, 8px);
+  background: var(--cursos-surface, #fff);
+  color: var(--cursos-text, #1f2429);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--cursos-brand, #bb292a);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &__marca {
+    flex: 0 0 auto;
+    display: flex;
+    color: var(--cursos-text-soft, #6b7280);
+  }
+
+  &--sel {
+    border-color: var(--cursos-brand, #bb292a);
+    background: var(--cursos-brand-soft, #fbe9e9);
+
+    .opcion__marca {
+      color: var(--cursos-brand, #bb292a);
+    }
+  }
+
+  // Tras corregir.
+  &--correcta {
+    border-color: var(--cursos-ok, #1f9d55);
+    background: #e6f6ed;
+
+    .opcion__marca {
+      color: var(--cursos-ok, #1f9d55);
+    }
+  }
+
+  &--fallada {
+    border-color: #d64545;
+    background: #fbe9e9;
+
+    .opcion__marca {
+      color: #d64545;
+    }
+  }
+}

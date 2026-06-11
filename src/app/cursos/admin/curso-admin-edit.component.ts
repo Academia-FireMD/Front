@@ -1,3 +1,8 @@
+import {
+  CdkDragDrop,
+  DragDropModule,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
@@ -32,6 +37,7 @@ import { WooCommerceProductPickerComponent } from '../../shared/components/wooco
 import { Oposicion } from '../../shared/models/subscription.model';
 import { CursoDetailPageComponent } from '../alumno/curso-detail-page.component';
 import {
+  Bloque,
   CursoCreatePayload,
   CursoDetail,
   CursoSlugResponse,
@@ -41,10 +47,10 @@ import {
   LeccionCreatePayload,
   LeccionUpdatePayload,
   Seccion,
-  TipoLeccion,
   WooCommerceProductSummary,
 } from '../models/curso.model';
 import { CursosAdminService } from '../services/cursos-admin.service';
+import { LeccionBloquesDialogComponent } from './leccion-bloques-dialog.component';
 import {
   LeccionFormDialogComponent,
   LeccionFormResult,
@@ -83,6 +89,7 @@ type TagSeverity =
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
+    DragDropModule,
     ButtonModule,
     InputTextModule,
     InputTextareaModule,
@@ -97,6 +104,7 @@ type TagSeverity =
     CursoDetailPageComponent,
     SeccionFormDialogComponent,
     LeccionFormDialogComponent,
+    LeccionBloquesDialogComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './curso-admin-edit.component.html',
@@ -130,6 +138,10 @@ export class CursoAdminEditComponent implements OnInit {
   leccionDialogVisible = signal(false);
   leccionEditando = signal<Leccion | null>(null);
   leccionSeccionId = signal<number | null>(null);
+
+  // Bloques (builder de contenido de la lección)
+  bloquesDialogVisible = signal(false);
+  bloquesLeccion = signal<Leccion | null>(null);
 
   // Acceso
   usuarioIdAccesoValue: number | null = null;
@@ -484,6 +496,26 @@ export class CursoAdminEditComponent implements OnInit {
     }
   }
 
+  /** Drag-and-drop de secciones (CDK). Reusa la persistencia de reorder. */
+  async dropSeccion(event: CdkDragDrop<Seccion[]>): Promise<void> {
+    if (event.previousIndex === event.currentIndex) return;
+    const prev = this.curso();
+    if (!prev) return;
+    const secciones = [...prev.secciones];
+    moveItemInArray(secciones, event.previousIndex, event.currentIndex);
+    const reordered = secciones.map((s, idx) => ({ ...s, orden: idx }));
+    this.curso.set({ ...prev, secciones: reordered });
+    try {
+      await firstValueFrom(
+        this.cursosAdminService.reorderSecciones(
+          reordered.map((s) => ({ id: s.id, orden: s.orden })),
+        ),
+      );
+    } catch {
+      this.curso.set(prev);
+    }
+  }
+
   // ---- Lecciones ----
 
   openAddLeccion(seccion: Seccion): void {
@@ -505,16 +537,11 @@ export class CursoAdminEditComponent implements OnInit {
     const editando = this.leccionEditando();
     try {
       if (editando) {
+        // Consolidación: la lección solo lleva título/orden; el contenido vive
+        // en los bloques ("Contenido").
         const updatePayload: LeccionUpdatePayload = {
           titulo: result.titulo,
           orden: result.orden,
-          bunnyVideoId: result.bunnyVideoId,
-          duracionSegundos: result.duracionSegundos,
-          contenidoMarkdown: result.contenidoMarkdown,
-          temaId: result.temaId,
-          numPreguntas: result.numPreguntas,
-          dificultad: result.dificultad,
-          esDeRepaso: result.esDeRepaso,
         };
         const updated = await firstValueFrom(
           this.cursosAdminService.updateLeccion(editando.id, updatePayload),
@@ -524,14 +551,6 @@ export class CursoAdminEditComponent implements OnInit {
         const createPayload: LeccionCreatePayload = {
           titulo: result.titulo,
           orden: result.orden,
-          tipo: result.tipo satisfies TipoLeccion,
-          bunnyVideoId: result.bunnyVideoId,
-          duracionSegundos: result.duracionSegundos,
-          contenidoMarkdown: result.contenidoMarkdown,
-          temaId: result.temaId,
-          numPreguntas: result.numPreguntas,
-          dificultad: result.dificultad,
-          esDeRepaso: result.esDeRepaso,
         };
         const created = await firstValueFrom(
           this.cursosAdminService.createLeccion(seccionId, createPayload),
@@ -636,6 +655,68 @@ export class CursoAdminEditComponent implements OnInit {
     } catch {
       this.curso.set(prev);
     }
+  }
+
+  /**
+   * Drag-and-drop de lecciones DENTRO de una sección (CDK). El reorder
+   * cross-sección no se soporta (cada sección es su propia lista). Reusa la
+   * persistencia de reorderLecciones.
+   */
+  async dropLeccion(
+    event: CdkDragDrop<Leccion[]>,
+    seccion: Seccion,
+  ): Promise<void> {
+    if (event.previousIndex === event.currentIndex) return;
+    const prev = this.curso();
+    if (!prev) return;
+    const lecciones = [...seccion.lecciones];
+    moveItemInArray(lecciones, event.previousIndex, event.currentIndex);
+    const reordered = lecciones.map((l, idx) => ({ ...l, orden: idx }));
+    const newSecciones = prev.secciones.map((s) =>
+      s.id === seccion.id ? { ...s, lecciones: reordered } : s,
+    );
+    this.curso.set({ ...prev, secciones: newSecciones });
+    try {
+      await firstValueFrom(
+        this.cursosAdminService.reorderLecciones(
+          reordered.map((l) => ({ id: l.id, orden: l.orden })),
+        ),
+      );
+    } catch {
+      this.curso.set(prev);
+    }
+  }
+
+  // ---- Bloques (contenido de la lección) ----
+
+  openBloques(leccion: Leccion): void {
+    this.bloquesLeccion.set(leccion);
+    this.bloquesDialogVisible.set(true);
+  }
+
+  /**
+   * El diálogo de bloques persiste sus propios cambios (create/update/delete/
+   * reorder) y emite la pila resultante. Aquí solo refrescamos el estado local
+   * para que el contador "N bloques" y la próxima apertura del diálogo estén
+   * sincronizados, sin recargar el curso entero.
+   */
+  onBloquesChanged(bloques: Bloque[]): void {
+    const leccion = this.bloquesLeccion();
+    if (!leccion) return;
+    this.curso.update((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        secciones: prev.secciones.map((s) => ({
+          ...s,
+          lecciones: s.lecciones.map((l) =>
+            l.id === leccion.id ? { ...l, bloques } : l,
+          ),
+        })),
+      };
+    });
+    // Mantener el input del diálogo en sync con la pila ya persistida.
+    this.bloquesLeccion.update((l) => (l ? { ...l, bloques } : l));
   }
 
   // ---- Acceso ----
