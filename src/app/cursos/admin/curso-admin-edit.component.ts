@@ -47,7 +47,6 @@ import {
   LeccionCreatePayload,
   LeccionUpdatePayload,
   Seccion,
-  TipoLeccion,
   WooCommerceProductSummary,
 } from '../models/curso.model';
 import { CursosAdminService } from '../services/cursos-admin.service';
@@ -538,16 +537,11 @@ export class CursoAdminEditComponent implements OnInit {
     const editando = this.leccionEditando();
     try {
       if (editando) {
+        // Consolidación: la lección solo lleva título/orden; el contenido vive
+        // en los bloques ("Contenido").
         const updatePayload: LeccionUpdatePayload = {
           titulo: result.titulo,
           orden: result.orden,
-          bunnyVideoId: result.bunnyVideoId,
-          duracionSegundos: result.duracionSegundos,
-          contenidoMarkdown: result.contenidoMarkdown,
-          temaId: result.temaId,
-          numPreguntas: result.numPreguntas,
-          dificultad: result.dificultad,
-          esDeRepaso: result.esDeRepaso,
         };
         const updated = await firstValueFrom(
           this.cursosAdminService.updateLeccion(editando.id, updatePayload),
@@ -557,14 +551,6 @@ export class CursoAdminEditComponent implements OnInit {
         const createPayload: LeccionCreatePayload = {
           titulo: result.titulo,
           orden: result.orden,
-          tipo: result.tipo satisfies TipoLeccion,
-          bunnyVideoId: result.bunnyVideoId,
-          duracionSegundos: result.duracionSegundos,
-          contenidoMarkdown: result.contenidoMarkdown,
-          temaId: result.temaId,
-          numPreguntas: result.numPreguntas,
-          dificultad: result.dificultad,
-          esDeRepaso: result.esDeRepaso,
         };
         const created = await firstValueFrom(
           this.cursosAdminService.createLeccion(seccionId, createPayload),

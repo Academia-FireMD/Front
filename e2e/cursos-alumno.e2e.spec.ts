@@ -662,5 +662,18 @@ test.describe('Cursos alumno — flujo completo', () => {
     await expect(page.getByText('Madrid es la capital.')).toBeVisible();
     // Tras corregir aparece "Reintentar".
     await expect(page.getByTestId('cuestionario-reintentar')).toBeVisible();
+
+    // Auto-marca: al corregir, la lección se marca completada (POST progreso).
+    await expect
+      .poll(
+        () =>
+          state.progresoCalls.some(
+            (c) =>
+              c.id === 100 &&
+              (c.body as { completada?: boolean }).completada === true,
+          ),
+        { timeout: 5_000 },
+      )
+      .toBe(true);
   });
 });

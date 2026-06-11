@@ -762,7 +762,9 @@ test.describe('Cursos admin — flujo completo', () => {
     ).toBe(true);
   });
 
-  test('7) añadir lección de tipo TEXTO a una sección', async ({ page }) => {
+  test('7) añadir lección (título-only): el contenido se añade luego con bloques', async ({
+    page,
+  }) => {
     await page.goto(`/app/cursos-admin/${state.detail.id}`);
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
     await page.getByRole('tab', { name: /Estructura/i }).click();
@@ -775,23 +777,17 @@ test.describe('Cursos admin — flujo completo', () => {
       .getByRole('button', { name: /Añadir lección/i })
       .click();
 
+    // Consolidación: el diálogo es título-only (sin tipo ni contenido).
     await expect(page.locator('#lf-titulo')).toBeVisible({ timeout: 5_000 });
-    await page.locator('#lf-titulo').fill('Lección E2E texto');
-    // Default tipo is VIDEO → switch to TEXTO via el dropdown del DIÁLOGO.
-    // Scope a `.leccion-form` para no matchear el p-dropdown oculto del
-    // woocommerce-product-picker (tab Metadatos, primero en el DOM).
-    await page.locator('.leccion-form p-dropdown').first().click();
-    await page.getByRole('option', { name: 'Texto', exact: true }).click();
-    await page
-      .locator('textarea[formControlName="contenidoMarkdown"]')
-      .fill('# Hola E2E\n\nContenido de prueba');
+    await expect(page.locator('.leccion-form p-dropdown')).toHaveCount(0);
+    await page.locator('#lf-titulo').fill('Lección E2E sólo título');
 
     await page
       .getByRole('button', { name: /Guardar/i })
       .last()
       .click();
 
-    await expect(page.getByText('Lección E2E texto')).toBeVisible({
+    await expect(page.getByText('Lección E2E sólo título')).toBeVisible({
       timeout: 5_000,
     });
   });
@@ -837,30 +833,28 @@ test.describe('Cursos admin — flujo completo', () => {
     expect(state.detail.estado).toBe('PUBLICADO');
   });
 
-  test('10) bunny upload — pedir credenciales TUS desde el dialog de lección', async ({
+  test('10) bunny upload — disponible en el bloque VIDEO + endpoint TUS reachable', async ({
     page,
   }) => {
     await page.goto(`/app/cursos-admin/${state.detail.id}`);
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
     await page.getByRole('tab', { name: /Estructura/i }).click();
 
-    const seccionCards = page.locator('.seccion-card');
-    await seccionCards
+    // Consolidación: el upload de vídeo vive ahora en el formulario de BLOQUE.
+    await page
+      .locator('[data-testid="leccion-row-contenido"]')
       .first()
-      .getByRole('button', { name: /Añadir lección/i })
       .click();
-    await expect(page.locator('#lf-titulo')).toBeVisible({ timeout: 5_000 });
-
-    await page.locator('#lf-titulo').fill('Vídeo bunny test');
-    // Default tipo VIDEO. The bunny-upload component renders.
+    await page.locator('[data-testid="bloques-add"]').click();
+    await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    // Tipo por defecto VIDEO → el bunny-upload se renderiza.
     await expect(
       page.getByRole('button', { name: /Seleccionar vídeo/i }),
     ).toBeVisible({ timeout: 5_000 });
 
-    // We can't actually run TUS upload in the test, but we can verify that
-    // the cred endpoint is reachable by triggering startUpload() with a
-    // synthetic File. Easier: simulate via direct fetch from the page
-    // context — the interceptor will respond.
+    // El endpoint de credenciales TUS responde (la subida real no corre en e2e).
     const resp = await page.evaluate(async () => {
       const r = await fetch('/cursos/videos/upload-url', {
         method: 'POST',

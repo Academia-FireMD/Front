@@ -4,6 +4,7 @@ import {
   Component,
   inject,
   input,
+  output,
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
@@ -43,6 +44,9 @@ export class BloqueTestInlineComponent {
   /** En preview admin no se llama al backend. */
   readonly preview = input<boolean>(false);
 
+  /** Emite cuando el alumno termina el test (para auto-marcar la lección). */
+  readonly completado = output<void>();
+
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastrService);
@@ -78,6 +82,7 @@ export class BloqueTestInlineComponent {
 
   onFinalizado(): void {
     this.completed.set(true);
+    if (!this.preview()) this.completado.emit();
   }
 
   verResultados(): void {

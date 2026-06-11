@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   input,
+  output,
 } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownComponent } from 'ngx-markdown';
@@ -37,6 +38,9 @@ export class BloqueRenderComponent {
   playbackUrl = input<string | null>(null);
   /** En preview admin no se llama al backend ni se navega. */
   preview = input<boolean>(false);
+
+  /** Burbujea cuando un bloque interactivo (TEST/CUESTIONARIO) se completa. */
+  readonly completado = output<void>();
 
   private readonly sanitizer = inject(DomSanitizer);
 

@@ -100,6 +100,20 @@ export class LeccionPageComponent implements OnInit {
     () => this.leccionData()?.playbackUrls ?? {},
   );
 
+  /**
+   * Lección sin contenido: ni bloques ni campos legacy. Pasa con lecciones
+   * recién creadas como contenedor (consolidación) a las que el admin aún no
+   * ha añadido bloques. El aula muestra un estado vacío amable en vez del
+   * render legacy en blanco.
+   */
+  readonly leccionVacia = computed(() => {
+    if (this.bloques().length > 0) return false;
+    const l = this.leccionData()?.leccion;
+    const url = this.leccionData()?.playbackUrl;
+    if (!l) return false;
+    return !l.contenidoMarkdown && !l.bunnyVideoId && !url && l.temaId == null;
+  });
+
   constructor() {
     effect(
       () => {
@@ -212,6 +226,32 @@ export class LeccionPageComponent implements OnInit {
             'No se pudo guardar el progreso, inténtalo de nuevo.',
           );
         },
+      });
+  }
+
+  /**
+   * Auto-marca la lección al terminar un bloque interactivo (TEST/CUESTIONARIO).
+   * Persiste el progreso al 100% y actualiza el sidebar SIN auto-avanzar (el
+   * alumno suele querer revisar el resultado). Idempotente: no hace nada si la
+   * lección ya está completada ni en preview.
+   */
+  onBloqueCompletado(): void {
+    if (this.isPreview()) return;
+    const id = this.leccionActivaId();
+    if (id == null || this.completadaActiva()) return;
+    this.service
+      .upsertProgreso(id, {
+        segundosVisto: 0,
+        porcentajeVisto: 100,
+        completada: true,
+      })
+      .subscribe({
+        next: () => {
+          this.aplicarCompletadaLocal(id);
+          this.toast.success('Lección completada');
+        },
+        // Silencioso: el footer "Marcar completada" sigue disponible como red.
+        error: () => undefined,
       });
   }
 

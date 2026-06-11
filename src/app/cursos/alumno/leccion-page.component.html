@@ -67,8 +67,14 @@
         [bloque]="bloque"
         [playbackUrl]="playbackUrls()[bloque.id] ?? null"
         [preview]="isPreview()"
+        (completado)="onBloqueCompletado()"
       ></app-bloque-render>
     }
+  } @else if (leccionVacia()) {
+    <div class="no-url-state" data-testid="leccion-sin-contenido">
+      <i class="pi pi-inbox"></i>
+      <p>Esta lección aún no tiene contenido.</p>
+    </div>
   } @else {
     <!-- Lección legacy (un solo tipo, sin bloques aún). -->
     @switch (leccionData()!.leccion.tipo) {

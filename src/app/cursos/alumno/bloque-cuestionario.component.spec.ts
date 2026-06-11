@@ -109,6 +109,20 @@ describe('BloqueCuestionarioComponent', () => {
     expect(component.resultado()?.aciertos).toBe(2);
   });
 
+  it('corregir con éxito emite (completado)', async () => {
+    fixture.detectChanges();
+    component.seleccionar(1, 0);
+    component.seleccionar(2, 0);
+    const emit = jest.fn();
+    component.completado.subscribe(emit);
+    const promise = component.corregir();
+    httpMock
+      .expectOne(`${environment.apiUrl}/bloques/30/cuestionario/corregir`)
+      .flush({ aciertos: 1, total: 2, resultados: [] });
+    await promise;
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
   it('corregir sin responder todas → warning, NO llama al backend', async () => {
     fixture.detectChanges();
     component.seleccionar(1, 0); // falta la 2

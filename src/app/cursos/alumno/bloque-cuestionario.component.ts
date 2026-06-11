@@ -5,6 +5,7 @@ import {
   computed,
   inject,
   input,
+  output,
   signal,
 } from '@angular/core';
 import { ToastrService } from 'ngx-toastr';
@@ -36,6 +37,9 @@ export class BloqueCuestionarioComponent {
   readonly bloque = input.required<Bloque>();
   /** En preview admin no se llama al backend. */
   readonly preview = input<boolean>(false);
+
+  /** Emite cuando el alumno corrige el cuestionario (para auto-marcar la lección). */
+  readonly completado = output<void>();
 
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastrService);
@@ -105,6 +109,7 @@ export class BloqueCuestionarioComponent {
         ),
       );
       this.resultado.set(res);
+      this.completado.emit();
     } catch (err) {
       const e = err as HttpErrorResponse;
       this.toast.error(

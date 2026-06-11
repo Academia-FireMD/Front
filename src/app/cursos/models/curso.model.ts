@@ -330,7 +330,11 @@ export interface CursoUpdatePayload {
 export interface LeccionCreatePayload {
   titulo: string;
   orden: number;
-  tipo: TipoLeccion;
+  /**
+   * Consolidación 2026-06-11: opcional. La lección es un contenedor de bloques;
+   * el backend aplica `TEXTO` por defecto. Solo se envía para compat legacy.
+   */
+  tipo?: TipoLeccion;
   bunnyVideoId?: string;
   duracionSegundos?: number;
   contenidoMarkdown?: string;

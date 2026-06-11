@@ -34,6 +34,7 @@
         [numPreguntas]="bloque().numPreguntas"
         [esDeRepaso]="bloque().esDeRepaso"
         [preview]="preview()"
+        (completado)="completado.emit()"
       ></app-bloque-test-inline>
     }
 
@@ -41,6 +42,7 @@
       <app-bloque-cuestionario
         [bloque]="bloque()"
         [preview]="preview()"
+        (completado)="completado.emit()"
       ></app-bloque-cuestionario>
     }
   }

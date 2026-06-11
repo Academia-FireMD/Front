@@ -270,13 +270,7 @@
                         <i class="pi pi-bars"></i>
                       </span>
                       <span class="leccion-row__orden">{{ li + 1 }}.</span>
-                      <span
-                        class="leccion-row__tipo pi"
-                        [class.pi-video]="leccion.tipo === 'VIDEO'"
-                        [class.pi-check-square]="leccion.tipo === 'TEST'"
-                        [class.pi-clone]="leccion.tipo === 'FLASHCARDS'"
-                        [class.pi-align-left]="leccion.tipo === 'TEXTO'"
-                      ></span>
+                      <span class="leccion-row__tipo pi pi-file"></span>
                       <span class="leccion-row__titulo">{{
                         leccion.titulo
                       }}</span>
@@ -387,11 +381,10 @@
   (cancelled)="seccionDialogVisible.set(false)"
 />
 
-<!-- Lección dialog -->
+<!-- Lección dialog (solo título/orden; contenido vía "Contenido") -->
 <app-leccion-form-dialog
   [visible]="leccionDialogVisible()"
   [leccion]="leccionEditando()"
-  [oposicion]="oposicionCurso()"
   (saved)="onLeccionSaved($event)"
   (cancelled)="leccionDialogVisible.set(false)"
 />

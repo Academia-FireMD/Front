@@ -101,20 +101,32 @@ describe('BloqueTestInlineComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('No tienes fallos');
   });
 
-  it('onFinalizado marca completado y muestra el resumen', async () => {
+  it('onFinalizado marca completado, emite (completado) y muestra el resumen', async () => {
     fixture.detectChanges();
     const promise = component.iniciarTest();
     httpMock
       .expectOne(`${environment.apiUrl}/bloques/7/iniciar-test`)
       .flush({ id: 50 });
     await promise;
+    const emit = jest.fn();
+    component.completado.subscribe(emit);
     component.onFinalizado();
     fixture.detectChanges();
     expect(component.completed()).toBe(true);
+    expect(emit).toHaveBeenCalledTimes(1);
     expect(
       fixture.nativeElement.querySelector('[data-testid="bloque-test-done"]'),
     ).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Test completado');
+  });
+
+  it('en preview, onFinalizado NO emite (completado)', () => {
+    fixture.componentRef.setInput('preview', true);
+    fixture.detectChanges();
+    const emit = jest.fn();
+    component.completado.subscribe(emit);
+    component.onFinalizado();
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it('en preview NO llama al backend', async () => {
