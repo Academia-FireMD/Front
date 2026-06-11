@@ -9,6 +9,29 @@ export type EstadoCurso = 'BORRADOR' | 'PUBLICADO' | 'ARCHIVADO';
  */
 export type TipoLeccion = 'VIDEO' | 'TEST' | 'FLASHCARDS' | 'TEXTO';
 
+/**
+ * Lección por bloques (2026-06-11). Una lección es una pila de bloques
+ * combinables. FLASHCARDS NO es un tipo de bloque (era para memorizar).
+ * CUESTIONARIO (quiz inline propio) llega en Fase 2.
+ */
+export type TipoBloque = 'VIDEO' | 'TEXTO' | 'TEST' | 'CUESTIONARIO';
+
+export interface Bloque {
+  id: number;
+  leccionId: number;
+  orden: number;
+  tipo: TipoBloque;
+  bunnyVideoId?: string | null;
+  duracionSegundos?: number | null;
+  contenidoMarkdown?: string | null;
+  temaId?: number | null;
+  numPreguntas?: number | null;
+  dificultad?: Dificultad | null;
+  esDeRepaso?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Leccion {
   id: number;
   titulo: string;
@@ -25,6 +48,9 @@ export interface Leccion {
   dificultad?: Dificultad | null;
   esDeRepaso?: boolean;
   seccionId: number;
+  // Lección por bloques: el contenido vive aquí. Si está vacío/ausente, la
+  // lección es legacy (un solo tipo) y se lee de los campos de arriba.
+  bloques?: Bloque[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -125,7 +151,39 @@ export interface CursoSlugResponse {
 
 export interface LeccionResponse {
   leccion: Leccion;
+  /** Legacy: URL firmada del vídeo de la lección de un solo tipo (compat). */
   playbackUrl?: string;
+  /** URLs firmadas por bloque de vídeo (mapa bloqueId → url). */
+  playbackUrls?: Record<number, string>;
+}
+
+// ---- Payloads admin de bloques ----
+export interface BloqueCreatePayload {
+  orden: number;
+  tipo: TipoBloque;
+  bunnyVideoId?: string;
+  duracionSegundos?: number;
+  contenidoMarkdown?: string;
+  temaId?: number;
+  numPreguntas?: number;
+  dificultad?: Dificultad;
+  esDeRepaso?: boolean;
+}
+
+export interface BloqueUpdatePayload {
+  orden?: number;
+  bunnyVideoId?: string;
+  duracionSegundos?: number;
+  contenidoMarkdown?: string;
+  temaId?: number;
+  numPreguntas?: number;
+  dificultad?: Dificultad;
+  esDeRepaso?: boolean;
+}
+
+export interface BloqueReorderItem {
+  id: number;
+  orden: number;
 }
 
 export interface UpsertProgresoDto {

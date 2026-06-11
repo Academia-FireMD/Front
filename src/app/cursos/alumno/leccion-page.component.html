@@ -60,41 +60,53 @@
 </div>
 
 <ng-template #contenido>
-  @switch (leccionData()!.leccion.tipo) {
-    @case ("VIDEO") {
-      @if (leccionData()!.playbackUrl) {
-        <app-leccion-video
-          [leccion]="leccionData()!.leccion"
-          [playbackUrl]="leccionData()!.playbackUrl!"
-          [enAula]="!isPreview()"
-        ></app-leccion-video>
-      } @else {
-        <div class="no-url-state">
-          <i class="pi pi-video"></i>
-          <p>El vídeo no está disponible todavía.</p>
-        </div>
+  @if (bloques().length > 0) {
+    <!-- Lección por bloques: pila de widgets. -->
+    @for (bloque of bloques(); track bloque.id) {
+      <app-bloque-render
+        [bloque]="bloque"
+        [playbackUrl]="playbackUrls()[bloque.id] ?? null"
+        [preview]="isPreview()"
+      ></app-bloque-render>
+    }
+  } @else {
+    <!-- Lección legacy (un solo tipo, sin bloques aún). -->
+    @switch (leccionData()!.leccion.tipo) {
+      @case ("VIDEO") {
+        @if (leccionData()!.playbackUrl) {
+          <app-leccion-video
+            [leccion]="leccionData()!.leccion"
+            [playbackUrl]="leccionData()!.playbackUrl!"
+            [enAula]="!isPreview()"
+          ></app-leccion-video>
+        } @else {
+          <div class="no-url-state">
+            <i class="pi pi-video"></i>
+            <p>El vídeo no está disponible todavía.</p>
+          </div>
+        }
       }
-    }
-    @case ("TEXTO") {
-      <app-leccion-texto
-        [leccion]="leccionData()!.leccion"
-        [enAula]="!isPreview()"
-      ></app-leccion-texto>
-    }
-    @case ("TEST") {
-      <app-leccion-test
-        [leccion]="leccionData()!.leccion"
-        [preview]="isPreview()"
-      ></app-leccion-test>
-    }
-    @case ("FLASHCARDS") {
-      <app-leccion-flashcards
-        [leccion]="leccionData()!.leccion"
-        [preview]="isPreview()"
-      ></app-leccion-flashcards>
-    }
-    @default {
-      <p class="text-secondary">Tipo de lección desconocido.</p>
+      @case ("TEXTO") {
+        <app-leccion-texto
+          [leccion]="leccionData()!.leccion"
+          [enAula]="!isPreview()"
+        ></app-leccion-texto>
+      }
+      @case ("TEST") {
+        <app-leccion-test
+          [leccion]="leccionData()!.leccion"
+          [preview]="isPreview()"
+        ></app-leccion-test>
+      }
+      @case ("FLASHCARDS") {
+        <app-leccion-flashcards
+          [leccion]="leccionData()!.leccion"
+          [preview]="isPreview()"
+        ></app-leccion-flashcards>
+      }
+      @default {
+        <p class="text-secondary">Tipo de lección desconocido.</p>
+      }
     }
   }
 </ng-template>

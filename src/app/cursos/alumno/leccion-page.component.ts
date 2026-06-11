@@ -25,6 +25,7 @@ import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { CurriculumSidebarComponent } from '../ui/curriculum-sidebar.component';
 import { LeccionShellComponent } from '../ui/leccion-shell.component';
 import { estaCompletada, leccionesPlanas } from '../ui/progreso.util';
+import { BloqueRenderComponent } from './bloque-render.component';
 import { LeccionFlashcardsComponent } from './leccion-flashcards.component';
 import { LeccionTestComponent } from './leccion-test.component';
 import { LeccionTextoComponent } from './leccion-texto.component';
@@ -47,6 +48,7 @@ import { LeccionVideoComponent } from './leccion-video.component';
     ButtonModule,
     LeccionShellComponent,
     CurriculumSidebarComponent,
+    BloqueRenderComponent,
     LeccionVideoComponent,
     LeccionTextoComponent,
     LeccionTestComponent,
@@ -91,6 +93,12 @@ export class LeccionPageComponent implements OnInit {
     const id = this.leccionActivaId();
     return id != null && estaCompletada(id, this.progreso());
   });
+
+  /** Bloques de la lección (pila). Vacío → lección legacy (render por tipo). */
+  readonly bloques = computed(() => this.leccionData()?.leccion.bloques ?? []);
+  readonly playbackUrls = computed(
+    () => this.leccionData()?.playbackUrls ?? {},
+  );
 
   constructor() {
     effect(

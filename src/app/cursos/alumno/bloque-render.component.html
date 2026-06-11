@@ -1,0 +1,70 @@
+<div class="bloque" [attr.data-tipo]="bloque().tipo">
+  @switch (bloque().tipo) {
+    @case ("VIDEO") {
+      @if (playbackUrl()) {
+        <div class="bloque-video">
+          <iframe
+            [src]="safeVideoUrl()"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowfullscreen
+            title="Vídeo del bloque"
+          ></iframe>
+        </div>
+      } @else {
+        <div class="bloque-empty">
+          <i class="pi pi-video"></i>
+          <p>El vídeo no está disponible todavía.</p>
+        </div>
+      }
+    }
+
+    @case ("TEXTO") {
+      @if (bloque().contenidoMarkdown) {
+        <div class="bloque-texto">
+          <markdown [data]="bloque().contenidoMarkdown!"></markdown>
+        </div>
+      } @else {
+        <p class="bloque-empty-text">Sin contenido.</p>
+      }
+    }
+
+    @case ("TEST") {
+      <div class="bloque-test">
+        <div class="bloque-test-head">
+          <i class="pi pi-question-circle"></i>
+          <div>
+            <strong>Test del tema</strong>
+            <span class="bloque-test-meta">
+              {{ bloque().numPreguntas }} preguntas
+              @if (bloque().esDeRepaso) {
+                · repaso de fallos
+              }
+            </span>
+          </div>
+        </div>
+        @if (noFailedQuestions(); as nfq) {
+          <p class="bloque-test-warn">
+            <i class="pi pi-info-circle"></i> {{ nfq.message }}
+          </p>
+        } @else {
+          <button
+            pButton
+            type="button"
+            class="bloque-test-cta"
+            [loading]="starting()"
+            (click)="iniciarTest()"
+          >
+            <i class="pi pi-play"></i><span>Iniciar test</span>
+          </button>
+        }
+      </div>
+    }
+
+    @case ("CUESTIONARIO") {
+      <div class="bloque-empty">
+        <i class="pi pi-list-check"></i>
+        <p>Cuestionario — próximamente.</p>
+      </div>
+    }
+  }
+</div>
