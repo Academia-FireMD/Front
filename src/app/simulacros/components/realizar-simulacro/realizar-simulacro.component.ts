@@ -5,7 +5,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, Subscription, tap } from 'rxjs';
-import { Examen } from '../../../examen/models/examen.model';
+import { environment } from '../../../../environments/environment';
+import {
+  ComprarSimulacroCofResponse,
+  Examen,
+} from '../../../examen/models/examen.model';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import { AuthService } from '../../../services/auth.service';
 import { Usuario } from '../../../shared/models/user.model';
@@ -44,6 +48,26 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
   public codigoAccesoForm: FormGroup;
   public codigoError: boolean = false;
   public simulacroUrl: string = '';
+
+  // ── Compra in-app del simulacro (1-clic COF) ──────────────────────────────
+  /** Diálogo "compra este simulacro" (se abre al iniciar sin acceso y comprable). */
+  public compraDialogVisible: boolean = false;
+  /** true mientras el backend cobra el COF (~2,5-5s). Botón spinner/disabled. */
+  public comprandoSimulacro = signal(false);
+  /** Diálogo de fallback "complétalo en la tienda" (sin COF usable o rechazo). */
+  public checkoutDialogVisible: boolean = false;
+  public checkoutMensaje: string = '';
+  public checkoutEsRechazo: boolean = false;
+  public checkoutWooProductId: string | null = null;
+  /**
+   * Clave de idempotencia del INTENTO de compra en curso. Se genera UNA vez al
+   * abrir la oferta y se REUTILIZA en cada reintento del mismo intento, de modo
+   * que un retry de un cobro ambiguo (ERROR_TEMPORAL) deduplique en el servidor
+   * y NO doble-cobre. Se limpia en estados terminales (éxito/rechazo/checkout)
+   * para que una compra NUEVA (un simulacro es comprable varias veces) use una
+   * clave nueva.
+   */
+  private compraIdempotencyKey: string = '';
 
   // Usuario actual
   public currentUser = signal<Usuario | null>(null);
@@ -93,8 +117,8 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
             } else {
               this.statusLoad = 'not_found';
             }
-          })
-        )
+          }),
+        ),
       );
     } catch (error) {
       console.error('Error al cargar el simulacro:', error);
@@ -125,14 +149,22 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
 
       // Verificar acceso por consumible
       const accesoInfo = await firstValueFrom(
-        this.examenService.verificarAccesoSimulacro$(examenId)
+        this.examenService.verificarAccesoSimulacro$(examenId),
       );
 
       if (!accesoInfo.tieneAcceso) {
-        this.toastr.error(
-          'No tienes un consumible de simulacro activo para este examen',
-          'Error'
-        );
+        // Sin acceso: si el simulacro está vinculado a un producto WC, ofrecer la
+        // compra in-app (1-clic COF). Si no, no es comprable → mensaje informativo.
+        if (this.lastLoadedExamen()?.woocommerceProductId) {
+          // Nueva oferta = nuevo intento de compra → clave de idempotencia fresca.
+          this.compraIdempotencyKey = this.generarIdempotencyKey();
+          this.compraDialogVisible = true;
+        } else {
+          this.toastr.error(
+            'No tienes acceso a este simulacro y no está disponible para compra.',
+            'Sin acceso',
+          );
+        }
         return;
       }
 
@@ -149,6 +181,124 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ── Compra in-app del simulacro (1-clic COF) ──────────────────────────────
+
+  /**
+   * Compra el simulacro en 1 clic contra el COF del alumno (tarjeta guardada).
+   * El `idempotencyKey` se genera POR CLICK: un retry de la MISMA compra (misma
+   * key) deduplica en la ruta de cobro; un click nuevo = compra nueva (un
+   * simulacro es comprable varias veces). Money-critical: el backend no concede
+   * el consumible salvo cobro confirmado.
+   */
+  public comprarSimulacro(): void {
+    if (this.comprandoSimulacro()) return;
+    const examenId = this.lastLoadedExamen()?.id;
+    if (!examenId) return;
+
+    // Reutiliza la clave del intento en curso (la fija la oferta al abrirse). El
+    // `||` es una red por si se llama sin pasar por la oferta: un retry del MISMO
+    // intento debe llevar la MISMA clave para deduplicar y no doble-cobrar.
+    if (!this.compraIdempotencyKey) {
+      this.compraIdempotencyKey = this.generarIdempotencyKey();
+    }
+    const idempotencyKey = this.compraIdempotencyKey;
+
+    this.comprandoSimulacro.set(true);
+    this.examenService
+      .comprarSimulacroCof$(examenId, idempotencyKey)
+      .subscribe({
+        next: (res) => {
+          this.comprandoSimulacro.set(false);
+          this.manejarRespuestaCompra(res);
+        },
+        error: () => {
+          // Fallo HTTP no clasificado (red/500). Reintentable: re-habilita el botón.
+          this.comprandoSimulacro.set(false);
+          this.toastr.error(
+            'No se pudo procesar la compra, inténtalo de nuevo.',
+            'Error',
+          );
+        },
+      });
+  }
+
+  private manejarRespuestaCompra(res: ComprarSimulacroCofResponse): void {
+    if (res.success) {
+      // Intento terminado con éxito → la próxima compra usará una clave nueva.
+      this.compraIdempotencyKey = '';
+      this.compraDialogVisible = false;
+      this.toastr.success(
+        res.mensaje || 'Compra realizada. Ya tienes acceso.',
+        'Compra realizada',
+      );
+      // Re-verificar acceso: el consumible ya existe → continúa el flujo normal
+      // (código de acceso si lo requiere, o confirmación de inicio).
+      this.verificarYProcederConSimulacro();
+      return;
+    }
+    if ('requiereCheckout' in res) {
+      // Sin COF usable (o precio cambiado) → empujar a la tienda, sin cobro.
+      // Sale del flujo COF → cierra el intento (clave nueva la próxima vez).
+      this.compraIdempotencyKey = '';
+      this.abrirCheckout(res.wooProductId, res.mensaje, false);
+      return;
+    }
+    switch (res.error) {
+      case 'PAGO_RECHAZADO':
+        // Decline: NO re-ofrecer 1-clic; a la tienda con otra tarjeta. Intento
+        // terminado (la tarjeta no sirve) → clave nueva la próxima vez.
+        this.compraIdempotencyKey = '';
+        this.abrirCheckout(
+          res.wooProductId ??
+            this.lastLoadedExamen()?.woocommerceProductId ??
+            null,
+          res.mensaje ||
+            'Tu tarjeta fue rechazada. Cómpralo en la tienda con otra tarjeta.',
+          true,
+        );
+        return;
+      case 'ERROR_TEMPORAL':
+        // Técnico/ambiguo: reintentable. NO se limpia la clave: un retry debe
+        // llevar la MISMA clave para deduplicar el cobro ambiguo y no doblar.
+        this.toastr.warning(
+          res.mensaje ||
+            'Estamos verificando tu pago. Si se completó, tendrás acceso en unos minutos.',
+          'Pago en verificación',
+        );
+        return;
+    }
+  }
+
+  /** Genera una clave de idempotencia única (UUID si está disponible). */
+  private generarIdempotencyKey(): string {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return crypto.randomUUID();
+    }
+    return `sim_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
+
+  private abrirCheckout(
+    wooProductId: string | null,
+    mensaje: string,
+    esRechazo: boolean,
+  ): void {
+    this.compraDialogVisible = false;
+    this.checkoutWooProductId = wooProductId;
+    this.checkoutMensaje = mensaje;
+    this.checkoutEsRechazo = esRechazo;
+    this.checkoutDialogVisible = true;
+  }
+
+  /** Abre el checkout de WC pre-cargado con el producto del simulacro. */
+  public completarEnTienda(): void {
+    if (!this.checkoutWooProductId) return;
+    window.open(
+      `${environment.wooCommerceUrl}?add-to-cart=${this.checkoutWooProductId}`,
+      '_blank',
+    );
+    this.checkoutDialogVisible = false;
+  }
+
   public mostrarDialogoRegistro(): void {
     this.registroDialogVisible = true;
   }
@@ -162,7 +312,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     try {
       // Realizar login automático con los datos del registro
       await firstValueFrom(
-        this.authService.login$(userData.email, userData.password)
+        this.authService.login$(userData.email, userData.password),
       );
 
       this.toastr.success('Has iniciado sesión correctamente', 'Bienvenido');
@@ -214,7 +364,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       // Verificar el código de acceso
       const examenId = this.lastLoadedExamen()?.id;
       const verificado = await firstValueFrom(
-        this.examenService.verificarCodigoAcceso$(examenId as number, codigo)
+        this.examenService.verificarCodigoAcceso$(examenId as number, codigo),
       );
 
       if (verificado) {
@@ -285,7 +435,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
 
       const examenId = this.lastLoadedExamen()?.id;
       const response = await firstValueFrom(
-        this.examenService.startSimulacro$(examenId as number, codigo)
+        this.examenService.startSimulacro$(examenId as number, codigo),
       );
 
       if (response && response.id) {
@@ -303,7 +453,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       console.error('Error al iniciar el examen:', error);
       this.toastr.error(
         'Ha ocurrido un error al iniciar el simulacro',
-        'Error'
+        'Error',
       );
       this.iniciando = false;
     }
