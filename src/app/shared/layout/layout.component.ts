@@ -604,6 +604,17 @@ export class LayoutComponent {
       });
     }
 
+    // Callejero — práctica de calles de la oposición (mapa interactivo).
+    // Enlace directo; ModuloGuard gatea por tenant (ModuloApp.CALLEJERO).
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Callejero',
+        icon: 'pi pi-map-marker',
+        routerLink: '/app/callejero',
+        modulo: ModuloApp.CALLEJERO,
+      });
+    }
+
     // Menú de perfil siempre disponible
     menu.push({
       label: 'Perfil',
