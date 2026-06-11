@@ -3,38 +3,39 @@
   max-width: 1080px;
   margin: 0 auto;
 
-  &__toolbar {
+  // Header del detailview (dentro del p-card): Volver + título + estado + acciones.
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+    padding-bottom: 1.1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--cursos-border, #e9ecef);
+  }
+
+  &__header-title {
+    flex: 1;
+    min-width: 240px;
+  }
+
+  &__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__preview-bar {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    background: var(--cursos-surface, #fff);
-    border: 1px solid var(--cursos-border, #e9ecef);
-    border-radius: var(--cursos-radius, 12px);
-    box-shadow: var(--cursos-shadow, 0 1px 3px rgba(0, 0, 0, 0.06));
-    padding: 0.85rem 1.1rem;
-  }
+    margin-bottom: 1.25rem;
 
-  &__toolbar-info {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__titulo {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--cursos-text, #1f2429);
-  }
-
-  &__toolbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    flex-wrap: wrap;
+    span {
+      color: var(--cursos-text-soft, #6b7280);
+      font-weight: 600;
+    }
   }
 
   &__preview-toggle {
@@ -82,22 +83,6 @@
       font-weight: 700;
       color: var(--cursos-text, #1f2429);
     }
-  }
-
-  &__acceso {
-    max-width: 520px;
-
-    h3 {
-      margin-top: 0;
-      color: var(--cursos-text, #1f2429);
-    }
-  }
-
-  &__acceso-form {
-    display: flex;
-    gap: 0.75rem;
-    align-items: flex-start;
-    flex-wrap: wrap;
   }
 }
 
