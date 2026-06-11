@@ -26,3 +26,52 @@
     border-top: 1px solid var(--cursos-border, #e9ecef);
   }
 }
+
+// ---- Editor de CUESTIONARIO ----
+.cuestionario-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cuest-pregunta {
+  border: 1px solid var(--cursos-border, #e9ecef);
+  border-radius: var(--cursos-radius-sm, 8px);
+  padding: 0.85rem;
+  background: var(--cursos-canvas, #f8f9fa);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__num {
+    font-weight: 600;
+    color: var(--cursos-brand, #bb292a);
+    font-size: 0.85rem;
+  }
+}
+
+.cuest-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cuest-opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cuest-explicacion {
+  font-size: 0.9rem;
+}
+
+.cuest-add-pregunta {
+  align-self: flex-start;
+}

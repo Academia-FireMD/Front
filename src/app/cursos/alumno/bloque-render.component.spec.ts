@@ -84,9 +84,16 @@ describe('BloqueRenderComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('test-inline');
   });
 
-  it('CUESTIONARIO muestra placeholder de próximamente', () => {
-    setBloque({ tipo: 'CUESTIONARIO' });
+  it('CUESTIONARIO renderiza el quiz inline (app-bloque-cuestionario)', () => {
+    setBloque({
+      tipo: 'CUESTIONARIO',
+      bloquePreguntas: [
+        { id: 1, bloqueId: 1, orden: 0, enunciado: '¿?', opciones: ['a', 'b'] },
+      ],
+    });
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('próximamente');
+    expect(
+      fixture.nativeElement.querySelector('app-bloque-cuestionario'),
+    ).not.toBeNull();
   });
 });

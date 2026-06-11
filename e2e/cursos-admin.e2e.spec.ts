@@ -1044,4 +1044,64 @@ test.describe('Cursos admin — flujo completo', () => {
     });
     expect(state.deleteBloqueCalls).toBe(1);
   });
+
+  test('15) builder: crear un bloque CUESTIONARIO con preguntas + opción correcta', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+
+    await page
+      .locator('[data-testid="leccion-row-contenido"]')
+      .first()
+      .click();
+    await page.locator('[data-testid="bloques-add"]').click();
+    await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Tipo → CUESTIONARIO (siembra 1 pregunta con 2 opciones).
+    await page.locator('[data-testid="bloque-form"] p-dropdown').first().click();
+    await page.getByRole('option', { name: 'Cuestionario', exact: true }).click();
+    await expect(
+      page.locator('[data-testid="cuestionario-editor"]'),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // Enunciado + 2 opciones.
+    await page.locator('[data-testid="cuest-enunciado"]').first().fill('¿2+2?');
+    const opciones = page.locator('[data-testid="cuest-opcion-input"]');
+    await opciones.nth(0).fill('3');
+    await opciones.nth(1).fill('4');
+    // Marca la 2ª opción (índice 1) como correcta clicando su radio.
+    await page
+      .locator('[data-testid="cuest-opcion"]')
+      .nth(1)
+      .locator('.p-radiobutton-box')
+      .click();
+
+    // Captura el POST de creación.
+    const reqPromise = page.waitForRequest((r) =>
+      /\/cursos\/lecciones\/\d+\/bloques$/.test(r.url()) &&
+      r.method() === 'POST',
+    );
+    await page.getByRole('button', { name: /Añadir bloque/i }).click();
+    const req = await reqPromise;
+    const body = req.postDataJSON();
+    expect(body.tipo).toBe('CUESTIONARIO');
+    expect(body.preguntas).toHaveLength(1);
+    expect(body.preguntas[0]).toMatchObject({
+      enunciado: '¿2+2?',
+      opciones: ['3', '4'],
+      respuestaCorrecta: 1,
+    });
+
+    // Vuelve a la pila con el bloque cuestionario.
+    await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(1, {
+      timeout: 5_000,
+    });
+    await expect(page.locator('[data-testid="bloques-list"]')).toContainText(
+      'Cuestionario',
+    );
+  });
 });

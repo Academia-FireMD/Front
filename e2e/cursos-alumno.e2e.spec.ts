@@ -578,4 +578,89 @@ test.describe('Cursos alumno — flujo completo', () => {
     // No navegó a la ruta standalone del test.
     expect(page.url()).not.toContain('/realizar-test');
   });
+
+  test('13) bloque CUESTIONARIO: responder + corregir muestra nota y feedback inline', async ({
+    page,
+  }) => {
+    // La lección 100 devuelve un bloque CUESTIONARIO (preguntas SIN
+    // respuestaCorrecta, como hace el backend cara-alumno).
+    await page.route(/\/lecciones\/100(\?.*)?$/, (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          leccion: {
+            id: 100,
+            seccionId: 10,
+            titulo: 'Bienvenida',
+            orden: 0,
+            tipo: 'CUESTIONARIO',
+            bloques: [
+              {
+                id: 901,
+                leccionId: 100,
+                orden: 0,
+                tipo: 'CUESTIONARIO',
+                bloquePreguntas: [
+                  { id: 1, bloqueId: 901, orden: 0, enunciado: '¿2+2?', opciones: ['3', '4'] },
+                  { id: 2, bloqueId: 901, orden: 1, enunciado: '¿Capital de España?', opciones: ['Lisboa', 'Madrid', 'París'] },
+                ],
+              },
+            ],
+          },
+          playbackUrls: {},
+        }),
+      });
+    });
+
+    // Corrección: pregunta 1 acierto, pregunta 2 fallo.
+    await page.route(/\/bloques\/901\/cuestionario\/corregir$/, (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          aciertos: 1,
+          total: 2,
+          resultados: [
+            { preguntaId: 1, opcionElegida: 1, correcta: true, respuestaCorrecta: 1, explicacion: null },
+            { preguntaId: 2, opcionElegida: 0, correcta: false, respuestaCorrecta: 1, explicacion: 'Madrid es la capital.' },
+          ],
+        }),
+      }),
+    );
+
+    await page.goto(`/app/cursos/${cursoDetailFixture.slug}/leccion/100`);
+    await expect(page.getByTestId('bloque-cuestionario')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Corregir está deshabilitado hasta responder todas.
+    const corregir = page.getByTestId('cuestionario-corregir');
+    await expect(corregir).toBeDisabled();
+
+    // Responder: pregunta 1 → opción "4"; pregunta 2 → opción "Lisboa" (fallo).
+    const q = page.getByTestId('cuest-q');
+    await q
+      .nth(0)
+      .getByTestId('cuest-opcion-btn')
+      .filter({ hasText: '4' })
+      .click();
+    await q
+      .nth(1)
+      .getByTestId('cuest-opcion-btn')
+      .filter({ hasText: 'Lisboa' })
+      .click();
+
+    await expect(corregir).toBeEnabled();
+    await corregir.click();
+
+    // Nota + feedback.
+    await expect(page.getByTestId('cuestionario-score')).toContainText('1 / 2', {
+      timeout: 10_000,
+    });
+    await expect(page.getByText('Madrid es la capital.')).toBeVisible();
+    // Tras corregir aparece "Reintentar".
+    await expect(page.getByTestId('cuestionario-reintentar')).toBeVisible();
+  });
 });

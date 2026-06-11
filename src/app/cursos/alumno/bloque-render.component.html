@@ -38,10 +38,10 @@
     }
 
     @case ("CUESTIONARIO") {
-      <div class="bloque-empty">
-        <i class="pi pi-list-check"></i>
-        <p>Cuestionario — próximamente.</p>
-      </div>
+      <app-bloque-cuestionario
+        [bloque]="bloque()"
+        [preview]="preview()"
+      ></app-bloque-cuestionario>
     }
   }
 </div>

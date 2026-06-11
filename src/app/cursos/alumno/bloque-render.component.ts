@@ -8,6 +8,7 @@ import {
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownComponent } from 'ngx-markdown';
 import { Bloque } from '../models/curso.model';
+import { BloqueCuestionarioComponent } from './bloque-cuestionario.component';
 import { BloqueTestInlineComponent } from './bloque-test-inline.component';
 
 /**
@@ -16,12 +17,16 @@ import { BloqueTestInlineComponent } from './bloque-test-inline.component';
  *  - VIDEO  → iframe Bunny (sin heartbeat; el progreso es por lección).
  *  - TEXTO  → markdown.
  *  - TEST   → motor de tests embebido in situ (app-bloque-test-inline).
- *  - CUESTIONARIO → placeholder (Fase 2).
+ *  - CUESTIONARIO → quiz propio autocorregido (app-bloque-cuestionario).
  */
 @Component({
   selector: 'app-bloque-render',
   standalone: true,
-  imports: [MarkdownComponent, BloqueTestInlineComponent],
+  imports: [
+    MarkdownComponent,
+    BloqueTestInlineComponent,
+    BloqueCuestionarioComponent,
+  ],
   templateUrl: './bloque-render.component.html',
   styleUrl: './bloque-render.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

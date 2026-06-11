@@ -16,6 +16,21 @@ export type TipoLeccion = 'VIDEO' | 'TEST' | 'FLASHCARDS' | 'TEXTO';
  */
 export type TipoBloque = 'VIDEO' | 'TEXTO' | 'TEST' | 'CUESTIONARIO';
 
+/**
+ * Pregunta de un bloque CUESTIONARIO. `respuestaCorrecta`/`explicacion` SOLO
+ * llegan en la cara admin (el alumno los recibe `undefined`; los obtiene al
+ * corregir vía POST /bloques/:id/cuestionario/corregir).
+ */
+export interface BloquePregunta {
+  id: number;
+  bloqueId: number;
+  orden: number;
+  enunciado: string;
+  opciones: string[];
+  respuestaCorrecta?: number;
+  explicacion?: string | null;
+}
+
 export interface Bloque {
   id: number;
   leccionId: number;
@@ -28,6 +43,7 @@ export interface Bloque {
   numPreguntas?: number | null;
   dificultad?: Dificultad | null;
   esDeRepaso?: boolean;
+  bloquePreguntas?: BloquePregunta[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -158,6 +174,13 @@ export interface LeccionResponse {
 }
 
 // ---- Payloads admin de bloques ----
+export interface BloquePreguntaPayload {
+  enunciado: string;
+  opciones: string[];
+  respuestaCorrecta: number;
+  explicacion?: string;
+}
+
 export interface BloqueCreatePayload {
   orden: number;
   tipo: TipoBloque;
@@ -168,6 +191,7 @@ export interface BloqueCreatePayload {
   numPreguntas?: number;
   dificultad?: Dificultad;
   esDeRepaso?: boolean;
+  preguntas?: BloquePreguntaPayload[];
 }
 
 export interface BloqueUpdatePayload {
@@ -179,6 +203,26 @@ export interface BloqueUpdatePayload {
   numPreguntas?: number;
   dificultad?: Dificultad;
   esDeRepaso?: boolean;
+  preguntas?: BloquePreguntaPayload[];
+}
+
+// ---- CUESTIONARIO: corrección cara-alumno ----
+export interface CorregirCuestionarioPayload {
+  respuestas: { preguntaId: number; opcionElegida: number | null }[];
+}
+
+export interface CuestionarioResultadoItem {
+  preguntaId: number;
+  opcionElegida: number | null;
+  correcta: boolean;
+  respuestaCorrecta: number;
+  explicacion: string | null;
+}
+
+export interface CuestionarioResultado {
+  aciertos: number;
+  total: number;
+  resultados: CuestionarioResultadoItem[];
 }
 
 export interface BloqueReorderItem {

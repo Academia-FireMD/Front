@@ -35,10 +35,9 @@ describe('BloqueFormComponent', () => {
     expect(component.form.controls.tipo.value).toBe('VIDEO');
   });
 
-  it('CUESTIONARIO no es una opción creable (Fase 2)', () => {
+  it('CUESTIONARIO es una opción creable (Fase 2)', () => {
     const tipos = component.tipoOptions.map((o) => o.value);
-    expect(tipos).toEqual(['VIDEO', 'TEXTO', 'TEST']);
-    expect(tipos).not.toContain('CUESTIONARIO');
+    expect(tipos).toEqual(['VIDEO', 'TEXTO', 'TEST', 'CUESTIONARIO']);
   });
 
   it('cambiar a TEST exige temaId y numPreguntas', () => {
@@ -160,5 +159,105 @@ describe('BloqueFormComponent', () => {
     fixture.componentRef.setInput('oposicion', Oposicion.MADRID);
     fixture.detectChanges();
     expect(component.oposicion()).toBe(Oposicion.MADRID);
+  });
+
+  describe('CUESTIONARIO authoring', () => {
+    it('al elegir CUESTIONARIO siembra una pregunta con 2 opciones', () => {
+      component.form.controls.tipo.setValue('CUESTIONARIO');
+      expect(component.preguntas.length).toBe(1);
+      expect(component.opcionesDe(component.preguntas.at(0)).length).toBe(2);
+    });
+
+    it('addPregunta / removePregunta gestionan el array (mín. 1)', () => {
+      component.form.controls.tipo.setValue('CUESTIONARIO');
+      component.addPregunta();
+      expect(component.preguntas.length).toBe(2);
+      component.removePregunta(1);
+      expect(component.preguntas.length).toBe(1);
+    });
+
+    it('addOpcion / removeOpcion (mín. 2) y reajuste de correcta', () => {
+      component.form.controls.tipo.setValue('CUESTIONARIO');
+      const p = component.preguntas.at(0);
+      component.addOpcion(p); // 3 opciones
+      component.marcarCorrecta(p, 2);
+      expect(p.controls.respuestaCorrecta.value).toBe(2);
+      component.removeOpcion(p, 2); // vuelve a 2 → correcta reajustada a 1
+      expect(component.opcionesDe(p).length).toBe(2);
+      expect(p.controls.respuestaCorrecta.value).toBe(1);
+      component.removeOpcion(p, 0); // no baja de 2
+      expect(component.opcionesDe(p).length).toBe(2);
+    });
+
+    it('save() emite preguntas válidas (filtra opciones vacías)', () => {
+      component.form.controls.tipo.setValue('CUESTIONARIO');
+      const p = component.preguntas.at(0);
+      p.controls.enunciado.setValue('¿Capital?');
+      component.addOpcion(p); // 3ª opción que dejamos vacía → debe filtrarse
+      const opciones = component.opcionesDe(p);
+      opciones.at(0).setValue('Madrid');
+      opciones.at(1).setValue('Lisboa');
+      component.marcarCorrecta(p, 0);
+      let received: BloqueFormResult | null = null;
+      component.saved.subscribe((r) => (received = r));
+      component.save();
+      expect(received).not.toBeNull();
+      expect(received!.tipo).toBe('CUESTIONARIO');
+      expect(received!.preguntas).toEqual([
+        {
+          enunciado: '¿Capital?',
+          opciones: ['Madrid', 'Lisboa'],
+          respuestaCorrecta: 0,
+        },
+      ]);
+    });
+
+    it('save() con enunciado vacío NO emite + warning', () => {
+      const toast = TestBed.inject(ToastrService);
+      component.form.controls.tipo.setValue('CUESTIONARIO');
+      const p = component.preguntas.at(0);
+      component.opcionesDe(p).at(0).setValue('a');
+      component.opcionesDe(p).at(1).setValue('b');
+      // enunciado vacío
+      const emit = jest.fn();
+      component.saved.subscribe(emit);
+      component.save();
+      expect(emit).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalled();
+    });
+
+    it('editar un bloque CUESTIONARIO precarga sus preguntas', () => {
+      fixture.componentRef.setInput('bloque', {
+        id: 5,
+        leccionId: 1,
+        orden: 0,
+        tipo: 'CUESTIONARIO',
+        bloquePreguntas: [
+          {
+            id: 1,
+            bloqueId: 5,
+            orden: 0,
+            enunciado: 'Q1',
+            opciones: ['x', 'y', 'z'],
+            respuestaCorrecta: 2,
+            explicacion: 'porque z',
+          },
+        ],
+      } as Bloque);
+      component.ngOnChanges();
+      expect(component.preguntas.length).toBe(1);
+      const p = component.preguntas.at(0);
+      expect(p.controls.enunciado.value).toBe('Q1');
+      expect(component.opcionesDe(p).length).toBe(3);
+      expect(p.controls.respuestaCorrecta.value).toBe(2);
+      expect(p.controls.explicacion.value).toBe('porque z');
+    });
+
+    it('cambiar de CUESTIONARIO a VIDEO limpia las preguntas', () => {
+      component.form.controls.tipo.setValue('CUESTIONARIO');
+      expect(component.preguntas.length).toBe(1);
+      component.form.controls.tipo.setValue('VIDEO');
+      expect(component.preguntas.length).toBe(0);
+    });
   });
 });

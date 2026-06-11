@@ -11,8 +11,10 @@ import {
   signal,
 } from '@angular/core';
 import {
+  FormArray,
   FormBuilder,
   FormControl,
+  FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
@@ -23,10 +25,15 @@ import { DropdownModule } from 'primeng/dropdown';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
+import { RadioButtonModule } from 'primeng/radiobutton';
 import { Dificultad } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
 import { SharedModule } from '../../shared/shared.module';
-import { Bloque, TipoBloque } from '../models/curso.model';
+import {
+  Bloque,
+  BloquePreguntaPayload,
+  TipoBloque,
+} from '../models/curso.model';
 import { BunnyUploadComponent, UploadedEvent } from './bunny-upload.component';
 
 /**
@@ -37,7 +44,7 @@ import { BunnyUploadComponent, UploadedEvent } from './bunny-upload.component';
  *  - VIDEO  → bunny-upload + duración.
  *  - TEXTO  → markdown.
  *  - TEST   → tema-select + nº preguntas + dificultad + modo repaso.
- * CUESTIONARIO (quiz inline propio) llega en Fase 2 → no creable aún.
+ *  - CUESTIONARIO → preguntas propias (enunciado + opciones + correcta + explic.).
  */
 export interface BloqueFormResult {
   tipo: TipoBloque;
@@ -48,7 +55,17 @@ export interface BloqueFormResult {
   numPreguntas?: number;
   dificultad?: Dificultad;
   esDeRepaso?: boolean;
+  preguntas?: BloquePreguntaPayload[];
 }
+
+// Tipos del FormArray de preguntas del CUESTIONARIO.
+type OpcionControl = FormControl<string>;
+type PreguntaGroup = FormGroup<{
+  enunciado: FormControl<string>;
+  opciones: FormArray<OpcionControl>;
+  respuestaCorrecta: FormControl<number>;
+  explicacion: FormControl<string>;
+}>;
 
 interface DificultadOption {
   label: string;
@@ -68,6 +85,7 @@ interface DificultadOption {
     InputNumberModule,
     InputTextareaModule,
     CheckboxModule,
+    RadioButtonModule,
     BunnyUploadComponent,
     SharedModule,
   ],
@@ -87,11 +105,11 @@ export class BloqueFormComponent implements OnChanges {
   private fb = inject(FormBuilder);
   private toast = inject(ToastrService);
 
-  // CUESTIONARIO se excluye: Fase 2. Solo VIDEO/TEXTO/TEST son creables ahora.
   readonly tipoOptions: { label: string; value: TipoBloque }[] = [
     { label: 'Vídeo', value: 'VIDEO' },
     { label: 'Texto', value: 'TEXTO' },
     { label: 'Test', value: 'TEST' },
+    { label: 'Cuestionario', value: 'CUESTIONARIO' },
   ];
 
   readonly dificultadOptions: DificultadOption[] = [
@@ -113,11 +131,70 @@ export class BloqueFormComponent implements OnChanges {
     numPreguntas: [10 as number | null],
     dificultad: [null as Dificultad | null],
     esDeRepaso: [false],
+    // CUESTIONARIO: preguntas propias (FormArray de FormGroup).
+    preguntas: this.fb.array<PreguntaGroup>([]),
   });
 
   /** `app-tema-select` consume un FormControl directo (lee .value/.setValue). */
   get temaIdControl(): FormControl<number | null> {
     return this.form.controls.temaId as FormControl<number | null>;
+  }
+
+  // ---- Helpers del FormArray de preguntas (CUESTIONARIO) ----
+
+  get preguntas(): FormArray<PreguntaGroup> {
+    return this.form.controls.preguntas;
+  }
+
+  opcionesDe(pregunta: PreguntaGroup): FormArray<OpcionControl> {
+    return pregunta.controls.opciones;
+  }
+
+  // Sin validators required en enunciado/opciones: la validación de negocio
+  // (≥2 opciones no vacías, enunciado presente, correcta válida) la hace
+  // buildPreguntasResult() con toasts, igual que el patrón de TEXTO/TEST. Así
+  // el form no queda bloqueado por una opción recién añadida aún vacía.
+  private nuevaPregunta(): PreguntaGroup {
+    return this.fb.group({
+      enunciado: this.fb.control('', { nonNullable: true }),
+      opciones: this.fb.array<OpcionControl>([
+        this.nuevaOpcion(),
+        this.nuevaOpcion(),
+      ]),
+      respuestaCorrecta: this.fb.control(0, { nonNullable: true }),
+      explicacion: this.fb.control('', { nonNullable: true }),
+    });
+  }
+
+  private nuevaOpcion(valor = ''): OpcionControl {
+    return this.fb.control(valor, { nonNullable: true });
+  }
+
+  addPregunta(): void {
+    this.preguntas.push(this.nuevaPregunta());
+  }
+
+  removePregunta(index: number): void {
+    this.preguntas.removeAt(index);
+  }
+
+  addOpcion(pregunta: PreguntaGroup): void {
+    this.opcionesDe(pregunta).push(this.nuevaOpcion());
+  }
+
+  removeOpcion(pregunta: PreguntaGroup, opcionIndex: number): void {
+    const opciones = this.opcionesDe(pregunta);
+    if (opciones.length <= 2) return; // mínimo 2 opciones
+    opciones.removeAt(opcionIndex);
+    // Si la correcta apuntaba a una opción posterior, reajusta el índice.
+    const correcta = pregunta.controls.respuestaCorrecta.value;
+    if (correcta >= opciones.length) {
+      pregunta.controls.respuestaCorrecta.setValue(opciones.length - 1);
+    }
+  }
+
+  marcarCorrecta(pregunta: PreguntaGroup, opcionIndex: number): void {
+    pregunta.controls.respuestaCorrecta.setValue(opcionIndex);
   }
 
   tipoSeleccionado = signal<TipoBloque>('VIDEO');
@@ -154,6 +231,16 @@ export class BloqueFormComponent implements OnChanges {
     }
     temaCtrl.updateValueAndValidity({ emitEvent: false });
     numCtrl.updateValueAndValidity({ emitEvent: false });
+
+    // CUESTIONARIO: el array de preguntas es obligatorio (≥1). Sembramos una
+    // pregunta inicial al entrar para que el admin tenga algo que rellenar.
+    if (tipo === 'CUESTIONARIO') {
+      this.preguntas.setValidators([Validators.required]);
+      if (this.preguntas.length === 0) this.addPregunta();
+    } else {
+      this.preguntas.clearValidators();
+    }
+    this.preguntas.updateValueAndValidity({ emitEvent: false });
   }
 
   private resetFieldsForTipo(tipo: TipoBloque): void {
@@ -177,11 +264,38 @@ export class BloqueFormComponent implements OnChanges {
         { emitEvent: false },
       );
     }
+    if (tipo !== 'CUESTIONARIO') {
+      this.preguntas.clear({ emitEvent: false });
+    }
+  }
+
+  /** Reconstruye el FormArray de preguntas desde un bloque CUESTIONARIO. */
+  private setPreguntasFromBloque(b: Bloque): void {
+    this.preguntas.clear({ emitEvent: false });
+    for (const p of b.bloquePreguntas ?? []) {
+      const grupo = this.nuevaPregunta();
+      grupo.controls.opciones.clear({ emitEvent: false });
+      for (const op of p.opciones) {
+        grupo.controls.opciones.push(this.nuevaOpcion(op), {
+          emitEvent: false,
+        });
+      }
+      grupo.patchValue(
+        {
+          enunciado: p.enunciado,
+          respuestaCorrecta: p.respuestaCorrecta ?? 0,
+          explicacion: p.explicacion ?? '',
+        },
+        { emitEvent: false },
+      );
+      this.preguntas.push(grupo, { emitEvent: false });
+    }
   }
 
   ngOnChanges(): void {
     const b = this.bloque();
     if (b) {
+      if (b.tipo === 'CUESTIONARIO') this.setPreguntasFromBloque(b);
       this.form.patchValue({
         tipo: b.tipo,
         bunnyVideoId: b.bunnyVideoId ?? '',
@@ -195,6 +309,7 @@ export class BloqueFormComponent implements OnChanges {
       this.tipoSeleccionado.set(b.tipo);
       this.applyValidatorsForTipo(b.tipo);
     } else {
+      this.preguntas.clear({ emitEvent: false });
       this.form.reset({
         tipo: 'VIDEO',
         bunnyVideoId: '',
@@ -260,7 +375,56 @@ export class BloqueFormComponent implements OnChanges {
         if (raw.dificultad != null) result.dificultad = raw.dificultad;
         result.esDeRepaso = !!raw.esDeRepaso;
         break;
+      case 'CUESTIONARIO': {
+        const preguntas = this.buildPreguntasResult();
+        if (!preguntas) return; // ya avisó con un toast
+        result.preguntas = preguntas;
+        break;
+      }
     }
     this.saved.emit(result);
+  }
+
+  /**
+   * Valida y construye el array de preguntas del cuestionario. Devuelve null y
+   * muestra un toast si algo falta (≥1 pregunta, cada una con enunciado, ≥2
+   * opciones no vacías y una opción correcta válida).
+   */
+  private buildPreguntasResult(): BloquePreguntaPayload[] | null {
+    if (this.preguntas.length === 0) {
+      this.toast.warning('Añade al menos una pregunta al cuestionario.');
+      return null;
+    }
+    const out: BloquePreguntaPayload[] = [];
+    for (let i = 0; i < this.preguntas.length; i++) {
+      const g = this.preguntas.at(i);
+      const enunciado = g.controls.enunciado.value.trim();
+      if (!enunciado) {
+        this.toast.warning(`La pregunta ${i + 1} necesita un enunciado.`);
+        return null;
+      }
+      const opciones = g.controls.opciones.controls
+        .map((c) => c.value.trim())
+        .filter((v) => v !== '');
+      if (opciones.length < 2) {
+        this.toast.warning(
+          `La pregunta ${i + 1} necesita al menos 2 opciones.`,
+        );
+        return null;
+      }
+      const correcta = g.controls.respuestaCorrecta.value;
+      if (correcta < 0 || correcta >= opciones.length) {
+        this.toast.warning(`Marca la opción correcta de la pregunta ${i + 1}.`);
+        return null;
+      }
+      const explicacion = g.controls.explicacion.value.trim();
+      out.push({
+        enunciado,
+        opciones,
+        respuestaCorrecta: correcta,
+        ...(explicacion ? { explicacion } : {}),
+      });
+    }
+    return out;
   }
 }

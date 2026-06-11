@@ -105,6 +105,97 @@
     </div>
   }
 
+  @if (tipoSeleccionado() === "CUESTIONARIO") {
+    <div class="cuestionario-editor" data-testid="cuestionario-editor">
+      @for (pregunta of preguntas.controls; track pregunta; let pi = $index) {
+        <div class="cuest-pregunta" [formGroup]="pregunta">
+          <div class="cuest-pregunta__head">
+            <span class="cuest-pregunta__num">Pregunta {{ pi + 1 }}</span>
+            <button
+              pButton
+              type="button"
+              icon="pi pi-trash"
+              class="p-button-text p-button-rounded p-button-sm p-button-danger"
+              title="Eliminar pregunta"
+              [disabled]="preguntas.length <= 1"
+              (click)="removePregunta(pi)"
+              data-testid="cuest-remove-pregunta"
+            ></button>
+          </div>
+
+          <input
+            pInputText
+            formControlName="enunciado"
+            class="w-full"
+            placeholder="Enunciado de la pregunta"
+            data-testid="cuest-enunciado"
+          />
+
+          <div class="cuest-opciones">
+            <small class="bloque-form__hint">
+              Marca con el radio la opción correcta.
+            </small>
+            @for (
+              opcion of opcionesDe(pregunta).controls;
+              track opcion;
+              let oi = $index
+            ) {
+              <div class="cuest-opcion" data-testid="cuest-opcion">
+                <p-radioButton
+                  formControlName="respuestaCorrecta"
+                  [value]="oi"
+                  [inputId]="'correcta-' + pi + '-' + oi"
+                ></p-radioButton>
+                <input
+                  pInputText
+                  [formControl]="opcion"
+                  class="w-full"
+                  [placeholder]="'Opción ' + (oi + 1)"
+                  data-testid="cuest-opcion-input"
+                />
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-times"
+                  class="p-button-text p-button-rounded p-button-sm"
+                  title="Quitar opción"
+                  [disabled]="opcionesDe(pregunta).length <= 2"
+                  (click)="removeOpcion(pregunta, oi)"
+                ></button>
+              </div>
+            }
+            <button
+              pButton
+              type="button"
+              label="Añadir opción"
+              icon="pi pi-plus"
+              class="p-button-text p-button-sm"
+              (click)="addOpcion(pregunta)"
+              data-testid="cuest-add-opcion"
+            ></button>
+          </div>
+
+          <input
+            pInputText
+            formControlName="explicacion"
+            class="w-full cuest-explicacion"
+            placeholder="Explicación (opcional, se muestra al corregir)"
+          />
+        </div>
+      }
+
+      <button
+        pButton
+        type="button"
+        label="Añadir pregunta"
+        icon="pi pi-plus"
+        class="cuest-add-pregunta"
+        (click)="addPregunta()"
+        data-testid="cuest-add-pregunta"
+      ></button>
+    </div>
+  }
+
   <div class="bloque-form__actions">
     <p-button
       label="Cancelar"

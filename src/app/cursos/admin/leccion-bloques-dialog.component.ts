@@ -121,8 +121,10 @@ export class LeccionBloquesDialogComponent {
         return `${b.numPreguntas ?? 0} preguntas${
           b.esDeRepaso ? ' · repaso' : ''
         }`;
-      case 'CUESTIONARIO':
-        return 'Próximamente';
+      case 'CUESTIONARIO': {
+        const n = b.bloquePreguntas?.length ?? 0;
+        return `${n} ${n === 1 ? 'pregunta' : 'preguntas'}`;
+      }
     }
   }
 
@@ -164,6 +166,7 @@ export class LeccionBloquesDialogComponent {
           numPreguntas: result.numPreguntas,
           dificultad: result.dificultad,
           esDeRepaso: result.esDeRepaso,
+          preguntas: result.preguntas,
         };
         const updated = await firstValueFrom(
           this.service.updateBloque(editando.id, payload),
@@ -183,6 +186,7 @@ export class LeccionBloquesDialogComponent {
           numPreguntas: result.numPreguntas,
           dificultad: result.dificultad,
           esDeRepaso: result.esDeRepaso,
+          preguntas: result.preguntas,
         };
         const created = await firstValueFrom(
           this.service.createBloque(leccionId, payload),
