@@ -46,6 +46,19 @@ interface MockSeccion {
   lecciones: MockLeccion[];
 }
 
+interface MockBloque {
+  id: number;
+  leccionId: number;
+  orden: number;
+  tipo: 'VIDEO' | 'TEXTO' | 'TEST' | 'CUESTIONARIO';
+  bunnyVideoId?: string | null;
+  duracionSegundos?: number | null;
+  contenidoMarkdown?: string | null;
+  temaId?: number | null;
+  numPreguntas?: number | null;
+  esDeRepaso?: boolean;
+}
+
 interface MockLeccion {
   id: number;
   seccionId: number;
@@ -57,6 +70,7 @@ interface MockLeccion {
   testPlantillaId?: number | null;
   mazoFlashcardsId?: number | null;
   contenidoMarkdown?: string | null;
+  bloques?: MockBloque[];
 }
 
 interface AdminState {
@@ -64,8 +78,12 @@ interface AdminState {
   detail: MockCurso & { secciones: MockSeccion[] };
   nextSeccionId: number;
   nextLeccionId: number;
+  nextBloqueId: number;
   reorderSeccionesCalls: number;
   reorderLeccionesCalls: number;
+  reorderBloquesCalls: number;
+  createBloqueCalls: number;
+  deleteBloqueCalls: number;
   bunnyUploadCalls: number;
   grantAccessCalls: number;
   deleteCursoCalls: number;
@@ -90,8 +108,12 @@ function freshState(): AdminState {
     detail,
     nextSeccionId: 200,
     nextLeccionId: 1000,
+    nextBloqueId: 5000,
     reorderSeccionesCalls: 0,
     reorderLeccionesCalls: 0,
+    reorderBloquesCalls: 0,
+    createBloqueCalls: 0,
+    deleteBloqueCalls: 0,
     bunnyUploadCalls: 0,
     grantAccessCalls: 0,
     deleteCursoCalls: 0,
@@ -448,6 +470,106 @@ async function setupCursosAdminInterceptors(
     return route.continue();
   });
 
+  // ---- Bloques (widgets de la lección) ----
+  // Helper: localiza la lección por id dentro del detail.
+  const findLeccion = (leccionId: number): MockLeccion | undefined => {
+    for (const s of state.detail.secciones) {
+      const l = s.lecciones.find((le) => le.id === leccionId);
+      if (l) return l;
+    }
+    return undefined;
+  };
+
+  // PUT /cursos/bloques/reorder — register BEFORE /bloques/:id
+  await page.route('**/cursos/bloques/reorder', async (route) => {
+    state.reorderBloquesCalls += 1;
+    const body = route.request().postDataJSON() as {
+      items: { id: number; orden: number }[];
+    };
+    for (const s of state.detail.secciones) {
+      for (const l of s.lecciones) {
+        if (!l.bloques) continue;
+        l.bloques = l.bloques
+          .map((b) => {
+            const found = body.items.find((it) => it.id === b.id);
+            return found ? { ...b, orden: found.orden } : b;
+          })
+          .sort((a, b) => a.orden - b.orden);
+      }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
+  // POST /cursos/lecciones/:id/bloques (create)
+  await page.route(/\/cursos\/lecciones\/\d+\/bloques$/, async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    state.createBloqueCalls += 1;
+    const url = route.request().url();
+    const leccionId = parseInt(url.split('/').slice(-2)[0], 10);
+    const body = route.request().postDataJSON() as Omit<
+      MockBloque,
+      'id' | 'leccionId'
+    >;
+    const created: MockBloque = {
+      id: state.nextBloqueId++,
+      leccionId,
+      ...body,
+    };
+    const leccion = findLeccion(leccionId);
+    if (leccion) leccion.bloques = [...(leccion.bloques ?? []), created];
+    return route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify(created),
+    });
+  });
+
+  // PUT/DELETE /cursos/bloques/:id
+  await page.route(/\/cursos\/bloques\/\d+$/, async (route) => {
+    const url = route.request().url();
+    const id = parseInt(url.split('/').pop()!.split('?')[0], 10);
+    const method = route.request().method();
+    if (method === 'PUT') {
+      const body = route.request().postDataJSON() as Partial<MockBloque>;
+      let updated: MockBloque | undefined;
+      for (const s of state.detail.secciones) {
+        for (const l of s.lecciones) {
+          if (!l.bloques) continue;
+          l.bloques = l.bloques.map((b) => {
+            if (b.id === id) {
+              updated = { ...b, ...body };
+              return updated;
+            }
+            return b;
+          });
+        }
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(updated ?? {}),
+      });
+    }
+    if (method === 'DELETE') {
+      state.deleteBloqueCalls += 1;
+      for (const s of state.detail.secciones) {
+        for (const l of s.lecciones) {
+          if (l.bloques) l.bloques = l.bloques.filter((b) => b.id !== id);
+        }
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    }
+    return route.continue();
+  });
+
   // POST /cursos/videos/upload-url (Bunny TUS credentials)
   await page.route('**/cursos/videos/upload-url', async (route) => {
     state.bunnyUploadCalls += 1;
@@ -684,12 +806,12 @@ test.describe('Cursos admin — flujo completo', () => {
     // First section has 2 lessons; click the down arrow on the first.
     const firstSeccion = page.locator('.seccion-card').first();
     await expect(firstSeccion).toBeVisible({ timeout: 5_000 });
-    // The leccion-row contains an arrow-down button. Find first arrow-down enabled.
+    // Selección por icono (no posicional): la fila tiene varios botones
+    // (Contenido, ↑, ↓, editar, eliminar); apuntamos al de flecha abajo.
     const firstLeccionDown = firstSeccion
       .locator('.leccion-row')
       .first()
-      .locator('button')
-      .nth(1); // 0=arrow-up (disabled), 1=arrow-down
+      .locator('button:has(.pi-arrow-down)');
     await firstLeccionDown.click();
 
     await expect
@@ -830,5 +952,96 @@ test.describe('Cursos admin — flujo completo', () => {
         { timeout: 5_000 },
       )
       .not.toBe(tituloInicial);
+  });
+
+  test('13) builder de bloques: añadir un bloque de TEXTO a una lección', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+
+    // Abre el builder de contenido de la primera lección.
+    await page
+      .locator('[data-testid="leccion-row-contenido"]')
+      .first()
+      .click();
+
+    // Estado vacío inicial (la lección del fixture no trae bloques).
+    await expect(
+      page.locator('[data-testid="bloques-empty"]'),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // Añadir bloque → formulario inline.
+    await page.locator('[data-testid="bloques-add"]').click();
+    await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Tipo por defecto VIDEO → cambiar a TEXTO.
+    await page.locator('[data-testid="bloque-form"] p-dropdown').first().click();
+    await page.getByRole('option', { name: 'Texto', exact: true }).click();
+    await page
+      .locator('textarea[formControlName="contenidoMarkdown"]')
+      .fill('# Bloque E2E\n\nContenido del bloque.');
+
+    await page.getByRole('button', { name: /Añadir bloque/i }).click();
+
+    // Vuelve a la lista con el bloque en la pila.
+    await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(1, {
+      timeout: 5_000,
+    });
+    await expect(page.locator('[data-testid="bloques-list"]')).toContainText(
+      'Texto',
+    );
+    expect(state.createBloqueCalls).toBe(1);
+
+    // Cierra el diálogo y verifica el chip "1 bloque" en la fila de lección.
+    await page.getByRole('button', { name: /^Cerrar$/i }).click();
+    await expect(
+      page.locator('[data-testid="leccion-row-bloques-count"]').first(),
+    ).toContainText('1 bloque', { timeout: 5_000 });
+  });
+
+  test('14) builder de bloques: eliminar un bloque lo quita de la pila', async ({
+    page,
+  }) => {
+    // Pre-sembrar un bloque en la primera lección del fixture (id 100).
+    const leccion = state.detail.secciones[0].lecciones[0];
+    leccion.bloques = [
+      {
+        id: 4321,
+        leccionId: leccion.id,
+        orden: 0,
+        tipo: 'TEXTO',
+        contenidoMarkdown: 'seed',
+      },
+    ];
+
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+
+    await page
+      .locator('[data-testid="leccion-row-contenido"]')
+      .first()
+      .click();
+
+    // Hay un bloque sembrado.
+    await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(1, {
+      timeout: 5_000,
+    });
+
+    // Eliminar (botón papelera de la fila).
+    await page
+      .locator('[data-testid="bloque-row"]')
+      .first()
+      .locator('button.p-button-danger')
+      .click();
+
+    await expect(page.locator('[data-testid="bloques-empty"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    expect(state.deleteBloqueCalls).toBe(1);
   });
 });

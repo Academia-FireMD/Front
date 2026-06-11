@@ -1,0 +1,123 @@
+<form [formGroup]="form" class="bloque-form" data-testid="bloque-form">
+  <div class="field">
+    <label for="bf-tipo">Tipo de bloque</label>
+    <p-dropdown
+      inputId="bf-tipo"
+      formControlName="tipo"
+      [options]="tipoOptions"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Seleccionar tipo"
+      [disabled]="esEdicion()"
+      class="w-full"
+    />
+    @if (esEdicion()) {
+      <small class="bloque-form__hint">
+        El tipo no se puede cambiar tras crear el bloque.
+      </small>
+    }
+  </div>
+
+  @if (tipoSeleccionado() === "VIDEO") {
+    <div class="field">
+      <label>Vídeo</label>
+      <app-bunny-upload
+        [videoTitle]="'Bloque de vídeo'"
+        (uploaded)="onVideoUploaded($event)"
+      />
+      @if (form.controls.bunnyVideoId.value) {
+        <small class="bloque-form__hint">
+          Video ID: {{ form.controls.bunnyVideoId.value }}
+        </small>
+      }
+    </div>
+    <div class="field">
+      <label for="bf-duracion">Duración (segundos)</label>
+      <p-inputNumber
+        inputId="bf-duracion"
+        formControlName="duracionSegundos"
+        [min]="0"
+        class="w-full"
+      />
+    </div>
+  }
+
+  @if (tipoSeleccionado() === "TEXTO") {
+    <div class="field">
+      <label for="bf-contenido">Contenido (Markdown)</label>
+      <textarea
+        id="bf-contenido"
+        pInputTextarea
+        formControlName="contenidoMarkdown"
+        rows="8"
+        class="w-full"
+        placeholder="Escribe el contenido en Markdown..."
+      ></textarea>
+    </div>
+  }
+
+  @if (tipoSeleccionado() === "TEST") {
+    <div class="field">
+      <label>Tema</label>
+      <app-tema-select
+        [multiple]="false"
+        [formControl]="temaIdControl"
+        [oposicion]="oposicion()"
+      ></app-tema-select>
+      <small class="bloque-form__hint">
+        El alumno verá preguntas de este tema dentro de la lección.
+      </small>
+    </div>
+
+    <div class="field">
+      <label for="bf-num-preguntas">Número de preguntas</label>
+      <p-inputNumber
+        inputId="bf-num-preguntas"
+        formControlName="numPreguntas"
+        [min]="1"
+        [max]="50"
+        [showButtons]="true"
+        class="w-full"
+      />
+      <small class="bloque-form__hint">Máximo 50.</small>
+    </div>
+
+    <div class="field">
+      <label for="bf-dificultad">Dificultad</label>
+      <p-dropdown
+        inputId="bf-dificultad"
+        formControlName="dificultad"
+        [options]="dificultadOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Seleccionar dificultad"
+        class="w-full"
+      />
+    </div>
+
+    <div class="field">
+      <p-checkbox
+        inputId="bf-es-repaso"
+        formControlName="esDeRepaso"
+        [binary]="true"
+        label="Modo repaso (alumno debe tener fallos en el tema)"
+      />
+    </div>
+  }
+
+  <div class="bloque-form__actions">
+    <p-button
+      label="Cancelar"
+      severity="secondary"
+      [text]="true"
+      (onClick)="cancel()"
+    />
+    <p-button
+      [label]="esEdicion() ? 'Guardar bloque' : 'Añadir bloque'"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="form.invalid"
+      (onClick)="save()"
+    />
+  </div>
+</form>

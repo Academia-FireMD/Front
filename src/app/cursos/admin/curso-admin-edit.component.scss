@@ -207,6 +207,17 @@
     color: var(--cursos-text, #1f2429);
   }
 
+  &__bloques {
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--cursos-brand, #bb292a);
+    background: var(--cursos-brand-soft, #fbe9e9);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+    white-space: nowrap;
+  }
+
   &__actions {
     display: flex;
     gap: 0.05rem;

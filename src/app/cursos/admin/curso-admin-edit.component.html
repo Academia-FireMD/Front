@@ -280,7 +280,27 @@
                       <span class="leccion-row__titulo">{{
                         leccion.titulo
                       }}</span>
+                      @if (leccion.bloques?.length) {
+                        <span
+                          class="leccion-row__bloques"
+                          data-testid="leccion-row-bloques-count"
+                          >{{ leccion.bloques!.length }}
+                          {{
+                            leccion.bloques!.length === 1 ? "bloque" : "bloques"
+                          }}</span
+                        >
+                      }
                       <div class="leccion-row__actions">
+                        <p-button
+                          label="Contenido"
+                          icon="pi pi-th-large"
+                          severity="secondary"
+                          [text]="true"
+                          size="small"
+                          (onClick)="openBloques(leccion)"
+                          pTooltip="Editar bloques de la lección"
+                          data-testid="leccion-row-contenido"
+                        />
                         <p-button
                           icon="pi pi-arrow-up"
                           severity="secondary"
@@ -374,4 +394,13 @@
   [oposicion]="oposicionCurso()"
   (saved)="onLeccionSaved($event)"
   (cancelled)="leccionDialogVisible.set(false)"
+/>
+
+<!-- Bloques (builder de contenido de la lección) -->
+<app-leccion-bloques-dialog
+  [visible]="bloquesDialogVisible()"
+  [leccion]="bloquesLeccion()"
+  [oposicion]="oposicionCurso()"
+  (bloquesChanged)="onBloquesChanged($event)"
+  (closed)="bloquesDialogVisible.set(false)"
 />

@@ -37,6 +37,7 @@ import { WooCommerceProductPickerComponent } from '../../shared/components/wooco
 import { Oposicion } from '../../shared/models/subscription.model';
 import { CursoDetailPageComponent } from '../alumno/curso-detail-page.component';
 import {
+  Bloque,
   CursoCreatePayload,
   CursoDetail,
   CursoSlugResponse,
@@ -50,6 +51,7 @@ import {
   WooCommerceProductSummary,
 } from '../models/curso.model';
 import { CursosAdminService } from '../services/cursos-admin.service';
+import { LeccionBloquesDialogComponent } from './leccion-bloques-dialog.component';
 import {
   LeccionFormDialogComponent,
   LeccionFormResult,
@@ -103,6 +105,7 @@ type TagSeverity =
     CursoDetailPageComponent,
     SeccionFormDialogComponent,
     LeccionFormDialogComponent,
+    LeccionBloquesDialogComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './curso-admin-edit.component.html',
@@ -136,6 +139,10 @@ export class CursoAdminEditComponent implements OnInit {
   leccionDialogVisible = signal(false);
   leccionEditando = signal<Leccion | null>(null);
   leccionSeccionId = signal<number | null>(null);
+
+  // Bloques (builder de contenido de la lección)
+  bloquesDialogVisible = signal(false);
+  bloquesLeccion = signal<Leccion | null>(null);
 
   // Acceso
   usuarioIdAccesoValue: number | null = null;
@@ -692,6 +699,38 @@ export class CursoAdminEditComponent implements OnInit {
     } catch {
       this.curso.set(prev);
     }
+  }
+
+  // ---- Bloques (contenido de la lección) ----
+
+  openBloques(leccion: Leccion): void {
+    this.bloquesLeccion.set(leccion);
+    this.bloquesDialogVisible.set(true);
+  }
+
+  /**
+   * El diálogo de bloques persiste sus propios cambios (create/update/delete/
+   * reorder) y emite la pila resultante. Aquí solo refrescamos el estado local
+   * para que el contador "N bloques" y la próxima apertura del diálogo estén
+   * sincronizados, sin recargar el curso entero.
+   */
+  onBloquesChanged(bloques: Bloque[]): void {
+    const leccion = this.bloquesLeccion();
+    if (!leccion) return;
+    this.curso.update((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        secciones: prev.secciones.map((s) => ({
+          ...s,
+          lecciones: s.lecciones.map((l) =>
+            l.id === leccion.id ? { ...l, bloques } : l,
+          ),
+        })),
+      };
+    });
+    // Mantener el input del diálogo en sync con la pila ya persistida.
+    this.bloquesLeccion.update((l) => (l ? { ...l, bloques } : l));
   }
 
   // ---- Acceso ----

@@ -1,0 +1,28 @@
+.bloque-form {
+  .field {
+    margin-bottom: 1rem;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+    color: var(--cursos-text, #1f2429);
+  }
+
+  &__hint {
+    display: block;
+    color: var(--cursos-text-soft, #6b7280);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--cursos-border, #e9ecef);
+  }
+}
