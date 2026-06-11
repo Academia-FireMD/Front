@@ -29,35 +29,12 @@
     }
 
     @case ("TEST") {
-      <div class="bloque-test">
-        <div class="bloque-test-head">
-          <i class="pi pi-question-circle"></i>
-          <div>
-            <strong>Test del tema</strong>
-            <span class="bloque-test-meta">
-              {{ bloque().numPreguntas }} preguntas
-              @if (bloque().esDeRepaso) {
-                · repaso de fallos
-              }
-            </span>
-          </div>
-        </div>
-        @if (noFailedQuestions(); as nfq) {
-          <p class="bloque-test-warn">
-            <i class="pi pi-info-circle"></i> {{ nfq.message }}
-          </p>
-        } @else {
-          <button
-            pButton
-            type="button"
-            class="bloque-test-cta"
-            [loading]="starting()"
-            (click)="iniciarTest()"
-          >
-            <i class="pi pi-play"></i><span>Iniciar test</span>
-          </button>
-        }
-      </div>
+      <app-bloque-test-inline
+        [bloqueId]="bloque().id"
+        [numPreguntas]="bloque().numPreguntas"
+        [esDeRepaso]="bloque().esDeRepaso"
+        [preview]="preview()"
+      ></app-bloque-test-inline>
     }
 
     @case ("CUESTIONARIO") {

@@ -5,8 +5,10 @@ import {
   DestroyRef,
   effect,
   ElementRef,
+  EventEmitter,
   inject,
   Input,
+  Output,
   QueryList,
   signal,
   ViewChildren,
@@ -132,6 +134,15 @@ export class CompletarTestComponent {
   @Input() testId: number | null = null;
   @Input() modoSimulacro: boolean = false;
   @Input() idExamenSimulacro: number | null = null;
+  /**
+   * Modo embebido (p.ej. bloque TEST dentro del aula de cursos): al finalizar
+   * NO se navega a la pantalla de resultados (eso sacaría al alumno del aula);
+   * en su lugar se emite `finalizado` y el host decide qué hacer (marcar el
+   * bloque completado, mostrar un resumen inline, etc.). Gateado y por defecto
+   * `false` → los flujos por ruta (test/examen/simulacro) quedan intactos.
+   */
+  @Input() embedded = false;
+  @Output() finalizado = new EventEmitter<{ testId: number }>();
 
   public isModoExamen() {
     return !!this.lastLoadedTest.duration && !!this.lastLoadedTest.endsAt;
@@ -840,6 +851,11 @@ export class CompletarTestComponent {
   }
 
   private navegarAResultados() {
+    // Embebido en el aula: no navegamos fuera; avisamos al host.
+    if (this.embedded) {
+      this.finalizado.emit({ testId: this.lastLoadedTest.id });
+      return;
+    }
     if (this.modoSimulacro && this.idExamenSimulacro) {
       const user = this.auth.getCurrentUser();
       if (esRolPlataforma(user?.rol as Rol) && !!user?.validated) {

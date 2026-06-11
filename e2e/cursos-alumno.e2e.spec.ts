@@ -482,4 +482,100 @@ test.describe('Cursos alumno — flujo completo', () => {
       page.getByRole('button', { name: /Continuar/i }).first(),
     ).toBeVisible();
   });
+
+  test('12) bloque TEST inline: "Iniciar test" embebe el motor SIN salir del aula', async ({
+    page,
+  }) => {
+    // La lección 100 ahora devuelve un bloque TEST (pila de bloques).
+    await page.route(/\/lecciones\/100(\?.*)?$/, (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          leccion: {
+            id: 100,
+            seccionId: 10,
+            titulo: 'Bienvenida',
+            orden: 0,
+            tipo: 'TEST',
+            bloques: [
+              {
+                id: 900,
+                leccionId: 100,
+                orden: 0,
+                tipo: 'TEST',
+                temaId: 14,
+                numPreguntas: 5,
+                esDeRepaso: false,
+              },
+            ],
+          },
+          playbackUrls: {},
+        }),
+      });
+    });
+
+    // Iniciar test del bloque → devuelve el id del Test creado.
+    await page.route(/\/bloques\/900\/iniciar-test$/, (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 777 }),
+      }),
+    );
+
+    // El motor embebido carga el test por id; respuesta mínima válida.
+    await page.route(/\/tests\/por-id\/777(\?.*)?$/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 777,
+          realizadorId: 1,
+          preguntas: [
+            {
+              id: 1,
+              identificador: 'P1',
+              descripcion: '¿Pregunta de prueba?',
+              respuestas: ['A', 'B', 'C', 'D'],
+              respuestaCorrectaIndex: 0,
+              temaId: 14,
+              relevancia: [],
+            },
+          ],
+          respuestas: [],
+          testPreguntasIds: [1],
+          respuestasCount: 0,
+          status: 'EMPEZADO',
+          createdAt: new Date().toISOString(),
+        }),
+      }),
+    );
+    // Llamadas auxiliares del motor (listas/fallos) → respuestas vacías.
+    await page.route(/\/tests(\?.*)?$/, (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+        : route.continue(),
+    );
+
+    await page.goto(`/app/cursos/${cursoDetailFixture.slug}/leccion/100`);
+
+    // Tarjeta de arranque del bloque TEST.
+    await expect(
+      page.getByRole('button', { name: /Iniciar test/i }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    const urlAntes = page.url();
+    await page.getByRole('button', { name: /Iniciar test/i }).click();
+
+    // El motor se embebe en el aula (NO redirige a /realizar-test).
+    await expect(page.getByTestId('bloque-test-embed')).toBeVisible({
+      timeout: 10_000,
+    });
+    expect(page.url()).toBe(urlAntes);
+    await expect(page).toHaveURL(/\/leccion\/100/);
+    // No navegó a la ruta standalone del test.
+    expect(page.url()).not.toContain('/realizar-test');
+  });
 });

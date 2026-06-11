@@ -1,18 +1,29 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component, input } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideMarkdown } from 'ngx-markdown';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
 import { Bloque } from '../models/curso.model';
-import { environment } from '../../../environments/environment';
 import { BloqueRenderComponent } from './bloque-render.component';
+import { BloqueTestInlineComponent } from './bloque-test-inline.component';
+
+// Stub liviano del bloque TEST inline para no arrastrar TestModule (que importa
+// el motor de tests completo) al unit test de bloque-render.
+@Component({
+  selector: 'app-bloque-test-inline',
+  standalone: true,
+  template: '<span data-testid="stub-test-inline">test-inline</span>',
+})
+class StubBloqueTestInlineComponent {
+  readonly bloqueId = input<number>();
+  readonly numPreguntas = input<number | null | undefined>();
+  readonly esDeRepaso = input<boolean | undefined>();
+  readonly preview = input<boolean>();
+}
 
 describe('BloqueRenderComponent', () => {
   let fixture: ComponentFixture<BloqueRenderComponent>;
-  let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -23,12 +34,14 @@ describe('BloqueRenderComponent', () => {
         provideHttpClientTesting(),
         provideMarkdown(),
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(BloqueRenderComponent, {
+        remove: { imports: [BloqueTestInlineComponent] },
+        add: { imports: [StubBloqueTestInlineComponent] },
+      })
+      .compileComponents();
     fixture = TestBed.createComponent(BloqueRenderComponent);
-    httpMock = TestBed.inject(HttpTestingController);
   });
-
-  afterEach(() => httpMock.verify());
 
   function setBloque(b: Partial<Bloque>): void {
     fixture.componentRef.setInput('bloque', {
@@ -56,37 +69,24 @@ describe('BloqueRenderComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('no está disponible');
   });
 
-  it('TEST muestra meta + botón "Iniciar test"', () => {
+  it('TEXTO renderiza el contenido markdown', () => {
+    setBloque({ tipo: 'TEXTO', contenidoMarkdown: '# Hola' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('markdown')).not.toBeNull();
+  });
+
+  it('TEST renderiza el bloque de test inline (app-bloque-test-inline)', () => {
     setBloque({ tipo: 'TEST', temaId: 14, numPreguntas: 12 });
     fixture.detectChanges();
-    const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('12 preguntas');
-    expect(text).toContain('Iniciar test');
+    expect(
+      fixture.nativeElement.querySelector('app-bloque-test-inline'),
+    ).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('test-inline');
   });
 
   it('CUESTIONARIO muestra placeholder de próximamente', () => {
     setBloque({ tipo: 'CUESTIONARIO' });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('próximamente');
-  });
-
-  it('iniciarTest hace POST a /bloques/:id/iniciar-test', async () => {
-    setBloque({ tipo: 'TEST', temaId: 14, numPreguntas: 10 });
-    fixture.detectChanges();
-    const promise = fixture.componentInstance.iniciarTest();
-    const req = httpMock.expectOne(
-      `${environment.apiUrl}/bloques/1/iniciar-test`,
-    );
-    expect(req.request.method).toBe('POST');
-    req.flush({ id: 99 });
-    await promise;
-  });
-
-  it('en preview NO llama al backend', async () => {
-    setBloque({ tipo: 'TEST', temaId: 14, numPreguntas: 10 });
-    fixture.componentRef.setInput('preview', true);
-    fixture.detectChanges();
-    await fixture.componentInstance.iniciarTest();
-    httpMock.expectNone(`${environment.apiUrl}/bloques/1/iniciar-test`);
   });
 });
