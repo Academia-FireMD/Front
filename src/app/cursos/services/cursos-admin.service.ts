@@ -167,6 +167,20 @@ export class CursosAdminService extends ApiBaseService {
   }
 
   /**
+   * Sube una imagen (miniatura/portada del curso) a Supabase vía el backend y
+   * devuelve su URL pública. Reusa el mismo almacenamiento que avatares.
+   */
+  uploadImage(file: File): Observable<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ url: string }>(
+      `${environment.apiUrl}/cursos/upload-image`,
+      formData,
+      { withCredentials: true },
+    );
+  }
+
+  /**
    * Refactor 2026-05-25 (T14) — productos categoría CURSO desde cache backend.
    * Lee de BD (WooCommerceProductCache) sincronizado por cron horario. Admin
    * only en el backend (RolesGuard).

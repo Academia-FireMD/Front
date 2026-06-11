@@ -1,375 +1,364 @@
 <p-confirmDialog></p-confirmDialog>
 
 <div class="curso-edit">
-  <!-- Toolbar -->
-  <div class="curso-edit__toolbar">
-    <p-button
-      label="Volver"
-      icon="pi pi-arrow-left"
-      severity="secondary"
-      (onClick)="goBack()"
-    />
-
-    @if (curso(); as c) {
-      <div class="curso-edit__toolbar-info">
-        <span class="curso-edit__titulo">{{ c.titulo }}</span>
-        <p-tag [value]="c.estado" [severity]="estadoSeverity(c.estado)" />
-      </div>
-
-      <div class="curso-edit__toolbar-actions">
-        @if (c.estado === "BORRADOR") {
-          <app-async-button
-            label="Publicar"
-            icon="pi pi-send"
-            styleClass="p-button-success"
-            [action]="publicar"
-          ></app-async-button>
-        }
-        @if (c.estado === "PUBLICADO") {
-          <app-async-button
-            label="Despublicar"
-            icon="pi pi-replay"
-            styleClass="p-button-secondary"
-            [action]="despublicar"
-          ></app-async-button>
-          <app-async-button
-            label="Archivar"
-            icon="pi pi-inbox"
-            styleClass="p-button-warning"
-            [action]="archivar"
-          ></app-async-button>
-        }
-        @if (c.estado === "ARCHIVADO") {
-          <app-async-button
-            label="Despublicar"
-            icon="pi pi-replay"
-            styleClass="p-button-secondary"
-            [action]="despublicar"
-          ></app-async-button>
-        }
-
-        <div
-          class="curso-edit__preview-toggle"
-          data-testid="curso-edit-preview-toggle"
-        >
-          <label for="ce-preview-toggle">Ver como alumno</label>
-          <p-inputSwitch
-            inputId="ce-preview-toggle"
-            [ngModel]="previewMode()"
-            (ngModelChange)="togglePreview()"
-          ></p-inputSwitch>
-        </div>
-      </div>
-    }
-
-    @if (esNuevo()) {
-      <span class="curso-edit__titulo">Nuevo curso</span>
-    }
-  </div>
-
   @if (loading()) {
     <div class="curso-edit__spinner">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
     </div>
   } @else if (previewMode() && previewSlugResponse()) {
+    <div class="curso-edit__preview-bar">
+      <p-button
+        label="Volver al editor"
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        (onClick)="togglePreview()"
+      />
+      <span><i class="pi pi-eye"></i> Vista previa — como alumno</span>
+    </div>
     <app-curso-detail-page
       [previewData]="previewSlugResponse()"
       [previewMode]="true"
       data-testid="curso-edit-preview"
     ></app-curso-detail-page>
   } @else {
-    <p-tabView>
-      <!-- Tab 1: Metadatos -->
-      <p-tabPanel header="Metadatos">
-        <form [formGroup]="metadataForm" class="curso-edit__form">
-          <div class="form-grid">
-            <div class="field">
-              <label for="ce-titulo">Título *</label>
-              <input
-                id="ce-titulo"
-                pInputText
-                formControlName="titulo"
-                class="w-full"
-                placeholder="Título del curso"
-              />
+    <div class="grid p-2" [formGroup]="metadataForm">
+      <div class="col-12 content">
+        <p-card>
+          <!-- Header: volver + título + estado + acciones -->
+          <div class="curso-edit__header">
+            <p-button
+              icon="pi pi-arrow-left"
+              label="Volver"
+              severity="secondary"
+              [text]="true"
+              (onClick)="goBack()"
+            />
+            <div class="curso-edit__header-title">
+              <p-floatLabel>
+                <input
+                  id="ce-titulo"
+                  pInputText
+                  formControlName="titulo"
+                  class="w-full"
+                  data-testid="curso-edit-titulo"
+                />
+                <label for="ce-titulo">Título del curso</label>
+              </p-floatLabel>
             </div>
-
-            <div class="field">
-              <label for="ce-slug">Slug *</label>
-              <input
-                id="ce-slug"
-                pInputText
-                formControlName="slug"
-                class="w-full"
-                placeholder="url-del-curso"
-                [attr.disabled]="!esNuevo() ? true : null"
-              />
-              @if (!esNuevo()) {
-                <small class="text-color-secondary">
-                  El slug no se puede modificar después de la creación.
-                </small>
+            @if (curso(); as c) {
+              <p-tag [value]="c.estado" [severity]="estadoSeverity(c.estado)" />
+            }
+            <div class="curso-edit__header-actions">
+              @if (curso(); as c) {
+                @if (c.estado === "BORRADOR") {
+                  <app-async-button
+                    label="Publicar"
+                    icon="pi pi-send"
+                    styleClass="p-button-success"
+                    [action]="publicar"
+                  ></app-async-button>
+                }
+                @if (c.estado === "PUBLICADO") {
+                  <app-async-button
+                    label="Despublicar"
+                    icon="pi pi-replay"
+                    styleClass="p-button-secondary"
+                    [action]="despublicar"
+                  ></app-async-button>
+                  <app-async-button
+                    label="Archivar"
+                    icon="pi pi-inbox"
+                    styleClass="p-button-warning"
+                    [action]="archivar"
+                  ></app-async-button>
+                }
+                @if (c.estado === "ARCHIVADO") {
+                  <app-async-button
+                    label="Despublicar"
+                    icon="pi pi-replay"
+                    styleClass="p-button-secondary"
+                    [action]="despublicar"
+                  ></app-async-button>
+                }
+                <div
+                  class="curso-edit__preview-toggle"
+                  data-testid="curso-edit-preview-toggle"
+                >
+                  <label for="ce-preview-toggle">Ver como alumno</label>
+                  <p-inputSwitch
+                    inputId="ce-preview-toggle"
+                    [ngModel]="previewMode()"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="togglePreview()"
+                  ></p-inputSwitch>
+                </div>
               }
             </div>
-
-            <div class="field field--full">
-              <label for="ce-descripcion">Descripción</label>
-              <textarea
-                id="ce-descripcion"
-                pInputTextarea
-                formControlName="descripcion"
-                rows="4"
-                class="w-full"
-                placeholder="Describe el curso..."
-              ></textarea>
-            </div>
-
-            <div class="field">
-              <label>Producto WooCommerce</label>
-              <app-woocommerce-product-picker
-                endpoint="cursos"
-                formControlName="wooProductId"
-                (selectionChange)="onWooProductSelected($event)"
-                data-testid="curso-edit-wc-picker"
-              ></app-woocommerce-product-picker>
-              <small class="text-color-secondary">
-                El precio se sincroniza desde WooCommerce automáticamente.
-              </small>
-            </div>
-
-            <div class="field">
-              <label for="ce-duracion">Duración estimada (minutos)</label>
-              <p-inputNumber
-                inputId="ce-duracion"
-                formControlName="duracionEstimadaMinutos"
-                [min]="0"
-                class="w-full"
-              />
-            </div>
-
-            <div class="field field--full">
-              <label for="ce-thumbnail">URL de miniatura</label>
-              <input
-                id="ce-thumbnail"
-                pInputText
-                formControlName="thumbnailUrl"
-                class="w-full"
-                placeholder="https://..."
-              />
-            </div>
           </div>
 
-          <div class="curso-edit__form-actions">
-            <app-async-button
-              [label]="esNuevo() ? 'Crear curso' : 'Guardar cambios'"
-              icon="pi pi-save"
-              [disabled]="metadataForm.invalid"
-              [action]="saveMetadata"
-              data-testid="curso-edit-save"
-            ></app-async-button>
-          </div>
-        </form>
-      </p-tabPanel>
-
-      <!-- Tab 2: Estructura -->
-      <p-tabPanel header="Estructura" [disabled]="esNuevo()">
-        <div class="curso-edit__estructura">
-          <div class="curso-edit__estructura-header">
-            <h3>Secciones</h3>
-            <p-button
-              label="Añadir sección"
-              icon="pi pi-plus"
-              severity="secondary"
-              (onClick)="openAddSeccion()"
-            />
-          </div>
-
-          @let secciones = curso()?.secciones ?? [];
-
-          @if (secciones.length === 0) {
-            <p class="text-color-secondary">
-              No hay secciones. Añade una para empezar.
-            </p>
-          }
-
-          <div
-            cdkDropList
-            (cdkDropListDropped)="dropSeccion($event)"
-            class="secciones-droplist"
-          >
-            @for (seccion of secciones; track seccion.id; let i = $index) {
-              <div class="seccion-card" cdkDrag>
-                <div class="seccion-card__header">
-                  <div class="seccion-card__title">
-                    <span
-                      class="seccion-card__drag"
-                      cdkDragHandle
-                      title="Arrastrar para reordenar"
-                    >
-                      <i class="pi pi-bars"></i>
-                    </span>
-                    <span class="seccion-card__orden">{{ i + 1 }}.</span>
-                    <strong>{{ seccion.titulo }}</strong>
+          <p-tabView>
+            <!-- Tab 1: Metadatos -->
+            <p-tabPanel header="Metadatos">
+              <div class="curso-edit__form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="ce-slug">Slug *</label>
+                    <input
+                      id="ce-slug"
+                      pInputText
+                      formControlName="slug"
+                      class="w-full"
+                      placeholder="url-del-curso"
+                      [attr.disabled]="!esNuevo() ? true : null"
+                    />
+                    @if (!esNuevo()) {
+                      <small class="text-color-secondary">
+                        El slug no se puede modificar después de la creación.
+                      </small>
+                    }
                   </div>
-                  <div class="seccion-card__actions">
-                    <p-button
-                      icon="pi pi-arrow-up"
-                      severity="secondary"
-                      [text]="true"
-                      [disabled]="i === 0"
-                      (onClick)="moveSeccionUp(i)"
-                      pTooltip="Mover arriba"
+
+                  <div class="field">
+                    <label for="ce-duracion">Duración estimada (minutos)</label>
+                    <p-inputNumber
+                      inputId="ce-duracion"
+                      formControlName="duracionEstimadaMinutos"
+                      [min]="0"
+                      class="w-full"
                     />
-                    <p-button
-                      icon="pi pi-arrow-down"
-                      severity="secondary"
-                      [text]="true"
-                      [disabled]="i === secciones.length - 1"
-                      (onClick)="moveSeccionDown(i)"
-                      pTooltip="Mover abajo"
-                    />
-                    <p-button
-                      icon="pi pi-pencil"
-                      severity="secondary"
-                      [text]="true"
-                      (onClick)="openEditSeccion(seccion)"
-                      pTooltip="Editar sección"
-                    />
-                    <p-button
-                      icon="pi pi-trash"
-                      severity="danger"
-                      [text]="true"
-                      (onClick)="deleteSeccion(seccion)"
-                      pTooltip="Eliminar sección"
-                    />
-                    <p-button
-                      label="Añadir lección"
-                      icon="pi pi-plus"
-                      severity="secondary"
-                      size="small"
-                      (onClick)="openAddLeccion(seccion)"
-                    />
+                  </div>
+
+                  <div class="field field--full">
+                    <label for="ce-descripcion">Descripción</label>
+                    <textarea
+                      id="ce-descripcion"
+                      pInputTextarea
+                      formControlName="descripcion"
+                      rows="4"
+                      class="w-full"
+                      placeholder="Describe el curso..."
+                    ></textarea>
+                  </div>
+
+                  <div class="field">
+                    <label>Producto WooCommerce</label>
+                    <app-woocommerce-product-picker
+                      endpoint="cursos"
+                      formControlName="wooProductId"
+                      (selectionChange)="onWooProductSelected($event)"
+                      data-testid="curso-edit-wc-picker"
+                    ></app-woocommerce-product-picker>
+                    <small class="text-color-secondary">
+                      El precio se sincroniza desde WooCommerce automáticamente.
+                    </small>
+                  </div>
+
+                  <div class="field field--full">
+                    <label>Miniatura / portada del curso</label>
+                    <app-image-upload
+                      [(imageUrl)]="thumbnailUrlModel"
+                      label="Miniatura"
+                    ></app-image-upload>
                   </div>
                 </div>
 
+                <div class="curso-edit__form-actions">
+                  <app-async-button
+                    [label]="esNuevo() ? 'Crear curso' : 'Guardar cambios'"
+                    icon="pi pi-save"
+                    [disabled]="metadataForm.invalid"
+                    [action]="saveMetadata"
+                    data-testid="curso-edit-save"
+                  ></app-async-button>
+                </div>
+              </div>
+            </p-tabPanel>
+
+            <!-- Tab 2: Estructura -->
+            <p-tabPanel header="Estructura" [disabled]="esNuevo()">
+              <div class="curso-edit__estructura">
+                <div class="curso-edit__estructura-header">
+                  <h3>Secciones</h3>
+                  <p-button
+                    label="Añadir sección"
+                    icon="pi pi-plus"
+                    severity="secondary"
+                    (onClick)="openAddSeccion()"
+                  />
+                </div>
+
+                @let secciones = curso()?.secciones ?? [];
+
+                @if (secciones.length === 0) {
+                  <p class="text-color-secondary">
+                    No hay secciones. Añade una para empezar.
+                  </p>
+                }
+
                 <div
-                  class="seccion-card__lecciones"
                   cdkDropList
-                  (cdkDropListDropped)="dropLeccion($event, seccion)"
+                  (cdkDropListDropped)="dropSeccion($event)"
+                  class="secciones-droplist"
                 >
                   @for (
-                    leccion of seccion.lecciones;
-                    track leccion.id;
-                    let li = $index
+                    seccion of secciones;
+                    track seccion.id;
+                    let i = $index
                   ) {
-                    <div class="leccion-row" cdkDrag>
-                      <span
-                        class="leccion-row__drag"
-                        cdkDragHandle
-                        title="Arrastrar"
+                    <div class="seccion-card" cdkDrag>
+                      <div class="seccion-card__header">
+                        <div class="seccion-card__title">
+                          <span
+                            class="seccion-card__drag"
+                            cdkDragHandle
+                            title="Arrastrar para reordenar"
+                          >
+                            <i class="pi pi-bars"></i>
+                          </span>
+                          <span class="seccion-card__orden">{{ i + 1 }}.</span>
+                          <strong>{{ seccion.titulo }}</strong>
+                        </div>
+                        <div class="seccion-card__actions">
+                          <p-button
+                            icon="pi pi-arrow-up"
+                            severity="secondary"
+                            [text]="true"
+                            [disabled]="i === 0"
+                            (onClick)="moveSeccionUp(i)"
+                            pTooltip="Mover arriba"
+                          />
+                          <p-button
+                            icon="pi pi-arrow-down"
+                            severity="secondary"
+                            [text]="true"
+                            [disabled]="i === secciones.length - 1"
+                            (onClick)="moveSeccionDown(i)"
+                            pTooltip="Mover abajo"
+                          />
+                          <p-button
+                            icon="pi pi-pencil"
+                            severity="secondary"
+                            [text]="true"
+                            (onClick)="openEditSeccion(seccion)"
+                            pTooltip="Editar sección"
+                          />
+                          <p-button
+                            icon="pi pi-trash"
+                            severity="danger"
+                            [text]="true"
+                            (onClick)="deleteSeccion(seccion)"
+                            pTooltip="Eliminar sección"
+                          />
+                          <p-button
+                            label="Añadir lección"
+                            icon="pi pi-plus"
+                            severity="secondary"
+                            size="small"
+                            (onClick)="openAddLeccion(seccion)"
+                          />
+                        </div>
+                      </div>
+
+                      <div
+                        class="seccion-card__lecciones"
+                        cdkDropList
+                        (cdkDropListDropped)="dropLeccion($event, seccion)"
                       >
-                        <i class="pi pi-bars"></i>
-                      </span>
-                      <span class="leccion-row__orden">{{ li + 1 }}.</span>
-                      <span class="leccion-row__tipo pi pi-file"></span>
-                      <span class="leccion-row__titulo">{{
-                        leccion.titulo
-                      }}</span>
-                      @if (leccion.bloques?.length) {
-                        <span
-                          class="leccion-row__bloques"
-                          data-testid="leccion-row-bloques-count"
-                          >{{ leccion.bloques!.length }}
-                          {{
-                            leccion.bloques!.length === 1 ? "bloque" : "bloques"
-                          }}</span
-                        >
-                      }
-                      <div class="leccion-row__actions">
-                        <p-button
-                          label="Contenido"
-                          icon="pi pi-th-large"
-                          severity="secondary"
-                          [text]="true"
-                          size="small"
-                          (onClick)="openBloques(leccion)"
-                          pTooltip="Editar bloques de la lección"
-                          data-testid="leccion-row-contenido"
-                        />
-                        <p-button
-                          icon="pi pi-arrow-up"
-                          severity="secondary"
-                          [text]="true"
-                          size="small"
-                          [disabled]="li === 0"
-                          (onClick)="moveLeccionUp(seccion, li)"
-                        />
-                        <p-button
-                          icon="pi pi-arrow-down"
-                          severity="secondary"
-                          [text]="true"
-                          size="small"
-                          [disabled]="li === seccion.lecciones.length - 1"
-                          (onClick)="moveLeccionDown(seccion, li)"
-                        />
-                        <p-button
-                          icon="pi pi-pencil"
-                          severity="secondary"
-                          [text]="true"
-                          size="small"
-                          (onClick)="openEditLeccion(leccion, seccion)"
-                        />
-                        <p-button
-                          icon="pi pi-trash"
-                          severity="danger"
-                          [text]="true"
-                          size="small"
-                          (onClick)="deleteLeccion(leccion)"
-                        />
+                        @for (
+                          leccion of seccion.lecciones;
+                          track leccion.id;
+                          let li = $index
+                        ) {
+                          <div class="leccion-row" cdkDrag>
+                            <span
+                              class="leccion-row__drag"
+                              cdkDragHandle
+                              title="Arrastrar"
+                            >
+                              <i class="pi pi-bars"></i>
+                            </span>
+                            <span class="leccion-row__orden"
+                              >{{ li + 1 }}.</span
+                            >
+                            <span class="leccion-row__tipo pi pi-file"></span>
+                            <span class="leccion-row__titulo">{{
+                              leccion.titulo
+                            }}</span>
+                            @if (leccion.bloques?.length) {
+                              <span
+                                class="leccion-row__bloques"
+                                data-testid="leccion-row-bloques-count"
+                                >{{ leccion.bloques!.length }}
+                                {{
+                                  leccion.bloques!.length === 1
+                                    ? "bloque"
+                                    : "bloques"
+                                }}</span
+                              >
+                            }
+                            <div class="leccion-row__actions">
+                              <p-button
+                                label="Contenido"
+                                icon="pi pi-th-large"
+                                severity="secondary"
+                                [text]="true"
+                                size="small"
+                                (onClick)="openBloques(leccion)"
+                                pTooltip="Editar bloques de la lección"
+                                data-testid="leccion-row-contenido"
+                              />
+                              <p-button
+                                icon="pi pi-arrow-up"
+                                severity="secondary"
+                                [text]="true"
+                                size="small"
+                                [disabled]="li === 0"
+                                (onClick)="moveLeccionUp(seccion, li)"
+                              />
+                              <p-button
+                                icon="pi pi-arrow-down"
+                                severity="secondary"
+                                [text]="true"
+                                size="small"
+                                [disabled]="li === seccion.lecciones.length - 1"
+                                (onClick)="moveLeccionDown(seccion, li)"
+                              />
+                              <p-button
+                                icon="pi pi-pencil"
+                                severity="secondary"
+                                [text]="true"
+                                size="small"
+                                (onClick)="openEditLeccion(leccion, seccion)"
+                              />
+                              <p-button
+                                icon="pi pi-trash"
+                                severity="danger"
+                                [text]="true"
+                                size="small"
+                                (onClick)="deleteLeccion(leccion)"
+                              />
+                            </div>
+                          </div>
+                        }
+
+                        @if (seccion.lecciones.length === 0) {
+                          <p
+                            class="text-color-secondary"
+                            style="font-size: 0.875rem; padding: 0.5rem 0"
+                          >
+                            Sin lecciones. Añade una con el botón de arriba.
+                          </p>
+                        }
                       </div>
                     </div>
                   }
-
-                  @if (seccion.lecciones.length === 0) {
-                    <p
-                      class="text-color-secondary"
-                      style="font-size: 0.875rem; padding: 0.5rem 0"
-                    >
-                      Sin lecciones. Añade una con el botón de arriba.
-                    </p>
-                  }
                 </div>
               </div>
-            }
-          </div>
-        </div>
-      </p-tabPanel>
-
-      <!-- Tab 3: Acceso -->
-      <p-tabPanel header="Acceso" [disabled]="esNuevo()">
-        <div class="curso-edit__acceso">
-          <h3>Conceder acceso manual</h3>
-          <p class="text-color-secondary">
-            Introduce el ID numérico del usuario al que deseas conceder acceso
-            al curso.
-          </p>
-          <div class="curso-edit__acceso-form">
-            <p-inputNumber
-              placeholder="ID de usuario"
-              [(ngModel)]="usuarioIdAccesoValue"
-              [min]="1"
-              class="w-full"
-            />
-            <p-button
-              label="Conceder acceso"
-              icon="pi pi-user-plus"
-              [loading]="granting()"
-              [disabled]="!usuarioIdAccesoValue"
-              (onClick)="grantAccess()"
-            />
-          </div>
-        </div>
-      </p-tabPanel>
-    </p-tabView>
+            </p-tabPanel>
+          </p-tabView>
+        </p-card>
+      </div>
+    </div>
   }
 </div>
 

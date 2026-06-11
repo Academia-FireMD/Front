@@ -869,30 +869,14 @@ test.describe('Cursos admin — flujo completo', () => {
     expect(state.bunnyUploadCalls).toBeGreaterThan(0);
   });
 
-  test('11) tab Acceso permite conceder acceso manual por usuarioId', async ({
+  test('11) la pestaña Acceso ya NO existe (acceso = compra en WooCommerce)', async ({
     page,
   }) => {
     await page.goto(`/app/cursos-admin/${state.detail.id}`);
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
-
-    await page.getByRole('tab', { name: /Acceso/i }).click();
-    await expect(
-      page.getByRole('heading', { name: /Conceder acceso manual/i }),
-    ).toBeVisible({ timeout: 5_000 });
-
-    // p-inputNumber renders an internal <input>; type chars + blur so the
-    // [(ngModel)] binding actually fires onModelChange before we click.
-    const numInput = page.locator('p-inputNumber input').last();
-    await numInput.click();
-    await numInput.pressSequentially('130');
-    await numInput.press('Tab');
-    const conceder = page.getByRole('button', { name: /Conceder acceso/i });
-    await expect(conceder).toBeEnabled({ timeout: 5_000 });
-    await conceder.click();
-
-    await expect
-      .poll(() => state.grantAccessCalls, { timeout: 5_000 })
-      .toBe(1);
+    await expect(page.getByRole('tab', { name: /Acceso/i })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: /Metadatos/i })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Estructura/i })).toBeVisible();
   });
 
   test('12) drag-and-drop reordena secciones (CDK) y llama el endpoint reorder', async ({
@@ -975,9 +959,13 @@ test.describe('Cursos admin — flujo completo', () => {
     // Tipo por defecto VIDEO → cambiar a TEXTO.
     await page.locator('[data-testid="bloque-form"] p-dropdown').first().click();
     await page.getByRole('option', { name: 'Texto', exact: true }).click();
-    await page
-      .locator('textarea[formControlName="contenidoMarkdown"]')
-      .fill('# Bloque E2E\n\nContenido del bloque.');
+    // El contenido se escribe en el editor Markdown (Toast UI), no un textarea.
+    const editor = page.locator(
+      '[data-testid="bf-markdown-editor"] .toastui-editor-md-container [contenteditable="true"]',
+    );
+    await expect(editor).toBeVisible({ timeout: 5_000 });
+    await editor.click();
+    await page.keyboard.type('Contenido del bloque E2E.');
 
     await page.getByRole('button', { name: /Añadir bloque/i }).click();
 

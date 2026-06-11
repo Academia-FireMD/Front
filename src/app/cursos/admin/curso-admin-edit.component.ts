@@ -29,6 +29,8 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
+import { FloatLabelModule } from 'primeng/floatlabel';
+import { CardModule } from 'primeng/card';
 import { TabViewModule } from 'primeng/tabview';
 import { TagModule } from 'primeng/tag';
 import { firstValueFrom } from 'rxjs';
@@ -50,6 +52,7 @@ import {
   WooCommerceProductSummary,
 } from '../models/curso.model';
 import { CursosAdminService } from '../services/cursos-admin.service';
+import { ImageUploadComponent } from './image-upload.component';
 import { LeccionBloquesDialogComponent } from './leccion-bloques-dialog.component';
 import {
   LeccionFormDialogComponent,
@@ -95,6 +98,8 @@ type TagSeverity =
     InputTextareaModule,
     InputNumberModule,
     InputSwitchModule,
+    FloatLabelModule,
+    CardModule,
     TabViewModule,
     TagModule,
     DividerModule,
@@ -105,6 +110,7 @@ type TagSeverity =
     SeccionFormDialogComponent,
     LeccionFormDialogComponent,
     LeccionBloquesDialogComponent,
+    ImageUploadComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './curso-admin-edit.component.html',
@@ -143,9 +149,18 @@ export class CursoAdminEditComponent implements OnInit {
   bloquesDialogVisible = signal(false);
   bloquesLeccion = signal<Leccion | null>(null);
 
-  // Acceso
-  usuarioIdAccesoValue: number | null = null;
-  granting = signal(false);
+  /**
+   * Puente entre el `app-image-upload` (model bidireccional) y el FormControl
+   * `thumbnailUrl` del metadataForm: al subir/quitar una imagen, escribe la URL
+   * en el form y lo marca dirty para que "Guardar" la persista.
+   */
+  get thumbnailUrlModel(): string | null {
+    return this.metadataForm.controls.thumbnailUrl.value ?? null;
+  }
+  set thumbnailUrlModel(value: string | null) {
+    this.metadataForm.controls.thumbnailUrl.setValue(value ?? '');
+    this.metadataForm.controls.thumbnailUrl.markAsDirty();
+  }
 
   /**
    * Oposición actual del curso. Pasada al picker de tema dentro del leccion
@@ -717,27 +732,6 @@ export class CursoAdminEditComponent implements OnInit {
     });
     // Mantener el input del diálogo en sync con la pila ya persistida.
     this.bloquesLeccion.update((l) => (l ? { ...l, bloques } : l));
-  }
-
-  // ---- Acceso ----
-
-  async grantAccess(): Promise<void> {
-    const id = this.cursoId();
-    const usuarioId = this.usuarioIdAccesoValue;
-    if (!id || !usuarioId) {
-      this.toast.warning('Introduce un ID de usuario válido');
-      return;
-    }
-    this.granting.set(true);
-    try {
-      await firstValueFrom(this.cursosAdminService.grantAccess(id, usuarioId));
-      this.toast.success(`Acceso concedido al usuario ${usuarioId}`);
-      this.usuarioIdAccesoValue = null;
-    } catch {
-      // handleError shows toast
-    } finally {
-      this.granting.set(false);
-    }
   }
 
   estadoSeverity(estado: EstadoCurso): TagSeverity {

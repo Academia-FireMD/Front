@@ -44,15 +44,15 @@
 
   @if (tipoSeleccionado() === "TEXTO") {
     <div class="field">
-      <label for="bf-contenido">Contenido (Markdown)</label>
-      <textarea
-        id="bf-contenido"
-        pInputTextarea
+      <label>Contenido</label>
+      <app-markdown-editor
         formControlName="contenidoMarkdown"
-        rows="8"
-        class="w-full"
-        placeholder="Escribe el contenido en Markdown..."
-      ></textarea>
+        height="320px"
+        data-testid="bf-markdown-editor"
+      ></app-markdown-editor>
+      <small class="bloque-form__hint">
+        Editor Markdown con vista previa en vivo al lado.
+      </small>
     </div>
   }
 

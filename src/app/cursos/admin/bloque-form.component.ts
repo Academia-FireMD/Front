@@ -27,6 +27,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { Dificultad } from '../../shared/models/pregunta.model';
+import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
 import { Oposicion } from '../../shared/models/subscription.model';
 import { SharedModule } from '../../shared/shared.module';
 import {
@@ -87,6 +88,7 @@ interface DificultadOption {
     CheckboxModule,
     RadioButtonModule,
     BunnyUploadComponent,
+    MarkdownEditorComponent,
     SharedModule,
   ],
   templateUrl: './bloque-form.component.html',
