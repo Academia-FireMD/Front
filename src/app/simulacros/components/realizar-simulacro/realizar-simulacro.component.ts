@@ -185,10 +185,11 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
 
   /**
    * Compra el simulacro en 1 clic contra el COF del alumno (tarjeta guardada).
-   * El `idempotencyKey` se genera POR CLICK: un retry de la MISMA compra (misma
-   * key) deduplica en la ruta de cobro; un click nuevo = compra nueva (un
-   * simulacro es comprable varias veces). Money-critical: el backend no concede
-   * el consumible salvo cobro confirmado.
+   * Usa la `compraIdempotencyKey` del INTENTO en curso (fijada al abrir la oferta
+   * y reutilizada en cada reintento): un retry de la MISMA compra deduplica en la
+   * ruta de cobro y no doble-cobra; un intento NUEVO (tras un estado terminal)
+   * usa otra clave = compra nueva (un simulacro es comprable varias veces).
+   * Money-critical: el backend no concede el consumible salvo cobro confirmado.
    */
   public comprarSimulacro(): void {
     if (this.comprandoSimulacro()) return;
