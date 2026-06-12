@@ -151,7 +151,11 @@ export interface AccesoConCurso {
   createdAt?: string;
 }
 
-export type CursoPublico = Curso;
+/**
+ * Curso del catálogo. `tieneAcceso` lo añade el backend (`GET /cursos/catalogo`)
+ * para que la card marque los cursos ya poseídos ("Ver curso") en vez de "Comprar".
+ */
+export type CursoPublico = Curso & { tieneAcceso?: boolean };
 
 export interface CursoSlugResponse {
   curso: CursoDetail;

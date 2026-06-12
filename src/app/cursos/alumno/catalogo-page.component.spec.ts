@@ -76,6 +76,13 @@ describe('CatalogoPageComponent (compra COF 1-clic)', () => {
     expect(component.checkoutDialogVisible()).toBe(false);
   });
 
+  it('yaComprado=true para un curso con tieneAcceso del backend (acceso pre-existente)', () => {
+    // Sin compra en esta sesión: la propiedad del backend manda.
+    expect(component.yaComprado({ ...CURSO, tieneAcceso: true })).toBe(true);
+    expect(component.yaComprado({ ...CURSO, tieneAcceso: false })).toBe(false);
+    expect(component.yaComprado({ ...CURSO })).toBe(false);
+  });
+
   it('requiereCheckout → abre diálogo y "Completar en la tienda" abre WC con add-to-cart=wooProductId', () => {
     const res: ComprarCursoCofResponse = {
       success: false,

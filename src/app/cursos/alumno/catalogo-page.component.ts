@@ -63,9 +63,13 @@ export class CatalogoPageComponent implements OnInit {
     });
   }
 
-  /** true si el alumno ya posee el curso (compra de esta sesión). */
+  /**
+   * true si el alumno ya posee el curso: bien porque el backend lo marca
+   * (`tieneAcceso`, acceso pre-existente), bien por una compra de esta sesión.
+   * En ambos casos la card muestra "Ver curso" en vez de "Comprar".
+   */
   yaComprado(curso: CursoPublico): boolean {
-    return this.comprados().has(curso.id);
+    return curso.tieneAcceso === true || this.comprados().has(curso.id);
   }
 
   /** Abre el curso (tras comprarlo en esta sesión). */
