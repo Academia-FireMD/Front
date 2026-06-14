@@ -86,13 +86,21 @@ describe('CursoAdminEditComponent', () => {
     expect(controls).toContain('wooProductId');
   });
 
-  it('previewMode toggleado renderiza preview (no HTTP)', () => {
-    component.previewMode.set(true);
+  it('previsualizar() abre el curso real del alumno en una pestaña nueva', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     component.curso.set(buildCursoFixture());
-    expect(component.previewMode()).toBe(true);
-    const preview = component.previewSlugResponse();
-    expect(preview).not.toBeNull();
-    expect(preview!.tieneAcceso).toBe(true);
+    const slug = component.curso()!.slug;
+    component.previsualizar();
+    expect(openSpy).toHaveBeenCalledWith(`/app/cursos/${slug}`, '_blank');
+    openSpy.mockRestore();
+  });
+
+  it('previsualizar() no hace nada si el curso aún no tiene slug', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    component.curso.set(null);
+    component.previsualizar();
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
   });
 
   it('saveMetadata envía updatedAt en el payload PUT (optimistic locking)', async () => {

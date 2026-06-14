@@ -13,12 +13,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import {
-  FormBuilder,
-  FormsModule,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
@@ -26,23 +21,21 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DividerModule } from 'primeng/divider';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { CardModule } from 'primeng/card';
 import { TabViewModule } from 'primeng/tabview';
 import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
 import { WooCommerceProductPickerComponent } from '../../shared/components/woocommerce-product-picker/woocommerce-product-picker.component';
 import { Oposicion } from '../../shared/models/subscription.model';
-import { CursoDetailPageComponent } from '../alumno/curso-detail-page.component';
 import {
   Bloque,
   CursoCreatePayload,
   CursoDetail,
-  CursoSlugResponse,
   CursoUpdatePayload,
   EstadoCurso,
   Leccion,
@@ -91,22 +84,20 @@ type TagSeverity =
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    FormsModule,
     DragDropModule,
     ButtonModule,
     InputTextModule,
     InputTextareaModule,
     InputNumberModule,
-    InputSwitchModule,
     FloatLabelModule,
     CardModule,
     TabViewModule,
     TagModule,
+    TooltipModule,
     DividerModule,
     ConfirmDialogModule,
     AsyncButtonComponent,
     WooCommerceProductPickerComponent,
-    CursoDetailPageComponent,
     SeccionFormDialogComponent,
     LeccionFormDialogComponent,
     LeccionBloquesDialogComponent,
@@ -132,9 +123,6 @@ export class CursoAdminEditComponent implements OnInit {
   // Estado computado para el toolbar
   esNuevo = computed(() => this.cursoId() === null);
   estadoCurso = computed(() => this.curso()?.estado ?? null);
-
-  // T10 — Preview "Ver como alumno"
-  previewMode = signal(false);
 
   // Sección dialogs
   seccionDialogVisible = signal(false);
@@ -260,43 +248,17 @@ export class CursoAdminEditComponent implements OnInit {
   }
 
   /** Helper: payload preview para `<app-curso-detail-page>` con datos del form. */
-  previewSlugResponse = computed<CursoSlugResponse | null>(() => {
-    if (!this.previewMode()) return null;
-    const c = this.curso();
-    const formValue = this.metadataForm.getRawValue();
-    if (!c) {
-      // Curso nuevo aún sin secciones; preview no tiene mucho sentido pero
-      // no crasheamos.
-      return {
-        curso: {
-          id: 0,
-          titulo: formValue.titulo ?? '',
-          slug: formValue.slug ?? '',
-          descripcion: formValue.descripcion ?? '',
-          thumbnailUrl: formValue.thumbnailUrl ?? '',
-          duracionEstimadaMinutos:
-            formValue.duracionEstimadaMinutos ?? undefined,
-          estado: 'BORRADOR',
-          secciones: [],
-        },
-        tieneAcceso: true,
-      };
-    }
-    return {
-      curso: {
-        ...c,
-        titulo: formValue.titulo ?? c.titulo,
-        descripcion: formValue.descripcion ?? c.descripcion,
-        thumbnailUrl: formValue.thumbnailUrl ?? c.thumbnailUrl,
-        duracionEstimadaMinutos:
-          formValue.duracionEstimadaMinutos ?? c.duracionEstimadaMinutos,
-      },
-      tieneAcceso: true,
-    };
-  });
-
-  togglePreview = (): void => {
-    this.previewMode.update((v) => !v);
+  /**
+   * Previsualizar = abrir el curso REAL del alumno en una pestaña nueva. El
+   * backend da bypass de acceso a ADMIN/SUPERADMIN, así que el aula es
+   * totalmente navegable e interactiva (vídeo, texto, test/cuestionario con el
+   * motor real del alumno), sin necesidad de haber comprado el curso. Sustituye
+   * al antiguo preview estático ("Ver como alumno") que no dejaba interactuar.
+   */
+  previsualizar = (): void => {
+    const slug = this.curso()?.slug;
+    if (!slug) return;
+    window.open(`/app/cursos/${slug}`, '_blank');
   };
 
   /**
