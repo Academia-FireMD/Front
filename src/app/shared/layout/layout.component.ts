@@ -285,6 +285,12 @@ export class LayoutComponent {
             routerLink: '/app/facturacion',
             modulo: ModuloApp.FACTURACION,
           },
+          {
+            label: 'Cursos',
+            icon: 'pi pi-graduation-cap',
+            routerLink: '/app/cursos-admin',
+            modulo: ModuloApp.CURSOS,
+          },
         ],
       },
       {
@@ -369,28 +375,9 @@ export class LayoutComponent {
           },
         ],
       },
-      // Bug WL-admin-cursos (2026-05-25): las rutas /app/cursos-admin
-      // existen (lista + nuevo + editar) pero no estaban en el menú,
-      // por lo que admin no podía crear ni gestionar cursos desde la UI.
-      // Cada sub-curso puede tener lecciones tipo VIDEO con bunnyVideoId,
-      // que es la forma de subir "histórico de sesiones/tutorías".
-      {
-        label: 'Cursos',
-        collapsed: true,
-        modulo: ModuloApp.CURSOS,
-        items: [
-          {
-            label: 'Lista de cursos',
-            icon: 'pi pi-list',
-            routerLink: '/app/cursos-admin',
-          },
-          {
-            label: 'Crear curso',
-            icon: 'pi pi-plus',
-            routerLink: '/app/cursos-admin/nuevo',
-          },
-        ],
-      },
+      // Cursos (admin) vive como subítem único dentro de "Gestión" → "Cursos"
+      // (apunta al listado; "Crear curso" es un botón dentro del propio listado).
+      // Antes era un grupo propio con "Lista de cursos" + "Crear curso".
 
       {
         label: 'Perfil',

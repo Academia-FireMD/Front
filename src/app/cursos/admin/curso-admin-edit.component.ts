@@ -418,7 +418,6 @@ export class CursoAdminEditComponent implements OnInit {
         const updated = await firstValueFrom(
           this.cursosAdminService.updateSeccion(editando.id, {
             titulo: result.titulo,
-            orden: result.orden,
           }),
         );
         this.curso.update((prev) => {
@@ -434,7 +433,6 @@ export class CursoAdminEditComponent implements OnInit {
         const created = await firstValueFrom(
           this.cursosAdminService.createSeccion(id, {
             titulo: result.titulo,
-            orden: result.orden,
           }),
         );
         this.curso.update((prev) => {
@@ -556,7 +554,6 @@ export class CursoAdminEditComponent implements OnInit {
         // en los bloques ("Contenido").
         const updatePayload: LeccionUpdatePayload = {
           titulo: result.titulo,
-          orden: result.orden,
         };
         const updated = await firstValueFrom(
           this.cursosAdminService.updateLeccion(editando.id, updatePayload),
@@ -565,7 +562,6 @@ export class CursoAdminEditComponent implements OnInit {
       } else {
         const createPayload: LeccionCreatePayload = {
           titulo: result.titulo,
-          orden: result.orden,
         };
         const created = await firstValueFrom(
           this.cursosAdminService.createLeccion(seccionId, createPayload),

@@ -21,24 +21,24 @@ describe('LeccionFormDialogComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('arranca con un form de título/orden vacío e inválido', () => {
+  it('arranca con un form de título vacío e inválido', () => {
     expect(component.form.controls.titulo.value).toBe('');
     expect(component.form.valid).toBe(false);
   });
 
   it('título < 2 chars → inválido; ≥ 2 → válido', () => {
-    component.form.patchValue({ titulo: 'A', orden: 0 });
+    component.form.patchValue({ titulo: 'A' });
     expect(component.form.valid).toBe(false);
     component.form.patchValue({ titulo: 'Lección 1' });
     expect(component.form.valid).toBe(true);
   });
 
-  it('save() emite { titulo, orden }', () => {
-    component.form.patchValue({ titulo: 'Introducción', orden: 3 });
+  it('save() emite { titulo } (sin orden — lo autocalcula el backend)', () => {
+    component.form.patchValue({ titulo: 'Introducción' });
     let received: LeccionFormResult | null = null;
     component.saved.subscribe((r) => (received = r));
     component.save();
-    expect(received).toEqual({ titulo: 'Introducción', orden: 3 });
+    expect(received).toEqual({ titulo: 'Introducción' });
   });
 
   it('save() no emite si el form es inválido', () => {
@@ -48,7 +48,7 @@ describe('LeccionFormDialogComponent', () => {
     expect(emit).not.toHaveBeenCalled();
   });
 
-  it('editar una lección precarga título y orden', () => {
+  it('editar una lección precarga el título', () => {
     fixture.componentRef.setInput('leccion', {
       id: 5,
       titulo: 'Capítulo avanzado',
@@ -59,7 +59,6 @@ describe('LeccionFormDialogComponent', () => {
     component.ngOnChanges();
     expect(component.esEdicion()).toBe(true);
     expect(component.form.controls.titulo.value).toBe('Capítulo avanzado');
-    expect(component.form.controls.orden.value).toBe(2);
   });
 
   it('cerrar el diálogo emite (cancelled)', () => {

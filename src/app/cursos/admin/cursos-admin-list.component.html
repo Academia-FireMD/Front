@@ -1,11 +1,4 @@
-<header class="cursos-admin__header">
-  <div class="cursos-admin__header-text">
-    <h1>Cursos</h1>
-    <p class="cursos-admin__subtitle">
-      Crea, organiza y publica los cursos de la plataforma.
-    </p>
-  </div>
-</header>
+<p-confirmDialog></p-confirmDialog>
 
 <app-generic-list
   [fetchItems$]="fetchItems$"
@@ -13,46 +6,125 @@
   (onItemClick)="onRowClick($any($event))"
 >
   <div left-actions>
-    <span class="p-input-icon-left">
-      <i class="pi pi-search"></i>
+    <p-iconField iconPosition="left">
+      <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
       <input
         type="text"
         pInputText
-        class="w-full"
         placeholder="Buscar cursos"
         [value]="pagination().searchTerm"
         (input)="valueChanged($event)"
+        data-testid="buscar-cursos-input"
+        class="w-full"
       />
-    </span>
+    </p-iconField>
   </div>
 
   <div right-actions>
     <p-button
       label="Nuevo curso"
       icon="pi pi-plus"
-      (onClick)="navigateToNew()"
+      [link]="true"
+      (click)="navigateToNew()"
+      data-testid="nuevo-curso-btn"
     ></p-button>
   </div>
 
   <div empty-template>
-    <div class="text-center p-4">No hay cursos registrados.</div>
+    <div class="text-center p-4" data-testid="no-cursos-message">
+      No hay cursos registrados.
+    </div>
   </div>
 </app-generic-list>
 
 <ng-template #cursoItemTemplate let-item>
-  <div class="cursos-admin-list__row">
-    <div class="cursos-admin-list__row-main">
-      <div class="cursos-admin-list__title">{{ item.titulo }}</div>
-      <code class="cursos-admin-list__slug">{{ item.slug }}</code>
+  <div class="flex flex-row align-items-between">
+    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+      <div class="text-lg font-medium flex gap-2 align-items-center">
+        <strong
+          class="curso-titulo"
+          pTooltip="{{ item.titulo }}"
+          tooltipPosition="top"
+          >{{ item.titulo }}</strong
+        >
+        <p-tag
+          [value]="item.estado"
+          [severity]="estadoSeverity(item.estado)"
+        ></p-tag>
+      </div>
+      <span
+        class="descripcion"
+        pTooltip="{{ item.descripcion }}"
+        tooltipPosition="top"
+        >{{ item.descripcion }}</span
+      >
     </div>
-    <div class="cursos-admin-list__row-meta">
-      <p-tag
-        [value]="item.estado"
-        [severity]="estadoSeverity(item.estado)"
-      ></p-tag>
-      <span class="cursos-admin-list__date">{{
-        item.createdAt | date: "dd/MM/yyyy"
-      }}</span>
+
+    <div class="right-side col-3 flex align-items-center justify-content-end">
+      <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <span
+          class="text-xs hidden md:block unbreakable-text"
+          pTooltip="Fecha de creación: {{
+            item.createdAt | date: 'dd/MM/yyyy HH:mm'
+          }}"
+          tooltipPosition="top"
+        >
+          {{ item.createdAt | date: "short" }}</span
+        >
+
+        <div class="admin-controls flex">
+          @if (item.estado === "BORRADOR") {
+            <p-button
+              icon="pi pi-check"
+              severity="success"
+              [text]="true"
+              size="small"
+              pTooltip="Publicar curso"
+              data-testid="publicar-curso-btn"
+              (click)="$event.stopPropagation(); publicarCurso(item, $event)"
+            ></p-button>
+          }
+          @if (item.estado === "PUBLICADO") {
+            <p-button
+              icon="pi pi-inbox"
+              severity="warning"
+              [text]="true"
+              size="small"
+              pTooltip="Archivar curso"
+              data-testid="archivar-curso-btn"
+              (click)="$event.stopPropagation(); archivarCurso(item, $event)"
+            ></p-button>
+          }
+          @if (item.estado === "ARCHIVADO") {
+            <p-button
+              icon="pi pi-replay"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              pTooltip="Volver a borrador"
+              (click)="$event.stopPropagation(); despublicarCurso(item, $event)"
+            ></p-button>
+          }
+          <p-button
+            icon="pi pi-pencil"
+            severity="info"
+            [text]="true"
+            size="small"
+            pTooltip="Editar curso"
+            data-testid="editar-curso-btn"
+            (click)="$event.stopPropagation(); onRowClick(item)"
+          ></p-button>
+          <p-button
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            size="small"
+            pTooltip="Eliminar curso"
+            data-testid="eliminar-curso-btn"
+            (click)="$event.stopPropagation(); eliminarCurso(item, $event)"
+          ></p-button>
+        </div>
+      </div>
     </div>
   </div>
 </ng-template>
