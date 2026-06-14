@@ -12,7 +12,7 @@
     </div>
   }
 
-  <h4 class="progreso-panel__subtitle">Por barrio</h4>
+  <h4 class="progreso-panel__subtitle">Por parque</h4>
 
   @if (zonasSafe().length === 0) {
     <p class="progreso-panel__empty" data-testid="progreso-vacio">
@@ -32,7 +32,10 @@
               {{ z.callesDominadas }}/{{ z.totalCalles }}
             </span>
           </div>
-          <p-progressBar [value]="z.porcentaje" [showValue]="false"></p-progressBar>
+          <p-progressBar
+            [value]="z.porcentaje"
+            [showValue]="false"
+          ></p-progressBar>
         </li>
       }
     </ul>
