@@ -22,6 +22,15 @@ import type {
 export type ZonaTipo = 'DISTRITO' | 'BARRIO' | 'PARQUE';
 export type PoiTipo = 'PARQUE_BOMBEROS' | 'HOSPITAL' | 'OTRO';
 
+/** Categorías de POI del callejero v3 (calcar Raúl). */
+export type PoiCategoria =
+  | 'bomberos'
+  | 'hospital'
+  | 'parque'
+  | 'museo'
+  | 'lugar'
+  | 'calle';
+
 /** `[minLng, minLat, maxLng, maxLat]` (EPSG:4326). */
 export type Bbox = [number, number, number, number];
 
@@ -39,6 +48,22 @@ export interface Zona {
   nombre: string;
   tipo: ZonaTipo;
   geometria: Polygon | MultiPolygon;
+  /** Callejero v3 (Raúl): color de relleno + parque/coopera. */
+  color?: string | null;
+  parque?: string | null;
+  coopera?: string | null;
+  areaName?: string | null;
+}
+
+/** Un POI de la ciudad (todas las categorías) — `GET /callejero/ciudades/:id/pois`. */
+export interface PoiCiudad {
+  id: number;
+  nombre: string;
+  tipo: PoiTipo;
+  categoria: PoiCategoria;
+  lat: number;
+  lng: number;
+  zonaId: number | null;
 }
 
 export interface Calle {
@@ -218,6 +243,19 @@ export interface LeaderboardMiRango {
   rank: number;
   nota: number;
   tiempoTotalMs: number;
+}
+
+/** Respuesta de `POST /callejero/examen/resultado` (examen estilo Raúl). */
+export interface ResultadoExamenRaul {
+  intentoId: number;
+  creadoEn: string;
+  ciudadId: number;
+  totalRetos: number;
+  aciertos: number;
+  fallos: number;
+  nota: number;
+  aprobado: boolean;
+  puntos: number;
 }
 
 /** Respuesta de `GET /callejero/examen/leaderboard`. */

@@ -1,20 +1,14 @@
 import { Routes } from '@angular/router';
-import { CallejeroMapComponent } from './alumno/callejero-map.component';
-import { CallejeroExamenComponent } from './alumno/callejero-examen.component';
+import { CallejeroAppComponent } from './alumno/callejero-app.component';
 
 /**
- * Rutas standalone del módulo Callejero. Lazy-loaded desde
- * `app-routing.module.ts` bajo `/app/callejero` con `moduloGuard`.
+ * Rutas standalone del módulo Callejero (v3 — port del tool de Raúl).
+ * Lazy-loaded desde `app-routing.module.ts` bajo `/app/callejero`.
  */
 export const routes: Routes = [
   {
     path: '',
-    component: CallejeroMapComponent,
+    component: CallejeroAppComponent,
     data: { title: 'Callejero' },
-  },
-  {
-    path: 'examen',
-    component: CallejeroExamenComponent,
-    data: { title: 'Examen de callejero' },
   },
 ];

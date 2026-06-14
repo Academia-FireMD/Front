@@ -8,9 +8,11 @@ import {
   GenerarExamenResponse,
   HistorialExamenResponse,
   LeaderboardResponse,
+  PoiCiudad,
   RegistrarExamenDto,
   RegistrarProgresoDto,
   ResultadoExamen,
+  ResultadoExamenRaul,
   ResumenProgreso,
   Zona,
 } from '../models/callejero.model';
@@ -33,9 +35,27 @@ export class CallejeroService extends ApiBaseService {
     return this.get('/ciudades') as Observable<Ciudad[]>;
   }
 
-  /** GET /callejero/ciudades/:id/zonas — distritos/barrios con su contorno. */
+  /** GET /callejero/ciudades/:id/zonas — zonas de parque con color/parque/coopera. */
   listarZonas(ciudadId: number): Observable<Zona[]> {
     return this.get(`/ciudades/${ciudadId}/zonas`) as Observable<Zona[]>;
+  }
+
+  /** GET /callejero/ciudades/:id/pois — todos los POIs (todas las categorías). */
+  listarPoisCiudad(ciudadId: number): Observable<PoiCiudad[]> {
+    return this.get(`/ciudades/${ciudadId}/pois`) as Observable<PoiCiudad[]>;
+  }
+
+  /** POST /callejero/examen/resultado — persiste un examen estilo Raúl (sin timer). */
+  registrarResultadoExamen(dto: {
+    ciudadId: number;
+    totalRetos: number;
+    aciertos: number;
+    puntos: number;
+  }): Observable<ResultadoExamenRaul> {
+    return this.post(
+      '/examen/resultado',
+      dto,
+    ) as Observable<ResultadoExamenRaul>;
   }
 
   /** GET /callejero/zonas/:id/calles — calles (GeoJSON) + POIs de la zona. */
