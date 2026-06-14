@@ -19,7 +19,7 @@ import type {
  *  - GET  /callejero/ciudades/:id/progreso    → ResumenProgreso
  */
 
-export type ZonaTipo = 'DISTRITO' | 'BARRIO';
+export type ZonaTipo = 'DISTRITO' | 'BARRIO' | 'PARQUE';
 export type PoiTipo = 'PARQUE_BOMBEROS' | 'HOSPITAL' | 'OTRO';
 
 /** `[minLng, minLat, maxLng, maxLat]` (EPSG:4326). */
@@ -101,3 +101,103 @@ export type ModoCallejero =
   | 'ENCUENTRA_CALLE'
   | 'QUE_CALLE_ES'
   | 'UBICAR_POI';
+
+// ============================================================================
+// Modo Examen (Callejero v2 — Hito 2). Espejo del contrato `/callejero/examen/*`.
+// ============================================================================
+
+/** Tipo de reto: localizar (click en mapa) o identificar (4 opciones). */
+export type TipoRetoCallejero = 'LOCALIZAR' | 'IDENTIFICAR';
+
+/** Una opción de un reto de identificar. */
+export interface OpcionRetoExamen {
+  calleId: number;
+  nombre: string;
+}
+
+/**
+ * Un reto del examen. `opciones` solo viene en los de IDENTIFICAR. El cliente
+ * usa `calleId`/`nombre` para el feedback inmediato; la nota la calcula el
+ * backend desde el token firmado.
+ */
+export interface RetoExamen {
+  orden: number;
+  tipo: TipoRetoCallejero;
+  calleId: number;
+  nombre: string;
+  opciones?: OpcionRetoExamen[];
+}
+
+/** Respuesta de `POST /callejero/examen/generar`. */
+export interface GenerarExamenResponse {
+  token: string;
+  ciudadId: number;
+  zonaIds: number[];
+  totalRetos: number;
+  duracionRetoMs: number;
+  calles: Calle[];
+  retos: RetoExamen[];
+}
+
+/** Una respuesta del alumno a un reto (cuerpo de `registrar`). */
+export interface RespuestaExamenDto {
+  orden: number;
+  respuestaCalleId: number | null;
+  tiempoMs: number;
+  agotoTiempo: boolean;
+}
+
+/** Cuerpo de `POST /callejero/examen/registrar`. */
+export interface RegistrarExamenDto {
+  token: string;
+  tiempoTotalMs: number;
+  respuestas: RespuestaExamenDto[];
+}
+
+/** Desglose por reto que devuelve `registrar` (para resultado + repasar fallos). */
+export interface DetalleRetoResultado {
+  orden: number;
+  calleId: number;
+  calleNombre: string;
+  tipoReto: TipoRetoCallejero;
+  acertado: boolean;
+  tiempoMs: number;
+  agotoTiempo: boolean;
+}
+
+/** Respuesta de `POST /callejero/examen/registrar`. */
+export interface ResultadoExamen {
+  intentoId: number;
+  creadoEn: string;
+  ciudadId: number;
+  zonaIds: number[];
+  totalRetos: number;
+  aciertos: number;
+  fallos: number;
+  nota: number;
+  aprobado: boolean;
+  tiempoTotalMs: number;
+  detalle: DetalleRetoResultado[];
+}
+
+/** Un intento en el histórico. */
+export interface IntentoExamenHistorial {
+  id: number;
+  ciudadId: number;
+  zonaIds: number[];
+  totalRetos: number;
+  aciertos: number;
+  fallos: number;
+  nota: number;
+  aprobado: boolean;
+  tiempoTotalMs: number;
+  creadoEn: string;
+}
+
+/** Respuesta de `GET /callejero/examen/historial`. */
+export interface HistorialExamenResponse {
+  items: IntentoExamenHistorial[];
+  total: number;
+  page: number;
+  pageSize: number;
+}

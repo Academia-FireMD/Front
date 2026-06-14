@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import * as L from 'leaflet';
@@ -70,6 +71,7 @@ describe('CallejeroMapComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CallejeroMapComponent],
       providers: [
+        provideRouter([]),
         { provide: CallejeroService, useValue: mock },
         { provide: ToastrService, useValue: { info: jest.fn() } },
       ],
@@ -183,10 +185,7 @@ describe('CallejeroMapComponent', () => {
     expect(poi).not.toBeNull();
 
     // Click exactamente sobre el POI → acierto.
-    (component as any).resolverUbicarPoi(
-      L.latLng(poi!.lat, poi!.lng),
-      poi,
-    );
+    (component as any).resolverUbicarPoi(L.latLng(poi!.lat, poi!.lng), poi);
     expect(component.feedback()?.tipo).toBe('acierto');
 
     // Click lejano (~1km) → fallo.

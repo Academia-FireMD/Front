@@ -5,7 +5,11 @@ import { ApiBaseService } from '../../services/api-base.service';
 import {
   CallesZonaResponse,
   Ciudad,
+  GenerarExamenResponse,
+  HistorialExamenResponse,
+  RegistrarExamenDto,
   RegistrarProgresoDto,
+  ResultadoExamen,
   ResumenProgreso,
   Zona,
 } from '../models/callejero.model';
@@ -54,5 +58,35 @@ export class CallejeroService extends ApiBaseService {
     return this.get(
       `/ciudades/${ciudadId}/progreso`,
     ) as Observable<ResumenProgreso>;
+  }
+
+  // ── Modo Examen (Callejero v2 — Hito 2) ──────────────────────────────────
+
+  /** POST /callejero/examen/generar — genera un examen sobre el scope elegido. */
+  generarExamen(
+    ciudadId: number,
+    zonaIds: number[] = [],
+  ): Observable<GenerarExamenResponse> {
+    return this.post('/examen/generar', {
+      ciudadId,
+      zonaIds,
+    }) as Observable<GenerarExamenResponse>;
+  }
+
+  /** POST /callejero/examen/registrar — envía las respuestas y recibe la nota. */
+  registrarExamen(dto: RegistrarExamenDto): Observable<ResultadoExamen> {
+    return this.post('/examen/registrar', dto) as Observable<ResultadoExamen>;
+  }
+
+  /** GET /callejero/examen/historial — intentos del alumno (más reciente primero). */
+  historialExamen(
+    ciudadId?: number,
+    page = 1,
+  ): Observable<HistorialExamenResponse> {
+    const params: string[] = [`page=${page}`];
+    if (ciudadId != null) params.push(`ciudadId=${ciudadId}`);
+    return this.get(
+      `/examen/historial?${params.join('&')}`,
+    ) as Observable<HistorialExamenResponse>;
   }
 }
