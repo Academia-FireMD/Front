@@ -1,0 +1,298 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.examen {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1rem 0;
+  }
+
+  &__titulo {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  &__link {
+    font-size: 0.85rem;
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  &__intro {
+    color: #475569;
+    font-size: 0.95rem;
+    margin: 0 0 1rem;
+  }
+
+  &__campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+
+    label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #334155;
+    }
+  }
+
+  &__scope {
+    color: #64748b;
+  }
+
+  &__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+  }
+
+  &__cargando,
+  &__vacio {
+    color: #64748b;
+    text-align: center;
+    padding: 1.5rem 0;
+  }
+
+  // ---- Jugando ----
+  &__barra {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.4rem;
+  }
+
+  &__progreso-retos {
+    font-size: 0.95rem;
+    color: #334155;
+  }
+
+  &__aciertos {
+    color: #16a34a;
+  }
+
+  &__cronometro {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #2563eb;
+    min-width: 3ch;
+    text-align: right;
+
+    &--urgente {
+      color: #dc2626;
+      animation: pulso 1s ease-in-out infinite;
+    }
+  }
+
+  &__timerbar {
+    height: 8px;
+  }
+
+  &__instruccion {
+    margin: 0.75rem 0;
+    font-size: 1.05rem;
+    color: #1e293b;
+  }
+
+  &__chip {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    margin-right: 0.5rem;
+    color: #fff;
+
+    &--localizar {
+      background: #2563eb;
+    }
+    &--identificar {
+      background: #7c3aed;
+    }
+  }
+
+  &__mapa {
+    width: 100%;
+    height: 52vh;
+    min-height: 360px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+  }
+
+  &__opciones {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+  }
+
+  &__opcion {
+    width: 100%;
+  }
+
+  &__feedback {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-align: center;
+
+    &--acierto {
+      background: #dcfce7;
+      color: #166534;
+    }
+    &--fallo {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  }
+
+  // ---- Resultado ----
+  &__nota {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem 0 0.5rem;
+
+    &-valor {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    &-sobre {
+      font-size: 1.2rem;
+      color: #94a3b8;
+    }
+    &-veredicto {
+      margin-left: 1rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    &--aprobado {
+      color: #16a34a;
+    }
+    &--suspenso {
+      color: #dc2626;
+    }
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    margin: 1rem 0;
+    text-align: center;
+
+    div {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      padding: 0.6rem 0.3rem;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+    strong {
+      font-size: 1.25rem;
+      color: #1e293b;
+    }
+    span {
+      font-size: 0.78rem;
+      color: #64748b;
+    }
+  }
+
+  &__fallos {
+    margin-top: 0.5rem;
+
+    h4 {
+      margin: 0 0 0.5rem;
+      color: #991b1b;
+    }
+    ul {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+    li {
+      margin-bottom: 0.2rem;
+    }
+  }
+
+  &__fallo-tipo {
+    color: #94a3b8;
+    font-size: 0.8rem;
+  }
+
+  &__pleno {
+    text-align: center;
+    color: #16a34a;
+    font-weight: 600;
+  }
+
+  // ---- Histórico ----
+  &__lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &__intento {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+
+    &-nota {
+      font-size: 1.4rem;
+      font-weight: 800;
+      min-width: 2.5ch;
+      text-align: center;
+      color: #dc2626;
+    }
+    &--aprobado .examen__intento-nota {
+      color: #16a34a;
+    }
+    &-detalle {
+      display: flex;
+      flex-direction: column;
+      color: #475569;
+      font-size: 0.9rem;
+
+      small {
+        color: #94a3b8;
+      }
+    }
+    &-veredicto {
+      margin-left: auto;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+  }
+}
+
+@keyframes pulso {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}

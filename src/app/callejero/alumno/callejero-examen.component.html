@@ -1,0 +1,283 @@
+<div class="examen" data-testid="callejero-examen">
+  <!-- ====================== INICIO ====================== -->
+  @if (fase() === "inicio") {
+    <div class="examen__inicio">
+      <p-card>
+        <ng-template pTemplate="header">
+          <div class="examen__header">
+            <h2 class="examen__titulo">Examen de callejero</h2>
+            <a routerLink="/app/callejero" class="examen__link"
+              >← Volver a practicar</a
+            >
+          </div>
+        </ng-template>
+
+        <p class="examen__intro">
+          20 retos cronometrados (localizar e identificar calles),
+          15&nbsp;segundos por reto. Nota de 0 a 10; apruebas con un 5.
+        </p>
+
+        @if (loadingInicio()) {
+          <p class="examen__cargando">Cargando…</p>
+        } @else {
+          <div class="examen__campo">
+            <label>Ciudad</label>
+            <p-dropdown
+              [options]="ciudades()"
+              [ngModel]="ciudadSel()"
+              (ngModelChange)="seleccionarCiudad($event)"
+              optionLabel="nombre"
+              placeholder="Elige una ciudad"
+              [style]="{ width: '100%' }"
+              data-testid="examen-ciudad"
+            ></p-dropdown>
+          </div>
+
+          <div class="examen__campo">
+            <label>Parques (opcional — vacío = ciudad completa)</label>
+            <p-multiSelect
+              [options]="parques()"
+              [ngModel]="parquesSel()"
+              (ngModelChange)="parquesSel.set($event)"
+              optionLabel="nombre"
+              placeholder="Ciudad completa"
+              [style]="{ width: '100%' }"
+              [filter]="true"
+              data-testid="examen-parques"
+            ></p-multiSelect>
+            <small class="examen__scope"
+              >Examen sobre: <strong>{{ scopeLabel() }}</strong></small
+            >
+          </div>
+
+          <div class="examen__acciones">
+            <button
+              pButton
+              type="button"
+              [label]="generando() ? 'Generando…' : 'Empezar examen'"
+              [disabled]="!ciudadSel() || generando()"
+              (click)="empezar()"
+              data-testid="examen-empezar"
+            ></button>
+            <button
+              pButton
+              type="button"
+              class="p-button-outlined"
+              label="Ver histórico"
+              (click)="verHistorial()"
+              data-testid="examen-ver-historial"
+            ></button>
+          </div>
+        }
+      </p-card>
+    </div>
+  }
+
+  <!-- ====================== JUGANDO ====================== -->
+  @if (fase() === "jugando") {
+    <div class="examen__jugando">
+      <div class="examen__barra">
+        <div class="examen__progreso-retos" data-testid="examen-progreso">
+          Reto <strong>{{ retoIdx() + 1 }}</strong> / {{ totalRetos() }}
+          <span class="examen__aciertos"
+            >· {{ aciertosEnVivo() }} aciertos</span
+          >
+        </div>
+        <div
+          class="examen__cronometro"
+          [class.examen__cronometro--urgente]="segundosRestantes() <= 5"
+        >
+          {{ segundosRestantes() }}s
+        </div>
+        <button
+          pButton
+          type="button"
+          class="p-button-text p-button-sm"
+          label="Abandonar"
+          (click)="abandonar()"
+        ></button>
+      </div>
+      <p-progressBar
+        [value]="porcentajeTiempo()"
+        [showValue]="false"
+        styleClass="examen__timerbar"
+      ></p-progressBar>
+
+      @if (retoActual(); as reto) {
+        <div class="examen__instruccion" data-testid="examen-instruccion">
+          @if (reto.tipo === "LOCALIZAR") {
+            <span class="examen__chip examen__chip--localizar">Localiza</span>
+            Encuentra en el mapa: <strong>{{ reto.nombre }}</strong>
+          } @else {
+            <span class="examen__chip examen__chip--identificar"
+              >Identifica</span
+            >
+            ¿Qué calle es la resaltada en <strong>naranja</strong>?
+          }
+        </div>
+      }
+
+      <div #mapEl class="examen__mapa" data-testid="examen-mapa"></div>
+
+      @if (retoActual()?.tipo === "IDENTIFICAR") {
+        <div class="examen__opciones" data-testid="examen-opciones">
+          @for (op of opcionesQuiz(); track op.calleId) {
+            <button
+              pButton
+              type="button"
+              class="p-button-outlined examen__opcion"
+              [label]="op.nombre"
+              [disabled]="bloqueado()"
+              (click)="responderOpcion(op)"
+            ></button>
+          }
+        </div>
+      }
+
+      @if (feedback(); as fb) {
+        <div
+          class="examen__feedback"
+          [class.examen__feedback--acierto]="fb.tipo === 'acierto'"
+          [class.examen__feedback--fallo]="fb.tipo === 'fallo'"
+          data-testid="examen-feedback"
+        >
+          {{ fb.texto }}
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ====================== RESULTADO ====================== -->
+  @if (fase() === "resultado" && resultado(); as r) {
+    <div class="examen__resultado" data-testid="examen-resultado">
+      <p-card>
+        <div
+          class="examen__nota"
+          [class.examen__nota--aprobado]="r.aprobado"
+          [class.examen__nota--suspenso]="!r.aprobado"
+        >
+          <span class="examen__nota-valor" data-testid="examen-nota">{{
+            r.nota
+          }}</span>
+          <span class="examen__nota-sobre">/ 10</span>
+          <span class="examen__nota-veredicto">
+            {{ r.aprobado ? "¡Aprobado!" : "Suspenso" }}
+          </span>
+        </div>
+
+        <div class="examen__stats">
+          <div>
+            <strong>{{ r.aciertos }}</strong
+            ><span>aciertos</span>
+          </div>
+          <div>
+            <strong>{{ r.fallos }}</strong
+            ><span>fallos</span>
+          </div>
+          <div>
+            <strong>{{ r.totalRetos }}</strong
+            ><span>retos</span>
+          </div>
+          <div>
+            <strong>{{ formatTiempo(r.tiempoTotalMs) }}</strong
+            ><span>tiempo</span>
+          </div>
+        </div>
+
+        @if (detalleFallos.length > 0) {
+          <div class="examen__fallos">
+            <h4>Calles falladas ({{ detalleFallos.length }})</h4>
+            <ul>
+              @for (d of detalleFallos; track d.orden) {
+                <li>
+                  {{ d.calleNombre }}
+                  <span class="examen__fallo-tipo">
+                    {{
+                      d.tipoReto === "LOCALIZAR" ? "localizar" : "identificar"
+                    }}
+                    @if (d.agotoTiempo) {
+                      · sin tiempo
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          </div>
+        } @else {
+          <p class="examen__pleno">¡Pleno! No fallaste ninguna calle. 🎯</p>
+        }
+
+        <div class="examen__acciones">
+          <button
+            pButton
+            type="button"
+            label="Nuevo examen"
+            (click)="reintentar()"
+            data-testid="examen-reintentar"
+          ></button>
+          <button
+            pButton
+            type="button"
+            class="p-button-outlined"
+            label="Ver histórico"
+            (click)="verHistorial()"
+          ></button>
+          <button
+            pButton
+            type="button"
+            class="p-button-text"
+            label="Volver"
+            (click)="volverInicio()"
+          ></button>
+        </div>
+      </p-card>
+    </div>
+  }
+
+  <!-- ====================== HISTÓRICO ====================== -->
+  @if (fase() === "historial") {
+    <div class="examen__historial" data-testid="examen-historial">
+      <p-card>
+        <ng-template pTemplate="header">
+          <div class="examen__header">
+            <h2 class="examen__titulo">Tus exámenes</h2>
+            <button
+              pButton
+              type="button"
+              class="p-button-text"
+              label="← Volver"
+              (click)="volverInicio()"
+            ></button>
+          </div>
+        </ng-template>
+
+        @if (loadingHistorial()) {
+          <p class="examen__cargando">Cargando…</p>
+        } @else if (historial().length === 0) {
+          <p class="examen__vacio">
+            Aún no has hecho ningún examen. ¡Haz el primero!
+          </p>
+        } @else {
+          <ul class="examen__lista">
+            @for (it of historial(); track it.id) {
+              <li
+                class="examen__intento"
+                [class.examen__intento--aprobado]="it.aprobado"
+              >
+                <span class="examen__intento-nota">{{ it.nota }}</span>
+                <span class="examen__intento-detalle">
+                  {{ it.aciertos }}/{{ it.totalRetos }} aciertos ·
+                  {{ formatTiempo(it.tiempoTotalMs) }}
+                  <small>{{ it.creadoEn | date: "dd/MM/yyyy HH:mm" }}</small>
+                </span>
+                <span class="examen__intento-veredicto">
+                  {{ it.aprobado ? "Aprobado" : "Suspenso" }}
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </p-card>
+    </div>
+  }
+</div>
