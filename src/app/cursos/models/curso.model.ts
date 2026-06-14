@@ -333,7 +333,11 @@ export interface CursoUpdatePayload {
  */
 export interface LeccionCreatePayload {
   titulo: string;
-  orden: number;
+  /**
+   * Opcional: el backend autocalcula el orden (append) si no se envía. El orden
+   * se gestiona con el reorder (flechas/drag), no en el alta.
+   */
+  orden?: number;
   /**
    * Consolidación 2026-06-11: opcional. La lección es un contenedor de bloques;
    * el backend aplica `TEXTO` por defecto. Solo se envía para compat legacy.

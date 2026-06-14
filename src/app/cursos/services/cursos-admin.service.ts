@@ -29,7 +29,9 @@ import {
 
 interface SeccionCreatePayload {
   titulo: string;
-  orden: number;
+  // Opcional: el backend autocalcula el orden (append) si no se envía. El orden
+  // se gestiona con el reorder (flechas/drag), no en el alta.
+  orden?: number;
 }
 
 @Injectable({ providedIn: 'root' })

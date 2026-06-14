@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { ConfirmationService } from 'primeng/api';
 import { of } from 'rxjs';
 import { CursoAdmin } from '../models/curso.model';
 import { CursosAdminService } from '../services/cursos-admin.service';
@@ -12,6 +13,7 @@ describe('CursosAdminListComponent', () => {
   let fixture: ComponentFixture<CursosAdminListComponent>;
   let component: CursosAdminListComponent;
   let listSpy: jest.Mock;
+  let serviceMock: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     listSpy = jest.fn().mockReturnValue(
@@ -28,13 +30,23 @@ describe('CursosAdminListComponent', () => {
         pagination: { skip: 0, take: 10, searchTerm: '', count: 1 },
       }),
     );
+    serviceMock = {
+      list: listSpy,
+      publicar: jest.fn().mockReturnValue(of({})),
+      archivar: jest.fn().mockReturnValue(of({})),
+      despublicar: jest.fn().mockReturnValue(of({})),
+      remove: jest.fn().mockReturnValue(of(undefined)),
+    };
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, CursosAdminListComponent],
       providers: [
         ...COMMON_TEST_PROVIDERS,
         provideHttpClient(),
-        { provide: CursosAdminService, useValue: { list: listSpy } },
+        { provide: CursosAdminService, useValue: serviceMock },
+        // El mock de COMMON_TEST_PROVIDERS no expone `requireConfirmation$`, que
+        // el <p-confirmDialog> del template necesita al renderizar → usamos el real.
+        ConfirmationService,
       ],
     }).compileComponents();
 
@@ -86,5 +98,30 @@ describe('CursosAdminListComponent', () => {
     expect(component.estadoSeverity('BORRADOR')).toBe('warning');
     expect(component.estadoSeverity('PUBLICADO')).toBe('success');
     expect(component.estadoSeverity('ARCHIVADO')).toBe('secondary');
+  });
+
+  const curso: CursoAdmin = {
+    id: 7,
+    titulo: 'Curso X',
+    slug: 'curso-x',
+    estado: 'BORRADOR',
+  };
+
+  it('publicarCurso confirma y, al aceptar, llama al service y refresca', async () => {
+    const confirm = TestBed.inject(ConfirmationService);
+    const spy = jest.spyOn(confirm, 'confirm');
+    component.publicarCurso(curso, new Event('click'));
+    expect(spy).toHaveBeenCalled();
+    await spy.mock.calls[0][0].accept!();
+    expect(serviceMock['publicar']).toHaveBeenCalledWith(7);
+  });
+
+  it('eliminarCurso confirma y, al aceptar, llama a remove', async () => {
+    const confirm = TestBed.inject(ConfirmationService);
+    const spy = jest.spyOn(confirm, 'confirm');
+    component.eliminarCurso(curso, new Event('click'));
+    expect(spy).toHaveBeenCalled();
+    await spy.mock.calls[0][0].accept!();
+    expect(serviceMock['remove']).toHaveBeenCalledWith(7);
   });
 });

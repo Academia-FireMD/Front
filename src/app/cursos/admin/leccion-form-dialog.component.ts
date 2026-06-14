@@ -11,7 +11,6 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { Leccion } from '../models/curso.model';
 
@@ -24,7 +23,6 @@ import { Leccion } from '../models/curso.model';
  */
 export interface LeccionFormResult {
   titulo: string;
-  orden: number;
 }
 
 @Component({
@@ -37,7 +35,6 @@ export interface LeccionFormResult {
     DialogModule,
     ButtonModule,
     InputTextModule,
-    InputNumberModule,
   ],
   templateUrl: './leccion-form-dialog.component.html',
   styles: [
@@ -70,17 +67,18 @@ export class LeccionFormDialogComponent implements OnChanges {
 
   readonly esEdicion = computed(() => this.leccion() !== null);
 
+  // Solo título: el orden lo gestiona el reorder (flechas/drag) y el backend lo
+  // autocalcula al crear (evita el 500 por colisión con @@unique).
   form = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(2)]],
-    orden: [0, [Validators.required, Validators.min(0)]],
   });
 
   ngOnChanges(): void {
     const l = this.leccion();
     if (l) {
-      this.form.patchValue({ titulo: l.titulo, orden: l.orden });
+      this.form.patchValue({ titulo: l.titulo });
     } else {
-      this.form.reset({ titulo: '', orden: 0 });
+      this.form.reset({ titulo: '' });
     }
   }
 
@@ -95,6 +93,6 @@ export class LeccionFormDialogComponent implements OnChanges {
   save(): void {
     if (this.form.invalid) return;
     const raw = this.form.getRawValue();
-    this.saved.emit({ titulo: raw.titulo ?? '', orden: raw.orden ?? 0 });
+    this.saved.emit({ titulo: raw.titulo ?? '' });
   }
 }

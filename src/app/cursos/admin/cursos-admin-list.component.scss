@@ -1,71 +1,22 @@
-:host {
-  display: block;
-}
+// Reusa el estilo estandarizado de los listados admin (exámenes, preguntas,
+// flashcards, planificación…) → misma tipografía, espaciados y truncado.
+@import "../../shared/styles/list-styles.scss";
 
-.cursos-admin__header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-
-  h1 {
-    margin: 0;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--cursos-text, #1f2429);
+.left-side {
+  .flex.flex-column {
+    height: 100%;
   }
 }
 
-.cursos-admin__subtitle {
-  margin: 0.25rem 0 0;
-  color: var(--cursos-text-soft, #6b7280);
-  font-size: 0.92rem;
+.admin-controls {
+  gap: 0.05rem;
 }
 
-.cursos-admin-list__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 0.75rem;
-  gap: 1rem;
-  width: 100%;
-  border-radius: var(--cursos-radius-sm, 8px);
-  transition: background 0.15s ease;
-
-  &:hover {
-    background: var(--cursos-canvas, #f8f9fa);
+// Layout móvil: mismas reglas que el resto de listados.
+@media (max-width: 768px) {
+  .right-side {
+    .flex.flex-row.align-items-center.justify-content-end {
+      gap: 0.3rem;
+    }
   }
-}
-
-.cursos-admin-list__row-main {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  gap: 0.15rem;
-}
-
-.cursos-admin-list__title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--cursos-text, #1f2429);
-}
-
-.cursos-admin-list__slug {
-  font-size: 0.82rem;
-  color: var(--cursos-text-soft, #6b7280);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.cursos-admin-list__row-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-
-.cursos-admin-list__date {
-  font-size: 0.82rem;
-  color: var(--cursos-text-soft, #6b7280);
 }
