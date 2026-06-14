@@ -3,7 +3,10 @@
   [visible]="visible()"
   (visibleChange)="onVisibleChange($event)"
   [modal]="true"
-  [style]="{ width: '640px' }"
+  [style]="{ width: '90vw', maxWidth: '1100px', height: '88vh' }"
+  [contentStyle]="{ height: 'calc(88vh - 6rem)', overflow: 'auto' }"
+  [breakpoints]="{ '960px': '96vw', '640px': '100vw' }"
+  [maximizable]="true"
   [draggable]="false"
   [resizable]="false"
 >

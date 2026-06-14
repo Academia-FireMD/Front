@@ -5,21 +5,6 @@
     <div class="curso-edit__spinner">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
     </div>
-  } @else if (previewMode() && previewSlugResponse()) {
-    <div class="curso-edit__preview-bar">
-      <p-button
-        label="Volver al editor"
-        icon="pi pi-arrow-left"
-        severity="secondary"
-        (onClick)="togglePreview()"
-      />
-      <span><i class="pi pi-eye"></i> Vista previa — como alumno</span>
-    </div>
-    <app-curso-detail-page
-      [previewData]="previewSlugResponse()"
-      [previewMode]="true"
-      data-testid="curso-edit-preview"
-    ></app-curso-detail-page>
   } @else {
     <div class="grid p-2" [formGroup]="metadataForm">
       <div class="col-12 content">
@@ -80,18 +65,18 @@
                     [action]="despublicar"
                   ></app-async-button>
                 }
-                <div
-                  class="curso-edit__preview-toggle"
-                  data-testid="curso-edit-preview-toggle"
-                >
-                  <label for="ce-preview-toggle">Ver como alumno</label>
-                  <p-inputSwitch
-                    inputId="ce-preview-toggle"
-                    [ngModel]="previewMode()"
-                    [ngModelOptions]="{ standalone: true }"
-                    (ngModelChange)="togglePreview()"
-                  ></p-inputSwitch>
-                </div>
+                @if (!esNuevo()) {
+                  <p-button
+                    label="Previsualizar"
+                    icon="pi pi-eye"
+                    severity="secondary"
+                    styleClass="p-button-outlined"
+                    pTooltip="Abre el curso como alumno en una pestaña nueva (navegación libre)"
+                    tooltipPosition="bottom"
+                    (onClick)="previsualizar()"
+                    data-testid="curso-edit-previsualizar"
+                  ></p-button>
+                }
               }
             </div>
           </div>
