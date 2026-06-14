@@ -46,6 +46,28 @@
         ></button>
       }
     </div>
+
+    <!-- Capa base del mapa: callejero claro o satélite -->
+    <div class="callejero__capas" data-testid="selector-capa">
+      <button
+        type="button"
+        pButton
+        class="p-button-sm"
+        label="Calles"
+        [outlined]="capaBase() !== 'calles'"
+        (click)="cambiarCapaBase('calles')"
+        data-testid="capa-calles"
+      ></button>
+      <button
+        type="button"
+        pButton
+        class="p-button-sm"
+        label="Satélite"
+        [outlined]="capaBase() !== 'satelite'"
+        (click)="cambiarCapaBase('satelite')"
+        data-testid="capa-satelite"
+      ></button>
+    </div>
   </div>
 
   <div class="callejero__body">
@@ -85,14 +107,14 @@
           }
 
           <!-- Explorar -->
-          @if (modo() === 'EXPLORAR') {
+          @if (modo() === "EXPLORAR") {
             <p class="callejero__hint">
               Pasa el ratón o haz click sobre una calle para ver su nombre.
             </p>
           }
 
           <!-- Mapa mudo -->
-          @if (modo() === 'MAPA_MUDO') {
+          @if (modo() === "MAPA_MUDO") {
             <p class="callejero__hint">
               Identifica las calles de memoria. Cuando quieras, revélalas.
             </p>
@@ -106,7 +128,7 @@
           }
 
           <!-- Encuentra la calle X -->
-          @if (modo() === 'ENCUENTRA_CALLE') {
+          @if (modo() === "ENCUENTRA_CALLE") {
             @if (retoCalle(); as reto) {
               <p class="callejero__reto" data-testid="reto-encuentra">
                 Encuentra: <strong>{{ reto.nombre }}</strong>
@@ -123,7 +145,7 @@
           }
 
           <!-- ¿Qué calle es esta? -->
-          @if (modo() === 'QUE_CALLE_ES') {
+          @if (modo() === "QUE_CALLE_ES") {
             <p class="callejero__reto">
               ¿Qué calle está <strong>resaltada</strong> en el mapa?
             </p>
@@ -151,7 +173,7 @@
           }
 
           <!-- Ubicar POI -->
-          @if (modo() === 'UBICAR_POI') {
+          @if (modo() === "UBICAR_POI") {
             @if (retoPoi(); as poi) {
               <p class="callejero__reto" data-testid="reto-poi">
                 Haz click en la ubicación de: <strong>{{ poi.nombre }}</strong>
@@ -188,7 +210,10 @@
           <!-- Contador de sesión (gamificación) -->
           @if (esModoScoring()) {
             <div class="callejero__contador" data-testid="contador-sesion">
-              <span class="callejero__stat callejero__stat--ok" title="Aciertos">
+              <span
+                class="callejero__stat callejero__stat--ok"
+                title="Aciertos"
+              >
                 ✓ {{ aciertosSesion() }}
               </span>
               <span class="callejero__stat callejero__stat--ko" title="Fallos">

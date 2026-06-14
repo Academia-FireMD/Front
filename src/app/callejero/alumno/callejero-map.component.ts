@@ -29,13 +29,19 @@ import {
 import { ProgresoPanelComponent } from './components/progreso-panel.component';
 
 /** Atribución obligatoria (OSM ODbL + IGN CartoCiudad + CARTO basemap). */
-const ATRIBUCION =
-  '© OpenStreetMap contributors · © IGN CartoCiudad · © CARTO';
+const ATRIBUCION = '© OpenStreetMap contributors · © IGN CartoCiudad · © CARTO';
 /**
  * Tiles claros (CartoDB Positron): fondo gris neutro para que el callejero (las
  * calles en azul) resalte con fuerza, a diferencia del OSM estándar recargado.
  */
-const MAP_TILES = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const MAP_TILES =
+  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+/** Capa satélite (Esri World Imagery) para reconocer el terreno real. */
+const MAP_TILES_SAT =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ATRIBUCION_SAT =
+  'Tiles © Esri · Source: Esri, Maxar, Earthstar Geographics';
 
 /** Pausa (ms) entre acertar un reto y cargar el siguiente automáticamente. */
 const AUTO_AVANCE_MS = 1300;
@@ -142,6 +148,10 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
 
   // ---- Leaflet (imperativo, fuera de signals) ----
   private map?: L.Map;
+  /** Capa base actual (Leaflet tile layer), para poder cambiarla a satélite. */
+  private baseLayer?: L.TileLayer;
+  /** Capa base seleccionada: callejero claro (Positron) o satélite (Esri). */
+  readonly capaBase = signal<'calles' | 'satelite'>('calles');
   private capaCalles?: L.GeoJSON;
   private capaZona?: L.GeoJSON;
   private capaPois?: L.LayerGroup;
@@ -174,7 +184,7 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
       center: [39.47, -0.376], // Valencia centro (fallback)
       zoom: 14,
     });
-    L.tileLayer(MAP_TILES, {
+    this.baseLayer = L.tileLayer(MAP_TILES, {
       maxZoom: 19,
       subdomains: 'abcd',
       attribution: ATRIBUCION,
@@ -182,6 +192,24 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
     // Click en mapa vacío → modo Ubicar POI evalúa la proximidad.
     map.on('click', (e: L.LeafletMouseEvent) => this.onMapClick(e));
     this.map = map;
+  }
+
+  /** Cambia la capa base entre callejero (Positron) y satélite (Esri). */
+  cambiarCapaBase(capa: 'calles' | 'satelite'): void {
+    if (capa === this.capaBase() || !this.map) return;
+    this.capaBase.set(capa);
+    this.baseLayer?.remove();
+    this.baseLayer = L.tileLayer(
+      capa === 'satelite' ? MAP_TILES_SAT : MAP_TILES,
+      {
+        maxZoom: 19,
+        subdomains: capa === 'satelite' ? '' : 'abcd',
+        attribution: capa === 'satelite' ? ATRIBUCION_SAT : ATRIBUCION,
+      },
+    ).addTo(this.map);
+    // La capa base se añade al fondo; reordenar para que las calles/zonas (SVG
+    // overlay panes) sigan por encima — Leaflet ya las mantiene en panes
+    // superiores, así que no hace falta z-index manual.
   }
 
   // ============ Carga de datos ============
@@ -648,7 +676,10 @@ export class CallejeroMapComponent implements AfterViewInit, OnDestroy {
   }
 
   /** Tras un acierto/fallo, encadena el siguiente reto para que la práctica fluya. */
-  private programarAutoAvance(siguiente: () => void, ms = AUTO_AVANCE_MS): void {
+  private programarAutoAvance(
+    siguiente: () => void,
+    ms = AUTO_AVANCE_MS,
+  ): void {
     clearTimeout(this.autoAvanceTimer);
     this.autoAvanceTimer = setTimeout(() => siguiente(), ms);
   }
