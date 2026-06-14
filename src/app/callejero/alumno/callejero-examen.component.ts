@@ -25,6 +25,7 @@ import {
   Ciudad,
   DetalleRetoResultado,
   IntentoExamenHistorial,
+  LeaderboardResponse,
   RespuestaExamenDto,
   ResultadoExamen,
   RetoExamen,
@@ -41,7 +42,12 @@ const FEEDBACK_MS = 1300;
 /** Resolución del cronómetro (ms). */
 const TICK_MS = 100;
 
-type FaseExamen = 'inicio' | 'jugando' | 'resultado' | 'historial';
+type FaseExamen =
+  | 'inicio'
+  | 'jugando'
+  | 'resultado'
+  | 'historial'
+  | 'leaderboard';
 
 interface FeedbackEstado {
   tipo: 'acierto' | 'fallo';
@@ -126,10 +132,13 @@ export class CallejeroExamenComponent implements AfterViewInit, OnDestroy {
     Math.ceil(this.restanteMs() / 1000),
   );
 
-  // ---- Resultado / histórico ----
+  // ---- Resultado / histórico / leaderboard ----
   readonly resultado = signal<ResultadoExamen | null>(null);
   readonly historial = signal<IntentoExamenHistorial[]>([]);
   readonly loadingHistorial = signal<boolean>(false);
+  readonly leaderboard = signal<LeaderboardResponse | null>(null);
+  readonly loadingLeaderboard = signal<boolean>(false);
+  readonly optInSaving = signal<boolean>(false);
 
   readonly scopeLabel = computed(() => {
     const sel = this.parquesSel();
@@ -456,6 +465,38 @@ export class CallejeroExamenComponent implements AfterViewInit, OnDestroy {
         this.loadingHistorial.set(false);
       },
       error: () => this.loadingHistorial.set(false),
+    });
+  }
+
+  // ============ Leaderboard ============
+
+  verLeaderboard(): void {
+    const ciudad = this.ciudadSel();
+    if (!ciudad) return;
+    this.fase.set('leaderboard');
+    this.loadingLeaderboard.set(true);
+    this.service.leaderboardExamen(ciudad.id).subscribe({
+      next: (res) => {
+        this.leaderboard.set(res);
+        this.loadingLeaderboard.set(false);
+      },
+      error: () => this.loadingLeaderboard.set(false),
+    });
+  }
+
+  /** Cambia el opt-in (mostrar nombre real) y recarga el leaderboard. */
+  toggleOptIn(optIn: boolean): void {
+    if (this.optInSaving()) return;
+    this.optInSaving.set(true);
+    this.service.setLeaderboardOptIn(optIn).subscribe({
+      next: () => {
+        this.optInSaving.set(false);
+        this.verLeaderboard();
+      },
+      error: () => {
+        this.optInSaving.set(false);
+        this.toast.error('No se pudo guardar la preferencia.');
+      },
     });
   }
 

@@ -6,6 +6,7 @@ import {
   Ciudad,
   GenerarExamenResponse,
   HistorialExamenResponse,
+  LeaderboardResponse,
   ResultadoExamen,
   Zona,
 } from '../models/callejero.model';
@@ -72,6 +73,8 @@ function buildServiceMock() {
     generarExamen: jest.fn().mockReturnValue(of(generarResp)),
     registrarExamen: jest.fn(),
     historialExamen: jest.fn(),
+    leaderboardExamen: jest.fn(),
+    setLeaderboardOptIn: jest.fn(),
     _generarResp: generarResp,
   };
 }
@@ -222,6 +225,54 @@ describe('CallejeroExamenComponent', () => {
     expect(mock.historialExamen).toHaveBeenCalledWith(1);
     expect(component.historial()).toHaveLength(2);
     expect(component.loadingHistorial()).toBe(false);
+  });
+
+  it('verLeaderboard carga la clasificación de la ciudad', () => {
+    const lbResp: LeaderboardResponse = {
+      ciudadId: 1,
+      total: 2,
+      top: [
+        {
+          rank: 1,
+          displayName: 'Ana',
+          nota: 9,
+          tiempoTotalMs: 60000,
+          creadoEn: '2026-06-14T10:00:00Z',
+          esTuyo: false,
+        },
+        {
+          rank: 2,
+          displayName: 'Alumno 4F2A',
+          nota: 8,
+          tiempoTotalMs: 70000,
+          creadoEn: '2026-06-14T09:00:00Z',
+          esTuyo: true,
+        },
+      ],
+      miRango: { rank: 2, nota: 8, tiempoTotalMs: 70000 },
+      miOptIn: false,
+    };
+    mock.leaderboardExamen.mockReturnValue(of(lbResp));
+
+    component.verLeaderboard();
+
+    expect(component.fase()).toBe('leaderboard');
+    expect(mock.leaderboardExamen).toHaveBeenCalledWith(1);
+    expect(component.leaderboard()?.top).toHaveLength(2);
+    expect(component.loadingLeaderboard()).toBe(false);
+  });
+
+  it('toggleOptIn guarda la preferencia y recarga la clasificación', () => {
+    mock.setLeaderboardOptIn.mockReturnValue(of({ optIn: true }));
+    mock.leaderboardExamen.mockReturnValue(
+      of({ ciudadId: 1, total: 0, top: [], miRango: null, miOptIn: true }),
+    );
+
+    component.toggleOptIn(true);
+
+    expect(mock.setLeaderboardOptIn).toHaveBeenCalledWith(true);
+    expect(mock.leaderboardExamen).toHaveBeenCalled(); // recarga
+    expect(component.optInSaving()).toBe(false);
   });
 
   it('volverInicio resetea a la pantalla de inicio', () => {

@@ -201,3 +201,31 @@ export interface HistorialExamenResponse {
   page: number;
   pageSize: number;
 }
+
+/** Una entrada del leaderboard (mejor intento de un alumno). */
+export interface LeaderboardEntry {
+  rank: number;
+  /** Nombre real si el alumno hizo opt-in; si no, seudónimo ("Alumno XXXX"). */
+  displayName: string;
+  nota: number;
+  tiempoTotalMs: number;
+  creadoEn: string;
+  esTuyo: boolean;
+}
+
+/** Posición del alumno actual aunque esté fuera del top. */
+export interface LeaderboardMiRango {
+  rank: number;
+  nota: number;
+  tiempoTotalMs: number;
+}
+
+/** Respuesta de `GET /callejero/examen/leaderboard`. */
+export interface LeaderboardResponse {
+  ciudadId: number;
+  total: number;
+  top: LeaderboardEntry[];
+  miRango: LeaderboardMiRango | null;
+  /** Estado actual del opt-in del alumno (mostrar nombre real). */
+  miOptIn: boolean;
+}

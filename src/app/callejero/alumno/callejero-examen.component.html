@@ -67,6 +67,15 @@
               (click)="verHistorial()"
               data-testid="examen-ver-historial"
             ></button>
+            <button
+              pButton
+              type="button"
+              class="p-button-outlined"
+              label="Clasificación"
+              icon="pi pi-trophy"
+              (click)="verLeaderboard()"
+              data-testid="examen-ver-leaderboard"
+            ></button>
           </div>
         }
       </p-card>
@@ -225,6 +234,14 @@
           <button
             pButton
             type="button"
+            class="p-button-outlined"
+            label="Clasificación"
+            icon="pi pi-trophy"
+            (click)="verLeaderboard()"
+          ></button>
+          <button
+            pButton
+            type="button"
             class="p-button-text"
             label="Volver"
             (click)="volverInicio()"
@@ -276,6 +293,80 @@
               </li>
             }
           </ul>
+        }
+      </p-card>
+    </div>
+  }
+
+  <!-- ====================== CLASIFICACIÓN ====================== -->
+  @if (fase() === "leaderboard") {
+    <div class="examen__leaderboard" data-testid="examen-leaderboard">
+      <p-card>
+        <ng-template pTemplate="header">
+          <div class="examen__header">
+            <h2 class="examen__titulo">
+              Clasificación · {{ ciudadSel()?.nombre }}
+            </h2>
+            <button
+              pButton
+              type="button"
+              class="p-button-text"
+              label="← Volver"
+              (click)="volverInicio()"
+            ></button>
+          </div>
+        </ng-template>
+
+        @if (loadingLeaderboard()) {
+          <p class="examen__cargando">Cargando…</p>
+        }
+        @if (!loadingLeaderboard() && leaderboard(); as lb) {
+          <label class="examen__optin">
+            <input
+              type="checkbox"
+              [ngModel]="lb.miOptIn"
+              [disabled]="optInSaving()"
+              (ngModelChange)="toggleOptIn($event)"
+              data-testid="examen-optin"
+            />
+            Mostrar mi nombre real (si no, sales como un seudónimo)
+          </label>
+
+          @if (lb.top.length === 0) {
+            <p class="examen__vacio">
+              Aún no hay clasificación. ¡Sé el primero en examinarte!
+            </p>
+          } @else {
+            <ol class="examen__ranking">
+              @for (e of lb.top; track e.rank) {
+                <li
+                  class="examen__rank-item"
+                  [class.examen__rank-item--tuyo]="e.esTuyo"
+                  [attr.data-testid]="'rank-' + e.rank"
+                >
+                  <span class="examen__rank-pos">{{ e.rank }}</span>
+                  <span class="examen__rank-nombre">
+                    {{ e.displayName }}
+                    @if (e.esTuyo) {
+                      <strong>(tú)</strong>
+                    }
+                  </span>
+                  <span class="examen__rank-nota">{{ e.nota }}</span>
+                  <span class="examen__rank-tiempo">{{
+                    formatTiempo(e.tiempoTotalMs)
+                  }}</span>
+                </li>
+              }
+            </ol>
+
+            @if (lb.miRango && lb.miRango.rank > lb.top.length) {
+              <p class="examen__mirango" data-testid="examen-mirango">
+                Tu mejor puesto: <strong>#{{ lb.miRango.rank }}</strong> · nota
+                {{ lb.miRango.nota }} ·
+                {{ formatTiempo(lb.miRango.tiempoTotalMs) }}
+              </p>
+            }
+          }
         }
       </p-card>
     </div>

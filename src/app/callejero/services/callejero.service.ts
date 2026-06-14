@@ -7,6 +7,7 @@ import {
   Ciudad,
   GenerarExamenResponse,
   HistorialExamenResponse,
+  LeaderboardResponse,
   RegistrarExamenDto,
   RegistrarProgresoDto,
   ResultadoExamen,
@@ -88,5 +89,19 @@ export class CallejeroService extends ApiBaseService {
     return this.get(
       `/examen/historial?${params.join('&')}`,
     ) as Observable<HistorialExamenResponse>;
+  }
+
+  /** GET /callejero/examen/leaderboard — ranking de la ciudad (cohorte oposición). */
+  leaderboardExamen(ciudadId: number): Observable<LeaderboardResponse> {
+    return this.get(
+      `/examen/leaderboard?ciudadId=${ciudadId}`,
+    ) as Observable<LeaderboardResponse>;
+  }
+
+  /** POST /callejero/examen/leaderboard-optin — mostrar/ocultar el nombre real propio. */
+  setLeaderboardOptIn(optIn: boolean): Observable<{ optIn: boolean }> {
+    return this.post('/examen/leaderboard-optin', { optIn }) as Observable<{
+      optIn: boolean;
+    }>;
   }
 }
