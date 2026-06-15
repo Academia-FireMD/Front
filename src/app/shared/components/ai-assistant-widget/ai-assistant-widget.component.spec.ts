@@ -25,17 +25,17 @@ describe('AiAssistantWidgetComponent', () => {
       .componentInstance;
   }
 
-  function forbidden(reason?: string) {
+  function forbidden(reason?: string, requiredTier?: string) {
     return throwError(
       () =>
         new HttpErrorResponse({
           status: 403,
-          error: reason ? { reason } : {},
+          error: reason ? { reason, requiredTier } : {},
         }),
     );
   }
 
-  it('muestra el upsell cuando el acceso se deniega por TIER_TOO_LOW', async () => {
+  it('muestra el paywall cuando el acceso se deniega por TIER_TOO_LOW', async () => {
     const cmp = setup();
     httpGet.mockReturnValue(forbidden('TIER_TOO_LOW'));
 
@@ -43,10 +43,22 @@ describe('AiAssistantWidgetComponent', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(cmp.showUpsell()).toBe(true);
+    expect(cmp.paywall()).toBe(true);
   });
 
-  it('NO muestra upsell con NO_SUBSCRIPTION (oculto en silencio)', async () => {
+  it('captura el tier requerido del 403 para el copy del paywall', async () => {
+    const cmp = setup();
+    httpGet.mockReturnValue(forbidden('TIER_TOO_LOW', 'PREMIUM'));
+
+    cmp.ngOnInit();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(cmp.requiredTier()).toBe('PREMIUM');
+    expect(cmp.requisitoTexto()).toBe('Premium');
+  });
+
+  it('NO muestra paywall con NO_SUBSCRIPTION (oculto en silencio)', async () => {
     const cmp = setup();
     httpGet.mockReturnValue(forbidden('NO_SUBSCRIPTION'));
 
@@ -54,10 +66,10 @@ describe('AiAssistantWidgetComponent', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(cmp.showUpsell()).toBe(false);
+    expect(cmp.paywall()).toBe(false);
   });
 
-  it('NO muestra upsell con EXPIRED (oculto en silencio)', async () => {
+  it('NO muestra paywall con EXPIRED (oculto en silencio)', async () => {
     const cmp = setup();
     httpGet.mockReturnValue(forbidden('EXPIRED'));
 
@@ -65,10 +77,10 @@ describe('AiAssistantWidgetComponent', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(cmp.showUpsell()).toBe(false);
+    expect(cmp.paywall()).toBe(false);
   });
 
-  it('NO muestra upsell cuando el token se obtiene OK', async () => {
+  it('NO muestra paywall cuando el token se obtiene OK', async () => {
     const cmp = setup();
     httpGet.mockReturnValue(of({ token: 'jwt' }));
 
@@ -76,7 +88,7 @@ describe('AiAssistantWidgetComponent', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(cmp.showUpsell()).toBe(false);
+    expect(cmp.paywall()).toBe(false);
     cmp.ngOnDestroy();
   });
 });

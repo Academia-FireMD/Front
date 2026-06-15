@@ -218,6 +218,31 @@
       <div class="cj-overlay-carga">Cargando callejero…</div>
     }
 
+    <!-- ---------- Paywall: sin la suscripción que da acceso ---------- -->
+    @if (sinAcceso()) {
+      <div class="cj-paywall" data-testid="cj-paywall">
+        <div class="cj-paywall__card">
+          <div class="cj-paywall__lock"><i class="pi pi-lock"></i></div>
+          <h2>Callejero de Valencia</h2>
+          <p>
+            El callejero está disponible con la
+            <strong>suscripción de Valencia</strong>. Aún no la tienes en tu
+            cuenta.
+          </p>
+          <button
+            class="cj-btn cj-btn--rojo"
+            (click)="abrirTienda()"
+            data-testid="cj-paywall-cta"
+          >
+            Añadir suscripción
+          </button>
+          <small
+            >Practica calles, parques y zonas como en el examen real.</small
+          >
+        </div>
+      </div>
+    }
+
     <!-- ---------- Barra de pregunta (examen) ---------- -->
     @if (examOn() && retoActual(); as q) {
       <div class="cj-qbar" data-testid="cj-qbar">

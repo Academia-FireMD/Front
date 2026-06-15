@@ -13,6 +13,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import * as L from 'leaflet';
+import { environment } from '../../../environments/environment';
 import { CallejeroService } from '../services/callejero.service';
 import {
   Ciudad,
@@ -142,8 +143,20 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   readonly zonas = signal<Zona[]>([]);
   readonly pois = signal<PoiCiudad[]>([]);
   readonly cargando = signal<boolean>(true);
+  readonly cargaError = signal<boolean>(false);
   readonly tab = signal<TabKey>('mapa');
   readonly sidebarAbierto = signal<boolean>(false);
+
+  /**
+   * Sin acceso = sin ninguna ciudad del callejero accesible para sus
+   * suscripciones (entorno multi-sub: le falta, p.ej., la de Valencia). La
+   * segmentación por oposición del backend ya bloquea el dato; esto es la UX
+   * del paywall ("añade la suscripción").
+   */
+  readonly sinAcceso = computed(
+    () =>
+      !this.cargando() && !this.cargaError() && this.ciudades().length === 0,
+  );
 
   // ---- Capas (visibilidad) ----
   readonly baseActiva = signal<BaseKey>('calles');
@@ -284,14 +297,23 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
 
   private cargarCiudades(): void {
     this.cargando.set(true);
+    this.cargaError.set(false);
     this.service.listarCiudades().subscribe({
       next: (cs) => {
         this.ciudades.set(cs);
         if (cs.length > 0) this.seleccionarCiudad(cs[0]);
-        else this.cargando.set(false);
+        else this.cargando.set(false); // → sinAcceso() = true → paywall
       },
-      error: () => this.cargando.set(false),
+      error: () => {
+        this.cargaError.set(true);
+        this.cargando.set(false);
+      },
     });
+  }
+
+  /** CTA del paywall: añadir la suscripción que da acceso al callejero (tienda). */
+  abrirTienda(): void {
+    window.open(environment.wooCommerceUrl, '_blank');
   }
 
   seleccionarCiudad(ciudad: Ciudad | null): void {

@@ -197,6 +197,20 @@ describe('CallejeroAppComponent', () => {
     expect(component.feedback()?.ok).toBe(true);
   });
 
+  it('sin ciudades accesibles → paywall (sinAcceso)', async () => {
+    svc.listarCiudades.mockReturnValue(of([]));
+    const fx = TestBed.createComponent(CallejeroAppComponent);
+    fx.detectChanges();
+    const cmp = fx.componentInstance;
+    expect(cmp.cargando()).toBe(false);
+    expect(cmp.sinAcceso()).toBe(true);
+    fx.destroy();
+  });
+
+  it('con ciudad accesible → NO paywall', () => {
+    expect(component.sinAcceso()).toBe(false);
+  });
+
   it('verLeaderboard carga la clasificación', () => {
     component.verLeaderboard();
     expect(svc.leaderboardExamen).toHaveBeenCalledWith(1);
