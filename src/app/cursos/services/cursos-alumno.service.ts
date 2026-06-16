@@ -58,6 +58,22 @@ export class CursosAlumnoService extends ApiBaseService {
     ) as Observable<ComprarCursoCofResponse>;
   }
 
+  /**
+   * Descarga PROTEGIDA del documento de un bloque DOCUMENTO. El backend valida
+   * acceso al curso (`tieneAccesoOAdmin`) y devuelve el archivo como stream. No
+   * es una URL pública: el `AuthInterceptor` añade el Bearer token a esta
+   * petición HttpClient, igual que al resto. El caller crea un objectURL con el
+   * blob para descargar o mostrar en un visor inline (PDF).
+   */
+  descargarDocumento(bloqueId: number): Observable<Blob> {
+    return this.http
+      .get(`${environment.apiUrl}/cursos/bloques/${bloqueId}/documento`, {
+        withCredentials: true,
+        responseType: 'blob',
+      })
+      .pipe(catchError((err) => this.handleError(err))) as Observable<Blob>;
+  }
+
   upsertProgreso(leccionId: number, dto: UpsertProgresoDto): Observable<void> {
     return this.http
       .post<void>(

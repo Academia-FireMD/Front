@@ -96,4 +96,20 @@ describe('BloqueRenderComponent', () => {
       fixture.nativeElement.querySelector('app-bloque-cuestionario'),
     ).not.toBeNull();
   });
+
+  it('DOCUMENTO renderiza la tarjeta de documento (app-bloque-documento)', () => {
+    setBloque({
+      tipo: 'DOCUMENTO',
+      documentoNombre: 'temario.pdf',
+      documentoMime: 'application/pdf',
+      documentoTamanoBytes: 2048,
+    });
+    fixture.componentRef.setInput('preview', true);
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('app-bloque-documento'),
+    ).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('temario.pdf');
+    expect(fixture.nativeElement.textContent).toContain('Descargar');
+  });
 });

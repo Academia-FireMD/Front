@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CursoCardComponent } from './curso-card.component';
 import { Curso } from '../models/curso.model';
+import { Oposicion } from '../../shared/models/subscription.model';
 
 const baseCurso: Curso = {
   id: 1,
@@ -62,15 +63,56 @@ describe('CursoCardComponent', () => {
     expect(abrir).not.toHaveBeenCalled();
   });
 
-  it('muestra badge de oposición solo si es específica', () => {
+  it('muestra badges de relevancia solo para oposiciones específicas (no GENERAL)', () => {
     fixture.componentRef.setInput('curso', {
       ...baseCurso,
-      oposicion: 'VALENCIA_AYUNTAMIENTO',
+      relevancia: [Oposicion.GENERAL, Oposicion.VALENCIA_AYUNTAMIENTO],
     });
     fixture.componentRef.setInput('tieneAcceso', true);
     fixture.detectChanges();
-    expect(fixture.componentInstance.oposicionBadge()).toBe(
-      'VALENCIA AYUNTAMIENTO',
-    );
+    expect(fixture.componentInstance.oposicionBadges()).toEqual([
+      'Valencia Ayuntamiento',
+    ]);
+  });
+
+  it('relevancia vacía o solo GENERAL → sin badges', () => {
+    fixture.componentRef.setInput('curso', {
+      ...baseCurso,
+      relevancia: [Oposicion.GENERAL],
+    });
+    fixture.componentRef.setInput('tieneAcceso', true);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.oposicionBadges()).toEqual([]);
+  });
+
+  it('curso gratuito sin acceso → CTA "Acceder gratis" + badge Gratis', () => {
+    fixture.componentRef.setInput('curso', {
+      ...baseCurso,
+      esGratuito: true,
+      wooProductId: null,
+      precio: null,
+    });
+    fixture.componentRef.setInput('tieneAcceso', false);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.cta()).toBe('acceder-gratis');
+    expect(text()).toContain('Acceder gratis');
+    expect(text()).toContain('Gratis');
+  });
+
+  it('curso gratuito → CTA abre (no compra)', () => {
+    fixture.componentRef.setInput('curso', {
+      ...baseCurso,
+      esGratuito: true,
+      wooProductId: null,
+    });
+    fixture.componentRef.setInput('tieneAcceso', false);
+    fixture.detectChanges();
+    const comprar = jest.fn();
+    const abrir = jest.fn();
+    fixture.componentInstance.comprar.subscribe(comprar);
+    fixture.componentInstance.abrir.subscribe(abrir);
+    fixture.componentInstance.onCta(new Event('click'));
+    expect(abrir).toHaveBeenCalledTimes(1);
+    expect(comprar).not.toHaveBeenCalled();
   });
 });

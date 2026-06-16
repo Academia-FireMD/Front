@@ -51,10 +51,17 @@
   }
 }
 
-.badge-oposicion {
+.badges-oposicion {
   position: absolute;
   top: 0.6rem;
   left: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  max-width: calc(100% - 1.2rem);
+}
+
+.badge-oposicion {
   background: rgba(0, 0, 0, 0.62);
   color: #fff;
   font-size: 0.68rem;
@@ -63,6 +70,20 @@
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   text-transform: capitalize;
+}
+
+.badge-gratis {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: var(--green-500, #22c55e);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
 }
 
 .thumb-progress {

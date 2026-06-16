@@ -7,13 +7,18 @@ import {
   output,
 } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import {
+  OPOSICION_LABELS,
+  Oposicion,
+} from '../../shared/models/subscription.model';
 import { Curso } from '../models/curso.model';
 import { ProgressRingComponent } from './progress-ring.component';
 
 /**
  * Card de curso reutilizable (catálogo, mis cursos, "continuar"). Presentacional:
  * el caller decide qué pasa al abrir/comprar. CTA contextual:
- *  - sin acceso → "Comprar (1 clic)"
+ *  - curso gratuito sin acceso → "Acceder gratis"
+ *  - de pago sin acceso → "Comprar (1 clic)"
  *  - con acceso y progreso > 0 → "Continuar"
  *  - con acceso sin progreso → "Empezar"
  */
@@ -35,8 +40,14 @@ export class CursoCardComponent {
   abrir = output<void>();
   comprar = output<void>();
 
-  readonly cta = computed<'comprar' | 'continuar' | 'empezar'>(() => {
-    if (!this.tieneAcceso()) return 'comprar';
+  readonly esGratuito = computed(() => this.curso().esGratuito === true);
+
+  readonly cta = computed<
+    'comprar' | 'acceder-gratis' | 'continuar' | 'empezar'
+  >(() => {
+    if (!this.tieneAcceso()) {
+      return this.esGratuito() ? 'acceder-gratis' : 'comprar';
+    }
     return (this.progreso() ?? 0) > 0 ? 'continuar' : 'empezar';
   });
 
@@ -44,14 +55,22 @@ export class CursoCardComponent {
     () => this.tieneAcceso() && this.progreso() !== null,
   );
 
-  /** Oposición visible como badge solo si es específica (no GENERAL). */
-  readonly oposicionBadge = computed(() => {
-    const o = this.curso().oposicion;
-    return o && o !== 'GENERAL' ? o.replace(/_/g, ' ') : null;
+  /**
+   * Badges de relevancia: oposiciones específicas (no GENERAL). Vacío o solo
+   * GENERAL → ningún badge (visible para todas). Etiquetas legibles desde
+   * `OPOSICION_LABELS`.
+   */
+  readonly oposicionBadges = computed<string[]>(() => {
+    const validValues = Object.values(Oposicion) as string[];
+    return (this.curso().relevancia ?? [])
+      .filter((o) => validValues.includes(o) && o !== Oposicion.GENERAL)
+      .map((o) => OPOSICION_LABELS[o] ?? o.replace(/_/g, ' '));
   });
 
   onCta(event: Event): void {
     event.stopPropagation();
+    // "Comprar" → cobro 1-clic (lo gestiona el caller). El resto (gratis,
+    // continuar, empezar) → abrir el curso.
     if (this.cta() === 'comprar') this.comprar.emit();
     else this.abrir.emit();
   }

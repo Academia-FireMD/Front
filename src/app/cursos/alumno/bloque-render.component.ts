@@ -10,6 +10,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownComponent } from 'ngx-markdown';
 import { Bloque } from '../models/curso.model';
 import { BloqueCuestionarioComponent } from './bloque-cuestionario.component';
+import { BloqueDocumentoComponent } from './bloque-documento.component';
 import { BloqueTestInlineComponent } from './bloque-test-inline.component';
 
 /**
@@ -19,6 +20,7 @@ import { BloqueTestInlineComponent } from './bloque-test-inline.component';
  *  - TEXTO  → markdown.
  *  - TEST   → motor de tests embebido in situ (app-bloque-test-inline).
  *  - CUESTIONARIO → quiz propio autocorregido (app-bloque-cuestionario).
+ *  - DOCUMENTO → tarjeta de descarga protegida + visor PDF inline.
  */
 @Component({
   selector: 'app-bloque-render',
@@ -27,6 +29,7 @@ import { BloqueTestInlineComponent } from './bloque-test-inline.component';
     MarkdownComponent,
     BloqueTestInlineComponent,
     BloqueCuestionarioComponent,
+    BloqueDocumentoComponent,
   ],
   templateUrl: './bloque-render.component.html',
   styleUrl: './bloque-render.component.scss',

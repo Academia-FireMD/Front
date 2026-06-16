@@ -14,8 +14,15 @@
         <i class="pi pi-play-circle"></i>
       </div>
     }
-    @if (oposicionBadge()) {
-      <span class="badge-oposicion">{{ oposicionBadge() }}</span>
+    @if (esGratuito()) {
+      <span class="badge-gratis">Gratis</span>
+    }
+    @if (oposicionBadges().length) {
+      <div class="badges-oposicion">
+        @for (badge of oposicionBadges(); track badge) {
+          <span class="badge-oposicion">{{ badge }}</span>
+        }
+      </div>
     }
     @if (mostrarProgreso()) {
       <div class="thumb-progress">
@@ -36,7 +43,7 @@
           <i class="pi pi-clock"></i> {{ curso().duracionEstimadaMinutos }} min
         </span>
       }
-      @if (!tieneAcceso() && curso().precio != null) {
+      @if (!tieneAcceso() && !esGratuito() && curso().precio != null) {
         <span class="meta-item precio"
           >{{ curso().precio | number: "1.2-2" }} €</span
         >
@@ -55,6 +62,9 @@
       @switch (cta()) {
         @case ("comprar") {
           <i class="pi pi-bolt"></i><span>Comprar (1 clic)</span>
+        }
+        @case ("acceder-gratis") {
+          <i class="pi pi-unlock"></i><span>Acceder gratis</span>
         }
         @case ("continuar") {
           <i class="pi pi-play"></i><span>Continuar</span>

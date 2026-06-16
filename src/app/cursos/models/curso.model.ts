@@ -14,7 +14,12 @@ export type TipoLeccion = 'VIDEO' | 'TEST' | 'FLASHCARDS' | 'TEXTO';
  * combinables. FLASHCARDS NO es un tipo de bloque (era para memorizar).
  * CUESTIONARIO (quiz inline propio) llega en Fase 2.
  */
-export type TipoBloque = 'VIDEO' | 'TEXTO' | 'TEST' | 'CUESTIONARIO';
+export type TipoBloque =
+  | 'VIDEO'
+  | 'TEXTO'
+  | 'TEST'
+  | 'CUESTIONARIO'
+  | 'DOCUMENTO';
 
 /**
  * Pregunta de un bloque CUESTIONARIO. `respuestaCorrecta`/`explicacion` SOLO
@@ -44,6 +49,13 @@ export interface Bloque {
   dificultad?: Dificultad | null;
   esDeRepaso?: boolean;
   bloquePreguntas?: BloquePregunta[];
+  // Bloque DOCUMENTO (2026-06-16): archivo descargable/visualizable. La descarga
+  // es protegida vía backend (`GET /cursos/bloques/:id/documento`), no por URL
+  // pública: `documentoPath` es la ruta interna en Supabase, NO una URL servible.
+  documentoPath?: string | null;
+  documentoNombre?: string | null;
+  documentoMime?: string | null;
+  documentoTamanoBytes?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -92,7 +104,17 @@ export interface Curso {
    * el cache de WooCommerceProductCache al hacer create/update.
    */
   wooProductId?: number | null;
-  oposicion?: Oposicion | null;
+  /**
+   * Refactor 2026-06-16: reemplaza el antiguo `oposicion` (single). Oposiciones
+   * a las que va dirigido el curso. Vacío/`[GENERAL]` = visible para todas.
+   */
+  relevancia?: Oposicion[];
+  /**
+   * Curso gratuito (2026-06-16): no requiere producto WooCommerce ni compra.
+   * El backend lo marca con `tieneAcceso=true` en el catálogo si el alumno
+   * tiene relevancia compatible.
+   */
+  esGratuito?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   estado: EstadoCurso;
@@ -196,6 +218,12 @@ export interface BloqueCreatePayload {
   dificultad?: Dificultad;
   esDeRepaso?: boolean;
   preguntas?: BloquePreguntaPayload[];
+  // Bloque DOCUMENTO (2026-06-16): metadatos del archivo ya subido vía
+  // `POST /cursos/bloques/upload-documento`.
+  documentoPath?: string;
+  documentoNombre?: string;
+  documentoMime?: string;
+  documentoTamanoBytes?: number;
 }
 
 export interface BloqueUpdatePayload {
@@ -208,6 +236,11 @@ export interface BloqueUpdatePayload {
   dificultad?: Dificultad;
   esDeRepaso?: boolean;
   preguntas?: BloquePreguntaPayload[];
+  // Bloque DOCUMENTO (2026-06-16).
+  documentoPath?: string;
+  documentoNombre?: string;
+  documentoMime?: string;
+  documentoTamanoBytes?: number;
 }
 
 // ---- CUESTIONARIO: corrección cara-alumno ----
@@ -294,7 +327,10 @@ export interface CursoCreatePayload {
   descripcion?: string;
   /** Backend deriva precio. NO mandar en payload. */
   wooProductId?: number | null;
-  oposicion?: Oposicion;
+  /** Refactor 2026-06-16: reemplaza `oposicion` (single). */
+  relevancia?: Oposicion[];
+  /** Curso gratuito: no requiere producto WC. */
+  esGratuito?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
 }
@@ -303,7 +339,10 @@ export interface CursoUpdatePayload {
   titulo?: string;
   descripcion?: string;
   wooProductId?: number | null;
-  oposicion?: Oposicion;
+  /** Refactor 2026-06-16: reemplaza `oposicion` (single). */
+  relevancia?: Oposicion[];
+  /** Curso gratuito: no requiere producto WC. */
+  esGratuito?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   /**

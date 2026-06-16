@@ -26,6 +26,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { RadioButtonModule } from 'primeng/radiobutton';
+import { firstValueFrom } from 'rxjs';
 import { Dificultad } from '../../shared/models/pregunta.model';
 import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
 import { Oposicion } from '../../shared/models/subscription.model';
@@ -35,6 +36,7 @@ import {
   BloquePreguntaPayload,
   TipoBloque,
 } from '../models/curso.model';
+import { CursosAdminService } from '../services/cursos-admin.service';
 import { BunnyUploadComponent, UploadedEvent } from './bunny-upload.component';
 
 /**
@@ -57,6 +59,11 @@ export interface BloqueFormResult {
   dificultad?: Dificultad;
   esDeRepaso?: boolean;
   preguntas?: BloquePreguntaPayload[];
+  // Bloque DOCUMENTO (2026-06-16): metadatos del archivo subido.
+  documentoPath?: string;
+  documentoNombre?: string;
+  documentoMime?: string;
+  documentoTamanoBytes?: number;
 }
 
 // Tipos del FormArray de preguntas del CUESTIONARIO.
@@ -106,13 +113,18 @@ export class BloqueFormComponent implements OnChanges {
 
   private fb = inject(FormBuilder);
   private toast = inject(ToastrService);
+  private service = inject(CursosAdminService);
 
   readonly tipoOptions: { label: string; value: TipoBloque }[] = [
     { label: 'Vídeo', value: 'VIDEO' },
     { label: 'Texto', value: 'TEXTO' },
     { label: 'Test', value: 'TEST' },
     { label: 'Cuestionario', value: 'CUESTIONARIO' },
+    { label: 'Documento', value: 'DOCUMENTO' },
   ];
+
+  /** Estado de subida del documento (bloque DOCUMENTO). */
+  readonly subiendoDoc = signal(false);
 
   readonly dificultadOptions: DificultadOption[] = [
     { label: 'Todas las dificultades', value: null },
@@ -135,6 +147,11 @@ export class BloqueFormComponent implements OnChanges {
     esDeRepaso: [false],
     // CUESTIONARIO: preguntas propias (FormArray de FormGroup).
     preguntas: this.fb.array<PreguntaGroup>([]),
+    // DOCUMENTO: metadatos del archivo subido a Supabase vía el backend.
+    documentoPath: [null as string | null],
+    documentoNombre: [null as string | null],
+    documentoMime: [null as string | null],
+    documentoTamanoBytes: [null as number | null],
   });
 
   /** `app-tema-select` consume un FormControl directo (lee .value/.setValue). */
@@ -269,6 +286,17 @@ export class BloqueFormComponent implements OnChanges {
     if (tipo !== 'CUESTIONARIO') {
       this.preguntas.clear({ emitEvent: false });
     }
+    if (tipo !== 'DOCUMENTO') {
+      this.form.patchValue(
+        {
+          documentoPath: null,
+          documentoNombre: null,
+          documentoMime: null,
+          documentoTamanoBytes: null,
+        },
+        { emitEvent: false },
+      );
+    }
   }
 
   /** Reconstruye el FormArray de preguntas desde un bloque CUESTIONARIO. */
@@ -307,6 +335,10 @@ export class BloqueFormComponent implements OnChanges {
         numPreguntas: b.numPreguntas ?? 10,
         dificultad: b.dificultad ?? null,
         esDeRepaso: b.esDeRepaso ?? false,
+        documentoPath: b.documentoPath ?? null,
+        documentoNombre: b.documentoNombre ?? null,
+        documentoMime: b.documentoMime ?? null,
+        documentoTamanoBytes: b.documentoTamanoBytes ?? null,
       });
       this.tipoSeleccionado.set(b.tipo);
       this.applyValidatorsForTipo(b.tipo);
@@ -321,6 +353,10 @@ export class BloqueFormComponent implements OnChanges {
         numPreguntas: 10,
         dificultad: null,
         esDeRepaso: false,
+        documentoPath: null,
+        documentoNombre: null,
+        documentoMime: null,
+        documentoTamanoBytes: null,
       });
       this.tipoSeleccionado.set('VIDEO');
       this.applyValidatorsForTipo('VIDEO');
@@ -332,6 +368,60 @@ export class BloqueFormComponent implements OnChanges {
     if (event.duracionSegundos != null) {
       this.form.patchValue({ duracionSegundos: event.duracionSegundos });
     }
+  }
+
+  // ---- DOCUMENTO: subida / metadatos ----
+
+  /** Tamaño máximo cliente (espeja el límite del backend: 25 MB). */
+  private readonly MAX_DOC_BYTES = 25 * 1024 * 1024;
+
+  async onDocumentoSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0];
+    if (!file) return;
+    if (file.size > this.MAX_DOC_BYTES) {
+      this.toast.warning('El documento supera el máximo de 25 MB.');
+      input.value = '';
+      return;
+    }
+    this.subiendoDoc.set(true);
+    try {
+      const meta = await firstValueFrom(this.service.uploadDocumento(file));
+      this.form.patchValue({
+        documentoPath: meta.documentoPath,
+        documentoNombre: meta.documentoNombre,
+        documentoMime: meta.documentoMime,
+        documentoTamanoBytes: meta.documentoTamanoBytes,
+      });
+      this.toast.success('Documento subido.');
+    } catch {
+      this.toast.error('No se pudo subir el documento.');
+    } finally {
+      this.subiendoDoc.set(false);
+      input.value = ''; // permite re-subir el mismo archivo
+    }
+  }
+
+  quitarDocumento(): void {
+    this.form.patchValue({
+      documentoPath: null,
+      documentoNombre: null,
+      documentoMime: null,
+      documentoTamanoBytes: null,
+    });
+  }
+
+  /** Tamaño legible para mostrar el documento ya subido. */
+  formatBytes(bytes: number | null | undefined): string {
+    if (bytes == null || bytes <= 0) return '';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let value = bytes;
+    let i = 0;
+    while (value >= 1024 && i < units.length - 1) {
+      value /= 1024;
+      i++;
+    }
+    return `${value.toFixed(value < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
   }
 
   cancel(): void {
@@ -383,6 +473,16 @@ export class BloqueFormComponent implements OnChanges {
         result.preguntas = preguntas;
         break;
       }
+      case 'DOCUMENTO':
+        if (!raw.documentoPath) {
+          this.toast.warning('Sube un documento para el bloque.');
+          return;
+        }
+        result.documentoPath = raw.documentoPath;
+        result.documentoNombre = raw.documentoNombre ?? undefined;
+        result.documentoMime = raw.documentoMime ?? undefined;
+        result.documentoTamanoBytes = raw.documentoTamanoBytes ?? undefined;
+        break;
     }
     this.saved.emit(result);
   }

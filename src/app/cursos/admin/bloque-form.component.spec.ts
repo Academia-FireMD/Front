@@ -35,9 +35,15 @@ describe('BloqueFormComponent', () => {
     expect(component.form.controls.tipo.value).toBe('VIDEO');
   });
 
-  it('CUESTIONARIO es una opción creable (Fase 2)', () => {
+  it('CUESTIONARIO y DOCUMENTO son opciones creables', () => {
     const tipos = component.tipoOptions.map((o) => o.value);
-    expect(tipos).toEqual(['VIDEO', 'TEXTO', 'TEST', 'CUESTIONARIO']);
+    expect(tipos).toEqual([
+      'VIDEO',
+      'TEXTO',
+      'TEST',
+      'CUESTIONARIO',
+      'DOCUMENTO',
+    ]);
   });
 
   it('cambiar a TEST exige temaId y numPreguntas', () => {
@@ -258,6 +264,71 @@ describe('BloqueFormComponent', () => {
       expect(component.preguntas.length).toBe(1);
       component.form.controls.tipo.setValue('VIDEO');
       expect(component.preguntas.length).toBe(0);
+    });
+  });
+
+  describe('DOCUMENTO', () => {
+    it('save() sin documento subido NO emite + warning', () => {
+      const toast = TestBed.inject(ToastrService);
+      component.form.controls.tipo.setValue('DOCUMENTO');
+      const emit = jest.fn();
+      component.saved.subscribe(emit);
+      component.save();
+      expect(emit).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalled();
+    });
+
+    it('save() con documento emite los metadatos', () => {
+      component.form.controls.tipo.setValue('DOCUMENTO');
+      component.form.patchValue({
+        documentoPath: 'cursos/docs/x.pdf',
+        documentoNombre: 'temario.pdf',
+        documentoMime: 'application/pdf',
+        documentoTamanoBytes: 12345,
+      });
+      let received: BloqueFormResult | null = null;
+      component.saved.subscribe((r) => (received = r));
+      component.save();
+      expect(received).not.toBeNull();
+      expect(received!.tipo).toBe('DOCUMENTO');
+      expect(received!.documentoPath).toBe('cursos/docs/x.pdf');
+      expect(received!.documentoNombre).toBe('temario.pdf');
+      expect(received!.documentoMime).toBe('application/pdf');
+      expect(received!.documentoTamanoBytes).toBe(12345);
+    });
+
+    it('cambiar de DOCUMENTO a VIDEO limpia los metadatos del documento', () => {
+      component.form.controls.tipo.setValue('DOCUMENTO');
+      component.form.patchValue({
+        documentoPath: 'cursos/docs/x.pdf',
+        documentoNombre: 'temario.pdf',
+      });
+      component.form.controls.tipo.setValue('VIDEO');
+      expect(component.form.value.documentoPath).toBeNull();
+      expect(component.form.value.documentoNombre).toBeNull();
+    });
+
+    it('editar un bloque DOCUMENTO precarga sus metadatos', () => {
+      fixture.componentRef.setInput('bloque', {
+        id: 7,
+        leccionId: 1,
+        orden: 0,
+        tipo: 'DOCUMENTO',
+        documentoPath: 'cursos/docs/y.pdf',
+        documentoNombre: 'apuntes.pdf',
+        documentoMime: 'application/pdf',
+        documentoTamanoBytes: 999,
+      } as Bloque);
+      component.ngOnChanges();
+      expect(component.form.value.documentoNombre).toBe('apuntes.pdf');
+      expect(component.form.value.documentoTamanoBytes).toBe(999);
+    });
+
+    it('formatBytes da tamaño legible', () => {
+      expect(component.formatBytes(0)).toBe('');
+      expect(component.formatBytes(512)).toBe('512 B');
+      expect(component.formatBytes(1536)).toBe('1.5 KB');
+      expect(component.formatBytes(5 * 1024 * 1024)).toBe('5.0 MB');
     });
   });
 });

@@ -196,6 +196,61 @@
     </div>
   }
 
+  @if (tipoSeleccionado() === "DOCUMENTO") {
+    <div class="field" data-testid="documento-editor">
+      <label>Documento</label>
+      @if (form.controls.documentoPath.value) {
+        <div class="documento-actual" data-testid="documento-actual">
+          <i class="pi pi-file"></i>
+          <span class="documento-actual__nombre">{{
+            form.controls.documentoNombre.value || "Documento"
+          }}</span>
+          @if (form.controls.documentoTamanoBytes.value) {
+            <span class="documento-actual__tamano">
+              ({{ formatBytes(form.controls.documentoTamanoBytes.value) }})
+            </span>
+          }
+          <button
+            pButton
+            type="button"
+            icon="pi pi-trash"
+            class="p-button-text p-button-rounded p-button-sm p-button-danger"
+            title="Quitar documento"
+            (click)="quitarDocumento()"
+            data-testid="documento-quitar"
+          ></button>
+        </div>
+      }
+      <div class="documento-upload">
+        <input
+          #docInput
+          type="file"
+          hidden
+          accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.pptx,.xlsx,application/pdf,image/png,image/jpeg,image/webp"
+          (change)="onDocumentoSelected($event)"
+          [disabled]="subiendoDoc()"
+          data-testid="documento-input"
+        />
+        <p-button
+          [label]="
+            form.controls.documentoPath.value
+              ? 'Reemplazar documento'
+              : 'Subir documento'
+          "
+          icon="pi pi-upload"
+          severity="secondary"
+          [loading]="subiendoDoc()"
+          (onClick)="docInput.click()"
+          data-testid="documento-subir"
+        ></p-button>
+      </div>
+      <small class="bloque-form__hint">
+        PDF, imagen (png/jpg/webp), Word, PowerPoint o Excel. Máximo 25 MB. El
+        PDF se muestra además en un visor dentro del aula.
+      </small>
+    </div>
+  }
+
   <div class="bloque-form__actions">
     <p-button
       label="Cancelar"

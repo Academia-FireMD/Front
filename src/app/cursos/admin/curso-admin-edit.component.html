@@ -126,17 +126,49 @@
                   </div>
 
                   <div class="field">
-                    <label>Producto WooCommerce</label>
-                    <app-woocommerce-product-picker
-                      endpoint="cursos"
-                      formControlName="wooProductId"
-                      (selectionChange)="onWooProductSelected($event)"
-                      data-testid="curso-edit-wc-picker"
-                    ></app-woocommerce-product-picker>
+                    <label>Oposiciones (relevancia)</label>
+                    <app-oposicion-picker
+                      [allowAdd]="true"
+                      [oposiciones]="relevancia()"
+                      (updateSelection)="updateRelevancia($event)"
+                      data-testid="curso-edit-relevancia"
+                    ></app-oposicion-picker>
                     <small class="text-color-secondary">
-                      El precio se sincroniza desde WooCommerce automáticamente.
+                      Oposiciones a las que va dirigido. Vacío o "General" = lo
+                      ven todas.
                     </small>
                   </div>
+
+                  <div class="field field--switch">
+                    <div class="flex align-items-center gap-2">
+                      <p-inputSwitch
+                        formControlName="esGratuito"
+                        (onChange)="onEsGratuitoChange($event.checked)"
+                        data-testid="curso-edit-gratuito"
+                      ></p-inputSwitch>
+                      <label>Curso gratuito</label>
+                    </div>
+                    <small class="text-color-secondary">
+                      Sin compra: el alumno con oposición compatible accede
+                      gratis (no requiere producto WooCommerce).
+                    </small>
+                  </div>
+
+                  @if (!esGratuitoSig()) {
+                    <div class="field">
+                      <label>Producto WooCommerce</label>
+                      <app-woocommerce-product-picker
+                        endpoint="cursos"
+                        formControlName="wooProductId"
+                        (selectionChange)="onWooProductSelected($event)"
+                        data-testid="curso-edit-wc-picker"
+                      ></app-woocommerce-product-picker>
+                      <small class="text-color-secondary">
+                        El precio se sincroniza desde WooCommerce
+                        automáticamente.
+                      </small>
+                    </div>
+                  }
 
                   <div class="field field--full">
                     <label>Miniatura / portada del curso</label>

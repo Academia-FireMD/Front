@@ -21,6 +21,7 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DividerModule } from 'primeng/divider';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { FloatLabelModule } from 'primeng/floatlabel';
@@ -32,6 +33,7 @@ import { firstValueFrom } from 'rxjs';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
 import { WooCommerceProductPickerComponent } from '../../shared/components/woocommerce-product-picker/woocommerce-product-picker.component';
 import { Oposicion } from '../../shared/models/subscription.model';
+import { SharedModule } from '../../shared/shared.module';
 import {
   Bloque,
   CursoCreatePayload,
@@ -89,6 +91,7 @@ type TagSeverity =
     InputTextModule,
     InputTextareaModule,
     InputNumberModule,
+    InputSwitchModule,
     FloatLabelModule,
     CardModule,
     TabViewModule,
@@ -102,6 +105,8 @@ type TagSeverity =
     LeccionFormDialogComponent,
     LeccionBloquesDialogComponent,
     ImageUploadComponent,
+    // SharedModule aporta `<app-oposicion-picker>` (multiselect de relevancia).
+    SharedModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './curso-admin-edit.component.html',
@@ -151,29 +156,55 @@ export class CursoAdminEditComponent implements OnInit {
   }
 
   /**
-   * Oposición actual del curso. Pasada al picker de tema dentro del leccion
-   * dialog (T11.1 / D6).
+   * Oposición que se pasa al `<app-tema-select>` del bloque TEST para filtrar
+   * temas. Refactor 2026-06-16: deriva de `relevancia` (el campo single
+   * `oposicion` se eliminó). Devuelve la PRIMERA oposición específica
+   * (no GENERAL); `null` si la relevancia es vacía o solo GENERAL.
    *
-   * HIGH-3 (codex review): validamos membresía del enum antes de devolverla.
-   * El backend devuelve el campo como string; si por algún drift de DTO
-   * llega un valor desconocido, preferimos devolver null que pasarle al
-   * picker un valor que rompería `OPOSICION_LABELS[...]` undefined.
+   * Se lee del FormControl `relevancia` para reflejar la selección en vivo del
+   * admin (no solo el curso cargado). Validamos membresía del enum antes de
+   * devolverla para no romper `OPOSICION_LABELS[...]` con un valor desconocido.
    */
   oposicionCurso = computed<Oposicion | null>(() => {
-    const raw = this.curso()?.oposicion;
-    if (!raw) return null;
     const validValues = Object.values(Oposicion) as string[];
-    return validValues.includes(raw as string) ? (raw as Oposicion) : null;
+    const especificas = this.relevancia().filter(
+      (o): o is Oposicion => validValues.includes(o) && o !== Oposicion.GENERAL,
+    );
+    return especificas.length > 0 ? especificas[0] : null;
   });
+
+  /** Relevancia seleccionada (multiselect `<app-oposicion-picker>`). */
+  relevancia = signal<Oposicion[]>([]);
 
   metadataForm = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(2)]],
     slug: ['', Validators.required],
     descripcion: [''],
     wooProductId: [null as number | null],
+    esGratuito: [false],
     thumbnailUrl: [''],
     duracionEstimadaMinutos: [null as number | null],
   });
+
+  /** Aplica la selección del `<app-oposicion-picker>` al estado del form. */
+  updateRelevancia(oposiciones: Oposicion[]): void {
+    this.relevancia.set(oposiciones);
+    this.metadataForm.markAsDirty();
+  }
+
+  /**
+   * Signal del toggle "Curso gratuito" para que el template oculte el picker de
+   * producto WooCommerce reactivamente. Se actualiza por `(onChange)` del switch.
+   */
+  esGratuitoSig = signal(false);
+
+  onEsGratuitoChange(value: boolean): void {
+    this.esGratuitoSig.set(value);
+    // Al marcar gratuito, desvinculamos el producto WC del form (no se exige).
+    if (value) {
+      this.metadataForm.controls.wooProductId.setValue(null);
+    }
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -190,11 +221,14 @@ export class CursoAdminEditComponent implements OnInit {
     try {
       const data = await firstValueFrom(this.cursosAdminService.getCurso(id));
       this.curso.set(data);
+      this.relevancia.set(data.relevancia ?? []);
+      this.esGratuitoSig.set(data.esGratuito ?? false);
       this.metadataForm.patchValue({
         titulo: data.titulo,
         slug: data.slug,
         descripcion: data.descripcion ?? '',
         wooProductId: data.wooProductId ?? null,
+        esGratuito: data.esGratuito ?? false,
         thumbnailUrl: data.thumbnailUrl ?? '',
         duracionEstimadaMinutos: data.duracionEstimadaMinutos ?? null,
       });
@@ -279,10 +313,14 @@ export class CursoAdminEditComponent implements OnInit {
           );
           return;
         }
+        const esGratuito = !!raw.esGratuito;
         const payload: CursoUpdatePayload = {
           titulo: raw.titulo ?? undefined,
           descripcion: raw.descripcion ?? undefined,
-          wooProductId: raw.wooProductId ?? null,
+          // Curso gratuito → sin producto WC (se desvincula al guardar).
+          wooProductId: esGratuito ? null : (raw.wooProductId ?? null),
+          relevancia: this.relevancia(),
+          esGratuito,
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
           updatedAt: c.updatedAt,
@@ -293,11 +331,14 @@ export class CursoAdminEditComponent implements OnInit {
         this.curso.update((prev) => (prev ? { ...prev, ...updated } : prev));
         this.toast.success('Metadatos guardados correctamente');
       } else {
+        const esGratuito = !!raw.esGratuito;
         const createPayload: CursoCreatePayload = {
           titulo: raw.titulo ?? '',
           slug: raw.slug ?? '',
           descripcion: raw.descripcion ?? undefined,
-          wooProductId: raw.wooProductId ?? null,
+          wooProductId: esGratuito ? null : (raw.wooProductId ?? null),
+          relevancia: this.relevancia(),
+          esGratuito,
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
         };

@@ -183,6 +183,31 @@ export class CursosAdminService extends ApiBaseService {
   }
 
   /**
+   * Sube el documento de un bloque DOCUMENTO a Supabase vía el backend (admin
+   * only). Devuelve los metadatos que el form persiste en el bloque. El archivo
+   * NO queda en una URL pública: se sirve protegido por
+   * `GET /cursos/bloques/:id/documento` con check de acceso al curso.
+   * Formatos: pdf, png/jpg/webp, docx, pptx, xlsx; máx 25 MB.
+   */
+  uploadDocumento(file: File): Observable<{
+    documentoPath: string;
+    documentoNombre: string;
+    documentoMime: string;
+    documentoTamanoBytes: number;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{
+      documentoPath: string;
+      documentoNombre: string;
+      documentoMime: string;
+      documentoTamanoBytes: number;
+    }>(`${environment.apiUrl}/cursos/bloques/upload-documento`, formData, {
+      withCredentials: true,
+    });
+  }
+
+  /**
    * Refactor 2026-05-25 (T14) — productos categoría CURSO desde cache backend.
    * Lee de BD (WooCommerceProductCache) sincronizado por cron horario. Admin
    * only en el backend (RolesGuard).

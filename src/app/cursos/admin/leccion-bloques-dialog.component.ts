@@ -83,6 +83,7 @@ export class LeccionBloquesDialogComponent {
     TEXTO: { label: 'Texto', icon: 'pi pi-align-left' },
     TEST: { label: 'Test', icon: 'pi pi-question-circle' },
     CUESTIONARIO: { label: 'Cuestionario', icon: 'pi pi-list-check' },
+    DOCUMENTO: { label: 'Documento', icon: 'pi pi-file' },
   };
 
   readonly leccionTitulo = computed(() => this.leccion()?.titulo ?? 'Lección');
@@ -125,6 +126,8 @@ export class LeccionBloquesDialogComponent {
         const n = b.bloquePreguntas?.length ?? 0;
         return `${n} ${n === 1 ? 'pregunta' : 'preguntas'}`;
       }
+      case 'DOCUMENTO':
+        return b.documentoNombre || 'Documento';
     }
   }
 
@@ -167,6 +170,10 @@ export class LeccionBloquesDialogComponent {
           dificultad: result.dificultad,
           esDeRepaso: result.esDeRepaso,
           preguntas: result.preguntas,
+          documentoPath: result.documentoPath,
+          documentoNombre: result.documentoNombre,
+          documentoMime: result.documentoMime,
+          documentoTamanoBytes: result.documentoTamanoBytes,
         };
         const updated = await firstValueFrom(
           this.service.updateBloque(editando.id, payload),
@@ -187,6 +194,10 @@ export class LeccionBloquesDialogComponent {
           dificultad: result.dificultad,
           esDeRepaso: result.esDeRepaso,
           preguntas: result.preguntas,
+          documentoPath: result.documentoPath,
+          documentoNombre: result.documentoNombre,
+          documentoMime: result.documentoMime,
+          documentoTamanoBytes: result.documentoTamanoBytes,
         };
         const created = await firstValueFrom(
           this.service.createBloque(leccionId, payload),

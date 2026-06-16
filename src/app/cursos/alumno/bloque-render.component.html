@@ -45,5 +45,12 @@
         (completado)="completado.emit()"
       ></app-bloque-cuestionario>
     }
+
+    @case ("DOCUMENTO") {
+      <app-bloque-documento
+        [bloque]="bloque()"
+        [preview]="preview()"
+      ></app-bloque-documento>
+    }
   }
 </div>
