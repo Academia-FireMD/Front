@@ -4,30 +4,6 @@
   gap: 1rem;
 }
 
-.bloques-empty {
-  text-align: center;
-  padding: 2rem 1rem;
-  color: var(--cursos-text-soft, #6b7280);
-  border: 1px dashed var(--cursos-border, #e9ecef);
-  border-radius: var(--cursos-radius, 12px);
-
-  i {
-    font-size: 1.75rem;
-    color: var(--cursos-brand, #bb292a);
-    margin-bottom: 0.5rem;
-  }
-
-  p {
-    margin: 0.25rem 0;
-    font-weight: 600;
-    color: var(--cursos-text, #1f2429);
-  }
-
-  small {
-    display: block;
-  }
-}
-
 .bloques-list {
   list-style: none;
   margin: 0;
@@ -108,8 +84,148 @@
   transition: transform 150ms cubic-bezier(0, 0, 0.2, 1);
 }
 
-.bloques-add {
-  align-self: flex-start;
+// ---- Paleta de tipos (drag&drop para construir la lección) ----
+.bloques-paleta {
+  border: 1px solid var(--cursos-border, #e9ecef);
+  border-radius: var(--cursos-radius, 12px);
+  background: var(--cursos-surface-soft, #f8f9fb);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  &__hint {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--cursos-text-soft, #6b7280);
+
+    i {
+      color: var(--cursos-brand, #bb292a);
+    }
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+.paleta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--cursos-border, #e9ecef);
+  border-radius: 999px;
+  background: var(--cursos-surface, #fff);
+  color: var(--cursos-text, #1f2429);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: grab;
+  user-select: none;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
+
+  i {
+    font-size: 0.95rem;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--cursos-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.1));
+    border-color: var(--chip-color, var(--cursos-brand, #bb292a));
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  // Color de acento por tipo (icono).
+  i {
+    color: var(--chip-color, var(--cursos-brand, #bb292a));
+  }
+
+  &--preview {
+    box-shadow: var(--cursos-shadow-hover, 0 6px 16px rgba(0, 0, 0, 0.18));
+    background: var(--chip-soft, var(--cursos-brand-soft, #fbe9e9));
+    border-color: var(--chip-color, var(--cursos-brand, #bb292a));
+  }
+}
+
+// Paleta de colores por tipo (chip + icono de la fila del bloque).
+.paleta-chip,
+.bloque-row__icon {
+  &[data-tipo="VIDEO"] {
+    --chip-color: #bb292a;
+    --chip-soft: #fbe9e9;
+  }
+  &[data-tipo="TEXTO"] {
+    --chip-color: #2563eb;
+    --chip-soft: #e8effd;
+  }
+  &[data-tipo="TEST"] {
+    --chip-color: #7c3aed;
+    --chip-soft: #f0e9fd;
+  }
+  &[data-tipo="CUESTIONARIO"] {
+    --chip-color: #059669;
+    --chip-soft: #e4f5ee;
+  }
+  &[data-tipo="DOCUMENTO"] {
+    --chip-color: #d97706;
+    --chip-soft: #fbf0dd;
+  }
+}
+
+// El icono de la fila del bloque usa el color/fondo del tipo.
+.bloque-row__icon[data-tipo] {
+  background: var(--chip-soft, var(--cursos-brand-soft, #fbe9e9));
+  color: var(--chip-color, var(--cursos-brand, #bb292a));
+}
+
+// La pila vacía es una zona de drop visible.
+.bloques-list--vacia {
+  min-height: 96px;
+  border: 1.5px dashed var(--cursos-border, #d9dde3);
+  border-radius: var(--cursos-radius, 12px);
+  padding: 0.5rem;
+}
+
+.bloques-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.15rem;
+  padding: 1.25rem 1rem;
+  color: var(--cursos-text-soft, #6b7280);
+
+  i {
+    font-size: 1.5rem;
+    color: var(--cursos-brand, #bb292a);
+    margin-bottom: 0.25rem;
+  }
+
+  p {
+    margin: 0;
+    font-weight: 600;
+    color: var(--cursos-text, #1f2429);
+  }
+}
+
+// Resaltado cuando arrastras un chip sobre la pila.
+.bloques-list.cdk-drop-list-receiving,
+.bloques-list.cdk-drop-list-dragging {
+  border-color: var(--cursos-brand, #bb292a);
+  background: var(--cursos-brand-soft, #fbe9e9);
 }
 
 .bloque-form-wrap {

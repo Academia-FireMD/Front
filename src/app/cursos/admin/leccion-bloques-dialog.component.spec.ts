@@ -107,11 +107,25 @@ describe('LeccionBloquesDialogComponent', () => {
     ).toBe('12 preguntas · repaso');
   });
 
-  it('openAdd() pone modo form sin bloque en edición', () => {
+  it('addTipo() pone modo form sin bloque en edición y preselecciona el tipo', () => {
     setLeccion(leccion([]));
-    component.openAdd();
+    component.addTipo('TEXTO');
     expect(component.mode()).toBe('form');
     expect(component.editando()).toBeNull();
+    expect(component.nuevoTipo()).toBe('TEXTO');
+  });
+
+  it('drop() de un chip de la paleta abre el form con ese tipo', async () => {
+    setLeccion(leccion([]));
+    await component.drop({
+      previousContainer: { id: 'paleta' },
+      container: { id: 'stack' },
+      item: { data: 'CUESTIONARIO' },
+      currentIndex: 0,
+    } as unknown as CdkDragDrop<Bloque[]>);
+    expect(component.mode()).toBe('form');
+    expect(component.nuevoTipo()).toBe('CUESTIONARIO');
+    expect(service.reorderBloques).not.toHaveBeenCalled();
   });
 
   it('openEdit() pone modo form con el bloque', () => {
@@ -139,7 +153,7 @@ describe('LeccionBloquesDialogComponent', () => {
       tipo: 'TEXTO',
       contenidoMarkdown: '# Hi',
     };
-    component.openAdd();
+    component.addTipo('TEXTO');
     await component.onFormSaved(result);
 
     expect(service.createBloque).toHaveBeenCalledWith(
@@ -161,7 +175,7 @@ describe('LeccionBloquesDialogComponent', () => {
     (service.createBloque as jest.Mock).mockReturnValue(
       of({ id: 2, leccionId: 1, orden: 1, tipo: 'TEXTO' }),
     );
-    component.openAdd();
+    component.addTipo('TEXTO');
     await component.onFormSaved({ tipo: 'TEXTO', contenidoMarkdown: 'x' });
     expect(service.createBloque).toHaveBeenCalledWith(
       1,

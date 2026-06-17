@@ -77,6 +77,10 @@ export class LeccionBloquesDialogComponent {
   readonly editando = signal<Bloque | null>(null);
   readonly saving = signal(false);
   readonly reordering = signal(false);
+  /** Tipo preseleccionado al crear desde la paleta (drag o clic). */
+  readonly nuevoTipo = signal<TipoBloque | null>(null);
+  /** Posición donde insertar el bloque nuevo (drop en la pila); null = al final. */
+  private readonly pendingInsertIndex = signal<number | null>(null);
 
   private readonly tipoMeta: Record<TipoBloque, TipoMeta> = {
     VIDEO: { label: 'Vídeo', icon: 'pi pi-video' },
@@ -85,6 +89,15 @@ export class LeccionBloquesDialogComponent {
     CUESTIONARIO: { label: 'Cuestionario', icon: 'pi pi-list-check' },
     DOCUMENTO: { label: 'Documento', icon: 'pi pi-file' },
   };
+
+  /** Orden de los chips de la paleta (drag&drop para construir la lección). */
+  readonly paletaTipos: TipoBloque[] = [
+    'VIDEO',
+    'TEXTO',
+    'TEST',
+    'CUESTIONARIO',
+    'DOCUMENTO',
+  ];
 
   readonly leccionTitulo = computed(() => this.leccion()?.titulo ?? 'Lección');
   readonly vacio = computed(() => this.bloques().length === 0);
@@ -139,19 +152,30 @@ export class LeccionBloquesDialogComponent {
     this.closed.emit();
   }
 
-  openAdd(): void {
+  /**
+   * Abre el formulario para crear un bloque del `tipo` dado (chip de la paleta,
+   * por clic o por drop). `insertIndex` = posición donde aterrizó el drop en la
+   * pila; null = añadir al final (clic en el chip).
+   */
+  addTipo(tipo: TipoBloque, insertIndex: number | null = null): void {
     this.editando.set(null);
+    this.nuevoTipo.set(tipo);
+    this.pendingInsertIndex.set(insertIndex);
     this.mode.set('form');
   }
 
   openEdit(bloque: Bloque): void {
     this.editando.set(bloque);
+    this.nuevoTipo.set(null);
+    this.pendingInsertIndex.set(null);
     this.mode.set('form');
   }
 
   backToList(): void {
     this.mode.set('list');
     this.editando.set(null);
+    this.nuevoTipo.set(null);
+    this.pendingInsertIndex.set(null);
   }
 
   async onFormSaved(result: BloqueFormResult): Promise<void> {
@@ -203,6 +227,9 @@ export class LeccionBloquesDialogComponent {
           this.service.createBloque(leccionId, payload),
         );
         this.bloques.update((prev) => [...prev, created]);
+        // Si vino de un drop en una posición concreta, lo movemos ahí (el
+        // backend lo creó al final). Reutiliza el reorder ya existente.
+        await this.aplicarPosicionDrop(created.id);
         this.toast.success('Bloque añadido');
       }
       this.emitChanged();
@@ -228,6 +255,14 @@ export class LeccionBloquesDialogComponent {
   }
 
   async drop(event: CdkDragDrop<Bloque[]>): Promise<void> {
+    // Drop de un chip de la PALETA (otra lista) → crear bloque de ese tipo en la
+    // posición soltada. No se transfiere nada de array: abrimos el formulario.
+    if (event.previousContainer !== event.container) {
+      const tipo = event.item.data as TipoBloque;
+      if (tipo) this.addTipo(tipo, event.currentIndex);
+      return;
+    }
+    // Reordenar dentro de la pila.
     if (event.previousIndex === event.currentIndex) return;
     const prev = this.bloques();
     const next = [...prev];
@@ -246,6 +281,34 @@ export class LeccionBloquesDialogComponent {
       this.bloques.set(prev); // rollback optimista
     } finally {
       this.reordering.set(false);
+    }
+  }
+
+  /**
+   * Tras crear un bloque (el backend lo añade al final), lo recoloca en la
+   * posición del drop si se soltó en un punto concreto de la pila. Persiste el
+   * nuevo orden con el mismo endpoint de reorder.
+   */
+  private async aplicarPosicionDrop(nuevoId: number): Promise<void> {
+    const index = this.pendingInsertIndex();
+    const lista = this.bloques();
+    // null = clic (al final) o drop al final → no hay que mover nada.
+    if (index === null || index >= lista.length - 1) return;
+    const next = [...lista];
+    const movedIdx = next.findIndex((b) => b.id === nuevoId);
+    if (movedIdx === -1) return;
+    const [moved] = next.splice(movedIdx, 1);
+    next.splice(index, 0, moved);
+    const reordered = next.map((b, idx) => ({ ...b, orden: idx }));
+    this.bloques.set(reordered);
+    try {
+      await firstValueFrom(
+        this.service.reorderBloques(
+          reordered.map((b) => ({ id: b.id, orden: b.orden })),
+        ),
+      );
+    } catch {
+      // Si el reorder falla, el bloque queda al final (ya creado); no rompemos.
     }
   }
 

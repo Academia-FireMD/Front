@@ -107,6 +107,12 @@ export class BloqueFormComponent implements OnChanges {
   /** Oposición del curso, propagada al `<app-tema-select>` para filtrar temas. */
   readonly oposicion = input<Oposicion | null>(null);
   readonly saving = input<boolean>(false);
+  /**
+   * Tipo preseleccionado al CREAR (cuando el bloque llega desde la paleta
+   * drag&drop). El admin puede cambiarlo en el dropdown si arrastró el chip
+   * equivocado. Ignorado en edición (el tipo es inmutable tras crear).
+   */
+  readonly initialTipo = input<TipoBloque | null>(null);
 
   readonly saved = output<BloqueFormResult>();
   readonly cancelled = output<void>();
@@ -343,9 +349,11 @@ export class BloqueFormComponent implements OnChanges {
       this.tipoSeleccionado.set(b.tipo);
       this.applyValidatorsForTipo(b.tipo);
     } else {
+      // Creación: el tipo arranca en el preseleccionado por la paleta (o VIDEO).
+      const tipoInicial = this.initialTipo() ?? 'VIDEO';
       this.preguntas.clear({ emitEvent: false });
       this.form.reset({
-        tipo: 'VIDEO',
+        tipo: tipoInicial,
         bunnyVideoId: '',
         duracionSegundos: null,
         contenidoMarkdown: '',
@@ -358,8 +366,8 @@ export class BloqueFormComponent implements OnChanges {
         documentoMime: null,
         documentoTamanoBytes: null,
       });
-      this.tipoSeleccionado.set('VIDEO');
-      this.applyValidatorsForTipo('VIDEO');
+      this.tipoSeleccionado.set(tipoInicial);
+      this.applyValidatorsForTipo(tipoInicial);
     }
   }
 

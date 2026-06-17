@@ -12,19 +12,61 @@
 >
   @if (mode() === "list") {
     <div class="bloques-builder" data-testid="bloques-builder">
-      @if (vacio()) {
-        <div class="bloques-empty" data-testid="bloques-empty">
-          <i class="pi pi-th-large"></i>
-          <p>Esta lección aún no tiene bloques.</p>
-          <small>Combina vídeo, texto y tests en una sola lección.</small>
+      <!-- Paleta de tipos: arrastra un chip a la pila o púlsalo para añadir. -->
+      <div
+        class="bloques-paleta"
+        cdkDropList
+        cdkDropListOrientation="horizontal"
+        [cdkDropListConnectedTo]="[stackList]"
+        [cdkDropListSortingDisabled]="true"
+        data-testid="bloques-paleta"
+      >
+        <span class="bloques-paleta__hint">
+          <i class="pi pi-arrows-alt"></i>
+          Arrastra un bloque a la lección o púlsalo para añadirlo
+        </span>
+        <div class="bloques-paleta__chips">
+          @for (t of paletaTipos; track t) {
+            <button
+              type="button"
+              class="paleta-chip"
+              [attr.data-tipo]="t"
+              cdkDrag
+              [cdkDragData]="t"
+              (click)="addTipo(t)"
+              [attr.data-testid]="'paleta-chip-' + t"
+            >
+              <i [class]="meta(t).icon"></i>
+              <span>{{ meta(t).label }}</span>
+              <span
+                class="paleta-chip paleta-chip--preview"
+                [attr.data-tipo]="t"
+                *cdkDragPreview
+              >
+                <i [class]="meta(t).icon"></i>
+                <span>{{ meta(t).label }}</span>
+              </span>
+            </button>
+          }
         </div>
-      } @else {
-        <ul
-          class="bloques-list"
-          cdkDropList
-          (cdkDropListDropped)="drop($event)"
-          data-testid="bloques-list"
-        >
+      </div>
+
+      <!-- Pila de bloques: siempre drop target (reordena + recibe chips). -->
+      <ul
+        class="bloques-list"
+        [class.bloques-list--vacia]="vacio()"
+        cdkDropList
+        #stackList="cdkDropList"
+        (cdkDropListDropped)="drop($event)"
+        data-testid="bloques-list"
+      >
+        @if (vacio()) {
+          <li class="bloques-empty" data-testid="bloques-empty">
+            <i class="pi pi-inbox"></i>
+            <p>Aún no hay bloques.</p>
+            <small>Suelta aquí un tipo de la paleta (o púlsalo arriba).</small>
+          </li>
+        } @else {
           @for (bloque of bloques(); track bloque.id) {
             <li class="bloque-row" cdkDrag data-testid="bloque-row">
               <span class="bloque-row__handle" cdkDragHandle title="Arrastrar">
@@ -57,18 +99,8 @@
               </span>
             </li>
           }
-        </ul>
-      }
-
-      <button
-        pButton
-        type="button"
-        label="Añadir bloque"
-        icon="pi pi-plus"
-        class="bloques-add"
-        (click)="openAdd()"
-        data-testid="bloques-add"
-      ></button>
+        }
+      </ul>
     </div>
   } @else {
     <div class="bloque-form-wrap">
