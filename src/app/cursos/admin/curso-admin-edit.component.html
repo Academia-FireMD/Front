@@ -9,15 +9,10 @@
     <div class="grid p-2" [formGroup]="metadataForm">
       <div class="col-12 content">
         <p-card>
-          <!-- Header: volver + título + estado + acciones -->
+          <!-- Header: título + estado + acciones (relevancia + gratuito inline
+               en la primera línea, igual que el oposicion-picker del detailview
+               de exámenes). El botón "Volver" vive abajo en el footer. -->
           <div class="curso-edit__header">
-            <p-button
-              icon="pi pi-arrow-left"
-              label="Volver"
-              severity="secondary"
-              [text]="true"
-              (onClick)="goBack()"
-            />
             <div class="curso-edit__header-title">
               <p-floatLabel>
                 <input
@@ -78,23 +73,9 @@
                   ></p-button>
                 }
               }
-            </div>
 
-            <!-- Meta del curso en el header (relevancia + gratuito), igual que
-                 el oposicion-picker del detailview de exámenes. -->
-            <div class="curso-edit__header-meta">
-              <div class="curso-edit__header-meta-item">
-                <label>Oposiciones</label>
-                <app-oposicion-picker
-                  [allowAdd]="true"
-                  [oposiciones]="relevancia()"
-                  (updateSelection)="updateRelevancia($event)"
-                  pTooltip='Oposiciones a las que va dirigido. Vacío o "General" = lo ven todas.'
-                  tooltipPosition="bottom"
-                  data-testid="curso-edit-relevancia"
-                ></app-oposicion-picker>
-              </div>
-              <div class="curso-edit__header-meta-item">
+              <!-- Gratuito + relevancia inline en la primera línea -->
+              <span class="curso-edit__header-gratis">
                 <p-inputSwitch
                   formControlName="esGratuito"
                   (onChange)="onEsGratuitoChange($event.checked)"
@@ -103,9 +84,17 @@
                 <label
                   pTooltip="Sin compra: el alumno con oposición compatible accede gratis (no requiere producto WooCommerce)."
                   tooltipPosition="bottom"
-                  >Curso gratuito</label
+                  >Gratis</label
                 >
-              </div>
+              </span>
+              <app-oposicion-picker
+                [allowAdd]="true"
+                [oposiciones]="relevancia()"
+                (updateSelection)="updateRelevancia($event)"
+                pTooltip='Oposiciones a las que va dirigido. Vacío o "General" = lo ven todas.'
+                tooltipPosition="bottom"
+                data-testid="curso-edit-relevancia"
+              ></app-oposicion-picker>
             </div>
           </div>
 
@@ -176,16 +165,6 @@
                       label="Miniatura"
                     ></app-image-upload>
                   </div>
-                </div>
-
-                <div class="curso-edit__form-actions">
-                  <app-async-button
-                    [label]="esNuevo() ? 'Crear curso' : 'Guardar cambios'"
-                    icon="pi pi-save"
-                    [disabled]="metadataForm.invalid"
-                    [action]="saveMetadata"
-                    data-testid="curso-edit-save"
-                  ></app-async-button>
                 </div>
               </div>
             </p-tabPanel>
@@ -373,6 +352,26 @@
             </p-tabPanel>
           </p-tabView>
         </p-card>
+      </div>
+
+      <!-- Footer global (igual que exámenes): "Volver atrás" + guardar. El
+           guardar persiste los metadatos; la Estructura autoguarda por bloque. -->
+      <div
+        class="col-12 curso-edit__footer flex justify-content-end align-items-center gap-2 w-full"
+      >
+        <p-button
+          label="Volver atrás"
+          [link]="true"
+          (onClick)="goBack()"
+          data-testid="curso-edit-volver"
+        ></p-button>
+        <app-async-button
+          [label]="esNuevo() ? 'Crear curso' : 'Guardar cambios'"
+          icon="pi pi-save"
+          [disabled]="metadataForm.invalid"
+          [action]="saveMetadata"
+          data-testid="curso-edit-save"
+        ></app-async-button>
       </div>
     </div>
   }

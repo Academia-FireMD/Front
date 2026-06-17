@@ -27,27 +27,24 @@
     flex-wrap: wrap;
   }
 
-  // Segunda línea del header: relevancia + gratuito (igual que el
-  // oposicion-picker del header de exámenes). flex-basis 100% fuerza el wrap
-  // para que caiga bajo la fila de título/acciones.
-  &__header-meta {
-    flex-basis: 100%;
+  // Toggle "Gratis" inline en la primera línea del header (junto a las
+  // acciones y al oposicion-picker), igual que exámenes.
+  &__header-gratis {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-  }
-
-  &__header-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
 
     label {
       font-weight: 600;
       color: var(--cursos-text-soft, #6b7280);
       white-space: nowrap;
+      cursor: default;
     }
+  }
+
+  // Footer global del editor (fuera de los tabs), como en exámenes.
+  &__footer {
+    margin-top: 1rem;
   }
 
   &__preview-bar {
@@ -86,12 +83,6 @@
 
   &__form {
     padding-top: 0.5rem;
-  }
-
-  &__form-actions {
-    margin-top: 1.5rem;
-    display: flex;
-    justify-content: flex-end;
   }
 
   &__estructura-header {
