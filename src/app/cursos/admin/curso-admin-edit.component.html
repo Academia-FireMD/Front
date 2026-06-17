@@ -79,6 +79,34 @@
                 }
               }
             </div>
+
+            <!-- Meta del curso en el header (relevancia + gratuito), igual que
+                 el oposicion-picker del detailview de exámenes. -->
+            <div class="curso-edit__header-meta">
+              <div class="curso-edit__header-meta-item">
+                <label>Oposiciones</label>
+                <app-oposicion-picker
+                  [allowAdd]="true"
+                  [oposiciones]="relevancia()"
+                  (updateSelection)="updateRelevancia($event)"
+                  pTooltip='Oposiciones a las que va dirigido. Vacío o "General" = lo ven todas.'
+                  tooltipPosition="bottom"
+                  data-testid="curso-edit-relevancia"
+                ></app-oposicion-picker>
+              </div>
+              <div class="curso-edit__header-meta-item">
+                <p-inputSwitch
+                  formControlName="esGratuito"
+                  (onChange)="onEsGratuitoChange($event.checked)"
+                  data-testid="curso-edit-gratuito"
+                ></p-inputSwitch>
+                <label
+                  pTooltip="Sin compra: el alumno con oposición compatible accede gratis (no requiere producto WooCommerce)."
+                  tooltipPosition="bottom"
+                  >Curso gratuito</label
+                >
+              </div>
+            </div>
           </div>
 
           <p-tabView>
@@ -123,35 +151,6 @@
                       class="w-full"
                       placeholder="Describe el curso..."
                     ></textarea>
-                  </div>
-
-                  <div class="field">
-                    <label>Oposiciones (relevancia)</label>
-                    <app-oposicion-picker
-                      [allowAdd]="true"
-                      [oposiciones]="relevancia()"
-                      (updateSelection)="updateRelevancia($event)"
-                      data-testid="curso-edit-relevancia"
-                    ></app-oposicion-picker>
-                    <small class="text-color-secondary">
-                      Oposiciones a las que va dirigido. Vacío o "General" = lo
-                      ven todas.
-                    </small>
-                  </div>
-
-                  <div class="field field--switch">
-                    <div class="flex align-items-center gap-2">
-                      <p-inputSwitch
-                        formControlName="esGratuito"
-                        (onChange)="onEsGratuitoChange($event.checked)"
-                        data-testid="curso-edit-gratuito"
-                      ></p-inputSwitch>
-                      <label>Curso gratuito</label>
-                    </div>
-                    <small class="text-color-secondary">
-                      Sin compra: el alumno con oposición compatible accede
-                      gratis (no requiere producto WooCommerce).
-                    </small>
                   </div>
 
                   @if (!esGratuitoSig()) {
