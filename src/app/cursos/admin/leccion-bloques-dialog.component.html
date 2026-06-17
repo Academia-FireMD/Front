@@ -114,6 +114,7 @@
       ></button>
       <app-bloque-form
         [bloque]="editando()"
+        [initialTipo]="nuevoTipo()"
         [oposicion]="oposicion()"
         [saving]="saving()"
         (saved)="onFormSaved($event)"
