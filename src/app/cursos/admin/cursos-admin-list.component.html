@@ -106,6 +106,15 @@
             ></p-button>
           }
           <p-button
+            icon="pi pi-copy"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            pTooltip="Duplicar curso"
+            data-testid="duplicar-curso-btn"
+            (click)="$event.stopPropagation(); duplicarCurso(item, $event)"
+          ></p-button>
+          <p-button
             icon="pi pi-pencil"
             severity="info"
             [text]="true"

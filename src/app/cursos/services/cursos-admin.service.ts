@@ -90,6 +90,11 @@ export class CursosAdminService extends ApiBaseService {
     return this.post(`/${id}/despublicar`, {}) as Observable<Curso>;
   }
 
+  /** Duplica un curso completo; el backend devuelve la copia en BORRADOR. */
+  duplicar(id: number): Observable<Curso> {
+    return this.post(`/${id}/duplicar`, {}) as Observable<Curso>;
+  }
+
   grantAccess(cursoId: number, usuarioId: number): Observable<unknown> {
     return this.post(`/${cursoId}/grant-access`, { usuarioId });
   }

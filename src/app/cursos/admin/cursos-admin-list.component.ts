@@ -141,6 +141,24 @@ export class CursosAdminListComponent extends SharedGridComponent<CursoAdmin> {
     });
   }
 
+  /**
+   * Duplica el curso (deep-clone en backend) y abre la copia en el editor para
+   * renombrarla/ajustarla. No es destructivo → sin confirmación (patrón "clonar"
+   * de planificación). La copia nace en BORRADOR y sin producto WooCommerce.
+   */
+  async duplicarCurso(curso: CursoAdmin, event: Event): Promise<void> {
+    event.stopPropagation();
+    try {
+      const copia = await firstValueFrom(
+        this.cursosAdminService.duplicar(curso.id),
+      );
+      this.toast.success(`Curso duplicado como "${copia.titulo}"`);
+      this.router.navigate(['/app/cursos-admin', copia.id]);
+    } catch {
+      // handleError del service ya muestra el toast de error
+    }
+  }
+
   eliminarCurso(curso: CursoAdmin, event: Event): void {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
