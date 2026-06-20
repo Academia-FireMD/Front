@@ -54,6 +54,49 @@ export async function loginAsAlumnoMock(page: Page): Promise<void> {
     })
   );
 
+  // El app-shell evolucionado (asistente IA, white-label, perfil) pide más
+  // endpoints al redirigir a /app; sin estos stubs el SPA dispara el toast
+  // genérico o crashea, y muchos e2e fallaban tras login.
+  await page.route('**/api/app-config/modulos', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        PLANIFICACION: true,
+        SIMULACROS: true,
+        HORARIOS: true,
+        DOCUMENTACION: true,
+        CURSOS: true,
+        EXAMEN: true,
+        TEST: true,
+        FLASHCARDS: true,
+        FACTURACION: true,
+        CALLEJERO: true,
+      }),
+    })
+  );
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ verifactuEnabled: false }),
+    })
+  );
+  await page.route('**/user/profile', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(userAlumnoFixture),
+    })
+  );
+  await page.route('**/ai-assistant/token', (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: 'application/json',
+      body: JSON.stringify({ reason: 'DISABLED' }),
+    })
+  );
+
   await page.goto('/auth/login');
   await page.locator('input[formControlName="email"]').fill('alumno@test.com');
   await page.locator('app-password-input input').fill('test1234');
