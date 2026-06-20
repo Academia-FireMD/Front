@@ -141,7 +141,7 @@ test.describe('Completar Test de Práctica (Alumno)', () => {
     await page.waitForResponse('**/tests/registrar-respuesta');
 
     // Toast error should appear
-    await expect(page.locator('.toast-error, [class*="ngx-toastr"][class*="error"]')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('.toast-error, [class*="ngx-toastr"][class*="error"]').first()).toBeVisible({ timeout: 5_000 });
 
     // The question card must still be present (UI not broken)
     await expect(page.locator('[data-testid="pregunta-card"]')).toBeVisible();
