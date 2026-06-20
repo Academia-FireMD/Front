@@ -2,6 +2,57 @@ import { Page } from '@playwright/test';
 import examenFixture from '../fixtures/examen.json';
 import flashcardTestFixture from '../fixtures/flashcard-test.json';
 import testGeneradoFixture from '../fixtures/test-generado.json';
+import userAlumnoFixture from '../fixtures/user-alumno.json';
+
+/**
+ * Stubs del app-shell que TODA ruta /app/* necesita al arrancar (el módulo
+ * evolucionó: asistente IA, white-label, /user/profile). Sin ellos el SPA
+ * dispara el toast genérico o, peor, crashea en `generateShades` si
+ * /api/app-config llega sin `secondaryColor`. Llamar ANTES de navegar a /app.
+ */
+export async function setupAppShellStubs(page: Page): Promise<void> {
+  const json = (body: unknown, status = 200) => ({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
+  });
+  await page.route('**/api/app-config', (route) =>
+    route.fulfill(
+      json({
+        appName: 'Test Academia',
+        logoUrl: null,
+        primaryColor: '#FF6B35',
+        secondaryColor: '#004E89', // sin esto: generateShades(undefined) → crash
+        updatedAt: new Date(0).toISOString(),
+      }),
+    ),
+  );
+  await page.route('**/api/app-config/modulos', (route) =>
+    route.fulfill(
+      json({
+        PLANIFICACION: true,
+        SIMULACROS: true,
+        HORARIOS: true,
+        DOCUMENTACION: true,
+        CURSOS: true,
+        EXAMEN: true,
+        TEST: true,
+        FLASHCARDS: true,
+        FACTURACION: true,
+        CALLEJERO: true,
+      }),
+    ),
+  );
+  await page.route('**/api/config', (route) =>
+    route.fulfill(json({ verifactuEnabled: false })),
+  );
+  await page.route('**/user/profile', (route) =>
+    route.fulfill(json(userAlumnoFixture)),
+  );
+  await page.route('**/ai-assistant/token', (route) =>
+    route.fulfill(json({ reason: 'DISABLED' }, 403)),
+  );
+}
 
 // ─── Mock responses ────────────────────────────────────────────────────────────
 

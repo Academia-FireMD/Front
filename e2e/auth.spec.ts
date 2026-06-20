@@ -1,10 +1,16 @@
 import { expect, test } from '@playwright/test';
 import userAdminFixture from './fixtures/user-admin.json';
 import userAlumnoFixture from './fixtures/user-alumno.json';
-import { setupAuthInterceptors } from './helpers/interceptors.helper';
+import {
+  setupAppShellStubs,
+  setupAuthInterceptors,
+} from './helpers/interceptors.helper';
 
 test.describe('Autenticación', () => {
   test.beforeEach(async ({ page }) => {
+    // Stubs del app-shell (incluye /api/app-config con secondaryColor) — sin
+    // ellos, al redirigir a /app el SPA crashea en generateShades.
+    await setupAppShellStubs(page);
     await page.route('**/user/get-by-email', (route) =>
       route.fulfill({
         status: 200,
@@ -25,7 +31,7 @@ test.describe('Autenticación', () => {
 
       await page.locator('input[formControlName="email"]').fill('alumno@test.com');
       await page.locator('app-password-input input').fill('test1234');
-      await page.locator('button[type="submit"]').click();
+      await page.locator('app-async-button button').click();
 
       await expect(page).toHaveURL(/\/app\//, { timeout: 10_000 });
     });
@@ -38,7 +44,7 @@ test.describe('Autenticación', () => {
 
       await page.locator('input[formControlName="email"]').fill('admin@test.com');
       await page.locator('app-password-input input').fill('test1234');
-      await page.locator('button[type="submit"]').click();
+      await page.locator('app-async-button button').click();
 
       await expect(page).toHaveURL(/\/app\//, { timeout: 10_000 });
     });
@@ -53,9 +59,9 @@ test.describe('Autenticación', () => {
 
       await page.locator('input[formControlName="email"]').fill('invalid@email.com');
       await page.locator('app-password-input input').fill('wrongpassword');
-      await page.locator('button[type="submit"]').click();
+      await page.locator('app-async-button button').click();
 
-      await expect(page.locator('.toast-error, [class*="ngx-toastr"][class*="error"]')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('.toast-error, [class*="ngx-toastr"][class*="error"]').first()).toBeVisible({ timeout: 5_000 });
     });
 
     test('debería validar el formato del email', async ({ page }) => {
@@ -75,12 +81,18 @@ test.describe('Autenticación', () => {
           body: JSON.stringify([{ id: 1, nombre: 'Tutor Test', email: 'tutor@test.com' }]),
         })
       );
+      // Solo POST: `**/auth/registro` también matchea la navegación GET del SPA
+      // a /auth/registro y pintaría el JSON en vez de renderizar la página.
       await page.route('**/auth/registro', (route) =>
-        route.fulfill({
-          status: 201,
-          contentType: 'application/json',
-          body: JSON.stringify({ message: 'Usuario registrado correctamente' }),
-        })
+        route.request().method() === 'POST'
+          ? route.fulfill({
+              status: 201,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                message: 'Usuario registrado correctamente',
+              }),
+            })
+          : route.continue()
       );
 
       await page.goto('/auth/registro');
@@ -118,7 +130,7 @@ test.describe('Autenticación', () => {
 
       await page.goto('/auth/reset-password?token=valid-token');
       await page.locator('app-password-input input').fill('NewPassword123!');
-      await page.locator('button[type="submit"]').click();
+      await page.locator('app-async-button button').click();
 
       await expect(page).toHaveURL(/\/auth\/login/, { timeout: 8_000 });
     });
@@ -134,9 +146,9 @@ test.describe('Autenticación', () => {
 
       await page.goto('/auth/reset-password?token=invalid-token');
       await page.locator('app-password-input input').fill('NewPassword123!');
-      await page.locator('button[type="submit"]').click();
+      await page.locator('app-async-button button').click();
 
-      await expect(page.locator('.toast-error, [class*="ngx-toastr"][class*="error"]')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('.toast-error, [class*="ngx-toastr"][class*="error"]').first()).toBeVisible({ timeout: 5_000 });
     });
   });
 });
