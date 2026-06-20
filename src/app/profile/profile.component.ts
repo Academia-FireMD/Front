@@ -2,12 +2,12 @@ import { Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
-import { Memoize } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { Observable, filter, firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ExamenesService } from '../examen/servicios/examen.service';
+import { AuthService } from '../services/auth.service';
 import { PlanificacionesService } from '../services/planificaciones.service';
 import {
   MotivoBaja,
@@ -57,6 +57,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Servicios
   private userService = inject(UserService);
+  private authService = inject(AuthService);
   private planificacionService = inject(PlanificacionesService);
   private toastService = inject(ToastrService);
   private store = inject(Store<AppState>);
@@ -859,21 +860,45 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   }
 
-  @Memoize()
   /**
-   * Cambio de tarjeta de pago: abrimos la página "Mis suscripciones" de
-   * WooCommerce, donde el alumno (logueado en WP) usa el botón nativo
-   * "Cambiar forma de pago" que re-tokeniza la tarjeta en la pasarela (Redsys).
-   * Money-safe: la captura de tarjeta/3DS la gestiona WC/Redsys, no nuestro
-   * código. No construimos la URL de change-payment directamente porque WC la
-   * protege con un nonce ligado a la sesión WP.
+   * Cambio de tarjeta de pago: solicita al Server una URL SSO magic-link y la
+   * abre en nueva pestaña. El alumno aterriza en WP ya logueado y puede usar
+   * el botón nativo "Cambiar forma de pago" (Redsys/WC), sin que tengamos que
+   * gestionar nosotros la captura de tarjeta ni el nonce WC.
+   *
+   * Patrón anti-popup-blocker: abrimos la ventana de forma síncrona (antes de
+   * la llamada async) y actualizamos su location cuando llega la URL del servidor.
+   * Si el navegador ya bloqueó la ventana o el servidor devuelve error, se
+   * abre la URL plana de WP como fallback (comportamiento previo).
+   *
+   * Money-safe: la captura de tarjeta/3DS la gestiona WC/Redsys, no nuestro código.
    */
-  abrirCambioTarjeta() {
-    window.open(
-      this.wordpressUrl + '/mi-cuenta/subscriptions/',
-      '_blank',
-      'noopener',
-    );
+  async abrirCambioTarjeta(): Promise<void> {
+    // Abrir la ventana de forma SÍNCRONA para evitar que el navegador bloquee
+    // el popup (los navegadores solo permiten window.open en respuesta a un
+    // gesto directo del usuario; una apertura tras await sería bloqueada).
+    const ventana = window.open('', '_blank', 'noopener');
+
+    try {
+      const res = await firstValueFrom(
+        this.authService.getWpSsoUrl$('subscriptions'),
+      );
+      if (ventana && !ventana.closed) {
+        ventana.location.href = res.url;
+      } else {
+        // La ventana fue bloqueada; abrimos con la URL ya resuelta.
+        window.open(res.url, '_blank', 'noopener');
+      }
+    } catch {
+      // Fallback: si el SSO falla, abrimos la URL plana de WP (comportamiento
+      // previo al SSO; el alumno tendrá que hacer login manual en WP).
+      const fallbackUrl = this.wordpressUrl + '/mi-cuenta/subscriptions/';
+      if (ventana && !ventana.closed) {
+        ventana.location.href = fallbackUrl;
+      } else {
+        window.open(fallbackUrl, '_blank', 'noopener');
+      }
+    }
   }
 
   getSubscriptionMenuItems(suscripcion: Suscripcion) {
