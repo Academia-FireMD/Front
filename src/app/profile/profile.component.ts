@@ -860,6 +860,22 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   @Memoize()
+  /**
+   * Cambio de tarjeta de pago: abrimos la página "Mis suscripciones" de
+   * WooCommerce, donde el alumno (logueado en WP) usa el botón nativo
+   * "Cambiar forma de pago" que re-tokeniza la tarjeta en la pasarela (Redsys).
+   * Money-safe: la captura de tarjeta/3DS la gestiona WC/Redsys, no nuestro
+   * código. No construimos la URL de change-payment directamente porque WC la
+   * protege con un nonce ligado a la sesión WP.
+   */
+  abrirCambioTarjeta() {
+    window.open(
+      this.wordpressUrl + '/mi-cuenta/subscriptions/',
+      '_blank',
+      'noopener',
+    );
+  }
+
   getSubscriptionMenuItems(suscripcion: Suscripcion) {
     if (this.isLinkedToWordPress()) {
       const menuItems: any[] = [];
@@ -880,6 +896,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
           label: 'Cambiar plan',
           icon: 'pi pi-refresh',
           command: () => this.abrirCambioPlanWC(suscripcion),
+        });
+        menuItems.push({
+          label: 'Cambiar tarjeta de pago',
+          icon: 'pi pi-credit-card',
+          command: () => this.abrirCambioTarjeta(),
         });
         // "Aplicar descuento" retirado del menú (Spec A 2026-06-02). El componente
         // y los endpoints se conservan en el código por si vuelve.
