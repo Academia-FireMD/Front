@@ -288,4 +288,19 @@ export class AuthService extends ApiBaseService {
     }
     return { isImpersonating: false };
   }
+
+  /**
+   * Pide al backend una URL SSO magic-link para WordPress.
+   * El token resultante es de un solo uso (TTL 60s, jti guardado en WP).
+   *
+   * @param target Clave de destino en la allowlist del server (default: 'subscriptions')
+   * @returns Observable con { url: string }
+   */
+  public getWpSsoUrl$(
+    target: 'subscriptions' = 'subscriptions',
+  ): Observable<{ url: string }> {
+    return this.get(`/wp-sso-url?target=${target}`) as Observable<{
+      url: string;
+    }>;
+  }
 }
