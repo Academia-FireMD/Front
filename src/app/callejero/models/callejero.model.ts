@@ -131,8 +131,15 @@ export type ModoCallejero =
 // Modo Examen (Callejero v2 — Hito 2). Espejo del contrato `/callejero/examen/*`.
 // ============================================================================
 
-/** Tipo de reto: localizar (click en mapa) o identificar (4 opciones). */
-export type TipoRetoCallejero = 'LOCALIZAR' | 'IDENTIFICAR';
+/** Tipo de reto: localizar (click en mapa), identificar (4 opciones) o recorrido (¿qué parque cubre?). */
+export type TipoRetoCallejero = 'LOCALIZAR' | 'IDENTIFICAR' | 'RECORRIDO';
+
+/**
+ * Tipo de examen (Callejero v10):
+ *  - `MIXTO` (default): retos LOCALIZAR + IDENTIFICAR sobre el mapa.
+ *  - `RECORRIDO`: reto objetivo "¿qué parque cubre esta calle?".
+ */
+export type TipoExamenCallejero = 'MIXTO' | 'RECORRIDO';
 
 /** Una opción de un reto de identificar. */
 export interface OpcionRetoExamen {
@@ -140,22 +147,30 @@ export interface OpcionRetoExamen {
   nombre: string;
 }
 
+/** Una opción de un reto de recorridos: el nombre de un parque. */
+export interface OpcionParqueExamen {
+  parque: string;
+}
+
 /**
- * Un reto del examen. `opciones` solo viene en los de IDENTIFICAR. El cliente
- * usa `calleId`/`nombre` para el feedback inmediato; la nota la calcula el
- * backend desde el token firmado.
+ * Un reto del examen. `opciones` viene en los de IDENTIFICAR
+ * (`OpcionRetoExamen[]`) y en los de RECORRIDO (`OpcionParqueExamen[]`). El
+ * cliente usa `calleId`/`nombre` para el feedback inmediato; la nota la calcula
+ * el backend desde el token firmado.
  */
 export interface RetoExamen {
   orden: number;
   tipo: TipoRetoCallejero;
   calleId: number;
   nombre: string;
-  opciones?: OpcionRetoExamen[];
+  opciones?: OpcionRetoExamen[] | OpcionParqueExamen[];
 }
 
 /** Respuesta de `POST /callejero/examen/generar`. */
 export interface GenerarExamenResponse {
   token: string;
+  /** Omitido en backends antiguos → tratar como `MIXTO`. */
+  tipoExamen?: TipoExamenCallejero;
   ciudadId: number;
   zonaIds: number[];
   totalRetos: number;
@@ -167,9 +182,28 @@ export interface GenerarExamenResponse {
 /** Una respuesta del alumno a un reto (cuerpo de `registrar`). */
 export interface RespuestaExamenDto {
   orden: number;
-  respuestaCalleId: number | null;
+  respuestaCalleId?: number | null;
+  /** Callejero v10 (RECORRIDO): parque elegido en "¿qué parque cubre esta calle?". */
+  respuestaParque?: string | null;
   tiempoMs: number;
   agotoTiempo: boolean;
+}
+
+/**
+ * Recorrido publicado de una calle — respuesta de
+ * `GET /callejero/recorrido?calleId=`. Si no hay ruta publicada el backend
+ * responde 404 ("Ruta no disponible"); el front lo trata como estado DURO
+ * (D7), nunca dibuja una línea recta como recorrido.
+ */
+export interface RecorridoResponse {
+  /** Geometría OSRM (GeoJSON coords/LineString) ya precomputada y limpia. */
+  polyline: LineString | MultiLineString;
+  /** Nombres de vía en orden de recorrido. */
+  calles: string[];
+  km: number;
+  minutos: number;
+  /** Estación (parque de bomberos) origen del recorrido. */
+  estacion: { nombre: string; lat: number; lng: number } | null;
 }
 
 /** Cuerpo de `POST /callejero/examen/registrar`. */

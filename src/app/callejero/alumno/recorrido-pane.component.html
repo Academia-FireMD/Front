@@ -1,0 +1,179 @@
+<div class="cj-rec" data-testid="cj-recorrido-pane">
+  <!-- ---------- Cabecera (título + minimizar) ---------- -->
+  <div class="cj-rec__cab">
+    <div class="cj-rec__tit">
+      <span class="cj-rec__icon">🛣️</span>
+      <span>Recorridos</span>
+    </div>
+    <button
+      type="button"
+      class="cj-rec__min"
+      [attr.aria-label]="minimizado() ? 'Restaurar' : 'Minimizar'"
+      data-testid="cj-rec-min"
+      (click)="toggleMinimizar()"
+    >
+      {{ minimizado() ? "▢" : "—" }}
+    </button>
+  </div>
+
+  <!-- ---------- Cuerpo (oculto al minimizar) ---------- -->
+  @if (!minimizado()) {
+    <div class="cj-rec__body" data-testid="cj-rec-body">
+      <!-- ========= MODO EXAMEN DE RECORRIDOS ========= -->
+      @if (examenActivo() && examen(); as ex) {
+        <div class="cj-rec__examen" data-testid="cj-rec-examen">
+          <div class="cj-rec__meta">
+            <span>Reto {{ ex.indice }} / {{ ex.total }}</span>
+            <span>{{ ex.aciertos }} aciertos</span>
+          </div>
+          <div class="cj-rec__pregunta">
+            🚒 ¿Qué parque cubre la calle
+            <b class="cj-rec__calle">{{ ex.calleNombre }}</b
+            >?
+          </div>
+          <div class="cj-rec__opciones">
+            @for (op of ex.opciones; track op) {
+              <button
+                type="button"
+                class="cj-rec__op"
+                [class.ok]="estadoOpcion(op) === 'ok'"
+                [class.bad]="estadoOpcion(op) === 'bad'"
+                [disabled]="!!ex.feedback"
+                (click)="onResponder(op)"
+              >
+                {{ op }}
+              </button>
+            }
+          </div>
+          @if (ex.feedback; as fb) {
+            <div class="cj-rec__fb" [class.ok]="fb.ok" [class.bad]="!fb.ok">
+              <b>{{ fb.ok ? "✔ Correcto" : "✘ Fallo" }}</b> — {{ fb.texto }}
+            </div>
+            <button
+              type="button"
+              class="cj-rec__btn cj-rec__btn--rojo"
+              data-testid="cj-rec-siguiente"
+              (click)="onSiguiente()"
+            >
+              {{ ex.esUltimo ? "Ver resultado" : "Siguiente calle" }}
+            </button>
+          }
+        </div>
+      } @else if (resultado()) {
+        <!-- ========= RESULTADO DEL EXAMEN ========= -->
+        <div class="cj-rec__resultado" data-testid="cj-rec-resultado">
+          <h4>Examen de recorridos</h4>
+          <div class="cj-rec__nota" [class.aprobado]="resultado()!.aprobado">
+            <b data-testid="cj-rec-nota">{{ resultado()!.nota }}</b>
+            <span
+              >{{ resultado()!.aciertos }} /
+              {{ resultado()!.total }} aciertos</span
+            >
+          </div>
+          <p class="cj-rec__veredicto">
+            {{ resultado()!.aprobado ? "¡Aprobado! 🔥" : "Sigue practicando." }}
+          </p>
+          <button
+            type="button"
+            class="cj-rec__btn cj-rec__btn--rojo"
+            (click)="onIniciarExamen()"
+          >
+            Repetir examen
+          </button>
+        </div>
+      } @else {
+        <!-- ========= MODO BÚSQUEDA DE RECORRIDO ========= -->
+        <div class="cj-rec__buscador">
+          <label class="cj-rec__lbl">Calle de destino</label>
+          <p-autoComplete
+            [suggestions]="sugerencias()"
+            [delay]="200"
+            [minLength]="2"
+            [forceSelection]="true"
+            field="nombre"
+            placeholder="Escribe una calle…"
+            styleClass="cj-rec__ac"
+            data-testid="cj-rec-buscar"
+            (completeMethod)="filtrarCalles($event)"
+            (onSelect)="onSeleccionarCalle($event)"
+          >
+            <ng-template let-c pTemplate="item">
+              <span>{{ c.nombre }}</span>
+            </ng-template>
+          </p-autoComplete>
+        </div>
+
+        @if (loading()) {
+          <!-- Cargando -->
+          <div class="cj-rec__estado" data-testid="cj-rec-loading">
+            Trazando recorrido…
+          </div>
+        } @else if (error() === "no-disponible") {
+          <!-- D7: ruta no disponible (estado DURO, sin mapa falso) -->
+          <div
+            class="cj-rec__estado cj-rec__estado--off"
+            data-testid="cj-rec-no-disponible"
+          >
+            <div class="cj-rec__estado-icon">🚧</div>
+            <b>Ruta no disponible</b>
+            <p>
+              Aún no hay un recorrido publicado para esta calle. Prueba con otra
+              calle de destino.
+            </p>
+          </div>
+        } @else if (recorrido()) {
+          <!-- Resultado del recorrido -->
+          <div class="cj-rec__resumen" data-testid="cj-rec-resumen">
+            <div class="cj-rec__stats">
+              <div class="cj-rec__stat">
+                <b>{{ recorrido()!.km | number: "1.1-1" }}</b
+                ><span>km</span>
+              </div>
+              <div class="cj-rec__stat">
+                <b>{{ recorrido()!.minutos }}</b
+                ><span>min</span>
+              </div>
+            </div>
+            @if (recorrido()!.estacion; as est) {
+              <div class="cj-rec__origen">
+                <span class="cj-rec__origen-dot"></span>
+                Desde <b>{{ est.nombre }}</b>
+              </div>
+            }
+            @if (destino(); as d) {
+              <div class="cj-rec__destino">
+                <span class="cj-rec__destino-dot"></span>
+                Hasta <b>{{ d.nombre }}</b>
+              </div>
+            }
+            <ol class="cj-rec__calles" data-testid="cj-rec-calles">
+              @for (calle of recorrido()!.calles; track $index) {
+                <li>
+                  <span class="cj-rec__idx">{{ $index + 1 }}</span>
+                  {{ calle }}
+                </li>
+              }
+            </ol>
+          </div>
+        } @else {
+          <!-- Sin búsqueda aún: CTA examen -->
+          <div class="cj-rec__hint" data-testid="cj-rec-hint">
+            <p>
+              Busca una calle para ver el recorrido del parque más cercano: las
+              vías en orden, los km y el tiempo.
+            </p>
+          </div>
+        }
+
+        <button
+          type="button"
+          class="cj-rec__btn cj-rec__btn--linea"
+          data-testid="cj-rec-iniciar-examen"
+          (click)="onIniciarExamen()"
+        >
+          Examen de recorridos
+        </button>
+      }
+    </div>
+  }
+</div>

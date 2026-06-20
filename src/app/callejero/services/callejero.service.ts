@@ -9,11 +9,13 @@ import {
   HistorialExamenResponse,
   LeaderboardResponse,
   PoiCiudad,
+  RecorridoResponse,
   RegistrarExamenDto,
   RegistrarProgresoDto,
   ResultadoExamen,
   ResultadoExamenRaul,
   ResumenProgreso,
+  TipoExamenCallejero,
   Zona,
 } from '../models/callejero.model';
 
@@ -81,17 +83,50 @@ export class CallejeroService extends ApiBaseService {
     ) as Observable<ResumenProgreso>;
   }
 
+  // ── Recorridos (Callejero v10 — Hito 4) ──────────────────────────────────
+
+  /**
+   * GET /callejero/recorrido?calleId= — recorrido publicado (precomputado en BD)
+   * de una calle accesible. El backend responde 404 ("Ruta no disponible") si no
+   * hay ruta publicada; el front lo trata como estado DURO (D7), nunca como una
+   * línea recta. `ignoreError = true`: el 404 es un estado esperado, lo gestiona
+   * el componente (sin toast).
+   */
+  getRecorrido(calleId: number): Observable<RecorridoResponse> {
+    return this.get(
+      `/recorrido?calleId=${calleId}`,
+      true,
+    ) as Observable<RecorridoResponse>;
+  }
+
   // ── Modo Examen (Callejero v2 — Hito 2) ──────────────────────────────────
 
-  /** POST /callejero/examen/generar — genera un examen sobre el scope elegido. */
+  /**
+   * POST /callejero/examen/generar — genera un examen sobre el scope elegido.
+   * `tipoExamen` por defecto `MIXTO` (no rompe llamadas existentes); pasar
+   * `RECORRIDO` genera el examen "¿qué parque cubre esta calle?".
+   */
   generarExamen(
     ciudadId: number,
     zonaIds: number[] = [],
+    tipoExamen: TipoExamenCallejero = 'MIXTO',
   ): Observable<GenerarExamenResponse> {
     return this.post('/examen/generar', {
       ciudadId,
       zonaIds,
+      tipoExamen,
     }) as Observable<GenerarExamenResponse>;
+  }
+
+  /**
+   * Atajo del examen de recorridos (Callejero v10): `generarExamen` con
+   * `tipoExamen = 'RECORRIDO'`.
+   */
+  generarExamenRecorrido(
+    ciudadId: number,
+    zonaIds: number[] = [],
+  ): Observable<GenerarExamenResponse> {
+    return this.generarExamen(ciudadId, zonaIds, 'RECORRIDO');
   }
 
   /** POST /callejero/examen/registrar — envía las respuestas y recibe la nota. */

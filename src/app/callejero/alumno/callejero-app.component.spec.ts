@@ -1,7 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
-import { Ciudad, PoiCiudad, Zona } from '../models/callejero.model';
+import {
+  Calle,
+  Ciudad,
+  PoiCiudad,
+  RecorridoResponse,
+  Zona,
+} from '../models/callejero.model';
 import { CallejeroService } from '../services/callejero.service';
 import { CallejeroAppComponent } from './callejero-app.component';
 
@@ -102,11 +108,74 @@ const POIS: PoiCiudad[] = [
   },
 ];
 
+const CALLES: Calle[] = [
+  {
+    id: 100,
+    zonaId: 10,
+    codigoExterno: 'c100',
+    nombre: 'Av. del Cid',
+    tipoVia: 'Avenida',
+    codigoPostal: null,
+    geometria: { type: 'LineString', coordinates: [] },
+  },
+];
+
+const RECORRIDO: RecorridoResponse = {
+  polyline: {
+    type: 'LineString',
+    coordinates: [
+      [-0.37, 39.47],
+      [-0.36, 39.46],
+    ],
+  },
+  calles: ['Av. del Cid', 'Calle Colón'],
+  km: 2.1,
+  minutos: 5,
+  estacion: { nombre: 'Parque Campanar', lat: 39.48, lng: -0.38 },
+};
+
 function mockService() {
   return {
     listarCiudades: jest.fn().mockReturnValue(of([CIUDAD])),
     listarZonas: jest.fn().mockReturnValue(of(ZONAS)),
     listarPoisCiudad: jest.fn().mockReturnValue(of(POIS)),
+    listarCalles: jest.fn().mockReturnValue(of({ calles: CALLES, pois: [] })),
+    getRecorrido: jest.fn().mockReturnValue(of(RECORRIDO)),
+    generarExamenRecorrido: jest.fn().mockReturnValue(
+      of({
+        token: 'tok',
+        tipoExamen: 'RECORRIDO',
+        ciudadId: 1,
+        zonaIds: [],
+        totalRetos: 1,
+        duracionRetoMs: 1000,
+        calles: [{ ...CALLES[0], parquesCobertura: ['Campanar'] }],
+        retos: [
+          {
+            orden: 0,
+            tipo: 'RECORRIDO',
+            calleId: 100,
+            nombre: 'Av. del Cid',
+            opciones: [{ parque: 'Campanar' }, { parque: 'Centro' }],
+          },
+        ],
+      }),
+    ),
+    registrarExamen: jest.fn().mockReturnValue(
+      of({
+        intentoId: 1,
+        creadoEn: '',
+        ciudadId: 1,
+        zonaIds: [],
+        totalRetos: 1,
+        aciertos: 1,
+        fallos: 0,
+        nota: 10,
+        aprobado: true,
+        tiempoTotalMs: 100,
+        detalle: [],
+      }),
+    ),
     registrarResultadoExamen: jest
       .fn()
       .mockReturnValue(of({ intentoId: 1, nota: 10, aprobado: true })),
@@ -215,5 +284,83 @@ describe('CallejeroAppComponent', () => {
     component.verLeaderboard();
     expect(svc.leaderboardExamen).toHaveBeenCalledWith(1);
     expect(component.leaderboardVisible()).toBe(true);
+  });
+
+  // ── Recorridos (Callejero v10) ────────────────────────────────────────────
+
+  it('hay una 4ª pestaña Recorridos', () => {
+    component.setTab('recorridos');
+    expect(component.tab()).toBe('recorridos');
+  });
+
+  it('carga el catálogo de calles para el autocomplete al elegir ciudad', () => {
+    expect(svc.listarCalles).toHaveBeenCalledWith(10);
+    expect(component.recCalles().length).toBe(1);
+    expect(component.recCalles()[0].nombre).toBe('Av. del Cid');
+  });
+
+  it('onBuscarDestino con éxito guarda el recorrido (sin error)', () => {
+    component.onBuscarDestino(100);
+    expect(svc.getRecorrido).toHaveBeenCalledWith(100);
+    expect(component.recResultado()?.km).toBe(2.1);
+    expect(component.recError()).toBeNull();
+    expect(component.recLoading()).toBe(false);
+  });
+
+  it('onBuscarDestino con 404 → error no-disponible, sin recorrido (D7)', () => {
+    svc.getRecorrido.mockReturnValue(throwError(() => new Error('404')));
+    component.onBuscarDestino(100);
+    expect(component.recResultado()).toBeNull();
+    expect(component.recError()).toBe('no-disponible');
+    expect(component.recLoading()).toBe(false);
+  });
+
+  it('examen de recorridos: generar → responder (D8) → registrar nota', () => {
+    component.onIniciarExamenRecorridos();
+    expect(svc.generarExamenRecorrido).toHaveBeenCalledWith(1);
+    const view = component.recExamenView();
+    expect(view).not.toBeNull();
+    expect(view?.calleNombre).toBe('Av. del Cid');
+    expect(view?.opciones).toContain('Campanar');
+
+    // Responder el parque correcto (cobertura D8).
+    component.onResponderParque('Campanar');
+    expect(component.recExamenView()?.feedback?.ok).toBe(true);
+    expect(component.recExamenView()?.aciertos).toBe(1);
+
+    // Último reto → cerrar → registrar.
+    component.onSiguienteRecorrido();
+    expect(svc.registrarExamen).toHaveBeenCalled();
+    expect(component.recExamenView()).toBeNull();
+    expect(component.recExamenResultado()?.nota).toBe(10);
+  });
+
+  it('salir de la pestaña Recorridos limpia el estado del recorrido', () => {
+    component.onBuscarDestino(100);
+    expect(component.recResultado()).not.toBeNull();
+    component.setTab('recorridos');
+    component.setTab('mapa');
+    expect(component.recResultado()).toBeNull();
+    expect(component.recDestino()).toBeNull();
+  });
+
+  it('toggleFichaMinimizada alterna el estado y cerrarFicha lo resetea', () => {
+    component.ficha.set({
+      titulo: 'Calle Colón',
+      sub: 'Calle',
+      campos: [{ k: 'zona', v: 'Campanar' }],
+    });
+    expect(component.fichaMinimizada()).toBe(false);
+
+    component.toggleFichaMinimizada();
+    expect(component.fichaMinimizada()).toBe(true);
+
+    component.toggleFichaMinimizada();
+    expect(component.fichaMinimizada()).toBe(false);
+
+    component.fichaMinimizada.set(true);
+    component.cerrarFicha();
+    expect(component.fichaMinimizada()).toBe(false);
+    expect(component.ficha()).toBeNull();
   });
 });

@@ -408,12 +408,23 @@
     color: #bdb6ae;
     margin-top: 2px;
   }
+  &__acciones {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  &__min,
   &__cerrar {
     border: 0;
     background: none;
     color: #fff;
     cursor: pointer;
     font-size: 16px;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+  &__min {
+    font-size: 14px;
   }
   &__campos {
     padding: 4px 14px 8px;
@@ -428,6 +439,23 @@
       padding: 8px;
       cursor: pointer;
       font-weight: 600;
+    }
+  }
+  &--min {
+    width: auto;
+    min-width: 180px;
+    max-height: none;
+    overflow: hidden;
+
+    .cj-card__cab {
+      border-radius: 13px;
+      padding: 10px 12px;
+    }
+    .cj-card__tit {
+      font-size: 16px;
+    }
+    .cj-card__sub {
+      display: none;
     }
   }
 }

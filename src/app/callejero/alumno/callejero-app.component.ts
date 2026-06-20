@@ -16,12 +16,23 @@ import * as L from 'leaflet';
 import { environment } from '../../../environments/environment';
 import { CallejeroService } from '../services/callejero.service';
 import {
+  Calle,
   Ciudad,
+  GenerarExamenResponse,
   LeaderboardResponse,
+  OpcionParqueExamen,
   PoiCategoria,
   PoiCiudad,
+  RecorridoResponse,
+  RespuestaExamenDto,
+  RetoExamen,
   Zona,
 } from '../models/callejero.model';
+import {
+  RecorridoExamenView,
+  RecorridoPaneComponent,
+  RecorridoResultadoView,
+} from './recorrido-pane.component';
 
 /**
  * Callejero v3 — port fiel del tool de Raúl (TÉCNIKAFIRE · Bombers València).
@@ -85,7 +96,7 @@ const BASE_URLS: Record<string, { url: string; opts: L.TileLayerOptions }> = {
   },
 };
 
-type TabKey = 'mapa' | 'estudio' | 'examen';
+type TabKey = 'mapa' | 'estudio' | 'examen' | 'recorridos';
 type BaseKey = 'calles' | 'fusion' | 'satelite';
 type TipoReto = 'localiza' | 'zona' | 'coopera';
 
@@ -122,7 +133,7 @@ interface ResultadoFila {
 @Component({
   selector: 'app-callejero-app',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RecorridoPaneComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './callejero-app.component.html',
   styleUrl: './callejero-app.component.scss',
@@ -173,6 +184,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
 
   // ---- Ficha ----
   readonly ficha = signal<FichaEstado | null>(null);
+  readonly fichaMinimizada = signal<boolean>(false);
 
   // ---- Estudio ----
   readonly buscar = signal<string>('');
@@ -226,6 +238,18 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   readonly leaderboard = signal<LeaderboardResponse | null>(null);
   readonly leaderboardVisible = signal<boolean>(false);
 
+  // ---- Recorridos (Callejero v10) ----
+  /** Catálogo de calles del scope (autocomplete del pane), agregado por zonas. */
+  readonly recCalles = signal<Calle[]>([]);
+  readonly recDestino = signal<Calle | null>(null);
+  readonly recResultado = signal<RecorridoResponse | null>(null);
+  readonly recLoading = signal<boolean>(false);
+  readonly recError = signal<'no-disponible' | null>(null);
+  /** Estado del examen de recorridos para el pane (presentacional). */
+  readonly recExamenView = signal<RecorridoExamenView | null>(null);
+  /** Resultado final del examen de recorridos. */
+  readonly recExamenResultado = signal<RecorridoResultadoView | null>(null);
+
   // ---- Estado interno del examen ----
   private retos: Reto[] = [];
   private espera = false;
@@ -240,6 +264,18 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   private capasCat: Partial<Record<PoiCategoria, L.LayerGroup>> = {};
   private capaExamen?: L.LayerGroup;
   private pinTmp?: L.CircleMarker;
+  /** Capa dedicada al recorrido (polilínea + marcadores estación/destino). */
+  private capaRecorrido?: L.LayerGroup;
+
+  // ---- Estado interno del examen de recorridos ----
+  private recExamToken: string | null = null;
+  private recExamRetos: RetoExamen[] = [];
+  /** parquesCobertura por calleId (D8): se llena al generar (desde `calles`). */
+  private recCobertura = new Map<number, string[]>();
+  private recExamIdx = 0;
+  private recExamAciertos = 0;
+  private recExamRespuestas: RespuestaExamenDto[] = [];
+  private recExamRetoInicio = 0;
 
   // ============ Lifecycle ============
 
@@ -274,6 +310,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.capaZonas = L.layerGroup().addTo(map);
     this.capaEst = L.layerGroup().addTo(map);
     this.capaExamen = L.layerGroup().addTo(map);
+    this.capaRecorrido = L.layerGroup().addTo(map);
     for (const c of CAT_ORDER) this.capasCat[c] = L.layerGroup().addTo(map);
     map.on('click', (e: L.LeafletMouseEvent) => this.onMapClick(e));
     this.map = map;
@@ -321,10 +358,13 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.ciudadSel.set(ciudad);
     this.cargando.set(true);
     this.cerrarFicha();
+    this.resetRecorrido();
+    this.recCalles.set([]);
     this.service.listarZonas(ciudad.id).subscribe({
       next: (zonas) => {
         this.zonas.set(zonas);
         this.safe(() => this.pintarZonas(zonas));
+        this.cargarCallesAutocomplete(zonas);
         this.service.listarPoisCiudad(ciudad.id).subscribe({
           next: (pois) => {
             this.pois.set(pois);
@@ -337,6 +377,34 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       },
       error: () => this.cargando.set(false),
     });
+  }
+
+  /**
+   * Agrega las calles de todas las zonas para el autocomplete de Recorridos.
+   * Reusa `GET /callejero/zonas/:id/calles` (no hay endpoint de "todas las
+   * calles" de la ciudad). Dedupe por id y ordena por nombre. Cualquier zona que
+   * falle se ignora (best-effort): el autocomplete se degrada, no rompe.
+   */
+  private cargarCallesAutocomplete(zonas: Zona[]): void {
+    if (zonas.length === 0) return;
+    const acc = new Map<number, Calle>();
+    let pendientes = zonas.length;
+    for (const z of zonas) {
+      this.service.listarCalles(z.id).subscribe({
+        next: (r) => {
+          for (const c of r.calles) acc.set(c.id, c);
+          if (--pendientes === 0) this.publicarCallesAutocomplete(acc);
+        },
+        error: () => {
+          if (--pendientes === 0) this.publicarCallesAutocomplete(acc);
+        },
+      });
+    }
+  }
+  private publicarCallesAutocomplete(acc: Map<number, Calle>): void {
+    this.recCalles.set(
+      [...acc.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    );
   }
 
   // ============ Pintado ============
@@ -414,7 +482,13 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   // ============ Tabs / sidebar ============
 
   setTab(t: TabKey): void {
+    const anterior = this.tab();
     this.tab.set(t);
+    // Al salir de Recorridos, limpia la capa del mapa y el estado del pane (D7:
+    // nunca dejamos una línea/recorrido huérfano pintado en otra pestaña).
+    if (anterior === 'recorridos' && t !== 'recorridos') {
+      this.resetRecorrido();
+    }
   }
   toggleSidebar(): void {
     this.sidebarAbierto.update((v) => !v);
@@ -521,6 +595,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   private fichaPunto(latlng: L.LatLng): void {
     const z = this.zonaEn(latlng.lat, latlng.lng);
     this.ponPin(latlng.lat, latlng.lng);
+    this.fichaMinimizada.set(false);
     this.ficha.set({
       titulo: z ? z.nombre : 'Punto consultado',
       sub: z ? 'Zonificación por parques' : 'Sin zona asignada',
@@ -536,6 +611,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   private fichaPOI(p: PoiCiudad): void {
     const z = this.zonaEn(p.lat, p.lng);
     this.ponPin(p.lat, p.lng);
+    this.fichaMinimizada.set(false);
     this.ficha.set({
       titulo: p.nombre,
       sub: CATS[p.categoria]?.label ?? 'Ficha del lugar',
@@ -549,8 +625,13 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       centrar: { lat: p.lat, lng: p.lng },
     });
   }
+  toggleFichaMinimizada(): void {
+    this.fichaMinimizada.update((v) => !v);
+  }
+
   cerrarFicha(): void {
     this.ficha.set(null);
+    this.fichaMinimizada.set(false);
     this.pinTmp?.remove();
     this.pinTmp = undefined;
   }
@@ -884,5 +965,282 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.service.setLeaderboardOptIn(on).subscribe({
       next: () => this.verLeaderboard(),
     });
+  }
+
+  // ============ Recorridos (Callejero v10) ============
+
+  /** Limpia la capa del mapa + el estado del pane de recorridos. */
+  private resetRecorrido(): void {
+    this.recDestino.set(null);
+    this.recResultado.set(null);
+    this.recLoading.set(false);
+    this.recError.set(null);
+    this.recExamenView.set(null);
+    this.recExamenResultado.set(null);
+    this.recExamToken = null;
+    this.recExamRetos = [];
+    this.recCobertura.clear();
+    this.safe(() => this.capaRecorrido?.clearLayers());
+  }
+
+  /**
+   * El alumno eligió una calle-destino: pide el recorrido precomputado al
+   * backend. Con éxito pinta polilínea + marcadores en SU capa Leaflet; con 404
+   * limpia la capa y marca `error='no-disponible'` (D7) — NUNCA línea recta.
+   */
+  onBuscarDestino(calleId: number): void {
+    const destino = this.recCalles().find((c) => c.id === calleId) ?? null;
+    this.recDestino.set(destino);
+    this.recResultado.set(null);
+    this.recError.set(null);
+    this.recLoading.set(true);
+    this.safe(() => this.capaRecorrido?.clearLayers());
+
+    this.service.getRecorrido(calleId).subscribe({
+      next: (rec) => {
+        this.recLoading.set(false);
+        this.recResultado.set(rec);
+        this.safe(() => this.pintarRecorrido(rec, destino));
+      },
+      error: () => {
+        // 404 "Ruta no disponible" (o cualquier fallo): estado DURO, sin pintar
+        // nada en el mapa. Jamás una línea recta como recorrido (D7).
+        this.recLoading.set(false);
+        this.recResultado.set(null);
+        this.recError.set('no-disponible');
+        this.safe(() => this.capaRecorrido?.clearLayers());
+      },
+    });
+  }
+
+  /**
+   * Pinta la polilínea precomputada + marcadores de estación (origen) y destino.
+   * La geometría llega del backend (OSRM); si por lo que sea no es una geometría
+   * de línea válida, NO inventa una recta: deja la capa limpia (D7).
+   */
+  private pintarRecorrido(rec: RecorridoResponse, destino: Calle | null): void {
+    if (!this.map || !this.capaRecorrido) return;
+    this.capaRecorrido.clearLayers();
+
+    const latlngs = this.polylineALatLngs(rec.polyline);
+    if (latlngs.length < 2) return; // sin geometría válida → no pintamos recta falsa
+
+    const linea = L.polyline(latlngs, {
+      color: '#BF0B1B',
+      weight: 5,
+      opacity: 0.9,
+    }).addTo(this.capaRecorrido);
+
+    if (rec.estacion) {
+      L.marker([rec.estacion.lat, rec.estacion.lng], { icon: flameIcon(26) })
+        .bindTooltip(rec.estacion.nombre, {
+          direction: 'top',
+          className: 'poi-tip',
+        })
+        .addTo(this.capaRecorrido);
+    }
+    const fin = latlngs[latlngs.length - 1];
+    L.circleMarker(fin, {
+      radius: 9,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#F9B112',
+      fillOpacity: 1,
+    })
+      .bindTooltip(destino?.nombre ?? 'Destino', {
+        permanent: true,
+        direction: 'top',
+        className: 'poi-tip',
+      })
+      .addTo(this.capaRecorrido);
+
+    try {
+      this.map.fitBounds(linea.getBounds().pad(0.15));
+    } catch {
+      /* jsdom */
+    }
+    if (window.innerWidth <= 820) this.sidebarAbierto.set(false);
+  }
+
+  /**
+   * Convierte la `polyline` del backend (GeoJSON LineString/MultiLineString o un
+   * array crudo de pares) a `L.LatLng[]`. GeoJSON va en `[lng, lat]`; Leaflet en
+   * `[lat, lng]`. Devuelve `[]` si la forma no es reconocible (no inventa).
+   */
+  private polylineALatLngs(polyline: unknown): L.LatLngExpression[] {
+    const toLatLng = (pair: unknown): L.LatLngExpression | null => {
+      if (
+        Array.isArray(pair) &&
+        pair.length >= 2 &&
+        typeof pair[0] === 'number' &&
+        typeof pair[1] === 'number'
+      ) {
+        return [pair[1], pair[0]]; // [lng,lat] → [lat,lng]
+      }
+      return null;
+    };
+    const flatten = (coords: unknown[]): L.LatLngExpression[] => {
+      const out: L.LatLngExpression[] = [];
+      for (const c of coords) {
+        const ll = toLatLng(c);
+        if (ll) out.push(ll);
+      }
+      return out;
+    };
+
+    if (polyline && typeof polyline === 'object' && 'type' in polyline) {
+      const g = polyline as { type: string; coordinates?: unknown };
+      if (g.type === 'LineString' && Array.isArray(g.coordinates)) {
+        return flatten(g.coordinates);
+      }
+      if (g.type === 'MultiLineString' && Array.isArray(g.coordinates)) {
+        const out: L.LatLngExpression[] = [];
+        for (const seg of g.coordinates)
+          if (Array.isArray(seg)) out.push(...flatten(seg));
+        return out;
+      }
+      return [];
+    }
+    // Array crudo de pares [lng,lat].
+    if (Array.isArray(polyline)) return flatten(polyline);
+    return [];
+  }
+
+  /** El alumno pidió empezar el examen de recorridos. */
+  onIniciarExamenRecorridos(): void {
+    const ciudad = this.ciudadSel();
+    if (!ciudad) return;
+    this.recExamenResultado.set(null);
+    this.recError.set(null);
+    this.recResultado.set(null);
+    this.recDestino.set(null);
+    this.safe(() => this.capaRecorrido?.clearLayers());
+    this.service.generarExamenRecorrido(ciudad.id).subscribe({
+      next: (ex) => this.arrancarExamenRecorridos(ex),
+      error: () => {
+        // El backend ya muestra el toast (BadRequest con motivo claro).
+      },
+    });
+  }
+
+  private arrancarExamenRecorridos(ex: GenerarExamenResponse): void {
+    this.recExamToken = ex.token;
+    this.recExamRetos = ex.retos;
+    this.recExamIdx = 0;
+    this.recExamAciertos = 0;
+    this.recExamRespuestas = [];
+    // Mapa calleId → parquesCobertura (D8) para el feedback inmediato local. La
+    // nota la recalcula el backend; esto solo resalta acierto/fallo al vuelo.
+    this.recCobertura.clear();
+    for (const calle of ex.calles) {
+      const cobertura = (calle as Calle & { parquesCobertura?: string[] })
+        .parquesCobertura;
+      if (Array.isArray(cobertura)) this.recCobertura.set(calle.id, cobertura);
+    }
+    this.pintarRetoRecorrido();
+  }
+
+  private pintarRetoRecorrido(): void {
+    const reto = this.recExamRetos[this.recExamIdx];
+    if (!reto) return;
+    this.recExamRetoInicio = Date.now();
+    const opciones = ((reto.opciones ?? []) as OpcionParqueExamen[]).map(
+      (o) => o.parque,
+    );
+    this.recExamenView.set({
+      calleNombre: reto.nombre,
+      opciones,
+      indice: this.recExamIdx + 1,
+      total: this.recExamRetos.length,
+      aciertos: this.recExamAciertos,
+      feedback: null,
+      elegido: null,
+      correctos: this.recCobertura.get(reto.calleId) ?? [],
+      esUltimo: this.recExamIdx >= this.recExamRetos.length - 1,
+    });
+  }
+
+  /** El alumno eligió un parque para el reto actual. */
+  onResponderParque(parque: string): void {
+    const view = this.recExamenView();
+    const reto = this.recExamRetos[this.recExamIdx];
+    if (!view || view.feedback || !reto) return;
+
+    const correctos = this.recCobertura.get(reto.calleId) ?? [];
+    const ok = correctos.includes(parque); // D8: cualquier parque del conjunto
+    if (ok) this.recExamAciertos++;
+
+    this.recExamRespuestas.push({
+      orden: reto.orden,
+      respuestaParque: parque,
+      tiempoMs: Math.max(0, Date.now() - this.recExamRetoInicio),
+      agotoTiempo: false,
+    });
+
+    this.recExamenView.set({
+      ...view,
+      aciertos: this.recExamAciertos,
+      elegido: parque,
+      correctos,
+      feedback: {
+        ok,
+        texto: ok
+          ? `${parque} cubre esta calle.`
+          : `Cubre: ${correctos.join(', ') || '—'}.`,
+      },
+    });
+  }
+
+  /** Avanza al siguiente reto del examen de recorridos o lo cierra. */
+  onSiguienteRecorrido(): void {
+    const esUltimo = this.recExamIdx >= this.recExamRetos.length - 1;
+    if (esUltimo) {
+      this.cerrarExamenRecorridos();
+      return;
+    }
+    this.recExamIdx++;
+    this.pintarRetoRecorrido();
+  }
+
+  private cerrarExamenRecorridos(): void {
+    const token = this.recExamToken;
+    const total = this.recExamRetos.length;
+    const aciertos = this.recExamAciertos;
+    this.recExamenView.set(null);
+    if (!token) return;
+    const tiempoTotalMs = this.recExamRespuestas.reduce(
+      (s, r) => s + r.tiempoMs,
+      0,
+    );
+    this.service
+      .registrarExamen({
+        token,
+        tiempoTotalMs,
+        respuestas: this.recExamRespuestas,
+      })
+      .subscribe({
+        next: (res) => {
+          this.recExamenResultado.set({
+            nota: res.nota,
+            aciertos: res.aciertos,
+            total: res.totalRetos,
+            aprobado: res.aprobado,
+          });
+        },
+        error: () => {
+          // Fallback: muestra el conteo local si el registro falla.
+          this.recExamenResultado.set({
+            nota: total ? Math.round((aciertos / total) * 10 * 10) / 10 : 0,
+            aciertos,
+            total,
+            aprobado: total ? aciertos / total >= 0.5 : false,
+          });
+        },
+      });
+  }
+
+  /** El alumno minimizó/restauró el pane de recorridos (no necesita reacción). */
+  onMinimizarRecorrido(_min: boolean): void {
+    // El estado lo gobierna el propio pane; el padre no necesita reaccionar.
   }
 }

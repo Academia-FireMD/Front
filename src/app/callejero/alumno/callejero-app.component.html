@@ -16,6 +16,13 @@
       <button [class.act]="tab() === 'examen'" (click)="setTab('examen')">
         Examen
       </button>
+      <button
+        [class.act]="tab() === 'recorridos'"
+        (click)="setTab('recorridos')"
+        data-testid="cj-tab-recorridos"
+      >
+        Recorridos
+      </button>
     </nav>
 
     <!-- ---------- Pane MAPA ---------- -->
@@ -207,6 +214,24 @@
         </button>
       }
     </div>
+
+    <!-- ---------- Pane RECORRIDOS (Callejero v10) ---------- -->
+    <div class="cj-pane" [class.act]="tab() === 'recorridos'">
+      <app-recorrido-pane
+        [calles]="recCalles()"
+        [destino]="recDestino()"
+        [recorrido]="recResultado()"
+        [loading]="recLoading()"
+        [error]="recError()"
+        [examen]="recExamenView()"
+        [resultado]="recExamenResultado()"
+        (buscarDestino)="onBuscarDestino($event)"
+        (iniciarExamenRecorridos)="onIniciarExamenRecorridos()"
+        (responderParque)="onResponderParque($event)"
+        (siguienteOtraCalle)="onSiguienteRecorrido()"
+        (minimizarToggle)="onMinimizarRecorrido($event)"
+      ></app-recorrido-pane>
+    </div>
   </aside>
 
   <!-- ===================== MAPA ===================== -->
@@ -300,28 +325,43 @@
 
     <!-- ---------- Ficha (estilo My Maps) ---------- -->
     @if (ficha(); as f) {
-      <div class="cj-card" data-testid="cj-card">
+      <div
+        class="cj-card"
+        [class.cj-card--min]="fichaMinimizada()"
+        data-testid="cj-card"
+      >
         <div class="cj-card__cab">
           <div>
             <div class="cj-card__tit">{{ f.titulo }}</div>
             <div class="cj-card__sub">{{ f.sub }}</div>
           </div>
-          <button class="cj-card__cerrar" (click)="cerrarFicha()">✕</button>
+          <div class="cj-card__acciones">
+            <button
+              class="cj-card__min"
+              (click)="toggleFichaMinimizada()"
+              [attr.aria-label]="fichaMinimizada() ? 'Restaurar' : 'Minimizar'"
+            >
+              {{ fichaMinimizada() ? "▢" : "—" }}
+            </button>
+            <button class="cj-card__cerrar" (click)="cerrarFicha()">✕</button>
+          </div>
         </div>
-        <div class="cj-card__campos">
-          @for (campo of f.campos; track campo.k) {
-            <div class="cj-campo">
-              <div class="cj-campo__k">{{ campo.k }}</div>
-              <div class="cj-campo__v" [class.peque]="campo.peque">
-                {{ campo.v }}
+        @if (!fichaMinimizada()) {
+          <div class="cj-card__campos">
+            @for (campo of f.campos; track campo.k) {
+              <div class="cj-campo">
+                <div class="cj-campo__k">{{ campo.k }}</div>
+                <div class="cj-campo__v" [class.peque]="campo.peque">
+                  {{ campo.v }}
+                </div>
               </div>
+            }
+          </div>
+          @if (f.centrar) {
+            <div class="cj-card__pie">
+              <button (click)="centrarFicha()">Centrar en el mapa</button>
             </div>
           }
-        </div>
-        @if (f.centrar) {
-          <div class="cj-card__pie">
-            <button (click)="centrarFicha()">Centrar en el mapa</button>
-          </div>
         }
       </div>
     }

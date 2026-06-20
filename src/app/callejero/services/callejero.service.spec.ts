@@ -9,6 +9,8 @@ import { environment } from '../../../environments/environment';
 import {
   CallesZonaResponse,
   Ciudad,
+  GenerarExamenResponse,
+  RecorridoResponse,
   ResumenProgreso,
   Zona,
 } from '../models/callejero.model';
@@ -121,5 +123,93 @@ describe('CallejeroService', () => {
     httpMock.expectOne(`${API}/callejero/ciudades/1/progreso`).flush(res);
 
     expect(received).toEqual(res);
+  });
+
+  // ── Recorridos (Callejero v10) ────────────────────────────────────────────
+
+  it('GET /callejero/recorrido?calleId= devuelve el recorrido publicado', () => {
+    const rec: RecorridoResponse = {
+      polyline: {
+        type: 'LineString',
+        coordinates: [
+          [-0.37, 39.47],
+          [-0.36, 39.46],
+        ],
+      },
+      calles: ['Av. del Cid', 'Calle Colón'],
+      km: 2.4,
+      minutos: 6,
+      estacion: { nombre: 'Parque Campanar', lat: 39.48, lng: -0.38 },
+    };
+    let received: RecorridoResponse | undefined;
+
+    service.getRecorrido(99).subscribe((r) => (received = r));
+
+    const req = httpMock.expectOne(`${API}/callejero/recorrido?calleId=99`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush(rec);
+
+    expect(received).toEqual(rec);
+    expect(received?.calles.length).toBe(2);
+  });
+
+  it('generarExamen sin tipo envía tipoExamen MIXTO (default, no rompe firma)', () => {
+    let received: GenerarExamenResponse | undefined;
+    service.generarExamen(1, [2, 3]).subscribe((r) => (received = r));
+
+    const req = httpMock.expectOne(`${API}/callejero/examen/generar`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      ciudadId: 1,
+      zonaIds: [2, 3],
+      tipoExamen: 'MIXTO',
+    });
+    const res: GenerarExamenResponse = {
+      token: 't',
+      tipoExamen: 'MIXTO',
+      ciudadId: 1,
+      zonaIds: [2, 3],
+      totalRetos: 0,
+      duracionRetoMs: 1000,
+      calles: [],
+      retos: [],
+    };
+    req.flush(res);
+    expect(received?.tipoExamen).toBe('MIXTO');
+  });
+
+  it('generarExamenRecorrido envía tipoExamen RECORRIDO', () => {
+    let received: GenerarExamenResponse | undefined;
+    service.generarExamenRecorrido(1).subscribe((r) => (received = r));
+
+    const req = httpMock.expectOne(`${API}/callejero/examen/generar`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      ciudadId: 1,
+      zonaIds: [],
+      tipoExamen: 'RECORRIDO',
+    });
+    const res: GenerarExamenResponse = {
+      token: 't',
+      tipoExamen: 'RECORRIDO',
+      ciudadId: 1,
+      zonaIds: [],
+      totalRetos: 1,
+      duracionRetoMs: 1000,
+      calles: [],
+      retos: [
+        {
+          orden: 0,
+          tipo: 'RECORRIDO',
+          calleId: 5,
+          nombre: 'Calle X',
+          opciones: [{ parque: 'Campanar' }, { parque: 'Centro' }],
+        },
+      ],
+    };
+    req.flush(res);
+    expect(received?.tipoExamen).toBe('RECORRIDO');
+    expect(received?.retos[0].tipo).toBe('RECORRIDO');
   });
 });
