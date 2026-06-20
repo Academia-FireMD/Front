@@ -655,11 +655,13 @@ test.describe('Cursos admin — flujo completo', () => {
   }) => {
     await page.goto('/app/cursos-admin');
 
+    // La lista admin no tiene un heading <h*>Cursos</h*>; su ancla estable es
+    // el botón "Nuevo curso".
     await expect(
-      page.getByRole('heading', { name: /Cursos/i }).first(),
+      page.locator('[data-testid="nuevo-curso-btn"]'),
     ).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Curso QA Test')).toBeVisible();
-    await expect(page.getByText('curso-qa-test')).toBeVisible();
+    // La lista ya no muestra el slug en la tarjeta (solo nombre + estado).
     await expect(page.getByText('BORRADOR').first()).toBeVisible();
 
     await page.getByText('Curso QA Test').click();
@@ -845,7 +847,8 @@ test.describe('Cursos admin — flujo completo', () => {
       .locator('[data-testid="leccion-row-contenido"]')
       .first()
       .click();
-    await page.locator('[data-testid="bloques-add"]').click();
+    // Pulsar el chip VIDEO de la paleta abre el form de bloque en tipo VIDEO.
+    await page.locator('[data-testid="paleta-chip-VIDEO"]').click();
     await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
       timeout: 5_000,
     });
@@ -950,15 +953,12 @@ test.describe('Cursos admin — flujo completo', () => {
       page.locator('[data-testid="bloques-empty"]'),
     ).toBeVisible({ timeout: 5_000 });
 
-    // Añadir bloque → formulario inline.
-    await page.locator('[data-testid="bloques-add"]').click();
+    // Pulsar el chip TEXTO de la paleta abre el form inline ya en tipo TEXTO.
+    await page.locator('[data-testid="paleta-chip-TEXTO"]').click();
     await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
       timeout: 5_000,
     });
 
-    // Tipo por defecto VIDEO → cambiar a TEXTO.
-    await page.locator('[data-testid="bloque-form"] p-dropdown').first().click();
-    await page.getByRole('option', { name: 'Texto', exact: true }).click();
     // El contenido se escribe en el editor Markdown (Toast UI), no un textarea.
     const editor = page.locator(
       '[data-testid="bf-markdown-editor"] .toastui-editor-md-container [contenteditable="true"]',
@@ -1038,14 +1038,12 @@ test.describe('Cursos admin — flujo completo', () => {
       .locator('[data-testid="leccion-row-contenido"]')
       .first()
       .click();
-    await page.locator('[data-testid="bloques-add"]').click();
+    // Pulsar el chip CUESTIONARIO abre el form ya en ese tipo (siembra 1
+    // pregunta con 2 opciones).
+    await page.locator('[data-testid="paleta-chip-CUESTIONARIO"]').click();
     await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
       timeout: 5_000,
     });
-
-    // Tipo → CUESTIONARIO (siembra 1 pregunta con 2 opciones).
-    await page.locator('[data-testid="bloque-form"] p-dropdown').first().click();
-    await page.getByRole('option', { name: 'Cuestionario', exact: true }).click();
     await expect(
       page.locator('[data-testid="cuestionario-editor"]'),
     ).toBeVisible({ timeout: 5_000 });
