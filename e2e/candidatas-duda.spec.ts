@@ -90,9 +90,9 @@ test.describe('Candidatas de duda', () => {
     // CINCUENTA_POR_CIENTO is the third button (index 2): ⭐, 👍, 👎, 🛑
     await picker.locator('.seguridad-box').nth(2).click();
 
-    // After clicking 50%, counter should appear: "0 / 2 candidatas"
+    // 50% → "Dudo entre 3" → cap 3 (maxCandidatas): "0 / 3 candidatas".
     await expect(page.locator('[data-testid="candidatas-contador"]')).toBeVisible();
-    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('/ 2');
+    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('/ 3');
   });
 
   // ── T2: Descartar (toggle candidata) updates the counter ─────────────────
@@ -101,35 +101,27 @@ test.describe('Candidatas de duda', () => {
     await page.goto(TEST_URL);
     await expect(page.locator('[data-testid="pregunta-card"]')).toBeVisible({ timeout: 10_000 });
 
-    // Switch to 75% duda → 3 candidatas max
+    // Switch to 50% duda → 3 candidatas max (75% sería cap 2).
     const picker = page.locator('[data-testid="selector-confianza"]');
-    await picker.locator('.seguridad-box').nth(1).click(); // 👍 SETENTA_Y_CINCO_POR_CIENTO
+    await picker.locator('.seguridad-box').nth(2).click(); // 👎 CINCUENTA_POR_CIENTO
 
     await expect(page.locator('[data-testid="candidatas-contador"]')).toBeVisible();
 
-    // All 4 answers start as descartadas when candidatasPorPregunta is empty:
-    // esCandidata() returns false for all indices → all 4 render rescatar-btn, zero descartar-btn.
-    const rescatarBtns = page.locator('[data-testid="rescatar-btn"]');
-    await expect(rescatarBtns.first()).toBeVisible({ timeout: 5_000 });
-    await expect(rescatarBtns).toHaveCount(4);
+    // Entrar al modo de selección de candidatas.
+    await page.locator('[data-testid="abrir-seleccion-candidatas"]').click();
 
-    // Rescue 3 of them (indices 0, 1, 2) → they become candidatas
-    await rescatarBtns.nth(0).click();
-    await rescatarBtns.nth(1).click();
-    await rescatarBtns.nth(2).click();
+    // En modo selección, clicar una opción la marca/desmarca como candidata
+    // (toggle); el estado se refleja en el contador.
+    const opciones = page.locator('[data-testid="opcion-respuesta"]');
+    await opciones.nth(0).click();
+    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('1 / 3');
+    await opciones.nth(1).click();
+    await opciones.nth(2).click();
+    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('3 / 3');
 
-    // Now 3 answers are candidatas → 3 descartar-btn visible; 1 still descartada → 1 rescatar-btn
-    const descartarBtns = page.locator('[data-testid="descartar-btn"]');
-    await expect(descartarBtns).toHaveCount(3);
-    await expect(rescatarBtns).toHaveCount(1);
-
-    // Counter should now show 3 / 3 candidatas
-    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('/ 3');
-
-    // Toggle one candidata back to descartada
-    await descartarBtns.first().click();
-    await expect(descartarBtns).toHaveCount(2);
-    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('/ 3');
+    // Desmarcar una candidata → el contador baja.
+    await opciones.nth(0).click();
+    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('2 / 3');
   });
 
   // ── T3: Rescatar devuelve la opción al pool de candidatas ─────────────────
@@ -138,27 +130,24 @@ test.describe('Candidatas de duda', () => {
     await page.goto(TEST_URL);
     await expect(page.locator('[data-testid="pregunta-card"]')).toBeVisible({ timeout: 10_000 });
 
-    // Switch to 50% → max 2 candidatas
+    // Switch to 50% → max 3 candidatas
     const picker = page.locator('[data-testid="selector-confianza"]');
     await picker.locator('.seguridad-box').nth(2).click();
 
     await expect(page.locator('[data-testid="candidatas-contador"]')).toBeVisible();
 
-    // Wait for rescatar-btn to appear on non-candidata answers
-    const rescatarBtn = page.locator('[data-testid="rescatar-btn"]').first();
-    await expect(rescatarBtn).toBeVisible({ timeout: 5_000 });
+    // Entrar al modo de selección de candidatas.
+    await page.locator('[data-testid="abrir-seleccion-candidatas"]').click();
 
-    // There should be descartadas at this point (4 options, max 2 candidatas)
-    const countBefore = await page.locator('[data-testid="rescatar-btn"]').count();
-    expect(countBefore).toBeGreaterThan(0);
-
-    // Click rescatar on the first descartada — it should become candidata again
-    await rescatarBtn.click();
-
-    // After rescatar, that answer should now have a descartar-btn (it's now a candidata)
-    // and the total rescatar buttons should decrease by 1 (or be rearranged)
-    // The key assertion: the counter stays correct after rescuing
-    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('/ 2');
+    // Marcar una opción como candidata, descartarla y volver a rescatarla,
+    // verificando que el contador refleja cada paso (marcar→descartar→rescatar).
+    const opcion = page.locator('[data-testid="opcion-respuesta"]').first();
+    await opcion.click(); // marcar candidata
+    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('1 / 3');
+    await opcion.click(); // descartar
+    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('0 / 3');
+    await opcion.click(); // rescatar de vuelta
+    await expect(page.locator('[data-testid="candidatas-contador"]')).toContainText('1 / 3');
   });
 
   // ── T4: Candidatas persisten en el payload de registrar-respuesta ─────────
