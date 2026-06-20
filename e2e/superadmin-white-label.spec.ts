@@ -1,6 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
 import userAlumnoFixture from './fixtures/user-alumno.json';
-import { setupAuthInterceptors } from './helpers/interceptors.helper';
 
 /**
  * E2E smoke white-label MVP (§8.2).
@@ -124,18 +123,58 @@ async function loginAs(
   page: Page,
   rol: 'ALUMNO' | 'ADMIN' | 'SUPERADMIN',
 ): Promise<void> {
-  await setupAuthInterceptors(page, { email: `${rol.toLowerCase()}@t.com`, rol });
+  const email = `${rol.toLowerCase()}@t.com`;
+  const payload = Buffer.from(
+    JSON.stringify({ rol, email, sub: 1, exp: 9_999_999_999 }),
+  ).toString('base64');
+  const mockJwt = `x.${payload}.x`;
+  const userFixture = { ...userAlumnoFixture, rol };
+
+  // Scope SOLO a POST: no interceptar la navegación GET a /auth/login (pintaría
+  // el JSON). NO mockeamos /api/app-config aquí: lo posee setupAppConfigMocks
+  // (stateful, es lo que este test verifica).
+  await page.route('**/auth/login', (route) =>
+    route.request().method() === 'POST'
+      ? route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({ access_token: mockJwt, refresh_token: mockJwt }),
+        })
+      : route.continue(),
+  );
   await page.route('**/user/get-by-email', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ ...userAlumnoFixture, rol }),
+      body: JSON.stringify(userFixture),
     }),
   );
+  await page.route('**/user/profile', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(userFixture),
+    }),
+  );
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ verifactuEnabled: false }),
+    }),
+  );
+  await page.route('**/ai-assistant/token', (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: 'application/json',
+      body: JSON.stringify({ reason: 'DISABLED' }),
+    }),
+  );
+
   await page.goto('/auth/login');
-  await page.locator('input[formControlName="email"]').fill(`${rol.toLowerCase()}@t.com`);
+  await page.locator('input[formControlName="email"]').fill(email);
   await page.locator('app-password-input input').fill('test1234');
-  await page.locator('button[type="submit"]').click();
+  await page.locator('app-async-button button').first().click();
   await page.waitForURL('**/app/**', { timeout: 15_000 });
 }
 
@@ -152,9 +191,12 @@ test.describe('White-label superadmin panel', () => {
 
   test('SUPERADMIN ve entrada Configuración en menú', async ({ page }) => {
     await loginAs(page, 'SUPERADMIN');
-    await expect(page.getByText('Configuración').first()).toBeVisible({
-      timeout: 10_000,
-    });
+    // El menú lateral renderiza las hojas (no el label del grupo 'Configuración')
+    // y está COLAPSADO a iconos: el texto del label está oculto hasta el hover,
+    // pero el nombre accesible del menuitem ('White-label') existe siempre.
+    await expect(
+      page.getByRole('menuitem', { name: 'White-label' }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test('panel /superadmin/config renderiza 3 secciones', async ({ page }) => {
@@ -212,6 +254,10 @@ test.describe('White-label superadmin panel', () => {
 
   test('ALUMNO no ve entrada Configuración en menú', async ({ page }) => {
     await loginAs(page, 'ALUMNO');
+    // La entrada real del superadmin ('White-label') no debe existir para alumno.
+    await expect(
+      page.getByRole('menuitem', { name: 'White-label' }),
+    ).toHaveCount(0);
     await expect(page.getByText('Configuración')).toHaveCount(0);
   });
 
