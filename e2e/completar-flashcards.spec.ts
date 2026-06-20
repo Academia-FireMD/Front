@@ -12,13 +12,13 @@ test.describe('Completar Flashcards (Alumno)', () => {
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
 
     // Wait for the flashcard view to load
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('[data-testid="flashcard-pregunta"], [data-testid="flashcard-descripcion"]')).toBeVisible();
   });
 
   test('clic en "Ver solución" muestra la cara trasera', async ({ page }) => {
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
 
     const verSolucionBtn = page.locator('[data-testid="ver-solucion-btn"]');
     await expect(verSolucionBtn).toBeVisible();
@@ -29,7 +29,7 @@ test.describe('Completar Flashcards (Alumno)', () => {
 
   test('tecla Space muestra la solución', async ({ page }) => {
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
 
     await page.keyboard.press('Space');
     await expect(page.locator('[data-testid="flashcard-solucion"]')).toBeVisible({ timeout: 3_000 });
@@ -37,7 +37,7 @@ test.describe('Completar Flashcards (Alumno)', () => {
 
   test('marcar como BIEN llama a registrar-respuesta con estado BIEN', async ({ page }) => {
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
 
     let requestBody: unknown = null;
     page.on('request', (req) => {
@@ -62,7 +62,7 @@ test.describe('Completar Flashcards (Alumno)', () => {
 
   test('marcar como MAL llama a registrar-respuesta con estado MAL', async ({ page }) => {
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
 
     let requestBody: unknown = null;
     page.on('request', (req) => {
@@ -80,7 +80,7 @@ test.describe('Completar Flashcards (Alumno)', () => {
 
   test('marcar como REVISAR llama a registrar-respuesta con estado REVISAR', async ({ page }) => {
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
 
     let requestBody: unknown = null;
     page.on('request', (req) => {
@@ -98,7 +98,7 @@ test.describe('Completar Flashcards (Alumno)', () => {
 
   test('tecla ArrowRight equivale a marcar BIEN', async ({ page }) => {
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
 
     let requestBody: unknown = null;
     page.on('request', (req) => {
@@ -119,7 +119,7 @@ test.describe('Completar Flashcards (Alumno)', () => {
 
   test('tecla ArrowLeft equivale a marcar MAL', async ({ page }) => {
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
 
     let requestBody: unknown = null;
     page.on('request', (req) => {
@@ -171,7 +171,7 @@ test.describe('Completar Flashcards (Alumno)', () => {
     await setupFlashcardInterceptors(page, singleCardFixture as any);
 
     await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
-    await expect(page.locator('[data-testid="flashcard-container"], app-completar-flash-card-test')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="flashcard-container"]')).toBeVisible({ timeout: 10_000 });
 
     await page.locator('[data-testid="ver-solucion-btn"]').click();
     await page.locator('[data-testid="btn-bien"]').click();
