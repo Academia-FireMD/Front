@@ -1576,7 +1576,7 @@
       </div>
     </div>
   </div>
-  <div class="col-12 mb-3">
+  <div class="col-12 mb-3" data-testid="importar-excel-reserva">
     <p-checkbox
       [(ngModel)]="agregarComoReserva"
       [binary]="true"
@@ -1593,9 +1593,10 @@
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  data-testid="importar-excel-dialog"
 >
-  <div class="flex flex-column gap-3 p-3">
+  <!-- data-testid en el contenido (no en el host p-dialog, que tiene 0px y
+       no cuenta como "visible" para Playwright; el contenido va al portal). -->
+  <div class="flex flex-column gap-3 p-3" data-testid="importar-excel-dialog">
     <div>
       <label class="block mb-2 font-semibold">Archivo Excel (.xlsx)</label>
       <input

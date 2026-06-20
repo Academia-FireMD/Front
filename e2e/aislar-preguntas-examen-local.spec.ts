@@ -2,18 +2,21 @@ import { expect, test } from '@playwright/test';
 import * as path from 'path';
 import userAdminFixture from './fixtures/user-admin.json';
 import examenFixture from './fixtures/examen.json';
+import { loginAsAdminMock } from './helpers/auth.helper';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const EXAMEN_ID = 5;
 const FIXTURE_XLSX = path.resolve(__dirname, 'fixtures/preguntas-ejemplo.xlsx');
 
+// app-tema-select agrupa por `modulo.nombre` (solo esPublico); sin `modulo` el
+// overlay sale vacío.
 const mockTemas = [
   {
     id: 1,
     numero: 1,
     descripcion: 'Tema 1: Anatomía',
-    oposicion: 'BOMBEROS_ESTADO',
+    modulo: { nombre: 'Anatomía', esPublico: true, relevancia: [] },
   },
 ];
 
@@ -24,46 +27,6 @@ const mockExamenBase = {
   test: { id: 10, testPreguntas: [] as Array<unknown> },
   testId: 10,
 };
-
-// ─── Auth helpers (mismo patrón que importar-excel-examen.spec) ───────────────
-
-function buildMockJwt(payload: Record<string, unknown>): string {
-  const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
-  return `x.${base64Payload}.x`;
-}
-
-async function loginAsAdminMock(
-  page: import('@playwright/test').Page,
-): Promise<void> {
-  const mockJwt = buildMockJwt({
-    rol: 'ADMIN',
-    email: 'admin@test.com',
-    sub: 99,
-    exp: 9_999_999_999,
-  });
-
-  await page.route('**/auth/login', (route) =>
-    route.fulfill({
-      status: 201,
-      contentType: 'application/json',
-      body: JSON.stringify({ access_token: mockJwt, refresh_token: mockJwt }),
-    }),
-  );
-
-  await page.route('**/user/get-by-email', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(userAdminFixture),
-    }),
-  );
-
-  await page.goto('/auth/login');
-  await page.locator('input[formControlName="email"]').fill('admin@test.com');
-  await page.locator('app-password-input input').fill('test1234');
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL('**/app/**', { timeout: 15_000 });
-}
 
 // ─── Test ─────────────────────────────────────────────────────────────────────
 
@@ -92,7 +55,7 @@ test.describe('Aislamiento de preguntas examen-local + promoción', () => {
     });
 
     // ── 1. Auth + setup base
-    await loginAsAdminMock(page);
+    await loginAsAdminMock(page, userAdminFixture);
 
     // Examen detail (recalculado en cada llamada)
     await page.route(`**/examenes/${EXAMEN_ID}`, (route) =>
@@ -102,7 +65,7 @@ test.describe('Aislamiento de preguntas examen-local + promoción', () => {
         body: JSON.stringify(computeExamenDto()),
       }),
     );
-    await page.route('**/tema/get-temas', (route) =>
+    await page.route('**/get-temas', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -141,20 +104,20 @@ test.describe('Aislamiento de preguntas examen-local + promoción', () => {
       },
     );
 
-    // Banco global: filtra examenId IS NULL como hará el server tras el fix
+    // Banco global: el dashboard admin llama POST al endpoint BASE /preguntas
+    // (getPreguntas$ → post('')), no a /get-all-preguntas-by-filter. Filtra
+    // examenId IS NULL como hará el server tras el fix.
     let preguntasGetCalls = 0;
-    await page.route(
-      '**/preguntas/get-all-preguntas-by-filter',
-      (route) => {
-        preguntasGetCalls++;
-        const filtradas = preguntasMock.filter((p) => p.examenId === null);
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ data: filtradas, total: filtradas.length }),
-        });
-      },
-    );
+    await page.route(/\/preguntas(\?.*)?$/, (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      preguntasGetCalls++;
+      const filtradas = preguntasMock.filter((p) => p.examenId === null);
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: filtradas, total: filtradas.length }),
+      });
+    });
 
     // Promoción: actualiza examenId=NULL en las locales
     await page.route(
@@ -191,14 +154,21 @@ test.describe('Aislamiento de preguntas examen-local + promoción', () => {
       FIXTURE_XLSX,
     );
 
-    // Tema
-    const temaWrapper = page.locator('[data-testid="importar-excel-tema"]');
-    await temaWrapper.locator('.p-dropdown').click();
-    const overlayPanel = page.locator('p-overlaypanel').last();
+    // Tema: app-tema-select es un overlay custom (grupos colapsados).
+    await page.locator('[data-testid="importar-excel-tema"]').click();
+    const overlayPanel = page.locator('.p-overlaypanel');
     await overlayPanel.waitFor({ state: 'visible', timeout: 5_000 });
-    await overlayPanel.locator('p-radioButton').first().click();
+    await overlayPanel.locator('span.font-bold.pointer').first().click(); // expandir grupo
+    await overlayPanel.locator('.pl-3 span.pointer').first().click(); // primer tema
+    // Cerrar el overlay con un clic neutro DENTRO del diálogo (Escape cerraría
+    // el p-dialog entero).
+    await page
+      .locator('[data-testid="importar-excel-dialog"]')
+      .getByText('Archivo Excel')
+      .click();
+    await overlayPanel.waitFor({ state: 'hidden', timeout: 3_000 }).catch(() => {});
 
-    // Dificultad
+    // Dificultad (sigue siendo p-dropdown con appendTo body).
     const dificultadWrapper = page.locator(
       '[data-testid="importar-excel-dificultad"]',
     );
@@ -215,9 +185,8 @@ test.describe('Aislamiento de preguntas examen-local + promoción', () => {
 
     // ── 3. Banco global: las 3 preguntas NO aparecen
     await page.goto('/app/test/preguntas');
-    // Espera a que el listado intente cargar
-    await page.waitForFunction(() => true, null, { timeout: 1_000 });
-    expect(preguntasGetCalls).toBeGreaterThan(0);
+    // Esperar a que el listado dispare el POST /preguntas (poll, no un wait fijo).
+    await expect.poll(() => preguntasGetCalls, { timeout: 10_000 }).toBeGreaterThan(0);
 
     // El estado del mock confirma que el banco-mock devolvió 0 preguntas
     // (todas tienen examenId set). Verificamos también que ningún
