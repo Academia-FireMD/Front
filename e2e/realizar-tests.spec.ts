@@ -60,7 +60,7 @@ test.describe('Realizar Tests - Configuración y Generación', () => {
       await page.locator('[data-testid="generar-test-btn"]').click();
 
       // Confirm dialog
-      await expect(page.locator('[data-testid="confirmacion-dialog"], .p-confirm-dialog')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('.p-confirm-dialog').first()).toBeVisible({ timeout: 5_000 });
       await page.locator('.p-confirm-dialog-accept').click();
 
       // Should navigate to the test execution page
@@ -161,7 +161,7 @@ test.describe('Realizar Tests - Configuración y Generación', () => {
       await seleccionarPrimerTema(page);
 
       await page.locator('[data-testid="generar-test-btn"]').click();
-      await expect(page.locator('[data-testid="confirmacion-dialog"], .p-confirm-dialog')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('.p-confirm-dialog').first()).toBeVisible({ timeout: 5_000 });
       await page.locator('.p-confirm-dialog-accept').click();
 
       await expect(page.locator('[data-testid="pregunta-card"]')).toBeVisible({ timeout: 10_000 });
