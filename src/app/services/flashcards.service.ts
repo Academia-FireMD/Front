@@ -26,6 +26,7 @@ export interface GenerarFlashcardTestDto {
   temas: Array<number>;
   generarTestDeRepaso: boolean;
   sobreescribir?: boolean;
+  aleatorio?: boolean;
 }
 @Injectable({
   providedIn: 'root',
@@ -77,7 +78,7 @@ export class FlashcardDataService extends ApiBaseService {
   public updateFlashcard$(flashcard: Partial<FlashcardData>) {
     return this.post(
       '/update-flashcard',
-      flashcard
+      flashcard,
     ) as Observable<FlashcardData>;
   }
 
@@ -143,25 +144,29 @@ export class FlashcardDataService extends ApiBaseService {
         this.controllerPrefix +
         '/flashcards-creados-por-alumno',
       {},
-      { responseType: 'blob' }
+      { responseType: 'blob' },
     );
   }
 
   public descargarPlantillaImportacion() {
     return this._http.get(
       environment.apiUrl + this.controllerPrefix + '/plantilla-importacion',
-      { responseType: 'blob' }
+      { responseType: 'blob' },
     );
   }
 
-  public exportarFlashcardsExcel(temaIds?: number[], soloAlumnos?: boolean, dificultad?: Dificultad): Observable<Blob> {
+  public exportarFlashcardsExcel(
+    temaIds?: number[],
+    soloAlumnos?: boolean,
+    dificultad?: Dificultad,
+  ): Observable<Blob> {
     let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/excel`;
     const params: string[] = [];
-    
+
     if (temaIds && temaIds.length > 0) {
       params.push(`temaIds=${temaIds.join(',')}`);
     }
-    
+
     if (soloAlumnos !== undefined) {
       params.push(`soloAlumnos=${soloAlumnos}`);
     }
@@ -172,18 +177,22 @@ export class FlashcardDataService extends ApiBaseService {
     if (params.length > 0) {
       url += `?${params.join('&')}`;
     }
-    
+
     return this._http.get(url, { responseType: 'blob' });
   }
 
-  public exportarFlashcardsWord(temaIds?: number[], soloAlumnos?: boolean, dificultad?: Dificultad): Observable<Blob> {
+  public exportarFlashcardsWord(
+    temaIds?: number[],
+    soloAlumnos?: boolean,
+    dificultad?: Dificultad,
+  ): Observable<Blob> {
     let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/word`;
     const params: string[] = [];
-    
+
     if (temaIds && temaIds.length > 0) {
       params.push(`temaIds=${temaIds.join(',')}`);
     }
-    
+
     if (soloAlumnos !== undefined) {
       params.push(`soloAlumnos=${soloAlumnos}`);
     }
@@ -194,7 +203,7 @@ export class FlashcardDataService extends ApiBaseService {
     if (params.length > 0) {
       url += `?${params.join('&')}`;
     }
-    
+
     return this._http.get(url, { responseType: 'blob' });
   }
 }

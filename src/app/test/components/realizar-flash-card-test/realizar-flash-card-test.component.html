@@ -31,9 +31,12 @@
             <ng-template let-item pTemplate="selectedItem">
               <div class="flex align-items-center gap-2 h-full">
                 @if (item.icon) {
-                <i class="pi {{ item.icon }}"></i>
+                  <i class="pi {{ item.icon }}"></i>
                 } @else {
-                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+                  <i
+                    class="pi pi-{{ star }}"
+                    *ngFor="let star of item.stars"
+                  ></i>
                 }
                 <div class="hidden md:block">{{ item.label }}</div>
               </div>
@@ -41,9 +44,12 @@
             <ng-template let-item let-index pTemplate="item">
               <div class="flex align-items-center gap-2 h-full">
                 @if (item.icon) {
-                <i class="pi {{ item.icon }}"></i>
+                  <i class="pi {{ item.icon }}"></i>
                 } @else {
-                <i class="pi pi-{{ star }}" *ngFor="let star of item.stars"></i>
+                  <i
+                    class="pi pi-{{ star }}"
+                    *ngFor="let star of item.stars"
+                  ></i>
                 }
                 <div class="hidden md:block">{{ item.label }}</div>
               </div>
@@ -67,7 +73,13 @@
           ></p-inputSwitch>
         </ng-container>
 
-        <i 
+        <label for="switchAleatorio">Orden aleatorio</label>
+        <p-inputSwitch
+          inputId="switchAleatorio"
+          [formControl]="formGroup.controls.aleatorio"
+        ></p-inputSwitch>
+
+        <i
           class="pi pi-info-circle text-primary cursor-pointer ml-2"
           pTooltip="El test prioriza fichas nuevas y las que necesitas repasar. Si solicitas más fichas de las disponibles, se incluirán todas."
           tooltipPosition="top"
@@ -114,7 +126,7 @@
                   <div class="body">
                     Has comenzado un test el día
                     <strong>{{
-                      testComenzado.createdAt | date : "shortDate"
+                      testComenzado.createdAt | date: "shortDate"
                     }}</strong>
 
                     con {{ testComenzado.flashcardsPendientes }} respuestas de
@@ -133,7 +145,7 @@
                 <a
                   [routerLink]="[
                     '/app/test/alumno/realizar-flash-cards-test/' +
-                      testComenzado.id
+                      testComenzado.id,
                   ]"
                   class="link-text flex align-items-center p-button p-button-raised"
                   style="text-decoration: none"

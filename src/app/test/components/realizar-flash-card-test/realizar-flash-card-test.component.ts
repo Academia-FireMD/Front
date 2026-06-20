@@ -13,7 +13,7 @@ import { TemaService } from '../../../services/tema.service';
 import { Dificultad } from '../../../shared/models/pregunta.model';
 import {
   getAllDifficultades,
-  getNumeroDePreguntas
+  getNumeroDePreguntas,
 } from '../../../utils/utils';
 
 @Component({
@@ -30,9 +30,13 @@ export class RealizarFlashCardTestComponent {
   flashcardService = inject(FlashcardDataService);
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
-    dificultad: [[Dificultad.BASICO, Dificultad.INTERMEDIO, Dificultad.DIFICIL], Validators.required],
+    dificultad: [
+      [Dificultad.BASICO, Dificultad.INTERMEDIO, Dificultad.DIFICIL],
+      Validators.required,
+    ],
     temas: [[], Validators.required],
     generarTestDeRepaso: [false],
+    aleatorio: [false],
   });
   public getFallosCount$ = this.flashcardService.obtenerFallosCount();
   public getAllTestsComenzados$ = this.flashcardService.getAllTest();
@@ -46,6 +50,7 @@ export class RealizarFlashCardTestComponent {
       dificultades: this.formGroup.value.dificultad ?? [Dificultad.BASICO],
       temas: this.formGroup.value.temas ?? [],
       generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
+      aleatorio: this.formGroup.value.aleatorio ?? false,
       sobreescribir,
     } as GenerarFlashcardTestDto;
   }
@@ -54,7 +59,7 @@ export class RealizarFlashCardTestComponent {
     try {
       this.generandoTest = true;
       const res = await firstValueFrom(
-        this.flashcardService.generarTest(this.buildPayload())
+        this.flashcardService.generarTest(this.buildPayload()),
       );
       this.generandoTest = false;
       this.toast.success('Test generado exitosamente!', 'Generación exitosa');
@@ -72,7 +77,8 @@ export class RealizarFlashCardTestComponent {
 
   private confirmarSobreescribir() {
     this.confirmationService.confirm({
-      message: 'Ya tienes un test en curso. ¿Quieres descartarlo y generar uno nuevo?',
+      message:
+        'Ya tienes un test en curso. ¿Quieres descartarlo y generar uno nuevo?',
       header: 'Test existente',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'none',
@@ -84,14 +90,20 @@ export class RealizarFlashCardTestComponent {
         try {
           this.generandoTest = true;
           await firstValueFrom(
-            this.flashcardService.generarTest(this.buildPayload(true))
+            this.flashcardService.generarTest(this.buildPayload(true)),
           );
           this.generandoTest = false;
-          this.toast.success('Test generado exitosamente!', 'Generación exitosa');
+          this.toast.success(
+            'Test generado exitosamente!',
+            'Generación exitosa',
+          );
           this.getAllTestsComenzados$ = this.flashcardService.getAllTest();
         } catch (err: any) {
           this.generandoTest = false;
-          this.toast.error(err?.error?.message || 'Error al generar el test.', 'Error');
+          this.toast.error(
+            err?.error?.message || 'Error al generar el test.',
+            'Error',
+          );
         }
       },
     });
@@ -113,7 +125,7 @@ export class RealizarFlashCardTestComponent {
         this.toast.info('Test eliminado exitosamente');
         this.getAllTestsComenzados$ = this.flashcardService.getAllTest();
       },
-      reject: () => { },
+      reject: () => {},
     });
   }
 }
