@@ -317,7 +317,7 @@ describe('CallejeroAppComponent', () => {
 
   it('examen de recorridos: generar → responder (D8) → registrar nota', () => {
     component.onIniciarExamenRecorridos();
-    expect(svc.generarExamenRecorrido).toHaveBeenCalledWith(1);
+    expect(svc.generarExamenRecorrido).toHaveBeenCalledWith(1, [], 'MEDIO');
     const view = component.recExamenView();
     expect(view).not.toBeNull();
     expect(view?.calleNombre).toBe('Av. del Cid');

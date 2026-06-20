@@ -141,6 +141,9 @@ export type TipoRetoCallejero = 'LOCALIZAR' | 'IDENTIFICAR' | 'RECORRIDO';
  */
 export type TipoExamenCallejero = 'MIXTO' | 'RECORRIDO';
 
+/** Dificultad del examen/recorrido (port v27): filtra el pool por longitud de calle. */
+export type DificultadCallejero = 'FACIL' | 'MEDIO' | 'DIFICIL';
+
 /** Una opción de un reto de identificar. */
 export interface OpcionRetoExamen {
   calleId: number;

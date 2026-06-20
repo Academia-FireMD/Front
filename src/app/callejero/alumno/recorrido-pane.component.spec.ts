@@ -229,4 +229,24 @@ describe('RecorridoPaneComponent', () => {
       expect(r?.textContent).toContain('Aprobado');
     });
   });
+
+  // ── Selector de dificultad (port v27) ─────────────────────────────────────
+  describe('selector de dificultad', () => {
+    it('renderiza los 3 niveles y emite cambiarDificultad al pulsar', () => {
+      expect(byTestId(fixture, 'cj-rec-dificultad')).not.toBeNull();
+      let emitido: string | undefined;
+      component.cambiarDificultad.subscribe((d) => (emitido = d));
+      (byTestId(fixture, 'cj-rec-dif-DIFICIL') as HTMLButtonElement).click();
+      expect(emitido).toBe('DIFICIL');
+    });
+
+    it('marca con .on el nivel activo según el input dificultad', () => {
+      fixture.componentRef.setInput('dificultad', 'FACIL');
+      fixture.detectChanges();
+      const facil = byTestId(fixture, 'cj-rec-dif-FACIL') as HTMLElement;
+      const medio = byTestId(fixture, 'cj-rec-dif-MEDIO') as HTMLElement;
+      expect(facil.classList.contains('on')).toBe(true);
+      expect(medio.classList.contains('on')).toBe(false);
+    });
+  });
 });

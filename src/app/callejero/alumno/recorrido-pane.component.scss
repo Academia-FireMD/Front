@@ -341,4 +341,47 @@
       }
     }
   }
+
+  // Selector de dificultad (port v27)
+  .cj-rec__dificultad {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 4px;
+
+    .cj-rec__dificultad-label {
+      font-size: 0.78rem;
+      color: var(--gris);
+    }
+
+    .cj-rec__dificultad-btns {
+      display: inline-flex;
+      border: 1px solid var(--linea);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .cj-rec__dif-btn {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      border-right: 1px solid var(--linea);
+
+      &:last-child {
+        border-right: 0;
+      }
+
+      &.on {
+        background: var(--rojo);
+        color: #fff;
+      }
+
+      &:not(.on):hover {
+        color: var(--rojo);
+      }
+    }
+  }
 }

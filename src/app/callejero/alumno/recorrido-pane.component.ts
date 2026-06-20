@@ -12,7 +12,11 @@ import type {
   AutoCompleteCompleteEvent,
   AutoCompleteSelectEvent,
 } from 'primeng/autocomplete';
-import { Calle, RecorridoResponse } from '../models/callejero.model';
+import {
+  Calle,
+  DificultadCallejero,
+  RecorridoResponse,
+} from '../models/callejero.model';
 
 /**
  * Estado del examen de recorridos que el padre pasa al pane. Es PRESENTACIONAL:
@@ -90,10 +94,14 @@ export class RecorridoPaneComponent {
   readonly examen = input<RecorridoExamenView | null>(null);
   /** Resultado final del examen; `null` mientras no haya terminado. */
   readonly resultado = input<RecorridoResultadoView | null>(null);
+  /** Dificultad seleccionada (port v27): filtra el pool por longitud de calle. */
+  readonly dificultad = input<DificultadCallejero>('MEDIO');
 
   // ---- Outputs (intención hacia el padre) ----
   /** El alumno eligió una calle-destino del autocomplete. */
   readonly buscarDestino = output<number>();
+  /** El alumno cambió la dificultad del examen de recorridos. */
+  readonly cambiarDificultad = output<DificultadCallejero>();
   /** El alumno pulsó "Examen de recorridos". */
   readonly iniciarExamenRecorridos = output<void>();
   /** El alumno eligió un parque en el reto actual del examen. */
@@ -107,6 +115,13 @@ export class RecorridoPaneComponent {
   readonly minimizado = signal<boolean>(false);
   /** Sugerencias del autocomplete (resultado del filtrado local). */
   readonly sugerencias = signal<Calle[]>([]);
+
+  /** Opciones del selector de dificultad (port v27). */
+  readonly dificultades: { valor: DificultadCallejero; label: string }[] = [
+    { valor: 'FACIL', label: 'Fácil' },
+    { valor: 'MEDIO', label: 'Medio' },
+    { valor: 'DIFICIL', label: 'Difícil' },
+  ];
 
   /** ¿Hay un examen de recorridos en curso? */
   readonly examenActivo = computed(() => this.examen() !== null);

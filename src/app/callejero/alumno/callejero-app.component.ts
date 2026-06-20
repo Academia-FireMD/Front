@@ -19,6 +19,7 @@ import {
   Calle,
   Ciudad,
   GenerarExamenResponse,
+  DificultadCallejero,
   LeaderboardResponse,
   OpcionParqueExamen,
   PoiCategoria,
@@ -249,6 +250,8 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   readonly recExamenView = signal<RecorridoExamenView | null>(null);
   /** Resultado final del examen de recorridos. */
   readonly recExamenResultado = signal<RecorridoResultadoView | null>(null);
+  /** Dificultad del examen de recorridos (port v27); por defecto MEDIO. */
+  readonly dificultadRec = signal<DificultadCallejero>('MEDIO');
 
   // ---- Estado interno del examen ----
   private retos: Reto[] = [];
@@ -1115,12 +1118,14 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.recResultado.set(null);
     this.recDestino.set(null);
     this.safe(() => this.capaRecorrido?.clearLayers());
-    this.service.generarExamenRecorrido(ciudad.id).subscribe({
-      next: (ex) => this.arrancarExamenRecorridos(ex),
-      error: () => {
-        // El backend ya muestra el toast (BadRequest con motivo claro).
-      },
-    });
+    this.service
+      .generarExamenRecorrido(ciudad.id, [], this.dificultadRec())
+      .subscribe({
+        next: (ex) => this.arrancarExamenRecorridos(ex),
+        error: () => {
+          // El backend ya muestra el toast (BadRequest con motivo claro).
+        },
+      });
   }
 
   private arrancarExamenRecorridos(ex: GenerarExamenResponse): void {

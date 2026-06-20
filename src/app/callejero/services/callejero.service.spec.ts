@@ -164,6 +164,7 @@ describe('CallejeroService', () => {
       ciudadId: 1,
       zonaIds: [2, 3],
       tipoExamen: 'MIXTO',
+      dificultad: 'MEDIO',
     });
     const res: GenerarExamenResponse = {
       token: 't',
@@ -189,6 +190,7 @@ describe('CallejeroService', () => {
       ciudadId: 1,
       zonaIds: [],
       tipoExamen: 'RECORRIDO',
+      dificultad: 'MEDIO',
     });
     const res: GenerarExamenResponse = {
       token: 't',
@@ -211,5 +213,26 @@ describe('CallejeroService', () => {
     req.flush(res);
     expect(received?.tipoExamen).toBe('RECORRIDO');
     expect(received?.retos[0].tipo).toBe('RECORRIDO');
+  });
+
+  it('generarExamenRecorrido propaga la dificultad elegida (port v27)', () => {
+    service.generarExamenRecorrido(1, [], 'DIFICIL').subscribe();
+    const req = httpMock.expectOne(`${API}/callejero/examen/generar`);
+    expect(req.request.body).toEqual({
+      ciudadId: 1,
+      zonaIds: [],
+      tipoExamen: 'RECORRIDO',
+      dificultad: 'DIFICIL',
+    });
+    req.flush({
+      token: 't',
+      tipoExamen: 'RECORRIDO',
+      ciudadId: 1,
+      zonaIds: [],
+      totalRetos: 0,
+      duracionRetoMs: 1000,
+      calles: [],
+      retos: [],
+    } as GenerarExamenResponse);
   });
 });

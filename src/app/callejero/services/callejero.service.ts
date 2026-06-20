@@ -5,6 +5,7 @@ import { ApiBaseService } from '../../services/api-base.service';
 import {
   CallesZonaResponse,
   Ciudad,
+  DificultadCallejero,
   GenerarExamenResponse,
   HistorialExamenResponse,
   LeaderboardResponse,
@@ -110,11 +111,13 @@ export class CallejeroService extends ApiBaseService {
     ciudadId: number,
     zonaIds: number[] = [],
     tipoExamen: TipoExamenCallejero = 'MIXTO',
+    dificultad: DificultadCallejero = 'MEDIO',
   ): Observable<GenerarExamenResponse> {
     return this.post('/examen/generar', {
       ciudadId,
       zonaIds,
       tipoExamen,
+      dificultad,
     }) as Observable<GenerarExamenResponse>;
   }
 
@@ -125,8 +128,9 @@ export class CallejeroService extends ApiBaseService {
   generarExamenRecorrido(
     ciudadId: number,
     zonaIds: number[] = [],
+    dificultad: DificultadCallejero = 'MEDIO',
   ): Observable<GenerarExamenResponse> {
-    return this.generarExamen(ciudadId, zonaIds, 'RECORRIDO');
+    return this.generarExamen(ciudadId, zonaIds, 'RECORRIDO', dificultad);
   }
 
   /** POST /callejero/examen/registrar — envía las respuestas y recibe la nota. */

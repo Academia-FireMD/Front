@@ -216,4 +216,53 @@ test.describe('Módulo Callejero (alumno)', () => {
     await opciones.first().click();
     await expect(page.getByTestId('feedback')).toBeVisible();
   });
+
+  test('Recorridos: el selector de dificultad (port v27) envía la dificultad elegida', async ({
+    page,
+  }) => {
+    let body: { tipoExamen?: string; dificultad?: string } | null = null;
+    await page.route('**/callejero/examen/generar', (route) => {
+      body = route.request().postDataJSON() as {
+        tipoExamen?: string;
+        dificultad?: string;
+      };
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 't',
+          tipoExamen: 'RECORRIDO',
+          dificultad: body?.dificultad ?? 'MEDIO',
+          ciudadId: 1,
+          zonaIds: [],
+          totalRetos: 1,
+          duracionRetoMs: 15000,
+          calles: [],
+          retos: [
+            {
+              orden: 0,
+              tipo: 'RECORRIDO',
+              calleId: 5,
+              nombre: 'Calle X',
+              opciones: [{ parque: 'A' }, { parque: 'B' }],
+            },
+          ],
+        }),
+      });
+    });
+
+    await irACallejero(page);
+    await page.getByTestId('cj-tab-recorridos').click();
+
+    // El selector de dificultad y el CTA del examen están visibles.
+    await expect(page.getByTestId('cj-rec-dificultad')).toBeVisible();
+    await page.getByTestId('cj-rec-dif-DIFICIL').click();
+    await page.getByTestId('cj-rec-iniciar-examen').click();
+
+    await page.waitForResponse('**/callejero/examen/generar');
+    expect(body).toMatchObject({
+      tipoExamen: 'RECORRIDO',
+      dificultad: 'DIFICIL',
+    });
+  });
 });

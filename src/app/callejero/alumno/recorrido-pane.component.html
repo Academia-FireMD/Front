@@ -165,6 +165,24 @@
           </div>
         }
 
+        <!-- Dificultad del examen (port v27): filtra el pool por longitud de calle -->
+        <div class="cj-rec__dificultad" data-testid="cj-rec-dificultad">
+          <span class="cj-rec__dificultad-label">Dificultad</span>
+          <div class="cj-rec__dificultad-btns">
+            @for (d of dificultades; track d.valor) {
+              <button
+                type="button"
+                class="cj-rec__dif-btn"
+                [class.on]="dificultad() === d.valor"
+                [attr.data-testid]="'cj-rec-dif-' + d.valor"
+                (click)="cambiarDificultad.emit(d.valor)"
+              >
+                {{ d.label }}
+              </button>
+            }
+          </div>
+        </div>
+
         <button
           type="button"
           class="cj-rec__btn cj-rec__btn--linea"
