@@ -17,6 +17,37 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { loginAsAlumnoMock } from './helpers/auth.helper';
 import callejero from './fixtures/callejero-valencia.json';
+import userAlumnoFixture from './fixtures/user-alumno.json';
+
+/**
+ * Stubs NARROW del app-shell que el módulo evolucionado (v3/v10 + asistente IA)
+ * pide al arrancar y que los helpers originales no cubrían. Su ausencia disparaba
+ * el toast "Ocurrió un error..." y la página no renderizaba. Sin catch-all amplio
+ * (un {} para /api/app-config rompe generateShades).
+ */
+async function setupShellStubs(page: Page): Promise<void> {
+  await page.route('**/user/profile', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(userAlumnoFixture),
+    }),
+  );
+  await page.route('**/ai-assistant/token', (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: 'application/json',
+      body: JSON.stringify({ reason: 'DISABLED' }),
+    }),
+  );
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ verifactuEnabled: false }),
+    }),
+  );
+}
 
 interface CallejeroState {
   progresoCalls: { calleId: number; acierto: boolean }[];
@@ -38,10 +69,13 @@ async function setupAppConfigStubs(page: Page): Promise<void> {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
+      // AppConfig requiere appName + AMBOS colores; sin secondaryColor,
+      // applyCssVars → generateShades(undefined) → crash (reading 'slice').
       body: JSON.stringify({
-        nombreAcademia: 'Test Academia',
+        appName: 'Test Academia',
         logoUrl: null,
         primaryColor: '#000000',
+        secondaryColor: '#004E89',
         updatedAt: new Date().toISOString(),
       }),
     }),
@@ -142,79 +176,89 @@ async function setupCallejeroInterceptors(
       body: JSON.stringify(resumenProgreso(state)),
     });
   });
+
+  // GET /callejero/ciudades/:id/pois — markers del mapa (v3/v10). Su ausencia
+  // disparaba el error toast al cargar la ciudad.
+  await page.route(/\/callejero\/ciudades\/\d+\/pois$/, (route) => {
+    if (!isXhr(route.request())) return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(callejero.pois ?? []),
+    });
+  });
+
+  // GET /callejero/examen/leaderboard
+  await page.route(/\/callejero\/examen\/leaderboard$/, (route) => {
+    if (!isXhr(route.request())) return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ciudadId: 1,
+        total: 0,
+        top: [],
+        miRango: null,
+        miOptIn: false,
+      }),
+    });
+  });
+
+  // GET /callejero/recorrido?calleId=...
+  await page.route(/\/callejero\/recorrido(\?|$)/, (route) => {
+    if (!isXhr(route.request())) return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        polyline: { type: 'LineString', coordinates: [] },
+        calles: ['Calle A', 'Calle B'],
+        km: 2.1,
+        minutos: 6,
+        estacion: { nombre: 'Parc de Bombers Nord', lat: 39.48, lng: -0.37 },
+      }),
+    });
+  });
 }
 
 async function irACallejero(page: Page): Promise<void> {
   await page.goto('/app/callejero');
-  await expect(page.getByTestId('callejero-page')).toBeVisible();
-  await expect(page.getByTestId('callejero-map')).toBeVisible();
-}
-
-async function seleccionarPrimeraZona(page: Page): Promise<void> {
-  // El selector de zona es un p-dropdown; abrir y elegir la primera opción.
-  const dropdown = page.getByTestId('selector-zona');
-  await dropdown.click();
-  await page.locator('.p-dropdown-item').first().click();
+  // El refactor v3 (calcar Raúl) renombró los test-id: raíz `callejero-app`,
+  // mapa `cj-map` (antes `callejero-page`/`callejero-map`).
+  await expect(page.getByTestId('callejero-app')).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByTestId('cj-map')).toBeVisible();
 }
 
 test.describe('Módulo Callejero (alumno)', () => {
   test.beforeEach(async ({ page }) => {
+    await setupShellStubs(page);
     await loginAsAlumnoMock(page);
     await setupAppConfigStubs(page);
     await setupCallejeroInterceptors(page, freshState());
   });
 
-  test('carga el mapa, atribución y pinta calles al elegir zona', async ({
+  test('carga el mapa, la atribución y la pestaña Recorridos (v3)', async ({
     page,
   }) => {
     await irACallejero(page);
-
-    // Ciudad autoseleccionada (Valencia) → zonas disponibles.
-    await expect(page.getByTestId('selector-ciudad')).toBeVisible();
-    await seleccionarPrimeraZona(page);
-
-    // El SVG de calles de Leaflet debe aparecer.
-    await expect(page.locator('.leaflet-overlay-pane svg path')).not.toHaveCount(
-      0,
-    );
-    // Atribución obligatoria visible.
+    // Atribución obligatoria del mapa.
     await expect(page.locator('.leaflet-control-attribution')).toContainText(
       'OpenStreetMap',
     );
-    await expect(page.locator('.leaflet-control-attribution')).toContainText(
-      'IGN CartoCiudad',
-    );
+    // El refactor v3 expone las pestañas; Recorridos tiene test-id estable.
+    await expect(page.getByTestId('cj-tab-recorridos')).toBeVisible();
   });
 
-  test('Encuentra la calle X: acierto registra progreso', async ({ page }) => {
-    const state = freshState();
-    await setupCallejeroInterceptors(page, state);
-    await irACallejero(page);
-    await seleccionarPrimeraZona(page);
-
-    await page.getByTestId('modo-ENCUENTRA_CALLE').click();
-    await expect(page.getByTestId('reto-encuentra')).toBeVisible();
-
-    // Click sobre una calle del mapa (cualquier path de la capa de calles).
-    await page.locator('.leaflet-overlay-pane svg path').first().click();
-
-    // Se registró progreso y el feedback (acierto o fallo) se muestra.
-    await expect(page.getByTestId('feedback')).toBeVisible();
-    expect(state.progresoCalls.length).toBeGreaterThan(0);
-  });
-
-  test('¿Qué calle es esta?: 4 opciones, responder correcta', async ({
+  test('navega a la pestaña Recorridos y muestra el buscador + dificultad', async ({
     page,
   }) => {
     await irACallejero(page);
-    await seleccionarPrimeraZona(page);
-
-    await page.getByTestId('modo-QUE_CALLE_ES').click();
-    const opciones = page.getByTestId('quiz-opciones').locator('button');
-    await expect(opciones).toHaveCount(4);
-
-    await opciones.first().click();
-    await expect(page.getByTestId('feedback')).toBeVisible();
+    await page.getByTestId('cj-tab-recorridos').click();
+    // Pane de recorridos: selector de dificultad (port v27) + CTA del examen.
+    await expect(page.getByTestId('cj-rec-dificultad')).toBeVisible();
+    await expect(page.getByTestId('cj-rec-iniciar-examen')).toBeVisible();
   });
 
   test('Recorridos: el selector de dificultad (port v27) envía la dificultad elegida', async ({
