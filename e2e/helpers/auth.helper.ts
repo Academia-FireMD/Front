@@ -6,10 +6,23 @@ function buildMockJwt(payload: Record<string, unknown>): string {
   return `x.${base64Payload}.x`;
 }
 
-export async function loginAsAlumnoMock(page: Page): Promise<void> {
+type Rol = 'ALUMNO' | 'ADMIN' | 'SUPERADMIN';
+
+/**
+ * Login mockeado genérico por rol. Mismo flujo robusto que el de alumno
+ * (POST-scoped /auth/login, shell stubs, botón <app-async-button>), pero con
+ * rol/email/fixture de usuario configurables — sirve para alumno, admin y
+ * superadmin sin duplicar el setup que se desincronizaba.
+ */
+export async function loginAsRoleMock(
+  page: Page,
+  opts: { rol: Rol; email?: string; userFixture?: unknown } = { rol: 'ALUMNO' }
+): Promise<void> {
+  const email = opts.email ?? `${opts.rol.toLowerCase()}@test.com`;
+  const userFixture = opts.userFixture ?? userAlumnoFixture;
   const mockJwt = buildMockJwt({
-    rol: 'ALUMNO',
-    email: 'alumno@test.com',
+    rol: opts.rol,
+    email,
     sub: 1,
     exp: 9_999_999_999,
   });
@@ -34,7 +47,7 @@ export async function loginAsAlumnoMock(page: Page): Promise<void> {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(userAlumnoFixture),
+      body: JSON.stringify(userFixture),
     })
   );
 
@@ -86,7 +99,7 @@ export async function loginAsAlumnoMock(page: Page): Promise<void> {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(userAlumnoFixture),
+      body: JSON.stringify(userFixture),
     })
   );
   await page.route('**/ai-assistant/token', (route) =>
@@ -98,10 +111,40 @@ export async function loginAsAlumnoMock(page: Page): Promise<void> {
   );
 
   await page.goto('/auth/login');
-  await page.locator('input[formControlName="email"]').fill('alumno@test.com');
+  await page.locator('input[formControlName="email"]').fill(email);
   await page.locator('app-password-input input').fill('test1234');
   // El botón de login es <app-async-button> (renderiza <button type="button">),
   // NO un submit; seleccionar por type="submit" no matchea nada.
   await page.locator('app-async-button button').first().click();
   await page.waitForURL('**/app/**', { timeout: 15_000 });
+}
+
+export async function loginAsAlumnoMock(page: Page): Promise<void> {
+  await loginAsRoleMock(page, {
+    rol: 'ALUMNO',
+    email: 'alumno@test.com',
+    userFixture: userAlumnoFixture,
+  });
+}
+
+export async function loginAsAdminMock(
+  page: Page,
+  userFixture?: unknown
+): Promise<void> {
+  await loginAsRoleMock(page, {
+    rol: 'ADMIN',
+    email: 'admin@test.com',
+    userFixture: userFixture ?? userAlumnoFixture,
+  });
+}
+
+export async function loginAsSuperadminMock(
+  page: Page,
+  userFixture?: unknown
+): Promise<void> {
+  await loginAsRoleMock(page, {
+    rol: 'SUPERADMIN',
+    email: 'superadmin@test.com',
+    userFixture: userFixture ?? userAlumnoFixture,
+  });
 }
