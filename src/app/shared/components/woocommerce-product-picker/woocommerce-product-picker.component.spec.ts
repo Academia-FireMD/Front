@@ -104,6 +104,32 @@ describe('WooCommerceProductPickerComponent', () => {
     expect(host.control.value).toBe(12);
   });
 
+  it('normaliza un id string a number (el backend lo devuelve como string)', () => {
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/woocommerce/products/cursos`,
+    );
+    req.flush(PRODUCTS);
+    fixture.detectChanges();
+    const picker = fixture.debugElement.children[0].componentInstance;
+    // p-dropdown puede emitir el id como string; el FormControl debe quedar number
+    picker.onModelChange('11' as unknown as number);
+    expect(host.control.value).toBe(11);
+    expect(typeof host.control.value).toBe('number');
+  });
+
+  it('clear (string vacío / null) deja el FormControl en null', () => {
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/woocommerce/products/cursos`,
+    );
+    req.flush(PRODUCTS);
+    fixture.detectChanges();
+    const picker = fixture.debugElement.children[0].componentInstance;
+    picker.onModelChange('' as unknown as number);
+    expect(host.control.value).toBeNull();
+    picker.onModelChange(null);
+    expect(host.control.value).toBeNull();
+  });
+
   it('selectionChange emite el producto completo, no sólo el id', () => {
     const req = httpMock.expectOne(
       `${environment.apiUrl}/woocommerce/products/cursos`,

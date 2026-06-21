@@ -3,7 +3,7 @@
   [visible]="visible()"
   (visibleChange)="onVisibleChange($event)"
   [modal]="true"
-  [style]="{ width: '520px' }"
+  [style]="{ width: '480px' }"
 >
   <form [formGroup]="form" class="leccion-form">
     <div class="field">
@@ -17,122 +17,10 @@
       />
     </div>
 
-    <div class="field">
-      <label for="lf-orden">Orden</label>
-      <p-inputNumber
-        inputId="lf-orden"
-        formControlName="orden"
-        [min]="0"
-        class="w-full"
-      />
-    </div>
-
-    <div class="field">
-      <label for="lf-tipo">Tipo</label>
-      <p-dropdown
-        inputId="lf-tipo"
-        formControlName="tipo"
-        [options]="tipoOptions"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Seleccionar tipo"
-        [disabled]="esEdicion()"
-        class="w-full"
-      />
-      @if (esEdicion()) {
-        <small class="leccion-form__hint">
-          El tipo no se puede cambiar tras crear la lección.
-        </small>
-      }
-    </div>
-
-    @if (tipoSeleccionado() === "VIDEO") {
-      <div class="field">
-        <label>Vídeo</label>
-        <app-bunny-upload
-          [videoTitle]="form.controls.titulo.value ?? ''"
-          (uploaded)="onVideoUploaded($event)"
-        />
-        @if (form.controls.bunnyVideoId.value) {
-          <small class="leccion-form__hint">
-            Video ID: {{ form.controls.bunnyVideoId.value }}
-          </small>
-        }
-      </div>
-      <div class="field">
-        <label for="lf-duracion">Duración (segundos)</label>
-        <p-inputNumber
-          inputId="lf-duracion"
-          formControlName="duracionSegundos"
-          [min]="0"
-          class="w-full"
-        />
-      </div>
-    }
-
-    @if (tipoSeleccionado() === "TEST" || tipoSeleccionado() === "FLASHCARDS") {
-      <div class="field">
-        <label>Tema</label>
-        <app-tema-select
-          [multiple]="false"
-          [formControl]="temaIdControl"
-          [oposicion]="oposicion()"
-        ></app-tema-select>
-        <small class="leccion-form__hint">
-          El alumno verá preguntas/flashcards de este tema cuando inicie la
-          lección.
-        </small>
-      </div>
-
-      <div class="field">
-        <label for="lf-num-preguntas">Número de preguntas</label>
-        <p-inputNumber
-          inputId="lf-num-preguntas"
-          formControlName="numPreguntas"
-          [min]="1"
-          [max]="50"
-          [showButtons]="true"
-          class="w-full"
-        />
-        <small class="leccion-form__hint">Máximo 50.</small>
-      </div>
-
-      <div class="field">
-        <label for="lf-dificultad">Dificultad</label>
-        <p-dropdown
-          inputId="lf-dificultad"
-          formControlName="dificultad"
-          [options]="dificultadOptions"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Seleccionar dificultad"
-          class="w-full"
-        />
-      </div>
-
-      <div class="field">
-        <p-checkbox
-          inputId="lf-es-repaso"
-          formControlName="esDeRepaso"
-          [binary]="true"
-          label="Modo repaso (alumno debe tener fallos en el tema)"
-        />
-      </div>
-    }
-
-    @if (tipoSeleccionado() === "TEXTO") {
-      <div class="field">
-        <label for="lf-contenido">Contenido (Markdown)</label>
-        <textarea
-          id="lf-contenido"
-          pInputTextarea
-          formControlName="contenidoMarkdown"
-          rows="6"
-          class="w-full"
-          placeholder="Escribe el contenido en Markdown..."
-        ></textarea>
-      </div>
-    }
+    <small class="leccion-form__hint">
+      El contenido (vídeo, texto, test, cuestionario) se añade después con el
+      botón <strong>"Contenido"</strong> de la lección.
+    </small>
   </form>
 
   <ng-template pTemplate="footer">

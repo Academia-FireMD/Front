@@ -10,7 +10,7 @@
  */
 import { expect, test } from '@playwright/test';
 import userAdminFixture from './fixtures/user-admin.json';
-import { setupAuthInterceptors } from './helpers/interceptors.helper';
+import { loginAsAdminMock } from './helpers/auth.helper';
 
 const userBase = (id: number, nombre: string, hasActiveSub: boolean) => ({
   id,
@@ -46,17 +46,7 @@ const userBase = (id: number, nombre: string, hasActiveSub: boolean) => ({
 
 test.describe('Admin — sort lista usuarios por actividad', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/user/get-by-email', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userAdminFixture),
-      }),
-    );
-    await setupAuthInterceptors(page, {
-      email: 'admin@test.com',
-      rol: 'ADMIN',
-    });
+    await loginAsAdminMock(page, userAdminFixture);
   });
 
   test('primera fila tiene sub ACTIVE; tras cancelar, ese usuario baja', async ({
@@ -92,10 +82,6 @@ test.describe('Admin — sort lista usuarios por actividad', () => {
       });
     });
 
-    await page.goto('/auth/login');
-    await page.locator('input[formControlName="email"]').fill('admin@test.com');
-    await page.locator('app-password-input input').fill('test1234');
-    await page.locator('button[type="submit"]').click();
     await page.goto('/app/test/user-dashboard');
 
     // Verificar orden inicial: Ana (activa) debe aparecer antes que Bruno

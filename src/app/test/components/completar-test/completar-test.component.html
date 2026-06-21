@@ -709,6 +709,20 @@
                         "
                         data-testid="adelante-vista-previa-btn"
                       />
+                      <button
+                        *ngIf="modoVerRespuestas"
+                        type="button"
+                        class="ai-regla-btn"
+                        data-testid="crear-regla-pregunta"
+                        (click)="
+                          crearReglaPregunta(
+                            testCargado.preguntas[indicePregunta()]
+                          )
+                        "
+                      >
+                        <span class="ai-regla-btn__icon">✨</span>
+                        <span class="ai-regla-btn__label">Crear regla</span>
+                      </button>
                     </div>
                   </div>
                 </ng-template>

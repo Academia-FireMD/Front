@@ -65,7 +65,7 @@ describe('UserDashboardComponent — lógica Fase 1 (plan 2026-05-11)', () => {
   describe('hasWooManagedSubscriptions', () => {
     it('returns false con wooCustomerId pero subs sin wooSubscriptionId (caso Luis Moltó)', () => {
       const user = {
-        woocommerceCustomerId: '111',
+        woocommerceCustomerId: 111,
         suscripciones: [
           { status: 'ACTIVE', woocommerceSubscriptionId: null },
           { status: 'ACTIVE', woocommerceSubscriptionId: undefined },

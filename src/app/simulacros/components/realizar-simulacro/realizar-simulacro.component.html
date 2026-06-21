@@ -103,7 +103,7 @@
             <span
               >Disponible desde:
               <strong>{{
-                lastLoadedExamen()?.fechaActivacion | date : "dd/MM/yyyy"
+                lastLoadedExamen()?.fechaActivacion | date: "dd/MM/yyyy"
               }}</strong></span
             >
           </div>
@@ -323,6 +323,115 @@
         ></button>
       </div>
     </form>
+  </div>
+</p-dialog>
+
+<!-- Diálogo de compra in-app del simulacro (1-clic COF) -->
+<p-dialog
+  [(visible)]="compraDialogVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '460px' }"
+  [breakpoints]="{ '640px': '92vw' }"
+  header="Comprar simulacro"
+  styleClass="compra-simulacro-dialog"
+  [closable]="!comprandoSimulacro()"
+  data-testid="simulacro-compra-dialog"
+>
+  <div class="compra-dialog-content">
+    <div class="compra-icon">
+      <i class="pi pi-shopping-cart"></i>
+    </div>
+
+    <h3 data-testid="simulacro-compra-titulo">
+      {{ lastLoadedExamen()?.titulo }}
+    </h3>
+
+    <p>
+      No tienes acceso a este simulacro. Cómpralo ahora con tu tarjeta guardada
+      y empieza al instante.
+    </p>
+
+    <div
+      *ngIf="lastLoadedExamen()?.precioSimulacro != null"
+      class="compra-precio"
+      data-testid="simulacro-precio"
+    >
+      {{ lastLoadedExamen()?.precioSimulacro | number: "1.2-2" }} €
+    </div>
+
+    <div class="compra-actions">
+      <button
+        pButton
+        type="button"
+        label="Cancelar"
+        class="p-button-text"
+        (click)="compraDialogVisible = false"
+        [disabled]="comprandoSimulacro()"
+        data-testid="simulacro-compra-cancelar-btn"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        [label]="comprandoSimulacro() ? 'Procesando…' : 'Comprar (1 clic)'"
+        icon="pi pi-bolt"
+        [loading]="comprandoSimulacro()"
+        [disabled]="comprandoSimulacro()"
+        (click)="comprarSimulacro()"
+        data-testid="simulacro-comprar-btn"
+      ></button>
+    </div>
+  </div>
+</p-dialog>
+
+<!-- Diálogo de fallback: completar la compra en la tienda WooCommerce -->
+<p-dialog
+  [(visible)]="checkoutDialogVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '460px' }"
+  [breakpoints]="{ '640px': '92vw' }"
+  [header]="
+    checkoutEsRechazo ? 'Tarjeta rechazada' : 'Completa la compra en la tienda'
+  "
+  styleClass="compra-simulacro-dialog"
+  [closable]="true"
+  data-testid="simulacro-checkout-dialog"
+>
+  <div class="compra-dialog-content">
+    <div class="compra-icon">
+      <i
+        class="pi"
+        [class.pi-credit-card]="checkoutEsRechazo"
+        [class.pi-shopping-cart]="!checkoutEsRechazo"
+      ></i>
+    </div>
+
+    <p data-testid="simulacro-checkout-mensaje">{{ checkoutMensaje }}</p>
+
+    <div class="compra-actions">
+      <button
+        pButton
+        type="button"
+        label="Cancelar"
+        class="p-button-text"
+        (click)="checkoutDialogVisible = false"
+        data-testid="simulacro-checkout-cancelar-btn"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        label="Completar en la tienda"
+        icon="pi pi-external-link"
+        [disabled]="!checkoutWooProductId"
+        (click)="completarEnTienda()"
+        data-testid="simulacro-checkout-tienda-btn"
+      ></button>
+    </div>
   </div>
 </p-dialog>
 

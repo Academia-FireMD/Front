@@ -1,21 +1,29 @@
+// El aula (shell) gestiona su propio ancho/centrado; el contenedor es full-width.
 .leccion-page-container {
-  padding: 1.5rem;
-  max-width: 900px;
-  margin: 0 auto;
+  background: var(--cursos-canvas);
+  min-height: 100%;
 }
 
 .preview-banner {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  max-width: 900px;
+  margin: 0 auto 1rem;
   padding: 0.7rem 1rem;
-  margin-bottom: 1rem;
   background: var(--yellow-50, #fef9c3);
   color: var(--yellow-900, #713f12);
   border: 1px solid var(--yellow-300, #fde047);
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+// Preview admin: contenido centrado y estrecho (sin chrome del aula).
+.preview-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
 }
 
 .loading-state,

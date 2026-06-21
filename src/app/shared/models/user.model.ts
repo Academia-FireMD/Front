@@ -19,7 +19,7 @@ export interface Usuario {
   sub?: number;
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
   metodoCalificacion: MetodoCalificacion;
-  woocommerceCustomerId?: string;
+  woocommerceCustomerId?: number;
   suscripciones?: Suscripcion[]; // Usuario puede tener múltiples suscripciones
   consumibles?: Consumible[];
   oposiciones?: Oposicion[]; // Oposiciones activas (derivado de suscripciones activas)

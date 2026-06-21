@@ -9,6 +9,57 @@ export type EstadoCurso = 'BORRADOR' | 'PUBLICADO' | 'ARCHIVADO';
  */
 export type TipoLeccion = 'VIDEO' | 'TEST' | 'FLASHCARDS' | 'TEXTO';
 
+/**
+ * Lección por bloques (2026-06-11). Una lección es una pila de bloques
+ * combinables. FLASHCARDS NO es un tipo de bloque (era para memorizar).
+ * CUESTIONARIO (quiz inline propio) llega en Fase 2.
+ */
+export type TipoBloque =
+  | 'VIDEO'
+  | 'TEXTO'
+  | 'TEST'
+  | 'CUESTIONARIO'
+  | 'DOCUMENTO';
+
+/**
+ * Pregunta de un bloque CUESTIONARIO. `respuestaCorrecta`/`explicacion` SOLO
+ * llegan en la cara admin (el alumno los recibe `undefined`; los obtiene al
+ * corregir vía POST /bloques/:id/cuestionario/corregir).
+ */
+export interface BloquePregunta {
+  id: number;
+  bloqueId: number;
+  orden: number;
+  enunciado: string;
+  opciones: string[];
+  respuestaCorrecta?: number;
+  explicacion?: string | null;
+}
+
+export interface Bloque {
+  id: number;
+  leccionId: number;
+  orden: number;
+  tipo: TipoBloque;
+  bunnyVideoId?: string | null;
+  duracionSegundos?: number | null;
+  contenidoMarkdown?: string | null;
+  temaId?: number | null;
+  numPreguntas?: number | null;
+  dificultad?: Dificultad | null;
+  esDeRepaso?: boolean;
+  bloquePreguntas?: BloquePregunta[];
+  // Bloque DOCUMENTO (2026-06-16): archivo descargable/visualizable. La descarga
+  // es protegida vía backend (`GET /cursos/bloques/:id/documento`), no por URL
+  // pública: `documentoPath` es la ruta interna en Supabase, NO una URL servible.
+  documentoPath?: string | null;
+  documentoNombre?: string | null;
+  documentoMime?: string | null;
+  documentoTamanoBytes?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Leccion {
   id: number;
   titulo: string;
@@ -25,6 +76,9 @@ export interface Leccion {
   dificultad?: Dificultad | null;
   esDeRepaso?: boolean;
   seccionId: number;
+  // Lección por bloques: el contenido vive aquí. Si está vacío/ausente, la
+  // lección es legacy (un solo tipo) y se lee de los campos de arriba.
+  bloques?: Bloque[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -50,7 +104,17 @@ export interface Curso {
    * el cache de WooCommerceProductCache al hacer create/update.
    */
   wooProductId?: number | null;
-  oposicion?: Oposicion | null;
+  /**
+   * Refactor 2026-06-16: reemplaza el antiguo `oposicion` (single). Oposiciones
+   * a las que va dirigido el curso. Vacío/`[GENERAL]` = visible para todas.
+   */
+  relevancia?: Oposicion[];
+  /**
+   * Curso gratuito (2026-06-16): no requiere producto WooCommerce ni compra.
+   * El backend lo marca con `tieneAcceso=true` en el catálogo si el alumno
+   * tiene relevancia compatible.
+   */
+  esGratuito?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   estado: EstadoCurso;
@@ -93,7 +157,11 @@ export interface ProgresoLeccion {
   segundosVisto: number;
   porcentajeVisto: number;
   completada: boolean;
-  updatedAt?: string;
+  /**
+   * Timestamp de última actividad. El backend (Prisma) lo expone como
+   * `ultimaVez` (no `updatedAt`); se usa para "continuar donde lo dejaste".
+   */
+  ultimaVez?: string;
 }
 
 export interface AccesoConCurso {
@@ -105,16 +173,98 @@ export interface AccesoConCurso {
   createdAt?: string;
 }
 
-export type CursoPublico = Curso;
+/**
+ * Curso del catálogo. `tieneAcceso` lo añade el backend (`GET /cursos/catalogo`)
+ * para que la card marque los cursos ya poseídos ("Ver curso") en vez de "Comprar".
+ */
+export type CursoPublico = Curso & { tieneAcceso?: boolean };
 
 export interface CursoSlugResponse {
   curso: CursoDetail;
   tieneAcceso: boolean;
+  /**
+   * Progreso del alumno en este curso. Presente SOLO cuando `tieneAcceso`
+   * (el backend lo omite si no hay acceso). Alimenta checkmarks del sidebar,
+   * % del curso y "continuar donde lo dejaste". Espeja el `progreso[]` que
+   * `GET /cursos/mios` ya devuelve por curso.
+   */
+  progreso?: ProgresoLeccion[];
 }
 
 export interface LeccionResponse {
   leccion: Leccion;
+  /** Legacy: URL firmada del vídeo de la lección de un solo tipo (compat). */
   playbackUrl?: string;
+  /** URLs firmadas por bloque de vídeo (mapa bloqueId → url). */
+  playbackUrls?: Record<number, string>;
+}
+
+// ---- Payloads admin de bloques ----
+export interface BloquePreguntaPayload {
+  enunciado: string;
+  opciones: string[];
+  respuestaCorrecta: number;
+  explicacion?: string;
+}
+
+export interface BloqueCreatePayload {
+  orden: number;
+  tipo: TipoBloque;
+  bunnyVideoId?: string;
+  duracionSegundos?: number;
+  contenidoMarkdown?: string;
+  temaId?: number;
+  numPreguntas?: number;
+  dificultad?: Dificultad;
+  esDeRepaso?: boolean;
+  preguntas?: BloquePreguntaPayload[];
+  // Bloque DOCUMENTO (2026-06-16): metadatos del archivo ya subido vía
+  // `POST /cursos/bloques/upload-documento`.
+  documentoPath?: string;
+  documentoNombre?: string;
+  documentoMime?: string;
+  documentoTamanoBytes?: number;
+}
+
+export interface BloqueUpdatePayload {
+  orden?: number;
+  bunnyVideoId?: string;
+  duracionSegundos?: number;
+  contenidoMarkdown?: string;
+  temaId?: number;
+  numPreguntas?: number;
+  dificultad?: Dificultad;
+  esDeRepaso?: boolean;
+  preguntas?: BloquePreguntaPayload[];
+  // Bloque DOCUMENTO (2026-06-16).
+  documentoPath?: string;
+  documentoNombre?: string;
+  documentoMime?: string;
+  documentoTamanoBytes?: number;
+}
+
+// ---- CUESTIONARIO: corrección cara-alumno ----
+export interface CorregirCuestionarioPayload {
+  respuestas: { preguntaId: number; opcionElegida: number | null }[];
+}
+
+export interface CuestionarioResultadoItem {
+  preguntaId: number;
+  opcionElegida: number | null;
+  correcta: boolean;
+  respuestaCorrecta: number;
+  explicacion: string | null;
+}
+
+export interface CuestionarioResultado {
+  aciertos: number;
+  total: number;
+  resultados: CuestionarioResultadoItem[];
+}
+
+export interface BloqueReorderItem {
+  id: number;
+  orden: number;
 }
 
 export interface UpsertProgresoDto {
@@ -177,7 +327,10 @@ export interface CursoCreatePayload {
   descripcion?: string;
   /** Backend deriva precio. NO mandar en payload. */
   wooProductId?: number | null;
-  oposicion?: Oposicion;
+  /** Refactor 2026-06-16: reemplaza `oposicion` (single). */
+  relevancia?: Oposicion[];
+  /** Curso gratuito: no requiere producto WC. */
+  esGratuito?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
 }
@@ -186,7 +339,10 @@ export interface CursoUpdatePayload {
   titulo?: string;
   descripcion?: string;
   wooProductId?: number | null;
-  oposicion?: Oposicion;
+  /** Refactor 2026-06-16: reemplaza `oposicion` (single). */
+  relevancia?: Oposicion[];
+  /** Curso gratuito: no requiere producto WC. */
+  esGratuito?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   /**
@@ -216,8 +372,16 @@ export interface CursoUpdatePayload {
  */
 export interface LeccionCreatePayload {
   titulo: string;
-  orden: number;
-  tipo: TipoLeccion;
+  /**
+   * Opcional: el backend autocalcula el orden (append) si no se envía. El orden
+   * se gestiona con el reorder (flechas/drag), no en el alta.
+   */
+  orden?: number;
+  /**
+   * Consolidación 2026-06-11: opcional. La lección es un contenedor de bloques;
+   * el backend aplica `TEXTO` por defecto. Solo se envía para compat legacy.
+   */
+  tipo?: TipoLeccion;
   bunnyVideoId?: string;
   duracionSegundos?: number;
   contenidoMarkdown?: string;

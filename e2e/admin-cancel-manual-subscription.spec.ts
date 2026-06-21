@@ -18,7 +18,7 @@
  */
 import { expect, test } from '@playwright/test';
 import userAdminFixture from './fixtures/user-admin.json';
-import { setupAuthInterceptors } from './helpers/interceptors.helper';
+import { loginAsAdminMock } from './helpers/auth.helper';
 
 const diegoActiveSub = {
   id: 5001,
@@ -52,18 +52,6 @@ const diegoMock = {
 
 test.describe('Admin — cancelar suscripción manual', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/user/get-by-email', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userAdminFixture),
-      }),
-    );
-    await setupAuthInterceptors(page, {
-      email: 'admin@test.com',
-      rol: 'ADMIN',
-    });
-
     await page.route('**/user/all', (route) =>
       route.fulfill({
         status: 200,
@@ -97,39 +85,29 @@ test.describe('Admin — cancelar suscripción manual', () => {
       });
     });
 
-    await page.goto('/auth/login');
-    await page
-      .locator('input[formControlName="email"]')
-      .fill('admin@test.com');
-    await page.locator('app-password-input input').fill('test1234');
-    await page.locator('button[type="submit"]').click();
+    await loginAsAdminMock(page, userAdminFixture);
 
     await page.goto('/app/test/user-dashboard');
     await expect(page.locator('text=Diego').first()).toBeVisible({
       timeout: 15_000,
     });
 
-    // Abrir menú contextual del usuario (3-dots / dropdown).
-    // Selector resiliente: cualquier botón con icono pi-ellipsis o "más opciones".
-    const userRow = page.locator('text=Diego').first();
-    await userRow
-      .locator('xpath=ancestor::*[self::tr or self::div][1]')
-      .locator(
-        'button[icon*="ellipsis"], button:has(i.pi-ellipsis-v), [aria-haspopup="true"]',
-      )
+    // Abrir el menú de acciones del usuario (botón ellipsis con test-id estable).
+    await page
+      .locator('[data-testid="user-actions-btn"]')
       .first()
       .click({ timeout: 5_000 });
 
-    // Click el ítem "Suscripción" del menú PrimeNG (p-menu / p-menuitem)
+    // Click el ítem "Suscripción" del menú PrimeNG (p-menu render a body).
     await page
-      .locator('a.p-menuitem-link, .p-menuitem-text')
+      .locator('.p-menuitem-text')
       .filter({ hasText: /^Suscripción$/ })
       .first()
       .click();
 
-    // Click botón "Cancelar" (icon ban, tooltip "Cancelar suscripción...")
+    // Click botón "Cancelar suscripción" (icon ban) dentro del diálogo.
     await page
-      .locator('button[icon*="ban"], button:has(i.pi-ban)')
+      .locator('[data-testid="cancel-sub-btn"]')
       .first()
       .click({ timeout: 5_000 });
 

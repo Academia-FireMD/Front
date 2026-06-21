@@ -50,7 +50,51 @@ export interface Examen {
   woocommerceProductId?: string;
   woocommerceSku?: string;
   woocommerceProductName?: string;
+  /**
+   * Precio de compra in-app (1-clic COF), derivado del cache de WooCommerce por
+   * el backend en el detalle del simulacro. `null` ⇒ no comprable in-app (sin
+   * producto WC, no publicado o sin precio válido). Solo para mostrar; el cobro
+   * revalida el precio real en el servidor.
+   */
+  precioSimulacro?: number | null;
 
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * Item de la tienda de simulacros: un simulacro comprable para el alumno con su
+ * precio (derivado del cache WC por el backend) y su estado de acceso.
+ */
+export interface SimulacroTienda {
+  id: number;
+  titulo: string;
+  descripcion?: string | null;
+  relevancia: Oposicion[];
+  precio: number;
+  woocommerceProductId: string;
+  woocommerceSku?: string | null;
+  /** INCLUIDO = el plan ADVANCED/PREMIUM ya lo incluye · COMPRADO = consumible activo · COMPRABLE = 1-clic COF */
+  estado: 'INCLUIDO' | 'COMPRADO' | 'COMPRABLE';
+}
+
+/**
+ * Respuesta de la compra in-app de un simulacro por COF (1-clic). Misma forma
+ * que la de cursos salvo que el éxito devuelve `consumibleId` y `wooProductId`
+ * es un string (Examen.woocommerceProductId). No hay caso "YA_TIENES": un
+ * simulacro es un consumible comprable varias veces.
+ */
+export type ComprarSimulacroCofResponse =
+  | { success: true; consumibleId?: number; mensaje: string }
+  | {
+      success: false;
+      requiereCheckout: true;
+      wooProductId: string;
+      mensaje: string;
+    }
+  | {
+      success: false;
+      error: 'PAGO_RECHAZADO' | 'ERROR_TEMPORAL';
+      wooProductId?: string;
+      mensaje: string;
+    };

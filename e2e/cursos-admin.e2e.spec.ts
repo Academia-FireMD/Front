@@ -46,6 +46,19 @@ interface MockSeccion {
   lecciones: MockLeccion[];
 }
 
+interface MockBloque {
+  id: number;
+  leccionId: number;
+  orden: number;
+  tipo: 'VIDEO' | 'TEXTO' | 'TEST' | 'CUESTIONARIO';
+  bunnyVideoId?: string | null;
+  duracionSegundos?: number | null;
+  contenidoMarkdown?: string | null;
+  temaId?: number | null;
+  numPreguntas?: number | null;
+  esDeRepaso?: boolean;
+}
+
 interface MockLeccion {
   id: number;
   seccionId: number;
@@ -57,6 +70,7 @@ interface MockLeccion {
   testPlantillaId?: number | null;
   mazoFlashcardsId?: number | null;
   contenidoMarkdown?: string | null;
+  bloques?: MockBloque[];
 }
 
 interface AdminState {
@@ -64,8 +78,12 @@ interface AdminState {
   detail: MockCurso & { secciones: MockSeccion[] };
   nextSeccionId: number;
   nextLeccionId: number;
+  nextBloqueId: number;
   reorderSeccionesCalls: number;
   reorderLeccionesCalls: number;
+  reorderBloquesCalls: number;
+  createBloqueCalls: number;
+  deleteBloqueCalls: number;
   bunnyUploadCalls: number;
   grantAccessCalls: number;
   deleteCursoCalls: number;
@@ -90,8 +108,12 @@ function freshState(): AdminState {
     detail,
     nextSeccionId: 200,
     nextLeccionId: 1000,
+    nextBloqueId: 5000,
     reorderSeccionesCalls: 0,
     reorderLeccionesCalls: 0,
+    reorderBloquesCalls: 0,
+    createBloqueCalls: 0,
+    deleteBloqueCalls: 0,
     bunnyUploadCalls: 0,
     grantAccessCalls: 0,
     deleteCursoCalls: 0,
@@ -116,9 +138,10 @@ async function setupAppConfigStubs(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        nombreAcademia: 'Test Academia',
+        appName: 'Test Academia',
         logoUrl: null,
-        primaryColor: '#000000',
+        primaryColor: '#FF6B35',
+        secondaryColor: '#1F2937',
         updatedAt: new Date().toISOString(),
       }),
     }),
@@ -447,6 +470,106 @@ async function setupCursosAdminInterceptors(
     return route.continue();
   });
 
+  // ---- Bloques (widgets de la lección) ----
+  // Helper: localiza la lección por id dentro del detail.
+  const findLeccion = (leccionId: number): MockLeccion | undefined => {
+    for (const s of state.detail.secciones) {
+      const l = s.lecciones.find((le) => le.id === leccionId);
+      if (l) return l;
+    }
+    return undefined;
+  };
+
+  // PUT /cursos/bloques/reorder — register BEFORE /bloques/:id
+  await page.route('**/cursos/bloques/reorder', async (route) => {
+    state.reorderBloquesCalls += 1;
+    const body = route.request().postDataJSON() as {
+      items: { id: number; orden: number }[];
+    };
+    for (const s of state.detail.secciones) {
+      for (const l of s.lecciones) {
+        if (!l.bloques) continue;
+        l.bloques = l.bloques
+          .map((b) => {
+            const found = body.items.find((it) => it.id === b.id);
+            return found ? { ...b, orden: found.orden } : b;
+          })
+          .sort((a, b) => a.orden - b.orden);
+      }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
+  // POST /cursos/lecciones/:id/bloques (create)
+  await page.route(/\/cursos\/lecciones\/\d+\/bloques$/, async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    state.createBloqueCalls += 1;
+    const url = route.request().url();
+    const leccionId = parseInt(url.split('/').slice(-2)[0], 10);
+    const body = route.request().postDataJSON() as Omit<
+      MockBloque,
+      'id' | 'leccionId'
+    >;
+    const created: MockBloque = {
+      id: state.nextBloqueId++,
+      leccionId,
+      ...body,
+    };
+    const leccion = findLeccion(leccionId);
+    if (leccion) leccion.bloques = [...(leccion.bloques ?? []), created];
+    return route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify(created),
+    });
+  });
+
+  // PUT/DELETE /cursos/bloques/:id
+  await page.route(/\/cursos\/bloques\/\d+$/, async (route) => {
+    const url = route.request().url();
+    const id = parseInt(url.split('/').pop()!.split('?')[0], 10);
+    const method = route.request().method();
+    if (method === 'PUT') {
+      const body = route.request().postDataJSON() as Partial<MockBloque>;
+      let updated: MockBloque | undefined;
+      for (const s of state.detail.secciones) {
+        for (const l of s.lecciones) {
+          if (!l.bloques) continue;
+          l.bloques = l.bloques.map((b) => {
+            if (b.id === id) {
+              updated = { ...b, ...body };
+              return updated;
+            }
+            return b;
+          });
+        }
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(updated ?? {}),
+      });
+    }
+    if (method === 'DELETE') {
+      state.deleteBloqueCalls += 1;
+      for (const s of state.detail.secciones) {
+        for (const l of s.lecciones) {
+          if (l.bloques) l.bloques = l.bloques.filter((b) => b.id !== id);
+        }
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    }
+    return route.continue();
+  });
+
   // POST /cursos/videos/upload-url (Bunny TUS credentials)
   await page.route('**/cursos/videos/upload-url', async (route) => {
     state.bunnyUploadCalls += 1;
@@ -532,11 +655,13 @@ test.describe('Cursos admin — flujo completo', () => {
   }) => {
     await page.goto('/app/cursos-admin');
 
+    // La lista admin no tiene un heading <h*>Cursos</h*>; su ancla estable es
+    // el botón "Nuevo curso".
     await expect(
-      page.getByRole('heading', { name: /Cursos/i }).first(),
+      page.locator('[data-testid="nuevo-curso-btn"]'),
     ).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Curso QA Test')).toBeVisible();
-    await expect(page.getByText('curso-qa-test')).toBeVisible();
+    // La lista ya no muestra el slug en la tarjeta (solo nombre + estado).
     await expect(page.getByText('BORRADOR').first()).toBeVisible();
 
     await page.getByText('Curso QA Test').click();
@@ -639,7 +764,9 @@ test.describe('Cursos admin — flujo completo', () => {
     ).toBe(true);
   });
 
-  test('7) añadir lección de tipo TEXTO a una sección', async ({ page }) => {
+  test('7) añadir lección (título-only): el contenido se añade luego con bloques', async ({
+    page,
+  }) => {
     await page.goto(`/app/cursos-admin/${state.detail.id}`);
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
     await page.getByRole('tab', { name: /Estructura/i }).click();
@@ -652,22 +779,17 @@ test.describe('Cursos admin — flujo completo', () => {
       .getByRole('button', { name: /Añadir lección/i })
       .click();
 
+    // Consolidación: el diálogo es título-only (sin tipo ni contenido).
     await expect(page.locator('#lf-titulo')).toBeVisible({ timeout: 5_000 });
-    await page.locator('#lf-titulo').fill('Lección E2E texto');
-    // Default tipo is VIDEO → switch to TEXTO via the p-dropdown.
-    // Use the dropdown UI: click and pick "Texto"
-    await page.locator('p-dropdown').first().click();
-    await page.getByRole('option', { name: /Texto/i }).click();
-    await page
-      .locator('textarea[formControlName="contenidoMarkdown"]')
-      .fill('# Hola E2E\n\nContenido de prueba');
+    await expect(page.locator('.leccion-form p-dropdown')).toHaveCount(0);
+    await page.locator('#lf-titulo').fill('Lección E2E sólo título');
 
     await page
       .getByRole('button', { name: /Guardar/i })
       .last()
       .click();
 
-    await expect(page.getByText('Lección E2E texto')).toBeVisible({
+    await expect(page.getByText('Lección E2E sólo título')).toBeVisible({
       timeout: 5_000,
     });
   });
@@ -682,12 +804,12 @@ test.describe('Cursos admin — flujo completo', () => {
     // First section has 2 lessons; click the down arrow on the first.
     const firstSeccion = page.locator('.seccion-card').first();
     await expect(firstSeccion).toBeVisible({ timeout: 5_000 });
-    // The leccion-row contains an arrow-down button. Find first arrow-down enabled.
+    // Selección por icono (no posicional): la fila tiene varios botones
+    // (Contenido, ↑, ↓, editar, eliminar); apuntamos al de flecha abajo.
     const firstLeccionDown = firstSeccion
       .locator('.leccion-row')
       .first()
-      .locator('button')
-      .nth(1); // 0=arrow-up (disabled), 1=arrow-down
+      .locator('button:has(.pi-arrow-down)');
     await firstLeccionDown.click();
 
     await expect
@@ -713,30 +835,29 @@ test.describe('Cursos admin — flujo completo', () => {
     expect(state.detail.estado).toBe('PUBLICADO');
   });
 
-  test('10) bunny upload — pedir credenciales TUS desde el dialog de lección', async ({
+  test('10) bunny upload — disponible en el bloque VIDEO + endpoint TUS reachable', async ({
     page,
   }) => {
     await page.goto(`/app/cursos-admin/${state.detail.id}`);
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
     await page.getByRole('tab', { name: /Estructura/i }).click();
 
-    const seccionCards = page.locator('.seccion-card');
-    await seccionCards
+    // Consolidación: el upload de vídeo vive ahora en el formulario de BLOQUE.
+    await page
+      .locator('[data-testid="leccion-row-contenido"]')
       .first()
-      .getByRole('button', { name: /Añadir lección/i })
       .click();
-    await expect(page.locator('#lf-titulo')).toBeVisible({ timeout: 5_000 });
-
-    await page.locator('#lf-titulo').fill('Vídeo bunny test');
-    // Default tipo VIDEO. The bunny-upload component renders.
+    // Pulsar el chip VIDEO de la paleta abre el form de bloque en tipo VIDEO.
+    await page.locator('[data-testid="paleta-chip-VIDEO"]').click();
+    await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    // Tipo por defecto VIDEO → el bunny-upload se renderiza.
     await expect(
       page.getByRole('button', { name: /Seleccionar vídeo/i }),
     ).toBeVisible({ timeout: 5_000 });
 
-    // We can't actually run TUS upload in the test, but we can verify that
-    // the cred endpoint is reachable by triggering startUpload() with a
-    // synthetic File. Easier: simulate via direct fetch from the page
-    // context — the interceptor will respond.
+    // El endpoint de credenciales TUS responde (la subida real no corre en e2e).
     const resp = await page.evaluate(async () => {
       const r = await fetch('/cursos/videos/upload-url', {
         method: 'POST',
@@ -751,29 +872,216 @@ test.describe('Cursos admin — flujo completo', () => {
     expect(state.bunnyUploadCalls).toBeGreaterThan(0);
   });
 
-  test('11) tab Acceso permite conceder acceso manual por usuarioId', async ({
+  test('11) la pestaña Acceso ya NO existe (acceso = compra en WooCommerce)', async ({
     page,
   }) => {
     await page.goto(`/app/cursos-admin/${state.detail.id}`);
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('tab', { name: /Acceso/i })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: /Metadatos/i })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Estructura/i })).toBeVisible();
+  });
 
-    await page.getByRole('tab', { name: /Acceso/i }).click();
+  test('12) drag-and-drop reordena secciones (CDK) y llama el endpoint reorder', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+
+    const cards = page.locator('.seccion-card');
+    await expect(cards).toHaveCount(2, { timeout: 5_000 });
+    // Orden inicial: la 1ª sección es la del fixture con id 10 (Introducción).
+    const tituloInicial = await cards
+      .first()
+      .locator('.seccion-card__title strong')
+      .textContent();
+
+    // Arrastra la 2ª sección por encima de la 1ª usando el handle ≡.
+    // CDK arranca el drag tras unos px de movimiento, por eso movemos en pasos.
+    const handle = cards.nth(1).locator('.seccion-card__drag');
+    const handleBox = await handle.boundingBox();
+    const targetBox = await cards.first().boundingBox();
+    if (!handleBox || !targetBox) throw new Error('no bounding boxes');
+
+    await page.mouse.move(
+      handleBox.x + handleBox.width / 2,
+      handleBox.y + handleBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + targetBox.height / 2,
+      { steps: 12 },
+    );
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + 8, {
+      steps: 6,
+    });
+    await page.mouse.up();
+
+    // El endpoint de reorder se llama y el orden en la UI cambia.
+    await expect
+      .poll(() => state.reorderSeccionesCalls, { timeout: 5_000 })
+      .toBeGreaterThan(0);
+    await expect
+      .poll(
+        async () =>
+          await cards
+            .first()
+            .locator('.seccion-card__title strong')
+            .textContent(),
+        { timeout: 5_000 },
+      )
+      .not.toBe(tituloInicial);
+  });
+
+  test('13) builder de bloques: añadir un bloque de TEXTO a una lección', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+
+    // Abre el builder de contenido de la primera lección.
+    await page
+      .locator('[data-testid="leccion-row-contenido"]')
+      .first()
+      .click();
+
+    // Estado vacío inicial (la lección del fixture no trae bloques).
     await expect(
-      page.getByRole('heading', { name: /Conceder acceso manual/i }),
+      page.locator('[data-testid="bloques-empty"]'),
     ).toBeVisible({ timeout: 5_000 });
 
-    // p-inputNumber renders an internal <input>; type chars + blur so the
-    // [(ngModel)] binding actually fires onModelChange before we click.
-    const numInput = page.locator('p-inputNumber input').last();
-    await numInput.click();
-    await numInput.pressSequentially('130');
-    await numInput.press('Tab');
-    const conceder = page.getByRole('button', { name: /Conceder acceso/i });
-    await expect(conceder).toBeEnabled({ timeout: 5_000 });
-    await conceder.click();
+    // Pulsar el chip TEXTO de la paleta abre el form inline ya en tipo TEXTO.
+    await page.locator('[data-testid="paleta-chip-TEXTO"]').click();
+    await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
+      timeout: 5_000,
+    });
 
-    await expect
-      .poll(() => state.grantAccessCalls, { timeout: 5_000 })
-      .toBe(1);
+    // El contenido se escribe en el editor Markdown (Toast UI), no un textarea.
+    const editor = page.locator(
+      '[data-testid="bf-markdown-editor"] .toastui-editor-md-container [contenteditable="true"]',
+    );
+    await expect(editor).toBeVisible({ timeout: 5_000 });
+    await editor.click();
+    await page.keyboard.type('Contenido del bloque E2E.');
+
+    await page.getByRole('button', { name: /Añadir bloque/i }).click();
+
+    // Vuelve a la lista con el bloque en la pila.
+    await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(1, {
+      timeout: 5_000,
+    });
+    await expect(page.locator('[data-testid="bloques-list"]')).toContainText(
+      'Texto',
+    );
+    expect(state.createBloqueCalls).toBe(1);
+
+    // Cierra el diálogo y verifica el chip "1 bloque" en la fila de lección.
+    await page.getByRole('button', { name: /^Cerrar$/i }).click();
+    await expect(
+      page.locator('[data-testid="leccion-row-bloques-count"]').first(),
+    ).toContainText('1 bloque', { timeout: 5_000 });
+  });
+
+  test('14) builder de bloques: eliminar un bloque lo quita de la pila', async ({
+    page,
+  }) => {
+    // Pre-sembrar un bloque en la primera lección del fixture (id 100).
+    const leccion = state.detail.secciones[0].lecciones[0];
+    leccion.bloques = [
+      {
+        id: 4321,
+        leccionId: leccion.id,
+        orden: 0,
+        tipo: 'TEXTO',
+        contenidoMarkdown: 'seed',
+      },
+    ];
+
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+
+    await page
+      .locator('[data-testid="leccion-row-contenido"]')
+      .first()
+      .click();
+
+    // Hay un bloque sembrado.
+    await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(1, {
+      timeout: 5_000,
+    });
+
+    // Eliminar (botón papelera de la fila).
+    await page
+      .locator('[data-testid="bloque-row"]')
+      .first()
+      .locator('button.p-button-danger')
+      .click();
+
+    await expect(page.locator('[data-testid="bloques-empty"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    expect(state.deleteBloqueCalls).toBe(1);
+  });
+
+  test('15) builder: crear un bloque CUESTIONARIO con preguntas + opción correcta', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+
+    await page
+      .locator('[data-testid="leccion-row-contenido"]')
+      .first()
+      .click();
+    // Pulsar el chip CUESTIONARIO abre el form ya en ese tipo (siembra 1
+    // pregunta con 2 opciones).
+    await page.locator('[data-testid="paleta-chip-CUESTIONARIO"]').click();
+    await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(
+      page.locator('[data-testid="cuestionario-editor"]'),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // Enunciado + 2 opciones.
+    await page.locator('[data-testid="cuest-enunciado"]').first().fill('¿2+2?');
+    const opciones = page.locator('[data-testid="cuest-opcion-input"]');
+    await opciones.nth(0).fill('3');
+    await opciones.nth(1).fill('4');
+    // Marca la 2ª opción (índice 1) como correcta clicando su radio.
+    await page
+      .locator('[data-testid="cuest-opcion"]')
+      .nth(1)
+      .locator('.p-radiobutton-box')
+      .click();
+
+    // Captura el POST de creación.
+    const reqPromise = page.waitForRequest((r) =>
+      /\/cursos\/lecciones\/\d+\/bloques$/.test(r.url()) &&
+      r.method() === 'POST',
+    );
+    await page.getByRole('button', { name: /Añadir bloque/i }).click();
+    const req = await reqPromise;
+    const body = req.postDataJSON();
+    expect(body.tipo).toBe('CUESTIONARIO');
+    expect(body.preguntas).toHaveLength(1);
+    expect(body.preguntas[0]).toMatchObject({
+      enunciado: '¿2+2?',
+      opciones: ['3', '4'],
+      respuestaCorrecta: 1,
+    });
+
+    // Vuelve a la pila con el bloque cuestionario.
+    await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(1, {
+      timeout: 5_000,
+    });
+    await expect(page.locator('[data-testid="bloques-list"]')).toContainText(
+      'Cuestionario',
+    );
   });
 });

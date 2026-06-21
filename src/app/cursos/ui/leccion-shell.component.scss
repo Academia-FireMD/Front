@@ -1,0 +1,165 @@
+:host {
+  display: block;
+}
+
+.aula {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.aula-sidebar {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+
+  .volver-btn span {
+    margin-left: 0.35rem;
+  }
+
+  .cerrar-drawer {
+    display: none; // solo en drawer móvil
+  }
+}
+
+.aula-backdrop {
+  display: none;
+}
+
+// ---- contenido ----
+.aula-content {
+  min-width: 0;
+}
+
+.aula-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .toggle-curriculo {
+    display: none; // solo móvil
+    span {
+      margin-left: 0.35rem;
+    }
+  }
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--cursos-text-soft);
+  min-width: 0;
+
+  .bc-leccion {
+    color: var(--cursos-text);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.aula-body {
+  background: var(--cursos-surface);
+  border: 1px solid var(--cursos-border);
+  border-radius: var(--cursos-radius);
+  box-shadow: var(--cursos-shadow);
+  padding: 1.25rem;
+  min-height: 320px;
+}
+
+.aula-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+
+  .nav-btn {
+    gap: 0.4rem;
+  }
+
+  .nav-next {
+    margin-left: auto;
+  }
+
+  .completar-btn {
+    gap: 0.45rem;
+    background: var(--cursos-brand);
+    border-color: var(--cursos-brand);
+
+    // Estado "ya completada": verde para distinguirlo del CTA de marcar.
+    &.is-done {
+      background: var(--cursos-ok);
+      border-color: var(--cursos-ok);
+    }
+  }
+}
+
+// ---- responsive: currículum como drawer ----
+@media (max-width: 900px) {
+  .aula {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .aula-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 360px);
+    z-index: 1100;
+    background: var(--cursos-surface);
+    padding: 1rem;
+    box-shadow: var(--cursos-shadow-hover);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    max-height: 100vh;
+  }
+
+  .drawer-open .aula-sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar-head .cerrar-drawer {
+    display: inline-flex;
+  }
+
+  .drawer-open .aula-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1090;
+  }
+
+  .aula-header .toggle-curriculo {
+    display: inline-flex;
+  }
+
+  .aula-footer {
+    flex-wrap: wrap;
+
+    .completar-btn {
+      order: -1;
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}

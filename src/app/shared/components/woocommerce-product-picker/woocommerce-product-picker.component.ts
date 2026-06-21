@@ -133,9 +133,16 @@ export class WooCommerceProductPickerComponent
     this.fetch();
   }
 
-  onModelChange(id: number | null): void {
-    this.value.set(id);
-    this.onChange(id);
+  onModelChange(id: number | string | null): void {
+    // p-dropdown emite el valor de `optionValue="id"` tal cual. El backend
+    // puede devolver el id como string → lo normalizamos a number para honrar
+    // el contrato `number | null` (el form/DTO consumidor espera Int). Clear
+    // (showClear) emite null/''; lo tratamos como null.
+    const num =
+      id === null || id === undefined || id === '' ? null : Number(id);
+    const normalized = num !== null && Number.isFinite(num) ? num : null;
+    this.value.set(normalized);
+    this.onChange(normalized);
     this.onTouched();
     this.selectionChange.emit(this.selectedProduct());
   }

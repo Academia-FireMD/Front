@@ -6,7 +6,7 @@
  */
 import { expect, test } from '@playwright/test';
 import userAdminFixture from './fixtures/user-admin.json';
-import { setupAuthInterceptors } from './helpers/interceptors.helper';
+import { loginAsAdminMock } from './helpers/auth.helper';
 
 const userBase = (id: number, hasActive: boolean) => ({
   id,
@@ -38,17 +38,7 @@ const userBase = (id: number, hasActive: boolean) => ({
 
 test.describe('Admin — paginación preserva orden', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/user/get-by-email', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userAdminFixture),
-      }),
-    );
-    await setupAuthInterceptors(page, {
-      email: 'admin@test.com',
-      rol: 'ADMIN',
-    });
+    await loginAsAdminMock(page, userAdminFixture);
   });
 
   test('cambiar de página 1 → 2 → 1 mantiene orden sin overlap', async ({
@@ -77,10 +67,6 @@ test.describe('Admin — paginación preserva orden', () => {
       });
     });
 
-    await page.goto('/auth/login');
-    await page.locator('input[formControlName="email"]').fill('admin@test.com');
-    await page.locator('app-password-input input').fill('test1234');
-    await page.locator('button[type="submit"]').click();
     await page.goto('/app/test/user-dashboard');
 
     // Esperar primera carga

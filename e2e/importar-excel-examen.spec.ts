@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import * as path from 'path';
 import userAdminFixture from './fixtures/user-admin.json';
 import examenFixture from './fixtures/examen.json';
+import { loginAsAdminMock } from './helpers/auth.helper';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -10,9 +11,21 @@ const FIXTURE_XLSX = path.resolve(__dirname, 'fixtures/preguntas-ejemplo.xlsx');
 
 // ─── Mock temas for tema-select component ─────────────────────────────────────
 
+// app-tema-select agrupa por `modulo.nombre` (solo `modulo.esPublico`); sin el
+// objeto `modulo` el overlay sale vacío.
 const mockTemas = [
-  { id: 1, numero: 1, descripcion: 'Tema 1: Anatomía', oposicion: 'BOMBEROS_ESTADO' },
-  { id: 2, numero: 2, descripcion: 'Tema 2: Química', oposicion: 'BOMBEROS_ESTADO' },
+  {
+    id: 1,
+    numero: 1,
+    descripcion: 'Tema 1: Anatomía',
+    modulo: { nombre: 'Anatomía', esPublico: true, relevancia: [] },
+  },
+  {
+    id: 2,
+    numero: 2,
+    descripcion: 'Tema 2: Química',
+    modulo: { nombre: 'Anatomía', esPublico: true, relevancia: [] },
+  },
 ];
 
 // ─── Mock examen with test + testPreguntas so the page renders fully ──────────
@@ -30,40 +43,33 @@ const mockExamen = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function buildMockJwt(payload: Record<string, unknown>): string {
-  const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
-  return `x.${base64Payload}.x`;
-}
+/**
+ * Rellena tema + dificultad del diálogo de importar. app-tema-select es un
+ * overlay custom (grupos colapsados): se abre clicando el host, se expande el
+ * grupo y se elige el primer tema. app-dificultad-dropdown sigue siendo un
+ * p-dropdown con appendTo body.
+ */
+async function rellenarTemaYDificultad(
+  page: import('@playwright/test').Page,
+): Promise<void> {
+  await page.locator('[data-testid="importar-excel-tema"]').click();
+  const overlay = page.locator('.p-overlaypanel');
+  await overlay.waitFor({ state: 'visible', timeout: 5_000 });
+  await overlay.locator('span.font-bold.pointer').first().click(); // expandir grupo
+  await overlay.locator('.pl-3 span.pointer').first().click(); // primer tema
+  // Cerrar el overlay con un clic neutro DENTRO del diálogo (un Escape cerraría
+  // el p-dialog entero, no solo el overlay del tema).
+  await page
+    .locator('[data-testid="importar-excel-dialog"]')
+    .getByText('Archivo Excel')
+    .click();
+  await overlay.waitFor({ state: 'hidden', timeout: 3_000 }).catch(() => {});
 
-async function loginAsAdminMock(page: import('@playwright/test').Page): Promise<void> {
-  const mockJwt = buildMockJwt({
-    rol: 'ADMIN',
-    email: 'admin@test.com',
-    sub: 99,
-    exp: 9_999_999_999,
-  });
-
-  await page.route('**/auth/login', (route) =>
-    route.fulfill({
-      status: 201,
-      contentType: 'application/json',
-      body: JSON.stringify({ access_token: mockJwt, refresh_token: mockJwt }),
-    }),
-  );
-
-  await page.route('**/user/get-by-email', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(userAdminFixture),
-    }),
-  );
-
-  await page.goto('/auth/login');
-  await page.locator('input[formControlName="email"]').fill('admin@test.com');
-  await page.locator('app-password-input input').fill('test1234');
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL('**/app/**', { timeout: 15_000 });
+  const dificultadWrapper = page.locator('[data-testid="importar-excel-dificultad"]');
+  await dificultadWrapper.locator('.p-dropdown').click();
+  const dropdownPanel = page.locator('.p-dropdown-panel').last();
+  await dropdownPanel.waitFor({ state: 'visible', timeout: 5_000 });
+  await dropdownPanel.locator('.p-dropdown-item').first().click();
 }
 
 async function setupExamenDetailInterceptors(
@@ -79,8 +85,9 @@ async function setupExamenDetailInterceptors(
     }),
   );
 
-  // Temas for tema-select
-  await page.route('**/tema/get-temas', (route) =>
+  // Temas for tema-select. app-tema-select consume GET /get-temas (no
+  // /tema/get-temas); el patrón **/get-temas cubre ambos.
+  await page.route('**/get-temas', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -111,7 +118,7 @@ async function setupExamenDetailInterceptors(
 
 test.describe('Importar Excel en examen (Admin)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsAdminMock(page);
+    await loginAsAdminMock(page, userAdminFixture);
     await setupExamenDetailInterceptors(page, EXAMEN_ID);
   });
 
@@ -140,7 +147,10 @@ test.describe('Importar Excel en examen (Admin)', () => {
     // The importar-excel dialog should appear
     const dialog = page.locator('[data-testid="importar-excel-dialog"]');
     await expect(dialog).toBeVisible({ timeout: 8_000 });
-    await expect(dialog).toContainText('Importar preguntas desde Excel');
+    // El título "Importar preguntas desde Excel" vive en el titlebar del
+    // p-dialog (fuera del div de contenido con el testid); verificamos el
+    // contenido real del cuerpo del diálogo.
+    await expect(dialog).toContainText('Archivo Excel');
   });
 
   test('el botón Importar está deshabilitado hasta completar todos los campos', async ({ page }) => {
@@ -151,8 +161,9 @@ test.describe('Importar Excel en examen (Admin)', () => {
     await page.locator('[data-testid="metodo-importar-excel-card"]').click();
     await expect(page.locator('[data-testid="importar-excel-dialog"]')).toBeVisible({ timeout: 8_000 });
 
-    // Submit button should be disabled initially (no file, no tema, no dificultad)
-    const submitBtn = page.locator('[data-testid="importar-excel-submit"]');
+    // Submit button should be disabled initially (no file, no tema, no dificultad).
+    // El [disabled] vive en el <button> interno del p-button, no en el host.
+    const submitBtn = page.locator('[data-testid="importar-excel-submit"] button');
     await expect(submitBtn).toBeDisabled();
   });
 
@@ -183,23 +194,10 @@ test.describe('Importar Excel en examen (Admin)', () => {
     // Upload the Excel file
     await page.setInputFiles('[data-testid="importar-excel-file-input"]', FIXTURE_XLSX);
 
-    // Select tema: click the custom dropdown trigger inside the wrapper
-    const temaWrapper = page.locator('[data-testid="importar-excel-tema"]');
-    await temaWrapper.locator('.p-dropdown').click();
-    // The overlay panel opens — click the first radio option
-    const overlayPanel = page.locator('p-overlaypanel').last();
-    await overlayPanel.waitFor({ state: 'visible', timeout: 5_000 });
-    await overlayPanel.locator('p-radioButton').first().click();
+    await rellenarTemaYDificultad(page);
 
-    // Select dificultad: p-dropdown with appendTo="body"
-    const dificultadWrapper = page.locator('[data-testid="importar-excel-dificultad"]');
-    await dificultadWrapper.locator('.p-dropdown').click();
-    const dropdownPanel = page.locator('.p-dropdown-panel').last();
-    await dropdownPanel.waitFor({ state: 'visible', timeout: 5_000 });
-    await dropdownPanel.locator('.p-dropdown-item').first().click();
-
-    // Submit button should now be enabled
-    const submitBtn = page.locator('[data-testid="importar-excel-submit"]');
+    // Submit button should now be enabled ([disabled] en el <button> interno).
+    const submitBtn = page.locator('[data-testid="importar-excel-submit"] button');
     await expect(submitBtn).not.toBeDisabled({ timeout: 3_000 });
 
     // Click submit
@@ -234,19 +232,7 @@ test.describe('Importar Excel en examen (Admin)', () => {
     // Upload file
     await page.setInputFiles('[data-testid="importar-excel-file-input"]', FIXTURE_XLSX);
 
-    // Select tema
-    const temaWrapper = page.locator('[data-testid="importar-excel-tema"]');
-    await temaWrapper.locator('.p-dropdown').click();
-    const overlayPanel = page.locator('p-overlaypanel').last();
-    await overlayPanel.waitFor({ state: 'visible', timeout: 5_000 });
-    await overlayPanel.locator('p-radioButton').first().click();
-
-    // Select dificultad
-    const dificultadWrapper = page.locator('[data-testid="importar-excel-dificultad"]');
-    await dificultadWrapper.locator('.p-dropdown').click();
-    const dropdownPanel = page.locator('.p-dropdown-panel').last();
-    await dropdownPanel.waitFor({ state: 'visible', timeout: 5_000 });
-    await dropdownPanel.locator('.p-dropdown-item').first().click();
+    await rellenarTemaYDificultad(page);
 
     // Submit
     await page.locator('[data-testid="importar-excel-submit"]').click();
@@ -260,12 +246,12 @@ test.describe('Importar Excel en examen (Admin)', () => {
   test('la checkbox de reserva está disponible en el diálogo', async ({ page }) => {
     await page.goto(`/app/examen/${EXAMEN_ID}`);
 
+    // La opción "Agregar como reserva" vive en el diálogo de selección de
+    // método (se elige ANTES de abrir el de importar; el flag agregarComoReserva
+    // se propaga al import). Se verifica ahí, no en el diálogo de importar.
     await page.locator('button.fab-button').click();
     await expect(page.locator('[data-testid="metodo-importar-excel-card"]')).toBeVisible({ timeout: 8_000 });
-    await page.locator('[data-testid="metodo-importar-excel-card"]').click();
-    await expect(page.locator('[data-testid="importar-excel-dialog"]')).toBeVisible({ timeout: 8_000 });
 
-    // The reserva checkbox should be present
     const reservaCheckbox = page.locator('[data-testid="importar-excel-reserva"]');
     await expect(reservaCheckbox).toBeVisible();
     await expect(reservaCheckbox).toContainText('reserva');

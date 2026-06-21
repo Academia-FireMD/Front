@@ -1,0 +1,387 @@
+:host {
+  --rojo: #bf0b1b;
+  --rojo-osc: #8e0913;
+  --ink: #15120e;
+  --gris: #8c857e;
+  --linea: #e7e3dd;
+  --panel: #ffffff;
+  --ok: #15803d;
+  --bad: #bf0b1b;
+  --sombra: 0 10px 30px rgba(21, 18, 14, 0.2);
+
+  display: block;
+}
+
+/* Estado minimizado: el host se encoge a la cabecera. */
+:host(.cj-recorrido-pane--min) .cj-rec {
+  width: auto;
+}
+
+.cj-rec {
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+
+  &__cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--rojo);
+    color: #fff;
+  }
+
+  &__tit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  &__min {
+    border: 0;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    line-height: 1;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.32);
+    }
+  }
+
+  &__body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ---- Buscador ---- */
+  &__lbl {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gris);
+    margin-bottom: 6px;
+  }
+
+  &__buscador {
+    ::ng-deep .p-autocomplete,
+    ::ng-deep .p-autocomplete .p-inputtext {
+      width: 100%;
+    }
+  }
+
+  /* ---- Estados (loading / no-disponible) ---- */
+  &__estado {
+    text-align: center;
+    padding: 16px 12px;
+    border-radius: 10px;
+    background: #faf8f5;
+    border: 1px dashed var(--linea);
+
+    p {
+      margin: 6px 0 0;
+      color: var(--gris);
+      font-size: 13px;
+    }
+
+    &--off {
+      border-color: var(--bad);
+      background: #fdf2f2;
+    }
+  }
+
+  &__estado-icon {
+    font-size: 26px;
+  }
+
+  /* ---- Resumen del recorrido ---- */
+  &__resumen {
+    border: 1px solid var(--linea);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  &__stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    b {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    span {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--gris);
+    }
+  }
+
+  &__origen,
+  &__destino {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    margin: 4px 0;
+  }
+
+  &__origen-dot,
+  &__destino-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  &__origen-dot {
+    background: var(--rojo);
+  }
+
+  &__destino-dot {
+    background: #f9b112;
+  }
+
+  &__calles {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 240px;
+    overflow-y: auto;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-top: 1px solid var(--linea);
+      font-size: 13px;
+    }
+  }
+
+  &__idx {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--linea);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  &__hint {
+    color: var(--gris);
+    font-size: 13px;
+  }
+
+  /* ---- Examen ---- */
+  &__meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--gris);
+    margin-bottom: 8px;
+  }
+
+  &__pregunta {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  &__calle {
+    color: var(--rojo);
+  }
+
+  &__opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__op {
+    border: 1px solid var(--linea);
+    background: #fff;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 14px;
+    transition:
+      background 0.12s,
+      border-color 0.12s;
+
+    &:hover:not(:disabled) {
+      border-color: var(--rojo);
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+
+    &.ok {
+      border-color: var(--ok);
+      background: #effaf1;
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    &.bad {
+      border-color: var(--bad);
+      background: #fdf2f2;
+      color: var(--bad);
+      font-weight: 700;
+    }
+  }
+
+  &__fb {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+
+    &.ok {
+      background: #effaf1;
+      color: var(--ok);
+    }
+
+    &.bad {
+      background: #fdf2f2;
+      color: var(--bad);
+    }
+  }
+
+  /* ---- Resultado examen ---- */
+  &__resultado {
+    text-align: center;
+
+    h4 {
+      margin: 0 0 8px;
+    }
+  }
+
+  &__nota {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 8px 0;
+
+    b {
+      font-size: 40px;
+      line-height: 1;
+      color: var(--bad);
+    }
+
+    span {
+      font-size: 13px;
+      color: var(--gris);
+    }
+
+    &.aprobado b {
+      color: var(--ok);
+    }
+  }
+
+  &__veredicto {
+    margin: 4px 0 12px;
+    color: var(--gris);
+  }
+
+  /* ---- Botones ---- */
+  &__btn {
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 14px;
+
+    &--rojo {
+      background: var(--rojo);
+      color: #fff;
+
+      &:hover {
+        background: var(--rojo-osc);
+      }
+    }
+
+    &--linea {
+      background: #fff;
+      border: 1px solid var(--linea);
+      color: var(--ink);
+
+      &:hover {
+        border-color: var(--rojo);
+        color: var(--rojo);
+      }
+    }
+  }
+
+  // Selector de dificultad (port v27)
+  .cj-rec__dificultad {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 4px;
+
+    .cj-rec__dificultad-label {
+      font-size: 0.78rem;
+      color: var(--gris);
+    }
+
+    .cj-rec__dificultad-btns {
+      display: inline-flex;
+      border: 1px solid var(--linea);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .cj-rec__dif-btn {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      border-right: 1px solid var(--linea);
+
+      &:last-child {
+        border-right: 0;
+      }
+
+      &.on {
+        background: var(--rojo);
+        color: #fff;
+      }
+
+      &:not(.on):hover {
+        color: var(--rojo);
+      }
+    }
+  }
+}

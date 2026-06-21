@@ -8,6 +8,10 @@ import {
   PaginationFilter,
 } from '../../shared/models/pagination.model';
 import {
+  Bloque,
+  BloqueCreatePayload,
+  BloqueReorderItem,
+  BloqueUpdatePayload,
   Curso,
   CursoAdmin,
   CursoCreatePayload,
@@ -25,7 +29,9 @@ import {
 
 interface SeccionCreatePayload {
   titulo: string;
-  orden: number;
+  // Opcional: el backend autocalcula el orden (append) si no se envía. El orden
+  // se gestiona con el reorder (flechas/drag), no en el alta.
+  orden?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -84,6 +90,11 @@ export class CursosAdminService extends ApiBaseService {
     return this.post(`/${id}/despublicar`, {}) as Observable<Curso>;
   }
 
+  /** Duplica un curso completo; el backend devuelve la copia en BORRADOR. */
+  duplicar(id: number): Observable<Curso> {
+    return this.post(`/${id}/duplicar`, {}) as Observable<Curso>;
+  }
+
   grantAccess(cursoId: number, usuarioId: number): Observable<unknown> {
     return this.post(`/${cursoId}/grant-access`, { usuarioId });
   }
@@ -132,10 +143,73 @@ export class CursosAdminService extends ApiBaseService {
     return this.put('/lecciones/reorder', { items }) as Observable<void>;
   }
 
+  // ---- Bloques (widgets de la lección) ----
+
+  createBloque(
+    leccionId: number,
+    dto: BloqueCreatePayload,
+  ): Observable<Bloque> {
+    return this.post(
+      `/lecciones/${leccionId}/bloques`,
+      dto,
+    ) as Observable<Bloque>;
+  }
+
+  updateBloque(id: number, dto: BloqueUpdatePayload): Observable<Bloque> {
+    return this.put(`/bloques/${id}`, dto) as Observable<Bloque>;
+  }
+
+  deleteBloque(id: number): Observable<void> {
+    return this.delete(`/bloques/${id}`) as Observable<void>;
+  }
+
+  reorderBloques(items: BloqueReorderItem[]): Observable<void> {
+    return this.put('/bloques/reorder', { items }) as Observable<void>;
+  }
+
   requestVideoUploadUrl(title: string): Observable<TusCredentials> {
     return this.post('/videos/upload-url', {
       title,
     }) as Observable<TusCredentials>;
+  }
+
+  /**
+   * Sube una imagen (miniatura/portada del curso) a Supabase vía el backend y
+   * devuelve su URL pública. Reusa el mismo almacenamiento que avatares.
+   */
+  uploadImage(file: File): Observable<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ url: string }>(
+      `${environment.apiUrl}/cursos/upload-image`,
+      formData,
+      { withCredentials: true },
+    );
+  }
+
+  /**
+   * Sube el documento de un bloque DOCUMENTO a Supabase vía el backend (admin
+   * only). Devuelve los metadatos que el form persiste en el bloque. El archivo
+   * NO queda en una URL pública: se sirve protegido por
+   * `GET /cursos/bloques/:id/documento` con check de acceso al curso.
+   * Formatos: pdf, png/jpg/webp, docx, pptx, xlsx; máx 25 MB.
+   */
+  uploadDocumento(file: File): Observable<{
+    documentoPath: string;
+    documentoNombre: string;
+    documentoMime: string;
+    documentoTamanoBytes: number;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{
+      documentoPath: string;
+      documentoNombre: string;
+      documentoMime: string;
+      documentoTamanoBytes: number;
+    }>(`${environment.apiUrl}/cursos/bloques/upload-documento`, formData, {
+      withCredentials: true,
+    });
   }
 
   /**

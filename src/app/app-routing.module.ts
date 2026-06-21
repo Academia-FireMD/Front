@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { roleGuard } from './guards/auth/role.guard';
 import { moduloGuard } from './guards/modulo.guard';
 import { SubscriptionGuard } from './guards/subscription.guard';
 import { superadminGuard } from './guards/superadmin.guard';
@@ -117,6 +118,26 @@ const routes: Routes = [
           import('./cursos/cursos-alumno.routes').then((m) => m.routes),
         canActivate: [moduloGuard],
         data: { modulo: ModuloApp.CURSOS },
+      },
+      {
+        path: 'simulacros-tienda',
+        loadComponent: () =>
+          import('./simulacros/tienda/tienda-simulacros.component').then(
+            (m) => m.TiendaSimulacrosComponent,
+          ),
+        canActivate: [moduloGuard],
+        data: { modulo: ModuloApp.SIMULACROS, title: 'Tienda de simulacros' },
+      },
+      {
+        path: 'callejero',
+        loadChildren: () =>
+          import('./callejero/callejero.routes').then((m) => m.routes),
+        canActivate: [moduloGuard, roleGuard],
+        data: {
+          modulo: ModuloApp.CALLEJERO,
+          expectedRole: 'ALUMNO',
+          title: 'Callejero',
+        },
       },
     ],
   },

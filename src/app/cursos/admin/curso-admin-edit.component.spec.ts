@@ -1,3 +1,4 @@
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -49,6 +50,8 @@ describe('CursoAdminEditComponent', () => {
       archivar: jest.fn().mockReturnValue(of({ estado: 'ARCHIVADO' })),
       despublicar: jest.fn().mockReturnValue(of({ estado: 'BORRADOR' })),
       getWooProductsCursos: jest.fn().mockReturnValue(of([])),
+      reorderSecciones: jest.fn().mockReturnValue(of({ ok: true })),
+      reorderLecciones: jest.fn().mockReturnValue(of({ ok: true })),
     };
 
     await TestBed.configureTestingModule({
@@ -83,13 +86,21 @@ describe('CursoAdminEditComponent', () => {
     expect(controls).toContain('wooProductId');
   });
 
-  it('previewMode toggleado renderiza preview (no HTTP)', () => {
-    component.previewMode.set(true);
+  it('previsualizar() abre el curso real del alumno en una pestaña nueva', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     component.curso.set(buildCursoFixture());
-    expect(component.previewMode()).toBe(true);
-    const preview = component.previewSlugResponse();
-    expect(preview).not.toBeNull();
-    expect(preview!.tieneAcceso).toBe(true);
+    const slug = component.curso()!.slug;
+    component.previsualizar();
+    expect(openSpy).toHaveBeenCalledWith(`/app/cursos/${slug}`, '_blank');
+    openSpy.mockRestore();
+  });
+
+  it('previsualizar() no hace nada si el curso aún no tiene slug', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    component.curso.set(null);
+    component.previsualizar();
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
   });
 
   it('saveMetadata envía updatedAt en el payload PUT (optimistic locking)', async () => {
@@ -197,5 +208,89 @@ describe('CursoAdminEditComponent', () => {
     expect(serviceMock.archivar).toHaveBeenCalledWith(1);
     await component.despublicar();
     expect(serviceMock.despublicar).toHaveBeenCalledWith(1);
+  });
+
+  // ---- Drag & drop (CDK) ----
+  // Solo se leen previousIndex/currentIndex; el resto del evento CDK no se usa.
+  const dragEvent = <T>(previousIndex: number, currentIndex: number) =>
+    ({ previousIndex, currentIndex }) as unknown as CdkDragDrop<T[]>;
+
+  it('dropSeccion reordena las secciones y persiste el nuevo orden', async () => {
+    component.curso.set(
+      buildCursoFixture({
+        secciones: [
+          { id: 10, cursoId: 1, titulo: 'A', orden: 0, lecciones: [] },
+          { id: 11, cursoId: 1, titulo: 'B', orden: 1, lecciones: [] },
+          { id: 12, cursoId: 1, titulo: 'C', orden: 2, lecciones: [] },
+        ],
+      }),
+    );
+    await component.dropSeccion(dragEvent(0, 2)); // A al final
+    const ids = component.curso()!.secciones.map((s) => s.id);
+    expect(ids).toEqual([11, 12, 10]);
+    expect(serviceMock.reorderSecciones).toHaveBeenCalledWith([
+      { id: 11, orden: 0 },
+      { id: 12, orden: 1 },
+      { id: 10, orden: 2 },
+    ]);
+  });
+
+  it('dropSeccion sin cambio de índice no persiste', async () => {
+    component.curso.set(
+      buildCursoFixture({
+        secciones: [
+          { id: 10, cursoId: 1, titulo: 'A', orden: 0, lecciones: [] },
+        ],
+      }),
+    );
+    await component.dropSeccion(dragEvent(0, 0));
+    expect(serviceMock.reorderSecciones).not.toHaveBeenCalled();
+  });
+
+  it('dropLeccion reordena lecciones DENTRO de la sección y persiste', async () => {
+    const seccion = {
+      id: 10,
+      cursoId: 1,
+      titulo: 'A',
+      orden: 0,
+      lecciones: [
+        {
+          id: 100,
+          seccionId: 10,
+          titulo: 'L1',
+          orden: 0,
+          tipo: 'TEXTO' as const,
+        },
+        {
+          id: 101,
+          seccionId: 10,
+          titulo: 'L2',
+          orden: 1,
+          tipo: 'VIDEO' as const,
+        },
+      ],
+    };
+    component.curso.set(buildCursoFixture({ secciones: [seccion] }));
+    await component.dropLeccion(dragEvent(1, 0), seccion); // L2 al principio
+    const ids = component.curso()!.secciones[0].lecciones.map((l) => l.id);
+    expect(ids).toEqual([101, 100]);
+    expect(serviceMock.reorderLecciones).toHaveBeenCalledWith([
+      { id: 101, orden: 0 },
+      { id: 100, orden: 1 },
+    ]);
+  });
+
+  it('dropSeccion revierte el estado si el reorder falla', async () => {
+    const secciones = [
+      { id: 10, cursoId: 1, titulo: 'A', orden: 0, lecciones: [] },
+      { id: 11, cursoId: 1, titulo: 'B', orden: 1, lecciones: [] },
+    ];
+    component.curso.set(buildCursoFixture({ secciones }));
+    serviceMock.reorderSecciones!.mockReturnValue(
+      throwError(() => new Error('boom')),
+    );
+    await component.dropSeccion(dragEvent(0, 1));
+    // Tras el fallo, el orden vuelve al original.
+    expect(component.curso()!.secciones.map((s) => s.id)).toEqual([10, 11]);
   });
 });

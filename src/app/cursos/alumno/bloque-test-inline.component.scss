@@ -1,0 +1,90 @@
+:host {
+  display: block;
+}
+
+// ---- Tarjeta de arranque ----
+.bloque-test {
+  border: 1px solid var(--cursos-border, #e9ecef);
+  border-radius: var(--cursos-radius, 12px);
+  background: var(--cursos-canvas, #f8f9fa);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.bloque-test-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+
+  > i {
+    font-size: 1.6rem;
+    color: var(--cursos-brand, #bb292a);
+  }
+
+  strong {
+    display: block;
+    color: var(--cursos-text, #1f2429);
+  }
+}
+
+.bloque-test-meta {
+  font-size: 0.85rem;
+  color: var(--cursos-text-soft, #6b7280);
+}
+
+.bloque-test-cta {
+  align-self: flex-start;
+  gap: 0.45rem;
+  background: var(--cursos-brand, #bb292a);
+  border-color: var(--cursos-brand, #bb292a);
+}
+
+.bloque-test-warn {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--cursos-text-soft, #6b7280);
+
+  i {
+    color: var(--cursos-brand, #bb292a);
+  }
+}
+
+// ---- Test embebido ----
+.bloque-test-embed {
+  border: 1px solid var(--cursos-border, #e9ecef);
+  border-radius: var(--cursos-radius, 12px);
+  padding: 0.5rem;
+  background: var(--cursos-surface, #fff);
+}
+
+.bloque-test-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.25rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--cursos-border, #e9ecef);
+  text-align: center;
+
+  > i {
+    font-size: 2rem;
+    color: var(--cursos-ok, #1f9d55);
+  }
+
+  strong {
+    color: var(--cursos-text, #1f2429);
+  }
+}
+
+.bloque-test-done-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}

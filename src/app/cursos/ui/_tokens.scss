@@ -1,0 +1,20 @@
+// Tokens del módulo Cursos — dirección visual "Aula Limpia" + marca TecnikaFire.
+// Se importan UNA vez desde src/styles.scss. No hardcodear el rojo en los
+// componentes: referenciar estas variables para poder whitelabelizar el módulo
+// (extraerlo a producto aparte) sin tocar los componentes.
+:root {
+  --cursos-brand: var(--primary-color, #bb292a);
+  --cursos-brand-contrast: #ffffff;
+  --cursos-brand-soft: #fbe9e9; // fondo de lección activa / overlays tenues
+  --cursos-canvas: #f8f9fa; // lienzo de página
+  --cursos-surface: #ffffff; // cards, paneles
+  --cursos-border: #e9ecef;
+  --cursos-text: #1f2429;
+  --cursos-text-soft: #6b7280;
+  --cursos-radius: 12px;
+  --cursos-radius-sm: 8px;
+  --cursos-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --cursos-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.1);
+  --cursos-ok: #1f9d55; // checkmark de lección completada
+}

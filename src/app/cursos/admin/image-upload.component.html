@@ -1,0 +1,42 @@
+<div class="image-upload" data-testid="image-upload">
+  @if (imageUrl()) {
+    <div class="image-upload__preview">
+      <img [src]="imageUrl()" [alt]="label()" />
+    </div>
+  } @else {
+    <div class="image-upload__placeholder">
+      <i class="pi pi-image"></i>
+      <span>Sin imagen</span>
+    </div>
+  }
+
+  <div class="image-upload__actions">
+    <label class="image-upload__btn" [class.is-loading]="uploading()">
+      <i
+        class="pi"
+        [class.pi-upload]="!uploading()"
+        [class.pi-spin]="uploading()"
+        [class.pi-spinner]="uploading()"
+      ></i>
+      <span>{{ imageUrl() ? "Cambiar" : "Subir imagen" }}</span>
+      <input
+        type="file"
+        accept="image/png, image/jpeg, image/webp, image/jpg"
+        (change)="onFileSelected($event)"
+        [disabled]="uploading()"
+        hidden
+        data-testid="image-upload-input"
+      />
+    </label>
+    @if (imageUrl()) {
+      <button
+        pButton
+        type="button"
+        class="p-button-text p-button-sm p-button-danger"
+        icon="pi pi-trash"
+        label="Quitar"
+        (click)="quitar()"
+      ></button>
+    }
+  </div>
+</div>

@@ -27,55 +27,92 @@
         (click)="volver()"
       ></button>
     </div>
+  } @else if (isPreview()) {
+    <!-- Preview admin: solo el contenido, sin chrome del aula. -->
+    <div class="preview-content">
+      <h2 class="leccion-titulo">{{ tituloLeccion() }}</h2>
+      <ng-container [ngTemplateOutlet]="contenido"></ng-container>
+    </div>
   } @else {
-    <div class="leccion-header">
-      <button
-        pButton
-        icon="pi pi-arrow-left"
-        class="p-button-text p-button-sm back-btn"
-        (click)="volver()"
-      >
-        Volver al curso
-      </button>
-      <h2 class="leccion-titulo">{{ leccionData()!.leccion.titulo }}</h2>
-    </div>
+    <app-leccion-shell
+      [secciones]="secciones()"
+      [leccionActivaId]="leccionActivaId()"
+      [tituloCurso]="tituloCurso()"
+      [tituloLeccion]="tituloLeccion()"
+      [marcando]="marcando()"
+      [completada]="completadaActiva()"
+      (navegar)="irALeccion($event)"
+      (marcarCompletada)="marcarCompletada()"
+      (volver)="volver()"
+    >
+      <app-curriculum-sidebar
+        sidebar
+        [secciones]="secciones()"
+        [progreso]="progreso()"
+        [leccionActivaId]="leccionActivaId()"
+        [interactivo]="true"
+        (seleccionar)="irALeccion($event)"
+      ></app-curriculum-sidebar>
 
-    <div class="leccion-body">
-      @switch (leccionData()!.leccion.tipo) {
-        @case ("VIDEO") {
-          @if (leccionData()!.playbackUrl) {
-            <app-leccion-video
-              [leccion]="leccionData()!.leccion"
-              [playbackUrl]="leccionData()!.playbackUrl!"
-            ></app-leccion-video>
-          } @else {
-            <div class="no-url-state">
-              <i class="pi pi-video"></i>
-              <p>El vídeo no está disponible todavía.</p>
-            </div>
-          }
-        }
-        @case ("TEXTO") {
-          <app-leccion-texto
-            [leccion]="leccionData()!.leccion"
-          ></app-leccion-texto>
-        }
-        @case ("TEST") {
-          <app-leccion-test
-            [leccion]="leccionData()!.leccion"
-            [preview]="isPreview()"
-          ></app-leccion-test>
-        }
-        @case ("FLASHCARDS") {
-          <app-leccion-flashcards
-            [leccion]="leccionData()!.leccion"
-            [preview]="isPreview()"
-          ></app-leccion-flashcards>
-        }
-        @default {
-          <p class="text-secondary">Tipo de lección desconocido.</p>
-        }
-      }
-    </div>
+      <ng-container [ngTemplateOutlet]="contenido"></ng-container>
+    </app-leccion-shell>
   }
 </div>
+
+<ng-template #contenido>
+  @if (bloques().length > 0) {
+    <!-- Lección por bloques: pila de widgets. -->
+    @for (bloque of bloques(); track bloque.id) {
+      <app-bloque-render
+        [bloque]="bloque"
+        [playbackUrl]="playbackUrls()[bloque.id] ?? null"
+        [preview]="isPreview()"
+        (completado)="onBloqueCompletado()"
+      ></app-bloque-render>
+    }
+  } @else if (leccionVacia()) {
+    <div class="no-url-state" data-testid="leccion-sin-contenido">
+      <i class="pi pi-inbox"></i>
+      <p>Esta lección aún no tiene contenido.</p>
+    </div>
+  } @else {
+    <!-- Lección legacy (un solo tipo, sin bloques aún). -->
+    @switch (leccionData()!.leccion.tipo) {
+      @case ("VIDEO") {
+        @if (leccionData()!.playbackUrl) {
+          <app-leccion-video
+            [leccion]="leccionData()!.leccion"
+            [playbackUrl]="leccionData()!.playbackUrl!"
+            [enAula]="!isPreview()"
+          ></app-leccion-video>
+        } @else {
+          <div class="no-url-state">
+            <i class="pi pi-video"></i>
+            <p>El vídeo no está disponible todavía.</p>
+          </div>
+        }
+      }
+      @case ("TEXTO") {
+        <app-leccion-texto
+          [leccion]="leccionData()!.leccion"
+          [enAula]="!isPreview()"
+        ></app-leccion-texto>
+      }
+      @case ("TEST") {
+        <app-leccion-test
+          [leccion]="leccionData()!.leccion"
+          [preview]="isPreview()"
+        ></app-leccion-test>
+      }
+      @case ("FLASHCARDS") {
+        <app-leccion-flashcards
+          [leccion]="leccionData()!.leccion"
+          [preview]="isPreview()"
+        ></app-leccion-flashcards>
+      }
+      @default {
+        <p class="text-secondary">Tipo de lección desconocido.</p>
+      }
+    }
+  }
+</ng-template>

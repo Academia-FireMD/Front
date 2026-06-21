@@ -1,0 +1,213 @@
+<div class="tienda-simulacros-container">
+  <!-- Header -->
+  <div class="header-section">
+    <div class="header-icon header-icon--blue">
+      <i class="pi pi-shopping-cart"></i>
+    </div>
+    <h1 class="header-title">Tienda de simulacros</h1>
+    <p class="header-subtitle">
+      Compra simulacros sueltos con tu tarjeta guardada (1 clic) y empieza al
+      instante.
+    </p>
+  </div>
+
+  <!-- Loading -->
+  @if (cargando()) {
+    <div class="loading-container">
+      <p-progressSpinner />
+      <p class="text-lg mt-3">Cargando simulacros disponibles...</p>
+    </div>
+  }
+
+  <!-- Error -->
+  @else if (error()) {
+    <div class="estado-vacio estado-error" data-testid="tienda-error">
+      <i class="pi pi-exclamation-circle"></i>
+      <p>No se pudieron cargar los simulacros. Inténtalo de nuevo.</p>
+      <p-button
+        label="Reintentar"
+        icon="pi pi-refresh"
+        (onClick)="cargar()"
+        [outlined]="true"
+        severity="secondary"
+      />
+    </div>
+  }
+
+  <!-- Vacío -->
+  @else if (simulacros().length === 0) {
+    <div class="estado-vacio" data-testid="tienda-vacia">
+      <i class="pi pi-inbox"></i>
+      <p>No hay simulacros disponibles para tu oposición en este momento.</p>
+    </div>
+  }
+
+  <!-- Grid de simulacros -->
+  @else {
+    <div class="simulacros-grid" data-testid="tienda-grid">
+      @for (s of simulacros(); track s.id) {
+        <div
+          class="simulacro-card"
+          [class.card-incluido]="s.estado === 'INCLUIDO'"
+          [class.card-comprado]="s.estado === 'COMPRADO'"
+          data-testid="simulacro-card"
+        >
+          <div class="card-header">
+            <div class="card-chips">
+              @for (rel of s.relevancia; track rel) {
+                <p-chip [label]="rel" styleClass="rel-chip" />
+              }
+            </div>
+            @if (s.estado === "INCLUIDO") {
+              <span
+                class="estado-badge badge-incluido"
+                data-testid="badge-incluido"
+              >
+                <i class="pi pi-star-fill"></i> Incluido en tu plan
+              </span>
+            } @else if (s.estado === "COMPRADO") {
+              <span
+                class="estado-badge badge-comprado"
+                data-testid="badge-comprado"
+              >
+                <i class="pi pi-check-circle"></i> Ya lo tienes
+              </span>
+            }
+          </div>
+
+          <h3 class="card-titulo">{{ s.titulo }}</h3>
+          @if (s.descripcion) {
+            <p class="card-descripcion">{{ s.descripcion }}</p>
+          }
+
+          <div class="card-footer">
+            <div class="card-precio">
+              @if (s.estado === "COMPRABLE") {
+                <span class="precio-valor"
+                  >{{ s.precio | number: "1.2-2" }} €</span
+                >
+              } @else {
+                <span class="precio-incluido">
+                  <i class="pi pi-unlock"></i> Acceso activo
+                </span>
+              }
+            </div>
+
+            @if (s.estado === "COMPRABLE") {
+              <p-button
+                label="Comprar (1 clic)"
+                icon="pi pi-bolt"
+                (onClick)="abrirCompra(s)"
+                severity="primary"
+                styleClass="comprar-btn"
+                data-testid="comprar-btn"
+              />
+            } @else {
+              <p-button
+                label="Realizar"
+                icon="pi pi-play"
+                (onClick)="realizar(s)"
+                severity="success"
+                [outlined]="true"
+                styleClass="realizar-btn"
+                data-testid="realizar-btn"
+              />
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Diálogo de confirmación de compra -->
+<p-dialog
+  header="Confirmar compra"
+  [visible]="confirmVisible()"
+  (visibleChange)="confirmVisible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '460px' }"
+  [breakpoints]="{ '640px': '92vw' }"
+  [closable]="!comprando()"
+  data-testid="tienda-confirm-dialog"
+>
+  @if (seleccionado(); as s) {
+    <div class="confirm-content">
+      <div class="confirm-icon"><i class="pi pi-shopping-cart"></i></div>
+      <h3>{{ s.titulo }}</h3>
+      <p>
+        Se cobrará a tu tarjeta guardada y tendrás acceso al instante. Un
+        simulacro se puede comprar varias veces.
+      </p>
+      <div class="confirm-precio" data-testid="tienda-confirm-precio">
+        {{ s.precio | number: "1.2-2" }} €
+      </div>
+    </div>
+  }
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      icon="pi pi-times"
+      (onClick)="confirmVisible.set(false)"
+      [outlined]="true"
+      severity="secondary"
+      [disabled]="comprando()"
+    />
+    <p-button
+      [label]="comprando() ? 'Procesando…' : 'Comprar (1 clic)'"
+      icon="pi pi-bolt"
+      (onClick)="confirmarCompra()"
+      [loading]="comprando()"
+      [disabled]="comprando()"
+      severity="primary"
+      data-testid="tienda-confirmar-btn"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Diálogo de fallback: completar la compra en la tienda WooCommerce -->
+<p-dialog
+  [header]="
+    checkoutEsRechazo()
+      ? 'Tarjeta rechazada'
+      : 'Completa la compra en la tienda'
+  "
+  [visible]="checkoutVisible()"
+  (visibleChange)="checkoutVisible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '460px' }"
+  [breakpoints]="{ '640px': '92vw' }"
+  data-testid="tienda-checkout-dialog"
+>
+  <div class="confirm-content">
+    <div class="confirm-icon">
+      <i
+        class="pi"
+        [class.pi-credit-card]="checkoutEsRechazo()"
+        [class.pi-shopping-cart]="!checkoutEsRechazo()"
+      ></i>
+    </div>
+    <p data-testid="tienda-checkout-mensaje">{{ checkoutMensaje() }}</p>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      icon="pi pi-times"
+      (onClick)="checkoutVisible.set(false)"
+      [outlined]="true"
+      severity="secondary"
+    />
+    <p-button
+      label="Completar en la tienda"
+      icon="pi pi-external-link"
+      (onClick)="completarEnTienda()"
+      [disabled]="!checkoutWooProductId()"
+      severity="primary"
+      data-testid="tienda-checkout-tienda-btn"
+    />
+  </ng-template>
+</p-dialog>

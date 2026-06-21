@@ -1,0 +1,41 @@
+<div class="bloque-documento" data-testid="bloque-documento">
+  <div class="doc-card">
+    <i class="doc-card__icon pi pi-file"></i>
+    <div class="doc-card__info">
+      <span class="doc-card__nombre">{{ nombre() }}</span>
+      @if (tamanoLegible()) {
+        <span class="doc-card__tamano">{{ tamanoLegible() }}</span>
+      }
+    </div>
+    <div class="doc-card__actions">
+      @if (esPdf() && !safePdfUrl()) {
+        <p-button
+          label="Ver"
+          icon="pi pi-eye"
+          severity="secondary"
+          [text]="true"
+          [loading]="cargandoVisor()"
+          (onClick)="verEnVisor()"
+          data-testid="documento-ver"
+        ></p-button>
+      }
+      <p-button
+        label="Descargar"
+        icon="pi pi-download"
+        [loading]="descargando()"
+        (onClick)="descargar()"
+        data-testid="documento-descargar"
+      ></p-button>
+    </div>
+  </div>
+
+  @if (esPdf() && safePdfUrl()) {
+    <div class="doc-visor" data-testid="documento-visor">
+      <iframe
+        [src]="safePdfUrl()"
+        title="Visor de PDF"
+        class="doc-visor__frame"
+      ></iframe>
+    </div>
+  }
+</div>

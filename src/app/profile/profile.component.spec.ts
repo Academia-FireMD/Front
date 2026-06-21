@@ -13,11 +13,13 @@ describe('ProfileComponent', () => {
 
   beforeEach(async () => {
     mockAuthService = {
-      getWpSsoUrl$: jest.fn().mockReturnValue(
-        of({
-          url: 'https://staging2.tecnikafire.com/wp-json/tecnika/v1/sso?token=tok.en.sig',
-        }),
-      ),
+      getWpSsoUrl$: jest
+        .fn()
+        .mockReturnValue(
+          of({
+            url: 'https://staging2.tecnikafire.com/wp-json/tecnika/v1/sso?token=tok.en.sig',
+          }),
+        ),
     };
 
     await TestBed.configureTestingModule({

@@ -269,12 +269,12 @@ export class SuscripcionManagementService extends ApiBaseService {
   linkToWordPress(password: string): Observable<{
     success: boolean;
     message: string;
-    woocommerceCustomerId?: string;
+    woocommerceCustomerId?: number;
   }> {
     return this.post('/link-wordpress', { password }) as Observable<{
       success: boolean;
       message: string;
-      woocommerceCustomerId?: string;
+      woocommerceCustomerId?: number;
     }>;
   }
 }

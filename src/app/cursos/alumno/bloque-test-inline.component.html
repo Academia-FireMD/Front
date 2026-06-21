@@ -1,0 +1,66 @@
+@if (startedTestId() === null) {
+  <!-- Tarjeta de arranque -->
+  <div class="bloque-test">
+    <div class="bloque-test-head">
+      <i class="pi pi-question-circle"></i>
+      <div>
+        <strong>Test del tema</strong>
+        <span class="bloque-test-meta">
+          {{ numPreguntas() }} preguntas
+          @if (esDeRepaso()) {
+            · repaso de fallos
+          }
+        </span>
+      </div>
+    </div>
+    @if (noFailedQuestions(); as nfq) {
+      <p class="bloque-test-warn">
+        <i class="pi pi-info-circle"></i> {{ nfq.message }}
+      </p>
+    } @else {
+      <button
+        pButton
+        type="button"
+        class="bloque-test-cta"
+        [loading]="starting()"
+        (click)="iniciarTest()"
+      >
+        <i class="pi pi-play"></i><span>Iniciar test</span>
+      </button>
+    }
+  </div>
+} @else {
+  <!-- Test embebido (in situ) -->
+  <div class="bloque-test-embed" data-testid="bloque-test-embed">
+    <app-completar-test
+      [embedded]="true"
+      [testId]="startedTestId()"
+      (finalizado)="onFinalizado()"
+    ></app-completar-test>
+
+    @if (completed()) {
+      <div class="bloque-test-done" data-testid="bloque-test-done">
+        <i class="pi pi-check-circle"></i>
+        <strong>¡Test completado!</strong>
+        <div class="bloque-test-done-actions">
+          <button
+            pButton
+            type="button"
+            class="p-button-outlined p-button-sm"
+            icon="pi pi-chart-bar"
+            label="Ver resultados"
+            (click)="verResultados()"
+          ></button>
+          <button
+            pButton
+            type="button"
+            class="p-button-text p-button-sm"
+            icon="pi pi-replay"
+            label="Repetir test"
+            (click)="repetir()"
+          ></button>
+        </div>
+      </div>
+    }
+  </div>
+}

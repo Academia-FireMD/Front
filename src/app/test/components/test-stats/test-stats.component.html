@@ -3,7 +3,7 @@
     <div class="col-12" *ngIf="test$ | async as test">
       <div class="flex align-items-center justify-content-between topbar mb-4">
         <span class="text-xl font-semibold text-700">
-          Test realizado el día {{ test.createdAt | date : "short" }}
+          Test realizado el día {{ test.createdAt | date: "short" }}
         </span>
         <p-button
           [link]="true"
@@ -11,6 +11,25 @@
           icon="pi pi-arrow-left"
           (click)="handleBackButton()"
         />
+      </div>
+    </div>
+
+    <!-- Banner Asistente de Estudio (gancho principal — arriba para que sea lo primero que ve el alumno tras la cabecera) -->
+    <div class="col-12 mb-4" *ngIf="preguntasFalladas.length > 0">
+      <div class="study-banner">
+        <span class="study-banner__icon">🧠</span>
+        <div class="study-banner__text">
+          Has fallado {{ preguntasFalladas.length }}
+          {{ preguntasFalladas.length === 1 ? "pregunta" : "preguntas" }}. ¿Te
+          monto una regla para recordarlas la próxima vez?
+        </div>
+        <button
+          pButton
+          type="button"
+          label="Sí, vamos"
+          class="p-button-sm"
+          (click)="abrirAsistenteConFallos()"
+        ></button>
       </div>
     </div>
 

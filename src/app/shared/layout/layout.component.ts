@@ -285,6 +285,12 @@ export class LayoutComponent {
             routerLink: '/app/facturacion',
             modulo: ModuloApp.FACTURACION,
           },
+          {
+            label: 'Cursos',
+            icon: 'pi pi-graduation-cap',
+            routerLink: '/app/cursos-admin',
+            modulo: ModuloApp.CURSOS,
+          },
         ],
       },
       {
@@ -369,28 +375,9 @@ export class LayoutComponent {
           },
         ],
       },
-      // Bug WL-admin-cursos (2026-05-25): las rutas /app/cursos-admin
-      // existen (lista + nuevo + editar) pero no estaban en el menú,
-      // por lo que admin no podía crear ni gestionar cursos desde la UI.
-      // Cada sub-curso puede tener lecciones tipo VIDEO con bunnyVideoId,
-      // que es la forma de subir "histórico de sesiones/tutorías".
-      {
-        label: 'Cursos',
-        collapsed: true,
-        modulo: ModuloApp.CURSOS,
-        items: [
-          {
-            label: 'Lista de cursos',
-            icon: 'pi pi-list',
-            routerLink: '/app/cursos-admin',
-          },
-          {
-            label: 'Crear curso',
-            icon: 'pi pi-plus',
-            routerLink: '/app/cursos-admin/nuevo',
-          },
-        ],
-      },
+      // Cursos (admin) vive como subítem único dentro de "Gestión" → "Cursos"
+      // (apunta al listado; "Crear curso" es un botón dentro del propio listado).
+      // Antes era un grupo propio con "Lista de cursos" + "Crear curso".
 
       {
         label: 'Perfil',
@@ -454,7 +441,6 @@ export class LayoutComponent {
           icon: 'pi pi-file',
           routerLink: '/app/documentacion/alumno',
           modulo: ModuloApp.DOCUMENTACION,
-          items: [],
         },
         {
           label: 'Test',
@@ -515,14 +501,12 @@ export class LayoutComponent {
         icon: 'pi pi-calendar-plus',
         routerLink: '/app/planificacion/planificacion-mensual-alumno',
         modulo: ModuloApp.PLANIFICACION,
-        items: [],
       });
     } else if (hasValidSubscription) {
       // Usuario BASIC - mostrar bloqueado
       menu.push({
         label: 'Planificación mensual',
         icon: 'pi pi-calendar-plus',
-        items: [],
         modulo: ModuloApp.PLANIFICACION,
         styleClass: 'locked-menu-item',
         state: { locked: true },
@@ -579,7 +563,6 @@ export class LayoutComponent {
         icon: 'pi pi-calendar',
         routerLink: '/app/horarios/alumno',
         modulo: ModuloApp.HORARIOS,
-        items: [],
       });
     }
 
@@ -605,6 +588,28 @@ export class LayoutComponent {
             routerLink: '/app/cursos/catalogo',
           },
         ],
+      });
+    }
+
+    // Tienda de simulacros — disponible para todos los alumnos con sub activa.
+    // El ModuloGuard se encarga del gating por tenant (módulo SIMULACROS).
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Simulacros',
+        icon: 'pi pi-file-edit',
+        routerLink: '/app/simulacros-tienda',
+        modulo: ModuloApp.SIMULACROS,
+      });
+    }
+
+    // Callejero — práctica de calles de la oposición (mapa interactivo).
+    // Enlace directo; ModuloGuard gatea por tenant (ModuloApp.CALLEJERO).
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Callejero',
+        icon: 'pi pi-map-marker',
+        routerLink: '/app/callejero',
+        modulo: ModuloApp.CALLEJERO,
       });
     }
 

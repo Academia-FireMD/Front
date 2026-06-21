@@ -1,0 +1,131 @@
+<p-dialog
+  [header]="'Contenido · ' + leccionTitulo()"
+  [visible]="visible()"
+  (visibleChange)="onVisibleChange($event)"
+  [modal]="true"
+  [style]="{ width: '90vw', maxWidth: '1100px', height: '88vh' }"
+  [contentStyle]="{ height: 'calc(88vh - 6rem)', overflow: 'auto' }"
+  [breakpoints]="{ '960px': '96vw', '640px': '100vw' }"
+  [maximizable]="true"
+  [draggable]="false"
+  [resizable]="false"
+>
+  @if (mode() === "list") {
+    <div class="bloques-builder" data-testid="bloques-builder">
+      <!-- Paleta de tipos: arrastra un chip a la pila o púlsalo para añadir. -->
+      <div
+        class="bloques-paleta"
+        cdkDropList
+        cdkDropListOrientation="horizontal"
+        [cdkDropListConnectedTo]="[stackList]"
+        [cdkDropListSortingDisabled]="true"
+        data-testid="bloques-paleta"
+      >
+        <span class="bloques-paleta__hint">
+          <i class="pi pi-arrows-alt"></i>
+          Arrastra un bloque a la lección o púlsalo para añadirlo
+        </span>
+        <div class="bloques-paleta__chips">
+          @for (t of paletaTipos; track t) {
+            <button
+              type="button"
+              class="paleta-chip"
+              [attr.data-tipo]="t"
+              cdkDrag
+              [cdkDragData]="t"
+              (click)="addTipo(t)"
+              [attr.data-testid]="'paleta-chip-' + t"
+            >
+              <i [class]="meta(t).icon"></i>
+              <span>{{ meta(t).label }}</span>
+              <span
+                class="paleta-chip paleta-chip--preview"
+                [attr.data-tipo]="t"
+                *cdkDragPreview
+              >
+                <i [class]="meta(t).icon"></i>
+                <span>{{ meta(t).label }}</span>
+              </span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Pila de bloques: siempre drop target (reordena + recibe chips). -->
+      <ul
+        class="bloques-list"
+        [class.bloques-list--vacia]="vacio()"
+        cdkDropList
+        #stackList="cdkDropList"
+        (cdkDropListDropped)="drop($event)"
+        data-testid="bloques-list"
+      >
+        @if (vacio()) {
+          <li class="bloques-empty" data-testid="bloques-empty">
+            <i class="pi pi-inbox"></i>
+            <p>Aún no hay bloques.</p>
+            <small>Suelta aquí un tipo de la paleta (o púlsalo arriba).</small>
+          </li>
+        } @else {
+          @for (bloque of bloques(); track bloque.id) {
+            <li class="bloque-row" cdkDrag data-testid="bloque-row">
+              <span class="bloque-row__handle" cdkDragHandle title="Arrastrar">
+                <i class="pi pi-bars"></i>
+              </span>
+              <span class="bloque-row__icon" [attr.data-tipo]="bloque.tipo">
+                <i [class]="meta(bloque.tipo).icon"></i>
+              </span>
+              <span class="bloque-row__body">
+                <strong>{{ meta(bloque.tipo).label }}</strong>
+                <small>{{ resumen(bloque) }}</small>
+              </span>
+              <span class="bloque-row__actions">
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-pencil"
+                  class="p-button-text p-button-rounded p-button-sm"
+                  title="Editar bloque"
+                  (click)="openEdit(bloque)"
+                ></button>
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-trash"
+                  class="p-button-text p-button-rounded p-button-sm p-button-danger"
+                  title="Eliminar bloque"
+                  (click)="deleteBloque(bloque)"
+                ></button>
+              </span>
+            </li>
+          }
+        }
+      </ul>
+    </div>
+  } @else {
+    <div class="bloque-form-wrap">
+      <button
+        pButton
+        type="button"
+        label="Volver a la pila"
+        icon="pi pi-arrow-left"
+        class="p-button-text p-button-sm bloque-form-back"
+        (click)="backToList()"
+      ></button>
+      <app-bloque-form
+        [bloque]="editando()"
+        [initialTipo]="nuevoTipo()"
+        [oposicion]="oposicion()"
+        [saving]="saving()"
+        (saved)="onFormSaved($event)"
+        (cancelled)="backToList()"
+      ></app-bloque-form>
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    @if (mode() === "list") {
+      <p-button label="Cerrar" severity="secondary" (onClick)="close()" />
+    }
+  </ng-template>
+</p-dialog>

@@ -1,0 +1,473 @@
+<div class="cj-app" data-testid="callejero-app">
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="cj-sidebar" [class.cj-sidebar--abierto]="sidebarAbierto()">
+    <div class="cj-brand">
+      <div class="cj-brand__logo">TÉCNIKA<span>FIRE</span></div>
+      <div class="cj-brand__tag">Callejero · Bombers València</div>
+    </div>
+
+    <nav class="cj-tabs">
+      <button [class.act]="tab() === 'mapa'" (click)="setTab('mapa')">
+        Mapa
+      </button>
+      <button [class.act]="tab() === 'estudio'" (click)="setTab('estudio')">
+        Estudio
+      </button>
+      <button [class.act]="tab() === 'examen'" (click)="setTab('examen')">
+        Examen
+      </button>
+      <button
+        [class.act]="tab() === 'recorridos'"
+        (click)="setTab('recorridos')"
+        data-testid="cj-tab-recorridos"
+      >
+        Recorridos
+      </button>
+    </nav>
+
+    <!-- ---------- Pane MAPA ---------- -->
+    <div class="cj-pane" [class.act]="tab() === 'mapa'">
+      @if (ciudades().length > 1) {
+        <div class="cj-sec">
+          <label class="cj-lbl">Ciudad</label>
+          <select
+            class="cj-select"
+            [ngModel]="ciudadSel()"
+            (ngModelChange)="seleccionarCiudad($event)"
+          >
+            @for (c of ciudades(); track c.id) {
+              <option [ngValue]="c">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <div class="cj-sec">
+        <label class="cj-lbl">Mapa base</label>
+        <div class="cj-chips">
+          <button
+            class="cj-chip"
+            [class.act]="baseActiva() === 'calles'"
+            (click)="setBase('calles')"
+          >
+            Calles
+          </button>
+          <button
+            class="cj-chip"
+            [class.act]="baseActiva() === 'fusion'"
+            (click)="setBase('fusion')"
+          >
+            Fusión
+          </button>
+          <button
+            class="cj-chip"
+            [class.act]="baseActiva() === 'satelite'"
+            (click)="setBase('satelite')"
+          >
+            Satélite
+          </button>
+        </div>
+      </div>
+
+      <div class="cj-sec">
+        <label class="cj-lbl">Capas</label>
+        <label class="cj-tgl">
+          <input
+            type="checkbox"
+            [ngModel]="capaZonasOn()"
+            (ngModelChange)="toggleCapaZonas($event)"
+          />
+          <span class="cj-dot" style="background: #d7263d"></span>
+          <span class="cj-tgl__lbl">Zonas de parque</span>
+          <span class="cj-tgl__num">{{ zonas().length }}</span>
+        </label>
+        @for (c of CAT_ORDER; track c) {
+          <label class="cj-tgl">
+            <input
+              type="checkbox"
+              [ngModel]="capaCatOn()[c]"
+              (ngModelChange)="toggleCapaCat(c, $event)"
+            />
+            <span class="cj-dot" [style.background]="CATS[c].color"></span>
+            <span class="cj-tgl__lbl">{{ CATS[c].label }}</span>
+            <span class="cj-tgl__num">{{ countCat(c) }}</span>
+          </label>
+        }
+      </div>
+    </div>
+
+    <!-- ---------- Pane ESTUDIO ---------- -->
+    <div class="cj-pane" [class.act]="tab() === 'estudio'">
+      <input
+        class="cj-buscar"
+        type="text"
+        placeholder="Busca calle, hospital, parque, museo…"
+        [ngModel]="buscar()"
+        (ngModelChange)="buscar.set($event)"
+        data-testid="cj-buscar"
+      />
+      <div class="cj-listas">
+        @for (g of listasEstudio(); track g.cat) {
+          <div class="cj-lista-cat">
+            <h4>
+              <span class="cj-dot" [style.background]="g.info.color"></span>
+              {{ g.info.label }}
+              <span class="cj-tgl__num">({{ g.items.length }})</span>
+            </h4>
+            <ul>
+              @for (p of g.items; track p.id) {
+                <li (click)="irAPoi(p)">{{ p.nombre }}</li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ---------- Pane EXAMEN ---------- -->
+    <div class="cj-pane" [class.act]="tab() === 'examen'">
+      @if (!examOn()) {
+        <div class="cj-sec">
+          <label class="cj-lbl">Categorías</label>
+          @for (c of CAT_ORDER; track c) {
+            <label class="cj-tgl">
+              <input
+                type="checkbox"
+                [ngModel]="examCats()[c]"
+                (ngModelChange)="toggleExamCat(c, $event)"
+              />
+              <span class="cj-dot" [style.background]="CATS[c].color"></span>
+              <span class="cj-tgl__lbl">{{ CATS[c].label }}</span>
+            </label>
+          }
+        </div>
+        <div class="cj-sec">
+          <label class="cj-lbl">Configuración</label>
+          <div class="cj-cfg-row">
+            <span>Nº de preguntas</span>
+            <select
+              class="cj-select cj-select--sm"
+              [ngModel]="cfgN()"
+              (ngModelChange)="cfgN.set($event)"
+            >
+              @for (n of opcionesN; track n) {
+                <option [ngValue]="n">{{ n }}</option>
+              }
+            </select>
+          </div>
+          <div class="cj-cfg-row">
+            <span>Tolerancia</span>
+            <select
+              class="cj-select cj-select--sm"
+              [ngModel]="cfgTol()"
+              (ngModelChange)="cfgTol.set($event)"
+            >
+              @for (t of opcionesTol; track t) {
+                <option [ngValue]="t">{{ t }} m</option>
+              }
+            </select>
+          </div>
+          <label class="cj-tgl">
+            <input
+              type="checkbox"
+              [ngModel]="cfgMudo()"
+              (ngModelChange)="cfgMudo.set($event)"
+            />
+            <span class="cj-tgl__lbl">Mapa mudo durante el examen</span>
+          </label>
+          <label class="cj-tgl">
+            <input
+              type="checkbox"
+              [ngModel]="cfgZonas()"
+              (ngModelChange)="cfgZonas.set($event)"
+            />
+            <span class="cj-tgl__lbl">Incluir preguntas de zona y coopera</span>
+          </label>
+        </div>
+        <button
+          class="cj-btn cj-btn--rojo"
+          (click)="empezarExamen()"
+          data-testid="cj-empezar"
+        >
+          Empezar examen
+        </button>
+        <button class="cj-btn cj-btn--linea" (click)="verLeaderboard()">
+          Clasificación
+        </button>
+      } @else {
+        <div class="cj-marcador">
+          <div class="cj-stat">
+            <b>{{ aciertos() }}</b
+            ><span>aciertos</span>
+          </div>
+          <div class="cj-stat">
+            <b>{{ racha() }}</b
+            ><span>racha</span>
+          </div>
+          <div class="cj-stat">
+            <b>{{ puntos() }}</b
+            ><span>puntos</span>
+          </div>
+        </div>
+        <button class="cj-btn cj-btn--linea" (click)="abandonar()">
+          Terminar examen
+        </button>
+      }
+    </div>
+
+    <!-- ---------- Pane RECORRIDOS (Callejero v10) ---------- -->
+    <div class="cj-pane" [class.act]="tab() === 'recorridos'">
+      <app-recorrido-pane
+        [calles]="recCalles()"
+        [destino]="recDestino()"
+        [recorrido]="recResultado()"
+        [loading]="recLoading()"
+        [error]="recError()"
+        [examen]="recExamenView()"
+        [resultado]="recExamenResultado()"
+        [dificultad]="dificultadRec()"
+        (buscarDestino)="onBuscarDestino($event)"
+        (cambiarDificultad)="dificultadRec.set($event)"
+        (iniciarExamenRecorridos)="onIniciarExamenRecorridos()"
+        (responderParque)="onResponderParque($event)"
+        (siguienteOtraCalle)="onSiguienteRecorrido()"
+        (minimizarToggle)="onMinimizarRecorrido($event)"
+      ></app-recorrido-pane>
+    </div>
+  </aside>
+
+  <!-- ===================== MAPA ===================== -->
+  <div class="cj-mapwrap">
+    <button class="cj-abrir-panel" (click)="toggleSidebar()">☰ Panel</button>
+    <div #mapEl class="cj-map" data-testid="cj-map"></div>
+
+    @if (cargando()) {
+      <div class="cj-overlay-carga">Cargando callejero…</div>
+    }
+
+    <!-- ---------- Paywall: sin la suscripción que da acceso ---------- -->
+    @if (sinAcceso()) {
+      <div class="cj-paywall" data-testid="cj-paywall">
+        <div class="cj-paywall__card">
+          <div class="cj-paywall__lock"><i class="pi pi-lock"></i></div>
+          <h2>Callejero de Valencia</h2>
+          <p>
+            El callejero está disponible con la
+            <strong>suscripción de Valencia</strong>. Aún no la tienes en tu
+            cuenta.
+          </p>
+          <button
+            class="cj-btn cj-btn--rojo"
+            (click)="abrirTienda()"
+            data-testid="cj-paywall-cta"
+          >
+            Añadir suscripción
+          </button>
+          <small
+            >Practica calles, parques y zonas como en el examen real.</small
+          >
+        </div>
+      </div>
+    }
+
+    <!-- ---------- Barra de pregunta (examen) ---------- -->
+    @if (examOn() && retoActual(); as q) {
+      <div class="cj-qbar" data-testid="cj-qbar">
+        <div class="cj-qbar__meta">
+          <span>Pregunta {{ retoIdx() + 1 }} / {{ totalRetos() }}</span>
+          <span>{{ puntos() }} pts · racha {{ racha() }}</span>
+        </div>
+        <div class="cj-qbar__txt">
+          @if (q.tipo === "localiza") {
+            📍 Localiza en el mapa:
+            <span class="cj-obj">{{ q.poi.nombre }}</span>
+          } @else if (q.tipo === "zona") {
+            🚒 ¿Qué parque cubre la zona donde está
+            <span class="cj-obj">{{ q.poi.nombre }}</span
+            >?
+          } @else {
+            🤝 ¿Qué parque COOPERA en la zona de
+            <span class="cj-obj">{{ q.poi.nombre }}</span
+            >?
+          }
+        </div>
+        @if (q.tipo === "localiza" && !feedback()) {
+          <div class="cj-qbar__pista">
+            Pincha en el mapa donde creas que está.
+          </div>
+        }
+        @if (opcionesQuiz().length) {
+          <div class="cj-qopts">
+            @for (op of opcionesQuiz(); track op) {
+              <button
+                [class.ok]="feedback() && estadoOpcion(op) === 'ok'"
+                [class.bad]="feedback() && estadoOpcion(op) === 'bad'"
+                [disabled]="!!feedback()"
+                (click)="responderOpcion(op)"
+              >
+                {{ op }}
+              </button>
+            }
+          </div>
+        }
+        @if (feedback(); as fb) {
+          <div class="cj-qfb" [class.ok]="fb.ok" [class.bad]="!fb.ok">
+            <b>{{ fb.ok ? "✔ " : "✘ " }}{{ fb.tit }}</b> {{ fb.txt }}
+          </div>
+          <button
+            class="cj-btn cj-btn--rojo cj-btn--sig"
+            (click)="siguiente()"
+            data-testid="cj-siguiente"
+          >
+            {{ esUltimo() ? "Ver resultado" : "Siguiente" }}
+          </button>
+        }
+      </div>
+    }
+
+    <!-- ---------- Ficha (estilo My Maps) ---------- -->
+    @if (ficha(); as f) {
+      <div
+        class="cj-card"
+        [class.cj-card--min]="fichaMinimizada()"
+        data-testid="cj-card"
+      >
+        <div class="cj-card__cab">
+          <div>
+            <div class="cj-card__tit">{{ f.titulo }}</div>
+            <div class="cj-card__sub">{{ f.sub }}</div>
+          </div>
+          <div class="cj-card__acciones">
+            <button
+              class="cj-card__min"
+              (click)="toggleFichaMinimizada()"
+              [attr.aria-label]="fichaMinimizada() ? 'Restaurar' : 'Minimizar'"
+            >
+              {{ fichaMinimizada() ? "▢" : "—" }}
+            </button>
+            <button class="cj-card__cerrar" (click)="cerrarFicha()">✕</button>
+          </div>
+        </div>
+        @if (!fichaMinimizada()) {
+          <div class="cj-card__campos">
+            @for (campo of f.campos; track campo.k) {
+              <div class="cj-campo">
+                <div class="cj-campo__k">{{ campo.k }}</div>
+                <div class="cj-campo__v" [class.peque]="campo.peque">
+                  {{ campo.v }}
+                </div>
+              </div>
+            }
+          </div>
+          @if (f.centrar) {
+            <div class="cj-card__pie">
+              <button (click)="centrarFicha()">Centrar en el mapa</button>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    <!-- ---------- Resultado del examen ---------- -->
+    @if (resultadoVisible()) {
+      <div class="cj-velo" data-testid="cj-resultado">
+        <div class="cj-resumen">
+          <div class="cj-resumen__cab">
+            <h3>Resultado del examen</h3>
+            <span>{{ resAciertos() }} aciertos · {{ resPuntos() }} pts</span>
+          </div>
+          <div class="cj-resumen__grandes">
+            <div class="cj-stat">
+              <b data-testid="cj-nota">{{ resNota() }}</b
+              ><span>nota</span>
+            </div>
+            <div class="cj-stat">
+              <b>{{ resAciertos() }}</b
+              ><span>aciertos</span>
+            </div>
+            <div class="cj-stat">
+              <b>{{ resPuntos() }}</b
+              ><span>puntos</span>
+            </div>
+          </div>
+          <table class="cj-resumen__tabla">
+            @for (fila of resFilas(); track $index) {
+              <tr>
+                <td>{{ $index + 1 }}</td>
+                <td>
+                  <b>{{ fila.n }}</b
+                  ><br />
+                  <span class="cj-resumen__tipo"
+                    >{{ fila.tipo }}
+                    @if (fila.detalle) {
+                      · {{ fila.detalle }}
+                    }
+                  </span>
+                </td>
+                <td class="cj-resumen__r">
+                  <span [style.color]="fila.ok ? '#15803d' : '#bf0b1b'">{{
+                    fila.ok ? "✔" : "✘"
+                  }}</span>
+                </td>
+              </tr>
+            }
+          </table>
+          <div class="cj-resumen__botones">
+            <button
+              class="cj-btn cj-btn--linea"
+              [disabled]="!hayFallos()"
+              (click)="repasarFallos()"
+            >
+              Repasar fallos
+            </button>
+            <button class="cj-btn cj-btn--rojo" (click)="cerrarResultado()">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ---------- Leaderboard ---------- -->
+    @if (leaderboardVisible() && leaderboard(); as lb) {
+      <div class="cj-velo" data-testid="cj-leaderboard">
+        <div class="cj-resumen">
+          <div class="cj-resumen__cab">
+            <h3>Clasificación · {{ ciudadSel()?.nombre }}</h3>
+            <button class="cj-card__cerrar" (click)="cerrarLeaderboard()">
+              ✕
+            </button>
+          </div>
+          <label class="cj-tgl">
+            <input
+              type="checkbox"
+              [ngModel]="lb.miOptIn"
+              (ngModelChange)="toggleOptIn($event)"
+            />
+            <span class="cj-tgl__lbl">Mostrar mi nombre real</span>
+          </label>
+          @if (lb.top.length === 0) {
+            <p class="cj-vacio">Aún no hay clasificación. ¡Sé el primero!</p>
+          } @else {
+            <table class="cj-resumen__tabla">
+              @for (e of lb.top; track e.rank) {
+                <tr [class.cj-tuyo]="e.esTuyo">
+                  <td>{{ e.rank }}</td>
+                  <td>
+                    {{ e.displayName }}
+                    @if (e.esTuyo) {
+                      <b> (tú)</b>
+                    }
+                  </td>
+                  <td class="cj-resumen__r">
+                    <b>{{ e.nota }}</b>
+                  </td>
+                </tr>
+              }
+            </table>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

@@ -76,7 +76,7 @@ import { TestRoutingModule } from './test-routing.module';
     FullStatsComponent,
     PieChartDashboardSecurityComponent,
     ModuloOverviewComponent,
-    ModuloDetailviewComponent
+    ModuloDetailviewComponent,
   ],
   imports: [
     CommonModule,
@@ -117,7 +117,7 @@ import { TestRoutingModule } from './test-routing.module';
     TemaOverviewComponent,
     TemaDetailviewComponent,
     ModuloOverviewComponent,
-    ModuloDetailviewComponent
-  ]
+    ModuloDetailviewComponent,
+  ],
 })
-export class TestModule { }
+export class TestModule {}

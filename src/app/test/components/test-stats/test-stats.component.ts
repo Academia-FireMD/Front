@@ -12,6 +12,12 @@ import { SeguridadAlResponder } from '../../../shared/models/pregunta.model';
 import { Test } from '../../../shared/models/test.model';
 import { MetodoCalificacion } from '../../../shared/models/user.model';
 import { AppState } from '../../../store/app.state';
+import {
+  extraerPreguntasFalladas,
+  construirMensajeFallos,
+  PreguntaFallada,
+} from './preguntas-falladas.util';
+import { StudyAssistantService } from '../../../shared/services/study-assistant.service';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
 import {
   calcular0,
@@ -42,6 +48,7 @@ export class TestStatsComponent {
   router = inject(Router);
   location = inject(Location);
   store = inject(Store<AppState>);
+  private studyAssistant = inject(StudyAssistantService);
 
   // Selector para obtener el método de calificación del usuario
   userMetodoCalificacion$ = this.store.select(selectUserMetodoCalificacion);
@@ -297,6 +304,22 @@ export class TestStatsComponent {
 
   public trackByCardId(index: number, card: ConfidenceCard): string {
     return card.id;
+  }
+
+  public get preguntasFalladas(): PreguntaFallada[] {
+    return extraerPreguntasFalladas(this.lastLoadedTest);
+  }
+
+  public abrirAsistenteConFallos(): void {
+    const falladas = this.preguntasFalladas;
+    if (!falladas.length) return;
+    const mensaje = construirMensajeFallos(falladas);
+    const ok = this.studyAssistant.openWithMessage(mensaje);
+    if (!ok) {
+      console.warn(
+        '[Asistente de Estudio] widget no montado; no se pudo abrir el chat',
+      );
+    }
   }
 
   // Métodos para los componentes reutilizables

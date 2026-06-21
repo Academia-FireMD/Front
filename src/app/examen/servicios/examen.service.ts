@@ -9,7 +9,11 @@ import {
   PaginationFilter,
 } from '../../shared/models/pagination.model';
 import { Pregunta } from '../../shared/models/pregunta.model';
-import { Examen } from '../models/examen.model';
+import {
+  ComprarSimulacroCofResponse,
+  Examen,
+  SimulacroTienda,
+} from '../models/examen.model';
 @Injectable({
   providedIn: 'root',
 })
@@ -298,6 +302,28 @@ export class ExamenesService extends ApiBaseService {
     return this.get(
       `/verificar-acceso-simulacro/${examenId}`,
     ) as Observable<any>;
+  }
+
+  /**
+   * Compra in-app de un simulacro por COF (1-clic). El `idempotencyKey` lo
+   * genera el front (uno por click) para que un retry de la misma compra no
+   * doble-cobre. Misma forma de respuesta que la compra de cursos.
+   */
+  public comprarSimulacroCof$(
+    examenId: number,
+    idempotencyKey: string,
+  ): Observable<ComprarSimulacroCofResponse> {
+    return this.post(`/comprar-simulacro-cof/${examenId}`, {
+      idempotencyKey,
+    }) as Observable<ComprarSimulacroCofResponse>;
+  }
+
+  /**
+   * Tienda de simulacros: lista los simulacros comprables para el alumno (con
+   * precio y estado de acceso INCLUIDO/COMPRADO/COMPRABLE).
+   */
+  public listarSimulacrosTienda$(): Observable<SimulacroTienda[]> {
+    return this.get('/simulacros/tienda') as Observable<SimulacroTienda[]>;
   }
 
   /**

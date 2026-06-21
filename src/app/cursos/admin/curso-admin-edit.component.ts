@@ -1,3 +1,8 @@
+import {
+  CdkDragDrop,
+  DragDropModule,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
@@ -8,12 +13,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import {
-  FormBuilder,
-  FormsModule,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
@@ -24,27 +24,31 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
+import { FloatLabelModule } from 'primeng/floatlabel';
+import { CardModule } from 'primeng/card';
 import { TabViewModule } from 'primeng/tabview';
 import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
 import { WooCommerceProductPickerComponent } from '../../shared/components/woocommerce-product-picker/woocommerce-product-picker.component';
 import { Oposicion } from '../../shared/models/subscription.model';
-import { CursoDetailPageComponent } from '../alumno/curso-detail-page.component';
+import { SharedModule } from '../../shared/shared.module';
 import {
+  Bloque,
   CursoCreatePayload,
   CursoDetail,
-  CursoSlugResponse,
   CursoUpdatePayload,
   EstadoCurso,
   Leccion,
   LeccionCreatePayload,
   LeccionUpdatePayload,
   Seccion,
-  TipoLeccion,
   WooCommerceProductSummary,
 } from '../models/curso.model';
 import { CursosAdminService } from '../services/cursos-admin.service';
+import { ImageUploadComponent } from './image-upload.component';
+import { LeccionBloquesDialogComponent } from './leccion-bloques-dialog.component';
 import {
   LeccionFormDialogComponent,
   LeccionFormResult,
@@ -82,21 +86,27 @@ type TagSeverity =
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    FormsModule,
+    DragDropModule,
     ButtonModule,
     InputTextModule,
     InputTextareaModule,
     InputNumberModule,
     InputSwitchModule,
+    FloatLabelModule,
+    CardModule,
     TabViewModule,
     TagModule,
+    TooltipModule,
     DividerModule,
     ConfirmDialogModule,
     AsyncButtonComponent,
     WooCommerceProductPickerComponent,
-    CursoDetailPageComponent,
     SeccionFormDialogComponent,
     LeccionFormDialogComponent,
+    LeccionBloquesDialogComponent,
+    ImageUploadComponent,
+    // SharedModule aporta `<app-oposicion-picker>` (multiselect de relevancia).
+    SharedModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './curso-admin-edit.component.html',
@@ -119,9 +129,6 @@ export class CursoAdminEditComponent implements OnInit {
   esNuevo = computed(() => this.cursoId() === null);
   estadoCurso = computed(() => this.curso()?.estado ?? null);
 
-  // T10 — Preview "Ver como alumno"
-  previewMode = signal(false);
-
   // Sección dialogs
   seccionDialogVisible = signal(false);
   seccionEditando = signal<Seccion | null>(null);
@@ -131,34 +138,73 @@ export class CursoAdminEditComponent implements OnInit {
   leccionEditando = signal<Leccion | null>(null);
   leccionSeccionId = signal<number | null>(null);
 
-  // Acceso
-  usuarioIdAccesoValue: number | null = null;
-  granting = signal(false);
+  // Bloques (builder de contenido de la lección)
+  bloquesDialogVisible = signal(false);
+  bloquesLeccion = signal<Leccion | null>(null);
 
   /**
-   * Oposición actual del curso. Pasada al picker de tema dentro del leccion
-   * dialog (T11.1 / D6).
+   * Puente entre el `app-image-upload` (model bidireccional) y el FormControl
+   * `thumbnailUrl` del metadataForm: al subir/quitar una imagen, escribe la URL
+   * en el form y lo marca dirty para que "Guardar" la persista.
+   */
+  get thumbnailUrlModel(): string | null {
+    return this.metadataForm.controls.thumbnailUrl.value ?? null;
+  }
+  set thumbnailUrlModel(value: string | null) {
+    this.metadataForm.controls.thumbnailUrl.setValue(value ?? '');
+    this.metadataForm.controls.thumbnailUrl.markAsDirty();
+  }
+
+  /**
+   * Oposición que se pasa al `<app-tema-select>` del bloque TEST para filtrar
+   * temas. Refactor 2026-06-16: deriva de `relevancia` (el campo single
+   * `oposicion` se eliminó). Devuelve la PRIMERA oposición específica
+   * (no GENERAL); `null` si la relevancia es vacía o solo GENERAL.
    *
-   * HIGH-3 (codex review): validamos membresía del enum antes de devolverla.
-   * El backend devuelve el campo como string; si por algún drift de DTO
-   * llega un valor desconocido, preferimos devolver null que pasarle al
-   * picker un valor que rompería `OPOSICION_LABELS[...]` undefined.
+   * Se lee del FormControl `relevancia` para reflejar la selección en vivo del
+   * admin (no solo el curso cargado). Validamos membresía del enum antes de
+   * devolverla para no romper `OPOSICION_LABELS[...]` con un valor desconocido.
    */
   oposicionCurso = computed<Oposicion | null>(() => {
-    const raw = this.curso()?.oposicion;
-    if (!raw) return null;
     const validValues = Object.values(Oposicion) as string[];
-    return validValues.includes(raw as string) ? (raw as Oposicion) : null;
+    const especificas = this.relevancia().filter(
+      (o): o is Oposicion => validValues.includes(o) && o !== Oposicion.GENERAL,
+    );
+    return especificas.length > 0 ? especificas[0] : null;
   });
+
+  /** Relevancia seleccionada (multiselect `<app-oposicion-picker>`). */
+  relevancia = signal<Oposicion[]>([]);
 
   metadataForm = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(2)]],
     slug: ['', Validators.required],
     descripcion: [''],
     wooProductId: [null as number | null],
+    esGratuito: [false],
     thumbnailUrl: [''],
     duracionEstimadaMinutos: [null as number | null],
   });
+
+  /** Aplica la selección del `<app-oposicion-picker>` al estado del form. */
+  updateRelevancia(oposiciones: Oposicion[]): void {
+    this.relevancia.set(oposiciones);
+    this.metadataForm.markAsDirty();
+  }
+
+  /**
+   * Signal del toggle "Curso gratuito" para que el template oculte el picker de
+   * producto WooCommerce reactivamente. Se actualiza por `(onChange)` del switch.
+   */
+  esGratuitoSig = signal(false);
+
+  onEsGratuitoChange(value: boolean): void {
+    this.esGratuitoSig.set(value);
+    // Al marcar gratuito, desvinculamos el producto WC del form (no se exige).
+    if (value) {
+      this.metadataForm.controls.wooProductId.setValue(null);
+    }
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -175,11 +221,14 @@ export class CursoAdminEditComponent implements OnInit {
     try {
       const data = await firstValueFrom(this.cursosAdminService.getCurso(id));
       this.curso.set(data);
+      this.relevancia.set(data.relevancia ?? []);
+      this.esGratuitoSig.set(data.esGratuito ?? false);
       this.metadataForm.patchValue({
         titulo: data.titulo,
         slug: data.slug,
         descripcion: data.descripcion ?? '',
         wooProductId: data.wooProductId ?? null,
+        esGratuito: data.esGratuito ?? false,
         thumbnailUrl: data.thumbnailUrl ?? '',
         duracionEstimadaMinutos: data.duracionEstimadaMinutos ?? null,
       });
@@ -233,43 +282,17 @@ export class CursoAdminEditComponent implements OnInit {
   }
 
   /** Helper: payload preview para `<app-curso-detail-page>` con datos del form. */
-  previewSlugResponse = computed<CursoSlugResponse | null>(() => {
-    if (!this.previewMode()) return null;
-    const c = this.curso();
-    const formValue = this.metadataForm.getRawValue();
-    if (!c) {
-      // Curso nuevo aún sin secciones; preview no tiene mucho sentido pero
-      // no crasheamos.
-      return {
-        curso: {
-          id: 0,
-          titulo: formValue.titulo ?? '',
-          slug: formValue.slug ?? '',
-          descripcion: formValue.descripcion ?? '',
-          thumbnailUrl: formValue.thumbnailUrl ?? '',
-          duracionEstimadaMinutos:
-            formValue.duracionEstimadaMinutos ?? undefined,
-          estado: 'BORRADOR',
-          secciones: [],
-        },
-        tieneAcceso: true,
-      };
-    }
-    return {
-      curso: {
-        ...c,
-        titulo: formValue.titulo ?? c.titulo,
-        descripcion: formValue.descripcion ?? c.descripcion,
-        thumbnailUrl: formValue.thumbnailUrl ?? c.thumbnailUrl,
-        duracionEstimadaMinutos:
-          formValue.duracionEstimadaMinutos ?? c.duracionEstimadaMinutos,
-      },
-      tieneAcceso: true,
-    };
-  });
-
-  togglePreview = (): void => {
-    this.previewMode.update((v) => !v);
+  /**
+   * Previsualizar = abrir el curso REAL del alumno en una pestaña nueva. El
+   * backend da bypass de acceso a ADMIN/SUPERADMIN, así que el aula es
+   * totalmente navegable e interactiva (vídeo, texto, test/cuestionario con el
+   * motor real del alumno), sin necesidad de haber comprado el curso. Sustituye
+   * al antiguo preview estático ("Ver como alumno") que no dejaba interactuar.
+   */
+  previsualizar = (): void => {
+    const slug = this.curso()?.slug;
+    if (!slug) return;
+    window.open(`/app/cursos/${slug}`, '_blank');
   };
 
   /**
@@ -290,10 +313,14 @@ export class CursoAdminEditComponent implements OnInit {
           );
           return;
         }
+        const esGratuito = !!raw.esGratuito;
         const payload: CursoUpdatePayload = {
           titulo: raw.titulo ?? undefined,
           descripcion: raw.descripcion ?? undefined,
-          wooProductId: raw.wooProductId ?? null,
+          // Curso gratuito → sin producto WC (se desvincula al guardar).
+          wooProductId: esGratuito ? null : (raw.wooProductId ?? null),
+          relevancia: this.relevancia(),
+          esGratuito,
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
           updatedAt: c.updatedAt,
@@ -304,11 +331,14 @@ export class CursoAdminEditComponent implements OnInit {
         this.curso.update((prev) => (prev ? { ...prev, ...updated } : prev));
         this.toast.success('Metadatos guardados correctamente');
       } else {
+        const esGratuito = !!raw.esGratuito;
         const createPayload: CursoCreatePayload = {
           titulo: raw.titulo ?? '',
           slug: raw.slug ?? '',
           descripcion: raw.descripcion ?? undefined,
-          wooProductId: raw.wooProductId ?? null,
+          wooProductId: esGratuito ? null : (raw.wooProductId ?? null),
+          relevancia: this.relevancia(),
+          esGratuito,
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
         };
@@ -391,7 +421,6 @@ export class CursoAdminEditComponent implements OnInit {
         const updated = await firstValueFrom(
           this.cursosAdminService.updateSeccion(editando.id, {
             titulo: result.titulo,
-            orden: result.orden,
           }),
         );
         this.curso.update((prev) => {
@@ -407,7 +436,6 @@ export class CursoAdminEditComponent implements OnInit {
         const created = await firstValueFrom(
           this.cursosAdminService.createSeccion(id, {
             titulo: result.titulo,
-            orden: result.orden,
           }),
         );
         this.curso.update((prev) => {
@@ -484,6 +512,26 @@ export class CursoAdminEditComponent implements OnInit {
     }
   }
 
+  /** Drag-and-drop de secciones (CDK). Reusa la persistencia de reorder. */
+  async dropSeccion(event: CdkDragDrop<Seccion[]>): Promise<void> {
+    if (event.previousIndex === event.currentIndex) return;
+    const prev = this.curso();
+    if (!prev) return;
+    const secciones = [...prev.secciones];
+    moveItemInArray(secciones, event.previousIndex, event.currentIndex);
+    const reordered = secciones.map((s, idx) => ({ ...s, orden: idx }));
+    this.curso.set({ ...prev, secciones: reordered });
+    try {
+      await firstValueFrom(
+        this.cursosAdminService.reorderSecciones(
+          reordered.map((s) => ({ id: s.id, orden: s.orden })),
+        ),
+      );
+    } catch {
+      this.curso.set(prev);
+    }
+  }
+
   // ---- Lecciones ----
 
   openAddLeccion(seccion: Seccion): void {
@@ -505,16 +553,10 @@ export class CursoAdminEditComponent implements OnInit {
     const editando = this.leccionEditando();
     try {
       if (editando) {
+        // Consolidación: la lección solo lleva título/orden; el contenido vive
+        // en los bloques ("Contenido").
         const updatePayload: LeccionUpdatePayload = {
           titulo: result.titulo,
-          orden: result.orden,
-          bunnyVideoId: result.bunnyVideoId,
-          duracionSegundos: result.duracionSegundos,
-          contenidoMarkdown: result.contenidoMarkdown,
-          temaId: result.temaId,
-          numPreguntas: result.numPreguntas,
-          dificultad: result.dificultad,
-          esDeRepaso: result.esDeRepaso,
         };
         const updated = await firstValueFrom(
           this.cursosAdminService.updateLeccion(editando.id, updatePayload),
@@ -523,15 +565,6 @@ export class CursoAdminEditComponent implements OnInit {
       } else {
         const createPayload: LeccionCreatePayload = {
           titulo: result.titulo,
-          orden: result.orden,
-          tipo: result.tipo satisfies TipoLeccion,
-          bunnyVideoId: result.bunnyVideoId,
-          duracionSegundos: result.duracionSegundos,
-          contenidoMarkdown: result.contenidoMarkdown,
-          temaId: result.temaId,
-          numPreguntas: result.numPreguntas,
-          dificultad: result.dificultad,
-          esDeRepaso: result.esDeRepaso,
         };
         const created = await firstValueFrom(
           this.cursosAdminService.createLeccion(seccionId, createPayload),
@@ -638,25 +671,66 @@ export class CursoAdminEditComponent implements OnInit {
     }
   }
 
-  // ---- Acceso ----
-
-  async grantAccess(): Promise<void> {
-    const id = this.cursoId();
-    const usuarioId = this.usuarioIdAccesoValue;
-    if (!id || !usuarioId) {
-      this.toast.warning('Introduce un ID de usuario válido');
-      return;
-    }
-    this.granting.set(true);
+  /**
+   * Drag-and-drop de lecciones DENTRO de una sección (CDK). El reorder
+   * cross-sección no se soporta (cada sección es su propia lista). Reusa la
+   * persistencia de reorderLecciones.
+   */
+  async dropLeccion(
+    event: CdkDragDrop<Leccion[]>,
+    seccion: Seccion,
+  ): Promise<void> {
+    if (event.previousIndex === event.currentIndex) return;
+    const prev = this.curso();
+    if (!prev) return;
+    const lecciones = [...seccion.lecciones];
+    moveItemInArray(lecciones, event.previousIndex, event.currentIndex);
+    const reordered = lecciones.map((l, idx) => ({ ...l, orden: idx }));
+    const newSecciones = prev.secciones.map((s) =>
+      s.id === seccion.id ? { ...s, lecciones: reordered } : s,
+    );
+    this.curso.set({ ...prev, secciones: newSecciones });
     try {
-      await firstValueFrom(this.cursosAdminService.grantAccess(id, usuarioId));
-      this.toast.success(`Acceso concedido al usuario ${usuarioId}`);
-      this.usuarioIdAccesoValue = null;
+      await firstValueFrom(
+        this.cursosAdminService.reorderLecciones(
+          reordered.map((l) => ({ id: l.id, orden: l.orden })),
+        ),
+      );
     } catch {
-      // handleError shows toast
-    } finally {
-      this.granting.set(false);
+      this.curso.set(prev);
     }
+  }
+
+  // ---- Bloques (contenido de la lección) ----
+
+  openBloques(leccion: Leccion): void {
+    this.bloquesLeccion.set(leccion);
+    this.bloquesDialogVisible.set(true);
+  }
+
+  /**
+   * El diálogo de bloques persiste sus propios cambios (create/update/delete/
+   * reorder) y emite la pila resultante. Aquí solo refrescamos el estado local
+   * para que el contador "N bloques" y la próxima apertura del diálogo estén
+   * sincronizados, sin recargar el curso entero.
+   */
+  onBloquesChanged(bloques: Bloque[]): void {
+    const leccion = this.bloquesLeccion();
+    if (!leccion) return;
+    this.curso.update((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        secciones: prev.secciones.map((s) => ({
+          ...s,
+          lecciones: s.lecciones.map((l) =>
+            l.id === leccion.id ? { ...l, bloques } : l,
+          ),
+        })),
+      };
+    });
+    // Mantener el input del diálogo en sync con la pila ya persistida.
+    this.bloquesLeccion.update((l) => (l ? { ...l, bloques } : l));
   }
 
   estadoSeverity(estado: EstadoCurso): TagSeverity {

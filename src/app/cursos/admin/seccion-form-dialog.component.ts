@@ -12,12 +12,10 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { Seccion } from '../models/curso.model';
 
 export interface SeccionFormResult {
   titulo: string;
-  orden: number;
 }
 
 @Component({
@@ -30,7 +28,6 @@ export interface SeccionFormResult {
     DialogModule,
     ButtonModule,
     InputTextModule,
-    InputNumberModule,
   ],
   template: `
     <p-dialog
@@ -48,15 +45,6 @@ export interface SeccionFormResult {
             pInputText
             formControlName="titulo"
             placeholder="Nombre de la sección"
-            class="w-full"
-          />
-        </div>
-        <div class="field">
-          <label for="sf-orden">Orden</label>
-          <p-inputNumber
-            inputId="sf-orden"
-            formControlName="orden"
-            [min]="0"
             class="w-full"
           />
         </div>
@@ -94,17 +82,19 @@ export class SeccionFormDialogComponent implements OnChanges {
 
   private fb = inject(FormBuilder);
 
+  // Solo título: el orden lo gestiona el reorder (flechas/drag) y el backend lo
+  // autocalcula al crear. Antes el form pedía "orden" y mandaba 0 → 500 por
+  // colisión con el @@unique([cursoId, orden]).
   form = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(2)]],
-    orden: [0, [Validators.required, Validators.min(0)]],
   });
 
   ngOnChanges(): void {
     const s = this.seccion();
     if (s) {
-      this.form.patchValue({ titulo: s.titulo, orden: s.orden });
+      this.form.patchValue({ titulo: s.titulo });
     } else {
-      this.form.reset({ titulo: '', orden: 0 });
+      this.form.reset({ titulo: '' });
     }
   }
 
@@ -119,9 +109,6 @@ export class SeccionFormDialogComponent implements OnChanges {
   save(): void {
     if (this.form.invalid) return;
     const raw = this.form.getRawValue();
-    this.saved.emit({
-      titulo: raw.titulo ?? '',
-      orden: raw.orden ?? 0,
-    });
+    this.saved.emit({ titulo: raw.titulo ?? '' });
   }
 }

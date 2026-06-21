@@ -19,7 +19,7 @@
  */
 import { expect, test } from '@playwright/test';
 import userAdminFixture from './fixtures/user-admin.json';
-import { setupAuthInterceptors } from './helpers/interceptors.helper';
+import { loginAsAdminMock } from './helpers/auth.helper';
 
 const mixedUser = {
   id: 200,
@@ -64,18 +64,6 @@ const mixedUser = {
 
 test.describe('Admin — cancel mixed subs (OV3)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/user/get-by-email', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userAdminFixture),
-      }),
-    );
-    await setupAuthInterceptors(page, {
-      email: 'admin@test.com',
-      rol: 'ADMIN',
-    });
-
     await page.route('**/user/all', (route) =>
       route.fulfill({
         status: 200,
@@ -106,10 +94,7 @@ test.describe('Admin — cancel mixed subs (OV3)', () => {
       });
     });
 
-    await page.goto('/auth/login');
-    await page.locator('input[formControlName="email"]').fill('admin@test.com');
-    await page.locator('app-password-input input').fill('test1234');
-    await page.locator('button[type="submit"]').click();
+    await loginAsAdminMock(page, userAdminFixture);
     await page.goto('/app/test/user-dashboard');
 
     await expect(page.locator('text=Mixed').first()).toBeVisible({

@@ -1,6 +1,21 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { loginAsAlumnoMock } from './helpers/auth.helper';
 import { setupTestGenerarInterceptors, setupTestPracticaInterceptors } from './helpers/interceptors.helper';
+
+/**
+ * Selecciona el primer tema del `app-tema-select`. El componente evolucionó de
+ * un p-multiSelect a un overlay custom (p-overlayPanel) con grupos COLAPSADOS
+ * por defecto: hay que abrir el overlay, expandir el primer grupo y clicar el
+ * primer item. (Antes el e2e esperaba `.p-multiselect-panel` → timeout 30s.)
+ */
+async function seleccionarPrimerTema(page: Page): Promise<void> {
+  await page.locator('[data-testid="temas-select"]').click();
+  const panel = page.locator('.p-overlaypanel');
+  await panel.waitFor({ state: 'visible', timeout: 8_000 });
+  await panel.locator('span.font-bold.pointer').first().click(); // expandir grupo
+  await panel.locator('.pl-3 span.pointer').first().click(); // primer tema
+  await page.keyboard.press('Escape');
+}
 
 test.describe('Realizar Tests - Configuración y Generación', () => {
   test.beforeEach(async ({ page }) => {
@@ -38,17 +53,14 @@ test.describe('Realizar Tests - Configuración y Generación', () => {
       await page.keyboard.press('Escape');
 
       // Select topics
-      await page.locator('[data-testid="temas-multiselect"], [data-testid="temas-select"]').click();
-      await page.locator('.p-multiselect-panel, .p-dropdown-panel').waitFor({ state: 'visible' });
-      await page.locator('.p-multiselect-panel .p-checkbox, .p-dropdown-item').first().click();
-      await page.keyboard.press('Escape');
+      await seleccionarPrimerTema(page);
 
       await expect(page.locator('[data-testid="generar-test-btn"]')).not.toBeDisabled();
 
       await page.locator('[data-testid="generar-test-btn"]').click();
 
       // Confirm dialog
-      await expect(page.locator('[data-testid="confirmacion-dialog"], .p-confirm-dialog')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('.p-confirm-dialog').first()).toBeVisible({ timeout: 5_000 });
       await page.locator('.p-confirm-dialog-accept').click();
 
       // Should navigate to the test execution page
@@ -65,10 +77,7 @@ test.describe('Realizar Tests - Configuración y Generación', () => {
 
     test('el botón queda deshabilitado si se activa examen sin tiempo', async ({ page }) => {
       // Select a topic so the only blocker is the missing time
-      await page.locator('[data-testid="temas-multiselect"], [data-testid="temas-select"]').click();
-      await page.locator('.p-multiselect-panel, .p-dropdown-panel').waitFor({ state: 'visible' });
-      await page.locator('.p-multiselect-panel .p-checkbox, .p-dropdown-item').first().click();
-      await page.keyboard.press('Escape');
+      await seleccionarPrimerTema(page);
 
       await page.locator('[data-testid="test-examen-switch"]').click();
       await expect(page.locator('[data-testid="generar-test-btn"]')).toBeDisabled();
@@ -81,31 +90,31 @@ test.describe('Realizar Tests - Configuración y Generación', () => {
 
   test.describe('Tests Pendientes', () => {
     test('no muestra sección de pendientes cuando no hay tests en curso', async ({ page }) => {
-      // setupTestGenerarInterceptors returns an empty list → no pending tests shown
-      await expect(page.locator('[data-testid="tests-pendientes-container"]')).not.toBeVisible();
+      // setupTestGenerarInterceptors devuelve GET /tests → [] (array vacío); el
+      // contenedor existe pero sin items de test pendiente.
+      await expect(page.locator('[data-testid="test-pendiente"]')).toHaveCount(0);
     });
 
     test('muestra tests pendientes cuando los hay', async ({ page }) => {
-      // Override with a pending test in the list
-      await page.route('**/tests/tests-alumno', (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            data: [
-              {
-                id: 999,
-                status: 'EMPEZADO',
-                createdAt: new Date().toISOString(),
-                respuestasCount: 2,
-                testPreguntasCount: 10,
-                preguntas: [],
-                respuestas: [],
-              },
-            ],
-            total: 1,
-          }),
-        })
+      // Override GET /tests (getAllTest) con un test pendiente en la lista.
+      await page.route(/\/tests(\?.*)?$/, (route) =>
+        route.request().method() === 'GET'
+          ? route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify([
+                {
+                  id: 999,
+                  status: 'EMPEZADO',
+                  createdAt: new Date().toISOString(),
+                  respuestasCount: 2,
+                  testPreguntasCount: 10,
+                  preguntas: [],
+                  respuestas: [],
+                },
+              ]),
+            })
+          : route.continue()
       );
 
       await page.reload();
@@ -116,19 +125,23 @@ test.describe('Realizar Tests - Configuración y Generación', () => {
     });
 
     test('abortar un test pendiente lo elimina de la lista', async ({ page }) => {
-      await page.route('**/tests/tests-alumno', (route) =>
-        route.fulfill({
+      let aborted = false;
+      await page.route(/\/tests(\?.*)?$/, (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            data: [{ id: 999, status: 'EMPEZADO', createdAt: new Date().toISOString(), respuestasCount: 2, testPreguntasCount: 10, preguntas: [], respuestas: [] }],
-            total: 1,
-          }),
-        })
-      );
-      await page.route('**/tests/999', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
-      );
+          body: JSON.stringify(
+            aborted
+              ? []
+              : [{ id: 999, status: 'EMPEZADO', createdAt: new Date().toISOString(), respuestasCount: 2, testPreguntasCount: 10, preguntas: [], respuestas: [] }]
+          ),
+        });
+      });
+      await page.route('**/tests/999', (route) => {
+        if (route.request().method() === 'DELETE') aborted = true;
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+      });
 
       await page.reload();
       await expect(page.locator('[data-testid="tests-pendientes-container"]')).toBeVisible({ timeout: 15_000 });
@@ -145,13 +158,10 @@ test.describe('Realizar Tests - Configuración y Generación', () => {
   test.describe('Ejecución de preguntas', () => {
     test.beforeEach(async ({ page }) => {
       // Create a test first via helper flow
-      await page.locator('[data-testid="temas-multiselect"], [data-testid="temas-select"]').click();
-      await page.locator('.p-multiselect-panel, .p-dropdown-panel').waitFor({ state: 'visible' });
-      await page.locator('.p-multiselect-panel .p-checkbox, .p-dropdown-item').first().click();
-      await page.keyboard.press('Escape');
+      await seleccionarPrimerTema(page);
 
       await page.locator('[data-testid="generar-test-btn"]').click();
-      await expect(page.locator('[data-testid="confirmacion-dialog"], .p-confirm-dialog')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('.p-confirm-dialog').first()).toBeVisible({ timeout: 5_000 });
       await page.locator('.p-confirm-dialog-accept').click();
 
       await expect(page.locator('[data-testid="pregunta-card"]')).toBeVisible({ timeout: 10_000 });

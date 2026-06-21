@@ -9,7 +9,9 @@
     }
   }
   .stats-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
 
     &:hover {
       transform: translateY(-2px);
@@ -111,7 +113,9 @@
 
 // Estilos para las cards de confianza
 .confidence-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 
   &:hover {
     transform: translateY(-2px);
@@ -319,5 +323,25 @@
   }
   &:nth-child(6) {
     animation-delay: 0.6s;
+  }
+}
+
+.study-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-top: 8px;
+  background: var(--surface-100, #eef0ff);
+  border: 1px solid var(--primary-200, #d7daff);
+  border-radius: 14px;
+  &__icon {
+    font-size: 22px;
+  }
+  &__text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--text-color, #312e81);
   }
 }

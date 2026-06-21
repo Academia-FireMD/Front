@@ -1,0 +1,78 @@
+<article
+  class="curso-card"
+  (click)="abrir.emit()"
+  (keydown.enter)="abrir.emit()"
+  tabindex="0"
+  role="button"
+  [attr.aria-label]="curso().titulo"
+>
+  <div class="thumb">
+    @if (curso().thumbnailUrl) {
+      <img [src]="curso().thumbnailUrl" [alt]="curso().titulo" />
+    } @else {
+      <div class="thumb-placeholder">
+        <i class="pi pi-play-circle"></i>
+      </div>
+    }
+    @if (esGratuito()) {
+      <span class="badge-gratis">Gratis</span>
+    }
+    @if (oposicionBadges().length) {
+      <div class="badges-oposicion">
+        @for (badge of oposicionBadges(); track badge) {
+          <span class="badge-oposicion">{{ badge }}</span>
+        }
+      </div>
+    }
+    @if (mostrarProgreso()) {
+      <div class="thumb-progress">
+        <app-progress-ring variant="ring" [value]="progreso()!" [size]="46" />
+      </div>
+    }
+  </div>
+
+  <div class="body">
+    <h3 class="titulo">{{ curso().titulo }}</h3>
+    @if (curso().descripcion) {
+      <p class="descripcion">{{ curso().descripcion }}</p>
+    }
+
+    <div class="meta">
+      @if (curso().duracionEstimadaMinutos) {
+        <span class="meta-item">
+          <i class="pi pi-clock"></i> {{ curso().duracionEstimadaMinutos }} min
+        </span>
+      }
+      @if (!tieneAcceso() && !esGratuito() && curso().precio != null) {
+        <span class="meta-item precio"
+          >{{ curso().precio | number: "1.2-2" }} €</span
+        >
+      }
+    </div>
+
+    <button
+      pButton
+      type="button"
+      class="cta"
+      [class.cta-secondary]="cta() !== 'comprar'"
+      [loading]="comprando()"
+      [disabled]="cta() === 'comprar' && (!curso().wooProductId || comprando())"
+      (click)="onCta($event)"
+    >
+      @switch (cta()) {
+        @case ("comprar") {
+          <i class="pi pi-bolt"></i><span>Comprar (1 clic)</span>
+        }
+        @case ("acceder-gratis") {
+          <i class="pi pi-unlock"></i><span>Acceder gratis</span>
+        }
+        @case ("continuar") {
+          <i class="pi pi-play"></i><span>Continuar</span>
+        }
+        @default {
+          <i class="pi pi-arrow-right"></i><span>Empezar</span>
+        }
+      }
+    </button>
+  </div>
+</article>
