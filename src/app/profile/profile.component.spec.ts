@@ -200,5 +200,50 @@ describe('ProfileComponent', () => {
 
       openSpy.mockRestore();
     });
+
+    it('el ítem de menú "Cambiar tarjeta de pago" abre la guía paso-a-paso (no navega directo)', () => {
+      component.user = { woocommerceCustomerId: 53 } as any;
+      const items = component.getSubscriptionMenuItems({
+        status: 'ACTIVE',
+      } as any);
+      const item = items.find(
+        (i: any) => i.label === 'Cambiar tarjeta de pago',
+      );
+      const openSpy = jest.spyOn(window, 'open');
+
+      expect(component.showGuiaCambioTarjetaDialog).toBe(false);
+      item.command();
+
+      expect(component.showGuiaCambioTarjetaDialog).toBe(true);
+      // El menú NO abre ventana directamente; eso ocurre al pulsar "Continuar".
+      expect(openSpy).not.toHaveBeenCalled();
+      openSpy.mockRestore();
+    });
+
+    it('"Continuar" cierra la guía y lanza el flujo real de cambio de tarjeta', async () => {
+      const ssoUrl =
+        'https://staging2.tecnikafire.com/wp-json/tecnika/v1/sso?token=tok.en.sig';
+      mockAuthService.getWpSsoUrl$.mockReturnValue(of({ url: ssoUrl }));
+      (component as any).wordpressUrl = 'https://staging2.tecnikafire.com';
+      component.showGuiaCambioTarjetaDialog = true;
+
+      const mockWindow = {
+        closed: false,
+        location: { href: '' },
+        opener: {} as any,
+      } as any;
+      const openSpy = jest
+        .spyOn(window, 'open')
+        .mockReturnValueOnce(mockWindow);
+
+      component.continuarCambioTarjeta();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(component.showGuiaCambioTarjetaDialog).toBe(false);
+      expect(openSpy).toHaveBeenCalledWith('', '_blank');
+      expect(mockWindow.location.href).toBe(ssoUrl);
+      openSpy.mockRestore();
+    });
   });
 });

@@ -927,6 +927,75 @@
   ></app-gestionar-plan>
 </p-dialog>
 
+<!-- Dialog guía "Cambiar tarjeta de pago" (paso a paso antes de abrir WP) -->
+<p-dialog
+  header="Cambiar tarjeta de pago"
+  [(visible)]="showGuiaCambioTarjetaDialog"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '95vw', maxWidth: '560px' }"
+  (onHide)="cerrarGuiaCambioTarjeta()"
+>
+  <div class="guia-cambio-tarjeta">
+    <p class="guia-intro">
+      Para cambiar tu tarjeta te abriremos una pestaña nueva en tu cuenta de
+      TécnikaFire, ya con la sesión iniciada (no tendrás que volver a poner
+      usuario ni contraseña). Sigue estos pasos:
+    </p>
+    <ol class="guia-pasos">
+      <li>
+        <i class="pi pi-external-link"></i>
+        <span
+          >Pulsa <strong>Continuar</strong>: se abrirá tu cuenta en una pestaña
+          nueva.</span
+        >
+      </li>
+      <li>
+        <i class="pi pi-credit-card"></i>
+        <span
+          >Entra en <strong>Métodos de pago</strong> (o abre tu suscripción) y
+          pulsa <strong>Añadir método de pago</strong> /
+          <strong>Cambiar forma de pago</strong>.</span
+        >
+      </li>
+      <li>
+        <i class="pi pi-check-circle"></i>
+        <span
+          >Introduce los datos de tu <strong>nueva tarjeta</strong> y guárdalos.
+          Tu próxima renovación se cobrará con ella.</span
+        >
+      </li>
+    </ol>
+    <p class="guia-nota">
+      <i class="pi pi-info-circle"></i>
+      <span
+        >Si no se abre la pestaña, revisa que tu navegador no esté bloqueando
+        las ventanas emergentes y vuelve a intentarlo.</span
+      >
+    </p>
+  </div>
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      type="button"
+      label="Cancelar"
+      class="p-button-text p-button-sm"
+      (click)="cerrarGuiaCambioTarjeta()"
+    ></button>
+    <button
+      pButton
+      type="button"
+      label="Continuar"
+      icon="pi pi-arrow-right"
+      iconPos="right"
+      class="p-button-sm"
+      (click)="continuarCambioTarjeta()"
+    ></button>
+  </ng-template>
+</p-dialog>
+
 <!-- Dialog "Gestionar Descuento" retirado (Spec A 2026-06-02): el flujo de cupones
      se oculta por ahora. El componente DescuentoSuscripcionComponent y los endpoints
      /aplicar-descuento se conservan en el código por si vuelve. -->

@@ -124,6 +124,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Dialog "Añadir más planes" (alta in-app en una oposición no contratada, COF Redsys)
   showAnadirPlanDialog = false;
 
+  // Dialog guía previo al cambio de tarjeta de pago (abre WP vía SSO)
+  showGuiaCambioTarjetaDialog = false;
+
   mostrarDialogFacturas = false;
 
   // Control de subdialogs para baja
@@ -861,6 +864,28 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Abre el diálogo-guía que explica al alumno los pasos para cambiar su
+   * tarjeta antes de mandarlo (vía SSO) a su cuenta de WordPress/WooCommerce.
+   */
+  abrirGuiaCambioTarjeta(): void {
+    this.showGuiaCambioTarjetaDialog = true;
+  }
+
+  cerrarGuiaCambioTarjeta(): void {
+    this.showGuiaCambioTarjetaDialog = false;
+  }
+
+  /**
+   * Confirmación del diálogo-guía: cierra el modal y lanza el flujo real de
+   * cambio de tarjeta. Se llama desde el (click) de "Continuar" para que el
+   * window.open salga de un gesto de usuario (evita el bloqueo de popups).
+   */
+  continuarCambioTarjeta(): void {
+    this.showGuiaCambioTarjetaDialog = false;
+    this.abrirCambioTarjeta();
+  }
+
+  /**
    * Cambio de tarjeta de pago: solicita al Server una URL SSO magic-link y la
    * abre en nueva pestaña. El alumno aterriza en WP ya logueado y puede usar
    * el botón nativo "Cambiar forma de pago" (Redsys/WC), sin que tengamos que
@@ -958,7 +983,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         menuItems.push({
           label: 'Cambiar tarjeta de pago',
           icon: 'pi pi-credit-card',
-          command: () => this.abrirCambioTarjeta(),
+          command: () => this.abrirGuiaCambioTarjeta(),
         });
         // "Aplicar descuento" retirado del menú (Spec A 2026-06-02). El componente
         // y los endpoints se conservan en el código por si vuelve.
