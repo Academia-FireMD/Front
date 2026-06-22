@@ -894,11 +894,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const res = await firstValueFrom(
         this.authService.getWpSsoUrl$('subscriptions'),
       );
+      // Guard anti open-redirect: la URL SSO la firma el backend, pero la
+      // validamos defensivamente (es un flujo de pago) — solo navegamos si su
+      // origen es nuestro WordPress. Si no es de confianza, degradamos a la URL
+      // plana de WP en vez de mandar al alumno a un destino arbitrario.
+      const destino = this.esUrlWpConfiable(res?.url)
+        ? res.url
+        : this.wordpressUrl + '/mi-cuenta/subscriptions/';
       if (ventana && !ventana.closed) {
-        ventana.location.href = res.url;
+        ventana.location.href = destino;
       } else {
         // La ventana fue bloqueada; abrimos con la URL ya resuelta.
-        window.open(res.url, '_blank', 'noopener');
+        window.open(destino, '_blank', 'noopener');
       }
     } catch {
       // Fallback: si el SSO falla, abrimos la URL plana de WP (comportamiento
@@ -909,6 +916,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
       } else {
         window.open(fallbackUrl, '_blank', 'noopener');
       }
+    }
+  }
+
+  /**
+   * True si `url` apunta a nuestro WordPress (mismo origen que `wordpressUrl`).
+   * Defensa anti open-redirect del flujo de cambio de tarjeta: aunque la URL la
+   * firma el backend, validar el origen evita que un fallo/compromiso del Server
+   * mande al alumno (en un flujo money) a un destino de phishing.
+   */
+  private esUrlWpConfiable(url: string | null | undefined): boolean {
+    if (!url) return false;
+    try {
+      return new URL(url).origin === new URL(this.wordpressUrl).origin;
+    } catch {
+      return false;
     }
   }
 

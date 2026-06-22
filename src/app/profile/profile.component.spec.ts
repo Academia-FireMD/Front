@@ -114,6 +114,32 @@ describe('ProfileComponent', () => {
       openSpy.mockRestore();
     });
 
+    it('guard anti open-redirect: si la URL SSO NO es de nuestro WordPress, degrada al fallback WP plano', async () => {
+      // El backend (comprometido/buggy) devuelve una URL de otro origen.
+      mockAuthService.getWpSsoUrl$.mockReturnValue(
+        of({ url: 'https://evil.example.com/phishing?token=x' }),
+      );
+
+      const mockWindow = {
+        closed: false,
+        location: { href: '' },
+        opener: {} as any,
+      } as any;
+      const openSpy = jest
+        .spyOn(window, 'open')
+        .mockReturnValueOnce(mockWindow);
+      (component as any).wordpressUrl = 'https://staging2.tecnikafire.com';
+
+      await component.abrirCambioTarjeta();
+
+      // NO navegó al destino ajeno; cayó al subscriptions de NUESTRO WP.
+      expect(mockWindow.location.href).not.toContain('evil.example.com');
+      expect(mockWindow.location.href).toBe(
+        'https://staging2.tecnikafire.com/mi-cuenta/subscriptions/',
+      );
+      openSpy.mockRestore();
+    });
+
     it('cuando el backend falla, usa la URL plana de WP como fallback', async () => {
       mockAuthService.getWpSsoUrl$.mockReturnValue(
         throwError(() => new Error('500 Server Error')),
