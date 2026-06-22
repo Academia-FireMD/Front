@@ -877,7 +877,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
     // Abrir la ventana de forma SÍNCRONA para evitar que el navegador bloquee
     // el popup (los navegadores solo permiten window.open en respuesta a un
     // gesto directo del usuario; una apertura tras await sería bloqueada).
-    const ventana = window.open('', '_blank', 'noopener');
+    //
+    // IMPORTANTE: NO pasar la flag 'noopener' aquí. Con 'noopener' el navegador
+    // devuelve null (por spec), así que perdemos la referencia a la pestaña y
+    // nunca podemos hacer `ventana.location.href = res.url` → la pestaña se
+    // queda en about:blank en blanco (bug reportado en prod 2026-06-22: el
+    // alumno veía una pantalla en blanco en ordenador, móvil y tablet).
+    // Para mantener la protección anti reverse-tabnabbing anulamos opener a
+    // mano conservando la referencia.
+    const ventana = window.open('', '_blank');
+    if (ventana) {
+      ventana.opener = null;
+    }
 
     try {
       const res = await firstValueFrom(

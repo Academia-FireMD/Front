@@ -13,13 +13,11 @@ describe('ProfileComponent', () => {
 
   beforeEach(async () => {
     mockAuthService = {
-      getWpSsoUrl$: jest
-        .fn()
-        .mockReturnValue(
-          of({
-            url: 'https://staging2.tecnikafire.com/wp-json/tecnika/v1/sso?token=tok.en.sig',
-          }),
-        ),
+      getWpSsoUrl$: jest.fn().mockReturnValue(
+        of({
+          url: 'https://staging2.tecnikafire.com/wp-json/tecnika/v1/sso?token=tok.en.sig',
+        }),
+      ),
     };
 
     await TestBed.configureTestingModule({
@@ -64,20 +62,54 @@ describe('ProfileComponent', () => {
         'https://staging2.tecnikafire.com/wp-json/tecnika/v1/sso?token=tok.en.sig';
       mockAuthService.getWpSsoUrl$.mockReturnValue(of({ url: ssoUrl }));
 
-      // Ventana simulada que acepta location.href
-      const mockWindow = { closed: false, location: { href: '' } } as any;
+      // Ventana simulada que acepta location.href y opener
+      const mockWindow = {
+        closed: false,
+        location: { href: '' },
+        opener: {} as any,
+      } as any;
       const openSpy = jest
         .spyOn(window, 'open')
         .mockReturnValueOnce(mockWindow); // primera apertura (vacía, síncrona)
 
       await component.abrirCambioTarjeta();
 
-      // La ventana vacía fue abierta de forma síncrona
-      expect(openSpy).toHaveBeenCalledWith('', '_blank', 'noopener');
+      // La ventana vacía fue abierta de forma síncrona SIN la flag 'noopener':
+      // con 'noopener' el navegador devuelve null y perderíamos la referencia,
+      // dejando la pestaña en about:blank (bug prod 2026-06-22).
+      expect(openSpy).toHaveBeenCalledWith('', '_blank');
+      // opener se anula a mano para conservar la protección anti tabnabbing.
+      expect(mockWindow.opener).toBeNull();
       // Su location.href fue actualizado a la URL SSO
       expect(mockWindow.location.href).toBe(ssoUrl);
       // NO se abrió una segunda ventana con la URL de fallback
       expect(openSpy).toHaveBeenCalledTimes(1);
+
+      openSpy.mockRestore();
+    });
+
+    it('REGRESIÓN: la apertura síncrona NUNCA usa la flag "noopener" (devuelve null → about:blank)', async () => {
+      const ssoUrl =
+        'https://staging2.tecnikafire.com/wp-json/tecnika/v1/sso?token=tok.en.sig';
+      mockAuthService.getWpSsoUrl$.mockReturnValue(of({ url: ssoUrl }));
+
+      const mockWindow = {
+        closed: false,
+        location: { href: '' },
+        opener: {} as any,
+      } as any;
+      const openSpy = jest
+        .spyOn(window, 'open')
+        .mockReturnValueOnce(mockWindow);
+
+      await component.abrirCambioTarjeta();
+
+      // La primera llamada (apertura síncrona) jamás debe llevar 'noopener',
+      // porque haría que window.open devuelva null en el navegador real.
+      const primeraLlamada = openSpy.mock.calls[0];
+      expect(primeraLlamada).not.toContain('noopener');
+      // Y la pestaña efectivamente se navega (no se queda en about:blank).
+      expect(mockWindow.location.href).toBe(ssoUrl);
 
       openSpy.mockRestore();
     });
