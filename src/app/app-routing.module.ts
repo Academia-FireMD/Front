@@ -120,6 +120,22 @@ const routes: Routes = [
         data: { modulo: ModuloApp.CURSOS },
       },
       {
+        // Clases grabadas (2026-06-29): reutiliza MisCursosPageComponent (CQ1)
+        // parametrizado por `data.tipo`. Acceso por suscripción + oposición
+        // (no se compran), gateado por el mismo módulo CURSOS.
+        path: 'clases-grabadas',
+        loadComponent: () =>
+          import('./cursos/alumno/mis-cursos-page.component').then(
+            (m) => m.MisCursosPageComponent,
+          ),
+        canActivate: [moduloGuard],
+        data: {
+          modulo: ModuloApp.CURSOS,
+          tipo: 'clases-grabadas',
+          title: 'Clases grabadas',
+        },
+      },
+      {
         path: 'simulacros-tienda',
         loadComponent: () =>
           import('./simulacros/tienda/tienda-simulacros.component').then(

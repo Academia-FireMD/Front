@@ -583,6 +583,11 @@ export class LayoutComponent {
             routerLink: '/app/cursos',
           },
           {
+            label: 'Clases grabadas',
+            icon: 'pi pi-video',
+            routerLink: '/app/clases-grabadas',
+          },
+          {
             label: 'Catálogo',
             icon: 'pi pi-th-large',
             routerLink: '/app/cursos/catalogo',

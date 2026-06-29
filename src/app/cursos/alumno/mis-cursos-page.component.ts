@@ -6,13 +6,21 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { AccesoConCurso } from '../models/curso.model';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { CursoCardComponent } from '../ui/curso-card.component';
 import { ProgressRingComponent } from '../ui/progress-ring.component';
 import { calcularPorcentajeCurso, leccionContinuar } from '../ui/progreso.util';
+
+/**
+ * Modo de la pantalla (CQ1, 2026-06-29). Reutilizamos este componente para dos
+ * secciones distintas; el `tipo` llega por `route.data` y condiciona la fuente
+ * de datos (`/mios` vs `/clases-grabadas`), el copy y el CTA. Unión literal
+ * cerrada — NO `string` suelto.
+ */
+export type TipoMisCursos = 'cursos' | 'clases-grabadas';
 
 /** Acceso enriquecido con datos derivados para la UI (progreso + continuar). */
 interface AccesoVista {
@@ -33,6 +41,36 @@ interface AccesoVista {
 export class MisCursosPageComponent implements OnInit {
   private readonly service = inject(CursosAlumnoService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /**
+   * Modo de la pantalla, leído de `route.data.tipo`. Default `'cursos'` para no
+   * romper la ruta existente `/app/cursos` (que no setea `tipo`).
+   */
+  readonly tipo = signal<TipoMisCursos>(
+    this.route.snapshot.data['tipo'] === 'clases-grabadas'
+      ? 'clases-grabadas'
+      : 'cursos',
+  );
+
+  readonly esClasesGrabadas = computed(() => this.tipo() === 'clases-grabadas');
+
+  /** Título de la página según el modo. */
+  readonly pageTitle = computed(() =>
+    this.esClasesGrabadas() ? 'Clases grabadas' : 'Mis Cursos',
+  );
+
+  /** Subtítulo del grid según el modo. */
+  readonly seccionTitulo = computed(() =>
+    this.esClasesGrabadas() ? 'Todas tus clases grabadas' : 'Todos tus cursos',
+  );
+
+  /** Copy del empty-state según el modo. */
+  readonly emptyMensaje = computed(() =>
+    this.esClasesGrabadas()
+      ? 'No hay clases grabadas disponibles para tu oposición todavía.'
+      : 'No tienes cursos todavía.',
+  );
 
   accesos = signal<AccesoConCurso[]>([]);
   loading = signal(true);
@@ -54,7 +92,10 @@ export class MisCursosPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.service.listMisCursos().subscribe({
+    const fuente$ = this.esClasesGrabadas()
+      ? this.service.listClasesGrabadas()
+      : this.service.listMisCursos();
+    fuente$.subscribe({
       next: (data) => {
         this.accesos.set(data);
         this.loading.set(false);
