@@ -24,12 +24,15 @@ import {
   OpcionParqueExamen,
   PoiCategoria,
   PoiCiudad,
+  RecorridoLibreErrorCode,
+  RecorridoLibreResponse,
   RecorridoResponse,
   RespuestaExamenDto,
   RetoExamen,
   Zona,
 } from '../models/callejero.model';
 import {
+  ModoRecorrido,
   RecorridoExamenView,
   RecorridoPaneComponent,
   RecorridoResultadoView,
@@ -245,7 +248,13 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   readonly recDestino = signal<Calle | null>(null);
   readonly recResultado = signal<RecorridoResponse | null>(null);
   readonly recLoading = signal<boolean>(false);
-  readonly recError = signal<'no-disponible' | null>(null);
+  /**
+   * Error de recorrido (D7): `'no-disponible'` (calle de BD sin ruta) o los
+   * códigos tipados del modo dirección libre (`NO_GEOCODE` / `ROUTE_UNAVAILABLE`).
+   */
+  readonly recError = signal<'no-disponible' | RecorridoLibreErrorCode | null>(
+    null,
+  );
   /** Estado del examen de recorridos para el pane (presentacional). */
   readonly recExamenView = signal<RecorridoExamenView | null>(null);
   /** Resultado final del examen de recorridos. */
@@ -1107,6 +1116,180 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     // Array crudo de pares [lng,lat].
     if (Array.isArray(polyline)) return flatten(polyline);
     return [];
+  }
+
+  /**
+   * Modo "dirección libre" (Callejero v27): el alumno escribió una dirección de
+   * texto. Pide al backend (proxy de geocoding + routing) el recorrido del
+   * parque que cubre la zona del destino. Con éxito adapta la respuesta al shape
+   * `RecorridoResponse` (para reusar el resumen del pane) + pinta polilínea y
+   * marcador del destino; con error mapea 404→NO_GEOCODE / 503→ROUTE_UNAVAILABLE
+   * a un estado DURO (D7), sin pintar recta falsa.
+   */
+  onBuscarDireccionLibre(q: string): void {
+    const ciudad = this.ciudadSel();
+    const texto = q.trim();
+    if (!ciudad || !texto) return;
+    this.recDestino.set(null);
+    this.recResultado.set(null);
+    this.recError.set(null);
+    this.recLoading.set(true);
+    this.safe(() => this.capaRecorrido?.clearLayers());
+
+    this.service.getRecorridoLibre(ciudad.id, texto).subscribe({
+      next: (rec) => {
+        this.recLoading.set(false);
+        this.recError.set(null);
+        // Adaptamos al shape precomputado para reusar el resumen (km/min/origen/
+        // destino) del pane. El modo libre no devuelve la lista de vías en orden,
+        // así que `calles` queda vacía (no se inventa). El destino se modela como
+        // una `Calle` sintética con la dirección resuelta como nombre.
+        const adaptado: RecorridoResponse = {
+          polyline: {
+            type: 'LineString',
+            coordinates: (rec.polyline ?? []).map(([la, ln]) => [ln, la]),
+          },
+          calles: [],
+          km: rec.km,
+          minutos: rec.minutos,
+          estacion: rec.estacion ?? null,
+        };
+        this.recResultado.set(adaptado);
+        this.recDestino.set(
+          this.calleSintetica(rec.direccionResuelta, rec.lat, rec.lng),
+        );
+        this.safe(() => this.pintarRecorridoLibre(rec));
+      },
+      error: (err) => {
+        this.recLoading.set(false);
+        this.recResultado.set(null);
+        this.recDestino.set(null);
+        this.recError.set(this.mapErrorLibre(err));
+        this.safe(() => this.capaRecorrido?.clearLayers());
+      },
+    });
+  }
+
+  /**
+   * El alumno alternó el modo del buscador de recorridos (calle-banco ↔
+   * dirección libre). El resultado/error/destino y la capa del mapa son
+   * COMPARTIDOS entre ambos modos, así que al cambiar se limpian para no dejar
+   * un resumen o una polilínea del modo anterior. NO toca el examen de
+   * recorridos (es un flujo aparte y debe seguir intacto).
+   */
+  onModoRecorridoCambiado(_modo: ModoRecorrido): void {
+    this.recDestino.set(null);
+    this.recResultado.set(null);
+    this.recError.set(null);
+    this.recLoading.set(false);
+    this.safe(() => this.capaRecorrido?.clearLayers());
+  }
+
+  /**
+   * Mapea el error del modo libre a su código tipado. Como `getRecorridoLibre`
+   * va por `_http` crudo, aquí llega el `HttpErrorResponse` íntegro: priorizamos
+   * el `code` del cuerpo y caemos al `status` (404/503). Fallback conservador a
+   * `ROUTE_UNAVAILABLE` (reintentar) si no se reconoce.
+   */
+  private mapErrorLibre(err: unknown): RecorridoLibreErrorCode {
+    const e = err as { status?: number; error?: { code?: string } };
+    const code = e?.error?.code;
+    if (code === 'NO_GEOCODE' || e?.status === 404) return 'NO_GEOCODE';
+    if (code === 'ROUTE_UNAVAILABLE' || e?.status === 503)
+      return 'ROUTE_UNAVAILABLE';
+    return 'ROUTE_UNAVAILABLE';
+  }
+
+  /** Construye una `Calle` sintética para el destino de una dirección libre. */
+  private calleSintetica(nombre: string, lat: number, lng: number): Calle {
+    return {
+      id: -1,
+      zonaId: null,
+      codigoExterno: 'libre',
+      nombre,
+      tipoVia: '',
+      codigoPostal: null,
+      geometria: { type: 'LineString', coordinates: [[lng, lat]] },
+    };
+  }
+
+  /**
+   * Escapa los metacaracteres HTML de un string para inyectarlo de forma segura
+   * en un tooltip de Leaflet, que interpreta su contenido como `innerHTML`. Se
+   * usa con datos EXTERNOS del modo dirección libre (`direccionResuelta` viene de
+   * Nominatim/OSM, `estacion.nombre` del backend) para cortar el sink XSS.
+   */
+  private escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /**
+   * Pinta el recorrido del modo dirección libre. La `polyline` llega como pares
+   * crudos `[lat, lng]` (NO GeoJSON), así que se usan directamente. Marca el
+   * destino (dirección resuelta) y la estación origen si vino. Sin geometría
+   * válida no inventa recta (D7): solo centra en el destino.
+   */
+  private pintarRecorridoLibre(rec: RecorridoLibreResponse): void {
+    if (!this.map || !this.capaRecorrido) return;
+    this.capaRecorrido.clearLayers();
+
+    const latlngs: L.LatLngExpression[] = (rec.polyline ?? [])
+      .filter(
+        (p): p is [number, number] =>
+          Array.isArray(p) &&
+          p.length >= 2 &&
+          typeof p[0] === 'number' &&
+          typeof p[1] === 'number',
+      )
+      .map(([la, ln]) => [la, ln] as L.LatLngExpression);
+
+    let linea: L.Polyline | null = null;
+    if (latlngs.length >= 2) {
+      linea = L.polyline(latlngs, {
+        color: '#BF0B1B',
+        weight: 5,
+        opacity: 0.9,
+      }).addTo(this.capaRecorrido);
+    }
+
+    if (rec.estacion) {
+      // Escapado: dato externo del backend (modo libre). bindTooltip = innerHTML.
+      L.marker([rec.estacion.lat, rec.estacion.lng], { icon: flameIcon(26) })
+        .bindTooltip(this.escapeHtml(rec.estacion.nombre), {
+          direction: 'top',
+          className: 'poi-tip',
+        })
+        .addTo(this.capaRecorrido);
+    }
+
+    L.circleMarker([rec.lat, rec.lng], {
+      radius: 9,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#F9B112',
+      fillOpacity: 1,
+    })
+      // Escapado: `direccionResuelta` viene de Nominatim/OSM (XSS). NOTA: los POIs
+      // preexistentes (mapa/examen) quedan fuera de scope de este fix.
+      .bindTooltip(this.escapeHtml(rec.direccionResuelta), {
+        permanent: true,
+        direction: 'top',
+        className: 'poi-tip',
+      })
+      .addTo(this.capaRecorrido);
+
+    try {
+      if (linea) this.map.fitBounds(linea.getBounds().pad(0.15));
+      else this.map.flyTo([rec.lat, rec.lng], 15);
+    } catch {
+      /* jsdom */
+    }
+    if (window.innerWidth <= 820) this.sidebarAbierto.set(false);
   }
 
   /** El alumno pidió empezar el examen de recorridos. */

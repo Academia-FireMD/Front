@@ -84,6 +84,66 @@
     }
   }
 
+  /* ---- Toggle de modo (calle-bd / dirección libre · v27) ---- */
+  &__modo {
+    display: inline-flex;
+    width: 100%;
+    border: 1px solid var(--linea);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  &__modo-btn {
+    flex: 1;
+    border: 0;
+    background: #fff;
+    color: var(--ink);
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-right: 1px solid var(--linea);
+
+    &:last-child {
+      border-right: 0;
+    }
+
+    &.on {
+      background: var(--rojo);
+      color: #fff;
+    }
+
+    &:not(.on):hover {
+      color: var(--rojo);
+    }
+  }
+
+  /* ---- Dirección libre (port v27) ---- */
+  &__libre {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__libre-input {
+    width: 100%;
+    border: 1.5px solid var(--linea);
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 15px;
+
+    &:focus {
+      outline: none;
+      border-color: var(--rojo);
+    }
+  }
+
+  &__libre-nota {
+    margin: 0;
+    color: var(--gris);
+    font-size: 13px;
+  }
+
   /* ---- Estados (loading / no-disponible) ---- */
   &__estado {
     text-align: center;
