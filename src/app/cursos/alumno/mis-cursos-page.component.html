@@ -1,13 +1,15 @@
 <div class="mis-cursos-container">
   <div class="page-header">
-    <h1>Mis Cursos</h1>
-    <button
-      pButton
-      class="p-button-outlined p-button-sm"
-      (click)="irACatalogo()"
-    >
-      <i class="pi pi-th-large"></i><span>Ver catálogo</span>
-    </button>
+    <h1>{{ pageTitle() }}</h1>
+    @if (!esClasesGrabadas()) {
+      <button
+        pButton
+        class="p-button-outlined p-button-sm"
+        (click)="irACatalogo()"
+      >
+        <i class="pi pi-th-large"></i><span>Ver catálogo</span>
+      </button>
+    }
   </div>
 
   @if (loading()) {
@@ -22,13 +24,19 @@
     </div>
   } @else if (accesos().length === 0) {
     <div class="empty-state">
-      <i class="pi pi-book"></i>
-      <p>No tienes cursos todavía.</p>
-      <button
-        pButton
-        label="Explorar catálogo"
-        (click)="irACatalogo()"
-      ></button>
+      <i
+        class="pi"
+        [class.pi-video]="esClasesGrabadas()"
+        [class.pi-book]="!esClasesGrabadas()"
+      ></i>
+      <p>{{ emptyMensaje() }}</p>
+      @if (!esClasesGrabadas()) {
+        <button
+          pButton
+          label="Explorar catálogo"
+          (click)="irACatalogo()"
+        ></button>
+      }
     </div>
   } @else {
     <!-- Hero: continuar aprendiendo -->
@@ -61,7 +69,7 @@
       </section>
     }
 
-    <h2 class="seccion-titulo">Todos tus cursos</h2>
+    <h2 class="seccion-titulo">{{ seccionTitulo() }}</h2>
     <div class="cursos-grid">
       @for (v of vistas(); track v.acceso.id) {
         <app-curso-card

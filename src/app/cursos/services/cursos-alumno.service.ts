@@ -23,6 +23,16 @@ export class CursosAlumnoService extends ApiBaseService {
     return this.get('/mios') as Observable<AccesoConCurso[]>;
   }
 
+  /**
+   * Clases grabadas (2026-06-29): cursos marcados `esClaseGrabada` accesibles por
+   * suscripción + oposición. El backend devuelve la MISMA forma que `/mios`
+   * (`AccesoConCurso[]`: curso + progreso envueltos en un acceso sintético), para
+   * que `MisCursosPageComponent` se reutilice parametrizado sin tipo unión.
+   */
+  listClasesGrabadas(): Observable<AccesoConCurso[]> {
+    return this.get('/clases-grabadas') as Observable<AccesoConCurso[]>;
+  }
+
   listCatalogo(): Observable<CursoPublico[]> {
     return this.get('/catalogo') as Observable<CursoPublico[]>;
   }

@@ -199,6 +199,68 @@ describe('CursoAdminEditComponent', () => {
     expect(spy).toHaveBeenCalled();
   });
 
+  // ---- Clase grabada (2026-06-29) ----
+
+  it('saveMetadata persiste esClaseGrabada=true y desvincula wooProductId', async () => {
+    component.cursoId.set(1);
+    component.curso.set(buildCursoFixture());
+    component.metadataForm.patchValue({
+      titulo: 'Clase Continua',
+      slug: 'curso-x',
+      wooProductId: 99,
+      // p-inputSwitch escribe el control ANTES de emitir (onChange); lo
+      // replicamos aquí para reflejar el runtime real.
+      esClaseGrabada: true,
+    });
+    component.onEsClaseGrabadaChange(true);
+    serviceMock.update!.mockReturnValue(
+      of({
+        id: 1,
+        titulo: 'Clase Continua',
+        slug: 'curso-x',
+        estado: 'BORRADOR',
+        esClaseGrabada: true,
+        updatedAt: '2026-06-29T13:00:00.000Z',
+      }),
+    );
+    await component.saveMetadata();
+    expect(serviceMock.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        esClaseGrabada: true,
+        // Clase grabada no se vende → sin producto WC.
+        wooProductId: null,
+      }),
+    );
+  });
+
+  it('onEsClaseGrabadaChange(true) oculta el picker de producto WC', () => {
+    expect(component.mostrarWcPicker()).toBe(true);
+    component.onEsClaseGrabadaChange(true);
+    expect(component.mostrarWcPicker()).toBe(false);
+    expect(component.metadataForm.controls.wooProductId.value).toBeNull();
+  });
+
+  it('hint CM2: clase grabada con relevancia vacía avisa que nadie la verá', () => {
+    component.updateRelevancia([]);
+    component.onEsClaseGrabadaChange(true);
+    expect(component.hintClaseGrabadaSinOposicion()).toBe(true);
+  });
+
+  it('loadCurso hidrata esClaseGrabada desde el backend', async () => {
+    serviceMock.getCurso!.mockReturnValue(
+      of(
+        buildCursoFixture({
+          esClaseGrabada: true,
+          updatedAt: '2026-06-29T10:00:00.000Z',
+        }),
+      ),
+    );
+    await component.loadCurso(1);
+    expect(component.esClaseGrabadaSig()).toBe(true);
+    expect(component.metadataForm.controls.esClaseGrabada.value).toBe(true);
+  });
+
   it('publicar/archivar/despublicar disparan los métodos del service', async () => {
     component.cursoId.set(1);
     component.curso.set(buildCursoFixture({ id: 1, titulo: 'X', slug: 'x' }));

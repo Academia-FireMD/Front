@@ -115,6 +115,14 @@ export interface Curso {
    * tiene relevancia compatible.
    */
   esGratuito?: boolean;
+  /**
+   * Clase grabada (2026-06-29): curso "indefinido/continuo" al que se accede por
+   * suscripción + oposición (NO se vende → sin `wooProductId`/`precio`). Vive en
+   * la sección de alumno "Clases grabadas", separada de "Mis cursos" y del
+   * catálogo de compra. El backend la excluye de `catalogo` y la sirve por
+   * `GET /cursos/clases-grabadas`.
+   */
+  esClaseGrabada?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   estado: EstadoCurso;
@@ -331,6 +339,8 @@ export interface CursoCreatePayload {
   relevancia?: Oposicion[];
   /** Curso gratuito: no requiere producto WC. */
   esGratuito?: boolean;
+  /** Clase grabada: acceso por oposición, sin venta (no se manda wooProductId). */
+  esClaseGrabada?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
 }
@@ -343,6 +353,8 @@ export interface CursoUpdatePayload {
   relevancia?: Oposicion[];
   /** Curso gratuito: no requiere producto WC. */
   esGratuito?: boolean;
+  /** Clase grabada: acceso por oposición, sin venta (no se manda wooProductId). */
+  esClaseGrabada?: boolean;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   /**

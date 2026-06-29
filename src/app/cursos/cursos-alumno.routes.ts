@@ -8,6 +8,7 @@ export const routes: Routes = [
   {
     path: '',
     component: MisCursosPageComponent,
+    data: { tipo: 'cursos' },
   },
   {
     path: 'catalogo',

@@ -66,4 +66,18 @@ describe('CursosAlumnoService.comprarCursoCof', () => {
     expect(received).toEqual(res);
     expect(toast.error).not.toHaveBeenCalled();
   });
+
+  // Clases grabadas (2026-06-29): mismo shape que /mios, endpoint propio.
+  it('listClasesGrabadas hace GET a /cursos/clases-grabadas', () => {
+    let received: unknown;
+    service.listClasesGrabadas().subscribe((r) => (received = r));
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/cursos/clases-grabadas`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+
+    expect(received).toEqual([]);
+  });
 });

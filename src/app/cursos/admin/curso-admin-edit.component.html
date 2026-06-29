@@ -87,6 +87,21 @@
                   >Gratis</label
                 >
               </span>
+
+              <!-- Clase grabada (2026-06-29): acceso por suscripción + oposición,
+                   sin venta. Vive en la sección de alumno "Clases grabadas". -->
+              <span class="curso-edit__header-gratis">
+                <p-inputSwitch
+                  formControlName="esClaseGrabada"
+                  (onChange)="onEsClaseGrabadaChange($event.checked)"
+                  data-testid="curso-edit-clase-grabada"
+                ></p-inputSwitch>
+                <label
+                  pTooltip="Clase grabada: curso continuo accesible por suscripción + oposición (no se vende). Aparece en la sección 'Clases grabadas' del alumno."
+                  tooltipPosition="bottom"
+                  >Clase grabada</label
+                >
+              </span>
               <app-oposicion-picker
                 [allowAdd]="true"
                 [oposiciones]="relevancia()"
@@ -142,7 +157,7 @@
                     ></textarea>
                   </div>
 
-                  @if (!esGratuitoSig()) {
+                  @if (mostrarWcPicker()) {
                     <div class="field">
                       <label>Producto WooCommerce</label>
                       <app-woocommerce-product-picker
@@ -154,6 +169,20 @@
                       <small class="text-color-secondary">
                         El precio se sincroniza desde WooCommerce
                         automáticamente.
+                      </small>
+                    </div>
+                  }
+
+                  @if (hintClaseGrabadaSinOposicion()) {
+                    <div class="field field--full">
+                      <small
+                        class="p-error"
+                        data-testid="curso-edit-clase-grabada-hint"
+                      >
+                        <i class="pi pi-exclamation-triangle"></i>
+                        Sin oposición seleccionada, ningún alumno verá esta
+                        clase grabada. Añade al menos una oposición en
+                        "Relevancia".
                       </small>
                     </div>
                   }

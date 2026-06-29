@@ -182,6 +182,7 @@ export class CursoAdminEditComponent implements OnInit {
     descripcion: [''],
     wooProductId: [null as number | null],
     esGratuito: [false],
+    esClaseGrabada: [false],
     thumbnailUrl: [''],
     duracionEstimadaMinutos: [null as number | null],
   });
@@ -206,6 +207,38 @@ export class CursoAdminEditComponent implements OnInit {
     }
   }
 
+  /**
+   * Signal del toggle "Es clase grabada" (2026-06-29). Una clase grabada se
+   * accede por suscripción + oposición y NO se vende, así que al activarla
+   * desvinculamos el producto WC y ocultamos su picker (igual que `esGratuito`).
+   */
+  esClaseGrabadaSig = signal(false);
+
+  onEsClaseGrabadaChange(value: boolean): void {
+    this.esClaseGrabadaSig.set(value);
+    // Clase grabada → sin venta: limpiamos el producto WC (no se exige/oculta).
+    if (value) {
+      this.metadataForm.controls.wooProductId.setValue(null);
+    }
+  }
+
+  /**
+   * El picker de producto WC solo tiene sentido en cursos de pago: lo ocultamos
+   * si el curso es gratuito O es una clase grabada (ambos = sin venta WC).
+   */
+  mostrarWcPicker = computed(
+    () => !this.esGratuitoSig() && !this.esClaseGrabadaSig(),
+  );
+
+  /**
+   * CM2 (riesgo aceptado, hint no bloqueante): una clase grabada con
+   * `relevancia=[]` no la ve ningún alumno (el filtro de acceso por oposición la
+   * niega para todos). Avisamos en el editor, sin bloquear el guardado.
+   */
+  hintClaseGrabadaSinOposicion = computed(
+    () => this.esClaseGrabadaSig() && this.relevancia().length === 0,
+  );
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'nuevo') {
@@ -223,12 +256,14 @@ export class CursoAdminEditComponent implements OnInit {
       this.curso.set(data);
       this.relevancia.set(data.relevancia ?? []);
       this.esGratuitoSig.set(data.esGratuito ?? false);
+      this.esClaseGrabadaSig.set(data.esClaseGrabada ?? false);
       this.metadataForm.patchValue({
         titulo: data.titulo,
         slug: data.slug,
         descripcion: data.descripcion ?? '',
         wooProductId: data.wooProductId ?? null,
         esGratuito: data.esGratuito ?? false,
+        esClaseGrabada: data.esClaseGrabada ?? false,
         thumbnailUrl: data.thumbnailUrl ?? '',
         duracionEstimadaMinutos: data.duracionEstimadaMinutos ?? null,
       });
@@ -314,13 +349,16 @@ export class CursoAdminEditComponent implements OnInit {
           return;
         }
         const esGratuito = !!raw.esGratuito;
+        const esClaseGrabada = !!raw.esClaseGrabada;
+        const sinVenta = esGratuito || esClaseGrabada;
         const payload: CursoUpdatePayload = {
           titulo: raw.titulo ?? undefined,
           descripcion: raw.descripcion ?? undefined,
-          // Curso gratuito → sin producto WC (se desvincula al guardar).
-          wooProductId: esGratuito ? null : (raw.wooProductId ?? null),
+          // Sin venta (gratuito o clase grabada) → sin producto WC.
+          wooProductId: sinVenta ? null : (raw.wooProductId ?? null),
           relevancia: this.relevancia(),
           esGratuito,
+          esClaseGrabada,
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
           updatedAt: c.updatedAt,
@@ -332,13 +370,16 @@ export class CursoAdminEditComponent implements OnInit {
         this.toast.success('Metadatos guardados correctamente');
       } else {
         const esGratuito = !!raw.esGratuito;
+        const esClaseGrabada = !!raw.esClaseGrabada;
+        const sinVenta = esGratuito || esClaseGrabada;
         const createPayload: CursoCreatePayload = {
           titulo: raw.titulo ?? '',
           slug: raw.slug ?? '',
           descripcion: raw.descripcion ?? undefined,
-          wooProductId: esGratuito ? null : (raw.wooProductId ?? null),
+          wooProductId: sinVenta ? null : (raw.wooProductId ?? null),
           relevancia: this.relevancia(),
           esGratuito,
+          esClaseGrabada,
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
         };
