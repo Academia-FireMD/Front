@@ -134,6 +134,21 @@ const RECORRIDO: RecorridoResponse = {
   estacion: { nombre: 'Parque Campanar', lat: 39.48, lng: -0.38 },
 };
 
+const RECORRIDO_LIBRE = {
+  direccionResuelta: 'Calle de Colón 12, València',
+  lat: 39.4699,
+  lng: -0.3712,
+  parqueNombre: 'Centro',
+  estacion: { nombre: 'Parque Centro', lat: 39.4665, lng: -0.3759 },
+  // Contrato v27: pares crudos [lat, lng] (NO GeoJSON).
+  polyline: [
+    [39.4665, -0.3759],
+    [39.4699, -0.3712],
+  ] as [number, number][],
+  km: 1.4,
+  minutos: 4,
+};
+
 function mockService() {
   return {
     listarCiudades: jest.fn().mockReturnValue(of([CIUDAD])),
@@ -141,6 +156,7 @@ function mockService() {
     listarPoisCiudad: jest.fn().mockReturnValue(of(POIS)),
     listarCalles: jest.fn().mockReturnValue(of({ calles: CALLES, pois: [] })),
     getRecorrido: jest.fn().mockReturnValue(of(RECORRIDO)),
+    getRecorridoLibre: jest.fn().mockReturnValue(of(RECORRIDO_LIBRE)),
     generarExamenRecorrido: jest.fn().mockReturnValue(
       of({
         token: 'tok',
@@ -315,6 +331,44 @@ describe('CallejeroAppComponent', () => {
     expect(component.recLoading()).toBe(false);
   });
 
+  // ── Modo "dirección libre" (Callejero v27) ────────────────────────────────
+
+  it('onBuscarDireccionLibre con éxito guarda el recorrido (km/min) + destino resuelto, sin error', () => {
+    component.onBuscarDireccionLibre('Calle Colón 12');
+    expect(svc.getRecorridoLibre).toHaveBeenCalledWith(1, 'Calle Colón 12');
+    expect(component.recResultado()?.km).toBe(1.4);
+    expect(component.recResultado()?.minutos).toBe(4);
+    // El destino se modela como Calle sintética con la dirección resuelta.
+    expect(component.recDestino()?.nombre).toBe('Calle de Colón 12, València');
+    expect(component.recError()).toBeNull();
+    expect(component.recLoading()).toBe(false);
+  });
+
+  it('onBuscarDireccionLibre no llama al backend con texto en blanco', () => {
+    component.onBuscarDireccionLibre('   ');
+    expect(svc.getRecorridoLibre).not.toHaveBeenCalled();
+  });
+
+  it('onBuscarDireccionLibre con 404 → error NO_GEOCODE, sin recorrido (D7)', () => {
+    svc.getRecorridoLibre.mockReturnValue(
+      throwError(() => ({ status: 404, error: { code: 'NO_GEOCODE' } })),
+    );
+    component.onBuscarDireccionLibre('Calle inexistente');
+    expect(component.recResultado()).toBeNull();
+    expect(component.recDestino()).toBeNull();
+    expect(component.recError()).toBe('NO_GEOCODE');
+    expect(component.recLoading()).toBe(false);
+  });
+
+  it('onBuscarDireccionLibre con 503 → error ROUTE_UNAVAILABLE (D7)', () => {
+    svc.getRecorridoLibre.mockReturnValue(
+      throwError(() => ({ status: 503, error: { code: 'ROUTE_UNAVAILABLE' } })),
+    );
+    component.onBuscarDireccionLibre('Calle Colón 12');
+    expect(component.recResultado()).toBeNull();
+    expect(component.recError()).toBe('ROUTE_UNAVAILABLE');
+  });
+
   it('examen de recorridos: generar → responder (D8) → registrar nota', () => {
     component.onIniciarExamenRecorridos();
     expect(svc.generarExamenRecorrido).toHaveBeenCalledWith(1, [], 'MEDIO');
@@ -342,6 +396,37 @@ describe('CallejeroAppComponent', () => {
     component.setTab('mapa');
     expect(component.recResultado()).toBeNull();
     expect(component.recDestino()).toBeNull();
+  });
+
+  it('onModoRecorridoCambiado limpia resultado/error/destino del modo anterior, sin tocar el examen', () => {
+    // Examen en curso (flujo aparte que NO debe limpiarse al alternar modo).
+    component.onIniciarExamenRecorridos();
+    expect(component.recExamenView()).not.toBeNull();
+    // Búsqueda previa con resultado (estado compartido entre modos).
+    component.onBuscarDestino(100);
+    expect(component.recResultado()).not.toBeNull();
+    expect(component.recDestino()).not.toBeNull();
+
+    component.onModoRecorridoCambiado('direccion-libre');
+
+    expect(component.recResultado()).toBeNull();
+    expect(component.recError()).toBeNull();
+    expect(component.recDestino()).toBeNull();
+    expect(component.recLoading()).toBe(false);
+    // El examen sigue intacto.
+    expect(component.recExamenView()).not.toBeNull();
+  });
+
+  it('escapeHtml escapa los metacaracteres (sink XSS de los tooltips del modo libre)', () => {
+    const out = (component as any).escapeHtml(
+      '<img src=x onerror=alert(1)> & "q" \'p\'',
+    );
+    expect(out).not.toContain('<img');
+    expect(out).toContain('&lt;img');
+    expect(out).toContain('&gt;');
+    expect(out).toContain('&amp;');
+    expect(out).toContain('&quot;');
+    expect(out).toContain('&#39;');
   });
 
   it('toggleFichaMinimizada alterna el estado y cerrarFicha lo resetea', () => {

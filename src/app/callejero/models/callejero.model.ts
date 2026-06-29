@@ -209,6 +209,46 @@ export interface RecorridoResponse {
   estacion: { nombre: string; lat: number; lng: number } | null;
 }
 
+// ============================================================================
+// Recorrido "dirección libre" (Callejero v27). Espejo de
+// `GET /callejero/recorrido-libre?ciudadId=&q=`.
+// ============================================================================
+
+/**
+ * Códigos de error tipados del modo "dirección libre":
+ *  - `NO_GEOCODE` (404): la dirección escrita no se pudo localizar.
+ *  - `ROUTE_UNAVAILABLE` (503): se localizó pero no se pudo trazar la ruta.
+ * El front los trata como estados DUROS (D7): mensaje claro, nunca recta falsa.
+ */
+export type RecorridoLibreErrorCode = 'NO_GEOCODE' | 'ROUTE_UNAVAILABLE';
+
+/**
+ * Respuesta 200 de `GET /callejero/recorrido-libre`. A diferencia de
+ * `RecorridoResponse` (precomputado, calle de BD), aquí la `polyline` llega como
+ * pares crudos `[lat, lng]` (NO GeoJSON `[lng, lat]`), y el destino es una
+ * dirección de texto resuelta por el geocoder, no una `Calle` del banco.
+ */
+export interface RecorridoLibreResponse {
+  /** Dirección tal como la resolvió el geocoder (se muestra como destino). */
+  direccionResuelta: string;
+  /** Coordenadas del destino resuelto. */
+  lat: number;
+  lng: number;
+  /** Nombre del parque que cubre la zona del destino (si se determinó). */
+  parqueNombre?: string;
+  /** Estación (parque de bomberos) origen del recorrido. */
+  estacion?: { nombre: string; lat: number; lng: number };
+  /** Geometría de la ruta en orden, pares `[lat, lng]`. */
+  polyline: [number, number][];
+  km: number;
+  minutos: number;
+}
+
+/** Cuerpo de error (404/503) de `GET /callejero/recorrido-libre`. */
+export interface RecorridoLibreErrorBody {
+  code: RecorridoLibreErrorCode;
+}
+
 /** Cuerpo de `POST /callejero/examen/registrar`. */
 export interface RegistrarExamenDto {
   token: string;

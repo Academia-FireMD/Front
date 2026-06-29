@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Calle, RecorridoResponse } from '../models/callejero.model';
 import {
+  ModoRecorrido,
   RecorridoExamenView,
   RecorridoPaneComponent,
   RecorridoResultadoView,
@@ -227,6 +228,97 @@ describe('RecorridoPaneComponent', () => {
       expect(r).not.toBeNull();
       expect(byTestId(fixture, 'cj-rec-nota')?.textContent).toContain('8');
       expect(r?.textContent).toContain('Aprobado');
+    });
+  });
+
+  // ── Modo "dirección libre" (Callejero v27) ────────────────────────────────
+  describe('modo dirección libre (v27)', () => {
+    it('renderiza el toggle con ambos modos; por defecto muestra el buscador BD', () => {
+      expect(byTestId(fixture, 'cj-rec-modo')).not.toBeNull();
+      expect(byTestId(fixture, 'cj-rec-modo-calle-bd')).not.toBeNull();
+      expect(byTestId(fixture, 'cj-rec-modo-direccion-libre')).not.toBeNull();
+      // Modo por defecto = calle-bd → buscador visible, input libre oculto.
+      expect(component.modo()).toBe('calle-bd');
+      expect(byTestId(fixture, 'cj-rec-buscador')).not.toBeNull();
+      expect(byTestId(fixture, 'cj-rec-libre')).toBeNull();
+    });
+
+    it('al cambiar a dirección libre muestra el input + botón "Trazar al primer resultado"', () => {
+      (
+        byTestId(fixture, 'cj-rec-modo-direccion-libre') as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
+      expect(component.modo()).toBe('direccion-libre');
+      expect(byTestId(fixture, 'cj-rec-libre')).not.toBeNull();
+      expect(byTestId(fixture, 'cj-rec-libre-input')).not.toBeNull();
+      const btn = byTestId(fixture, 'cj-rec-libre-trazar');
+      expect(btn?.textContent).toContain('Trazar al primer resultado');
+      expect(txt(fixture)).toContain('Destino de la salida');
+      // El buscador de BD queda oculto en este modo.
+      expect(byTestId(fixture, 'cj-rec-buscador')).toBeNull();
+    });
+
+    it('escribir una dirección + botón emite buscarDireccionLibre con el texto', () => {
+      const emitted: string[] = [];
+      component.buscarDireccionLibre.subscribe((q) => emitted.push(q));
+      component.setModo('direccion-libre');
+      fixture.detectChanges();
+      const input = byTestId(fixture, 'cj-rec-libre-input') as HTMLInputElement;
+      input.value = 'Calle Colón 12';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(component.textoLibre()).toBe('Calle Colón 12');
+      (byTestId(fixture, 'cj-rec-libre-trazar') as HTMLButtonElement).click();
+      expect(emitted).toEqual(['Calle Colón 12']);
+    });
+
+    it('no emite si el texto libre está vacío o en blanco', () => {
+      const emitted: string[] = [];
+      component.buscarDireccionLibre.subscribe((q) => emitted.push(q));
+      component.setModo('direccion-libre');
+      component.textoLibre.set('   ');
+      fixture.detectChanges();
+      (byTestId(fixture, 'cj-rec-libre-trazar') as HTMLButtonElement).click();
+      expect(emitted).toEqual([]);
+    });
+
+    it('estado NO_GEOCODE: mensaje claro, sin mapa falso (D7)', () => {
+      fixture.componentRef.setInput('error', 'NO_GEOCODE');
+      fixture.detectChanges();
+      const el = byTestId(fixture, 'cj-rec-no-geocode');
+      expect(el).not.toBeNull();
+      expect(el?.textContent).toContain('No encontramos esa dirección');
+      // No hay resumen ni otros estados de error a la vez.
+      expect(byTestId(fixture, 'cj-rec-resumen')).toBeNull();
+      expect(byTestId(fixture, 'cj-rec-route-unavailable')).toBeNull();
+    });
+
+    it('estado ROUTE_UNAVAILABLE: mensaje de reintento (D7)', () => {
+      fixture.componentRef.setInput('error', 'ROUTE_UNAVAILABLE');
+      fixture.detectChanges();
+      const el = byTestId(fixture, 'cj-rec-route-unavailable');
+      expect(el).not.toBeNull();
+      expect(el?.textContent).toContain('No se pudo trazar la ruta');
+      expect(byTestId(fixture, 'cj-rec-no-geocode')).toBeNull();
+    });
+
+    it('al alternar de modo emite modoCambiado y limpia el estado local', () => {
+      const emitted: ModoRecorrido[] = [];
+      component.modoCambiado.subscribe((m) => emitted.push(m));
+      // Estado local del modo anterior que NO debe arrastrarse.
+      component.textoLibre.set('Calle Colón 12');
+      component.sugerencias.set([CALLE(1, 'Av. del Cid')]);
+
+      component.setModo('direccion-libre');
+
+      expect(emitted).toEqual(['direccion-libre']);
+      expect(component.modo()).toBe('direccion-libre');
+      expect(component.textoLibre()).toBe('');
+      expect(component.sugerencias().length).toBe(0);
+
+      // No reemite si el modo no cambia (toggle idempotente).
+      component.setModo('direccion-libre');
+      expect(emitted).toEqual(['direccion-libre']);
     });
   });
 

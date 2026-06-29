@@ -10,6 +10,7 @@ import {
   CallesZonaResponse,
   Ciudad,
   GenerarExamenResponse,
+  RecorridoLibreResponse,
   RecorridoResponse,
   ResumenProgreso,
   Zona,
@@ -152,6 +153,60 @@ describe('CallejeroService', () => {
 
     expect(received).toEqual(rec);
     expect(received?.calles.length).toBe(2);
+  });
+
+  // ── Recorrido "dirección libre" (Callejero v27) ───────────────────────────
+
+  it('GET /callejero/recorrido-libre codifica ciudadId + q y devuelve la ruta', () => {
+    const rec: RecorridoLibreResponse = {
+      direccionResuelta: 'Calle de Colón 12, València',
+      lat: 39.4699,
+      lng: -0.3712,
+      parqueNombre: 'Centro',
+      estacion: { nombre: 'Parque Centro', lat: 39.4665, lng: -0.3759 },
+      polyline: [
+        [39.4665, -0.3759],
+        [39.4699, -0.3712],
+      ],
+      km: 1.4,
+      minutos: 4,
+    };
+    let received: RecorridoLibreResponse | undefined;
+
+    service.getRecorridoLibre(1, 'Calle Colón 12').subscribe((r) => {
+      received = r;
+    });
+
+    const req = httpMock.expectOne(
+      `${API}/callejero/recorrido-libre?ciudadId=1&q=Calle%20Col%C3%B3n%2012`,
+    );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush(rec);
+
+    expect(received).toEqual(rec);
+  });
+
+  it('GET /callejero/recorrido-libre propaga el error crudo (code) sin toast (404 NO_GEOCODE)', () => {
+    const toast = TestBed.inject(ToastrService) as unknown as {
+      error: jest.Mock;
+    };
+    let err: { status?: number; error?: { code?: string } } | undefined;
+
+    service.getRecorridoLibre(1, 'no existe').subscribe({
+      next: () => fail('no debería emitir'),
+      error: (e) => (err = e),
+    });
+
+    httpMock
+      .expectOne(`${API}/callejero/recorrido-libre?ciudadId=1&q=no%20existe`)
+      .flush({ code: 'NO_GEOCODE' }, { status: 404, statusText: 'Not Found' });
+
+    // El error llega íntegro (status + code), no colapsado a Error(message).
+    expect(err?.status).toBe(404);
+    expect(err?.error?.code).toBe('NO_GEOCODE');
+    // Sin toast genérico: el padre gobierna el estado (D7).
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it('generarExamen sin tipo envía tipoExamen MIXTO (default, no rompe firma)', () => {

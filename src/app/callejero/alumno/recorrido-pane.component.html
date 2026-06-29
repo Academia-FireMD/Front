@@ -83,25 +83,76 @@
         </div>
       } @else {
         <!-- ========= MODO BÚSQUEDA DE RECORRIDO ========= -->
-        <div class="cj-rec__buscador">
-          <label class="cj-rec__lbl">Calle de destino</label>
-          <p-autoComplete
-            [suggestions]="sugerencias()"
-            [delay]="200"
-            [minLength]="2"
-            [forceSelection]="true"
-            field="nombre"
-            placeholder="Escribe una calle…"
-            styleClass="cj-rec__ac"
-            data-testid="cj-rec-buscar"
-            (completeMethod)="filtrarCalles($event)"
-            (onSelect)="onSeleccionarCalle($event)"
+        <!-- Toggle de modo (estética v27): calle del banco vs dirección libre -->
+        <div class="cj-rec__modo" data-testid="cj-rec-modo">
+          <button
+            type="button"
+            class="cj-rec__modo-btn"
+            [class.on]="modo() === 'calle-bd'"
+            data-testid="cj-rec-modo-calle-bd"
+            (click)="setModo('calle-bd')"
           >
-            <ng-template let-c pTemplate="item">
-              <span>{{ c.nombre }}</span>
-            </ng-template>
-          </p-autoComplete>
+            Elijo yo la calle
+          </button>
+          <button
+            type="button"
+            class="cj-rec__modo-btn"
+            [class.on]="modo() === 'direccion-libre'"
+            data-testid="cj-rec-modo-direccion-libre"
+            (click)="setModo('direccion-libre')"
+          >
+            Escribo una dirección
+          </button>
         </div>
+
+        @if (modo() === "calle-bd") {
+          <div class="cj-rec__buscador" data-testid="cj-rec-buscador">
+            <label class="cj-rec__lbl">Calle de destino</label>
+            <p-autoComplete
+              [suggestions]="sugerencias()"
+              [delay]="200"
+              [minLength]="2"
+              [forceSelection]="true"
+              field="nombre"
+              placeholder="Escribe una calle…"
+              styleClass="cj-rec__ac"
+              data-testid="cj-rec-buscar"
+              (completeMethod)="filtrarCalles($event)"
+              (onSelect)="onSeleccionarCalle($event)"
+            >
+              <ng-template let-c pTemplate="item">
+                <span>{{ c.nombre }}</span>
+              </ng-template>
+            </p-autoComplete>
+          </div>
+        } @else {
+          <!-- ===== Dirección libre (port v27) ===== -->
+          <div class="cj-rec__libre" data-testid="cj-rec-libre">
+            <label class="cj-rec__lbl">Destino de la salida</label>
+            <input
+              type="text"
+              class="cj-rec__libre-input"
+              placeholder="Escribe una calle o dirección de València…"
+              autocomplete="off"
+              data-testid="cj-rec-libre-input"
+              [ngModel]="textoLibre()"
+              (ngModelChange)="textoLibre.set($event)"
+              (keyup.enter)="onTrazarLibre()"
+            />
+            <button
+              type="button"
+              class="cj-rec__btn cj-rec__btn--rojo"
+              data-testid="cj-rec-libre-trazar"
+              (click)="onTrazarLibre()"
+            >
+              Trazar al primer resultado
+            </button>
+            <p class="cj-rec__libre-nota">
+              Escribe una dirección de València y traza el recorrido del parque
+              que cubre su zona.
+            </p>
+          </div>
+        }
 
         @if (loading()) {
           <!-- Cargando -->
@@ -120,6 +171,28 @@
               Aún no hay un recorrido publicado para esta calle. Prueba con otra
               calle de destino.
             </p>
+          </div>
+        } @else if (error() === "NO_GEOCODE") {
+          <!-- D7: dirección libre no localizada (estado DURO) -->
+          <div
+            class="cj-rec__estado cj-rec__estado--off"
+            data-testid="cj-rec-no-geocode"
+          >
+            <div class="cj-rec__estado-icon">📍</div>
+            <b>No encontramos esa dirección</b>
+            <p>
+              Revisa el nombre o prueba con otra calle o dirección de València.
+            </p>
+          </div>
+        } @else if (error() === "ROUTE_UNAVAILABLE") {
+          <!-- D7: localizada pero sin ruta trazable (estado DURO) -->
+          <div
+            class="cj-rec__estado cj-rec__estado--off"
+            data-testid="cj-rec-route-unavailable"
+          >
+            <div class="cj-rec__estado-icon">🚧</div>
+            <b>No se pudo trazar la ruta, inténtalo de nuevo</b>
+            <p>El servidor de rutas no respondió. Vuelve a intentarlo.</p>
           </div>
         } @else if (recorrido()) {
           <!-- Resultado del recorrido -->

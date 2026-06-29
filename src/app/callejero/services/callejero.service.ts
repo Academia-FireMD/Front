@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import {
   CallesZonaResponse,
@@ -10,6 +11,7 @@ import {
   HistorialExamenResponse,
   LeaderboardResponse,
   PoiCiudad,
+  RecorridoLibreResponse,
   RecorridoResponse,
   RegistrarExamenDto,
   RegistrarProgresoDto,
@@ -98,6 +100,29 @@ export class CallejeroService extends ApiBaseService {
       `/recorrido?calleId=${calleId}`,
       true,
     ) as Observable<RecorridoResponse>;
+  }
+
+  /**
+   * GET /callejero/recorrido-libre?ciudadId=&q= — recorrido del parque más
+   * cercano a una dirección de texto LIBRE (Callejero v27), resuelta por el
+   * proxy de geocoding del backend. A diferencia de `getRecorrido`, va por
+   * `_http` crudo (no por el wrapper `get`) ADREDE: el wrapper colapsa el
+   * `HttpErrorResponse` en un `Error(message)` y perdería el `code` tipado del
+   * cuerpo de error (404 `NO_GEOCODE` / 503 `ROUTE_UNAVAILABLE`). El padre
+   * inspecciona `status`/`error.code` para elegir el mensaje (D7), así que el
+   * error debe llegar intacto y sin toast genérico.
+   */
+  getRecorridoLibre(
+    ciudadId: number,
+    q: string,
+  ): Observable<RecorridoLibreResponse> {
+    const url =
+      environment.apiUrl +
+      this.controllerPrefix +
+      `/recorrido-libre?ciudadId=${ciudadId}&q=${encodeURIComponent(q)}`;
+    return this._http.get(url, {
+      withCredentials: true,
+    }) as Observable<RecorridoLibreResponse>;
   }
 
   // ── Modo Examen (Callejero v2 — Hito 2) ──────────────────────────────────

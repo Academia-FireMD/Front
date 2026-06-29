@@ -7,6 +7,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import type {
   AutoCompleteCompleteEvent,
@@ -15,8 +16,12 @@ import type {
 import {
   Calle,
   DificultadCallejero,
+  RecorridoLibreErrorCode,
   RecorridoResponse,
 } from '../models/callejero.model';
+
+/** Modos del buscador de recorridos: calle del banco (autocomplete) o dirección libre (v27). */
+export type ModoRecorrido = 'calle-bd' | 'direccion-libre';
 
 /**
  * Estado del examen de recorridos que el padre pasa al pane. Es PRESENTACIONAL:
@@ -69,7 +74,7 @@ export interface RecorridoResultadoView {
 @Component({
   selector: 'app-recorrido-pane',
   standalone: true,
-  imports: [CommonModule, AutoCompleteModule],
+  imports: [CommonModule, FormsModule, AutoCompleteModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './recorrido-pane.component.html',
   styleUrl: './recorrido-pane.component.scss',
@@ -88,8 +93,15 @@ export class RecorridoPaneComponent {
   readonly recorrido = input<RecorridoResponse | null>(null);
   /** Petición en curso (spinner en el buscador). */
   readonly loading = input<boolean>(false);
-  /** Error de recorrido: `'no-disponible'` (404) o `null`. (D7) */
-  readonly error = input<'no-disponible' | null>(null);
+  /**
+   * Error de recorrido (D7 — estado DURO, sin mapa falso):
+   *  - `'no-disponible'`: calle de BD sin recorrido publicado (404 de `getRecorrido`).
+   *  - `'NO_GEOCODE'`: dirección libre no localizada por el geocoder (404).
+   *  - `'ROUTE_UNAVAILABLE'`: localizada pero sin ruta trazable (503).
+   */
+  readonly error = input<'no-disponible' | RecorridoLibreErrorCode | null>(
+    null,
+  );
   /** Estado del examen de recorridos; `null` si no hay examen en curso. */
   readonly examen = input<RecorridoExamenView | null>(null);
   /** Resultado final del examen; `null` mientras no haya terminado. */
@@ -98,8 +110,10 @@ export class RecorridoPaneComponent {
   readonly dificultad = input<DificultadCallejero>('MEDIO');
 
   // ---- Outputs (intención hacia el padre) ----
-  /** El alumno eligió una calle-destino del autocomplete. */
+  /** El alumno eligió una calle-destino del autocomplete (modo `calle-bd`). */
   readonly buscarDestino = output<number>();
+  /** El alumno pidió trazar a una dirección de texto libre (modo `direccion-libre`, v27). */
+  readonly buscarDireccionLibre = output<string>();
   /** El alumno cambió la dificultad del examen de recorridos. */
   readonly cambiarDificultad = output<DificultadCallejero>();
   /** El alumno pulsó "Examen de recorridos". */
@@ -110,11 +124,21 @@ export class RecorridoPaneComponent {
   readonly siguienteOtraCalle = output<void>();
   /** El alumno minimizó/restauró la ventana (notifica al padre por si reacciona). */
   readonly minimizarToggle = output<boolean>();
+  /**
+   * El alumno alternó el modo del buscador (calle-banco ↔ dirección libre). El
+   * padre lo usa para limpiar el resultado/error/capa del modo anterior y no
+   * arrastrar un resumen o una polilínea incoherentes con el modo actual.
+   */
+  readonly modoCambiado = output<ModoRecorrido>();
 
   // ---- Estado local (presentación) ----
   readonly minimizado = signal<boolean>(false);
   /** Sugerencias del autocomplete (resultado del filtrado local). */
   readonly sugerencias = signal<Calle[]>([]);
+  /** Modo del buscador: calle del banco (autocomplete) o dirección libre (v27). */
+  readonly modo = signal<ModoRecorrido>('calle-bd');
+  /** Texto tecleado en el modo dirección libre (v27). */
+  readonly textoLibre = signal<string>('');
 
   /** Opciones del selector de dificultad (port v27). */
   readonly dificultades: { valor: DificultadCallejero; label: string }[] = [
@@ -145,6 +169,24 @@ export class RecorridoPaneComponent {
   onSeleccionarCalle(ev: AutoCompleteSelectEvent): void {
     const c = ev.value as Calle | null;
     if (c?.id != null) this.buscarDestino.emit(c.id);
+  }
+
+  /** Cambia entre modo calle-banco y dirección libre (v27). */
+  setModo(modo: ModoRecorrido): void {
+    if (this.modo() === modo) return;
+    this.modo.set(modo);
+    // Limpia el estado local del buscador para no arrastrar texto/sugerencias
+    // del modo anterior; el padre limpia su resultado/error/capa al recibir
+    // `modoCambiado` (el estado de recorrido es compartido entre ambos modos).
+    this.textoLibre.set('');
+    this.sugerencias.set([]);
+    this.modoCambiado.emit(modo);
+  }
+
+  /** Modo dirección libre (v27): emite el texto tecleado si no está vacío. */
+  onTrazarLibre(): void {
+    const q = this.textoLibre().trim();
+    if (q) this.buscarDireccionLibre.emit(q);
   }
 
   toggleMinimizar(): void {
