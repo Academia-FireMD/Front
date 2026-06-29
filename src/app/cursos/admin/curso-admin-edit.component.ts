@@ -231,8 +231,8 @@ export class CursoAdminEditComponent implements OnInit {
   );
 
   /**
-   * CM2 (riesgo aceptado, hint no bloqueante): una clase grabada con
-   * `relevancia=[]` no la ve ningún alumno (el filtro de acceso por oposición la
+   * Hint informativo: una clase grabada con `relevancia=[]` es visible para
+   * todos los suscritos (equivale a GENERAL, regla canónica de OposicionFilterService).
    * niega para todos). Avisamos en el editor, sin bloquear el guardado.
    */
   hintClaseGrabadaSinOposicion = computed(

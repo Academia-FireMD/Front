@@ -176,13 +176,14 @@
                   @if (hintClaseGrabadaSinOposicion()) {
                     <div class="field field--full">
                       <small
-                        class="p-error"
+                        class="p-text-secondary"
                         data-testid="curso-edit-clase-grabada-hint"
                       >
-                        <i class="pi pi-exclamation-triangle"></i>
-                        Sin oposición seleccionada, ningún alumno verá esta
-                        clase grabada. Añade al menos una oposición en
-                        "Relevancia".
+                        <i class="pi pi-info-circle"></i>
+                        Sin oposición seleccionada, la clase grabada será
+                        visible para <strong>todos los suscritos</strong>
+                        (equivale a "General"). Selecciona una oposición
+                        en "Relevancia" si quieres restringirla.
                       </small>
                     </div>
                   }

@@ -241,9 +241,11 @@ describe('CursoAdminEditComponent', () => {
     expect(component.metadataForm.controls.wooProductId.value).toBeNull();
   });
 
-  it('hint CM2: clase grabada con relevancia vacía avisa que nadie la verá', () => {
+  it('hint informativo: clase grabada con relevancia=[] muestra aviso (visible para todos los suscritos)', () => {
     component.updateRelevancia([]);
     component.onEsClaseGrabadaChange(true);
+    // relevancia=[] = GENERAL: el hint ahora informa de visibilidad universal,
+    // no de que "nadie la verá" (esa semántica quedó unificada en OposicionFilterService)
     expect(component.hintClaseGrabadaSinOposicion()).toBe(true);
   });
 
