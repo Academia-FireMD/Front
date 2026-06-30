@@ -7,8 +7,10 @@ import { TestBed } from '@angular/core/testing';
 import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../../environments/environment';
 import {
+  CalleCiudad,
   CallesZonaResponse,
   Ciudad,
+  GeocodeBuscarItem,
   GenerarExamenResponse,
   RecorridoLibreResponse,
   RecorridoResponse,
@@ -289,5 +291,76 @@ describe('CallejeroService', () => {
       calles: [],
       retos: [],
     } as GenerarExamenResponse);
+  });
+
+  // ── Nuevos endpoints v27 (T1, T4, T10) ───────────────────────────────────
+
+  it('GET /callejero/ciudades/:id/calles mapea response.calles y usa withCredentials', () => {
+    const calles: CalleCiudad[] = [
+      {
+        id: 1001,
+        nombre: 'Avenida del Puerto',
+        tipoVia: 'Avenida',
+        lat: 39.471,
+        lng: -0.362,
+        longitudM: 600,
+        parquesCobertura: ['Campanar'],
+      },
+    ];
+    let received: CalleCiudad[] | undefined;
+
+    service.listarCallesCiudad(1).subscribe((r) => (received = r));
+
+    const req = httpMock.expectOne(`${API}/callejero/ciudades/1/calles`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ calles });
+
+    expect(received).toEqual(calles);
+    expect(received?.[0].longitudM).toBe(600);
+  });
+
+  it('GET /callejero/geocode/reverse devuelve la dirección aproximada', () => {
+    let received: { direccion: string } | undefined;
+
+    service.geocodeReverse(39.471, -0.362).subscribe((r) => (received = r));
+
+    const req = httpMock.expectOne(
+      `${API}/callejero/geocode/reverse?lat=39.471&lng=-0.362`,
+    );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ direccion: 'Avenida del Puerto 10, València' });
+
+    expect(received?.direccion).toBe('Avenida del Puerto 10, València');
+  });
+
+  it('GET /callejero/geocode/buscar mapea response.items y codifica la query', () => {
+    const items: GeocodeBuscarItem[] = [
+      { nombre: 'Avenida del Puerto 12, València', lat: 39.471, lng: -0.362 },
+    ];
+    let received: GeocodeBuscarItem[] | undefined;
+
+    service.geocodeBuscar('Puerto 12').subscribe((r) => (received = r));
+
+    const req = httpMock.expectOne(
+      `${API}/callejero/geocode/buscar?q=Puerto%2012&limit=5`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ items });
+
+    expect(received).toEqual(items);
+    expect(received?.[0].nombre).toBe('Avenida del Puerto 12, València');
+  });
+
+  it('GET /callejero/geocode/buscar respeta el limit personalizado', () => {
+    service.geocodeBuscar('Colón', 10).subscribe();
+
+    const req = httpMock.expectOne(
+      `${API}/callejero/geocode/buscar?q=Col%C3%B3n&limit=10`,
+    );
+    req.flush({ items: [] });
+
+    expect(req.request.url).toContain('limit=10');
   });
 });

@@ -129,6 +129,41 @@
             }
           </div>
         }
+
+        <!-- Sección "Calles y avenidas" de la ciudad (T4): ~1727 entradas,
+             arranca colapsada, limita a 300 cuando no hay filtro de búsqueda. -->
+        @if (callesCiudad().length > 0) {
+          <div
+            class="cj-lista-cat"
+            [class.cj-lista-cat--plegada]="colapsadas().has('calles-ciudad')"
+            data-testid="cj-lista-calles-ciudad"
+          >
+            <h4
+              (click)="toggleColapso('calles-ciudad')"
+              role="button"
+              tabindex="0"
+            >
+              <span class="cj-dot" [style.background]="CATS.calle.color"></span>
+              Calles y avenidas
+              <span class="cj-tgl__num">({{ callesCiudad().length }})</span>
+              <span class="cj-lista-cat__chevron" aria-hidden="true">{{
+                colapsadas().has("calles-ciudad") ? "▸" : "▾"
+              }}</span>
+            </h4>
+            @if (!colapsadas().has("calles-ciudad")) {
+              <ul>
+                @for (c of listaCallesEstudio(); track c.id) {
+                  <li (click)="irACalleCiudad(c)">{{ c.nombre }}</li>
+                }
+              </ul>
+              @if (!buscar() && callesCiudad().length > 300) {
+                <p class="cj-lista-cat__mas">
+                  …y {{ callesCiudad().length - 300 }} más, busca para filtrar
+                </p>
+              }
+            }
+          </div>
+        }
       </div>
     </div>
 
@@ -200,8 +235,9 @@
               [ngModel]="cfgSoloZonas()"
               (ngModelChange)="onCfgSoloZonasChange($event)"
             />
-            <span class="cj-tgl__lbl"
-              >Solo preguntas de parque y coopera (tipo test)</span
+            <span class="cj-tgl__lbl">Solo preguntas de parque y coopera</span>
+            <span class="cj-tgl__num"
+              >(tipo test, sin localizar en el mapa)</span
             >
           </label>
           <label class="cj-tgl">
@@ -212,6 +248,10 @@
               [disabled]="cfgSoloZonas()"
             />
             <span class="cj-tgl__lbl">Incluir preguntas de zona y coopera</span>
+            <span class="cj-tgl__num"
+              >(si lo desmarcas, las calles se preguntan localizándolas en el
+              mapa)</span
+            >
           </label>
         </div>
         <button
@@ -257,6 +297,7 @@
         [resultado]="recExamenResultado()"
         [dificultad]="dificultadRec()"
         [parques]="parquesUnicos()"
+        [geocodeSugerencias]="geocodeSugerencias()"
         (buscarDestino)="onBuscarDestino($event)"
         (buscarDireccionLibre)="onBuscarDireccionLibre($event)"
         (cambiarDificultad)="dificultadRec.set($event)"
@@ -265,6 +306,10 @@
         (siguienteOtraCalle)="onSiguienteRecorrido()"
         (minimizarToggle)="onMinimizarRecorrido($event)"
         (modoCambiado)="onModoRecorridoCambiado($event)"
+        (geocodeBuscarChange)="onGeocodeBuscarLibre($event)"
+        (geocodeSugerenciaSeleccionada)="
+          onGeocodeSugerenciaSeleccionada($event)
+        "
       ></app-recorrido-pane>
     </div>
   </aside>
@@ -389,6 +434,12 @@
                 <div class="cj-campo__v" [class.peque]="campo.peque">
                   {{ campo.v }}
                 </div>
+              </div>
+            }
+            @if (fichaDireccion()) {
+              <div class="cj-campo" data-testid="cj-ficha-direccion">
+                <div class="cj-campo__k">dirección</div>
+                <div class="cj-campo__v peque">{{ fichaDireccion() }}</div>
               </div>
             }
           </div>

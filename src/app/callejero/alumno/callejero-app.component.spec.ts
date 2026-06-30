@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import {
+  CalleCiudad,
   Calle,
   Ciudad,
   PoiCiudad,
@@ -120,6 +121,37 @@ const CALLES: Calle[] = [
   },
 ];
 
+/** Calles de ciudad con punto medio + longitud (T4). */
+const CALLES_CIUDAD: CalleCiudad[] = [
+  {
+    id: 1001,
+    nombre: 'Avenida del Puerto',
+    tipoVia: 'Avenida',
+    lat: 39.471,
+    lng: -0.362,
+    longitudM: 600,
+    parquesCobertura: ['Campanar'],
+  },
+  {
+    id: 1002,
+    nombre: 'Calle Colón',
+    tipoVia: 'Calle',
+    lat: 39.469,
+    lng: -0.371,
+    longitudM: 200,
+    parquesCobertura: ['Centro'],
+  },
+  {
+    id: 1003,
+    nombre: 'Calle Corta',
+    tipoVia: 'Calle',
+    lat: 39.465,
+    lng: -0.368,
+    longitudM: 80,
+    parquesCobertura: ['Centro'],
+  },
+];
+
 const RECORRIDO: RecorridoResponse = {
   polyline: {
     type: 'LineString',
@@ -155,6 +187,15 @@ function mockService() {
     listarZonas: jest.fn().mockReturnValue(of(ZONAS)),
     listarPoisCiudad: jest.fn().mockReturnValue(of(POIS)),
     listarCalles: jest.fn().mockReturnValue(of({ calles: CALLES, pois: [] })),
+    listarCallesCiudad: jest.fn().mockReturnValue(of([])),
+    geocodeReverse: jest
+      .fn()
+      .mockReturnValue(of({ direccion: 'Calle Test 1, València' })),
+    geocodeBuscar: jest
+      .fn()
+      .mockReturnValue(
+        of([{ nombre: 'Av. del Puerto 12, València', lat: 39.47, lng: -0.36 }]),
+      ),
     getRecorrido: jest.fn().mockReturnValue(of(RECORRIDO)),
     getRecorridoLibre: jest.fn().mockReturnValue(of(RECORRIDO_LIBRE)),
     generarExamenRecorrido: jest.fn().mockReturnValue(
@@ -537,6 +578,93 @@ describe('CallejeroAppComponent', () => {
       expect(component.colapsadas().has('hospital')).toBe(true);
       component.toggleColapso('hospital');
       expect(component.colapsadas().has('hospital')).toBe(false);
+    });
+  });
+
+  // ── callesCiudad — T1 (carga), T2 (estudio/dedup), T3 (examen), T6 (cfgSoloZonas) ──
+
+  describe('callesCiudad (T1/T3/T6)', () => {
+    it('vialesPorDif FACIL solo devuelve calles con longitudM ≥ 450 m', () => {
+      component.callesCiudad.set(CALLES_CIUDAD);
+      const result = component.vialesPorDif('FACIL');
+      expect(result.length).toBe(1);
+      expect(result[0].nombre).toBe('Avenida del Puerto');
+    });
+
+    it('vialesPorDif MEDIO devuelve calles con longitudM ≥ 150 m', () => {
+      component.callesCiudad.set(CALLES_CIUDAD);
+      const result = component.vialesPorDif('MEDIO');
+      expect(result.length).toBe(2);
+      const nombres = result.map((c) => c.nombre);
+      expect(nombres).toContain('Avenida del Puerto');
+      expect(nombres).toContain('Calle Colón');
+    });
+
+    it('vialesPorDif DIFICIL devuelve todas las calles sin filtro de longitud', () => {
+      component.callesCiudad.set(CALLES_CIUDAD);
+      const result = component.vialesPorDif('DIFICIL');
+      expect(result.length).toBe(3);
+    });
+
+    it('empezarExamen DIFICIL incluye candidatos de callesCiudad (categoria calle)', () => {
+      component.callesCiudad.set(CALLES_CIUDAD); // 3 calles
+      component.dificultadExamen.set('DIFICIL');
+      component.cfgN.set(10);
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const calleRetos = (component as any).retos.filter(
+        (r: any) => r.poi.categoria === 'calle',
+      );
+      expect(calleRetos.length).toBeGreaterThan(0);
+    });
+
+    it('empezarExamen MEDIO incluye calles con longitudM ≥ 150 m en candidatos', () => {
+      component.callesCiudad.set(CALLES_CIUDAD);
+      component.dificultadExamen.set('MEDIO');
+      component.cfgN.set(10);
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const calleRetos = (component as any).retos.filter(
+        (r: any) => r.poi.categoria === 'calle',
+      );
+      // MEDIO devuelve longitudM ≥ 150 → Avenida del Puerto (600) + Calle Colón (200)
+      expect(calleRetos.length).toBeGreaterThan(0);
+      const nombres = calleRetos.map((r: any) => r.poi.nombre);
+      expect(nombres).not.toContain('Calle Corta'); // longitudM=80 → excluida
+    });
+
+    it('empezarExamen con cfgSoloZonas excluye candidatos de callesCiudad', () => {
+      component.callesCiudad.set(CALLES_CIUDAD);
+      component.dificultadExamen.set('DIFICIL');
+      component.cfgSoloZonas.set(true);
+      component.cfgN.set(10);
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const calleRetos = (component as any).retos.filter(
+        (r: any) => r.poi.categoria === 'calle',
+      );
+      expect(calleRetos.length).toBe(0);
+    });
+  });
+
+  describe('listasEstudio dedup (T2)', () => {
+    it('excluye del grupo calle los POIs cuyo nombre coincide con una callesCiudad', () => {
+      // POIS[5] = 'Calle Colón' (categoria:'calle'); CALLES_CIUDAD[1] = 'Calle Colón'
+      component.callesCiudad.set(CALLES_CIUDAD);
+      const grupos = component.listasEstudio();
+      const calleGrupo = grupos.find((g) => g.cat === 'calle');
+      // 'Calle Colón' del POI se elimina por dedup; el único POI calle queda vacío
+      expect(calleGrupo).toBeUndefined();
+    });
+
+    it('sin callesCiudad, el grupo calle muestra el POI normalmente', () => {
+      component.callesCiudad.set([]);
+      const grupos = component.listasEstudio();
+      const calleGrupo = grupos.find((g) => g.cat === 'calle');
+      expect(calleGrupo).toBeDefined();
+      expect(calleGrupo!.items.some((p) => p.nombre === 'Calle Colón')).toBe(
+        true,
+      );
     });
   });
 });

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  OnDestroy,
   computed,
   effect,
   input,
@@ -9,6 +10,8 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { debounceTime, takeUntil } from 'rxjs/operators';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import type {
   AutoCompleteCompleteEvent,
@@ -17,6 +20,7 @@ import type {
 import {
   Calle,
   DificultadCallejero,
+  GeocodeBuscarItem,
   RecorridoLibreErrorCode,
   RecorridoResponse,
 } from '../models/callejero.model';
@@ -98,7 +102,7 @@ export interface RecorridoResultadoView {
     '[class.cj-recorrido-pane--min]': 'minimizado()',
   },
 })
-export class RecorridoPaneComponent {
+export class RecorridoPaneComponent implements OnDestroy {
   // ---- Inputs (datos del padre) ----
   /** Catálogo de calles para el autocomplete (segmentado por oposición en BD). */
   readonly calles = input<Calle[]>([]);
@@ -125,12 +129,25 @@ export class RecorridoPaneComponent {
   readonly dificultad = input<DificultadCallejero>('MEDIO');
   /** Parques disponibles para el examen de recorridos (derivados de zonas). */
   readonly parques = input<string[]>([]);
+  /**
+   * Sugerencias OSM para el autocomplete de dirección libre (T10). El padre
+   * las carga vía `geocodeBuscar` al recibir `geocodeBuscarChange`.
+   */
+  readonly geocodeSugerencias = input<GeocodeBuscarItem[]>([]);
 
   // ---- Outputs (intención hacia el padre) ----
   /** El alumno eligió una calle-destino del autocomplete (modo `calle-bd`). */
   readonly buscarDestino = output<number>();
   /** El alumno pidió trazar a una dirección de texto libre (modo `direccion-libre`, v27). */
   readonly buscarDireccionLibre = output<string>();
+  /**
+   * El alumno tecleó en el input de dirección libre (con debounce 300ms, T10).
+   * El padre llama a geocodeBuscar y pasa los resultados via `geocodeSugerencias`.
+   * Emite cadena vacía cuando el input queda vacío (el padre debe limpiar sugerencias).
+   */
+  readonly geocodeBuscarChange = output<string>();
+  /** El alumno seleccionó una sugerencia OSM (T10). */
+  readonly geocodeSugerenciaSeleccionada = output<GeocodeBuscarItem>();
   /** El alumno cambió la dificultad del examen de recorridos. */
   readonly cambiarDificultad = output<DificultadCallejero>();
   /** El alumno pulsó "Examen de recorridos". Emite los parques seleccionados. */
@@ -168,6 +185,10 @@ export class RecorridoPaneComponent {
     { valor: 'DIFICIL', label: 'Difícil' },
   ];
 
+  /** Subject para debounce del geocoder (T10 — dirección libre). */
+  private readonly geocoderSubject = new Subject<string>();
+  private readonly destroy$ = new Subject<void>();
+
   constructor() {
     effect(
       () => {
@@ -176,6 +197,16 @@ export class RecorridoPaneComponent {
       },
       { allowSignalWrites: true },
     );
+
+    // T10: debounce 300ms para el autocomplete de dirección libre.
+    this.geocoderSubject
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .subscribe((q) => this.geocodeBuscarChange.emit(q));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /** ¿Hay un examen de recorridos en curso? */
@@ -218,6 +249,26 @@ export class RecorridoPaneComponent {
   onTrazarLibre(): void {
     const q = this.textoLibre().trim();
     if (q) this.buscarDireccionLibre.emit(q);
+  }
+
+  /**
+   * Maneja el cambio del input de dirección libre (T10). Actualiza el signal
+   * local y pone en el Subject el texto para debounce → padre llama geocodeBuscar.
+   * Si el texto queda vacío, emite '' inmediatamente (sin debounce) para que el
+   * padre limpie las sugerencias al instante.
+   */
+  onTextoLibreChange(q: string): void {
+    this.textoLibre.set(q);
+    if (!q.trim()) {
+      this.geocodeBuscarChange.emit('');
+    } else {
+      this.geocoderSubject.next(q.trim());
+    }
+  }
+
+  /** El alumno eligió una sugerencia OSM (T10). */
+  onSugerenciaSeleccionada(item: GeocodeBuscarItem): void {
+    this.geocodeSugerenciaSeleccionada.emit(item);
   }
 
   toggleMinimizar(): void {

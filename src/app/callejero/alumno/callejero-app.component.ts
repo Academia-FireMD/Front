@@ -16,10 +16,12 @@ import * as L from 'leaflet';
 import { environment } from '../../../environments/environment';
 import { CallejeroService } from '../services/callejero.service';
 import {
+  CalleCiudad,
   Calle,
   Ciudad,
   GenerarExamenResponse,
   DificultadCallejero,
+  GeocodeBuscarItem,
   LeaderboardResponse,
   OpcionParqueExamen,
   PoiCategoria,
@@ -147,6 +149,12 @@ interface ResultadoFila {
   detalle?: string;
 }
 
+/** Normaliza un nombre de calle para comparación dedup (sin acentos, minúsculas). */
+function normalizarNombreCalle(s: string): string {
+  // eslint-disable-next-line no-misleading-character-class
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
 @Component({
   selector: 'app-callejero-app',
   standalone: true,
@@ -177,6 +185,11 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   readonly ciudadSel = signal<Ciudad | null>(null);
   readonly zonas = signal<Zona[]>([]);
   readonly pois = signal<PoiCiudad[]>([]);
+  /**
+   * Todas las calles de la ciudad con punto medio + longitud (T4).
+   * Se carga en paralelo con los POIs al seleccionar ciudad; si falla queda vacío.
+   */
+  readonly callesCiudad = signal<CalleCiudad[]>([]);
   readonly cargando = signal<boolean>(true);
   readonly cargaError = signal<boolean>(false);
   readonly tab = signal<TabKey>('mapa');
@@ -217,25 +230,61 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   // ---- Ficha ----
   readonly ficha = signal<FichaEstado | null>(null);
   readonly fichaMinimizada = signal<boolean>(false);
+  /** Dirección aproximada del punto de la ficha (cargada async via geocodeReverse). */
+  readonly fichaDireccion = signal<string | null>(null);
 
   // ---- Estudio ----
   readonly buscar = signal<string>('');
-  /** Categorías plegadas en el modo Estudio (click en la cabecera, como el HTML de Raúl). */
-  readonly colapsadas = signal<Set<PoiCategoria>>(new Set<PoiCategoria>());
-  toggleColapso(c: PoiCategoria): void {
+  /**
+   * Grupos plegados en el modo Estudio: categorías PoiCategoria + 'calles-ciudad'
+   * para la sección de calles de ciudad (arranca colapsada por defecto).
+   */
+  readonly colapsadas = signal<Set<string>>(new Set(['calles-ciudad']));
+  toggleColapso(c: string): void {
     const next = new Set(this.colapsadas());
     next.has(c) ? next.delete(c) : next.add(c);
     this.colapsadas.set(next);
   }
   readonly listasEstudio = computed(() => {
     const f = this.buscar().trim().toLowerCase();
+    // Nombres normalizados de calles de ciudad para dedup (T4): si el POI 'calle'
+    // tiene el mismo nombre normalizado que una entrada de callesCiudad, la prioriza la de ciudad.
+    const nombresCD = new Set(
+      this.callesCiudad().map((c) => normalizarNombreCalle(c.nombre)),
+    );
     return CAT_ORDER.map((c) => {
       let items = this.pois().filter((p) => p.categoria === c);
+      // Dedup: para la categoría 'calle', excluir POIs que ya están en callesCiudad.
+      if (c === 'calle') {
+        items = items.filter(
+          (p) => !nombresCD.has(normalizarNombreCalle(p.nombre)),
+        );
+      }
       if (f) items = items.filter((p) => p.nombre.toLowerCase().includes(f));
       items = [...items].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
       return { cat: c, info: CATS[c], items };
     }).filter((g) => g.items.length > 0);
   });
+
+  /**
+   * Lista de calles de ciudad para el Estudio (T4). Ordenadas por nombre;
+   * cuando no hay filtro de búsqueda se limita a 300 ítems para no pintar 1727 <li>.
+   */
+  readonly listaCallesEstudio = computed<CalleCiudad[]>(() => {
+    const f = this.buscar().trim().toLowerCase();
+    let items = [...this.callesCiudad()].sort((a, b) =>
+      a.nombre.localeCompare(b.nombre, 'es'),
+    );
+    if (f) {
+      items = items.filter((c) => c.nombre.toLowerCase().includes(f));
+    } else {
+      items = items.slice(0, 300);
+    }
+    return items;
+  });
+
+  // ---- Geocode sugerencias (T10 — autocomplete OSM en Recorridos) ----
+  readonly geocodeSugerencias = signal<GeocodeBuscarItem[]>([]);
 
   // ---- Examen (config) ----
   readonly examCats = signal<Record<PoiCategoria, boolean>>({
@@ -246,7 +295,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     lugar: true,
     calle: true,
   });
-  readonly cfgN = signal<number>(15);
+  readonly cfgN = signal<number>(10);
   readonly cfgTol = signal<number>(300);
   readonly cfgMudo = signal<boolean>(true);
   readonly cfgZonas = signal<boolean>(true);
@@ -414,6 +463,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.cerrarFicha();
     this.resetRecorrido();
     this.recCalles.set([]);
+    this.callesCiudad.set([]);
     this.service.listarZonas(ciudad.id).subscribe({
       next: (zonas) => {
         this.zonas.set(zonas);
@@ -423,6 +473,11 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
         this.parquesSeleccion.set(new Set(uniqueParques));
         this.safe(() => this.pintarZonas(zonas));
         this.cargarCallesAutocomplete(zonas);
+        // T4: Carga masiva de calles de ciudad (fire-and-forget, no bloquea cargando).
+        this.service.listarCallesCiudad(ciudad.id).subscribe({
+          next: (calles) => this.callesCiudad.set(calles),
+          error: () => this.callesCiudad.set([]),
+        });
         this.service.listarPoisCiudad(ciudad.id).subscribe({
           next: (pois) => {
             this.pois.set(pois);
@@ -652,6 +707,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     const z = this.zonaEn(latlng.lat, latlng.lng);
     this.ponPin(latlng.lat, latlng.lng);
     this.fichaMinimizada.set(false);
+    this.fichaDireccion.set(null);
     this.ficha.set({
       titulo: z ? z.nombre : 'Punto consultado',
       sub: z ? 'Zonificación por parques' : 'Sin zona asignada',
@@ -663,11 +719,14 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
         },
       ]),
     });
+    // T4: dirección aproximada async via geocodeReverse (fallo silencioso).
+    this.geocodeReverseAsync(latlng.lat, latlng.lng);
   }
   private fichaPOI(p: PoiCiudad): void {
     const z = this.zonaEn(p.lat, p.lng);
     this.ponPin(p.lat, p.lng);
     this.fichaMinimizada.set(false);
+    this.fichaDireccion.set(null);
     this.ficha.set({
       titulo: p.nombre,
       sub: CATS[p.categoria]?.label ?? 'Ficha del lugar',
@@ -680,6 +739,23 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       ]),
       centrar: { lat: p.lat, lng: p.lng },
     });
+    // T4: dirección aproximada async via geocodeReverse (fallo silencioso).
+    this.geocodeReverseAsync(p.lat, p.lng);
+  }
+
+  /**
+   * Carga la dirección aproximada de un punto async (T4). Actualiza
+   * `fichaDireccion` cuando llega la respuesta; fallo silencioso (el campo
+   * simplemente no aparece en la ficha).
+   */
+  private geocodeReverseAsync(lat: number, lng: number): void {
+    this.service.geocodeReverse(lat, lng).subscribe({
+      next: (r) => {
+        // Solo actualizar si la ficha sigue abierta (el usuario puede haberla cerrado).
+        if (this.ficha()) this.fichaDireccion.set(r.direccion);
+      },
+      error: () => {}, // Fallo silencioso.
+    });
   }
   toggleFichaMinimizada(): void {
     this.fichaMinimizada.update((v) => !v);
@@ -688,6 +764,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   cerrarFicha(): void {
     this.ficha.set(null);
     this.fichaMinimizada.set(false);
+    this.fichaDireccion.set(null);
     this.pinTmp?.remove();
     this.pinTmp = undefined;
   }
@@ -711,6 +788,38 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     if (window.innerWidth <= 820) this.sidebarAbierto.set(false);
   }
 
+  /** Navega y abre ficha para una calle de la lista de ciudad (T4). */
+  irACalleCiudad(c: CalleCiudad): void {
+    this.safe(() => this.map?.flyTo([c.lat, c.lng], 16));
+    const z = this.zonaEn(c.lat, c.lng);
+    this.ponPin(c.lat, c.lng);
+    this.fichaMinimizada.set(false);
+    this.fichaDireccion.set(null);
+    this.ficha.set({
+      titulo: c.nombre,
+      sub: CATS.calle.label,
+      campos: this.filasZona(z).concat(
+        [
+          { k: 'tipo de vía', v: c.tipoVia },
+          { k: 'longitud', v: `${Math.round(c.longitudM)} m`, peque: true },
+          {
+            k: 'parques cobertura',
+            v: c.parquesCobertura.join(', ') || '—',
+            peque: true,
+          },
+          {
+            k: 'coordenadas',
+            v: `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`,
+            peque: true,
+          },
+        ].filter((f) => f.v),
+      ),
+      centrar: { lat: c.lat, lng: c.lng },
+    });
+    this.geocodeReverseAsync(c.lat, c.lng);
+    if (window.innerWidth <= 820) this.sidebarAbierto.set(false);
+  }
+
   // ============ Examen ============
 
   toggleExamCat(cat: PoiCategoria, on: boolean): void {
@@ -729,12 +838,28 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     if (dif === 'FACIL') return base;
     return [...base, 'lugar']; // MEDIO y DIFICIL añaden 'lugar'
   }
+  /**
+   * Filtra calles de ciudad por dificultad para el examen (paridad v27, T4):
+   *  - FACIL: longitudM >= 450 (calles largas).
+   *  - MEDIO: longitudM >= 150 (largas + medias).
+   *  - DIFICIL: todas las calles.
+   */
+  vialesPorDif(dif: DificultadCallejero): CalleCiudad[] {
+    const calles = this.callesCiudad();
+    switch (dif) {
+      case 'FACIL':
+        return calles.filter((c) => c.longitudM >= 450);
+      case 'MEDIO':
+        return calles.filter((c) => c.longitudM >= 150);
+      case 'DIFICIL':
+        return calles;
+    }
+  }
   onCfgSoloZonasChange(on: boolean): void {
     this.cfgSoloZonas.set(on);
     if (on) this.cfgZonas.set(true);
   }
   empezarExamen(): void {
-    // TODO: integrar filtro de calles por longitud cuando llegue el masivo (T4)
     const cats = this.catsPorDif(this.dificultadExamen());
     const selParques = this.parquesSeleccion();
     const allParques = this.parquesUnicos();
@@ -754,6 +879,30 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     // Si cfgSoloZonas, solo candidatos que tienen zona asignada
     if (soloZonas) {
       candidatos = candidatos.filter((p) => this.zonaEn(p.lat, p.lng) !== null);
+    }
+
+    // T4: candidatos de CALLE desde callesCiudad (paridad v27).
+    // Solo si NO es modo soloZonas (tipo test, sin localizar en el mapa).
+    // TODO: preguntas coopera de calle via parquesCobertura (follow-up).
+    if (!soloZonas) {
+      let callesCandidatas = this.vialesPorDif(this.dificultadExamen());
+      // Filtro por parque: la calle entra si algún parque de parquesCobertura está seleccionado.
+      if (!todasMarcadas) {
+        callesCandidatas = callesCandidatas.filter((c) =>
+          c.parquesCobertura.some((p) => selParques.has(p)),
+        );
+      }
+      // Convertir a PoiCiudad sintético para homogeneizar con el resto de candidatos.
+      const poisCalle: PoiCiudad[] = callesCandidatas.map((c) => ({
+        id: c.id,
+        nombre: c.nombre,
+        tipo: 'OTRO' as const,
+        categoria: 'calle' as const,
+        lat: c.lat,
+        lng: c.lng,
+        zonaId: null,
+      }));
+      candidatos = [...candidatos, ...poisCalle];
     }
 
     if (candidatos.length < 4) {
@@ -1514,5 +1663,32 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   /** El alumno minimizó/restauró el pane de recorridos (no necesita reacción). */
   onMinimizarRecorrido(_min: boolean): void {
     // El estado lo gobierna el propio pane; el padre no necesita reaccionar.
+  }
+
+  // ============ Geocode autocomplete (T10 — dirección libre en Recorridos) ============
+
+  /**
+   * El alumno tecleó en el input de dirección libre (debounce gestionado en el pane).
+   * Si `q` está vacío, limpia las sugerencias; si no, llama a geocodeBuscar y
+   * actualiza el signal que el pane recibe como input.
+   */
+  onGeocodeBuscarLibre(q: string): void {
+    if (!q) {
+      this.geocodeSugerencias.set([]);
+      return;
+    }
+    this.service.geocodeBuscar(q).subscribe({
+      next: (items) => this.geocodeSugerencias.set(items),
+      error: () => this.geocodeSugerencias.set([]),
+    });
+  }
+
+  /**
+   * El alumno eligió una sugerencia OSM en el pane. Limpia las sugerencias y
+   * traza el recorrido reutilizando el flujo de dirección libre (T10).
+   */
+  onGeocodeSugerenciaSeleccionada(item: GeocodeBuscarItem): void {
+    this.geocodeSugerencias.set([]);
+    this.onBuscarDireccionLibre(item.nombre);
   }
 }

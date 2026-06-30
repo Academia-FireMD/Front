@@ -304,6 +304,48 @@ export interface HistorialExamenResponse {
   pageSize: number;
 }
 
+// ============================================================================
+// Calles de ciudad y geocoding (Callejero v27 — paridad T4–T10).
+// ============================================================================
+
+/**
+ * Calle de la ciudad con punto medio (lat/lng), longitud en metros y parques
+ * de cobertura — respuesta de `GET /callejero/ciudades/:id/calles`.
+ */
+export interface CalleCiudad {
+  id: number;
+  nombre: string;
+  tipoVia: string;
+  lat: number;
+  lng: number;
+  /** Longitud de la calle en metros (para filtro de dificultad). */
+  longitudM: number;
+  /** Parques de bomberos cuya zona cubre esta calle. */
+  parquesCobertura: string[];
+}
+
+/** Respuesta de `GET /callejero/ciudades/:id/calles`. */
+export interface CalleCiudadListResponse {
+  calles: CalleCiudad[];
+}
+
+/** Respuesta de `GET /callejero/geocode/reverse?lat=&lng=`. */
+export interface GeocodeReverseResponse {
+  direccion: string;
+}
+
+/** Un ítem de sugerencia de `GET /callejero/geocode/buscar?q=&limit=`. */
+export interface GeocodeBuscarItem {
+  nombre: string;
+  lat: number;
+  lng: number;
+}
+
+/** Respuesta de `GET /callejero/geocode/buscar`. */
+export interface GeocodeBuscarResponse {
+  items: GeocodeBuscarItem[];
+}
+
 /** Una entrada del leaderboard (mejor intento de un alumno). */
 export interface LeaderboardEntry {
   rank: number;

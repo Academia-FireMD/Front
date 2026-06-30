@@ -1,13 +1,18 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import {
+  CalleCiudad,
+  CalleCiudadListResponse,
   CallesZonaResponse,
   Ciudad,
   DificultadCallejero,
   GenerarExamenResponse,
+  GeocodeBuscarItem,
+  GeocodeBuscarResponse,
+  GeocodeReverseResponse,
   HistorialExamenResponse,
   LeaderboardResponse,
   PoiCiudad,
@@ -48,6 +53,47 @@ export class CallejeroService extends ApiBaseService {
   /** GET /callejero/ciudades/:id/pois — todos los POIs (todas las categorías). */
   listarPoisCiudad(ciudadId: number): Observable<PoiCiudad[]> {
     return this.get(`/ciudades/${ciudadId}/pois`) as Observable<PoiCiudad[]>;
+  }
+
+  /**
+   * GET /callejero/ciudades/:id/calles — todas las calles de la ciudad con
+   * punto medio, longitud en metros y parques de cobertura (~1727 para Valencia).
+   * Usa `ignoreError=true` para evitar toast si falla; el componente degrada
+   * graciosamente a `callesCiudad=[]`.
+   */
+  listarCallesCiudad(ciudadId: number): Observable<CalleCiudad[]> {
+    return (
+      this.get(
+        `/ciudades/${ciudadId}/calles`,
+        true,
+      ) as Observable<CalleCiudadListResponse>
+    ).pipe(map((r) => r.calles));
+  }
+
+  /**
+   * GET /callejero/geocode/reverse?lat=&lng= — dirección aproximada a partir
+   * de coordenadas (se usa en la ficha de punto). `ignoreError=true` para
+   * degradar silenciosamente si el servicio no está disponible.
+   */
+  geocodeReverse(lat: number, lng: number): Observable<GeocodeReverseResponse> {
+    return this.get(
+      `/geocode/reverse?lat=${lat}&lng=${lng}`,
+      true,
+    ) as Observable<GeocodeReverseResponse>;
+  }
+
+  /**
+   * GET /callejero/geocode/buscar?q=&limit= — sugerencias OSM para el
+   * autocomplete de dirección libre (Recorridos). `ignoreError=true` para
+   * degradar a lista vacía si falla.
+   */
+  geocodeBuscar(q: string, limit = 5): Observable<GeocodeBuscarItem[]> {
+    return (
+      this.get(
+        `/geocode/buscar?q=${encodeURIComponent(q)}&limit=${limit}`,
+        true,
+      ) as Observable<GeocodeBuscarResponse>
+    ).pipe(map((r) => r.items));
   }
 
   /** POST /callejero/examen/resultado — persiste un examen estilo Raúl (sin timer). */

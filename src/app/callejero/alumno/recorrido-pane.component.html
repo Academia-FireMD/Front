@@ -136,9 +136,19 @@
               autocomplete="off"
               data-testid="cj-rec-libre-input"
               [ngModel]="textoLibre()"
-              (ngModelChange)="textoLibre.set($event)"
+              (ngModelChange)="onTextoLibreChange($event)"
               (keyup.enter)="onTrazarLibre()"
             />
+            <!-- T10: Sugerencias OSM (geocode/buscar, debounce 300ms) -->
+            @if (geocodeSugerencias().length > 0) {
+              <ul class="cj-rec__sugerencias" data-testid="cj-rec-sugerencias">
+                @for (item of geocodeSugerencias(); track item.nombre) {
+                  <li (click)="onSugerenciaSeleccionada(item)">
+                    {{ item.nombre }}
+                  </li>
+                }
+              </ul>
+            }
             <button
               type="button"
               class="cj-rec__btn cj-rec__btn--rojo"
