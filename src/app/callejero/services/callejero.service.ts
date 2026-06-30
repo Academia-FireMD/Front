@@ -6,6 +6,8 @@ import { ApiBaseService } from '../../services/api-base.service';
 import {
   CalleCiudad,
   CalleCiudadListResponse,
+  CalleModificada,
+  CallesModificadasResponse,
   CallesZonaResponse,
   Ciudad,
   DificultadCallejero,
@@ -94,6 +96,20 @@ export class CallejeroService extends ApiBaseService {
         true,
       ) as Observable<GeocodeBuscarResponse>
     ).pipe(map((r) => r.items));
+  }
+
+  /**
+   * GET /callejero/ciudades/:id/calles-modificadas — calles renombradas en 2017.
+   * `ignoreError=true`: si el endpoint no existe todavía (backend en paralelo),
+   * el front degrada silenciosamente a lista vacía.
+   */
+  listarCallesModificadas(ciudadId: number): Observable<CalleModificada[]> {
+    return (
+      this.get(
+        `/ciudades/${ciudadId}/calles-modificadas`,
+        true,
+      ) as Observable<CallesModificadasResponse>
+    ).pipe(map((r) => r?.modificadas ?? []));
   }
 
   /** POST /callejero/examen/resultado — persiste un examen estilo Raúl (sin timer). */

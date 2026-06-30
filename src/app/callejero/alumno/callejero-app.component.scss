@@ -672,3 +672,53 @@
   padding: 3px 7px;
   border-radius: 6px;
 }
+
+/* ---------- CalleRapida: doble selector ---------- */
+.cj-qbar__subtit {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #bdb6ae;
+  margin-bottom: 2px;
+}
+.cj-cr-grupos {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cj-cr-grupo {
+  &__lbl {
+    font-family: var(--cond);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #bdb6ae;
+    margin-bottom: 5px;
+  }
+}
+.cj-qopts button.sel {
+  background: #2a5298;
+  border-color: #2a5298;
+}
+.cj-qopts button.neutral {
+  opacity: 0.55;
+}
+
+/* ---------- Estudio: item de calle modificada ---------- */
+.cj-mod-item {
+  &__nuevo {
+    font-weight: 600;
+  }
+  &__sep {
+    color: var(--gris);
+    font-size: 12px;
+  }
+  &__antiguo {
+    color: var(--gris);
+    font-size: 13px;
+    font-style: italic;
+  }
+}

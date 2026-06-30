@@ -17,6 +17,7 @@ import { environment } from '../../../environments/environment';
 import { CallejeroService } from '../services/callejero.service';
 import {
   CalleCiudad,
+  CalleModificada,
   Calle,
   Ciudad,
   GenerarExamenResponse,
@@ -117,7 +118,7 @@ const BASE_URLS: Record<string, { url: string; opts: L.TileLayerOptions }> = {
 
 type TabKey = 'mapa' | 'estudio' | 'examen' | 'recorridos';
 type BaseKey = 'calles' | 'mudo' | 'satelite';
-type TipoReto = 'localiza' | 'zona' | 'coopera';
+type TipoReto = 'localiza' | 'zona' | 'coopera' | 'calleRapida' | 'modificada';
 
 interface Reto {
   poi: PoiCiudad;
@@ -125,6 +126,13 @@ interface Reto {
   tipo: TipoReto;
   ok?: boolean;
   detalle?: string;
+  // calleRapida: parque y coopera correctos (ambos deben acertarse)
+  crParqueCorrecto?: string;
+  crCooperaCorrecto?: string;
+  // modificada: datos de la pregunta de renombrado 2017
+  modDado?: string;
+  modCorrecto?: string;
+  modDireccion?: 'antes' | 'ahora';
 }
 interface FeedbackEstado {
   ok: boolean;
@@ -214,6 +222,17 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     ),
   ]);
 
+  readonly cooperasUnicas = computed<string[]>(() => [
+    ...new Set(
+      this.zonas()
+        .filter((z) => z.coopera)
+        .map((z) => z.coopera!),
+    ),
+  ]);
+
+  /** Calles renombradas en 2017, cargadas en paralelo al seleccionar ciudad. */
+  readonly callesModificadas = signal<CalleModificada[]>([]);
+
   // ---- Capas (visibilidad) ----
   readonly baseActiva = signal<BaseKey>('calles');
   readonly capaZonasOn = signal<boolean>(true);
@@ -226,6 +245,8 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     lugar: true,
     calle: true,
   });
+  /** Capa de puntos de las ~1727 calles de la ciudad (off por defecto: rendimiento). */
+  readonly capaCallesCiudadOn = signal<boolean>(false);
 
   // ---- Ficha ----
   readonly ficha = signal<FichaEstado | null>(null);
@@ -237,9 +258,11 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   readonly buscar = signal<string>('');
   /**
    * Grupos plegados en el modo Estudio: categorías PoiCategoria + 'calles-ciudad'
-   * para la sección de calles de ciudad (arranca colapsada por defecto).
+   * + 'calles-modificadas' (arrancan colapsadas por defecto).
    */
-  readonly colapsadas = signal<Set<string>>(new Set(['calles-ciudad']));
+  readonly colapsadas = signal<Set<string>>(
+    new Set(['calles-ciudad', 'calles-modificadas']),
+  );
   toggleColapso(c: string): void {
     const next = new Set(this.colapsadas());
     next.has(c) ? next.delete(c) : next.add(c);
@@ -283,8 +306,31 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     return items;
   });
 
+  /**
+   * Calles renombradas (2017) para la sección de Estudio. Filtra por búsqueda
+   * en nombreNuevo y nombreAntiguo; sin límite (hay pocas decenas).
+   */
+  readonly listaModificadasEstudio = computed<CalleModificada[]>(() => {
+    const f = this.buscar().trim().toLowerCase();
+    const items = [...this.callesModificadas()].sort((a, b) =>
+      a.nombreNuevo.localeCompare(b.nombreNuevo, 'es'),
+    );
+    if (!f) return items;
+    return items.filter(
+      (m) =>
+        m.nombreNuevo.toLowerCase().includes(f) ||
+        m.nombreAntiguo.toLowerCase().includes(f),
+    );
+  });
+
   // ---- Geocode sugerencias (T10 — autocomplete OSM en Recorridos) ----
   readonly geocodeSugerencias = signal<GeocodeBuscarItem[]>([]);
+
+  // ---- CalleRapida: estado del doble selector (Parque + Coopera) ----
+  readonly crOpcionesParque = signal<string[]>([]);
+  readonly crOpcionesCoopera = signal<string[]>([]);
+  readonly crSelParque = signal<string | null>(null);
+  readonly crSelCoopera = signal<string | null>(null);
 
   // ---- Examen (config) ----
   readonly examCats = signal<Record<PoiCategoria, boolean>>({
@@ -369,6 +415,11 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   private pinTmp?: L.CircleMarker;
   /** Capa dedicada al recorrido (polilínea + marcadores estación/destino). */
   private capaRecorrido?: L.LayerGroup;
+  /**
+   * Capa de puntos de las ~1727 calles de la ciudad (circleMarkers ligeros).
+   * Se crea en initMapa pero NO se añade al mapa (off por defecto).
+   */
+  private capaCallesCiudad?: L.LayerGroup;
 
   // ---- Estado interno del examen de recorridos ----
   private recExamToken: string | null = null;
@@ -415,6 +466,8 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.capaExamen = L.layerGroup().addTo(map);
     this.capaRecorrido = L.layerGroup().addTo(map);
     for (const c of CAT_ORDER) this.capasCat[c] = L.layerGroup().addTo(map);
+    // Capa de puntos de calles ciudad (off por defecto, se activa por toggle)
+    this.capaCallesCiudad = L.layerGroup();
     map.on('click', (e: L.LeafletMouseEvent) => this.onMapClick(e));
     this.map = map;
   }
@@ -464,6 +517,8 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.resetRecorrido();
     this.recCalles.set([]);
     this.callesCiudad.set([]);
+    this.callesModificadas.set([]);
+    this.safe(() => this.capaCallesCiudad?.clearLayers());
     this.service.listarZonas(ciudad.id).subscribe({
       next: (zonas) => {
         this.zonas.set(zonas);
@@ -475,8 +530,16 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
         this.cargarCallesAutocomplete(zonas);
         // T4: Carga masiva de calles de ciudad (fire-and-forget, no bloquea cargando).
         this.service.listarCallesCiudad(ciudad.id).subscribe({
-          next: (calles) => this.callesCiudad.set(calles),
+          next: (calles) => {
+            this.callesCiudad.set(calles);
+            this.safe(() => this.montarCapaCallesCiudad(calles));
+          },
           error: () => this.callesCiudad.set([]),
+        });
+        // Calles modificadas 2017 (fire-and-forget, error → []).
+        this.service.listarCallesModificadas(ciudad.id).subscribe({
+          next: (mods) => this.callesModificadas.set(mods),
+          error: () => this.callesModificadas.set([]),
         });
         this.service.listarPoisCiudad(ciudad.id).subscribe({
           next: (pois) => {
@@ -518,6 +581,35 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.recCalles.set(
       [...acc.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
     );
+  }
+
+  /**
+   * Monta los circleMarkers de las ~1727 calles sobre `capaCallesCiudad`.
+   * Puntos pequeños (r=3) e interactivos=false para no interferir con clicks
+   * del mapa durante el examen. Solo se añade al mapa si `capaCallesCiudadOn()`.
+   */
+  private montarCapaCallesCiudad(calles: CalleCiudad[]): void {
+    if (!this.capaCallesCiudad) return;
+    this.capaCallesCiudad.clearLayers();
+    for (const c of calles) {
+      L.circleMarker([c.lat, c.lng], {
+        radius: 3,
+        color: '#5B6B7F',
+        weight: 0,
+        fillColor: '#5B6B7F',
+        fillOpacity: 0.5,
+        interactive: false,
+      }).addTo(this.capaCallesCiudad);
+    }
+    if (this.capaCallesCiudadOn() && this.map) {
+      this.capaCallesCiudad.addTo(this.map);
+    }
+  }
+
+  toggleCapaCallesCiudad(on: boolean): void {
+    this.capaCallesCiudadOn.set(on);
+    if (!this.map || !this.capaCallesCiudad) return;
+    on ? this.capaCallesCiudad.addTo(this.map) : this.capaCallesCiudad.remove();
   }
 
   // ============ Pintado ============
@@ -656,6 +748,8 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       { k: 'coopera', v: z.coopera ?? '' },
       { k: 'código', v: z.codigo },
       { k: 'área', v: z.areaName ?? '' },
+      { k: 'CaseTypeID', v: z.caseTypeId ?? '' },
+      { k: 'CTypeArea', v: z.cTypeArea ?? '' },
     ].filter((f) => f.v);
   }
   private zonaEn(lat: number, lng: number): Zona | null {
@@ -861,6 +955,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   }
   empezarExamen(): void {
     const cats = this.catsPorDif(this.dificultadExamen());
+    const dif = this.dificultadExamen();
     const selParques = this.parquesSeleccion();
     const allParques = this.parquesUnicos();
     const todasMarcadas = selParques.size >= allParques.length;
@@ -883,9 +978,8 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
 
     // T4: candidatos de CALLE desde callesCiudad (paridad v27).
     // Solo si NO es modo soloZonas (tipo test, sin localizar en el mapa).
-    // TODO: preguntas coopera de calle via parquesCobertura (follow-up).
     if (!soloZonas) {
-      let callesCandidatas = this.vialesPorDif(this.dificultadExamen());
+      let callesCandidatas = this.vialesPorDif(dif);
       // Filtro por parque: la calle entra si algún parque de parquesCobertura está seleccionado.
       if (!todasMarcadas) {
         callesCandidatas = callesCandidatas.filter((c) =>
@@ -912,22 +1006,92 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const n = Math.min(this.cfgN(), candidatos.length);
+    const cfgN = this.cfgN();
     const conZonas = soloZonas || this.cfgZonas();
 
-    this.retos = this.shuffle(candidatos)
-      .slice(0, n)
+    // --- Pool calleRapida (solo sin soloZonas): calles cuya zona tiene parque Y coopera ---
+    const retosCalleRapida: Reto[] = [];
+    if (!soloZonas) {
+      let crCandidatas = this.vialesPorDif(dif);
+      if (!todasMarcadas) {
+        crCandidatas = crCandidatas.filter((c) =>
+          c.parquesCobertura.some((p) => selParques.has(p)),
+        );
+      }
+      for (const c of crCandidatas) {
+        const zona = this.zonaEn(c.lat, c.lng);
+        if (!zona?.parque || !zona?.coopera) continue;
+        const synPoi: PoiCiudad = {
+          id: c.id,
+          nombre: c.nombre,
+          tipo: 'OTRO' as const,
+          categoria: 'calle' as const,
+          lat: c.lat,
+          lng: c.lng,
+          zonaId: null,
+        };
+        retosCalleRapida.push({
+          poi: synPoi,
+          zona,
+          tipo: 'calleRapida',
+          crParqueCorrecto: zona.parque,
+          crCooperaCorrecto: zona.coopera,
+        });
+      }
+    }
+
+    // --- Pool modificada (solo sin soloZonas, solo si hay datos) ---
+    const retosModificada: Reto[] = [];
+    const mods = this.callesModificadas();
+    if (!soloZonas && mods.length > 0) {
+      for (const m of mods) {
+        const dir: 'antes' | 'ahora' = Math.random() < 0.5 ? 'antes' : 'ahora';
+        const dado = dir === 'antes' ? m.nombreNuevo : m.nombreAntiguo;
+        const correcto = dir === 'antes' ? m.nombreAntiguo : m.nombreNuevo;
+        // Poi sintético sin localización (texto puro, no se pinta en el mapa)
+        const synPoi: PoiCiudad = {
+          id: 0,
+          nombre: dado,
+          tipo: 'OTRO' as const,
+          categoria: 'calle' as const,
+          lat: 0,
+          lng: 0,
+          zonaId: null,
+        };
+        retosModificada.push({
+          poi: synPoi,
+          zona: null,
+          tipo: 'modificada',
+          modDado: dado,
+          modCorrecto: correcto,
+          modDireccion: dir,
+        });
+      }
+    }
+
+    // Proporciones ~15% para cada tipo especial (como Raúl), resto base
+    const nMod = Math.min(Math.round(cfgN * 0.15), retosModificada.length);
+    const nCR = Math.min(Math.round(cfgN * 0.15), retosCalleRapida.length);
+    const nBase = Math.max(0, cfgN - nMod - nCR);
+
+    // Retos base (localiza / zona / coopera)
+    const baseRetos: Reto[] = this.shuffle(candidatos)
+      .slice(0, Math.min(nBase, candidatos.length))
       .map((p) => {
         const z = this.zonaEn(p.lat, p.lng);
         let tipo: TipoReto = 'localiza';
         if (soloZonas && z) {
-          // Solo preguntas de zona y coopera (tipo test, sin mapa)
           tipo = z.coopera && Math.random() < 0.5 ? 'coopera' : 'zona';
         } else if (conZonas && z && Math.random() < 0.4) {
           tipo = Math.random() < 0.5 && z.coopera ? 'coopera' : 'zona';
         }
         return { poi: p, zona: z, tipo };
       });
+
+    const selectedMod = this.shuffle(retosModificada).slice(0, nMod);
+    const selectedCR = this.shuffle(retosCalleRapida).slice(0, nCR);
+
+    this.retos = this.shuffle([...baseRetos, ...selectedMod, ...selectedCR]);
 
     this.tol = this.cfgTol();
     this.baseAntes = this.baseActiva();
@@ -955,6 +1119,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.capaZonas?.remove();
     this.capaEst?.remove();
     for (const c of CAT_ORDER) this.capasCat[c]?.remove();
+    this.capaCallesCiudad?.remove();
   }
   private restaurarCapas(): void {
     if (!this.map) return;
@@ -962,18 +1127,24 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     if (this.capaEstOn()) this.capaEst?.addTo(this.map);
     for (const c of CAT_ORDER)
       if (this.capaCatOn()[c]) this.capasCat[c]?.addTo(this.map);
+    if (this.capaCallesCiudadOn()) this.capaCallesCiudad?.addTo(this.map);
     this.aplicarBase(this.baseAntes);
   }
   private pregunta(): void {
     this.capaExamen?.clearLayers();
     this.espera = true;
     this.feedback.set(null);
+    this.crSelParque.set(null);
+    this.crSelCoopera.set(null);
+    this.crOpcionesParque.set([]);
+    this.crOpcionesCoopera.set([]);
+    this.opcionesQuiz.set([]);
     const q = this.retos[this.retoIdx()];
     this.retoActual.set(q);
+
     if (q.tipo === 'localiza') {
-      this.opcionesQuiz.set([]);
       if (this.mapEl) this.mapEl.nativeElement.style.cursor = 'crosshair';
-    } else {
+    } else if (q.tipo === 'zona' || q.tipo === 'coopera') {
       const esZona = q.tipo === 'zona';
       const correcto = (esZona ? q.zona?.parque : q.zona?.coopera) ?? '';
       let vals = [
@@ -989,6 +1160,41 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
         vals = this.shuffle(vals);
       }
       this.opcionesQuiz.set(vals);
+    } else if (q.tipo === 'calleRapida') {
+      // Grupo Parque: hasta 5 opciones de parquesUnicos, incluida la correcta
+      const correctoP = q.crParqueCorrecto ?? '';
+      let optsP = this.shuffle([...this.parquesUnicos()]);
+      if (!optsP.includes(correctoP)) optsP = [correctoP, ...optsP];
+      if (optsP.length > 5) {
+        optsP = [
+          correctoP,
+          ...optsP.filter((v) => v !== correctoP).slice(0, 4),
+        ];
+        optsP = this.shuffle(optsP);
+      }
+      this.crOpcionesParque.set(optsP);
+      // Grupo Coopera: hasta 5 opciones de cooperasUnicas, incluida la correcta
+      const correctoC = q.crCooperaCorrecto ?? '';
+      let optsC = this.shuffle([...this.cooperasUnicas()]);
+      if (!optsC.includes(correctoC)) optsC = [correctoC, ...optsC];
+      if (optsC.length > 5) {
+        optsC = [
+          correctoC,
+          ...optsC.filter((v) => v !== correctoC).slice(0, 4),
+        ];
+        optsC = this.shuffle(optsC);
+      }
+      this.crOpcionesCoopera.set(optsC);
+    } else if (q.tipo === 'modificada') {
+      // 4 opciones de texto: la correcta + 3 distractores del mismo "lado"
+      const dir = q.modDireccion ?? 'ahora';
+      const correcto = q.modCorrecto ?? '';
+      const mods = this.callesModificadas();
+      const pool = mods
+        .map((m) => (dir === 'antes' ? m.nombreAntiguo : m.nombreNuevo))
+        .filter((n) => n !== correcto);
+      const distractors = this.shuffle(pool).slice(0, 3);
+      this.opcionesQuiz.set(this.shuffle([correcto, ...distractors]));
     }
   }
   private respLocaliza(latlng: L.LatLng): void {
@@ -1053,16 +1259,28 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   responderOpcion(v: string): void {
     if (!this.espera) return;
     const q = this.retos[this.retoIdx()];
-    const correcto =
-      (q.tipo === 'zona' ? q.zona?.parque : q.zona?.coopera) ?? '';
+    if (q.tipo !== 'zona' && q.tipo !== 'coopera' && q.tipo !== 'modificada')
+      return;
+
+    let correcto: string;
+    if (q.tipo === 'zona') correcto = q.zona?.parque ?? '';
+    else if (q.tipo === 'coopera') correcto = q.zona?.coopera ?? '';
+    else correcto = q.modCorrecto ?? ''; // modificada
+
     this.espera = false;
     const ok = v === correcto;
     this.registra(q, ok, ok ? '' : `la respuesta era ${correcto}`);
     if (ok) {
+      const tipoLabel =
+        q.tipo === 'zona'
+          ? 'Parque'
+          : q.tipo === 'coopera'
+            ? 'Coopera'
+            : 'Respuesta';
       this.feedback.set({
         ok: true,
         tit: '¡Correcto!',
-        txt: `${q.tipo === 'zona' ? 'Parque' : 'Coopera'}: ${correcto}.`,
+        txt: `${tipoLabel}: ${correcto}.`,
       });
     } else {
       this.feedback.set({
@@ -1070,29 +1288,97 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
         tit: 'Fallo',
         txt: `La respuesta correcta era ${correcto}.`,
       });
-      const p = q.poi;
-      this.map?.flyTo([p.lat, p.lng], 15.5);
-      L.circleMarker([p.lat, p.lng], {
-        radius: 9,
-        color: '#fff',
-        weight: 2,
-        fillColor: '#F9B112',
-        fillOpacity: 1,
-      })
-        .bindTooltip(p.nombre, {
-          permanent: true,
-          direction: 'top',
-          className: 'poi-tip',
+      // Modificada: sin localización en el mapa (poi.lat/lng = 0)
+      if (q.tipo !== 'modificada') {
+        const p = q.poi;
+        this.map?.flyTo([p.lat, p.lng], 15.5);
+        L.circleMarker([p.lat, p.lng], {
+          radius: 9,
+          color: '#fff',
+          weight: 2,
+          fillColor: '#F9B112',
+          fillOpacity: 1,
         })
-        .addTo(this.capaExamen!);
+          .bindTooltip(p.nombre, {
+            permanent: true,
+            direction: 'top',
+            className: 'poi-tip',
+          })
+          .addTo(this.capaExamen!);
+      }
     }
   }
+
   /** Para resaltar la opción correcta/errónea tras responder (gobernado por feedback()). */
   estadoOpcion(v: string): 'ok' | 'bad' {
     const q = this.retoActual();
-    const correcto =
-      (q?.tipo === 'zona' ? q?.zona?.parque : q?.zona?.coopera) ?? '';
+    if (!q) return 'bad';
+    let correcto = '';
+    if (q.tipo === 'zona') correcto = q.zona?.parque ?? '';
+    else if (q.tipo === 'coopera') correcto = q.zona?.coopera ?? '';
+    else if (q.tipo === 'modificada') correcto = q.modCorrecto ?? '';
     return v === correcto ? 'ok' : 'bad';
+  }
+
+  // ---- CalleRapida: doble selector ----
+
+  selCalleRapidaParque(v: string): void {
+    if (!this.espera || !!this.feedback()) return;
+    this.crSelParque.set(v);
+  }
+
+  selCalleRapidaCoopera(v: string): void {
+    if (!this.espera || !!this.feedback()) return;
+    this.crSelCoopera.set(v);
+  }
+
+  comprobarCalleRapida(): void {
+    if (!this.espera || !!this.feedback()) return;
+    const q = this.retos[this.retoIdx()];
+    if (q.tipo !== 'calleRapida') return;
+    const selP = this.crSelParque();
+    const selC = this.crSelCoopera();
+    if (!selP || !selC) return;
+    this.espera = false;
+    const okP = selP === (q.crParqueCorrecto ?? '');
+    const okC = selC === (q.crCooperaCorrecto ?? '');
+    const ok = okP && okC;
+    const errores = [
+      !okP ? `parque era ${q.crParqueCorrecto}` : '',
+      !okC ? `coopera era ${q.crCooperaCorrecto}` : '',
+    ]
+      .filter(Boolean)
+      .join(', ');
+    this.registra(q, ok, ok ? '' : errores);
+    this.feedback.set({
+      ok,
+      tit: ok ? '¡Correcto!' : 'Fallo',
+      txt: `Parque: ${q.crParqueCorrecto} · Coopera: ${q.crCooperaCorrecto}.`,
+    });
+  }
+
+  /**
+   * Estado visual de una opción del doble selector (calleRapida).
+   * Devuelve 'ok'|'bad' tras responder, 'sel' si está seleccionada (pre-respuesta),
+   * 'neutral' en cualquier otro caso.
+   */
+  estadoCrOpcion(
+    tipo: 'parque' | 'coopera',
+    v: string,
+  ): 'ok' | 'bad' | 'sel' | 'neutral' {
+    const q = this.retoActual();
+    if (!q || q.tipo !== 'calleRapida') return 'neutral';
+    const sel = tipo === 'parque' ? this.crSelParque() : this.crSelCoopera();
+    const correcto =
+      tipo === 'parque'
+        ? (q.crParqueCorrecto ?? '')
+        : (q.crCooperaCorrecto ?? '');
+    if (this.feedback()) {
+      if (v === correcto) return 'ok';
+      if (v === sel) return 'bad';
+      return 'neutral';
+    }
+    return v === sel ? 'sel' : 'neutral';
   }
   private registra(q: Reto, ok: boolean, detalle: string): void {
     q.ok = ok;
@@ -1133,13 +1419,17 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.resPuntos.set(this.puntos());
     this.resFilas.set(
       hechas.map((q) => ({
-        n: q.poi.nombre,
+        n: q.tipo === 'modificada' ? (q.modDado ?? q.poi.nombre) : q.poi.nombre,
         tipo:
           q.tipo === 'localiza'
             ? 'Localizar'
             : q.tipo === 'zona'
               ? 'Zona'
-              : 'Coopera',
+              : q.tipo === 'coopera'
+                ? 'Coopera'
+                : q.tipo === 'calleRapida'
+                  ? 'Calle rápida'
+                  : 'Modificada',
         ok: !!q.ok,
         detalle: q.detalle,
       })),

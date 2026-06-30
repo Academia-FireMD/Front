@@ -8,6 +8,7 @@ import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../../environments/environment';
 import {
   CalleCiudad,
+  CalleModificada,
   CallesZonaResponse,
   Ciudad,
   GeocodeBuscarItem,
@@ -362,5 +363,51 @@ describe('CallejeroService', () => {
     req.flush({ items: [] });
 
     expect(req.request.url).toContain('limit=10');
+  });
+
+  // ── Calles modificadas (v27) ──────────────────────────────────────────────
+
+  it('GET /callejero/ciudades/:id/calles-modificadas mapea response.modificadas', () => {
+    const modificadas: CalleModificada[] = [
+      {
+        nombreNuevo: 'Av. de la Constitución',
+        nombreAntiguo: 'Calle General Mola',
+        tipoVia: 'Avenida',
+      },
+    ];
+    let received: CalleModificada[] | undefined;
+
+    service.listarCallesModificadas(1).subscribe((r) => (received = r));
+
+    const req = httpMock.expectOne(
+      `${API}/callejero/ciudades/1/calles-modificadas`,
+    );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ modificadas });
+
+    expect(received).toEqual(modificadas);
+    expect(received?.[0].nombreAntiguo).toBe('Calle General Mola');
+  });
+
+  it('listarCallesModificadas propaga el error sin toast (ignoreError=true, degradación en componente)', () => {
+    // ignoreError=true solo suprime el toast; el error se propaga al subscriber.
+    // La degradación a [] ocurre en el component (error: () => callesModificadas.set([])).
+    const toast = TestBed.inject(ToastrService) as unknown as {
+      error: jest.Mock;
+    };
+    let err: unknown;
+
+    service.listarCallesModificadas(1).subscribe({
+      next: () => fail('no debería emitir'),
+      error: (e) => (err = e),
+    });
+
+    httpMock
+      .expectOne(`${API}/callejero/ciudades/1/calles-modificadas`)
+      .flush(null, { status: 404, statusText: 'Not Found' });
+
+    expect(err).toBeDefined();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

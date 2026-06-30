@@ -93,6 +93,18 @@
             <span class="cj-tgl__num">{{ countCat(c) }}</span>
           </label>
         }
+        @if (callesCiudad().length > 0) {
+          <label class="cj-tgl" data-testid="cj-capa-calles-ciudad">
+            <input
+              type="checkbox"
+              [ngModel]="capaCallesCiudadOn()"
+              (ngModelChange)="toggleCapaCallesCiudad($event)"
+            />
+            <span class="cj-dot" style="background: #5b6b7f"></span>
+            <span class="cj-tgl__lbl">Calles de ciudad (puntos)</span>
+            <span class="cj-tgl__num">{{ callesCiudad().length }}</span>
+          </label>
+        }
       </div>
     </div>
 
@@ -161,6 +173,44 @@
                   …y {{ callesCiudad().length - 300 }} más, busca para filtrar
                 </p>
               }
+            }
+          </div>
+        }
+
+        @if (callesModificadas().length > 0) {
+          <div
+            class="cj-lista-cat"
+            [class.cj-lista-cat--plegada]="
+              colapsadas().has('calles-modificadas')
+            "
+            data-testid="cj-lista-calles-modificadas"
+          >
+            <h4
+              (click)="toggleColapso('calles-modificadas')"
+              role="button"
+              tabindex="0"
+            >
+              <span class="cj-dot" style="background: #6d4c41"></span>
+              Calles modificadas (2017)
+              <span class="cj-tgl__num"
+                >({{ callesModificadas().length }})</span
+              >
+              <span class="cj-lista-cat__chevron" aria-hidden="true">{{
+                colapsadas().has("calles-modificadas") ? "▸" : "▾"
+              }}</span>
+            </h4>
+            @if (!colapsadas().has("calles-modificadas")) {
+              <ul>
+                @for (m of listaModificadasEstudio(); track m.nombreNuevo) {
+                  <li class="cj-mod-item">
+                    <span class="cj-mod-item__nuevo">{{ m.nombreNuevo }}</span>
+                    <span class="cj-mod-item__sep"> · antes: </span>
+                    <span class="cj-mod-item__antiguo">{{
+                      m.nombreAntiguo
+                    }}</span>
+                  </li>
+                }
+              </ul>
             }
           </div>
         }
@@ -363,10 +413,22 @@
             🚒 ¿Qué parque cubre la zona donde está
             <span class="cj-obj">{{ q.poi.nombre }}</span
             >?
-          } @else {
+          } @else if (q.tipo === "coopera") {
             🤝 ¿Qué parque COOPERA en la zona de
             <span class="cj-obj">{{ q.poi.nombre }}</span
             >?
+          } @else if (q.tipo === "calleRapida") {
+            <span class="cj-qbar__subtit">Callejero de València</span>
+            🚏 Parque y coopera de:
+            <span class="cj-obj">{{ q.poi.nombre }}</span>
+          } @else if (q.tipo === "modificada") {
+            @if (q.modDireccion === "antes") {
+              🪧 ¿Cómo se llamaba <strong>ANTES</strong> (hasta 2017)?
+              <span class="cj-obj">{{ q.modDado }}</span>
+            } @else {
+              🪧 ¿Cómo se llama <strong>AHORA</strong>?
+              <span class="cj-obj">{{ q.modDado }}</span>
+            }
           }
         </div>
         @if (q.tipo === "localiza" && !feedback()) {
@@ -384,6 +446,61 @@
                 (click)="responderOpcion(op)"
               >
                 {{ op }}
+              </button>
+            }
+          </div>
+        }
+        @if (q.tipo === "calleRapida" && crOpcionesParque().length) {
+          <div class="cj-cr-grupos">
+            <div class="cj-cr-grupo">
+              <div class="cj-cr-grupo__lbl">Parque</div>
+              <div class="cj-qopts">
+                @for (op of crOpcionesParque(); track op) {
+                  <button
+                    [class.sel]="!feedback() && crSelParque() === op"
+                    [class.ok]="
+                      feedback() && estadoCrOpcion('parque', op) === 'ok'
+                    "
+                    [class.bad]="
+                      feedback() && estadoCrOpcion('parque', op) === 'bad'
+                    "
+                    [disabled]="!!feedback()"
+                    (click)="selCalleRapidaParque(op)"
+                  >
+                    {{ op }}
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="cj-cr-grupo">
+              <div class="cj-cr-grupo__lbl">Coopera</div>
+              <div class="cj-qopts">
+                @for (op of crOpcionesCoopera(); track op) {
+                  <button
+                    [class.sel]="!feedback() && crSelCoopera() === op"
+                    [class.ok]="
+                      feedback() && estadoCrOpcion('coopera', op) === 'ok'
+                    "
+                    [class.bad]="
+                      feedback() && estadoCrOpcion('coopera', op) === 'bad'
+                    "
+                    [disabled]="!!feedback()"
+                    (click)="selCalleRapidaCoopera(op)"
+                  >
+                    {{ op }}
+                  </button>
+                }
+              </div>
+            </div>
+            @if (!feedback()) {
+              <button
+                class="cj-btn cj-btn--rojo"
+                style="margin-top: 8px"
+                [disabled]="!crSelParque() || !crSelCoopera()"
+                (click)="comprobarCalleRapida()"
+                data-testid="cj-cr-comprobar"
+              >
+                Comprobar
               </button>
             }
           </div>

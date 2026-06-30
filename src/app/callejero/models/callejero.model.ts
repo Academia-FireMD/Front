@@ -53,6 +53,9 @@ export interface Zona {
   parque?: string | null;
   coopera?: string | null;
   areaName?: string | null;
+  /** Callejero v27: campos adicionales del backend. */
+  caseTypeId?: string | null;
+  cTypeArea?: string | null;
 }
 
 /** Un POI de la ciudad (todas las categorías) — `GET /callejero/ciudades/:id/pois`. */
@@ -327,6 +330,18 @@ export interface CalleCiudad {
 /** Respuesta de `GET /callejero/ciudades/:id/calles`. */
 export interface CalleCiudadListResponse {
   calles: CalleCiudad[];
+}
+
+/** Calle renombrada en 2017 — ítem de `GET /callejero/ciudades/:id/calles-modificadas`. */
+export interface CalleModificada {
+  nombreNuevo: string;
+  nombreAntiguo: string;
+  tipoVia: string | null;
+}
+
+/** Respuesta de `GET /callejero/ciudades/:id/calles-modificadas`. */
+export interface CallesModificadasResponse {
+  modificadas: CalleModificada[];
 }
 
 /** Respuesta de `GET /callejero/geocode/reverse?lat=&lng=`. */

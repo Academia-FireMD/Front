@@ -3,6 +3,7 @@ import { of, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import {
   CalleCiudad,
+  CalleModificada,
   Calle,
   Ciudad,
   PoiCiudad,
@@ -166,6 +167,29 @@ const RECORRIDO: RecorridoResponse = {
   estacion: { nombre: 'Parque Campanar', lat: 39.48, lng: -0.38 },
 };
 
+const CALLES_MODIFICADAS: CalleModificada[] = [
+  {
+    nombreNuevo: 'Av. de la Constitución',
+    nombreAntiguo: 'Calle General Mola',
+    tipoVia: 'Avenida',
+  },
+  {
+    nombreNuevo: 'Calle de la Democracia',
+    nombreAntiguo: 'Calle del Caudillo',
+    tipoVia: 'Calle',
+  },
+  {
+    nombreNuevo: 'Av. de los Derechos Humanos',
+    nombreAntiguo: 'Av. del Generalísimo',
+    tipoVia: 'Avenida',
+  },
+  {
+    nombreNuevo: 'Calle de la Paz',
+    nombreAntiguo: 'Calle de la Victoria',
+    tipoVia: 'Calle',
+  },
+];
+
 const RECORRIDO_LIBRE = {
   direccionResuelta: 'Calle de Colón 12, València',
   lat: 39.4699,
@@ -188,6 +212,7 @@ function mockService() {
     listarPoisCiudad: jest.fn().mockReturnValue(of(POIS)),
     listarCalles: jest.fn().mockReturnValue(of({ calles: CALLES, pois: [] })),
     listarCallesCiudad: jest.fn().mockReturnValue(of([])),
+    listarCallesModificadas: jest.fn().mockReturnValue(of([])),
     geocodeReverse: jest
       .fn()
       .mockReturnValue(of({ direccion: 'Calle Test 1, València' })),
@@ -665,6 +690,300 @@ describe('CallejeroAppComponent', () => {
       expect(calleGrupo!.items.some((p) => p.nombre === 'Calle Colón')).toBe(
         true,
       );
+    });
+  });
+
+  // ── cooperasUnicas ────────────────────────────────────────────────────────
+
+  it('cooperasUnicas derivado de zonas()', () => {
+    // ZONAS = [{ coopera: 'Oeste', ... }]
+    expect(component.cooperasUnicas()).toEqual(['Oeste']);
+  });
+
+  it('cooperasUnicas devuelve [] cuando ninguna zona tiene coopera', () => {
+    component.zonas.set([{ ...ZONAS[0], coopera: undefined }]);
+    expect(component.cooperasUnicas()).toEqual([]);
+  });
+
+  // ── listaModificadasEstudio ───────────────────────────────────────────────
+
+  describe('listaModificadasEstudio', () => {
+    beforeEach(() => {
+      component.callesModificadas.set(CALLES_MODIFICADAS);
+    });
+
+    it('lista todas las calles modificadas ordenadas por nombreNuevo', () => {
+      const lista = component.listaModificadasEstudio();
+      expect(lista.length).toBe(4);
+      // Alfabéticamente: Av. de la Constitución < Av. de los Derechos Humanos < Calle de la Democracia < Calle de la Paz
+      expect(lista[0].nombreNuevo).toBe('Av. de la Constitución');
+      expect(lista[1].nombreNuevo).toBe('Av. de los Derechos Humanos');
+    });
+
+    it('filtra por nombreNuevo (case-insensitive)', () => {
+      component.buscar.set('democracia');
+      const lista = component.listaModificadasEstudio();
+      expect(lista.length).toBe(1);
+      expect(lista[0].nombreNuevo).toBe('Calle de la Democracia');
+    });
+
+    it('filtra por nombreAntiguo (case-insensitive)', () => {
+      component.buscar.set('generalísimo');
+      const lista = component.listaModificadasEstudio();
+      expect(lista.length).toBe(1);
+      expect(lista[0].nombreAntiguo).toBe('Av. del Generalísimo');
+    });
+
+    it('búsqueda sin resultados devuelve lista vacía', () => {
+      component.buscar.set('xyznotexist');
+      expect(component.listaModificadasEstudio().length).toBe(0);
+    });
+
+    it('sin filtro devuelve todas sin límite', () => {
+      component.buscar.set('');
+      expect(component.listaModificadasEstudio().length).toBe(4);
+    });
+  });
+
+  // ── filasZona (caseTypeId / cTypeArea) ───────────────────────────────────
+
+  describe('filasZona (Pieza 4 — CaseTypeID / CTypeArea)', () => {
+    it('incluye CaseTypeID y CTypeArea cuando están presentes', () => {
+      const zonaConExtras: Zona = {
+        ...ZONAS[0],
+        caseTypeId: 'CT-001',
+        cTypeArea: 'Area Norte',
+      };
+      const campos = (component as any).filasZona(zonaConExtras) as {
+        k: string;
+        v: string;
+      }[];
+      expect(campos.some((c) => c.k === 'CaseTypeID' && c.v === 'CT-001')).toBe(
+        true,
+      );
+      expect(
+        campos.some((c) => c.k === 'CTypeArea' && c.v === 'Area Norte'),
+      ).toBe(true);
+    });
+
+    it('omite CaseTypeID y CTypeArea cuando son null', () => {
+      const zonaSinExtras: Zona = {
+        ...ZONAS[0],
+        caseTypeId: null,
+        cTypeArea: null,
+      };
+      const campos = (component as any).filasZona(zonaSinExtras) as {
+        k: string;
+        v: string;
+      }[];
+      expect(campos.some((c) => c.k === 'CaseTypeID')).toBe(false);
+      expect(campos.some((c) => c.k === 'CTypeArea')).toBe(false);
+    });
+
+    it('zona null → fila "Fuera de la zonificación"', () => {
+      const campos = (component as any).filasZona(null) as {
+        k: string;
+        v: string;
+      }[];
+      expect(campos[0].k).toBe('Zona de parque');
+      expect(campos[0].v).toContain('Fuera');
+    });
+  });
+
+  // ── calleRapida (Pieza 1) ─────────────────────────────────────────────────
+
+  describe('calleRapida', () => {
+    beforeEach(() => {
+      // CALLES_CIUDAD lat/lng caen dentro del polígono SQUARE:
+      // lat [39.45, 39.5] · lng [-0.4, -0.35] → zonaEn = ZONAS[0] (parque+coopera ✓)
+      component.callesCiudad.set(CALLES_CIUDAD);
+      component.dificultadExamen.set('DIFICIL');
+      component.cfgN.set(10);
+      component.cfgSoloZonas.set(false);
+    });
+
+    it('candidato calleRapida requiere zona con parque Y coopera', () => {
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const crRetos = (component as any).retos.filter(
+        (r: any) => r.tipo === 'calleRapida',
+      );
+      expect(crRetos.length).toBeGreaterThan(0);
+      for (const r of crRetos) {
+        expect(r.crParqueCorrecto).toBeTruthy();
+        expect(r.crCooperaCorrecto).toBeTruthy();
+        expect(r.zona).not.toBeNull();
+      }
+    });
+
+    it('comprobarCalleRapida con ambas correctas → acierto', () => {
+      component.empezarExamen();
+      // Inyectar un reto calleRapida conocido en la posición actual
+      const crReto: any = {
+        poi: { ...POIS[0], categoria: 'calle' as const },
+        zona: ZONAS[0],
+        tipo: 'calleRapida',
+        crParqueCorrecto: 'Campanar',
+        crCooperaCorrecto: 'Oeste',
+      };
+      const idx = component.retoIdx();
+      (component as any).retos[idx] = crReto;
+      (component as any).espera = true;
+      component.retoActual.set(crReto);
+      component.crSelParque.set('Campanar');
+      component.crSelCoopera.set('Oeste');
+      component.comprobarCalleRapida();
+      expect(component.feedback()?.ok).toBe(true);
+      expect(component.aciertos()).toBe(1);
+    });
+
+    it('comprobarCalleRapida con coopera incorrecta → fallo (acierto requiere ambos)', () => {
+      component.empezarExamen();
+      const crReto: any = {
+        poi: { ...POIS[0], categoria: 'calle' as const },
+        zona: ZONAS[0],
+        tipo: 'calleRapida',
+        crParqueCorrecto: 'Campanar',
+        crCooperaCorrecto: 'Oeste',
+      };
+      const idx = component.retoIdx();
+      (component as any).retos[idx] = crReto;
+      (component as any).espera = true;
+      component.retoActual.set(crReto);
+      component.crSelParque.set('Campanar'); // parque correcto
+      component.crSelCoopera.set('Este'); // coopera INCORRECTA
+      component.comprobarCalleRapida();
+      expect(component.feedback()?.ok).toBe(false);
+      expect(component.aciertos()).toBe(0);
+    });
+
+    it('cfgSoloZonas excluye calleRapida del examen', () => {
+      component.cfgSoloZonas.set(true);
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const tipos = (component as any).retos.map((r: any) => r.tipo);
+      expect(tipos).not.toContain('calleRapida');
+    });
+  });
+
+  // ── modificada (Pieza 2) ──────────────────────────────────────────────────
+
+  describe('modificada', () => {
+    beforeEach(() => {
+      component.callesModificadas.set(CALLES_MODIFICADAS);
+      component.cfgN.set(10);
+      component.cfgSoloZonas.set(false);
+    });
+
+    it('genera retos de tipo modificada cuando hay callesModificadas', () => {
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const mods = (component as any).retos.filter(
+        (r: any) => r.tipo === 'modificada',
+      );
+      expect(mods.length).toBeGreaterThan(0);
+      for (const r of mods) {
+        expect(r.modDado).toBeTruthy();
+        expect(r.modCorrecto).toBeTruthy();
+        expect(['antes', 'ahora']).toContain(r.modDireccion);
+      }
+    });
+
+    it('dirección "antes": dado=nombreNuevo, correcto=nombreAntiguo → respuesta correcta', () => {
+      component.empezarExamen();
+      const modReto: any = {
+        poi: {
+          id: 0,
+          nombre: 'Av. de la Constitución',
+          tipo: 'OTRO' as const,
+          categoria: 'calle' as const,
+          lat: 0,
+          lng: 0,
+          zonaId: null,
+        },
+        zona: null,
+        tipo: 'modificada',
+        modDado: 'Av. de la Constitución',
+        modCorrecto: 'Calle General Mola',
+        modDireccion: 'antes' as const,
+      };
+      const idx = component.retoIdx();
+      (component as any).retos[idx] = modReto;
+      (component as any).espera = true;
+      component.retoActual.set(modReto);
+      component.responderOpcion('Calle General Mola');
+      expect(component.feedback()?.ok).toBe(true);
+      expect(component.aciertos()).toBe(1);
+    });
+
+    it('dirección "ahora": dado=nombreAntiguo, correcto=nombreNuevo → respuesta correcta', () => {
+      component.empezarExamen();
+      const modReto: any = {
+        poi: {
+          id: 0,
+          nombre: 'Calle del Caudillo',
+          tipo: 'OTRO' as const,
+          categoria: 'calle' as const,
+          lat: 0,
+          lng: 0,
+          zonaId: null,
+        },
+        zona: null,
+        tipo: 'modificada',
+        modDado: 'Calle del Caudillo',
+        modCorrecto: 'Calle de la Democracia',
+        modDireccion: 'ahora' as const,
+      };
+      const idx = component.retoIdx();
+      (component as any).retos[idx] = modReto;
+      (component as any).espera = true;
+      component.retoActual.set(modReto);
+      component.responderOpcion('Calle de la Democracia');
+      expect(component.feedback()?.ok).toBe(true);
+      expect(component.aciertos()).toBe(1);
+    });
+
+    it('respuesta incorrecta → fallo', () => {
+      component.empezarExamen();
+      const modReto: any = {
+        poi: {
+          id: 0,
+          nombre: 'Av. de la Constitución',
+          tipo: 'OTRO' as const,
+          categoria: 'calle' as const,
+          lat: 0,
+          lng: 0,
+          zonaId: null,
+        },
+        zona: null,
+        tipo: 'modificada',
+        modDado: 'Av. de la Constitución',
+        modCorrecto: 'Calle General Mola',
+        modDireccion: 'antes' as const,
+      };
+      const idx = component.retoIdx();
+      (component as any).retos[idx] = modReto;
+      (component as any).espera = true;
+      component.retoActual.set(modReto);
+      component.responderOpcion('Respuesta Incorrecta XYZ');
+      expect(component.feedback()?.ok).toBe(false);
+      expect(component.aciertos()).toBe(0);
+    });
+
+    it('excluida del examen cuando no hay callesModificadas', () => {
+      component.callesModificadas.set([]);
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const tipos = (component as any).retos.map((r: any) => r.tipo);
+      expect(tipos).not.toContain('modificada');
+    });
+
+    it('cfgSoloZonas excluye modificada del examen', () => {
+      component.cfgSoloZonas.set(true);
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const tipos = (component as any).retos.map((r: any) => r.tipo);
+      expect(tipos).not.toContain('modificada');
     });
   });
 });
