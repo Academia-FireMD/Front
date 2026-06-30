@@ -196,6 +196,16 @@
     font-size: 15px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    cursor: pointer;
+    user-select: none;
+    &:hover {
+      color: var(--rojo, #bf0b1b);
+    }
+  }
+  .cj-lista-cat__chevron {
+    margin-left: auto;
+    font-size: 12px;
+    opacity: 0.6;
   }
   ul {
     list-style: none;

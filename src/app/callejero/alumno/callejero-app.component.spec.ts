@@ -257,10 +257,10 @@ describe('CallejeroAppComponent', () => {
   });
 
   it('empezarExamen genera retos de las categorías elegidas', () => {
-    component.cfgN.set(6);
+    component.cfgN.set(5);
     component.empezarExamen();
     expect(component.examOn()).toBe(true);
-    expect(component.totalRetos()).toBe(6);
+    expect(component.totalRetos()).toBe(5);
     expect(component.retoActual()).not.toBeNull();
   });
 
@@ -370,7 +370,7 @@ describe('CallejeroAppComponent', () => {
   });
 
   it('examen de recorridos: generar → responder (D8) → registrar nota', () => {
-    component.onIniciarExamenRecorridos();
+    component.onIniciarExamenRecorridos(['Campanar']);
     expect(svc.generarExamenRecorrido).toHaveBeenCalledWith(1, [], 'MEDIO');
     const view = component.recExamenView();
     expect(view).not.toBeNull();
@@ -400,7 +400,7 @@ describe('CallejeroAppComponent', () => {
 
   it('onModoRecorridoCambiado limpia resultado/error/destino del modo anterior, sin tocar el examen', () => {
     // Examen en curso (flujo aparte que NO debe limpiarse al alternar modo).
-    component.onIniciarExamenRecorridos();
+    component.onIniciarExamenRecorridos(['Campanar']);
     expect(component.recExamenView()).not.toBeNull();
     // Búsqueda previa con resultado (estado compartido entre modos).
     component.onBuscarDestino(100);
@@ -447,5 +447,96 @@ describe('CallejeroAppComponent', () => {
     component.cerrarFicha();
     expect(component.fichaMinimizada()).toBe(false);
     expect(component.ficha()).toBeNull();
+  });
+
+  describe('filtros de examen (dificultad + zonas + soloZonas)', () => {
+    it('catsPorDif FACIL excluye lugar y calle', () => {
+      component.dificultadExamen.set('FACIL');
+      component.cfgN.set(10);
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      expect(component.totalRetos()).toBe(4);
+      const cats = (component as any).retos.map((r: any) => r.poi.categoria);
+      expect(cats).not.toContain('lugar');
+      expect(cats).not.toContain('calle');
+    });
+
+    it('catsPorDif MEDIO incluye lugar pero excluye calle', () => {
+      component.dificultadExamen.set('MEDIO');
+      component.cfgN.set(10);
+      component.empezarExamen();
+      expect(component.totalRetos()).toBe(5);
+      const cats = (component as any).retos.map((r: any) => r.poi.categoria);
+      expect(cats).not.toContain('calle');
+    });
+
+    it('selección de parques acota los candidatos del examen', () => {
+      component.parquesSeleccion.set(new Set());
+      component.dificultadExamen.set('MEDIO');
+      const toastSpy = jest.spyOn((component as any).toast, 'info');
+      component.empezarExamen();
+      expect(component.examOn()).toBe(false);
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.stringContaining('suficientes'),
+      );
+    });
+
+    it('cfgSoloZonas genera solo retos de tipo zona o coopera', () => {
+      component.cfgSoloZonas.set(true);
+      component.cfgN.set(10);
+      component.empezarExamen();
+      expect(component.examOn()).toBe(true);
+      const tipos = (component as any).retos.map((r: any) => r.tipo);
+      expect(tipos.every((t: string) => t === 'zona' || t === 'coopera')).toBe(
+        true,
+      );
+    });
+
+    it('onCfgSoloZonasChange(true) fuerza cfgZonas a true', () => {
+      component.cfgZonas.set(false);
+      component.onCfgSoloZonasChange(true);
+      expect(component.cfgSoloZonas()).toBe(true);
+      expect(component.cfgZonas()).toBe(true);
+    });
+
+    it('onCfgSoloZonasChange(false) desactiva cfgSoloZonas sin tocar cfgZonas', () => {
+      component.cfgZonas.set(true);
+      component.onCfgSoloZonasChange(false);
+      expect(component.cfgSoloZonas()).toBe(false);
+      expect(component.cfgZonas()).toBe(true);
+    });
+
+    it('parquesUnicos derivados de zonas()', () => {
+      expect(component.parquesUnicos()).toEqual(['Campanar']);
+    });
+
+    it('opcionesTol son Amplia/Media/Estricta etiquetadas', () => {
+      const labels = component.opcionesTol.map((t) => t.label);
+      expect(labels).toContain('Amplia · 500 m');
+      expect(labels).toContain('Media · 300 m');
+      expect(labels).toContain('Estricta · 175 m');
+      const valores = component.opcionesTol.map((t) => t.valor);
+      expect(valores).toContain(500);
+      expect(valores).toContain(300);
+      expect(valores).toContain(175);
+    });
+
+    it('onIniciarExamenRecorridos con todos los parques pasa zonaIds=[]', () => {
+      component.onIniciarExamenRecorridos(['Campanar']);
+      expect(svc.generarExamenRecorrido).toHaveBeenCalledWith(1, [], 'MEDIO');
+    });
+
+    it('onIniciarExamenRecorridos con parques vacíos pasa zonaIds=[]', () => {
+      component.onIniciarExamenRecorridos([]);
+      expect(svc.generarExamenRecorrido).toHaveBeenCalledWith(1, [], 'MEDIO');
+    });
+
+    it('toggleColapso pliega y despliega una categoría en Estudio', () => {
+      expect(component.colapsadas().has('hospital')).toBe(false);
+      component.toggleColapso('hospital');
+      expect(component.colapsadas().has('hospital')).toBe(true);
+      component.toggleColapso('hospital');
+      expect(component.colapsadas().has('hospital')).toBe(false);
+    });
   });
 });

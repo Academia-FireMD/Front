@@ -37,6 +37,8 @@ import {
   RecorridoPaneComponent,
   RecorridoResultadoView,
 } from './recorrido-pane.component';
+import { CjDificultadChipsComponent } from '../shared/cj-dificultad-chips.component';
+import { CjZonaChipsComponent } from '../shared/cj-zona-chips.component';
 
 /**
  * Callejero v3 — port fiel del tool de Raúl (TÉCNIKAFIRE · Bombers València).
@@ -68,6 +70,17 @@ const CAT_ORDER: PoiCategoria[] = [
   'lugar',
   'calle',
 ];
+
+type DificultadExamen = DificultadCallejero; // alias semántico (misma unión)
+
+/** Descripción de cada nivel de dificultad para el EXAMEN de POIs. */
+const DIF_DESC_EXAM: Record<DificultadCallejero, string> = {
+  FACIL:
+    'Calles y avenidas largas + hospitales, parques y jardines, museos, parques de bomberos y calles modificadas (2017).',
+  MEDIO: 'Lo anterior + calles de longitud media + lugares de referencia.',
+  DIFICIL:
+    'Absolutamente todo: cualquier calle de València, incluidas las cortas y sin salida.',
+};
 
 /** Llama (icono de bombero) en SVG data-uri (no dependemos de un PNG externo). */
 const FLAME_SVG =
@@ -101,7 +114,7 @@ const BASE_URLS: Record<string, { url: string; opts: L.TileLayerOptions }> = {
 };
 
 type TabKey = 'mapa' | 'estudio' | 'examen' | 'recorridos';
-type BaseKey = 'calles' | 'fusion' | 'satelite';
+type BaseKey = 'calles' | 'mudo' | 'satelite';
 type TipoReto = 'localiza' | 'zona' | 'coopera';
 
 interface Reto {
@@ -137,7 +150,13 @@ interface ResultadoFila {
 @Component({
   selector: 'app-callejero-app',
   standalone: true,
-  imports: [CommonModule, FormsModule, RecorridoPaneComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RecorridoPaneComponent,
+    CjDificultadChipsComponent,
+    CjZonaChipsComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './callejero-app.component.html',
   styleUrl: './callejero-app.component.scss',
@@ -151,6 +170,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
 
   readonly CATS = CATS;
   readonly CAT_ORDER = CAT_ORDER;
+  readonly DIF_DESC_EXAM = DIF_DESC_EXAM;
 
   // ---- Estado general ----
   readonly ciudades = signal<Ciudad[]>([]);
@@ -173,6 +193,14 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       !this.cargando() && !this.cargaError() && this.ciudades().length === 0,
   );
 
+  readonly parquesUnicos = computed<string[]>(() => [
+    ...new Set(
+      this.zonas()
+        .filter((z) => z.parque)
+        .map((z) => z.parque!),
+    ),
+  ]);
+
   // ---- Capas (visibilidad) ----
   readonly baseActiva = signal<BaseKey>('calles');
   readonly capaZonasOn = signal<boolean>(true);
@@ -192,6 +220,13 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
 
   // ---- Estudio ----
   readonly buscar = signal<string>('');
+  /** Categorías plegadas en el modo Estudio (click en la cabecera, como el HTML de Raúl). */
+  readonly colapsadas = signal<Set<PoiCategoria>>(new Set<PoiCategoria>());
+  toggleColapso(c: PoiCategoria): void {
+    const next = new Set(this.colapsadas());
+    next.has(c) ? next.delete(c) : next.add(c);
+    this.colapsadas.set(next);
+  }
   readonly listasEstudio = computed(() => {
     const f = this.buscar().trim().toLowerCase();
     return CAT_ORDER.map((c) => {
@@ -215,8 +250,15 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   readonly cfgTol = signal<number>(300);
   readonly cfgMudo = signal<boolean>(true);
   readonly cfgZonas = signal<boolean>(true);
+  readonly dificultadExamen = signal<DificultadCallejero>('MEDIO');
+  readonly cfgSoloZonas = signal<boolean>(false);
+  readonly parquesSeleccion = signal<Set<string>>(new Set());
   readonly opcionesN = [10, 15, 20, 30, 40];
-  readonly opcionesTol = [150, 200, 300, 450, 600];
+  readonly opcionesTol: { valor: number; label: string }[] = [
+    { valor: 500, label: 'Amplia · 500 m' },
+    { valor: 300, label: 'Media · 300 m' },
+    { valor: 175, label: 'Estricta · 175 m' },
+  ];
 
   // ---- Examen (en vivo) ----
   readonly examOn = signal<boolean>(false);
@@ -375,6 +417,10 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.service.listarZonas(ciudad.id).subscribe({
       next: (zonas) => {
         this.zonas.set(zonas);
+        const uniqueParques = [
+          ...new Set(zonas.filter((z) => z.parque).map((z) => z.parque!)),
+        ];
+        this.parquesSeleccion.set(new Set(uniqueParques));
         this.safe(() => this.pintarZonas(zonas));
         this.cargarCallesAutocomplete(zonas);
         this.service.listarPoisCiudad(ciudad.id).subscribe({
@@ -516,9 +562,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   private aplicarBase(b: BaseKey): void {
     if (!this.map) return;
     this.baseLayer?.remove();
-    const key =
-      b === 'fusion' ? 'mudo' : b === 'satelite' ? 'satelite' : 'calles';
-    this.baseLayer = this.tileLayer(key).addTo(this.map);
+    this.baseLayer = this.tileLayer(b).addTo(this.map);
     this.baseLayer.bringToBack();
   }
 
@@ -680,29 +724,62 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     }
     return r;
   }
+  private catsPorDif(dif: DificultadCallejero): PoiCategoria[] {
+    const base: PoiCategoria[] = ['bomberos', 'hospital', 'parque', 'museo'];
+    if (dif === 'FACIL') return base;
+    return [...base, 'lugar']; // MEDIO y DIFICIL añaden 'lugar'
+  }
+  onCfgSoloZonasChange(on: boolean): void {
+    this.cfgSoloZonas.set(on);
+    if (on) this.cfgZonas.set(true);
+  }
   empezarExamen(): void {
-    const cats = CAT_ORDER.filter((c) => this.examCats()[c]);
-    if (!cats.length) {
-      this.toast.info('Selecciona al menos una categoría');
-      return;
+    // TODO: integrar filtro de calles por longitud cuando llegue el masivo (T4)
+    const cats = this.catsPorDif(this.dificultadExamen());
+    const selParques = this.parquesSeleccion();
+    const allParques = this.parquesUnicos();
+    const todasMarcadas = selParques.size >= allParques.length;
+    const soloZonas = this.cfgSoloZonas();
+
+    let candidatos = this.pois().filter((p) => cats.includes(p.categoria));
+
+    // Filtro por parque: si no están todos marcados, acotar
+    if (!todasMarcadas) {
+      candidatos = candidatos.filter((p) => {
+        const z = this.zonaEn(p.lat, p.lng);
+        return z?.parque ? selParques.has(z.parque) : false;
+      });
     }
-    const candidatos = this.pois().filter((p) => cats.includes(p.categoria));
+
+    // Si cfgSoloZonas, solo candidatos que tienen zona asignada
+    if (soloZonas) {
+      candidatos = candidatos.filter((p) => this.zonaEn(p.lat, p.lng) !== null);
+    }
+
     if (candidatos.length < 4) {
-      this.toast.info('Muy pocos lugares en esas categorías');
+      this.toast.info(
+        'No hay suficientes lugares en esas zonas/dificultad, marca más o baja la dificultad',
+      );
       return;
     }
+
     const n = Math.min(this.cfgN(), candidatos.length);
-    const conZonas = this.cfgZonas();
+    const conZonas = soloZonas || this.cfgZonas();
+
     this.retos = this.shuffle(candidatos)
       .slice(0, n)
       .map((p) => {
         const z = this.zonaEn(p.lat, p.lng);
         let tipo: TipoReto = 'localiza';
-        if (conZonas && z && Math.random() < 0.4) {
+        if (soloZonas && z) {
+          // Solo preguntas de zona y coopera (tipo test, sin mapa)
+          tipo = z.coopera && Math.random() < 0.5 ? 'coopera' : 'zona';
+        } else if (conZonas && z && Math.random() < 0.4) {
           tipo = Math.random() < 0.5 && z.coopera ? 'coopera' : 'zona';
         }
         return { poi: p, zona: z, tipo };
       });
+
     this.tol = this.cfgTol();
     this.baseAntes = this.baseActiva();
     this.examOn.set(true);
@@ -712,7 +789,6 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.puntos.set(0);
     this.totalRetos.set(this.retos.length);
     this.cerrarFicha();
-    // Examen ciego: ocultar capas; opcional base muda.
     this.safe(() => this.ocultarCapas());
     this.safe(() => {
       if (this.cfgMudo() && this.map) {
@@ -1293,7 +1369,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   }
 
   /** El alumno pidió empezar el examen de recorridos. */
-  onIniciarExamenRecorridos(): void {
+  onIniciarExamenRecorridos(parques: string[]): void {
     const ciudad = this.ciudadSel();
     if (!ciudad) return;
     this.recExamenResultado.set(null);
@@ -1301,13 +1377,21 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.recResultado.set(null);
     this.recDestino.set(null);
     this.safe(() => this.capaRecorrido?.clearLayers());
+
+    // Mapear parques seleccionados a zonaIds (si no son todos → filtrar)
+    const allParques = this.parquesUnicos();
+    const todasMarcadas = parques.length >= allParques.length;
+    const zonaIds = todasMarcadas
+      ? []
+      : this.zonas()
+          .filter((z) => z.parque && parques.includes(z.parque))
+          .map((z) => z.id);
+
     this.service
-      .generarExamenRecorrido(ciudad.id, [], this.dificultadRec())
+      .generarExamenRecorrido(ciudad.id, zonaIds, this.dificultadRec())
       .subscribe({
         next: (ex) => this.arrancarExamenRecorridos(ex),
-        error: () => {
-          // El backend ya muestra el toast (BadRequest con motivo claro).
-        },
+        error: () => {},
       });
   }
 

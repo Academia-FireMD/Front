@@ -241,20 +241,24 @@
         <!-- Dificultad del examen (port v27): filtra el pool por longitud de calle -->
         <div class="cj-rec__dificultad" data-testid="cj-rec-dificultad">
           <span class="cj-rec__dificultad-label">Dificultad</span>
-          <div class="cj-rec__dificultad-btns">
-            @for (d of dificultades; track d.valor) {
-              <button
-                type="button"
-                class="cj-rec__dif-btn"
-                [class.on]="dificultad() === d.valor"
-                [attr.data-testid]="'cj-rec-dif-' + d.valor"
-                (click)="cambiarDificultad.emit(d.valor)"
-              >
-                {{ d.label }}
-              </button>
-            }
-          </div>
+          <app-cj-dificultad-chips
+            [dificultad]="dificultad()"
+            [descripciones]="DIF_DESC_REC"
+            prefix="cj-rec-dif-"
+            (dificultadChange)="cambiarDificultad.emit($event)"
+          ></app-cj-dificultad-chips>
         </div>
+
+        @if (parques().length > 0) {
+          <div class="cj-rec__zonas" data-testid="cj-rec-zonas">
+            <span class="cj-rec__dificultad-label">Zonas / parques</span>
+            <app-cj-zona-chips
+              [parques]="parques()"
+              [seleccion]="parquesRecSel()"
+              (seleccionChange)="parquesRecSel.set($event)"
+            ></app-cj-zona-chips>
+          </div>
+        }
 
         <button
           type="button"

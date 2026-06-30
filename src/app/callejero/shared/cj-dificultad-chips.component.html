@@ -1,0 +1,14 @@
+<div class="cj-dif-chips">
+  @for (n of niveles; track n.valor) {
+    <button
+      type="button"
+      class="cj-dif-btn"
+      [class.on]="dificultad() === n.valor"
+      [attr.data-testid]="prefix() + n.valor"
+      (click)="dificultadChange.emit(n.valor)"
+    >
+      {{ n.label }}
+    </button>
+  }
+</div>
+<p class="cj-dif-desc">{{ descripcionActiva() }}</p>

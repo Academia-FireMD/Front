@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   input,
   output,
   signal,
@@ -19,6 +20,14 @@ import {
   RecorridoLibreErrorCode,
   RecorridoResponse,
 } from '../models/callejero.model';
+import { CjDificultadChipsComponent } from '../shared/cj-dificultad-chips.component';
+import { CjZonaChipsComponent } from '../shared/cj-zona-chips.component';
+
+const DIF_DESC_REC: Record<DificultadCallejero, string> = {
+  FACIL: 'Te pregunta solo calles y avenidas de longitud considerable.',
+  MEDIO: 'Calles largas y de longitud media.',
+  DIFICIL: 'Cualquier calle, incluidas las cortas y sin salida.',
+};
 
 /** Modos del buscador de recorridos: calle del banco (autocomplete) o dirección libre (v27). */
 export type ModoRecorrido = 'calle-bd' | 'direccion-libre';
@@ -74,7 +83,13 @@ export interface RecorridoResultadoView {
 @Component({
   selector: 'app-recorrido-pane',
   standalone: true,
-  imports: [CommonModule, FormsModule, AutoCompleteModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    AutoCompleteModule,
+    CjDificultadChipsComponent,
+    CjZonaChipsComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './recorrido-pane.component.html',
   styleUrl: './recorrido-pane.component.scss',
@@ -108,6 +123,8 @@ export class RecorridoPaneComponent {
   readonly resultado = input<RecorridoResultadoView | null>(null);
   /** Dificultad seleccionada (port v27): filtra el pool por longitud de calle. */
   readonly dificultad = input<DificultadCallejero>('MEDIO');
+  /** Parques disponibles para el examen de recorridos (derivados de zonas). */
+  readonly parques = input<string[]>([]);
 
   // ---- Outputs (intención hacia el padre) ----
   /** El alumno eligió una calle-destino del autocomplete (modo `calle-bd`). */
@@ -116,8 +133,8 @@ export class RecorridoPaneComponent {
   readonly buscarDireccionLibre = output<string>();
   /** El alumno cambió la dificultad del examen de recorridos. */
   readonly cambiarDificultad = output<DificultadCallejero>();
-  /** El alumno pulsó "Examen de recorridos". */
-  readonly iniciarExamenRecorridos = output<void>();
+  /** El alumno pulsó "Examen de recorridos". Emite los parques seleccionados. */
+  readonly iniciarExamenRecorridos = output<string[]>();
   /** El alumno eligió un parque en el reto actual del examen. */
   readonly responderParque = output<string>();
   /** El alumno pulsó "Siguiente" / "Otra calle" (avanzar de reto). */
@@ -139,6 +156,10 @@ export class RecorridoPaneComponent {
   readonly modo = signal<ModoRecorrido>('calle-bd');
   /** Texto tecleado en el modo dirección libre (v27). */
   readonly textoLibre = signal<string>('');
+  /** Parques seleccionados para el examen de recorridos. */
+  readonly parquesRecSel = signal<Set<string>>(new Set());
+
+  readonly DIF_DESC_REC = DIF_DESC_REC;
 
   /** Opciones del selector de dificultad (port v27). */
   readonly dificultades: { valor: DificultadCallejero; label: string }[] = [
@@ -146,6 +167,16 @@ export class RecorridoPaneComponent {
     { valor: 'MEDIO', label: 'Medio' },
     { valor: 'DIFICIL', label: 'Difícil' },
   ];
+
+  constructor() {
+    effect(
+      () => {
+        const ps = this.parques();
+        if (ps.length > 0) this.parquesRecSel.set(new Set(ps));
+      },
+      { allowSignalWrites: true },
+    );
+  }
 
   /** ¿Hay un examen de recorridos en curso? */
   readonly examenActivo = computed(() => this.examen() !== null);
@@ -196,7 +227,7 @@ export class RecorridoPaneComponent {
   }
 
   onIniciarExamen(): void {
-    this.iniciarExamenRecorridos.emit();
+    this.iniciarExamenRecorridos.emit([...this.parquesRecSel()]);
   }
 
   onResponder(parque: string): void {

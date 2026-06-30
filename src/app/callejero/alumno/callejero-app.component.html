@@ -54,10 +54,10 @@
           </button>
           <button
             class="cj-chip"
-            [class.act]="baseActiva() === 'fusion'"
-            (click)="setBase('fusion')"
+            [class.act]="baseActiva() === 'mudo'"
+            (click)="setBase('mudo')"
           >
-            Fusión
+            Mudo
           </button>
           <button
             class="cj-chip"
@@ -108,17 +108,25 @@
       />
       <div class="cj-listas">
         @for (g of listasEstudio(); track g.cat) {
-          <div class="cj-lista-cat">
-            <h4>
+          <div
+            class="cj-lista-cat"
+            [class.cj-lista-cat--plegada]="colapsadas().has(g.cat)"
+          >
+            <h4 (click)="toggleColapso(g.cat)" role="button" tabindex="0">
               <span class="cj-dot" [style.background]="g.info.color"></span>
               {{ g.info.label }}
               <span class="cj-tgl__num">({{ g.items.length }})</span>
+              <span class="cj-lista-cat__chevron" aria-hidden="true">{{
+                colapsadas().has(g.cat) ? "▸" : "▾"
+              }}</span>
             </h4>
-            <ul>
-              @for (p of g.items; track p.id) {
-                <li (click)="irAPoi(p)">{{ p.nombre }}</li>
-              }
-            </ul>
+            @if (!colapsadas().has(g.cat)) {
+              <ul>
+                @for (p of g.items; track p.id) {
+                  <li (click)="irAPoi(p)">{{ p.nombre }}</li>
+                }
+              </ul>
+            }
           </div>
         }
       </div>
@@ -128,19 +136,28 @@
     <div class="cj-pane" [class.act]="tab() === 'examen'">
       @if (!examOn()) {
         <div class="cj-sec">
-          <label class="cj-lbl">Categorías</label>
-          @for (c of CAT_ORDER; track c) {
-            <label class="cj-tgl">
-              <input
-                type="checkbox"
-                [ngModel]="examCats()[c]"
-                (ngModelChange)="toggleExamCat(c, $event)"
-              />
-              <span class="cj-dot" [style.background]="CATS[c].color"></span>
-              <span class="cj-tgl__lbl">{{ CATS[c].label }}</span>
-            </label>
+          <label class="cj-lbl">Dificultad</label>
+          <app-cj-dificultad-chips
+            [dificultad]="dificultadExamen()"
+            [descripciones]="DIF_DESC_EXAM"
+            prefix="cj-exam-dif-"
+            (dificultadChange)="dificultadExamen.set($event)"
+            data-testid="cj-exam-dificultad"
+          ></app-cj-dificultad-chips>
+        </div>
+
+        <div class="cj-sec">
+          <label class="cj-lbl">Zonas / parques</label>
+          @if (parquesUnicos().length > 0) {
+            <app-cj-zona-chips
+              [parques]="parquesUnicos()"
+              [seleccion]="parquesSeleccion()"
+              (seleccionChange)="parquesSeleccion.set($event)"
+              data-testid="cj-exam-zona-chips"
+            ></app-cj-zona-chips>
           }
         </div>
+
         <div class="cj-sec">
           <label class="cj-lbl">Configuración</label>
           <div class="cj-cfg-row">
@@ -156,16 +173,18 @@
             </select>
           </div>
           <div class="cj-cfg-row">
-            <span>Tolerancia</span>
-            <select
-              class="cj-select cj-select--sm"
-              [ngModel]="cfgTol()"
-              (ngModelChange)="cfgTol.set($event)"
-            >
-              @for (t of opcionesTol; track t) {
-                <option [ngValue]="t">{{ t }} m</option>
+            <span>Tolerancia de localización</span>
+            <div class="cj-chips">
+              @for (t of opcionesTol; track t.valor) {
+                <button
+                  class="cj-chip"
+                  [class.act]="cfgTol() === t.valor"
+                  (click)="cfgTol.set(t.valor)"
+                >
+                  {{ t.label }}
+                </button>
               }
-            </select>
+            </div>
           </div>
           <label class="cj-tgl">
             <input
@@ -178,8 +197,19 @@
           <label class="cj-tgl">
             <input
               type="checkbox"
+              [ngModel]="cfgSoloZonas()"
+              (ngModelChange)="onCfgSoloZonasChange($event)"
+            />
+            <span class="cj-tgl__lbl"
+              >Solo preguntas de parque y coopera (tipo test)</span
+            >
+          </label>
+          <label class="cj-tgl">
+            <input
+              type="checkbox"
               [ngModel]="cfgZonas()"
               (ngModelChange)="cfgZonas.set($event)"
+              [disabled]="cfgSoloZonas()"
             />
             <span class="cj-tgl__lbl">Incluir preguntas de zona y coopera</span>
           </label>
@@ -226,10 +256,11 @@
         [examen]="recExamenView()"
         [resultado]="recExamenResultado()"
         [dificultad]="dificultadRec()"
+        [parques]="parquesUnicos()"
         (buscarDestino)="onBuscarDestino($event)"
         (buscarDireccionLibre)="onBuscarDireccionLibre($event)"
         (cambiarDificultad)="dificultadRec.set($event)"
-        (iniciarExamenRecorridos)="onIniciarExamenRecorridos()"
+        (iniciarExamenRecorridos)="onIniciarExamenRecorridos($event)"
         (responderParque)="onResponderParque($event)"
         (siguienteOtraCalle)="onSiguienteRecorrido()"
         (minimizarToggle)="onMinimizarRecorrido($event)"
