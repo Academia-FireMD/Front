@@ -27,6 +27,7 @@ import { TagModule } from 'primeng/tag';
 import { ToolbarModule } from 'primeng/toolbar';
 import { TooltipModule } from 'primeng/tooltip';
 import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
+import { ExportDialogComponent } from '../shared/components/export-dialog/export-dialog.component';
 import { GenericListComponent } from '../shared/generic-list/generic-list.component';
 import { SharedModule } from '../shared/shared.module';
 import { AjustesAdminComponent } from './components/ajustes-admin/ajustes-admin.component';
@@ -108,6 +109,7 @@ import { TestRoutingModule } from './test-routing.module';
     ToolbarModule,
     SplitButtonModule,
     AsyncButtonComponent,
+    ExportDialogComponent,
     UserDashboardComponent,
     GenericListComponent,
   ],

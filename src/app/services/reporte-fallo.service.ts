@@ -44,7 +44,7 @@ export class ReportesFalloService extends ApiBaseService {
   }
 
   public exportarFallos$(
-    filtros: any,
+    filtros: { temas?: number[]; dificultad?: string },
     type: 'test' | 'flashcards',
     formato: 'excel' | 'word',
   ): Observable<Blob> {

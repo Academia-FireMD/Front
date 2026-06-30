@@ -1,0 +1,47 @@
+<p-dialog
+  [header]="titulo()"
+  [visible]="visible()"
+  (visibleChange)="!$event && onCerrar()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '40vw' }"
+  [breakpoints]="{ '960px': '60vw', '640px': '90vw' }"
+>
+  <div class="flex flex-column gap-3">
+    <div>
+      <label class="block mb-2">Tema</label>
+      <app-tema-select [formControl]="temasControl"></app-tema-select>
+    </div>
+    <div>
+      <label class="block mb-2">Dificultad</label>
+      <app-dificultad-dropdown
+        [formControlDificultad]="dificultadControl"
+      ></app-dificultad-dropdown>
+    </div>
+    <div>
+      <label class="block mb-2">Formato</label>
+      <p-dropdown
+        [ngModel]="selectedFormato()"
+        (ngModelChange)="selectedFormato.set($event)"
+        [options]="formatoOptions"
+        optionLabel="label"
+        optionValue="value"
+        [style]="{ width: '100%' }"
+      ></p-dropdown>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      styleClass="p-button-outlined"
+      (click)="onCerrar()"
+    ></p-button>
+    <p-button
+      label="Descargar"
+      icon="pi pi-download"
+      (click)="onExportar()"
+      [loading]="loading()"
+    ></p-button>
+  </ng-template>
+</p-dialog>

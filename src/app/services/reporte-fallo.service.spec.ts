@@ -33,7 +33,9 @@ describe('ReportesFalloService', () => {
       const mockBlob = new Blob(['dummy'], { type: 'application/xlsx' });
       mockHttpPost.mockReturnValue(of(mockBlob));
 
-      const filtros = { createdAt: { gte: new Date('2024-01-01') } };
+      const filtros: { temas?: number[]; dificultad?: string } = {
+        temas: [1, 2],
+      };
       const type: 'test' | 'flashcards' = 'test';
       const formato: 'excel' | 'word' = 'excel';
 
@@ -52,7 +54,10 @@ describe('ReportesFalloService', () => {
       const mockBlob = new Blob(['dummy'], { type: 'application/docx' });
       mockHttpPost.mockReturnValue(of(mockBlob));
 
-      const filtros = { temaId: { in: [1, 2] } };
+      const filtros: { temas?: number[]; dificultad?: string } = {
+        temas: [1, 2],
+        dificultad: 'BASICO',
+      };
       const type: 'test' | 'flashcards' = 'flashcards';
       const formato: 'excel' | 'word' = 'word';
 
@@ -70,16 +75,16 @@ describe('ReportesFalloService', () => {
       const mockBlob = new Blob(['dummy']);
       mockHttpPost.mockReturnValue(of(mockBlob));
 
-      const filtros = {
-        pregunta: { relevancia: ['VALENCIA_AYUNTAMIENTO'] },
-        createdAt: { gte: '2024-01-01', lte: '2024-12-31' },
+      const filtros: { temas?: number[]; dificultad?: string } = {
+        temas: [3, 7],
+        dificultad: 'INTERMEDIO',
       };
 
       service.exportarFallos$(filtros, 'test', 'excel').subscribe(() => {
         const calledBody = mockHttpPost.mock.calls[0][1];
         expect(calledBody).toMatchObject({
-          pregunta: { relevancia: ['VALENCIA_AYUNTAMIENTO'] },
-          createdAt: { gte: '2024-01-01', lte: '2024-12-31' },
+          temas: [3, 7],
+          dificultad: 'INTERMEDIO',
           type: 'test',
           formato: 'excel',
         });

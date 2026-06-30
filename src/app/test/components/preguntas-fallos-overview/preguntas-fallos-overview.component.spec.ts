@@ -50,18 +50,16 @@ describe('PreguntasFallosOverviewComponent', () => {
   });
 
   describe('abrirExportDialog', () => {
-    it('should reset formato to excel and open the dialog', () => {
-      component.formatoExport = 'word';
+    it('should open the dialog', () => {
       component.mostrarExportDialog = false;
 
       component.abrirExportDialog();
 
-      expect(component.formatoExport).toBe('excel');
       expect(component.mostrarExportDialog).toBe(true);
     });
   });
 
-  describe('exportarFallos', () => {
+  describe('onExportar', () => {
     function setupUrlMocks() {
       (URL as unknown as { createObjectURL: jest.Mock }).createObjectURL = jest
         .fn()
@@ -70,17 +68,9 @@ describe('PreguntasFallosOverviewComponent', () => {
         jest.fn();
     }
 
-    it('should call exportarFallos$ with type=test and current where filters, then trigger anchor download', async () => {
+    it('should call exportarFallos$ with type=test and given filtros/formato, then trigger anchor download', async () => {
       const mockBlob = new Blob(['data'], { type: 'application/xlsx' });
       mockReportesFalloService.exportarFallos$.mockReturnValue(of(mockBlob));
-
-      component.pagination.set({
-        skip: 0,
-        take: 10,
-        searchTerm: '',
-        where: { pregunta: { relevancia: ['VALENCIA_AYUNTAMIENTO'] } },
-      });
-      component.formatoExport = 'excel';
 
       const mockLink = {
         href: '',
@@ -90,10 +80,10 @@ describe('PreguntasFallosOverviewComponent', () => {
       jest.spyOn(document, 'createElement').mockReturnValue(mockLink);
       setupUrlMocks();
 
-      await component.exportarFallos();
+      await component.onExportar({ filtros: { temas: [1] }, formato: 'excel' });
 
       expect(mockReportesFalloService.exportarFallos$).toHaveBeenCalledWith(
-        { pregunta: { relevancia: ['VALENCIA_AYUNTAMIENTO'] } },
+        { temas: [1] },
         'test',
         'excel',
       );
@@ -110,9 +100,6 @@ describe('PreguntasFallosOverviewComponent', () => {
       const mockBlob = new Blob(['data']);
       mockReportesFalloService.exportarFallos$.mockReturnValue(of(mockBlob));
 
-      component.pagination.set({ skip: 0, take: 10, searchTerm: '' });
-      component.formatoExport = 'word';
-
       const mockLink = {
         href: '',
         download: '',
@@ -121,10 +108,10 @@ describe('PreguntasFallosOverviewComponent', () => {
       jest.spyOn(document, 'createElement').mockReturnValue(mockLink);
       setupUrlMocks();
 
-      await component.exportarFallos();
+      await component.onExportar({ filtros: {}, formato: 'word' });
 
       expect(mockReportesFalloService.exportarFallos$).toHaveBeenCalledWith(
-        undefined,
+        {},
         'test',
         'word',
       );
@@ -146,7 +133,7 @@ describe('PreguntasFallosOverviewComponent', () => {
       setupUrlMocks();
 
       expect(component.exportando).toBe(false);
-      await component.exportarFallos();
+      await component.onExportar({ filtros: {}, formato: 'excel' });
       expect(component.exportando).toBe(false);
     });
 
@@ -163,7 +150,7 @@ describe('PreguntasFallosOverviewComponent', () => {
       jest.spyOn(document, 'createElement').mockReturnValue(mockLink);
       setupUrlMocks();
 
-      await component.exportarFallos();
+      await component.onExportar({ filtros: {}, formato: 'excel' });
 
       expect(component.mostrarExportDialog).toBe(false);
     });

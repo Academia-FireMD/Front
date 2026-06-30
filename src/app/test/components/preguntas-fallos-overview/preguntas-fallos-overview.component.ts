@@ -7,6 +7,7 @@ import { FilterConfig } from '../../../shared/generic-list/generic-list.componen
 import { PaginatedResult } from '../../../shared/models/pagination.model';
 import { PreguntaFallo } from '../../../shared/models/pregunta.model';
 import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import type { ExportDialogEvent } from '../../../shared/components/export-dialog/export-dialog.component';
 
 @Component({
   selector: 'app-preguntas-fallos-overview',
@@ -23,7 +24,6 @@ export class PreguntasFallosOverviewComponent extends SharedGridComponent<Pregun
 
   public mostrarExportDialog = false;
   public exportando = false;
-  public formatoExport: 'excel' | 'word' = 'excel';
 
   // Configuración de filtros para el GenericListComponent
   public filters: FilterConfig[] = [
@@ -69,26 +69,24 @@ export class PreguntasFallosOverviewComponent extends SharedGridComponent<Pregun
   }
 
   public abrirExportDialog() {
-    this.formatoExport = 'excel';
     this.mostrarExportDialog = true;
   }
 
-  public async exportarFallos() {
-    const where = this.pagination().where;
+  public async onExportar(event: ExportDialogEvent) {
     this.exportando = true;
     try {
       const blob = await firstValueFrom(
         this.reportesFalloService.exportarFallos$(
-          where,
+          event.filtros,
           'test',
-          this.formatoExport,
+          event.formato,
         ),
       );
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.href = url;
       const fecha = new Date().toISOString().split('T')[0];
-      const ext = this.formatoExport === 'excel' ? 'xlsx' : 'docx';
+      const ext = event.formato === 'excel' ? 'xlsx' : 'docx';
       link.download = `fallos_test_${fecha}.${ext}`;
       link.click();
       URL.revokeObjectURL(url);
