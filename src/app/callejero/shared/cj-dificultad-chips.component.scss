@@ -1,2 +1,46 @@
-.cj-dif-chips {
+/* Verbatim from Raúl (callejero_tecnikafire_valencia_27.html) */
+:host {
+  --rojo: #bf0b1b;
+  --ink: #15120e;
+  --linea: #e7e3dd;
+}
+
+.dif-sel {
+  display: flex;
+  gap: 6px;
+  margin: 2px 0 8px;
+}
+
+/* Targets both bare <button> elements and any with class .cj-dif-btn */
+.dif-sel button {
+  flex: 1;
+  border: 1.5px solid var(--linea);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 9px;
+  padding: 9px 4px;
+  font-family: "Barlow Condensed";
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.dif-sel button:hover {
+  border-color: var(--rojo);
+}
+
+.dif-sel button.on {
+  background: var(--rojo);
+  color: #fff;
+  border-color: var(--rojo);
+}
+
+.cj-dif-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gris, #8c857e);
+  line-height: 1.4;
 }

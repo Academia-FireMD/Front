@@ -82,51 +82,40 @@
           </button>
         </div>
       } @else {
-        <!-- ========= MODO BÚSQUEDA DE RECORRIDO ========= -->
-        <!-- Toggle de modo (estética v27): calle del banco vs dirección libre -->
-        <div class="cj-rec__modo" data-testid="cj-rec-modo">
-          <button
-            type="button"
-            class="cj-rec__modo-btn"
-            [class.on]="modo() === 'calle-bd'"
+        <!-- ========= MODO SELECCIÓN (port v27 / Raúl) ========= -->
+
+        <!-- Modo: 2 checkboxes apilados, radio-exclusivos (calca .tgl de Raúl) -->
+        <div class="cj-tgl-group" data-testid="cj-rec-modo">
+          <label
+            class="cj-tgl"
             data-testid="cj-rec-modo-calle-bd"
-            (click)="setModo('calle-bd')"
+            (click)="setPreguntar(false)"
           >
-            Elijo yo la calle
-          </button>
-          <button
-            type="button"
-            class="cj-rec__modo-btn"
-            [class.on]="modo() === 'direccion-libre'"
+            <input
+              type="checkbox"
+              [checked]="!preguntar()"
+              (click)="$event.preventDefault()"
+            />
+            <span class="cj-tgl__lbl">Escribo / elijo yo la calle</span>
+          </label>
+          <label
+            class="cj-tgl"
             data-testid="cj-rec-modo-direccion-libre"
-            (click)="setModo('direccion-libre')"
+            (click)="setPreguntar(true)"
           >
-            Escribo una dirección
-          </button>
+            <input
+              type="checkbox"
+              [checked]="preguntar()"
+              (click)="$event.preventDefault()"
+            />
+            <span class="cj-tgl__lbl">Que me pregunten una calle</span>
+          </label>
         </div>
 
-        @if (modo() === "calle-bd") {
-          <div class="cj-rec__buscador" data-testid="cj-rec-buscador">
-            <label class="cj-rec__lbl">Calle de destino</label>
-            <p-autoComplete
-              [suggestions]="sugerencias()"
-              [delay]="200"
-              [minLength]="2"
-              [forceSelection]="true"
-              field="nombre"
-              placeholder="Escribe una calle…"
-              styleClass="cj-rec__ac"
-              data-testid="cj-rec-buscar"
-              (completeMethod)="filtrarCalles($event)"
-              (onSelect)="onSeleccionarCalle($event)"
-            >
-              <ng-template let-c pTemplate="item">
-                <span>{{ c.nombre }}</span>
-              </ng-template>
-            </p-autoComplete>
-          </div>
-        } @else {
-          <!-- ===== Dirección libre (port v27) ===== -->
+        @if (!preguntar()) {
+          <!-- ===== ESCRIBO / ELIJO YO LA CALLE ===== -->
+
+          <!-- Dirección libre (OSM geocode, T10) -->
           <div class="cj-rec__libre" data-testid="cj-rec-libre">
             <label class="cj-rec__lbl">Destino de la salida</label>
             <input
@@ -157,127 +146,149 @@
             >
               Trazar al primer resultado
             </button>
-            <p class="cj-rec__libre-nota">
-              Escribe una dirección de València y traza el recorrido del parque
-              que cubre su zona.
-            </p>
           </div>
-        }
 
-        @if (loading()) {
-          <!-- Cargando -->
-          <div class="cj-rec__estado" data-testid="cj-rec-loading">
-            Trazando recorrido…
-          </div>
-        } @else if (error() === "no-disponible") {
-          <!-- D7: ruta no disponible (estado DURO, sin mapa falso) -->
-          <div
-            class="cj-rec__estado cj-rec__estado--off"
-            data-testid="cj-rec-no-disponible"
-          >
-            <div class="cj-rec__estado-icon">🚧</div>
-            <b>Ruta no disponible</b>
-            <p>
-              Aún no hay un recorrido publicado para esta calle. Prueba con otra
-              calle de destino.
-            </p>
-          </div>
-        } @else if (error() === "NO_GEOCODE") {
-          <!-- D7: dirección libre no localizada (estado DURO) -->
-          <div
-            class="cj-rec__estado cj-rec__estado--off"
-            data-testid="cj-rec-no-geocode"
-          >
-            <div class="cj-rec__estado-icon">📍</div>
-            <b>No encontramos esa dirección</b>
-            <p>
-              Revisa el nombre o prueba con otra calle o dirección de València.
-            </p>
-          </div>
-        } @else if (error() === "ROUTE_UNAVAILABLE") {
-          <!-- D7: localizada pero sin ruta trazable (estado DURO) -->
-          <div
-            class="cj-rec__estado cj-rec__estado--off"
-            data-testid="cj-rec-route-unavailable"
-          >
-            <div class="cj-rec__estado-icon">🚧</div>
-            <b>No se pudo trazar la ruta, inténtalo de nuevo</b>
-            <p>El servidor de rutas no respondió. Vuelve a intentarlo.</p>
-          </div>
-        } @else if (recorrido()) {
-          <!-- Resultado del recorrido -->
-          <div class="cj-rec__resumen" data-testid="cj-rec-resumen">
-            <div class="cj-rec__stats">
-              <div class="cj-rec__stat">
-                <b>{{ recorrido()!.km | number: "1.1-1" }}</b
-                ><span>km</span>
-              </div>
-              <div class="cj-rec__stat">
-                <b>{{ recorrido()!.minutos }}</b
-                ><span>min</span>
-              </div>
-            </div>
-            @if (recorrido()!.estacion; as est) {
-              <div class="cj-rec__origen">
-                <span class="cj-rec__origen-dot"></span>
-                Desde <b>{{ est.nombre }}</b>
-              </div>
-            }
-            @if (destino(); as d) {
-              <div class="cj-rec__destino">
-                <span class="cj-rec__destino-dot"></span>
-                Hasta <b>{{ d.nombre }}</b>
-              </div>
-            }
-            <ol class="cj-rec__calles" data-testid="cj-rec-calles">
-              @for (calle of recorrido()!.calles; track $index) {
-                <li>
-                  <span class="cj-rec__idx">{{ $index + 1 }}</span>
-                  {{ calle }}
+          <!-- Base de calles: filtro + lista (port v27) -->
+          <div class="cj-rec__buscador" data-testid="cj-rec-buscador">
+            <label class="cj-rec__lbl">O elige una calle de la base</label>
+            <input
+              type="text"
+              class="cj-rec__base-input"
+              placeholder="Filtrar calles…"
+              autocomplete="off"
+              [ngModel]="baseBuscarTexto()"
+              (ngModelChange)="baseBuscarTexto.set($event)"
+            />
+            <ul class="cj-rec__base-list">
+              @for (c of callesFiltradas(); track c.id) {
+                <li
+                  class="cj-rec__base-item"
+                  (click)="onSeleccionarCalleDirecto(c)"
+                >
+                  {{ c.nombre }}
                 </li>
               }
-            </ol>
+            </ul>
           </div>
+
+          <!-- Estados: loading / error / recorrido / hint inicial -->
+          @if (loading()) {
+            <div class="cj-rec__estado" data-testid="cj-rec-loading">
+              Trazando recorrido…
+            </div>
+          } @else if (error() === "no-disponible") {
+            <!-- D7: ruta no disponible (estado DURO, sin mapa falso) -->
+            <div
+              class="cj-rec__estado cj-rec__estado--off"
+              data-testid="cj-rec-no-disponible"
+            >
+              <div class="cj-rec__estado-icon">🚧</div>
+              <b>Ruta no disponible</b>
+              <p>
+                Aún no hay un recorrido publicado para esta calle. Prueba con
+                otra calle de destino.
+              </p>
+            </div>
+          } @else if (error() === "NO_GEOCODE") {
+            <!-- D7: dirección libre no localizada (estado DURO) -->
+            <div
+              class="cj-rec__estado cj-rec__estado--off"
+              data-testid="cj-rec-no-geocode"
+            >
+              <div class="cj-rec__estado-icon">📍</div>
+              <b>No encontramos esa dirección</b>
+              <p>
+                Revisa el nombre o prueba con otra calle o dirección de
+                València.
+              </p>
+            </div>
+          } @else if (error() === "ROUTE_UNAVAILABLE") {
+            <!-- D7: localizada pero sin ruta trazable (estado DURO) -->
+            <div
+              class="cj-rec__estado cj-rec__estado--off"
+              data-testid="cj-rec-route-unavailable"
+            >
+              <div class="cj-rec__estado-icon">🚧</div>
+              <b>No se pudo trazar la ruta, inténtalo de nuevo</b>
+              <p>El servidor de rutas no respondió. Vuelve a intentarlo.</p>
+            </div>
+          } @else if (recorrido()) {
+            <!-- Resultado del recorrido -->
+            <div class="cj-rec__resumen" data-testid="cj-rec-resumen">
+              <div class="cj-rec__stats">
+                <div class="cj-rec__stat">
+                  <b>{{ recorrido()!.km | number: "1.1-1" }}</b
+                  ><span>km</span>
+                </div>
+                <div class="cj-rec__stat">
+                  <b>{{ recorrido()!.minutos }}</b
+                  ><span>min</span>
+                </div>
+              </div>
+              @if (recorrido()!.estacion; as est) {
+                <div class="cj-rec__origen">
+                  <span class="cj-rec__origen-dot"></span>
+                  Desde <b>{{ est.nombre }}</b>
+                </div>
+              }
+              @if (destino(); as d) {
+                <div class="cj-rec__destino">
+                  <span class="cj-rec__destino-dot"></span>
+                  Hasta <b>{{ d.nombre }}</b>
+                </div>
+              }
+              <ol class="cj-rec__calles" data-testid="cj-rec-calles">
+                @for (calle of recorrido()!.calles; track $index) {
+                  <li>
+                    <span class="cj-rec__idx">{{ $index + 1 }}</span>
+                    {{ calle }}
+                  </li>
+                }
+              </ol>
+            </div>
+          } @else {
+            <!-- Sin búsqueda aún: hint inicial -->
+            <div class="cj-rec__hint" data-testid="cj-rec-hint">
+              <p>
+                Busca una calle para ver el recorrido del parque más cercano:
+                las vías en orden, los km y el tiempo.
+              </p>
+            </div>
+          }
         } @else {
-          <!-- Sin búsqueda aún: CTA examen -->
-          <div class="cj-rec__hint" data-testid="cj-rec-hint">
-            <p>
-              Busca una calle para ver el recorrido del parque más cercano: las
-              vías en orden, los km y el tiempo.
-            </p>
+          <!-- ===== QUE ME PREGUNTEN UNA CALLE ===== -->
+
+          <!-- Dificultad del examen (port v27): filtra el pool por longitud de calle -->
+          <div class="cj-rec__dificultad" data-testid="cj-rec-dificultad">
+            <span class="cj-rec__dificultad-label">Dificultad</span>
+            <app-cj-dificultad-chips
+              [dificultad]="dificultad()"
+              [descripciones]="DIF_DESC_REC"
+              prefix="cj-rec-dif-"
+              (dificultadChange)="cambiarDificultad.emit($event)"
+            ></app-cj-dificultad-chips>
           </div>
+
+          @if (parques().length > 0) {
+            <div class="cj-rec__zonas" data-testid="cj-rec-zonas">
+              <span class="cj-rec__dificultad-label">Zonas / parques</span>
+              <app-cj-zona-chips
+                [parques]="parques()"
+                [seleccion]="parquesRecSel()"
+                (seleccionChange)="parquesRecSel.set($event)"
+              ></app-cj-zona-chips>
+            </div>
+          }
+
+          <button
+            type="button"
+            class="cj-rec__btn cj-rec__btn--linea"
+            data-testid="cj-rec-iniciar-examen"
+            (click)="onIniciarExamen()"
+          >
+            Examen de recorridos
+          </button>
         }
-
-        <!-- Dificultad del examen (port v27): filtra el pool por longitud de calle -->
-        <div class="cj-rec__dificultad" data-testid="cj-rec-dificultad">
-          <span class="cj-rec__dificultad-label">Dificultad</span>
-          <app-cj-dificultad-chips
-            [dificultad]="dificultad()"
-            [descripciones]="DIF_DESC_REC"
-            prefix="cj-rec-dif-"
-            (dificultadChange)="cambiarDificultad.emit($event)"
-          ></app-cj-dificultad-chips>
-        </div>
-
-        @if (parques().length > 0) {
-          <div class="cj-rec__zonas" data-testid="cj-rec-zonas">
-            <span class="cj-rec__dificultad-label">Zonas / parques</span>
-            <app-cj-zona-chips
-              [parques]="parques()"
-              [seleccion]="parquesRecSel()"
-              (seleccionChange)="parquesRecSel.set($event)"
-            ></app-cj-zona-chips>
-          </div>
-        }
-
-        <button
-          type="button"
-          class="cj-rec__btn cj-rec__btn--linea"
-          data-testid="cj-rec-iniciar-examen"
-          (click)="onIniciarExamen()"
-        >
-          Examen de recorridos
-        </button>
       }
     </div>
   }

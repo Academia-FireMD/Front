@@ -101,18 +101,24 @@ function flameIcon(px: number): L.DivIcon {
 }
 
 const ATTRIB = '© OpenStreetMap · © CARTO · Esri';
+// TODO ToS: Google tiles sin key (zona gris); migrar a Esri/key oficial antes de prod
+const GOOGLE_OPTS: L.TileLayerOptions = {
+  subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] as unknown as string,
+  maxZoom: 20,
+  attribution: '© Google',
+};
 const BASE_URLS: Record<string, { url: string; opts: L.TileLayerOptions }> = {
   calles: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    opts: { subdomains: 'abcd', maxZoom: 20, attribution: ATTRIB },
+    url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    opts: GOOGLE_OPTS,
   },
   mudo: {
     url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
     opts: { subdomains: 'abcd', maxZoom: 20, attribution: ATTRIB },
   },
   satelite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    opts: { maxZoom: 20, attribution: ATTRIB },
+    url: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    opts: GOOGLE_OPTS,
   },
 };
 
@@ -258,10 +264,10 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   readonly buscar = signal<string>('');
   /**
    * Grupos plegados en el modo Estudio: categorías PoiCategoria + 'calles-ciudad'
-   * + 'calles-modificadas' (arrancan colapsadas por defecto).
+   * + 'calles-modificadas'. Arrancan TODAS colapsadas por defecto (paridad v27).
    */
   readonly colapsadas = signal<Set<string>>(
-    new Set(['calles-ciudad', 'calles-modificadas']),
+    new Set([...CAT_ORDER, 'calles-ciudad', 'calles-modificadas']),
   );
   toggleColapso(c: string): void {
     const next = new Set(this.colapsadas());
@@ -474,7 +480,22 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
 
   private tileLayer(key: 'calles' | 'mudo' | 'satelite'): L.TileLayer {
     const b = BASE_URLS[key];
-    return L.tileLayer(b.url, b.opts);
+    const layer = L.tileLayer(b.url, b.opts);
+    // TODO ToS: Google tiles sin key (zona gris); migrar a Esri/key oficial antes de prod
+    if (key === 'calles') {
+      layer.on('tileerror', () => {
+        layer.setUrl(
+          'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        );
+      });
+    } else if (key === 'satelite') {
+      layer.on('tileerror', () => {
+        layer.setUrl(
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        );
+      });
+    }
+    return layer;
   }
 
   /** Ejecuta una operación Leaflet ignorando errores de jsdom (tests). */

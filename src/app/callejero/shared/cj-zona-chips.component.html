@@ -1,9 +1,9 @@
-<div class="cj-zona-chips" data-testid="cj-zona-chips">
+<div class="zona-chips" data-testid="cj-zona-chips">
   @for (p of parques(); track p) {
     <button
       type="button"
       class="cj-zona-chip"
-      [class.act]="seleccion().has(p)"
+      [class.on]="seleccion().has(p)"
       (click)="toggle(p)"
     >
       {{ p }}

@@ -97,27 +97,28 @@
 .cj-sec {
   margin-bottom: 18px;
 }
+/* Matches Raúl's .sec h3 (font-weight:700, font-size:15px, letter-spacing:.14em) */
 .cj-lbl {
   display: block;
   font-family: var(--cond);
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--gris);
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 }
 
 .cj-select {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--linea);
+  padding: 7px 9px;
+  border: 1.5px solid var(--linea);
   border-radius: 8px;
   background: #fff;
   font-size: 14px;
   &--sm {
     width: auto;
-    padding: 5px 8px;
+    padding: 7px 9px;
   }
 }
 

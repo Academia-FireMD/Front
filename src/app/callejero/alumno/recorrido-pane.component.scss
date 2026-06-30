@@ -445,3 +445,34 @@
     }
   }
 }
+
+/* Modo: 2 checkboxes apilados (calca .tgl de Raúl) */
+.cj-tgl-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+.cj-tgl-group .cj-tgl {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  &:hover {
+    background: #f6f8fb;
+  }
+  input {
+    accent-color: var(--rojo, #bf0b1b);
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+  .cj-tgl__lbl {
+    font-size: 14.5px;
+    font-weight: 500;
+    flex: 1;
+  }
+}

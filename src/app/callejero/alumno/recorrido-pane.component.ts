@@ -175,6 +175,13 @@ export class RecorridoPaneComponent implements OnDestroy {
   readonly textoLibre = signal<string>('');
   /** Parques seleccionados para el examen de recorridos. */
   readonly parquesRecSel = signal<Set<string>>(new Set());
+  /**
+   * Modo externo (port v27 / Raúl): false = "Escribo/elijo yo la calle",
+   * true = "Que me pregunten una calle" (muestra config del examen).
+   */
+  readonly preguntar = signal<boolean>(false);
+  /** Texto del filtro de la base de calles en la sección "Escribo/elijo". */
+  readonly baseBuscarTexto = signal<string>('');
 
   readonly DIF_DESC_REC = DIF_DESC_REC;
 
@@ -209,8 +216,33 @@ export class RecorridoPaneComponent implements OnDestroy {
     this.destroy$.complete();
   }
 
+  /**
+   * Alterna entre "Escribo/elijo yo la calle" (false) y "Que me pregunten" (true).
+   * Port v27 / Raúl: los checkboxes del sidebar son radio-exclusivos.
+   */
+  setPreguntar(v: boolean): void {
+    this.preguntar.set(v);
+  }
+
+  /** El alumno seleccionó directamente una calle del filtro de la base. */
+  onSeleccionarCalleDirecto(c: Calle): void {
+    this.buscarDestino.emit(c.id);
+  }
+
   /** ¿Hay un examen de recorridos en curso? */
   readonly examenActivo = computed(() => this.examen() !== null);
+
+  /**
+   * Calles filtradas por texto de búsqueda base (sección "Escribo/elijo").
+   * Sin filtro muestra las primeras 20; con filtro hasta 30 resultados.
+   */
+  readonly callesFiltradas = computed<Calle[]>(() => {
+    const q = this.baseBuscarTexto().trim().toLowerCase();
+    if (!q) return this.calles().slice(0, 20);
+    return this.calles()
+      .filter((c) => c.nombre.toLowerCase().includes(q))
+      .slice(0, 30);
+  });
 
   /**
    * Filtra el catálogo de calles por el texto tecleado (case/acentos-insensible

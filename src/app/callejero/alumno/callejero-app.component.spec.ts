@@ -598,11 +598,12 @@ describe('CallejeroAppComponent', () => {
     });
 
     it('toggleColapso pliega y despliega una categoría en Estudio', () => {
-      expect(component.colapsadas().has('hospital')).toBe(false);
-      component.toggleColapso('hospital');
+      // TA2: todas las categorías de CAT_ORDER arrancan colapsadas.
       expect(component.colapsadas().has('hospital')).toBe(true);
       component.toggleColapso('hospital');
       expect(component.colapsadas().has('hospital')).toBe(false);
+      component.toggleColapso('hospital');
+      expect(component.colapsadas().has('hospital')).toBe(true);
     });
   });
 

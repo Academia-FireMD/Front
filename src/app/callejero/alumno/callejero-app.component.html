@@ -259,17 +259,15 @@
           </div>
           <div class="cj-cfg-row">
             <span>Tolerancia de localización</span>
-            <div class="cj-chips">
+            <select
+              class="cj-select cj-select--sm"
+              [ngModel]="cfgTol()"
+              (ngModelChange)="cfgTol.set(+$event)"
+            >
               @for (t of opcionesTol; track t.valor) {
-                <button
-                  class="cj-chip"
-                  [class.act]="cfgTol() === t.valor"
-                  (click)="cfgTol.set(t.valor)"
-                >
-                  {{ t.label }}
-                </button>
+                <option [ngValue]="t.valor">{{ t.label }}</option>
               }
-            </div>
+            </select>
           </div>
           <label class="cj-tgl">
             <input

@@ -66,9 +66,12 @@ describe('RecorridoPaneComponent', () => {
 
   afterEach(() => fixture.destroy());
 
+  // En el modo por defecto (preguntar=false / "Escribo/elijo") el hint aparece y
+  // el botón de iniciar examen vive en la sección "Que me pregunten" (oculta).
   it('renderiza el hint inicial cuando no hay búsqueda', () => {
     expect(byTestId(fixture, 'cj-rec-hint')).not.toBeNull();
-    expect(byTestId(fixture, 'cj-rec-iniciar-examen')).not.toBeNull();
+    // El botón de examen solo se ve en modo "Que me pregunten" (preguntar=true).
+    expect(byTestId(fixture, 'cj-rec-iniciar-examen')).toBeNull();
   });
 
   it('estado "ruta no disponible" DURO (D7) cuando error=no-disponible', () => {
@@ -136,9 +139,12 @@ describe('RecorridoPaneComponent', () => {
     expect(emitted).toEqual([true, false]);
   });
 
-  it('emite iniciarExamenRecorridos al pulsar el botón', () => {
+  it('emite iniciarExamenRecorridos al pulsar el botón (preguntar=true)', () => {
     let called = 0;
     component.iniciarExamenRecorridos.subscribe(() => called++);
+    // El botón solo vive en la sección "Que me pregunten".
+    component.setPreguntar(true);
+    fixture.detectChanges();
     (byTestId(fixture, 'cj-rec-iniciar-examen') as HTMLButtonElement).click();
     expect(called).toBe(1);
   });
@@ -231,38 +237,47 @@ describe('RecorridoPaneComponent', () => {
     });
   });
 
-  // ── Modo "dirección libre" (Callejero v27) ────────────────────────────────
-  describe('modo dirección libre (v27)', () => {
-    it('renderiza el toggle con ambos modos; por defecto muestra el buscador BD', () => {
+  // ── Toggle externo v27 (Raúl): "Escribo/elijo" ↔ "Que me pregunten" ─────────
+  describe('toggle externo v27 (preguntar)', () => {
+    it('renderiza el toggle con ambos modos; por defecto muestra libre + base (preguntar=false)', () => {
       expect(byTestId(fixture, 'cj-rec-modo')).not.toBeNull();
       expect(byTestId(fixture, 'cj-rec-modo-calle-bd')).not.toBeNull();
       expect(byTestId(fixture, 'cj-rec-modo-direccion-libre')).not.toBeNull();
-      // Modo por defecto = calle-bd → buscador visible, input libre oculto.
-      expect(component.modo()).toBe('calle-bd');
+      // Por defecto: preguntar=false → sección "Escribo/elijo" visible
+      expect(component.preguntar()).toBe(false);
+      expect(byTestId(fixture, 'cj-rec-libre')).not.toBeNull();
       expect(byTestId(fixture, 'cj-rec-buscador')).not.toBeNull();
-      expect(byTestId(fixture, 'cj-rec-libre')).toBeNull();
+      // La sección de dificultad/examen queda oculta.
+      expect(byTestId(fixture, 'cj-rec-dificultad')).toBeNull();
+      expect(byTestId(fixture, 'cj-rec-iniciar-examen')).toBeNull();
     });
 
-    it('al cambiar a dirección libre muestra el input + botón "Trazar al primer resultado"', () => {
-      (
-        byTestId(fixture, 'cj-rec-modo-direccion-libre') as HTMLButtonElement
-      ).click();
+    it('al cambiar a "Que me pregunten" muestra dificultad + botón examen; oculta libre/base', () => {
+      (byTestId(fixture, 'cj-rec-modo-direccion-libre') as HTMLElement).click();
       fixture.detectChanges();
-      expect(component.modo()).toBe('direccion-libre');
-      expect(byTestId(fixture, 'cj-rec-libre')).not.toBeNull();
-      expect(byTestId(fixture, 'cj-rec-libre-input')).not.toBeNull();
-      const btn = byTestId(fixture, 'cj-rec-libre-trazar');
-      expect(btn?.textContent).toContain('Trazar al primer resultado');
-      expect(txt(fixture)).toContain('Destino de la salida');
-      // El buscador de BD queda oculto en este modo.
+      expect(component.preguntar()).toBe(true);
+      expect(byTestId(fixture, 'cj-rec-dificultad')).not.toBeNull();
+      expect(byTestId(fixture, 'cj-rec-iniciar-examen')).not.toBeNull();
+      // Las secciones de búsqueda quedan ocultas.
+      expect(byTestId(fixture, 'cj-rec-libre')).toBeNull();
       expect(byTestId(fixture, 'cj-rec-buscador')).toBeNull();
+    });
+
+    it('al volver a "Escribo/elijo" restaura libre + base y oculta dificultad', () => {
+      component.setPreguntar(true);
+      fixture.detectChanges();
+      (byTestId(fixture, 'cj-rec-modo-calle-bd') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(component.preguntar()).toBe(false);
+      expect(byTestId(fixture, 'cj-rec-libre')).not.toBeNull();
+      expect(byTestId(fixture, 'cj-rec-buscador')).not.toBeNull();
+      expect(byTestId(fixture, 'cj-rec-dificultad')).toBeNull();
     });
 
     it('escribir una dirección + botón emite buscarDireccionLibre con el texto', () => {
       const emitted: string[] = [];
       component.buscarDireccionLibre.subscribe((q) => emitted.push(q));
-      component.setModo('direccion-libre');
-      fixture.detectChanges();
+      // preguntar=false por defecto → libre visible
       const input = byTestId(fixture, 'cj-rec-libre-input') as HTMLInputElement;
       input.value = 'Calle Colón 12';
       input.dispatchEvent(new Event('input'));
@@ -275,7 +290,7 @@ describe('RecorridoPaneComponent', () => {
     it('no emite si el texto libre está vacío o en blanco', () => {
       const emitted: string[] = [];
       component.buscarDireccionLibre.subscribe((q) => emitted.push(q));
-      component.setModo('direccion-libre');
+      // preguntar=false por defecto → libre visible
       component.textoLibre.set('   ');
       fixture.detectChanges();
       (byTestId(fixture, 'cj-rec-libre-trazar') as HTMLButtonElement).click();
@@ -302,7 +317,7 @@ describe('RecorridoPaneComponent', () => {
       expect(byTestId(fixture, 'cj-rec-no-geocode')).toBeNull();
     });
 
-    it('al alternar de modo emite modoCambiado y limpia el estado local', () => {
+    it('setModo() emite modoCambiado y limpia estado local del buscador (inner mode)', () => {
       const emitted: ModoRecorrido[] = [];
       component.modoCambiado.subscribe((m) => emitted.push(m));
       // Estado local del modo anterior que NO debe arrastrarse.
@@ -324,6 +339,12 @@ describe('RecorridoPaneComponent', () => {
 
   // ── Selector de dificultad (port v27) ─────────────────────────────────────
   describe('selector de dificultad', () => {
+    // La sección de dificultad solo se muestra en modo "Que me pregunten".
+    beforeEach(() => {
+      component.setPreguntar(true);
+      fixture.detectChanges();
+    });
+
     it('renderiza los 3 niveles y emite cambiarDificultad al pulsar', () => {
       expect(byTestId(fixture, 'cj-rec-dificultad')).not.toBeNull();
       let emitido: string | undefined;
