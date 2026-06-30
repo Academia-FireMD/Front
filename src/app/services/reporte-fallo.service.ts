@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import {
   PaginatedResult,
   PaginationFilter,
@@ -40,5 +41,17 @@ export class ReportesFalloService extends ApiBaseService {
 
   public deleteReporteFallo$(id: number) {
     return this.delete('/' + id);
+  }
+
+  public exportarFallos$(
+    filtros: any,
+    type: 'test' | 'flashcards',
+    formato: 'excel' | 'word',
+  ): Observable<Blob> {
+    return this._http.post(
+      environment.apiUrl + this.controllerPrefix + '/exportar',
+      { ...filtros, type, formato },
+      { responseType: 'blob', withCredentials: true },
+    ) as Observable<Blob>;
   }
 }

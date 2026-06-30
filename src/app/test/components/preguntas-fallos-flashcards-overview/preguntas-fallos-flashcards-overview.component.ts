@@ -21,6 +21,10 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
   @Input() mode: 'injected' | 'overview' = 'overview';
   @Input() data!: PaginatedResult<PreguntaFallo>;
 
+  public mostrarExportDialog = false;
+  public exportando = false;
+  public formatoExport: 'excel' | 'word' = 'excel';
+
   // Configuración de filtros para el GenericListComponent
   public filters: FilterConfig[] = [
     {
@@ -62,6 +66,38 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
     });
   }
 
+  public abrirExportDialog() {
+    this.formatoExport = 'excel';
+    this.mostrarExportDialog = true;
+  }
+
+  public async exportarFallos() {
+    const where = this.pagination().where;
+    this.exportando = true;
+    try {
+      const blob = await firstValueFrom(
+        this.reportesFalloService.exportarFallos$(
+          where,
+          'flashcards',
+          this.formatoExport,
+        ),
+      );
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      const fecha = new Date().toISOString().split('T')[0];
+      const ext = this.formatoExport === 'excel' ? 'xlsx' : 'docx';
+      link.download = `fallos_flashcards_${fecha}.${ext}`;
+      link.click();
+      URL.revokeObjectURL(url);
+      this.toast.success('Archivo exportado correctamente');
+      this.mostrarExportDialog = false;
+    } catch (_error) {
+    } finally {
+      this.exportando = false;
+    }
+  }
+
   public onItemClick(item: PreguntaFallo) {
     // Manejar click en el item si es necesario
     this.toggleRowExpansion(item);
@@ -72,11 +108,13 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
   }
 
   public eliminarFeedback(id: number, event: Event) {
-    const message = this.mode === 'injected'
-      ? '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.'
-      : 'Vas a eliminar el reporte de fallo, ¿estás seguro?';
+    const message =
+      this.mode === 'injected'
+        ? '¿Deseas marcar este fallo como solucionado? Se eliminará de la lista de fallos reportados.'
+        : 'Vas a eliminar el reporte de fallo, ¿estás seguro?';
 
-    const header = this.mode === 'injected' ? 'Marcar como solucionado' : 'Confirmación';
+    const header =
+      this.mode === 'injected' ? 'Marcar como solucionado' : 'Confirmación';
 
     this.confirmationService.confirm({
       target: event.target as EventTarget,
@@ -90,9 +128,10 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
       rejectButtonStyleClass: 'p-button-text',
       accept: async () => {
         await firstValueFrom(this.reportesFalloService.deleteReporteFallo$(id));
-        const successMessage = this.mode === 'injected'
-          ? 'Fallo marcado como solucionado exitosamente'
-          : 'Reporte de fallo eliminado exitosamente';
+        const successMessage =
+          this.mode === 'injected'
+            ? 'Fallo marcado como solucionado exitosamente'
+            : 'Reporte de fallo eliminado exitosamente';
         this.toast.info(successMessage);
         this.refresh();
       },

@@ -21,10 +21,63 @@
     </p-iconField>
   </div>
 
+  <div right-actions *ngIf="mode == 'overview'">
+    <p-button
+      label="Exportar"
+      icon="pi pi-download"
+      [link]="true"
+      (click)="abrirExportDialog()"
+    ></p-button>
+  </div>
+
   <div empty-template>
     <div class="text-center p-4">No hay fallos reportados disponibles</div>
   </div>
 </app-generic-list>
+
+<p-dialog
+  header="Exportar fallos de test"
+  [(visible)]="mostrarExportDialog"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '30vw' }"
+  [breakpoints]="{ '960px': '60vw', '640px': '90vw' }"
+>
+  <div class="flex flex-column gap-3">
+    <p class="text-sm text-color-secondary m-0">
+      Se exportarán los fallos según los filtros aplicados actualmente.
+    </p>
+    <div>
+      <label class="block mb-2">Formato</label>
+      <p-dropdown
+        [(ngModel)]="formatoExport"
+        [options]="[
+          { label: 'Excel (.xlsx)', value: 'excel' },
+          { label: 'Word (.docx)', value: 'word' },
+        ]"
+        optionLabel="label"
+        optionValue="value"
+        [style]="{ width: '100%' }"
+      ></p-dropdown>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      styleClass="p-button-outlined"
+      (click)="mostrarExportDialog = false"
+    ></p-button>
+    <p-button
+      [label]="formatoExport === 'excel' ? 'Descargar Excel' : 'Descargar Word'"
+      [icon]="
+        formatoExport === 'excel' ? 'pi pi-file-excel' : 'pi pi-file-word'
+      "
+      (click)="exportarFallos()"
+      [loading]="exportando"
+    ></p-button>
+  </ng-template>
+</p-dialog>
 
 <!-- Template para el item de fallo -->
 <ng-template #falloItemTemplate let-item>
