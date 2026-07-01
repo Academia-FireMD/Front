@@ -4,9 +4,11 @@ export const environment = {
   wordpressUrl: 'https://tecnikafire.com',
   wooCommerceUrl: 'https://tecnikafire.com/tienda',
   aiAssistant: {
-    apiUrl: 'https://ai-assistant-production.up.railway.app/api',
+    // ai-assistant-production.up.railway.app quedó huérfano (Railway "Application
+    // not found"): el servicio prod se sirve por el dominio custom ai-api.tecnikafire.com.
+    apiUrl: 'https://ai-api.tecnikafire.com/api',
     embedToken: '43978f44-205d-42b9-8273-b0a3a1c7fb34',
     adminEmbedToken: 'admin-preauth-embed-001',
-    widgetUrl: 'https://ai-assistant-production.up.railway.app/widget/ai-assistant-widget.js',
+    widgetUrl: 'https://ai-api.tecnikafire.com/widget/ai-assistant-widget.js',
   },
 };
