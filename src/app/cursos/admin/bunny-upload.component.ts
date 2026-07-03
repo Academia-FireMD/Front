@@ -54,6 +54,12 @@ export interface UploadedEvent {
           <i class="pi pi-check-circle" style="color: var(--green-500)"></i>
           <span>Vídeo subido correctamente</span>
         </div>
+        <small class="bunny-upload__processing-hint">
+          <i class="pi pi-info-circle"></i>
+          Bunny está procesando el vídeo; puede tardar unos minutos en estar
+          disponible para reproducir (más tiempo cuanto más largo sea el vídeo).
+          Si al abrirlo da error, espera un poco y recarga.
+        </small>
       }
     </div>
   `,
@@ -77,6 +83,12 @@ export interface UploadedEvent {
         display: flex;
         align-items: center;
         gap: 0.5rem;
+      }
+      .bunny-upload__processing-hint {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.375rem;
+        color: var(--text-color-secondary);
       }
     `,
   ],
