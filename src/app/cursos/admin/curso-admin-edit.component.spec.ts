@@ -86,6 +86,51 @@ describe('CursoAdminEditComponent', () => {
     expect(controls).toContain('wooProductId');
   });
 
+  // ---- Slug automático (2026-07-03): el backend genera el slug server-side
+  // desde `titulo`; el front ya no lo manda en la creación y solo muestra un
+  // preview cosmético mientras el admin escribe. ----
+
+  it('crear un curso NO manda slug en el payload a create()', async () => {
+    component.metadataForm.patchValue({ titulo: 'Curso Nuevo' });
+    serviceMock.create!.mockReturnValue(
+      of(
+        buildCursoFixture({
+          id: 5,
+          titulo: 'Curso Nuevo',
+          slug: 'curso-nuevo',
+        }),
+      ),
+    );
+    await component.saveMetadata();
+    expect(serviceMock.create).toHaveBeenCalled();
+    const payload = serviceMock.create!.mock.calls[0][0];
+    expect(payload).not.toHaveProperty('slug');
+    expect(payload.titulo).toBe('Curso Nuevo');
+  });
+
+  it('el preview del slug se actualiza reactivamente cuando cambia el título', () => {
+    // Nota: `slugPreview` es un `computed()` sobre `toSignal(titulo.valueChanges)`,
+    // se recalcula al leerlo sin necesitar `fixture.detectChanges()` (que en
+    // este spec crashea por un problema preexistente de ConfirmDialog no
+    // relacionado con esta feature — ningún test de este fichero lo usa).
+    component.metadataForm.controls.titulo.setValue('Título de Prueba');
+    expect(component.slugPreview()).toBe('titulo-de-prueba');
+
+    component.metadataForm.controls.titulo.setValue('Otro Título 2');
+    expect(component.slugPreview()).toBe('otro-titulo-2');
+  });
+
+  it('en modo edición, el control de slug sigue mostrando el valor persistido (no lo pisa el preview)', async () => {
+    component.cursoId.set(1);
+    await component.loadCurso(1);
+    expect(component.esNuevo()).toBe(false);
+    expect(component.metadataForm.controls.slug.value).toBe('curso-x');
+    // Cambiar el título en edición NO debe sobrescribir el slug persistido:
+    // el effect de sync del preview solo actúa cuando esNuevo().
+    component.metadataForm.controls.titulo.setValue('Nuevo título editado');
+    expect(component.metadataForm.controls.slug.value).toBe('curso-x');
+  });
+
   it('previsualizar() abre el curso real del alumno en una pestaña nueva', () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     component.curso.set(buildCursoFixture());

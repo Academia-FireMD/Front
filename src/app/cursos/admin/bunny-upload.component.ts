@@ -40,16 +40,11 @@ export interface UploadedEvent {
           severity="secondary"
           (onClick)="fileInput.click()"
         />
-        @if (selectedFile()) {
-          <span class="bunny-upload__filename">{{ selectedFile()!.name }}</span>
-          <p-button
-            label="Subir"
-            icon="pi pi-cloud-upload"
-            (onClick)="startUpload()"
-          />
-        }
       } @else {
         <div class="bunny-upload__progress">
+          @if (selectedFile(); as file) {
+            <span class="bunny-upload__filename">{{ file.name }}</span>
+          }
           <span>Subiendo… {{ progress() }}%</span>
           <p-progressBar [value]="progress()" />
         </div>
@@ -99,26 +94,42 @@ export class BunnyUploadComponent {
   private cursosAdminService = inject(CursosAdminService);
   private toast = inject(ToastrService);
 
-  onFileSelected(event: Event): void {
+  /**
+   * Auto-inicio de subida (2026-07-03): al seleccionar el archivo se arranca
+   * la subida inmediatamente — ya no hay botón "Subir" ni paso intermedio.
+   * `uploading` se marca aquí mismo (no dentro de `startUpload`) para que la
+   * UI cambie de inmediato a la vista de progreso y no deje una ventana en
+   * la que se pueda volver a pulsar "Seleccionar vídeo" mientras se piden
+   * las credenciales/duración.
+   */
+  async onFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
+    // Limpia el input para que seleccionar el MISMO fichero dos veces
+    // seguidas (p.ej. tras un error) vuelva a disparar el evento `change`.
+    input.value = '';
+    if (!file) return;
+
     this.selectedFile.set(file);
     this.done.set(false);
     this.progress.set(0);
+    this.uploading.set(true);
+
+    await this.startUpload(file);
   }
 
-  async startUpload(): Promise<void> {
-    const file = this.selectedFile();
-    if (!file) return;
-
+  private async startUpload(file: File): Promise<void> {
     const title = this.videoTitle() || file.name;
 
     try {
-      const credentials = await firstValueFrom(
-        this.cursosAdminService.requestVideoUploadUrl(title),
-      );
+      // Se piden credenciales y duración en paralelo: la lectura de
+      // duración (hasta ~5s de timeout defensivo) no debe alargar el
+      // arranque de la subida más de lo necesario.
+      const [credentials, duracionSegundos] = await Promise.all([
+        firstValueFrom(this.cursosAdminService.requestVideoUploadUrl(title)),
+        this.leerDuracionVideo(file),
+      ]);
 
-      this.uploading.set(true);
       this.progress.set(0);
 
       const upload = new tus.Upload(file, {
@@ -144,7 +155,10 @@ export class BunnyUploadComponent {
         onSuccess: () => {
           this.uploading.set(false);
           this.done.set(true);
-          this.uploaded.emit({ guid: credentials.VideoId });
+          this.uploaded.emit({
+            guid: credentials.VideoId,
+            duracionSegundos: duracionSegundos ?? undefined,
+          });
         },
       });
 
@@ -155,5 +169,47 @@ export class BunnyUploadComponent {
         'No se pudo obtener la URL de subida. Intenta de nuevo.',
       );
     }
+  }
+
+  /**
+   * Lee la duración del vídeo EN EL NAVEGADOR (sin depender de que Bunny
+   * procese el archivo, que tarda) creando un `<video>` fuera del DOM
+   * visible y escuchando `loadedmetadata`. Defensivo: nunca rechaza y nunca
+   * bloquea la subida — ante timeout (~5s) o error de lectura, resuelve
+   * `null` y el campo de duración del formulario de bloque se queda
+   * editable manualmente como fallback (ver `bloque-form.component.ts`).
+   */
+  private leerDuracionVideo(file: File): Promise<number | null> {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+
+      const objectUrl = URL.createObjectURL(file);
+      let settled = false;
+
+      const finish = (value: number | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+        video.removeEventListener('error', onError);
+        URL.revokeObjectURL(objectUrl);
+        resolve(value);
+      };
+
+      const onLoadedMetadata = () => {
+        const duration = video.duration;
+        finish(Number.isFinite(duration) ? Math.round(duration) : null);
+      };
+
+      const onError = () => finish(null);
+
+      const timeoutId = setTimeout(() => finish(null), 5000);
+
+      video.addEventListener('loadedmetadata', onLoadedMetadata);
+      video.addEventListener('error', onError);
+      video.src = objectUrl;
+    });
   }
 }

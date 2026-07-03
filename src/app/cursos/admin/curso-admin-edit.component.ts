@@ -9,10 +9,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
@@ -34,6 +36,7 @@ import { AsyncButtonComponent } from '../../shared/components/async-button/async
 import { WooCommerceProductPickerComponent } from '../../shared/components/woocommerce-product-picker/woocommerce-product-picker.component';
 import { Oposicion } from '../../shared/models/subscription.model';
 import { SharedModule } from '../../shared/shared.module';
+import { slugify } from '../../shared/utils/slugify.util';
 import {
   Bloque,
   CursoCreatePayload,
@@ -178,13 +181,48 @@ export class CursoAdminEditComponent implements OnInit {
 
   metadataForm = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(2)]],
-    slug: ['', Validators.required],
+    // Sin Validators.required (2026-07-03): ya no es un campo de input del
+    // admin, el backend lo genera server-side desde `titulo`. El control se
+    // mantiene solo para mostrar el valor (preview en creación, persistido
+    // en edición). Deshabilitado en el propio FormControl (no via [disabled]
+    // en el template) para evitar el warning de Angular sobre mezclar el
+    // atributo disabled con reactive forms.
+    slug: [{ value: '', disabled: true }],
     descripcion: [''],
     wooProductId: [null as number | null],
     esGratuito: [false],
     esClaseGrabada: [false],
     thumbnailUrl: [''],
     duracionEstimadaMinutos: [null as number | null],
+  });
+
+  /**
+   * Preview EN VIVO del slug (2026-07-03): puramente cosmético, calculado
+   * client-side con `slugify()` a partir de `titulo` mientras el admin
+   * escribe. El valor real y autoritativo lo calcula el backend al guardar
+   * (incluida la disambiguación de colisiones `-2`, `-3`...), que NO se
+   * replica aquí. Solo tiene sentido en modo creación; en edición el input
+   * muestra el `slug` real persistido (patcheado en `loadCurso`).
+   */
+  private tituloValue = toSignal(
+    this.metadataForm.controls.titulo.valueChanges,
+    {
+      initialValue: this.metadataForm.controls.titulo.value,
+    },
+  );
+  slugPreview = computed(() => slugify(this.tituloValue() ?? ''));
+
+  /**
+   * Sincroniza el preview al control `slug` (solo en creación, sin marcar
+   * dirty ni disparar valueChanges) para que el input deshabilitado del
+   * template muestre el valor vía el mismo `formControlName="slug"` que usa
+   * el modo edición — sin bindings condicionales extra en el HTML.
+   */
+  private syncSlugPreview = effect(() => {
+    if (this.esNuevo()) {
+      const preview = this.slugPreview();
+      this.metadataForm.controls.slug.setValue(preview, { emitEvent: false });
+    }
   });
 
   /** Aplica la selección del `<app-oposicion-picker>` al estado del form. */
@@ -374,7 +412,7 @@ export class CursoAdminEditComponent implements OnInit {
         const sinVenta = esGratuito || esClaseGrabada;
         const createPayload: CursoCreatePayload = {
           titulo: raw.titulo ?? '',
-          slug: raw.slug ?? '',
+          // Sin `slug` (2026-07-03): el backend lo genera server-side.
           descripcion: raw.descripcion ?? undefined,
           wooProductId: sinVenta ? null : (raw.wooProductId ?? null),
           relevancia: this.relevancia(),

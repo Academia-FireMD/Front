@@ -331,7 +331,12 @@ export type ComprarCursoCofResponse =
  */
 export interface CursoCreatePayload {
   titulo: string;
-  slug: string;
+  /**
+   * Eliminado (2026-07-03): el backend ya no acepta `slug` en la creación —
+   * lo genera server-side a partir de `titulo` (con disambiguación `-2`,
+   * `-3`... ante colisión) y lo devuelve calculado en la respuesta. El front
+   * solo muestra un preview cosmético (ver `slugify.util.ts`), no lo manda.
+   */
   descripcion?: string;
   /** Backend deriva precio. NO mandar en payload. */
   wooProductId?: number | null;

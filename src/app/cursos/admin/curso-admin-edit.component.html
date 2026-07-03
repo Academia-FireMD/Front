@@ -119,16 +119,20 @@
               <div class="curso-edit__form">
                 <div class="form-grid">
                   <div class="field">
-                    <label for="ce-slug">Slug *</label>
+                    <label for="ce-slug">Slug</label>
                     <input
                       id="ce-slug"
                       pInputText
                       formControlName="slug"
                       class="w-full"
                       placeholder="url-del-curso"
-                      [attr.disabled]="!esNuevo() ? true : null"
+                      data-testid="curso-edit-slug"
                     />
-                    @if (!esNuevo()) {
+                    @if (esNuevo()) {
+                      <small class="text-color-secondary">
+                        Se genera automáticamente a partir del título.
+                      </small>
+                    } @else {
                       <small class="text-color-secondary">
                         El slug no se puede modificar después de la creación.
                       </small>
@@ -182,8 +186,8 @@
                         <i class="pi pi-info-circle"></i>
                         Sin oposición seleccionada, la clase grabada será
                         visible para <strong>todos los suscritos</strong>
-                        (equivale a "General"). Selecciona una oposición
-                        en "Relevancia" si quieres restringirla.
+                        (equivale a "General"). Selecciona una oposición en
+                        "Relevancia" si quieres restringirla.
                       </small>
                     </div>
                   }
