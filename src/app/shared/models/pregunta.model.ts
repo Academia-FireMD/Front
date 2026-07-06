@@ -35,6 +35,9 @@ export interface PreguntaFallo {
   descripcion: string;
   createdAt: Date;
   updatedAt: Date;
+  resuelto: boolean;
+  resueltoEn?: string | null;
+  resueltoPorId?: number | null;
   pregunta?: Pregunta; // Relación opcional con Pregunta
   usuario?: Usuario; // Relación opcional con Usuario
 }

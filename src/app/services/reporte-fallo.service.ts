@@ -43,6 +43,16 @@ export class ReportesFalloService extends ApiBaseService {
     return this.delete('/' + id);
   }
 
+  /**
+   * Alterna (resolver / reabrir) el estado "resuelto" de un fallo. Solo admin.
+   */
+  public resolverFallo$(id: number): Observable<PreguntaFallo> {
+    return this.patch(
+      '/fallo/' + id + '/resolver',
+      {},
+    ) as Observable<PreguntaFallo>;
+  }
+
   public exportarFallos$(
     filtros: { temas?: number[]; dificultad?: string },
     type: 'test' | 'flashcards',
