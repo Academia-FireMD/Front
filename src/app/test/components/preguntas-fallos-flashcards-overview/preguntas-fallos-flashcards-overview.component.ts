@@ -46,15 +46,66 @@ export class PreguntasFallosFlashcardsOverviewComponent extends SharedGridCompon
         return { temaId: { in: value } };
       },
     },
+    {
+      key: 'estado',
+      label: 'Estado',
+      type: 'dropdown',
+      placeholder: 'Estado',
+      defaultValue: 'pendientes',
+      options: [
+        { label: 'Pendientes', value: 'pendientes' },
+        { label: 'Resueltos', value: 'resueltos' },
+        { label: 'Todos', value: 'todos' },
+      ],
+      filterInterpolation: (value: string) =>
+        value === 'pendientes'
+          ? { resuelto: false }
+          : value === 'resueltos'
+            ? { resuelto: true }
+            : {},
+    },
   ];
 
   constructor() {
     super();
+    // Por defecto la bandeja muestra solo los fallos pendientes.
+    if (this.mode !== 'injected') {
+      this.updatePaginationSafe({ where: { resuelto: false } });
+    }
     this.fetchItems$ = computed(() => {
       if (!!this.data) return of(this.data);
       return this.reportesFalloService
         .getReporteFallosFlashcards$(this.pagination())
         .pipe(tap((entry) => (this.lastLoadedPagination = entry)));
+    });
+  }
+
+  public resolverFallo(item: PreguntaFallo, event: Event) {
+    event.stopPropagation();
+    event.preventDefault();
+    const marcarResuelto = !item.resuelto;
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: marcarResuelto
+        ? '¿Marcar este fallo como resuelto?'
+        : '¿Reabrir este fallo (marcar como pendiente)?',
+      header: marcarResuelto ? 'Marcar como resuelto' : 'Reabrir fallo',
+      icon: 'pi pi-check-circle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        await firstValueFrom(this.reportesFalloService.resolverFallo$(item.id));
+        this.toast.info(
+          marcarResuelto
+            ? 'Fallo marcado como resuelto'
+            : 'Fallo reabierto (pendiente)',
+        );
+        this.refresh();
+      },
+      reject: () => {},
     });
   }
 

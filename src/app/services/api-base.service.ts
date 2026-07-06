@@ -75,6 +75,18 @@ export class ApiBaseService {
       .pipe(catchError((err) => this.handleError(err, ignoreError)));
   }
 
+  public patch(
+    endpoint: string,
+    body: any,
+    ignoreError?: boolean,
+  ): Observable<any> {
+    return this._http
+      .patch(environment.apiUrl + this.controllerPrefix + endpoint, body, {
+        withCredentials: true,
+      })
+      .pipe(catchError((err) => this.handleError(err, ignoreError)));
+  }
+
   protected handleError(
     response: HttpErrorResponse,
     ignoreError: boolean = false,

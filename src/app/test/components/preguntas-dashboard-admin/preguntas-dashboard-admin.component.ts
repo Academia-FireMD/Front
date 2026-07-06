@@ -209,9 +209,9 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
         this.preguntasService.importarPreguntasExcel(formData),
       );
       this.toast.success(
-        `Archivo importado: ${response.count ?? 0} insertadas, ${
-          response.ignoradas ?? 0
-        } ignoradas.`,
+        `Archivo importado: ${response.creadas ?? 0} creadas, ${
+          response.actualizadas ?? 0
+        } actualizadas, ${response.ignoradas ?? 0} ignoradas.`,
       );
       this.mostrarFicherosDialog = false;
       this.selectedFile = null;

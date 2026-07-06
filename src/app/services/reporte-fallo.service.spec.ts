@@ -8,13 +8,16 @@ import { environment } from '../../environments/environment';
 describe('ReportesFalloService', () => {
   let service: ReportesFalloService;
   let mockHttpPost: jest.Mock;
+  let mockHttpPatch: jest.Mock;
 
   beforeEach(() => {
     mockHttpPost = jest.fn();
+    mockHttpPatch = jest.fn();
     const mockHttp = {
       get: jest.fn(),
       post: mockHttpPost,
       put: jest.fn(),
+      patch: mockHttpPatch,
       delete: jest.fn(),
     };
 
@@ -88,6 +91,22 @@ describe('ReportesFalloService', () => {
           type: 'test',
           formato: 'excel',
         });
+        done();
+      });
+    });
+  });
+
+  describe('resolverFallo$', () => {
+    it('should PATCH to /reportes/fallo/:id/resolver', (done) => {
+      mockHttpPatch.mockReturnValue(of({ id: 5, resuelto: true }));
+
+      service.resolverFallo$(5).subscribe((result) => {
+        expect(mockHttpPatch).toHaveBeenCalledWith(
+          `${environment.apiUrl}/reportes/fallo/5/resolver`,
+          {},
+          { withCredentials: true },
+        );
+        expect(result).toMatchObject({ id: 5, resuelto: true });
         done();
       });
     });

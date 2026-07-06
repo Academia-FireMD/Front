@@ -79,6 +79,23 @@
           {{ item.usuario?.nombre || "Usuario" }}
           {{ item.usuario?.apellidos || "" }}
         </span>
+        @if (item.resuelto) {
+          <span
+            class="badge bg-green-500 text-white"
+            pTooltip="Fallo resuelto"
+            tooltipPosition="top"
+          >
+            <i class="pi pi-check mr-1"></i>Resuelto
+          </span>
+        } @else {
+          <span
+            class="badge bg-yellow-500 text-white"
+            pTooltip="Fallo pendiente"
+            tooltipPosition="top"
+          >
+            Pendiente
+          </span>
+        }
       </div>
       <span
         class="descripcion"
@@ -101,9 +118,18 @@
         </span>
         <p-button
           *ngIf="mode == 'overview'"
+          [icon]="item.resuelto ? 'pi pi-replay' : 'pi pi-check-circle'"
+          [styleClass]="
+            item.resuelto ? 'p-button-secondary' : 'p-button-success'
+          "
+          [pTooltip]="item.resuelto ? 'Reabrir fallo' : 'Marcar como resuelto'"
+          (click)="resolverFallo(item, $event)"
+        ></p-button>
+        <p-button
+          *ngIf="mode == 'overview'"
           icon="pi pi-eye"
           styleClass="p-button-primary"
-          pTooltip="Ver pregunta"
+          pTooltip="Editar pregunta"
           [routerLink]="['/app/test/preguntas/' + item.pregunta.id]"
           [queryParams]="{ goBack: true }"
           (click)="$event.stopPropagation(); $event.preventDefault()"

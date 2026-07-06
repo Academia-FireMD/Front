@@ -35,9 +35,10 @@ export class ExportDialogComponent {
   readonly dificultadControl = new FormControl<Dificultad | null>(null);
   readonly selectedFormato = signal<'excel' | 'word'>('excel');
 
+  // El export de fallos produce siempre Excel importable; el "informe" Word se
+  // eliminó (D5 del diseño 2026-07-06), por lo que solo se ofrece Excel.
   readonly formatoOptions: Array<{ label: string; value: 'excel' | 'word' }> = [
     { label: 'Excel (.xlsx)', value: 'excel' },
-    { label: 'Word (.docx)', value: 'word' },
   ];
 
   onCerrar(): void {
