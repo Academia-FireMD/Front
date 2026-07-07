@@ -52,7 +52,9 @@ export class DocumentationOverviewComponent
   public uploadedFiles: File[] = [];
   private fb = inject(FormBuilder);
   public uploadingFileFormGroup = this.fb.group({
-    identificador: ['', Validators.required],
+    // El identificador se autogenera en el backend a partir del tema; el admin
+    // ya no lo introduce a mano en la creación (evita basura tipo "0").
+    identificador: [''],
     descripcion: [''],
     temaIds: [[] as number[]],
     isLocked: [false],
@@ -304,6 +306,26 @@ export class DocumentationOverviewComponent
       this.toast.success('Documento actualizado correctamente');
       this.mostrarEditarDocumento = false;
       this.documentoEditando = null;
+      this.refresh();
+    } catch (error) {}
+  }
+
+  confirmarPublicacion(document: Documento) {
+    this.confirmationService.confirm({
+      message: `¿Publicar el documento "${document.identificador}"? Pasará a estar visible para los alumnos de su comunidad (según la relevancia de su módulo).`,
+      header: 'Confirmar publicación',
+      icon: 'pi pi-cloud-upload',
+      accept: () => {
+        this.publicarDocumento(document);
+      },
+    });
+  }
+
+  async publicarDocumento(document: Documento) {
+    try {
+      await firstValueFrom(this.service.publicarDocumento$(document.id));
+      this.toast.success('Documento publicado correctamente');
+      document.isPublicado = true;
       this.refresh();
     } catch (error) {}
   }

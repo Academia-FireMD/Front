@@ -28,7 +28,7 @@ export class DocumentosService extends ApiBaseService {
    * @param filter Filtro de paginación
    */
   public getDocumentosPublicos$(
-    filter: PaginationFilter
+    filter: PaginationFilter,
   ): Observable<PaginatedResult<Documento>> {
     return this.post('/publicos', filter) as Observable<
       PaginatedResult<Documento>
@@ -40,17 +40,19 @@ export class DocumentosService extends ApiBaseService {
   }
 
   public descargarDocumento$(id: number): Observable<Blob> {
-    return this.http.get(`${environment.apiUrl + this.controllerPrefix}/download/${id}`, {
-      responseType: 'blob',
-      observe: 'response'
-    }).pipe(
-      map(response => {
-        if (!response.body) {
-          throw new Error('No se pudo descargar el archivo');
-        }
-        return response.body;
+    return this.http
+      .get(`${environment.apiUrl + this.controllerPrefix}/download/${id}`, {
+        responseType: 'blob',
+        observe: 'response',
       })
-    );
+      .pipe(
+        map((response) => {
+          if (!response.body) {
+            throw new Error('No se pudo descargar el archivo');
+          }
+          return response.body;
+        }),
+      );
   }
 
   public updateDocumento$(payload: {
@@ -64,37 +66,70 @@ export class DocumentosService extends ApiBaseService {
     return this.post('/update', payload) as Observable<Documento>;
   }
 
+  public publicarDocumento$(
+    id: number,
+  ): Observable<{
+    id: number;
+    isPublicado: boolean;
+    alreadyPublished?: boolean;
+  }> {
+    return this.post(`/${id}/publicar`, {}) as Observable<{
+      id: number;
+      isPublicado: boolean;
+      alreadyPublished?: boolean;
+    }>;
+  }
+
   public getDocumentTree$(at?: string): Observable<any> {
     const params: { [key: string]: string } = {};
     if (at) {
       params['at'] = at;
     }
-    return this.http.get(`${environment.apiUrl + this.controllerPrefix}/tree`, { params });
+    return this.http.get(`${environment.apiUrl + this.controllerPrefix}/tree`, {
+      params,
+    });
   }
 
   public markAsSeen$(documentId: number): Observable<{ message: string }> {
-    return this.post(`/${documentId}/ack`, {}) as Observable<{ message: string }>;
+    return this.post(`/${documentId}/ack`, {}) as Observable<{
+      message: string;
+    }>;
   }
 
   public downloadWithWatermark$(id: number): Observable<Blob> {
-    return this.http.post(`${environment.apiUrl + this.controllerPrefix}/${id}/download`, {}, {
-      responseType: 'blob',
-      observe: 'response'
-    }).pipe(
-      map(response => {
-        if (!response.body) {
-          throw new Error('No se pudo descargar el archivo');
-        }
-        return response.body;
-      })
-    );
+    return this.http
+      .post(
+        `${environment.apiUrl + this.controllerPrefix}/${id}/download`,
+        {},
+        {
+          responseType: 'blob',
+          observe: 'response',
+        },
+      )
+      .pipe(
+        map((response) => {
+          if (!response.body) {
+            throw new Error('No se pudo descargar el archivo');
+          }
+          return response.body;
+        }),
+      );
   }
 
-  public createOverride$(documentId: number, userId: number, visibility: string): Observable<any> {
+  public createOverride$(
+    documentId: number,
+    userId: number,
+    visibility: string,
+  ): Observable<any> {
     return this.post(`/${documentId}/overrides`, { userId, visibility });
   }
 
-  public deleteOverride$(documentId: number, overrideId: string): Observable<{ message: string }> {
-    return this.delete(`/${documentId}/overrides/${overrideId}`) as Observable<{ message: string }>;
+  public deleteOverride$(
+    documentId: number,
+    overrideId: string,
+  ): Observable<{ message: string }> {
+    return this.delete(`/${documentId}/overrides/${overrideId}`) as Observable<{
+      message: string;
+    }>;
   }
 }

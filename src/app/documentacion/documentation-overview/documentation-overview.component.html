@@ -17,18 +17,30 @@
         <div *ngFor="let tema of modulo.temas" class="tema-section">
           <h4 class="tema-title">{{ tema.numero }} - {{ tema.descripcion }}</h4>
           <div class="documentos-list">
-            <div *ngFor="let doc of tema.documentos" class="documento-item" [ngClass]="{'locked-document': doc.isLocked}">
+            <div
+              *ngFor="let doc of tema.documentos"
+              class="documento-item"
+              [ngClass]="{ 'locked-document': doc.isLocked }"
+            >
               <div class="doc-info" (click)="verDocumentoAlumno(doc)">
                 <span class="doc-name">
                   <i
                     *ngIf="doc.isLocked"
                     class="pi pi-lock"
-                    [ngClass]="doc.isDownloadable ? 'text-orange-500' : 'text-red-500'"
-                    [pTooltip]="doc.isDownloadable ? 'Documento premium - Puedes descargarlo' : 'Documento premium - Requiere suscripción PREMIUM o ADVANCED'"
+                    [ngClass]="
+                      doc.isDownloadable ? 'text-orange-500' : 'text-red-500'
+                    "
+                    [pTooltip]="
+                      doc.isDownloadable
+                        ? 'Documento premium - Puedes descargarlo'
+                        : 'Documento premium - Requiere suscripción PREMIUM o ADVANCED'
+                    "
                   ></i>
                   {{ doc.identificador }}
                   <span *ngIf="doc.isNew" class="badge-new">NEW</span>
-                  <span *ngIf="doc.isLocked" class="badge-premium">PREMIUM</span>
+                  <span *ngIf="doc.isLocked" class="badge-premium"
+                    >PREMIUM</span
+                  >
                 </span>
                 <span class="doc-desc" *ngIf="doc.descripcion">{{
                   doc.descripcion
@@ -56,7 +68,10 @@
 </div>
 
 <!-- Vista de Admin o modo selección -->
-<div *ngIf="expectedRole === 'ADMIN' || mode === 'selection'" class="admin-documents-container">
+<div
+  *ngIf="expectedRole === 'ADMIN' || mode === 'selection'"
+  class="admin-documents-container"
+>
   <p-dialog
     header="Subir nuevo documento"
     [modal]="true"
@@ -82,15 +97,15 @@
           [formGroup]="uploadingFileFormGroup"
           class="flex flex-column gap-3"
         >
-          <p-floatLabel class="py-2">
-            <input
-              type="text"
-              pInputText
-              class="w-full"
-              formControlName="identificador"
-            />
-            <label for="identificador">Identificador</label>
-          </p-floatLabel>
+          <div
+            class="flex align-items-center gap-2 p-2 border-round surface-100 text-color-secondary"
+          >
+            <i class="pi pi-info-circle"></i>
+            <small
+              >El identificador se generará automáticamente a partir del tema
+              seleccionado.</small
+            >
+          </div>
           <p-floatLabel>
             <textarea
               id="descripcion"
@@ -120,7 +135,9 @@
               </div>
               <small class="text-color-secondary ml-4">
                 <i class="pi pi-info-circle"></i>
-                El documento será visible para todos los alumnos (según reglas de audiencia del release), pero solo podrán descargarlo usuarios con suscripción PREMIUM o ADVANCED.
+                El documento será visible para todos los alumnos (según reglas
+                de audiencia del release), pero solo podrán descargarlo usuarios
+                con suscripción PREMIUM o ADVANCED.
               </small>
             </div>
             <div class="flex flex-column gap-2">
@@ -136,7 +153,9 @@
               </div>
               <small class="text-color-secondary ml-4">
                 <i class="pi pi-info-circle"></i>
-                Al descargar, el PDF incluirá automáticamente los datos del usuario (nombre, apellidos, DNI) como marca de agua para trazabilidad.
+                Al descargar, el PDF incluirá automáticamente los datos del
+                usuario (nombre, apellidos, DNI) como marca de agua para
+                trazabilidad.
               </small>
             </div>
           </div>
@@ -207,7 +226,9 @@
           </div>
           <small class="text-color-secondary ml-4">
             <i class="pi pi-info-circle"></i>
-            El documento será visible para todos los alumnos (según reglas de audiencia del release), pero solo podrán descargarlo usuarios con suscripción PREMIUM o ADVANCED.
+            El documento será visible para todos los alumnos (según reglas de
+            audiencia del release), pero solo podrán descargarlo usuarios con
+            suscripción PREMIUM o ADVANCED.
           </small>
         </div>
         <div class="flex flex-column gap-2">
@@ -223,7 +244,8 @@
           </div>
           <small class="text-color-secondary ml-4">
             <i class="pi pi-info-circle"></i>
-            Al descargar, el PDF incluirá automáticamente los datos del usuario (nombre, apellidos, DNI) como marca de agua para trazabilidad.
+            Al descargar, el PDF incluirá automáticamente los datos del usuario
+            (nombre, apellidos, DNI) como marca de agua para trazabilidad.
           </small>
         </div>
       </div>
@@ -284,11 +306,24 @@
   </app-generic-list>
 
   <!-- Template para el item de documento -->
-  <ng-template #documentItemTemplate let-document let-mode="mode" let-isSelected="isSelected">
+  <ng-template
+    #documentItemTemplate
+    let-document
+    let-mode="mode"
+    let-isSelected="isSelected"
+  >
     <div
       class="flex flex-row align-items-between"
-      [ngClass]="{'selected-item': mode === 'selection' && isSelected}"
-      (click)="mode === 'overview' ? descargarDocumento(document.id, document.identificador, document.fileName) : null"
+      [ngClass]="{ 'selected-item': mode === 'selection' && isSelected }"
+      (click)="
+        mode === 'overview'
+          ? descargarDocumento(
+              document.id,
+              document.identificador,
+              document.fileName
+            )
+          : null
+      "
     >
       <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
         <div class="text-lg font-medium flex gap-2 align-items-center">
@@ -308,6 +343,20 @@
             tooltipPosition="top"
           >
             {{ document.esPublico ? "Público" : "Privado" }}
+          </span>
+
+          <span
+            *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
+            class="badge"
+            [ngClass]="document.isPublicado ? 'bg-green-500' : 'bg-yellow-500'"
+            pTooltip="{{
+              document.isPublicado
+                ? 'Publicado: incluido en una release activa. La visibilidad final depende además de la audiencia de la release y de la relevancia del módulo por comunidad'
+                : 'Sin publicar: no lo cubre ninguna release activa, los alumnos NO lo ven'
+            }}"
+            tooltipPosition="top"
+          >
+            {{ document.isPublicado ? "Publicado" : "Sin publicar" }}
           </span>
 
           <span
@@ -362,12 +411,27 @@
           <span
             class="text-xs hidden md:block unbreakable-text"
             pTooltip="Fecha de creación: {{
-              document.createdAt | date : 'dd/MM/yyyy HH:mm'
+              document.createdAt | date: 'dd/MM/yyyy HH:mm'
             }}"
             tooltipPosition="top"
           >
-            {{ document.createdAt | date : "short" }}
+            {{ document.createdAt | date: "short" }}
           </span>
+          <p-button
+            *ngIf="
+              expectedRole == 'ADMIN' &&
+              mode === 'overview' &&
+              !document.isPublicado
+            "
+            icon="pi pi-cloud-upload"
+            styleClass="p-button-success"
+            pTooltip="Publicar documento (hacerlo visible para los alumnos)"
+            (click)="
+              $event.stopPropagation();
+              $event.preventDefault();
+              confirmarPublicacion(document)
+            "
+          ></p-button>
           <p-button
             *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
             icon="pi pi-pencil"
