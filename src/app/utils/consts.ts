@@ -1,5 +1,5 @@
-import { Comunidad } from "../shared/models/pregunta.model";
-import { Oposicion } from "../shared/models/subscription.model";
+import { Comunidad } from '../shared/models/pregunta.model';
+import { Oposicion } from '../shared/models/subscription.model';
 
 // Mapping para Comunidades geográficas (perfil de usuario)
 export const comunidades: Record<Comunidad, { image: string; name: string }> = {
@@ -74,10 +74,13 @@ export const comunidades: Record<Comunidad, { image: string; name: string }> = {
 };
 
 // Mapping para Oposiciones (suscripciones y contenido)
-export const oposiciones: Record<Oposicion, { icon: string; name: string; image: string | null }> = {
+export const oposiciones: Record<
+  Oposicion,
+  { icon: string; name: string; image: string | null }
+> = {
   [Oposicion.GENERAL]: {
     icon: '🔥',
-    name: 'General',
+    name: 'Todas las oposiciones (incluye Madrid)',
     image: null,
   },
   [Oposicion.VALENCIA_AYUNTAMIENTO]: {
@@ -96,6 +99,35 @@ export const oposiciones: Record<Oposicion, { icon: string; name: string; image:
     image: 'oposiciones/madrid.png',
   },
 };
+
+/**
+ * Grupo de oposiciones = azúcar de UI para poder marcar de una sola vez un conjunto
+ * de oposiciones reales (p.ej. "toda la Comunidad Valenciana" = Valencia + Alicante).
+ *
+ * IMPORTANTE: `code` es un marcador SINTÉTICO, NUNCA se persiste ni es un valor del enum
+ * `Oposicion`. El picker siempre emite/guarda `members` (valores reales del enum).
+ * La estructura es una lista para poder añadir futuras comunidades sin tocar el componente.
+ */
+export interface GrupoOposicion {
+  /** Marcador sintético (no es un valor de enum, nunca se guarda). */
+  code: string;
+  name: string;
+  icon: string;
+  image: string | null;
+  /** Oposiciones reales que representa este grupo. */
+  members: Oposicion[];
+}
+
+export const GRUPO_COMUNIDAD_VALENCIANA: GrupoOposicion = {
+  code: '__GRUPO_COMUNIDAD_VALENCIANA__',
+  name: 'Comunidad Valenciana',
+  icon: '🟠',
+  image: null,
+  members: [Oposicion.VALENCIA_AYUNTAMIENTO, Oposicion.ALICANTE_CPBA],
+};
+
+/** Grupos agrupadores disponibles en el selector de oposiciones (extensible). */
+export const gruposOposicion: GrupoOposicion[] = [GRUPO_COMUNIDAD_VALENCIANA];
 
 export const provinciasEspanolas = [
   { name: 'Álava', code: 'VI' },
@@ -147,9 +179,7 @@ export const provinciasEspanolas = [
   { name: 'Valladolid', code: 'VA' },
   { name: 'Vizcaya', code: 'BI' },
   { name: 'Zamora', code: 'ZA' },
-  { name: 'Zaragoza', code: 'Z' }
+  { name: 'Zaragoza', code: 'Z' },
 ];
 
-export const paises = [
-  { name: 'España', code: 'ES' },
-]
+export const paises = [{ name: 'España', code: 'ES' }];

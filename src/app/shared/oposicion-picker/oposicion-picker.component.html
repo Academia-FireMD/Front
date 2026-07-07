@@ -1,13 +1,15 @@
 <p-overlayPanel #op>
   <div class="flex flex-column gap-3">
     <p-listbox
-      [options]="keysEnum"
+      [options]="listboxOptions"
       optionLabel="label"
+      dataKey="code"
       [className]="'oposicion-picker-listbox'"
       [listStyle]="{ 'max-height': '250px' }"
       [style]="{ width: '18rem' }"
       [multiple]="multiple"
-      (onChange)="parseOutput($event.value)"
+      [ngModel]="listboxValue"
+      (onChange)="onSelectionChange($event.value)"
     >
       <ng-template let-item pTemplate="item">
         <div class="flex align-items-center gap-2">
@@ -27,22 +29,23 @@
 
 <div class="contenedor-oposiciones">
   <div class="list flex align-items-center gap-1">
-    @if (oposiciones.length === 0) {
+    @if (displayItems.length === 0) {
       <span class="text-sm text-600">Sin oposiciones</span>
     }
-    @for (oposicion of oposiciones; track oposicion) {
+    @for (item of displayItems; track item.code) {
       <span
         class="oposicion-badge"
-        [pTooltip]="getName(oposicion)"
+        [class.oposicion-badge--grupo]="!!item.members"
+        [pTooltip]="item.label"
         tooltipPosition="top"
       >
         <img
-          *ngIf="getImage(oposicion)"
-          [src]="getImage(oposicion)"
-          [alt]="getName(oposicion)"
+          *ngIf="item.image"
+          [src]="item.image"
+          [alt]="item.label"
           class="oposicion-img"
         />
-        <span *ngIf="!getImage(oposicion)">{{ getIcon(oposicion) }}</span>
+        <span *ngIf="!item.image">{{ item.icon }}</span>
       </span>
     }
   </div>

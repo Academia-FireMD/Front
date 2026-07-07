@@ -11,4 +11,9 @@ export interface Documento {
   actualizadoEn: Date; // Fecha de última actualización
   temaId?: number;
   tema?: { id: number; numero: number | string; descripcion?: string };
+  isLocked?: boolean;
+  requireWatermark?: boolean;
+  // Señal de gestión (admin): ¿está cubierto por una Release activa y por tanto
+  // visible para los alumnos? Lo calcula el backend en /documentos/publicos.
+  isPublicado?: boolean;
 }

@@ -38,6 +38,12 @@
     background: var(--surface-200);
     transform: scale(1.05);
   }
+
+  // Badge de la agrupadora "Comunidad Valenciana": se distingue de las individuales.
+  &--grupo {
+    background: var(--primary-50, var(--surface-100));
+    border-color: var(--primary-color, var(--surface-border));
+  }
 }
 
 .oposicion-img {
