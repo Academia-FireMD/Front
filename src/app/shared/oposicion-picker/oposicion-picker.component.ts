@@ -3,6 +3,7 @@ import {
   EventEmitter,
   Input,
   OnChanges,
+  OnInit,
   Output,
   SimpleChanges,
 } from '@angular/core';
@@ -31,7 +32,7 @@ export interface PickerOption {
   templateUrl: './oposicion-picker.component.html',
   styleUrl: './oposicion-picker.component.scss',
 })
-export class OposicionPickerComponent implements OnChanges {
+export class OposicionPickerComponent implements OnChanges, OnInit {
   @Input() oposiciones: Array<Oposicion> = [];
   @Input() allowAdd = false;
   @Input() multiple = true;
@@ -45,6 +46,23 @@ export class OposicionPickerComponent implements OnChanges {
   /** Grupo agrupador que se muestra ACTIVO (azúcar de UI, no persiste). null = modo individual. */
   private grupoActivoRef: GrupoOposicion | null = null;
 
+  // Vistas MEMOIZADAS para el template. NUNCA usar getters que reconstruyan estos
+  // arrays/objetos en cada ciclo de detección de cambios: al enlazarse a
+  // `[ngModel]`/`[options]` de un p-listbox, una nueva referencia por tick
+  // re-dispara CD en bucle y cuelga el hilo (Chromium se cae). Se recalculan solo
+  // cuando cambia el estado real (ngOnChanges / onSelectionChange).
+  public listboxOptions: PickerOption[] = [];
+  public listboxValue: PickerOption[] | PickerOption | null = null;
+  public displayItems: PickerOption[] = [];
+  /** true si la agrupadora se muestra activa (para template). */
+  public grupoActivo = false;
+
+  ngOnInit(): void {
+    // Estado inicial memoizado (por si no llega ningún ngOnChanges con inputs).
+    this.syncFromInput(this.oposiciones ?? []);
+    this.recompute();
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['oposiciones']) {
       this.syncFromInput(this.oposiciones ?? []);
@@ -53,42 +71,37 @@ export class OposicionPickerComponent implements OnChanges {
       // En modo simple la agrupadora no aplica: degradar a individual.
       this.grupoActivoRef = null;
     }
+    this.recompute();
   }
 
-  /** true si la agrupadora se muestra activa (para template). */
-  get grupoActivo(): boolean {
-    return !!this.grupoActivoRef;
-  }
-
-  /** Opciones del listbox: grupos agrupadores (solo si multiple) + oposiciones individuales. */
-  get listboxOptions(): PickerOption[] {
+  /** Recalcula las vistas memoizadas desde el estado interno. Referencias estables. */
+  private recompute(): void {
     const grupos = this.multiple
       ? gruposOposicion.map((g) => this.toGrupoOption(g))
       : [];
     const individuales = Object.values(Oposicion).map((op) =>
       this.toIndividualOption(op),
     );
-    return [...grupos, ...individuales];
-  }
+    this.listboxOptions = [...grupos, ...individuales];
 
-  /** Valor seleccionado que refleja el listbox (grupo activo → solo el chip del grupo). */
-  get listboxValue(): PickerOption[] | PickerOption | null {
+    this.grupoActivo = !!this.grupoActivoRef;
+
     if (!this.multiple) {
       const op = this.selected[0];
-      return op ? this.toIndividualOption(op) : null;
+      const single = op ? this.toIndividualOption(op) : null;
+      this.listboxValue = single;
+      this.displayItems = single ? [single] : [];
+      return;
     }
     if (this.grupoActivoRef) {
-      return [this.toGrupoOption(this.grupoActivoRef)];
+      const chip = [this.toGrupoOption(this.grupoActivoRef)];
+      this.listboxValue = chip;
+      this.displayItems = chip;
+      return;
     }
-    return this.selected.map((op) => this.toIndividualOption(op));
-  }
-
-  /** Badges a mostrar: uno agrupador si el grupo está activo, si no, uno por oposición. */
-  get displayItems(): PickerOption[] {
-    if (this.grupoActivoRef) {
-      return [this.toGrupoOption(this.grupoActivoRef)];
-    }
-    return this.selected.map((op) => this.toIndividualOption(op));
+    const items = this.selected.map((op) => this.toIndividualOption(op));
+    this.listboxValue = items;
+    this.displayItems = items;
   }
 
   /**
@@ -139,6 +152,9 @@ export class OposicionPickerComponent implements OnChanges {
   }
 
   private emit(): void {
+    // Recalcular las vistas memoizadas ANTES de emitir, para que el template
+    // refleje el nuevo estado sin depender de getters por-tick.
+    this.recompute();
     this.updateSelection.emit([...this.selected]);
   }
 
