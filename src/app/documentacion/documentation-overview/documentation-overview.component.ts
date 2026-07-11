@@ -312,7 +312,7 @@ export class DocumentationOverviewComponent
 
   confirmarPublicacion(document: Documento) {
     this.confirmationService.confirm({
-      message: `¿Publicar el documento "${document.identificador}"? Pasará a estar visible para los alumnos de su comunidad (según la relevancia de su módulo).`,
+      message: `¿Publicar el documento "${document.identificador}"? Pasará a estar visible para los alumnos de su comunidad (según la relevancia de su módulo). Podrás despublicarlo cuando quieras.`,
       header: 'Confirmar publicación',
       icon: 'pi pi-cloud-upload',
       accept: () => {
@@ -327,7 +327,43 @@ export class DocumentationOverviewComponent
       this.toast.success('Documento publicado correctamente');
       document.isPublicado = true;
       this.refresh();
-    } catch (error) {}
+    } catch (error) {
+      this.toast.error('No se pudo publicar el documento');
+    }
+  }
+
+  confirmarDespublicacion(document: Documento) {
+    this.confirmationService.confirm({
+      message: `¿Despublicar el documento "${document.identificador}"? Dejará de estar visible para los alumnos. Podrás volver a publicarlo cuando quieras.`,
+      header: 'Confirmar despublicación',
+      icon: 'pi pi-eye-slash',
+      accept: () => {
+        this.despublicarDocumento(document);
+      },
+    });
+  }
+
+  async despublicarDocumento(document: Documento) {
+    try {
+      const res = await firstValueFrom(
+        this.service.despublicarDocumento$(document.id),
+      );
+      document.isPublicado = res.isPublicado;
+      if (res.isPublicado) {
+        // Se quitó del cubo público, pero el doc sigue cubierto por otra
+        // audiencia/release activa → el alumno lo sigue viendo. No mentir con
+        // un success.
+        this.toast.warning(
+          'Se quitó de la publicación general, pero sigue visible para los alumnos porque está incluido en otra audiencia/release activa.',
+          'Sigue visible',
+        );
+      } else {
+        this.toast.success('Documento despublicado correctamente');
+      }
+      this.refresh();
+    } catch (error) {
+      this.toast.error('No se pudo despublicar el documento');
+    }
   }
 
   confirmarEliminacion(document: Documento) {

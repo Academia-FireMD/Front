@@ -12,7 +12,13 @@
       (onChange)="onSelectionChange($event.value)"
     >
       <ng-template let-item pTemplate="item">
-        <div class="flex align-items-center gap-2">
+        <div
+          class="flex align-items-center gap-2 oposicion-item"
+          [class.oposicion-item--raiz]="item.nivel === 0"
+          [class.oposicion-item--n1]="item.nivel === 1"
+          [class.oposicion-item--n2]="item.nivel === 2"
+          [class.oposicion-item--grupo]="!!item.members"
+        >
           <img
             *ngIf="item.image"
             [src]="item.image"

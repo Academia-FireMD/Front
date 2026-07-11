@@ -80,6 +80,15 @@ export class DocumentosService extends ApiBaseService {
     }>;
   }
 
+  public despublicarDocumento$(
+    id: number,
+  ): Observable<{ id: number; isPublicado: boolean }> {
+    return this.post(`/${id}/despublicar`, {}) as Observable<{
+      id: number;
+      isPublicado: boolean;
+    }>;
+  }
+
   public getDocumentTree$(at?: string): Observable<any> {
     const params: { [key: string]: string } = {};
     if (at) {

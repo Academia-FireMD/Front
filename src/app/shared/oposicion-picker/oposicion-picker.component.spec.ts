@@ -94,16 +94,41 @@ describe('OposicionPickerComponent', () => {
     );
   });
 
-  it('(e) marcar una individual con la agrupadora activa rompe la agrupación', () => {
+  it('(e) con la agrupadora activa, quitar una hija rompe la agrupación y deja la otra', () => {
     load([VAL, ALI]);
     expect(component.grupoActivo).toBe(true);
+    // Con el grupo activo, padre + hijas están marcados; el usuario quita VAL →
+    // PrimeNG emite el valor sin VAL (padre + ALI).
     const emit = jest.spyOn(component.updateSelection, 'emit');
-    // PrimeNG añade la individual al valor que ya contenía el grupo.
-    component.onSelectionChange([grupoOption(), indOption(VAL)]);
+    component.onSelectionChange([grupoOption(), indOption(ALI)]);
     expect(component.grupoActivo).toBe(false);
-    expect(component.displayItems.length).toBe(2);
-    expect(emit).toHaveBeenLastCalledWith(expect.arrayContaining([VAL, ALI]));
-    expect(lastEmit(emit)).toHaveLength(2);
+    expect(component.displayItems.map((i) => i.code)).toEqual([ALI]);
+    expect(emit).toHaveBeenLastCalledWith([ALI]);
+  });
+
+  it('(e bis) con la agrupadora activa, el dropdown marca el padre Y sus dos hijas', () => {
+    load([VAL, ALI]);
+    const codes = (
+      component.listboxValue as PickerOption[]
+    ).map((o) => o.code);
+    expect(codes).toContain(GRUPO_COMUNIDAD_VALENCIANA.code);
+    expect(codes).toContain(VAL);
+    expect(codes).toContain(ALI);
+  });
+
+  it('(e ter) el árbol tiene niveles: GENERAL raíz (0), Madrid/CV comunidad (1), Valencia/Alicante provincia (2)', () => {
+    load([]);
+    expect(indOption(GEN).nivel).toBe(0);
+    expect(indOption(MAD).nivel).toBe(1);
+    expect(grupoOption().nivel).toBe(1);
+    expect(indOption(VAL).nivel).toBe(2);
+    expect(indOption(ALI).nivel).toBe(2);
+  });
+
+  it('(e quater) Madrid se muestra como comunidad ("Comunidad de Madrid") y GENERAL como raíz', () => {
+    load([]);
+    expect(indOption(MAD).label).toBe('Comunidad de Madrid');
+    expect(indOption(GEN).label).toBe('Todas las oposiciones');
   });
 
   it('activar la agrupadora desmarca GENERAL (conceptos distintos)', () => {
@@ -131,12 +156,53 @@ describe('OposicionPickerComponent', () => {
     expect(lastEmit(emit).slice().sort()).toEqual([VAL, ALI, MAD].sort());
   });
 
-  it('write-back del padre con el mismo conjunto conserva el modo individual roto', () => {
+  it('write-back del padre con el par exacto conserva la agrupación (sin parpadeo)', () => {
     load([VAL, ALI]);
-    component.onSelectionChange([grupoOption(), indOption(VAL)]); // rompe la agrupación
-    expect(component.grupoActivo).toBe(false);
+    expect(component.grupoActivo).toBe(true);
     load([VAL, ALI]); // el padre reescribe el mismo par tras la emisión
-    expect(component.grupoActivo).toBe(false); // no re-agrupa
+    expect(component.grupoActivo).toBe(true); // sigue agrupado, no se rompe
+    expect(component.displayItems.map((i) => i.code)).toEqual([
+      GRUPO_COMUNIDAD_VALENCIANA.code,
+    ]);
+  });
+
+  it('(w1) seleccionar GENERAL es exclusivo: emite [GENERAL] y limpia lo demás', () => {
+    load([VAL, ALI]); // arranca agrupado (CV)
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    // el dropdown tenía [CV, VAL, ALI] marcados; el usuario añade GENERAL
+    component.onSelectionChange([
+      grupoOption(),
+      indOption(VAL),
+      indOption(ALI),
+      indOption(GEN),
+    ]);
+    expect(emit).toHaveBeenLastCalledWith([GEN]);
+    expect(component.grupoActivo).toBe(false);
+    expect(component.displayItems.map((i) => i.code)).toEqual([GEN]);
+  });
+
+  it('(w2) con GENERAL activo, elegir una oposición concreta quita GENERAL', () => {
+    load([GEN]);
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    component.onSelectionChange([indOption(GEN), indOption(MAD)]);
+    expect(emit).toHaveBeenLastCalledWith([MAD]);
+    expect(component.grupoActivo).toBe(false);
+  });
+
+  it('(w3) deseleccionar GENERAL deja la selección vacía', () => {
+    load([GEN]);
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    component.onSelectionChange([]);
+    expect(emit).toHaveBeenLastCalledWith([]);
+  });
+
+  it('(w4) activar la agrupadora CV con GENERAL activo sustituye GENERAL por [VAL, ALI]', () => {
+    load([GEN]);
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    component.onSelectionChange([indOption(GEN), grupoOption()]);
+    expect(emit).toHaveBeenLastCalledWith([VAL, ALI]);
+    expect(lastEmit(emit)).not.toContain(GEN);
+    expect(component.grupoActivo).toBe(true);
   });
 
   it('multiple=false: no ofrece agrupadora y emite selección simple', () => {
