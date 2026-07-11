@@ -121,13 +121,138 @@ export interface GrupoOposicion {
 export const GRUPO_COMUNIDAD_VALENCIANA: GrupoOposicion = {
   code: '__GRUPO_COMUNIDAD_VALENCIANA__',
   name: 'Comunidad Valenciana',
-  icon: '🟠',
-  image: null,
+  icon: '🟠', // fallback si no cargara la imagen
+  image: 'comunidades/VALENCIA.png', // Senyera de la Comunidad Valenciana
   members: [Oposicion.VALENCIA_AYUNTAMIENTO, Oposicion.ALICANTE_CPBA],
 };
 
 /** Grupos agrupadores disponibles en el selector de oposiciones (extensible). */
 export const gruposOposicion: GrupoOposicion[] = [GRUPO_COMUNIDAD_VALENCIANA];
+
+/** Item de display ya colapsado (una oposición individual o un grupo agrupador). */
+export interface OposicionColapsada {
+  code: string;
+  label: string;
+  icon: string;
+  image: string | null;
+  /** Presente solo si es un grupo agrupador (p.ej. Comunidad Valenciana). */
+  members?: Oposicion[];
+}
+
+function mismoConjuntoOposiciones(a: Oposicion[], b: Oposicion[]): boolean {
+  if (a.length !== b.length) return false;
+  const setB = new Set(b);
+  return a.every((x) => setB.has(x));
+}
+
+/**
+ * Colapsa una lista de oposiciones reales a items de display, con la MISMA regla
+ * que usa el badge del picker (fuente única, para que no diverja entre el picker
+ * y las tarjetas/overviews): si el conjunto coincide EXACTAMENTE con un grupo
+ * agrupador (p.ej. Valencia + Alicante), se muestra el grupo como un solo item
+ * ("Comunidad Valenciana"); si no, se muestran las oposiciones individuales.
+ * @param opts.excluirGeneral si true, quita GENERAL de la lista antes de colapsar.
+ */
+export function colapsarOposiciones(
+  ops: Oposicion[],
+  opts: { excluirGeneral?: boolean } = {},
+): OposicionColapsada[] {
+  const lista = opts.excluirGeneral
+    ? (ops ?? []).filter((o) => o !== Oposicion.GENERAL)
+    : ops ?? [];
+  const grupo = gruposOposicion.find((g) =>
+    mismoConjuntoOposiciones(g.members, lista),
+  );
+  if (grupo) {
+    return [
+      {
+        code: grupo.code,
+        label: grupo.name,
+        icon: grupo.icon,
+        image: grupo.image,
+        members: grupo.members,
+      },
+    ];
+  }
+  return lista.map((o) => ({
+    code: o,
+    label: oposiciones[o]?.name ?? o,
+    icon: oposiciones[o]?.icon ?? '📋',
+    image: oposiciones[o]?.image ?? null,
+  }));
+}
+
+/**
+ * Nodo del árbol del selector de oposiciones.
+ * `nivel`: 0 = raíz (comodín GENERAL), 1 = comunidad, 2 = provincia.
+ * `tipo`: WILDCARD (GENERAL, exclusivo, "todas"), GRUPO (agrupadora con members),
+ * OPOSICION (valor real del enum, hoja).
+ */
+export interface NodoOposicion {
+  code: string;
+  label: string;
+  icon: string;
+  image: string | null;
+  nivel: 0 | 1 | 2;
+  tipo: 'WILDCARD' | 'GRUPO' | 'OPOSICION';
+  members?: Oposicion[];
+}
+
+/** Marcador del comodín "todas las oposiciones" (valor real del enum). */
+export const OPOSICION_WILDCARD = Oposicion.GENERAL;
+
+/**
+ * Árbol de oposiciones del selector (dos niveles bajo el comodín GENERAL):
+ *   Todas las oposiciones (GENERAL)   ← raíz/comodín, exclusivo
+ *     Comunidad de Madrid             ← comunidad sin provincias (hoja)
+ *     Comunidad Valenciana            ← comunidad (grupo)
+ *       Valencia Ayuntamiento         ← provincia
+ *       CPBA Alicante                 ← provincia
+ * El orden de este array ES el orden en que se pintan las filas.
+ */
+export const ARBOL_OPOSICIONES: NodoOposicion[] = [
+  {
+    code: OPOSICION_WILDCARD,
+    label: 'Todas las oposiciones',
+    icon: oposiciones[Oposicion.GENERAL].icon,
+    image: null,
+    nivel: 0,
+    tipo: 'WILDCARD',
+  },
+  {
+    code: Oposicion.MADRID,
+    label: 'Comunidad de Madrid',
+    icon: oposiciones[Oposicion.MADRID].icon,
+    image: oposiciones[Oposicion.MADRID].image,
+    nivel: 1,
+    tipo: 'OPOSICION',
+  },
+  {
+    code: GRUPO_COMUNIDAD_VALENCIANA.code,
+    label: GRUPO_COMUNIDAD_VALENCIANA.name,
+    icon: GRUPO_COMUNIDAD_VALENCIANA.icon,
+    image: GRUPO_COMUNIDAD_VALENCIANA.image,
+    nivel: 1,
+    tipo: 'GRUPO',
+    members: GRUPO_COMUNIDAD_VALENCIANA.members,
+  },
+  {
+    code: Oposicion.VALENCIA_AYUNTAMIENTO,
+    label: oposiciones[Oposicion.VALENCIA_AYUNTAMIENTO].name,
+    icon: oposiciones[Oposicion.VALENCIA_AYUNTAMIENTO].icon,
+    image: oposiciones[Oposicion.VALENCIA_AYUNTAMIENTO].image,
+    nivel: 2,
+    tipo: 'OPOSICION',
+  },
+  {
+    code: Oposicion.ALICANTE_CPBA,
+    label: oposiciones[Oposicion.ALICANTE_CPBA].name,
+    icon: oposiciones[Oposicion.ALICANTE_CPBA].icon,
+    image: oposiciones[Oposicion.ALICANTE_CPBA].image,
+    nivel: 2,
+    tipo: 'OPOSICION',
+  },
+];
 
 export const provinciasEspanolas = [
   { name: 'Álava', code: 'VI' },

@@ -59,3 +59,70 @@
   object-fit: contain;
   border-radius: 4px;
 }
+
+// Árbol del dropdown en dos niveles bajo el comodín GENERAL:
+//   nivel 0 (raíz "Todas las oposiciones") · nivel 1 (comunidades: Madrid, CV) ·
+//   nivel 2 (provincias: Valencia, Alicante, indentadas bajo su comunidad).
+// La indentación + guías en árbol dejan clara la jerarquía.
+.oposicion-item {
+  width: 100%;
+  position: relative;
+
+  // Raíz: el comodín "Todas las oposiciones" se destaca como padre de todos.
+  &--raiz {
+    font-weight: 700;
+  }
+
+  // Grupo-comunidad (Comunidad Valenciana) en negrita también.
+  &--grupo {
+    font-weight: 600;
+  }
+
+  // Nivel 1 (comunidades) — indentado un escalón con guía.
+  &--n1 {
+    padding-left: 1.35rem;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0.5rem;
+      top: 50%;
+      width: 0.55rem;
+      height: 1px;
+      background: var(--surface-400, #9ca3af);
+    }
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0.5rem;
+      top: -0.5rem;
+      bottom: 50%;
+      width: 1px;
+      background: var(--surface-400, #9ca3af);
+    }
+  }
+
+  // Nivel 2 (provincias) — indentado dos escalones bajo su comunidad.
+  &--n2 {
+    padding-left: 2.6rem;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 1.75rem;
+      top: 50%;
+      width: 0.55rem;
+      height: 1px;
+      background: var(--surface-400, #9ca3af);
+    }
+    &::after {
+      content: "";
+      position: absolute;
+      left: 1.75rem;
+      top: -0.5rem;
+      bottom: 50%;
+      width: 1px;
+      background: var(--surface-400, #9ca3af);
+    }
+  }
+}

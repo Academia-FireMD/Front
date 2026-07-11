@@ -75,6 +75,21 @@ describe('CursoCardComponent', () => {
     ]);
   });
 
+  it('Valencia + Alicante se colapsan en un solo badge "Comunidad Valenciana" (consistente con el picker)', () => {
+    fixture.componentRef.setInput('curso', {
+      ...baseCurso,
+      relevancia: [
+        Oposicion.VALENCIA_AYUNTAMIENTO,
+        Oposicion.ALICANTE_CPBA,
+      ],
+    });
+    fixture.componentRef.setInput('tieneAcceso', true);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.oposicionBadges()).toEqual([
+      'Comunidad Valenciana',
+    ]);
+  });
+
   it('relevancia vacía o solo GENERAL → sin badges', () => {
     fixture.componentRef.setInput('curso', {
       ...baseCurso,

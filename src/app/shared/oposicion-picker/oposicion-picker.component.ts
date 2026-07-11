@@ -8,9 +8,13 @@ import {
   SimpleChanges,
 } from '@angular/core';
 import {
+  ARBOL_OPOSICIONES,
+  colapsarOposiciones,
   GrupoOposicion,
   gruposOposicion,
+  NodoOposicion,
   oposiciones,
+  OPOSICION_WILDCARD,
 } from '../../utils/consts';
 import { Oposicion } from '../models/subscription.model';
 
@@ -25,6 +29,8 @@ export interface PickerOption {
   icon: string;
   image: string | null;
   members?: Oposicion[];
+  /** Nivel de indentación en el árbol: 0=raíz (GENERAL), 1=comunidad, 2=provincia. */
+  nivel?: number;
 }
 
 @Component({
@@ -76,32 +82,63 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
 
   /** Recalcula las vistas memoizadas desde el estado interno. Referencias estables. */
   private recompute(): void {
-    const grupos = this.multiple
-      ? gruposOposicion.map((g) => this.toGrupoOption(g))
-      : [];
-    const individuales = Object.values(Oposicion).map((op) =>
-      this.toIndividualOption(op),
-    );
-    this.listboxOptions = [...grupos, ...individuales];
+    // Opciones del listbox = el ÁRBOL de oposiciones (dos niveles bajo GENERAL):
+    //   Todas las oposiciones (raíz) · Comunidad de Madrid (hoja) · Comunidad
+    //   Valenciana (grupo) → Valencia / Alicante (provincias, indentadas).
+    // En modo simple no hay árbol: lista plana de oposiciones reales.
+    this.listboxOptions = this.multiple
+      ? ARBOL_OPOSICIONES.map((n) => this.nodoToOption(n))
+      : Object.values(Oposicion).map((op) => this.toIndividualOption(op));
 
     this.grupoActivo = !!this.grupoActivoRef;
 
+    // listboxValue = qué se MARCA en el dropdown (depende del estado):
+    //  - modo simple: la opción única
+    //  - comodín GENERAL activo (exclusivo): solo GENERAL
+    //  - grupo activo: el padre + sus dos hijas resaltados
+    //  - resto: las individuales
     if (!this.multiple) {
       const op = this.selected[0];
-      const single = op ? this.toIndividualOption(op) : null;
-      this.listboxValue = single;
-      this.displayItems = single ? [single] : [];
-      return;
+      this.listboxValue = op ? this.toIndividualOption(op) : null;
+    } else if (this.esWildcardActivo()) {
+      this.listboxValue = [this.toIndividualOption(OPOSICION_WILDCARD)];
+    } else if (this.grupoActivoRef) {
+      const parent = this.toGrupoOption(this.grupoActivoRef);
+      const memberOpts = this.grupoActivoRef.members.map((m) =>
+        this.toIndividualOption(m),
+      );
+      this.listboxValue = [parent, ...memberOpts];
+    } else {
+      this.listboxValue = this.selected.map((op) => this.toIndividualOption(op));
     }
-    if (this.grupoActivoRef) {
-      const chip = [this.toGrupoOption(this.grupoActivoRef)];
-      this.listboxValue = chip;
-      this.displayItems = chip;
-      return;
-    }
-    const items = this.selected.map((op) => this.toIndividualOption(op));
-    this.listboxValue = items;
-    this.displayItems = items;
+
+    // displayItems = badges RESUMEN. Usa la MISMA lógica de colapso compartida
+    // (colapsarOposiciones) que las tarjetas/overviews → consistencia garantizada:
+    // Valencia + Alicante se muestran como un solo badge "Comunidad Valenciana".
+    this.displayItems = colapsarOposiciones(this.selected);
+  }
+
+  /** ¿Está seleccionado solo el comodín GENERAL ("todas las oposiciones")? */
+  private esWildcardActivo(): boolean {
+    return this.selected.length === 1 && this.selected[0] === OPOSICION_WILDCARD;
+  }
+
+  private nodoToOption(n: NodoOposicion): PickerOption {
+    return {
+      label: n.label,
+      code: n.code,
+      icon: n.icon,
+      image: n.image,
+      nivel: n.nivel,
+      members: n.members,
+    };
+  }
+
+  /** Códigos actualmente marcados en el listbox (para diffear el cambio). */
+  private listboxValueCodes(): string[] {
+    const v = this.listboxValue;
+    if (Array.isArray(v)) return v.map((o) => o.code);
+    return v ? [v.code] : [];
   }
 
   /**
@@ -117,37 +154,57 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
       return;
     }
 
-    const seleccion = (value as PickerOption[]) ?? [];
-    const grupoOpt = seleccion.find((o) => !!o.members) ?? null;
-    const individuales = seleccion.filter((o) => !o.members);
-    const grupoEstabaActivo = !!this.grupoActivoRef;
+    // p-listbox (multiple) normalmente alterna UNA opción por clic. Diffeamos la
+    // nueva selección contra lo que estaba marcado (padre + hijas cuando el grupo
+    // está activo) para distinguir "clic en el padre" de "clic/quitar una hija".
+    // Robusto al orden y a eventos multi-cambio (p.ej. limpiar todo → []).
+    const nextOpts = (value as PickerOption[]) ?? [];
+    const prevCodes = new Set(this.listboxValueCodes());
+    const nextCodes = new Set(nextOpts.map((o) => o.code));
+    const added = [...nextCodes].filter((c) => !prevCodes.has(c));
+    const removed = [...prevCodes].filter((c) => !nextCodes.has(c));
 
-    if (grupoOpt && !grupoEstabaActivo) {
-      // ACTIVACIÓN: el usuario acaba de marcar la agrupadora.
-      // Marca sus miembros, desmarca GENERAL, conserva otras individuales ajenas (p.ej. Madrid).
+    const wildcardAdded = added.includes(OPOSICION_WILDCARD);
+    const wildcardRemoved = removed.includes(OPOSICION_WILDCARD);
+    const grupoAdded = gruposOposicion.find((g) => added.includes(g.code));
+    const grupoRemoved = gruposOposicion.find((g) => removed.includes(g.code));
+    const esGrupo = (c: string) => gruposOposicion.some((g) => g.code === c);
+    const esWildcard = (c: string) => c === OPOSICION_WILDCARD;
+
+    if (wildcardAdded) {
+      // GENERAL ("todas las oposiciones") es EXCLUSIVO: al marcarlo, limpia el resto.
+      this.selected = [OPOSICION_WILDCARD];
+    } else if (wildcardRemoved && added.length === 0) {
+      // Se deseleccionó GENERAL sin elegir otra cosa.
+      this.selected = [];
+    } else if (grupoAdded) {
+      // Activar el padre: añade sus miembros, quita GENERAL, conserva otras sueltas.
       const set = new Set<Oposicion>(
-        individuales.map((o) => o.code as Oposicion),
+        this.selected.filter(
+          (op) => op !== OPOSICION_WILDCARD && !grupoAdded.members.includes(op),
+        ),
       );
-      set.delete(Oposicion.GENERAL);
-      grupoOpt.members!.forEach((m) => set.add(m));
+      grupoAdded.members.forEach((m) => set.add(m));
       this.selected = [...set];
-      // Solo se pinta agrupado si el resultado es EXACTAMENTE el par del grupo.
-      this.grupoActivoRef = this.findGrupoExacto(this.selected);
-    } else if (grupoOpt && grupoEstabaActivo && individuales.length > 0) {
-      // El grupo estaba activo y el usuario tocó una individual → ROMPER agrupación.
-      const set = new Set<Oposicion>(grupoOpt.members!);
-      individuales.forEach((o) => set.add(o.code as Oposicion));
-      this.selected = [...set];
-      this.grupoActivoRef = null;
-    } else if (grupoOpt) {
-      // El grupo sigue como único seleccionado → permanece agrupado.
-      this.selected = [...grupoOpt.members!];
-      this.grupoActivoRef = this.findGrupoExacto(this.selected);
+    } else if (grupoRemoved) {
+      // Desmarcar el padre = quitar sus miembros de golpe (rompe/limpia el grupo).
+      this.selected = this.selected.filter(
+        (op) => !grupoRemoved.members.includes(op),
+      );
     } else {
-      // Sin grupo en la selección → modo individual puro (no se auto-agrupa al editar a mano).
-      this.selected = individuales.map((o) => o.code as Oposicion);
-      this.grupoActivoRef = null;
+      // Toggles de oposiciones individuales. Elegir una concreta quita GENERAL.
+      const set = new Set<Oposicion>(
+        this.selected.filter((op) => op !== OPOSICION_WILDCARD),
+      );
+      for (const c of added)
+        if (!esGrupo(c) && !esWildcard(c)) set.add(c as Oposicion);
+      for (const c of removed)
+        if (!esGrupo(c) && !esWildcard(c)) set.delete(c as Oposicion);
+      this.selected = [...set];
     }
+
+    // Se pinta agrupado solo si el resultado coincide EXACTAMENTE con un grupo.
+    this.grupoActivoRef = this.findGrupoExacto(this.selected);
     this.emit();
   }
 

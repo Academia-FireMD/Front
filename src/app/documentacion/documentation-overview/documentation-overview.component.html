@@ -334,7 +334,11 @@
           >
             {{ document.identificador }}
           </span>
+          <!-- En la gestión admin (overview) todos los documentos son públicos y
+               se muestra el estado "Publicado/Sin publicar"; el badge "Público"
+               sería redundante ahí, así que solo se muestra fuera de esa vista. -->
           <span
+            *ngIf="!(expectedRole == 'ADMIN' && mode === 'overview')"
             class="badge"
             [ngClass]="document.esPublico ? 'bg-green-500' : 'bg-orange-500'"
             pTooltip="{{
@@ -351,8 +355,8 @@
             [ngClass]="document.isPublicado ? 'bg-green-500' : 'bg-yellow-500'"
             pTooltip="{{
               document.isPublicado
-                ? 'Publicado: incluido en una release activa. La visibilidad final depende además de la audiencia de la release y de la relevancia del módulo por comunidad'
-                : 'Sin publicar: no lo cubre ninguna release activa, los alumnos NO lo ven'
+                ? 'Publicado: incluido en alguna publicación/audiencia. Con el botón Publicar se hace visible de un clic, sin montar audiencia. Nota: si solo está en una audiencia caducada cuenta como Publicado, pero el alumno no lo verá hasta que esté en una audiencia con fechas activas.'
+                : 'Sin publicar: los alumnos NO lo ven todavía. Usa el botón Publicar para hacerlo visible de un clic (sin montar audiencia)'
             }}"
             tooltipPosition="top"
           >
@@ -430,6 +434,21 @@
               $event.stopPropagation();
               $event.preventDefault();
               confirmarPublicacion(document)
+            "
+          ></p-button>
+          <p-button
+            *ngIf="
+              expectedRole == 'ADMIN' &&
+              mode === 'overview' &&
+              document.isPublicado
+            "
+            icon="pi pi-eye-slash"
+            styleClass="p-button-secondary"
+            pTooltip="Despublicar documento (ocultarlo a los alumnos)"
+            (click)="
+              $event.stopPropagation();
+              $event.preventDefault();
+              confirmarDespublicacion(document)
             "
           ></p-button>
           <p-button
