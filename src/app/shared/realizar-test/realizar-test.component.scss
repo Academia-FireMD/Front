@@ -1,0 +1,39 @@
+// El aspecto base de este componente viene de estilos globales. Aquí solo van
+// los estilos de los añadidos del modo desafío.
+
+// Cada pareja label + switch (+ icono) viaja junta. Al hacer wrap en móvil
+// nunca se separan el label y su switch (bug real detectado en QA 390px).
+.switch-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.unirse-desafio-row {
+  // Fila discreta: no debe competir con el botón principal "Generar test".
+  opacity: 0.95;
+}
+
+.unirse-desafio-link {
+  color: var(--primary-color);
+  font-size: 0.875rem;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+.codigo-invitacion-valor {
+  font-family: monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  background: var(--surface-100);
+  border: 1px dashed var(--primary-color);
+  color: var(--primary-color);
+}

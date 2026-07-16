@@ -16,6 +16,138 @@
   ></app-popup-fallos-test>
 </p-dialog>
 
+<!-- Popup explicativo + configuración al activar "Test desafío" -->
+<p-dialog
+  *ngIf="mode == 'default'"
+  header="Modo desafío"
+  [modal]="true"
+  [(visible)]="displayPopupDesafio"
+  (onHide)="onHidePopupDesafio()"
+  [breakpoints]="{ '575px': '90vw' }"
+  [style]="{ width: '32rem' }"
+  [draggable]="false"
+  [resizable]="false"
+  data-testid="popup-desafio-dialog"
+>
+  <p class="mt-0 text-sm line-height-3" data-testid="popup-desafio-explicacion">
+    Crea un examen de los temas que elijas y reta a tus compañeros. Todos
+    responden las mismas preguntas y al final se genera un ranking. Al crearlo
+    recibirás un <strong>código de invitación</strong> para compartir con quien
+    quieras.
+  </p>
+
+  <div class="flex flex-column gap-3 mt-3">
+    <div class="flex flex-column gap-1">
+      <label for="desafioTiempoResolver" class="text-sm font-semibold"
+        >Tiempo para resolver el test (minutos)</label
+      >
+      <p-inputNumber
+        inputId="desafioTiempoResolver"
+        [formControl]="formGroup.controls.tiempoLimiteEnMinutos"
+        [min]="1"
+        placeholder="Por defecto, sin límite"
+        [showButtons]="false"
+        styleClass="w-full"
+        [style]="{ width: '100%' }"
+        data-testid="popup-desafio-tiempo-resolver"
+      ></p-inputNumber>
+      <small class="text-color-secondary"
+        >Cronómetro individual de cada participante. Por defecto, sin
+        límite.</small
+      >
+    </div>
+
+    <div class="flex flex-column gap-1">
+      <label for="desafioDuracionSala" class="text-sm font-semibold"
+        >¿Cuánto tiempo estará abierto el desafío? (horas)</label
+      >
+      <p-inputNumber
+        inputId="desafioDuracionSala"
+        [formControl]="formGroup.controls.duracionSalaHoras"
+        [min]="1"
+        placeholder="168 (7 días)"
+        [showButtons]="false"
+        styleClass="w-full"
+        [style]="{ width: '100%' }"
+        data-testid="popup-desafio-duracion-sala"
+      ></p-inputNumber>
+      <small class="text-color-secondary"
+        >Tiempo que la sala acepta que se unan y compitan antes de cerrar el
+        ranking. Por defecto, 168 h (7 días).</small
+      >
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      type="button"
+      class="p-button-text"
+      (click)="cancelarDesafio()"
+      data-testid="popup-desafio-cancelar"
+    >
+      <span class="w-full">Cancelar</span>
+    </button>
+    <button
+      pButton
+      type="button"
+      class="p-button p-button-raised"
+      (click)="confirmarDesafio()"
+      data-testid="popup-desafio-entendido"
+    >
+      <span class="w-full">Entendido</span>
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- Popup para unirse a un desafío con un código -->
+<p-dialog
+  *ngIf="mode == 'default'"
+  header="Unirse a un desafío"
+  [modal]="true"
+  [(visible)]="displayPopupUnirse"
+  [breakpoints]="{ '575px': '90vw' }"
+  [style]="{ width: '30rem' }"
+  [draggable]="false"
+  [resizable]="false"
+  data-testid="popup-unirse-dialog"
+>
+  <p class="mt-0 text-sm line-height-3" data-testid="popup-unirse-explicacion">
+    Si un compañero te ha pasado un código de desafío, pégalo aquí. Harás el
+    mismo test que él y competiréis en el ranking.
+  </p>
+
+  <div class="flex flex-column gap-2 mt-2">
+    <input
+      pInputText
+      type="text"
+      class="w-full"
+      placeholder="Ej. BATALLA-X7K2"
+      [formControl]="codigoDesafioControl"
+      data-testid="codigo-desafio-input"
+    />
+    <p-message
+      *ngIf="mensajeUnirse"
+      [severity]="mensajeUnirse.severity"
+      [text]="mensajeUnirse.texto"
+      data-testid="unirse-desafio-message"
+    ></p-message>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      type="button"
+      class="p-button p-button-raised"
+      (click)="unirmeAlDesafio()"
+      [loading]="uniendose"
+      data-testid="unirme-desafio-btn"
+    >
+      <span class="w-full">Unirme</span>
+    </button>
+  </ng-template>
+</p-dialog>
+
 <p-confirmDialog data-testid="confirmacion-dialog"></p-confirmDialog>
 <div class="grid" [formGroup]="formGroup" data-testid="realizar-test-container">
   <div class="col-12 content">
@@ -53,7 +185,7 @@
             <ng-template let-item pTemplate="selectedItem">
               <div class="flex align-items-center gap-2 h-full">
                 @if (item.icon) {
-                <i class="pi {{ item.icon }}"></i>
+                  <i class="pi {{ item.icon }}"></i>
                 }
                 <div class="hidden md:block">{{ item.label }}</div>
               </div>
@@ -61,7 +193,7 @@
             <ng-template let-item let-index pTemplate="item">
               <div class="flex align-items-center gap-2 h-full">
                 @if (item.icon) {
-                <i class="pi {{ item.icon }}"></i>
+                  <i class="pi {{ item.icon }}"></i>
                 }
                 <div class="hidden md:block">{{ item.label }}</div>
               </div>
@@ -81,6 +213,7 @@
         *ngIf="mode == 'default'"
         data-testid="opciones-test-container"
       >
+        <!-- Tiempo inline solo para EXAMEN: en modo desafío se pide en el popup. -->
         <p-floatLabel *ngIf="formGroup.value.generarTestDeExamen">
           <input
             pInputText
@@ -93,18 +226,44 @@
           />
           <label for="tiempoLimiteEnMinutos">Tiempo límite</label>
         </p-floatLabel>
-        <label for="switch1">Generar test de examen</label>
-        <p-inputSwitch
-          [formControl]="formGroup.controls.generarTestDeExamen"
-          data-testid="test-examen-switch"
-        ></p-inputSwitch>
 
-        <ng-container *ngIf="!!(getFallosCount$ | async)">
-          <label for="switch1">Generar test de repaso</label>
+        <!-- Cada pareja label+switch en su propio grupo inline para que nunca se
+             separen al hacer wrap en móvil. En modo desafío, examen y repaso se
+             OCULTAN (no solo se deshabilitan) para dejar la fila limpia. -->
+        <div class="switch-group" *ngIf="!formGroup.value.generarTestDesafio">
+          <label for="switch1">Generar test de examen</label>
           <p-inputSwitch
-            [formControl]="formGroup.controls.generarTestDeRepaso"
-            data-testid="test-repaso-switch"
+            [formControl]="formGroup.controls.generarTestDeExamen"
+            data-testid="test-examen-switch"
           ></p-inputSwitch>
+        </div>
+
+        <div class="switch-group">
+          <label for="switchDesafio">Test desafío</label>
+          <p-inputSwitch
+            [formControl]="formGroup.controls.generarTestDesafio"
+            data-testid="test-desafio-switch"
+          ></p-inputSwitch>
+          <i
+            class="pi pi-info-circle text-primary cursor-pointer"
+            pTooltip="Reta a tus compañeros: haréis el mismo test y saldrá un ranking al final."
+            tooltipPosition="top"
+            data-testid="test-desafio-tooltip"
+          ></i>
+        </div>
+
+        <ng-container
+          *ngIf="
+            !formGroup.value.generarTestDesafio && !!(getFallosCount$ | async)
+          "
+        >
+          <div class="switch-group">
+            <label for="switch1">Generar test de repaso</label>
+            <p-inputSwitch
+              [formControl]="formGroup.controls.generarTestDeRepaso"
+              data-testid="test-repaso-switch"
+            ></p-inputSwitch>
+          </div>
 
           <button
             pButton
@@ -139,79 +298,119 @@
           <span class="w-full">Generar test</span>
         </button>
       </div>
-      @if (mode == 'default') {
-      <div
-        class="grid"
-        *ngIf="getAllTestsComenzados$ | async as testsComenzados"
-        data-testid="tests-pendientes-container"
-      >
-        <div
-          class="col-12 md:col-6"
-          *ngFor="let testComenzado of testsComenzados"
-          data-testid="test-pendiente"
-          [attr.data-test-id]="testComenzado.id"
-        >
-          <p-card data-testid="test-pendiente-card">
-            <div class="info">
-              <div class="flex gap-2 info-card">
-                <div class="icon">
-                  <i class="pi pi-info-circle"></i>
-                </div>
-                <div class="content">
-                  <div class="title">
-                    <h4 class="my-0" data-testid="test-pendiente-titulo">
-                      Tienes un test pendiente
-                      {{
-                        !!testComenzado.duration && !!testComenzado.endsAt
-                          ? " de tipo examen"
-                          : ""
-                      }}
-                    </h4>
-                  </div>
-                  <div class="body" data-testid="test-pendiente-info">
-                    Has comenzado un test el día
-                    <strong>{{
-                      testComenzado.createdAt | date : "shortDate"
-                    }}</strong>
 
-                    <strong
-                      *ngIf="!!testComenzado.duration && !!testComenzado.endsAt"
-                      data-testid="tiempo-restante-examen"
-                      >. Y te quedan
-                      {{ testComenzado.endsAt | countdown }} minutos para
-                      terminarlo</strong
-                    >
-
-                    con {{ testComenzado.respuestasCount }} respuestas de
-                    {{ testComenzado.testPreguntasCount }} preguntas
-                    respondidas. Termínalo ahora haciendo clic en el botón de
-                    "Continuar"
-                  </div>
-                </div>
-              </div>
-              <br />
-              <div class="flex w-full justify-content-end">
-                <p-button
-                  label="Abortar"
-                  [link]="true"
-                  (click)="eliminarTest(testComenzado.id, $event)"
-                  data-testid="abortar-test-btn"
-                ></p-button>
-                <a
-                  [routerLink]="[
-                    '/app/test/alumno/realizar-test/' + testComenzado.id
-                  ]"
-                  class="link-text flex align-items-center p-button p-button-raised"
-                  style="text-decoration: none"
-                  data-testid="continuar-test-btn"
-                >
-                  <span>Continuar</span>
-                </a>
-              </div>
-            </div>
-          </p-card>
+      <!-- Unirse a un desafío: enlace discreto que abre el popup. -->
+      <ng-container *ngIf="mode == 'default'">
+        <p-divider></p-divider>
+        <div class="flex align-items-center gap-2 flex-wrap unirse-desafio-row">
+          <a
+            href="javascript:void(0)"
+            class="unirse-desafio-link"
+            (click)="abrirPopupUnirse()"
+            data-testid="unirse-desafio-link"
+            >¿Tienes un código de desafío?</a
+          >
         </div>
-      </div>
+      </ng-container>
+
+      @if (mode == "default") {
+        <div
+          class="grid"
+          *ngIf="getAllTestsComenzados$ | async as testsComenzados"
+          data-testid="tests-pendientes-container"
+        >
+          <div
+            class="col-12 md:col-6"
+            *ngFor="let testComenzado of testsComenzados"
+            data-testid="test-pendiente"
+            [attr.data-test-id]="testComenzado.id"
+          >
+            <p-card data-testid="test-pendiente-card">
+              <div class="info">
+                <div class="flex gap-2 info-card">
+                  <div class="icon">
+                    <i class="pi pi-info-circle"></i>
+                  </div>
+                  <div class="content">
+                    <div class="title">
+                      <h4 class="my-0" data-testid="test-pendiente-titulo">
+                        {{
+                          testComenzado.codigoDesafio
+                            ? "Tienes un desafío pendiente"
+                            : "Tienes un test pendiente" +
+                              (!!testComenzado.duration &&
+                              !!testComenzado.endsAt
+                                ? " de tipo examen"
+                                : "")
+                        }}
+                      </h4>
+                    </div>
+                    <div class="body" data-testid="test-pendiente-info">
+                      Has comenzado un test el día
+                      <strong>{{
+                        testComenzado.createdAt | date: "shortDate"
+                      }}</strong>
+
+                      <strong
+                        *ngIf="
+                          !!testComenzado.duration && !!testComenzado.endsAt
+                        "
+                        data-testid="tiempo-restante-examen"
+                        >. Y te quedan
+                        {{ testComenzado.endsAt | countdown }} minutos para
+                        terminarlo</strong
+                      >
+
+                      con {{ testComenzado.respuestasCount }} respuestas de
+                      {{ testComenzado.testPreguntasCount }} preguntas
+                      respondidas. Termínalo ahora haciendo clic en el botón de
+                      "Continuar"
+                    </div>
+
+                    <!-- El código de invitación solo aparece en tests de desafío. -->
+                    <div
+                      *ngIf="testComenzado.codigoDesafio"
+                      class="flex align-items-center gap-2 flex-wrap mt-3 codigo-invitacion"
+                    >
+                      <span class="text-sm">Código de invitación:</span>
+                      <span
+                        class="codigo-invitacion-valor"
+                        data-testid="codigo-invitacion"
+                        >{{ testComenzado.codigoDesafio }}</span
+                      >
+                      <p-button
+                        label="Copiar código"
+                        icon="pi pi-copy"
+                        [link]="true"
+                        (click)="copiarCodigo(testComenzado.codigoDesafio)"
+                        data-testid="copiar-codigo-btn"
+                      ></p-button>
+                    </div>
+                  </div>
+                </div>
+                <br />
+                <div class="flex w-full justify-content-end">
+                  <p-button
+                    label="Abortar"
+                    [link]="true"
+                    (click)="eliminarTest(testComenzado.id, $event)"
+                    data-testid="abortar-test-btn"
+                  ></p-button>
+                  <a
+                    [routerLink]="[
+                      '/app/test/alumno/realizar-test/' + testComenzado.id,
+                    ]"
+                    class="link-text flex align-items-center p-button p-button-raised"
+                    style="text-decoration: none"
+                    data-testid="continuar-test-btn"
+                  >
+                    <span>Continuar</span>
+                  </a>
+                </div>
+              </div>
+            </p-card>
+          </div>
+        </div>
       }
     </p-card>
   </div>
