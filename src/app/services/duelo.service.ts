@@ -62,6 +62,35 @@ export interface RankingDueloResponse {
   [key: string]: unknown;
 }
 
+/**
+ * Estado de una sala de duelo. Se aceptan ambas grafías (masc./fem.) porque el
+ * enum vive en el backend; el cliente OpenAPI aún no expone estos endpoints, así
+ * que la unión cubre las variantes posibles sin caer en `string` suelto.
+ */
+export type EstadoDuelo = 'ABIERTA' | 'CERRADA' | 'ABIERTO' | 'CERRADO';
+
+/**
+ * Un desafío del alumno, tal como lo devuelve `GET /duelos/mios`. Reúne los
+ * datos necesarios para pintar la lista "Mis desafíos" y volver a la
+ * clasificación de cada uno.
+ */
+export interface MiDuelo {
+  codigo: string;
+  estado: EstadoDuelo;
+  /** ISO date; `null` si la sala no expira. */
+  expiraEn: string | null;
+  /** ISO date de creación de la sala. */
+  createdAt: string;
+  esCreador: boolean;
+  numeroPreguntas: number;
+  totalParticipantes: number;
+  /** Id del test del alumno en este desafío; `null` si aún no lo empezó. */
+  miTestId: number | null;
+  miTestFinalizado: boolean;
+  /** Nota del alumno si ya finalizó su test; `null` en caso contrario. */
+  miNota: number | null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -98,5 +127,10 @@ export class DueloService extends ApiBaseService {
     return this.get(
       '/' + encodeURIComponent(codigo) + '/ranking',
     ) as Observable<RankingDueloResponse>;
+  }
+
+  /** Lista de desafíos del alumno (creados y en los que ha participado). */
+  public misDuelos$(): Observable<MiDuelo[]> {
+    return this.get('/mios') as Observable<MiDuelo[]>;
   }
 }

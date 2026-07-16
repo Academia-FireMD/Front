@@ -35,6 +35,16 @@ export interface DateRangeDto {
   temas?: Array<string>;
 }
 
+/**
+ * Respuesta de `POST /tests/finalizar-test/:id`. Además del test, el backend
+ * devuelve `salaDueloCodigo` si el test pertenece a un desafío (duelo), o `null`
+ * en tests normales/examen. Se usa para redirigir a la clasificación del desafío.
+ */
+export interface FinalizarTestResponse {
+  salaDueloCodigo?: string | null;
+  [key: string]: unknown;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -93,8 +103,11 @@ export class TestService extends ApiBaseService {
     return this.post('/registrar-respuesta', dto);
   }
 
-  public finalizarTest(testId: number) {
-    return this.post('/finalizar-test/' + testId, {});
+  public finalizarTest(testId: number): Observable<FinalizarTestResponse> {
+    return this.post(
+      '/finalizar-test/' + testId,
+      {},
+    ) as Observable<FinalizarTestResponse>;
   }
 
   public eliminarTest(idTest: number) {

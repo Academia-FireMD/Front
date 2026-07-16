@@ -302,13 +302,19 @@
       <!-- Unirse a un desafío: enlace discreto que abre el popup. -->
       <ng-container *ngIf="mode == 'default'">
         <p-divider></p-divider>
-        <div class="flex align-items-center gap-2 flex-wrap unirse-desafio-row">
+        <div class="flex align-items-center gap-3 flex-wrap unirse-desafio-row">
           <a
             href="javascript:void(0)"
             class="unirse-desafio-link"
             (click)="abrirPopupUnirse()"
             data-testid="unirse-desafio-link"
             >¿Tienes un código de desafío?</a
+          >
+          <a
+            class="unirse-desafio-link"
+            [routerLink]="['/app/test/alumno/mis-desafios']"
+            data-testid="mis-desafios-link"
+            >Mis desafíos</a
           >
         </div>
       </ng-container>
@@ -384,6 +390,16 @@
                         [link]="true"
                         (click)="copiarCodigo(testComenzado.codigoDesafio)"
                         data-testid="copiar-codigo-btn"
+                      ></p-button>
+                      <p-button
+                        label="Ver clasificación"
+                        icon="pi pi-trophy"
+                        [link]="true"
+                        [routerLink]="[
+                          '/app/test/alumno/duelo/ranking/' +
+                            testComenzado.codigoDesafio,
+                        ]"
+                        data-testid="ver-clasificacion-pendiente-btn"
                       ></p-button>
                     </div>
                   </div>

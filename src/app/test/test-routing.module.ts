@@ -331,6 +331,23 @@ const routes: Routes = [
         data: { expectedRole: 'ALUMNO', ocultarVolver: true, tipo: 'duelo' },
       },
       {
+        path: 'mis-desafios',
+        loadComponent: () =>
+          import('./components/mis-desafios/mis-desafios.component').then(
+            (m) => m.MisDesafiosComponent,
+          ),
+        canActivate: [roleGuard, SubscriptionGuard],
+        data: {
+          expectedRole: 'ALUMNO',
+          title: 'Mis desafíos',
+          allowedSubscriptions: [
+            SuscripcionTipo.BASIC,
+            SuscripcionTipo.ADVANCED,
+            SuscripcionTipo.PREMIUM,
+          ],
+        },
+      },
+      {
         path: '',
         redirectTo: 'realizar-test',
         pathMatch: 'full',

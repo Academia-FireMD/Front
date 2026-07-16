@@ -1,0 +1,130 @@
+<div class="grid" data-testid="mis-desafios-container">
+  <div class="col-12 content">
+    <p-card>
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 pb-0">
+          <h3 class="m-0">Mis desafíos</h3>
+          <p-button
+            label="Actualizar"
+            icon="pi pi-refresh"
+            [link]="true"
+            (click)="cargarDuelos()"
+            [loading]="loading()"
+            data-testid="mis-desafios-refresh"
+          ></p-button>
+        </div>
+      </ng-template>
+
+      @if (loading()) {
+        <div
+          class="flex justify-content-center align-items-center p-5"
+          data-testid="mis-desafios-loading"
+        >
+          <i class="pi pi-spin pi-spinner text-2xl"></i>
+        </div>
+      } @else if (error()) {
+        <div
+          class="flex flex-column align-items-center gap-3 p-5 text-center"
+          data-testid="mis-desafios-error"
+        >
+          <i
+            class="pi pi-exclamation-triangle text-3xl text-color-secondary"
+          ></i>
+          <p class="m-0">No se han podido cargar tus desafíos.</p>
+          <p-button
+            label="Reintentar"
+            icon="pi pi-refresh"
+            (click)="cargarDuelos()"
+            data-testid="mis-desafios-reintentar"
+          ></p-button>
+        </div>
+      } @else if (duelos().length === 0) {
+        <div
+          class="flex flex-column align-items-center gap-2 p-5 text-center"
+          data-testid="mis-desafios-vacio"
+        >
+          <i class="pi pi-flag text-3xl text-color-secondary"></i>
+          <p class="m-0">Aún no has participado en ningún desafío.</p>
+        </div>
+      } @else {
+        <p-table
+          [value]="duelos()"
+          responsiveLayout="stack"
+          [breakpoint]="'768px'"
+          styleClass="p-datatable-sm"
+          data-testid="mis-desafios-tabla"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Desafío</th>
+              <th>Estado</th>
+              <th class="text-center">Participantes</th>
+              <th class="text-center">Tu resultado</th>
+              <th></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-duelo>
+            <tr [attr.data-testid]="'mis-desafios-fila'">
+              <td>
+                <span class="p-column-title">Desafío</span>
+                <div class="flex flex-column gap-1">
+                  <span
+                    class="font-semibold"
+                    data-testid="mis-desafios-codigo"
+                    >{{ duelo.codigo }}</span
+                  >
+                  <small class="text-color-secondary">
+                    {{ duelo.numeroPreguntas }} preguntas ·
+                    {{ duelo.createdAt | date: "shortDate" }}
+                    @if (duelo.esCreador) {
+                      · <span class="font-medium">Creador</span>
+                    }
+                  </small>
+                </div>
+              </td>
+              <td>
+                <span class="p-column-title">Estado</span>
+                <p-tag
+                  [value]="esAbierto(duelo) ? 'Abierto' : 'Cerrado'"
+                  [severity]="esAbierto(duelo) ? 'success' : 'secondary'"
+                  data-testid="mis-desafios-estado"
+                ></p-tag>
+              </td>
+              <td class="text-center">
+                <span class="p-column-title">Participantes</span>
+                {{ duelo.totalParticipantes }}
+              </td>
+              <td class="text-center">
+                <span class="p-column-title">Tu resultado</span>
+                @if (duelo.miTestFinalizado && duelo.miNota !== null) {
+                  <span
+                    class="font-semibold"
+                    [class]="getNotaClass(duelo.miNota)"
+                    data-testid="mis-desafios-nota"
+                    >{{ duelo.miNota | number: "1.0-2" }}</span
+                  >
+                } @else {
+                  <span
+                    class="text-color-secondary"
+                    data-testid="mis-desafios-en-curso"
+                    >En curso</span
+                  >
+                }
+              </td>
+              <td class="text-right">
+                <p-button
+                  label="Ver clasificación"
+                  icon="pi pi-trophy"
+                  [outlined]="true"
+                  size="small"
+                  (click)="verClasificacion(duelo.codigo)"
+                  data-testid="mis-desafios-ver-clasificacion"
+                ></p-button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </p-card>
+  </div>
+</div>

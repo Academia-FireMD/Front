@@ -102,4 +102,35 @@ describe('DueloService', () => {
       });
     });
   });
+
+  describe('misDuelos$', () => {
+    it('should GET /duelos/mios and return the list', (done) => {
+      const duelos = [
+        {
+          codigo: 'BATALLA-X7K2',
+          estado: 'ABIERTA',
+          expiraEn: null,
+          createdAt: '2026-07-16T00:00:00.000Z',
+          esCreador: true,
+          numeroPreguntas: 30,
+          totalParticipantes: 2,
+          miTestId: 99,
+          miTestFinalizado: true,
+          miNota: 8.5,
+        },
+      ];
+      mockHttpGet.mockReturnValue(of(duelos));
+
+      service.misDuelos$().subscribe((res) => {
+        expect(mockHttpGet).toHaveBeenCalledWith(
+          `${environment.apiUrl}/duelos/mios`,
+          { withCredentials: true },
+        );
+        expect(res.length).toBe(1);
+        expect(res[0].codigo).toBe('BATALLA-X7K2');
+        expect(res[0].miNota).toBe(8.5);
+        done();
+      });
+    });
+  });
 });

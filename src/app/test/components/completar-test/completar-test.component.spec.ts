@@ -180,6 +180,21 @@ describe('CompletarTestComponent — integration', () => {
         expect.arrayContaining([expect.stringContaining('stats-test')]),
       );
     });
+
+    it('finalizarTest de un desafío (salaDueloCodigo) navega a la clasificación del duelo', async () => {
+      const routerSpy = (component as any).router;
+      testServiceMock.finalizarTest.mockReturnValueOnce(
+        of({ salaDueloCodigo: 'BATALLA-X7K2' }),
+      );
+
+      await component.finalizarTest();
+
+      expect(routerSpy.navigate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.stringContaining('duelo/ranking/BATALLA-X7K2'),
+        ]),
+      );
+    });
   });
 
   describe('Vista previa y modo ver respuestas', () => {
