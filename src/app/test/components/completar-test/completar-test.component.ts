@@ -850,10 +850,18 @@ export class CompletarTestComponent {
       : (this.activedRoute.snapshot.paramMap.get('id') as string);
   }
 
-  private navegarAResultados() {
+  private navegarAResultados(salaDueloCodigo: string | null = null) {
     // Embebido en el aula: no navegamos fuera; avisamos al host.
     if (this.embedded) {
       this.finalizado.emit({ testId: this.lastLoadedTest.id });
+      return;
+    }
+    // Test de desafío (duelo): ir directo a la clasificación del desafío en vez
+    // del resultado/stats normal. Solo aplica cuando el backend devuelve código.
+    if (salaDueloCodigo) {
+      this.router.navigate([
+        '/app/test/alumno/duelo/ranking/' + salaDueloCodigo,
+      ]);
       return;
     }
     if (this.modoSimulacro && this.idExamenSimulacro) {
@@ -882,13 +890,15 @@ export class CompletarTestComponent {
   }
 
   public async finalizarTest() {
-    await firstValueFrom(
-      this.testService
-        .finalizarTest(this.lastLoadedTest.id)
-        .pipe(switchMap(() => this.loadTest())),
+    // Capturamos la respuesta de finalizar (trae `salaDueloCodigo` si es un
+    // desafío) antes de recargar el test. En tests normales/examen es null y el
+    // flujo de navegación se mantiene intacto.
+    const finalizarResponse = await firstValueFrom(
+      this.testService.finalizarTest(this.lastLoadedTest.id),
     );
+    await firstValueFrom(this.loadTest());
 
-    this.navegarAResultados();
+    this.navegarAResultados(finalizarResponse?.salaDueloCodigo ?? null);
   }
 
   private loadTest(id: string = this.getId()) {

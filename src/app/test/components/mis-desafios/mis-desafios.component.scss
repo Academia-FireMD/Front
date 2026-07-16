@@ -1,0 +1,22 @@
+:host {
+  display: block;
+}
+
+.p-column-title {
+  display: none;
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+// En modo "stack" (móvil) PrimeNG apila las celdas: mostramos el título de cada
+// columna a la izquierda para que la fila siga siendo legible.
+@media screen and (max-width: 768px) {
+  .p-column-title {
+    display: inline-block;
+  }
+
+  td.text-center,
+  td.text-right {
+    text-align: left !important;
+  }
+}
