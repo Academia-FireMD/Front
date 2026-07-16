@@ -11,6 +11,7 @@ import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
 import { PaginatorModule } from 'primeng/paginator';
 import { TooltipModule } from 'primeng/tooltip';
 import { AvatarUploadComponent } from './avatar-upload/avatar-upload.component';
@@ -44,14 +45,15 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     DificultadDropdownComponent,
     PasswordInputComponent,
     AvatarUploadComponent,
-    TemaSelectComponent, RealizarTestComponent,
+    TemaSelectComponent,
+    RealizarTestComponent,
     PopupFallosTestComponent,
     QrCodeShareComponent,
     MetodoCalificacionPickerComponent,
     ScoreChartCardComponent,
     KpiStatsCardsComponent,
     ConfidenceAnalysisCardsComponent,
-    AttachmentsManagerComponent
+    AttachmentsManagerComponent,
   ],
   imports: [
     CommonModule,
@@ -66,12 +68,13 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     PrimengModule,
     RouterModule,
     InputTextModule,
+    MessageModule,
     TooltipModule,
     DataViewModule,
     PaginatorModule,
     NgxEchartsModule,
     OnboardingFormComponent,
-    AsyncButtonComponent
+    AsyncButtonComponent,
   ],
   exports: [
     SharedGridComponent,
@@ -84,7 +87,8 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     ReactiveFormsModule,
     DificultadDropdownComponent,
     PasswordInputComponent,
-    AvatarUploadComponent, RealizarTestComponent,
+    AvatarUploadComponent,
+    RealizarTestComponent,
     TemaSelectComponent,
     PopupFallosTestComponent,
     QrCodeShareComponent,
@@ -96,7 +100,7 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     AsyncButtonComponent,
     BadgeModule,
     FloatLabelModule,
-    OnboardingFormComponent
+    OnboardingFormComponent,
   ],
 })
-export class SharedModule { }
+export class SharedModule {}

@@ -8,6 +8,7 @@ import { TableModule } from 'primeng/table';
 import { catchError, finalize, firstValueFrom, of } from 'rxjs';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import { AuthService } from '../../../services/auth.service';
+import { DueloService } from '../../../services/duelo.service';
 import { ConfidenceAnalysis } from '../../../shared/components/confidence-analysis-cards/confidence-analysis-cards.component';
 import { KpiStat } from '../../../shared/components/kpi-stats-cards/kpi-stats-cards.component';
 import { MetodoCalificacion } from '../../../shared/models/user.model';
@@ -15,7 +16,14 @@ import { PrimengModule } from '../../../shared/primeng.module';
 import { SharedModule } from '../../../shared/shared.module';
 import { AppState } from '../../../store/app.state';
 import { selectUserMetodoCalificacion } from '../../../store/user/user.selectors';
-import { calcular100, calcular100y50, calcular100y75y50, createConfidenceAnalysisForResult, getColorClass, getNotaClass } from '../../../utils/utils';
+import {
+  calcular100,
+  calcular100y50,
+  calcular100y75y50,
+  createConfidenceAnalysisForResult,
+  getColorClass,
+  getNotaClass,
+} from '../../../utils/utils';
 @Component({
   selector: 'app-resultado-simulacro',
   templateUrl: './resultado-simulacro.component.html',
@@ -36,6 +44,7 @@ export class ResultadoSimulacroComponent implements OnInit {
   router = inject(Router);
   toastr = inject(ToastrService);
   examenService = inject(ExamenesService);
+  dueloService = inject(DueloService);
   authService = inject(AuthService);
   location = inject(Location);
   cdr = inject(ChangeDetectorRef);
@@ -43,6 +52,9 @@ export class ResultadoSimulacroComponent implements OnInit {
 
   public idExamen: number | null = null;
   public idTest: number | null = null;
+  // Fuente "duelo": cuando la ruta trae :codigo (path duelo/ranking/:codigo),
+  // el ranking se pide a DueloService en vez de a ExamenesService.
+  public dueloCodigo: string | null = null;
   public loading: boolean = true;
   public error: boolean = false;
   public errorMessage: string = '';
@@ -62,14 +74,15 @@ export class ResultadoSimulacroComponent implements OnInit {
   // Selector para obtener el método de calificación del usuario
   userMetodoCalificacion$ = this.store.select(selectUserMetodoCalificacion);
   // Variable para almacenar el método actual
-  private currentMetodoCalificacion: MetodoCalificacion = MetodoCalificacion.A1_E1_3_B0;
+  private currentMetodoCalificacion: MetodoCalificacion =
+    MetodoCalificacion.A1_E1_3_B0;
 
   getColorClass = getColorClass;
   getNotaClass = getNotaClass;
 
   ngOnInit(): void {
     // Suscribirse al método de calificación del usuario
-    this.userMetodoCalificacion$.subscribe(metodo => {
+    this.userMetodoCalificacion$.subscribe((metodo) => {
       this.currentMetodoCalificacion = metodo;
     });
 
@@ -79,11 +92,20 @@ export class ResultadoSimulacroComponent implements OnInit {
 
   private async loadRouteData() {
     try {
-      const { idExamen, idTest } = await firstValueFrom(
-        this.activedRoute.params
-      );
+      const params = await firstValueFrom(this.activedRoute.params);
       const { ocultarVolver } = await firstValueFrom(this.activedRoute.data);
       this.ocultarVolver = !!ocultarVolver;
+
+      // Rama duelo: la ruta trae :codigo (no idExamen/idTest). Reutilizamos el
+      // mismo componente porque el ranking devuelve la misma forma.
+      const { codigo } = params;
+      if (codigo) {
+        this.dueloCodigo = String(codigo);
+        await this.loadResultados();
+        return;
+      }
+
+      const { idExamen, idTest } = params;
       if (!idExamen || !idTest) {
         this.error = true;
         this.errorMessage = 'Parámetros de ruta inválidos';
@@ -103,16 +125,21 @@ export class ResultadoSimulacroComponent implements OnInit {
       this.loading = false;
       this.toastr.error(
         'No se pudieron cargar los datos del simulacro',
-        'Error'
+        'Error',
       );
     }
   }
 
   private async loadResultados() {
-    if (!this.idExamen) return;
+    if (!this.dueloCodigo && !this.idExamen) return;
 
-    this.examenService
-      .getSimulacroResultados$(this.idExamen)
+    // Misma forma de respuesta en ambas fuentes → el resto del componente
+    // (tabla, miPosicion, badges) funciona igual sin más branching.
+    const resultados$ = this.dueloCodigo
+      ? this.dueloService.getRanking$(this.dueloCodigo)
+      : this.examenService.getSimulacroResultados$(this.idExamen as number);
+
+    resultados$
       .pipe(
         catchError((err) => {
           console.error('Error al cargar los resultados:', err);
@@ -124,7 +151,7 @@ export class ResultadoSimulacroComponent implements OnInit {
         }),
         finalize(() => {
           this.loading = false;
-        })
+        }),
       )
       .subscribe((data) => {
         if (!data) return;
@@ -139,8 +166,6 @@ export class ResultadoSimulacroComponent implements OnInit {
         this.miResultado = this.resultados.find((r) => r.usuario.esTuResultado);
       });
   }
-
-
 
   public goBack() {
     return this.activedRoute.snapshot.queryParamMap.get('goBack') === 'true';
@@ -165,7 +190,7 @@ export class ResultadoSimulacroComponent implements OnInit {
         queryParams: {
           goBack: true,
         },
-      }
+      },
     );
   }
 
@@ -211,34 +236,37 @@ export class ResultadoSimulacroComponent implements OnInit {
       this.getCorrectas.bind(this),
       this.getIncorrectas.bind(this),
       this.getNoContestadas.bind(this),
-      this.getAccuracyPercentage.bind(this)
+      this.getAccuracyPercentage.bind(this),
     );
   }
 
   getKpiStatsForResult(estadisticas: any): KpiStat[] {
     if (!estadisticas) return [];
 
-    const noContestadas = estadisticas.totalPreguntas - estadisticas.correctas - estadisticas.incorrectas;
+    const noContestadas =
+      estadisticas.totalPreguntas -
+      estadisticas.correctas -
+      estadisticas.incorrectas;
 
     return [
       {
         value: estadisticas.correctas,
         label: 'Correctas',
         type: 'correctas',
-        icon: 'pi-check'
+        icon: 'pi-check',
       },
       {
         value: estadisticas.incorrectas,
         label: 'Incorrectas',
         type: 'incorrectas',
-        icon: 'pi-times'
+        icon: 'pi-times',
       },
       {
         value: noContestadas,
         label: 'No contestadas',
         type: 'no-contestadas',
-        icon: 'pi-minus'
-      }
+        icon: 'pi-minus',
+      },
     ];
   }
 
@@ -279,7 +307,10 @@ export class ResultadoSimulacroComponent implements OnInit {
     return Math.round((correctas / total) * 100);
   }
 
-  public getCombinedConfidenceAnalysisFromSecurity(seguridad: any, totalPreguntas: number): ConfidenceAnalysis[] {
+  public getCombinedConfidenceAnalysisFromSecurity(
+    seguridad: any,
+    totalPreguntas: number,
+  ): ConfidenceAnalysis[] {
     if (!seguridad) return [];
 
     const stats100 = {
@@ -288,7 +319,10 @@ export class ResultadoSimulacroComponent implements OnInit {
     };
     const stats75 = {
       correctas: this.getCorrectas({ seguridad }, 'SETENTA_Y_CINCO_POR_CIENTO'),
-      incorrectas: this.getIncorrectas({ seguridad }, 'SETENTA_Y_CINCO_POR_CIENTO'),
+      incorrectas: this.getIncorrectas(
+        { seguridad },
+        'SETENTA_Y_CINCO_POR_CIENTO',
+      ),
     };
     const stats50 = {
       correctas: this.getCorrectas({ seguridad }, 'CINCUENTA_POR_CIENTO'),
@@ -301,21 +335,40 @@ export class ResultadoSimulacroComponent implements OnInit {
         title: 'Solo 100% Seguro',
         icon: '⭐',
         tipos: ['CIEN_POR_CIENTO'],
-        score: calcular100(stats100 as any, totalPreguntas, this.currentMetodoCalificacion),
+        score: calcular100(
+          stats100 as any,
+          totalPreguntas,
+          this.currentMetodoCalificacion,
+        ),
       },
       {
         id: 'combined-100-50',
         title: '100% + 50% Seguro',
         icon: '🎯',
         tipos: ['CIEN_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
-        score: calcular100y50(stats100 as any, stats50 as any, totalPreguntas, this.currentMetodoCalificacion),
+        score: calcular100y50(
+          stats100 as any,
+          stats50 as any,
+          totalPreguntas,
+          this.currentMetodoCalificacion,
+        ),
       },
       {
         id: 'combined-100-75-50',
         title: '100% + 75% + 50% Seguro',
         icon: '📈',
-        tipos: ['CIEN_POR_CIENTO', 'SETENTA_Y_CINCO_POR_CIENTO', 'CINCUENTA_POR_CIENTO'],
-        score: calcular100y75y50(stats100 as any, stats75 as any, stats50 as any, totalPreguntas, this.currentMetodoCalificacion),
+        tipos: [
+          'CIEN_POR_CIENTO',
+          'SETENTA_Y_CINCO_POR_CIENTO',
+          'CINCUENTA_POR_CIENTO',
+        ],
+        score: calcular100y75y50(
+          stats100 as any,
+          stats75 as any,
+          stats50 as any,
+          totalPreguntas,
+          this.currentMetodoCalificacion,
+        ),
       },
     ];
 
@@ -334,15 +387,30 @@ export class ResultadoSimulacroComponent implements OnInit {
 
   private getTotalPreguntas(stats: any): number {
     if (!stats?.seguridad) return 0;
-    return Object.values(stats.seguridad).reduce((total: number, seguridad: any) => {
-      return total + (seguridad.correctas || 0) + (seguridad.incorrectas || 0) + (seguridad.noRespondidas || 0);
-    }, 0);
+    return Object.values(stats.seguridad).reduce(
+      (total: number, seguridad: any) => {
+        return (
+          total +
+          (seguridad.correctas || 0) +
+          (seguridad.incorrectas || 0) +
+          (seguridad.noRespondidas || 0)
+        );
+      },
+      0,
+    );
   }
 
-  private getTotalPreguntasPorSeguridad(stats: any, tipoSeguridad: string): number {
+  private getTotalPreguntasPorSeguridad(
+    stats: any,
+    tipoSeguridad: string,
+  ): number {
     if (!stats?.seguridad?.[tipoSeguridad]) return 0;
     const seguridad = stats.seguridad[tipoSeguridad];
-    return (seguridad.correctas || 0) + (seguridad.incorrectas || 0) + (seguridad.noRespondidas || 0);
+    return (
+      (seguridad.correctas || 0) +
+      (seguridad.incorrectas || 0) +
+      (seguridad.noRespondidas || 0)
+    );
   }
 
   private getCorrectas(stats: any, tipoSeguridad: string): number {
