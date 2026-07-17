@@ -214,6 +214,21 @@
             <span>{{ day.date | date: "d" }}</span>
           </div>
 
+          <!-- Bridge temario↔física: insignia compacta, solo ALUMNO y solo
+               días con entreno físico. Navega a
+               /app/planificacion-fisica/dia/:fecha; el click detiene
+               propagación para NO disparar (dayClicked) de la celda. -->
+          <div
+            class="fisica-bridge-mensual"
+            *ngIf="expectedRole == 'ALUMNO' && tieneFisica(day.date)"
+            data-testid="temario-fisica-bridge"
+            [pTooltip]="etiquetaFisica(day.date)"
+            tooltipPosition="top"
+            (click)="abrirFisica(day.date, $event)"
+          >
+            🏋️
+          </div>
+
           <!-- Progreso Diario -->
           <div *ngIf="events.length > 0" class="progress-container">
             <div class="progress-bar-background">

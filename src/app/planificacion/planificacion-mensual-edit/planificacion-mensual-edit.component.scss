@@ -123,6 +123,18 @@
   margin-bottom: 5px;
 }
 
+.fisica-bridge-mensual {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1;
+
+  &:hover {
+    filter: brightness(0.9);
+  }
+}
+
 .progress-container {
   margin-top: 5px;
 }

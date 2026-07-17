@@ -633,6 +633,45 @@ export class PlanificacionMensualEditComponent {
     }
   }
 
+  /**
+   * Bridge temario↔física en vista MENSUAL: mismo patrón que
+   * `VistaSemanalComponent.resumenFisicaDelDia`/`tieneFisica`/`etiquetaFisica`/
+   * `abrirFisica` (ver comentarios ahí), replicado aquí porque la celda del
+   * mes (`customCellTemplate`) vive en este componente y no en
+   * `vista-semanal`. Aditivo y defensivo: si `resumenFisica()` está vacío
+   * (bloque BASIC, sin plan, o fallo de `cargarResumenFisica`) estos métodos
+   * simplemente no pintan nada — la celda del mes sigue funcionando igual.
+   */
+  private resumenFisicaDelDia(dia: Date): ResumenDiaFisica | undefined {
+    const fecha = formatFechaISO(dia);
+    return this.resumenFisica().find((d) => d.fecha === fecha);
+  }
+
+  tieneFisica(dia: Date): boolean {
+    const resumen = this.resumenFisicaDelDia(dia);
+    return !!resumen && resumen.disciplinas.length > 0;
+  }
+
+  etiquetaFisica(dia: Date): string {
+    const resumen = this.resumenFisicaDelDia(dia);
+    if (!resumen) return '';
+    return resumen.disciplinas.map((d) => d.nombre).join(', ');
+  }
+
+  /**
+   * Click en la insignia de física de la celda del mes: navega al detalle
+   * del día en el módulo de física. `stopPropagation`+`preventDefault` para
+   * que NO dispare `(dayClicked)` de `mwl-calendar-month-view` (que abre la
+   * semana de ese día en `onDayClicked`) — el temario mensual sigue
+   * intacto, esto es puramente un atajo aparte.
+   */
+  abrirFisica(dia: Date, domEvent: Event): void {
+    domEvent.stopPropagation();
+    domEvent.preventDefault();
+    const fecha = formatFechaISO(dia);
+    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);
+  }
+
   onDateSelect(event: Date): void {
     const selectedDate = new Date(event);
     const year = selectedDate.getFullYear();
