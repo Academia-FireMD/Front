@@ -155,6 +155,23 @@ const routes: Routes = [
           title: 'Callejero',
         },
       },
+      {
+        // Panel admin de import de planificación física (Task 8, Fase 1a).
+        // Solo `moduloGuard` aquí — el gate por rol (ADMIN) vive en la ruta
+        // hija `admin` de `planificacion-fisica.routes.ts`, mismo patrón que
+        // `cursos-admin` (arriba). `callejero` usa roleGuard a este nivel
+        // porque es 100% alumno; este módulo es 100% admin.
+        path: 'planificacion-fisica',
+        loadChildren: () =>
+          import('./planificacion-fisica/planificacion-fisica.routes').then(
+            (m) => m.routes,
+          ),
+        canActivate: [moduloGuard],
+        data: {
+          modulo: ModuloApp.PLANIFICACION_FISICA,
+          title: 'Planificación física',
+        },
+      },
     ],
   },
   {

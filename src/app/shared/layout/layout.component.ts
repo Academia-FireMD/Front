@@ -291,6 +291,12 @@ export class LayoutComponent {
             routerLink: '/app/cursos-admin',
             modulo: ModuloApp.CURSOS,
           },
+          {
+            label: 'Planificación física',
+            icon: 'pi pi-bolt',
+            routerLink: '/app/planificacion-fisica/admin',
+            modulo: ModuloApp.PLANIFICACION_FISICA,
+          },
         ],
       },
       {
