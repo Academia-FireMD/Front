@@ -8,6 +8,7 @@ import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
 import {
+  DisciplinaCatalogo,
   MarcaPersonal,
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
@@ -17,6 +18,11 @@ describe('PlanificacionFisicaMarcasComponent', () => {
   let fixture: ComponentFixture<PlanificacionFisicaMarcasComponent>;
   let component: PlanificacionFisicaMarcasComponent;
   let serviceMock: Partial<Record<keyof PlanificacionFisicaService, jest.Mock>>;
+
+  const catalogoFixture: DisciplinaCatalogo[] = [
+    { id: 3, nombre: 'Carrera 1', grupo: 'CARRERA', color: '#fdeaa8' },
+    { id: 5, nombre: 'Press 1', grupo: 'PRESS', color: '#c9c0ec' },
+  ];
 
   const marcasFixture: MarcaPersonal[] = [
     {
@@ -57,7 +63,7 @@ describe('PlanificacionFisicaMarcasComponent', () => {
   beforeEach(async () => {
     serviceMock = {
       marcas: jest.fn().mockReturnValue(of(marcasFixture)),
-      miPlan: jest.fn().mockReturnValue(of(null)),
+      catalogoDisciplinas: jest.fn().mockReturnValue(of(catalogoFixture)),
       crearMarca: jest.fn(),
       borrarMarca: jest.fn(),
     };
@@ -107,6 +113,66 @@ describe('PlanificacionFisicaMarcasComponent', () => {
       By.css('[data-testid="pf-marca-1"]'),
     );
     expect(marca1).toBeTruthy();
+  });
+
+  it('el selector de prueba se puebla desde el catálogo global (GET /disciplinas), no del plan/marcas', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(serviceMock.catalogoDisciplinas).toHaveBeenCalled();
+    expect(component['discOpciones']()).toEqual([
+      {
+        disciplinaId: 3,
+        nombre: 'Carrera 1',
+        grupo: 'CARRERA',
+        color: '#fdeaa8',
+      },
+      { disciplinaId: 5, nombre: 'Press 1', grupo: 'PRESS', color: '#c9c0ec' },
+    ]);
+
+    const select = fixture.debugElement.query(
+      By.css('[data-testid="pf-marcas-select-prueba"]'),
+    );
+    expect(select).toBeTruthy();
+  });
+
+  it('un alumno SIN marcas ni plan puede añadir su primera marca: el selector no está vacío', async () => {
+    serviceMock.marcas!.mockReturnValue(of([]));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Estado "sin marcas" (histórico vacío)...
+    const vacio = fixture.debugElement.query(
+      By.css('[data-testid="pf-marcas-vacio"]'),
+    );
+    expect(vacio).toBeTruthy();
+
+    // ...pero el selector de prueba SÍ tiene opciones (viene del catálogo,
+    // no de las marcas ni del plan): el hint "sin pruebas" no aparece.
+    expect(component['discOpciones']().length).toBeGreaterThan(0);
+    const hint = fixture.debugElement.query(
+      By.css('[data-testid="pf-marcas-sin-pruebas"]'),
+    );
+    expect(hint).toBeFalsy();
+  });
+
+  it('si el catálogo falla (500/red), muestra el estado de error y NO el hint de "sin pruebas"', async () => {
+    serviceMock.catalogoDisciplinas!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const errorEl = fixture.debugElement.query(
+      By.css('[data-testid="pf-marcas-error"]'),
+    );
+    expect(errorEl).toBeTruthy();
+    expect(component['discOpciones']()).toEqual([]);
   });
 
   it('añadir marca: llama a crearMarca con el DTO del formulario y refresca la lista', async () => {

@@ -26,13 +26,13 @@ import { AsyncButtonComponent } from '../../shared/components/async-button/async
 import {
   AccesoDenegadoPlanFisica,
   CrearMarcaDto,
+  DisciplinaCatalogo,
   GrupoDisciplina,
   MarcaPersonal,
-  MiPlan,
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
 
-/** Opción del selector de prueba: solo disciplinas de las que ya tenemos un ID real (no un catálogo inventado). */
+/** Opción del selector de prueba, derivada del catálogo global (`GET /disciplinas`). */
 interface DisciplinaOpcion {
   disciplinaId: number;
   nombre: string;
@@ -56,14 +56,13 @@ interface GrupoMarcas {
  * entrenador), esto es un registro libre de resultados propios (mejor
  * tiempo, repeticiones...) que el alumno lleva por su cuenta.
  *
- * Selector de prueba: el backend NO expone un catálogo de disciplinas para
- * el alumno (solo el admin puede listarlas), así que el desplegable se
- * construye con IDs REALES sacados de fuentes que el alumno ya puede leer:
- * las disciplinas de sus propias marcas (`GET /marcas`) más las de su plan
- * vigente (`GET /mi-plan`, best-effort). Hardcodear IDs de un catálogo fijo
- * en el front sería frágil (los IDs los asigna el seed del backend, pueden
- * no coincidir entre staging/prod) — con esta unión el `disciplinaId` que
- * viaja al `POST` es siempre uno que el backend ya reconoce.
+ * Selector de prueba: se puebla desde `GET /planificacion-fisica/disciplinas`
+ * (catálogo GLOBAL de pruebas). Antes se deducía de las disciplinas de las
+ * propias marcas del alumno (`GET /marcas`) más las de su plan vigente
+ * (`GET /mi-plan`, best-effort) — eso dejaba el selector VACÍO para un
+ * alumno sin plan asignado ni marcas previas, justo cuando necesita añadir
+ * su PRIMERA marca (bug de review). El catálogo no depende de alumnoId ni
+ * de plan/marcas, así que siempre hay opciones.
  */
 @Component({
   selector: 'app-planificacion-fisica-marcas',
@@ -137,31 +136,20 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     return Array.from(porDisciplina.values());
   });
 
-  /** Opciones del desplegable "prueba", construidas con IDs reales (ver comentario de la clase). */
-  protected readonly discOpciones = computed<DisciplinaOpcion[]>(() => {
-    const porId = new Map<number, DisciplinaOpcion>();
-    for (const marca of this.marcas()) {
-      if (!porId.has(marca.disciplinaId)) {
-        porId.set(marca.disciplinaId, {
-          disciplinaId: marca.disciplinaId,
-          nombre: marca.disciplinaNombre,
-          grupo: marca.grupo,
-          color: marca.color,
-        });
-      }
-    }
-    for (const opcion of this.discOpcionesDelPlan()) {
-      if (!porId.has(opcion.disciplinaId)) {
-        porId.set(opcion.disciplinaId, opcion);
-      }
-    }
-    return Array.from(porId.values()).sort((a, b) =>
-      a.nombre.localeCompare(b.nombre),
-    );
-  });
+  /** Catálogo global de pruebas (`GET /disciplinas`), fuente única del selector. */
+  protected catalogo = signal<DisciplinaCatalogo[]>([]);
 
-  /** Disciplinas del plan vigente (best-effort, `null` si no hay o falla). */
-  private discOpcionesDelPlan = signal<DisciplinaOpcion[]>([]);
+  /** Opciones del desplegable "prueba", derivadas del catálogo global. */
+  protected readonly discOpciones = computed<DisciplinaOpcion[]>(() =>
+    this.catalogo()
+      .map((d) => ({
+        disciplinaId: d.id,
+        nombre: d.nombre,
+        grupo: d.grupo,
+        color: d.color,
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+  );
 
   protected readonly form = this.fb.nonNullable.group({
     disciplinaId: this.fb.control<number | null>(null, Validators.required),
@@ -183,15 +171,16 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     this.error.set(false);
     try {
       // Ambas llamadas son independientes — se lanzan en paralelo (mismo
-      // patrón que `planificacion-fisica-dia.component.ts`). `miPlan` es
-      // best-effort: solo aporta opciones extra al desplegable de prueba;
-      // si falla, simplemente no aporta nada — no bloquea la carga de marcas.
-      const [marcas, plan] = await Promise.all([
+      // patrón que `planificacion-fisica-dia.component.ts`). A diferencia
+      // del antiguo `miPlan()` best-effort, el catálogo NO es opcional: es
+      // la fuente del selector de prueba, así que si falla se trata igual
+      // que un fallo al cargar las marcas (gated/error), nunca en silencio.
+      const [marcas, catalogo] = await Promise.all([
         firstValueFrom(this.svc.marcas()),
-        firstValueFrom(this.svc.miPlan()).catch(() => null),
+        firstValueFrom(this.svc.catalogoDisciplinas()),
       ]);
       this.marcas.set(marcas);
-      this.discOpcionesDelPlan.set(this.extraerOpcionesDelPlan(plan));
+      this.catalogo.set(catalogo);
     } catch (err) {
       const httpErr = err as HttpErrorResponse;
       const body = httpErr?.error as AccesoDenegadoPlanFisica | undefined;
@@ -205,24 +194,6 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       this.loading.set(false);
       this.cargado.set(true);
     }
-  }
-
-  private extraerOpcionesDelPlan(plan: MiPlan | null): DisciplinaOpcion[] {
-    if (!plan) return [];
-    const porId = new Map<number, DisciplinaOpcion>();
-    for (const semana of plan.semanas) {
-      for (const dia of semana.dias) {
-        for (const chip of dia.chips) {
-          porId.set(chip.disciplinaId, {
-            disciplinaId: chip.disciplinaId,
-            nombre: chip.nombre,
-            grupo: chip.grupo,
-            color: chip.color,
-          });
-        }
-      }
-    }
-    return Array.from(porId.values());
   }
 
   /** Botón "Reintentar" del estado de error. */

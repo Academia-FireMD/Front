@@ -237,6 +237,20 @@ export interface MarcaPersonal {
 }
 
 /**
+ * Prueba (disciplina) del catálogo global, para poblar el selector al
+ * añadir una marca personal (`GET /planificacion-fisica/disciplinas`). A
+ * diferencia de `DetalleDisciplina`/`ChipDisciplina` (ligadas a un
+ * bloque/plan concreto), esto es el catálogo COMPLETO — no depende de que
+ * el alumno tenga plan asignado ni marcas previas.
+ */
+export interface DisciplinaCatalogo {
+  id: number;
+  nombre: string;
+  grupo: GrupoDisciplina;
+  color: string;
+}
+
+/**
  * Body de `POST /planificacion-fisica/marcas`. `alumnoId` NUNCA viaja aquí
  * — el backend lo saca siempre de `req.user.id` (mismo criterio anti-IDOR
  * que el resto del módulo).
@@ -354,5 +368,16 @@ export class PlanificacionFisicaService {
 
   borrarMarca(id: number): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(`${this.base}/marcas/${id}`);
+  }
+
+  /**
+   * Catálogo completo de pruebas (disciplinas) para poblar el selector al
+   * añadir una marca personal. Es GLOBAL — no depende del plan/bloque ni
+   * de las marcas previas del alumno, así que un alumno sin plan asignado
+   * ni marcas registradas también tiene opciones para su primera marca.
+   * Mismo gate 403 `TIER_TOO_LOW` que `marcas()`/`miPlan()`.
+   */
+  catalogoDisciplinas(): Observable<DisciplinaCatalogo[]> {
+    return this.http.get<DisciplinaCatalogo[]>(`${this.base}/disciplinas`);
   }
 }
