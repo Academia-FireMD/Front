@@ -2,7 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { ConfirmationService, PrimeNGConfig } from 'primeng/api';
+import { Confirmation, ConfirmationService, PrimeNGConfig } from 'primeng/api';
+import { FileUpload } from 'primeng/fileupload';
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
@@ -182,6 +183,135 @@ describe('PlanificacionFisicaAdminComponent', () => {
 
     expect(serviceMock.publicar).toHaveBeenCalledWith(bloqueFixture.id);
     expect(serviceMock.listarBloques).toHaveBeenCalledTimes(2);
+    confirmSpy.mockRestore();
+  });
+
+  it('onFileSelected limpia el p-fileUpload al seleccionar un fichero, para que una segunda selección siga funcionando (PrimeNG destruye su <input> tras la primera)', async () => {
+    fixture.detectChanges();
+
+    const clearSpy = jest.fn();
+    // Sustituimos el ViewChild real por un stub: solo nos interesa
+    // verificar que `clear()` se invoca, no el comportamiento interno
+    // de PrimeNG.
+    component['excelUpload'] = { clear: clearSpy } as unknown as FileUpload;
+
+    const file = new File(['x'], 'plantilla.xlsx');
+    await component.onFileSelected({ files: [file] });
+
+    expect(clearSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('al eliminar un bloque con progreso de alumnos, pide una segunda confirmación explícita con el nº de marcas y solo reintenta con force=true si el admin la acepta', async () => {
+    fixture.detectChanges();
+
+    const error409 = new HttpErrorResponse({
+      status: 409,
+      error: {
+        message: 'El bloque tiene progreso de alumnos registrado.',
+        progreso: 42,
+        confirmar: true,
+      },
+    });
+
+    serviceMock
+      .eliminar!// Primer intento (sin force): el backend rechaza porque hay progreso.
+      .mockReturnValueOnce(throwError(() => error409))
+      // Segundo intento (con force, tras la 2ª confirmación): éxito.
+      .mockReturnValueOnce(of(undefined));
+
+    const confirmCalls: Confirmation[] = [];
+    const confirmSpy = jest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation((opts) => {
+        confirmCalls.push(opts);
+        if (confirmCalls.length === 1) {
+          // 1ª confirmación ("¿estás seguro?"): el admin acepta siempre.
+          opts.accept?.();
+        }
+        // La 2ª confirmación (aviso de progreso) la dispara el propio
+        // componente al recibir el 409 — la controla el test explícitamente
+        // más abajo, no se auto-acepta aquí.
+        return TestBed.inject(ConfirmationService);
+      });
+
+    component.eliminarBloque(bloqueFixture, new Event('click'));
+    // Deja que el primer eliminar() (que rechaza) se propague y dispare
+    // la 2ª llamada a confirm() dentro del catch.
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Todavía NO se ha borrado nada: solo el primer intento (sin force) se
+    // ha hecho, y se ha mostrado el 2º aviso con el nº real de marcas.
+    expect(serviceMock.eliminar).toHaveBeenCalledTimes(1);
+    expect(serviceMock.eliminar).toHaveBeenNthCalledWith(
+      1,
+      bloqueFixture.id,
+      false,
+    );
+    expect(confirmCalls.length).toBe(2);
+    expect(confirmCalls[1].message).toContain('42');
+    expect(confirmCalls[1].header).toContain('progreso');
+    expect(serviceMock.listarBloques).not.toHaveBeenCalledTimes(2);
+
+    // El admin acepta el 2º aviso ("Sí, eliminar de todas formas").
+    confirmCalls[1].accept?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(serviceMock.eliminar).toHaveBeenCalledTimes(2);
+    expect(serviceMock.eliminar).toHaveBeenNthCalledWith(
+      2,
+      bloqueFixture.id,
+      true,
+    );
+
+    confirmSpy.mockRestore();
+  });
+
+  it('si el admin rechaza el 2º aviso de progreso, NUNCA se reintenta el borrado con force', async () => {
+    fixture.detectChanges();
+
+    const error409 = new HttpErrorResponse({
+      status: 409,
+      error: {
+        message: 'El bloque tiene progreso de alumnos registrado.',
+        progreso: 7,
+        confirmar: true,
+      },
+    });
+
+    serviceMock.eliminar!.mockReturnValueOnce(throwError(() => error409));
+
+    const confirmCalls: Confirmation[] = [];
+    const confirmSpy = jest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation((opts) => {
+        confirmCalls.push(opts);
+        if (confirmCalls.length === 1) {
+          opts.accept?.();
+        }
+        // 2ª confirmación: NO se auto-acepta; el admin la rechaza (no se
+        // invoca `accept`, que es como PrimeNG modela un `reject`/dismiss
+        // cuando el componente no define callback de `reject`).
+        return TestBed.inject(ConfirmationService);
+      });
+
+    component.eliminarBloque(bloqueFixture, new Event('click'));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(confirmCalls.length).toBe(2);
+    expect(serviceMock.eliminar).toHaveBeenCalledTimes(1);
+
+    // El admin cierra/rechaza el 2º diálogo: nunca se llama a `accept`.
+    confirmCalls[1].reject?.();
+    await Promise.resolve();
+
+    expect(serviceMock.eliminar).toHaveBeenCalledTimes(1);
+    expect(serviceMock.eliminar).toHaveBeenCalledWith(bloqueFixture.id, false);
+
     confirmSpy.mockRestore();
   });
 });
