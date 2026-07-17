@@ -86,7 +86,7 @@ describe('VistaSemanalComponent', () => {
       // El badge de física es un elemento aparte del calendario de eventos,
       // nunca un CalendarEvent — así que no puede colarse en onEventClicked,
       // que asume `event.meta.subBloque` (temario) o `event.meta.esPersonalizado`.
-      const openDialogSpy = jest.spyOn(component, 'onEventClicked' as any);
+      const openDialogSpy = jest.spyOn(component, 'onEventClicked');
       const domEvent = {
         stopPropagation: jest.fn(),
         preventDefault: jest.fn(),
