@@ -89,6 +89,7 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
   beforeEach(async () => {
     serviceMock = {
       miPlan: jest.fn().mockReturnValue(of(planFixture)),
+      misBloques: jest.fn().mockReturnValue(of([])),
     };
 
     await TestBed.configureTestingModule({
@@ -261,5 +262,95 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
       '/app/planificacion-fisica',
       'marcas',
     ]);
+  });
+
+  describe('switcher multi-oposición (Fase 2)', () => {
+    const bloqueValencia = {
+      id: 2,
+      identificador: 'Bloque Valencia',
+      relevancia: [Oposicion.VALENCIA_AYUNTAMIENTO],
+      esActivo: true,
+    };
+    const bloqueMadrid = {
+      id: 3,
+      identificador: 'Bloque Madrid',
+      relevancia: [Oposicion.MADRID],
+      esActivo: false,
+    };
+
+    it('con más de un bloque aplicable: muestra el selector y cambiar recarga el plan con el bloqueId elegido', async () => {
+      serviceMock.misBloques!.mockReturnValue(
+        of([bloqueValencia, bloqueMadrid]),
+      );
+
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const switcher = fixture.debugElement.query(
+        By.css('[data-testid="pf-switcher-bloques"]'),
+      );
+      expect(switcher).toBeTruthy();
+      // Preselecciona el bloque esActivo (el más específico) para el
+      // selector, aunque la carga inicial de mi-plan va sin bloqueId (el
+      // backend ya resuelve al mismo bloque por defecto).
+      expect(component['bloqueSeleccionadoId']()).toBe(2);
+      expect(serviceMock.miPlan).toHaveBeenCalledWith();
+
+      component['cambiarBloque'](3);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component['bloqueSeleccionadoId']()).toBe(3);
+      expect(serviceMock.miPlan).toHaveBeenCalledWith(3);
+    });
+
+    it('con un solo bloque aplicable (v1): NO muestra el selector', async () => {
+      serviceMock.misBloques!.mockReturnValue(of([bloqueValencia]));
+
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const switcher = fixture.debugElement.query(
+        By.css('[data-testid="pf-switcher-bloques"]'),
+      );
+      expect(switcher).toBeFalsy();
+    });
+
+    it('sin ningún bloque aplicable: NO muestra el selector', async () => {
+      serviceMock.misBloques!.mockReturnValue(of([]));
+
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const switcher = fixture.debugElement.query(
+        By.css('[data-testid="pf-switcher-bloques"]'),
+      );
+      expect(switcher).toBeFalsy();
+    });
+
+    it('fallo de misBloques (red/5xx) no rompe la carga del calendario: cae a miPlan() sin bloqueId', async () => {
+      serviceMock.misBloques!.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 500 })),
+      );
+
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const switcher = fixture.debugElement.query(
+        By.css('[data-testid="pf-switcher-bloques"]'),
+      );
+      expect(switcher).toBeFalsy();
+      expect(serviceMock.miPlan).toHaveBeenCalledWith();
+      expect(component['miPlan']()).toEqual(planFixture);
+
+      const semana1 = fixture.debugElement.query(
+        By.css('[data-testid="pf-semana-10"]'),
+      );
+      expect(semana1).toBeTruthy();
+    });
   });
 });

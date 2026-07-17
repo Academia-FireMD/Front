@@ -16,6 +16,18 @@
     }
   }
 
+  &__switcher {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    label {
+      font-weight: 600;
+      color: var(--text-color-secondary);
+    }
+  }
+
   &__loading {
     display: flex;
     align-items: center;

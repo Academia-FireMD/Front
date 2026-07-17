@@ -136,6 +136,34 @@ describe('PlanificacionFisicaService', () => {
     expect(errorRecibido?.error?.reason).toBe('TIER_TOO_LOW');
   });
 
+  it('miPlan con bloqueId lo manda como query param', () => {
+    service.miPlan(7).subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/mi-plan?bloqueId=7`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(null);
+  });
+
+  it('misBloques llama al endpoint correcto', () => {
+    let recibido: unknown;
+    service.misBloques().subscribe((res) => (recibido = res));
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/mis-bloques`,
+    );
+    expect(req.request.method).toBe('GET');
+    const bloques = [
+      {
+        id: 2,
+        identificador: 'Bloque Valencia',
+        relevancia: [],
+        esActivo: true,
+      },
+    ];
+    req.flush(bloques);
+    expect(recibido).toEqual(bloques);
+  });
+
   it('dia llama al endpoint correcto con la fecha', () => {
     service.dia('2026-07-15').subscribe();
     const req = http.expectOne(

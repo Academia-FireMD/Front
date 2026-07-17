@@ -11,6 +11,21 @@
     ></p-button>
   </div>
 
+  @if (mostrarSwitcher()) {
+    <div class="pf-calendario__switcher">
+      <label for="pf-switcher-bloques">Oposición</label>
+      <p-dropdown
+        inputId="pf-switcher-bloques"
+        [options]="misBloques()"
+        optionLabel="identificador"
+        optionValue="id"
+        [ngModel]="bloqueSeleccionadoId()"
+        (onChange)="cambiarBloque($event.value)"
+        data-testid="pf-switcher-bloques"
+      ></p-dropdown>
+    </div>
+  }
+
   @if (loading()) {
     <div class="pf-calendario__loading" data-testid="pf-calendario-loading">
       <i class="pi pi-spin pi-spinner"></i>

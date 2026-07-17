@@ -166,6 +166,21 @@ export interface MiPlan {
   hoy: string;
 }
 
+/**
+ * Opción del selector multi-oposición (`GET /mis-bloques`, Fase 2 switcher):
+ * un bloque que le aplica al alumno. Cuando tiene más de uno (ej. bloque
+ * específico de Valencia + bloque específico de Madrid) puede elegir cuál
+ * ver; con uno solo (v1) el componente no muestra selector. `esActivo`
+ * marca el que se ve por defecto (el más específico, mismo criterio que
+ * `GET /mi-plan` sin `bloqueId`).
+ */
+export interface BloqueOpcion {
+  id: number;
+  identificador: string;
+  relevancia: Oposicion[];
+  esActivo: boolean;
+}
+
 export interface DisciplinaDia {
   asignacionId: number;
   disciplinaId: number;
@@ -319,9 +334,26 @@ export class PlanificacionFisicaService {
    * hay plan publicado que le aplique. 403 `TIER_TOO_LOW` cuando su
    * suscripción no llega — el componente lo trata como estado de UI
    * (píldora de upsell), no como error a tragar.
+   *
+   * `bloqueId` (opcional, Fase 2 switcher multi-oposición): pide el
+   * calendario de ESE bloque en vez del más específico por defecto. El
+   * backend valida que sea uno de los aplicables al alumno — si no, cae en
+   * silencio al de siempre, así que este método nunca necesita validar
+   * nada del lado del cliente.
    */
-  miPlan(): Observable<MiPlan | null> {
-    return this.http.get<MiPlan | null>(`${this.base}/mi-plan`);
+  miPlan(bloqueId?: number): Observable<MiPlan | null> {
+    const params =
+      bloqueId != null ? new HttpParams().set('bloqueId', bloqueId) : undefined;
+    return this.http.get<MiPlan | null>(`${this.base}/mi-plan`, { params });
+  }
+
+  /**
+   * Lista de bloques que le aplican al alumno (Fase 2 switcher
+   * multi-oposición), para poblar el selector. El componente decide si lo
+   * muestra (solo si hay más de uno).
+   */
+  misBloques(): Observable<BloqueOpcion[]> {
+    return this.http.get<BloqueOpcion[]>(`${this.base}/mis-bloques`);
   }
 
   /** Detalle de un día concreto (`fecha` ISO, ej. "2026-07-15"). */
