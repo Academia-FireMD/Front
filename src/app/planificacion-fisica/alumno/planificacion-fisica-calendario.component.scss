@@ -37,6 +37,26 @@
     }
   }
 
+  &__error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    background: var(--red-50, #fef2f2);
+    border: 1px solid var(--red-300, #fca5a5);
+    color: var(--red-800, #991b1b);
+
+    i {
+      font-size: 1.1rem;
+    }
+
+    p {
+      margin: 0;
+    }
+  }
+
   &__semana-header {
     display: flex;
     flex-direction: column;

@@ -187,6 +187,55 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
     expect(vacio).toBeTruthy();
   });
 
+  it('muestra un estado de ERROR (no "sin plan") cuando el backend falla con un error genérico (500)', async () => {
+    serviceMock.miPlan!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const errorEl = fixture.debugElement.query(
+      By.css('[data-testid="pf-calendario-error"]'),
+    );
+    expect(errorEl).toBeTruthy();
+
+    // Regresión: la UI NO debe mentir diciendo "sin plan" cuando en
+    // realidad hubo un fallo de backend.
+    const vacio = fixture.debugElement.query(
+      By.css('[data-testid="pf-calendario-sin-plan"]'),
+    );
+    expect(vacio).toBeFalsy();
+    expect(component['sinPlan']()).toBe(false);
+  });
+
+  it('el botón de reintentar del estado de error vuelve a llamar a mi-plan', async () => {
+    serviceMock.miPlan!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(serviceMock.miPlan).toHaveBeenCalledTimes(1);
+
+    serviceMock.miPlan!.mockReturnValue(of(planFixture));
+
+    const reintentar = fixture.debugElement.query(
+      By.css('[data-testid="pf-calendario-reintentar"]'),
+    );
+    expect(reintentar).toBeTruthy();
+    (reintentar.nativeElement as HTMLElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(serviceMock.miPlan).toHaveBeenCalledTimes(2);
+    expect(component['error']()).toBe(false);
+    expect(component['miPlan']()).toEqual(planFixture);
+  });
+
   it('abrirDia navega a la vista de detalle del día', async () => {
     fixture.detectChanges();
     await fixture.whenStable();

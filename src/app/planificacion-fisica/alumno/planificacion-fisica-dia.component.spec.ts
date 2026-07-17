@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
 import { Oposicion } from '../../shared/models/subscription.model';
 import {
@@ -130,6 +130,47 @@ describe('PlanificacionFisicaDiaComponent', () => {
       component['detalle']()?.disciplinas.find((d) => d.asignacionId === 501)
         ?.realizado,
     ).toBe(true);
+  });
+
+  it('deshabilita el checkbox mientras el PUT de marcarProgreso está en vuelo (evita doble-click → doble PUT)', async () => {
+    const marcarProgreso$ = new Subject<{
+      realizado: boolean;
+      realizadoEn: string;
+    }>();
+    serviceMock.marcarProgreso!.mockReturnValue(marcarProgreso$);
+
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const primerClick = component['toggle'](diaFixture.disciplinas[0]);
+    // Aún no resuelve la petición: el checkbox debe quedar deshabilitado.
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(component['estaGuardando'](501)).toBe(true);
+
+    const checkbox = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-check-501"]'),
+    );
+    expect(checkbox.componentInstance.disabled).toBe(true);
+
+    // Un segundo click mientras la primera petición sigue en vuelo NO debe
+    // disparar un segundo PUT.
+    await component['toggle'](diaFixture.disciplinas[0]);
+    expect(serviceMock.marcarProgreso).toHaveBeenCalledTimes(1);
+
+    marcarProgreso$.next({
+      realizado: true,
+      realizadoEn: '2026-07-17T10:00:00Z',
+    });
+    marcarProgreso$.complete();
+    await primerClick;
+    fixture.detectChanges();
+
+    expect(component['estaGuardando'](501)).toBe(false);
+    expect(checkbox.componentInstance.disabled).toBe(false);
   });
 
   it('deduce soloLectura cruzando con mi-plan y NO permite marcar en la semana anterior', async () => {

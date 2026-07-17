@@ -60,6 +60,14 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
   protected detalle = signal<DiaDetalle | null>(null);
   protected soloLectura = signal(false);
   protected gated = signal<AccesoDenegadoPlanFisica | null>(null);
+  /**
+   * `asignacionId` de las disciplinas con un PUT `marcarProgreso` en vuelo.
+   * Deshabilita SU checkbox mientras dura la petición: sin esto, un
+   * doble-click rápido lee el mismo `realizado` obsoleto dos veces y dispara
+   * dos PUTs con el mismo valor (perdiendo el segundo click, que el usuario
+   * querría que revirtiera).
+   */
+  protected guardandoIds = signal<ReadonlySet<number>>(new Set());
 
   protected readonly progreso = computed(() => {
     const disciplinas = this.detalle()?.disciplinas ?? [];
@@ -121,7 +129,9 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
 
   protected async toggle(disciplina: DisciplinaDia): Promise<void> {
     if (this.soloLectura()) return;
+    if (this.estaGuardando(disciplina.asignacionId)) return;
     const nuevoValor = !disciplina.realizado;
+    this.marcarGuardando(disciplina.asignacionId, true);
     try {
       const res = await firstValueFrom(
         this.svc.marcarProgreso(disciplina.asignacionId, nuevoValor),
@@ -131,7 +141,25 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
       this.toast.error(
         `No se ha podido actualizar "${disciplina.nombre}". Inténtalo de nuevo.`,
       );
+    } finally {
+      this.marcarGuardando(disciplina.asignacionId, false);
     }
+  }
+
+  protected estaGuardando(asignacionId: number): boolean {
+    return this.guardandoIds().has(asignacionId);
+  }
+
+  private marcarGuardando(asignacionId: number, guardando: boolean): void {
+    this.guardandoIds.update((ids) => {
+      const next = new Set(ids);
+      if (guardando) {
+        next.add(asignacionId);
+      } else {
+        next.delete(asignacionId);
+      }
+      return next;
+    });
   }
 
   private actualizarLocal(asignacionId: number, realizado: boolean): void {

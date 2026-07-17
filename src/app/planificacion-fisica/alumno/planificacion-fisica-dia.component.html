@@ -80,7 +80,7 @@
                   [binary]="true"
                   [ngModel]="d.realizado"
                   [ngModelOptions]="{ standalone: true }"
-                  [disabled]="soloLectura()"
+                  [disabled]="soloLectura() || estaGuardando(d.asignacionId)"
                   [attr.data-testid]="'pf-dia-check-' + d.asignacionId"
                   (onChange)="toggle(d)"
                 ></p-checkbox>

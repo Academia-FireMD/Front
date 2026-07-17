@@ -54,10 +54,21 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
   protected cargado = signal(false);
   protected miPlan = signal<MiPlan | null>(null);
   protected gated = signal<AccesoDenegadoPlanFisica | null>(null);
+  /**
+   * Fallo genérico (500, red caída) al cargar `/mi-plan`, distinto de "sin
+   * plan" (null real) y de "gated" (403 TIER_TOO_LOW). Si no se distingue,
+   * la vista miente al alumno mostrando permanentemente "no tienes plan"
+   * cuando en realidad hubo un error de backend.
+   */
+  protected error = signal(false);
 
   protected readonly hoy = computed(() => this.miPlan()?.hoy ?? null);
   protected readonly sinPlan = computed(
-    () => this.cargado() && !this.gated() && this.miPlan() === null,
+    () =>
+      this.cargado() &&
+      !this.gated() &&
+      !this.error() &&
+      this.miPlan() === null,
   );
 
   async ngOnInit(): Promise<void> {
@@ -67,6 +78,7 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
   private async cargar(): Promise<void> {
     this.loading.set(true);
     this.gated.set(null);
+    this.error.set(false);
     try {
       const plan = await firstValueFrom(this.svc.miPlan());
       this.miPlan.set(plan);
@@ -76,12 +88,18 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
       if (httpErr?.status === 403 && body?.reason === 'TIER_TOO_LOW') {
         this.gated.set(body);
       } else {
+        this.error.set(true);
         this.toast.error('No se ha podido cargar tu planificación física.');
       }
     } finally {
       this.loading.set(false);
       this.cargado.set(true);
     }
+  }
+
+  /** Botón "Reintentar" del estado de error: vuelve a llamar a `mi-plan`. */
+  protected reintentar(): void {
+    void this.cargar();
   }
 
   protected esHoy(fecha: string): boolean {

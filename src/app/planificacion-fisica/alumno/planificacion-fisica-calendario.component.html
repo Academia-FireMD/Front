@@ -19,6 +19,17 @@
         (click)="mejorarSuscripcion()"
       ></p-button>
     </div>
+  } @else if (error()) {
+    <div class="pf-calendario__error" data-testid="pf-calendario-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>No hemos podido cargar tu planificación. Inténtalo de nuevo.</p>
+      <p-button
+        label="Reintentar"
+        size="small"
+        data-testid="pf-calendario-reintentar"
+        (click)="reintentar()"
+      ></p-button>
+    </div>
   } @else if (sinPlan()) {
     <p data-testid="pf-calendario-sin-plan">
       Aún no hay planificación física para tu oposición.
