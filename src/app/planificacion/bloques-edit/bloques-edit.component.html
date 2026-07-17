@@ -13,19 +13,21 @@
           class="col-12 header flex justify-content-start align-items-center gap-3"
         >
           <div class="identificador">
-            @if (getId() !== 'new' &&
-            !lastLoaded?.identificador?.includes('CLON')) { Identificador:
-            <strong>{{ formGroup.value.identificador }}</strong>
-            }@else {
-            <p-floatLabel>
-              <input
-                type="text"
-                pInputText
-                class="w-full"
-                formControlName="identificador"
-              />
-              <label for="identificador">Identificador</label>
-            </p-floatLabel>
+            @if (
+              getId() !== "new" && !lastLoaded?.identificador?.includes("CLON")
+            ) {
+              Identificador:
+              <strong>{{ formGroup.value.identificador }}</strong>
+            } @else {
+              <p-floatLabel>
+                <input
+                  type="text"
+                  pInputText
+                  class="w-full"
+                  formControlName="identificador"
+                />
+                <label for="identificador">Identificador</label>
+              </p-floatLabel>
             }
           </div>
           <div class="nombre col-6">
@@ -61,19 +63,20 @@
                   <div class="flex align-items-center gap-2">
                     <i class="pi pi-clock text-sm"></i>
                     <span> {{ subBloque.duracion }} minutos </span>
-                    @if(subBloque.importante) {
-                    <i
-                      class="pi pi-exclamation-circle text-red-500"
-                      pTooltip="Sub-bloque importante"
-                    ></i>
-                    } @if(subBloque.avisoAnticipado) {
-                    <div class="flex align-items-center gap-1">
+                    @if (subBloque.importante) {
                       <i
-                        class="pi pi-bell text-orange-500"
-                        pTooltip="Aviso anticipado"
+                        class="pi pi-exclamation-circle text-red-500"
+                        pTooltip="Sub-bloque importante"
                       ></i>
-                      <small>{{ subBloque.avisoAnticipado }} min</small>
-                    </div>
+                    }
+                    @if (subBloque.avisoAnticipado) {
+                      <div class="flex align-items-center gap-1">
+                        <i
+                          class="pi pi-bell text-orange-500"
+                          pTooltip="Aviso anticipado"
+                        ></i>
+                        <small>{{ subBloque.avisoAnticipado }} min</small>
+                      </div>
                     }
                   </div>
                 </div>
@@ -120,24 +123,24 @@
       </div>
     </p-card>
   </div>
-  <div class="col-12 footer flex justify-content-end w-full">
+  <div class="col-12 footer fab-safe-area flex justify-content-end w-full">
     <p-button
       label="Volver atrás"
       [link]="true"
       (click)="handleBackButton()"
     ></p-button>
-    @if(getId() == 'new'){
-    <app-async-button
-      label="Crear bloque"
-      [disabled]="formGroup.invalid"
-      [action]="crear.bind(this)"
-    ></app-async-button>
-    }@else{
-    <app-async-button
-      label="Actualizar bloque"
-      [disabled]="formGroup.invalid"
-      [action]="actualizar.bind(this)"
-    ></app-async-button>
+    @if (getId() == "new") {
+      <app-async-button
+        label="Crear bloque"
+        [disabled]="formGroup.invalid"
+        [action]="crear.bind(this)"
+      ></app-async-button>
+    } @else {
+      <app-async-button
+        label="Actualizar bloque"
+        [disabled]="formGroup.invalid"
+        [action]="actualizar.bind(this)"
+      ></app-async-button>
     }
   </div>
 </div>
