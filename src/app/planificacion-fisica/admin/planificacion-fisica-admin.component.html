@@ -1,0 +1,217 @@
+<!-- Dos dialogos con `key` distinta, a proposito. El aviso de progreso se abre
+     DESDE el `accept` del primero: si ambos comparten un unico <p-confirmDialog>,
+     el cierre del primero se come al segundo y el admin no ve NADA (el bloque no
+     se borra, pero se queda sin saber por que). Verificado en QA visual. -->
+<p-confirmDialog key="pf-borrar"></p-confirmDialog>
+<p-confirmDialog key="pf-borrar-con-progreso"></p-confirmDialog>
+
+<div class="planificacion-fisica-admin">
+  <div class="planificacion-fisica-admin__header">
+    <h2>Planificación física</h2>
+    <a
+      [href]="descargarPlantillaUrl()"
+      class="p-button p-button-outlined p-button-sm"
+      data-testid="descargar-plantilla-link"
+    >
+      <i class="pi pi-download"></i>
+      <span>Descargar plantilla</span>
+    </a>
+  </div>
+
+  <p-card
+    header="Subir Excel del entrenador"
+    styleClass="planificacion-fisica-admin__upload-card"
+  >
+    <p class="planificacion-fisica-admin__hint">
+      Sube el Excel con el bloque de entrenamiento. Se previsualiza
+      automáticamente: si tiene errores, se listan aquí mismo (hoja, fila y
+      motivo) para poder corregirlos sin importar nada todavía.
+    </p>
+
+    <p-fileUpload
+      #excelUpload
+      mode="basic"
+      name="file"
+      chooseLabel="Seleccionar Excel"
+      accept=".xlsx"
+      [auto]="false"
+      [maxFileSize]="10000000"
+      (onSelect)="onFileSelected($event)"
+      data-testid="fileupload-excel-fisica"
+    ></p-fileUpload>
+
+    @if (previewLoading()) {
+      <div
+        class="planificacion-fisica-admin__loading"
+        data-testid="preview-loading"
+      >
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Previsualizando…</span>
+      </div>
+    }
+
+    @if (!previewLoading() && tieneErrores()) {
+      <p-message
+        severity="error"
+        text="No se ha importado nada; corrige el Excel y vuelve a subirlo."
+        styleClass="w-full"
+        data-testid="errores-mensaje"
+      ></p-message>
+
+      <p-table
+        [value]="errores()"
+        styleClass="p-datatable-sm planificacion-fisica-admin__errores-table"
+        data-testid="errores-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Hoja</th>
+            <th>Fila</th>
+            <th>Motivo</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-error>
+          <tr>
+            <td>{{ error.hoja }}</td>
+            <td>{{ error.fila }}</td>
+            <td class="planificacion-fisica-admin__motivo">
+              {{ error.motivo }}
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+
+    @if (!previewLoading() && !tieneErrores() && resumen(); as res) {
+      <div
+        class="planificacion-fisica-admin__resumen"
+        data-testid="resumen-card"
+      >
+        <p-message
+          severity="success"
+          text="Excel válido. Revisa el resumen antes de importar."
+          styleClass="w-full"
+        ></p-message>
+
+        <dl class="planificacion-fisica-admin__resumen-grid">
+          <dt>Identificador</dt>
+          <dd>{{ res.identificador }}</dd>
+          <dt>Nº semanas</dt>
+          <dd>{{ res.numSemanas }}</dd>
+          <dt>Asignaciones</dt>
+          <dd>{{ res.totalAsignaciones }}</dd>
+          <dt>Detalles</dt>
+          <dd>{{ res.totalDetalles }}</dd>
+          <dt>Relevancia</dt>
+          <dd>
+            @for (op of res.relevancia; track op) {
+              <p-tag [value]="labelOposicion(op)" severity="info"></p-tag>
+            }
+          </dd>
+        </dl>
+
+        <app-async-button
+          label="Importar"
+          icon="pi pi-upload"
+          [action]="importar"
+          data-testid="importar-btn"
+        ></app-async-button>
+      </div>
+    }
+
+    @if (
+      !previewLoading() && previewRealizada() && !tieneErrores() && !resumen()
+    ) {
+      <p-message
+        severity="warn"
+        text="El Excel no ha devuelto ni resumen ni errores. Vuelve a intentarlo."
+      ></p-message>
+    }
+  </p-card>
+
+  <p-card
+    header="Bloques"
+    styleClass="planificacion-fisica-admin__bloques-card"
+  >
+    @if (bloquesLoading()) {
+      <div
+        class="planificacion-fisica-admin__loading"
+        data-testid="bloques-loading"
+      >
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Cargando bloques…</span>
+      </div>
+    } @else if (bloques().length === 0) {
+      <p data-testid="bloques-vacio">
+        Todavía no hay bloques de entrenamiento físico.
+      </p>
+    } @else {
+      <p-table
+        [value]="bloques()"
+        styleClass="p-datatable-sm"
+        data-testid="bloques-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Identificador</th>
+            <th>Semanas</th>
+            <th>Relevancia</th>
+            <th>Inicio semana 1</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-bloque>
+          <tr [attr.data-testid]="'bloque-row-' + bloque.id">
+            <td>{{ bloque.identificador }}</td>
+            <td>{{ bloque.numSemanas }}</td>
+            <td>
+              @for (op of bloque.relevancia; track op) {
+                <p-tag [value]="labelOposicion(op)" severity="info"></p-tag>
+              }
+            </td>
+            <td>{{ bloque.fechaInicioSemana1 | date: "dd/MM/yyyy" }}</td>
+            <td>
+              <p-tag
+                [value]="bloque.estado"
+                [severity]="
+                  bloque.estado === 'PUBLICADO' ? 'success' : 'secondary'
+                "
+              ></p-tag>
+            </td>
+            <td class="planificacion-fisica-admin__acciones">
+              <p-button
+                icon="pi pi-list"
+                [text]="true"
+                size="small"
+                pTooltip="Ver / editar detalles"
+                data-testid="detalles-bloque-btn"
+                (click)="verDetalles(bloque)"
+              ></p-button>
+              @if (bloque.estado === "BORRADOR") {
+                <p-button
+                  icon="pi pi-check"
+                  severity="success"
+                  [text]="true"
+                  size="small"
+                  pTooltip="Publicar bloque"
+                  data-testid="publicar-bloque-btn"
+                  (click)="publicarBloque(bloque, $event)"
+                ></p-button>
+              }
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [text]="true"
+                size="small"
+                pTooltip="Eliminar bloque"
+                data-testid="eliminar-bloque-btn"
+                (click)="eliminarBloque(bloque, $event)"
+              ></p-button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </p-card>
+</div>

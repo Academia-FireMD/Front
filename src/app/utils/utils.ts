@@ -97,6 +97,19 @@ export const getStartOfWeek = (date: Date): Date => {
   return startOfWeek;
 };
 
+/**
+ * Fecha ISO "YYYY-MM-DD" en horario LOCAL (a diferencia de
+ * `date.toISOString()`, que desplaza a UTC y puede cambiar de día cerca de
+ * medianoche). Usado para casar los `Date` de `angular-calendar` con las
+ * fechas ISO que devuelve el backend (p. ej. el bridge temario↔física).
+ */
+export const formatFechaISO = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 export const getDateForDayOfWeek = (
   dayIndex: number,
   startOfWeek: Date,

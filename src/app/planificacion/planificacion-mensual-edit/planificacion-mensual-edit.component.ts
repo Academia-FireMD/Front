@@ -9,7 +9,18 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CalendarEvent, CalendarView } from 'angular-calendar';
 import { ToastrService } from 'ngx-toastr';
 import { PrimeNGConfig } from 'primeng/api';
-import { combineLatest, filter, firstValueFrom, tap } from 'rxjs';
+import {
+  catchError,
+  combineLatest,
+  filter,
+  firstValueFrom,
+  of,
+  tap,
+} from 'rxjs';
+import {
+  PlanificacionFisicaService,
+  ResumenDiaFisica,
+} from '../../planificacion-fisica/services/planificacion-fisica.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
@@ -23,7 +34,11 @@ import {
 import { duracionesDisponibles } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
-import { getNextWeekIfFriday, getStartOfWeek } from '../../utils/utils';
+import {
+  formatFechaISO,
+  getNextWeekIfFriday,
+  getStartOfWeek,
+} from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 
 @Component({
@@ -71,6 +86,16 @@ export class PlanificacionMensualEditComponent {
   view: CalendarView = CalendarView.Week;
   public calendarView = CalendarView;
   eventsService = inject(EventsService);
+  planificacionFisicaService = inject(PlanificacionFisicaService);
+  /**
+   * Bridge temario↔física: resumen de entrenamiento físico por día del
+   * rango actualmente visible, pasado a `<app-vista-semanal>` como input
+   * aparte (NUNCA mezclado en `events`, ver comentario en
+   * `VistaSemanalComponent.resumenFisica`). Si la carga falla, se queda en
+   * `[]` — el temario sigue funcionando exactamente igual, solo no aparece
+   * la indicación de física.
+   */
+  resumenFisica = signal<ResumenDiaFisica[]>([]);
   public isDialogVisible = false;
   public isDialogAsignacionUsuarioVisible = false;
   public pickedEvents: CalendarEvent[] = [];
@@ -454,6 +479,7 @@ export class PlanificacionMensualEditComponent {
             // Para alumnos, cargar también los eventos personalizados
             if (this.expectedRole === 'ALUMNO') {
               this.loadEventosPersonalizados(Number(itemId));
+              this.cargarResumenFisica(this.viewDate);
             }
 
             // Configurar eventos para alumnos
@@ -548,6 +574,102 @@ export class PlanificacionMensualEditComponent {
         '/app/planificacion/planificacion-mensual/' + res.id,
       ]);
     }
+  }
+
+  /**
+   * Sustituye el binding `[(viewDate)]` de `<app-calendar-header>` (equivale
+   * exactamente a la sintaxis banana-in-a-box que había antes) para poder
+   * enganchar el refetch del bridge física cada vez que el alumno navega de
+   * semana/mes en el calendario del temario.
+   */
+  public onViewDateChange(date: Date): void {
+    this.viewDate = date;
+    if (this.expectedRole === 'ALUMNO') {
+      this.cargarResumenFisica(date);
+    }
+  }
+
+  /**
+   * Rango razonable alrededor de `fecha` para pedir el bridge física: el
+   * mes visible + una semana de margen a cada lado (cubre la semana visible
+   * cuando cae a caballo entre meses). Muy por debajo del cap de 92 días
+   * del backend.
+   */
+  private rangoResumenFisica(fecha: Date): { desde: string; hasta: string } {
+    const inicioMes = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+    inicioMes.setDate(inicioMes.getDate() - 7);
+    const finMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0);
+    finMes.setDate(finMes.getDate() + 7);
+    return { desde: formatFechaISO(inicioMes), hasta: formatFechaISO(finMes) };
+  }
+
+  /**
+   * Carga el bridge temario↔física. ADITIVO y DEFENSIVO por diseño: nunca
+   * debe poder tumbar el calendario del temario. Cualquier fallo (red, 5xx,
+   * cálculo de rango) se traga aquí y deja `resumenFisica` en `[]` — el
+   * resto del componente ni se entera.
+   */
+  private cargarResumenFisica(fecha: Date = this.viewDate): void {
+    try {
+      const { desde, hasta } = this.rangoResumenFisica(fecha);
+      this.planificacionFisicaService
+        .resumenDias(desde, hasta)
+        .pipe(
+          catchError((err) => {
+            console.error(
+              'Bridge física: no se pudo cargar el resumen (el temario sigue intacto):',
+              err,
+            );
+            return of([] as ResumenDiaFisica[]);
+          }),
+        )
+        .subscribe((dias) => this.resumenFisica.set(dias ?? []));
+    } catch (err) {
+      console.error(
+        'Bridge física: error inesperado calculando el rango:',
+        err,
+      );
+      this.resumenFisica.set([]);
+    }
+  }
+
+  /**
+   * Bridge temario↔física en vista MENSUAL: mismo patrón que
+   * `VistaSemanalComponent.resumenFisicaDelDia`/`tieneFisica`/`etiquetaFisica`/
+   * `abrirFisica` (ver comentarios ahí), replicado aquí porque la celda del
+   * mes (`customCellTemplate`) vive en este componente y no en
+   * `vista-semanal`. Aditivo y defensivo: si `resumenFisica()` está vacío
+   * (bloque BASIC, sin plan, o fallo de `cargarResumenFisica`) estos métodos
+   * simplemente no pintan nada — la celda del mes sigue funcionando igual.
+   */
+  private resumenFisicaDelDia(dia: Date): ResumenDiaFisica | undefined {
+    const fecha = formatFechaISO(dia);
+    return this.resumenFisica().find((d) => d.fecha === fecha);
+  }
+
+  tieneFisica(dia: Date): boolean {
+    const resumen = this.resumenFisicaDelDia(dia);
+    return !!resumen && resumen.disciplinas.length > 0;
+  }
+
+  etiquetaFisica(dia: Date): string {
+    const resumen = this.resumenFisicaDelDia(dia);
+    if (!resumen) return '';
+    return resumen.disciplinas.map((d) => d.nombre).join(', ');
+  }
+
+  /**
+   * Click en la insignia de física de la celda del mes: navega al detalle
+   * del día en el módulo de física. `stopPropagation`+`preventDefault` para
+   * que NO dispare `(dayClicked)` de `mwl-calendar-month-view` (que abre la
+   * semana de ese día en `onDayClicked`) — el temario mensual sigue
+   * intacto, esto es puramente un atajo aparte.
+   */
+  abrirFisica(dia: Date, domEvent: Event): void {
+    domEvent.stopPropagation();
+    domEvent.preventDefault();
+    const fecha = formatFechaISO(dia);
+    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);
   }
 
   onDateSelect(event: Date): void {

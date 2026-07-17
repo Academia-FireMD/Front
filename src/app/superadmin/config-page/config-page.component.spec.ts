@@ -27,6 +27,7 @@ function makeMockAppConfigService() {
     [ModuloApp.FLASHCARDS]: true,
     [ModuloApp.FACTURACION]: true,
     [ModuloApp.CALLEJERO]: true,
+    [ModuloApp.PLANIFICACION_FISICA]: true,
   });
 
   const updateConfig: jest.Mock<Promise<any>, any[]> = jest.fn(async () => ({
@@ -67,12 +68,10 @@ describe('ConfigPageComponent', () => {
     // accept() inmediato. Esto evita tener que mockear los Subjects internos
     // de PrimeNG.
     const realService = new ConfirmationService();
-    jest
-      .spyOn(realService, 'confirm')
-      .mockImplementation(({ accept }: any) => {
-        if (accept) accept();
-        return realService;
-      });
+    jest.spyOn(realService, 'confirm').mockImplementation(({ accept }: any) => {
+      if (accept) accept();
+      return realService;
+    });
     confirmation = realService as any;
     await TestBed.configureTestingModule({
       imports: [ConfigPageComponent, HttpClientTestingModule],
@@ -84,9 +83,7 @@ describe('ConfigPageComponent', () => {
     })
       .overrideComponent(ConfigPageComponent, {
         set: {
-          providers: [
-            { provide: ConfirmationService, useValue: confirmation },
-          ],
+          providers: [{ provide: ConfirmationService, useValue: confirmation }],
         },
       })
       .compileComponents();

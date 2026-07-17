@@ -32,6 +32,7 @@ const sampleModulos: EstadoModulos = {
   [ModuloApp.FLASHCARDS]: true,
   [ModuloApp.FACTURACION]: true,
   [ModuloApp.CALLEJERO]: true,
+  [ModuloApp.PLANIFICACION_FISICA]: true,
 };
 
 function mockAuth(rol: string | null) {

@@ -1,0 +1,75 @@
+.pf-detalles {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    h2 {
+      margin: 0;
+    }
+  }
+
+  &__loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-color-secondary);
+  }
+
+  &__semana-card {
+    margin-bottom: 0.5rem;
+  }
+
+  &__comentario-semana {
+    color: var(--text-color-secondary);
+    margin-top: 0;
+  }
+
+  &__disciplinas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  &__disciplina {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: var(--surface-card);
+
+    // Resaltado claro para que el entrenador vea de un vistazo qué le
+    // queda por rellenar, sin depender solo del color de fondo (que
+    // puede ser blanco para el grupo DESCANSO).
+    &--vacio {
+      border-style: dashed;
+      box-shadow: 0 0 0 1px var(--yellow-400, #fbbf24) inset;
+    }
+  }
+
+  &__disciplina-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__disciplina-color {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    border: 1px solid var(--surface-border);
+    flex-shrink: 0;
+  }
+
+  &__disciplina-nombre {
+    font-weight: 600;
+    flex: 1;
+  }
+}
