@@ -1,4 +1,9 @@
-<p-confirmDialog></p-confirmDialog>
+<!-- Dos dialogos con `key` distinta, a proposito. El aviso de progreso se abre
+     DESDE el `accept` del primero: si ambos comparten un unico <p-confirmDialog>,
+     el cierre del primero se come al segundo y el admin no ve NADA (el bloque no
+     se borra, pero se queda sin saber por que). Verificado en QA visual. -->
+<p-confirmDialog key="pf-borrar"></p-confirmDialog>
+<p-confirmDialog key="pf-borrar-con-progreso"></p-confirmDialog>
 
 <div class="planificacion-fisica-admin">
   <div class="planificacion-fisica-admin__header">

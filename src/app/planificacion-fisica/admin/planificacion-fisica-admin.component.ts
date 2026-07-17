@@ -222,6 +222,7 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
 
   eliminarBloque(bloque: BloqueEntrenamiento, event: Event): void {
     this.confirmationService.confirm({
+      key: 'pf-borrar',
       target: event.target as EventTarget,
       message: `Vas a eliminar el bloque "${bloque.identificador}". ¿Estás seguro?`,
       header: 'Confirmación',
@@ -253,7 +254,13 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
       const httpErr = err as HttpErrorResponse;
       if (httpErr?.status === 409) {
         const body = httpErr.error as EliminarBloqueConProgreso;
+        // `key` propia: este aviso se emite desde el `accept` del dialogo
+        // anterior, y compartir un unico <p-confirmDialog> hacia que el cierre
+        // del primero se comiera este segundo — el admin confirmaba el borrado
+        // y no pasaba nada, sin ningun mensaje. Cazado en QA visual (2026-07-17):
+        // el confirm() SI se llamaba, pero PrimeNG nunca lo pintaba.
         this.confirmationService.confirm({
+          key: 'pf-borrar-con-progreso',
           target: event.target as EventTarget,
           message: `El bloque "${bloque.identificador}" tiene ${body.progreso} marca(s) de progreso de alumnos. Si lo eliminas, se perderán. ¿Eliminar de todas formas?`,
           header: 'Este bloque tiene progreso de alumnos',

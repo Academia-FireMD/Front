@@ -186,6 +186,63 @@ describe('PlanificacionFisicaAdminComponent', () => {
     confirmSpy.mockRestore();
   });
 
+  // Regresión de un bug cazado en QA visual (2026-07-17): el aviso de progreso
+  // se emite desde el `accept` del primer diálogo. Cuando ambos compartían un
+  // único <p-confirmDialog>, el cierre del primero se comía al segundo: el
+  // confirm() SÍ se llamaba pero PrimeNG no lo pintaba nunca, así que el admin
+  // confirmaba el borrado, no pasaba nada, y no veía ni un mensaje.
+  // Un test unitario no puede comprobar que PrimeNG pinte (eso solo lo ve un
+  // navegador), pero sí la invariante que lo arregla: los dos diálogos DEBEN
+  // usar keys distintas, y esas keys deben existir en el template.
+  it('los dos diálogos de borrado usan keys DISTINTAS (si se unifican, el aviso de progreso deja de verse)', async () => {
+    fixture.detectChanges();
+
+    // 1er intento (sin force) -> 409; 2o intento (con force) -> OK.
+    // Si el mock devolviera 409 SIEMPRE, el accept del 2o diálogo reintentaría
+    // en bucle infinito.
+    serviceMock.eliminar!.mockImplementation((_id: number, force?: boolean) =>
+      force
+        ? of(undefined)
+        : throwError(
+            () =>
+              new HttpErrorResponse({
+                status: 409,
+                error: {
+                  message: 'tiene progreso',
+                  progreso: 7,
+                  confirmar: '...',
+                },
+              }),
+          ),
+    );
+
+    const confirmationService = TestBed.inject(ConfirmationService);
+    const keys: (string | undefined)[] = [];
+    const confirmSpy = jest
+      .spyOn(confirmationService, 'confirm')
+      .mockImplementation((opts: Confirmation) => {
+        keys.push(opts.key);
+        (opts.accept as (() => void) | undefined)?.();
+        return confirmationService;
+      });
+
+    component.eliminarBloque(bloqueFixture, new Event('click'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Se abren DOS diálogos: el de confirmar y el aviso de progreso.
+    expect(keys.length).toBe(2);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBeTruthy();
+    // Esta es la invariante que arregla el bug: keys distintas.
+    expect(keys[0]).not.toBe(keys[1]);
+
+    // Y ambas keys deben existir en el template, o el diálogo no se pinta.
+    const html: string = fixture.nativeElement.innerHTML;
+    keys.forEach((k) => expect(html).toContain(k as string));
+
+    confirmSpy.mockRestore();
+  });
+
   it('onFileSelected limpia el p-fileUpload al seleccionar un fichero, para que una segunda selección siga funcionando (PrimeNG destruye su <input> tras la primera)', async () => {
     fixture.detectChanges();
 
@@ -214,7 +271,7 @@ describe('PlanificacionFisicaAdminComponent', () => {
     });
 
     serviceMock
-      .eliminar!// Primer intento (sin force): el backend rechaza porque hay progreso.
+      .eliminar! // Primer intento (sin force): el backend rechaza porque hay progreso.
       .mockReturnValueOnce(throwError(() => error409))
       // Segundo intento (con force, tras la 2ª confirmación): éxito.
       .mockReturnValueOnce(of(undefined));
