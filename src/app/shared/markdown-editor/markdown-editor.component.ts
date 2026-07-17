@@ -46,18 +46,22 @@ export class MarkdownEditorComponent
   private onTouched: () => void = () => undefined;
 
   ngAfterViewInit(): void {
-    this.editor = new Editor({
-      el: this.host.nativeElement,
-      ...universalEditorConfig,
-      height: this.height,
-      initialValue: this.pendingValue,
-      events: {
-        change: () => {
-          const md = this.editor?.getMarkdown() ?? '';
-          this.onChange(md);
+    // Defer initialization to next tick to allow layout/CSS to stabilize
+    // and avoid visual glitch where Markdown and WYSIWYG views overlap briefly.
+    requestAnimationFrame(() => {
+      this.editor = new Editor({
+        el: this.host.nativeElement,
+        ...universalEditorConfig,
+        height: this.height,
+        initialValue: this.pendingValue,
+        events: {
+          change: () => {
+            const md = this.editor?.getMarkdown() ?? '';
+            this.onChange(md);
+          },
+          blur: () => this.onTouched(),
         },
-        blur: () => this.onTouched(),
-      },
+      });
     });
   }
 
