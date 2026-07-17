@@ -217,6 +217,39 @@ export interface ResumenDiaFisica {
   disciplinas: DisciplinaResumenDia[];
 }
 
+/**
+ * Marca personal del alumno en una prueba física (Task "marcas", Fase 2):
+ * su propio histórico de resultados (mejor tiempo, repeticiones...), NO
+ * ligado a ningún bloque/semana de la planificación del entrenador — de ahí
+ * que no lleve `asignacionId`. Ordenadas por el backend `disciplinaId asc,
+ * fecha desc` (`GET /marcas`); el front decide si las agrupa visualmente.
+ */
+export interface MarcaPersonal {
+  id: number;
+  disciplinaId: number;
+  disciplinaNombre: string;
+  grupo: GrupoDisciplina;
+  color: string;
+  valor: number;
+  unidad: string;
+  fecha: string;
+  notas: string | null;
+}
+
+/**
+ * Body de `POST /planificacion-fisica/marcas`. `alumnoId` NUNCA viaja aquí
+ * — el backend lo saca siempre de `req.user.id` (mismo criterio anti-IDOR
+ * que el resto del módulo).
+ */
+export interface CrearMarcaDto {
+  disciplinaId: number;
+  valor: number;
+  unidad: string;
+  /** ISO "YYYY-MM-DD". */
+  fecha: string;
+  notas?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PlanificacionFisicaService {
   private http = inject(HttpClient);
@@ -304,5 +337,22 @@ export class PlanificacionFisicaService {
     return this.http.get<ResumenDiaFisica[]>(`${this.base}/resumen-dias`, {
       params,
     });
+  }
+
+  /**
+   * Marcas del propio alumno en pruebas físicas. Mismo gate 403
+   * `TIER_TOO_LOW` que `miPlan()`/`dia()` — el componente lo trata como
+   * estado de UI (píldora de upsell), no como error a tragar.
+   */
+  marcas(): Observable<MarcaPersonal[]> {
+    return this.http.get<MarcaPersonal[]>(`${this.base}/marcas`);
+  }
+
+  crearMarca(dto: CrearMarcaDto): Observable<MarcaPersonal> {
+    return this.http.post<MarcaPersonal>(`${this.base}/marcas`, dto);
+  }
+
+  borrarMarca(id: number): Observable<{ ok: true }> {
+    return this.http.delete<{ ok: true }>(`${this.base}/marcas/${id}`);
   }
 }

@@ -1,0 +1,207 @@
+<p-confirmDialog key="pf-marcas-borrar"></p-confirmDialog>
+
+<div class="pf-marcas">
+  <div class="pf-marcas__header">
+    <div>
+      <h2>Mis marcas</h2>
+      <p class="pf-marcas__subtitulo">
+        Tu histórico personal en las pruebas físicas.
+      </p>
+    </div>
+    <p-button
+      label="Volver al calendario"
+      icon="pi pi-arrow-left"
+      [text]="true"
+      size="small"
+      data-testid="pf-marcas-volver"
+      (click)="volver()"
+    ></p-button>
+  </div>
+
+  @if (loading()) {
+    <div class="pf-marcas__loading" data-testid="pf-marcas-loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando tus marcas…</span>
+    </div>
+  } @else if (gated()) {
+    <div class="pf-marcas__upsell" data-testid="pf-marcas-upsell">
+      <i class="pi pi-lock"></i>
+      <span>{{ gated()!.message }}</span>
+      <p-button
+        label="Mejorar suscripción"
+        size="small"
+        data-testid="pf-marcas-upsell-cta"
+        (click)="mejorarSuscripcion()"
+      ></p-button>
+    </div>
+  } @else if (error()) {
+    <div class="pf-marcas__error" data-testid="pf-marcas-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>No hemos podido cargar tu histórico de marcas. Inténtalo de nuevo.</p>
+      <p-button
+        label="Reintentar"
+        size="small"
+        data-testid="pf-marcas-reintentar"
+        (click)="reintentar()"
+      ></p-button>
+    </div>
+  } @else {
+    <p-card header="Añadir marca" styleClass="pf-marcas__form-card">
+      <form
+        [formGroup]="form"
+        class="pf-marcas__form"
+        data-testid="pf-marcas-form"
+      >
+        <div class="pf-marcas__campo">
+          <label for="pf-marcas-prueba">Prueba</label>
+          <p-dropdown
+            inputId="pf-marcas-prueba"
+            formControlName="disciplinaId"
+            [options]="discOpciones()"
+            optionLabel="nombre"
+            optionValue="disciplinaId"
+            placeholder="Selecciona una prueba"
+            [filter]="true"
+            filterBy="nombre"
+            styleClass="w-full"
+            data-testid="pf-marcas-select-prueba"
+          >
+            <ng-template let-opcion pTemplate="item">
+              <span
+                class="pf-marcas__opcion-color"
+                [style.backgroundColor]="opcion.color"
+              ></span>
+              <span>{{ opcion.nombre }}</span>
+            </ng-template>
+          </p-dropdown>
+          @if (discOpciones().length === 0) {
+            <small class="pf-marcas__hint" data-testid="pf-marcas-sin-pruebas">
+              Todavía no hay pruebas disponibles para elegir: añade marcas
+              cuando tengas un plan de entrenamiento asignado, o consulta el
+              histórico de otra prueba primero.
+            </small>
+          }
+        </div>
+
+        <div class="pf-marcas__campo">
+          <label for="pf-marcas-valor">Valor</label>
+          <p-inputNumber
+            inputId="pf-marcas-valor"
+            formControlName="valor"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            styleClass="w-full"
+            data-testid="pf-marcas-input-valor"
+          ></p-inputNumber>
+        </div>
+
+        <div class="pf-marcas__campo">
+          <label for="pf-marcas-unidad">Unidad</label>
+          <input
+            id="pf-marcas-unidad"
+            type="text"
+            pInputText
+            formControlName="unidad"
+            placeholder="min, seg, reps..."
+            class="w-full"
+            data-testid="pf-marcas-input-unidad"
+          />
+        </div>
+
+        <div class="pf-marcas__campo">
+          <label for="pf-marcas-fecha">Fecha</label>
+          <p-calendar
+            inputId="pf-marcas-fecha"
+            formControlName="fecha"
+            dateFormat="dd/mm/yy"
+            [maxDate]="hoy"
+            [showIcon]="true"
+            styleClass="w-full"
+            data-testid="pf-marcas-input-fecha"
+          ></p-calendar>
+        </div>
+
+        <div class="pf-marcas__campo pf-marcas__campo--notas">
+          <label for="pf-marcas-notas">Notas (opcional)</label>
+          <input
+            id="pf-marcas-notas"
+            type="text"
+            pInputText
+            formControlName="notas"
+            placeholder="Sensaciones, condiciones..."
+            class="w-full"
+            data-testid="pf-marcas-input-notas"
+          />
+        </div>
+
+        <app-async-button
+          label="Añadir marca"
+          icon="pi pi-plus"
+          [disabled]="form.invalid"
+          [action]="guardarMarca"
+          data-testid="pf-marcas-add-btn"
+        ></app-async-button>
+      </form>
+    </p-card>
+
+    @if (sinMarcas()) {
+      <p data-testid="pf-marcas-vacio">
+        Todavía no tienes marcas registradas. Añade la primera con el formulario
+        de arriba.
+      </p>
+    } @else {
+      <div class="pf-marcas__lista" data-testid="pf-marcas-container">
+        @for (grupo of grupos(); track grupo.disciplinaId) {
+          <p-card
+            styleClass="pf-marcas__grupo"
+            [attr.data-testid]="'pf-marcas-grupo-' + grupo.disciplinaId"
+          >
+            <ng-template pTemplate="header">
+              <div class="pf-marcas__grupo-header">
+                <span
+                  class="pf-marcas__grupo-color"
+                  [style.backgroundColor]="grupo.color"
+                ></span>
+                <span class="pf-marcas__grupo-titulo">{{
+                  grupo.disciplinaNombre
+                }}</span>
+              </div>
+            </ng-template>
+
+            <ul class="pf-marcas__historico">
+              @for (marca of grupo.marcas; track marca.id) {
+                <li
+                  class="pf-marcas__marca"
+                  [attr.data-testid]="'pf-marca-' + marca.id"
+                >
+                  <span class="pf-marcas__marca-fecha">{{
+                    marca.fecha | date: "dd/MM/yyyy"
+                  }}</span>
+                  <span class="pf-marcas__marca-valor"
+                    >{{ marca.valor }} {{ marca.unidad }}</span
+                  >
+                  @if (marca.notas) {
+                    <span class="pf-marcas__marca-notas">{{
+                      marca.notas
+                    }}</span>
+                  }
+                  <p-button
+                    icon="pi pi-trash"
+                    severity="danger"
+                    [text]="true"
+                    size="small"
+                    [loading]="estaBorrando(marca.id)"
+                    [disabled]="estaBorrando(marca.id)"
+                    pTooltip="Eliminar marca"
+                    [attr.data-testid]="'pf-marca-borrar-' + marca.id"
+                    (click)="confirmarBorrarMarca(marca, $event)"
+                  ></p-button>
+                </li>
+              }
+            </ul>
+          </p-card>
+        }
+      </div>
+    }
+  }
+</div>

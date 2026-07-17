@@ -249,4 +249,17 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
       '2026-07-17',
     ]);
   });
+
+  it('irAMarcas navega al histórico de marcas personales', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component['irAMarcas']();
+
+    const router = TestBed.inject(Router);
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/app/planificacion-fisica',
+      'marcas',
+    ]);
+  });
 });

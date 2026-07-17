@@ -4,6 +4,7 @@ import { PlanificacionFisicaAdminComponent } from './admin/planificacion-fisica-
 import { PlanificacionFisicaDetallesComponent } from './admin/planificacion-fisica-detalles.component';
 import { PlanificacionFisicaCalendarioComponent } from './alumno/planificacion-fisica-calendario.component';
 import { PlanificacionFisicaDiaComponent } from './alumno/planificacion-fisica-dia.component';
+import { PlanificacionFisicaMarcasComponent } from './alumno/planificacion-fisica-marcas.component';
 
 /**
  * Rutas de planificación física: panel admin (Task 8, Fase 1a) + calendario
@@ -33,6 +34,15 @@ export const routes: Routes = [
     component: PlanificacionFisicaDiaComponent,
     canActivate: [roleGuard],
     data: { expectedRole: 'ALUMNO', title: 'Día de entrenamiento' },
+  },
+  {
+    // Histórico de marcas personales del alumno (Fase 2): independiente del
+    // plan/bloque del entrenador, así que va como ruta hermana propia en
+    // lugar de colgar de `mi-plan`.
+    path: 'marcas',
+    component: PlanificacionFisicaMarcasComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ALUMNO', title: 'Mis marcas' },
   },
   {
     path: 'admin',

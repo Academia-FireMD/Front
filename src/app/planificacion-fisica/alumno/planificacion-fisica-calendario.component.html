@@ -1,6 +1,14 @@
 <div class="pf-calendario">
   <div class="pf-calendario__header">
     <h2>Planificación física</h2>
+    <p-button
+      label="Mis marcas"
+      icon="pi pi-chart-line"
+      [text]="true"
+      size="small"
+      data-testid="pf-calendario-marcas-link"
+      (click)="irAMarcas()"
+    ></p-button>
   </div>
 
   @if (loading()) {
