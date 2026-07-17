@@ -190,15 +190,19 @@
             class="col-12 justify-content-end align-items-center w-full flex"
           >
             @if (getId() == "new" && mode == "edit") {
-              <p-checkbox
-                inputId="crearOtra"
-                [formControl]="crearOtroControl"
-                [binary]="true"
-              ></p-checkbox>
-              <label for="crearOtra" class="ml-2">Crear otra</label>
+              <div class="checkbox-touch">
+                <p-checkbox
+                  inputId="crearOtra"
+                  [formControl]="crearOtroControl"
+                  [binary]="true"
+                ></p-checkbox>
+                <label for="crearOtra">Crear otra</label>
+              </div>
             }
           </div>
-          <div class="col-12 footer flex justify-content-end w-full">
+          <div
+            class="col-12 footer fab-safe-area flex justify-content-end w-full"
+          >
             <p-button
               *ngIf="mode != 'injected'"
               label="Volver atrás"

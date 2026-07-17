@@ -57,12 +57,15 @@
       </div>
     </p-card>
   </div>
-  <div class="col-12 footer flex justify-content-end w-full">
+  <div class="col-12 footer fab-safe-area flex justify-content-end w-full">
     <p-button label="Volver atrás" [link]="true" (click)="handleBackButton()" />
-    @if(getId() == 'new'){
-    <app-async-button label="Crear módulo" [action]="guardar.bind(this)" />
-    }@else{
-    <app-async-button label="Actualizar módulo" [action]="guardar.bind(this)" />
+    @if (getId() == "new") {
+      <app-async-button label="Crear módulo" [action]="guardar.bind(this)" />
+    } @else {
+      <app-async-button
+        label="Actualizar módulo"
+        [action]="guardar.bind(this)"
+      />
     }
   </div>
 </div>
