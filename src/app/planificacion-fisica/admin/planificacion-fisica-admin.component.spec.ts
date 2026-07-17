@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { Router } from '@angular/router';
 import { Confirmation, ConfirmationService, PrimeNGConfig } from 'primeng/api';
 import { FileUpload } from 'primeng/fileupload';
 import { ToastrService } from 'ngx-toastr';
@@ -370,5 +371,19 @@ describe('PlanificacionFisicaAdminComponent', () => {
     expect(serviceMock.eliminar).toHaveBeenCalledWith(bloqueFixture.id, false);
 
     confirmSpy.mockRestore();
+  });
+
+  it('verDetalles navega a la ventana de edición de detalles del bloque', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.verDetalles(bloqueFixture);
+
+    const router = TestBed.inject(Router);
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/app/planificacion-fisica/admin',
+      bloqueFixture.id,
+      'detalles',
+    ]);
   });
 });

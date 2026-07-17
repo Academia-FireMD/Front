@@ -81,4 +81,28 @@ describe('PlanificacionFisicaService', () => {
       `${environment.apiUrl}/planificacion-fisica/plantilla`,
     );
   });
+
+  it('detallesDeBloque llama al endpoint correcto', () => {
+    service.detallesDeBloque(3).subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/bloques/3/detalles`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('actualizarDetalle manda el body y llama al endpoint correcto', () => {
+    service
+      .actualizarDetalle(45, { contenido: '4x400m', comentario: 'suave' })
+      .subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/detalles/45`,
+    );
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({
+      contenido: '4x400m',
+      comentario: 'suave',
+    });
+    req.flush({});
+  });
 });

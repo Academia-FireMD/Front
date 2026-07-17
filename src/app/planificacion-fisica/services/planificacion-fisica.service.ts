@@ -52,6 +52,57 @@ export interface EliminarBloqueConProgreso {
   confirmar: boolean;
 }
 
+/**
+ * Grupo de una disciplina. Determina el color con el que se pinta en la
+ * parrilla (igual que en el Excel del entrenador). Conjunto cerrado —
+ * definido en el backend, replicado aquí como unión literal.
+ */
+export type GrupoDisciplina =
+  | 'CUERDA'
+  | 'CARRERA'
+  | 'NATACION'
+  | 'PRESS'
+  | 'FUERZA'
+  | 'ESCALERAS'
+  | 'DESCANSO'
+  | 'TEST';
+
+/** Colores fijos por grupo de disciplina, replicados del backend. */
+export const GRUPO_DISCIPLINA_COLORES: Record<GrupoDisciplina, string> = {
+  CUERDA: '#9fe2d0',
+  CARRERA: '#fdeaa8',
+  NATACION: '#a9d3f0',
+  PRESS: '#c9c0ec',
+  FUERZA: '#f4b8b8',
+  ESCALERAS: '#ef8a7f',
+  DESCANSO: '#ffffff',
+  TEST: '#b6e3b6',
+};
+
+/**
+ * Un "hueco" de la parrilla: una disciplina asignada a una semana concreta.
+ * El entrenador sube la parrilla por Excel (qué disciplina toca cada día);
+ * el `contenido` (texto de los ejercicios) se escribe DESPUÉS aquí, en la
+ * plataforma — por eso puede venir `null`/`vacio: true`.
+ */
+export interface DetalleDisciplina {
+  id: number;
+  disciplinaId: number;
+  disciplinaNombre: string;
+  grupo: GrupoDisciplina;
+  contenido: string | null;
+  comentario: string | null;
+  vacio: boolean;
+}
+
+export interface SemanaConDetalles {
+  semanaId: number;
+  indice: number;
+  numeroAno: number;
+  comentarioSemana: string | null;
+  detalles: DetalleDisciplina[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PlanificacionFisicaService {
   private http = inject(HttpClient);
@@ -87,5 +138,18 @@ export class PlanificacionFisicaService {
 
   descargarPlantillaUrl(): string {
     return `${this.base}/plantilla`;
+  }
+
+  detallesDeBloque(bloqueId: number): Observable<SemanaConDetalles[]> {
+    return this.http.get<SemanaConDetalles[]>(
+      `${this.base}/bloques/${bloqueId}/detalles`,
+    );
+  }
+
+  actualizarDetalle(
+    id: number,
+    body: { contenido?: string; comentario?: string },
+  ): Observable<unknown> {
+    return this.http.put<unknown>(`${this.base}/detalles/${id}`, body);
   }
 }

@@ -180,6 +180,14 @@
               ></p-tag>
             </td>
             <td class="planificacion-fisica-admin__acciones">
+              <p-button
+                icon="pi pi-list"
+                [text]="true"
+                size="small"
+                pTooltip="Ver / editar detalles"
+                data-testid="detalles-bloque-btn"
+                (click)="verDetalles(bloque)"
+              ></p-button>
               @if (bloque.estado === "BORRADOR") {
                 <p-button
                   icon="pi pi-check"

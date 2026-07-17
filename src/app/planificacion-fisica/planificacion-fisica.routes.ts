@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
 import { PlanificacionFisicaAdminComponent } from './admin/planificacion-fisica-admin.component';
+import { PlanificacionFisicaDetallesComponent } from './admin/planificacion-fisica-detalles.component';
 
 /**
  * Panel admin de import de planificación física (Task 8, Fase 1a). Solo
@@ -21,5 +22,14 @@ export const routes: Routes = [
     component: PlanificacionFisicaAdminComponent,
     canActivate: [roleGuard],
     data: { expectedRole: 'ADMIN', title: 'Planificación física (admin)' },
+  },
+  {
+    // Ventana de edición del texto de los ejercicios de un bloque, disciplina
+    // a disciplina (la parrilla la sube el entrenador por Excel; el texto se
+    // escribe aquí). Mismo gate ADMIN que `admin` — panel 100% admin.
+    path: 'admin/:bloqueId/detalles',
+    component: PlanificacionFisicaDetallesComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ADMIN', title: 'Detalles del bloque' },
   },
 ];

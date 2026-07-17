@@ -1,0 +1,76 @@
+<div class="pf-detalles">
+  <div class="pf-detalles__header">
+    <p-button
+      icon="pi pi-arrow-left"
+      [text]="true"
+      label="Volver a bloques"
+      data-testid="pf-detalles-volver"
+      (click)="volver()"
+    ></p-button>
+    <h2>Detalles del bloque</h2>
+  </div>
+
+  @if (loading()) {
+    <div class="pf-detalles__loading" data-testid="pf-detalles-loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando semanas…</span>
+    </div>
+  } @else if (semanas().length === 0) {
+    <p data-testid="pf-detalles-vacio">Este bloque no tiene semanas.</p>
+  } @else {
+    @for (semana of semanas(); track semana.semanaId) {
+      <p-card
+        [header]="'Semana ' + (semana.indice + 1)"
+        styleClass="pf-detalles__semana-card"
+        [attr.data-testid]="'pf-semana-' + semana.semanaId"
+      >
+        @if (semana.comentarioSemana) {
+          <p class="pf-detalles__comentario-semana">
+            {{ semana.comentarioSemana }}
+          </p>
+        }
+
+        <div class="pf-detalles__disciplinas">
+          @for (detalle of semana.detalles; track detalle.id) {
+            <div
+              class="pf-detalles__disciplina"
+              [class.pf-detalles__disciplina--vacio]="detalle.vacio"
+              [style.borderColor]="colorGrupo(detalle.grupo)"
+              [attr.data-testid]="'pf-detalle-' + detalle.id"
+            >
+              <div class="pf-detalles__disciplina-header">
+                <span
+                  class="pf-detalles__disciplina-color"
+                  [style.backgroundColor]="colorGrupo(detalle.grupo)"
+                ></span>
+                <span class="pf-detalles__disciplina-nombre">{{
+                  detalle.disciplinaNombre
+                }}</span>
+                @if (detalle.vacio) {
+                  <p-tag
+                    value="Falta"
+                    severity="warning"
+                    data-testid="pf-detalle-falta-badge"
+                  ></p-tag>
+                }
+              </div>
+
+              <app-markdown-editor
+                [formControl]="controlFor(detalle)"
+                height="180px"
+                [attr.data-testid]="'pf-detalle-editor-' + detalle.id"
+              ></app-markdown-editor>
+
+              <app-async-button
+                label="Guardar"
+                icon="pi pi-save"
+                [action]="guardarAccion(detalle)"
+                [attr.data-testid]="'pf-detalle-guardar-' + detalle.id"
+              ></app-async-button>
+            </div>
+          }
+        </div>
+      </p-card>
+    }
+  }
+</div>

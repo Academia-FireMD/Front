@@ -19,6 +19,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastrService } from 'ngx-toastr';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
 import {
@@ -61,6 +62,7 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
   private svc = inject(PlanificacionFisicaService);
   private toast = inject(ToastrService);
   private confirmationService = inject(ConfirmationService);
+  private router = inject(Router);
 
   /**
    * PrimeNG `p-fileUpload` (modo `basic`) destruye su `<input type="file">`
@@ -278,6 +280,19 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
         );
       }
     }
+  }
+
+  /**
+   * Ventana de edición del texto de los ejercicios de este bloque, disciplina
+   * a disciplina (el excel del entrenador solo trae la parrilla, no el
+   * texto). Ruta hermana de `admin`, mismo gate ADMIN.
+   */
+  verDetalles(bloque: BloqueEntrenamiento): void {
+    this.router.navigate([
+      '/app/planificacion-fisica/admin',
+      bloque.id,
+      'detalles',
+    ]);
   }
 
   protected labelOposicion(op: Oposicion): string {
