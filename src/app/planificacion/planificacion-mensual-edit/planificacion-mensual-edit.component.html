@@ -95,87 +95,89 @@
     >
       <div class="left gap-2">
         <div class="identificador">
-          @if (getId() !== 'new' && expectedRole != 'ADMIN') { @if
-          (viewportService.screenWidth != 'xs') { Identificador: }
-          <strong>{{ formGroup.value.identificador }}</strong>
-          }@else {
-          <input
-            type="text"
-            pInputText
-            class="w-full"
-            placeholder="Identificador"
-            formControlName="identificador"
-          />
+          @if (getId() !== "new" && expectedRole != "ADMIN") {
+            @if (viewportService.screenWidth != "xs") {
+              Identificador:
+            }
+            <strong>{{ formGroup.value.identificador }}</strong>
+          } @else {
+            <input
+              type="text"
+              pInputText
+              class="w-full"
+              placeholder="Identificador"
+              formControlName="identificador"
+            />
           }
         </div>
 
         <div class="nombre w-full" *ngIf="viewportService.screenWidth != 'xs'">
-          @if( expectedRole == 'ALUMNO' ){
-          <span>{{ formGroup.value.descripcion }}</span>
-          }@else {
-          <input
-            type="text"
-            pInputText
-            class="w-full"
-            placeholder="Descripcion"
-            formControlName="descripcion"
-          />
+          @if (expectedRole == "ALUMNO") {
+            <span>{{ formGroup.value.descripcion }}</span>
+          } @else {
+            <input
+              type="text"
+              pInputText
+              class="w-full"
+              placeholder="Descripcion"
+              formControlName="descripcion"
+            />
           }
         </div>
       </div>
 
       <div class="right gap-2">
-        @if (getId() !== 'new') {
-        <app-attachments-manager
-          [entidadTipo]="entidadTipoPlanificacion"
-          [entidadId]="Number(getId())"
-          [mode]="expectedRole === 'ADMIN' ? 'admin' : 'view'"
-        ></app-attachments-manager>
+        @if (getId() !== "new") {
+          <app-attachments-manager
+            [entidadTipo]="entidadTipoPlanificacion"
+            [entidadId]="Number(getId())"
+            [mode]="expectedRole === 'ADMIN' ? 'admin' : 'view'"
+          ></app-attachments-manager>
         }
-        @if (expectedRole == 'ALUMNO' && relevancia.value?.length) {
-        <div class="relevancia">
-          <app-oposicion-picker
-            [allowAdd]="false"
-            [oposiciones]="relevancia.value"
-          ></app-oposicion-picker>
-        </div>
+        @if (expectedRole == "ALUMNO" && relevancia.value?.length) {
+          <div class="relevancia">
+            <app-oposicion-picker
+              [allowAdd]="false"
+              [oposiciones]="relevancia.value"
+            ></app-oposicion-picker>
+          </div>
         }
-        @if (expectedRole == 'ADMIN') {
-        <div class="duracion">
-          <p-dropdown
-            class="w-full"
-            id="tipoDePlanificacionDuracionDeseada"
-            [options]="duracionesDisponibles"
-            [formControl]="tipoDePlanificacion"
-            optionLabel="label"
-            optionValue="value"
-            appendTo="body"
-            placeholder="Seleccione una duración"
-          >
-          </p-dropdown>
-        </div>
-        <div class="relevancia">
-          <app-oposicion-picker
-            [allowAdd]="true"
-            [oposiciones]="relevancia.value"
-            (updateSelection)="updateOposicionSelection($event)"
-          ></app-oposicion-picker>
-        </div>
-        <div class="por-defecto gap-2">
-          <label for="switch1">Por defecto</label>
-          <p-inputSwitch [formControl]="esPorDefecto" />
-        </div>
-        <app-async-button
-          [disabled]="formGroup.invalid"
-          [action]="guardarCambios.bind(this)"
-          label="Guardar cambios"
-        ></app-async-button>
+        @if (expectedRole == "ADMIN") {
+          <div class="duracion">
+            <p-dropdown
+              class="w-full"
+              id="tipoDePlanificacionDuracionDeseada"
+              [options]="duracionesDisponibles"
+              [formControl]="tipoDePlanificacion"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              placeholder="Seleccione una duración"
+            >
+            </p-dropdown>
+          </div>
+          <div class="relevancia">
+            <app-oposicion-picker
+              [allowAdd]="true"
+              [oposiciones]="relevancia.value"
+              (updateSelection)="updateOposicionSelection($event)"
+            ></app-oposicion-picker>
+          </div>
+          <div class="por-defecto gap-2">
+            <label for="switch1">Por defecto</label>
+            <p-inputSwitch [formControl]="esPorDefecto" />
+          </div>
+          <app-async-button
+            [disabled]="formGroup.invalid"
+            [action]="guardarCambios.bind(this)"
+            label="Guardar cambios"
+          ></app-async-button>
         }
       </div>
     </div>
     <div class="col-12 calendar-info">
       <div class="visualizando">
-        <span>{{ viewDate | calendarDate : view + "ViewTitle" : "es" }}</span>
+        <span>{{ viewDate | calendarDate: view + "ViewTitle" : "es" }}</span>
       </div>
 
       <p-button
@@ -196,7 +198,8 @@
 
       <app-calendar-header
         [(view)]="view"
-        [(viewDate)]="viewDate"
+        [viewDate]="viewDate"
+        (viewDateChange)="onViewDateChange($event)"
         [role]="expectedRole"
         [startDate]="startDate"
         [endDate]="endDate"
@@ -208,7 +211,7 @@
         <div class="custom-cell">
           <!-- Fecha del día -->
           <div class="date-header">
-            <span>{{ day.date | date : "d" }}</span>
+            <span>{{ day.date | date: "d" }}</span>
           </div>
 
           <!-- Progreso Diario -->
@@ -244,21 +247,22 @@
       </ng-template>
 
       @if (view == calendarView.Week) {
-      <app-vista-semanal
-        [role]="expectedRole"
-        [mode]="expectedRole == 'ADMIN' ? 'edit' : 'picker'"
-        [(events)]="events"
-        [viewDate]="viewDate"
-        (saveChanges)="guardarCambios()"
-      ></app-vista-semanal>
-      }@else {
-      <mwl-calendar-month-view
-        [viewDate]="viewDate"
-        [events]="events"
-        [weekStartsOn]="1"
-        (dayClicked)="onDayClicked($event)"
-        [cellTemplate]="customCellTemplate"
-      ></mwl-calendar-month-view>
+        <app-vista-semanal
+          [role]="expectedRole"
+          [mode]="expectedRole == 'ADMIN' ? 'edit' : 'picker'"
+          [(events)]="events"
+          [viewDate]="viewDate"
+          [resumenFisica]="resumenFisica()"
+          (saveChanges)="guardarCambios()"
+        ></app-vista-semanal>
+      } @else {
+        <mwl-calendar-month-view
+          [viewDate]="viewDate"
+          [events]="events"
+          [weekStartsOn]="1"
+          (dayClicked)="onDayClicked($event)"
+          [cellTemplate]="customCellTemplate"
+        ></mwl-calendar-month-view>
       }
 
       <p-speedDial

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -200,6 +200,23 @@ export interface AccesoDenegadoPlanFisica {
   message: string;
 }
 
+/**
+ * Disciplina resumida de un día, para el "bridge" temario↔física: la
+ * indicación ("🏋️ Cuerda 2, Carrera 2") que se pinta en el calendario del
+ * temario del alumno. Solo trae lo mínimo para pintar la indicación — el
+ * detalle completo se carga en `/dia/:fecha` al navegar desde ahí.
+ */
+export interface DisciplinaResumenDia {
+  nombre: string;
+  grupo: GrupoDisciplina;
+  color: string;
+}
+
+export interface ResumenDiaFisica {
+  fecha: string;
+  disciplinas: DisciplinaResumenDia[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PlanificacionFisicaService {
   private http = inject(HttpClient);
@@ -273,5 +290,19 @@ export class PlanificacionFisicaService {
       `${this.base}/progreso/${asignacionId}`,
       { realizado },
     );
+  }
+
+  /**
+   * Resumen de entrenamiento físico por día (fechas ISO "YYYY-MM-DD"), para
+   * el "bridge" que se pinta en el calendario del temario. `[]` (NUNCA 403)
+   * cuando el alumno no tiene bloque activo que le aplique — el llamador
+   * debe tratar cualquier fallo (red, 5xx) como "sin indicación de física",
+   * nunca como error que bloquee el calendario del temario.
+   */
+  resumenDias(desde: string, hasta: string): Observable<ResumenDiaFisica[]> {
+    const params = new HttpParams().set('desde', desde).set('hasta', hasta);
+    return this.http.get<ResumenDiaFisica[]>(`${this.base}/resumen-dias`, {
+      params,
+    });
   }
 }

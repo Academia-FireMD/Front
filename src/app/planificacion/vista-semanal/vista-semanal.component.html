@@ -12,7 +12,7 @@
         id="selectedDay"
         type="text"
         pInputText
-        [value]="selectedDayForCloning | date : 'fullDate'"
+        [value]="selectedDayForCloning | date: 'fullDate'"
         readonly
       />
     </div>
@@ -97,13 +97,20 @@
         >
           <div class="flex-1 flex flex-column gap-2">
             <div class="flex align-items-center gap-2">
-              <i *ngIf="subBloque.importante"
-                 class="pi pi-star-fill text-yellow-500"
-                 pTooltip="Sub-bloque importante"></i>
-              <div *ngIf="subBloque.tiempoAviso" class="flex align-items-center gap-1">
-                <i class="pi pi-bell text-orange-500"
-                   pTooltip="Aviso anticipado"></i>
-                <small>{{subBloque.tiempoAviso}} min</small>
+              <i
+                *ngIf="subBloque.importante"
+                class="pi pi-star-fill text-yellow-500"
+                pTooltip="Sub-bloque importante"
+              ></i>
+              <div
+                *ngIf="subBloque.tiempoAviso"
+                class="flex align-items-center gap-1"
+              >
+                <i
+                  class="pi pi-bell text-orange-500"
+                  pTooltip="Aviso anticipado"
+                ></i>
+                <small>{{ subBloque.tiempoAviso }} min</small>
               </div>
               <span class="font-bold text-overflow-ellipsis">{{
                 subBloque.nombre && subBloque.nombre.length > 0
@@ -142,8 +149,8 @@
     >
       <div class="top" [class.today]="day.isToday">
         <div class="day-label text-uppercase">
-          {{ day.date | date : "d" }} -
-          {{ day.date | calendarDate : "weekViewColumnHeader" : locale }}
+          {{ day.date | date: "d" }} -
+          {{ day.date | calendarDate: "weekViewColumnHeader" : locale }}
 
           <i
             class="pi pi-clone pointer"
@@ -155,6 +162,19 @@
             "
           ></i>
         </div>
+      </div>
+      <!-- Bridge temario↔física: indicación de entrenamiento físico del día,
+           navega a /app/planificacion-fisica/dia/:fecha. Canal aparte de
+           `events`, no toca el progreso ni el guardado del temario. -->
+      <div
+        class="fisica-bridge"
+        *ngIf="role == 'ALUMNO' && tieneFisica(day.date)"
+        data-testid="temario-fisica-bridge"
+        pTooltip="Ver entrenamiento físico de este día"
+        tooltipPosition="top"
+        (click)="abrirFisica(day.date, $event)"
+      >
+        🏋️ {{ etiquetaFisica(day.date) }}
       </div>
       <!-- Progreso debajo del día -->
       <div
@@ -234,31 +254,42 @@
           class="custom-event-template"
           [ngStyle]="{
             'background-color': weekEvent?.event?.color?.primary || '#e3e3e3',
-            'border-left': weekEvent?.event?.meta?.esPersonalizado ? '4px solid #ff9800' : 'none'
+            'border-left': weekEvent?.event?.meta?.esPersonalizado
+              ? '4px solid #ff9800'
+              : 'none',
           }"
         >
           <div class="event-content">
             <div class="event-header">
               <div class="d-flex align-items-center gap-1">
                 <!-- Iconos para eventos personalizados -->
-                <i *ngIf="weekEvent?.event?.meta?.esPersonalizado"
-                   class="pi pi-user text-orange-500"
-                   style="font-size: 0.8rem;"
-                   pTooltip="Evento personal"></i>
+                <i
+                  *ngIf="weekEvent?.event?.meta?.esPersonalizado"
+                  class="pi pi-user text-orange-500"
+                  style="font-size: 0.8rem"
+                  pTooltip="Evento personal"
+                ></i>
                 <!-- Iconos existentes -->
-                <i *ngIf="weekEvent?.event?.meta?.subBloque?.importante"
-                   class="pi pi-star-fill text-yellow-500"
-                   style="font-size: 0.8rem;"
-                   pTooltip="Importante"></i>
-                <i *ngIf="weekEvent?.event?.meta?.subBloque?.tiempoAviso"
-                   class="pi pi-bell text-orange-500"
-                   style="font-size: 0.8rem;"
-                   pTooltip="Aviso anticipado"></i>
-                <strong class="descripcion text-sm">{{weekEvent?.event?.title || "Sin nombre"}}</strong>
+                <i
+                  *ngIf="weekEvent?.event?.meta?.subBloque?.importante"
+                  class="pi pi-star-fill text-yellow-500"
+                  style="font-size: 0.8rem"
+                  pTooltip="Importante"
+                ></i>
+                <i
+                  *ngIf="weekEvent?.event?.meta?.subBloque?.tiempoAviso"
+                  class="pi pi-bell text-orange-500"
+                  style="font-size: 0.8rem"
+                  pTooltip="Aviso anticipado"
+                ></i>
+                <strong class="descripcion text-sm">{{
+                  weekEvent?.event?.title || "Sin nombre"
+                }}</strong>
               </div>
               <div class="event-actions">
                 <!-- Ícono de comentario para eventos no personalizados -->
-                <i *ngIf="!weekEvent?.event?.meta?.esPersonalizado"
+                <i
+                  *ngIf="!weekEvent?.event?.meta?.esPersonalizado"
                   class="{{
                     !!weekEvent?.event?.meta?.subBloque?.comentariosAlumno
                       ? 'fa-solid'
@@ -272,12 +303,16 @@
                 <!-- Ícono de borrar (adaptado para ambos tipos) -->
                 <i
                   class="fa-solid fa-trash-can text-primary"
-                  (click)="weekEvent?.event?.meta?.esPersonalizado ? 
-                         deleteEventoPersonalizado(weekEvent?.event, $event) : 
-                         deleteEvent(weekEvent?.event, $event)"
-                  *ngIf="role == 'ADMIN' || weekEvent?.event?.meta?.esPersonalizado"
+                  (click)="
+                    weekEvent?.event?.meta?.esPersonalizado
+                      ? deleteEventoPersonalizado(weekEvent?.event, $event)
+                      : deleteEvent(weekEvent?.event, $event)
+                  "
+                  *ngIf="
+                    role == 'ADMIN' || weekEvent?.event?.meta?.esPersonalizado
+                  "
                 ></i>
-                
+
                 <!-- Checkbox unificado para ambos tipos de eventos -->
                 <p-checkbox
                   *ngIf="role == 'ALUMNO'"
@@ -290,7 +325,10 @@
               </div>
             </div>
             <span class="event-comments descripcion w-full">
-              {{ weekEvent?.event?.meta?.subBloque?.comentarios || "Sin comentarios" }}
+              {{
+                weekEvent?.event?.meta?.subBloque?.comentarios ||
+                  "Sin comentarios"
+              }}
             </span>
           </div>
         </div>
@@ -328,82 +366,82 @@
   header="Evento Personalizado"
   [(visible)]="isEventoPersonalizadoDialogVisible"
   [modal]="true"
-  [style]="{width: '450px'}"
+  [style]="{ width: '450px' }"
   [closable]="true"
 >
   <div class="p-fluid" *ngIf="editEventoPersonalizadoData">
     <div class="field">
       <label for="nombre">Nombre del evento</label>
-      <input 
-        id="nombre" 
-        type="text" 
-        pInputText 
-        [(ngModel)]="editEventoPersonalizadoData.nombre" 
+      <input
+        id="nombre"
+        type="text"
+        pInputText
+        [(ngModel)]="editEventoPersonalizadoData.nombre"
         required
       />
     </div>
-    
+
     <div class="field">
       <label for="descripcion">Descripción</label>
-      <textarea 
-        id="descripcion" 
-        pInputTextarea 
-        [(ngModel)]="editEventoPersonalizadoData.descripcion" 
+      <textarea
+        id="descripcion"
+        pInputTextarea
+        [(ngModel)]="editEventoPersonalizadoData.descripcion"
         rows="3"
       ></textarea>
     </div>
-    
+
     <div class="field">
       <label for="horaInicio">Hora de inicio</label>
-      <p-calendar 
-        id="horaInicio" 
+      <p-calendar
+        id="horaInicio"
         appendTo="body"
-        [(ngModel)]="editEventoPersonalizadoData.horaInicio" 
-        [showTime]="true" 
+        [(ngModel)]="editEventoPersonalizadoData.horaInicio"
+        [showTime]="true"
         [showSeconds]="false"
         dateFormat="dd/mm/yy"
-        [style]="{width: '100%'}"
+        [style]="{ width: '100%' }"
       ></p-calendar>
     </div>
-    
+
     <div class="field">
       <label for="duracion">Duración (minutos)</label>
-      <p-inputNumber 
-        id="duracion" 
-        [(ngModel)]="editEventoPersonalizadoData.duracion" 
-        [min]="15" 
+      <p-inputNumber
+        id="duracion"
+        [(ngModel)]="editEventoPersonalizadoData.duracion"
+        [min]="15"
         [max]="480"
         [showButtons]="true"
-        [style]="{width: '100%'}"
+        [style]="{ width: '100%' }"
       ></p-inputNumber>
     </div>
-    
+
     <div class="field">
       <label for="color">Color</label>
-      <p-colorPicker 
+      <p-colorPicker
         appendTo="body"
-        id="color" 
-        [(ngModel)]="editEventoPersonalizadoData.color" 
-        [style]="{width: '100%'}"
+        id="color"
+        [(ngModel)]="editEventoPersonalizadoData.color"
+        [style]="{ width: '100%' }"
       ></p-colorPicker>
     </div>
-    
+
     <div class="field-checkbox" *ngIf="editEventoPersonalizadoData.id">
-      <p-checkbox 
-        [(ngModel)]="editEventoPersonalizadoData.realizado" 
-        [binary]="true" 
+      <p-checkbox
+        [(ngModel)]="editEventoPersonalizadoData.realizado"
+        [binary]="true"
         inputId="realizado"
       ></p-checkbox>
       <label for="realizado">Marcar como realizado</label>
     </div>
   </div>
-  
+
   <ng-template pTemplate="footer">
-    <button 
-      pButton 
-      label="Cancelar" 
-      icon="pi pi-times" 
-      class="p-button-text" 
+    <button
+      pButton
+      label="Cancelar"
+      icon="pi pi-times"
+      class="p-button-text"
       (click)="isEventoPersonalizadoDialogVisible = false"
     ></button>
     <app-async-button

@@ -159,4 +159,37 @@ describe('PlanificacionFisicaService', () => {
     expect(req.request.body).toEqual({ realizado: true });
     req.flush({ realizado: true, realizadoEn: '2026-07-17T10:00:00Z' });
   });
+
+  it('resumenDias llama al endpoint correcto con el rango de fechas', () => {
+    let recibido: unknown = 'sin-emitir';
+    service
+      .resumenDias('2026-07-01', '2026-07-31')
+      .subscribe((res) => (recibido = res));
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/resumen-dias?desde=2026-07-01&hasta=2026-07-31`,
+    );
+    expect(req.request.method).toBe('GET');
+    const dias = [
+      {
+        fecha: '2026-07-15',
+        disciplinas: [
+          { nombre: 'Cuerda 2', grupo: 'CUERDA', color: '#9fe2d0' },
+        ],
+      },
+    ];
+    req.flush(dias);
+    expect(recibido).toEqual(dias);
+  });
+
+  it('resumenDias devuelve [] cuando el alumno no tiene bloque activo (BASIC/sin plan) — nunca 403', () => {
+    let recibido: unknown = 'sin-emitir';
+    service
+      .resumenDias('2026-07-01', '2026-07-31')
+      .subscribe((res) => (recibido = res));
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/resumen-dias?desde=2026-07-01&hasta=2026-07-31`,
+    );
+    req.flush([]);
+    expect(recibido).toEqual([]);
+  });
 });

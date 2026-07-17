@@ -7,7 +7,7 @@ import {
   Output,
   signal,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   CalendarEvent,
   CalendarEventTimesChangedEvent,
@@ -18,12 +18,17 @@ import { Memoize } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { ContextMenu } from 'primeng/contextmenu';
 import { map, Subject } from 'rxjs';
+import { ResumenDiaFisica } from '../../planificacion-fisica/services/planificacion-fisica.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import {
   PlanificacionBloque,
   SubBloque,
 } from '../../shared/models/planificacion.model';
-import { getDateForDayOfWeek, getStartOfWeek } from '../../utils/utils';
+import {
+  formatFechaISO,
+  getDateForDayOfWeek,
+  getStartOfWeek,
+} from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 import { colors } from './calendar-colors';
 @Component({
@@ -82,9 +87,23 @@ export class VistaSemanalComponent {
   }
 
   @Input() mode: 'picker' | 'edit' = 'edit';
+  /**
+   * Bridge temario↔física (Task Sergio): resumen de entrenamiento físico
+   * por día, para pintar una indicación en la cabecera del día ("🏋️ Cuerda
+   * 2, Carrera 2") que navega a `/app/planificacion-fisica/dia/:fecha`.
+   * Deliberadamente NO se mezcla con `events` (CalendarEvent[]): ese array
+   * alimenta `guardarCambios()` → `fromEventsToSubbloques()` (se persiste
+   * en el backend) y `getProgressPercentageForDay()` (barra de progreso del
+   * temario) — un evento de física ahí falsearía ambas cosas. Este input es
+   * un canal aparte, puramente aditivo: si viene vacío (bloque BASIC, sin
+   * bloque activo, o fallo al cargar el bridge) simplemente no se pinta
+   * nada, el resto del calendario sigue funcionando igual.
+   */
+  @Input() resumenFisica: ResumenDiaFisica[] = [];
   private onTimeClickedDate!: Date;
   public triggerSaveUpdateProgress = new Subject();
   private activatedRoute = inject(ActivatedRoute);
+  private router = inject(Router);
   @Memoize()
   getMenuItems(role: 'ADMIN' | 'ALUMNO') {
     const addNewPersonalizado = {
@@ -286,6 +305,37 @@ export class VistaSemanalComponent {
   }
 
   ngOnInit(): void {}
+
+  /** Resumen de física del día, o `undefined` si no hay entrenamiento ese día. */
+  private resumenFisicaDelDia(dia: Date): ResumenDiaFisica | undefined {
+    const fecha = formatFechaISO(dia);
+    return this.resumenFisica.find((d) => d.fecha === fecha);
+  }
+
+  tieneFisica(dia: Date): boolean {
+    const resumen = this.resumenFisicaDelDia(dia);
+    return !!resumen && resumen.disciplinas.length > 0;
+  }
+
+  etiquetaFisica(dia: Date): string {
+    const resumen = this.resumenFisicaDelDia(dia);
+    if (!resumen) return '';
+    return resumen.disciplinas.map((d) => d.nombre).join(', ');
+  }
+
+  /**
+   * Click en la indicación de física: navega al detalle del día en el
+   * módulo de física, en vez de caer en `onEventClicked` (que asume
+   * `event.meta.subBloque` de un evento de temario). Por eso este badge
+   * NUNCA es un `CalendarEvent` — es un elemento aparte en la cabecera del
+   * día, así que no puede colarse en ese flujo por accidente.
+   */
+  abrirFisica(dia: Date, domEvent: Event): void {
+    domEvent.stopPropagation();
+    domEvent.preventDefault();
+    const fecha = formatFechaISO(dia);
+    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);
+  }
 
   onEventClicked(event: CalendarEvent): void {
     this.selectedEvent = event;
