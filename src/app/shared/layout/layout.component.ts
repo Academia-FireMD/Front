@@ -624,6 +624,20 @@ export class LayoutComponent {
       });
     }
 
+    // Planificación física — calendario de entrenamiento del alumno (Task
+    // 11/12, Fase 1b). Enlace directo a la raíz del módulo (`roleGuard`
+    // ALUMNO vive en `planificacion-fisica.routes.ts`); ModuloGuard gatea
+    // por tenant (ModuloApp.PLANIFICACION_FISICA). El tier BASIC no se filtra
+    // aquí — la vista lo resuelve en runtime con una píldora de upsell.
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Planificación física',
+        icon: 'pi pi-bolt',
+        routerLink: '/app/planificacion-fisica',
+        modulo: ModuloApp.PLANIFICACION_FISICA,
+      });
+    }
+
     // Menú de perfil siempre disponible
     menu.push({
       label: 'Perfil',

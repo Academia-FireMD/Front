@@ -156,11 +156,12 @@ const routes: Routes = [
         },
       },
       {
-        // Panel admin de import de planificación física (Task 8, Fase 1a).
-        // Solo `moduloGuard` aquí — el gate por rol (ADMIN) vive en la ruta
-        // hija `admin` de `planificacion-fisica.routes.ts`, mismo patrón que
-        // `cursos-admin` (arriba). `callejero` usa roleGuard a este nivel
-        // porque es 100% alumno; este módulo es 100% admin.
+        // Planificación física: panel admin (Task 8, Fase 1a) + calendario y
+        // detalle de día del alumno (Tasks 11/12, Fase 1b). Solo
+        // `moduloGuard` aquí — el módulo mezcla ADMIN y ALUMNO, así que el
+        // gate por rol vive por ruta hija en `planificacion-fisica.routes.ts`
+        // (mismo patrón que `cursos-admin`, a diferencia de `callejero` que
+        // es 100% alumno y sí usa roleGuard a este nivel).
         path: 'planificacion-fisica',
         loadChildren: () =>
           import('./planificacion-fisica/planificacion-fisica.routes').then(

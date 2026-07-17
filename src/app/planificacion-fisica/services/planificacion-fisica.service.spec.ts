@@ -105,4 +105,58 @@ describe('PlanificacionFisicaService', () => {
     });
     req.flush({});
   });
+
+  it('miPlan llama al endpoint correcto y propaga null cuando no hay plan', () => {
+    let recibido: unknown = 'sin-emitir';
+    service.miPlan().subscribe((res) => (recibido = res));
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/mi-plan`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(null);
+    expect(recibido).toBeNull();
+  });
+
+  it('miPlan propaga el cuerpo del 403 TIER_TOO_LOW sin transformarlo', () => {
+    let errorRecibido: { error?: { reason?: string } } | undefined;
+    service.miPlan().subscribe({
+      error: (err) => (errorRecibido = err),
+    });
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/mi-plan`,
+    );
+    req.flush(
+      {
+        reason: 'TIER_TOO_LOW',
+        requiredTier: 'ADVANCED',
+        message: 'Mejora tu suscripción.',
+      },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    expect(errorRecibido?.error?.reason).toBe('TIER_TOO_LOW');
+  });
+
+  it('dia llama al endpoint correcto con la fecha', () => {
+    service.dia('2026-07-15').subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/dia/2026-07-15`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      fecha: '2026-07-15',
+      comentarioSemana: null,
+      comentarioGeneral: null,
+      disciplinas: [],
+    });
+  });
+
+  it('marcarProgreso manda el body y llama al endpoint correcto', () => {
+    service.marcarProgreso(99, true).subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/progreso/99`,
+    );
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ realizado: true });
+    req.flush({ realizado: true, realizadoEn: '2026-07-17T10:00:00Z' });
+  });
 });

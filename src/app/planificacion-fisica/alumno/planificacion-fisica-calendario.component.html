@@ -1,0 +1,108 @@
+<div class="pf-calendario">
+  <div class="pf-calendario__header">
+    <h2>Planificación física</h2>
+  </div>
+
+  @if (loading()) {
+    <div class="pf-calendario__loading" data-testid="pf-calendario-loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando tu planificación…</span>
+    </div>
+  } @else if (gated()) {
+    <div class="pf-calendario__upsell" data-testid="pf-upsell-pill">
+      <i class="pi pi-lock"></i>
+      <span>{{ gated()!.message }}</span>
+      <p-button
+        label="Mejorar suscripción"
+        size="small"
+        data-testid="pf-upsell-cta"
+        (click)="mejorarSuscripcion()"
+      ></p-button>
+    </div>
+  } @else if (sinPlan()) {
+    <p data-testid="pf-calendario-sin-plan">
+      Aún no hay planificación física para tu oposición.
+    </p>
+  } @else if (miPlan()) {
+    @let plan = miPlan()!;
+    @for (semana of plan.semanas; track semana.id) {
+      <p-card
+        styleClass="pf-calendario__semana"
+        [class.pf-calendario__semana--anterior]="semana.soloLectura"
+        [style]="{ background: fondoSemana(semana.intensidad) }"
+        [attr.data-testid]="'pf-semana-' + semana.id"
+        [attr.data-solo-lectura]="semana.soloLectura"
+      >
+        <ng-template pTemplate="header">
+          <div class="pf-calendario__semana-header">
+            <span class="pf-calendario__semana-titulo">
+              Semana {{ semana.numeroAno }}
+              @if (semana.esActual) {
+                <span class="pf-calendario__badge-actual">actual</span>
+              }
+              @if (semana.soloLectura) {
+                <span class="pf-calendario__badge-lectura">solo lectura</span>
+              }
+            </span>
+            @if (semana.comentarioSemana) {
+              <span class="pf-calendario__semana-comentario">{{
+                semana.comentarioSemana
+              }}</span>
+            }
+          </div>
+        </ng-template>
+
+        <div
+          class="pf-calendario__progreso"
+          [attr.data-testid]="'pf-progreso-semana-' + semana.id"
+        >
+          <p-progressBar
+            [value]="
+              progresoPorcentaje(semana.progreso.hechas, semana.progreso.total)
+            "
+            [showValue]="false"
+          ></p-progressBar>
+          <span class="pf-calendario__progreso-texto">
+            {{ semana.progreso.hechas }}/{{ semana.progreso.total }}
+          </span>
+        </div>
+
+        <div class="pf-calendario__dias">
+          @for (dia of semana.dias; track dia.fecha) {
+            <button
+              type="button"
+              class="pf-calendario__dia"
+              [class.pf-calendario__dia--hoy]="esHoy(dia.fecha)"
+              [attr.data-testid]="'pf-dia-' + dia.fecha"
+              (click)="abrirDia(dia.fecha)"
+            >
+              <span class="pf-calendario__dia-label">{{
+                etiquetaDia(dia.diaSemana)
+              }}</span>
+              <span class="pf-calendario__dia-fecha">{{
+                dia.fecha | date: "d/M"
+              }}</span>
+              <div class="pf-calendario__chips">
+                @for (chip of dia.chips; track chip.disciplinaId) {
+                  <span
+                    class="pf-calendario__chip"
+                    [class.pf-calendario__chip--hecho]="chip.realizado"
+                    [style.backgroundColor]="chip.color"
+                    [attr.data-testid]="
+                      'pf-chip-' + dia.fecha + '-' + chip.disciplinaId
+                    "
+                    [title]="chip.nombre"
+                  >
+                    @if (chip.realizado) {
+                      <i class="pi pi-check"></i>
+                    }
+                  </span>
+                }
+              </div>
+            </button>
+          }
+        </div>
+      </p-card>
+    }
+  }
+</div>

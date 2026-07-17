@@ -2,21 +2,38 @@ import { Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
 import { PlanificacionFisicaAdminComponent } from './admin/planificacion-fisica-admin.component';
 import { PlanificacionFisicaDetallesComponent } from './admin/planificacion-fisica-detalles.component';
+import { PlanificacionFisicaCalendarioComponent } from './alumno/planificacion-fisica-calendario.component';
+import { PlanificacionFisicaDiaComponent } from './alumno/planificacion-fisica-dia.component';
 
 /**
- * Panel admin de import de planificación física (Task 8, Fase 1a). Solo
- * contiene `/admin` de momento — la vista de alumno (Fase 1b) se añade
- * como hermana de este path cuando se cierre el diseño con datos reales.
+ * Rutas de planificación física: panel admin (Task 8, Fase 1a) + calendario
+ * y detalle de día del alumno (Tasks 11/12, Fase 1b), como hermanas del
+ * mismo módulo.
  *
- * `roleGuard` + `expectedRole: 'ADMIN'` se aplica AQUÍ, a nivel de ruta hija
- * (mismo patrón que `cursos-routing.module.ts` y
- * `facturacion-routing.module.ts`), NO en `app-routing.module.ts` — ese
- * nivel superior solo gatea por módulo (`moduloGuard`), igual que
- * `cursos-admin`. Es un panel 100% admin, así que gatearlo con
- * `expectedRole: 'ALUMNO'` en el nivel superior (como hace `callejero`,
- * que sí es 100% alumno) dejaría entrar a cualquier ALUMNO logueado.
+ * `roleGuard` se aplica AQUÍ, a nivel de ruta hija (mismo patrón que
+ * `cursos-routing.module.ts` y `facturacion-routing.module.ts`), NO en
+ * `app-routing.module.ts` — ese nivel superior solo gatea por módulo
+ * (`moduloGuard`). Este módulo YA NO es 100% admin (mezcla ADMIN + ALUMNO),
+ * así que a diferencia de `callejero` (100% alumno, `roleGuard` en el nivel
+ * superior) el rol se decide POR RUTA aquí: `admin`/`admin/:id/detalles` →
+ * ADMIN, `''`/`dia/:fecha` → ALUMNO.
  */
 export const routes: Routes = [
+  {
+    // Calendario de 4 semanas del alumno (Task 11). Ruta base del módulo:
+    // `/app/planificacion-fisica`.
+    path: '',
+    component: PlanificacionFisicaCalendarioComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ALUMNO', title: 'Planificación física' },
+  },
+  {
+    // Detalle de un día concreto, con los checks de progreso (Task 12).
+    path: 'dia/:fecha',
+    component: PlanificacionFisicaDiaComponent,
+    canActivate: [roleGuard],
+    data: { expectedRole: 'ALUMNO', title: 'Día de entrenamiento' },
+  },
   {
     path: 'admin',
     component: PlanificacionFisicaAdminComponent,
