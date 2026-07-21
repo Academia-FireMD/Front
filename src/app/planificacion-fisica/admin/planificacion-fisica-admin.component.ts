@@ -22,10 +22,7 @@ import { ToastrService } from 'ngx-toastr';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
-import {
-  OPOSICION_LABELS,
-  Oposicion,
-} from '../../shared/models/subscription.model';
+import { OposicionBadgesComponent } from '../../shared/oposicion-badges/oposicion-badges.component';
 import {
   BloqueEntrenamiento,
   ErrorImport,
@@ -54,6 +51,7 @@ interface HttpErrorGenerico {
     TagModule,
     TooltipModule,
     AsyncButtonComponent,
+    OposicionBadgesComponent,
   ],
   templateUrl: './planificacion-fisica-admin.component.html',
   styleUrl: './planificacion-fisica-admin.component.scss',
@@ -75,8 +73,6 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
    * de fichero.
    */
   @ViewChild('excelUpload') private excelUpload?: FileUpload;
-
-  protected readonly oposicionLabels = OPOSICION_LABELS;
 
   /** Fichero seleccionado en el `p-fileUpload`, pendiente de preview/import. */
   protected selectedFile = signal<File | null>(null);
@@ -293,10 +289,6 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
       bloque.id,
       'detalles',
     ]);
-  }
-
-  protected labelOposicion(op: Oposicion): string {
-    return this.oposicionLabels[op] ?? op;
   }
 
   private extraerMensajeError(

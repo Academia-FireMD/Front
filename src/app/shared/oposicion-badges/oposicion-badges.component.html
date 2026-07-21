@@ -1,0 +1,17 @@
+@if (displayItems.length === 0) {
+  <span class="text-sm text-600">Sin oposiciones</span>
+}
+@for (item of displayItems; track item.code) {
+  <span
+    class="oposicion-badge"
+    [class.oposicion-badge--grupo]="!!item.members"
+    [pTooltip]="item.label"
+    tooltipPosition="top"
+  >
+    @if (item.image) {
+      <img [src]="item.image" [alt]="item.label" class="oposicion-img" />
+    } @else {
+      <span>{{ item.icon }}</span>
+    }
+  </span>
+}
