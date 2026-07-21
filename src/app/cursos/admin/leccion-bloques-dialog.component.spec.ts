@@ -160,7 +160,6 @@ describe('LeccionBloquesDialogComponent', () => {
       1,
       expect.objectContaining({
         tipo: 'TEXTO',
-        orden: 0,
         contenidoMarkdown: '# Hi',
       }),
     );
@@ -169,7 +168,7 @@ describe('LeccionBloquesDialogComponent', () => {
     expect(component.mode()).toBe('list');
   });
 
-  it('onFormSaved (create) usa orden = longitud actual de la pila', async () => {
+  it('onFormSaved (create) no envía orden en el payload — lo calcula el backend a partir del estado real, no del array local (bug 2026-07-20: huecos por borrados dejaban el cálculo de orden en cliente desincronizado)', async () => {
     const existente: Bloque = { id: 1, leccionId: 1, orden: 0, tipo: 'VIDEO' };
     setLeccion(leccion([existente]));
     (service.createBloque as jest.Mock).mockReturnValue(
@@ -177,10 +176,8 @@ describe('LeccionBloquesDialogComponent', () => {
     );
     component.addTipo('TEXTO');
     await component.onFormSaved({ tipo: 'TEXTO', contenidoMarkdown: 'x' });
-    expect(service.createBloque).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ orden: 1 }),
-    );
+    const payload = (service.createBloque as jest.Mock).mock.calls[0][1];
+    expect(payload).not.toHaveProperty('orden');
   });
 
   it('onFormSaved (edit) llama updateBloque y refleja el cambio', async () => {

@@ -208,7 +208,6 @@ export class LeccionBloquesDialogComponent {
         this.toast.success('Bloque actualizado');
       } else {
         const payload: BloqueCreatePayload = {
-          orden: this.bloques().length,
           tipo: result.tipo,
           bunnyVideoId: result.bunnyVideoId,
           duracionSegundos: result.duracionSegundos,
