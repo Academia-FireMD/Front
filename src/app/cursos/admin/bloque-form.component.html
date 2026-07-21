@@ -31,19 +31,6 @@
         </small>
       }
     </div>
-    <div class="field">
-      <label for="bf-duracion">Duración (segundos)</label>
-      <p-inputNumber
-        inputId="bf-duracion"
-        formControlName="duracionSegundos"
-        [min]="0"
-        class="w-full"
-      />
-      <small class="bloque-form__hint">
-        Se detecta automáticamente al subir el vídeo; corrígela aquí solo si
-        hace falta.
-      </small>
-    </div>
   }
 
   @if (tipoSeleccionado() === "TEXTO") {
