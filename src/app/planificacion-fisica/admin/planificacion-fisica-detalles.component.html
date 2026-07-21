@@ -20,7 +20,7 @@
   } @else {
     @for (semana of semanas(); track semana.semanaId) {
       <p-card
-        [header]="'Semana ' + (semana.indice + 1)"
+        [header]="'Semana ' + semana.numeroAno"
         styleClass="pf-detalles__semana-card"
         [attr.data-testid]="'pf-semana-' + semana.semanaId"
       >
