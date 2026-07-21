@@ -216,7 +216,8 @@ export interface BloquePreguntaPayload {
 }
 
 export interface BloqueCreatePayload {
-  orden: number;
+  // `orden` lo calcula el backend (siguiente hueco libre real en BD); no se
+  // envía desde el cliente — ver BloquesService.create().
   tipo: TipoBloque;
   bunnyVideoId?: string;
   duracionSegundos?: number;
