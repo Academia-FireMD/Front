@@ -18,7 +18,10 @@ import { Memoize } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { ContextMenu } from 'primeng/contextmenu';
 import { map, Subject } from 'rxjs';
-import { ResumenDiaFisica } from '../../planificacion-fisica/services/planificacion-fisica.service';
+import {
+  DisciplinaResumenDia,
+  ResumenDiaFisica,
+} from '../../planificacion-fisica/services/planificacion-fisica.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import {
   PlanificacionBloque,
@@ -321,6 +324,15 @@ export class VistaSemanalComponent {
     const resumen = this.resumenFisicaDelDia(dia);
     if (!resumen) return '';
     return resumen.disciplinas.map((d) => d.nombre).join(', ');
+  }
+
+  /**
+   * Disciplinas de física del día (nombre + color), para pintar el chip del
+   * bridge con el punto de color de cada disciplina — el mismo color que ya
+   * usa el calendario del módulo de física (el dato viene en la API).
+   */
+  disciplinasFisica(dia: Date): DisciplinaResumenDia[] {
+    return this.resumenFisicaDelDia(dia)?.disciplinas ?? [];
   }
 
   /**

@@ -98,5 +98,16 @@ describe('VistaSemanalComponent', () => {
       expect(component.isDialogVisible).toBe(false);
       expect(router.navigate).toHaveBeenCalled();
     });
+
+    it('disciplinasFisica devuelve las disciplinas del día con su color, para pintar el chip coloreado', () => {
+      expect(component.disciplinasFisica(dia)).toEqual([
+        { nombre: 'Cuerda 2', grupo: 'CUERDA', color: '#9fe2d0' },
+        { nombre: 'Carrera 2', grupo: 'CARRERA', color: '#fdeaa8' },
+      ]);
+    });
+
+    it('disciplinasFisica devuelve [] cuando el día no tiene física (el chip no se pinta)', () => {
+      expect(component.disciplinasFisica(new Date(2026, 6, 16))).toEqual([]);
+    });
   });
 });

@@ -174,7 +174,17 @@
         tooltipPosition="top"
         (click)="abrirFisica(day.date, $event)"
       >
-        🏋️ {{ etiquetaFisica(day.date) }}
+        🏋️
+        <ng-container
+          *ngFor="let d of disciplinasFisica(day.date); let last = last"
+        >
+          <span
+            class="fisica-bridge__dot"
+            [style.background-color]="d.color"
+            [attr.data-testid]="'temario-fisica-dot-' + d.nombre"
+          ></span
+          >{{ d.nombre }}<span *ngIf="!last">,&nbsp;</span>
+        </ng-container>
       </div>
       <!-- Progreso debajo del día -->
       <div

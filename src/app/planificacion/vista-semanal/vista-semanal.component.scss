@@ -121,6 +121,19 @@
   }
 }
 
+/* Punto de color por disciplina dentro del chip del bridge (mismo color que
+   el calendario de física). Borde sutil para que los colores claros (p.ej.
+   el blanco de DESCANSO) no se pierdan sobre el fondo amarillo del chip. */
+.fisica-bridge__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  margin: 0 3px 0 2px;
+  vertical-align: baseline;
+}
+
 small {
   font-size: 12px;
   color: #555;
