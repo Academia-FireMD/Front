@@ -1,13 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  computed,
-  inject,
   input,
   output,
 } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MarkdownComponent } from 'ngx-markdown';
+import { BunnyPlayerComponent } from '../../shared/bunny-player/bunny-player.component';
 import { Bloque } from '../models/curso.model';
 import { BloqueCuestionarioComponent } from './bloque-cuestionario.component';
 import { BloqueDocumentoComponent } from './bloque-documento.component';
@@ -16,7 +14,8 @@ import { BloqueTestInlineComponent } from './bloque-test-inline.component';
 /**
  * Renderiza un bloque de la lección en el aula. Un bloque es un widget de
  * contenido; la lección los apila. Tipos:
- *  - VIDEO  → iframe Bunny (sin heartbeat; el progreso es por lección).
+ *  - VIDEO  → reproductor Bunny (app-bunny-player; sin heartbeat, el
+ *    progreso es por lección).
  *  - TEXTO  → markdown.
  *  - TEST   → motor de tests embebido in situ (app-bloque-test-inline).
  *  - CUESTIONARIO → quiz propio autocorregido (app-bloque-cuestionario).
@@ -27,6 +26,7 @@ import { BloqueTestInlineComponent } from './bloque-test-inline.component';
   standalone: true,
   imports: [
     MarkdownComponent,
+    BunnyPlayerComponent,
     BloqueTestInlineComponent,
     BloqueCuestionarioComponent,
     BloqueDocumentoComponent,
@@ -44,11 +44,4 @@ export class BloqueRenderComponent {
 
   /** Burbujea cuando un bloque interactivo (TEST/CUESTIONARIO) se completa. */
   readonly completado = output<void>();
-
-  private readonly sanitizer = inject(DomSanitizer);
-
-  readonly safeVideoUrl = computed<SafeResourceUrl | null>(() => {
-    const url = this.playbackUrl();
-    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
-  });
 }

@@ -43,6 +43,7 @@
     "chartjs-plugin-datalabels": "^2.2.0",
     "date-fns": "^4.1.0",
     "echarts": "^5.5.1",
+    "hls.js": "^1.6.16",
     "leaflet": "^1.9.4",
     "lodash": "^4.17.21",
     "lodash-decorators": "^6.0.1",

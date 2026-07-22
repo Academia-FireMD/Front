@@ -1,0 +1,18 @@
+:host {
+  display: block;
+}
+
+.bunny-player-wrapper {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--bunny-player-radius, 8px);
+  overflow: hidden;
+
+  video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+}

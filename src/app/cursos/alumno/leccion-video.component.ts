@@ -1,16 +1,16 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  inject,
-  input,
   OnDestroy,
   OnInit,
+  inject,
+  input,
   signal,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ButtonModule } from 'primeng/button';
 import { ToastrService } from 'ngx-toastr';
+import { BunnyPlayerComponent } from '../../shared/bunny-player/bunny-player.component';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { Leccion } from '../models/curso.model';
 
@@ -19,7 +19,7 @@ const HEARTBEAT_INTERVAL_MS = 15_000;
 @Component({
   selector: 'app-leccion-video',
   standalone: true,
-  imports: [ButtonModule, DecimalPipe],
+  imports: [ButtonModule, DecimalPipe, BunnyPlayerComponent],
   templateUrl: './leccion-video.component.html',
   styleUrl: './leccion-video.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,11 +33,9 @@ export class LeccionVideoComponent implements OnInit, OnDestroy {
    */
   enAula = input<boolean>(false);
 
-  private readonly sanitizer = inject(DomSanitizer);
   private readonly service = inject(CursosAlumnoService);
   private readonly toastr = inject(ToastrService);
 
-  safeUrl = signal<SafeResourceUrl>('');
   segundosVisto = signal(0);
   marcando = signal(false);
   // Set true once the user marks the lesson complete (manually or by
@@ -48,13 +46,23 @@ export class LeccionVideoComponent implements OnInit, OnDestroy {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
-    this.safeUrl.set(
-      this.sanitizer.bypassSecurityTrustResourceUrl(this.playbackUrl()),
-    );
     this.startHeartbeat();
   }
 
   ngOnDestroy(): void {
+    this.clearHeartbeat();
+  }
+
+  /** Progreso real: lo emite app-bunny-player (timeupdate del <video>). */
+  onTiempoActual(segundos: number): void {
+    this.segundosVisto.set(segundos);
+  }
+
+  onTerminado(): void {
+    const duracion = this.leccion().duracionSegundos;
+    const segs = duracion ?? this.segundosVisto();
+    this.segundosVisto.set(segs);
+    this.enviarProgreso(segs, 100, false);
     this.clearHeartbeat();
   }
 
@@ -66,8 +74,7 @@ export class LeccionVideoComponent implements OnInit, OnDestroy {
         this.clearHeartbeat();
         return;
       }
-      const segs = this.segundosVisto() + HEARTBEAT_INTERVAL_MS / 1000;
-      this.segundosVisto.set(segs);
+      const segs = this.segundosVisto();
       const duracion = this.leccion().duracionSegundos;
       const porcentaje = duracion
         ? Math.min(100, Math.round((segs / duracion) * 100))
