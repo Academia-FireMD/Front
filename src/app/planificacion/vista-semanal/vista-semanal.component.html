@@ -177,13 +177,14 @@
         🏋️
         <ng-container
           *ngFor="let d of disciplinasFisica(day.date); let last = last"
-        >
-          <span
+          ><!-- OJO: dentro de `.cal-header` hay una regla legacy `span{display:none}`
+               (oculta los spans del header nativo de angular-calendar) — por eso el
+               punto de color es un <i> y el separador un nodo de texto, no <span>. --><i
             class="fisica-bridge__dot"
             [style.background-color]="d.color"
             [attr.data-testid]="'temario-fisica-dot-' + d.nombre"
-          ></span
-          >{{ d.nombre }}<span *ngIf="!last">,&nbsp;</span>
+          ></i
+          >{{ d.nombre }}{{ last ? "" : ", " }}
         </ng-container>
       </div>
       <!-- Progreso debajo del día -->
