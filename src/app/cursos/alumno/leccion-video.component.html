@@ -1,12 +1,8 @@
-<div class="video-wrapper">
-  <iframe
-    [src]="safeUrl()"
-    allow="autoplay; encrypted-media; picture-in-picture"
-    allowfullscreen
-    class="video-iframe"
-    title="Vídeo de la lección"
-  ></iframe>
-</div>
+<app-bunny-player
+  [playbackUrl]="playbackUrl()"
+  (tiempoActual)="onTiempoActual($event)"
+  (terminado)="onTerminado()"
+/>
 
 @if (!enAula()) {
   <div class="video-controls">

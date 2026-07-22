@@ -2,14 +2,7 @@
   @switch (bloque().tipo) {
     @case ("VIDEO") {
       @if (playbackUrl()) {
-        <div class="bloque-video">
-          <iframe
-            [src]="safeVideoUrl()"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowfullscreen
-            title="Vídeo del bloque"
-          ></iframe>
-        </div>
+        <app-bunny-player class="bloque-video" [playbackUrl]="playbackUrl()!" />
       } @else {
         <div class="bloque-empty">
           <i class="pi pi-video"></i>

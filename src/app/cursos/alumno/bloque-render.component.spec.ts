@@ -52,11 +52,12 @@ describe('BloqueRenderComponent', () => {
     } as Bloque);
   }
 
-  it('VIDEO con playbackUrl: el reproductor se alimenta de la URL firmada', () => {
-    // No renderizamos el iframe (requiere DomSanitizer real; cubierto por QA
-    // visual). Verificamos el cableado del input y la URL.
+  it('VIDEO con playbackUrl: renderiza app-bunny-player con la URL firmada', () => {
     setBloque({ tipo: 'VIDEO' });
     fixture.componentRef.setInput('playbackUrl', 'https://video/embed/x');
+    fixture.detectChanges();
+    const player = fixture.nativeElement.querySelector('app-bunny-player');
+    expect(player).not.toBeNull();
     expect(fixture.componentInstance.bloque().tipo).toBe('VIDEO');
     expect(fixture.componentInstance.playbackUrl()).toBe(
       'https://video/embed/x',
