@@ -20,26 +20,30 @@ import { environment } from '../../../environments/environment';
 import {
   AccesoDenegadoPlanFisica,
   BloqueOpcion,
-  DiaCalendario,
-  MiPlan,
+  MiPlanCompleto,
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
 
 const ETIQUETAS_DIA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 /**
- * Calendario de entrenamiento del alumno (Task 11, Fase 1b): sus 4 semanas
- * del bloque de planificación física vigente para su oposición, con las
- * disciplinas de cada día en forma de "chips" de color.
+ * Vista de BLOQUE COMPLETO del alumno (Gap #12 de la petición de Sergio:
+ * "visión más global" — todas las semanas del bloque de un vistazo, como la
+ * página 1 de su PDF, en vez de solo la ventana rodante de 4 semanas).
  *
- * NO es un calendario tipo `angular-calendar` (esto no es un calendario de
- * eventos genérico): es una rejilla de semanas propia, calcando el patrón
- * visual de `planificacion-fisica-detalles.component` (color por grupo de
- * disciplina) más los añadidos de la vista alumno (intensidad de semana,
- * hoy, solo-lectura de la semana anterior, progreso).
+ * Es una vista de SOLO LECTURA visual: los días fuera de la ventana de 4
+ * semanas (`enVentana === false`) se muestran atenuados y NO son clicables
+ * — `dia/:fecha` los rechazaría con 403 por diseño, así que aquí ni se
+ * ofrece el gesto. La interactividad real (marcar hecho, ver ejercicios)
+ * sigue viviendo en el calendario (`/app/planificacion-fisica`).
+ *
+ * Misma carga/estados que el calendario (switcher multi-oposición, gate de
+ * tier con píldora de upsell, error, sin plan) — calcados de
+ * `planificacion-fisica-calendario.component.ts` para que el alumno no
+ * perciba dos módulos distintos.
  */
 @Component({
-  selector: 'app-planificacion-fisica-calendario',
+  selector: 'app-planificacion-fisica-bloque',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -50,10 +54,10 @@ const ETIQUETAS_DIA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     DropdownModule,
     ProgressBarModule,
   ],
-  templateUrl: './planificacion-fisica-calendario.component.html',
-  styleUrl: './planificacion-fisica-calendario.component.scss',
+  templateUrl: './planificacion-fisica-bloque.component.html',
+  styleUrl: './planificacion-fisica-bloque.component.scss',
 })
-export class PlanificacionFisicaCalendarioComponent implements OnInit {
+export class PlanificacionFisicaBloqueComponent implements OnInit {
   private svc = inject(PlanificacionFisicaService);
   private toast = inject(ToastrService);
   private router = inject(Router);
@@ -61,23 +65,11 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
   protected readonly etiquetasDia = ETIQUETAS_DIA;
 
   protected loading = signal(false);
-  /** Distingue "aún no ha respondido" de "respondió y no hay plan" (null real). */
   protected cargado = signal(false);
-  protected miPlan = signal<MiPlan | null>(null);
+  protected miPlan = signal<MiPlanCompleto | null>(null);
   protected gated = signal<AccesoDenegadoPlanFisica | null>(null);
-  /**
-   * Fallo genérico (500, red caída) al cargar `/mi-plan`, distinto de "sin
-   * plan" (null real) y de "gated" (403 TIER_TOO_LOW). Si no se distingue,
-   * la vista miente al alumno mostrando permanentemente "no tienes plan"
-   * cuando en realidad hubo un error de backend.
-   */
   protected error = signal(false);
 
-  /**
-   * Fase 2, switcher multi-oposición: bloques que le aplican al alumno.
-   * Vacío/1 elemento en v1 (un solo bloque general) — el selector solo se
-   * pinta cuando hay más de uno (`mostrarSwitcher`).
-   */
   protected misBloques = signal<BloqueOpcion[]>([]);
   protected bloqueSeleccionadoId = signal<number | null>(null);
 
@@ -97,30 +89,15 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
     await this.cargar();
   }
 
-  /**
-   * Carga inicial: `misBloques()` (para el selector) y `miPlan()` (sin
-   * `bloqueId`, el más específico por defecto — el mismo que marca
-   * `esActivo` en `misBloques()`) EN PARALELO, mismo patrón que
-   * `planificacion-fisica-marcas.component.ts`. No hace falta esperar a
-   * `misBloques()` para saber qué bloque pedir: el default del backend
-   * coincide siempre con el `esActivo` de `misBloques()`.
-   *
-   * `misBloques()` es best-effort (Fase 2, solo alimenta el selector): si
-   * falla, el `.catch()` encadenado se traga el error y cae a `[]`, así
-   * que el selector simplemente no aparece — nunca rompe la carga de `plan`.
-   */
+  /** Mismo patrón de carga en paralelo que el calendario (ver su docstring). */
   private async cargar(): Promise<void> {
     this.loading.set(true);
     this.gated.set(null);
     this.error.set(false);
     try {
-      // Defensivo (misBloques best-effort): `.catch()` encadenado en el
-      // mismo nivel que `firstValueFrom`, sin envolver en una función async
-      // aparte, para que ambas promesas del `Promise.all` tengan la misma
-      // profundidad — si `misBloques()` falla, cae a `[]` sin romper `plan`.
       const [bloques, plan] = await Promise.all([
         firstValueFrom(this.svc.misBloques()).catch((): BloqueOpcion[] => []),
-        firstValueFrom(this.svc.miPlan()),
+        firstValueFrom(this.svc.miPlanCompleto()),
       ]);
       this.misBloques.set(bloques);
       const activo = bloques.find((b) => b.esActivo) ?? bloques[0] ?? null;
@@ -141,12 +118,10 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
     }
   }
 
-  /** Botón "Reintentar" del estado de error: recarga bloques + plan desde cero. */
   protected reintentar(): void {
     void this.cargar();
   }
 
-  /** Cambio en el selector del switcher: recarga solo el plan con el bloque elegido. */
   protected cambiarBloque(bloqueId: number): void {
     this.bloqueSeleccionadoId.set(bloqueId);
     void this.cargarPlan(bloqueId);
@@ -157,7 +132,7 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
     this.gated.set(null);
     this.error.set(false);
     try {
-      const plan = await firstValueFrom(this.svc.miPlan(bloqueId));
+      const plan = await firstValueFrom(this.svc.miPlanCompleto(bloqueId));
       this.miPlan.set(plan);
     } catch (err) {
       const httpErr = err as HttpErrorResponse;
@@ -182,11 +157,7 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
     return this.etiquetasDia[diaSemana - 1] ?? '';
   }
 
-  /**
-   * Fondo gris de la tarjeta de semana en función de la intensidad (0-100):
-   * a más intensidad, tono más oscuro — mismo lenguaje visual que el Excel
-   * del entrenador.
-   */
+  /** Mismo cálculo de fondo por intensidad que el calendario de 4 semanas. */
   protected fondoSemana(intensidad: number): string {
     const clamped = Math.min(100, Math.max(0, intensidad));
     const lightness = 94 - (clamped / 100) * 42;
@@ -199,46 +170,21 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
   }
 
   /**
-   * Progreso del día (disciplinas hechas / asignadas), derivado de los chips
-   * que ya trae `mi-plan` — no hace falta otro endpoint. Es la barra "diaria"
-   * que pedía Sergio (prioridad por encima de la semanal).
+   * Solo los días dentro de la ventana navegan al detalle — fuera de ella el
+   * backend responde 403 por diseño, así que el click ni se ofrece (el día se
+   * pinta atenuado y sin cursor pointer desde el HTML/SCSS).
    */
-  protected progresoDia(dia: DiaCalendario): { hechas: number; total: number } {
-    return {
-      hechas: dia.chips.filter((c) => c.realizado).length,
-      total: dia.chips.length,
-    };
-  }
-
-  /**
-   * Color de la mini-barra diaria: misma escala que la barra diaria del
-   * temario (`EventsService.getProgressBarColor`) para que el gesto visual
-   * sea idéntico en ambos módulos. Duplicada a propósito: esta lógica es
-   * presentacional y local, no merece acoplar los dos módulos.
-   */
-  protected colorProgresoDia(dia: DiaCalendario): string {
-    const { hechas, total } = this.progresoDia(dia);
-    const porcentaje = this.progresoPorcentaje(hechas, total);
-    if (porcentaje === 100) return '#28a745';
-    if (porcentaje >= 50) return '#ffc107';
-    return '#dc3545';
-  }
-
-  protected abrirDia(fecha: string): void {
+  protected abrirDia(fecha: string, enVentana: boolean): void {
+    if (!enVentana) return;
     this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);
   }
 
-  /** Entrada al histórico de marcas personales (Fase 2), independiente del plan del entrenador. */
-  protected irAMarcas(): void {
-    this.router.navigate(['/app/planificacion-fisica', 'marcas']);
+  /** Vuelta al calendario operativo (la ventana de 4 semanas). */
+  protected volverAlCalendario(): void {
+    this.router.navigate(['/app/planificacion-fisica']);
   }
 
-  /** Entrada a la vista de bloque completo (Gap #12), visión global de solo lectura. */
-  protected irABloque(): void {
-    this.router.navigate(['/app/planificacion-fisica', 'bloque']);
-  }
-
-  /** Mismo CTA que `ai-assistant-widget`: abre la tienda WooCommerce para mejorar de plan. */
+  /** Mismo CTA que el calendario: abre la tienda WooCommerce para mejorar de plan. */
   protected mejorarSuscripcion(): void {
     window.open(environment.wooCommerceUrl, '_blank');
   }

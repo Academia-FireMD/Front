@@ -264,6 +264,19 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
     ]);
   });
 
+  it('irABloque navega a la vista de bloque completo', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component['irABloque']();
+
+    const router = TestBed.inject(Router);
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/app/planificacion-fisica',
+      'bloque',
+    ]);
+  });
+
   describe('switcher multi-oposición (Fase 2)', () => {
     const bloqueValencia = {
       id: 2,
@@ -351,6 +364,103 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
         By.css('[data-testid="pf-semana-10"]'),
       );
       expect(semana1).toBeTruthy();
+    });
+  });
+
+  describe('progreso diario en la tarjeta de día', () => {
+    it('progresoDia deriva hechas/total de los chips (sin llamar al backend)', async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const diaHecho = planFixture.semanas[0].dias[0]; // 1 chip realizado
+      const diaPendiente = planFixture.semanas[1].dias[0]; // 1 chip sin hacer
+
+      expect(component['progresoDia'](diaHecho)).toEqual({
+        hechas: 1,
+        total: 1,
+      });
+      expect(component['progresoDia'](diaPendiente)).toEqual({
+        hechas: 0,
+        total: 1,
+      });
+    });
+
+    it('pinta la mini-barra con "X de Y" bajo cada día con disciplinas', async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const progHecho = fixture.debugElement.query(
+        By.css('[data-testid="pf-progreso-dia-2026-07-08"]'),
+      );
+      expect(progHecho).toBeTruthy();
+      expect((progHecho.nativeElement as HTMLElement).textContent).toContain(
+        '1 de 1',
+      );
+
+      const progPendiente = fixture.debugElement.query(
+        By.css('[data-testid="pf-progreso-dia-2026-07-17"]'),
+      );
+      expect(progPendiente).toBeTruthy();
+      expect(
+        (progPendiente.nativeElement as HTMLElement).textContent,
+      ).toContain('0 de 1');
+    });
+
+    it('colorProgresoDia sigue la misma escala que la barra diaria del temario (rojo <50%, amarillo >=50%, verde 100%)', async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(
+        component['colorProgresoDia'](planFixture.semanas[0].dias[0]),
+      ).toBe('#28a745'); // 1/1 = 100% → verde
+      expect(
+        component['colorProgresoDia'](planFixture.semanas[1].dias[0]),
+      ).toBe('#dc3545'); // 0/1 = 0% → rojo
+      expect(
+        component['colorProgresoDia']({
+          fecha: '2026-07-18',
+          diaSemana: 5,
+          chips: [
+            {
+              disciplinaId: 1,
+              nombre: 'Cuerda',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: true,
+            },
+            {
+              disciplinaId: 2,
+              nombre: 'Carrera',
+              grupo: 'CARRERA',
+              color: '#fdeaa8',
+              realizado: false,
+            },
+          ],
+        }),
+      ).toBe('#ffc107'); // 1/2 = 50% → amarillo
+    });
+
+    it('no pinta la mini-barra en días sin disciplinas', async () => {
+      const planSinDisciplinas: MiPlan = {
+        ...planFixture,
+        semanas: [
+          {
+            ...planFixture.semanas[1],
+            dias: [{ fecha: '2026-07-17', diaSemana: 4, chips: [] }],
+          },
+        ],
+      };
+      serviceMock.miPlan!.mockReturnValue(of(planSinDisciplinas));
+
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const prog = fixture.debugElement.query(
+        By.css('[data-testid="pf-progreso-dia-2026-07-17"]'),
+      );
+      expect(prog).toBeFalsy();
     });
   });
 });

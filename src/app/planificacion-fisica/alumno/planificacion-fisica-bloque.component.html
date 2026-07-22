@@ -1,0 +1,146 @@
+<div class="pf-bloque">
+  <div class="pf-bloque__header">
+    <h2>Bloque completo</h2>
+    <p-button
+      label="Volver al calendario"
+      icon="pi pi-arrow-left"
+      [text]="true"
+      size="small"
+      data-testid="pf-bloque-volver"
+      (click)="volverAlCalendario()"
+    ></p-button>
+  </div>
+
+  @if (mostrarSwitcher()) {
+    <div class="pf-bloque__switcher">
+      <label for="pf-bloque-switcher-bloques">Oposición</label>
+      <p-dropdown
+        inputId="pf-bloque-switcher-bloques"
+        [options]="misBloques()"
+        optionLabel="identificador"
+        optionValue="id"
+        [ngModel]="bloqueSeleccionadoId()"
+        (onChange)="cambiarBloque($event.value)"
+        data-testid="pf-bloque-switcher-bloques"
+      ></p-dropdown>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="pf-bloque__loading" data-testid="pf-bloque-loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando tu planificación…</span>
+    </div>
+  } @else if (gated()) {
+    <div class="pf-bloque__upsell" data-testid="pf-upsell-pill">
+      <i class="pi pi-lock"></i>
+      <span>{{ gated()!.message }}</span>
+      <p-button
+        label="Mejorar suscripción"
+        size="small"
+        data-testid="pf-upsell-cta"
+        (click)="mejorarSuscripcion()"
+      ></p-button>
+    </div>
+  } @else if (error()) {
+    <div class="pf-bloque__error" data-testid="pf-bloque-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>No hemos podido cargar tu planificación. Inténtalo de nuevo.</p>
+      <p-button
+        label="Reintentar"
+        size="small"
+        data-testid="pf-bloque-reintentar"
+        (click)="reintentar()"
+      ></p-button>
+    </div>
+  } @else if (sinPlan()) {
+    <p data-testid="pf-bloque-sin-plan">
+      Aún no hay planificación física para tu oposición.
+    </p>
+  } @else if (miPlan()) {
+    @let plan = miPlan()!;
+    <p class="pf-bloque__leyenda">
+      Vista global de las {{ plan.semanas.length }} semanas del bloque. Los días
+      atenuados están fuera de tu ventana de entrenamiento actual — para marcar
+      progreso, vuelve al calendario.
+    </p>
+    @for (semana of plan.semanas; track semana.id) {
+      <p-card
+        styleClass="pf-bloque__semana"
+        [class.pf-bloque__semana--fuera-ventana]="!semana.enVentana"
+        [style]="{ background: fondoSemana(semana.intensidad) }"
+        [attr.data-testid]="'pf-bloque-semana-' + semana.id"
+        [attr.data-en-ventana]="semana.enVentana"
+      >
+        <ng-template pTemplate="header">
+          <div class="pf-bloque__semana-header">
+            <span class="pf-bloque__semana-titulo">
+              Semana {{ semana.numeroAno }}
+              @if (semana.esActual) {
+                <span class="pf-bloque__badge-actual">actual</span>
+              }
+              @if (semana.soloLectura) {
+                <span class="pf-bloque__badge-lectura">solo lectura</span>
+              }
+            </span>
+            @if (semana.comentarioSemana) {
+              <span class="pf-bloque__semana-comentario">{{
+                semana.comentarioSemana
+              }}</span>
+            }
+          </div>
+        </ng-template>
+
+        <div
+          class="pf-bloque__progreso"
+          [attr.data-testid]="'pf-bloque-progreso-semana-' + semana.id"
+        >
+          <p-progressBar
+            [value]="
+              progresoPorcentaje(semana.progreso.hechas, semana.progreso.total)
+            "
+            [showValue]="false"
+          ></p-progressBar>
+          <span class="pf-bloque__progreso-texto">
+            {{ semana.progreso.hechas }}/{{ semana.progreso.total }}
+          </span>
+        </div>
+
+        <div class="pf-bloque__dias">
+          @for (dia of semana.dias; track dia.fecha) {
+            <button
+              type="button"
+              class="pf-bloque__dia"
+              [class.pf-bloque__dia--hoy]="esHoy(dia.fecha)"
+              [class.pf-bloque__dia--fuera-ventana]="!semana.enVentana"
+              [disabled]="!semana.enVentana"
+              [attr.data-testid]="'pf-bloque-dia-' + dia.fecha"
+              (click)="abrirDia(dia.fecha, semana.enVentana)"
+            >
+              <span class="pf-bloque__dia-label">{{
+                etiquetaDia(dia.diaSemana)
+              }}</span>
+              <span class="pf-bloque__dia-fecha">{{
+                dia.fecha | date: "d/M"
+              }}</span>
+              <div class="pf-bloque__chips">
+                @for (chip of dia.chips; track chip.disciplinaId) {
+                  <span
+                    class="pf-bloque__chip"
+                    [class.pf-bloque__chip--hecho]="chip.realizado"
+                    [style.backgroundColor]="chip.color"
+                    [title]="chip.nombre"
+                  >
+                    @if (chip.realizado) {
+                      <i class="pi pi-check"></i>
+                    }
+                  </span>
+                }
+              </div>
+            </button>
+          }
+        </div>
+      </p-card>
+    }
+  }
+</div>

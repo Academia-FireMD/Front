@@ -167,6 +167,20 @@ export interface MiPlan {
 }
 
 /**
+ * Semana de la vista de BLOQUE COMPLETO (`GET /mi-plan-completo`): añade
+ * `enVentana` para saber qué días son navegables al detalle (`/dia/:fecha`
+ * rechaza con 403 cualquier día fuera de la ventana de 4 semanas — la vista
+ * completa es solo visión global, no relaja esa restricción).
+ */
+export interface SemanaCalendarioCompleta extends SemanaCalendario {
+  enVentana: boolean;
+}
+
+export interface MiPlanCompleto extends Omit<MiPlan, 'semanas'> {
+  semanas: SemanaCalendarioCompleta[];
+}
+
+/**
  * Opción del selector multi-oposición (`GET /mis-bloques`, Fase 2 switcher):
  * un bloque que le aplica al alumno. Cuando tiene más de uno (ej. bloque
  * específico de Valencia + bloque específico de Madrid) puede elegir cuál
@@ -345,6 +359,22 @@ export class PlanificacionFisicaService {
     const params =
       bloqueId != null ? new HttpParams().set('bloqueId', bloqueId) : undefined;
     return this.http.get<MiPlan | null>(`${this.base}/mi-plan`, { params });
+  }
+
+  /**
+   * Vista de BLOQUE COMPLETO (todas las semanas del bloque, sin recorte de
+   * ventana) para la pantalla "Ver bloque completo". Mismo contrato y gating
+   * que `miPlan` (403 `TIER_TOO_LOW` como estado de UI); cada semana trae
+   * `enVentana` para que la vista solo deje navegar al detalle los días que
+   * el backend aceptaría.
+   */
+  miPlanCompleto(bloqueId?: number): Observable<MiPlanCompleto | null> {
+    const params =
+      bloqueId != null ? new HttpParams().set('bloqueId', bloqueId) : undefined;
+    return this.http.get<MiPlanCompleto | null>(
+      `${this.base}/mi-plan-completo`,
+      { params },
+    );
   }
 
   /**

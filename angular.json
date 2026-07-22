@@ -111,6 +111,9 @@
             },
             "development": {
               "buildTarget": "Front:build:development"
+            },
+            "staging": {
+              "buildTarget": "Front:build:staging"
             }
           },
           "defaultConfiguration": "development"

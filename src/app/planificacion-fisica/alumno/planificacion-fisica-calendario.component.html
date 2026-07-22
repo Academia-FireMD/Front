@@ -1,14 +1,24 @@
 <div class="pf-calendario">
   <div class="pf-calendario__header">
     <h2>Planificación física</h2>
-    <p-button
-      label="Mis marcas"
-      icon="pi pi-chart-line"
-      [text]="true"
-      size="small"
-      data-testid="pf-calendario-marcas-link"
-      (click)="irAMarcas()"
-    ></p-button>
+    <div class="pf-calendario__header-acciones">
+      <p-button
+        label="Ver bloque completo"
+        icon="pi pi-calendar"
+        [text]="true"
+        size="small"
+        data-testid="pf-calendario-bloque-link"
+        (click)="irABloque()"
+      ></p-button>
+      <p-button
+        label="Mis marcas"
+        icon="pi pi-chart-line"
+        [text]="true"
+        size="small"
+        data-testid="pf-calendario-marcas-link"
+        (click)="irAMarcas()"
+      ></p-button>
+    </div>
   </div>
 
   @if (mostrarSwitcher()) {
@@ -133,6 +143,28 @@
                   </span>
                 }
               </div>
+              <!-- Progreso diario (barra + "X de Y"), mismo patrón visual que
+                   la barra diaria del temario. Solo si el día tiene
+                   disciplinas — igual que el temario oculta la suya en días
+                   sin eventos. -->
+              @if (dia.chips.length > 0) {
+                @let prog = progresoDia(dia);
+                <div
+                  class="pf-calendario__dia-progreso"
+                  [attr.data-testid]="'pf-progreso-dia-' + dia.fecha"
+                >
+                  <div class="pf-calendario__dia-progreso-fondo">
+                    <div
+                      class="pf-calendario__dia-progreso-barra"
+                      [style.width.%]="
+                        progresoPorcentaje(prog.hechas, prog.total)
+                      "
+                      [style.background-color]="colorProgresoDia(dia)"
+                    ></div>
+                  </div>
+                  <small>{{ prog.hechas }} de {{ prog.total }}</small>
+                </div>
+              }
             </button>
           }
         </div>
