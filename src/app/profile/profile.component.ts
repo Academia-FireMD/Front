@@ -1202,6 +1202,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Entrada al histórico de marcas personales de física (tarjeta "Mis marcas"
+   * del perfil). La vista de destino resuelve ella misma el gate de tier
+   * (píldora de upsell para BASIC), así que aquí no se filtra nada.
+   */
+  irAMarcas(): void {
+    this.router.navigate(['/app/planificacion-fisica', 'marcas']);
+  }
+
+  /**
    * Navega a la pantalla de resultados de un simulacro usado
    */
   async verResultadosConsumible(consumible: any): Promise<void> {

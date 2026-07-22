@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../testing';
 import { AuthService } from '../services/auth.service';
@@ -244,6 +245,19 @@ describe('ProfileComponent', () => {
       expect(openSpy).toHaveBeenCalledWith('', '_blank');
       expect(mockWindow.location.href).toBe(ssoUrl);
       openSpy.mockRestore();
+    });
+  });
+
+  describe('tarjeta "Mis marcas" (Fase 3)', () => {
+    it('irAMarcas navega al histórico de marcas personales de física', () => {
+      const router = TestBed.inject(Router);
+
+      component.irAMarcas();
+
+      expect(router.navigate).toHaveBeenCalledWith([
+        '/app/planificacion-fisica',
+        'marcas',
+      ]);
     });
   });
 });

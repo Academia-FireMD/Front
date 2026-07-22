@@ -638,6 +638,19 @@ export class LayoutComponent {
       });
     }
 
+    // Mis marcas — histórico de marcas personales del alumno (Fase 3:
+    // visibilidad). Mismo gating por tenant que Planificación física; el
+    // tier BASIC lo resuelve la propia vista con la píldora de upsell.
+    // Mismo icono que el botón "Mis marcas" del calendario de física.
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Mis marcas',
+        icon: 'pi pi-chart-line',
+        routerLink: '/app/planificacion-fisica/marcas',
+        modulo: ModuloApp.PLANIFICACION_FISICA,
+      });
+    }
+
     // Menú de perfil siempre disponible
     menu.push({
       label: 'Perfil',

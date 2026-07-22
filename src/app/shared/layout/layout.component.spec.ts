@@ -7,6 +7,10 @@ import { AppConfigService } from '../../services/app-config.service';
 import { AuthService } from '../../services/auth.service';
 import { EstadoModulos } from '../models/app-config.model';
 import { ModuloApp } from '../models/modulo-app.enum';
+import {
+  SuscripcionStatus,
+  SuscripcionTipo,
+} from '../models/subscription.model';
 import { Rol, Usuario } from '../models/user.model';
 import { AppMenuItem, LayoutComponent } from './layout.component';
 
@@ -190,6 +194,46 @@ describe('LayoutComponent', () => {
     (component as any).currentUserSignal.set(makeUser(Rol.ADMIN));
     const adminItems = component.items();
     expect(findItemByLabel(adminItems, 'Configuración')).toBeUndefined();
+  });
+
+  // -------- Mis marcas en el menú del alumno (Fase 3) --------
+  function makeAlumnoConSub(): Usuario {
+    return {
+      ...makeUser(Rol.ALUMNO),
+      suscripciones: [
+        { tipo: SuscripcionTipo.ADVANCED, status: SuscripcionStatus.ACTIVE },
+      ],
+    } as any;
+  }
+
+  it('ALUMNO con suscripción ve "Mis marcas" en el menú, enlazando al histórico de física', () => {
+    (component as any).currentUserSignal.set(makeAlumnoConSub());
+    const items = component.items();
+
+    const marcas = findItemByLabel(items, 'Mis marcas');
+    expect(marcas).toBeDefined();
+    expect(marcas?.routerLink).toBe('/app/planificacion-fisica/marcas');
+    expect(marcas?.modulo).toBe(ModuloApp.PLANIFICACION_FISICA);
+  });
+
+  it('"Mis marcas" desaparece del menú si el tenant tiene PLANIFICACION_FISICA=OFF', () => {
+    appConfigService.setEstado({
+      ...appConfigService.estadoModulos(),
+      [ModuloApp.PLANIFICACION_FISICA]: false,
+    });
+    (component as any).currentUserSignal.set(makeAlumnoConSub());
+
+    expect(findItemByLabel(component.items(), 'Mis marcas')).toBeUndefined();
+    // La entrada principal del módulo se oculta por el mismo filtro.
+    expect(
+      findItemByLabel(component.items(), 'Planificación física'),
+    ).toBeUndefined();
+  });
+
+  it('ALUMNO sin suscripción vigente no ve "Mis marcas"', () => {
+    (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO)); // suscripciones: []
+
+    expect(findItemByLabel(component.items(), 'Mis marcas')).toBeUndefined();
   });
 
   // -------- T5 logo fallback --------
