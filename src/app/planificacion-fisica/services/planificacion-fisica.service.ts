@@ -239,6 +239,10 @@ export interface DisciplinaResumenDia {
   nombre: string;
   grupo: GrupoDisciplina;
   color: string;
+  /** Estado hecho del alumno sobre esa disciplina (rediseño 2026-07-22 del
+   * bridge a sub-bloque vinculado): permite al temario derivar el estado del
+   * bloque de entrenamiento sin llamadas extra. */
+  realizado: boolean;
 }
 
 export interface ResumenDiaFisica {

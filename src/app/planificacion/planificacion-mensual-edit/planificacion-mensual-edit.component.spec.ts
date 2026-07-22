@@ -97,8 +97,18 @@ describe('PlanificacionMensualEditComponent', () => {
         {
           fecha: '2026-07-15',
           disciplinas: [
-            { nombre: 'Cuerda 2', grupo: 'CUERDA', color: '#9fe2d0' },
-            { nombre: 'Carrera 2', grupo: 'CARRERA', color: '#fdeaa8' },
+            {
+              nombre: 'Cuerda 2',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: false,
+            },
+            {
+              nombre: 'Carrera 2',
+              grupo: 'CARRERA',
+              color: '#fdeaa8',
+              realizado: false,
+            },
           ],
         },
       ]);

@@ -31,6 +31,10 @@ export interface SubBloque {
   updatedAt?: Date;
   realizado?: boolean;
   comentariosAlumno?: string;
+  // Bridge temario→física (rediseño 2026-07-22): sub-bloque vinculado al
+  // módulo de planificación física. El temario aporta hora/duración; las
+  // disciplinas y el estado hecho se leen en vivo del módulo de física.
+  esEntrenamientoFisico?: boolean;
 }
 
 export interface PlantillaSemanal {

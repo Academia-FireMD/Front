@@ -6,25 +6,26 @@
   [modal]="true"
   (onHide)="isDialogVisibleChange.emit(false)"
   [style]="{ width: '90vw', maxWidth: '800px' }"
-  [breakpoints]="{'960px': '95vw', '640px': '100vw'}"
+  [breakpoints]="{ '960px': '95vw', '640px': '100vw' }"
   styleClass="p-fluid"
 >
   <form [formGroup]="formGroup">
     <div class="grid py-5">
       <div class="col-12 md:col-4">
-        @if (formGroup.get('nombre')?.disabled) { Nombre:
-        <strong>{{ formGroup.get("nombre")?.value }}</strong>
-        }@else{
-        <p-floatLabel>
-          <input
-            id="nombre"
-            style="width: 100%"
-            type="text"
-            pInputText
-            formControlName="nombre"
-          />
-          <label for="nombre">Nombre</label>
-        </p-floatLabel>
+        @if (formGroup.get("nombre")?.disabled) {
+          Nombre:
+          <strong>{{ formGroup.get("nombre")?.value }}</strong>
+        } @else {
+          <p-floatLabel>
+            <input
+              id="nombre"
+              style="width: 100%"
+              type="text"
+              pInputText
+              formControlName="nombre"
+            />
+            <label for="nombre">Nombre</label>
+          </p-floatLabel>
         }
       </div>
 
@@ -63,29 +64,37 @@
         <p-colorPicker [formControl]="color" appendTo="body" />
       </div>
       <div class="col-12" [ngClass]="{ 'py-3': isRoleAdminOrAddingNew() }">
-        @if (formGroup.get('comentarios')?.disabled) {
-        <p>
-          Comentarios:
-          <markdown [data]="formGroup.get('comentarios')?.value"></markdown>
-        </p>
-        }@else{
-        <div class="col-12 py-3">
-          <div class="markdown-container">
-            <div class="editor">
-              <h3>Comentarios:</h3>
-              <div [id]="'editor-comentarios-' + formGroup.get('controlId')?.value"></div>
+        @if (formGroup.get("comentarios")?.disabled) {
+          <p>
+            Comentarios:
+            <markdown [data]="formGroup.get('comentarios')?.value"></markdown>
+          </p>
+        } @else {
+          <div class="col-12 py-3">
+            <div class="markdown-container">
+              <div class="editor">
+                <h3>Comentarios:</h3>
+                <div
+                  [id]="
+                    'editor-comentarios-' + formGroup.get('controlId')?.value
+                  "
+                ></div>
+              </div>
             </div>
           </div>
-        </div>
         }
       </div>
 
       <!-- Nuevos controles -->
-      <div class="col-12 flex flex-column md:flex-row align-items-start md:align-items-center gap-3" *ngIf="role == 'ADMIN'">
+      <div
+        class="col-12 flex flex-column md:flex-row align-items-start md:align-items-center gap-3"
+        *ngIf="role == 'ADMIN'"
+      >
         <p-checkbox
           [formControl]="importante"
           [binary]="true"
-          label="Marcar como importante">
+          label="Marcar como importante"
+        >
         </p-checkbox>
 
         <p-floatLabel *ngIf="importante.value">
@@ -100,10 +109,28 @@
           <label for="tiempoAviso">Avisar con antelación de</label>
         </p-floatLabel>
       </div>
+
+      <!-- Vínculo con la planificación física (rediseño bridge 2026-07-22):
+           el alumno verá las disciplinas reales del día y su estado hecho
+           derivado del módulo de física, y el click navegará al detalle del
+           día de entrenamiento. -->
+      <div class="col-12 flex align-items-center gap-2" *ngIf="role == 'ADMIN'">
+        <p-checkbox
+          formControlName="esEntrenamientoFisico"
+          [binary]="true"
+          inputId="esEntrenamientoFisico"
+          data-testid="checkbox-entrenamiento-fisico"
+        ></p-checkbox>
+        <label for="esEntrenamientoFisico">
+          Entrenamiento físico (vinculado a la planificación física)
+        </label>
+      </div>
       <!-- Fin nuevos controles -->
     </div>
   </form>
-  <p-footer class="flex flex-column sm:flex-row justify-content-center sm:justify-content-end gap-2">
+  <p-footer
+    class="flex flex-column sm:flex-row justify-content-center sm:justify-content-end gap-2"
+  >
     <button
       pButton
       label="{{ isRoleAdminOrAddingNew() ? 'Cancelar' : 'Cerrar' }}"

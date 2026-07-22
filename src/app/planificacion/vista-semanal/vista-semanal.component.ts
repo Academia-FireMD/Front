@@ -194,12 +194,62 @@ export class VistaSemanalComponent {
     // Para alumnos, mostrar opción de agregar evento personal
     return [addNewPersonalizado];
   }
-  public getEventsForDay = this.eventsService.getEventsForDay;
-  public getProgressBarColor = this.eventsService.getProgressBarColor;
-  public getCompletedSubBlocksForDay =
-    this.eventsService.getCompletedSubBlocksForDay;
-  public getProgressPercentageForDay =
-    this.eventsService.getProgressPercentageForDay;
+  /** Filtra eventos por día. Implementado localmente (no delegado en el
+   * servicio) para evitar problemas de `this` en tests con mocks y para que
+   * el componente sea autónomo en esta operación pura. */
+  public getEventsForDay(events: CalendarEvent[], date: Date): CalendarEvent[] {
+    return events.filter((event) => {
+      const eventDate = new Date(event.start);
+      return (
+        eventDate.getFullYear() === date.getFullYear() &&
+        eventDate.getMonth() === date.getMonth() &&
+        eventDate.getDate() === date.getDate()
+      );
+    });
+  }
+
+  /** Mismo semáforo que EventsService pero sobre el porcentaje local (que
+   * deriva el "hecho" de los bloques vinculados a física). */
+  public getProgressBarColor = (
+    events: CalendarEvent[],
+    date: Date,
+  ): string => {
+    const percentage = this.getProgressPercentageForDay(events, date);
+    if (percentage === 100) return '#28a745';
+    if (percentage >= 50) return '#ffc107';
+    return '#dc3545';
+  };
+
+  /**
+   * Sub-bloques completados del día. Igual que
+   * `EventsService.getCompletedSubBlocksForDay` salvo por los sub-bloques
+   * vinculados a física: su "hecho" NO vive en `subBloque.realizado` (no se
+   * marca a mano) sino que se deriva de las disciplinas del día en el módulo
+   * de física — una sola fuente de verdad (rediseño bridge 2026-07-22).
+   */
+  public getCompletedSubBlocksForDay = (
+    events: CalendarEvent[],
+    date: Date,
+  ): number =>
+    this.getEventsForDay(events, date).filter((event) =>
+      this.esEventoFisicaVinculado(event)
+        ? this.fisicaVinculadaRealizada(event.start)
+        : event.meta?.subBloque?.realizado,
+    ).length;
+
+  public getProgressPercentageForDay = (
+    events: CalendarEvent[],
+    date: Date,
+  ): number => {
+    const eventsForDay = this.getEventsForDay(events, date);
+    const completed = this.getCompletedSubBlocksForDay(events, date);
+    return Number(
+      (eventsForDay.length > 0
+        ? (completed / eventsForDay.length) * 100
+        : 0
+      ).toFixed(2),
+    );
+  };
   isCloneDialogVisible: boolean = false;
   selectedDayForCloning: Date | null = null;
   targetDayForCloning: number | null = null;
@@ -248,6 +298,7 @@ export class VistaSemanalComponent {
     // Crear clones de los eventos con la nueva fecha
     const clonedEvents = eventsToClone.map((event) => {
       event.meta.subBloque.id = undefined;
+      const sourceEnd = event.end ?? event.start;
       return {
         ...event,
         start: new Date(
@@ -261,8 +312,8 @@ export class VistaSemanalComponent {
           targetDayDate.getFullYear(),
           targetDayDate.getMonth(),
           targetDayDate.getDate(),
-          event.end.getHours(),
-          event.end.getMinutes(),
+          sourceEnd.getHours(),
+          sourceEnd.getMinutes(),
         ),
         id: undefined, // Eliminar el ID para que el backend cree uno nuevo
       };
@@ -349,6 +400,48 @@ export class VistaSemanalComponent {
     this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);
   }
 
+  /* ── Sub-bloque vinculado a física (rediseño bridge 2026-07-22) ─────────
+   * Un sub-bloque del temario marcado `esEntrenamientoFisico` deja de ser
+   * texto muerto: el contenido (disciplinas, estado hecho) se lee en vivo
+   * del módulo de física por fecha. El temario solo aporta hora/duración. */
+
+  /** ¿Este evento del temario es un sub-bloque vinculado a física? */
+  esEventoFisicaVinculado(event: CalendarEvent): boolean {
+    return !!event?.meta?.subBloque?.esEntrenamientoFisico;
+  }
+
+  /**
+   * ¿El día tiene YA un sub-bloque vinculado? Entonces el chip del header se
+   * omite (el bloque en la agenda ES la indicación — pintar ambos sería el
+   * duplicado que el rediseño elimina).
+   */
+  diaTieneBloqueFisicaVinculado(dia: Date): boolean {
+    return this.getEventsForDay(this.events, dia).some((e) =>
+      this.esEventoFisicaVinculado(e),
+    );
+  }
+
+  /**
+   * Progreso de física del día {hechas, total} según las disciplinas del
+   * resumen (realizado por disciplina). `total = 0` cuando el día no tiene
+   * entrenamiento en el módulo de física — el bloque vinculado se comporta
+   * entonces como un sub-bloque normal (fallback).
+   */
+  progresoFisicaDia(dia: Date): { hechas: number; total: number } {
+    const disciplinas = this.disciplinasFisica(dia);
+    return {
+      hechas: disciplinas.filter((d) => d.realizado).length,
+      total: disciplinas.length,
+    };
+  }
+
+  /** El bloque vinculado cuenta como hecho cuando TODAS las disciplinas del
+   * día están hechas en física — una sola fuente de verdad, sin doble check. */
+  fisicaVinculadaRealizada(dia: Date): boolean {
+    const { hechas, total } = this.progresoFisicaDia(dia);
+    return total > 0 && hechas === total;
+  }
+
   onEventClicked(event: CalendarEvent): void {
     this.selectedEvent = event;
 
@@ -397,6 +490,7 @@ export class VistaSemanalComponent {
             duracion: subbloque.duracion,
             importante: subbloque.importante,
             tiempoAviso: subbloque.tiempoAviso,
+            esEntrenamientoFisico: subbloque.esEntrenamientoFisico ?? false,
           },
         },
       };

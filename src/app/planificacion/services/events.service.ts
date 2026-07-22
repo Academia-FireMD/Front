@@ -21,6 +21,8 @@ export class EventsService {
         comentariosAlumno: event.meta?.subBloque?.comentariosAlumno ?? null,
         importante: event.meta?.subBloque?.importante ?? false,
         tiempoAviso: event.meta?.subBloque?.tiempoAviso ?? null,
+        esEntrenamientoFisico:
+          event.meta?.subBloque?.esEntrenamientoFisico ?? false,
         horaInicio: event.start,
         duracion:
           event.meta?.subBloque?.duracion ||

@@ -34,8 +34,18 @@ describe('VistaSemanalComponent', () => {
         {
           fecha: '2026-07-15',
           disciplinas: [
-            { nombre: 'Cuerda 2', grupo: 'CUERDA', color: '#9fe2d0' },
-            { nombre: 'Carrera 2', grupo: 'CARRERA', color: '#fdeaa8' },
+            {
+              nombre: 'Cuerda 2',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: false,
+            },
+            {
+              nombre: 'Carrera 2',
+              grupo: 'CARRERA',
+              color: '#fdeaa8',
+              realizado: false,
+            },
           ],
         },
       ];
@@ -101,13 +111,142 @@ describe('VistaSemanalComponent', () => {
 
     it('disciplinasFisica devuelve las disciplinas del día con su color, para pintar el chip coloreado', () => {
       expect(component.disciplinasFisica(dia)).toEqual([
-        { nombre: 'Cuerda 2', grupo: 'CUERDA', color: '#9fe2d0' },
-        { nombre: 'Carrera 2', grupo: 'CARRERA', color: '#fdeaa8' },
+        {
+          nombre: 'Cuerda 2',
+          grupo: 'CUERDA',
+          color: '#9fe2d0',
+          realizado: false,
+        },
+        {
+          nombre: 'Carrera 2',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          realizado: false,
+        },
       ]);
     });
 
     it('disciplinasFisica devuelve [] cuando el día no tiene física (el chip no se pinta)', () => {
       expect(component.disciplinasFisica(new Date(2026, 6, 16))).toEqual([]);
+    });
+  });
+
+  describe('sub-bloque vinculado a física (rediseño bridge 2026-07-22)', () => {
+    const dia = new Date(2026, 6, 15); // 2026-07-15
+
+    const eventoTemario = (
+      fecha: Date,
+      { vinculado = false, realizado = false } = {},
+    ): any => ({
+      title: vinculado ? 'ENTRENAMIENTO' : 'Tema 5',
+      start: fecha,
+      end: new Date(fecha.getTime() + 60 * 60000),
+      meta: {
+        esPersonalizado: false,
+        subBloque: {
+          id: vinculado ? 900 : 901,
+          esEntrenamientoFisico: vinculado,
+          realizado,
+        },
+      },
+    });
+
+    beforeEach(() => {
+      component.resumenFisica = [
+        {
+          fecha: '2026-07-15',
+          disciplinas: [
+            {
+              nombre: 'Cuerda 2',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: true,
+            },
+            {
+              nombre: 'Carrera 2',
+              grupo: 'CARRERA',
+              color: '#fdeaa8',
+              realizado: false,
+            },
+          ],
+        },
+      ];
+    });
+
+    it('esEventoFisicaVinculado distingue el sub-bloque vinculado del normal', () => {
+      expect(
+        component.esEventoFisicaVinculado(
+          eventoTemario(dia, { vinculado: true }),
+        ),
+      ).toBe(true);
+      expect(component.esEventoFisicaVinculado(eventoTemario(dia))).toBe(false);
+      expect(component.esEventoFisicaVinculado(null as any)).toBe(false);
+    });
+
+    it('diaTieneBloqueFisicaVinculado es true solo si hay un evento vinculado ese día', () => {
+      component.events = [
+        eventoTemario(dia, { vinculado: true }),
+        eventoTemario(dia),
+      ];
+      expect(component.diaTieneBloqueFisicaVinculado(dia)).toBe(true);
+      expect(
+        component.diaTieneBloqueFisicaVinculado(new Date(2026, 6, 16)),
+      ).toBe(false);
+
+      component.events = [eventoTemario(dia)];
+      expect(component.diaTieneBloqueFisicaVinculado(dia)).toBe(false);
+    });
+
+    it('progresoFisicaDia cuenta las disciplinas hechas del resumen; fisicaVinculadaRealizada exige TODAS', () => {
+      expect(component.progresoFisicaDia(dia)).toEqual({ hechas: 1, total: 2 });
+      expect(component.fisicaVinculadaRealizada(dia)).toBe(false);
+
+      component.resumenFisica[0].disciplinas[1].realizado = true;
+      expect(component.fisicaVinculadaRealizada(dia)).toBe(true);
+
+      // Día sin física: nunca "hecho" (fallback a comportamiento normal).
+      expect(component.fisicaVinculadaRealizada(new Date(2026, 6, 16))).toBe(
+        false,
+      );
+    });
+
+    it('el progreso del día deriva el "hecho" del vinculado de física, no del flag manual', () => {
+      const normalHecho = eventoTemario(dia, { realizado: true });
+      const vinculado = eventoTemario(dia, { vinculado: true }); // 1/2 hechas en física
+      component.events = [normalHecho, vinculado];
+
+      // 1 (normal hecho) + 0 (vinculado NO completado en física) = 1 de 2
+      expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
+        1,
+      );
+      expect(component.getProgressPercentageForDay(component.events, dia)).toBe(
+        50,
+      );
+
+      // Con las 2 disciplinas hechas, el vinculado cuenta como completado.
+      component.resumenFisica[0].disciplinas[1].realizado = true;
+      expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
+        2,
+      );
+      expect(component.getProgressPercentageForDay(component.events, dia)).toBe(
+        100,
+      );
+      expect(component.getProgressBarColor(component.events, dia)).toBe(
+        '#28a745',
+      );
+    });
+
+    it('un vinculado en un día SIN física no cuenta como hecho aunque su flag manual sea false', () => {
+      const vinculado = eventoTemario(new Date(2026, 6, 16), {
+        vinculado: true,
+      });
+      component.events = [vinculado];
+      expect(
+        component.getCompletedSubBlocksForDay(
+          component.events,
+          new Date(2026, 6, 16),
+        ),
+      ).toBe(0);
     });
   });
 });

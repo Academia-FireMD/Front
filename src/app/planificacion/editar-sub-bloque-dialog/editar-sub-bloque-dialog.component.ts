@@ -1,4 +1,15 @@
-import { Component, EventEmitter, inject, Input, Output, ViewChild, ElementRef, OnDestroy, AfterViewInit, OnInit } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  inject,
+  Input,
+  Output,
+  ViewChild,
+  ElementRef,
+  OnDestroy,
+  AfterViewInit,
+  OnInit,
+} from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep, uniqueId } from 'lodash';
@@ -10,7 +21,9 @@ import { duracionOptions, universalEditorConfig } from '../../utils/utils';
   templateUrl: './editar-sub-bloque-dialog.component.html',
   styleUrl: './editar-sub-bloque-dialog.component.scss',
 })
-export class EditarSubBloqueDialogComponent implements OnDestroy, AfterViewInit, OnInit {
+export class EditarSubBloqueDialogComponent
+  implements OnDestroy, AfterViewInit, OnInit
+{
   @Input() set data(data: any) {
     this.isAddingNew = !data?.id;
     this.formGroup.patchValue(data);
@@ -21,7 +34,7 @@ export class EditarSubBloqueDialogComponent implements OnDestroy, AfterViewInit,
       this.formGroup.disable();
       this.formGroup.get(['nombre', 'comentarios'])?.enable();
     }
-    
+
     // Esperar a que el diálogo esté visible y el DOM actualizado
     if (this.isDialogVisible) {
       setTimeout(() => {
@@ -29,7 +42,7 @@ export class EditarSubBloqueDialogComponent implements OnDestroy, AfterViewInit,
       }, 100);
     }
   }
-  
+
   @Input() role: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   @Input() set isDialogVisible(value: boolean) {
     this._isDialogVisible = value;
@@ -43,21 +56,21 @@ export class EditarSubBloqueDialogComponent implements OnDestroy, AfterViewInit,
       this.destroyEditor();
     }
   }
-  
+
   get isDialogVisible(): boolean {
     return this._isDialogVisible;
   }
-  
+
   private _isDialogVisible = false;
   @Output() isDialogVisibleChange = new EventEmitter<boolean>();
   @Output() savedSubBloque = new EventEmitter<SubBloque>();
-  
+
   editorComentarios!: any;
   private editorInitialized = false;
   public isAddingNew = false;
   public isRoleAdminOrAddingNew = () =>
     this.role == 'ADMIN' || this.isAddingNew;
-    
+
   fb = inject(FormBuilder);
   public formGroup = this.fb.group({
     duracion: [60, [Validators.required, Validators.min(1)]],
@@ -67,7 +80,8 @@ export class EditarSubBloqueDialogComponent implements OnDestroy, AfterViewInit,
     siendoEditado: [false],
     controlId: [uniqueId()],
     importante: [false],
-    tiempoAviso: [null]
+    tiempoAviso: [null],
+    esEntrenamientoFisico: [false],
   });
 
   duracionOptions = duracionOptions;
@@ -136,7 +150,7 @@ export class EditarSubBloqueDialogComponent implements OnDestroy, AfterViewInit,
   ngOnDestroy(): void {
     this.destroyEditor();
   }
-  
+
   public cancelarEdicion() {
     this.isDialogVisible = false;
     this.isDialogVisibleChange.emit(false);
@@ -158,10 +172,12 @@ export class EditarSubBloqueDialogComponent implements OnDestroy, AfterViewInit,
   private initEditor(initialValueComentarios: string): void {
     // Destruir editor existente si hay uno
     this.destroyEditor();
-    
+
     const controlId = this.formGroup.get('controlId')?.value;
-    const editorElement = document.querySelector(`#editor-comentarios-${controlId}`);
-    
+    const editorElement = document.querySelector(
+      `#editor-comentarios-${controlId}`,
+    );
+
     if (!editorElement) {
       console.warn('Editor element not found, retrying...');
       // Retry after a short delay
