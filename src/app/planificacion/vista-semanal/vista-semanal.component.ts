@@ -181,6 +181,38 @@ export class VistaSemanalComponent {
       },
     };
 
+    const addEntrenamientoFisico = {
+      label: 'Añadir entrenamiento físico',
+      icon: 'pi pi-bolt',
+      command: () => {
+        this.selectedEvent = null;
+        const nuevoSubBloque: SubBloque = {
+          id: undefined,
+          horaInicio: this.onTimeClickedDate,
+          duracion: 60,
+          nombre: 'ENTRENAMIENTO FÍSICO',
+          comentarios: '',
+          color: '#b6e3b6',
+          esEntrenamientoFisico: true,
+        };
+        this.selectedEvent = {
+          title: nuevoSubBloque.nombre,
+          start: this.onTimeClickedDate,
+          draggable: true,
+          end: new Date(
+            this.onTimeClickedDate.getTime() + nuevoSubBloque.duracion * 60000,
+          ),
+          color: {
+            primary: nuevoSubBloque.color || '#b6e3b6',
+            secondary: nuevoSubBloque.color || '#b6e3b6',
+          },
+          meta: { subBloque: { ...nuevoSubBloque } },
+        };
+        this.editSubBloqueData = nuevoSubBloque;
+        this.isDialogVisible = true;
+      },
+    };
+
     const aplicarBloqueAsignable = {
       label: 'Aplicar bloque asignable',
       icon: 'pi pi-book',
@@ -188,7 +220,7 @@ export class VistaSemanalComponent {
     };
 
     if (role == 'ADMIN') {
-      return [addNew, aplicarBloqueAsignable];
+      return [addNew, addEntrenamientoFisico, aplicarBloqueAsignable];
     }
 
     // Para alumnos, mostrar opción de agregar evento personal

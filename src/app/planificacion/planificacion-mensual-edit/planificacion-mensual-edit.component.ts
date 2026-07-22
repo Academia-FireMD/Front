@@ -8,7 +8,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { CalendarEvent, CalendarView } from 'angular-calendar';
 import { ToastrService } from 'ngx-toastr';
-import { PrimeNGConfig } from 'primeng/api';
+import { ConfirmationService, PrimeNGConfig } from 'primeng/api';
 import {
   catchError,
   combineLatest,
@@ -80,6 +80,7 @@ export class PlanificacionMensualEditComponent {
   activatedRoute = inject(ActivatedRoute);
   userService = inject(UserService);
   toast = inject(ToastrService);
+  confirmationService = inject(ConfirmationService);
   router = inject(Router);
   events: CalendarEvent[] = [];
   viewDate = new Date();
@@ -265,7 +266,45 @@ export class PlanificacionMensualEditComponent {
           this.isDialogVisible = true;
         },
       },
+      {
+        icon: 'pi pi-bolt',
+        tooltipOptions: {
+          position: 'right',
+          tooltipLabel: 'Convertir bloques ENTRENAMIENTO en física vinculada',
+        },
+        command: () => this.confirmarConversionBloquesFisica(),
+      },
     ];
+  }
+
+  /**
+   * Fase 2 bridge temario↔física: convierte los sub-bloques "ENTRENAMIENTO%"
+   * de esta planificación en bloques vinculados a física. La acción es
+   * irreversible, por eso pide confirmación explícita.
+   */
+  public confirmarConversionBloquesFisica(): void {
+    this.confirmationService.confirm({
+      message:
+        'Se marcarán como entrenamiento físico todos los sub-bloques de esta planificación cuyo nombre empiece por "ENTRENAMIENTO". ¿Continuar?',
+      header: 'Convertir bloques a física',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Convertir',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        const id = Number(this.activedRoute.snapshot.paramMap.get('id'));
+        this.planificacionesService.convertirBloquesFisica$(id).subscribe({
+          next: (res) => {
+            this.toast.success(
+              `Convertidos ${res.actualizados} bloques a física. ${res.ignorados} ya estaban vinculados.`,
+            );
+            this.load();
+          },
+          error: () => {
+            this.toast.error('Error al convertir los bloques a física.');
+          },
+        });
+      },
+    });
   }
 
   private getPlanificacion() {

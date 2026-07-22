@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, Pipe, PipeTransform } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { ConfirmationService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
+import { PlanificacionesService } from '../../services/planificaciones.service';
 import { PlanificacionFisicaService } from '../../planificacion-fisica/services/planificacion-fisica.service';
 
 import { PlanificacionMensualEditComponent } from './planificacion-mensual-edit.component';
@@ -195,6 +197,54 @@ describe('PlanificacionMensualEditComponent', () => {
         expect(domEvent.stopPropagation).toHaveBeenCalled();
         expect(router.navigate).toHaveBeenCalled();
       }
+    });
+  });
+
+  describe('conversión masiva de bloques ENTRENAMIENTO', () => {
+    it('items() incluye la acción de conversión para admin', () => {
+      const items = component.items();
+      const accion = items.find((i) =>
+        i.tooltipOptions?.tooltipLabel?.includes('Convertir bloques'),
+      );
+      expect(accion).toBeDefined();
+    });
+
+    it('confirmarConversionBloquesFisica pide confirmación y al aceptar llama al servicio y recarga', () => {
+      const confirmationService = TestBed.inject(ConfirmationService);
+      const confirmSpy = jest.spyOn(confirmationService, 'confirm');
+      const convertirMock = jest
+        .fn()
+        .mockReturnValue(of({ actualizados: 3, ignorados: 1 }));
+      (component as any).planificacionesService = {
+        convertirBloquesFisica$: convertirMock,
+      };
+      const loadSpy = jest
+        .spyOn(component as any, 'load')
+        .mockImplementation(() => {});
+
+      // Forzar la ruta a una planificación concreta para que el accept use su id.
+      (component as any).activedRoute = {
+        snapshot: {
+          paramMap: { get: () => '207' },
+        },
+      };
+
+      component.confirmarConversionBloquesFisica();
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'Se marcarán como entrenamiento físico',
+          ),
+          accept: expect.any(Function),
+        }),
+      );
+
+      const accept = confirmSpy.mock.calls[0][0].accept as () => void;
+      accept();
+
+      expect(convertirMock).toHaveBeenCalledWith(207);
+      expect(loadSpy).toHaveBeenCalled();
     });
   });
 });

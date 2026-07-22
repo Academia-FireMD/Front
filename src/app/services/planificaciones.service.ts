@@ -2,13 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-    PaginatedResult,
-    PaginationFilter,
+  PaginatedResult,
+  PaginationFilter,
 } from '../shared/models/pagination.model';
 import {
-    PlanificacionBloque,
-    PlanificacionMensual,
-    PlantillaSemanal,
+  PlanificacionBloque,
+  PlanificacionMensual,
+  PlantillaSemanal,
 } from '../shared/models/planificacion.model';
 import { TipoDePlanificacionDeseada } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
@@ -49,13 +49,13 @@ export class PlanificacionesService extends ApiBaseService {
 
   public getPlantillaSemanalById(id: number) {
     return this.get(
-      '/plantillas-semanales/' + id
+      '/plantillas-semanales/' + id,
     ) as Observable<PlantillaSemanal>;
   }
 
   public getPlanificacionMensualById$(id: number) {
     return this.get(
-      '/planificaciones-mensuales/' + id
+      '/planificaciones-mensuales/' + id,
     ) as Observable<PlanificacionMensual>;
   }
 
@@ -74,7 +74,7 @@ export class PlanificacionesService extends ApiBaseService {
   public getComentariosAlumnos$(filter: PaginationFilter) {
     return this.post(
       '/comentarios-alumnos-planificacion',
-      filter
+      filter,
     ) as Observable<PaginatedResult<any>>;
   }
 
@@ -84,8 +84,12 @@ export class PlanificacionesService extends ApiBaseService {
     >;
   }
 
-  public getPlanificacionesPorDefecto$(tipoDePlanificacion: TipoDePlanificacionDeseada) {
-    return this.post('/planificaciones-por-defecto', { tipoDePlanificacion }) as Observable<PlanificacionMensual[]>;
+  public getPlanificacionesPorDefecto$(
+    tipoDePlanificacion: TipoDePlanificacionDeseada,
+  ) {
+    return this.post('/planificaciones-por-defecto', {
+      tipoDePlanificacion,
+    }) as Observable<PlanificacionMensual[]>;
   }
 
   public getPlanificacionMensualAlumno$(filter: PaginationFilter) {
@@ -95,27 +99,27 @@ export class PlanificacionesService extends ApiBaseService {
   }
 
   public createPlanificacionMensual$(
-    data: Partial<PlanificacionMensual>
+    data: Partial<PlanificacionMensual>,
   ): Observable<PlanificacionMensual> {
     return this.post(
       '/planificacion-mensual',
-      data
+      data,
     ) as Observable<PlanificacionMensual>;
   }
 
   public createPlantillaSemanal$(
-    data: Partial<PlantillaSemanal>
+    data: Partial<PlantillaSemanal>,
   ): Observable<PlantillaSemanal> {
     return this.post(
       '/plantilla-semanal',
-      data
+      data,
     ) as Observable<PlantillaSemanal>;
   }
 
   public updateBloque$(pregunta: Partial<PlanificacionBloque>) {
     return this.post(
       '/actualizar-bloque',
-      pregunta
+      pregunta,
     ) as Observable<PlanificacionBloque>;
   }
 
@@ -139,6 +143,19 @@ export class PlanificacionesService extends ApiBaseService {
     return this.post('/planificacion-mensual/clonar/' + id, null);
   }
 
+  /**
+   * Fase 2 bridge temario↔física: marca como entrenamiento físico todos los
+   * sub-bloques de esta planificación cuyo nombre empiece por "ENTRENAMIENTO".
+   */
+  public convertirBloquesFisica$(
+    planificacionId: number,
+  ): Observable<{ actualizados: number; ignorados: number }> {
+    return this.post(
+      `/planificacion-mensual/${planificacionId}/convertir-bloques-fisica`,
+      {},
+    ) as Observable<{ actualizados: number; ignorados: number }>;
+  }
+
   public clonarBloque$(id: number) {
     return this.post('/bloque/clonar/' + id, null);
   }
@@ -149,7 +166,7 @@ export class PlanificacionesService extends ApiBaseService {
 
   public asignarPlanificacionMensual$(
     planificacionId: number,
-    alumnosIds: number[]
+    alumnosIds: number[],
   ): Observable<any> {
     return this.post('/asignar-planificacion-mensual', {
       planificacionId,
@@ -162,7 +179,7 @@ export class PlanificacionesService extends ApiBaseService {
   }
 
   public autoAssignPlanificacionMensual(
-    tipoDePlanificacion: TipoDePlanificacionDeseada
+    tipoDePlanificacion: TipoDePlanificacionDeseada,
   ) {
     return this.post('/auto-assign-planificacion-mensual', {
       tipoDePlanificacion,
@@ -189,11 +206,15 @@ export class PlanificacionesService extends ApiBaseService {
     return this.get(`/eventos-personalizados/${planificacionId}`);
   }
 
-  public crearEventoPersonalizado$(dto: EventoPersonalizadoDTO): Observable<any> {
+  public crearEventoPersonalizado$(
+    dto: EventoPersonalizadoDTO,
+  ): Observable<any> {
     return this.post('/eventos-personalizados', dto);
   }
 
-  public actualizarEventoPersonalizado$(dto: EventoPersonalizadoDTO): Observable<any> {
+  public actualizarEventoPersonalizado$(
+    dto: EventoPersonalizadoDTO,
+  ): Observable<any> {
     return this.post('/eventos-personalizados/actualizar', dto);
   }
 
@@ -202,11 +223,15 @@ export class PlanificacionesService extends ApiBaseService {
   }
 
   // Método específico para actualizar solo el estado "realizado" de un evento personalizado
-  public actualizarEventoPersonalizadoRealizado$(id: number, planificacionId: number, realizado: boolean): Observable<any> {
+  public actualizarEventoPersonalizadoRealizado$(
+    id: number,
+    planificacionId: number,
+    realizado: boolean,
+  ): Observable<any> {
     return this.post('/eventos-personalizados/actualizar-realizado', {
       id,
       planificacionId,
-      realizado
+      realizado,
     });
   }
 
@@ -214,7 +239,13 @@ export class PlanificacionesService extends ApiBaseService {
     return this.post(`/desvincular-planificacion-mensual/${id}`, null);
   }
 
-  public desvincularPlanificacionMensualAdmin$(planificacionId: number, alumnoId: number): Observable<any> {
-    return this.post(`/desvincular-planificacion-mensual-admin/${planificacionId}/${alumnoId}`, null);
+  public desvincularPlanificacionMensualAdmin$(
+    planificacionId: number,
+    alumnoId: number,
+  ): Observable<any> {
+    return this.post(
+      `/desvincular-planificacion-mensual-admin/${planificacionId}/${alumnoId}`,
+      null,
+    );
   }
 }
