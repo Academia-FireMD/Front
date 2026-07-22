@@ -274,6 +274,11 @@
       >
         <div
           class="custom-event-template"
+          [ngClass]="{
+            'evento-fisica-vinculada': esEventoFisicaVinculado(
+              weekEvent?.event
+            ),
+          }"
           [ngStyle]="{
             'background-color': weekEvent?.event?.color?.primary || '#e3e3e3',
             'border-left': weekEvent?.event?.meta?.esPersonalizado
@@ -291,7 +296,8 @@
                   style="font-size: 0.8rem"
                   pTooltip="Evento personal"
                 ></i>
-                <!-- Sub-bloque vinculado a física (rediseño bridge 2026-07-22) -->
+                <!-- Sub-bloque vinculado a física (rediseño bridge 2026-07-22):
+                     el badge es visible para admin y alumno. -->
                 <i
                   *ngIf="esEventoFisicaVinculado(weekEvent?.event)"
                   class="pi pi-bolt text-primary"
@@ -299,6 +305,13 @@
                   pTooltip="Entrenamiento físico vinculado a la planificación física"
                   data-testid="fisica-vinculada-icono"
                 ></i>
+                <span
+                  *ngIf="esEventoFisicaVinculado(weekEvent?.event)"
+                  class="badge-fisica"
+                  data-testid="fisica-badge"
+                >
+                  🏋️ Física
+                </span>
                 <!-- Iconos existentes -->
                 <i
                   *ngIf="weekEvent?.event?.meta?.subBloque?.importante"

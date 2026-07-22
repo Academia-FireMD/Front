@@ -114,16 +114,34 @@
            el alumno verá las disciplinas reales del día y su estado hecho
            derivado del módulo de física, y el click navegará al detalle del
            día de entrenamiento. -->
-      <div class="col-12 flex align-items-center gap-2" *ngIf="role == 'ADMIN'">
-        <p-checkbox
-          formControlName="esEntrenamientoFisico"
-          [binary]="true"
-          inputId="esEntrenamientoFisico"
-          data-testid="checkbox-entrenamiento-fisico"
-        ></p-checkbox>
-        <label for="esEntrenamientoFisico">
-          Entrenamiento físico (vinculado a la planificación física)
-        </label>
+      <div
+        class="col-12 flex flex-column gap-2"
+        *ngIf="role == 'ADMIN'"
+        [ngClass]="{
+          'fisica-check-activo': formGroup.get('esEntrenamientoFisico')?.value,
+        }"
+      >
+        <div class="flex align-items-center gap-2">
+          <p-checkbox
+            formControlName="esEntrenamientoFisico"
+            [binary]="true"
+            inputId="esEntrenamientoFisico"
+            data-testid="checkbox-entrenamiento-fisico"
+          ></p-checkbox>
+          <label for="esEntrenamientoFisico" class="font-semibold">
+            Este sub-bloque es entrenamiento físico
+          </label>
+        </div>
+        <small
+          *ngIf="formGroup.get('esEntrenamientoFisico')?.value"
+          class="fisica-explicacion"
+          data-testid="fisica-explicacion"
+        >
+          El alumno verá este bloque en su temario con las disciplinas reales
+          del día y su estado de progreso, leídas en vivo del módulo de
+          planificación física. Al hacer click, irá al detalle del entrenamiento
+          de ese día.
+        </small>
       </div>
       <!-- Fin nuevos controles -->
     </div>

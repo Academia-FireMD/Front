@@ -19,7 +19,9 @@
   }
 
   @media screen and (max-width: 640px) {
-    .p-dropdown, .p-inputtext, .p-colorpicker {
+    .p-dropdown,
+    .p-inputtext,
+    .p-colorpicker {
       width: 100% !important;
     }
 
@@ -35,4 +37,19 @@
       padding: 0 1rem 1rem 1rem;
     }
   }
+}
+
+// Contenedor destacado del checkbox de entrenamiento físico (Fase 1 claridad
+// bridge): hace visible al admin que este sub-bloque no es texto muerto sino
+// una vinculación activa al módulo de física.
+.fisica-check-activo {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: var(--surface-100);
+  border-left: 3px solid var(--primary-color);
+}
+
+.fisica-explicacion {
+  color: var(--text-color-secondary);
+  line-height: 1.4;
 }

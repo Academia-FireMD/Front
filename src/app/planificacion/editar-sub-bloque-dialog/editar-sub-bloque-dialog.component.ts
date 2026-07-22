@@ -126,6 +126,12 @@ export class EditarSubBloqueDialogComponent
     { label: '2 días', value: 2880 },
   ];
 
+  /** Texto explicativo que ve el admin cuando marca el sub-bloque como
+   * entrenamiento físico (Fase 1 claridad bridge). */
+  get textoExplicativoFisica(): string {
+    return 'El alumno verá este bloque en su temario con las disciplinas reales del día y su estado de progreso, leídas en vivo del módulo de planificación física. Al hacer click, irá al detalle del entrenamiento de ese día.';
+  }
+
   public get color() {
     return this.formGroup.get('color') as FormControl;
   }
