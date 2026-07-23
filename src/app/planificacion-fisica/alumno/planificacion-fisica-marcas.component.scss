@@ -71,15 +71,15 @@
 
   &__form {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
     align-items: end;
   }
 
   &__campo {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.5rem;
 
     label {
       font-size: 0.85rem;
@@ -89,6 +89,7 @@
 
     &--notas {
       grid-column: 1 / -1;
+      margin-top: 0.25rem;
     }
   }
 
