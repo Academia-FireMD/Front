@@ -188,6 +188,12 @@
   border-left: 2px solid rgba(var(--primary-color-rgb, 63, 81, 181), 0.5) !important;
 }
 
+/* Icono de enlace externo del bloque físico: gap a la derecha del título. */
+.fisica-vinculada-link {
+  margin-left: 4px;
+  font-size: 0.8rem;
+}
+
 small {
   font-size: 12px;
   color: #555;

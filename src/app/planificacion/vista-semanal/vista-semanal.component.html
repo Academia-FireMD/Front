@@ -296,15 +296,6 @@
                   style="font-size: 0.8rem"
                   pTooltip="Evento personal"
                 ></i>
-                <!-- Sub-bloque vinculado a física (rediseño bridge 2026-07-22):
-                     indicador limpio — icono de enlace externo, sin badge textual. -->
-                <i
-                  *ngIf="esEventoFisicaVinculado(weekEvent?.event)"
-                  class="pi pi-external-link text-primary"
-                  style="font-size: 0.8rem"
-                  pTooltip="Entrenamiento físico vinculado — click para ir al detalle"
-                  data-testid="fisica-vinculada-icono"
-                ></i>
                 <!-- Iconos existentes -->
                 <i
                   *ngIf="weekEvent?.event?.meta?.subBloque?.importante"
@@ -321,6 +312,14 @@
                 <strong class="descripcion text-sm">{{
                   weekEvent?.event?.title || "Sin nombre"
                 }}</strong>
+                <!-- Sub-bloque vinculado a física (rediseño bridge 2026-07-22):
+                     indicador limpio — icono de enlace externo a la derecha. -->
+                <i
+                  *ngIf="esEventoFisicaVinculado(weekEvent?.event)"
+                  class="pi pi-external-link text-primary fisica-vinculada-link"
+                  pTooltip="Entrenamiento físico vinculado — click para ir al detalle"
+                  data-testid="fisica-vinculada-icono"
+                ></i>
               </div>
               <div class="event-actions">
                 <!-- Ícono de comentario para eventos no personalizados -->
