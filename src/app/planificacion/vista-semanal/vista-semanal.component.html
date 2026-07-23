@@ -163,37 +163,12 @@
           ></i>
         </div>
       </div>
-      <!-- Bridge temario↔física: indicación de entrenamiento físico del día,
-           navega a /app/planificacion-fisica/dia/:fecha. Canal aparte de
-           `events`, no toca el progreso ni el guardado del temario.
-           FALLBACK (rediseño 2026-07-22): solo se pinta si el día NO tiene ya
-           un sub-bloque vinculado — si lo tiene, ese bloque ES la indicación
-           y pintar ambos sería el duplicado que el rediseño elimina. -->
-      <div
-        class="fisica-bridge"
-        *ngIf="
-          role == 'ALUMNO' &&
-          tieneFisica(day.date) &&
-          !diaTieneBloqueFisicaVinculado(day.date)
-        "
-        data-testid="temario-fisica-bridge"
-        pTooltip="Ver entrenamiento físico de este día"
-        tooltipPosition="top"
-        (click)="abrirFisica(day.date, $event)"
-      >
-        🏋️
-        <ng-container
-          *ngFor="let d of disciplinasFisica(day.date); let last = last"
-          ><!-- OJO: dentro de `.cal-header` hay una regla legacy `span{display:none}`
-               (oculta los spans del header nativo de angular-calendar) — por eso el
-               punto de color es un <i> y el separador un nodo de texto, no <span>. --><i
-            class="fisica-bridge__dot"
-            [style.background-color]="d.color"
-            [attr.data-testid]="'temario-fisica-dot-' + d.nombre"
-          ></i
-          >{{ d.nombre }}{{ last ? "" : ", " }}
-        </ng-container>
-      </div>
+      <!-- Bridge temario↔física: indicación de entrenamiento físico del día.
+           OCULTO (Fase 5, decisión producto): el fallback del header se elimina
+           porque el bloque vinculado ya es la indicación; si el día no tiene
+           bloque vinculado, el alumno no ve nada en el temario (va al módulo
+           de física directamente). Los métodos tieneFisica/abrirFisica se
+           mantienen para el bloque vinculado y la vista mensual. -->
       <!-- Progreso debajo del día -->
       <div
         class="progress-container"
