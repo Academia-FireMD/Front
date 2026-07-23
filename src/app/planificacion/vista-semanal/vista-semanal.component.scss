@@ -148,11 +148,12 @@
   align-items: center;
   gap: 3px;
   font-size: 11px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--text-color-secondary);
 }
 
 .fisica-vinculada-chip--hecho {
@@ -181,21 +182,10 @@
   color: #28a745;
 }
 
-/* Fase 1 claridad bridge: hace que el bloque vinculado se distinga del resto
-   de bloques de temario para admin y alumno. */
+/* Fase 5 polish bridge: indicador sutil de bloque externo/vinculado — borde
+   fino con opacidad, sin badge textual denso. */
 .evento-fisica-vinculada {
-  border-left: 4px solid var(--primary-color) !important;
-}
-
-.badge-fisica {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  background: rgba(var(--primary-color-rgb, 63, 81, 181), 0.12);
-  border: 1px solid var(--primary-color);
-  border-radius: 10px;
-  padding: 1px 5px;
-  white-space: nowrap;
+  border-left: 2px solid rgba(var(--primary-color-rgb, 63, 81, 181), 0.5) !important;
 }
 
 small {

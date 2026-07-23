@@ -49,6 +49,19 @@
   font-weight: 600;
 }
 
+/* Marcas físicas en el expanded row del usuario (Fase 5 polish) */
+.marcas-content {
+  .marca-card {
+    .marca-color {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  }
+}
+
 .label-chip {
   background-color: var(--cyan-100);
   color: var(--cyan-800);

@@ -428,6 +428,16 @@ export class PlanificacionFisicaService {
     return this.http.get<MarcaPersonal[]>(`${this.base}/marcas`);
   }
 
+  /**
+   * Fase 5 polish: marcas de UN ALUMNO concreto, solo para ADMIN. El backend
+   * exige rol ADMIN; un ALUMNO recibiría 403.
+   */
+  marcasDeAlumno(alumnoId: number): Observable<MarcaPersonal[]> {
+    return this.http.get<MarcaPersonal[]>(
+      `${this.base}/marcas/alumno/${alumnoId}`,
+    );
+  }
+
   crearMarca(dto: CrearMarcaDto): Observable<MarcaPersonal> {
     return this.http.post<MarcaPersonal>(`${this.base}/marcas`, dto);
   }

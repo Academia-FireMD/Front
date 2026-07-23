@@ -291,6 +291,55 @@
             </div>
           </p-tabPanel>
 
+          <p-tabPanel header="Marcas físicas" leftIcon="pi pi-chart-line">
+            <div class="marcas-content">
+              @if (isLoadingMarcas(item.id)) {
+                <div class="text-center py-3">
+                  <p-progressSpinner styleClass="small-spinner" />
+                  <p class="text-sm text-500">Cargando marcas...</p>
+                </div>
+              } @else if (getUserMarcas(item.id).length === 0) {
+                <div class="text-center py-3">
+                  <i class="pi pi-chart-line text-400 text-xl"></i>
+                  <p class="text-sm text-500 mt-2">Sin marcas registradas</p>
+                </div>
+              } @else {
+                <div class="grid">
+                  @for (marca of getUserMarcas(item.id); track marca.id) {
+                    <div class="col-12 md:col-6 lg:col-4">
+                      <div
+                        class="p-2 border-1 border-round-md surface-50 marca-card"
+                      >
+                        <div class="flex align-items-center gap-2">
+                          <span
+                            class="marca-color"
+                            [style.backgroundColor]="marca.color"
+                          ></span>
+                          <div class="flex-grow-1">
+                            <div class="font-semibold text-sm">
+                              {{ marca.disciplinaNombre }}
+                            </div>
+                            <div class="text-xs text-500">
+                              {{ marca.fecha | date: "dd/MM/yyyy" }}
+                            </div>
+                          </div>
+                          <div class="font-bold text-primary">
+                            {{ marca.valor }} {{ marca.unidad }}
+                          </div>
+                        </div>
+                        @if (marca.notas) {
+                          <div class="text-xs text-500 mt-1 italic">
+                            {{ marca.notas }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </p-tabPanel>
+
           <p-tabPanel header="Información Personal" leftIcon="pi pi-user-plus">
             <div class="user-onboarding-info">
               <div class="onboarding-summary mb-3">

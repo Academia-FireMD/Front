@@ -65,6 +65,7 @@
             filterBy="nombre"
             styleClass="w-full"
             data-testid="pf-marcas-select-prueba"
+            (onChange)="onDisciplinaChange($event.value)"
           >
             <ng-template let-opcion pTemplate="item">
               <span
@@ -164,13 +165,22 @@
                 <span class="pf-marcas__grupo-titulo">{{
                   grupo.disciplinaNombre
                 }}</span>
+                <span class="pf-marcas__grupo-count"
+                  >({{ grupo.marcas.length }})</span
+                >
               </div>
             </ng-template>
 
-            <ul class="pf-marcas__historico">
+            <div class="pf-marcas__tabla">
+              <div class="pf-marcas__fila pf-marcas__fila--header">
+                <span>Fecha</span>
+                <span>Valor</span>
+                <span>Notas</span>
+                <span></span>
+              </div>
               @for (marca of grupo.marcas; track marca.id) {
-                <li
-                  class="pf-marcas__marca"
+                <div
+                  class="pf-marcas__fila"
                   [attr.data-testid]="'pf-marca-' + marca.id"
                 >
                   <span class="pf-marcas__marca-fecha">{{
@@ -179,25 +189,25 @@
                   <span class="pf-marcas__marca-valor"
                     >{{ marca.valor }} {{ marca.unidad }}</span
                   >
-                  @if (marca.notas) {
-                    <span class="pf-marcas__marca-notas">{{
-                      marca.notas
-                    }}</span>
-                  }
-                  <p-button
-                    icon="pi pi-trash"
-                    severity="danger"
-                    [text]="true"
-                    size="small"
-                    [loading]="estaBorrando(marca.id)"
-                    [disabled]="estaBorrando(marca.id)"
-                    pTooltip="Eliminar marca"
-                    [attr.data-testid]="'pf-marca-borrar-' + marca.id"
-                    (click)="confirmarBorrarMarca(marca, $event)"
-                  ></p-button>
-                </li>
+                  <span class="pf-marcas__marca-notas">{{
+                    marca.notas || "—"
+                  }}</span>
+                  <span class="pf-marcas__marca-acciones">
+                    <p-button
+                      icon="pi pi-trash"
+                      severity="danger"
+                      [text]="true"
+                      size="small"
+                      [loading]="estaBorrando(marca.id)"
+                      [disabled]="estaBorrando(marca.id)"
+                      pTooltip="Eliminar marca"
+                      [attr.data-testid]="'pf-marca-borrar-' + marca.id"
+                      (click)="confirmarBorrarMarca(marca, $event)"
+                    ></p-button>
+                  </span>
+                </div>
               }
-            </ul>
+            </div>
           </p-card>
         }
       </div>

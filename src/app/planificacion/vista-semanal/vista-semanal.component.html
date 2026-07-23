@@ -297,21 +297,14 @@
                   pTooltip="Evento personal"
                 ></i>
                 <!-- Sub-bloque vinculado a física (rediseño bridge 2026-07-22):
-                     el badge es visible para admin y alumno. -->
+                     indicador limpio — icono de enlace externo, sin badge textual. -->
                 <i
                   *ngIf="esEventoFisicaVinculado(weekEvent?.event)"
-                  class="pi pi-bolt text-primary"
+                  class="pi pi-external-link text-primary"
                   style="font-size: 0.8rem"
-                  pTooltip="Entrenamiento físico vinculado a la planificación física"
+                  pTooltip="Entrenamiento físico vinculado — click para ir al detalle"
                   data-testid="fisica-vinculada-icono"
                 ></i>
-                <span
-                  *ngIf="esEventoFisicaVinculado(weekEvent?.event)"
-                  class="badge-fisica"
-                  data-testid="fisica-badge"
-                >
-                  🏋️ Física
-                </span>
                 <!-- Iconos existentes -->
                 <i
                   *ngIf="weekEvent?.event?.meta?.subBloque?.importante"

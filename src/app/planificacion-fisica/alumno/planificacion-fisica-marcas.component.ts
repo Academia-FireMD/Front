@@ -153,13 +153,38 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
 
   protected readonly form = this.fb.nonNullable.group({
     disciplinaId: this.fb.control<number | null>(null, Validators.required),
-    valor: this.fb.control<number | null>(null, Validators.required),
+    valor: this.fb.control<number | null>(null, [
+      Validators.required,
+      Validators.min(0.01),
+    ]),
     unidad: ['', Validators.required],
     fecha: this.fb.control<Date | null>(null, Validators.required),
     notas: [''],
   });
 
   protected readonly hoy = new Date();
+
+  /** Unidades sugeridas por grupo de disciplina, para autocompletar. */
+  private readonly unidadesPorGrupo: Record<string, string> = {
+    CUERDA: 'min',
+    CARRERA: 'min',
+    NATACION: 'min',
+    PRESS: 'reps',
+    FUERZA: 'reps',
+    ESCALERAS: 'min',
+    DESCANSO: '',
+    TEST: 'puntos',
+  };
+
+  /** Cuando cambia la disciplina, sugiere la unidad típica de su grupo. */
+  protected onDisciplinaChange(disciplinaId: number): void {
+    const disciplina = this.catalogo().find((d) => d.id === disciplinaId);
+    if (disciplina && !this.form.get('unidad')?.value) {
+      this.form
+        .get('unidad')
+        ?.setValue(this.unidadesPorGrupo[disciplina.grupo] ?? '');
+    }
+  }
 
   async ngOnInit(): Promise<void> {
     await this.cargar();

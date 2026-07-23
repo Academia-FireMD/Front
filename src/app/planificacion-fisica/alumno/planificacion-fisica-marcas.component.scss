@@ -130,42 +130,61 @@
     font-size: 1.05rem;
   }
 
-  &__historico {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  &__grupo-count {
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
   }
 
-  &__marca {
+  /* Tabla de marcas (Fase 5 polish) */
+  &__tabla {
     display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  &__fila {
+    display: grid;
+    grid-template-columns: 100px 1fr 2fr 40px;
     align-items: center;
     gap: 0.75rem;
-    flex-wrap: wrap;
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--surface-border, #e5e7eb);
 
     &:last-child {
       border-bottom: none;
     }
+
+    &--header {
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--text-color-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--surface-border, #e5e7eb);
+    }
   }
 
   &__marca-fecha {
     font-size: 0.85rem;
     color: var(--text-color-secondary);
-    min-width: 90px;
   }
 
   &__marca-valor {
     font-weight: 700;
+    color: var(--primary-color);
   }
 
   &__marca-notas {
-    flex: 1 1 auto;
     color: var(--text-color-secondary);
     font-size: 0.85rem;
     font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__marca-acciones {
+    display: flex;
+    justify-content: flex-end;
   }
 }

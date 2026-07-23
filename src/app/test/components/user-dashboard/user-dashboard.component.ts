@@ -17,6 +17,10 @@ import { AuthService } from '../../../services/auth.service';
 import { PlanificacionesService } from '../../../services/planificaciones.service';
 import { UserService } from '../../../services/user.service';
 import {
+  MarcaPersonal,
+  PlanificacionFisicaService,
+} from '../../../planificacion-fisica/services/planificacion-fisica.service';
+import {
   FilterConfig,
   GenericListComponent,
   GenericListMode,
@@ -63,6 +67,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   confirmationService = inject(ConfirmationService);
   authService = inject(AuthService);
   labelsService = inject(LabelsService);
+  planificacionFisicaService = inject(PlanificacionFisicaService);
 
   @Input() mode: GenericListMode = 'overview';
   @Input() singleSelection = false;
@@ -126,6 +131,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   expandedUserIds = new Set<number>();
   userPlanifications = new Map<number, any[]>();
   loadingPlanifications = new Set<number>();
+  userMarcas = new Map<number, MarcaPersonal[]>();
+  loadingMarcas = new Set<number>();
 
   // Configuración de filtros para el GenericListComponent
   public filters = computed(() => {
@@ -713,6 +720,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       if (!this.userPlanifications.has(userId)) {
         this.loadUserPlanifications(userId);
       }
+      if (!this.userMarcas.has(userId)) {
+        this.loadUserMarcas(userId);
+      }
     }
   }
 
@@ -732,6 +742,28 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     } finally {
       this.loadingPlanifications.delete(userId);
     }
+  }
+
+  async loadUserMarcas(userId: number) {
+    this.loadingMarcas.add(userId);
+    try {
+      const marcas = await firstValueFrom(
+        this.planificacionFisicaService.marcasDeAlumno(userId),
+      );
+      this.userMarcas.set(userId, marcas);
+    } catch (error) {
+      console.error('Error loading user marcas:', error);
+    } finally {
+      this.loadingMarcas.delete(userId);
+    }
+  }
+
+  getUserMarcas(userId: number): MarcaPersonal[] {
+    return this.userMarcas.get(userId) || [];
+  }
+
+  isLoadingMarcas(userId: number): boolean {
+    return this.loadingMarcas.has(userId);
   }
 
   getUserPlanifications(userId: number): any[] {
