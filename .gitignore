@@ -52,3 +52,4 @@ playwright-report/
 playwright-report-wl/
 playwright.manual-qa.config.ts
 playwright.wl.config.ts
+qa-playwright-*.js

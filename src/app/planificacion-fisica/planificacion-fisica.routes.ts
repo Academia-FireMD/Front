@@ -3,7 +3,6 @@ import { roleGuard } from '../guards/auth/role.guard';
 import { PlanificacionFisicaAdminComponent } from './admin/planificacion-fisica-admin.component';
 import { PlanificacionFisicaDetallesComponent } from './admin/planificacion-fisica-detalles.component';
 import { PlanificacionFisicaCalendarioComponent } from './alumno/planificacion-fisica-calendario.component';
-import { PlanificacionFisicaBloqueComponent } from './alumno/planificacion-fisica-bloque.component';
 import { PlanificacionFisicaDiaComponent } from './alumno/planificacion-fisica-dia.component';
 import { PlanificacionFisicaMarcasComponent } from './alumno/planificacion-fisica-marcas.component';
 
@@ -28,14 +27,6 @@ export const routes: Routes = [
     component: PlanificacionFisicaCalendarioComponent,
     canActivate: [roleGuard],
     data: { expectedRole: 'ALUMNO', title: 'Planificación física' },
-  },
-  {
-    // Vista de bloque completo (todas las semanas, Gap #12): visión global de
-    // solo lectura; la operativa diaria sigue en el calendario de 4 semanas.
-    path: 'bloque',
-    component: PlanificacionFisicaBloqueComponent,
-    canActivate: [roleGuard],
-    data: { expectedRole: 'ALUMNO', title: 'Bloque completo' },
   },
   {
     // Detalle de un día concreto, con los checks de progreso (Task 12).

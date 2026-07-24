@@ -233,11 +233,6 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
     this.router.navigate(['/app/planificacion-fisica', 'marcas']);
   }
 
-  /** Entrada a la vista de bloque completo (Gap #12), visión global de solo lectura. */
-  protected irABloque(): void {
-    this.router.navigate(['/app/planificacion-fisica', 'bloque']);
-  }
-
   /** Mismo CTA que `ai-assistant-widget`: abre la tienda WooCommerce para mejorar de plan. */
   protected mejorarSuscripcion(): void {
     window.open(environment.wooCommerceUrl, '_blank');

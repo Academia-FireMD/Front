@@ -264,17 +264,15 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
     ]);
   });
 
-  it('irABloque navega a la vista de bloque completo', async () => {
+  it('no muestra el enlace "Ver bloque completo" (feedback Sergio 2026-07-24)', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
 
-    component['irABloque']();
-
-    const router = TestBed.inject(Router);
-    expect(router.navigate).toHaveBeenCalledWith([
-      '/app/planificacion-fisica',
-      'bloque',
-    ]);
+    const link = fixture.nativeElement.querySelector(
+      '[data-testid="pf-calendario-bloque-link"]',
+    );
+    expect(link).toBeNull();
   });
 
   describe('switcher multi-oposición (Fase 2)', () => {
