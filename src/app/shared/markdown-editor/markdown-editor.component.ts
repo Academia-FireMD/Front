@@ -117,6 +117,15 @@ export class MarkdownEditorComponent
     resaltado: '🖍',
   };
 
+  private static readonly SNIPPET_TOOLTIPS: Record<SnippetClave, string> = {
+    'callout--info': 'Insertar recuadro de información',
+    'callout--exito': 'Insertar recuadro de éxito',
+    'callout--aviso': 'Insertar recuadro de aviso',
+    'callout--peligro': 'Insertar recuadro importante',
+    recuadro: 'Insertar recuadro enmarcado',
+    resaltado: 'Resaltar texto',
+  };
+
   // `Editor` (named export) es un namespace en los typings → se usa como valor
   // pero se tipa la instancia como `any` (mismo patrón que el resto del repo).
   private editor?: any;
@@ -177,7 +186,11 @@ export class MarkdownEditorComponent
       el.className = 'toastui-editor-toolbar-icons cursos-toolbar-btn';
       el.textContent = texto;
       el.addEventListener('click', () => this.insertarSnippet(clave));
-      return { el, name: clave, tooltip: `Insertar ${clave}` };
+      return {
+        el,
+        name: clave,
+        tooltip: MarkdownEditorComponent.SNIPPET_TOOLTIPS[clave],
+      };
     });
   }
 
