@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, input } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DomSanitizer, ɵDomSanitizerImpl } from '@angular/platform-browser';
 import { provideMarkdown } from 'ngx-markdown';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
 import { Bloque } from '../models/curso.model';
@@ -33,6 +34,9 @@ describe('BloqueRenderComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideMarkdown(),
+        // Override the mocked DomSanitizer with the real implementation to validate
+        // that HTML elements with classes survive sanitization (CommonMark raw HTML blocks).
+        { provide: DomSanitizer, useClass: ɵDomSanitizerImpl },
       ],
     })
       .overrideComponent(BloqueRenderComponent, {
@@ -121,19 +125,19 @@ describe('BloqueRenderComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Descargar');
   });
 
-  it('aplica estilos CSS de callout, resaltado y recuadro al contenido markdown', () => {
-    // Verifica que el componente aplica la clase .cursos-prose que contiene
-    // las nuevas clases CSS para callout, resaltado, y recuadro.
-    // El contrato del sanitizador (permitir clases en elementos) se valida
-    // en QA visual en navegador real, no en test unitario mockeado.
+  it('conserva las clases CSS de un callout embebido en el markdown', async () => {
     setBloque({
       tipo: 'TEXTO',
-      contenidoMarkdown: '# Test\n\nContenido del bloque.',
+      contenidoMarkdown:
+        '<div class="callout callout--info">\n\n**Recuerda.** Interior.\n\n</div>',
     });
     fixture.detectChanges();
-    const wrapper = fixture.nativeElement.querySelector('.bloque-texto');
-    expect(wrapper).not.toBeNull();
-    // Verify que la clase de tipografía prose se aplica
-    expect(wrapper.classList.contains('cursos-prose')).toBe(true);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const callout = fixture.nativeElement.querySelector(
+      '.callout.callout--info',
+    );
+    expect(callout).not.toBeNull();
+    expect(callout.querySelector('strong')).not.toBeNull();
   });
 });
