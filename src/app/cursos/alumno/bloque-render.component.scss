@@ -12,12 +12,6 @@
   --bunny-player-radius: var(--cursos-radius, 12px);
 }
 
-.bloque-texto {
-  :first-child {
-    margin-top: 0;
-  }
-}
-
 .bloque-empty,
 .bloque-empty-text {
   color: var(--cursos-text-soft, #6b7280);
