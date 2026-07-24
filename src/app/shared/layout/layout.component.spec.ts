@@ -147,7 +147,7 @@ describe('LayoutComponent', () => {
         items: [],
       },
       {
-        label: 'Planificación mensual',
+        label: 'Planificación de estudio',
         routerLink: '/app/planificacion/planificacion-mensual-alumno',
         modulo: ModuloApp.PLANIFICACION,
         items: [],
@@ -166,7 +166,7 @@ describe('LayoutComponent', () => {
     );
     // Enlaces directos con items:[] NO se podan; el submenú vacío sí.
     expect(findItemByLabel(filtered, 'Documentos')).toBeDefined();
-    expect(findItemByLabel(filtered, 'Planificación mensual')).toBeDefined();
+    expect(findItemByLabel(filtered, 'Planificación de estudio')).toBeDefined();
     expect(findItemByLabel(filtered, 'Submenú vacío')).toBeUndefined();
   });
 
@@ -197,12 +197,12 @@ describe('LayoutComponent', () => {
   });
 
   // -------- Mis marcas en el menú del alumno (Fase 3) --------
-  function makeAlumnoConSub(): Usuario {
+  function makeAlumnoConSub(
+    tipo: SuscripcionTipo = SuscripcionTipo.ADVANCED,
+  ): Usuario {
     return {
       ...makeUser(Rol.ALUMNO),
-      suscripciones: [
-        { tipo: SuscripcionTipo.ADVANCED, status: SuscripcionStatus.ACTIVE },
-      ],
+      suscripciones: [{ tipo, status: SuscripcionStatus.ACTIVE }],
     } as any;
   }
 
@@ -224,16 +224,96 @@ describe('LayoutComponent', () => {
     (component as any).currentUserSignal.set(makeAlumnoConSub());
 
     expect(findItemByLabel(component.items(), 'Mis marcas')).toBeUndefined();
-    // La entrada principal del módulo se oculta por el mismo filtro.
+    // El hijo de física dentro del grupo "Planificación" se oculta por el
+    // mismo filtro; el grupo sobrevive con el hijo de estudio.
     expect(
-      findItemByLabel(component.items(), 'Planificación física'),
+      findItemByLabel(component.items(), 'Planificación pruebas físicas'),
     ).toBeUndefined();
+    expect(
+      findItemByLabel(component.items(), 'Planificación de estudio'),
+    ).toBeDefined();
   });
 
   it('ALUMNO sin suscripción vigente no ve "Mis marcas"', () => {
     (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO)); // suscripciones: []
 
     expect(findItemByLabel(component.items(), 'Mis marcas')).toBeUndefined();
+  });
+
+  // -------- Grupo Planificación (feedback Sergio 2026-07-24) --------
+  describe('grupo Planificación (feedback Sergio 2026-07-24)', () => {
+    it('ADVANCED: grupo "Planificación" con hijos estudio (ruta mensual) y pruebas físicas', () => {
+      (component as any).currentUserSignal.set(
+        makeAlumnoConSub(SuscripcionTipo.ADVANCED),
+      );
+      const menu = component.items();
+
+      const grupo = menu.find((i) => i.label === 'Planificación');
+      expect(grupo).toBeDefined();
+      const labels = (grupo!.items as AppMenuItem[]).map((i) => i.label);
+      expect(labels).toEqual([
+        'Planificación de estudio',
+        'Planificación pruebas físicas',
+      ]);
+      expect((grupo!.items as AppMenuItem[])[0].routerLink).toBe(
+        '/app/planificacion/planificacion-mensual-alumno',
+      );
+      expect((grupo!.items as AppMenuItem[])[1].routerLink).toBe(
+        '/app/planificacion-fisica',
+      );
+    });
+
+    it('BASIC: hijo estudio bloqueado (locked-menu-item + upsell), hijo físicas visible', () => {
+      (component as any).currentUserSignal.set(
+        makeAlumnoConSub(SuscripcionTipo.BASIC),
+      );
+      const menu = component.items();
+
+      const grupo = menu.find((i) => i.label === 'Planificación');
+      expect(grupo).toBeDefined();
+      const hijos = grupo!.items as AppMenuItem[];
+      expect(hijos[0].styleClass).toBe('locked-menu-item');
+      expect(hijos[0].routerLink).toBeUndefined();
+      // El 403 de tier lo resuelve la vista (píldora de upsell).
+      expect(hijos[1].routerLink).toBe('/app/planificacion-fisica');
+    });
+
+    it('sin suscripción vigente: el grupo no aparece', () => {
+      (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO)); // suscripciones: []
+      const menu = component.items();
+
+      expect(menu.find((i) => i.label === 'Planificación')).toBeUndefined();
+    });
+
+    it('"Planificación mensual" y "Planificación física" ya no existen como items planos', () => {
+      (component as any).currentUserSignal.set(makeAlumnoConSub());
+      const menu = component.items();
+
+      expect(findItemByLabel(menu, 'Planificación mensual')).toBeUndefined();
+      expect(findItemByLabel(menu, 'Planificación física')).toBeUndefined();
+    });
+
+    it('"Mis marcas" sigue siendo item propio (fuera del grupo)', () => {
+      (component as any).currentUserSignal.set(makeAlumnoConSub());
+      const menu = component.items();
+
+      const marcas = menu.find((i) => i.label === 'Mis marcas');
+      expect(marcas).toBeDefined();
+      expect(marcas?.routerLink).toBe('/app/planificacion-fisica/marcas');
+    });
+
+    it('grupo se poda si ambos módulos hijos están OFF (sin header huérfano)', () => {
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION]: false,
+        [ModuloApp.PLANIFICACION_FISICA]: false,
+      });
+      (component as any).currentUserSignal.set(makeAlumnoConSub());
+
+      expect(
+        component.items().find((i) => i.label === 'Planificación'),
+      ).toBeUndefined();
+    });
   });
 
   // -------- T5 logo fallback --------
