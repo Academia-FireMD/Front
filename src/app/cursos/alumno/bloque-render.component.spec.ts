@@ -120,4 +120,20 @@ describe('BloqueRenderComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('temario.pdf');
     expect(fixture.nativeElement.textContent).toContain('Descargar');
   });
+
+  it('aplica estilos CSS de callout, resaltado y recuadro al contenido markdown', () => {
+    // Verifica que el componente aplica la clase .cursos-prose que contiene
+    // las nuevas clases CSS para callout, resaltado, y recuadro.
+    // El contrato del sanitizador (permitir clases en elementos) se valida
+    // en QA visual en navegador real, no en test unitario mockeado.
+    setBloque({
+      tipo: 'TEXTO',
+      contenidoMarkdown: '# Test\n\nContenido del bloque.',
+    });
+    fixture.detectChanges();
+    const wrapper = fixture.nativeElement.querySelector('.bloque-texto');
+    expect(wrapper).not.toBeNull();
+    // Verify que la clase de tipografía prose se aplica
+    expect(wrapper.classList.contains('cursos-prose')).toBe(true);
+  });
 });

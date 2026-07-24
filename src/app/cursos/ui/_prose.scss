@@ -125,4 +125,49 @@
     border-top: 1px solid var(--cursos-border);
     margin: 2em 0;
   }
+
+  .callout {
+    margin: 1.25em 0;
+    padding: 1em 1.25em;
+    border-radius: var(--cursos-radius);
+    border: 1px solid var(--cursos-border);
+    border-left-width: 4px;
+    background: var(--cursos-canvas);
+    > :last-child {
+      margin-bottom: 0;
+    }
+
+    &.callout--info {
+      border-left-color: #3b82f6;
+      background: #eff6ff;
+    }
+    &.callout--exito {
+      border-left-color: #10b981;
+      background: #ecfdf5;
+    }
+    &.callout--aviso {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+    &.callout--peligro {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+  }
+
+  .resaltado {
+    background: #fef08a;
+    padding: 0.05em 0.25em;
+    border-radius: 3px;
+  }
+
+  .recuadro {
+    margin: 1.25em 0;
+    padding: 1em 1.25em;
+    border: 2px solid var(--cursos-brand);
+    border-radius: var(--cursos-radius);
+    > :last-child {
+      margin-bottom: 0;
+    }
+  }
 }
