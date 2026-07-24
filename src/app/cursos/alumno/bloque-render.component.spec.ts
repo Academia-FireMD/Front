@@ -76,6 +76,13 @@ describe('BloqueRenderComponent', () => {
     expect(fixture.nativeElement.querySelector('markdown')).not.toBeNull();
   });
 
+  it('el bloque TEXTO lleva la clase de tipografía cursos-prose', () => {
+    setBloque({ tipo: 'TEXTO', contenidoMarkdown: '# Hola' });
+    fixture.detectChanges();
+    const wrapper = fixture.nativeElement.querySelector('.bloque-texto');
+    expect(wrapper.classList).toContain('cursos-prose');
+  });
+
   it('TEST renderiza el bloque de test inline (app-bloque-test-inline)', () => {
     setBloque({ tipo: 'TEST', temaId: 14, numPreguntas: 12 });
     fixture.detectChanges();
