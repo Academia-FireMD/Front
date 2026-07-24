@@ -123,6 +123,12 @@ export interface Curso {
    * `GET /cursos/clases-grabadas`.
    */
   esClaseGrabada?: boolean;
+  /**
+   * Task C4 (feedback Raúl 2026-07-24): fecha de publicación. Se sella
+   * automáticamente al publicar; el admin puede editarla. En clases grabadas
+   * decide qué alumnos la ven (`fechaPublicacion >= fechaCorte(alumno)`).
+   */
+  fechaPublicacion?: string | null;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   estado: EstadoCurso;
@@ -361,6 +367,11 @@ export interface CursoUpdatePayload {
   esGratuito?: boolean;
   /** Clase grabada: acceso por oposición, sin venta (no se manda wooProductId). */
   esClaseGrabada?: boolean;
+  /**
+   * Task C4: string ISO. `null` explícito borra la fecha (vuelve al sellado
+   * automático al publicar); ausente = no tocarla.
+   */
+  fechaPublicacion?: string | null;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   /**

@@ -15,6 +15,12 @@ export interface Usuario {
   apellidos: string;
   esTutor: boolean;
   tutorId?: number;
+  /**
+   * Task C4 (feedback Raúl 2026-07-24): override admin del corte de clases
+   * grabadas. String ISO por HTTP; `null` borra el override (vuelve al corte
+   * por primera matrícula). Campo solo-admin en el backend (whitelist).
+   */
+  fechaAccesoClasesGrabadas?: string | null;
   avatarUrl: string;
   sub?: number;
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;

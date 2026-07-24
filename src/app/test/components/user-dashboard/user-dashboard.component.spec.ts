@@ -284,3 +284,111 @@ describe('UserDashboardComponent — lógica Fase 2 (plan 2026-05-11)', () => {
     });
   });
 });
+
+/**
+ * Task C4 (feedback Raúl 2026-07-24) — override admin "Acceso a clases
+ * grabadas desde" en el diálogo de edición.
+ *
+ * Mismo enfoque que Fase 1/2: réplica fiel de `editarUsuario` +
+ * `confirmarCambios` del componente (no instanciable en este entorno por deep
+ * imports de PrimeNG). Si la lógica del componente cambia, actualizar aquí.
+ */
+describe('UserDashboardComponent — override clases grabadas (Task C4)', () => {
+  const buildEditHandlers = (deps: { userService: any; toast: any }) => {
+    const state = {
+      selectedUser: null as any,
+      editFechaClasesGrabadas: null as Date | null,
+      editDialogVisible: false,
+    };
+    // Réplica de `editarUsuario`.
+    const editarUsuario = (user: any) => {
+      state.selectedUser = { ...user };
+      state.editFechaClasesGrabadas = user.fechaAccesoClasesGrabadas
+        ? new Date(user.fechaAccesoClasesGrabadas)
+        : null;
+      state.editDialogVisible = true;
+    };
+    // Réplica de `confirmarCambios` (solo la construcción del payload).
+    const confirmarCambios = (modifiedUser: any) => {
+      deps.userService
+        .updateUser(modifiedUser.id, {
+          nombre: modifiedUser.nombre,
+          apellidos: modifiedUser.apellidos,
+          esTutor: modifiedUser.esTutor,
+          fechaAccesoClasesGrabadas: state.editFechaClasesGrabadas
+            ? state.editFechaClasesGrabadas.toISOString()
+            : null,
+        })
+        .subscribe({
+          next: () => deps.toast.success('Usuario actualizado correctamente'),
+          error: () => deps.toast.error('No se pudo actualizar el usuario'),
+        });
+    };
+    return { state, editarUsuario, confirmarCambios };
+  };
+
+  const buildDeps = () => {
+    const subscribeMock = jest
+      .fn()
+      .mockImplementation((handlers: any) => handlers.next({}));
+    return {
+      userService: {
+        updateUser: jest.fn().mockReturnValue({ subscribe: subscribeMock }),
+      },
+      toast: { success: jest.fn(), error: jest.fn() },
+    };
+  };
+
+  it('el payload de guardado incluye fechaAccesoClasesGrabadas en ISO cuando el admin fija fecha', () => {
+    const deps = buildDeps();
+    const { state, editarUsuario, confirmarCambios } = buildEditHandlers(deps);
+
+    editarUsuario({ id: 7, nombre: 'Ana', apellidos: 'B', esTutor: false });
+    state.editFechaClasesGrabadas = new Date('2026-05-01T00:00:00.000Z');
+    confirmarCambios(state.selectedUser);
+
+    expect(deps.userService.updateUser).toHaveBeenCalledWith(7, {
+      nombre: 'Ana',
+      apellidos: 'B',
+      esTutor: false,
+      fechaAccesoClasesGrabadas: '2026-05-01T00:00:00.000Z',
+    });
+  });
+
+  it('calendario vacío → manda fechaAccesoClasesGrabadas=null (borra el override)', () => {
+    const deps = buildDeps();
+    const { state, editarUsuario, confirmarCambios } = buildEditHandlers(deps);
+
+    editarUsuario({
+      id: 7,
+      nombre: 'Ana',
+      apellidos: 'B',
+      esTutor: false,
+      fechaAccesoClasesGrabadas: '2026-05-01T00:00:00.000Z',
+    });
+    // El admin limpia el calendario (botón clear del p-calendar).
+    state.editFechaClasesGrabadas = null;
+    confirmarCambios(state.selectedUser);
+
+    expect(deps.userService.updateUser).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ fechaAccesoClasesGrabadas: null }),
+    );
+  });
+
+  it('editarUsuario hidrata el calendario con el override existente del usuario', () => {
+    const deps = buildDeps();
+    const { state, editarUsuario } = buildEditHandlers(deps);
+
+    editarUsuario({
+      id: 7,
+      fechaAccesoClasesGrabadas: '2026-05-01T00:00:00.000Z',
+    });
+    expect(state.editFechaClasesGrabadas).toEqual(
+      new Date('2026-05-01T00:00:00.000Z'),
+    );
+
+    editarUsuario({ id: 8 });
+    expect(state.editFechaClasesGrabadas).toBeNull();
+  });
+});

@@ -279,6 +279,79 @@ describe('CursoAdminEditComponent', () => {
     );
   });
 
+  // ---- Task C4 (feedback Raúl 2026-07-24): fechaPublicacion editable ----
+
+  it('saveMetadata incluye fechaPublicacion en ISO cuando es clase grabada y hay fecha', async () => {
+    component.cursoId.set(1);
+    component.curso.set(buildCursoFixture({ esClaseGrabada: true }));
+    component.metadataForm.patchValue({
+      titulo: 'Clase Continua',
+      slug: 'curso-x',
+      esClaseGrabada: true,
+      fechaPublicacion: new Date('2026-06-01T00:00:00.000Z'),
+    });
+    component.onEsClaseGrabadaChange(true);
+    serviceMock.update!.mockReturnValue(
+      of(buildCursoFixture({ esClaseGrabada: true })),
+    );
+    await component.saveMetadata();
+    expect(serviceMock.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        fechaPublicacion: '2026-06-01T00:00:00.000Z',
+      }),
+    );
+  });
+
+  it('saveMetadata clase grabada con calendario vacío → fechaPublicacion=null (borra)', async () => {
+    component.cursoId.set(1);
+    component.curso.set(buildCursoFixture({ esClaseGrabada: true }));
+    component.metadataForm.patchValue({
+      titulo: 'Clase Continua',
+      slug: 'curso-x',
+      esClaseGrabada: true,
+      fechaPublicacion: null,
+    });
+    component.onEsClaseGrabadaChange(true);
+    serviceMock.update!.mockReturnValue(
+      of(buildCursoFixture({ esClaseGrabada: true })),
+    );
+    await component.saveMetadata();
+    expect(serviceMock.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ fechaPublicacion: null }),
+    );
+  });
+
+  it('saveMetadata NO manda fechaPublicacion cuando el curso no es clase grabada', async () => {
+    component.cursoId.set(1);
+    component.curso.set(buildCursoFixture());
+    component.metadataForm.patchValue({
+      titulo: 'Curso Normal',
+      slug: 'curso-x',
+      fechaPublicacion: new Date('2026-06-01T00:00:00.000Z'),
+    });
+    serviceMock.update!.mockReturnValue(of(buildCursoFixture()));
+    await component.saveMetadata();
+    const payload = serviceMock.update!.mock.calls[0][1];
+    expect(payload).not.toHaveProperty('fechaPublicacion');
+  });
+
+  it('loadCurso hidrata fechaPublicacion como Date en el form', async () => {
+    serviceMock.getCurso!.mockReturnValue(
+      of(
+        buildCursoFixture({
+          esClaseGrabada: true,
+          fechaPublicacion: '2026-06-01T00:00:00.000Z',
+        }),
+      ),
+    );
+    await component.loadCurso(1);
+    expect(component.metadataForm.controls.fechaPublicacion.value).toEqual(
+      new Date('2026-06-01T00:00:00.000Z'),
+    );
+  });
+
   it('onEsClaseGrabadaChange(true) oculta el picker de producto WC', () => {
     expect(component.mostrarWcPicker()).toBe(true);
     component.onEsClaseGrabadaChange(true);
