@@ -16,6 +16,7 @@ jest.mock('@toast-ui/editor', () => ({
   Editor: jest.fn().mockImplementation((opts: any) => {
     editorCtorOpts.push(opts);
     let markdown: string = opts.initialValue ?? '';
+    let selectedText: string = '';
     const instance = {
       getMarkdown: jest.fn(() => markdown),
       setMarkdown: jest.fn((v: string) => {
@@ -25,7 +26,19 @@ jest.mock('@toast-ui/editor', () => ({
         markdown += texto;
         opts.events?.change?.();
       }),
+      getSelectedText: jest.fn(() => selectedText),
+      replaceSelection: jest.fn((texto: string) => {
+        if (selectedText) {
+          markdown = markdown.replace(selectedText, texto);
+          selectedText = '';
+          opts.events?.change?.();
+        }
+      }),
       destroy: jest.fn(),
+      // Auxiliar de test para simular selección
+      _setSelectedText: (text: string) => {
+        selectedText = text;
+      },
     };
     editorInstances.push(instance);
     return instance;
@@ -134,5 +147,55 @@ describe('MarkdownEditorComponent', () => {
     expect(editorInstances[0].getMarkdown()).toContain(
       '<div class="callout callout--peligro">',
     );
+  });
+
+  it('resaltado envuelve texto seleccionado en <span class="resaltado">...', () => {
+    // Recrear componente con inicial value que contiene el texto que será seleccionado
+    editorInstances.length = 0;
+    editorCtorOpts.length = 0;
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
+    const editor = editorInstances[0] as any;
+    // Setear markdown inicial para que contenga la palabra a seleccionar
+    editor.setMarkdown('texto con palabra importante aquí');
+    // Simular selección de "palabra importante"
+    editor._setSelectedText('palabra importante');
+
+    component.insertarSnippet('resaltado');
+
+    expect(editor.replaceSelection).toHaveBeenCalledWith(
+      '<span class="resaltado">palabra importante</span>',
+    );
+    expect(editor.getMarkdown()).toContain(
+      '<span class="resaltado">palabra importante</span>',
+    );
+  });
+
+  it('resaltado inserta placeholder si NO hay selección', () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
+    const editor = editorInstances[0] as any;
+    // Sin selección (texto vacío)
+    editor._setSelectedText('');
+
+    component.insertarSnippet('resaltado');
+
+    // Debe usar insertText, no replaceSelection
+    expect(editor.insertText).toHaveBeenCalledWith(
+      '<span class="resaltado">texto resaltado</span>',
+    );
+  });
+
+  it('botones custom tienen title para accesibilidad', () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
+    const grupoCustom =
+      editorCtorOpts[0].toolbarItems[editorCtorOpts[0].toolbarItems.length - 1];
+    for (const item of grupoCustom) {
+      expect(item.el.getAttribute('title')).toBe(item.tooltip);
+    }
   });
 });

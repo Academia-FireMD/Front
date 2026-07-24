@@ -164,9 +164,27 @@ export class MarkdownEditorComponent
     });
   }
 
-  /** Inserta el snippet HTML+markdown de la clave dada en el cursor. */
+  /**
+   * Inserta el snippet HTML+markdown de la clave dada en el cursor.
+   * Para `resaltado`, si hay texto seleccionado, lo envuelve en
+   * `<span class="resaltado">...</span>` en lugar de insertar el placeholder.
+   */
   insertarSnippet(clave: SnippetClave): void {
-    this.editor?.insertText(MarkdownEditorComponent.SNIPPETS[clave]);
+    if (clave === 'resaltado') {
+      const selectedText = this.editor?.getSelectedText?.();
+      if (selectedText) {
+        // Envolver selección en span.resaltado
+        this.editor?.replaceSelection(
+          `<span class="resaltado">${selectedText}</span>`,
+        );
+      } else {
+        // Sin selección, usar el placeholder predefinido
+        this.editor?.insertText(MarkdownEditorComponent.SNIPPETS[clave]);
+      }
+    } else {
+      // Callouts y otros snippets: insertar directamente
+      this.editor?.insertText(MarkdownEditorComponent.SNIPPETS[clave]);
+    }
   }
 
   /**
@@ -185,11 +203,13 @@ export class MarkdownEditorComponent
       el.type = 'button';
       el.className = 'toastui-editor-toolbar-icons cursos-toolbar-btn';
       el.textContent = texto;
+      const tooltip = MarkdownEditorComponent.SNIPPET_TOOLTIPS[clave];
+      el.setAttribute('title', tooltip);
       el.addEventListener('click', () => this.insertarSnippet(clave));
       return {
         el,
         name: clave,
-        tooltip: MarkdownEditorComponent.SNIPPET_TOOLTIPS[clave],
+        tooltip,
       };
     });
   }
