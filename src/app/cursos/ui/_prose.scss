@@ -1,0 +1,128 @@
+// Tipografía del contenido markdown del aula (bloques TEXTO).
+// Global a propósito: ngx-markdown inyecta innerHTML sin atributos
+// _ngcontent-*, así que los estilos de componente no aplican.
+.cursos-prose {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--cursos-text);
+
+  > :first-child {
+    margin-top: 0;
+  }
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--cursos-text);
+    line-height: 1.3;
+    margin: 1.75em 0 0.6em;
+    font-weight: 700;
+  }
+  h1 {
+    font-size: 1.75rem;
+  }
+  h2 {
+    font-size: 1.45rem;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--cursos-border);
+  }
+  h3 {
+    font-size: 1.2rem;
+  }
+  h4 {
+    font-size: 1.05rem;
+  }
+
+  p {
+    margin: 0 0 1em;
+  }
+  ul,
+  ol {
+    margin: 0 0 1em;
+    padding-left: 1.5em;
+  }
+  li {
+    margin-bottom: 0.35em;
+  }
+  li > ul,
+  li > ol {
+    margin-top: 0.35em;
+    margin-bottom: 0;
+  }
+
+  strong {
+    color: var(--cursos-text);
+    font-weight: 700;
+  }
+  a {
+    color: var(--cursos-brand);
+    text-decoration: underline;
+  }
+
+  blockquote {
+    margin: 1.25em 0;
+    padding: 0.5em 1em;
+    border-left: 4px solid var(--cursos-brand);
+    background: var(--cursos-brand-soft);
+    border-radius: 0 var(--cursos-radius) var(--cursos-radius) 0;
+    > :last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  code {
+    background: var(--cursos-canvas);
+    border: 1px solid var(--cursos-border);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+  }
+  pre {
+    background: var(--cursos-canvas);
+    border: 1px solid var(--cursos-border);
+    border-radius: var(--cursos-radius);
+    padding: 1em;
+    overflow-x: auto;
+    code {
+      background: none;
+      border: none;
+      padding: 0;
+    }
+  }
+
+  table {
+    border-collapse: collapse;
+    margin: 1.25em 0;
+    width: 100%;
+    display: block;
+    overflow-x: auto;
+    th,
+    td {
+      border: 1px solid var(--cursos-border);
+      padding: 0.5em 0.75em;
+      text-align: left;
+    }
+    th {
+      background: var(--cursos-canvas);
+      font-weight: 700;
+    }
+    tr:nth-child(even) td {
+      background: color-mix(in srgb, var(--cursos-canvas) 50%, transparent);
+    }
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--cursos-radius);
+  }
+  hr {
+    border: none;
+    border-top: 1px solid var(--cursos-border);
+    margin: 2em 0;
+  }
+}
