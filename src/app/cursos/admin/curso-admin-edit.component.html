@@ -149,6 +149,32 @@
                     />
                   </div>
 
+                  <!-- Task C4 (feedback Raúl 2026-07-24): fecha de publicación
+                       editable, solo en clases grabadas — decide qué alumnos
+                       ven la clase según su fecha de matrícula/override. -->
+                  @if (esClaseGrabadaSig()) {
+                    <div class="field">
+                      <label for="ce-fecha-publicacion"
+                        >Fecha de publicación</label
+                      >
+                      <p-calendar
+                        inputId="ce-fecha-publicacion"
+                        formControlName="fechaPublicacion"
+                        dateFormat="dd/mm/yy"
+                        [showIcon]="true"
+                        [showClear]="true"
+                        appendTo="body"
+                        placeholder="Automática al publicar"
+                        styleClass="w-full"
+                        data-testid="curso-edit-fecha-publicacion"
+                      />
+                      <small class="text-color-secondary">
+                        Los alumnos matriculados después de esta fecha no verán
+                        esta clase. Vacío = fecha de publicación automática.
+                      </small>
+                    </div>
+                  }
+
                   <div class="field field--full">
                     <label for="ce-descripcion">Descripción</label>
                     <textarea

@@ -560,8 +560,18 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     });
   }
 
+  /**
+   * Task C4 (feedback Raúl 2026-07-24): puente Date del `p-calendar` "Acceso a
+   * clases grabadas desde" del diálogo de edición. El backend recibe string
+   * ISO (o `null` para borrar el override) vía `POST /user/update/:id`.
+   */
+  editFechaClasesGrabadas: Date | null = null;
+
   editarUsuario(user: Usuario) {
     this.selectedUser = { ...user }; // Copiar los datos del usuario para editar
+    this.editFechaClasesGrabadas = user.fechaAccesoClasesGrabadas
+      ? new Date(user.fechaAccesoClasesGrabadas)
+      : null;
     this.editDialogVisible = cloneDeep(true); // Mostrar el diálogo
   }
 
@@ -674,6 +684,11 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         nombre: modifiedUser.nombre,
         apellidos: modifiedUser.apellidos,
         esTutor: modifiedUser.esTutor,
+        // Task C4: override admin del corte de clases grabadas. Calendario
+        // vacío → null explícito (borra el override).
+        fechaAccesoClasesGrabadas: this.editFechaClasesGrabadas
+          ? this.editFechaClasesGrabadas.toISOString()
+          : null,
       })
       .subscribe({
         next: () => {

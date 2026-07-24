@@ -1029,3 +1029,90 @@
     </div>
   </ng-template>
 </p-dialog>
+
+<!-- Diálogo de edición de usuario (admin). Task C4 (feedback Raúl 2026-07-24):
+     restaura el diálogo de `editDialogVisible` (el antiguo app-user-edit-dialog
+     se eliminó) y añade el override "Acceso a clases grabadas desde". -->
+<p-dialog
+  header="Editar usuario"
+  [(visible)]="editDialogVisible"
+  [modal]="true"
+  [style]="{ width: '450px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  @if (selectedUser) {
+    <div class="flex flex-column gap-3">
+      <div class="flex flex-column gap-2">
+        <label for="edit-user-nombre" class="font-medium">Nombre</label>
+        <input
+          id="edit-user-nombre"
+          type="text"
+          pInputText
+          [(ngModel)]="selectedUser.nombre"
+          class="w-full"
+          data-testid="user-edit-nombre"
+        />
+      </div>
+
+      <div class="flex flex-column gap-2">
+        <label for="edit-user-apellidos" class="font-medium">Apellidos</label>
+        <input
+          id="edit-user-apellidos"
+          type="text"
+          pInputText
+          [(ngModel)]="selectedUser.apellidos"
+          class="w-full"
+          data-testid="user-edit-apellidos"
+        />
+      </div>
+
+      <div class="flex align-items-center gap-2">
+        <p-inputSwitch
+          inputId="edit-user-tutor"
+          [(ngModel)]="selectedUser.esTutor"
+          data-testid="user-edit-tutor"
+        />
+        <label for="edit-user-tutor">Es tutor</label>
+      </div>
+
+      <div class="flex flex-column gap-2">
+        <label for="edit-user-fecha-clases-grabadas" class="font-medium">
+          Acceso a clases grabadas desde
+        </label>
+        <p-calendar
+          inputId="edit-user-fecha-clases-grabadas"
+          [(ngModel)]="editFechaClasesGrabadas"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [showClear]="true"
+          appendTo="body"
+          placeholder="Automático (primera matrícula)"
+          styleClass="w-full"
+          data-testid="user-edit-fecha-clases-grabadas"
+        />
+        <small class="text-color-secondary">
+          El alumno ve las clases grabadas publicadas a partir de esta fecha.
+          Vacío = fecha de su primera matrícula.
+        </small>
+      </div>
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        (click)="editDialogVisible = false"
+        [text]="true"
+      />
+      <p-button
+        label="Guardar"
+        icon="pi pi-check"
+        (onClick)="confirmarCambios(selectedUser)"
+        data-testid="user-edit-guardar"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

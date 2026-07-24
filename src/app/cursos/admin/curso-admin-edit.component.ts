@@ -20,6 +20,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { CalendarModule } from 'primeng/calendar';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DividerModule } from 'primeng/divider';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -91,6 +92,7 @@ type TagSeverity =
     ReactiveFormsModule,
     DragDropModule,
     ButtonModule,
+    CalendarModule,
     InputTextModule,
     InputTextareaModule,
     InputNumberModule,
@@ -192,6 +194,13 @@ export class CursoAdminEditComponent implements OnInit {
     wooProductId: [null as number | null],
     esGratuito: [false],
     esClaseGrabada: [false],
+    /**
+     * Task C4 (feedback Raúl 2026-07-24): fecha de publicación editable, solo
+     * visible para clases grabadas (`@if (esClaseGrabadaSig())` en el
+     * template). Decide qué alumnos ven la clase (matriculados después de
+     * esta fecha NO la ven). Vacío = sellado automático al publicar.
+     */
+    fechaPublicacion: [null as Date | null],
     thumbnailUrl: [''],
     duracionEstimadaMinutos: [null as number | null],
   });
@@ -302,6 +311,9 @@ export class CursoAdminEditComponent implements OnInit {
         wooProductId: data.wooProductId ?? null,
         esGratuito: data.esGratuito ?? false,
         esClaseGrabada: data.esClaseGrabada ?? false,
+        fechaPublicacion: data.fechaPublicacion
+          ? new Date(data.fechaPublicacion)
+          : null,
         thumbnailUrl: data.thumbnailUrl ?? '',
         duracionEstimadaMinutos: data.duracionEstimadaMinutos ?? null,
       });
@@ -397,6 +409,16 @@ export class CursoAdminEditComponent implements OnInit {
           relevancia: this.relevancia(),
           esGratuito,
           esClaseGrabada,
+          // Task C4: solo se manda en clases grabadas (única vista del campo).
+          // Date → ISO; calendario vacío → null explícito (borra la fecha y
+          // vuelve al sellado automático al publicar).
+          ...(esClaseGrabada
+            ? {
+                fechaPublicacion: raw.fechaPublicacion
+                  ? raw.fechaPublicacion.toISOString()
+                  : null,
+              }
+            : {}),
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
           updatedAt: c.updatedAt,
