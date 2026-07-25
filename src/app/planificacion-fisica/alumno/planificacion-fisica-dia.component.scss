@@ -7,9 +7,11 @@
   gap: 1rem;
   padding: 1rem;
 
+  // Sin `text-transform: capitalize`: capitalizaba también la preposición
+  // ("Viernes, 17 De Julio"). El título llega ya con solo la primera letra en
+  // mayúscula desde `tituloFecha()`.
   h2 {
     margin: 0;
-    text-transform: capitalize;
   }
 
   // Continuidad de color al bajar del calendario (naranja) a esta vista: solo
@@ -66,9 +68,9 @@
       flex: 1 1 auto;
     }
 
-    ::ng-deep .p-progressbar .p-progressbar-value {
-      background: pf.$pf-naranja-barra;
-    }
+    // Mismo relleno y misma pista que la barra semanal del calendario (mixin
+    // compartido en `_pf-colores.scss`).
+    @include pf.pf-barra-progreso;
 
     span {
       font-size: 0.85rem;

@@ -1,4 +1,7 @@
+import { registerLocaleData } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import localeEs from '@angular/common/locales/es';
+import { LOCALE_ID } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -12,6 +15,8 @@ import {
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
 import { PlanificacionFisicaDiaComponent } from './planificacion-fisica-dia.component';
+
+registerLocaleData(localeEs);
 
 describe('PlanificacionFisicaDiaComponent', () => {
   let fixture: ComponentFixture<PlanificacionFisicaDiaComponent>;
@@ -100,8 +105,25 @@ describe('PlanificacionFisicaDiaComponent', () => {
       providers: [
         ...COMMON_TEST_PROVIDERS,
         { provide: PlanificacionFisicaService, useValue: serviceMock },
+        // La app corre en español (`app.module.ts`): la cabecera del día es
+        // texto en español y su capitalización solo se puede verificar con
+        // este locale.
+        { provide: LOCALE_ID, useValue: 'es' },
       ],
     }).compileComponents();
+  });
+
+  it('la cabecera capitaliza SOLO la primera palabra ("Viernes, 17 de julio")', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const titulo = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-titulo"]'),
+    ).nativeElement as HTMLElement;
+    // El `text-transform: capitalize` que había ponía "17 De Julio".
+    expect(titulo.textContent?.trim()).toBe('Viernes, 17 de julio');
   });
 
   it('carga el día y pinta cada disciplina con su contenido', async () => {

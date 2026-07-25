@@ -12,7 +12,9 @@
       (click)="volver()"
     ></p-button>
     @if (detalle()) {
-      <h2>{{ detalle()!.fecha | date: "EEEE, d 'de' MMMM" }}</h2>
+      <!-- Ya viene capitalizado solo en la primera palabra desde el .ts: el
+           `text-transform: capitalize` que había aquí ponía "17 De Julio". -->
+      <h2 data-testid="pf-dia-titulo">{{ tituloFecha() }}</h2>
     }
   </div>
 

@@ -23,6 +23,31 @@ $pf-crema: #fffaf4;
 // Marrón cálido: >5:1 sobre el naranja, mantiene el tono del bloque.
 $pf-texto-calido: #7c2d12;
 
+// Borde de la pista (track) de las barras de progreso. Sobre la tarjeta
+// naranja del calendario una pista blanca sin borde casi no se distingue de la
+// banda, y una semana a 0/12 parecía no tener barra. El borde la recorta en
+// cualquiera de las dos superficies (naranja del calendario, blanco del
+// detalle de día).
+$pf-barra-pista-borde: rgba(124, 45, 18, 0.35);
+
+// Barra de progreso del alumno: FUENTE ÚNICA de su relleno y su pista, para
+// las dos superficies donde aparece (tarjeta de semana del calendario y
+// detalle de día). El relleno estaba ya en el mismo token en ambas, pero el
+// calendario lo pintaba más claro porque la tarjeta de semana en solo-lectura
+// se atenuaba entera con `opacity` (ver `--anterior`): dos naranjas para lo
+// mismo. Aquí queda un único naranja y una pista con borde.
+@mixin pf-barra-progreso {
+  ::ng-deep .p-progressbar {
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid $pf-barra-pista-borde;
+
+    .p-progressbar-value {
+      background: $pf-naranja-barra;
+    }
+  }
+}
+
 // Borde de los puntos de color de disciplina. DESCANSO es #ffffff en el
 // catálogo (`disciplinas.catalogo.ts`): sin borde desaparece sobre cualquier
 // superficie clara (crema del calendario, blanco del detalle). El arreglo es

@@ -146,9 +146,18 @@
 
   // Semana anterior: atenuada para indicar solo-lectura, sin ocultar el
   // contenido (el alumno sigue queriendo consultarla).
+  //
+  // El atenuado va sobre la cabecera y la rejilla de días, NO sobre la tarjeta
+  // entera: `opacity` crea un contexto de composición que un hijo no puede
+  // revertir, así que lavaba también la barra de progreso y esta salía en un
+  // naranja más claro (#eaa578) que la misma barra del detalle de día
+  // (#dd6b20) — dos naranjas para lo mismo (QA ronda 3).
   &--anterior,
   &__semana--anterior {
-    opacity: 0.6;
+    .pf-calendario__semana-header,
+    .pf-calendario__dias {
+      opacity: 0.6;
+    }
   }
 
   &__progreso {
@@ -161,16 +170,11 @@
       flex: 1 1 auto;
     }
 
-    // La barra semanal usaba el primary del tema (rojo #bb292a) sobre pista
-    // gris; sobre el naranja de la tarjeta se lee mal. Pista clara + relleno
-    // naranja.
-    ::ng-deep .p-progressbar {
-      background: rgba(255, 255, 255, 0.75);
-
-      .p-progressbar-value {
-        background: pf.$pf-naranja-barra;
-      }
-    }
+    // Relleno naranja + pista blanca con borde, exactamente los mismos que la
+    // barra del detalle de día (mixin compartido en `_pf-colores.scss`): antes
+    // la pista era blanco al 75% y sobre el naranja de la tarjeta no se
+    // distinguía cuando la semana iba 0/12.
+    @include pf.pf-barra-progreso;
   }
 
   &__progreso-texto {

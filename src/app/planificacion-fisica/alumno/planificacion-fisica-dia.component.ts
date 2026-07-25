@@ -1,8 +1,9 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, formatDate } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  LOCALE_ID,
   OnInit,
   computed,
   inject,
@@ -55,6 +56,7 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
   private toast = inject(ToastrService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private locale = inject(LOCALE_ID);
 
   protected loading = signal(false);
   protected detalle = signal<DiaDetalle | null>(null);
@@ -73,6 +75,20 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
     const disciplinas = this.detalle()?.disciplinas ?? [];
     const hechas = disciplinas.filter((d) => d.realizado).length;
     return { hechas, total: disciplinas.length };
+  });
+
+  /**
+   * Cabecera del día, "Viernes, 17 de julio". En español el `date` pipe
+   * devuelve el día de la semana en minúscula ("viernes, 17 de julio") y la
+   * cabecera lo arreglaba con `text-transform: capitalize`, que capitaliza
+   * TODAS las palabras: salía "Viernes, 17 De Julio". Se formatea aquí y solo
+   * se sube la primera letra.
+   */
+  protected readonly tituloFecha = computed(() => {
+    const fecha = this.detalle()?.fecha;
+    if (!fecha) return '';
+    const texto = formatDate(fecha, "EEEE, d 'de' MMMM", this.locale);
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   });
 
   protected readonly progresoPorcentaje = computed(() => {
