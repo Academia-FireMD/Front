@@ -425,13 +425,20 @@ p-chip {
   font-size: 18px;
 }
 
-/* La vista previa de Toast UI renderiza el HTML de los recuadros pero sin
-   estilarlo: info / aviso / importante salían como párrafos pelados idénticos
-   y el profe no podía comprobar lo que iba a ver el alumno. Se aplica el MISMO
-   mixin que `.cursos-prose` (definido en `app/cursos/ui/_prose.scss`, colores
-   en `_tokens.scss`) — una sola fuente de verdad para ambas vistas. */
-.toastui-editor-contents {
-  @include cursos-callouts;
+/* El editor de bloques de cursos ya NO usa la vista previa de Toast UI: la
+   sustituye un panel propio que renderiza con el mismo pipeline que el alumno
+   (ngx-markdown + `.cursos-prose`, ver `markdown-editor.component.html`).
+   Motivo: Toast UI parsea CommonMark estricto y no procesa el markdown que va
+   dentro de un `<div>` HTML, así que pintaba los recuadros como cajas de color
+   vacías con el texto fuera — el autor veía algo que NO era lo que vería el
+   alumno. Con la previa fiel al lado, su pestaña "Preview" sobra y se oculta
+   para no ofrecer dos previas contradictorias. Va en global porque Toast UI
+   inyecta su DOM fuera de la encapsulación de Angular, y con `!important`
+   porque Toast UI escribe `style="display: block"` INLINE en ese contenedor al
+   arrancar en modo `tab` (verificado en navegador: sin `!important` la regla
+   pierde contra el estilo inline). */
+.md-editor--cursos .toastui-editor-md-tab-container {
+  display: none !important;
 }
 
 .select-bloque-asignable-dialog {

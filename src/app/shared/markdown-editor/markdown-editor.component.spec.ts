@@ -1,5 +1,8 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
+import { By, DomSanitizer, ɵDomSanitizerImpl } from '@angular/platform-browser';
+import { provideMarkdown } from 'ngx-markdown';
 
 /**
  * `@toast-ui/editor` no funciona en jsdom (su `Editor` real no es invocable
@@ -88,6 +91,16 @@ describe('MarkdownEditorComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [MarkdownEditorComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideMarkdown(),
+        // El panel de vista previa renderiza con ngx-markdown igual que el
+        // alumno; con el DomSanitizer mockeado del repo el HTML se anularía y
+        // el test no probaría nada (mismo motivo que en
+        // `bloque-render.component.spec.ts`).
+        { provide: DomSanitizer, useClass: ɵDomSanitizerImpl },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MarkdownEditorComponent);
@@ -181,6 +194,81 @@ describe('MarkdownEditorComponent', () => {
     expect(
       fixture.debugElement.query(By.css('[data-testid="md-insert-bar"]')),
     ).toBeNull();
+  });
+
+  // ---- Vista previa fiel (el mismo render que ve el alumno) ----
+
+  const panelPreview = (): HTMLElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="md-preview-alumno"]');
+
+  it('con cursosToolbar hay panel de previa propio con el markdown actual', async () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
+    component.writeValue('# Título de la lección');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const panel = panelPreview();
+    expect(panel).not.toBeNull();
+    expect(panel!.textContent).toContain('como lo verá el alumno');
+    // Renderizado con ngx-markdown, no texto plano.
+    expect(panel!.querySelector('h1')?.textContent).toContain(
+      'Título de la lección',
+    );
+  });
+
+  it('la previa usa el pipeline del alumno: el callout conserva sus clases', async () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
+    // MISMO markdown que inserta el chip (línea en blanco dentro del div, que
+    // es lo que la preview de Toast UI no sabía parsear).
+    component.writeValue(
+      '<div class="callout callout--info">\n\n**Recuerda.** Interior.\n\n</div>\n\n',
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const panel = panelPreview()!;
+    // El contenedor lleva la clase de tipografía del aula: mismos estilos.
+    expect(
+      panel.querySelector('[data-testid="md-preview-cuerpo"]')!.classList,
+    ).toContain('cursos-prose');
+    const callout = panel.querySelector('.callout.callout--info');
+    expect(callout).not.toBeNull();
+    // El markdown de DENTRO del div se procesa (lo que fallaba en Toast UI).
+    expect(callout!.querySelector('strong')?.textContent).toContain('Recuerda');
+  });
+
+  it('la previa se actualiza en vivo al insertar un recuadro', async () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
+    chipPorClave('callout--peligro').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(
+      panelPreview()!.querySelector('.callout.callout--peligro'),
+    ).not.toBeNull();
+  });
+
+  it('con cursosToolbar Toast UI se crea SIN su panel de preview (previewStyle tab)', () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
+    expect(editorCtorOpts[0].previewStyle).toBe('tab');
+  });
+
+  it('sin cursosToolbar no hay panel propio y Toast UI conserva su preview', () => {
+    fixture.detectChanges();
+
+    expect(panelPreview()).toBeNull();
+    expect(editorCtorOpts[0].previewStyle).toBe('vertical');
   });
 
   it('nunca se pasa toolbarItems: Toast UI conserva su toolbar por defecto', () => {

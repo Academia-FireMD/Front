@@ -1,21 +1,53 @@
-<div #host class="markdown-editor-host"></div>
+<!-- Con `cursosToolbar` el editor se parte en dos columnas propias: a la
+     izquierda Toast UI (sin su panel de preview) + la barra de recuadros, a la
+     derecha la vista previa REAL, la misma que ve el alumno. Sin
+     `cursosToolbar` nada cambia: un único host con la preview de Toast UI de
+     siempre. `#host` vive FUERA de cualquier `@if` para que el `ViewChild`
+     estático siga resolviendo en ambos casos. -->
+<div class="md-editor" [class.md-editor--cursos]="cursosToolbar()">
+  <div class="md-editor__col">
+    <div #host class="markdown-editor-host"></div>
 
-@if (cursosToolbar()) {
-  <div class="md-insert-bar" data-testid="md-insert-bar">
-    <span class="md-insert-bar__label">Insertar:</span>
-    @for (chip of chips; track chip.clave) {
-      <button
-        type="button"
-        [class]="'md-insert-bar__chip ' + chip.claseColor"
-        [title]="chip.titulo"
-        [attr.data-testid]="'md-chip-' + chip.clave"
-        (click)="insertarSnippet(chip.clave)"
-      >
-        <span class="md-insert-bar__icono" aria-hidden="true">{{
-          chip.icono
-        }}</span>
-        {{ chip.etiqueta }}
-      </button>
+    @if (cursosToolbar()) {
+      <div class="md-insert-bar" data-testid="md-insert-bar">
+        <span class="md-insert-bar__label">Insertar:</span>
+        @for (chip of chips; track chip.clave) {
+          <button
+            type="button"
+            [class]="'md-insert-bar__chip ' + chip.claseColor"
+            [title]="chip.titulo"
+            [attr.data-testid]="'md-chip-' + chip.clave"
+            (click)="insertarSnippet(chip.clave)"
+          >
+            <span class="md-insert-bar__icono" aria-hidden="true">{{
+              chip.icono
+            }}</span>
+            {{ chip.etiqueta }}
+          </button>
+        }
+      </div>
     }
   </div>
-}
+
+  @if (cursosToolbar()) {
+    <aside class="md-editor__preview" data-testid="md-preview-alumno">
+      <span class="md-editor__preview-titulo">
+        Vista previa (como lo verá el alumno)
+      </span>
+      <div
+        class="md-editor__preview-cuerpo cursos-prose"
+        [style.height]="height"
+        data-testid="md-preview-cuerpo"
+      >
+        @if (valorActual().trim()) {
+          <markdown [data]="valorActual()"></markdown>
+        } @else {
+          <p class="md-editor__preview-vacio">
+            Escribe a la izquierda y aquí verás exactamente lo que verá el
+            alumno.
+          </p>
+        }
+      </div>
+    </aside>
+  }
+</div>
