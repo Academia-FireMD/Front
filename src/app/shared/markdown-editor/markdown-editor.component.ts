@@ -22,11 +22,14 @@ export type SnippetClave =
   | 'recuadro'
   | 'resaltado';
 
-/** Item custom de toolbar de Toast UI v3 (`{ el, name, tooltip }`). */
-interface ToolbarCustomItem {
-  el: HTMLElement;
-  name: string;
-  tooltip: string;
+/** Chip de la barra de inserción de recuadros (solo con `cursosToolbar`). */
+export interface SnippetChip {
+  clave: SnippetClave;
+  icono: string;
+  etiqueta: string;
+  titulo: string;
+  /** Clase modificadora BEM que da al chip el color de su propio recuadro. */
+  claseColor: string;
 }
 
 /**
@@ -42,7 +45,8 @@ interface ToolbarCustomItem {
 @Component({
   selector: 'app-markdown-editor',
   standalone: true,
-  template: `<div #host class="markdown-editor-host"></div>`,
+  templateUrl: './markdown-editor.component.html',
+  styleUrl: './markdown-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -67,28 +71,19 @@ export class MarkdownEditorComponent
    */
   @Input() previewStyle: 'vertical' | 'tab' = 'vertical';
   /**
-   * Activa un grupo extra de botones en la toolbar para insertar los snippets
-   * de callout/resaltado/recuadro de las lecciones de cursos (clases CSS de
+   * Activa una barra propia bajo el editor para insertar los snippets de
+   * callout/resaltado/recuadro de las lecciones de cursos (clases CSS de
    * `cursos/ui/_prose.scss`), para que el profe no escriba HTML a mano.
    * Default `false`: el resto de consumidores del editor (preguntas,
    * flashcards, planificación física) no cambian.
+   *
+   * Antes estos botones se inyectaban DENTRO de la toolbar de Toast UI; en el
+   * ancho del diálogo de bloques Toast UI los colapsaba en el menú "···" y la
+   * funcionalidad quedaba invisible, así que se sacaron a una fila propia
+   * (feedback Gonzalo). Al no pasar ya `toolbarItems`, Toast UI usa su toolbar
+   * por defecto y desaparece la réplica que había que mantener a mano.
    */
   cursosToolbar = input(false);
-
-  /**
-   * Toolbar por defecto de Toast UI v3. Hay que replicarla porque pasar
-   * `toolbarItems` al constructor REEMPLAZA el default — solo se usa cuando
-   * `cursosToolbar` añade el grupo custom; sin él no se pasa `toolbarItems`
-   * y Toast UI usa su default interno (idéntico a esta lista).
-   */
-  private static readonly DEFAULT_TOOLBAR: string[][] = [
-    ['heading', 'bold', 'italic', 'strike'],
-    ['hr', 'quote'],
-    ['ul', 'ol', 'task', 'indent', 'outdent'],
-    ['table', 'image', 'link'],
-    ['code', 'codeblock'],
-    ['scrollSync'],
-  ];
 
   /**
    * Snippets con líneas en blanco alrededor del contenido interior para que
@@ -108,23 +103,56 @@ export class MarkdownEditorComponent
     resaltado: '<span class="resaltado">texto resaltado</span>',
   } as const;
 
-  private static readonly SNIPPET_ICONS: Record<SnippetClave, string> = {
-    'callout--info': 'ℹ️',
-    'callout--exito': '✅',
-    'callout--aviso': '⚠️',
-    'callout--peligro': '⛔',
-    recuadro: '▢',
-    resaltado: '🖍',
-  };
-
-  private static readonly SNIPPET_TOOLTIPS: Record<SnippetClave, string> = {
-    'callout--info': 'Insertar recuadro de información',
-    'callout--exito': 'Insertar recuadro de éxito',
-    'callout--aviso': 'Insertar recuadro de aviso',
-    'callout--peligro': 'Insertar recuadro importante',
-    recuadro: 'Insertar recuadro enmarcado',
-    resaltado: 'Resaltar texto',
-  };
+  /**
+   * Chips de la barra de inserción. El emoji solo no se entendía, así que cada
+   * chip lleva ETIQUETA de texto además del icono y el color de su propio
+   * recuadro (`markdown-editor.component.scss`, valores calcados de
+   * `cursos/ui/_prose.scss`).
+   */
+  protected readonly chips: readonly SnippetChip[] = [
+    {
+      clave: 'callout--info',
+      icono: 'ℹ️',
+      etiqueta: 'Información',
+      titulo: 'Insertar recuadro de información',
+      claseColor: 'md-insert-bar__chip--info',
+    },
+    {
+      clave: 'callout--exito',
+      icono: '✅',
+      etiqueta: 'Éxito',
+      titulo: 'Insertar recuadro de éxito',
+      claseColor: 'md-insert-bar__chip--exito',
+    },
+    {
+      clave: 'callout--aviso',
+      icono: '⚠️',
+      etiqueta: 'Aviso',
+      titulo: 'Insertar recuadro de aviso',
+      claseColor: 'md-insert-bar__chip--aviso',
+    },
+    {
+      clave: 'callout--peligro',
+      icono: '⛔',
+      etiqueta: 'Importante',
+      titulo: 'Insertar recuadro importante',
+      claseColor: 'md-insert-bar__chip--peligro',
+    },
+    {
+      clave: 'recuadro',
+      icono: '▢',
+      etiqueta: 'Recuadro',
+      titulo: 'Insertar recuadro enmarcado',
+      claseColor: 'md-insert-bar__chip--recuadro',
+    },
+    {
+      clave: 'resaltado',
+      icono: '🖍',
+      etiqueta: 'Resaltar',
+      titulo: 'Resaltar el texto seleccionado',
+      claseColor: 'md-insert-bar__chip--resaltado',
+    },
+  ];
 
   // `Editor` (named export) es un namespace en los typings → se usa como valor
   // pero se tipa la instancia como `any` (mismo patrón que el resto del repo).
@@ -137,22 +165,15 @@ export class MarkdownEditorComponent
     // Defer initialization to next tick to allow layout/CSS to stabilize
     // and avoid visual glitch where Markdown and WYSIWYG views overlap briefly.
     requestAnimationFrame(() => {
-      // Toast UI agrupa la toolbar por sub-arrays; los botones custom de
-      // cursos van como grupo final. Sin `cursosToolbar` NO se pasa
-      // `toolbarItems` → default interno de Toast UI (comportamiento intacto
-      // para el resto de consumidores).
-      const extra = this.extraToolbarItems();
+      // NO se pasa `toolbarItems`: Toast UI usa su toolbar por defecto en
+      // todos los casos. Los botones de recuadros de cursos viven ahora en la
+      // fila propia del template (`.md-insert-bar`), no en esta toolbar.
       this.editor = new Editor({
         el: this.host.nativeElement,
         ...universalEditorConfig,
         height: this.height,
         previewStyle: this.previewStyle,
         initialValue: this.pendingValue,
-        ...(extra.length
-          ? {
-              toolbarItems: [...MarkdownEditorComponent.DEFAULT_TOOLBAR, extra],
-            }
-          : {}),
         events: {
           change: () => {
             const md = this.editor?.getMarkdown() ?? '';
@@ -185,33 +206,6 @@ export class MarkdownEditorComponent
       // Callouts y otros snippets: insertar directamente
       this.editor?.insertText(MarkdownEditorComponent.SNIPPETS[clave]);
     }
-  }
-
-  /**
-   * Grupo de botones custom para la toolbar de cursos. Vacío salvo que
-   * `cursosToolbar` esté activo.
-   */
-  extraToolbarItems(): ToolbarCustomItem[] {
-    if (!this.cursosToolbar()) return [];
-    return (
-      Object.entries(MarkdownEditorComponent.SNIPPET_ICONS) as [
-        SnippetClave,
-        string,
-      ][]
-    ).map(([clave, texto]) => {
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'toastui-editor-toolbar-icons cursos-toolbar-btn';
-      el.textContent = texto;
-      const tooltip = MarkdownEditorComponent.SNIPPET_TOOLTIPS[clave];
-      el.setAttribute('title', tooltip);
-      el.addEventListener('click', () => this.insertarSnippet(clave));
-      return {
-        el,
-        name: clave,
-        tooltip,
-      };
-    });
   }
 
   ngOnDestroy(): void {

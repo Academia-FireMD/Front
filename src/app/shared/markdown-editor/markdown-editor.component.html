@@ -1,0 +1,21 @@
+<div #host class="markdown-editor-host"></div>
+
+@if (cursosToolbar()) {
+  <div class="md-insert-bar" data-testid="md-insert-bar">
+    <span class="md-insert-bar__label">Insertar:</span>
+    @for (chip of chips; track chip.clave) {
+      <button
+        type="button"
+        [class]="'md-insert-bar__chip ' + chip.claseColor"
+        [title]="chip.titulo"
+        [attr.data-testid]="'md-chip-' + chip.clave"
+        (click)="insertarSnippet(chip.clave)"
+      >
+        <span class="md-insert-bar__icono" aria-hidden="true">{{
+          chip.icono
+        }}</span>
+        {{ chip.etiqueta }}
+      </button>
+    }
+  </div>
+}
