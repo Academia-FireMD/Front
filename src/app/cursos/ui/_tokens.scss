@@ -17,4 +17,25 @@
     0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.05);
   --cursos-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.1);
   --cursos-ok: #1f9d55; // checkmark de lección completada
+
+  // --- Paleta de recuadros (callouts) del contenido de lecciones ---
+  // FUENTE ÚNICA de estos colores. La consumen los tres sitios donde aparecen
+  // los recuadros, para que no puedan divergir:
+  //   1. `.cursos-prose` (vista del alumno)          → `_prose.scss`
+  //   2. `.toastui-editor-contents` (preview admin)  → mismo mixin, `styles.scss`
+  //   3. los chips de "Insertar:" del editor markdown → `markdown-editor.component.scss`
+  --cursos-callout-info-borde: #3b82f6;
+  --cursos-callout-info-fondo: #eff6ff;
+  --cursos-callout-exito-borde: #10b981;
+  --cursos-callout-exito-fondo: #ecfdf5;
+  --cursos-callout-aviso-borde: #f59e0b;
+  --cursos-callout-aviso-fondo: #fffbeb;
+  --cursos-callout-peligro-borde: #ef4444;
+  --cursos-callout-peligro-fondo: #fef2f2;
+  // El recuadro genérico es una caja NEUTRA, no una categoría más: con el
+  // borde de marca (rojo) se confundía con el callout "Importante". Gris.
+  --cursos-recuadro-borde: #94a3b8;
+  --cursos-recuadro-fondo: #f8fafc;
+  --cursos-resaltado-fondo: #fef08a;
+  --cursos-resaltado-borde: #eab308;
 }
