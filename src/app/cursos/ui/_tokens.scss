@@ -21,9 +21,9 @@
   // --- Paleta de recuadros (callouts) del contenido de lecciones ---
   // FUENTE ÚNICA de estos colores. La consumen los tres sitios donde aparecen
   // los recuadros, para que no puedan divergir:
-  //   1. `.cursos-prose` (vista del alumno)          → `_prose.scss`
-  //   2. `.toastui-editor-contents` (preview admin)  → mismo mixin, `styles.scss`
-  //   3. los chips de "Insertar:" del editor markdown → `markdown-editor.component.scss`
+  //   1. `.cursos-prose` (vista del alumno Y panel de vista previa del editor,
+  //      que renderiza con el mismo pipeline) → `_prose.scss`
+  //   2. los chips de "Insertar:" del editor markdown → `markdown-editor.component.scss`
   --cursos-callout-info-borde: #3b82f6;
   --cursos-callout-info-fondo: #eff6ff;
   --cursos-callout-exito-borde: #10b981;

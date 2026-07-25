@@ -1,3 +1,60 @@
+// Layout de dos columnas del editor de cursos: markdown a la izquierda, vista
+// previa REAL (la del alumno) a la derecha.
+//
+// Se eligió AL LADO y no debajo porque el diálogo de bloques mide 90vw con
+// máximo 1100px: cada columna queda tan ancha como quedaban los dos paneles
+// del split de Toast UI que se sustituye, y el autor sigue viendo el resultado
+// mientras escribe sin hacer scroll. Por debajo de 900px de viewport (donde el
+// diálogo pasa a 96/100vw) se apilan.
+.md-editor--cursos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+
+  @media (min-width: 900px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+// `minmax(0, 1fr)` arriba + esto: sin `min-width: 0` una columna de grid no
+// baja de su contenido mínimo y el editor de Toast UI desbordaría el diálogo.
+.md-editor__col,
+.md-editor__preview {
+  min-width: 0;
+}
+
+.md-editor__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.md-editor__preview-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--cursos-text-soft, #6b7280);
+}
+
+// Misma altura que el editor (`[style.height]` con el input `height`) y scroll
+// propio: las dos columnas quedan alineadas y el contenido largo no estira el
+// formulario.
+.md-editor__preview-cuerpo {
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--cursos-border, #e5e7eb);
+  border-radius: var(--cursos-radius, 8px);
+  background: #fff;
+}
+
+.md-editor__preview-vacio {
+  color: var(--cursos-text-soft, #6b7280);
+  font-style: italic;
+}
+
 // Barra de inserción de recuadros de las lecciones de cursos.
 //
 // Antes estos 6 botones vivían DENTRO de la toolbar de Toast UI. En el ancho

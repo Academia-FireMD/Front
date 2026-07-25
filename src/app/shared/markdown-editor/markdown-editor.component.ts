@@ -7,10 +7,12 @@ import {
   Input,
   input,
   OnDestroy,
+  signal,
   ViewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Editor } from '@toast-ui/editor';
+import { MarkdownComponent } from 'ngx-markdown';
 import { universalEditorConfig } from '../../utils/utils';
 
 /** Claves de los snippets de la toolbar de cursos (clases de `_prose.scss`). */
@@ -41,10 +43,20 @@ export interface SnippetChip {
  * `universalEditorConfig`) permite que un consumidor concreto pida el modo
  * `tab` de Toast UI (pestañas Write/Preview) en vez del split lateral
  * permanente — pensado para contenedores estrechos.
+ *
+ * Con `cursosToolbar` la preview de Toast UI se SUSTITUYE por un panel propio
+ * que renderiza el markdown con el mismo pipeline que la vista del alumno
+ * (ngx-markdown + `.cursos-prose`). Motivo: Toast UI parsea CommonMark
+ * estricto y no procesa el markdown que va DENTRO de un `<div>` HTML, así que
+ * los recuadros salían como cajas de color vacías con su texto colgando
+ * debajo — justo lo contrario de lo que promete la barra de chips. La línea en
+ * blanco de los snippets es necesaria para el renderer del alumno (marked), no
+ * se toca: el que cambia es el panel de previa.
  */
 @Component({
   selector: 'app-markdown-editor',
   standalone: true,
+  imports: [MarkdownComponent],
   templateUrl: './markdown-editor.component.html',
   styleUrl: './markdown-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -161,6 +173,13 @@ export class MarkdownEditorComponent
     },
   ];
 
+  /**
+   * Markdown actual del editor. Alimenta el panel de vista previa propio (solo
+   * con `cursosToolbar`) y se actualiza en vivo: en cada `change` de Toast UI y
+   * en cada `writeValue` del formulario.
+   */
+  protected readonly valorActual = signal('');
+
   // `Editor` (named export) es un namespace en los typings → se usa como valor
   // pero se tipa la instancia como `any` (mismo patrón que el resto del repo).
   private editor?: any;
@@ -179,11 +198,18 @@ export class MarkdownEditorComponent
         el: this.host.nativeElement,
         ...universalEditorConfig,
         height: this.height,
-        previewStyle: this.previewStyle,
+        // Con la barra de cursos NO se usa el split de Toast UI: su preview la
+        // sustituye el panel propio (render real del alumno), así que el
+        // editor markdown ocupa toda su columna. `tab` es el modo de Toast UI
+        // que deja el área de escritura a ancho completo; su pestaña
+        // "Preview" se oculta por CSS (`styles.scss`) para que no haya dos
+        // previas contradictorias.
+        previewStyle: this.cursosToolbar() ? 'tab' : this.previewStyle,
         initialValue: this.pendingValue,
         events: {
           change: () => {
             const md = this.editor?.getMarkdown() ?? '';
+            this.valorActual.set(md);
             this.onChange(md);
           },
           blur: () => this.onTouched(),
@@ -222,6 +248,7 @@ export class MarkdownEditorComponent
   // ---- ControlValueAccessor ----
   writeValue(value: string | null): void {
     const v = value ?? '';
+    this.valorActual.set(v);
     if (this.editor) {
       // Evita re-emitir change al setear programáticamente.
       if (this.editor.getMarkdown() !== v) this.editor.setMarkdown(v, false);

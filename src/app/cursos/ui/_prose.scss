@@ -1,11 +1,11 @@
 // Recuadros del contenido de lecciones (callouts / resaltado / recuadro).
 //
-// Extraído a mixin porque tiene DOS consumidores que deben verse idénticos:
-// la vista del alumno (`.cursos-prose`) y la vista previa del editor de Toast
-// UI (`.toastui-editor-contents`, incluido desde `src/styles.scss`). Antes el
-// preview no tenía estos estilos y el profe veía info/aviso/importante como
-// párrafos pelados indistinguibles, sin poder comprobar lo que iba a publicar.
-// Los colores viven en `_tokens.scss` (fuente única), no aquí.
+// Mixin de `.cursos-prose`, que es el ÚNICO estilo de estos recuadros: lo usan
+// tanto la vista del alumno como el panel de vista previa del editor de
+// bloques, que renderiza con el mismo pipeline (ngx-markdown envuelto en
+// `.cursos-prose`) precisamente para que no puedan diferir. Sigue siendo mixin
+// por si hace falta un segundo contenedor. Los colores viven en `_tokens.scss`
+// (fuente única), no aquí.
 @mixin cursos-callouts {
   .callout {
     margin: 1.25em 0;
