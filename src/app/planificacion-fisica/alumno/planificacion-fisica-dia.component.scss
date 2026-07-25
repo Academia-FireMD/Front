@@ -1,9 +1,5 @@
-// Mismo naranja de "Entrenamiento" que el calendario padre
-// (`planificacion-fisica-calendario.component.scss`). Aquí no hay tarjeta de
-// bloque que pintar (la vista de día vive sobre el surface neutro de la app y
-// cada disciplina ya lleva su propio color), así que la coherencia con el
-// padre se mantiene solo en la barra de progreso.
-$pf-naranja-barra: #dd6b20;
+// Paleta compartida con el calendario y "Mis marcas" (ver `_pf-colores.scss`).
+@use "../pf-colores" as pf;
 
 .pf-dia {
   display: flex;
@@ -14,6 +10,17 @@ $pf-naranja-barra: #dd6b20;
   h2 {
     margin: 0;
     text-transform: capitalize;
+  }
+
+  // Continuidad de color al bajar del calendario (naranja) a esta vista: solo
+  // la cabecera se tiñe. Las tarjetas de disciplina siguen en blanco porque
+  // el color que debe mandar ahí es el de cada disciplina.
+  &__cabecera {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    @include pf.pf-banda-cabecera;
   }
 
   &__loading {
@@ -60,7 +67,7 @@ $pf-naranja-barra: #dd6b20;
     }
 
     ::ng-deep .p-progressbar .p-progressbar-value {
-      background: $pf-naranja-barra;
+      background: pf.$pf-naranja-barra;
     }
 
     span {
@@ -94,10 +101,14 @@ $pf-naranja-barra: #dd6b20;
     gap: 0.5rem;
   }
 
+  // Mismo borde sutil que los puntos del calendario: DESCANSO es #ffffff en el
+  // catálogo y sin borde desaparece sobre la tarjeta blanca.
   &__disciplina-color {
+    box-sizing: border-box;
     width: 12px;
     height: 12px;
     border-radius: 50%;
+    border: 1px solid pf.$pf-punto-borde;
     flex: none;
   }
 

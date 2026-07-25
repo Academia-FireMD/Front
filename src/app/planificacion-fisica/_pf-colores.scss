@@ -1,0 +1,50 @@
+// Paleta "Entrenamiento" del módulo de planificación física — FUENTE ÚNICA.
+//
+// El bloque físico se pinta con el mismo naranja que el sub-bloque
+// "Entrenamiento" del calendario de estudio (`#fdd6b3`, ver
+// `editar-sub-bloque-dialog.component.ts`), feedback Sergio. El verde queda
+// reservado a las horas de estudio "Específico SPEIS" — no se usa como color
+// de bloque ni de progreso en este módulo.
+//
+// Estos valores los comparten las tres vistas del alumno (calendario, detalle
+// de día y "Mis marcas"): antes estaban duplicados a mano en cada .scss y ya
+// habían empezado a divergir (la barra de progreso del calendario acabó verde
+// y la del detalle naranja).
+
+// Naranja suave de la banda/tarjeta de entrenamiento.
+$pf-naranja-suave: #fdd6b3;
+// Naranja fuerte para acentos con texto blanco encima: #c05621 da 4.5:1 con
+// blanco (WCAG AA); el #dd6b20 más vivo se queda en 3.4:1, así que ese solo
+// se usa donde no hay texto (relleno de barras de progreso).
+$pf-naranja-acento: #c05621;
+$pf-naranja-barra: #dd6b20;
+// Crema casi blanco para las tarjetas de día sobre el naranja.
+$pf-crema: #fffaf4;
+// Marrón cálido: >5:1 sobre el naranja, mantiene el tono del bloque.
+$pf-texto-calido: #7c2d12;
+
+// Borde de los puntos de color de disciplina. DESCANSO es #ffffff en el
+// catálogo (`disciplinas.catalogo.ts`): sin borde desaparece sobre cualquier
+// superficie clara (crema del calendario, blanco del detalle). El arreglo es
+// de presentación — el catálogo de colores NO se toca.
+$pf-punto-borde: rgba(0, 0, 0, 0.18);
+
+// Banda de cabecera tintada: da continuidad de color al bajar del calendario
+// (naranja) al detalle de día y a "Mis marcas" (blancos con acento rojo), sin
+// repintar sus tarjetas de contenido — que llevan el color de cada disciplina
+// y son las que deben mandar.
+@mixin pf-banda-cabecera {
+  background: $pf-naranja-suave;
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+
+  h2 {
+    color: $pf-texto-calido;
+  }
+
+  // El "volver" en rojo de marca sobre la banda naranja rompe la unidad de la
+  // banda; en marrón cálido se lee igual de bien y va a juego.
+  ::ng-deep .p-button.p-button-text {
+    color: $pf-texto-calido;
+  }
+}

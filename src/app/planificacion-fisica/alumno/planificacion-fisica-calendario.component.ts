@@ -217,19 +217,12 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
     };
   }
 
-  /**
-   * Color de la mini-barra diaria: misma escala que la barra diaria del
-   * temario (`EventsService.getProgressBarColor`) para que el gesto visual
-   * sea idéntico en ambos módulos. Duplicada a propósito: esta lógica es
-   * presentacional y local, no merece acoplar los dos módulos.
-   */
-  protected colorProgresoDia(dia: DiaCalendario): string {
-    const { hechas, total } = this.progresoDia(dia);
-    const porcentaje = this.progresoPorcentaje(hechas, total);
-    if (porcentaje === 100) return '#28a745';
-    if (porcentaje >= 50) return '#ffc107';
-    return '#dc3545';
-  }
+  // La mini-barra diaria ya no calcula color en TS: seguía la escala semáforo
+  // del temario y al 100% se pintaba verde brillante — el color que el cliente
+  // tiene reservado a "Específico SPEIS" en el calendario de estudio, y encima
+  // distinto del naranja que ya usaba el detalle de día para la misma barra.
+  // Ahora el color es fijo y vive en el .scss (`$pf-naranja-barra`), única
+  // fuente compartida con la vista de detalle.
 
   protected abrirDia(fecha: string): void {
     this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);

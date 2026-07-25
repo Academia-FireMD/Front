@@ -1,16 +1,18 @@
-// Paleta "Entrenamiento" (feedback Sergio): el bloque físico se pinta con el
-// mismo naranja que el sub-bloque Entrenamiento del calendario de estudio
-// (`#fdd6b3`, ver `editar-sub-bloque-dialog.component.ts`). El verde queda
-// reservado a las horas de estudio "Específico SPEIS" y al check de
-// "disciplina hecha" — no se usa como color de bloque.
-$pf-naranja-suave: #fdd6b3;
-// Naranja fuerte para acentos con texto blanco encima: #c05621 da 4.5:1 con
-// blanco (WCAG AA); el #dd6b20 más vivo se queda en 3.4:1, así que ese solo
-// se usa donde no hay texto (relleno de la barra de progreso).
-$pf-naranja-acento: #c05621;
-$pf-naranja-barra: #dd6b20;
-$pf-crema: #fffaf4;
-$pf-texto-calido: #7c2d12;
+// Paleta compartida de las tres vistas del alumno (ver `_pf-colores.scss`).
+@use "../pf-colores" as pf;
+
+// La tarjeta de semana arrastraba el padding por defecto de p-card (1.25rem de
+// body + 1rem arriba/abajo de content): ~55px de franja naranja vacía arriba y
+// abajo que en el gris anterior pasaban desapercibidos. El aire lo reparten
+// ahora la cabecera, la barra y la rejilla de días, que ya lo traían.
+// `::ng-deep` porque `styleClass` cae en el div interno de p-card, fuera de la
+// encapsulación del componente.
+:host ::ng-deep .pf-calendario__semana {
+  .p-card-body,
+  .p-card-content {
+    padding: 0;
+  }
+}
 
 .pf-calendario {
   display: flex;
@@ -99,7 +101,7 @@ $pf-texto-calido: #7c2d12;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    padding: 1rem 1.25rem 0;
+    padding: 0.85rem 1.25rem 0;
   }
 
   &__semana-titulo {
@@ -110,11 +112,11 @@ $pf-texto-calido: #7c2d12;
     font-size: 1.05rem;
     // Marrón oscuro en vez del gris heredado: sobre el naranja de la tarjeta
     // da >5:1 de contraste y mantiene el tono cálido del bloque.
-    color: $pf-texto-calido;
+    color: pf.$pf-texto-calido;
   }
 
   &__semana-comentario {
-    color: $pf-texto-calido;
+    color: pf.$pf-texto-calido;
     font-size: 0.9rem;
   }
 
@@ -131,7 +133,7 @@ $pf-texto-calido: #7c2d12;
   // "ACTUAL" era verde y chocaba con el verde de "Específico SPEIS" del
   // calendario de estudio: pasa a naranja fuerte (feedback Sergio).
   &__badge-actual {
-    background: $pf-naranja-acento;
+    background: pf.$pf-naranja-acento;
     color: #fff;
   }
 
@@ -153,7 +155,7 @@ $pf-texto-calido: #7c2d12;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem 1.25rem 0;
+    padding: 0.6rem 1.25rem 0;
 
     p-progressBar {
       flex: 1 1 auto;
@@ -166,7 +168,7 @@ $pf-texto-calido: #7c2d12;
       background: rgba(255, 255, 255, 0.75);
 
       .p-progressbar-value {
-        background: $pf-naranja-barra;
+        background: pf.$pf-naranja-barra;
       }
     }
   }
@@ -174,7 +176,7 @@ $pf-texto-calido: #7c2d12;
   &__progreso-texto {
     font-size: 0.85rem;
     font-weight: 600;
-    color: $pf-texto-calido;
+    color: pf.$pf-texto-calido;
     white-space: nowrap;
   }
 
@@ -182,7 +184,7 @@ $pf-texto-calido: #7c2d12;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
     gap: 0.5rem;
-    padding: 1rem 1.25rem 1.25rem;
+    padding: 0.75rem 1.25rem 0.9rem;
   }
 
   &__dia {
@@ -196,7 +198,7 @@ $pf-texto-calido: #7c2d12;
     // Crema casi blanco (opaco, no un blanco translúcido) para que las
     // tarjetas de día contrasten con el naranja de la semana en todas las
     // intensidades.
-    background: $pf-crema;
+    background: pf.$pf-crema;
     cursor: pointer;
     font: inherit;
     color: inherit;
@@ -235,9 +237,17 @@ $pf-texto-calido: #7c2d12;
   }
 
   &__chip {
+    // `box-sizing` explícito: el borde de abajo no debe crecer el punto de
+    // 20px (no hay reset global garantizado en este árbol).
+    box-sizing: border-box;
     width: 20px;
     height: 20px;
     border-radius: 50%;
+    // DESCANSO es #ffffff en el catálogo de disciplinas: sobre la tarjeta de
+    // día crema es indistinguible (todos los domingos parecían vacíos). El
+    // borde sutil recorta cualquier color claro sobre cualquier fondo, sin
+    // tocar el catálogo de colores.
+    border: 1px solid pf.$pf-punto-borde;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -269,8 +279,13 @@ $pf-texto-calido: #7c2d12;
     width: 100%;
   }
 
+  // Naranja fijo, el MISMO que la barra del detalle de día: antes seguía la
+  // escala semáforo del temario y al 100% se pintaba verde brillante — el
+  // color que el cliente tiene reservado a "Específico SPEIS" en el calendario
+  // de estudio, y encima incoherente con el detalle, que ya era naranja.
   &__dia-progreso-barra {
     height: 100%;
+    background-color: pf.$pf-naranja-barra;
     transition: width 0.3s ease;
   }
 }

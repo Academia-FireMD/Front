@@ -1,5 +1,9 @@
 <div class="pf-dia" data-testid="pf-dia-detalle">
-  <div class="pf-dia__header">
+  <!-- Cabecera tintada con el naranja del calendario: da continuidad al bajar
+       de nivel sin repintar las tarjetas de disciplina, que llevan el color de
+       cada disciplina y son las que deben mandar. El título vive dentro de la
+       banda para que se lea como una sola pieza. -->
+  <div class="pf-dia__cabecera">
     <p-button
       icon="pi pi-arrow-left"
       [text]="true"
@@ -7,6 +11,9 @@
       data-testid="pf-dia-volver"
       (click)="volver()"
     ></p-button>
+    @if (detalle()) {
+      <h2>{{ detalle()!.fecha | date: "EEEE, d 'de' MMMM" }}</h2>
+    }
   </div>
 
   @if (loading()) {
@@ -27,7 +34,6 @@
     </div>
   } @else if (detalle()) {
     @let dia = detalle()!;
-    <h2>{{ dia.fecha | date: "EEEE, d 'de' MMMM" }}</h2>
 
     @if (soloLectura()) {
       <p class="pf-dia__solo-lectura-aviso" data-testid="pf-dia-solo-lectura">

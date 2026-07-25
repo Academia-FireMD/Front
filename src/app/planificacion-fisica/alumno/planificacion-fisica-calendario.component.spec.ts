@@ -405,38 +405,29 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
       ).toContain('0 de 1');
     });
 
-    it('colorProgresoDia sigue la misma escala que la barra diaria del temario (rojo <50%, amarillo >=50%, verde 100%)', async () => {
+    it('la mini-barra no pinta color inline: el naranja del bloque lo da el .scss (antes verde al 100%)', async () => {
       fixture.detectChanges();
       await fixture.whenStable();
+      fixture.detectChanges();
 
+      // 2026-07-08 está al 100% (1/1): era justo el caso que pintaba
+      // `#28a745` — el verde reservado a "Específico SPEIS" en el calendario
+      // de estudio, y además incoherente con el detalle de día, ya naranja.
+      const barra = fixture.debugElement.query(
+        By.css(
+          '[data-testid="pf-progreso-dia-2026-07-08"] .pf-calendario__dia-progreso-barra',
+        ),
+      );
+      expect(barra).toBeTruthy();
+      const style = (barra.nativeElement as HTMLElement).style;
+      expect(style.width).toBe('100%');
+      // Sin background-color inline manda `$pf-naranja-barra` de la hoja de
+      // estilos, la MISMA variable que usa la barra del detalle de día.
+      expect(style.backgroundColor).toBe('');
+      // Y la escala semáforo ya no existe en el componente.
       expect(
-        component['colorProgresoDia'](planFixture.semanas[0].dias[0]),
-      ).toBe('#28a745'); // 1/1 = 100% → verde
-      expect(
-        component['colorProgresoDia'](planFixture.semanas[1].dias[0]),
-      ).toBe('#dc3545'); // 0/1 = 0% → rojo
-      expect(
-        component['colorProgresoDia']({
-          fecha: '2026-07-18',
-          diaSemana: 5,
-          chips: [
-            {
-              disciplinaId: 1,
-              nombre: 'Cuerda',
-              grupo: 'CUERDA',
-              color: '#9fe2d0',
-              realizado: true,
-            },
-            {
-              disciplinaId: 2,
-              nombre: 'Carrera',
-              grupo: 'CARRERA',
-              color: '#fdeaa8',
-              realizado: false,
-            },
-          ],
-        }),
-      ).toBe('#ffc107'); // 1/2 = 50% → amarillo
+        (component as unknown as Record<string, unknown>)['colorProgresoDia'],
+      ).toBeUndefined();
     });
 
     it('no pinta la mini-barra en días sin disciplinas', async () => {
