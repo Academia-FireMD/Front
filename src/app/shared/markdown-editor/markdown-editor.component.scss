@@ -1,0 +1,89 @@
+// Barra de inserción de recuadros de las lecciones de cursos.
+//
+// Antes estos 6 botones vivían DENTRO de la toolbar de Toast UI. En el ancho
+// del diálogo de bloques, Toast UI los colapsaba en el menú "···" y la
+// funcionalidad quedaba invisible. Ahora son una fila propia, siempre visible,
+// con etiqueta de texto (el emoji solo no se entendía).
+//
+// A diferencia de `.cursos-toolbar-btn` (que vivía en `styles.scss` porque
+// Toast UI inyecta sus botones fuera del árbol de Angular), esta fila SÍ está
+// dentro de la encapsulación del componente → no necesita CSS global.
+.md-insert-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+
+  &__label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--cursos-text-soft, #6b7280);
+    margin-right: 0.1rem;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--cursos-text, #1f2429);
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--cursos-brand, #bb292a);
+      outline-offset: 2px;
+    }
+  }
+
+  &__icono {
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  // Cada chip lleva el color de su propio recuadro, con los MISMOS valores que
+  // `src/app/cursos/ui/_prose.scss`, para que el profe reconozca de un vistazo
+  // qué está insertando.
+  &__chip--info {
+    background: #eff6ff;
+    border-color: #3b82f6;
+  }
+
+  &__chip--exito {
+    background: #ecfdf5;
+    border-color: #10b981;
+  }
+
+  &__chip--aviso {
+    background: #fffbeb;
+    border-color: #f59e0b;
+  }
+
+  &__chip--peligro {
+    background: #fef2f2;
+    border-color: #ef4444;
+  }
+
+  // El recuadro genérico se pinta con la marca del módulo Cursos (borde de
+  // marca sobre fondo tenue), igual que `.recuadro` en `_prose.scss`.
+  &__chip--recuadro {
+    background: var(--cursos-brand-soft, #fbe9e9);
+    border-color: var(--cursos-brand, #bb292a);
+  }
+
+  &__chip--resaltado {
+    background: #fef08a;
+    border-color: #eab308;
+  }
+}

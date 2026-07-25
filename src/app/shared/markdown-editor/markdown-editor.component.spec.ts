@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 
 /**
  * `@toast-ui/editor` no funciona en jsdom (su `Editor` real no es invocable
@@ -6,8 +7,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
  * `planificacion-fisica-detalles.component.spec.ts`). Se sustituye por un fake
  * que acumula el markdown insertado y captura las opciones del constructor,
  * suficiente para verificar el CONTRATO: `insertarSnippet` llama a
- * `editor.insertText` con el snippet correcto, y la toolbar extra solo se
- * registra cuando `cursosToolbar` está activo.
+ * `editor.insertText` con el snippet correcto, y la barra de inserción de
+ * recuadros solo se pinta cuando `cursosToolbar` está activo.
  */
 const editorInstances: any[] = [];
 const editorCtorOpts: any[] = [];
@@ -45,12 +46,33 @@ jest.mock('@toast-ui/editor', () => ({
   }),
 }));
 
-import { MarkdownEditorComponent } from './markdown-editor.component';
+import {
+  MarkdownEditorComponent,
+  SnippetClave,
+} from './markdown-editor.component';
+
+const CLAVES: SnippetClave[] = [
+  'callout--info',
+  'callout--exito',
+  'callout--aviso',
+  'callout--peligro',
+  'recuadro',
+  'resaltado',
+];
 
 describe('MarkdownEditorComponent', () => {
   let fixture: ComponentFixture<MarkdownEditorComponent>;
   let component: MarkdownEditorComponent;
   let rafSpy: jest.SpyInstance;
+
+  const chips = (): HTMLButtonElement[] =>
+    fixture.debugElement
+      .queryAll(By.css('.md-insert-bar__chip'))
+      .map((de) => de.nativeElement as HTMLButtonElement);
+
+  const chipPorClave = (clave: SnippetClave): HTMLButtonElement =>
+    fixture.debugElement.query(By.css(`[data-testid="md-chip-${clave}"]`))
+      .nativeElement as HTMLButtonElement;
 
   beforeEach(async () => {
     editorInstances.length = 0;
@@ -108,45 +130,92 @@ describe('MarkdownEditorComponent', () => {
     expect(md).toContain('<span class="resaltado">');
   });
 
-  it('sin cursosToolbar no se registran botones extra', () => {
+  it('sin cursosToolbar no se pinta ningún chip de inserción', () => {
     fixture.detectChanges();
 
-    expect(component.extraToolbarItems().length).toBe(0);
-    // Y el editor se construye con la config por defecto (sin toolbarItems).
+    expect(chips().length).toBe(0);
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="md-insert-bar"]')),
+    ).toBeNull();
+  });
+
+  it('nunca se pasa toolbarItems: Toast UI conserva su toolbar por defecto', () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
     expect(editorCtorOpts[0].toolbarItems).toBeUndefined();
   });
 
-  it('con cursosToolbar, el editor recibe la toolbar por defecto + grupo custom final', () => {
+  it('con cursosToolbar se pintan los 6 chips con su etiqueta de texto', () => {
     fixture.componentRef.setInput('cursosToolbar', true);
     fixture.detectChanges();
 
-    const toolbarItems = editorCtorOpts[0].toolbarItems;
-    expect(Array.isArray(toolbarItems)).toBe(true);
-    // Grupos por defecto de Toast UI v3 + el grupo custom al final.
-    expect(toolbarItems[0]).toEqual(['heading', 'bold', 'italic', 'strike']);
-    const grupoCustom = toolbarItems[toolbarItems.length - 1];
-    expect(grupoCustom).toHaveLength(6);
-    for (const item of grupoCustom) {
-      expect(item.el).toBeInstanceOf(HTMLButtonElement);
-      expect(typeof item.name).toBe('string');
-      expect(typeof item.tooltip).toBe('string');
+    const rendered = chips();
+    expect(rendered).toHaveLength(6);
+    expect(rendered.map((el) => el.getAttribute('data-testid'))).toEqual([
+      'md-chip-callout--info',
+      'md-chip-callout--exito',
+      'md-chip-callout--aviso',
+      'md-chip-callout--peligro',
+      'md-chip-recuadro',
+      'md-chip-resaltado',
+    ]);
+    // Etiqueta de texto (no solo emoji): es el motivo del cambio.
+    expect(rendered.map((el) => el.textContent?.trim())).toEqual([
+      expect.stringContaining('Información'),
+      expect.stringContaining('Éxito'),
+      expect.stringContaining('Aviso'),
+      expect.stringContaining('Importante'),
+      expect.stringContaining('Recuadro'),
+      expect.stringContaining('Resaltar'),
+    ]);
+    // Todos son type="button" para no enviar el formulario que los envuelve.
+    for (const el of rendered) {
+      expect(el.getAttribute('type')).toBe('button');
     }
   });
 
-  it('el click en un botón custom inserta su snippet', () => {
+  it('el click en un chip inserta su snippet', () => {
     fixture.componentRef.setInput('cursosToolbar', true);
     fixture.detectChanges();
 
-    const grupoCustom =
-      editorCtorOpts[0].toolbarItems[editorCtorOpts[0].toolbarItems.length - 1];
-    const btnPeligro = grupoCustom.find(
-      (i: any) => i.name === 'callout--peligro',
-    );
-    btnPeligro.el.dispatchEvent(new Event('click'));
+    chipPorClave('callout--peligro').click();
 
     expect(editorInstances[0].getMarkdown()).toContain(
       '<div class="callout callout--peligro">',
     );
+  });
+
+  it('cada chip inserta el snippet de SU clave', () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+    const spy = jest.spyOn(component, 'insertarSnippet');
+
+    for (const clave of CLAVES) {
+      chipPorClave(clave).click();
+    }
+
+    expect(spy.mock.calls.map(([c]) => c)).toEqual(CLAVES);
+  });
+
+  it('cada chip lleva la clase de color de su recuadro', () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+
+    const modificadores = [
+      'info',
+      'exito',
+      'aviso',
+      'peligro',
+      'recuadro',
+      'resaltado',
+    ];
+    chips().forEach((el, i) => {
+      expect(el.classList).toContain('md-insert-bar__chip');
+      expect(el.classList).toContain(
+        `md-insert-bar__chip--${modificadores[i]}`,
+      );
+    });
   });
 
   it('resaltado envuelve texto seleccionado en <span class="resaltado">...', () => {
@@ -188,14 +257,15 @@ describe('MarkdownEditorComponent', () => {
     );
   });
 
-  it('botones custom tienen title para accesibilidad', () => {
+  it('los chips tienen title descriptivo para accesibilidad', () => {
     fixture.componentRef.setInput('cursosToolbar', true);
     fixture.detectChanges();
 
-    const grupoCustom =
-      editorCtorOpts[0].toolbarItems[editorCtorOpts[0].toolbarItems.length - 1];
-    for (const item of grupoCustom) {
-      expect(item.el.getAttribute('title')).toBe(item.tooltip);
+    for (const el of chips()) {
+      expect(el.getAttribute('title')).toBeTruthy();
     }
+    expect(chipPorClave('resaltado').getAttribute('title')).toBe(
+      'Resaltar el texto seleccionado',
+    );
   });
 });
