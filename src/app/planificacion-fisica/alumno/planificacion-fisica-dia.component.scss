@@ -1,3 +1,10 @@
+// Mismo naranja de "Entrenamiento" que el calendario padre
+// (`planificacion-fisica-calendario.component.scss`). Aquí no hay tarjeta de
+// bloque que pintar (la vista de día vive sobre el surface neutro de la app y
+// cada disciplina ya lleva su propio color), así que la coherencia con el
+// padre se mantiene solo en la barra de progreso.
+$pf-naranja-barra: #dd6b20;
+
 .pf-dia {
   display: flex;
   flex-direction: column;
@@ -50,6 +57,10 @@
 
     p-progressBar {
       flex: 1 1 auto;
+    }
+
+    ::ng-deep .p-progressbar .p-progressbar-value {
+      background: $pf-naranja-barra;
     }
 
     span {

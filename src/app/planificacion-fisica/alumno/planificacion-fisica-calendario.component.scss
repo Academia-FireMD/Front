@@ -1,3 +1,17 @@
+// Paleta "Entrenamiento" (feedback Sergio): el bloque físico se pinta con el
+// mismo naranja que el sub-bloque Entrenamiento del calendario de estudio
+// (`#fdd6b3`, ver `editar-sub-bloque-dialog.component.ts`). El verde queda
+// reservado a las horas de estudio "Específico SPEIS" y al check de
+// "disciplina hecha" — no se usa como color de bloque.
+$pf-naranja-suave: #fdd6b3;
+// Naranja fuerte para acentos con texto blanco encima: #c05621 da 4.5:1 con
+// blanco (WCAG AA); el #dd6b20 más vivo se queda en 3.4:1, así que ese solo
+// se usa donde no hay texto (relleno de la barra de progreso).
+$pf-naranja-acento: #c05621;
+$pf-naranja-barra: #dd6b20;
+$pf-crema: #fffaf4;
+$pf-texto-calido: #7c2d12;
+
 .pf-calendario {
   display: flex;
   flex-direction: column;
@@ -94,10 +108,13 @@
     gap: 0.5rem;
     font-weight: 700;
     font-size: 1.05rem;
+    // Marrón oscuro en vez del gris heredado: sobre el naranja de la tarjeta
+    // da >5:1 de contraste y mantiene el tono cálido del bloque.
+    color: $pf-texto-calido;
   }
 
   &__semana-comentario {
-    color: var(--text-color-secondary);
+    color: $pf-texto-calido;
     font-size: 0.9rem;
   }
 
@@ -111,13 +128,17 @@
     letter-spacing: 0.02em;
   }
 
+  // "ACTUAL" era verde y chocaba con el verde de "Específico SPEIS" del
+  // calendario de estudio: pasa a naranja fuerte (feedback Sergio).
   &__badge-actual {
-    background: var(--green-500, #22c55e);
+    background: $pf-naranja-acento;
     color: #fff;
   }
 
+  // "SOLO LECTURA" es información secundaria: gris pizarra apagado, con
+  // suficiente contraste para el texto blanco (4.7:1).
   &__badge-lectura {
-    background: var(--surface-400, #94a3b8);
+    background: #64748b;
     color: #fff;
   }
 
@@ -137,12 +158,23 @@
     p-progressBar {
       flex: 1 1 auto;
     }
+
+    // La barra semanal usaba el primary del tema (rojo #bb292a) sobre pista
+    // gris; sobre el naranja de la tarjeta se lee mal. Pista clara + relleno
+    // naranja.
+    ::ng-deep .p-progressbar {
+      background: rgba(255, 255, 255, 0.75);
+
+      .p-progressbar-value {
+        background: $pf-naranja-barra;
+      }
+    }
   }
 
   &__progreso-texto {
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--text-color-secondary);
+    color: $pf-texto-calido;
     white-space: nowrap;
   }
 
@@ -161,14 +193,24 @@
     padding: 0.5rem 0.35rem;
     border-radius: 8px;
     border: 2px solid transparent;
-    background: rgba(255, 255, 255, 0.55);
+    // Crema casi blanco (opaco, no un blanco translúcido) para que las
+    // tarjetas de día contrasten con el naranja de la semana en todas las
+    // intensidades.
+    background: $pf-crema;
     cursor: pointer;
     font: inherit;
     color: inherit;
+    transition: background-color 0.15s ease;
 
+    &:hover {
+      background: #fff;
+    }
+
+    // El borde rojo de "hoy" (primary del tema, #bb292a) se mantiene: es la
+    // marca de posición, no el color del bloque.
     &--hoy {
-      border-color: var(--primary-color, #6366f1);
-      background: rgba(255, 255, 255, 0.85);
+      border-color: var(--primary-color, #bb292a);
+      background: #fff;
     }
   }
 
