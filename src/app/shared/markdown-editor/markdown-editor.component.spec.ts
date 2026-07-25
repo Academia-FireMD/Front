@@ -130,6 +130,50 @@ describe('MarkdownEditorComponent', () => {
     expect(md).toContain('<span class="resaltado">');
   });
 
+  it('un recuadro insertado EN MEDIO no rompe el markdown de la línea siguiente', () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+    const editor = editorInstances[0];
+
+    // El admin ya tiene contenido, mete el recuadro en mitad del documento y
+    // sigue escribiendo debajo (el fake acumula el texto en orden).
+    editor.setMarkdown('Párrafo previo.\n');
+    component.insertarSnippet('callout--aviso');
+    editor.insertText('# Título justo debajo\n\nY su párrafo.');
+
+    // Un bloque HTML de markdown no termina hasta una línea EN BLANCO: con
+    // `</div>\n` el `# Título` quedaba dentro del bloque y se renderizaba como
+    // texto literal en vez de como encabezado (QA ronda 2).
+    expect(editor.getMarkdown()).toMatch(/<\/div>\n\n# Título justo debajo/);
+  });
+
+  it('todos los snippets de bloque cierran con línea en blanco', () => {
+    fixture.componentRef.setInput('cursosToolbar', true);
+    fixture.detectChanges();
+    const editor = editorInstances[0];
+
+    const bloques: SnippetClave[] = [
+      'callout--info',
+      'callout--exito',
+      'callout--aviso',
+      'callout--peligro',
+      'recuadro',
+    ];
+    for (const clave of bloques) {
+      editor.setMarkdown('');
+      component.insertarSnippet(clave);
+      expect(editor.getMarkdown()).toMatch(/<\/div>\n\n$/);
+    }
+
+    // `resaltado` es inline (envuelve texto dentro de un párrafo): no debe
+    // meter saltos de línea o partiría la frase del alumno.
+    editor.setMarkdown('');
+    component.insertarSnippet('resaltado');
+    expect(editor.getMarkdown()).toBe(
+      '<span class="resaltado">texto resaltado</span>',
+    );
+  });
+
   it('sin cursosToolbar no se pinta ningún chip de inserción', () => {
     fixture.detectChanges();
 

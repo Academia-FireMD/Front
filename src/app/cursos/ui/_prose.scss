@@ -1,3 +1,60 @@
+// Recuadros del contenido de lecciones (callouts / resaltado / recuadro).
+//
+// Extraído a mixin porque tiene DOS consumidores que deben verse idénticos:
+// la vista del alumno (`.cursos-prose`) y la vista previa del editor de Toast
+// UI (`.toastui-editor-contents`, incluido desde `src/styles.scss`). Antes el
+// preview no tenía estos estilos y el profe veía info/aviso/importante como
+// párrafos pelados indistinguibles, sin poder comprobar lo que iba a publicar.
+// Los colores viven en `_tokens.scss` (fuente única), no aquí.
+@mixin cursos-callouts {
+  .callout {
+    margin: 1.25em 0;
+    padding: 1em 1.25em;
+    border-radius: var(--cursos-radius);
+    border: 1px solid var(--cursos-border);
+    border-left-width: 4px;
+    background: var(--cursos-canvas);
+    > :last-child {
+      margin-bottom: 0;
+    }
+
+    &.callout--info {
+      border-left-color: var(--cursos-callout-info-borde);
+      background: var(--cursos-callout-info-fondo);
+    }
+    &.callout--exito {
+      border-left-color: var(--cursos-callout-exito-borde);
+      background: var(--cursos-callout-exito-fondo);
+    }
+    &.callout--aviso {
+      border-left-color: var(--cursos-callout-aviso-borde);
+      background: var(--cursos-callout-aviso-fondo);
+    }
+    &.callout--peligro {
+      border-left-color: var(--cursos-callout-peligro-borde);
+      background: var(--cursos-callout-peligro-fondo);
+    }
+  }
+
+  .resaltado {
+    background: var(--cursos-resaltado-fondo);
+    padding: 0.05em 0.25em;
+    border-radius: 3px;
+  }
+
+  // Caja neutra, no una categoría: con el borde de marca (rojo) se leía como
+  // un segundo "Importante". Gris — así el chip gris del editor no miente.
+  .recuadro {
+    margin: 1.25em 0;
+    padding: 1em 1.25em;
+    border: 2px solid var(--cursos-recuadro-borde);
+    border-radius: var(--cursos-radius);
+    > :last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
 // Tipografía del contenido markdown del aula (bloques TEXTO).
 // Global a propósito: ngx-markdown inyecta innerHTML sin atributos
 // _ngcontent-*, así que los estilos de componente no aplican.
@@ -126,48 +183,5 @@
     margin: 2em 0;
   }
 
-  .callout {
-    margin: 1.25em 0;
-    padding: 1em 1.25em;
-    border-radius: var(--cursos-radius);
-    border: 1px solid var(--cursos-border);
-    border-left-width: 4px;
-    background: var(--cursos-canvas);
-    > :last-child {
-      margin-bottom: 0;
-    }
-
-    &.callout--info {
-      border-left-color: #3b82f6;
-      background: #eff6ff;
-    }
-    &.callout--exito {
-      border-left-color: #10b981;
-      background: #ecfdf5;
-    }
-    &.callout--aviso {
-      border-left-color: #f59e0b;
-      background: #fffbeb;
-    }
-    &.callout--peligro {
-      border-left-color: #ef4444;
-      background: #fef2f2;
-    }
-  }
-
-  .resaltado {
-    background: #fef08a;
-    padding: 0.05em 0.25em;
-    border-radius: 3px;
-  }
-
-  .recuadro {
-    margin: 1.25em 0;
-    padding: 1em 1.25em;
-    border: 2px solid var(--cursos-brand);
-    border-radius: var(--cursos-radius);
-    > :last-child {
-      margin-bottom: 0;
-    }
-  }
+  @include cursos-callouts;
 }

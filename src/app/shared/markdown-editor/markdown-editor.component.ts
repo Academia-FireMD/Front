@@ -89,17 +89,24 @@ export class MarkdownEditorComponent
    * Snippets con líneas en blanco alrededor del contenido interior para que
    * marked parsee el markdown de dentro del `<div>`. Las clases son EXACTAS
    * a las definidas en `src/app/cursos/ui/_prose.scss`.
+   *
+   * Los de BLOQUE cierran con `</div>\n\n` — línea en blanco final, no un solo
+   * salto. Un bloque HTML de markdown no termina hasta la primera línea en
+   * blanco: con `</div>\n` la línea siguiente seguía DENTRO del bloque, así que
+   * al insertar un recuadro en mitad del documento el `# Título` de debajo se
+   * renderizaba como texto literal (QA ronda 2). `resaltado` es inline y no
+   * lleva saltos a propósito: envuelve texto dentro de un párrafo.
    */
   private static readonly SNIPPETS = {
     'callout--info':
-      '\n<div class="callout callout--info">\n\n**Recuerda.** Texto...\n\n</div>\n',
+      '\n<div class="callout callout--info">\n\n**Recuerda.** Texto...\n\n</div>\n\n',
     'callout--exito':
-      '\n<div class="callout callout--exito">\n\n**Bien.** Texto...\n\n</div>\n',
+      '\n<div class="callout callout--exito">\n\n**Bien.** Texto...\n\n</div>\n\n',
     'callout--aviso':
-      '\n<div class="callout callout--aviso">\n\n**Ojo.** Texto...\n\n</div>\n',
+      '\n<div class="callout callout--aviso">\n\n**Ojo.** Texto...\n\n</div>\n\n',
     'callout--peligro':
-      '\n<div class="callout callout--peligro">\n\n**Importante.** Texto...\n\n</div>\n',
-    recuadro: '\n<div class="recuadro">\n\nTexto enmarcado...\n\n</div>\n',
+      '\n<div class="callout callout--peligro">\n\n**Importante.** Texto...\n\n</div>\n\n',
+    recuadro: '\n<div class="recuadro">\n\nTexto enmarcado...\n\n</div>\n\n',
     resaltado: '<span class="resaltado">texto resaltado</span>',
   } as const;
 

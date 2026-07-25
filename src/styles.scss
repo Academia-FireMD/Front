@@ -425,6 +425,15 @@ p-chip {
   font-size: 18px;
 }
 
+/* La vista previa de Toast UI renderiza el HTML de los recuadros pero sin
+   estilarlo: info / aviso / importante salían como párrafos pelados idénticos
+   y el profe no podía comprobar lo que iba a ver el alumno. Se aplica el MISMO
+   mixin que `.cursos-prose` (definido en `app/cursos/ui/_prose.scss`, colores
+   en `_tokens.scss`) — una sola fuente de verdad para ambas vistas. */
+.toastui-editor-contents {
+  @include cursos-callouts;
+}
+
 .select-bloque-asignable-dialog {
   .p-dialog {
     width: 100%;

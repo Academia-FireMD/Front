@@ -52,38 +52,41 @@
     line-height: 1;
   }
 
-  // Cada chip lleva el color de su propio recuadro, con los MISMOS valores que
-  // `src/app/cursos/ui/_prose.scss`, para que el profe reconozca de un vistazo
-  // qué está insertando.
+  // Cada chip lleva el color de su propio recuadro para que el profe reconozca
+  // de un vistazo qué está insertando. Los valores NO se repiten aquí: salen
+  // de los tokens de `app/cursos/ui/_tokens.scss`, los mismos que pintan el
+  // recuadro real en la vista del alumno y en la previa del editor.
   &__chip--info {
-    background: #eff6ff;
-    border-color: #3b82f6;
+    background: var(--cursos-callout-info-fondo);
+    border-color: var(--cursos-callout-info-borde);
   }
 
   &__chip--exito {
-    background: #ecfdf5;
-    border-color: #10b981;
+    background: var(--cursos-callout-exito-fondo);
+    border-color: var(--cursos-callout-exito-borde);
   }
 
   &__chip--aviso {
-    background: #fffbeb;
-    border-color: #f59e0b;
+    background: var(--cursos-callout-aviso-fondo);
+    border-color: var(--cursos-callout-aviso-borde);
   }
 
   &__chip--peligro {
-    background: #fef2f2;
-    border-color: #ef4444;
+    background: var(--cursos-callout-peligro-fondo);
+    border-color: var(--cursos-callout-peligro-borde);
   }
 
-  // El recuadro genérico se pinta con la marca del módulo Cursos (borde de
-  // marca sobre fondo tenue), igual que `.recuadro` en `_prose.scss`.
+  // Neutro, NO rojo: "Recuadro" es una caja sin categoría, pero pintado con el
+  // rojo de marca se leía como una variante de "Importante" (que ya es rojo).
+  // El recuadro real pasa a gris con él (`.recuadro` en `_prose.scss`), para
+  // que el chip no prometa un color distinto del que se inserta.
   &__chip--recuadro {
-    background: var(--cursos-brand-soft, #fbe9e9);
-    border-color: var(--cursos-brand, #bb292a);
+    background: var(--cursos-recuadro-fondo);
+    border-color: var(--cursos-recuadro-borde);
   }
 
   &__chip--resaltado {
-    background: #fef08a;
-    border-color: #eab308;
+    background: var(--cursos-resaltado-fondo);
+    border-color: var(--cursos-resaltado-borde);
   }
 }
