@@ -196,6 +196,7 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
 
   publicarBloque(bloque: BloqueEntrenamiento, event: Event): void {
     this.confirmationService.confirm({
+      key: 'pf-publicar',
       target: event.target as EventTarget,
       message: `Vas a publicar el bloque "${bloque.identificador}". Los alumnos con las oposiciones asociadas empezarán a verlo. ¿Estás seguro?`,
       header: 'Confirmación',
