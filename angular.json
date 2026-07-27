@@ -122,7 +122,11 @@
           "builder": "@angular-builders/jest:run",
           "options": {
             "tsConfig": "tsconfig.spec.json",
-            "testPathIgnorePatterns": ["/node_modules/", "<rootDir>/e2e/"]
+            "testPathIgnorePatterns": [
+              "/node_modules/",
+              "<rootDir>/e2e/",
+              "<rootDir>/.claude/"
+            ]
           }
         }
       }
