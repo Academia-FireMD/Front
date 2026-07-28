@@ -91,6 +91,15 @@ export class PlanificacionMensualEditComponent {
   eventsService = inject(EventsService);
   planificacionFisicaService = inject(PlanificacionFisicaService);
   appConfigService = inject(AppConfigService);
+
+  /** Bridge temario↔física: fail-open para no romper a SUPERADMIN ni en
+   * arranque pre-login. */
+  planificacionFisicaHabilitada = computed(
+    () =>
+      this.appConfigService.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !==
+      false,
+  );
+
   /**
    * Bridge temario↔física: resumen de entrenamiento físico por día del
    * rango actualmente visible, pasado a `<app-vista-semanal>` como input
@@ -269,10 +278,7 @@ export class PlanificacionMensualEditComponent {
       },
     },
     {
-      visible:
-        this.appConfigService.estadoModulos()[
-          ModuloApp.PLANIFICACION_FISICA
-        ] !== false,
+      visible: this.planificacionFisicaHabilitada(),
       icon: 'pi pi-bolt',
       tooltipOptions: {
         position: 'right',
@@ -286,8 +292,16 @@ export class PlanificacionMensualEditComponent {
    * Fase 2 bridge temario↔física: convierte los sub-bloques "ENTRENAMIENTO%"
    * de esta planificación en bloques vinculados a física. La acción es
    * irreversible, por eso pide confirmación explícita.
+   *
+   * Defensa en profundidad: aunque el botón del menú ya está gateado por
+   * `planificacionFisicaHabilitada`, re-comprobamos el flag antes de abrir
+   * el diálogo para evitar carreras o llamadas programáticas con el módulo OFF.
    */
   public confirmarConversionBloquesFisica(): void {
+    if (!this.planificacionFisicaHabilitada()) {
+      return;
+    }
+
     this.confirmationService.confirm({
       message:
         'Se marcarán como entrenamiento físico todos los sub-bloques de esta planificación cuyo nombre empiece por "ENTRENAMIENTO". ¿Continuar?',
@@ -652,8 +666,16 @@ export class PlanificacionMensualEditComponent {
    * debe poder tumbar el calendario del temario. Cualquier fallo (red, 5xx,
    * cálculo de rango) se traga aquí y deja `resumenFisica` en `[]` — el
    * resto del componente ni se entera.
+   *
+   * Si el módulo PLANIFICACION_FISICA está OFF, no llamamos al endpoint
+   * (evita el 403 visible en prod para alumnos sin el módulo activo).
    */
   private cargarResumenFisica(fecha: Date = this.viewDate): void {
+    if (!this.planificacionFisicaHabilitada()) {
+      this.resumenFisica.set([]);
+      return;
+    }
+
     try {
       const { desde, hasta } = this.rangoResumenFisica(fecha);
       this.planificacionFisicaService

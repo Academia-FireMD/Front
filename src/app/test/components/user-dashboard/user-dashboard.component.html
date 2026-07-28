@@ -291,7 +291,11 @@
             </div>
           </p-tabPanel>
 
-          <p-tabPanel header="Marcas físicas" leftIcon="pi pi-chart-line">
+          <p-tabPanel
+            header="Marcas físicas"
+            leftIcon="pi pi-chart-line"
+            *ngIf="planificacionFisicaHabilitada()"
+          >
             <div class="marcas-content">
               @if (isLoadingMarcas(item.id)) {
                 <div class="text-center py-3">

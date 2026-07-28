@@ -1,7 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { COMMON_TEST_PROVIDERS } from '../../../testing';
+import { AppConfigService } from '../../../services/app-config.service';
+import { EstadoModulos } from '../../../shared/models/app-config.model';
+import { ModuloApp } from '../../../shared/models/modulo-app.enum';
 
 // UserDashboardComponent has deep imports (PrimengModule, GenericListComponent)
 // that can't be resolved in the Jest test environment.
@@ -390,5 +393,105 @@ describe('UserDashboardComponent — override clases grabadas (Task C4)', () => 
 
     editarUsuario({ id: 8 });
     expect(state.editFechaClasesGrabadas).toBeNull();
+  });
+});
+
+function makeMockAppConfigService(planificacionFisicaEnabled = true) {
+  const estado = signal<EstadoModulos>(
+    Object.values(ModuloApp).reduce((acc, key) => {
+      acc[key] =
+        key === ModuloApp.PLANIFICACION_FISICA
+          ? planificacionFisicaEnabled
+          : true;
+      return acc;
+    }, {} as EstadoModulos),
+  );
+  return {
+    appConfig: signal({
+      appName: 'AcmeAcademy',
+      logoUrl: null,
+      primaryColor: '#123456',
+      secondaryColor: '#abcdef',
+      updatedAt: '2026-05-21T10:00:00Z',
+    }),
+    estadoModulos: estado,
+    isModuloHabilitado: (m: ModuloApp) => estado()[m] === true,
+    modulosFailedToLoad: signal(false),
+    isLoaded: signal(true),
+    setEstado: estado.set.bind(estado),
+  };
+}
+
+/**
+ * Task 8 fix: gatear el tab y la carga lazy de marcas físicas por el flag
+ * PLANIFICACION_FISICA. El componente real sigue sin poder instanciarse en
+ * este entorno (deep imports de PrimeNG), así que replicamos la lógica
+ * exacta que vive en el componente.
+ */
+describe('UserDashboardComponent — marcas físicas (Task 8)', () => {
+  const buildToggleHandler = (deps: {
+    planificacionFisicaHabilitada: boolean;
+    loadUserMarcas: jest.Mock;
+    loadUserPlanifications: jest.Mock;
+  }) => {
+    const expandedUserIds = new Set<number>();
+    const userPlanifications = new Map<number, any[]>();
+    const userMarcas = new Map<number, any[]>();
+
+    return (userId: number) => {
+      if (expandedUserIds.has(userId)) {
+        expandedUserIds.delete(userId);
+      } else {
+        expandedUserIds.add(userId);
+        if (!userPlanifications.has(userId)) {
+          deps.loadUserPlanifications(userId);
+        }
+        if (!userMarcas.has(userId) && deps.planificacionFisicaHabilitada) {
+          deps.loadUserMarcas(userId);
+        }
+      }
+    };
+  };
+
+  it('expandir fila llama loadUserMarcas cuando PLANIFICACION_FISICA está habilitada', () => {
+    const loadUserMarcas = jest.fn();
+    const loadUserPlanifications = jest.fn();
+    const toggle = buildToggleHandler({
+      planificacionFisicaHabilitada: true,
+      loadUserMarcas,
+      loadUserPlanifications,
+    });
+
+    toggle(42);
+
+    expect(loadUserPlanifications).toHaveBeenCalledWith(42);
+    expect(loadUserMarcas).toHaveBeenCalledWith(42);
+  });
+
+  it('expandir fila NO llama loadUserMarcas cuando PLANIFICACION_FISICA está deshabilitada', () => {
+    const loadUserMarcas = jest.fn();
+    const loadUserPlanifications = jest.fn();
+    const toggle = buildToggleHandler({
+      planificacionFisicaHabilitada: false,
+      loadUserMarcas,
+      loadUserPlanifications,
+    });
+
+    toggle(42);
+
+    expect(loadUserPlanifications).toHaveBeenCalledWith(42);
+    expect(loadUserMarcas).not.toHaveBeenCalled();
+  });
+
+  it('el tab "Marcas físicas" se renderiza solo cuando PLANIFICACION_FISICA está habilitada', () => {
+    const on = makeMockAppConfigService(true);
+    const off = makeMockAppConfigService(false);
+
+    // Réplica exacta de la guarda del template.
+    const tabVisible = (svc: ReturnType<typeof makeMockAppConfigService>) =>
+      svc.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !== false;
+
+    expect(tabVisible(on)).toBe(true);
+    expect(tabVisible(off)).toBe(false);
   });
 });

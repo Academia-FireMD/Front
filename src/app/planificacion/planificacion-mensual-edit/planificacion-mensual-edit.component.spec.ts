@@ -108,6 +108,20 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
+    it('cargarResumenFisica NO llama al endpoint cuando PLANIFICACION_FISICA está deshabilitada', () => {
+      const svc = TestBed.inject(PlanificacionFisicaService);
+      const spy = jest.spyOn(svc, 'resumenDias');
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION_FISICA]: false,
+      });
+
+      (component as any).cargarResumenFisica(new Date(2026, 7, 1));
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(component.resumenFisica()).toEqual([]);
+    });
+
     it('REGLA #1 no romper el temario: si el endpoint del bridge física falla (500/red), resumenFisica queda en [] sin lanzar excepción', () => {
       const svc = TestBed.inject(PlanificacionFisicaService);
       jest
@@ -261,6 +275,19 @@ describe('PlanificacionMensualEditComponent', () => {
         i.tooltipOptions?.tooltipLabel?.includes('Convertir bloques'),
       );
       expect(accion?.visible).toBe(false);
+    });
+
+    it('confirmarConversionBloquesFisica NO abre el confirm si PLANIFICACION_FISICA está deshabilitada (defensa en profundidad)', () => {
+      const confirmationService = TestBed.inject(ConfirmationService);
+      const confirmSpy = jest.spyOn(confirmationService, 'confirm');
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION_FISICA]: false,
+      });
+
+      component.confirmarConversionBloquesFisica();
+
+      expect(confirmSpy).not.toHaveBeenCalled();
     });
 
     it('confirmarConversionBloquesFisica pide confirmación y al aceptar llama al servicio y recarga', () => {

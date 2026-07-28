@@ -76,4 +76,32 @@ describe('EditarSubBloqueDialogComponent', () => {
 
     expect(component.planificacionFisicaHabilitada()).toBe(false);
   });
+
+  describe('setter de data — reset defensivo de esEntrenamientoFisico', () => {
+    it('un payload antiguo sin esEntrenamientoFisico resetea el campo a false', () => {
+      // Simular un diálogo anterior que dejó el campo a true.
+      component.formGroup.patchValue({ esEntrenamientoFisico: true });
+      expect(component.formGroup.get('esEntrenamientoFisico')?.value).toBe(
+        true,
+      );
+
+      component.data = { id: 1, nombre: 'Bloque sin campo físico' };
+
+      expect(component.formGroup.get('esEntrenamientoFisico')?.value).toBe(
+        false,
+      );
+    });
+
+    it('un payload con esEntrenamientoFisico=true conserva el valor true', () => {
+      component.data = {
+        id: 2,
+        nombre: 'Bloque físico',
+        esEntrenamientoFisico: true,
+      };
+
+      expect(component.formGroup.get('esEntrenamientoFisico')?.value).toBe(
+        true,
+      );
+    });
+  });
 });

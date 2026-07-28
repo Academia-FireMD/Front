@@ -1,4 +1,11 @@
-import { Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import {
+  Component,
+  computed,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  inject,
+} from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { cloneDeep } from 'lodash';
@@ -7,6 +14,7 @@ import { ConfirmationService } from 'primeng/api';
 import { Observable, filter, firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ExamenesService } from '../examen/servicios/examen.service';
+import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
 import { PlanificacionesService } from '../services/planificaciones.service';
 import {
@@ -15,6 +23,7 @@ import {
 } from '../services/suscripcion-management.service';
 import { UserService } from '../services/user.service';
 import { ViewportService } from '../services/viewport.service';
+import { ModuloApp } from '../shared/models/modulo-app.enum';
 import { duracionesDisponibles } from '../shared/models/pregunta.model';
 import {
   getPlanLabel,
@@ -66,6 +75,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
   viewportService = inject(ViewportService);
   private router = inject(Router);
   private examenesService = inject(ExamenesService);
+  private appConfigService = inject(AppConfigService);
+
+  /** Fase 3 bridge física: la tarjeta de marcas personales solo se muestra
+   * cuando el módulo PLANIFICACION_FISICA está habilitado. Fail-open
+   * (`!== false`) para no ocultar nada a SUPERADMIN ni durante el arranque. */
+  planificacionFisicaHabilitada = computed(
+    () =>
+      this.appConfigService.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !==
+      false,
+  );
 
   oposiciones = oposiciones;
 

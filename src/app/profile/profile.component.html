@@ -194,11 +194,11 @@
 
         <!-- Mis marcas — entrada al histórico de marcas personales de física
              (Fase 3: visibilidad, antes solo accesible desde el calendario de
-             física). Solo ALUMNO, igual que la tarjeta de onboarding; el tier
+             física). Solo ALUMNO + módulo PLANIFICACION_FISICA activo; el tier
              BASIC lo resuelve la propia vista con su píldora de upsell. -->
         <div
           class="profile-card mt-4"
-          *ngIf="user.rol === Rol.ALUMNO"
+          *ngIf="user.rol === Rol.ALUMNO && planificacionFisicaHabilitada()"
           data-testid="profile-marcas-card"
         >
           <div class="card-header">

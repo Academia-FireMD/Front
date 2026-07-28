@@ -29,7 +29,12 @@ export class EditarSubBloqueDialogComponent
 {
   @Input() set data(data: any) {
     this.isAddingNew = !data?.id;
-    this.formGroup.patchValue(data);
+    // Forzamos el reset de esEntrenamientoFisico para que un payload antiguo
+    // (o un nuevo evento sin ese campo) no herede el valor del diálogo anterior.
+    this.formGroup.patchValue({
+      ...data,
+      esEntrenamientoFisico: !!data?.esEntrenamientoFisico,
+    });
     //Si data.id es falsey, significa que el alumno está intentando crear un evento, cosa que está permitida
     if (this.role == 'ADMIN' || this.isAddingNew) {
       this.formGroup.enable();

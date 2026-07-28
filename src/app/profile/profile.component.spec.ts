@@ -1,16 +1,46 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../testing';
+import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
+import { EstadoModulos } from '../shared/models/app-config.model';
+import { ModuloApp } from '../shared/models/modulo-app.enum';
 
 import { ProfileComponent } from './profile.component';
+
+function makeMockAppConfigService(planificacionFisicaEnabled = true) {
+  const estado = signal<EstadoModulos>(
+    Object.values(ModuloApp).reduce((acc, key) => {
+      acc[key] =
+        key === ModuloApp.PLANIFICACION_FISICA
+          ? planificacionFisicaEnabled
+          : true;
+      return acc;
+    }, {} as EstadoModulos),
+  );
+  return {
+    appConfig: signal({
+      appName: 'AcmeAcademy',
+      logoUrl: null,
+      primaryColor: '#123456',
+      secondaryColor: '#abcdef',
+      updatedAt: '2026-05-21T10:00:00Z',
+    }),
+    estadoModulos: estado,
+    isModuloHabilitado: (m: ModuloApp) => estado()[m] === true,
+    modulosFailedToLoad: signal(false),
+    isLoaded: signal(true),
+    setEstado: estado.set.bind(estado),
+  };
+}
 
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
   let fixture: ComponentFixture<ProfileComponent>;
   let mockAuthService: { getWpSsoUrl$: jest.Mock };
+  let appConfigService: ReturnType<typeof makeMockAppConfigService>;
 
   beforeEach(async () => {
     mockAuthService = {
@@ -20,6 +50,7 @@ describe('ProfileComponent', () => {
         }),
       ),
     };
+    appConfigService = makeMockAppConfigService(true);
 
     await TestBed.configureTestingModule({
       declarations: [ProfileComponent],
@@ -27,6 +58,7 @@ describe('ProfileComponent', () => {
         ...COMMON_TEST_PROVIDERS,
         // Override AuthService con mock que tiene getWpSsoUrl$
         { provide: AuthService, useValue: mockAuthService },
+        { provide: AppConfigService, useValue: appConfigService },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -258,6 +290,31 @@ describe('ProfileComponent', () => {
         '/app/planificacion-fisica',
         'marcas',
       ]);
+    });
+
+    it('renderiza la tarjeta de marcas para un alumno cuando PLANIFICACION_FISICA está habilitada', () => {
+      component.user = { rol: 'ALUMNO' } as any;
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector(
+        '[data-testid="profile-marcas-card"]',
+      );
+      expect(card).toBeTruthy();
+    });
+
+    it('NO renderiza la tarjeta de marcas para un alumno cuando PLANIFICACION_FISICA está deshabilitada', () => {
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION_FISICA]: false,
+      });
+
+      component.user = { rol: 'ALUMNO' } as any;
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector(
+        '[data-testid="profile-marcas-card"]',
+      );
+      expect(card).toBeFalsy();
     });
   });
 });

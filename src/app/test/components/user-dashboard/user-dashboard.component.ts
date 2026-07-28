@@ -13,9 +13,11 @@ import { cloneDeep } from 'lodash';
 import { Memoize } from 'lodash-decorators';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
+import { AppConfigService } from '../../../services/app-config.service';
 import { AuthService } from '../../../services/auth.service';
 import { PlanificacionesService } from '../../../services/planificaciones.service';
 import { UserService } from '../../../services/user.service';
+import { ModuloApp } from '../../../shared/models/modulo-app.enum';
 import {
   MarcaPersonal,
   PlanificacionFisicaService,
@@ -68,6 +70,15 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   authService = inject(AuthService);
   labelsService = inject(LabelsService);
   planificacionFisicaService = inject(PlanificacionFisicaService);
+  appConfigService = inject(AppConfigService);
+
+  /** Bridge física: el tab de marcas personales y su carga lazy solo están
+   * disponibles cuando el módulo PLANIFICACION_FISICA está habilitado. */
+  planificacionFisicaHabilitada = computed(
+    () =>
+      this.appConfigService.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !==
+      false,
+  );
 
   @Input() mode: GenericListMode = 'overview';
   @Input() singleSelection = false;
@@ -735,7 +746,10 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       if (!this.userPlanifications.has(userId)) {
         this.loadUserPlanifications(userId);
       }
-      if (!this.userMarcas.has(userId)) {
+      if (
+        !this.userMarcas.has(userId) &&
+        this.planificacionFisicaHabilitada()
+      ) {
         this.loadUserMarcas(userId);
       }
     }
