@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   EventEmitter,
   inject,
   Input,
@@ -13,6 +14,8 @@ import {
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep, uniqueId } from 'lodash';
+import { AppConfigService } from '../../services/app-config.service';
+import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { SubBloque } from '../../shared/models/planificacion.model';
 import { duracionOptions, universalEditorConfig } from '../../utils/utils';
 
@@ -72,6 +75,12 @@ export class EditarSubBloqueDialogComponent
     this.role == 'ADMIN' || this.isAddingNew;
 
   fb = inject(FormBuilder);
+  appConfigService = inject(AppConfigService);
+  planificacionFisicaHabilitada = computed(
+    () =>
+      this.appConfigService.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !==
+      false,
+  );
   public formGroup = this.fb.group({
     duracion: [60, [Validators.required, Validators.min(1)]],
     nombre: ['', [Validators.required]],

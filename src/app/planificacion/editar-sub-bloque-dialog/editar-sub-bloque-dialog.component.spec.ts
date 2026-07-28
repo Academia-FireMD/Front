@@ -1,18 +1,52 @@
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
+import { AppConfigService } from '../../services/app-config.service';
+import { EstadoModulos } from '../../shared/models/app-config.model';
+import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { EditarSubBloqueDialogComponent } from './editar-sub-bloque-dialog.component';
+
+function makeMockAppConfigService(planificacionFisicaEnabled = true) {
+  const estado = signal<EstadoModulos>(
+    Object.values(ModuloApp).reduce((acc, key) => {
+      acc[key] =
+        key === ModuloApp.PLANIFICACION_FISICA
+          ? planificacionFisicaEnabled
+          : true;
+      return acc;
+    }, {} as EstadoModulos),
+  );
+  return {
+    appConfig: signal({
+      appName: 'AcmeAcademy',
+      logoUrl: null,
+      primaryColor: '#123456',
+      secondaryColor: '#abcdef',
+      updatedAt: '2026-05-21T10:00:00Z',
+    }),
+    estadoModulos: estado,
+    isModuloHabilitado: (m: ModuloApp) => estado()[m] === true,
+    modulosFailedToLoad: signal(false),
+    isLoaded: signal(true),
+    setEstado: estado.set.bind(estado),
+  };
+}
 
 describe('EditarSubBloqueDialogComponent', () => {
   let fixture: ComponentFixture<EditarSubBloqueDialogComponent>;
   let component: EditarSubBloqueDialogComponent;
+  let appConfigService: ReturnType<typeof makeMockAppConfigService>;
 
   beforeEach(async () => {
+    appConfigService = makeMockAppConfigService(true);
     await TestBed.configureTestingModule({
       declarations: [EditarSubBloqueDialogComponent],
       imports: [ReactiveFormsModule],
-      providers: [...COMMON_TEST_PROVIDERS],
+      providers: [
+        ...COMMON_TEST_PROVIDERS,
+        { provide: AppConfigService, useValue: appConfigService },
+      ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
     fixture = TestBed.createComponent(EditarSubBloqueDialogComponent);
@@ -28,5 +62,18 @@ describe('EditarSubBloqueDialogComponent', () => {
 
   it('el checkbox de entrenamiento físico empieza desmarcado', () => {
     expect(component.formGroup.get('esEntrenamientoFisico')?.value).toBe(false);
+  });
+
+  it('habilita el checkbox de entrenamiento físico para admin cuando PLANIFICACION_FISICA está activo', () => {
+    expect(component.planificacionFisicaHabilitada()).toBe(true);
+  });
+
+  it('deshabilita el checkbox de entrenamiento físico para admin cuando PLANIFICACION_FISICA está OFF', () => {
+    appConfigService.setEstado({
+      ...appConfigService.estadoModulos(),
+      [ModuloApp.PLANIFICACION_FISICA]: false,
+    });
+
+    expect(component.planificacionFisicaHabilitada()).toBe(false);
   });
 });

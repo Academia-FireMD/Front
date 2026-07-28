@@ -1,13 +1,47 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA, Pipe, PipeTransform } from '@angular/core';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA, Pipe, PipeTransform, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { PlanificacionFisicaService } from '../../planificacion-fisica/services/planificacion-fisica.service';
+import { AppConfigService } from '../../services/app-config.service';
+import { EstadoModulos } from '../../shared/models/app-config.model';
+import { ModuloApp } from '../../shared/models/modulo-app.enum';
 
 import { PlanificacionMensualEditComponent } from './planificacion-mensual-edit.component';
+
+function makeMockAppConfigService(planificacionFisicaEnabled = true) {
+  const estado = signal<EstadoModulos>(
+    Object.values(ModuloApp).reduce((acc, key) => {
+      acc[key] =
+        key === ModuloApp.PLANIFICACION_FISICA
+          ? planificacionFisicaEnabled
+          : true;
+      return acc;
+    }, {} as EstadoModulos),
+  );
+  return {
+    appConfig: signal({
+      appName: 'AcmeAcademy',
+      logoUrl: null,
+      primaryColor: '#123456',
+      secondaryColor: '#abcdef',
+      updatedAt: '2026-05-21T10:00:00Z',
+    }),
+    estadoModulos: estado,
+    isModuloHabilitado: (m: ModuloApp) => estado()[m] === true,
+    modulosFailedToLoad: signal(false),
+    isLoaded: signal(true),
+    setEstado: estado.set.bind(estado),
+  };
+}
 
 @Pipe({ name: 'calendarDate' })
 class MockCalendarDatePipe implements PipeTransform {
@@ -20,11 +54,16 @@ describe('PlanificacionMensualEditComponent', () => {
   let component: PlanificacionMensualEditComponent;
   let fixture: ComponentFixture<PlanificacionMensualEditComponent>;
   let router: Router;
+  let appConfigService: ReturnType<typeof makeMockAppConfigService>;
 
   beforeEach(async () => {
+    appConfigService = makeMockAppConfigService(true);
     await TestBed.configureTestingModule({
       declarations: [PlanificacionMensualEditComponent, MockCalendarDatePipe],
-      providers: [...COMMON_TEST_PROVIDERS],
+      providers: [
+        ...COMMON_TEST_PROVIDERS,
+        { provide: AppConfigService, useValue: appConfigService },
+      ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
@@ -201,12 +240,27 @@ describe('PlanificacionMensualEditComponent', () => {
   });
 
   describe('conversión masiva de bloques ENTRENAMIENTO', () => {
-    it('items() incluye la acción de conversión para admin', () => {
+    it('items() incluye la acción de conversión para admin cuando PLANIFICACION_FISICA está habilitada', () => {
       const items = component.items();
       const accion = items.find((i) =>
         i.tooltipOptions?.tooltipLabel?.includes('Convertir bloques'),
       );
       expect(accion).toBeDefined();
+      expect(accion?.visible).not.toBe(false);
+    });
+
+    it('items() oculta la acción de conversión cuando PLANIFICACION_FISICA está deshabilitada', () => {
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION_FISICA]: false,
+      });
+      fixture.detectChanges();
+
+      const items = component.items();
+      const accion = items.find((i) =>
+        i.tooltipOptions?.tooltipLabel?.includes('Convertir bloques'),
+      );
+      expect(accion?.visible).toBe(false);
     });
 
     it('confirmarConversionBloquesFisica pide confirmación y al aceptar llama al servicio y recarga', () => {

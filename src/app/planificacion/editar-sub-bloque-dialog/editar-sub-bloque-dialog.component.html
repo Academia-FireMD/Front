@@ -116,7 +116,7 @@
            día de entrenamiento. -->
       <div
         class="col-12 flex flex-column gap-2"
-        *ngIf="role == 'ADMIN'"
+        *ngIf="role == 'ADMIN' && planificacionFisicaHabilitada()"
         [ngClass]="{
           'fisica-check-activo': formGroup.get('esEntrenamientoFisico')?.value,
         }"

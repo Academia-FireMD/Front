@@ -21,9 +21,11 @@ import {
   PlanificacionFisicaService,
   ResumenDiaFisica,
 } from '../../planificacion-fisica/services/planificacion-fisica.service';
+import { AppConfigService } from '../../services/app-config.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
+import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { EntidadTipo } from '../../shared/models/attachment.model';
 import {
@@ -88,6 +90,7 @@ export class PlanificacionMensualEditComponent {
   public calendarView = CalendarView;
   eventsService = inject(EventsService);
   planificacionFisicaService = inject(PlanificacionFisicaService);
+  appConfigService = inject(AppConfigService);
   /**
    * Bridge temario↔física: resumen de entrenamiento físico por día del
    * rango actualmente visible, pasado a `<app-vista-semanal>` como input
@@ -241,41 +244,43 @@ export class PlanificacionMensualEditComponent {
     lines.push('END:VCALENDAR');
     return lines.join('\r\n');
   };
-  items() {
-    return [
-      {
-        icon: 'fa-solid fa-user-pen',
-        tooltipOptions: {
-          tooltipLabel: 'Asignar a usuarios',
-          position: 'right',
-        },
-        command: () => {
-          this.isDialogAsignacionUsuarioVisible = true;
-        },
+  items = computed(() => [
+    {
+      icon: 'fa-solid fa-user-pen',
+      tooltipOptions: {
+        tooltipLabel: 'Asignar a usuarios',
+        position: 'right',
       },
-      {
-        disabled: this.view != CalendarView.Week,
-        icon: 'fa-regular fa-hand-pointer',
-        tooltipOptions: {
-          position: 'right',
-          tooltipLabel: 'Seleccionar una plantilla semanal',
-        },
-        command: () => {
-          this.activeStepSeleccionPlantilla = 0;
-          this.pickedEvents = [];
-          this.isDialogVisible = true;
-        },
+      command: () => {
+        this.isDialogAsignacionUsuarioVisible = true;
       },
-      {
-        icon: 'pi pi-bolt',
-        tooltipOptions: {
-          position: 'right',
-          tooltipLabel: 'Convertir bloques ENTRENAMIENTO en física vinculada',
-        },
-        command: () => this.confirmarConversionBloquesFisica(),
+    },
+    {
+      disabled: this.view != CalendarView.Week,
+      icon: 'fa-regular fa-hand-pointer',
+      tooltipOptions: {
+        position: 'right',
+        tooltipLabel: 'Seleccionar una plantilla semanal',
       },
-    ];
-  }
+      command: () => {
+        this.activeStepSeleccionPlantilla = 0;
+        this.pickedEvents = [];
+        this.isDialogVisible = true;
+      },
+    },
+    {
+      visible:
+        this.appConfigService.estadoModulos()[
+          ModuloApp.PLANIFICACION_FISICA
+        ] !== false,
+      icon: 'pi pi-bolt',
+      tooltipOptions: {
+        position: 'right',
+        tooltipLabel: 'Convertir bloques ENTRENAMIENTO en física vinculada',
+      },
+      command: () => this.confirmarConversionBloquesFisica(),
+    },
+  ]);
 
   /**
    * Fase 2 bridge temario↔física: convierte los sub-bloques "ENTRENAMIENTO%"
