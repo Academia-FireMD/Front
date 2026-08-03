@@ -158,6 +158,21 @@ export async function setupTestGenerarInterceptors(page: Page): Promise<void> {
     })
   );
 
+  // PopupFallosTestComponent se crea junto con la pantalla aunque el diálogo
+  // esté cerrado, por lo que su primera consulta también debe estar mockeada.
+  await page.route('**/tests/obtener-fallos', (route) =>
+    route.request().method() === 'POST'
+      ? route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: [],
+            pagination: { count: 0, skip: 0, take: 10 },
+          }),
+        })
+      : route.continue()
+  );
+
   // Temas / topics for dropdowns
   // app-tema-select usa getAllTemas$() → GET /get-temas, y groupedTemas agrupa
   // por `modulo.nombre` incluyendo solo `modulo.esPublico` (antes el mock era

@@ -138,7 +138,10 @@ async function loginAs(
       ? route.fulfill({
           status: 201,
           contentType: 'application/json',
-          body: JSON.stringify({ access_token: mockJwt, refresh_token: mockJwt }),
+          body: JSON.stringify({
+            access_token: mockJwt,
+            refresh_token: mockJwt,
+          }),
         })
       : route.continue(),
   );
@@ -179,6 +182,10 @@ async function loginAs(
 }
 
 test.describe('White-label superadmin panel', () => {
+  // El mock se recrea en beforeEach pero vive en el scope del fichero; no es
+  // seguro ejecutar estos tests en paralelo con fullyParallel habilitado.
+  test.describe.configure({ mode: 'serial' });
+
   let state: { config: MockConfig; modulos: MockEstadoModulos };
 
   test.beforeEach(async ({ page }) => {
@@ -202,7 +209,9 @@ test.describe('White-label superadmin panel', () => {
   test('panel /superadmin/config renderiza 3 secciones', async ({ page }) => {
     await loginAs(page, 'SUPERADMIN');
     await page.goto('/app/superadmin/config');
-    await expect(page.locator('[data-testid="section-branding"]')).toBeVisible();
+    await expect(
+      page.locator('[data-testid="section-branding"]'),
+    ).toBeVisible();
     await expect(page.locator('[data-testid="section-logo"]')).toBeVisible();
     await expect(page.locator('[data-testid="section-modulos"]')).toBeVisible();
   });

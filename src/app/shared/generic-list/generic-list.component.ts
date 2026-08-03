@@ -116,7 +116,7 @@ export type GenericListMode = 'overview' | 'selection';
                   'selection-mode': mode === 'selection',
                 }"
                 *ngFor="let item of data"
-                (click)="handleItemClick(item)"
+                (click)="handleItemClick(item, $event)"
               >
                 <!-- Checkbox para modo selección -->
                 <div
@@ -680,8 +680,42 @@ export class GenericListComponent<T>
     return this.getActiveFiltersCount() > 0;
   }
 
+  /**
+   * Elementos que tienen su propia interacción no deben activar el click de
+   * la fila. Las regiones más grandes, como una expansión con tabs, pueden
+   * marcarse con `data-prevent-item-click` en su elemento raíz.
+   */
+  private readonly itemClickIgnoreSelector = [
+    '[data-prevent-item-click]',
+    'a',
+    'button',
+    'input',
+    'select',
+    'textarea',
+    '[contenteditable="true"]',
+    '[role="button"]',
+    '[role="checkbox"]',
+    '[role="combobox"]',
+    '[role="menuitem"]',
+    '[role="option"]',
+    '[role="radio"]',
+    '[role="tab"]',
+  ].join(', ');
+
+  private isNestedInteractiveClick(event: MouseEvent): boolean {
+    if (event.defaultPrevented) return true;
+
+    const target = event.target;
+    return (
+      target instanceof Element &&
+      target.closest(this.itemClickIgnoreSelector) !== null
+    );
+  }
+
   // Métodos para modo selección
-  handleItemClick(item: T) {
+  handleItemClick(item: T, event?: MouseEvent) {
+    if (event && this.isNestedInteractiveClick(event)) return;
+
     if (this.mode === 'selection') {
       this.toggleItemSelection(item);
     } else {

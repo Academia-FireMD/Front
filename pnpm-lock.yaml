@@ -162,6 +162,9 @@ importers:
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@25.0.8)(ts-node@10.9.2(@types/node@25.0.8)(typescript@5.5.4))
+      jest-preset-angular:
+        specifier: 14.1.0
+        version: 14.1.0(8b182b5bfa1631b97bf2e32abfaeb409)
       lint-staged:
         specifier: ^16.4.0
         version: 16.4.0

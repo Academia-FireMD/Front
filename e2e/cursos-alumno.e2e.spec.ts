@@ -195,7 +195,7 @@ async function setupCursosAlumnoInterceptors(
             contenidoMarkdown: isVideo ? null : '# Bienvenida\n\nContenido E2E',
           },
           playbackUrl: isVideo
-            ? 'https://iframe.mediadelivery.net/embed/0/mock-bunny-guid'
+            ? 'https://vz-mock.b-cdn.net/mock-bunny-guid/playlist.m3u8?token=e2e'
             : undefined,
         }),
       });
@@ -275,9 +275,7 @@ async function loginAsAlumno(page: Page): Promise<void> {
   await page.waitForSelector('input[formControlName="email"]', {
     timeout: 15_000,
   });
-  await page
-    .locator('input[formControlName="email"]')
-    .fill('alumno@test.com');
+  await page.locator('input[formControlName="email"]').fill('alumno@test.com');
   await page.locator('app-password-input input').fill('test1234');
   // The login button is wrapped by <app-async-button> and its internal
   // <button> is type="button" (not "submit"), so we can't rely on the
@@ -287,6 +285,10 @@ async function loginAsAlumno(page: Page): Promise<void> {
 }
 
 test.describe('Cursos alumno — flujo completo', () => {
+  // Los interceptores comparten un estado mutable por fichero; serializar este
+  // flujo evita que fullyParallel mezcle respuestas entre tests.
+  test.describe.configure({ mode: 'serial' });
+
   let state: AlumnoState;
 
   test.beforeEach(async ({ page }) => {
@@ -320,7 +322,9 @@ test.describe('Cursos alumno — flujo completo', () => {
     expect(state.catalogoCount).toBeGreaterThan(0);
   });
 
-  test('3) detalle de curso muestra secciones y lecciones', async ({ page }) => {
+  test('3) detalle de curso muestra secciones y lecciones', async ({
+    page,
+  }) => {
     await page.goto(`/app/cursos/${cursoDetailFixture.slug}`);
     await expect(
       page.getByRole('heading', { name: /Curso QA Test/i }),
@@ -380,7 +384,7 @@ test.describe('Cursos alumno — flujo completo', () => {
       /Vídeo de presentación/i,
       { timeout: 10_000 },
     );
-    await expect(page.locator('iframe.video-iframe')).toBeVisible({
+    await expect(page.getByTestId('bunny-player')).toBeVisible({
       timeout: 5_000,
     });
     // En el aula la completitud la dueña el footer del shell, NO el botón
@@ -555,7 +559,11 @@ test.describe('Cursos alumno — flujo completo', () => {
     // Llamadas auxiliares del motor (listas/fallos) → respuestas vacías.
     await page.route(/\/tests(\?.*)?$/, (route) =>
       route.request().method() === 'GET'
-        ? route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+        ? route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: '[]',
+          })
         : route.continue(),
     );
 
@@ -603,8 +611,20 @@ test.describe('Cursos alumno — flujo completo', () => {
                 orden: 0,
                 tipo: 'CUESTIONARIO',
                 bloquePreguntas: [
-                  { id: 1, bloqueId: 901, orden: 0, enunciado: '¿2+2?', opciones: ['3', '4'] },
-                  { id: 2, bloqueId: 901, orden: 1, enunciado: '¿Capital de España?', opciones: ['Lisboa', 'Madrid', 'París'] },
+                  {
+                    id: 1,
+                    bloqueId: 901,
+                    orden: 0,
+                    enunciado: '¿2+2?',
+                    opciones: ['3', '4'],
+                  },
+                  {
+                    id: 2,
+                    bloqueId: 901,
+                    orden: 1,
+                    enunciado: '¿Capital de España?',
+                    opciones: ['Lisboa', 'Madrid', 'París'],
+                  },
                 ],
               },
             ],
@@ -623,8 +643,20 @@ test.describe('Cursos alumno — flujo completo', () => {
           aciertos: 1,
           total: 2,
           resultados: [
-            { preguntaId: 1, opcionElegida: 1, correcta: true, respuestaCorrecta: 1, explicacion: null },
-            { preguntaId: 2, opcionElegida: 0, correcta: false, respuestaCorrecta: 1, explicacion: 'Madrid es la capital.' },
+            {
+              preguntaId: 1,
+              opcionElegida: 1,
+              correcta: true,
+              respuestaCorrecta: 1,
+              explicacion: null,
+            },
+            {
+              preguntaId: 2,
+              opcionElegida: 0,
+              correcta: false,
+              respuestaCorrecta: 1,
+              explicacion: 'Madrid es la capital.',
+            },
           ],
         }),
       }),
@@ -656,9 +688,12 @@ test.describe('Cursos alumno — flujo completo', () => {
     await corregir.click();
 
     // Nota + feedback.
-    await expect(page.getByTestId('cuestionario-score')).toContainText('1 / 2', {
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId('cuestionario-score')).toContainText(
+      '1 / 2',
+      {
+        timeout: 10_000,
+      },
+    );
     await expect(page.getByText('Madrid es la capital.')).toBeVisible();
     // Tras corregir aparece "Reintentar".
     await expect(page.getByTestId('cuestionario-reintentar')).toBeVisible();

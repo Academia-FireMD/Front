@@ -196,7 +196,7 @@
 
   <!-- Expansión de planificaciones e información del usuario -->
   @if (viewerEsAdminOSuperior && isUserExpanded(item.id)) {
-    <div class="col-12 mt-2 planifications-expansion">
+    <div class="col-12 mt-2 planifications-expansion" data-prevent-item-click>
       <div class="p-3 border-1 border-round surface-border">
         <!-- Tabs para planificaciones e información personal -->
         <p-tabView>

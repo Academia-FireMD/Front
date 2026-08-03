@@ -36,6 +36,7 @@ export interface UploadedEvent {
       @if (!uploading() && !done()) {
         <div
           class="bunny-upload__dropzone"
+          data-testid="bunny-upload-dropzone"
           [class.is-dragging]="isDragging()"
           (click)="fileInput.click()"
           (dragover)="onDragOver($event)"

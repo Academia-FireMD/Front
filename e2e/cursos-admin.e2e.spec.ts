@@ -10,7 +10,7 @@
  *   - Reorder de secciones / lecciones (con bug doc: ver QA report)
  *   - Publicar / archivar con badge actualizado
  *   - Eliminar curso con confirm
- *   - Validación de formulario (slug requerido, etc.)
+ *   - Validación de formulario y preview de slug automático
  *
  * Todos los endpoints se mockean — no se requiere backend levantado.
  * Sigue el patrón de auth.spec.ts + superadmin-white-label.spec.ts:
@@ -89,6 +89,15 @@ interface AdminState {
   deleteCursoCalls: number;
   archivarCalls: number;
   publicarCalls: number;
+}
+
+function slugifyMock(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function freshState(): AdminState {
@@ -255,7 +264,11 @@ async function setupCursosAdminInterceptors(
     return route.fulfill({
       status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ id: 999, usuarioId: 130, cursoId: state.detail.id }),
+      body: JSON.stringify({
+        id: 999,
+        usuarioId: 130,
+        cursoId: state.detail.id,
+      }),
     });
   });
 
@@ -288,16 +301,18 @@ async function setupCursosAdminInterceptors(
   // POST /cursos (create)
   await page.route(/\/cursos$/, async (route) => {
     if (route.request().method() !== 'POST') return route.continue();
-    const body = route.request().postDataJSON() as MockCurso & {
-      slug: string;
+    const body = route.request().postDataJSON() as Partial<MockCurso> & {
       titulo: string;
     };
-    if (state.cursos.some((c) => c.slug === body.slug)) {
+    // El backend genera el slug desde el título; el front solo muestra el
+    // preview deshabilitado y no lo manda en el payload de creación.
+    const slug = body.slug ?? slugifyMock(body.titulo);
+    if (state.cursos.some((c) => c.slug === slug)) {
       return route.fulfill({
         status: 409,
         contentType: 'application/json',
         body: JSON.stringify({
-          message: `Slug "${body.slug}" ya existe`,
+          message: `Slug "${slug}" ya existe`,
           error: 'Conflict',
           statusCode: 409,
         }),
@@ -306,7 +321,7 @@ async function setupCursosAdminInterceptors(
     const created: MockCurso = {
       id: state.cursos.length + 100,
       titulo: body.titulo,
-      slug: body.slug,
+      slug,
       descripcion: body.descripcion ?? null,
       estado: 'BORRADOR',
       precio: body.precio ?? null,
@@ -369,7 +384,10 @@ async function setupCursosAdminInterceptors(
   // POST /cursos/:id/secciones | DELETE /cursos/secciones/:id | PUT /cursos/secciones/:id
   await page.route(/\/cursos\/\d+\/secciones$/, async (route) => {
     if (route.request().method() !== 'POST') return route.continue();
-    const body = route.request().postDataJSON() as { titulo: string; orden: number };
+    const body = route.request().postDataJSON() as {
+      titulo: string;
+      orden: number;
+    };
     const created: MockSeccion = {
       id: state.nextSeccionId++,
       cursoId: state.detail.id,
@@ -402,7 +420,9 @@ async function setupCursosAdminInterceptors(
       });
     }
     if (method === 'DELETE') {
-      state.detail.secciones = state.detail.secciones.filter((s) => s.id !== id);
+      state.detail.secciones = state.detail.secciones.filter(
+        (s) => s.id !== id,
+      );
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -417,7 +437,10 @@ async function setupCursosAdminInterceptors(
     if (route.request().method() !== 'POST') return route.continue();
     const url = route.request().url();
     const seccionId = parseInt(url.split('/').slice(-2)[0], 10);
-    const body = route.request().postDataJSON() as Omit<MockLeccion, 'id' | 'seccionId'>;
+    const body = route.request().postDataJSON() as Omit<
+      MockLeccion,
+      'id' | 'seccionId'
+    >;
     const created: MockLeccion = {
       id: state.nextLeccionId++,
       seccionId,
@@ -629,9 +652,7 @@ async function loginAsAdmin(page: Page): Promise<void> {
   await page.waitForSelector('input[formControlName="email"]', {
     timeout: 15_000,
   });
-  await page
-    .locator('input[formControlName="email"]')
-    .fill('admin@test.com');
+  await page.locator('input[formControlName="email"]').fill('admin@test.com');
   await page.locator('app-password-input input').fill('test1234');
   // The login button is wrapped by <app-async-button> and its internal
   // <button> is type="button" (not "submit"), so we can't rely on the
@@ -641,6 +662,10 @@ async function loginAsAdmin(page: Page): Promise<void> {
 }
 
 test.describe('Cursos admin — flujo completo', () => {
+  // Los interceptores comparten un estado mutable por fichero; serializar este
+  // flujo evita que fullyParallel mezcle respuestas entre tests.
+  test.describe.configure({ mode: 'serial' });
+
   let state: AdminState;
 
   test.beforeEach(async ({ page }) => {
@@ -657,15 +682,17 @@ test.describe('Cursos admin — flujo completo', () => {
 
     // La lista admin no tiene un heading <h*>Cursos</h*>; su ancla estable es
     // el botón "Nuevo curso".
-    await expect(
-      page.locator('[data-testid="nuevo-curso-btn"]'),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="nuevo-curso-btn"]')).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(page.getByText('Curso QA Test')).toBeVisible();
     // La lista ya no muestra el slug en la tarjeta (solo nombre + estado).
     await expect(page.getByText('BORRADOR').first()).toBeVisible();
 
     await page.getByText('Curso QA Test').click();
-    await expect(page).toHaveURL(/\/app\/cursos-admin\/\d+/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/app\/cursos-admin\/\d+/, {
+      timeout: 5_000,
+    });
   });
 
   test('2) botón "Nuevo curso" navega a /nuevo y muestra el form', async ({
@@ -691,7 +718,8 @@ test.describe('Cursos admin — flujo completo', () => {
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
 
     await page.locator('#ce-titulo').fill('Curso Nuevo E2E');
-    await page.locator('#ce-slug').fill('curso-nuevo-e2e');
+    await expect(page.locator('#ce-slug')).toBeDisabled();
+    await expect(page.locator('#ce-slug')).toHaveValue('curso-nuevo-e2e');
     await page.locator('#ce-descripcion').fill('Descripción de prueba');
 
     await page.getByRole('button', { name: /Crear curso/i }).click();
@@ -709,8 +737,8 @@ test.describe('Cursos admin — flujo completo', () => {
     await page.goto('/app/cursos-admin/nuevo');
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
 
-    await page.locator('#ce-slug').fill('slug-valido');
-    // No título → formGroup.invalid → submit button disabled
+    // Sin título → formGroup.invalid → submit button disabled. El slug es un
+    // preview deshabilitado: se genera automáticamente desde el título.
 
     const submit = page.getByRole('button', { name: /Crear curso/i });
     await expect(submit).toBeDisabled();
@@ -828,9 +856,9 @@ test.describe('Cursos admin — flujo completo', () => {
     await publicarBtn.click();
 
     // After publishing, an "Archivar" button should appear and BORRADOR tag becomes PUBLICADO.
-    await expect(
-      page.getByRole('button', { name: /Archivar/i }),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('button', { name: /Archivar/i })).toBeVisible({
+      timeout: 5_000,
+    });
     expect(state.publicarCalls).toBe(1);
     expect(state.detail.estado).toBe('PUBLICADO');
   });
@@ -843,19 +871,16 @@ test.describe('Cursos admin — flujo completo', () => {
     await page.getByRole('tab', { name: /Estructura/i }).click();
 
     // Consolidación: el upload de vídeo vive ahora en el formulario de BLOQUE.
-    await page
-      .locator('[data-testid="leccion-row-contenido"]')
-      .first()
-      .click();
+    await page.locator('[data-testid="leccion-row-contenido"]').first().click();
     // Pulsar el chip VIDEO de la paleta abre el form de bloque en tipo VIDEO.
     await page.locator('[data-testid="paleta-chip-VIDEO"]').click();
     await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
       timeout: 5_000,
     });
     // Tipo por defecto VIDEO → el bunny-upload se renderiza.
-    await expect(
-      page.getByRole('button', { name: /Seleccionar vídeo/i }),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('bunny-upload-dropzone')).toBeVisible({
+      timeout: 5_000,
+    });
 
     // El endpoint de credenciales TUS responde (la subida real no corre en e2e).
     const resp = await page.evaluate(async () => {
@@ -943,15 +968,12 @@ test.describe('Cursos admin — flujo completo', () => {
     await page.getByRole('tab', { name: /Estructura/i }).click();
 
     // Abre el builder de contenido de la primera lección.
-    await page
-      .locator('[data-testid="leccion-row-contenido"]')
-      .first()
-      .click();
+    await page.locator('[data-testid="leccion-row-contenido"]').first().click();
 
     // Estado vacío inicial (la lección del fixture no trae bloques).
-    await expect(
-      page.locator('[data-testid="bloques-empty"]'),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="bloques-empty"]')).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Pulsar el chip TEXTO de la paleta abre el form inline ya en tipo TEXTO.
     await page.locator('[data-testid="paleta-chip-TEXTO"]').click();
@@ -1004,10 +1026,7 @@ test.describe('Cursos admin — flujo completo', () => {
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
     await page.getByRole('tab', { name: /Estructura/i }).click();
 
-    await page
-      .locator('[data-testid="leccion-row-contenido"]')
-      .first()
-      .click();
+    await page.locator('[data-testid="leccion-row-contenido"]').first().click();
 
     // Hay un bloque sembrado.
     await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(1, {
@@ -1034,10 +1053,7 @@ test.describe('Cursos admin — flujo completo', () => {
     await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
     await page.getByRole('tab', { name: /Estructura/i }).click();
 
-    await page
-      .locator('[data-testid="leccion-row-contenido"]')
-      .first()
-      .click();
+    await page.locator('[data-testid="leccion-row-contenido"]').first().click();
     // Pulsar el chip CUESTIONARIO abre el form ya en ese tipo (siembra 1
     // pregunta con 2 opciones).
     await page.locator('[data-testid="paleta-chip-CUESTIONARIO"]').click();
@@ -1061,9 +1077,10 @@ test.describe('Cursos admin — flujo completo', () => {
       .click();
 
     // Captura el POST de creación.
-    const reqPromise = page.waitForRequest((r) =>
-      /\/cursos\/lecciones\/\d+\/bloques$/.test(r.url()) &&
-      r.method() === 'POST',
+    const reqPromise = page.waitForRequest(
+      (r) =>
+        /\/cursos\/lecciones\/\d+\/bloques$/.test(r.url()) &&
+        r.method() === 'POST',
     );
     await page.getByRole('button', { name: /Añadir bloque/i }).click();
     const req = await reqPromise;

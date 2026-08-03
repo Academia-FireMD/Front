@@ -14,7 +14,13 @@
  * sin backend real. El QA visual end-to-end contra el backend real lo realiza
  * el orquestador integrando ambos repos.
  */
-import { expect, test, type Page, type Request } from '@playwright/test';
+import {
+  expect,
+  test,
+  type FrameLocator,
+  type Page,
+  type Request,
+} from '@playwright/test';
 import { loginAsAlumnoMock } from './helpers/auth.helper';
 import callejero from './fixtures/callejero-valencia.json';
 import userAlumnoFixture from './fixtures/user-alumno.json';
@@ -146,7 +152,10 @@ async function setupCallejeroInterceptors(
   // GET /callejero/zonas/:id/calles
   await page.route(/\/callejero\/zonas\/(\d+)\/calles$/, (route) => {
     if (!isXhr(route.request())) return route.continue();
-    const m = route.request().url().match(/\/zonas\/(\d+)\/calles/);
+    const m = route
+      .request()
+      .url()
+      .match(/\/zonas\/(\d+)\/calles/);
     const zonaId = m ? m[1] : '1';
     const calles =
       (callejero.callesPorZona as Record<string, unknown[]>)[zonaId] ?? [];
@@ -221,14 +230,19 @@ async function setupCallejeroInterceptors(
   });
 }
 
-async function irACallejero(page: Page): Promise<void> {
+async function irACallejero(page: Page): Promise<FrameLocator> {
   await page.goto('/app/callejero');
-  // El refactor v3 (calcar Raúl) renombró los test-id: raíz `callejero-app`,
-  // mapa `cj-map` (antes `callejero-page`/`callejero-map`).
-  await expect(page.getByTestId('callejero-app')).toBeVisible({
+  // La ruta pública actual conserva el HTML de Raúl dentro de un iframe. Los
+  // test-id del port nativo viven en /app/callejero/nativo y no deben usarse
+  // para verificar el flujo que realmente ve el alumno.
+  const embed = page.locator('[data-testid="callejero-embed-iframe"]');
+  await expect(embed).toBeVisible({ timeout: 15_000 });
+  const frame = page.frameLocator('[data-testid="callejero-embed-iframe"]');
+  await expect(frame.locator('#app')).toBeVisible({
     timeout: 15_000,
   });
-  await expect(page.getByTestId('cj-map')).toBeVisible();
+  await expect(frame.locator('#map')).toBeVisible();
+  return frame;
 }
 
 test.describe('Módulo Callejero (alumno)', () => {
@@ -242,71 +256,32 @@ test.describe('Módulo Callejero (alumno)', () => {
   test('carga el mapa, la atribución y la pestaña Recorridos (v3)', async ({
     page,
   }) => {
-    await irACallejero(page);
+    const frame = await irACallejero(page);
     // Atribución obligatoria del mapa.
-    await expect(page.locator('.leaflet-control-attribution')).toContainText(
-      'OpenStreetMap',
-    );
-    // El refactor v3 expone las pestañas; Recorridos tiene test-id estable.
-    await expect(page.getByTestId('cj-tab-recorridos')).toBeVisible();
+    await expect(frame.locator('#attrib')).toContainText('OpenStreetMap');
+    await expect(frame.locator('#tabRecorridos')).toBeVisible();
   });
 
   test('navega a la pestaña Recorridos y muestra el buscador + dificultad', async ({
     page,
   }) => {
-    await irACallejero(page);
-    await page.getByTestId('cj-tab-recorridos').click();
-    // Pane de recorridos: selector de dificultad (port v27) + CTA del examen.
-    await expect(page.getByTestId('cj-rec-dificultad')).toBeVisible();
-    await expect(page.getByTestId('cj-rec-iniciar-examen')).toBeVisible();
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    await expect(frame.locator('#paneRecorridos')).toHaveClass(/act/);
+    await expect(frame.locator('#recTexto')).toBeVisible();
+    await expect(frame.locator('#recBtnTrazar')).toBeVisible();
   });
 
-  test('Recorridos: el selector de dificultad (port v27) envía la dificultad elegida', async ({
+  test('Recorridos: permite seleccionar la dificultad del modo pregunta', async ({
     page,
   }) => {
-    let body: { tipoExamen?: string; dificultad?: string } | null = null;
-    await page.route('**/callejero/examen/generar', (route) => {
-      body = route.request().postDataJSON() as {
-        tipoExamen?: string;
-        dificultad?: string;
-      };
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          token: 't',
-          tipoExamen: 'RECORRIDO',
-          dificultad: body?.dificultad ?? 'MEDIO',
-          ciudadId: 1,
-          zonaIds: [],
-          totalRetos: 1,
-          duracionRetoMs: 15000,
-          calles: [],
-          retos: [
-            {
-              orden: 0,
-              tipo: 'RECORRIDO',
-              calleId: 5,
-              nombre: 'Calle X',
-              opciones: [{ parque: 'A' }, { parque: 'B' }],
-            },
-          ],
-        }),
-      });
-    });
-
-    await irACallejero(page);
-    await page.getByTestId('cj-tab-recorridos').click();
-
-    // El selector de dificultad y el CTA del examen están visibles.
-    await expect(page.getByTestId('cj-rec-dificultad')).toBeVisible();
-    await page.getByTestId('cj-rec-dif-DIFICIL').click();
-    await page.getByTestId('cj-rec-iniciar-examen').click();
-
-    await page.waitForResponse('**/callejero/examen/generar');
-    expect(body).toMatchObject({
-      tipoExamen: 'RECORRIDO',
-      dificultad: 'DIFICIL',
-    });
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    await frame.locator('#recModoPregunta').check();
+    await expect(frame.locator('#recPreguntaBox')).toBeVisible();
+    await frame.locator('#difRec button[data-d="dificil"]').click();
+    await expect(frame.locator('#difRec button[data-d="dificil"]')).toHaveClass(
+      /on/,
+    );
   });
 });

@@ -1,3 +1,5 @@
 #!/bin/sh
 . ~/.nvm/nvm.sh 2>/dev/null || true
 npx lint-staged
+npx tsc -p tsconfig.app.json --noEmit || exit 1
+npx ng test --watch=false --run-in-band --silent || exit 1
