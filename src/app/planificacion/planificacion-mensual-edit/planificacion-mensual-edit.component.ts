@@ -85,6 +85,8 @@ export class PlanificacionMensualEditComponent {
   confirmationService = inject(ConfirmationService);
   router = inject(Router);
   events: CalendarEvent[] = [];
+  /** Indica si los eventos del calendario tienen cambios sin guardar. */
+  eventosModificados = false;
   viewDate = new Date();
   view: CalendarView = CalendarView.Week;
   public calendarView = CalendarView;
@@ -297,8 +299,20 @@ export class PlanificacionMensualEditComponent {
    * `planificacionFisicaHabilitada`, re-comprobamos el flag antes de abrir
    * el diálogo para evitar carreras o llamadas programáticas con el módulo OFF.
    */
+  public onEventsChange(events: CalendarEvent[]): void {
+    this.events = events;
+    this.eventosModificados = true;
+  }
+
   public confirmarConversionBloquesFisica(): void {
     if (!this.planificacionFisicaHabilitada()) {
+      return;
+    }
+
+    if (this.eventosModificados) {
+      this.toast.warning(
+        'Hay cambios sin guardar en el calendario. Guarda los cambios antes de convertir bloques a física.',
+      );
       return;
     }
 
@@ -313,9 +327,20 @@ export class PlanificacionMensualEditComponent {
         const id = Number(this.activedRoute.snapshot.paramMap.get('id'));
         this.planificacionesService.convertirBloquesFisica$(id).subscribe({
           next: (res) => {
-            this.toast.success(
-              `Convertidos ${res.actualizados} bloques a física. ${res.ignorados} ya estaban vinculados.`,
-            );
+            if (res.actualizados === 0 && res.ignorados > 0) {
+              this.toast.info(
+                `Todos los bloques ENTRENAMIENTO ya estaban vinculados (${res.ignorados}).`,
+              );
+            } else {
+              let mensaje = `Convertidos ${res.actualizados} bloques a física.`;
+              if (res.ignorados > 0) {
+                mensaje += ` ${res.ignorados} ya estaban vinculados.`;
+              }
+              if (res.sinCoincidencia > 0) {
+                mensaje += ` ${res.sinCoincidencia} bloques no empiezan por ENTRENAMIENTO y no se tocaron.`;
+              }
+              this.toast.success(mensaje);
+            }
             this.load();
           },
           error: () => {
@@ -448,6 +473,7 @@ export class PlanificacionMensualEditComponent {
     });
     // Combinar eventos de otras semanas con los eventos ajustados para la semana actual
     this.events = [...eventsOutsideCurrentWeek, ...adjustedEvents];
+    this.eventosModificados = true;
 
     // Resetear el estado del diálogo y de los eventos seleccionados
     this.isDialogVisible = false;
@@ -517,6 +543,7 @@ export class PlanificacionMensualEditComponent {
   }
 
   private load() {
+    this.eventosModificados = false;
     const itemId = this.getId();
     if (itemId === 'new') {
       this.formGroup.reset();
@@ -625,6 +652,7 @@ export class PlanificacionMensualEditComponent {
         ) as SubBloque[],
       }),
     );
+    this.eventosModificados = false;
     if (this.expectedRole == 'ADMIN') {
       this.toast.success('Planificacion mensual actualizada con exito');
 

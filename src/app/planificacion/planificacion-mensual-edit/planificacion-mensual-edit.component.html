@@ -256,7 +256,8 @@
         <app-vista-semanal
           [role]="expectedRole"
           [mode]="expectedRole == 'ADMIN' ? 'edit' : 'picker'"
-          [(events)]="events"
+          [events]="events"
+          (eventsChange)="onEventsChange($event)"
           [viewDate]="viewDate"
           [resumenFisica]="resumenFisica()"
           (saveChanges)="guardarCambios()"

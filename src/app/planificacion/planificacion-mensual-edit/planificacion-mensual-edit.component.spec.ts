@@ -7,6 +7,7 @@ import {
 import { NO_ERRORS_SCHEMA, Pipe, PipeTransform, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
+import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 import { PlanificacionesService } from '../../services/planificaciones.service';
@@ -57,6 +58,7 @@ describe('PlanificacionMensualEditComponent', () => {
   let appConfigService: ReturnType<typeof makeMockAppConfigService>;
 
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     appConfigService = makeMockAppConfigService(true);
     await TestBed.configureTestingModule({
       declarations: [PlanificacionMensualEditComponent, MockCalendarDatePipe],
@@ -295,7 +297,9 @@ describe('PlanificacionMensualEditComponent', () => {
       const confirmSpy = jest.spyOn(confirmationService, 'confirm');
       const convertirMock = jest
         .fn()
-        .mockReturnValue(of({ actualizados: 3, ignorados: 1 }));
+        .mockReturnValue(
+          of({ actualizados: 3, ignorados: 1, sinCoincidencia: 0 }),
+        );
       (component as any).planificacionesService = {
         convertirBloquesFisica$: convertirMock,
       };
@@ -326,6 +330,64 @@ describe('PlanificacionMensualEditComponent', () => {
 
       expect(convertirMock).toHaveBeenCalledWith(207);
       expect(loadSpy).toHaveBeenCalled();
+    });
+
+    it('confirmarConversionBloquesFisica no abre el confirm y avisa si hay cambios sin guardar', fakeAsync(() => {
+      jest.clearAllMocks();
+      const confirmationService = TestBed.inject(ConfirmationService);
+      const confirmSpy = jest.spyOn(confirmationService, 'confirm');
+      const toastService = TestBed.inject(ToastrService);
+      const warningSpy = jest.spyOn(toastService, 'warning');
+      tick();
+      component.eventosModificados = true;
+
+      component.confirmarConversionBloquesFisica();
+
+      expect(confirmSpy).toHaveBeenCalledTimes(0);
+      expect(warningSpy).toHaveBeenCalledWith(
+        expect.stringContaining('cambios sin guardar'),
+      );
+    }));
+
+    it('confirmarConversionBloquesFisica muestra info cuando todos los bloques ya estaban vinculados', fakeAsync(() => {
+      jest.clearAllMocks();
+      const confirmationService = TestBed.inject(ConfirmationService);
+      const confirmSpy = jest.spyOn(confirmationService, 'confirm');
+      const convertirMock = jest
+        .fn()
+        .mockReturnValue(
+          of({ actualizados: 0, ignorados: 5, sinCoincidencia: 0 }),
+        );
+      (component as any).planificacionesService = {
+        convertirBloquesFisica$: convertirMock,
+      };
+      jest.spyOn(component as any, 'load').mockImplementation(() => {});
+      const toastService = TestBed.inject(ToastrService);
+      const infoSpy = jest.spyOn(toastService, 'info');
+      (component as any).activedRoute = {
+        snapshot: {
+          paramMap: { get: () => '207' },
+        },
+      };
+      tick();
+
+      component.confirmarConversionBloquesFisica();
+      const accept = confirmSpy.mock.calls[0][0].accept as () => void;
+      accept();
+
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('ya estaban vinculados'),
+      );
+    }));
+
+    it('onEventsChange actualiza los eventos y marca que hay cambios sin guardar', () => {
+      component.eventosModificados = false;
+      const nuevosEventos = [{ title: 'Nuevo' } as any];
+
+      component.onEventsChange(nuevosEventos);
+
+      expect(component.events).toBe(nuevosEventos);
+      expect(component.eventosModificados).toBe(true);
     });
   });
 });

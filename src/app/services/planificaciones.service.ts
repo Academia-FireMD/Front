@@ -147,13 +147,19 @@ export class PlanificacionesService extends ApiBaseService {
    * Fase 2 bridge temario↔física: marca como entrenamiento físico todos los
    * sub-bloques de esta planificación cuyo nombre empiece por "ENTRENAMIENTO".
    */
-  public convertirBloquesFisica$(
-    planificacionId: number,
-  ): Observable<{ actualizados: number; ignorados: number }> {
+  public convertirBloquesFisica$(planificacionId: number): Observable<{
+    actualizados: number;
+    ignorados: number;
+    sinCoincidencia: number;
+  }> {
     return this.post(
       `/planificacion-mensual/${planificacionId}/convertir-bloques-fisica`,
       {},
-    ) as Observable<{ actualizados: number; ignorados: number }>;
+    ) as Observable<{
+      actualizados: number;
+      ignorados: number;
+      sinCoincidencia: number;
+    }>;
   }
 
   public clonarBloque$(id: number) {
