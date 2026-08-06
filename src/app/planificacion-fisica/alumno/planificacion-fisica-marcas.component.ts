@@ -8,6 +8,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -26,26 +27,31 @@ import { AsyncButtonComponent } from '../../shared/components/async-button/async
 import {
   AccesoDenegadoPlanFisica,
   CrearMarcaDto,
-  DisciplinaCatalogo,
+  PruebaFisicaCatalogo,
   GrupoDisciplina,
   MarcaPersonal,
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
 
-/** Opción del selector de prueba, derivada del catálogo global (`GET /disciplinas`). */
-interface DisciplinaOpcion {
-  disciplinaId: number;
+const PRUEBA_OTRA_ID = -1;
+
+/** Opción del selector de prueba oficial filtrado por oposición (`GET /pruebas`). */
+interface PruebaOpcion {
+  pruebaFisicaId: number;
   nombre: string;
-  grupo: GrupoDisciplina;
-  color: string;
+  grupo: GrupoDisciplina | null;
+  color: string | null;
+  /** Entrada centinela "Otra prueba…". */
+  esOtra: boolean;
 }
 
 /** Un grupo de marcas de la misma disciplina, para pintar el histórico agrupado. */
 interface GrupoMarcas {
-  disciplinaId: number;
-  disciplinaNombre: string;
-  grupo: GrupoDisciplina;
-  color: string;
+  /** Id de prueba o identificador textual para marcas libres. */
+  pruebaFisicaId: number | string;
+  pruebaNombre: string;
+  grupo: GrupoDisciplina | null;
+  color: string | null;
   marcas: MarcaPersonal[];
 }
 
@@ -56,8 +62,8 @@ interface GrupoMarcas {
  * entrenador), esto es un registro libre de resultados propios (mejor
  * tiempo, repeticiones...) que el alumno lleva por su cuenta.
  *
- * Selector de prueba: se puebla desde `GET /planificacion-fisica/disciplinas`
- * (catálogo GLOBAL de pruebas). Antes se deducía de las disciplinas de las
+ * Selector de prueba: se puebla desde `GET /planificacion-fisica/pruebas`
+ * (catálogo de pruebas filtrado por oposición). Antes se deducía de las disciplinas de las
  * propias marcas del alumno (`GET /marcas`) más las de su plan vigente
  * (`GET /mi-plan`, best-effort) — eso dejaba el selector VACÍO para un
  * alumno sin plan asignado ni marcas previas, justo cuando necesita añadir
@@ -104,7 +110,7 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
    */
   protected error = signal(false);
 
-  /** `disciplinaId` de la marca cuyo DELETE está en vuelo, para deshabilitar solo ESE botón. */
+  /** Id de la marca cuyo DELETE está en vuelo, para deshabilitar solo ESE botón. */
   protected borrandoIds = signal<ReadonlySet<number>>(new Set());
 
   protected readonly sinMarcas = computed(
@@ -116,43 +122,57 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
   );
 
   protected readonly grupos = computed<GrupoMarcas[]>(() => {
-    const porDisciplina = new Map<number, GrupoMarcas>();
+    const porPrueba = new Map<number | string, GrupoMarcas>();
     for (const marca of this.marcas()) {
-      const existente = porDisciplina.get(marca.disciplinaId);
+      const key =
+        marca.pruebaFisicaId ?? marca.nombreLibre ?? `libre-${marca.id}`;
+      const existente = porPrueba.get(key);
       if (existente) {
         existente.marcas.push(marca);
       } else {
-        porDisciplina.set(marca.disciplinaId, {
-          disciplinaId: marca.disciplinaId,
-          disciplinaNombre: marca.disciplinaNombre,
+        porPrueba.set(key, {
+          pruebaFisicaId: key,
+          pruebaNombre: marca.pruebaNombre,
           grupo: marca.grupo,
           color: marca.color,
           marcas: [marca],
         });
       }
     }
-    // El backend ya ordena `disciplinaId asc, fecha desc`; Map conserva el
+    // El backend ya ordena `pruebaFisicaId asc, fecha desc`; Map conserva el
     // orden de inserción, así que no hace falta reordenar aquí.
-    return Array.from(porDisciplina.values());
+    return Array.from(porPrueba.values());
   });
 
-  /** Catálogo global de pruebas (`GET /disciplinas`), fuente única del selector. */
-  protected catalogo = signal<DisciplinaCatalogo[]>([]);
+  /** Catálogo filtrado de pruebas (`GET /pruebas`), fuente única del selector. */
+  protected catalogo = signal<PruebaFisicaCatalogo[]>([]);
 
-  /** Opciones del desplegable "prueba", derivadas del catálogo global. */
-  protected readonly discOpciones = computed<DisciplinaOpcion[]>(() =>
-    this.catalogo()
+  /** Opciones del desplegable "prueba", derivadas del catálogo filtrado. */
+  protected readonly pruebaOpciones = computed<PruebaOpcion[]>(() => {
+    const delCatalogo = this.catalogo()
       .map((d) => ({
-        disciplinaId: d.id,
+        pruebaFisicaId: d.id,
         nombre: d.nombre,
         grupo: d.grupo,
         color: d.color,
+        esOtra: false,
       }))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre)),
-  );
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    return [
+      ...delCatalogo,
+      {
+        pruebaFisicaId: PRUEBA_OTRA_ID,
+        nombre: 'Otra prueba…',
+        grupo: null,
+        color: null,
+        esOtra: true,
+      },
+    ];
+  });
 
   protected readonly form = this.fb.nonNullable.group({
-    disciplinaId: this.fb.control<number | null>(null, Validators.required),
+    pruebaFisicaId: this.fb.control<number | null>(null, Validators.required),
+    nombreLibre: ['', [Validators.maxLength(60)]],
     valor: this.fb.control<number | null>(null, [
       Validators.required,
       Validators.min(0.01),
@@ -162,27 +182,42 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     notas: [''],
   });
 
+  /**
+   * Selección actual del desplegable como signal. OJO: un `computed` que lea
+   * `form.getRawValue()` directamente queda cacheado para siempre (el form no
+   * es reactivo para signals) y el input de "Otra prueba…" no aparecería tras
+   * el primer render. Por eso se pasa por `valueChanges` + `toSignal`.
+   */
+  private readonly pruebaSeleccionada = toSignal(
+    this.form.controls.pruebaFisicaId.valueChanges,
+    { initialValue: this.form.controls.pruebaFisicaId.value },
+  );
+
+  /** True cuando el alumno ha elegido "Otra prueba…" en el selector. */
+  protected readonly esOtraPruebaSeleccionada = computed(
+    () => this.pruebaSeleccionada() === PRUEBA_OTRA_ID,
+  );
+
   protected readonly hoy = new Date();
 
-  /** Unidades sugeridas por grupo de disciplina, para autocompletar. */
-  private readonly unidadesPorGrupo: Record<string, string> = {
-    CUERDA: 'min',
-    CARRERA: 'min',
-    NATACION: 'min',
-    PRESS: 'reps',
-    FUERZA: 'reps',
-    ESCALERAS: 'min',
-    DESCANSO: '',
-    TEST: 'puntos',
-  };
+  /** Cuando cambia la prueba, sugiere la unidad del catálogo. */
+  protected onPruebaChange(pruebaFisicaId: number): void {
+    const nombreLibreControl = this.form.get('nombreLibre');
+    if (pruebaFisicaId === PRUEBA_OTRA_ID) {
+      nombreLibreControl?.setValidators([
+        Validators.required,
+        Validators.maxLength(60),
+      ]);
+      nombreLibreControl?.updateValueAndValidity();
+      return;
+    }
+    nombreLibreControl?.setValue('');
+    nombreLibreControl?.setValidators([Validators.maxLength(60)]);
+    nombreLibreControl?.updateValueAndValidity();
 
-  /** Cuando cambia la disciplina, sugiere la unidad típica de su grupo. */
-  protected onDisciplinaChange(disciplinaId: number): void {
-    const disciplina = this.catalogo().find((d) => d.id === disciplinaId);
-    if (disciplina && !this.form.get('unidad')?.value) {
-      this.form
-        .get('unidad')
-        ?.setValue(this.unidadesPorGrupo[disciplina.grupo] ?? '');
+    const prueba = this.catalogo().find((d) => d.id === pruebaFisicaId);
+    if (prueba && !this.form.get('unidad')?.value) {
+      this.form.get('unidad')?.setValue(prueba.unidadSugerida);
     }
   }
 
@@ -202,7 +237,7 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       // que un fallo al cargar las marcas (gated/error), nunca en silencio.
       const [marcas, catalogo] = await Promise.all([
         firstValueFrom(this.svc.marcas()),
-        firstValueFrom(this.svc.catalogoDisciplinas()),
+        firstValueFrom(this.svc.catalogoPruebas()),
       ]);
       this.marcas.set(marcas);
       this.catalogo.set(catalogo);
@@ -234,12 +269,16 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     }
     const valores = this.form.getRawValue();
     const dto: CrearMarcaDto = {
-      disciplinaId: valores.disciplinaId!,
       valor: valores.valor!,
       unidad: valores.unidad,
       fecha: this.formatearFechaISO(valores.fecha!),
       ...(valores.notas ? { notas: valores.notas } : {}),
     };
+    if (valores.pruebaFisicaId === PRUEBA_OTRA_ID) {
+      dto.nombreLibre = valores.nombreLibre.trim();
+    } else {
+      dto.pruebaFisicaId = valores.pruebaFisicaId!;
+    }
     try {
       await firstValueFrom(this.svc.crearMarca(dto));
       this.toast.success('Marca añadida.');
@@ -258,7 +297,7 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     this.confirmationService.confirm({
       key: 'pf-marcas-borrar',
       target: event.target as EventTarget,
-      message: `Vas a eliminar esta marca de "${marca.disciplinaNombre}" (${marca.valor} ${marca.unidad}, ${marca.fecha}). ¿Estás seguro?`,
+      message: `Vas a eliminar esta marca de "${marca.pruebaNombre}" (${marca.valor} ${marca.unidad}, ${marca.fecha}). ¿Estás seguro?`,
       header: 'Confirmación',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Sí',

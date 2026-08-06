@@ -56,32 +56,57 @@
           <label for="pf-marcas-prueba">Prueba</label>
           <p-dropdown
             inputId="pf-marcas-prueba"
-            formControlName="disciplinaId"
-            [options]="discOpciones()"
+            formControlName="pruebaFisicaId"
+            [options]="pruebaOpciones()"
             optionLabel="nombre"
-            optionValue="disciplinaId"
+            optionValue="pruebaFisicaId"
             placeholder="Selecciona una prueba"
             [filter]="true"
             filterBy="nombre"
             styleClass="w-full"
             data-testid="pf-marcas-select-prueba"
-            (onChange)="onDisciplinaChange($event.value)"
+            (onChange)="onPruebaChange($event.value)"
           >
             <ng-template let-opcion pTemplate="item">
-              <span
-                class="pf-marcas__opcion-color"
-                [style.backgroundColor]="opcion.color"
-              ></span>
+              @if (opcion.color) {
+                <span
+                  class="pf-marcas__opcion-color"
+                  [style.backgroundColor]="opcion.color"
+                ></span>
+              }
               <span>{{ opcion.nombre }}</span>
             </ng-template>
           </p-dropdown>
-          @if (discOpciones().length === 0) {
+          @if (pruebaOpciones().length === 0) {
             <small class="pf-marcas__hint" data-testid="pf-marcas-sin-pruebas">
               No hay pruebas disponibles en este momento. Inténtalo de nuevo más
               tarde.
             </small>
           }
         </div>
+
+        @if (esOtraPruebaSeleccionada()) {
+          <div class="pf-marcas__campo" data-testid="pf-marcas-nombre-libre">
+            <label for="pf-marcas-nombre-libre">Nombre de la prueba</label>
+            <input
+              id="pf-marcas-nombre-libre"
+              type="text"
+              pInputText
+              formControlName="nombreLibre"
+              placeholder="Ej. Lanzamiento de balón"
+              class="w-full"
+              data-testid="pf-marcas-input-nombre-libre"
+            />
+            @if (
+              form.get("nombreLibre")?.invalid &&
+              form.get("nombreLibre")?.touched
+            ) {
+              <small class="p-error">
+                El nombre es obligatorio (máx. 60 caracteres).
+              </small>
+            }
+          </div>
+        }
 
         <div class="pf-marcas__campo">
           <label for="pf-marcas-valor">Valor</label>
@@ -151,20 +176,24 @@
       </p>
     } @else {
       <div class="pf-marcas__lista" data-testid="pf-marcas-container">
-        @for (grupo of grupos(); track grupo.disciplinaId) {
+        @for (grupo of grupos(); track grupo.pruebaFisicaId) {
           <p-card
             styleClass="pf-marcas__grupo"
-            [attr.data-testid]="'pf-marcas-grupo-' + grupo.disciplinaId"
+            [attr.data-testid]="'pf-marcas-grupo-' + grupo.pruebaFisicaId"
           >
             <ng-template pTemplate="header">
               <div class="pf-marcas__grupo-header">
+                @if (grupo.color) {
+                  <span
+                    class="pf-marcas__grupo-color"
+                    [style.backgroundColor]="grupo.color"
+                  ></span>
+                }
                 <span
-                  class="pf-marcas__grupo-color"
-                  [style.backgroundColor]="grupo.color"
-                ></span>
-                <span class="pf-marcas__grupo-titulo">{{
-                  grupo.disciplinaNombre
-                }}</span>
+                  class="pf-marcas__grupo-titulo"
+                  [class.pf-marcas__grupo-titulo--libre]="!grupo.color"
+                  >{{ grupo.pruebaNombre }}</span
+                >
                 <span class="pf-marcas__grupo-count"
                   >({{ grupo.marcas.length }})</span
                 >

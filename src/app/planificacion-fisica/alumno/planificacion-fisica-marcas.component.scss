@@ -142,6 +142,10 @@
   &__grupo-titulo {
     font-weight: 700;
     font-size: 1.05rem;
+
+    &--libre {
+      color: var(--text-color-secondary);
+    }
   }
 
   &__grupo-count {

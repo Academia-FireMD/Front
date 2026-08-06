@@ -23,6 +23,8 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
 import { OposicionBadgesComponent } from '../../shared/oposicion-badges/oposicion-badges.component';
+import { SharedModule } from '../../shared/shared.module';
+import { Oposicion } from '../../shared/models/subscription.model';
 import {
   BloqueEntrenamiento,
   ErrorImport,
@@ -52,6 +54,7 @@ interface HttpErrorGenerico {
     TooltipModule,
     AsyncButtonComponent,
     OposicionBadgesComponent,
+    SharedModule,
   ],
   templateUrl: './planificacion-fisica-admin.component.html',
   styleUrl: './planificacion-fisica-admin.component.scss',
@@ -290,6 +293,26 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
       bloque.id,
       'detalles',
     ]);
+  }
+
+  async guardarRelevancia(
+    bloque: BloqueEntrenamiento,
+    oposiciones: Oposicion[],
+  ): Promise<void> {
+    try {
+      const actualizado = await firstValueFrom(
+        this.svc.actualizarBloque(bloque.id, { relevancia: oposiciones }),
+      );
+      bloque.relevancia = actualizado.relevancia;
+      this.toast.success(
+        `Relevancia de "${bloque.identificador}" actualizada.`,
+      );
+    } catch (err) {
+      this.toast.error(
+        this.extraerMensajeError(err as HttpErrorResponse) ??
+          'No se ha podido guardar la relevancia.',
+      );
+    }
   }
 
   private extraerMensajeError(

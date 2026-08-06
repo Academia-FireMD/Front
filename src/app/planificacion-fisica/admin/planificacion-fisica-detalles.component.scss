@@ -72,4 +72,9 @@
     font-weight: 600;
     flex: 1;
   }
+
+  &__disciplina-dia {
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+  }
 }

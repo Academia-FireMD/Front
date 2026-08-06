@@ -41,6 +41,10 @@ export interface BloqueEntrenamiento {
   _count: { semanas: number };
 }
 
+export interface ActualizarBloqueDto {
+  relevancia: Oposicion[];
+}
+
 /**
  * Cuerpo real del error 409 de `DELETE /planificacion-fisica/bloques/:id`
  * cuando el bloque tiene progreso de alumnos registrado. Repetir la
@@ -80,13 +84,15 @@ export const GRUPO_DISCIPLINA_COLORES: Record<GrupoDisciplina, string> = {
 };
 
 /**
- * Un "hueco" de la parrilla: una disciplina asignada a una semana concreta.
+ * Un "hueco" de la parrilla: una disciplina asignada a un día concreto.
  * El entrenador sube la parrilla por Excel (qué disciplina toca cada día);
  * el `contenido` (texto de los ejercicios) se escribe DESPUÉS aquí, en la
  * plataforma — por eso puede venir `null`/`vacio: true`.
  */
 export interface DetalleDisciplina {
   id: number;
+  asignacionId: number;
+  diaSemana: number;
   disciplinaId: number;
   disciplinaNombre: string;
   grupo: GrupoDisciplina;
@@ -240,33 +246,40 @@ export interface ResumenDiaFisica {
  * Marca personal del alumno en una prueba física (Task "marcas", Fase 2):
  * su propio histórico de resultados (mejor tiempo, repeticiones...), NO
  * ligado a ningún bloque/semana de la planificación del entrenador — de ahí
- * que no lleve `asignacionId`. Ordenadas por el backend `disciplinaId asc,
+ * que no lleve `asignacionId`. Ordenadas por el backend `pruebaFisicaId asc,
  * fecha desc` (`GET /marcas`); el front decide si las agrupa visualmente.
  */
 export interface MarcaPersonal {
   id: number;
-  disciplinaId: number;
-  disciplinaNombre: string;
-  grupo: GrupoDisciplina;
-  color: string;
+  /** Null cuando la marca se registró como "otra prueba" libre. */
+  pruebaFisicaId: number | null;
+  pruebaNombre: string;
+  /** Null para marcas libres; el front pinta un estilo neutro. */
+  grupo: GrupoDisciplina | null;
+  /** Null para marcas libres. */
+  color: string | null;
   valor: number;
   unidad: string;
   fecha: string;
   notas: string | null;
+  /** Nombre libre de la prueba, cuando no viene del catálogo. */
+  nombreLibre?: string | null;
 }
 
 /**
- * Prueba (disciplina) del catálogo global, para poblar el selector al
- * añadir una marca personal (`GET /planificacion-fisica/disciplinas`). A
+ * Prueba oficial filtrada por las oposiciones activas del alumno, para poblar
+ * el selector al añadir una marca personal (`GET /planificacion-fisica/pruebas`). A
  * diferencia de `DetalleDisciplina`/`ChipDisciplina` (ligadas a un
- * bloque/plan concreto), esto es el catálogo COMPLETO — no depende de que
- * el alumno tenga plan asignado ni marcas previas.
+ * bloque/plan concreto), no depende de que el alumno tenga plan asignado ni
+ * marcas previas.
  */
-export interface DisciplinaCatalogo {
+export interface PruebaFisicaCatalogo {
   id: number;
+  codigo: string;
   nombre: string;
   grupo: GrupoDisciplina;
   color: string;
+  unidadSugerida: string;
 }
 
 /**
@@ -275,7 +288,10 @@ export interface DisciplinaCatalogo {
  * que el resto del módulo).
  */
 export interface CrearMarcaDto {
-  disciplinaId: number;
+  /** Mutuamente excluyente con `nombreLibre`: exactamente uno de los dos debe estar presente. */
+  pruebaFisicaId?: number;
+  /** Nombre libre de la prueba cuando no existe en el catálogo. */
+  nombreLibre?: string;
   valor: number;
   unidad: string;
   /** ISO "YYYY-MM-DD". */
@@ -308,6 +324,16 @@ export class PlanificacionFisicaService {
     return this.http.put<BloqueEntrenamiento>(
       `${this.base}/bloques/${id}/publicar`,
       {},
+    );
+  }
+
+  actualizarBloque(
+    id: number,
+    dto: ActualizarBloqueDto,
+  ): Observable<BloqueEntrenamiento> {
+    return this.http.put<BloqueEntrenamiento>(
+      `${this.base}/bloques/${id}`,
+      dto,
     );
   }
 
@@ -417,13 +443,13 @@ export class PlanificacionFisicaService {
   }
 
   /**
-   * Catálogo completo de pruebas (disciplinas) para poblar el selector al
-   * añadir una marca personal. Es GLOBAL — no depende del plan/bloque ni
-   * de las marcas previas del alumno, así que un alumno sin plan asignado
+   * Catálogo de pruebas oficiales para poblar el selector al
+   * añadir una marca personal. No depende del plan/bloque ni de las marcas
+   * previas del alumno, así que un alumno sin plan asignado
    * ni marcas registradas también tiene opciones para su primera marca.
    * Mismo gate 403 `TIER_TOO_LOW` que `marcas()`/`miPlan()`.
    */
-  catalogoDisciplinas(): Observable<DisciplinaCatalogo[]> {
-    return this.http.get<DisciplinaCatalogo[]>(`${this.base}/disciplinas`);
+  catalogoPruebas(): Observable<PruebaFisicaCatalogo[]> {
+    return this.http.get<PruebaFisicaCatalogo[]>(`${this.base}/pruebas`);
   }
 }

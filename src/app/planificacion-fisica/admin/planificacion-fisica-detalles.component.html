@@ -46,6 +46,9 @@
                 <span class="pf-detalles__disciplina-nombre">{{
                   detalle.disciplinaNombre
                 }}</span>
+                <span class="pf-detalles__disciplina-dia">{{
+                  dias[detalle.diaSemana]
+                }}</span>
                 @if (detalle.vacio) {
                   <p-tag
                     value="Falta"

@@ -53,6 +53,16 @@ export class PlanificacionFisicaDetallesComponent implements OnInit {
   private router = inject(Router);
 
   protected readonly grupoColores = GRUPO_DISCIPLINA_COLORES;
+  protected readonly dias = [
+    '',
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+    'Domingo',
+  ];
 
   protected semanas = signal<SemanaConDetalles[]>([]);
   protected loading = signal(false);

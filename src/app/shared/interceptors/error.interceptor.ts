@@ -16,7 +16,7 @@ export class ErrorInterceptor implements HttpInterceptor {
 
   intercept(
     request: HttpRequest<any>,
-    next: HttpHandler
+    next: HttpHandler,
   ): Observable<HttpEvent<any>> {
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
@@ -24,11 +24,11 @@ export class ErrorInterceptor implements HttpInterceptor {
         if (error.status === 500 && !error.error?.handled) {
           this.toastr.error(
             error.error?.message || 'Ha ocurrido un error',
-            'Error del servidor'
+            'Error del servidor',
           );
         }
         return throwError(() => error);
-      })
+      }),
     );
   }
-} 
+}

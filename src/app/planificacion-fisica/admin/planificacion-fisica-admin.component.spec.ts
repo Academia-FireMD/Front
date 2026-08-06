@@ -51,6 +51,7 @@ describe('PlanificacionFisicaAdminComponent', () => {
       importar: jest.fn(),
       listarBloques: jest.fn().mockReturnValue(of([bloqueFixture])),
       publicar: jest.fn(),
+      actualizarBloque: jest.fn(),
       eliminar: jest.fn(),
       descargarPlantillaUrl: jest
         .fn()
@@ -385,5 +386,42 @@ describe('PlanificacionFisicaAdminComponent', () => {
       bloqueFixture.id,
       'detalles',
     ]);
+  });
+
+  it('guardarRelevancia llama al servicio con el array del picker y actualiza el bloque local', async () => {
+    fixture.detectChanges();
+    const relevanciaActualizada = [
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      Oposicion.MADRID,
+    ];
+    serviceMock.actualizarBloque!.mockReturnValue(
+      of({ ...bloqueFixture, relevancia: relevanciaActualizada }),
+    );
+
+    const bloque = { ...bloqueFixture };
+    await component.guardarRelevancia(bloque, relevanciaActualizada);
+
+    expect(serviceMock.actualizarBloque).toHaveBeenCalledWith(bloque.id, {
+      relevancia: relevanciaActualizada,
+    });
+    expect(bloque.relevancia).toEqual(relevanciaActualizada);
+  });
+
+  it('guardarRelevancia muestra toast de error si el servicio falla', async () => {
+    fixture.detectChanges();
+    serviceMock.actualizarBloque!.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 500,
+            error: { message: 'Error guardando relevancia' },
+          }),
+      ),
+    );
+
+    await component.guardarRelevancia({ ...bloqueFixture }, [Oposicion.MADRID]);
+
+    const toast = TestBed.inject(ToastrService);
+    expect(toast.error).toHaveBeenCalledWith('Error guardando relevancia');
   });
 });

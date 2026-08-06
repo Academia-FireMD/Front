@@ -231,8 +231,8 @@ describe('PlanificacionFisicaService', () => {
     const marcas = [
       {
         id: 1,
-        disciplinaId: 3,
-        disciplinaNombre: 'Carrera 1',
+        pruebaFisicaId: 3,
+        pruebaNombre: 'Carrera 60 m',
         grupo: 'CARRERA',
         color: '#fdeaa8',
         valor: 12.4,
@@ -266,7 +266,7 @@ describe('PlanificacionFisicaService', () => {
 
   it('crearMarca manda el body y llama al endpoint correcto', () => {
     const dto = {
-      disciplinaId: 3,
+      pruebaFisicaId: 3,
       valor: 12.4,
       unidad: 'min',
       fecha: '2026-07-10',
@@ -280,8 +280,8 @@ describe('PlanificacionFisicaService', () => {
     expect(req.request.body).toEqual(dto);
     req.flush({
       id: 9,
-      disciplinaId: 3,
-      disciplinaNombre: 'Carrera 1',
+      pruebaFisicaId: 3,
+      pruebaNombre: 'Carrera 60 m',
       grupo: 'CARRERA',
       color: '#fdeaa8',
       valor: 12.4,
@@ -289,6 +289,24 @@ describe('PlanificacionFisicaService', () => {
       fecha: '2026-07-10',
       notas: 'buena sensación',
     });
+  });
+
+  it('catalogoPruebas pide el catálogo filtrado por el backend', () => {
+    service.catalogoPruebas().subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/pruebas`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush([
+      {
+        id: 3,
+        codigo: 'CARRERA_60',
+        nombre: 'Carrera 60 m',
+        grupo: 'CARRERA',
+        color: '#fdeaa8',
+        unidadSugerida: 'seg',
+      },
+    ]);
   });
 
   it('borrarMarca llama al endpoint correcto', () => {

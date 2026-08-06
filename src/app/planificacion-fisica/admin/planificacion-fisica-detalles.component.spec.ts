@@ -36,8 +36,10 @@ describe('PlanificacionFisicaDetallesComponent', () => {
 
   const detalleVacio: DetalleDisciplina = {
     id: 45,
+    asignacionId: 501,
+    diaSemana: 1,
     disciplinaId: 1,
-    disciplinaNombre: 'Cuerda 1',
+    disciplinaNombre: 'Cuerda',
     grupo: 'CUERDA',
     contenido: null,
     comentario: null,
@@ -46,8 +48,10 @@ describe('PlanificacionFisicaDetallesComponent', () => {
 
   const detalleRelleno: DetalleDisciplina = {
     id: 46,
+    asignacionId: 502,
+    diaSemana: 4,
     disciplinaId: 3,
-    disciplinaNombre: 'Carrera 1',
+    disciplinaNombre: 'Carrera',
     grupo: 'CARRERA',
     contenido: '4x400m',
     comentario: null,
@@ -104,8 +108,10 @@ describe('PlanificacionFisicaDetallesComponent', () => {
     expect(component['semanas']()).toEqual(semanasFixture);
 
     const html = fixture.nativeElement as HTMLElement;
-    expect(html.textContent).toContain('Cuerda 1');
-    expect(html.textContent).toContain('Carrera 1');
+    expect(html.textContent).toContain('Cuerda');
+    expect(html.textContent).toContain('Carrera');
+    expect(html.textContent).toContain('Lunes');
+    expect(html.textContent).toContain('Jueves');
   });
 
   it('marca con el badge "Falta" solo las disciplinas vacías', async () => {

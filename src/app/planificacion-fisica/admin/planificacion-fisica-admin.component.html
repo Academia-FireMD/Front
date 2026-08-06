@@ -165,7 +165,11 @@
             <td>{{ bloque.identificador }}</td>
             <td>{{ bloque.numSemanas }}</td>
             <td>
-              <app-oposicion-badges [oposiciones]="bloque.relevancia" />
+              <app-oposicion-picker
+                [allowAdd]="true"
+                [oposiciones]="bloque.relevancia"
+                (updateSelection)="guardarRelevancia(bloque, $event)"
+              />
             </td>
             <td>{{ bloque.fechaInicioSemana1 | date: "dd/MM/yyyy" }}</td>
             <td>

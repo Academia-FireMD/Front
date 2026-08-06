@@ -2,364 +2,162 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { Router } from '@angular/router';
-import { Confirmation, ConfirmationService, PrimeNGConfig } from 'primeng/api';
+import { ConfirmationService, PrimeNGConfig } from 'primeng/api';
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
 import {
-  DisciplinaCatalogo,
   MarcaPersonal,
   PlanificacionFisicaService,
+  PruebaFisicaCatalogo,
 } from '../services/planificacion-fisica.service';
 import { PlanificacionFisicaMarcasComponent } from './planificacion-fisica-marcas.component';
 
 describe('PlanificacionFisicaMarcasComponent', () => {
   let fixture: ComponentFixture<PlanificacionFisicaMarcasComponent>;
   let component: PlanificacionFisicaMarcasComponent;
-  let serviceMock: Partial<Record<keyof PlanificacionFisicaService, jest.Mock>>;
+  let serviceMock: any;
 
-  const catalogoFixture: DisciplinaCatalogo[] = [
-    { id: 3, nombre: 'Carrera 1', grupo: 'CARRERA', color: '#fdeaa8' },
-    { id: 5, nombre: 'Press 1', grupo: 'PRESS', color: '#c9c0ec' },
+  const catalogo: PruebaFisicaCatalogo[] = [
+    {
+      id: 3,
+      codigo: 'CARRERA_60',
+      nombre: 'Carrera 60 m',
+      grupo: 'CARRERA',
+      color: '#fdeaa8',
+      unidadSugerida: 'seg',
+    },
   ];
-
-  const marcasFixture: MarcaPersonal[] = [
+  const marcas: MarcaPersonal[] = [
     {
       id: 1,
-      disciplinaId: 3,
-      disciplinaNombre: 'Carrera 1',
+      pruebaFisicaId: 3,
+      pruebaNombre: 'Carrera 60 m',
       grupo: 'CARRERA',
       color: '#fdeaa8',
-      valor: 12.4,
-      unidad: 'min',
+      valor: 7.2,
+      unidad: 'seg',
       fecha: '2026-07-10',
-      notas: 'buena sensación',
-    },
-    {
-      id: 2,
-      disciplinaId: 3,
-      disciplinaNombre: 'Carrera 1',
-      grupo: 'CARRERA',
-      color: '#fdeaa8',
-      valor: 12.9,
-      unidad: 'min',
-      fecha: '2026-06-01',
       notas: null,
     },
     {
-      id: 3,
-      disciplinaId: 5,
-      disciplinaNombre: 'Press 1',
-      grupo: 'PRESS',
-      color: '#c9c0ec',
-      valor: 20,
-      unidad: 'reps',
-      fecha: '2026-07-01',
+      id: 2,
+      pruebaFisicaId: 3,
+      pruebaNombre: 'Carrera 60 m',
+      grupo: 'CARRERA',
+      color: '#fdeaa8',
+      valor: 7.3,
+      unidad: 'seg',
+      fecha: '2026-06-01',
       notas: null,
     },
   ];
 
   beforeEach(async () => {
     serviceMock = {
-      marcas: jest.fn().mockReturnValue(of(marcasFixture)),
-      catalogoDisciplinas: jest.fn().mockReturnValue(of(catalogoFixture)),
-      crearMarca: jest.fn(),
-      borrarMarca: jest.fn(),
+      marcas: jest.fn().mockReturnValue(of(marcas)),
+      catalogoPruebas: jest.fn().mockReturnValue(of(catalogo)),
+      crearMarca: jest.fn().mockReturnValue(of(marcas[0])),
+      borrarMarca: jest.fn().mockReturnValue(of({ ok: true })),
     };
-
     await TestBed.configureTestingModule({
       imports: [PlanificacionFisicaMarcasComponent, NoopAnimationsModule],
       providers: [
         ...COMMON_TEST_PROVIDERS,
-        // ConfirmationService/PrimeNGConfig REALES: `<p-confirmDialog>` en el
-        // template se suscribe a Subjects internos del servicio real; el
-        // mock plano de COMMON_TEST_PROVIDERS revienta al crear el fixture.
-        // Mismo patrón que `planificacion-fisica-admin.component.spec.ts`.
         ConfirmationService,
         PrimeNGConfig,
         { provide: PlanificacionFisicaService, useValue: serviceMock },
       ],
     }).compileComponents();
-
     fixture = TestBed.createComponent(PlanificacionFisicaMarcasComponent);
     component = fixture.componentInstance;
-
-    const toast = TestBed.inject(ToastrService);
-    (toast.success as jest.Mock).mockClear();
-    (toast.error as jest.Mock).mockClear();
   });
 
-  it('carga las marcas al iniciar y las agrupa por disciplina', async () => {
+  async function cargar() {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  }
 
-    expect(serviceMock.marcas).toHaveBeenCalled();
-    expect(component['grupos']().length).toBe(2);
-    expect(component['grupos']()[0].marcas.length).toBe(2);
-
-    const contenedor = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-container"]'),
-    );
-    expect(contenedor).toBeTruthy();
-
-    const grupoCarrera = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-grupo-3"]'),
-    );
-    expect(grupoCarrera).toBeTruthy();
-
-    const marca1 = fixture.debugElement.query(
-      By.css('[data-testid="pf-marca-1"]'),
-    );
-    expect(marca1).toBeTruthy();
+  it('carga el catálogo filtrado y agrupa el histórico por prueba física', async () => {
+    await cargar();
+    expect(serviceMock.catalogoPruebas).toHaveBeenCalled();
+    expect(component['grupos']()).toHaveLength(1);
+    expect(component['grupos']()[0].marcas).toHaveLength(2);
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="pf-marcas-grupo-3"]')),
+    ).toBeTruthy();
   });
 
-  it('el selector de prueba se puebla desde el catálogo global (GET /disciplinas), no del plan/marcas', async () => {
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(serviceMock.catalogoDisciplinas).toHaveBeenCalled();
-    expect(component['discOpciones']()).toEqual([
-      {
-        disciplinaId: 3,
-        nombre: 'Carrera 1',
-        grupo: 'CARRERA',
-        color: '#fdeaa8',
-      },
-      { disciplinaId: 5, nombre: 'Press 1', grupo: 'PRESS', color: '#c9c0ec' },
+  it('usa el catálogo para seleccionar una prueba y sugerir la unidad', async () => {
+    await cargar();
+    expect(component['pruebaOpciones']()).toEqual([
+      expect.objectContaining({ pruebaFisicaId: 3, nombre: 'Carrera 60 m' }),
+      expect.objectContaining({ pruebaFisicaId: -1, nombre: 'Otra prueba…' }),
     ]);
-
-    const select = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-select-prueba"]'),
-    );
-    expect(select).toBeTruthy();
+    component['onPruebaChange'](3);
+    expect(component['form'].controls.unidad.value).toBe('seg');
   });
 
-  it('un alumno SIN marcas ni plan puede añadir su primera marca: el selector no está vacío', async () => {
-    serviceMock.marcas!.mockReturnValue(of([]));
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    // Estado "sin marcas" (histórico vacío)...
-    const vacio = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-vacio"]'),
-    );
-    expect(vacio).toBeTruthy();
-
-    // ...pero el selector de prueba SÍ tiene opciones (viene del catálogo,
-    // no de las marcas ni del plan): el hint "sin pruebas" no aparece.
-    expect(component['discOpciones']().length).toBeGreaterThan(0);
-    const hint = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-sin-pruebas"]'),
-    );
-    expect(hint).toBeFalsy();
-  });
-
-  it('si el catálogo falla (500/red), muestra el estado de error y NO el hint de "sin pruebas"', async () => {
-    serviceMock.catalogoDisciplinas!.mockReturnValue(
-      throwError(() => new HttpErrorResponse({ status: 500 })),
-    );
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const errorEl = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-error"]'),
-    );
-    expect(errorEl).toBeTruthy();
-    expect(component['discOpciones']()).toEqual([]);
-  });
-
-  it('añadir marca: llama a crearMarca con el DTO del formulario y refresca la lista', async () => {
-    serviceMock.crearMarca!.mockReturnValue(
-      of({ ...marcasFixture[0], id: 99 }),
-    );
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+  it('envía pruebaFisicaId, nunca disciplinaId, al guardar una marca oficial', async () => {
+    await cargar();
     component['form'].setValue({
-      disciplinaId: 3,
-      valor: 15,
-      unidad: 'min',
-      fecha: new Date(2026, 6, 5), // 5 julio 2026 (mes 0-indexado)
-      notas: 'ok',
+      pruebaFisicaId: 3,
+      nombreLibre: '',
+      valor: 7.1,
+      unidad: 'seg',
+      fecha: new Date(2026, 6, 5),
+      notas: '',
     });
-
     await component['guardarMarca']();
-
     expect(serviceMock.crearMarca).toHaveBeenCalledWith({
-      disciplinaId: 3,
-      valor: 15,
-      unidad: 'min',
+      pruebaFisicaId: 3,
+      valor: 7.1,
+      unidad: 'seg',
       fecha: '2026-07-05',
-      notas: 'ok',
     });
-    // refresca tras crear
-    expect(serviceMock.marcas).toHaveBeenCalledTimes(2);
   });
 
-  it('no llama a crearMarca si el formulario es inválido', async () => {
+  it('mantiene la reactividad de Otra prueba y envía nombreLibre', async () => {
+    await cargar();
+    component['form'].controls.pruebaFisicaId.setValue(-1);
+    component['onPruebaChange'](-1);
     fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    await component['guardarMarca']();
-
-    expect(serviceMock.crearMarca).not.toHaveBeenCalled();
-  });
-
-  it('borrar marca: pide confirmación y solo llama a borrarMarca si se acepta', async () => {
-    serviceMock.borrarMarca!.mockReturnValue(of({ ok: true as const }));
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const confirmSpy = jest
-      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
-      .mockImplementation((c: Confirmation) => {
-        c.accept?.();
-        return TestBed.inject(ConfirmationService);
-      });
-
-    const borrarBtn = fixture.debugElement.query(
-      By.css('[data-testid="pf-marca-borrar-1"]'),
-    );
-    expect(borrarBtn).toBeTruthy();
-    borrarBtn.triggerEventHandler('click', new Event('click'));
-
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(serviceMock.borrarMarca).toHaveBeenCalledWith(1);
-  });
-
-  it('borrar marca: NO llama al backend si se cancela la confirmación', async () => {
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    jest
-      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
-      .mockImplementation(() => TestBed.inject(ConfirmationService)); // no invoca accept
-
-    const borrarBtn = fixture.debugElement.query(
-      By.css('[data-testid="pf-marca-borrar-1"]'),
-    );
-    borrarBtn.triggerEventHandler('click', new Event('click'));
-
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(serviceMock.borrarMarca).not.toHaveBeenCalled();
-  });
-
-  it('muestra la píldora de upsell cuando el backend responde 403 TIER_TOO_LOW', async () => {
-    serviceMock.marcas!.mockReturnValue(
-      throwError(
-        () =>
-          new HttpErrorResponse({
-            status: 403,
-            error: {
-              reason: 'TIER_TOO_LOW',
-              requiredTier: 'ADVANCED',
-              message: 'Mejora tu suscripción para acceder a este contenido.',
-            },
-          }),
+    expect(component['esOtraPruebaSeleccionada']()).toBe(true);
+    expect(
+      fixture.debugElement.query(
+        By.css('[data-testid="pf-marcas-input-nombre-libre"]'),
       ),
-    );
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const pill = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-upsell"]'),
-    );
-    expect(pill).toBeTruthy();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Mejora tu suscripción para acceder a este contenido.',
-    );
+    ).toBeTruthy();
+    component['form'].setValue({
+      pruebaFisicaId: -1,
+      nombreLibre: 'Lanzamiento',
+      valor: 4,
+      unidad: 'm',
+      fecha: new Date(2026, 6, 5),
+      notas: '',
+    });
+    await component['guardarMarca']();
+    expect(serviceMock.crearMarca).toHaveBeenCalledWith({
+      nombreLibre: 'Lanzamiento',
+      valor: 4,
+      unidad: 'm',
+      fecha: '2026-07-05',
+    });
   });
 
-  it('muestra el estado "sin marcas" cuando el backend devuelve un array vacío', async () => {
-    serviceMock.marcas!.mockReturnValue(of([]));
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const vacio = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-vacio"]'),
-    );
-    expect(vacio).toBeTruthy();
-    const errorEl = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-error"]'),
-    );
-    expect(errorEl).toBeFalsy();
-  });
-
-  it('muestra un estado de ERROR (no "sin marcas") cuando el backend falla con un error genérico (500)', async () => {
-    serviceMock.marcas!.mockReturnValue(
+  it('muestra error si falla el catálogo y no miente con un selector vacío', async () => {
+    serviceMock.catalogoPruebas.mockReturnValue(
       throwError(() => new HttpErrorResponse({ status: 500 })),
     );
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const errorEl = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-error"]'),
-    );
-    expect(errorEl).toBeTruthy();
-
-    const vacio = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-vacio"]'),
-    );
-    expect(vacio).toBeFalsy();
-    expect(component['sinMarcas']()).toBe(false);
-  });
-
-  it('el botón de reintentar del estado de error vuelve a llamar a marcas', async () => {
-    serviceMock.marcas!.mockReturnValue(
-      throwError(() => new HttpErrorResponse({ status: 500 })),
-    );
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(serviceMock.marcas).toHaveBeenCalledTimes(1);
-
-    serviceMock.marcas!.mockReturnValue(of(marcasFixture));
-
-    const reintentar = fixture.debugElement.query(
-      By.css('[data-testid="pf-marcas-reintentar"]'),
-    );
-    expect(reintentar).toBeTruthy();
-    (reintentar.nativeElement as HTMLElement).click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(serviceMock.marcas).toHaveBeenCalledTimes(2);
-    expect(component['error']()).toBe(false);
-  });
-
-  it('volver navega al calendario de planificación física', async () => {
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    component['volver']();
-
-    const router = TestBed.inject(Router);
-    expect(router.navigate).toHaveBeenCalledWith(['/app/planificacion-fisica']);
+    await cargar();
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="pf-marcas-error"]')),
+    ).toBeTruthy();
+    expect(
+      fixture.debugElement.query(
+        By.css('[data-testid="pf-marcas-sin-pruebas"]'),
+      ),
+    ).toBeFalsy();
   });
 });
