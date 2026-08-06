@@ -34,6 +34,7 @@ import {
 } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 import { colors } from './calendar-colors';
+import { COLORES_TIPO_SUBBLOQUE } from '../sub-bloque-colores';
 @Component({
   selector: 'app-vista-semanal',
   templateUrl: './vista-semanal.component.html',
@@ -192,7 +193,7 @@ export class VistaSemanalComponent {
           duracion: 60,
           nombre: 'ENTRENAMIENTO FÍSICO',
           comentarios: '',
-          color: '#b6e3b6',
+          color: COLORES_TIPO_SUBBLOQUE.entrenamiento,
           esEntrenamientoFisico: true,
         };
         this.selectedEvent = {
@@ -203,8 +204,10 @@ export class VistaSemanalComponent {
             this.onTimeClickedDate.getTime() + nuevoSubBloque.duracion * 60000,
           ),
           color: {
-            primary: nuevoSubBloque.color || '#b6e3b6',
-            secondary: nuevoSubBloque.color || '#b6e3b6',
+            primary:
+              nuevoSubBloque.color || COLORES_TIPO_SUBBLOQUE.entrenamiento,
+            secondary:
+              nuevoSubBloque.color || COLORES_TIPO_SUBBLOQUE.entrenamiento,
           },
           meta: { subBloque: { ...nuevoSubBloque } },
         };

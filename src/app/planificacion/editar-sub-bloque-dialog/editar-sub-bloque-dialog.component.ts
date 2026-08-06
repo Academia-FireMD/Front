@@ -18,6 +18,7 @@ import { AppConfigService } from '../../services/app-config.service';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { SubBloque } from '../../shared/models/planificacion.model';
 import { duracionOptions, universalEditorConfig } from '../../utils/utils';
+import { POSIBLES_TIPOS_SUBBLOQUE } from '../sub-bloque-colores';
 
 @Component({
   selector: 'app-editar-sub-bloque-dialog',
@@ -100,36 +101,7 @@ export class EditarSubBloqueDialogComponent
 
   duracionOptions = duracionOptions;
 
-  posiblesTipos = [
-    {
-      label: 'Entrenamiento',
-      value: '#fdd6b3', // Naranja pastel
-    },
-    {
-      label: 'Específico SPEIS',
-      value: '#b8fcd1', // Verde menta
-    },
-    {
-      label: 'General',
-      value: '#b8f6fb', // Azul cielo
-    },
-    {
-      label: 'Específico',
-      value: '#fbf3c0', // Amarillo suave
-    },
-    {
-      label: 'Psicotécnico',
-      value: '#f7d794', // Amarillo más fuerte
-    },
-    {
-      label: 'Varios',
-      value: '#ffffff', // Blanco
-    },
-    {
-      label: 'Examen',
-      value: '#ffcdd2', // Rojo suave
-    },
-  ];
+  posiblesTipos = POSIBLES_TIPOS_SUBBLOQUE;
 
   tiempoAvisoOptions = [
     { label: '15 minutos', value: 15 },

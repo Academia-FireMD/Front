@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 
 import { VistaSemanalComponent } from './vista-semanal.component';
+import { COLORES_TIPO_SUBBLOQUE } from '../sub-bloque-colores';
 
 describe('VistaSemanalComponent', () => {
   let component: VistaSemanalComponent;
@@ -24,6 +25,31 @@ describe('VistaSemanalComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('menú de contexto — añadir entrenamiento físico', () => {
+    it('crea el evento con el color de tipo Entrenamiento', () => {
+      const fecha = new Date(2026, 6, 15, 10, 0, 0);
+      (component as any).onTimeClickedDate = fecha;
+
+      const items = component.getMenuItems('ADMIN');
+      const itemFisico = items.find(
+        (i) => i.label === 'Añadir entrenamiento físico',
+      );
+
+      expect(itemFisico).toBeTruthy();
+      itemFisico!.command!();
+
+      expect(component.selectedEvent?.title).toBe('ENTRENAMIENTO FÍSICO');
+      expect(component.selectedEvent?.color).toEqual({
+        primary: COLORES_TIPO_SUBBLOQUE.entrenamiento,
+        secondary: COLORES_TIPO_SUBBLOQUE.entrenamiento,
+      });
+      expect(component.editSubBloqueData.color).toBe(
+        COLORES_TIPO_SUBBLOQUE.entrenamiento,
+      );
+      expect(component.editSubBloqueData.esEntrenamientoFisico).toBe(true);
+    });
   });
 
   describe('bridge temario↔física', () => {
