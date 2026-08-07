@@ -29,6 +29,10 @@ describe('PlanificacionFisicaAdminComponent', () => {
     numSemanas: 4,
     relevancia: [Oposicion.VALENCIA_AYUNTAMIENTO],
     estado: 'BORRADOR',
+    planificaciones: [
+      { id: 10, identificador: 'PGCVI6-8H' },
+      { id: 11, identificador: 'PGCVI4-6H' },
+    ],
     _count: { semanas: 4 },
   };
 
@@ -372,6 +376,18 @@ describe('PlanificacionFisicaAdminComponent', () => {
     expect(serviceMock.eliminar).toHaveBeenCalledWith(bloqueFixture.id, false);
 
     confirmSpy.mockRestore();
+  });
+
+  it('renderiza las planificaciones enlazadas como chips en la tabla', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector(
+      '[data-testid="bloque-row-1"]',
+    ) as HTMLElement;
+    expect(row.textContent).toContain('PGCVI6-8H');
+    expect(row.textContent).toContain('PGCVI4-6H');
   });
 
   it('verDetalles navega a la ventana de edición de detalles del bloque', async () => {

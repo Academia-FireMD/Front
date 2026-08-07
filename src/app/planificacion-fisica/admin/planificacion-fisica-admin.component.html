@@ -103,10 +103,6 @@
           <dd>{{ res.totalAsignaciones }}</dd>
           <dt>Detalles</dt>
           <dd>{{ res.totalDetalles }}</dd>
-          <dt>Relevancia</dt>
-          <dd>
-            <app-oposicion-badges [oposiciones]="res.relevancia" />
-          </dd>
         </dl>
 
         <app-async-button
@@ -155,6 +151,7 @@
             <th>Identificador</th>
             <th>Semanas</th>
             <th>Relevancia</th>
+            <th>Planificaciones enlazadas</th>
             <th>Inicio semana 1</th>
             <th>Estado</th>
             <th></th>
@@ -170,6 +167,22 @@
                 [oposiciones]="bloque.relevancia"
                 (updateSelection)="guardarRelevancia(bloque, $event)"
               />
+            </td>
+            <td>
+              @if (bloque.planificaciones?.length) {
+                <div class="planificacion-fisica-admin__chips">
+                  @for (plan of bloque.planificaciones; track plan.id) {
+                    <p-chip
+                      [label]="plan.identificador"
+                      styleClass="p-chip-sm"
+                    />
+                  }
+                </div>
+              } @else {
+                <span class="planificacion-fisica-admin__sin-planificaciones"
+                  >Sin enlaces</span
+                >
+              }
             </td>
             <td>{{ bloque.fechaInicioSemana1 | date: "dd/MM/yyyy" }}</td>
             <td>

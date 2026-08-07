@@ -77,4 +77,36 @@
     color: var(--text-color-secondary);
     font-size: 0.875rem;
   }
+
+  &__planificaciones-card {
+    .p-card-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+
+  &__planificaciones-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.75rem;
+
+    p-multiSelect {
+      flex: 1 1 320px;
+      min-width: 220px;
+    }
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  &__sin-planificaciones {
+    color: var(--text-color-secondary);
+    font-style: italic;
+    margin: 0;
+  }
 }

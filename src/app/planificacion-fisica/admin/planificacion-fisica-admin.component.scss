@@ -81,4 +81,15 @@
     gap: 0.25rem;
     justify-content: flex-end;
   }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  &__sin-planificaciones {
+    color: var(--text-color-secondary);
+    font-style: italic;
+  }
 }

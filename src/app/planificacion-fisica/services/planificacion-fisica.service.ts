@@ -30,6 +30,12 @@ export interface ImportResponse {
 
 export type EstadoBloque = 'BORRADOR' | 'PUBLICADO';
 
+/** Planificación de temario enlazada a un bloque de entrenamiento (M2M). */
+export interface PlanificacionResumen {
+  id: number;
+  identificador: string;
+}
+
 export interface BloqueEntrenamiento {
   id: number;
   identificador: string;
@@ -38,6 +44,7 @@ export interface BloqueEntrenamiento {
   numSemanas: number;
   relevancia: Oposicion[];
   estado: EstadoBloque;
+  planificaciones: PlanificacionResumen[];
   _count: { semanas: number };
 }
 
@@ -320,6 +327,10 @@ export class PlanificacionFisicaService {
     return this.http.get<BloqueEntrenamiento[]>(`${this.base}/bloques`);
   }
 
+  obtenerBloque(id: number): Observable<BloqueEntrenamiento> {
+    return this.http.get<BloqueEntrenamiento>(`${this.base}/bloques/${id}`);
+  }
+
   publicar(id: number): Observable<BloqueEntrenamiento> {
     return this.http.put<BloqueEntrenamiento>(
       `${this.base}/bloques/${id}/publicar`,
@@ -334,6 +345,21 @@ export class PlanificacionFisicaService {
     return this.http.put<BloqueEntrenamiento>(
       `${this.base}/bloques/${id}`,
       dto,
+    );
+  }
+
+  /**
+   * Reemplaza los enlaces M2M de un bloque con las planificaciones de temario
+   * indicadas. El backend responde con el bloque actualizado incluyendo sus
+   * `planificaciones: [{ id, identificador }]`.
+   */
+  actualizarPlanificaciones(
+    id: number,
+    planificacionIds: number[],
+  ): Observable<BloqueEntrenamiento> {
+    return this.http.put<BloqueEntrenamiento>(
+      `${this.base}/bloques/${id}/planificaciones`,
+      { planificacionIds },
     );
   }
 

@@ -22,7 +22,6 @@ import { ToastrService } from 'ngx-toastr';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
-import { OposicionBadgesComponent } from '../../shared/oposicion-badges/oposicion-badges.component';
 import { SharedModule } from '../../shared/shared.module';
 import { Oposicion } from '../../shared/models/subscription.model';
 import {
@@ -53,7 +52,6 @@ interface HttpErrorGenerico {
     TagModule,
     TooltipModule,
     AsyncButtonComponent,
-    OposicionBadgesComponent,
     SharedModule,
   ],
   templateUrl: './planificacion-fisica-admin.component.html',

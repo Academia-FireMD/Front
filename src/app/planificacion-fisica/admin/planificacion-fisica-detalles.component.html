@@ -7,8 +7,58 @@
       data-testid="pf-detalles-volver"
       (click)="volver()"
     ></p-button>
-    <h2>Detalles del bloque</h2>
+    <h2>{{ tituloBloque() }}</h2>
   </div>
+
+  @if (cargandoBloque()) {
+    <div class="pf-detalles__loading" data-testid="pf-detalles-loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando bloque…</span>
+    </div>
+  } @else if (bloque()) {
+    <p-card
+      header="Planificaciones de temario enlazadas"
+      styleClass="pf-detalles__planificaciones-card"
+      data-testid="pf-detalles-planificaciones-card"
+    >
+      <div class="pf-detalles__planificaciones-body">
+        <p-multiSelect
+          [options]="planificacionesDisponibles()"
+          [ngModel]="planificacionesSeleccionadas()"
+          (ngModelChange)="planificacionesSeleccionadas.set($event)"
+          optionLabel="identificador"
+          placeholder="Selecciona las planificaciones"
+          [showToggleAll]="false"
+          display="chip"
+          styleClass="w-full"
+          data-testid="pf-detalles-planificaciones-select"
+        />
+        <p-button
+          icon="pi pi-save"
+          label="Guardar enlaces"
+          size="small"
+          [loading]="guardandoPlanificaciones()"
+          (click)="guardarPlanificaciones()"
+          data-testid="pf-detalles-guardar-planificaciones"
+        ></p-button>
+      </div>
+
+      @if (bloque()!.planificaciones.length === 0) {
+        <p
+          class="pf-detalles__sin-planificaciones"
+          data-testid="pf-detalles-sin-planificaciones"
+        >
+          Este bloque no está enlazado a ninguna planificación de temario.
+        </p>
+      } @else {
+        <div class="pf-detalles__chips">
+          @for (plan of bloque()!.planificaciones; track plan.id) {
+            <p-chip [label]="plan.identificador" />
+          }
+        </div>
+      }
+    </p-card>
+  }
 
   @if (loading()) {
     <div class="pf-detalles__loading" data-testid="pf-detalles-loading">

@@ -49,6 +49,36 @@ describe('PlanificacionFisicaService', () => {
     req.flush([]);
   });
 
+  it('obtenerBloque llama al endpoint correcto', () => {
+    service.obtenerBloque(7).subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/bloques/7`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      id: 7,
+      identificador: 'BLOQUE-7',
+      planificaciones: [],
+    });
+  });
+
+  it('actualizarPlanificaciones manda el body y llama al endpoint correcto', () => {
+    service.actualizarPlanificaciones(7, [1, 3]).subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/bloques/7/planificaciones`,
+    );
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ planificacionIds: [1, 3] });
+    req.flush({
+      id: 7,
+      identificador: 'BLOQUE-7',
+      planificaciones: [
+        { id: 1, identificador: 'PGCV-A' },
+        { id: 3, identificador: 'PGCV-B' },
+      ],
+    });
+  });
+
   it('publicar llama al endpoint correcto', () => {
     service.publicar(7).subscribe();
     const req = http.expectOne(

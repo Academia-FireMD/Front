@@ -21,8 +21,11 @@ jest.mock('@toast-ui/editor', () => ({
     destroy: jest.fn(),
   })),
 }));
+import { PlanificacionesService } from '../../services/planificaciones.service';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
+import { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import {
+  BloqueEntrenamiento,
   DetalleDisciplina,
   PlanificacionFisicaService,
   SemanaConDetalles,
@@ -68,6 +71,45 @@ describe('PlanificacionFisicaDetallesComponent', () => {
     },
   ];
 
+  const bloqueFixture: BloqueEntrenamiento = {
+    id: 3,
+    identificador: 'BLOQUE-3',
+    comentarioGeneral: null,
+    fechaInicioSemana1: '2026-08-01T00:00:00.000Z',
+    numSemanas: 4,
+    relevancia: [],
+    estado: 'BORRADOR',
+    planificaciones: [{ id: 20, identificador: 'PCA-A' }],
+    _count: { semanas: 4 },
+  };
+
+  const planificacionesDisponibles: PlanificacionMensual[] = [
+    {
+      id: 20,
+      identificador: 'PCA-A',
+      mes: 8,
+      ano: 2026,
+      subBloques: [],
+      asignacion: {} as any,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      esPorDefecto: false,
+      relevancia: [],
+    },
+    {
+      id: 21,
+      identificador: 'PGCV-B',
+      mes: 8,
+      ano: 2026,
+      subBloques: [],
+      asignacion: {} as any,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      esPorDefecto: false,
+      relevancia: [],
+    },
+  ];
+
   let activatedRouteMock: {
     snapshot: { paramMap: { get: jest.Mock } };
   };
@@ -75,6 +117,8 @@ describe('PlanificacionFisicaDetallesComponent', () => {
   beforeEach(async () => {
     serviceMock = {
       detallesDeBloque: jest.fn().mockReturnValue(of(semanasFixture)),
+      obtenerBloque: jest.fn().mockReturnValue(of(bloqueFixture)),
+      actualizarPlanificaciones: jest.fn(),
       actualizarDetalle: jest.fn().mockReturnValue(of({})),
     };
 
@@ -82,11 +126,24 @@ describe('PlanificacionFisicaDetallesComponent', () => {
       snapshot: { paramMap: { get: jest.fn().mockReturnValue('3') } },
     };
 
+    const planificacionesServiceMock = {
+      getPlanificacionMensual$: jest.fn().mockReturnValue(
+        of({
+          data: planificacionesDisponibles,
+          pagination: { take: 999999, skip: 0, searchTerm: '', count: 2 },
+        }),
+      ),
+    };
+
     await TestBed.configureTestingModule({
       imports: [PlanificacionFisicaDetallesComponent, NoopAnimationsModule],
       providers: [
         ...COMMON_TEST_PROVIDERS,
         { provide: PlanificacionFisicaService, useValue: serviceMock },
+        {
+          provide: PlanificacionesService,
+          useValue: planificacionesServiceMock,
+        },
         { provide: ActivatedRoute, useValue: activatedRouteMock },
       ],
     }).compileComponents();
@@ -181,5 +238,62 @@ describe('PlanificacionFisicaDetallesComponent', () => {
       '/app/planificacion-fisica/admin',
     ]);
     expect(serviceMock.detallesDeBloque).not.toHaveBeenCalled();
+  });
+
+  it('carga el bloque, sus planificaciones enlazadas y las disponibles', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(serviceMock.obtenerBloque).toHaveBeenCalledWith(3);
+    expect(component['bloque']()).toEqual(bloqueFixture);
+    expect(component['planificacionesSeleccionadas']()).toEqual([
+      planificacionesDisponibles[0],
+    ]);
+
+    const html = fixture.nativeElement as HTMLElement;
+    expect(html.textContent).toContain('Planificaciones de temario enlazadas');
+    expect(html.textContent).toContain('PCA-A');
+  });
+
+  it('guardarPlanificaciones envía los IDs seleccionados y actualiza el bloque', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const actualizado = {
+      ...bloqueFixture,
+      planificaciones: [
+        { id: 20, identificador: 'PCA-A' },
+        { id: 21, identificador: 'PGCV-B' },
+      ],
+    };
+    serviceMock.actualizarPlanificaciones!.mockReturnValue(of(actualizado));
+
+    component['planificacionesSeleccionadas'].set(planificacionesDisponibles);
+    await component['guardarPlanificaciones']();
+
+    expect(serviceMock.actualizarPlanificaciones).toHaveBeenCalledWith(
+      3,
+      [20, 21],
+    );
+    expect(component['bloque']()).toEqual(actualizado);
+    const toast = TestBed.inject(ToastrService);
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('guardarPlanificaciones muestra toast de error si el servicio falla', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    serviceMock.actualizarPlanificaciones!.mockReturnValue(
+      throwError(() => new Error('boom')),
+    );
+
+    await component['guardarPlanificaciones']();
+
+    const toast = TestBed.inject(ToastrService);
+    expect(toast.error).toHaveBeenCalledWith(
+      'No se han podido guardar las planificaciones enlazadas.',
+    );
   });
 });
