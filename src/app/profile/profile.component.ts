@@ -409,9 +409,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
         value !== null &&
         value !== '' &&
         value !== false &&
-        value !== undefined,
+        value !== undefined &&
+        !this.isEmptyArray(value),
     ).length;
     return Math.round((filledFields / fields.length) * 100);
+  }
+
+  private isEmptyArray(value: any): boolean {
+    return Array.isArray(value) && value.length === 0;
   }
 
   isFormPartiallyFilled(): boolean {

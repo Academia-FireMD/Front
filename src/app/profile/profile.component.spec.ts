@@ -71,6 +71,24 @@ describe('ProfileComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('getOnboardingCompletionPercentage con tipoOposicion array', () => {
+    it('no cuenta un array vacío como campo relleno', () => {
+      component.onboardingData = {
+        tipoOposicion: [],
+        nivelOposicion: 'INICIACION',
+      } as any;
+      expect(component.getOnboardingCompletionPercentage()).toBe(50);
+    });
+
+    it('cuenta un array con oposiciones como campo relleno', () => {
+      component.onboardingData = {
+        tipoOposicion: ['MADRID'],
+        nivelOposicion: 'INICIACION',
+      } as any;
+      expect(component.getOnboardingCompletionPercentage()).toBe(100);
+    });
+  });
+
   it('menú de suscripción (WP-linked) incluye "Cambiar tarjeta de pago"', () => {
     component.user = { woocommerceCustomerId: 53 } as any;
     const items = component.getSubscriptionMenuItems({

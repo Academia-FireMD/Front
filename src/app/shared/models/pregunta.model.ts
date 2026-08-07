@@ -94,18 +94,6 @@ export const duracionesDisponibles = [
   { label: '6-8 Horas', value: 'FRANJA_SEIS_A_OCHO_HORAS' },
 ];
 
-export enum TipoOposicion {
-  CPBA = 'CPBA',
-  AYTO_VLC = 'AYTO_VLC',
-  GENERAL_CV = 'GENERAL_CV',
-}
-
-export const tiposOposicionDisponibles = [
-  { label: 'CPBA', value: 'CPBA' },
-  { label: 'Ayto. Vlc', value: 'AYTO_VLC' },
-  { label: 'General CV', value: 'GENERAL_CV' },
-];
-
 export enum NivelOposicion {
   INICIACION = 'INICIACION',
   AVANZADO = 'AVANZADO',

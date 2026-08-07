@@ -5,6 +5,10 @@ import { COMMON_TEST_PROVIDERS } from '../../../testing';
 import { AppConfigService } from '../../../services/app-config.service';
 import { EstadoModulos } from '../../../shared/models/app-config.model';
 import { ModuloApp } from '../../../shared/models/modulo-app.enum';
+import {
+  Oposicion,
+  OPOSICION_LABELS,
+} from '../../../shared/models/subscription.model';
 
 // UserDashboardComponent has deep imports (PrimengModule, GenericListComponent)
 // that can't be resolved in the Jest test environment.
@@ -393,6 +397,70 @@ describe('UserDashboardComponent — override clases grabadas (Task C4)', () => 
 
     editarUsuario({ id: 8 });
     expect(state.editFechaClasesGrabadas).toBeNull();
+  });
+});
+
+/**
+ * Tests de lógica para el cambio a tipoOposicion: Oposicion[].
+ */
+describe('UserDashboardComponent — tipoOposicion array', () => {
+  const isEmptyArray = (value: any): boolean =>
+    Array.isArray(value) && value.length === 0;
+
+  const getOnboardingCompletionPercentage = (user: any): number => {
+    const onboardingFields = [
+      user.tipoOposicion,
+      user.nivelOposicion,
+      user.tipoDePlanificacionDuracionDeseada,
+    ];
+    const filledFields = onboardingFields.filter(
+      (field) =>
+        field !== null &&
+        field !== '' &&
+        field !== false &&
+        field !== undefined &&
+        !isEmptyArray(field),
+    ).length;
+    return Math.round((filledFields / onboardingFields.length) * 100);
+  };
+
+  const formatTipoOposicion = (ops?: Oposicion[]): string => {
+    if (!ops || ops.length === 0) {
+      return 'No proporcionado';
+    }
+    return ops.map((o) => OPOSICION_LABELS[o] ?? o).join(', ');
+  };
+
+  it('formatTipoOposicion devuelve labels separados por coma', () => {
+    expect(
+      formatTipoOposicion([
+        Oposicion.VALENCIA_AYUNTAMIENTO,
+        Oposicion.ALICANTE_CPBA,
+      ]),
+    ).toBe('Valencia Ayuntamiento, CPBA Alicante');
+  });
+
+  it('formatTipoOposicion devuelve "No proporcionado" para array vacío o undefined', () => {
+    expect(formatTipoOposicion([])).toBe('No proporcionado');
+    expect(formatTipoOposicion(undefined)).toBe('No proporcionado');
+  });
+
+  it('getOnboardingCompletionPercentage no cuenta tipoOposicion vacío como relleno', () => {
+    const user = {
+      tipoOposicion: [],
+      nivelOposicion: 'INICIACION',
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    };
+    expect(getOnboardingCompletionPercentage(user)).toBe(67);
+  });
+
+  it('getOnboardingCompletionPercentage cuenta tipoOposicion con valores como relleno', () => {
+    const user = {
+      tipoOposicion: [Oposicion.MADRID],
+      nivelOposicion: 'INICIACION',
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    };
+    expect(getOnboardingCompletionPercentage(user)).toBe(100);
   });
 });
 

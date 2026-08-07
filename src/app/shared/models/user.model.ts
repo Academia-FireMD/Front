@@ -1,4 +1,4 @@
-import type { NivelOposicion, TipoOposicion } from './pregunta.model';
+import type { NivelOposicion } from './pregunta.model';
 import type { Oposicion, Suscripcion } from './subscription.model';
 import type { Test } from './test.model';
 
@@ -72,7 +72,7 @@ export interface Usuario {
   ultimoRecordatorioOnboarding?: Date;
 
   // Nuevos campos faltantes
-  tipoOposicion?: TipoOposicion;
+  tipoOposicion?: Oposicion[];
   nivelOposicion?: NivelOposicion;
 }
 

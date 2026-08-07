@@ -917,10 +917,22 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         field !== null &&
         field !== '' &&
         field !== false &&
-        field !== undefined,
+        field !== undefined &&
+        !this.isEmptyArray(field),
     ).length;
 
     return Math.round((filledFields / onboardingFields.length) * 100);
+  }
+
+  private isEmptyArray(value: any): boolean {
+    return Array.isArray(value) && value.length === 0;
+  }
+
+  formatTipoOposicion(ops?: Oposicion[]): string {
+    if (!ops || ops.length === 0) {
+      return 'No proporcionado';
+    }
+    return ops.map((o) => OPOSICION_LABELS[o] ?? o).join(', ');
   }
 
   impersonateUser(user: Usuario) {

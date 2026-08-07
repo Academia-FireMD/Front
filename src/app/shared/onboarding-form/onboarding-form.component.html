@@ -5,7 +5,8 @@
       Completar perfil
     </h2>
     <p class="onboarding-subtitle">
-      Ayúdanos a conocerte mejor para ofrecerte la mejor experiencia personalizada
+      Ayúdanos a conocerte mejor para ofrecerte la mejor experiencia
+      personalizada
     </p>
 
     <div class="completion-progress mb-4" *ngIf="isFormPartiallyFilled()">
@@ -23,27 +24,30 @@
 
   <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="onboarding-form">
     <p-accordion [multiple]="true" [activeIndex]="[0]">
-
       <!-- Datos Principales -->
       <p-accordionTab [selected]="true">
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Información Principal</span>
-            <p-badge [value]="getSectionBadgeConfig('datos-principales').value" [severity]="getSectionBadgeConfig('datos-principales').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('datos-principales').value"
+              [severity]="getSectionBadgeConfig('datos-principales').severity"
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
           <div class="col-12 md:col-6">
             <p-floatLabel>
-              <p-dropdown
-                [options]="tiposOposicion"
+              <p-multiSelect
+                [options]="oposicionesDisponibles"
                 formControlName="tipoOposicion"
-                placeholder="Selecciona tipo"
+                defaultLabel="Selecciona oposiciones"
                 class="w-full"
                 id="tipoOposicion"
                 [style]="{ width: '100%' }"
                 optionLabel="label"
                 optionValue="value"
+                display="chip"
               />
               <label for="tipoOposicion">Quiero opositar al *</label>
             </p-floatLabel>
@@ -77,7 +81,9 @@
                 optionLabel="label"
                 optionValue="value"
               />
-              <label for="tipoDePlanificacionDuracionDeseada">Horas al día que me voy a dedicar *</label>
+              <label for="tipoDePlanificacionDuracionDeseada"
+                >Horas al día que me voy a dedicar *</label
+              >
             </p-floatLabel>
           </div>
 
@@ -108,7 +114,10 @@
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Datos Personales</span>
-            <p-badge [value]="getSectionBadgeConfig('datos-personales').value" [severity]="getSectionBadgeConfig('datos-personales').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('datos-personales').value"
+              [severity]="getSectionBadgeConfig('datos-personales').severity"
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
@@ -261,13 +270,22 @@
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Formación y Experiencia</span>
-            <p-badge [value]="getSectionBadgeConfig('formacion-experiencia').value" [severity]="getSectionBadgeConfig('formacion-experiencia').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('formacion-experiencia').value"
+              [severity]="
+                getSectionBadgeConfig('formacion-experiencia').severity
+              "
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
           <div class="col-12 p-2">
             <div class="field">
-              <label for="estudiosPrevaios" class="block text-sm font-medium mb-2">Estudios previos</label>
+              <label
+                for="estudiosPrevaios"
+                class="block text-sm font-medium mb-2"
+                >Estudios previos</label
+              >
               <textarea
                 pInputTextarea
                 id="estudiosPrevaios"
@@ -280,7 +298,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="actualTrabajoOcupacion" class="block text-sm font-medium mb-2">Actual trabajo/ocupación</label>
+              <label
+                for="actualTrabajoOcupacion"
+                class="block text-sm font-medium mb-2"
+                >Actual trabajo/ocupación</label
+              >
               <textarea
                 pInputTextarea
                 id="actualTrabajoOcupacion"
@@ -293,7 +315,9 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="hobbies" class="block text-sm font-medium mb-2">Hobbies</label>
+              <label for="hobbies" class="block text-sm font-medium mb-2"
+                >Hobbies</label
+              >
               <textarea
                 pInputTextarea
                 id="hobbies"
@@ -306,7 +330,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="descripcionSemana" class="block text-sm font-medium mb-2">Describe tu semana</label>
+              <label
+                for="descripcionSemana"
+                class="block text-sm font-medium mb-2"
+                >Describe tu semana</label
+              >
               <textarea
                 pInputTextarea
                 id="descripcionSemana"
@@ -324,7 +352,12 @@
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Planificación de Estudio</span>
-            <p-badge [value]="getSectionBadgeConfig('planificacion-estudio').value" [severity]="getSectionBadgeConfig('planificacion-estudio').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('planificacion-estudio').value"
+              [severity]="
+                getSectionBadgeConfig('planificacion-estudio').severity
+              "
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
@@ -339,7 +372,9 @@
                 class="w-full"
                 [style]="{ width: '100%' }"
               />
-              <label for="horasEstudioDiaSemana">Horas de estudio (por día)</label>
+              <label for="horasEstudioDiaSemana"
+                >Horas de estudio (por día)</label
+              >
             </p-floatLabel>
           </div>
 
@@ -354,13 +389,19 @@
                 class="w-full"
                 [style]="{ width: '100%' }"
               />
-              <label for="horasEntrenoDiaSemana">Horas de entreno (por día)</label>
+              <label for="horasEntrenoDiaSemana"
+                >Horas de entreno (por día)</label
+              >
             </p-floatLabel>
           </div>
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="organizacionEstudioEntreno" class="block text-sm font-medium mb-2">¿Cómo organizas tu estudio y entrenamiento?</label>
+              <label
+                for="organizacionEstudioEntreno"
+                class="block text-sm font-medium mb-2"
+                >¿Cómo organizas tu estudio y entrenamiento?</label
+              >
               <textarea
                 pInputTextarea
                 id="organizacionEstudioEntreno"
@@ -378,13 +419,18 @@
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Experencia</span>
-            <p-badge [value]="getSectionBadgeConfig('experiencia').value" [severity]="getSectionBadgeConfig('experiencia').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('experiencia').value"
+              [severity]="getSectionBadgeConfig('experiencia').severity"
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
           <div class="col-12 p-2">
             <div class="field">
-              <label for="temaPersonal" class="block text-sm font-medium mb-2">En el temario</label>
+              <label for="temaPersonal" class="block text-sm font-medium mb-2"
+                >En el temario</label
+              >
               <textarea
                 pInputTextarea
                 id="temaPersonal"
@@ -397,7 +443,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="oposicionesHechasResultados" class="block text-sm font-medium mb-2">En oposiciones (hechas y resultados)</label>
+              <label
+                for="oposicionesHechasResultados"
+                class="block text-sm font-medium mb-2"
+                >En oposiciones (hechas y resultados)</label
+              >
               <textarea
                 pInputTextarea
                 id="oposicionesHechasResultados"
@@ -410,7 +460,9 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="pruebasFisicas" class="block text-sm font-medium mb-2">Pruebas Físicas</label>
+              <label for="pruebasFisicas" class="block text-sm font-medium mb-2"
+                >Pruebas Físicas</label
+              >
               <textarea
                 pInputTextarea
                 id="pruebasFisicas"
@@ -423,7 +475,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="tecnicasEstudioUtilizadas" class="block text-sm font-medium mb-2">Técnicas de estudio que utilizas</label>
+              <label
+                for="tecnicasEstudioUtilizadas"
+                class="block text-sm font-medium mb-2"
+                >Técnicas de estudio que utilizas</label
+              >
               <textarea
                 pInputTextarea
                 id="tecnicasEstudioUtilizadas"
@@ -441,13 +497,20 @@
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Define tus objetivos</span>
-            <p-badge [value]="getSectionBadgeConfig('objetivos').value" [severity]="getSectionBadgeConfig('objetivos').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('objetivos').value"
+              [severity]="getSectionBadgeConfig('objetivos').severity"
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
           <div class="col-12 p-2">
             <div class="field">
-              <label for="objetivosSeisMeses" class="block text-sm font-medium mb-2">A 6 meses vista</label>
+              <label
+                for="objetivosSeisMeses"
+                class="block text-sm font-medium mb-2"
+                >A 6 meses vista</label
+              >
               <textarea
                 pInputTextarea
                 id="objetivosSeisMeses"
@@ -460,7 +523,9 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="objetivosUnAno" class="block text-sm font-medium mb-2">A 1 año vista</label>
+              <label for="objetivosUnAno" class="block text-sm font-medium mb-2"
+                >A 1 año vista</label
+              >
               <textarea
                 pInputTextarea
                 id="objetivosUnAno"
@@ -478,7 +543,10 @@
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Academia</span>
-            <p-badge [value]="getSectionBadgeConfig('academia').value" [severity]="getSectionBadgeConfig('academia').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('academia').value"
+              [severity]="getSectionBadgeConfig('academia').severity"
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
@@ -497,7 +565,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="queValorasAcademia" class="block text-sm font-medium mb-2">¿Qué valoras en una academia?</label>
+              <label
+                for="queValorasAcademia"
+                class="block text-sm font-medium mb-2"
+                >¿Qué valoras en una academia?</label
+              >
               <textarea
                 pInputTextarea
                 id="queValorasAcademia"
@@ -510,7 +582,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="queMenosGustaAcademias" class="block text-sm font-medium mb-2">¿Qué es lo que menos te gusta de las academias?</label>
+              <label
+                for="queMenosGustaAcademias"
+                class="block text-sm font-medium mb-2"
+                >¿Qué es lo que menos te gusta de las academias?</label
+              >
               <textarea
                 pInputTextarea
                 id="queMenosGustaAcademias"
@@ -523,7 +599,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="queEsperasAcademia" class="block text-sm font-medium mb-2">¿Qué esperas de esta academia?</label>
+              <label
+                for="queEsperasAcademia"
+                class="block text-sm font-medium mb-2"
+                >¿Qué esperas de esta academia?</label
+              >
               <textarea
                 pInputTextarea
                 id="queEsperasAcademia"
@@ -541,13 +621,21 @@
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Información para la planificación</span>
-            <p-badge [value]="getSectionBadgeConfig('planificacion').value" [severity]="getSectionBadgeConfig('planificacion').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('planificacion').value"
+              [severity]="getSectionBadgeConfig('planificacion').severity"
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
           <div class="col-12 p-2">
             <div class="field">
-              <label for="trabajasActualmente" class="block text-sm font-medium mb-2">Trabajas actualmente, en qué y tiempo invertido en el trabajo</label>
+              <label
+                for="trabajasActualmente"
+                class="block text-sm font-medium mb-2"
+                >Trabajas actualmente, en qué y tiempo invertido en el
+                trabajo</label
+              >
               <textarea
                 pInputTextarea
                 id="trabajasActualmente"
@@ -560,7 +648,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="agotamientoFisicoMental" class="block text-sm font-medium mb-2">Agotamiento físico y mental al finalizar el trabajo</label>
+              <label
+                for="agotamientoFisicoMental"
+                class="block text-sm font-medium mb-2"
+                >Agotamiento físico y mental al finalizar el trabajo</label
+              >
               <textarea
                 pInputTextarea
                 id="agotamientoFisicoMental"
@@ -573,7 +665,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="tiempoDedicableEstudio" class="block text-sm font-medium mb-2">¿Cuánto tiempo podrías dedicar al estudio por día?</label>
+              <label
+                for="tiempoDedicableEstudio"
+                class="block text-sm font-medium mb-2"
+                >¿Cuánto tiempo podrías dedicar al estudio por día?</label
+              >
               <textarea
                 pInputTextarea
                 id="tiempoDedicableEstudio"
@@ -586,7 +682,12 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="diasSemanaDisponibles" class="block text-sm font-medium mb-2">Cuántos días estarías dispuesto a estudiar (Ej 6 días / 6 horas/día / semana)</label>
+              <label
+                for="diasSemanaDisponibles"
+                class="block text-sm font-medium mb-2"
+                >Cuántos días estarías dispuesto a estudiar (Ej 6 días / 6
+                horas/día / semana)</label
+              >
               <textarea
                 pInputTextarea
                 id="diasSemanaDisponibles"
@@ -599,7 +700,11 @@
 
           <div class="col-12 p-2">
             <div class="field">
-              <label for="otraInformacionLaboral" class="block text-sm font-medium mb-2">Otra información laboral/de estudio relevante</label>
+              <label
+                for="otraInformacionLaboral"
+                class="block text-sm font-medium mb-2"
+                >Otra información laboral/de estudio relevante</label
+              >
               <textarea
                 pInputTextarea
                 id="otraInformacionLaboral"
@@ -617,13 +722,20 @@
         <ng-template pTemplate="header">
           <div class="flex align-items-center justify-content-between w-full">
             <span>Comentarios adicionales</span>
-            <p-badge [value]="getSectionBadgeConfig('comentarios').value" [severity]="getSectionBadgeConfig('comentarios').severity"></p-badge>
+            <p-badge
+              [value]="getSectionBadgeConfig('comentarios').value"
+              [severity]="getSectionBadgeConfig('comentarios').severity"
+            ></p-badge>
           </div>
         </ng-template>
         <div class="grid">
           <div class="col-12 p-2">
             <div class="field">
-              <label for="comentariosAdicionales" class="block text-sm font-medium mb-2">Comentarios adicionales, sugerencias, inquietudes</label>
+              <label
+                for="comentariosAdicionales"
+                class="block text-sm font-medium mb-2"
+                >Comentarios adicionales, sugerencias, inquietudes</label
+              >
               <textarea
                 pInputTextarea
                 id="comentariosAdicionales"
@@ -636,6 +748,5 @@
         </div>
       </p-accordionTab>
     </p-accordion>
-
   </form>
 </div>
