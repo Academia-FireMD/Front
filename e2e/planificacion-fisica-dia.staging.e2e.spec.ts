@@ -58,10 +58,12 @@ const cleanupTimeout = 10_000;
 let cleanupState: CleanupState | undefined;
 
 function esDetalleDia(response: Response): boolean {
+  const url = new URL(response.url());
   return (
     response.request().method() === 'GET' &&
-    /\/planificacion-fisica\/dia\//.test(new URL(response.url()).pathname) &&
-    response.status() === 200
+    url.pathname.startsWith('/planificacion-fisica/dia/') &&
+    response.status() === 200 &&
+    response.headers()['content-type']?.includes('application/json') === true
   );
 }
 
