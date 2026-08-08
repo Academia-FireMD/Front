@@ -3,13 +3,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   computed,
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DropdownModule } from 'primeng/dropdown';
@@ -21,6 +23,7 @@ import {
   AccesoDenegadoPlanFisica,
   BloqueOpcion,
   DiaCalendario,
+  esDisciplinaCompletable,
   MiPlan,
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
@@ -57,6 +60,8 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
   private svc = inject(PlanificacionFisicaService);
   private toast = inject(ToastrService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   protected readonly etiquetasDia = ETIQUETAS_DIA;
 
@@ -80,6 +85,9 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
    */
   protected misBloques = signal<BloqueOpcion[]>([]);
   protected bloqueSeleccionadoId = signal<number | null>(null);
+  private cargaActual = 0;
+  private destruido = false;
+  private ultimoBloqueSolicitado: number | undefined;
 
   protected readonly hoy = computed(() => this.miPlan()?.hoy ?? null);
   protected readonly sinPlan = computed(
@@ -94,7 +102,23 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
   );
 
   async ngOnInit(): Promise<void> {
-    await this.cargar();
+    this.destroyRef.onDestroy(() => {
+      this.destruido = true;
+    });
+    const bloqueInicial = this.bloqueIdDeParametro(
+      this.route.snapshot.queryParamMap.get('bloqueId'),
+    );
+    this.ultimoBloqueSolicitado = bloqueInicial;
+    const cargaInicial = this.cargar(bloqueInicial);
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const bloqueId = this.bloqueIdDeParametro(params.get('bloqueId'));
+        if (this.ultimoBloqueSolicitado === bloqueId) return;
+        this.ultimoBloqueSolicitado = bloqueId;
+        void this.cargar(bloqueId);
+      });
+    await cargaInicial;
   }
 
   /**
@@ -105,28 +129,52 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
    * `misBloques()` para saber qué bloque pedir: el default del backend
    * coincide siempre con el `esActivo` de `misBloques()`.
    *
-   * `misBloques()` es best-effort (Fase 2, solo alimenta el selector): si
-   * falla, el `.catch()` encadenado se traga el error y cae a `[]`, así
-   * que el selector simplemente no aparece — nunca rompe la carga de `plan`.
+   * `misBloques()` es best-effort (Fase 2, solo alimenta el selector): un
+   * fallo transitorio no rompe la carga de `plan` ni invalida el último
+   * selector que sí se pudo cargar.
    */
-  private async cargar(): Promise<void> {
+  private async cargar(bloqueIdQuery?: number): Promise<void> {
+    const carga = ++this.cargaActual;
     this.loading.set(true);
     this.gated.set(null);
     this.error.set(false);
     try {
-      // Defensivo (misBloques best-effort): `.catch()` encadenado en el
-      // mismo nivel que `firstValueFrom`, sin envolver en una función async
-      // aparte, para que ambas promesas del `Promise.all` tengan la misma
-      // profundidad — si `misBloques()` falla, cae a `[]` sin romper `plan`.
-      const [bloques, plan] = await Promise.all([
-        firstValueFrom(this.svc.misBloques()).catch((): BloqueOpcion[] => []),
-        firstValueFrom(this.svc.miPlan()),
+      const [resultadoBloques, resultadoPlan] = await Promise.all([
+        firstValueFrom(
+          this.svc.misBloques().pipe(takeUntilDestroyed(this.destroyRef)),
+        ).then(
+          (bloques) => ({ ok: true as const, bloques }),
+          () => ({ ok: false as const }),
+        ),
+        firstValueFrom(
+          this.svc
+            .miPlan(bloqueIdQuery)
+            .pipe(takeUntilDestroyed(this.destroyRef)),
+        ).then(
+          (plan) => ({ ok: true as const, plan }),
+          (error: unknown) => ({ ok: false as const, error }),
+        ),
       ]);
-      this.misBloques.set(bloques);
+      if (this.destruido || carga !== this.cargaActual) return;
+      if (!resultadoPlan.ok) throw resultadoPlan.error;
+      const plan = resultadoPlan.plan;
+      if (resultadoBloques.ok) this.misBloques.set(resultadoBloques.bloques);
+      const bloques = this.misBloques();
       const activo = bloques.find((b) => b.esActivo) ?? bloques[0] ?? null;
-      this.bloqueSeleccionadoId.set(activo?.id ?? null);
       this.miPlan.set(plan);
+      const bloqueEfectivo = plan?.bloque.id;
+      this.bloqueSeleccionadoId.set(bloqueEfectivo ?? null);
+      if (
+        bloqueEfectivo &&
+        (bloqueIdQuery !== bloqueEfectivo ||
+          (bloques.length === 0 && !bloqueIdQuery))
+      ) {
+        this.normalizarBloqueEnUrl(bloqueEfectivo);
+      } else if (!bloqueEfectivo) {
+        this.bloqueSeleccionadoId.set(activo?.id ?? null);
+      }
     } catch (err) {
+      if (this.destruido || carga !== this.cargaActual) return;
       const httpErr = err as HttpErrorResponse;
       const body = httpErr?.error as AccesoDenegadoPlanFisica | undefined;
       if (httpErr?.status === 403 && body?.reason === 'TIER_TOO_LOW') {
@@ -136,6 +184,7 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
         this.toast.error('No se ha podido cargar tu planificación física.');
       }
     } finally {
+      if (this.destruido || carga !== this.cargaActual) return;
       this.loading.set(false);
       this.cargado.set(true);
     }
@@ -143,35 +192,40 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
 
   /** Botón "Reintentar" del estado de error: recarga bloques + plan desde cero. */
   protected reintentar(): void {
-    void this.cargar();
+    void this.cargar(
+      this.bloqueIdDeParametro(
+        this.route.snapshot.queryParamMap.get('bloqueId'),
+      ),
+    );
   }
 
   /** Cambio en el selector del switcher: recarga solo el plan con el bloque elegido. */
   protected cambiarBloque(bloqueId: number): void {
-    this.bloqueSeleccionadoId.set(bloqueId);
-    void this.cargarPlan(bloqueId);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { bloqueId },
+      queryParamsHandling: 'merge',
+    });
   }
 
-  private async cargarPlan(bloqueId?: number): Promise<void> {
-    this.loading.set(true);
-    this.gated.set(null);
-    this.error.set(false);
-    try {
-      const plan = await firstValueFrom(this.svc.miPlan(bloqueId));
-      this.miPlan.set(plan);
-    } catch (err) {
-      const httpErr = err as HttpErrorResponse;
-      const body = httpErr?.error as AccesoDenegadoPlanFisica | undefined;
-      if (httpErr?.status === 403 && body?.reason === 'TIER_TOO_LOW') {
-        this.gated.set(body);
-      } else {
-        this.error.set(true);
-        this.toast.error('No se ha podido cargar tu planificación física.');
-      }
-    } finally {
-      this.loading.set(false);
-      this.cargado.set(true);
-    }
+  private bloqueIdDeParametro(raw: string | null): number | undefined {
+    if (!raw || !/^\d+$/.test(raw)) return undefined;
+    const bloqueId = Number(raw);
+    return Number.isSafeInteger(bloqueId) && bloqueId > 0
+      ? bloqueId
+      : undefined;
+  }
+
+  private normalizarBloqueEnUrl(bloqueId: number): void {
+    // La emisión de esta navegación se ignora por igualdad. Actualizar antes
+    // de navegar también evita que una navegación cancelada deje un latch
+    // pendiente que pueda suprimir una navegación posterior del usuario.
+    this.ultimoBloqueSolicitado = bloqueId;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { bloqueId },
+      replaceUrl: true,
+    });
   }
 
   protected esHoy(fecha: string): boolean {
@@ -211,9 +265,12 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
    * que pedía Sergio (prioridad por encima de la semanal).
    */
   protected progresoDia(dia: DiaCalendario): { hechas: number; total: number } {
+    const completables = dia.chips.filter((chip) =>
+      esDisciplinaCompletable(chip.grupo),
+    );
     return {
-      hechas: dia.chips.filter((c) => c.realizado).length,
-      total: dia.chips.length,
+      hechas: completables.filter((chip) => chip.realizado).length,
+      total: completables.length,
     };
   }
 
@@ -225,7 +282,10 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
   // fuente compartida con la vista de detalle.
 
   protected abrirDia(fecha: string): void {
-    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);
+    const bloqueId = this.bloqueSeleccionadoId();
+    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha], {
+      queryParams: bloqueId ? { bloqueId } : {},
+    });
   }
 
   /** Entrada al histórico de marcas personales (Fase 2), independiente del plan del entrenador. */

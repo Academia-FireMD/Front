@@ -42,11 +42,18 @@ const mockStore = {
 };
 
 const mockActivatedRoute = {
-  snapshot: { params: {}, queryParams: {}, data: {}, paramMap: { get: jest.fn() } },
+  snapshot: {
+    params: {},
+    queryParams: {},
+    data: {},
+    paramMap: { get: jest.fn() },
+    queryParamMap: { get: jest.fn(() => null) },
+  },
   params: of({}),
   queryParams: of({}),
   data: of({}),
   paramMap: of({ get: jest.fn() }),
+  queryParamMap: of({ get: jest.fn(() => null) }),
   parent: { params: of({}) },
 };
 
@@ -60,14 +67,17 @@ const mockRouter = {
 };
 
 function mockService(): Record<string, jest.Mock> {
-  return new Proxy({}, {
-    get: (_target, prop) => {
-      if (typeof prop === 'string' && prop !== 'then') {
-        return jest.fn(() => of(null));
-      }
-      return undefined;
+  return new Proxy(
+    {},
+    {
+      get: (_target, prop) => {
+        if (typeof prop === 'string' && prop !== 'then') {
+          return jest.fn(() => of(null));
+        }
+        return undefined;
+      },
     },
-  }) as Record<string, jest.Mock>;
+  ) as Record<string, jest.Mock>;
 }
 
 export const COMMON_TEST_PROVIDERS: Provider[] = [
@@ -75,20 +85,50 @@ export const COMMON_TEST_PROVIDERS: Provider[] = [
   { provide: Router, useValue: mockRouter },
   { provide: ActivatedRoute, useValue: mockActivatedRoute },
   { provide: Location, useValue: { back: jest.fn(), path: jest.fn(() => '') } },
-  { provide: DomSanitizer, useValue: { bypassSecurityTrustResourceUrl: jest.fn(), sanitize: jest.fn() } },
+  {
+    provide: DomSanitizer,
+    useValue: {
+      bypassSecurityTrustResourceUrl: jest.fn(),
+      sanitize: jest.fn(),
+    },
+  },
   { provide: HttpClient, useValue: mockService() },
-  { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn(), markForCheck: jest.fn() } },
+  {
+    provide: ChangeDetectorRef,
+    useValue: { detectChanges: jest.fn(), markForCheck: jest.fn() },
+  },
   { provide: Store, useValue: mockStore },
-  { provide: PrimeNGConfig, useValue: { ripple: false, setTranslation: jest.fn(), inputStyle: () => 'outlined' } },
-  { provide: ConfirmationService, useValue: { confirm: jest.fn(), close: jest.fn() } },
-  { provide: ToastrService, useValue: { success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn() } },
+  {
+    provide: PrimeNGConfig,
+    useValue: {
+      ripple: false,
+      setTranslation: jest.fn(),
+      inputStyle: () => 'outlined',
+    },
+  },
+  {
+    provide: ConfirmationService,
+    useValue: { confirm: jest.fn(), close: jest.fn() },
+  },
+  {
+    provide: ToastrService,
+    useValue: {
+      success: jest.fn(),
+      error: jest.fn(),
+      warning: jest.fn(),
+      info: jest.fn(),
+    },
+  },
   { provide: AppInitializationService, useValue: mockService() },
   { provide: AuthService, useValue: mockService() },
   { provide: UserService, useValue: mockService() },
   { provide: TestService, useValue: mockService() },
   { provide: TemaService, useValue: mockService() },
   { provide: PreguntasService, useValue: mockService() },
-  { provide: ViewportService, useValue: { isMobile: jest.fn(() => false), isMobile$: of(false) } },
+  {
+    provide: ViewportService,
+    useValue: { isMobile: jest.fn(() => false), isMobile$: of(false) },
+  },
   { provide: PlanificacionesService, useValue: mockService() },
   { provide: FlashcardDataService, useValue: mockService() },
   { provide: ReportesFalloService, useValue: mockService() },

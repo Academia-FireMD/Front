@@ -204,14 +204,32 @@ describe('PlanificacionFisicaService', () => {
       fecha: '2026-07-15',
       comentarioSemana: null,
       comentarioGeneral: null,
+      tipoPlan: 'ADVANCED',
+      soloLectura: false,
+      esHoy: true,
       disciplinas: [],
     });
   });
 
-  it('marcarProgreso manda el body y llama al endpoint correcto', () => {
-    service.marcarProgreso(99, true).subscribe();
+  it('dia con bloqueId lo manda como query param', () => {
+    service.dia('2026-07-15', 7).subscribe();
     const req = http.expectOne(
-      `${environment.apiUrl}/planificacion-fisica/progreso/99`,
+      `${environment.apiUrl}/planificacion-fisica/dia/2026-07-15?bloqueId=7`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      fecha: '2026-07-15',
+      tipoPlan: 'PREMIUM',
+      soloLectura: false,
+      esHoy: false,
+      disciplinas: [],
+    });
+  });
+
+  it('marcarProgreso manda bloqueId como query y conserva el DTO del body', () => {
+    service.marcarProgreso(99, true, 7).subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/progreso/99?bloqueId=7`,
     );
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ realizado: true });

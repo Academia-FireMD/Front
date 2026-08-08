@@ -70,6 +70,7 @@ describe('AppConfigService', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     httpMock.verify();
   });
 
@@ -86,6 +87,7 @@ describe('AppConfigService', () => {
   });
 
   it('load() falla → fallback defaults + isLoaded=true', async () => {
+    jest.useFakeTimers();
     const promise = service.load();
     httpMock
       .expectOne(CONFIG_URL)
@@ -94,8 +96,9 @@ describe('AppConfigService', () => {
       .expectOne(MODULOS_URL)
       .error(new ProgressEvent('error'), { status: 500, statusText: 'err' });
 
-    // dejar pasar los await timer(1000) — usamos waitFor del backend de tests
-    await new Promise((r) => setTimeout(r, 1100));
+    await Promise.resolve();
+    jest.advanceTimersByTime(1000);
+    await Promise.resolve();
 
     httpMock
       .expectOne(CONFIG_URL)
@@ -112,21 +115,26 @@ describe('AppConfigService', () => {
     expect(service.estadoModulos()[ModuloApp.PLANIFICACION]).toBe(true);
     expect(service.estadoModulos()[ModuloApp.DOCUMENTACION]).toBe(true);
     expect(service.modulosFailedToLoad()).toBe(false);
-  }, 10_000);
+    jest.useRealTimers();
+  });
 
   it('load() retry path (T2): primer GET 500, retry succeed popula signal', async () => {
+    jest.useFakeTimers();
     const promise = service.load();
     httpMock
       .expectOne(CONFIG_URL)
       .error(new ProgressEvent('error'), { status: 500, statusText: 'err' });
     httpMock.expectOne(MODULOS_URL).flush(sampleModulos);
 
-    await new Promise((r) => setTimeout(r, 1100));
+    await Promise.resolve();
+    jest.advanceTimersByTime(1000);
+    await Promise.resolve();
     httpMock.expectOne(CONFIG_URL).flush(sampleConfig);
 
     await promise;
     expect(service.appConfig().appName).toBe('AcmeAcademy');
-  }, 10_000);
+    jest.useRealTimers();
+  });
 
   it('updateConfig 409 dispara reload y devuelve STALE_CONFIG', async () => {
     // initial load

@@ -6,6 +6,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
 import { Subject, of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
 import { Oposicion } from '../../shared/models/subscription.model';
@@ -14,7 +15,10 @@ import {
   MiPlan,
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
-import { PlanificacionFisicaDiaComponent } from './planificacion-fisica-dia.component';
+import {
+  formatearIntensidad,
+  PlanificacionFisicaDiaComponent,
+} from './planificacion-fisica-dia.component';
 
 registerLocaleData(localeEs);
 
@@ -27,6 +31,12 @@ describe('PlanificacionFisicaDiaComponent', () => {
     fecha: '2026-07-17',
     comentarioSemana: 'Semana de carga',
     comentarioGeneral: 'Bloque general',
+    intensidad: 75,
+    numeroSemana: 28,
+    identificadorBloque: 'BLOQUE-AVANZADO-A',
+    tipoPlan: 'ADVANCED',
+    soloLectura: false,
+    esHoy: true,
     disciplinas: [
       {
         asignacionId: 501,
@@ -79,10 +89,13 @@ describe('PlanificacionFisicaDiaComponent', () => {
     ],
   };
 
-  function setup(fecha = '2026-07-17'): void {
+  function setup(fecha = '2026-07-17', bloqueId?: string): void {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: {
-        snapshot: { paramMap: { get: () => fecha } },
+        snapshot: {
+          paramMap: { get: () => fecha },
+          queryParamMap: { get: () => bloqueId ?? null },
+        },
       },
     });
     fixture = TestBed.createComponent(PlanificacionFisicaDiaComponent);
@@ -126,18 +139,254 @@ describe('PlanificacionFisicaDiaComponent', () => {
     expect(titulo.textContent?.trim()).toBe('Viernes, 17 de julio');
   });
 
+  it.each([
+    [0, 'Intensidad baja (0%)'],
+    [39, 'Intensidad baja (39%)'],
+    [40, 'Intensidad media (40%)'],
+    [69, 'Intensidad media (69%)'],
+    [70, 'Intensidad alta (70%)'],
+    [100, 'Intensidad alta (100%)'],
+    [-1, 'Intensidad baja (0%)'],
+    [101, 'Intensidad alta (100%)'],
+    [Number.NaN, 'Intensidad baja (0%)'],
+  ])('formatea intensidad estable en el límite %i', (valor, esperado) => {
+    expect(formatearIntensidad(valor)).toBe(esperado);
+  });
+
+  it('descanso no muestra botón ni cuenta como tarea completables', async () => {
+    serviceMock.dia!.mockReturnValue(
+      of({
+        ...diaFixture,
+        disciplinas: [
+          {
+            ...diaFixture.disciplinas[0],
+            asignacionId: 503,
+            nombre: 'Descanso',
+            grupo: 'DESCANSO',
+            realizado: false,
+          },
+        ],
+      }),
+    );
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component['progreso']()).toEqual({ hechas: 0, total: 0 });
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="pf-dia-progreso"]')),
+    ).toBeFalsy();
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="pf-dia-descanso"]')),
+    ).toBeTruthy();
+    expect(
+      fixture.debugElement.query(
+        By.css('[data-testid="pf-dia-boton-marcar-503"]'),
+      ),
+    ).toBeFalsy();
+  });
+
+  it('un día vacío no se presenta como día de descanso', async () => {
+    serviceMock.dia!.mockReturnValue(of({ ...diaFixture, disciplinas: [] }));
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component['esDiaDeDescanso']()).toBe(false);
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="pf-dia-descanso"]')),
+    ).toBeFalsy();
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="pf-dia-progreso"]')),
+    ).toBeFalsy();
+    expect(
+      fixture.debugElement.query(
+        By.css('[data-testid="pf-dia-sin-disciplinas"]'),
+      ),
+    ).toBeTruthy();
+  });
+
+  it('carga día y plan para el bloque indicado en query', async () => {
+    setup('2026-07-17', '3');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(serviceMock.dia).toHaveBeenCalledWith('2026-07-17', 3);
+    expect(serviceMock.miPlan).toHaveBeenCalledWith(3);
+  });
+
   it('carga el día y pinta cada disciplina con su contenido', async () => {
     setup();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(serviceMock.dia).toHaveBeenCalledWith('2026-07-17');
+    expect(serviceMock.dia).toHaveBeenCalledWith('2026-07-17', undefined);
+    expect(serviceMock.miPlan).toHaveBeenCalledWith(undefined);
     expect(component['detalle']()).toEqual(diaFixture);
 
     const html = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(html).toContain('3x10m');
     expect(html).toContain('Sin detalle aún.');
+  });
+
+  it('renderiza el banner de comentarios de la semana y general', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const banner = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-comentarios-banner"]'),
+    );
+    expect(banner).toBeTruthy();
+
+    const html = banner.nativeElement.textContent;
+    expect(html).toContain('Comentario de la semana:');
+    expect(html).toContain('Semana de carga');
+    expect(html).toContain('Comentario general:');
+    expect(html).not.toContain('Comentario del bloque: Bloque general');
+    expect(html).toContain('Bloque general');
+  });
+
+  it('muestra el plan comercial canónico, nunca el identificador del bloque', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const badge = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-badge-plan"]'),
+    );
+    expect(badge).toBeTruthy();
+    expect(badge.nativeElement.textContent).toContain('Plan Avanzado');
+    expect(badge.nativeElement.textContent).not.toContain('BLOQUE-AVANZADO-A');
+  });
+
+  it('separa la cabecera abreviada del detalle temporal dentro de la tarjeta', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const resumen = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-resumen"]'),
+    ).nativeElement as HTMLElement;
+    const detalle = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-titulo"]'),
+    ).nativeElement as HTMLElement;
+    expect(resumen.textContent?.trim()).toBe('Viernes 17 jul · Semana 28');
+    expect(detalle.textContent?.trim()).toBe('Viernes, 17 de julio');
+  });
+
+  it('muestra el subtítulo con semana e intensidad', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const subtitulo = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-subtitulo"]'),
+    );
+    expect(subtitulo.nativeElement.textContent).toContain('Semana 28');
+    expect(subtitulo.nativeElement.textContent).toContain(
+      'Intensidad alta (75%)',
+    );
+  });
+
+  it('distingue visualmente disciplinas hechas y pendientes', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Cuerda (501) está pendiente: botón "Marcar como hecho".
+    const botonPendiente = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-boton-marcar-501"]'),
+    );
+    expect(botonPendiente).toBeTruthy();
+    expect(botonPendiente.nativeElement.textContent).toContain(
+      'Marcar como hecho',
+    );
+    expect(botonPendiente.componentInstance.severity).toBe('warning');
+    expect(
+      botonPendiente
+        .query(By.css('button'))
+        .nativeElement.getAttribute('aria-label'),
+    ).toBe('Marcar como hecho');
+
+    // Carrera (502) está hecha: botón "Hecho".
+    const botonHecho = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-boton-hecho-502"]'),
+    );
+    expect(botonHecho).toBeTruthy();
+    expect(botonHecho.nativeElement.textContent).toContain('Hecho');
+    expect(botonHecho.componentInstance.severity).toBe('success');
+    expect(
+      botonHecho
+        .query(By.css('button'))
+        .nativeElement.getAttribute('aria-label'),
+    ).toBe('Marcar como pendiente');
+  });
+
+  it('tiñe cada tarjeta con el color de su disciplina', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const tarjeta = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-disciplina-501"]'),
+    );
+
+    expect(tarjeta).toBeTruthy();
+    expect(
+      tarjeta.nativeElement.style.getPropertyValue('--pf-dia-disciplina-color'),
+    ).toBe('#9fe2d0');
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '.p-card.pf-dia__disciplina',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('renderiza el comentario del bloque en la clase de comentario', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const comentario = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-comentario-bloque-502"]'),
+    );
+    expect(comentario).toBeTruthy();
+    expect(comentario.nativeElement.textContent).toContain('suave');
+    expect(comentario.nativeElement.textContent).toContain(
+      'Comentario del bloque:',
+    );
+    expect(comentario.classes['pf-dia__disciplina-comentario']).toBe(true);
+    expect(comentario.nativeElement.tagName).toBe('P');
+  });
+
+  it('click en "Marcar como hecho" llama al servicio y actualiza el estado local', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const boton = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-boton-marcar-501"]'),
+    );
+    boton.nativeElement.click();
+    await fixture.whenStable();
+
+    expect(serviceMock.marcarProgreso).toHaveBeenCalledWith(501, true, 1);
+    expect(
+      component['detalle']()?.disciplinas.find((d) => d.asignacionId === 501)
+        ?.realizado,
+    ).toBe(true);
   });
 
   it('marcar progreso llama al servicio y actualiza el estado local', async () => {
@@ -147,14 +396,14 @@ describe('PlanificacionFisicaDiaComponent', () => {
 
     await component['toggle'](diaFixture.disciplinas[0]);
 
-    expect(serviceMock.marcarProgreso).toHaveBeenCalledWith(501, true);
+    expect(serviceMock.marcarProgreso).toHaveBeenCalledWith(501, true, 1);
     expect(
       component['detalle']()?.disciplinas.find((d) => d.asignacionId === 501)
         ?.realizado,
     ).toBe(true);
   });
 
-  it('deshabilita el checkbox mientras el PUT de marcarProgreso está en vuelo (evita doble-click → doble PUT)', async () => {
+  it('deshabilita el botón "Marcar como hecho" mientras el PUT de marcarProgreso está en vuelo (evita doble-click → doble PUT)', async () => {
     const marcarProgreso$ = new Subject<{
       realizado: boolean;
       realizadoEn: string;
@@ -167,16 +416,19 @@ describe('PlanificacionFisicaDiaComponent', () => {
     fixture.detectChanges();
 
     const primerClick = component['toggle'](diaFixture.disciplinas[0]);
-    // Aún no resuelve la petición: el checkbox debe quedar deshabilitado.
+    // Aún no resuelve la petición: el botón debe quedar deshabilitado.
     await Promise.resolve();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(component['estaGuardando'](501)).toBe(true);
 
-    const checkbox = fixture.debugElement.query(
-      By.css('[data-testid="pf-dia-check-501"]'),
+    const boton = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-boton-marcar-501"]'),
     );
-    expect(checkbox.componentInstance.disabled).toBe(true);
+    const botonNative = boton.query(By.css('button'))
+      .nativeElement as HTMLButtonElement;
+    expect(botonNative.disabled).toBe(true);
 
     // Un segundo click mientras la primera petición sigue en vuelo NO debe
     // disparar un segundo PUT.
@@ -189,19 +441,19 @@ describe('PlanificacionFisicaDiaComponent', () => {
     });
     marcarProgreso$.complete();
     await primerClick;
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(component['estaGuardando'](501)).toBe(false);
-    expect(checkbox.componentInstance.disabled).toBe(false);
+    // Tras completarse, la disciplina pasa a hecho y el botón cambia.
+    const botonHecho = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-boton-hecho-501"]'),
+    );
+    expect(botonHecho).toBeTruthy();
   });
 
-  it('deduce soloLectura cruzando con mi-plan y NO permite marcar en la semana anterior', async () => {
-    serviceMock.miPlan!.mockReturnValue(
-      of({
-        ...miPlanFixture,
-        semanas: [{ ...miPlanFixture.semanas[0], soloLectura: true }],
-      }),
-    );
+  it('usa soloLectura de dia y NO permite marcar en la semana anterior', async () => {
+    serviceMock.dia!.mockReturnValue(of({ ...diaFixture, soloLectura: true }));
     setup();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -217,6 +469,41 @@ describe('PlanificacionFisicaDiaComponent', () => {
       By.css('[data-testid="pf-dia-solo-lectura"]'),
     );
     expect(aviso).toBeTruthy();
+  });
+
+  it('soloLectura de dia bloquea el PUT aunque miPlan best-effort falle', async () => {
+    serviceMock.dia!.mockReturnValue(of({ ...diaFixture, soloLectura: true }));
+    serviceMock.miPlan!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component['soloLectura']()).toBe(true);
+    const boton = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-boton-marcar-501"] button'),
+    ).nativeElement as HTMLButtonElement;
+    expect(boton.disabled).toBe(true);
+    await component['toggle'](diaFixture.disciplinas[0]);
+    expect(serviceMock.marcarProgreso).not.toHaveBeenCalled();
+  });
+
+  it('no llama «Hoy» al progreso de una fecha pasada o futura', async () => {
+    serviceMock.dia!.mockReturnValue(of({ ...diaFixture, esHoy: false }));
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(
+      fixture.debugElement
+        .query(
+          By.css('[data-testid="pf-dia-progreso"] .pf-dia__progreso-label'),
+        )
+        .nativeElement.textContent.trim(),
+    ).toBe('Progreso del día');
   });
 
   it('muestra la píldora de upsell cuando `dia()` responde 403 TIER_TOO_LOW', async () => {
@@ -252,6 +539,95 @@ describe('PlanificacionFisicaDiaComponent', () => {
     component['volver']();
 
     const router = TestBed.inject(Router);
-    expect(router.navigate).toHaveBeenCalledWith(['/app/planificacion-fisica']);
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/app/planificacion-fisica'],
+      {
+        queryParams: { bloqueId: 1 },
+      },
+    );
+  });
+
+  it.each(['abc', '0', '-1', '1.5', '9007199254740992'])(
+    'ignora bloqueId inválido %s',
+    async (bloqueId) => {
+      setup('2026-07-17', bloqueId);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(serviceMock.dia).toHaveBeenCalledWith('2026-07-17', undefined);
+      expect(serviceMock.miPlan).toHaveBeenCalledWith(undefined);
+    },
+  );
+
+  it('permite desmarcar una disciplina hecha y conserva el label visible accesible', async () => {
+    serviceMock.marcarProgreso!.mockReturnValue(
+      of({ realizado: false, realizadoEn: '2026-07-17T10:00:00Z' }),
+    );
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    await component['toggle'](diaFixture.disciplinas[1]);
+    expect(serviceMock.marcarProgreso).toHaveBeenCalledWith(502, false, 1);
+    expect(
+      component['detalle']()?.disciplinas.find((d) => d.asignacionId === 502)
+        ?.realizado,
+    ).toBe(false);
+    fixture.detectChanges();
+
+    const boton = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-boton-marcar-502"]'),
+    );
+    expect(
+      boton.query(By.css('button')).nativeElement.getAttribute('aria-label'),
+    ).toBe('Marcar como hecho');
+  });
+
+  it('si el PUT falla conserva estado, muestra toast y libera el guard', async () => {
+    serviceMock.marcarProgreso!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component['toggle'](diaFixture.disciplinas[0]);
+
+    expect(component['detalle']()?.disciplinas[0].realizado).toBe(false);
+    expect(component['estaGuardando'](501)).toBe(false);
+    expect(TestBed.inject(ToastrService).error).toHaveBeenCalled();
+  });
+
+  it('muestra error de carga y reintenta con fecha y bloque originales', async () => {
+    serviceMock.dia!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+    setup('2026-07-17', '3');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="pf-dia-error"]')),
+    ).toBeTruthy();
+    serviceMock.dia!.mockReturnValue(of(diaFixture));
+    component['reintentar']();
+    await fixture.whenStable();
+
+    expect(serviceMock.dia).toHaveBeenLastCalledWith('2026-07-17', 3);
+  });
+
+  it('un fallo de miPlan no bloquea el detalle del día', async () => {
+    serviceMock.miPlan!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+    setup('2026-07-17', '3');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component['detalle']()).toEqual(diaFixture);
+    expect(component['errorCarga']()).toBe(false);
   });
 });

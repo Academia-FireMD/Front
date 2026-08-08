@@ -1,23 +1,4 @@
 <div class="pf-dia" data-testid="pf-dia-detalle">
-  <!-- Cabecera tintada con el naranja del calendario: da continuidad al bajar
-       de nivel sin repintar las tarjetas de disciplina, que llevan el color de
-       cada disciplina y son las que deben mandar. El título vive dentro de la
-       banda para que se lea como una sola pieza. -->
-  <div class="pf-dia__cabecera">
-    <p-button
-      icon="pi pi-arrow-left"
-      [text]="true"
-      label="Volver al calendario"
-      data-testid="pf-dia-volver"
-      (click)="volver()"
-    ></p-button>
-    @if (detalle()) {
-      <!-- Ya viene capitalizado solo en la primera palabra desde el .ts: el
-           `text-transform: capitalize` que había aquí ponía "17 De Julio". -->
-      <h2 data-testid="pf-dia-titulo">{{ tituloFecha() }}</h2>
-    }
-  </div>
-
   @if (loading()) {
     <div class="pf-dia__loading" data-testid="pf-dia-loading">
       <i class="pi pi-spin pi-spinner"></i>
@@ -34,8 +15,27 @@
         (click)="mejorarSuscripcion()"
       ></p-button>
     </div>
+  } @else if (errorCarga()) {
+    <div class="pf-dia__upsell pf-dia__error" data-testid="pf-dia-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>No hemos podido cargar el día. Inténtalo de nuevo.</p>
+      <p-button
+        label="Reintentar"
+        size="small"
+        data-testid="pf-dia-reintentar"
+        (click)="reintentar()"
+      ></p-button>
+    </div>
   } @else if (detalle()) {
     @let dia = detalle()!;
+
+    <p-button
+      icon="pi pi-arrow-left"
+      [text]="true"
+      label="Volver al calendario"
+      data-testid="pf-dia-volver"
+      (click)="volver()"
+    ></p-button>
 
     @if (soloLectura()) {
       <p class="pf-dia__solo-lectura-aviso" data-testid="pf-dia-solo-lectura">
@@ -44,24 +44,72 @@
       </p>
     }
 
-    <div class="pf-dia__progreso" data-testid="pf-dia-progreso">
-      <p-progressBar
-        [value]="progresoPorcentaje()"
-        [showValue]="false"
-      ></p-progressBar>
-      <span>{{ progreso().hechas }}/{{ progreso().total }} completadas</span>
-    </div>
+    <!-- Cabecera del módulo: título, resumen breve y plan comercial. -->
+    <header class="pf-dia__header">
+      <div class="pf-dia__header-principal">
+        <div>
+          <h1 data-testid="pf-dia-titulo-modulo">Planificación Física</h1>
+          <p class="pf-dia__header-resumen" data-testid="pf-dia-resumen">
+            {{ subtituloCabecera() }}
+          </p>
+        </div>
+        @if (badgePlan()) {
+          <span class="pf-dia__badge-plan" data-testid="pf-dia-badge-plan">
+            <i class="pi pi-check"></i>
+            {{ badgePlan() }}
+          </span>
+        }
+      </div>
+    </header>
 
-    @if (dia.comentarioSemana) {
-      <p class="pf-dia__comentario" data-testid="pf-dia-comentario-semana">
-        <strong>Comentario de la semana:</strong> {{ dia.comentarioSemana }}
-      </p>
-    }
-    @if (dia.comentarioGeneral) {
-      <p class="pf-dia__comentario" data-testid="pf-dia-comentario-general">
-        <strong>Comentario general:</strong> {{ dia.comentarioGeneral }}
-      </p>
-    }
+    <!-- Tarjeta del día: detalle temporal, comentarios y progreso diario. -->
+    <p-card styleClass="pf-dia__tarjeta-dia">
+      <div class="pf-dia__header-dia">
+        <h2 data-testid="pf-dia-titulo">{{ tituloFecha() }}</h2>
+        <span data-testid="pf-dia-subtitulo">{{ subtituloDia() }}</span>
+      </div>
+
+      <div
+        class="pf-dia__comentarios-banner"
+        data-testid="pf-dia-comentarios-banner"
+      >
+        @if (dia.comentarioSemana) {
+          <p data-testid="pf-dia-comentario-semana">
+            <strong>Comentario de la semana:</strong> {{ dia.comentarioSemana }}
+          </p>
+        }
+        @if (dia.comentarioGeneral) {
+          <p data-testid="pf-dia-comentario-general">
+            <strong>Comentario general:</strong> {{ dia.comentarioGeneral }}
+          </p>
+        }
+        @if (!dia.comentarioSemana && !dia.comentarioGeneral) {
+          <p
+            class="pf-dia__comentarios-vacio"
+            data-testid="pf-dia-sin-comentarios"
+          >
+            No hay comentarios para esta semana.
+          </p>
+        }
+      </div>
+
+      @if (esDiaDeDescanso()) {
+        <p class="pf-dia__descanso" data-testid="pf-dia-descanso">
+          Día de descanso · no hay tareas que completar.
+        </p>
+      } @else if (progreso().total > 0) {
+        <div class="pf-dia__progreso-hoy" data-testid="pf-dia-progreso">
+          <span class="pf-dia__progreso-label">{{ etiquetaProgreso() }}</span>
+          <p-progressBar
+            [value]="progresoPorcentaje()"
+            [showValue]="false"
+          ></p-progressBar>
+          <span class="pf-dia__progreso-texto">
+            {{ progreso().hechas }}/{{ progreso().total }}
+          </span>
+        </div>
+      }
+    </p-card>
 
     @if (dia.disciplinas.length === 0) {
       <p data-testid="pf-dia-sin-disciplinas">
@@ -72,36 +120,74 @@
         @for (d of dia.disciplinas; track d.asignacionId) {
           <p-card
             styleClass="pf-dia__disciplina"
-            [style]="{ borderColor: d.color }"
+            [style.--pf-dia-disciplina-color]="d.color"
             [attr.data-testid]="'pf-dia-disciplina-' + d.asignacionId"
           >
-            <div class="pf-dia__disciplina-header">
-              <span
-                class="pf-dia__disciplina-color"
+            <ng-template pTemplate="header">
+              <div
+                class="pf-dia__disciplina-header"
                 [style.backgroundColor]="d.color"
-              ></span>
-              <span class="pf-dia__disciplina-nombre">{{ d.nombre }}</span>
+                [attr.data-testid]="
+                  'pf-dia-disciplina-header-' + d.asignacionId
+                "
+              >
+                <span
+                  class="pf-dia__disciplina-color"
+                  [style.backgroundColor]="d.color"
+                ></span>
+                <span class="pf-dia__disciplina-nombre">{{ d.nombre }}</span>
 
-              <div class="checkbox-touch">
-                <p-checkbox
-                  [inputId]="'pf-check-' + d.asignacionId"
-                  [binary]="true"
-                  [ngModel]="d.realizado"
-                  [ngModelOptions]="{ standalone: true }"
-                  [disabled]="soloLectura() || estaGuardando(d.asignacionId)"
-                  [attr.data-testid]="'pf-dia-check-' + d.asignacionId"
-                  (onChange)="toggle(d)"
-                ></p-checkbox>
-                <label [for]="'pf-check-' + d.asignacionId">Hecho</label>
+                @if (!esDescanso(d)) {
+                  @if (d.realizado) {
+                    <p-button
+                      icon="pi pi-check"
+                      label="Hecho"
+                      severity="success"
+                      size="small"
+                      [loading]="estaGuardando(d.asignacionId)"
+                      [disabled]="
+                        soloLectura() || estaGuardando(d.asignacionId)
+                      "
+                      [ariaLabel]="'Marcar como pendiente'"
+                      [attr.data-testid]="
+                        'pf-dia-boton-hecho-' + d.asignacionId
+                      "
+                      (click)="toggle(d)"
+                    ></p-button>
+                  } @else {
+                    <p-button
+                      label="Marcar como hecho"
+                      severity="warning"
+                      [outlined]="true"
+                      size="small"
+                      [loading]="estaGuardando(d.asignacionId)"
+                      [disabled]="
+                        soloLectura() || estaGuardando(d.asignacionId)
+                      "
+                      [ariaLabel]="'Marcar como hecho'"
+                      [attr.data-testid]="
+                        'pf-dia-boton-marcar-' + d.asignacionId
+                      "
+                      (click)="toggle(d)"
+                    ></p-button>
+                  }
+                }
               </div>
-            </div>
+            </ng-template>
 
             <p class="pf-dia__disciplina-contenido">
               {{ d.contenido || "Sin detalle aún." }}
             </p>
 
             @if (d.comentario) {
-              <p class="pf-dia__disciplina-comentario">{{ d.comentario }}</p>
+              <p
+                class="pf-dia__disciplina-comentario"
+                [attr.data-testid]="
+                  'pf-dia-comentario-bloque-' + d.asignacionId
+                "
+              >
+                <strong>Comentario del bloque:</strong> {{ d.comentario }}
+              </p>
             }
           </p-card>
         }

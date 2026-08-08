@@ -78,6 +78,11 @@ export type GrupoDisciplina =
   | 'DESCANSO'
   | 'TEST';
 
+/** Regla única de progreso: DESCANSO se muestra, pero no se completa. */
+export function esDisciplinaCompletable(grupo: GrupoDisciplina): boolean {
+  return grupo !== 'DESCANSO';
+}
+
 /** Colores fijos por grupo de disciplina, replicados del backend. */
 export const GRUPO_DISCIPLINA_COLORES: Record<GrupoDisciplina, string> = {
   CUERDA: '#9fe2d0',
@@ -209,6 +214,18 @@ export interface DiaDetalle {
   fecha: string;
   comentarioSemana: string | null;
   comentarioGeneral: string | null;
+  /** Intensidad de la semana (0-100). */
+  intensidad: number;
+  /** Número de semana dentro del año (p. ej. 28). */
+  numeroSemana: number;
+  /** Identificador del bloque, conservado por compatibilidad de contrato. */
+  identificadorBloque: string;
+  /** Tipo comercial canónico de la suscripción vigente más alta. */
+  tipoPlan: 'ADVANCED' | 'PREMIUM';
+  /** Fuente de verdad del backend para bloquear la semana anterior. */
+  soloLectura: boolean;
+  /** Indica si este detalle corresponde al día actual. */
+  esHoy: boolean;
   disciplinas: DisciplinaDia[];
 }
 
@@ -413,17 +430,23 @@ export class PlanificacionFisicaService {
   }
 
   /** Detalle de un día concreto (`fecha` ISO, ej. "2026-07-15"). */
-  dia(fecha: string): Observable<DiaDetalle> {
-    return this.http.get<DiaDetalle>(`${this.base}/dia/${fecha}`);
+  dia(fecha: string, bloqueId?: number): Observable<DiaDetalle> {
+    const params =
+      bloqueId != null ? new HttpParams().set('bloqueId', bloqueId) : undefined;
+    return this.http.get<DiaDetalle>(`${this.base}/dia/${fecha}`, { params });
   }
 
   marcarProgreso(
     asignacionId: number,
     realizado: boolean,
+    bloqueId?: number,
   ): Observable<ProgresoActualizado> {
+    const params =
+      bloqueId != null ? new HttpParams().set('bloqueId', bloqueId) : undefined;
     return this.http.put<ProgresoActualizado>(
       `${this.base}/progreso/${asignacionId}`,
       { realizado },
+      { params },
     );
   }
 

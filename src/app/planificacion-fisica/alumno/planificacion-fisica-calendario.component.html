@@ -139,7 +139,7 @@
                    la barra diaria del temario. Solo si el día tiene
                    disciplinas — igual que el temario oculta la suya en días
                    sin eventos. -->
-              @if (dia.chips.length > 0) {
+              @if (progresoDia(dia).total > 0) {
                 @let prog = progresoDia(dia);
                 <div
                   class="pf-calendario__dia-progreso"
@@ -155,6 +155,12 @@
                   </div>
                   <small>{{ prog.hechas }} de {{ prog.total }}</small>
                 </div>
+              } @else if (dia.chips.length > 0) {
+                <small
+                  class="pf-calendario__dia-descanso"
+                  [attr.data-testid]="'pf-dia-descanso-' + dia.fecha"
+                  >Descanso</small
+                >
               }
             </button>
           }
