@@ -73,14 +73,14 @@
         class="pf-dia__comentarios-banner"
         data-testid="pf-dia-comentarios-banner"
       >
-        @if (dia.comentarioSemana) {
-          <p data-testid="pf-dia-comentario-semana">
-            <strong>Comentario de la semana:</strong> {{ dia.comentarioSemana }}
-          </p>
-        }
         @if (dia.comentarioGeneral) {
           <p data-testid="pf-dia-comentario-general">
             <strong>Comentario general:</strong> {{ dia.comentarioGeneral }}
+          </p>
+        }
+        @if (dia.comentarioSemana) {
+          <p data-testid="pf-dia-comentario-semana">
+            <strong>Comentario de la semana:</strong> {{ dia.comentarioSemana }}
           </p>
         }
         @if (!dia.comentarioSemana && !dia.comentarioGeneral) {

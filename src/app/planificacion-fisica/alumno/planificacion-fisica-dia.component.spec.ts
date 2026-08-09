@@ -227,10 +227,18 @@ describe('PlanificacionFisicaDiaComponent', () => {
     const comentarioSemana = fixture.debugElement.query(
       By.css('[data-testid="pf-dia-comentario-semana"]'),
     );
+    const comentarioGeneral = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-comentario-general"]'),
+    );
     expect(banner).toBeTruthy();
     expect(comentarioSemana.nativeElement.textContent).toContain(
       'Semana de carga',
     );
+    expect(
+      comentarioGeneral.nativeElement.compareDocumentPosition(
+        comentarioSemana.nativeElement,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     const html = banner.nativeElement.textContent;
     expect(html).toContain('Comentario de la semana:');
