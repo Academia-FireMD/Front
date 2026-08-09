@@ -269,9 +269,7 @@ test('bloque B se conserva de calendario a día, progreso y vuelta', async ({
   await expect(page.getByTestId('pf-dia-resumen')).toHaveText(
     'Viernes 17 jul · Semana 29',
   );
-  await expect(page.getByTestId('pf-dia-subtitulo')).toHaveText(
-    'Semana 29 · Intensidad alta (75%)',
-  );
+  await expect(page.getByTestId('pf-dia-subtitulo')).toHaveText('Semana 29');
   await expect(page.getByTestId('pf-dia-disciplina-1201')).toContainText(
     'B: 3 subidas controladas',
   );

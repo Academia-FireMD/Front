@@ -175,10 +175,6 @@
               </div>
             </ng-template>
 
-            <p class="pf-dia__disciplina-contenido">
-              {{ d.contenido || "Sin detalle aún." }}
-            </p>
-
             @if (d.comentario) {
               <p
                 class="pf-dia__disciplina-comentario"
@@ -189,6 +185,10 @@
                 <strong>Comentario del bloque:</strong> {{ d.comentario }}
               </p>
             }
+
+            <p class="pf-dia__disciplina-contenido">
+              {{ d.contenido || "Sin detalle aún." }}
+            </p>
           </p-card>
         }
       </div>

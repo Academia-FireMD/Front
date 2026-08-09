@@ -123,6 +123,30 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
     );
     expect(semana1).toBeTruthy();
     expect(semana2).toBeTruthy();
+    expect(
+      fixture.debugElement.query(
+        By.css('[data-testid="pf-semana-comentario-10"]'),
+      ).nativeElement.textContent,
+    ).toContain('Semana suave');
+  });
+
+  it('no expone intensidad ni un fondo derivado de ese valor', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const semanaSuave = fixture.debugElement.query(
+      By.css('[data-testid="pf-semana-10"]'),
+    ).nativeElement as HTMLElement;
+    const semanaIntensa = fixture.debugElement.query(
+      By.css('[data-testid="pf-semana-11"]'),
+    ).nativeElement as HTMLElement;
+
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Intensidad',
+    );
+    expect(semanaSuave.style.background).toBe('');
+    expect(semanaIntensa.style.background).toBe('');
   });
 
   it('marca visualmente el día de hoy (compara la fecha del día contra `hoy` del plan)', async () => {

@@ -8,6 +8,8 @@
 // `::ng-deep` porque `styleClass` cae en el div interno de p-card, fuera de la
 // encapsulación del componente.
 :host ::ng-deep .pf-calendario__semana {
+  background: var(--surface-card);
+
   .p-card-body,
   .p-card-content {
     padding: 0;
@@ -110,13 +112,11 @@
     gap: 0.5rem;
     font-weight: 700;
     font-size: 1.05rem;
-    // Marrón oscuro en vez del gris heredado: sobre el naranja de la tarjeta
-    // da >5:1 de contraste y mantiene el tono cálido del bloque.
-    color: pf.$pf-texto-calido;
+    color: var(--text-color);
   }
 
   &__semana-comentario {
-    color: pf.$pf-texto-calido;
+    color: var(--text-color-secondary);
     font-size: 0.9rem;
   }
 
@@ -180,7 +180,7 @@
   &__progreso-texto {
     font-size: 0.85rem;
     font-weight: 600;
-    color: pf.$pf-texto-calido;
+    color: var(--text-color-secondary);
     white-space: nowrap;
   }
 

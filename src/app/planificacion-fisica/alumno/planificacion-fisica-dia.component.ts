@@ -25,15 +25,6 @@ import {
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
 
-/** Etiqueta estable para los límites inclusivos de intensidad del plan. */
-export function formatearIntensidad(intensidad: number): string {
-  const valor = Number.isFinite(intensidad)
-    ? Math.min(100, Math.max(0, Math.round(intensidad)))
-    : 0;
-  const nivel = valor < 40 ? 'baja' : valor < 70 ? 'media' : 'alta';
-  return `Intensidad ${nivel} (${valor}%)`;
-}
-
 /**
  * Detalle de un día de entrenamiento (Task 12, Fase 1b): el alumno ve cada
  * disciplina asignada ese día (color, contenido, comentario) y marca las que
@@ -113,7 +104,7 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
   protected readonly subtituloDia = computed(() => {
     const detalle = this.detalle();
     if (!detalle) return '';
-    return `Semana ${detalle.numeroSemana} · ${formatearIntensidad(detalle.intensidad)}`;
+    return `Semana ${detalle.numeroSemana}`;
   });
 
   protected readonly subtituloCabecera = computed(() => {

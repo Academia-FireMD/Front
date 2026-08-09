@@ -38,8 +38,8 @@ const ETIQUETAS_DIA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
  * NO es un calendario tipo `angular-calendar` (esto no es un calendario de
  * eventos genérico): es una rejilla de semanas propia, calcando el patrón
  * visual de `planificacion-fisica-detalles.component` (color por grupo de
- * disciplina) más los añadidos de la vista alumno (intensidad de semana,
- * hoy, solo-lectura de la semana anterior, progreso).
+ * disciplina) más los añadidos de la vista alumno (hoy, solo-lectura de la
+ * semana anterior, progreso).
  */
 @Component({
   selector: 'app-planificacion-fisica-calendario',
@@ -234,24 +234,6 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
 
   protected etiquetaDia(diaSemana: number): string {
     return this.etiquetasDia[diaSemana - 1] ?? '';
-  }
-
-  /**
-   * Fondo naranja de la tarjeta de semana en función de la intensidad (0-100):
-   * a más intensidad, tono más oscuro — mismo lenguaje visual que el Excel
-   * del entrenador, pero en el naranja de "Entrenamiento" (#fdd6b3 ≈
-   * `hsl(28, 95%, 85%)`, el mismo que el sub-bloque Entrenamiento del
-   * calendario de estudio) en vez del gris azulado. El verde queda reservado
-   * a las horas de estudio "Específico SPEIS" (feedback Sergio).
-   *
-   * El rango de luminosidad (92% → 72%) es más corto que el del gris original
-   * (94% → 52%): por debajo de ~70% el naranja pierde legibilidad con el texto
-   * marrón oscuro que usa la tarjeta.
-   */
-  protected fondoSemana(intensidad: number): string {
-    const clamped = Math.min(100, Math.max(0, intensidad));
-    const lightness = 92 - (clamped / 100) * 20;
-    return `hsl(28, 92%, ${lightness}%)`;
   }
 
   protected progresoPorcentaje(hechas: number, total: number): number {

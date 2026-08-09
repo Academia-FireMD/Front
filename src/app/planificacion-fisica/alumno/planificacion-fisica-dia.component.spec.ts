@@ -15,10 +15,7 @@ import {
   MiPlan,
   PlanificacionFisicaService,
 } from '../services/planificacion-fisica.service';
-import {
-  formatearIntensidad,
-  PlanificacionFisicaDiaComponent,
-} from './planificacion-fisica-dia.component';
+import { PlanificacionFisicaDiaComponent } from './planificacion-fisica-dia.component';
 
 registerLocaleData(localeEs);
 
@@ -45,7 +42,7 @@ describe('PlanificacionFisicaDiaComponent', () => {
         grupo: 'CUERDA',
         color: '#9fe2d0',
         contenido: '3x10m',
-        comentario: null,
+        comentario: 'Controla el descanso entre series.',
         realizado: false,
       },
       {
@@ -139,20 +136,6 @@ describe('PlanificacionFisicaDiaComponent', () => {
     expect(titulo.textContent?.trim()).toBe('Viernes, 17 de julio');
   });
 
-  it.each([
-    [0, 'Intensidad baja (0%)'],
-    [39, 'Intensidad baja (39%)'],
-    [40, 'Intensidad media (40%)'],
-    [69, 'Intensidad media (69%)'],
-    [70, 'Intensidad alta (70%)'],
-    [100, 'Intensidad alta (100%)'],
-    [-1, 'Intensidad baja (0%)'],
-    [101, 'Intensidad alta (100%)'],
-    [Number.NaN, 'Intensidad baja (0%)'],
-  ])('formatea intensidad estable en el límite %i', (valor, esperado) => {
-    expect(formatearIntensidad(valor)).toBe(esperado);
-  });
-
   it('descanso no muestra botón ni cuenta como tarea completables', async () => {
     serviceMock.dia!.mockReturnValue(
       of({
@@ -241,7 +224,13 @@ describe('PlanificacionFisicaDiaComponent', () => {
     const banner = fixture.debugElement.query(
       By.css('[data-testid="pf-dia-comentarios-banner"]'),
     );
+    const comentarioSemana = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-comentario-semana"]'),
+    );
     expect(banner).toBeTruthy();
+    expect(comentarioSemana.nativeElement.textContent).toContain(
+      'Semana de carga',
+    );
 
     const html = banner.nativeElement.textContent;
     expect(html).toContain('Comentario de la semana:');
@@ -281,7 +270,7 @@ describe('PlanificacionFisicaDiaComponent', () => {
     expect(detalle.textContent?.trim()).toBe('Viernes, 17 de julio');
   });
 
-  it('muestra el subtítulo con semana e intensidad', async () => {
+  it('muestra el subtítulo solo con la semana, sin intensidad', async () => {
     setup();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -290,9 +279,9 @@ describe('PlanificacionFisicaDiaComponent', () => {
     const subtitulo = fixture.debugElement.query(
       By.css('[data-testid="pf-dia-subtitulo"]'),
     );
-    expect(subtitulo.nativeElement.textContent).toContain('Semana 28');
-    expect(subtitulo.nativeElement.textContent).toContain(
-      'Intensidad alta (75%)',
+    expect(subtitulo.nativeElement.textContent.trim()).toBe('Semana 28');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Intensidad',
     );
   });
 
@@ -368,6 +357,32 @@ describe('PlanificacionFisicaDiaComponent', () => {
     );
     expect(comentario.classes['pf-dia__disciplina-comentario']).toBe(true);
     expect(comentario.nativeElement.tagName).toBe('P');
+  });
+
+  it('renderiza el comentario de cada disciplina antes de su contenido', async () => {
+    setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const tarjeta = fixture.debugElement.query(
+      By.css('[data-testid="pf-dia-disciplina-501"]'),
+    ).nativeElement as HTMLElement;
+    const comentario = tarjeta.querySelector(
+      '[data-testid="pf-dia-comentario-bloque-501"]',
+    ) as HTMLElement;
+    const contenido = tarjeta.querySelector(
+      '.pf-dia__disciplina-contenido',
+    ) as HTMLElement;
+
+    expect(comentario.textContent).toContain(
+      'Controla el descanso entre series.',
+    );
+    expect(contenido.textContent).toContain('3x10m');
+    expect(
+      comentario.compareDocumentPosition(contenido) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it('click en "Marcar como hecho" llama al servicio y actualiza el estado local', async () => {
