@@ -78,6 +78,132 @@ describe('PlanificacionMensualEditComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('aplicar plantilla semanal', () => {
+    const lunesActual = new Date(2026, 7, 3, 9, 0);
+
+    beforeEach(() => {
+      component.viewDate = lunesActual;
+    });
+
+    it('reemplaza los eventos lunes y domingo de la semana actual y conserva los de semanas adyacentes', () => {
+      const lunesAnterior = {
+        title: 'Lunes anterior',
+        start: new Date(2026, 6, 27, 9, 0),
+      } as any;
+      const lunesActualEvento = {
+        title: 'Lunes actual',
+        start: new Date(2026, 7, 3, 9, 0),
+      } as any;
+      const domingoActual = {
+        title: 'Domingo actual',
+        start: new Date(2026, 7, 9, 9, 0),
+      } as any;
+      const lunesSiguiente = {
+        title: 'Lunes siguiente',
+        start: new Date(2026, 7, 10, 9, 0),
+      } as any;
+      component.events = [
+        lunesAnterior,
+        lunesActualEvento,
+        domingoActual,
+        lunesSiguiente,
+      ];
+      const plantillaLunes = {
+        title: 'Plantilla lunes',
+        start: new Date(2026, 6, 6, 10, 0),
+      } as any;
+      const plantillaDomingo = {
+        title: 'Plantilla domingo',
+        start: new Date(2026, 6, 12, 11, 0),
+      } as any;
+      const successSpy = jest.spyOn(TestBed.inject(ToastrService), 'success');
+
+      component.applyEventsToCurrentWeek([plantillaLunes, plantillaDomingo]);
+
+      expect(component.events).toHaveLength(4);
+      expect(component.events).toEqual(
+        expect.arrayContaining([lunesAnterior, lunesSiguiente]),
+      );
+      expect(component.events.map((event) => event.title)).not.toContain(
+        'Lunes actual',
+      );
+      expect(component.events.map((event) => event.title)).not.toContain(
+        'Domingo actual',
+      );
+      expect(component.events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            title: 'Plantilla lunes',
+            start: new Date(2026, 7, 3, 10, 0),
+          }),
+          expect.objectContaining({
+            title: 'Plantilla domingo',
+            start: new Date(2026, 7, 9, 11, 0),
+          }),
+        ]),
+      );
+      expect(component.eventosModificados).toBe(true);
+      expect(successSpy).toHaveBeenCalledWith(
+        'Eventos aplicados correctamente a la semana actual',
+      );
+    });
+
+    it('no modifica la plantilla y limpia los ids solo en la copia ajustada', () => {
+      const plantilla = {
+        title: 'Plantilla domingo',
+        start: new Date(2026, 6, 12, 11, 0),
+        meta: { subBloque: { id: 15, plantillaId: 8, nombre: 'Bloque' } },
+      } as any;
+
+      component.applyEventsToCurrentWeek([plantilla]);
+
+      const copia = component.events[0] as any;
+      expect(plantilla.meta.subBloque).toEqual({
+        id: 15,
+        plantillaId: 8,
+        nombre: 'Bloque',
+      });
+      expect(copia.meta.subBloque).toEqual({
+        id: undefined,
+        plantillaId: undefined,
+        nombre: 'Bloque',
+      });
+      expect(copia.meta.subBloque).not.toBe(plantilla.meta.subBloque);
+    });
+
+    it('reemplaza también el domingo al cruzar de año y conserva el lunes siguiente', () => {
+      component.viewDate = new Date(2025, 11, 29, 9, 0);
+      const domingoActual = {
+        title: 'Domingo actual',
+        start: new Date(2026, 0, 4, 9, 0),
+      } as any;
+      const lunesSiguiente = {
+        title: 'Lunes siguiente',
+        start: new Date(2026, 0, 5, 9, 0),
+      } as any;
+      component.events = [domingoActual, lunesSiguiente];
+      const plantillaDomingo = {
+        title: 'Plantilla domingo',
+        start: new Date(2025, 11, 28, 11, 0),
+      } as any;
+
+      component.applyEventsToCurrentWeek([plantillaDomingo]);
+
+      expect(component.events).toEqual(
+        expect.arrayContaining([
+          lunesSiguiente,
+          expect.objectContaining({
+            title: 'Plantilla domingo',
+            start: new Date(2026, 0, 4, 11, 0),
+          }),
+        ]),
+      );
+      expect(component.events.map((event) => event.title)).not.toContain(
+        'Domingo actual',
+      );
+    });
+  });
+
   describe('bridge temario↔física', () => {
     it('resumenFisica arranca vacío — sin indicación hasta que cargue', () => {
       expect(component.resumenFisica()).toEqual([]);
@@ -331,11 +457,14 @@ describe('PlanificacionMensualEditComponent', () => {
     it('confirmarConversionBloquesFisica pide confirmación y al aceptar llama al servicio y recarga', () => {
       const confirmationService = TestBed.inject(ConfirmationService);
       const confirmSpy = jest.spyOn(confirmationService, 'confirm');
-      const convertirMock = jest
-        .fn()
-        .mockReturnValue(
-          of({ actualizados: 3, ignorados: 1, sinCoincidencia: 0 }),
-        );
+      const convertirMock = jest.fn().mockReturnValue(
+        of({
+          actualizados: 3,
+          ignorados: 1,
+          sinCoincidencia: 0,
+          desmarcados: 0,
+        }),
+      );
       (component as any).planificacionesService = {
         convertirBloquesFisica$: convertirMock,
       };
@@ -355,7 +484,7 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(confirmSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining(
-            'Se marcarán como entrenamiento físico',
+            'se conservará uno y los demás se desvincularán',
           ),
           accept: expect.any(Function),
         }),
@@ -385,15 +514,17 @@ describe('PlanificacionMensualEditComponent', () => {
       );
     }));
 
-    it('confirmarConversionBloquesFisica muestra info cuando todos los bloques ya estaban vinculados', fakeAsync(() => {
+    it('confirmarConversionBloquesFisica mantiene compatibilidad con respuestas legacy sin desmarcados', fakeAsync(() => {
       jest.clearAllMocks();
       const confirmationService = TestBed.inject(ConfirmationService);
       const confirmSpy = jest.spyOn(confirmationService, 'confirm');
-      const convertirMock = jest
-        .fn()
-        .mockReturnValue(
-          of({ actualizados: 0, ignorados: 5, sinCoincidencia: 0 }),
-        );
+      const convertirMock = jest.fn().mockReturnValue(
+        of({
+          actualizados: 0,
+          ignorados: 5,
+          sinCoincidencia: 0,
+        }),
+      );
       (component as any).planificacionesService = {
         convertirBloquesFisica$: convertirMock,
       };
@@ -412,9 +543,75 @@ describe('PlanificacionMensualEditComponent', () => {
       accept();
 
       expect(infoSpy).toHaveBeenCalledWith(
-        expect.stringContaining('ya estaban vinculados'),
+        expect.stringContaining(
+          'ya tenía un entrenamiento físico enlazado en 5 días',
+        ),
       );
     }));
+
+    it('confirmarConversionBloquesFisica detalla los bloques no coincidentes en vez de mostrar solo info', () => {
+      jest.clearAllMocks();
+      const confirmationService = TestBed.inject(ConfirmationService);
+      const confirmSpy = jest.spyOn(confirmationService, 'confirm');
+      (component as any).planificacionesService = {
+        convertirBloquesFisica$: jest.fn().mockReturnValue(
+          of({
+            actualizados: 0,
+            ignorados: 2,
+            sinCoincidencia: 1,
+            desmarcados: 0,
+          }),
+        ),
+      };
+      jest.spyOn(component as any, 'load').mockImplementation(() => {});
+      const toastService = TestBed.inject(ToastrService);
+      const successSpy = jest.spyOn(toastService, 'success');
+      const infoSpy = jest.spyOn(toastService, 'info');
+      (component as any).activedRoute = {
+        snapshot: { paramMap: { get: () => '207' } },
+      };
+
+      component.confirmarConversionBloquesFisica();
+      (
+        confirmSpy.mock.calls[confirmSpy.mock.calls.length - 1][0]
+          .accept as () => void
+      )();
+
+      expect(successSpy).toHaveBeenCalledWith(
+        expect.stringContaining('1 bloques no empiezan por ENTRENAMIENTO'),
+      );
+      expect(infoSpy).not.toHaveBeenCalled();
+    });
+
+    it('confirmarConversionBloquesFisica informa de los duplicados normalizados aunque no haya altas nuevas', () => {
+      const confirmationService = TestBed.inject(ConfirmationService);
+      const confirmSpy = jest.spyOn(confirmationService, 'confirm');
+      (component as any).planificacionesService = {
+        convertirBloquesFisica$: jest.fn().mockReturnValue(
+          of({
+            actualizados: 0,
+            ignorados: 2,
+            sinCoincidencia: 0,
+            desmarcados: 3,
+          }),
+        ),
+      };
+      jest.spyOn(component as any, 'load').mockImplementation(() => {});
+      const successSpy = jest.spyOn(TestBed.inject(ToastrService), 'success');
+      (component as any).activedRoute = {
+        snapshot: { paramMap: { get: () => '207' } },
+      };
+
+      component.confirmarConversionBloquesFisica();
+      (
+        confirmSpy.mock.calls[confirmSpy.mock.calls.length - 1][0]
+          .accept as () => void
+      )();
+
+      expect(successSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Se normalizaron 3 duplicados'),
+      );
+    });
 
     it('onEventsChange actualiza los eventos y marca que hay cambios sin guardar', () => {
       component.eventosModificados = false;

@@ -144,13 +144,14 @@ export class PlanificacionesService extends ApiBaseService {
   }
 
   /**
-   * Fase 2 bridge temario↔física: marca como entrenamiento físico todos los
-   * sub-bloques de esta planificación cuyo nombre empiece por "ENTRENAMIENTO".
+   * Fase 2 bridge temario↔física: enlaza un sub-bloque ENTRENAMIENTO por día
+   * y normaliza los duplicados existentes.
    */
   public convertirBloquesFisica$(planificacionId: number): Observable<{
     actualizados: number;
     ignorados: number;
     sinCoincidencia: number;
+    desmarcados?: number;
   }> {
     return this.post(
       `/planificacion-mensual/${planificacionId}/convertir-bloques-fisica`,
@@ -159,6 +160,7 @@ export class PlanificacionesService extends ApiBaseService {
       actualizados: number;
       ignorados: number;
       sinCoincidencia: number;
+      desmarcados?: number;
     }>;
   }
 

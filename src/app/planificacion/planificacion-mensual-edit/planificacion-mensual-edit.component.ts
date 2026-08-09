@@ -9,6 +9,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CalendarEvent, CalendarView } from 'angular-calendar';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService, PrimeNGConfig } from 'primeng/api';
+import { cloneDeep } from 'lodash';
 import {
   catchError,
   combineLatest,
@@ -319,7 +320,7 @@ export class PlanificacionMensualEditComponent {
 
     this.confirmationService.confirm({
       message:
-        'Se marcarán como entrenamiento físico todos los sub-bloques de esta planificación cuyo nombre empiece por "ENTRENAMIENTO". ¿Continuar?',
+        'Se enlazará un bloque ENTRENAMIENTO como entrenamiento físico por día. Si un día ya tiene varios bloques físicos, se conservará uno y los demás se desvincularán. ¿Continuar?',
       header: 'Convertir bloques a física',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Convertir',
@@ -328,9 +329,15 @@ export class PlanificacionMensualEditComponent {
         const id = Number(this.activedRoute.snapshot.paramMap.get('id'));
         this.planificacionesService.convertirBloquesFisica$(id).subscribe({
           next: (res) => {
-            if (res.actualizados === 0 && res.ignorados > 0) {
+            const desmarcados = res.desmarcados ?? 0;
+            if (
+              res.actualizados === 0 &&
+              desmarcados === 0 &&
+              res.sinCoincidencia === 0 &&
+              res.ignorados > 0
+            ) {
               this.toast.info(
-                `Todos los bloques ENTRENAMIENTO ya estaban vinculados (${res.ignorados}).`,
+                `La planificación ya tenía un entrenamiento físico enlazado en ${res.ignorados} días.`,
               );
             } else {
               let mensaje = `Convertidos ${res.actualizados} bloques a física.`;
@@ -339,6 +346,9 @@ export class PlanificacionMensualEditComponent {
               }
               if (res.sinCoincidencia > 0) {
                 mensaje += ` ${res.sinCoincidencia} bloques no empiezan por ENTRENAMIENTO y no se tocaron.`;
+              }
+              if (desmarcados > 0) {
+                mensaje += ` Se normalizaron ${desmarcados} duplicados.`;
               }
               this.toast.success(mensaje);
             }
@@ -432,20 +442,19 @@ export class PlanificacionMensualEditComponent {
     eventsToApplyToCurrentWeek: CalendarEvent[],
   ): void {
     const startOfWeek = getStartOfWeek(this.viewDate); // Inicio de la semana actual
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Fin de la semana actual
+    const endOfWeekExclusive = new Date(startOfWeek);
+    endOfWeekExclusive.setDate(startOfWeek.getDate() + 7);
 
     // Filtrar eventos actuales que NO pertenecen a la semana actual
     const eventsOutsideCurrentWeek = this.events.filter(
-      (event) =>
-        event.start < startOfWeek || (event.end && event.end > endOfWeek),
+      (event) => event.start < startOfWeek || event.start >= endOfWeekExclusive,
     );
 
     // Ajustar los eventos seleccionados a la semana actual
     const adjustedEvents = eventsToApplyToCurrentWeek.map((event) => {
-      const dayOffset = event.start.getDay(); // Día de la semana del evento (0 = domingo, 1 = lunes, etc.)
+      const dayOffset = (event.start.getDay() + 6) % 7;
       const adjustedStart = new Date(startOfWeek);
-      adjustedStart.setDate(adjustedStart.getDate() + (dayOffset - 1)); // Ajustar al mismo día relativo en la semana actual
+      adjustedStart.setDate(adjustedStart.getDate() + dayOffset);
       adjustedStart.setHours(
         event.start.getHours(),
         event.start.getMinutes(),
@@ -460,17 +469,17 @@ export class PlanificacionMensualEditComponent {
           ) // Mantener duración
         : undefined;
 
+      const adjustedEvent = cloneDeep(event);
+      if (adjustedEvent.meta?.subBloque) {
+        (adjustedEvent.meta.subBloque as SubBloque).id = undefined;
+        (adjustedEvent.meta.subBloque as SubBloque).plantillaId = undefined;
+      }
+
       return {
-        ...event,
+        ...adjustedEvent,
         start: adjustedStart,
         end: adjustedEnd,
       };
-    });
-    eventsToApplyToCurrentWeek.forEach((event) => {
-      if (event?.meta?.subBloque as SubBloque) {
-        (event?.meta?.subBloque as SubBloque).id = undefined;
-        (event?.meta?.subBloque as SubBloque).plantillaId = undefined;
-      }
     });
     // Combinar eventos de otras semanas con los eventos ajustados para la semana actual
     this.events = [...eventsOutsideCurrentWeek, ...adjustedEvents];
