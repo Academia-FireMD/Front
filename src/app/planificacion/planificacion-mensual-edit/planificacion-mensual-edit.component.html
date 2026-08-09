@@ -260,6 +260,7 @@
           (eventsChange)="onEventsChange($event)"
           [viewDate]="viewDate"
           [resumenFisica]="resumenFisica()"
+          [originPlanificacionId]="lastLoadedPlanification()?.id"
           (saveChanges)="guardarCambios()"
         ></app-vista-semanal>
       } @else {

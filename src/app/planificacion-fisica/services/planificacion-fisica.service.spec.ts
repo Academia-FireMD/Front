@@ -88,6 +88,16 @@ describe('PlanificacionFisicaService', () => {
     req.flush({});
   });
 
+  it('despublicar llama al endpoint correcto con body vacío', () => {
+    service.despublicar(7).subscribe();
+    const req = http.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/bloques/7/despublicar`,
+    );
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({});
+    req.flush({});
+  });
+
   it('eliminar llama al endpoint correcto sin force por defecto', () => {
     service.eliminar(7).subscribe();
     const req = http.expectOne(
@@ -239,15 +249,16 @@ describe('PlanificacionFisicaService', () => {
   it('resumenDias llama al endpoint correcto con el rango de fechas', () => {
     let recibido: unknown = 'sin-emitir';
     service
-      .resumenDias('2026-07-01', '2026-07-31')
+      .resumenDias(42, '2026-07-01', '2026-07-31')
       .subscribe((res) => (recibido = res));
     const req = http.expectOne(
-      `${environment.apiUrl}/planificacion-fisica/resumen-dias?desde=2026-07-01&hasta=2026-07-31`,
+      `${environment.apiUrl}/planificacion-fisica/resumen-dias?planificacionId=42&desde=2026-07-01&hasta=2026-07-31`,
     );
     expect(req.request.method).toBe('GET');
     const dias = [
       {
         fecha: '2026-07-15',
+        bloqueId: 7,
         disciplinas: [
           { nombre: 'Cuerda 2', grupo: 'CUERDA', color: '#9fe2d0' },
         ],
@@ -260,10 +271,10 @@ describe('PlanificacionFisicaService', () => {
   it('resumenDias devuelve [] cuando el alumno no tiene bloque activo (BASIC/sin plan) — nunca 403', () => {
     let recibido: unknown = 'sin-emitir';
     service
-      .resumenDias('2026-07-01', '2026-07-31')
+      .resumenDias(42, '2026-07-01', '2026-07-31')
       .subscribe((res) => (recibido = res));
     const req = http.expectOne(
-      `${environment.apiUrl}/planificacion-fisica/resumen-dias?desde=2026-07-01&hasta=2026-07-31`,
+      `${environment.apiUrl}/planificacion-fisica/resumen-dias?planificacionId=42&desde=2026-07-01&hasta=2026-07-31`,
     );
     req.flush([]);
     expect(recibido).toEqual([]);

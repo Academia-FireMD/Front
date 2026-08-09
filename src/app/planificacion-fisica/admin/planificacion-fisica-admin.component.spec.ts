@@ -55,6 +55,7 @@ describe('PlanificacionFisicaAdminComponent', () => {
       importar: jest.fn(),
       listarBloques: jest.fn().mockReturnValue(of([bloqueFixture])),
       publicar: jest.fn(),
+      despublicar: jest.fn(),
       actualizarBloque: jest.fn(),
       eliminar: jest.fn(),
       descargarPlantillaUrl: jest
@@ -189,6 +190,74 @@ describe('PlanificacionFisicaAdminComponent', () => {
 
     expect(serviceMock.publicar).toHaveBeenCalledWith(bloqueFixture.id);
     expect(serviceMock.listarBloques).toHaveBeenCalledTimes(2);
+    confirmSpy.mockRestore();
+  });
+
+  it('muestra el detalle estructurado del 409 de solape del backend', async () => {
+    fixture.detectChanges();
+    serviceMock.publicar!.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: {
+              code: 'BLOQUE_SOLAPADO',
+              message: 'Solapamiento',
+              details: {
+                bloque: { id: 8, identificador: 'Semanas 31-37' },
+                intervalos: [
+                  {
+                    bloque: {
+                      inicio: '2026-08-10',
+                      fin: '2026-08-17',
+                      label: 'Semana 33',
+                    },
+                    conflictivo: {
+                      inicio: '2026-08-10',
+                      fin: '2026-08-17',
+                      label: 'Semana 33',
+                    },
+                  },
+                ],
+                planificaciones: [{ id: 10, identificador: 'PGCVI6-8H' }],
+              },
+            },
+          }),
+      ),
+    );
+    jest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation((opts) => {
+        opts.accept?.();
+        return TestBed.inject(ConfirmationService);
+      });
+
+    component.publicarBloque(bloqueFixture, new Event('click'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(TestBed.inject(ToastrService).error).toHaveBeenCalledWith(
+      'Se solapa con Semanas 31-37: Semana 33 (2026-08-10 a 2026-08-17). Planificaciones compartidas: PGCVI6-8H.',
+    );
+  });
+
+  it('despublicarBloque llama al servicio y bloquea un segundo submit mientras está en curso', async () => {
+    fixture.detectChanges();
+    const publicado = { ...bloqueFixture, estado: 'PUBLICADO' as const };
+    serviceMock.despublicar!.mockReturnValue(of({ ...bloqueFixture }));
+    const confirmSpy = jest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation((opts) => {
+        (opts.accept as (() => void) | undefined)?.();
+        (opts.accept as (() => void) | undefined)?.();
+        return TestBed.inject(ConfirmationService);
+      });
+
+    component.despublicarBloque(publicado, new Event('click'));
+    await Promise.resolve();
+
+    expect(serviceMock.despublicar).toHaveBeenCalledTimes(1);
+    expect(serviceMock.despublicar).toHaveBeenCalledWith(publicado.id);
     confirmSpy.mockRestore();
   });
 

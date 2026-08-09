@@ -24,18 +24,15 @@ import { firstValueFrom } from 'rxjs';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
 import { SharedModule } from '../../shared/shared.module';
 import { Oposicion } from '../../shared/models/subscription.model';
+import { extraerMensajeError } from '../../shared/utils/http-error.util';
 import {
   BloqueEntrenamiento,
   ErrorImport,
   EliminarBloqueConProgreso,
+  ErrorBloqueSolapado,
   PlanificacionFisicaService,
   ResumenImport,
 } from '../services/planificacion-fisica.service';
-
-/** Cuerpo de un error HTTP de este módulo que no es JSON estructurado. */
-interface HttpErrorGenerico {
-  message?: string;
-}
 
 @Component({
   selector: 'app-planificacion-fisica-admin',
@@ -89,6 +86,7 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
 
   protected bloques = signal<BloqueEntrenamiento[]>([]);
   protected bloquesLoading = signal(false);
+  protected accionBloqueEnCurso = signal<number | null>(null);
 
   ngOnInit(): void {
     this.cargarBloques();
@@ -147,7 +145,7 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
         this.errores.set(errores);
       } else {
         this.toast.error(
-          this.extraerMensajeError(httpErr) ??
+          this.mensajeError(httpErr) ??
             'No se ha podido previsualizar el Excel.',
         );
       }
@@ -188,14 +186,14 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
         this.toast.error('El Excel tiene errores; no se ha importado nada.');
       } else {
         this.toast.error(
-          this.extraerMensajeError(httpErr) ??
-            'No se ha podido importar el Excel.',
+          this.mensajeError(httpErr) ?? 'No se ha podido importar el Excel.',
         );
       }
     }
   };
 
   publicarBloque(bloque: BloqueEntrenamiento, event: Event): void {
+    if (this.accionBloqueEnCurso() !== null) return;
     this.confirmationService.confirm({
       key: 'pf-publicar',
       target: event.target as EventTarget,
@@ -206,15 +204,49 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
       rejectLabel: 'No',
       rejectButtonStyleClass: 'p-button-text',
       accept: async () => {
+        if (this.accionBloqueEnCurso() !== null) return;
+        this.accionBloqueEnCurso.set(bloque.id);
         try {
           await firstValueFrom(this.svc.publicar(bloque.id));
           this.toast.success(`Bloque "${bloque.identificador}" publicado.`);
           await this.cargarBloques();
         } catch (err) {
           this.toast.error(
-            this.extraerMensajeError(err as HttpErrorResponse) ??
+            this.mensajeError(err as HttpErrorResponse) ??
               'No se ha podido publicar el bloque.',
           );
+        } finally {
+          this.accionBloqueEnCurso.set(null);
+        }
+      },
+    });
+  }
+
+  despublicarBloque(bloque: BloqueEntrenamiento, event: Event): void {
+    if (this.accionBloqueEnCurso() !== null) return;
+    this.confirmationService.confirm({
+      key: 'pf-despublicar',
+      target: event.target as EventTarget,
+      message: `Vas a despublicar el bloque "${bloque.identificador}". Los alumnos dejarán de verlo. ¿Estás seguro?`,
+      header: 'Confirmación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, despublicar',
+      rejectLabel: 'Cancelar',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        if (this.accionBloqueEnCurso() !== null) return;
+        this.accionBloqueEnCurso.set(bloque.id);
+        try {
+          await firstValueFrom(this.svc.despublicar(bloque.id));
+          this.toast.success(`Bloque "${bloque.identificador}" despublicado.`);
+          await this.cargarBloques();
+        } catch (err) {
+          this.toast.error(
+            this.mensajeError(err as HttpErrorResponse) ??
+              'No se ha podido despublicar el bloque.',
+          );
+        } finally {
+          this.accionBloqueEnCurso.set(null);
         }
       },
     });
@@ -273,8 +305,7 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
         });
       } else {
         this.toast.error(
-          this.extraerMensajeError(httpErr) ??
-            'No se ha podido eliminar el bloque.',
+          this.mensajeError(httpErr) ?? 'No se ha podido eliminar el bloque.',
         );
       }
     }
@@ -307,16 +338,27 @@ export class PlanificacionFisicaAdminComponent implements OnInit {
       );
     } catch (err) {
       this.toast.error(
-        this.extraerMensajeError(err as HttpErrorResponse) ??
+        this.mensajeError(err as HttpErrorResponse) ??
           'No se ha podido guardar la relevancia.',
       );
     }
   }
 
-  private extraerMensajeError(
-    err: HttpErrorResponse | undefined,
-  ): string | null {
-    const body = err?.error as HttpErrorGenerico | undefined;
-    return body?.message ?? null;
+  private mensajeError(err: HttpErrorResponse | undefined): string | null {
+    const conflicto = err?.error as ErrorBloqueSolapado | undefined;
+    if (conflicto?.code === 'BLOQUE_SOLAPADO' && conflicto.details) {
+      const { bloque, intervalos, planificaciones } = conflicto.details;
+      const semanas = intervalos
+        .map(
+          (intervalo) =>
+            `${intervalo.bloque.label} (${intervalo.bloque.inicio} a ${intervalo.bloque.fin})`,
+        )
+        .join(', ');
+      const planes = planificaciones
+        .map((plan) => plan.identificador)
+        .join(', ');
+      return `Se solapa con ${bloque.identificador}${semanas ? `: ${semanas}` : ''}${planes ? `. Planificaciones compartidas: ${planes}.` : ''}`;
+    }
+    return extraerMensajeError(err);
   }
 }

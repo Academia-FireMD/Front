@@ -19,12 +19,18 @@
       <p-dropdown
         inputId="pf-switcher-bloques"
         [options]="misBloques()"
-        optionLabel="identificador"
         optionValue="id"
         [ngModel]="bloqueSeleccionadoId()"
         (onChange)="cambiarBloque($event.value)"
         data-testid="pf-switcher-bloques"
-      ></p-dropdown>
+      >
+        <ng-template pTemplate="selectedItem" let-bloque>
+          {{ bloque ? etiquetaBloque(bloque) : "" }}
+        </ng-template>
+        <ng-template pTemplate="item" let-bloque>
+          {{ etiquetaBloque(bloque) }}
+        </ng-template>
+      </p-dropdown>
     </div>
   }
 

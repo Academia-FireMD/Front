@@ -8,7 +8,7 @@ import { NO_ERRORS_SCHEMA, Pipe, PipeTransform, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { ToastrService } from 'ngx-toastr';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { PlanificacionFisicaService } from '../../planificacion-fisica/services/planificacion-fisica.service';
@@ -87,16 +87,23 @@ describe('PlanificacionMensualEditComponent', () => {
       const svc = TestBed.inject(PlanificacionFisicaService);
       const spy = jest
         .spyOn(svc, 'resumenDias')
-        .mockReturnValue(of([{ fecha: '2026-07-15', disciplinas: [] }]));
+        .mockReturnValue(
+          of([{ fecha: '2026-07-15', bloqueId: 33, disciplinas: [] }]),
+        );
       component.expectedRole = 'ALUMNO';
+      component.lastLoadedPlanification.set({ id: 17 } as any);
 
       const nuevaFecha = new Date(2026, 7, 1);
       component.onViewDateChange(nuevaFecha);
 
       expect(component.viewDate).toBe(nuevaFecha);
-      expect(spy).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(
+        17,
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      );
       expect(component.resumenFisica()).toEqual([
-        { fecha: '2026-07-15', disciplinas: [] },
+        { fecha: '2026-07-15', bloqueId: 33, disciplinas: [] },
       ]);
     });
 
@@ -144,6 +151,28 @@ describe('PlanificacionMensualEditComponent', () => {
 
       expect(component.resumenFisica()).toEqual([]);
     });
+
+    it('ignora una respuesta tardía de un plan anterior', () => {
+      const svc = TestBed.inject(PlanificacionFisicaService);
+      const anterior$ = new Subject<any[]>();
+      const actual$ = new Subject<any[]>();
+      jest
+        .spyOn(svc, 'resumenDias')
+        .mockReturnValueOnce(anterior$)
+        .mockReturnValueOnce(actual$);
+      component.expectedRole = 'ALUMNO';
+      component.lastLoadedPlanification.set({ id: 17 } as any);
+      component.onViewDateChange(new Date(2026, 6, 1));
+      component.lastLoadedPlanification.set({ id: 18 } as any);
+      component.onViewDateChange(new Date(2026, 7, 1));
+
+      actual$.next([{ fecha: '2026-08-10', bloqueId: 33, disciplinas: [] }]);
+      anterior$.next([{ fecha: '2026-07-10', bloqueId: 22, disciplinas: [] }]);
+
+      expect(component.resumenFisica()).toEqual([
+        { fecha: '2026-08-10', bloqueId: 33, disciplinas: [] },
+      ]);
+    });
   });
 
   describe('bridge temario↔física — vista MENSUAL (customCellTemplate)', () => {
@@ -153,6 +182,7 @@ describe('PlanificacionMensualEditComponent', () => {
       component.resumenFisica.set([
         {
           fecha: '2026-07-15',
+          bloqueId: 33,
           disciplinas: [
             {
               nombre: 'Cuerda 2',
@@ -177,7 +207,9 @@ describe('PlanificacionMensualEditComponent', () => {
     });
 
     it('tieneFisica es false cuando el día trae disciplinas vacío', () => {
-      component.resumenFisica.set([{ fecha: '2026-07-15', disciplinas: [] }]);
+      component.resumenFisica.set([
+        { fecha: '2026-07-15', bloqueId: 33, disciplinas: [] },
+      ]);
       expect(component.tieneFisica(dia)).toBe(false);
     });
 
@@ -205,11 +237,15 @@ describe('PlanificacionMensualEditComponent', () => {
 
       expect(domEvent.stopPropagation).toHaveBeenCalled();
       expect(domEvent.preventDefault).toHaveBeenCalled();
-      expect(router.navigate).toHaveBeenCalledWith([
-        '/app/planificacion-fisica',
-        'dia',
-        '2026-07-15',
-      ]);
+      expect(router.navigate).toHaveBeenCalledWith(
+        ['/app/planificacion-fisica', 'dia', '2026-07-15'],
+        {
+          queryParams: {
+            bloqueId: 33,
+            originPlanificacionId: undefined,
+          },
+        },
+      );
     });
 
     it('el click de la insignia de física NO dispara onDayClicked (no abre la vista semanal de ese día por accidente)', () => {

@@ -5,6 +5,7 @@
 <p-confirmDialog key="pf-borrar"></p-confirmDialog>
 <p-confirmDialog key="pf-borrar-con-progreso"></p-confirmDialog>
 <p-confirmDialog key="pf-publicar"></p-confirmDialog>
+<p-confirmDialog key="pf-despublicar"></p-confirmDialog>
 
 <div class="planificacion-fisica-admin">
   <div class="planificacion-fisica-admin__header">
@@ -210,7 +211,20 @@
                   size="small"
                   pTooltip="Publicar bloque"
                   data-testid="publicar-bloque-btn"
+                  [disabled]="accionBloqueEnCurso() !== null"
                   (click)="publicarBloque(bloque, $event)"
+                ></p-button>
+              } @else {
+                <p-button
+                  icon="pi pi-eye-slash"
+                  severity="warning"
+                  [text]="true"
+                  size="small"
+                  ariaLabel="Despublicar bloque"
+                  pTooltip="Despublicar bloque"
+                  data-testid="despublicar-bloque-btn"
+                  [disabled]="accionBloqueEnCurso() !== null"
+                  (click)="despublicarBloque(bloque, $event)"
                 ></p-button>
               }
               <p-button

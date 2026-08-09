@@ -93,6 +93,7 @@ export class PlanificacionMensualEditComponent {
   eventsService = inject(EventsService);
   planificacionFisicaService = inject(PlanificacionFisicaService);
   appConfigService = inject(AppConfigService);
+  private cargaResumenFisicaActual = 0;
 
   /** Bridge temario↔física: fail-open para no romper a SUPERADMIN ni en
    * arranque pre-login. */
@@ -699,7 +700,14 @@ export class PlanificacionMensualEditComponent {
    * (evita el 403 visible en prod para alumnos sin el módulo activo).
    */
   private cargarResumenFisica(fecha: Date = this.viewDate): void {
+    const carga = ++this.cargaResumenFisicaActual;
     if (!this.planificacionFisicaHabilitada()) {
+      this.resumenFisica.set([]);
+      return;
+    }
+
+    const planificacionId = this.lastLoadedPlanification()?.id;
+    if (!planificacionId) {
       this.resumenFisica.set([]);
       return;
     }
@@ -707,7 +715,7 @@ export class PlanificacionMensualEditComponent {
     try {
       const { desde, hasta } = this.rangoResumenFisica(fecha);
       this.planificacionFisicaService
-        .resumenDias(desde, hasta)
+        .resumenDias(planificacionId, desde, hasta)
         .pipe(
           catchError((err) => {
             console.error(
@@ -717,7 +725,11 @@ export class PlanificacionMensualEditComponent {
             return of([] as ResumenDiaFisica[]);
           }),
         )
-        .subscribe((dias) => this.resumenFisica.set(dias ?? []));
+        .subscribe((dias) => {
+          if (carga === this.cargaResumenFisicaActual) {
+            this.resumenFisica.set(dias ?? []);
+          }
+        });
     } catch (err) {
       console.error(
         'Bridge física: error inesperado calculando el rango:',
@@ -763,7 +775,14 @@ export class PlanificacionMensualEditComponent {
     domEvent.stopPropagation();
     domEvent.preventDefault();
     const fecha = formatFechaISO(dia);
-    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);
+    const bloqueId = this.resumenFisicaDelDia(dia)?.bloqueId;
+    if (!bloqueId) return;
+    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha], {
+      queryParams: {
+        bloqueId,
+        originPlanificacionId: this.lastLoadedPlanification()?.id,
+      },
+    });
   }
 
   onDateSelect(event: Date): void {

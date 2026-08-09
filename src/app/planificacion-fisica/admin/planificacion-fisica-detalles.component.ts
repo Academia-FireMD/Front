@@ -20,6 +20,8 @@ import { PlanificacionesService } from '../../services/planificaciones.service';
 import { AsyncButtonComponent } from '../../shared/components/async-button/async-button.component';
 import { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
+import { extraerMensajeError } from '../../shared/utils/http-error.util';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   BloqueEntrenamiento,
   DetalleDisciplina,
@@ -147,7 +149,14 @@ export class PlanificacionFisicaDetallesComponent implements OnInit {
    * seleccionadas. Actualiza el bloque local con la respuesta del backend.
    */
   protected async guardarPlanificaciones(): Promise<void> {
+    if (this.guardandoPlanificaciones()) return;
     const seleccionadas = this.planificacionesSeleccionadas();
+    if (this.bloque()?.estado === 'PUBLICADO' && seleccionadas.length === 0) {
+      this.toast.error(
+        'Para dejar un bloque publicado sin enlaces, despublícalo primero.',
+      );
+      return;
+    }
     this.guardandoPlanificaciones.set(true);
     try {
       const actualizado = await firstValueFrom(
@@ -160,9 +169,10 @@ export class PlanificacionFisicaDetallesComponent implements OnInit {
       this.toast.success(
         `Planificaciones de "${actualizado.identificador}" actualizadas.`,
       );
-    } catch {
+    } catch (err) {
       this.toast.error(
-        'No se han podido guardar las planificaciones enlazadas.',
+        extraerMensajeError(err as HttpErrorResponse) ??
+          'No se han podido guardar las planificaciones enlazadas.',
       );
     } finally {
       this.guardandoPlanificaciones.set(false);

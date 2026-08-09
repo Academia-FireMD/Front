@@ -307,13 +307,22 @@ describe('PlanificacionFisicaCalendarioComponent', () => {
       identificador: 'Bloque Valencia',
       relevancia: [Oposicion.VALENCIA_AYUNTAMIENTO],
       esActivo: true,
+      planificaciones: [{ id: 20, identificador: 'PGCVI6-8H' }],
     };
     const bloqueMadrid = {
       id: 3,
       identificador: 'Bloque Madrid',
       relevancia: [Oposicion.MADRID],
       esActivo: false,
+      planificaciones: [{ id: 21, identificador: 'PGCM4-6H' }],
     };
+
+    it('etiqueta también una opción única con sus planes enlazados', () => {
+      component['misBloques'].set([bloqueValencia]);
+      expect(component['etiquetaBloque'](bloqueValencia)).toBe(
+        'Bloque Valencia · PGCVI6-8H',
+      );
+    });
 
     it('con más de un bloque aplicable: muestra el selector y cambiar recarga el plan con el bloqueId elegido', async () => {
       serviceMock.misBloques!.mockReturnValue(

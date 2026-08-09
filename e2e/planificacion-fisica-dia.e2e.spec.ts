@@ -3,10 +3,12 @@
  * calendario y detalle, sin depender de API/BD reales.
  */
 import { expect, test, type Page, type Request } from '@playwright/test';
-import { loginAsAlumnoMock } from './helpers/auth.helper';
+import { loginAsAlumnoMock, loginAsRoleMock } from './helpers/auth.helper';
 
 const BLOQUE_B = 2;
 const FECHA = '2026-07-17';
+const PLAN_TEMARIO = 41;
+const BLOQUE_EXACTO = 502;
 
 interface Estado {
   miPlanQueries: string[];
@@ -141,12 +143,14 @@ async function mockPlanificacion(page: Page, estado: Estado): Promise<void> {
           identificador: 'BLOQUE-A-VALENCIA',
           relevancia: ['VALENCIA_AYUNTAMIENTO'],
           esActivo: true,
+          planificaciones: [{ id: 101, identificador: 'TEMARIO-VALENCIA' }],
         },
         {
           id: BLOQUE_B,
           identificador: 'BLOQUE-B-MADRID',
           relevancia: ['MADRID'],
           esActivo: false,
+          planificaciones: [{ id: 102, identificador: 'TEMARIO-MADRID' }],
         },
       ]),
     }),
@@ -223,7 +227,10 @@ test('bloque B se conserva de calendario a día, progreso y vuelta', async ({
   );
   await expect(page.getByTestId(`pf-dia-${FECHA}`)).toBeVisible();
   await page.getByTestId('pf-switcher-bloques').click();
-  await page.getByRole('option', { name: 'BLOQUE-B-MADRID' }).click();
+  await page
+    .getByRole('listbox')
+    .getByText('BLOQUE-B-MADRID · TEMARIO-MADRID', { exact: true })
+    .click();
   await expect(page).toHaveURL(
     new RegExp(`planificacion-fisica\\?bloqueId=${BLOQUE_B}`),
   );
@@ -333,4 +340,162 @@ test('en móvil el CTA de progreso sigue visible y no desborda', async ({
       .getByTestId('pf-dia-detalle')
       .evaluate((element) => element.scrollWidth <= element.clientWidth),
   ).toBe(true);
+});
+
+test('el bridge del temario conserva planificacionId, bloqueId y origen hasta el día exacto', async ({
+  page,
+}) => {
+  const hoy = new Date();
+  hoy.setHours(10, 0, 0, 0);
+  const fecha = [
+    hoy.getFullYear(),
+    String(hoy.getMonth() + 1).padStart(2, '0'),
+    String(hoy.getDate()).padStart(2, '0'),
+  ].join('-');
+  let planificacionConsultada: string | null = null;
+
+  await page.route(
+    `**/planificaciones/planificaciones-mensuales/${PLAN_TEMARIO}`,
+    (route) =>
+      route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: PLAN_TEMARIO,
+          identificador: 'PLAN-TEMARIO-EXACTO',
+          descripcion: 'Plan de estudio con entrenamiento vinculado',
+          mes: hoy.getMonth() + 1,
+          ano: hoy.getFullYear(),
+          esPorDefecto: false,
+          relevancia: [],
+          tipoDePlanificacion: 'FRANJA_CUATRO_A_SEIS_HORAS',
+          subBloques: [
+            {
+              id: 700,
+              planificacionId: PLAN_TEMARIO,
+              nombre: 'ENTRENAMIENTO FÍSICO',
+              horaInicio: hoy.toISOString(),
+              duracion: 60,
+              color: '#f59e0b',
+              comentarios: '',
+              realizado: false,
+              esEntrenamientoFisico: true,
+            },
+          ],
+        }),
+      }),
+  );
+  await page.route(
+    `**/planificaciones/eventos-personalizados/${PLAN_TEMARIO}`,
+    (route) => route.fulfill({ contentType: 'application/json', body: '[]' }),
+  );
+  await page.route('**/planificacion-fisica/resumen-dias**', (route) => {
+    const url = new URL(route.request().url());
+    planificacionConsultada = url.searchParams.get('planificacionId');
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          fecha,
+          bloqueId: BLOQUE_EXACTO,
+          disciplinas: [
+            {
+              nombre: 'Cuerda exacta',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: false,
+            },
+          ],
+        },
+      ]),
+    });
+  });
+  await page.route('**/planificacion-fisica/dia/**', (route) => {
+    const bloqueId = new URL(route.request().url()).searchParams.get(
+      'bloqueId',
+    );
+    if (bloqueId !== String(BLOQUE_EXACTO)) {
+      throw new Error(`día recibió bloqueId inesperado: ${bloqueId}`);
+    }
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        fecha,
+        comentarioSemana: null,
+        comentarioGeneral: null,
+        intensidad: 50,
+        numeroSemana: 1,
+        identificadorBloque: 'BLOQUE-EXACTO',
+        tipoPlan: 'PREMIUM',
+        soloLectura: false,
+        esHoy: true,
+        disciplinas: [
+          {
+            asignacionId: 800,
+            disciplinaId: 8,
+            nombre: 'Cuerda exacta',
+            grupo: 'CUERDA',
+            color: '#9fe2d0',
+            contenido: 'Trabajo exacto del plan consultado',
+            comentario: null,
+            realizado: false,
+          },
+        ],
+      }),
+    });
+  });
+  await page.route('**/planificacion-fisica/mi-plan**', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        bloque: {
+          id: BLOQUE_EXACTO,
+          identificador: 'BLOQUE-EXACTO',
+          comentarioGeneral: null,
+          fechaInicioSemana1: fecha,
+          numSemanas: 1,
+          relevancia: [],
+          estado: 'PUBLICADO',
+        },
+        hoy: fecha,
+        semanas: [],
+      }),
+    }),
+  );
+
+  const userPremium = {
+    id: 1,
+    email: 'alumno@test.com',
+    nombre: 'Test',
+    apellidos: 'Alumno',
+    rol: 'ALUMNO',
+    validated: true,
+    onboardingCompletado: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    suscripciones: [{ id: 1, tipo: 'PREMIUM', status: 'ACTIVE' }],
+    oposiciones: [],
+  };
+  await loginAsRoleMock(page, {
+    rol: 'ALUMNO',
+    email: 'alumno@test.com',
+    userFixture: userPremium,
+  });
+
+  await page.goto(
+    `/app/planificacion/planificacion-mensual-alumno/${PLAN_TEMARIO}`,
+  );
+  const bridge = page.getByTestId('temario-fisica-bridge');
+  await expect(bridge).toBeVisible();
+  await expect(bridge).toContainText('Cuerda exacta');
+  expect(planificacionConsultada).toBe(String(PLAN_TEMARIO));
+
+  await bridge.click();
+  await expect(page).toHaveURL(
+    new RegExp(
+      `planificacion-fisica/dia/${fecha}\\?bloqueId=${BLOQUE_EXACTO}&originPlanificacionId=${PLAN_TEMARIO}`,
+    ),
+  );
+  await expect(
+    page.getByText('Trabajo exacto del plan consultado'),
+  ).toBeVisible();
 });

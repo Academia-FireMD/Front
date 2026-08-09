@@ -148,6 +148,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/auth/wp-sso-url': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Genera una URL SSO magic-link hacia WordPress para el usuario autenticado.
+     *
+     *     El token resultante es de un solo uso (jti guardado en WP con transient 90s),
+     *     TTL 60s, y solo puede ser emitido para el woocommerceCustomerId propio del usuario JWT
+     *     (consolidado desde wpUserId — ambos son el mismo id numérico en WP).
+     */
+    get: operations['AuthController_getWpSsoUrl'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/user/search': {
     parameters: {
       query?: never;
@@ -318,6 +341,28 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['UserController_updateUser'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/user/reset-password/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Reset de contraseña por un ADMIN (alta manual, alumno que perdió acceso, etc.).
+     *     Endpoint dedicado y seguro: solo ADMIN/SUPERADMIN, valida longitud y HASHEA la
+     *     contraseña en el servidor. Sustituye al antipatrón de fijar `contrasenya` por
+     *     el endpoint genérico de update (ahora bloqueado por la whitelist).
+     */
+    post: operations['UserController_adminResetPassword'];
     delete?: never;
     options?: never;
     head?: never;
@@ -711,7 +756,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/preguntas/generar': {
+  '/preguntas/oficiales': {
     parameters: {
       query?: never;
       header?: never;
@@ -720,7 +765,19 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: operations['PreguntasAiController_generarPreguntas'];
+    /**
+     * @description Lectura del banco oficial de un tema (few-shot + grounding). La generación
+     *     con LLM la hace Paidio con la BYOK del tenant; este endpoint solo aporta los
+     *     datos. Aplica aislamiento por oposición vía el header `x-user-id` (externalId
+     *     del alumno, inyectado server-to-server por el asistente).
+     *
+     *     Es POST (no GET) a propósito: existe OTRO `@Controller('preguntas')`
+     *     (`preguntas.controller.ts`) con `@Get('/:id')` protegido por RolesGuard, que
+     *     captura cualquier `GET /preguntas/<segmento>` — incluido `/oficiales` — antes
+     *     de llegar a este controller (ServiceApiKeyGuard). Como POST, no colisiona con
+     *     sus rutas y queda bajo la auth service-to-service correcta. Es lectura: NO muta.
+     */
+    post: operations['PreguntasAiController_obtenerPreguntasOficiales'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1077,6 +1134,49 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  '/reportes/exportar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Exporta todos los fallos reportados (sin paginar) en Excel o Word.
+     *     Filtra por type (test|flashcards), formato (excel|word) y filtros opcionales.
+     *
+     *     POST /reportes/exportar
+     *     Body: ExportarFallosDto
+     */
+    post: operations['ReporteFalloController_exportarFallos'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/reportes/fallo/{id}/resolver': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * @description Alterna el estado "resuelto" de un fallo (resolver / reabrir). Solo ADMIN.
+     *     PATCH /reportes/fallo/:id/resolver
+     */
+    patch: operations['ReporteFalloController_resolverFallo'];
     trace?: never;
   };
   '/reportes/{id}': {
@@ -1927,6 +2027,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/planificaciones/planificacion-mensual/{id}/convertir-bloques-fisica': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Fase 2 bridge temario↔física: marca como `esEntrenamientoFisico` todos los
+     *     sub-bloques de esta planificación mensual cuyo nombre empiece por
+     *     "ENTRENAMIENTO". Solo ADMIN; la confirmación la pide el front.
+     */
+    post: operations['PlanificacionController_convertirBloquesFisica'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/planificaciones/planificacion-mensual/clonar/{id}': {
     parameters: {
       query?: never;
@@ -2161,6 +2282,38 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['DocumentosController_updateDocumento'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/documentos/{id}/publicar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['DocumentosController_publicarDocumento'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/documentos/{id}/despublicar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['DocumentosController_despublicarDocumento'];
     delete?: never;
     options?: never;
     head?: never;
@@ -2455,6 +2608,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/examenes/simulacros/tienda': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Tienda de simulacros: simulacros comprables para el alumno (filtrados por su
+     *     oposición) con precio y estado de acceso (INCLUIDO/COMPRADO/COMPRABLE). La
+     *     compra se hace luego con `POST /comprar-simulacro-cof/:id`.
+     */
+    get: operations['ExamenController_listarSimulacrosTienda'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/examenes/{id}/publicar': {
     parameters: {
       query?: never;
@@ -2713,6 +2887,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/examenes/comprar-simulacro-cof/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Compra in-app de un SIMULACRO por COF (1-clic). Espeja `/cursos/:id/comprar-cof`.
+     *     El alumno pulsa "Comprar 1-clic"; sin COF utilizable el servicio devuelve
+     *     `{ requiereCheckout, wooProductId }` y el front abre el checkout WC. El
+     *     `idempotencyKey` lo genera el front (uno por click) para que un retry de la
+     *     misma compra no doble-cobre, pero una compra nueva sí cree otro consumible.
+     */
+    post: operations['ExamenController_comprarSimulacroCof'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/examenes/start-simulacro/{id}': {
     parameters: {
       query?: never;
@@ -2840,6 +3037,70 @@ export interface paths {
     post?: never;
     /** @description Elimina un intento específico de un alumno */
     delete: operations['ExamenController_eliminarIntentoIndividual'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/duelos/crear': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['DueloController_crear'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/duelos/unirse/{codigo}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['DueloController_unirse'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/duelos/mios': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['DueloController_mios'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/duelos/{codigo}/ranking': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['DueloController_ranking'];
+    put?: never;
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -3022,6 +3283,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/woocommerce/products/cursos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Obtiene productos categoría CURSO desde cache. Alimenta el dropdown del
+     *     form admin de cursos (refactor 2026-05-25). Lee de BD, no llama a WP API.
+     */
+    get: operations['WooCommerceController_getCursoProducts'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/woocommerce/products': {
     parameters: {
       query?: never;
@@ -3050,6 +3331,22 @@ export interface paths {
     put?: never;
     /** @description Fuerza sincronización manual del cache */
     post: operations['WooCommerceController_forceSync'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/storage/public': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['StorageController_getPublicAsset'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -3115,6 +3412,87 @@ export interface paths {
     put?: never;
     post: operations['SuscripcionManagementController_cambiarPlan'];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/suscripcion-management/preview-cambio': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['SuscripcionManagementController_previewCambio'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/suscripcion-management/anadir-plan': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Alta in-app de un plan NUEVO (Spec B "Añadir más planes"). El alumno se da de alta
+     *     en una oposición que no tiene, cobrando la 1ª cuota con su COF Redsys. Sin COF →
+     *     `requiereCheckout:true` (el front lleva al checkout de WC pre-cargado).
+     */
+    post: operations['SuscripcionManagementController_anadirPlan'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/suscripcion-management/admin/suscripciones/{suscripcionId}/cambiar-forzado': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Cambio de plan FORZADO por un admin (T1.5 del plan v3.2).
+     *     Salta por defecto cooldown + plazo de antelación. `motivo` es obligatorio.
+     *     El dueño de la suscripción se resuelve internamente desde `:suscripcionId`.
+     */
+    post: operations['SuscripcionManagementController_cambiarSuscripcionForzado'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/suscripcion-management/switches/{opId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * @description Cancela un cambio de suscripción PROGRAMADO antes de que el cron lo aplique
+     *     (T3.2 del plan v3.2). La SwitchOperation debe estar PENDING+PROGRAMADO; si no,
+     *     NotFoundException. Un ALUMNO solo puede cancelar la suya (el service filtra por
+     *     usuarioId). Un ADMIN puede cancelar la de cualquier alumno (P2#2): se pasa
+     *     `esAdmin` para saltar el filtro de propiedad.
+     */
+    delete: operations['SuscripcionManagementController_cancelarCambioProgramado'];
     options?: never;
     head?: never;
     patch?: never;
@@ -3875,7 +4253,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/flashcards/generar': {
+  '/flashcards/oficiales': {
     parameters: {
       query?: never;
       header?: never;
@@ -3884,7 +4262,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: operations['FlashcardsAiController_generarFlashcards'];
+    /**
+     * @description Lectura del banco oficial de un tema (few-shot + grounding para generar
+     *     flashcards). Es POST (no GET) por la misma colisión de rutas que
+     *     `/preguntas/oficiales`. Aplica aislamiento por oposición vía `x-user-id`.
+     */
+    post: operations['FlashcardsAiController_obtenerFlashcardsOficiales'];
     delete?: never;
     options?: never;
     head?: never;
@@ -3917,6 +4300,27 @@ export interface paths {
     get: operations['TemasAiController_consultarTemas'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/temas/seleccionables': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Lista estructurada de temas que el alumno puede ver (para el desplegable del
+     *     widget). Aislamiento por oposición vía `x-user-id`. POST para no colisionar con
+     *     el GET de `consultarTemas` ni con `GET /tema/:id` del controller normal.
+     */
+    post: operations['TemasAiController_listarSeleccionables'];
     delete?: never;
     options?: never;
     head?: never;
@@ -3971,7 +4375,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/planificacion/generar': {
+  '/planificacion/contexto': {
     parameters: {
       query?: never;
       header?: never;
@@ -3980,7 +4384,23 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: operations['PlanificacionAiController_generarPlanificacion'];
+    post: operations['PlanificacionAiController_obtenerContextoGeneracion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionAiController_registrarPreview'];
     delete?: never;
     options?: never;
     head?: never;
@@ -4014,6 +4434,70 @@ export interface paths {
     put?: never;
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/app-config': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['AppConfigController_getPublic'];
+    put: operations['AppConfigController_updateConfig'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/app-config/modulos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['AppConfigController_getModulos'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/app-config/modulos/{modulo}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['AppConfigController_toggleModulo'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/app-config/logo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['AppConfigController_uploadLogo'];
+    delete: operations['AppConfigController_deleteLogo'];
     options?: never;
     head?: never;
     patch?: never;
@@ -4061,6 +4545,22 @@ export interface paths {
     get: operations['CursosAdminController_getById'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cursos/{id}/duplicar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['CursosAdminController_duplicar'];
     delete?: never;
     options?: never;
     head?: never;
@@ -4115,6 +4615,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/cursos/{id}/despublicar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['CursosAdminController_despublicar'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/cursos/{id}/grant-access': {
     parameters: {
       query?: never;
@@ -4163,22 +4679,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/cursos/secciones/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put: operations['CursosAdminController_updateSeccion'];
-    post?: never;
-    delete: operations['CursosAdminController_deleteSeccion'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/cursos/secciones/reorder': {
     parameters: {
       query?: never;
@@ -4195,6 +4695,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/cursos/secciones/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['CursosAdminController_updateSeccion'];
+    post?: never;
+    delete: operations['CursosAdminController_deleteSeccion'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/cursos/secciones/{id}/lecciones': {
     parameters: {
       query?: never;
@@ -4205,6 +4721,22 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['CursosAdminController_createLeccion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cursos/lecciones/reorder': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['CursosAdminController_reorderLecciones'];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -4227,7 +4759,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/cursos/lecciones/reorder': {
+  '/cursos/lecciones/{id}/bloques': {
     parameters: {
       query?: never;
       header?: never;
@@ -4235,9 +4767,41 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    put: operations['CursosAdminController_reorderLecciones'];
+    put?: never;
+    post: operations['CursosAdminController_createBloque'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cursos/bloques/reorder': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['CursosAdminController_reorderBloques'];
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cursos/bloques/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['CursosAdminController_updateBloque'];
+    post?: never;
+    delete: operations['CursosAdminController_deleteBloque'];
     options?: never;
     head?: never;
     patch?: never;
@@ -4253,6 +4817,59 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['CursosAdminController_requestVideoUploadUrl'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cursos/upload-image': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Sube una imagen (miniatura/portada del curso) a Supabase Storage y devuelve
+     *     `{ url }`. El front la pone en el form de metadatos y guarda. Reusa el mismo
+     *     provider que avatares/documentos. Vídeos siguen yendo a Bunny.
+     */
+    post: operations['CursosAdminController_uploadImage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cursos/bloques/upload-documento': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['CursosAdminController_uploadBloqueDocumento'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cursos/bloques/{id}/documento': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CursosAlumnoController_descargarDocumentoBloque'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -4275,6 +4892,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/cursos/clases-grabadas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CursosAlumnoController_listClasesGrabadas'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/cursos/catalogo': {
     parameters: {
       query?: never;
@@ -4285,6 +4918,22 @@ export interface paths {
     get: operations['CursosAlumnoController_listCatalogo'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cursos/{id}/comprar-cof': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['CursosAlumnoController_comprarCof'];
     delete?: never;
     options?: never;
     head?: never;
@@ -4333,6 +4982,81 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['LeccionesController_upsertProgreso'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/lecciones/{id}/iniciar-test': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Refactor 2026-05-25: arranca un Test a partir de una lección TEST. La
+     *     lección embebe `temaId`, `numPreguntas`, `dificultad` (null = mix) y
+     *     `esDeRepaso`. Requiere AccesoCurso vigente. Si `esDeRepaso=true` y el
+     *     alumno no tiene fallos en el tema, responde 422 con payload explicativo.
+     */
+    post: operations['LeccionesController_iniciarTest'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/lecciones/{id}/iniciar-flashcards': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['LeccionesController_iniciarFlashcards'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/bloques/{id}/iniciar-test': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['BloquesController_iniciarTest'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/bloques/{id}/cuestionario/corregir': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Corrige un bloque CUESTIONARIO respondido por el alumno (autocorrección
+     *     inline del aula). El backend tiene la respuesta correcta (nunca se filtra
+     *     antes de corregir) y devuelve aciertos + feedback por pregunta.
+     */
+    post: operations['BloquesController_corregirCuestionario'];
     delete?: never;
     options?: never;
     head?: never;
@@ -4419,6 +5143,695 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/callejero/ciudades': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CallejeroController_listarCiudades'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/ciudades/{id}/zonas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CallejeroController_listarZonas'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/zonas/{id}/calles': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CallejeroController_listarCallesDeZona'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/ciudades/{id}/calles': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Todas las calles de la ciudad con punto representativo (a media longitud
+     *     sobre la línea) y longitud en metros. Para modo Estudio y examen del front.
+     */
+    get: operations['CallejeroController_listarCallesCiudad'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/ciudades/{id}/pois': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Todos los POIs de la ciudad (todas las categorías) — mapa estilo Raúl. */
+    get: operations['CallejeroController_listarPois'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/ciudades/{id}/calles-modificadas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Calles renombradas (nomenclátor 2017) de la ciudad.
+     *     Fuente: CalleModificadaCallejero (ingesta flag `--modificadas`).
+     *     Uso: pregunta "modificada" del examen, sección Estudio y capa del mapa.
+     *     Respuesta: `{ modificadas: [{ nombreNuevo, nombreAntiguo, tipoVia }] }`
+     */
+    get: operations['CallejeroController_listarCallesModificadas'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/recorrido': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Recorrido publicado de una calle (polyline, calles, estación). */
+    get: operations['CallejeroController_getRecorrido'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/recorrido-libre': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Modo "dirección libre" (Callejero v27): traza el recorrido del parque más
+     *     cercano a una dirección arbitraria escrita por el alumno. Geocoding+routing
+     *     vía proxy backend (Nominatim/OSRM) con caché persistente. La oposición de la
+     *     ciudad la valida el servicio (`assertCiudadAccesible`), no solo el módulo.
+     *     Errores: 404 `{ code: 'NO_GEOCODE' }`, 503 `{ code: 'ROUTE_UNAVAILABLE' }`.
+     */
+    get: operations['CallejeroController_getRecorridoLibre'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/progreso': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['CallejeroController_registrarProgreso'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/ciudades/{id}/progreso': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CallejeroController_resumenProgreso'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/examen/generar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['CallejeroController_generarExamen'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/examen/registrar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Registra el intento: reverifica el token y calcula la nota server-side. */
+    post: operations['CallejeroController_registrarExamen'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/examen/resultado': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Registra el resultado de un examen estilo Raúl (sin timer, por puntos). */
+    post: operations['CallejeroController_registrarResultadoExamen'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/examen/historial': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Histórico de exámenes del alumno (opcionalmente acotado a una ciudad). */
+    get: operations['CallejeroController_historialExamen'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/examen/leaderboard': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Leaderboard de una ciudad (cohorte = oposición); seudónimo salvo opt-in. */
+    get: operations['CallejeroController_leaderboardExamen'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/examen/leaderboard-optin': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Activa/desactiva mostrar el nombre real propio en el leaderboard (self-only). */
+    post: operations['CallejeroController_setLeaderboardOptIn'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/geocode/reverse': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CallejeroController_geocodeReverse'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/callejero/geocode/buscar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Búsqueda Nominatim: query libre → lista de `{nombre, lat, lng}` (max 10).
+     *     Usado por el autocompletar de recorridos (T10) y la ficha del mapa (T9).
+     *     Rate-limited server-side (cross-réplica). Devuelve `items: []` si no hay
+     *     resultados (no lanza 404). Errores: 503 `{ code: 'GEOCODE_UNAVAILABLE' }`.
+     */
+    get: operations['CallejeroController_geocodeBuscar'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/plantilla': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionFisicaAdminController_descargarPlantilla'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionFisicaAdminController_preview'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/import': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionFisicaAdminController_importar'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/bloques': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionFisicaAdminController_listarBloques'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/bloques/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionFisicaAdminController_obtenerBloque'];
+    put: operations['PlanificacionFisicaAdminController_actualizar'];
+    post?: never;
+    delete: operations['PlanificacionFisicaAdminController_borrar'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/bloques/{id}/planificaciones': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['PlanificacionFisicaAdminController_actualizarPlanificaciones'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/bloques/{id}/detalles': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionFisicaAdminController_detallesDeBloque'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/bloques/{id}/publicar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['PlanificacionFisicaAdminController_publicar'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/bloques/{id}/despublicar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['PlanificacionFisicaAdminController_despublicar'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/semanas/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['PlanificacionFisicaAdminController_actualizarSemana'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/detalles/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['PlanificacionFisicaAdminController_actualizarDetalle'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/mi-plan': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description `bloqueId` (query, opcional, Fase 2 switcher multi-oposición): el
+     *     aislamiento (nunca mostrar un bloque que no le aplica al alumno) lo
+     *     garantiza `VentanaSemanasService.resolverBloque`, que solo acepta
+     *     `bloqueId` si está entre `bloquesAplicables(alumnoId)` — aquí solo se
+     *     parsea el query param, la validación real vive en el servicio.
+     */
+    get: operations['PlanificacionFisicaAlumnoController_miPlan'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/mis-bloques': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Fase 2 (switcher multi-oposición): lista de bloques que le aplican al
+     *     alumno, para poblar el selector. El front decide si lo muestra (solo
+     *     si length > 1) — aquí siempre se devuelve la lista completa (0, 1 o N).
+     */
+    get: operations['PlanificacionFisicaAlumnoController_misBloques'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/dia/{fecha}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionFisicaAlumnoController_dia'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/resumen-dias': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Bridge temario→física: alimenta la tarjeta "🏋️ Cuerda, Velocidad 60m →"
+     *     que el calendario del TEMARIO (Front, otra tarea) pinta en cada día con
+     *     entrenamiento. Ese calendario lo usan TODOS los alumnos, incluidos
+     *     BASIC — a diferencia del resto de endpoints de este controller, aquí
+     *     NO propagamos el 403 de `verificarAcceso()`: un alumno sin acceso al
+     *     módulo de física (BASIC, sin suscripción vigente, o sin bloque para su
+     *     oposición) simplemente no tiene bridge que mostrar, y debe fallar en
+     *     silencio a `[]` — un 403 aquí rompería la carga del calendario de
+     *     temario si el front no lo maneja explícitamente. El resto de reglas de
+     *     negocio (aislamiento por bloque/oposición, formato de fecha) las
+     *     resuelve `VentanaSemanasService.resumenDias`.
+     */
+    get: operations['PlanificacionFisicaAlumnoController_resumenDias'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/progreso/{asignacionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * @description Task 10. El `alumnoId` sale de `req.user.id` (nunca de `:asignacionId`
+     *     ni del body) y `ProgresoFisicaService.marcar` es quien rechaza (403) si
+     *     la asignación no es del bloque del alumno o cae fuera de la ventana
+     *     escribible — ver `VentanaSemanasService.asignacionEscribiblePorAlumno`.
+     */
+    put: operations['PlanificacionFisicaAlumnoController_marcarProgreso'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/marcas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Task 14 (spec Adenda 2 D-B1). Marcas del PROPIO alumno, agrupadas
+     *     implícitamente por `pruebaFisicaId` (orden `pruebaFisicaId asc, fecha
+     *     desc`); el front decide si las agrupa visualmente por prueba.
+     */
+    get: operations['PlanificacionFisicaAlumnoController_marcasMias'];
+    put?: never;
+    /** @description Task 14. `alumnoId` sale de `req.user.id`, nunca del body. */
+    post: operations['PlanificacionFisicaAlumnoController_crearMarca'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/marcas/alumno/{alumnoId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Fase 5 polish: marcas de UN ALUMNO concreto, solo para ADMIN. Reutiliza
+     *     `listarMias` (que ya valida el aislamiento por alumnoId); aquí el
+     *     `alumnoId` viene de query param, pero solo un ADMIN puede pedirlo —
+     *     un ALUMNO sigue recibiendo 403 en `verificarAcceso`.
+     */
+    get: operations['PlanificacionFisicaAlumnoController_marcasDeAlumno'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/pruebas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * @description Catálogo de pruebas oficiales, independiente de Disciplina/calendario.
+     *     El filtro de oposición se aplica en el servicio antes de devolverlo.
+     */
+    get: operations['PlanificacionFisicaAlumnoController_pruebas'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificacion-fisica/marcas/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * @description Task 14. Vector IDOR: `MarcasPersonalesService.borrar` verifica
+     *     `marca.alumnoId === req.user.id` ANTES de borrar (403/404 si no).
+     */
+    delete: operations['PlanificacionFisicaAlumnoController_borrarMarca'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4483,12 +5896,53 @@ export interface components {
       flashcardDataId: number;
       descripcion: string;
     };
+    RangoFechaDto: {
+      gte?: string;
+      lte?: string;
+    };
+    ExportarFallosDto: {
+      /**
+       * @description Tipo de fallo: preguntas de test o flashcards
+       * @enum {string}
+       */
+      type: 'test' | 'flashcards';
+      /**
+       * @description Formato de salida. Opcional y actualmente ignorado: el export de fallos
+       *     produce siempre Excel importable (el "informe" Word se eliminó, D5 del
+       *     diseño 2026-07-06). Se mantiene por compatibilidad con el cliente.
+       * @enum {string}
+       */
+      formato?: 'excel' | 'word';
+      /**
+       * @description Estado de resolución por el que filtrar. Por defecto PENDIENTES.
+       * @enum {string}
+       */
+      estado?: 'pendientes' | 'resueltos' | 'todos';
+      /** @description IDs de temas para filtrar */
+      temas?: number[];
+      /**
+       * @description Oposiciones relevantes (solo aplica para type='test').
+       *     Mapea a `where.pregunta.relevancia` en `procesarFiltrosFallos`.
+       */
+      relevancia?: Record<string, never>[];
+      /** @description Filtrar por ID de usuario reportador */
+      usuarioId?: number;
+      /** @description Rango de fechas del campo `createdAt` */
+      createdAt?: components['schemas']['RangoFechaDto'];
+      /**
+       * @description Dificultad de la pregunta o flashcard subyacente.
+       *     Aplica tanto para type='test' (filtra Pregunta.dificultad) como
+       *     type='flashcards' (filtra FlashcardData.dificultad).
+       */
+      dificultad?: Record<string, never>;
+    };
     NewFlashcardTestDto: {
       generarTestDeRepaso: boolean;
       numPreguntas: number;
       dificultades: Record<string, never>[];
       temas: number[];
       sobreescribir?: boolean;
+      aleatorio?: boolean;
     };
     RegistrarRespuestaFlashcardDto: {
       testId: number;
@@ -4521,6 +5975,7 @@ export interface components {
       tiempoAviso?: number;
       color?: string;
       bloqueId?: number;
+      esEntrenamientoFisico?: boolean;
     };
     CreateOrUpdatePlantillaSemanalDto: {
       id?: number;
@@ -4588,9 +6043,29 @@ export interface components {
       woocommerceSku?: string;
       woocommerceProductName?: string;
     };
+    CrearSalaDueloDto: {
+      temas: number[];
+      numeroPreguntas: number;
+      tiempoPorTestMin?: number;
+      duracionSalaHoras?: number;
+    };
     CambiarPlanDto: {
       suscripcionId: number;
       nuevoSku: string;
+      comentario?: string;
+    };
+    PreviewCambioDto: {
+      suscripcionId: number;
+      nuevoSku: string;
+    };
+    AnadirPlanDto: {
+      nuevoSku: string;
+    };
+    CambiarForzadoDto: {
+      nuevoSku: string;
+      motivo: string;
+      saltarCooldown?: boolean;
+      saltarPlazoAntelacion?: boolean;
       comentario?: string;
     };
     AplicarDescuentoDto: {
@@ -4686,26 +6161,54 @@ export interface components {
       clienteCodigoPostal?: string;
       clientePais?: string;
     };
+    AppConfigUpdateDto: {
+      appName?: string;
+      primaryColor?: string;
+      secondaryColor?: string;
+      /**
+       * @description Optimistic concurrency token (D8). Si el cliente envía `updatedAt` y
+       *     difiere del valor actual en BD, devolvemos 409 Conflict para que el
+       *     cliente recargue. Si no se envía, omitimos el check (backward-compat
+       *     para clientes que aún no lo soporten).
+       */
+      updatedAt?: string;
+    };
+    ToggleModuloDto: {
+      habilitado: boolean;
+    };
     CursoCreateDto: {
       titulo: string;
-      slug: string;
       descripcion?: string;
-      precio?: number;
-      oposicion?: Record<string, never>;
+      wooProductId?: number;
+      esGratuito?: boolean;
+      esClaseGrabada?: boolean;
+      relevancia?: Record<string, never>[];
       thumbnailUrl?: string;
       duracionEstimadaMinutos?: number;
     };
     CursoUpdateDto: {
+      /** Format: date-time */
+      updatedAt: string;
+      /**
+       * @description Task C4 (feedback Raúl 2026-07-24): fecha de publicación editable por el
+       *     admin. Para clases grabadas decide qué alumnos la ven (regla:
+       *     `fechaPublicacion >= fechaCorte(alumno)`). No está en CursoCreateDto (al
+       *     crear se sella automáticamente en `publicar()`); `null` explícito la borra
+       *     y vuelve al sellado automático en la próxima publicación.
+       */
+      fechaPublicacion?: string | null;
       titulo?: string;
       descripcion?: string;
-      precio?: number;
-      oposicion?: Record<string, never>;
+      wooProductId?: number;
+      esGratuito?: boolean;
+      esClaseGrabada?: boolean;
+      relevancia?: Record<string, never>[];
       thumbnailUrl?: string;
       duracionEstimadaMinutos?: number;
     };
     SeccionCreateDto: {
       titulo: string;
-      orden: number;
+      orden?: number;
     };
     SeccionReorderItemDto: {
       id: number;
@@ -4716,22 +6219,15 @@ export interface components {
     };
     LeccionCreateDto: {
       titulo: string;
-      orden: number;
-      tipo: Record<string, never>;
-      bunnyVideoId?: string;
-      duracionSegundos?: number;
-      testPlantillaId?: number;
-      mazoFlashcardsId?: number;
-      contenidoMarkdown?: string;
-    };
-    LeccionUpdateDto: {
-      titulo?: string;
       orden?: number;
+      tipo?: Record<string, never>;
       bunnyVideoId?: string;
       duracionSegundos?: number;
-      testPlantillaId?: number;
-      mazoFlashcardsId?: number;
       contenidoMarkdown?: string;
+      temaId?: number;
+      numPreguntas?: number;
+      dificultad?: Record<string, never>;
+      esDeRepaso?: boolean;
     };
     LeccionReorderItemDto: {
       id: number;
@@ -4740,10 +6236,61 @@ export interface components {
     LeccionReorderDto: {
       items: components['schemas']['LeccionReorderItemDto'][];
     };
+    LeccionUpdateDto: {
+      titulo?: string;
+      orden?: number;
+      bunnyVideoId?: string;
+      duracionSegundos?: number;
+      contenidoMarkdown?: string;
+      temaId?: number;
+      numPreguntas?: number;
+      dificultad?: Record<string, never>;
+      esDeRepaso?: boolean;
+    };
+    BloquePreguntaDto: {
+      enunciado: string;
+      opciones: string[];
+      respuestaCorrecta: number;
+      explicacion?: string;
+    };
+    BloqueCreateDto: {
+      tipo: Record<string, never>;
+      bunnyVideoId?: string;
+      duracionSegundos?: number;
+      contenidoMarkdown?: string;
+      temaId?: number;
+      numPreguntas?: number;
+      dificultad?: Record<string, never>;
+      esDeRepaso?: boolean;
+      preguntas?: components['schemas']['BloquePreguntaDto'][];
+      documentoPath?: string;
+      documentoNombre?: string;
+      documentoMime?: string;
+      documentoTamanoBytes?: number;
+    };
+    BloqueReorderItemDto: {
+      id: number;
+      orden: number;
+    };
+    BloqueReorderDto: {
+      items: components['schemas']['BloqueReorderItemDto'][];
+    };
+    BloqueUpdateDto: {
+      identificador?: string;
+      comentarioGeneral?: string;
+      relevancia?: Record<string, never>[];
+    };
     ProgresoUpsertDto: {
       segundosVisto: number;
       porcentajeVisto: number;
       completada?: boolean;
+    };
+    RespuestaCuestionarioItemDto: {
+      preguntaId: number;
+      opcionElegida?: number | null;
+    };
+    CorregirCuestionarioDto: {
+      respuestas: components['schemas']['RespuestaCuestionarioItemDto'][];
     };
     TutoriaCreateDto: {
       titulo: string;
@@ -4753,6 +6300,61 @@ export interface components {
       duracionMinutos?: number;
       oposicion?: Record<string, never>;
       visibleA?: Record<string, never>;
+    };
+    RegistrarProgresoDto: {
+      calleId: number;
+      acierto: boolean;
+    };
+    GenerarExamenDto: {
+      ciudadId: number;
+      zonaIds?: number[];
+      /** @enum {string} */
+      tipoExamen?: 'MIXTO' | 'RECORRIDO';
+      /** @enum {string} */
+      dificultad?: 'FACIL' | 'MEDIO' | 'DIFICIL';
+    };
+    RespuestaExamenDto: {
+      orden: number;
+      respuestaCalleId?: number | null;
+      respuestaParque?: string | null;
+      tiempoMs: number;
+      agotoTiempo: boolean;
+    };
+    RegistrarExamenDto: {
+      token: string;
+      tiempoTotalMs: number;
+      respuestas: components['schemas']['RespuestaExamenDto'][];
+    };
+    RegistrarResultadoExamenDto: {
+      ciudadId: number;
+      totalRetos: number;
+      aciertos: number;
+      puntos: number;
+    };
+    LeaderboardOptInDto: {
+      optIn: boolean;
+    };
+    BloquePlanificacionesDto: {
+      planificacionIds: number[];
+    };
+    SemanaUpdateDto: {
+      comentarioSemana?: string;
+      intensidad?: number;
+    };
+    DetalleUpdateDto: {
+      contenido?: string;
+      comentario?: string;
+    };
+    ProgresoMarcarDto: {
+      realizado: boolean;
+    };
+    MarcaCrearDto: {
+      pruebaFisicaId?: number;
+      nombreLibre?: string;
+      valor: number;
+      unidad: string;
+      fecha: string;
+      notas?: string;
     };
   };
   responses: never;
@@ -4916,6 +6518,25 @@ export interface operations {
   AuthController_getServerInfo: {
     parameters: {
       query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthController_getWpSsoUrl: {
+    parameters: {
+      query: {
+        target: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -5139,6 +6760,25 @@ export interface operations {
       };
     };
   };
+  UserController_adminResetPassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   UserController_getUserById: {
     parameters: {
       query?: never;
@@ -5152,7 +6792,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': Record<string, never>;
+        };
       };
     };
   };
@@ -5564,7 +7206,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': Record<string, never>;
+        };
       };
     };
   };
@@ -5621,11 +7265,12 @@ export interface operations {
       };
     };
   };
-  PreguntasAiController_generarPreguntas: {
+  PreguntasAiController_obtenerPreguntasOficiales: {
     parameters: {
       query?: never;
       header: {
         'x-request-id': string;
+        'x-user-id': string;
       };
       path?: never;
       cookie?: never;
@@ -6083,6 +7728,46 @@ export interface operations {
       };
     };
   };
+  ReporteFalloController_exportarFallos: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExportarFallosDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ReporteFalloController_resolverFallo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   ReporteFalloController_eliminarReporteDeFallo: {
     parameters: {
       query?: never;
@@ -6107,7 +7792,9 @@ export interface operations {
       query: {
         q: string;
       };
-      header?: never;
+      header: {
+        'x-user-id': string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -6117,9 +7804,7 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content: {
-          'application/json': Record<string, never>[];
-        };
+        content?: never;
       };
     };
   };
@@ -6233,7 +7918,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': Record<string, never>;
+        };
       };
     };
   };
@@ -7208,6 +8895,25 @@ export interface operations {
       };
     };
   };
+  PlanificacionController_convertirBloquesFisica: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   PlanificacionController_clonarPlanificacion: {
     parameters: {
       query?: never;
@@ -7494,6 +9200,46 @@ export interface operations {
         content: {
           'application/json': Record<string, never>;
         };
+      };
+    };
+  };
+  DocumentosController_publicarDocumento: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  DocumentosController_despublicarDocumento: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
@@ -7890,6 +9636,23 @@ export interface operations {
       };
     };
   };
+  ExamenController_listarSimulacrosTienda: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   ExamenController_publicarExamen: {
     parameters: {
       query?: never;
@@ -8219,6 +9982,27 @@ export interface operations {
       };
     };
   };
+  ExamenController_comprarSimulacroCof: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
   ExamenController_: {
     parameters: {
       query?: never;
@@ -8368,6 +10152,86 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  DueloController_crear: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CrearSalaDueloDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  DueloController_unirse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        codigo: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  DueloController_mios: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  DueloController_ranking: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        codigo: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
       };
     };
   };
@@ -8597,6 +10461,23 @@ export interface operations {
       };
     };
   };
+  WooCommerceController_getCursoProducts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   WooCommerceController_getAllProducts: {
     parameters: {
       query?: never;
@@ -8624,6 +10505,25 @@ export interface operations {
     requestBody?: never;
     responses: {
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  StorageController_getPublicAsset: {
+    parameters: {
+      query: {
+        path: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -8696,6 +10596,92 @@ export interface operations {
         'application/json': components['schemas']['CambiarPlanDto'];
       };
     };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SuscripcionManagementController_previewCambio: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PreviewCambioDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  SuscripcionManagementController_anadirPlan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AnadirPlanDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SuscripcionManagementController_cambiarSuscripcionForzado: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        suscripcionId: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CambiarForzadoDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SuscripcionManagementController_cancelarCambioProgramado: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        opId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       200: {
         headers: {
@@ -9831,11 +11817,12 @@ export interface operations {
       };
     };
   };
-  FlashcardsAiController_generarFlashcards: {
+  FlashcardsAiController_obtenerFlashcardsOficiales: {
     parameters: {
       query?: never;
       header: {
         'x-request-id': string;
+        'x-user-id': string;
       };
       path?: never;
       cookie?: never;
@@ -9877,6 +11864,7 @@ export interface operations {
       };
       header: {
         'x-request-id': string;
+        'x-user-id': string;
       };
       path?: never;
       cookie?: never;
@@ -9884,6 +11872,26 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  TemasAiController_listarSeleccionables: {
+    parameters: {
+      query?: never;
+      header: {
+        'x-request-id': string;
+        'x-user-id': string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
         headers: {
           [name: string]: unknown;
         };
@@ -9952,7 +11960,28 @@ export interface operations {
       };
     };
   };
-  PlanificacionAiController_generarPlanificacion: {
+  PlanificacionAiController_obtenerContextoGeneracion: {
+    parameters: {
+      query?: never;
+      header: {
+        'x-request-id': string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionAiController_registrarPreview: {
     parameters: {
       query?: never;
       header: {
@@ -10009,6 +12038,124 @@ export interface operations {
       };
     };
   };
+  AppConfigController_getPublic: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  AppConfigController_updateConfig: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AppConfigUpdateDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AppConfigController_getModulos: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  AppConfigController_toggleModulo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        modulo: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ToggleModuloDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  AppConfigController_uploadLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AppConfigController_deleteLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   CursosAdminController_create: {
     parameters: {
       query?: never;
@@ -10032,7 +12179,12 @@ export interface operations {
   };
   CursosAdminController_listAdmin: {
     parameters: {
-      query?: never;
+      query: {
+        skip: number;
+        take: number;
+        searchTerm: string;
+        totalRegisters: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -10059,6 +12211,25 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CursosAdminController_duplicar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
         headers: {
           [name: string]: unknown;
         };
@@ -10146,6 +12317,25 @@ export interface operations {
       };
     };
   };
+  CursosAdminController_despublicar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   CursosAdminController_grantAccess: {
     parameters: {
       query?: never;
@@ -10208,6 +12398,27 @@ export interface operations {
       };
     };
   };
+  CursosAdminController_reorderSecciones: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SeccionReorderDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   CursosAdminController_updateSeccion: {
     parameters: {
       query?: never;
@@ -10246,27 +12457,6 @@ export interface operations {
       };
     };
   };
-  CursosAdminController_reorderSecciones: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SeccionReorderDto'];
-      };
-    };
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
   CursosAdminController_createLeccion: {
     parameters: {
       query?: never;
@@ -10283,6 +12473,27 @@ export interface operations {
     };
     responses: {
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CursosAdminController_reorderLecciones: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LeccionReorderDto'];
+      };
+    };
+    responses: {
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -10332,7 +12543,30 @@ export interface operations {
       };
     };
   };
-  CursosAdminController_reorderLecciones: {
+  CursosAdminController_createBloque: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BloqueCreateDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CursosAdminController_reorderBloques: {
     parameters: {
       query?: never;
       header?: never;
@@ -10341,9 +12575,51 @@ export interface operations {
     };
     requestBody: {
       content: {
-        'application/json': components['schemas']['LeccionReorderDto'];
+        'application/json': components['schemas']['BloqueReorderDto'];
       };
     };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CursosAdminController_updateBloque: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BloqueUpdateDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CursosAdminController_deleteBloque: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       200: {
         headers: {
@@ -10370,7 +12646,77 @@ export interface operations {
       };
     };
   };
+  CursosAdminController_uploadImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CursosAdminController_uploadBloqueDocumento: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CursosAlumnoController_descargarDocumentoBloque: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   CursosAlumnoController_listMios: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CursosAlumnoController_listClasesGrabadas: {
     parameters: {
       query?: never;
       header?: never;
@@ -10404,6 +12750,27 @@ export interface operations {
       };
     };
   };
+  CursosAlumnoController_comprarCof: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
   CursosAlumnoController_getCurso: {
     parameters: {
       query?: never;
@@ -10419,7 +12786,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': Record<string, never>;
+        };
       };
     };
   };
@@ -10454,6 +12823,88 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['ProgresoUpsertDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  LeccionesController_iniciarTest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  LeccionesController_iniciarFlashcards: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  BloquesController_iniciarTest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  BloquesController_corregirCuestionario: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CorregirCuestionarioDto'];
       };
     };
     responses: {
@@ -10584,6 +13035,841 @@ export interface operations {
       path: {
         id: number;
         usuarioId: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_listarCiudades: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_listarZonas: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_listarCallesDeZona: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_listarCallesCiudad: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_listarPois: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_listarCallesModificadas: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_getRecorrido: {
+    parameters: {
+      query: {
+        calleId: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  CallejeroController_getRecorridoLibre: {
+    parameters: {
+      query: {
+        ciudadId: number;
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  CallejeroController_registrarProgreso: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegistrarProgresoDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_resumenProgreso: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_generarExamen: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GenerarExamenDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  CallejeroController_registrarExamen: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegistrarExamenDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_registrarResultadoExamen: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegistrarResultadoExamenDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_historialExamen: {
+    parameters: {
+      query: {
+        ciudadId: string;
+        page: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_leaderboardExamen: {
+    parameters: {
+      query: {
+        ciudadId: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_setLeaderboardOptIn: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LeaderboardOptInDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_geocodeReverse: {
+    parameters: {
+      query: {
+        lat: number;
+        lng: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CallejeroController_geocodeBuscar: {
+    parameters: {
+      query: {
+        q: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_descargarPlantilla: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_preview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_importar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_listarBloques: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_obtenerBloque: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_actualizar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BloqueUpdateDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_borrar: {
+    parameters: {
+      query: {
+        force: string;
+      };
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_actualizarPlanificaciones: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BloquePlanificacionesDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_detallesDeBloque: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_publicar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_despublicar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_actualizarSemana: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SemanaUpdateDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAdminController_actualizarDetalle: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DetalleUpdateDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_miPlan: {
+    parameters: {
+      query: {
+        bloqueId: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_misBloques: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_dia: {
+    parameters: {
+      query: {
+        bloqueId: string;
+      };
+      header?: never;
+      path: {
+        fecha: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_resumenDias: {
+    parameters: {
+      query: {
+        desde: string;
+        hasta: string;
+        planificacionId: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_marcarProgreso: {
+    parameters: {
+      query: {
+        bloqueId: string;
+      };
+      header?: never;
+      path: {
+        asignacionId: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ProgresoMarcarDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_marcasMias: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_crearMarca: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MarcaCrearDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_marcasDeAlumno: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alumnoId: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_pruebas: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  PlanificacionFisicaAlumnoController_borrarMarca: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
       };
       cookie?: never;
     };

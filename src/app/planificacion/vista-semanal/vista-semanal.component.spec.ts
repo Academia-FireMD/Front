@@ -59,6 +59,7 @@ describe('VistaSemanalComponent', () => {
       component.resumenFisica = [
         {
           fecha: '2026-07-15',
+          bloqueId: 33,
           disciplinas: [
             {
               nombre: 'Cuerda 2',
@@ -83,7 +84,9 @@ describe('VistaSemanalComponent', () => {
     });
 
     it('tieneFisica es false cuando el día trae disciplinas vacío (no debería pintar nada)', () => {
-      component.resumenFisica = [{ fecha: '2026-07-15', disciplinas: [] }];
+      component.resumenFisica = [
+        { fecha: '2026-07-15', bloqueId: 33, disciplinas: [] },
+      ];
       expect(component.tieneFisica(dia)).toBe(false);
     });
 
@@ -111,11 +114,15 @@ describe('VistaSemanalComponent', () => {
 
       expect(domEvent.stopPropagation).toHaveBeenCalled();
       expect(domEvent.preventDefault).toHaveBeenCalled();
-      expect(router.navigate).toHaveBeenCalledWith([
-        '/app/planificacion-fisica',
-        'dia',
-        '2026-07-15',
-      ]);
+      expect(router.navigate).toHaveBeenCalledWith(
+        ['/app/planificacion-fisica', 'dia', '2026-07-15'],
+        {
+          queryParams: {
+            bloqueId: 33,
+            originPlanificacionId: undefined,
+          },
+        },
+      );
     });
 
     it('el click de un evento de física NO cae en onEventClicked (no abre el diálogo de sub-bloque del temario)', () => {
@@ -181,6 +188,7 @@ describe('VistaSemanalComponent', () => {
       component.resumenFisica = [
         {
           fecha: '2026-07-15',
+          bloqueId: 33,
           disciplinas: [
             {
               nombre: 'Cuerda 2',

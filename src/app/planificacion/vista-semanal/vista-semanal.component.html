@@ -237,6 +237,12 @@
     <ng-template #templatePlan let-weekEvent="weekEvent">
       <div
         class="wrapper"
+        [attr.data-testid]="
+          esEventoFisicaVinculado(weekEvent.event) &&
+          tieneFisica(weekEvent.event.start)
+            ? 'temario-fisica-bridge'
+            : null
+        "
         (click)="
           role == 'ALUMNO' &&
           esEventoFisicaVinculado(weekEvent.event) &&

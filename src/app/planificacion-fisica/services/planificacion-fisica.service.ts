@@ -36,6 +36,21 @@ export interface PlanificacionResumen {
   identificador: string;
 }
 
+export interface ConflictoBloqueSolapado {
+  bloque: { id: number; identificador: string };
+  intervalos: {
+    bloque: { inicio: string; fin: string; label: string };
+    conflictivo: { inicio: string; fin: string; label: string };
+  }[];
+  planificaciones: PlanificacionResumen[];
+}
+
+export interface ErrorBloqueSolapado {
+  code: 'BLOQUE_SOLAPADO';
+  message: string;
+  details: ConflictoBloqueSolapado;
+}
+
 export interface BloqueEntrenamiento {
   id: number;
   identificador: string;
@@ -197,6 +212,7 @@ export interface BloqueOpcion {
   identificador: string;
   relevancia: Oposicion[];
   esActivo: boolean;
+  planificaciones: PlanificacionResumen[];
 }
 
 export interface DisciplinaDia {
@@ -263,6 +279,8 @@ export interface DisciplinaResumenDia {
 
 export interface ResumenDiaFisica {
   fecha: string;
+  /** Bloque exacto que aporta las disciplinas de este día. */
+  bloqueId: number;
   disciplinas: DisciplinaResumenDia[];
 }
 
@@ -351,6 +369,13 @@ export class PlanificacionFisicaService {
   publicar(id: number): Observable<BloqueEntrenamiento> {
     return this.http.put<BloqueEntrenamiento>(
       `${this.base}/bloques/${id}/publicar`,
+      {},
+    );
+  }
+
+  despublicar(id: number): Observable<BloqueEntrenamiento> {
+    return this.http.put<BloqueEntrenamiento>(
+      `${this.base}/bloques/${id}/despublicar`,
       {},
     );
   }
@@ -457,8 +482,15 @@ export class PlanificacionFisicaService {
    * debe tratar cualquier fallo (red, 5xx) como "sin indicación de física",
    * nunca como error que bloquee el calendario del temario.
    */
-  resumenDias(desde: string, hasta: string): Observable<ResumenDiaFisica[]> {
-    const params = new HttpParams().set('desde', desde).set('hasta', hasta);
+  resumenDias(
+    planificacionId: number,
+    desde: string,
+    hasta: string,
+  ): Observable<ResumenDiaFisica[]> {
+    const params = new HttpParams()
+      .set('planificacionId', planificacionId)
+      .set('desde', desde)
+      .set('hasta', hasta);
     return this.http.get<ResumenDiaFisica[]>(`${this.base}/resumen-dias`, {
       params,
     });

@@ -38,6 +38,7 @@
           label="Guardar enlaces"
           size="small"
           [loading]="guardandoPlanificaciones()"
+          [disabled]="guardandoPlanificaciones()"
           (click)="guardarPlanificaciones()"
           data-testid="pf-detalles-guardar-planificaciones"
         ></p-button>

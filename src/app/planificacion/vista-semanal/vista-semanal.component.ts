@@ -104,6 +104,8 @@ export class VistaSemanalComponent {
    * nada, el resto del calendario sigue funcionando igual.
    */
   @Input() resumenFisica: ResumenDiaFisica[] = [];
+  /** Plan de temario que originó el bridge, para recuperar una URL física obsoleta. */
+  @Input() originPlanificacionId: number | undefined;
   private onTimeClickedDate!: Date;
   public triggerSaveUpdateProgress = new Subject();
   private activatedRoute = inject(ActivatedRoute);
@@ -432,7 +434,14 @@ export class VistaSemanalComponent {
     domEvent.stopPropagation();
     domEvent.preventDefault();
     const fecha = formatFechaISO(dia);
-    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha]);
+    const bloqueId = this.resumenFisicaDelDia(dia)?.bloqueId;
+    if (!bloqueId) return;
+    this.router.navigate(['/app/planificacion-fisica', 'dia', fecha], {
+      queryParams: {
+        bloqueId,
+        originPlanificacionId: this.originPlanificacionId,
+      },
+    });
   }
 
   /* ── Sub-bloque vinculado a física (rediseño bridge 2026-07-22) ─────────

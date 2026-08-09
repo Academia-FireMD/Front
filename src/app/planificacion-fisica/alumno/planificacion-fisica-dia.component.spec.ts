@@ -86,12 +86,23 @@ describe('PlanificacionFisicaDiaComponent', () => {
     ],
   };
 
-  function setup(fecha = '2026-07-17', bloqueId?: string): void {
+  function setup(
+    fecha = '2026-07-17',
+    bloqueId?: string,
+    originPlanificacionId?: string,
+  ): void {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: {
         snapshot: {
           paramMap: { get: () => fecha },
-          queryParamMap: { get: () => bloqueId ?? null },
+          queryParamMap: {
+            get: (key: string) =>
+              key === 'bloqueId'
+                ? (bloqueId ?? null)
+                : key === 'originPlanificacionId'
+                  ? (originPlanificacionId ?? null)
+                  : null,
+          },
         },
       },
     });
@@ -639,6 +650,38 @@ describe('PlanificacionFisicaDiaComponent', () => {
     await fixture.whenStable();
 
     expect(serviceMock.dia).toHaveBeenLastCalledWith('2026-07-17', 3);
+  });
+
+  it('si el bloque explícito ya no existe vuelve al plan de temario de origen', async () => {
+    serviceMock.dia!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 404 })),
+    );
+    setup('2026-07-17', '3', '91');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(TestBed.inject(ToastrService).warning).toHaveBeenCalledWith(
+      'La planificación física ha cambiado.',
+    );
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([
+      '/app/planificacion/planificacion-mensual-alumno',
+      91,
+    ]);
+    expect(component['errorCarga']()).toBe(false);
+  });
+
+  it('si el bloque explícito ya no existe y no hay origen vuelve al calendario físico', async () => {
+    serviceMock.dia!.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 404 })),
+    );
+    setup('2026-07-17', '3');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([
+      '/app/planificacion-fisica',
+    ]);
+    expect(component['errorCarga']()).toBe(false);
   });
 
   it('un fallo de miPlan no bloquea el detalle del día', async () => {

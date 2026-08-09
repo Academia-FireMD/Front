@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -294,6 +295,48 @@ describe('PlanificacionFisicaDetallesComponent', () => {
     const toast = TestBed.inject(ToastrService);
     expect(toast.error).toHaveBeenCalledWith(
       'No se han podido guardar las planificaciones enlazadas.',
+    );
+  });
+
+  it('un bloque publicado no permite eliminar todos sus enlaces sin despublicarlo', async () => {
+    serviceMock.obtenerBloque!.mockReturnValue(
+      of({ ...bloqueFixture, estado: 'PUBLICADO' }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component['planificacionesSeleccionadas'].set([]);
+
+    await component['guardarPlanificaciones']();
+
+    expect(serviceMock.actualizarPlanificaciones).not.toHaveBeenCalled();
+    expect(TestBed.inject(ToastrService).error).toHaveBeenCalledWith(
+      'Para dejar un bloque publicado sin enlaces, despublícalo primero.',
+    );
+  });
+
+  it('si backend rechaza los nuevos enlaces conserva la selección y muestra su motivo', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const seleccion = [planificacionesDisponibles[1]];
+    component['planificacionesSeleccionadas'].set(seleccion);
+    serviceMock.actualizarPlanificaciones!.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: {
+              code: 'BLOQUE_SOLAPADO',
+              message: 'La nueva selección se solapa con otro bloque.',
+            },
+          }),
+      ),
+    );
+
+    await component['guardarPlanificaciones']();
+
+    expect(component['planificacionesSeleccionadas']()).toEqual(seleccion);
+    expect(TestBed.inject(ToastrService).error).toHaveBeenCalledWith(
+      'La nueva selección se solapa con otro bloque.',
     );
   });
 });

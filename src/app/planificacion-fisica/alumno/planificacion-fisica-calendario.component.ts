@@ -101,6 +101,16 @@ export class PlanificacionFisicaCalendarioComponent implements OnInit {
     () => this.misBloques().length > 1,
   );
 
+  /** Identifica siempre el bloque y los planes de temario que lo habilitan. */
+  protected etiquetaBloque = (bloque: BloqueOpcion): string => {
+    const planes = (bloque.planificaciones ?? [])
+      .map((planificacion) => planificacion.identificador)
+      .join(', ');
+    return planes
+      ? `${bloque.identificador} · ${planes}`
+      : bloque.identificador;
+  };
+
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => {
       this.destruido = true;

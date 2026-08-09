@@ -57,6 +57,7 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
   protected errorCarga = signal(false);
   private fechaCargada: string | null = null;
   private bloqueIdEfectivo: number | undefined;
+  private originPlanificacionId: number | undefined;
   /**
    * `asignacionId` de las disciplinas con un PUT `marcarProgreso` en vuelo.
    * Deshabilita SU botón "Marcar como hecho" mientras dura la petición: sin
@@ -131,6 +132,7 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
       return;
     }
     const bloqueId = this.bloqueIdDeQuery();
+    this.originPlanificacionId = this.planificacionIdDeOrigen();
     await this.cargar(fecha, bloqueId);
   }
 
@@ -141,6 +143,13 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
     return Number.isSafeInteger(bloqueId) && bloqueId > 0
       ? bloqueId
       : undefined;
+  }
+
+  private planificacionIdDeOrigen(): number | undefined {
+    const raw = this.route.snapshot.queryParamMap.get('originPlanificacionId');
+    if (!raw || !/^\d+$/.test(raw)) return undefined;
+    const id = Number(raw);
+    return Number.isSafeInteger(id) && id > 0 ? id : undefined;
   }
 
   private async cargar(fecha: string, bloqueId?: number): Promise<void> {
@@ -171,8 +180,13 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
       if (httpErr?.status === 403 && body?.reason === 'TIER_TOO_LOW') {
         this.gated.set(body);
       } else {
-        this.errorCarga.set(true);
-        this.toast.error('No se ha podido cargar el día.');
+        if (bloqueId && httpErr?.status === 404) {
+          this.toast.warning('La planificación física ha cambiado.');
+          this.volverAlOrigen();
+        } else {
+          this.errorCarga.set(true);
+          this.toast.error('No se ha podido cargar el día.');
+        }
       }
     } finally {
       this.loading.set(false);
@@ -240,6 +254,17 @@ export class PlanificacionFisicaDiaComponent implements OnInit {
     this.router.navigate(['/app/planificacion-fisica'], {
       queryParams: bloqueId ? { bloqueId } : {},
     });
+  }
+
+  private volverAlOrigen(): void {
+    if (this.originPlanificacionId) {
+      void this.router.navigate([
+        '/app/planificacion/planificacion-mensual-alumno',
+        this.originPlanificacionId,
+      ]);
+      return;
+    }
+    void this.router.navigate(['/app/planificacion-fisica']);
   }
 
   protected reintentar(): void {
