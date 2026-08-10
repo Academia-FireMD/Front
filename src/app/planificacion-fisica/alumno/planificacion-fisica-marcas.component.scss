@@ -7,16 +7,12 @@
   gap: 1.25rem;
   padding: 1rem;
 
-  // Igual que en el detalle de día: solo la cabecera se tiñe con el naranja
-  // del calendario, para que la sección se lea como continuación de él. Las
-  // tarjetas de marcas siguen neutras (mandan los colores de disciplina).
   &__header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
-    @include pf.pf-banda-cabecera;
 
     h2 {
       margin: 0;
@@ -25,7 +21,7 @@
 
   &__subtitulo {
     margin: 0.15rem 0 0;
-    color: pf.$pf-texto-calido;
+    color: var(--text-color-secondary);
     font-size: 0.9rem;
   }
 

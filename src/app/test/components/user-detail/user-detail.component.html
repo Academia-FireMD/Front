@@ -24,7 +24,11 @@
         [text]="true"
         (onClick)="volver()"
       />
-      <div>
+      <div class="detail-avatar">
+        {{ (user.nombre || "?").charAt(0)
+        }}{{ (user.apellidos || "").charAt(0) }}
+      </div>
+      <div class="detail-identity">
         <h1>{{ user.nombre }} {{ user.apellidos }}</h1>
         <span>{{ user.email }} · #{{ user.id }}</span>
         <div class="chip-list">
@@ -89,28 +93,44 @@
     <div class="detail-grid">
       <p-card header="Resumen administrativo"
         ><dl>
-          <dt>Teléfono</dt>
-          <dd>{{ user.telefono || "—" }}</dd>
-          <dt>Tutor</dt>
-          <dd>
-            {{
-              user.tutor ? user.tutor.nombre + " " + user.tutor.apellidos : "—"
-            }}
-          </dd>
-          <dt>Origen</dt>
-          <dd>{{ user.authSource || "LOCAL" }}</dd>
-          <dt>Planificaciones</dt>
-          <dd>{{ user.cantidadPlanificaciones }}</dd>
-          <dt>Onboarding</dt>
-          <dd>{{ user.onboardingCompletado ? "Completado" : "Pendiente" }}</dd>
-          <dt>Acceso a clases grabadas</dt>
-          <dd>
-            {{
-              user.fechaAccesoClasesGrabadas
-                ? (user.fechaAccesoClasesGrabadas | date: "dd/MM/yyyy")
-                : "Según primera matrícula"
-            }}
-          </dd>
+          <div>
+            <dt>Teléfono</dt>
+            <dd>{{ user.telefono || "—" }}</dd>
+          </div>
+          <div>
+            <dt>Tutor</dt>
+            <dd>
+              {{
+                user.tutor
+                  ? user.tutor.nombre + " " + user.tutor.apellidos
+                  : "—"
+              }}
+            </dd>
+          </div>
+          <div>
+            <dt>Origen</dt>
+            <dd>{{ user.authSource || "LOCAL" }}</dd>
+          </div>
+          <div>
+            <dt>Planificaciones</dt>
+            <dd>{{ user.cantidadPlanificaciones }}</dd>
+          </div>
+          <div>
+            <dt>Onboarding</dt>
+            <dd>
+              {{ user.onboardingCompletado ? "Completado" : "Pendiente" }}
+            </dd>
+          </div>
+          <div>
+            <dt>Acceso a clases grabadas</dt>
+            <dd>
+              {{
+                user.fechaAccesoClasesGrabadas
+                  ? (user.fechaAccesoClasesGrabadas | date: "dd/MM/yyyy")
+                  : "Según primera matrícula"
+              }}
+            </dd>
+          </div>
         </dl></p-card
       >
       <p-card header="Suscripciones"

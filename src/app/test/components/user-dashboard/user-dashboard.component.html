@@ -61,5 +61,24 @@
         <p-tag [value]="labelDisplay(entry.label)" severity="secondary" />
       }
     </div>
+    @if (mode === "overview") {
+      <div class="user-row-actions">
+        <p-menu
+          #actionMenu
+          [model]="getActionItems(item)"
+          [popup]="true"
+          appendTo="body"
+        ></p-menu>
+        <p-button
+          icon="pi pi-ellipsis-v"
+          data-testid="user-actions-btn"
+          styleClass="p-button-sm p-button-text p-button-rounded"
+          (onClick)="actionMenu.toggle($event)"
+          (click)="$event.stopPropagation()"
+          pTooltip="Opciones"
+          tooltipPosition="top"
+        ></p-button>
+      </div>
+    }
   </div>
 </ng-template>

@@ -25,6 +25,8 @@ import {
   getUserActivity,
   UserActivityStatus,
 } from '../../../shared/utils/user-activity.utils';
+import { MenuItem } from 'primeng/api';
+import { AuthService } from '../../../services/auth.service';
 
 /** Compact administrative list. All mutable user management lives in UserDetail. */
 @Component({
@@ -36,6 +38,7 @@ import {
 })
 export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   readonly userService = inject(UserService);
+  private readonly auth = inject(AuthService);
   readonly labelDisplay = labelDisplay;
   @Input() mode: GenericListMode = 'overview';
   @Input() singleSelection = false;
@@ -265,6 +268,64 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         queryParams: this.route.snapshot.queryParams,
       });
     }
+  }
+
+  /**
+   * Menú de acciones rápidas por fila (modo overview). Los diálogos de gestión
+   * viven SOLO en la ficha (`UserDetailComponent`); desde aquí se navega a la
+   * ficha con `?action=...` para que la abra, sin duplicar reglas. La única
+   * acción directa es "Acceder como usuario" (misma llamada única del
+   * AuthService que usa la ficha).
+   */
+  getActionItems(user: Usuario): MenuItem[] {
+    const queryParams = {
+      ...this.route.snapshot.queryParams,
+      action: undefined,
+    };
+    const irAFicha = (action?: string) =>
+      this.router.navigate(['/app/test/user', user.id], {
+        queryParams: { ...queryParams, ...(action ? { action } : {}) },
+      });
+
+    return [
+      {
+        label: 'Ver ficha',
+        icon: 'pi pi-id-card',
+        command: () => irAFicha(),
+      },
+      {
+        label: 'Acceder como usuario',
+        icon: 'pi pi-user-edit',
+        command: () => this.impersonar(user),
+      },
+      {
+        label: 'Editar',
+        icon: 'pi pi-pencil',
+        command: () => irAFicha('editar'),
+      },
+      {
+        label: 'Suscripción',
+        icon: 'pi pi-credit-card',
+        command: () => irAFicha('suscripciones'),
+      },
+      {
+        label: 'Gestionar etiquetas',
+        icon: 'pi pi-tag',
+        command: () => irAFicha('etiquetas'),
+      },
+      {
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        command: () => irAFicha('eliminar'),
+      },
+    ];
+  }
+
+  private impersonar(user: Usuario): void {
+    this.auth.impersonateUser$(user.id).subscribe({
+      next: () => this.router.navigate(['/app/profile']),
+      error: () => this.toast.error('No se pudo acceder como el usuario'),
+    });
   }
   getUserId = (user: Usuario): number => user.id;
   getUserActivity(user: Usuario) {

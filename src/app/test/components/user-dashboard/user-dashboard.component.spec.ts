@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { UserDashboardComponent } from './user-dashboard.component';
 
 describe('UserDashboardComponent', () => {
@@ -18,6 +19,10 @@ describe('UserDashboardComponent', () => {
       },
     };
     component.router = { navigate: jest.fn() };
+    component.auth = {
+      impersonateUser$: jest.fn(() => of({})),
+    };
+    component.toast = { error: jest.fn(), success: jest.fn() };
     component.selectionChange = { emit: jest.fn() };
     component.initialQueryFilterMatched = false;
     component.initialFilterHydrationOpen = true;
@@ -47,6 +52,53 @@ describe('UserDashboardComponent', () => {
     component.onSelectionChange([7, 9]);
     expect(component.router.navigate).not.toHaveBeenCalled();
     expect(component.selectionChange.emit).toHaveBeenCalledWith([7, 9]);
+  });
+
+  it('ofrece las acciones de fila navegando a la ficha con ?action=', () => {
+    const component = build();
+    const items = component.getActionItems({ id: 7 } as any);
+    const labels = items.map((i: any) => i.label);
+    expect(labels).toEqual([
+      'Ver ficha',
+      'Acceder como usuario',
+      'Editar',
+      'Suscripción',
+      'Gestionar etiquetas',
+      'Eliminar',
+    ]);
+    items[2].command();
+    expect(component.router.navigate).toHaveBeenCalledWith(
+      ['/app/test/user', 7],
+      {
+        queryParams: expect.objectContaining({ action: 'editar' }),
+      },
+    );
+  });
+
+  it('impersonar desde el menú de fila usa el AuthService y navega al perfil', () => {
+    const component = build();
+    component.getActionItems({ id: 7 } as any)[1].command();
+    expect(component.auth.impersonateUser$).toHaveBeenCalledWith(7);
+    expect(component.router.navigate).toHaveBeenCalledWith(['/app/profile']);
+  });
+
+  it('las acciones de "Ver ficha" y "Eliminar" navegan a la ficha con su acción', () => {
+    const component = build();
+    const items = component.getActionItems({ id: 7 } as any);
+    items[0].command();
+    expect(component.router.navigate).toHaveBeenCalledWith(
+      ['/app/test/user', 7],
+      {
+        queryParams: expect.not.objectContaining({ action: expect.anything() }),
+      },
+    );
+    items[5].command();
+    expect(component.router.navigate).toHaveBeenCalledWith(
+      ['/app/test/user', 7],
+      {
+        queryParams: expect.objectContaining({ action: 'eliminar' }),
+      },
+    );
   });
 
   it('provides an accessible activity label for the status indicator', () => {

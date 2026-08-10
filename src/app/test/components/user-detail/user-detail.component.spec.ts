@@ -177,6 +177,47 @@ describe('UserDetailComponent focused behavior', () => {
     expect(component.fisica.marcasDeAlumno).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['editar', 'editVisible'],
+    ['suscripciones', 'subscriptionVisible'],
+    ['etiquetas', 'labelsVisible'],
+    ['eliminar', 'confirmacion'],
+  ])(
+    'abre el diálogo %s al llegar con ?action=%s desde el menú de fila del listado',
+    async (action, efecto) => {
+      const component = build();
+      component.user = { id: 7 };
+      component.users.getAdminUserDetail$ = jest
+        .fn()
+        .mockReturnValue(of({ id: 7 }));
+      component.users.getUserPlanifications$ = jest
+        .fn()
+        .mockReturnValue(of([]));
+      component.confirmation = { confirm: jest.fn(), close: jest.fn() };
+      component.labels.getLabels = jest.fn().mockReturnValue(of([]));
+      component.route.snapshot.queryParams = { action };
+      await component.load();
+      if (efecto === 'confirmacion') {
+        expect(component.confirmation.confirm).toHaveBeenCalled();
+      } else {
+        expect(component[efecto as keyof typeof component]).toBe(true);
+      }
+    },
+  );
+
+  it('no abre ningún diálogo sin ?action en la URL', async () => {
+    const component = build();
+    component.user = { id: 7 };
+    component.users.getAdminUserDetail$ = jest
+      .fn()
+      .mockReturnValue(of({ id: 7 }));
+    component.users.getUserPlanifications$ = jest.fn().mockReturnValue(of([]));
+    component.route.snapshot.queryParams = {};
+    const editarSpy = jest.spyOn(component as any, 'editar');
+    await component.load();
+    expect(editarSpy).not.toHaveBeenCalled();
+  });
+
   it('allows mixed Woo/manual subscription management and cancels Woo through the same endpoint', () => {
     const component = build();
     component.user = {

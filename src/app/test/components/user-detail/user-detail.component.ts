@@ -173,6 +173,7 @@ export class UserDetailComponent {
       if (!this.isCurrent(requestVersion, requestedId)) return;
       this.user = user;
       await this.loadSections(requestedId, requestVersion);
+      await this.ejecutarAccionQuery();
     } catch (error: any) {
       if (this.isCurrent(requestVersion, requestedId)) {
         this.notFound = error?.status === 404;
@@ -180,6 +181,31 @@ export class UserDetailComponent {
       }
     } finally {
       if (this.isCurrent(requestVersion, requestedId)) this.loading = false;
+    }
+  }
+
+  /**
+   * Acciones rápidas del menú de 3 puntos del listado: se llega con
+   * `?action=editar|suscripciones|etiquetas|eliminar` y aquí se abre el
+   * diálogo correspondiente. La lógica de cada diálogo vive en este componente
+   * (fuente única) — el listado solo navega.
+   */
+  private async ejecutarAccionQuery(): Promise<void> {
+    const action = this.route.snapshot.queryParams['action'];
+    if (!action || !this.user) return;
+    switch (action) {
+      case 'editar':
+        this.editar();
+        break;
+      case 'suscripciones':
+        this.abrirSuscripciones();
+        break;
+      case 'etiquetas':
+        await this.abrirEtiquetas();
+        break;
+      case 'eliminar':
+        this.confirmarEliminar();
+        break;
     }
   }
 

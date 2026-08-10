@@ -1,164 +1,352 @@
 .user-detail {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.25rem;
 }
+
+/* ---------- Cabecera ---------- */
 .detail-header {
   display: flex;
-  gap: 1rem;
   align-items: center;
+  gap: 1rem;
   flex-wrap: wrap;
+  background: var(--surface-section, #f8f9fa);
+  border: 1px solid var(--surface-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
 }
-.detail-header h1 {
-  margin: 0;
+
+.detail-avatar {
+  display: grid;
+  place-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
-.detail-header > div {
+
+.detail-identity {
   min-width: 0;
+  flex: 1 1 16rem;
+
+  h1 {
+    margin: 0 0 0.15rem;
+    font-size: 1.35rem;
+    overflow-wrap: anywhere;
+  }
+
+  & > span {
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+  }
 }
-.detail-header h1,
-.detail-header span {
-  overflow-wrap: anywhere;
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
 }
+
 .header-actions {
   display: flex;
   gap: 0.5rem;
   margin-left: auto;
   flex-wrap: wrap;
+  align-items: center;
 }
+
+/* ---------- Grid de resumen ---------- */
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1rem;
 }
-dl {
-  display: grid;
-  grid-template-columns: minmax(8rem, auto) 1fr;
-  gap: 0.5rem 1rem;
-  margin: 0;
+
+.detail-grid :host ::ng-deep .p-card,
+.detail-card {
+  height: 100%;
+  box-shadow: none;
+  border: 1px solid var(--surface-border, #e5e7eb);
+  border-radius: 10px;
 }
-dt {
+
+:host ::ng-deep .detail-grid .p-card,
+:host ::ng-deep .user-detail > .p-card,
+:host ::ng-deep .p-card.detail-card {
+  box-shadow: none;
+  border: 1px solid var(--surface-border, #e5e7eb);
+  border-radius: 10px;
+}
+
+:host ::ng-deep .p-card .p-card-body {
+  padding: 1rem 1.1rem;
+}
+
+:host ::ng-deep .p-card .p-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--text-color-secondary);
-}
-dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.chip-list,
-.assignment-list {
-  display: grid;
+  margin: 0 0 0.85rem;
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
-.chip-list {
-  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+
+:host ::ng-deep .p-card .p-card-title i {
+  color: var(--primary-color);
 }
-.label-entry {
+
+/* ---------- Resumen administrativo (dl) ---------- */
+dl {
+  display: grid;
+  grid-template-columns: minmax(9rem, auto) 1fr;
+  gap: 0;
+  margin: 0;
+}
+
+dl > div {
+  display: contents;
+}
+
+dt {
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+  padding: 0.45rem 0.75rem 0.45rem 0;
+  border-bottom: 1px solid var(--surface-border, #e5e7eb);
+}
+
+dd {
+  margin: 0;
+  padding: 0.45rem 0 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--surface-border, #e5e7eb);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+dl > div:last-child dt,
+dl > div:last-child dd {
+  border-bottom: none;
+}
+
+/* ---------- Chips (suscripciones, consumibles, etiquetas) ---------- */
+.chip-list .label-entry {
   display: inline-flex;
   align-items: center;
+  gap: 0.35rem;
   min-width: 0;
   max-width: 100%;
 }
+
 :host ::ng-deep .chip-list .p-tag {
   max-width: 100%;
   white-space: normal;
 }
+
 :host ::ng-deep .chip-list .p-tag-value {
   overflow-wrap: anywhere;
 }
-.assignment {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid var(--surface-border);
-  padding: 0.75rem 0;
-}
-.assignment p {
-  margin: 0.25rem 0 0;
-}
-.assignment > :first-child {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.assignment > span {
-  flex-shrink: 0;
-}
-.detail-state {
-  min-height: 18rem;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 1rem;
-}
-.small-spinner {
-  width: 2rem;
-  height: 2rem;
-}
+
+/* ---------- Onboarding ---------- */
 .completion {
   display: grid;
   gap: 0.5rem;
   margin-bottom: 1rem;
+
+  span {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
 }
+
 .onboarding-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: 0.75rem;
 }
+
 .onboarding-grid > div {
   display: grid;
   gap: 0.2rem;
-  padding: 0.65rem;
-  background: var(--surface-ground);
-  border-radius: var(--border-radius);
+  padding: 0.7rem 0.85rem;
+  background: var(--surface-section, #f8f9fa);
+  border: 1px solid var(--surface-border, #e5e7eb);
+  border-radius: 8px;
 }
-.onboarding-grid span {
-  overflow-wrap: anywhere;
+
+.onboarding-grid strong {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
   color: var(--text-color-secondary);
 }
+
+.onboarding-grid span {
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+}
+
+/* ---------- Planificaciones ---------- */
+.assignment-list {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.assignment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--surface-border, #e5e7eb);
+  padding: 0.7rem 0.25rem;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.assignment p {
+  margin: 0.25rem 0 0;
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+}
+
+.assignment > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.assignment > span {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* ---------- Marcas físicas ---------- */
 .marca-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: 0.75rem;
 }
+
 .marca-card {
   display: grid;
   grid-template-columns: 0.65rem 1fr;
   gap: 0.35rem 0.6rem;
-  padding: 0.75rem;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--border-radius);
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--surface-border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--surface-section, #f8f9fa);
 }
+
 .marca-card strong {
   grid-column: 2;
+  font-size: 0.95rem;
 }
+
 .marca-card span:not(.marca-color),
 .marca-card small {
   grid-column: 2;
+  color: var(--text-color-secondary);
 }
+
 .marca-color {
   grid-row: span 3;
   width: 0.65rem;
   border-radius: 999px;
 }
+
+/* ---------- Estados ---------- */
+.detail-state {
+  min-height: 18rem;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.85rem;
+  text-align: center;
+  color: var(--text-color-secondary);
+
+  i {
+    font-size: 2.25rem;
+    color: var(--text-color-secondary);
+  }
+
+  h2 {
+    margin: 0;
+    color: var(--text-color);
+  }
+}
+
+.small-spinner {
+  width: 2rem;
+  height: 2rem;
+}
+
 .section-error {
   color: var(--red-500);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
+
+/* ---------- Diálogos ---------- */
+.form-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
 @media (max-width: 768px) {
-  .detail-grid {
-    grid-template-columns: 1fr;
+  .detail-header {
+    align-items: flex-start;
   }
+
   .header-actions {
     margin-left: 0;
     width: 100%;
   }
+
   .header-actions :is(button, .p-button) {
     flex: 1 1 auto;
   }
+
   .assignment {
     align-items: flex-start;
   }
-  .chip-list {
+
+  dl {
     grid-template-columns: 1fr;
+  }
+
+  dt {
+    padding: 0.5rem 0 0.1rem;
+    border-bottom: none;
+  }
+
+  dd {
+    padding: 0 0 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--surface-border, #e5e7eb);
+  }
+
+  dl > div:last-child dt,
+  dl > div:last-child dd {
+    border-bottom: none;
   }
 }

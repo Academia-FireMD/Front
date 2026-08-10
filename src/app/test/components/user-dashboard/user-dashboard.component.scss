@@ -16,6 +16,12 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: flex-end;
+  flex: 1 1 auto;
+}
+.user-row-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .status-dot {
