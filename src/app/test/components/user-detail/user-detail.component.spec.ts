@@ -15,6 +15,7 @@ describe('UserDetailComponent focused behavior', () => {
     ) as UserDetailComponent & any;
     component.users = {
       getAdminUserDetail$: jest.fn(),
+      getUserPlanifications$: jest.fn(),
       updateUser: jest.fn(),
       createUserSubscription: jest.fn(),
       cancelUserSubscription: jest.fn(),
@@ -73,6 +74,35 @@ describe('UserDetailComponent focused behavior', () => {
     await component.load();
     expect(component.notFound).toBe(true);
     expect(component.error).toBe(false);
+  });
+
+  it('maps a non-404 failure to the retryable error state', async () => {
+    const component = build();
+    component.users.getAdminUserDetail$.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+    await component.load();
+    expect(component.error).toBe(true);
+    expect(component.notFound).toBe(false);
+    expect(component.loading).toBe(false);
+  });
+
+  it('recovers from a retryable error via reintento', async () => {
+    const component = build();
+    component.users.getUserPlanifications$.mockReturnValue(of([]));
+    component.users.getAdminUserDetail$.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 503 })),
+    );
+    await component.load();
+    expect(component.error).toBe(true);
+
+    component.users.getAdminUserDetail$.mockReturnValueOnce(
+      of({ id: 7, nombre: 'Ana', apellidos: 'Díaz' }),
+    );
+    await component.load();
+    expect(component.error).toBe(false);
+    expect(component.notFound).toBe(false);
+    expect(component.user).toMatchObject({ id: 7, nombre: 'Ana' });
   });
 
   it('ignores a late response from the previously requested user', async () => {
