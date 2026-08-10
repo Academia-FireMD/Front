@@ -1,7 +1,8 @@
 /**
  * E2E Fase 2 (plan 2026-05-11) — Sort de la lista admin: activos primero.
  *
- * Verifica que /user/all devuelve primero usuarios con sub ACTIVE.
+ * Verifica que /user/all devuelve primero usuarios con sub ACTIVE y que tras
+ * cancelar una sub, el usuario baja en la lista.
  *
  * NOTAS:
  *   - Mockeamos backend; el orden ya lo da el server (paso 8 split+concat).
@@ -48,25 +49,40 @@ test.describe('Admin — sort lista usuarios por actividad', () => {
     await loginAsAdminMock(page, userAdminFixture);
   });
 
-  test('la lista compacta pinta primero al usuario con sub ACTIVE', async ({
+  test('primera fila tiene sub ACTIVE; tras cancelar, ese usuario baja', async ({
     page,
   }) => {
     // Estado inicial: usuario activo arriba, inactivo abajo
     const activeUser = userBase(101, 'Ana', true);
     const inactiveUser = userBase(102, 'Bruno', false);
 
+    let cancelCalled = false;
+
     await page.route('**/user/all', (route) => {
+      // Si ya se canceló, devolvemos a Ana sin sub activa (debería bajar)
+      const data = cancelCalled
+        ? [inactiveUser, { ...activeUser, suscripciones: [] }]
+        : [activeUser, inactiveUser];
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          data: [activeUser, inactiveUser],
+          data,
           pagination: { skip: 0, take: 10, count: 2 },
         }),
       });
     });
 
-    await page.goto('/app/test/user');
+    await page.route('**/user/cancel-subscription/**', (route) => {
+      cancelCalled = true;
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 1010, status: 'CANCELLED' }),
+      });
+    });
+
+    await page.goto('/app/test/user-dashboard');
 
     // Verificar orden inicial: Ana (activa) debe aparecer antes que Bruno
     const anaLoc = page.locator('text=Ana').first();

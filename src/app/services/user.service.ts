@@ -1,13 +1,12 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, Observable, throwError } from 'rxjs';
+import { Observable } from 'rxjs';
 import {
   PaginatedResult,
   PaginationFilter,
 } from '../shared/models/pagination.model';
-import { Usuario, UsuarioAdministrativo } from '../shared/models/user.model';
+import { Usuario } from '../shared/models/user.model';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
-import { AsignacionAdministrativa } from '../shared/models/planificacion.model';
 import { ApiBaseService } from './api-base.service';
 
 @Injectable({
@@ -46,17 +45,6 @@ export class UserService extends ApiBaseService {
 
   public getAllUsers$(filter: PaginationFilter) {
     return this.post('/all', filter) as Observable<PaginatedResult<Usuario>>;
-  }
-
-  public getAdminUserDetail$(id: number): Observable<UsuarioAdministrativo> {
-    // El 404 del detalle es un estado de UI ("El usuario ya no existe"), no un
-    // error que deba tragarse ni disparar toast genérico. `ApiBaseService.get`
-    // con `ignoreError` omite el toast; aquí se RE-EMITE el HttpErrorResponse
-    // original para que `UserDetailComponent` pueda distinguir 404 de 5xx
-    // (`error?.status`), cosa que el `Error` plano de `handleError` no permite.
-    return this.get(`/admin/${id}`, true).pipe(
-      catchError((err: HttpErrorResponse) => throwError(() => err)),
-    );
   }
 
   public getAllTutores$() {
@@ -106,10 +94,10 @@ export class UserService extends ApiBaseService {
   public deleteUserSubscription(
     userId: number,
     subscriptionId: number,
-  ): Observable<UsuarioAdministrativo> {
+  ): Observable<Usuario> {
     return this.delete(
       `/subscription/${userId}/${subscriptionId}`,
-    ) as Observable<UsuarioAdministrativo>;
+    ) as Observable<Usuario>;
   }
 
   public getAvailableSubscriptions() {
@@ -123,9 +111,7 @@ export class UserService extends ApiBaseService {
   }
 
   public getUserPlanifications$(userId: number) {
-    return this.get(`/planifications/${userId}`) as Observable<
-      AsignacionAdministrativa[]
-    >;
+    return this.get(`/planifications/${userId}`) as Observable<any[]>;
   }
 
   public updateOnboardingData$(data: OnboardingData): Observable<Usuario> {

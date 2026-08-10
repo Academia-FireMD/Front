@@ -1,59 +1,153 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
-  EventEmitter,
   computed,
+  EventEmitter,
   inject,
   input,
   Input,
   Output,
 } from '@angular/core';
-import { tap } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { cloneDeep } from 'lodash';
+import { Memoize } from 'lodash-decorators';
+import { ConfirmationService, MenuItem } from 'primeng/api';
+import { firstValueFrom, tap } from 'rxjs';
+import { AppConfigService } from '../../../services/app-config.service';
+import { AuthService } from '../../../services/auth.service';
+import { PlanificacionesService } from '../../../services/planificaciones.service';
 import { UserService } from '../../../services/user.service';
+import { ModuloApp } from '../../../shared/models/modulo-app.enum';
+import {
+  MarcaPersonal,
+  PlanificacionFisicaService,
+} from '../../../planificacion-fisica/services/planificacion-fisica.service';
 import {
   FilterConfig,
   GenericListComponent,
   GenericListMode,
 } from '../../../shared/generic-list/generic-list.component';
-import { PaginationFilter } from '../../../shared/models/pagination.model';
-import { Usuario } from '../../../shared/models/user.model';
-import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
-import { PrimengModule } from '../../../shared/primeng.module';
-import { SuscripcionTipo } from '../../../shared/models/subscription.model';
-import { labelDisplay } from '../../../shared/models/label.model';
+import { Label, UsuarioLabel } from '../../../shared/models/label.model';
 import {
-  getUserActivity,
-  UserActivityStatus,
-} from '../../../shared/utils/user-activity.utils';
-import { MenuItem } from 'primeng/api';
-import { AuthService } from '../../../services/auth.service';
+  isSubscriptionAccessible,
+  Oposicion,
+  OPOSICION_LABELS,
+  Suscripcion,
+  SuscripcionStatus,
+  SuscripcionTipo,
+} from '../../../shared/models/subscription.model';
+import { Rol, Usuario } from '../../../shared/models/user.model';
+import { PrimengModule } from '../../../shared/primeng.module';
+import {
+  esAdminOSuperior,
+  etiquetaRol,
+  etiquetaRolCorta,
+} from '../../../shared/utils/rol.utils';
+import { LabelsService } from '../../../shared/services/labels.service';
+import { SharedGridComponent } from '../../../shared/shared-grid/shared-grid.component';
+import { SharedModule } from '../../../shared/shared.module';
 
-/** Compact administrative list. All mutable user management lives in UserDetail. */
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, PrimengModule, GenericListComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrimengModule,
+    SharedModule,
+    GenericListComponent,
+  ],
   templateUrl: './user-dashboard.component.html',
-  styleUrl: './user-dashboard.component.scss',
+  styleUrls: [
+    './user-dashboard.component.scss',
+    './user-dashboard-onboarding.component.scss',
+  ],
 })
 export class UserDashboardComponent extends SharedGridComponent<Usuario> {
-  readonly userService = inject(UserService);
-  private readonly auth = inject(AuthService);
-  readonly labelDisplay = labelDisplay;
+  userService = inject(UserService);
+  planificacionesService = inject(PlanificacionesService);
+  confirmationService = inject(ConfirmationService);
+  authService = inject(AuthService);
+  labelsService = inject(LabelsService);
+  planificacionFisicaService = inject(PlanificacionFisicaService);
+  appConfigService = inject(AppConfigService);
+
+  /** Bridge física: el tab de marcas personales y su carga lazy solo están
+   * disponibles cuando el módulo PLANIFICACION_FISICA está habilitado. */
+  planificacionFisicaHabilitada = computed(
+    () =>
+      this.appConfigService.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !==
+      false,
+  );
+
   @Input() mode: GenericListMode = 'overview';
   @Input() singleSelection = false;
   @Input() selectedUserIds: number[] = [];
-  readonly extraFilters = input<FilterConfig[]>();
+  extraFilters = input<FilterConfig[]>();
   @Output() selectionChange = new EventEmitter<number[]>();
-  private readonly initialListQueryParams = {
-    ...this.route.snapshot.queryParams,
-  };
-  private initialQueryFilterSignature?: string | null;
-  private initialQueryFilterMatched = false;
-  private initialFilterHydrationOpen = true;
 
-  readonly filters = computed(() => {
-    const base: FilterConfig[] = [
+  availableSubscriptions: any[] = [];
+  editDialogVisible = false;
+  subscriptionDialogVisible = false;
+  selectedUser!: Usuario;
+  selectedSubscriptionType = SuscripcionTipo.BASIC;
+  selectedOposicion = Oposicion.VALENCIA_AYUNTAMIENTO;
+  public decodedUser = this.authService.decodeToken() as Usuario;
+
+  /** El usuario que mira el dashboard es admin o superior (incluye SUPERADMIN). */
+  get viewerEsAdminOSuperior(): boolean {
+    return esAdminOSuperior(this.decodedUser?.rol);
+  }
+
+  /** Clase del chip de rol para un usuario del listado. */
+  chipRolClase(rol: Rol | string | null | undefined): string {
+    return esAdminOSuperior(rol) ? 'admin-chip' : 'alumno-chip';
+  }
+
+  /** Etiqueta corta del chip de rol (Super / Admin / Alumno). */
+  chipRolLabel(rol: Rol | string | null | undefined): string {
+    return etiquetaRolCorta(rol);
+  }
+
+  /** Tooltip del chip de rol ("Usuario superadministrador", etc.). */
+  chipRolTooltip(rol: Rol | string | null | undefined): string {
+    return `Usuario ${etiquetaRol(rol).toLowerCase()}`;
+  }
+
+  // Opciones para selects de oposición
+  oposicionOptions = Object.values(Oposicion)
+    .map((op) => ({
+      label: OPOSICION_LABELS[op] || op,
+      value: op,
+    }))
+    .filter((op) => op.value !== Oposicion.GENERAL);
+
+  subscriptionTypeOptions = [
+    { label: 'Básica', value: SuscripcionTipo.BASIC },
+    { label: 'Avanzada', value: SuscripcionTipo.ADVANCED },
+    { label: 'Premium', value: SuscripcionTipo.PREMIUM },
+  ];
+
+  // Etiquetas management
+  labelsDialogVisible = false;
+  availableLabels: Label[] = [];
+  userLabels: UsuarioLabel[] = [];
+  selectedLabelId: string = '';
+
+  creatingNewLabel = false;
+  newLabelKey = '';
+  newLabelValue = '';
+
+  // Nuevas propiedades para expansión
+  expandedUserIds = new Set<number>();
+  userPlanifications = new Map<number, any[]>();
+  loadingPlanifications = new Set<number>();
+  userMarcas = new Map<number, MarcaPersonal[]>();
+  loadingMarcas = new Set<number>();
+
+  // Configuración de filtros para el GenericListComponent
+  public filters = computed(() => {
+    const baseFilters = [
       {
         key: 'tipoUsuario',
         label: 'Tipo de Usuario',
@@ -66,11 +160,13 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           { label: 'Usuarios WooCommerce', value: 'woocommerce' },
         ],
         filterInterpolation: (value) => {
-          if (value === 'admin')
+          if (value === 'todos') return {};
+          if (value === 'admin') {
             return {
               OR: [{ rol: { equals: 'ADMIN' } }, { esTutor: { equals: true } }],
             };
-          if (value === 'particulares')
+          }
+          if (value === 'particulares') {
             return {
               AND: [
                 { woocommerceCustomerId: { equals: null } },
@@ -78,9 +174,13 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
                 { esTutor: { equals: false } },
               ],
             };
-          return value === 'woocommerce'
-            ? { woocommerceCustomerId: { not: null } }
-            : {};
+          }
+          if (value === 'woocommerce') {
+            return {
+              woocommerceCustomerId: { not: null },
+            };
+          }
+          return {};
         },
       },
       {
@@ -95,16 +195,17 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           { label: 'Premium', value: SuscripcionTipo.PREMIUM },
           { label: 'Avanzado', value: SuscripcionTipo.ADVANCED },
         ],
-        filterInterpolation: (value) =>
-          value === 'sin_suscripcion'
-            ? { suscripciones: { none: {} } }
-            : value === 'todas'
-              ? {}
-              : {
-                  suscripciones: {
-                    some: { tipo: { equals: value }, status: 'ACTIVE' },
-                  },
-                },
+        filterInterpolation: (value: string) => {
+          if (value === 'todas') return {};
+          if (value === 'sin_suscripcion') {
+            return { suscripciones: { none: {} } };
+          }
+          return {
+            suscripciones: {
+              some: { tipo: { equals: value }, status: 'ACTIVE' },
+            },
+          };
+        },
       },
       {
         key: 'validated',
@@ -116,8 +217,10 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           { label: 'Verificados', value: true },
           { label: 'Sin verificar', value: false },
         ],
-        filterInterpolation: (value) =>
-          value === 'todos' ? {} : { validated: value },
+        filterInterpolation: (value) => {
+          if (value === 'todos') return {};
+          return { validated: value };
+        },
       },
       {
         key: 'estadoActividad',
@@ -130,20 +233,10 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           { label: 'Parciales (Amarillo)', value: 'parcial' },
           { label: 'Inactivos (Rojo)', value: 'inactivo' },
         ],
-        filterInterpolation: (value) =>
-          value === 'todos' ? {} : { estadoActividad: value },
-      },
-      {
-        key: 'variasPlanificaciones',
-        label: 'Varias planificaciones',
-        type: 'dropdown',
-        placeholder: 'Filtrar planificaciones',
-        options: [
-          { label: 'Todos', value: 'todos' },
-          { label: 'Con varias planificaciones', value: 'varias' },
-        ],
-        filterInterpolation: (value) =>
-          value === 'varias' ? { variasPlanificaciones: true } : {},
+        filterInterpolation: (value) => {
+          if (value === 'todos') return {};
+          return { estadoActividad: value };
+        },
       },
       {
         key: 'rol',
@@ -155,192 +248,705 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
           { label: 'Admin', value: 'ADMIN' },
           { label: 'Alumno', value: 'ALUMNO' },
         ],
-        filterInterpolation: (value) =>
-          value === 'todos' ? {} : { rol: value },
+        filterInterpolation: (value) => {
+          if (value === 'todos') return {};
+          return { rol: value };
+        },
       },
-    ];
-    return [...base, ...(this.extraFilters() || [])];
+    ] as FilterConfig[];
+    return [...baseFilters, ...(this.extraFilters() || [])];
   });
 
   constructor() {
     super();
-    this.fetchItems$ = computed(() =>
-      this.userService
-        .getAllUsers$(this.pagination())
-        .pipe(tap((result) => (this.lastLoadedPagination = result))),
+    this.loadAvailableSubscriptions();
+    this.loadAvailableLabels();
+
+    this.fetchItems$ = computed(() => {
+      return this.userService.getAllUsers$(this.pagination()).pipe(
+        tap((entry) => {
+          this.lastLoadedPagination = entry;
+        }),
+      );
+    });
+  }
+
+  public onFiltersChanged(where: any) {
+    this.updatePaginationSafe({
+      where: where,
+      skip: 0, // Resetear a la primera página cuando cambian los filtros
+    });
+  }
+
+  public onItemClick(item: Usuario) {
+    this.editarUsuario(item);
+  }
+
+  public getUserId = (user: Usuario): number => user.id;
+
+  public onSelectionChange(selectedIds: (string | number)[]) {
+    this.selectionChange.emit(selectedIds as number[]);
+  }
+
+  async loadAvailableSubscriptions() {
+    try {
+      this.availableSubscriptions = await firstValueFrom(
+        this.userService.getAvailableSubscriptions(),
+      );
+    } catch (error) {
+      console.error('Error loading subscriptions:', error);
+    }
+  }
+
+  getSubscriptionBadgeClass(
+    suscripcion: Suscripcion | null | undefined,
+  ): string {
+    if (!suscripcion) return 'no-subscription-chip';
+
+    switch (suscripcion.tipo) {
+      case SuscripcionTipo.BASIC:
+        return 'basic-chip';
+      case SuscripcionTipo.PREMIUM:
+        return 'premium-chip';
+      case SuscripcionTipo.ADVANCED:
+        return 'pro-chip';
+      default:
+        return 'no-subscription-chip';
+    }
+  }
+
+  getSubscriptionLabel(suscripcion: Suscripcion | null | undefined): string {
+    if (!suscripcion) return 'Sin suscripción';
+
+    const tipoLabel =
+      {
+        [SuscripcionTipo.BASIC]: 'Básica',
+        [SuscripcionTipo.ADVANCED]: 'Avanzada',
+        [SuscripcionTipo.PREMIUM]: 'Premium',
+      }[suscripcion.tipo] || suscripcion.tipo;
+
+    const oposicionLabel =
+      OPOSICION_LABELS[suscripcion.oposicion] || suscripcion.oposicion;
+    return `${tipoLabel} - ${oposicionLabel}`;
+  }
+
+  getHighestSubscription(suscripciones?: Suscripcion[]): Suscripcion | null {
+    if (!suscripciones || suscripciones.length === 0) return null;
+
+    const activeSubs = suscripciones.filter((s) =>
+      isSubscriptionAccessible(s.status),
     );
-  }
-  onFiltersChanged(where: unknown): void {
-    const signature = this.filterSignature(where);
-    const initialSignature = this.queryFilterSignature();
-    const isTransientEmptyHydration =
-      initialSignature !== null &&
-      !this.initialQueryFilterMatched &&
-      !this.hasFilterConditions(where);
-    const matchesInitial =
-      initialSignature !== null && signature === initialSignature;
-    const preserveInitialPagination =
-      this.initialFilterHydrationOpen &&
-      (isTransientEmptyHydration || matchesInitial);
-    if (matchesInitial) {
-      this.initialQueryFilterMatched = true;
-    } else if (!isTransientEmptyHydration) {
-      this.initialFilterHydrationOpen = false;
-    }
-    this.updatePaginationSafe(
-      preserveInitialPagination
-        ? { where, ...this.paginationFromQueryParams() }
-        : { where, skip: 0 },
-    );
-  }
+    if (activeSubs.length === 0) return null;
 
-  private queryFilterSignature(): string | null {
-    if (this.initialQueryFilterSignature !== undefined) {
-      return this.initialQueryFilterSignature;
-    }
-    const queryParams =
-      this.initialListQueryParams ?? this.route.snapshot.queryParams;
-    const where: Record<string, unknown> = {};
-    let hasFilter = false;
-    for (const filter of this.filters()) {
-      const rawValue = queryParams[filter.key];
-      if (rawValue === undefined) continue;
-      hasFilter = true;
-      const value = this.decodeQueryFilterValue(rawValue, filter.type);
-      const condition = filter.filterInterpolation
-        ? filter.filterInterpolation(value)
-        : { [filter.key]: value };
-      Object.assign(where, condition);
-    }
-    this.initialQueryFilterSignature = hasFilter
-      ? this.filterSignature(Object.keys(where).length ? where : undefined)
-      : null;
-    return this.initialQueryFilterSignature;
-  }
-
-  private decodeQueryFilterValue(
-    value: unknown,
-    type: FilterConfig['type'],
-  ): unknown {
-    if (type !== 'dropdown' || typeof value !== 'string') return value;
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    const numeric = Number(value);
-    return Number.isNaN(numeric) ? value : numeric;
-  }
-
-  private paginationFromQueryParams(): Pick<PaginationFilter, 'skip' | 'take'> {
-    const queryParams =
-      this.initialListQueryParams ?? this.route.snapshot.queryParams;
-    return {
-      skip: Number(queryParams['skip']) || 0,
-      take: Number(queryParams['take']) || this.pagination().take,
+    const tierPriority: Record<SuscripcionTipo, number> = {
+      [SuscripcionTipo.PREMIUM]: 3,
+      [SuscripcionTipo.ADVANCED]: 2,
+      [SuscripcionTipo.BASIC]: 1,
     };
-  }
 
-  private filterSignature(value: unknown): string {
-    if (Array.isArray(value)) {
-      return `[${value.map((item) => this.filterSignature(item)).join(',')}]`;
-    }
-    if (value && typeof value === 'object') {
-      return `{${Object.entries(value as Record<string, unknown>)
-        .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
-        .map(
-          ([key, item]) =>
-            `${JSON.stringify(key)}:${this.filterSignature(item)}`,
-        )
-        .join(',')}}`;
-    }
-    return JSON.stringify(value) ?? String(value);
-  }
-
-  private hasFilterConditions(where: unknown): boolean {
-    return (
-      !!where && typeof where === 'object' && Object.keys(where).length > 0
+    return activeSubs.reduce(
+      (highest, sub) => {
+        if (!highest) return sub;
+        return (tierPriority[sub.tipo] || 0) > (tierPriority[highest.tipo] || 0)
+          ? sub
+          : highest;
+      },
+      null as Suscripcion | null,
     );
   }
-  onItemClick(user: Usuario): void {
-    if (this.mode !== 'selection') {
-      // GenericList serializes each declared filter in the URL. Forwarding the
-      // complete query state (rather than only skip/search) makes browser back
-      // and the explicit return restore the selected filters as well.
-      this.router.navigate(['/app/test/user', user.id], {
-        queryParams: this.route.snapshot.queryParams,
-      });
-    }
+
+  getActiveSuscripciones(user: Usuario): Suscripcion[] {
+    return (user.suscripciones || []).filter((s) =>
+      isSubscriptionAccessible(s.status),
+    );
+  }
+
+  getUserStatus(user: Usuario): 'active' | 'partial' | 'inactive' {
+    const hasActiveSub = user.suscripciones?.some((s) =>
+      isSubscriptionAccessible(s.status),
+    );
+    if (hasActiveSub) return 'active';
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const hasActiveConsumible = user.consumibles?.some(
+      (c) => c.estado === 'ACTIVADO',
+    );
+    const recentActivity =
+      user.updatedAt && new Date(user.updatedAt) > thirtyDaysAgo;
+    if (hasActiveConsumible || recentActivity) return 'partial';
+
+    return 'inactive';
   }
 
   /**
-   * Menú de acciones rápidas por fila (modo overview). Los diálogos de gestión
-   * viven SOLO en la ficha (`UserDetailComponent`); desde aquí se navega a la
-   * ficha con `?action=...` para que la abra, sin duplicar reglas. La única
-   * acción directa es "Acceder como usuario" (misma llamada única del
-   * AuthService que usa la ficha).
+   * Verifica si el usuario tiene al menos una suscripción ACTIVA gestionada por
+   * WooCommerce (con `woocommerceSubscriptionId` real). NO basta con
+   * `woocommerceCustomerId`, porque casos como Luis Moltó tienen el customerId
+   * pero sus suscripciones activas son manuales (sin wooSubId) y se pueden
+   * gestionar localmente.
+   *
+   * Refactor del antiguo `isWordPressUser` (Fase 1 plan 2026-05-11).
    */
-  getActionItems(user: Usuario): MenuItem[] {
-    const queryParams = {
-      ...this.route.snapshot.queryParams,
-      action: undefined,
-    };
-    const irAFicha = (action?: string) =>
-      this.router.navigate(['/app/test/user', user.id], {
-        queryParams: { ...queryParams, ...(action ? { action } : {}) },
-      });
+  hasWooManagedSubscriptions(user: Usuario): boolean {
+    return (
+      user?.suscripciones?.some(
+        (s) => s.status === 'ACTIVE' && !!s.woocommerceSubscriptionId,
+      ) ?? false
+    );
+  }
 
-    return [
-      {
-        label: 'Ver ficha',
-        icon: 'pi pi-id-card',
-        command: () => irAFicha(),
+  openSubscriptionDialog(user: Usuario) {
+    if (this.hasWooManagedSubscriptions(user)) {
+      this.toast.info(
+        'Los usuarios de WordPress deben gestionar sus suscripciones desde su panel en la tienda.',
+      );
+      return;
+    }
+    this.selectedUser = { ...user };
+    // Inicializar con la primera oposición disponible (que no tenga suscripción)
+    this.selectedSubscriptionType = SuscripcionTipo.BASIC;
+    this.selectedOposicion = this.getFirstAvailableOposicion();
+    this.subscriptionDialogVisible = true;
+  }
+
+  /**
+   * Verifica si ya existe una suscripción activa para la oposición seleccionada
+   */
+  hasSubscriptionForOposicion(oposicion: Oposicion): boolean {
+    if (!this.selectedUser?.suscripciones) return false;
+    return this.selectedUser.suscripciones.some(
+      (s) => s.oposicion === oposicion && isSubscriptionAccessible(s.status),
+    );
+  }
+
+  /**
+   * Obtiene la primera oposición que no tiene suscripción activa
+   */
+  getFirstAvailableOposicion(): Oposicion {
+    for (const op of Object.values(Oposicion)) {
+      if (!this.hasSubscriptionForOposicion(op)) {
+        return op;
+      }
+    }
+    return Oposicion.VALENCIA_AYUNTAMIENTO;
+  }
+
+  /**
+   * Verifica si se puede añadir la suscripción seleccionada
+   */
+  canAddSubscription(): boolean {
+    return (
+      this.selectedOposicion &&
+      this.selectedSubscriptionType &&
+      !this.hasSubscriptionForOposicion(this.selectedOposicion)
+    );
+  }
+
+  updateUserSubscription() {
+    if (this.hasSubscriptionForOposicion(this.selectedOposicion)) {
+      this.toast.warning(
+        'Ya existe una suscripción activa para esta oposición',
+      );
+      return;
+    }
+
+    this.userService
+      .createUserSubscription(
+        this.selectedUser.id,
+        this.selectedSubscriptionType,
+        this.selectedOposicion,
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.toast.success('Suscripción añadida correctamente');
+          if (response?.suscripciones) {
+            this.selectedUser = {
+              ...this.selectedUser,
+              suscripciones: response.suscripciones,
+            };
+          } else if (response?.id) {
+            // Si devuelve la suscripción creada, añadirla localmente
+            const newSub: Suscripcion = response;
+            this.selectedUser = {
+              ...this.selectedUser,
+              suscripciones: [
+                ...(this.selectedUser.suscripciones || []),
+                newSub,
+              ],
+            };
+          }
+          this.selectedOposicion = this.getFirstAvailableOposicion();
+          this.refresh();
+        },
+        error: (err) => {
+          const message =
+            err?.error?.message || 'No se pudo añadir la suscripción';
+          this.toast.error(message);
+        },
+      });
+  }
+
+  deleteSubscription(subscription: Suscripcion) {
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de que deseas eliminar la suscripción "${this.getSubscriptionLabel(subscription)}"?`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.userService
+          .deleteUserSubscription(this.selectedUser.id, subscription.id)
+          .subscribe({
+            next: (updatedUser) => {
+              this.toast.success('Suscripción eliminada correctamente');
+              if (updatedUser?.suscripciones) {
+                this.selectedUser = {
+                  ...this.selectedUser,
+                  suscripciones: updatedUser.suscripciones,
+                };
+              } else {
+                // Si no devuelve las suscripciones, eliminarla localmente
+                this.selectedUser = {
+                  ...this.selectedUser,
+                  suscripciones: (this.selectedUser.suscripciones || []).filter(
+                    (s) => s.id !== subscription.id,
+                  ),
+                };
+              }
+              this.refresh();
+            },
+            error: (err) => {
+              const message =
+                err?.error?.message || 'No se pudo eliminar la suscripción';
+              this.toast.error(message);
+            },
+          });
       },
-      {
+    });
+  }
+
+  /**
+   * Cancela una suscripción (status -> CANCELLED) sin borrarla. Conserva el
+   * histórico. Si la suscripción tiene `woocommerceSubscriptionId`, el backend
+   * cancela también en WooCommerce (D6 + 1A del plan 2026-05-11). Si WC falla,
+   * el backend devuelve BadGateway y el toast muestra la instrucción del runbook.
+   */
+  cancelSubscription(subscription: Suscripcion) {
+    this.confirmationService.confirm({
+      message: `¿Cancelar la suscripción "${this.getSubscriptionLabel(subscription)}"? El usuario perderá el acceso pero el histórico se conserva.`,
+      header: 'Cancelar suscripción',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, cancelar',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-warning',
+      accept: () => {
+        this.userService.cancelUserSubscription(subscription.id).subscribe({
+          next: (updatedSub: any) => {
+            this.toast.success('Suscripción cancelada');
+            // Actualizar localmente la sub para reflejar el cambio en el dialog
+            if (this.selectedUser?.suscripciones) {
+              this.selectedUser = {
+                ...this.selectedUser,
+                suscripciones: this.selectedUser.suscripciones.map((s) =>
+                  s.id === subscription.id
+                    ? {
+                        ...s,
+                        ...(updatedSub || {}),
+                        status: 'CANCELLED' as SuscripcionStatus,
+                      }
+                    : s,
+                ),
+              };
+            }
+            this.refresh();
+          },
+          error: (err) => {
+            const message = err?.error?.message || 'Error al cancelar';
+            this.toast.error(message);
+          },
+        });
+      },
+    });
+  }
+
+  /**
+   * Task C4 (feedback Raúl 2026-07-24): puente Date del `p-calendar` "Acceso a
+   * clases grabadas desde" del diálogo de edición. El backend recibe string
+   * ISO (o `null` para borrar el override) vía `POST /user/update/:id`.
+   */
+  editFechaClasesGrabadas: Date | null = null;
+
+  editarUsuario(user: Usuario) {
+    this.selectedUser = { ...user }; // Copiar los datos del usuario para editar
+    this.editFechaClasesGrabadas = user.fechaAccesoClasesGrabadas
+      ? new Date(user.fechaAccesoClasesGrabadas)
+      : null;
+    this.editDialogVisible = cloneDeep(true); // Mostrar el diálogo
+  }
+
+  // Etiquetas
+  async loadAvailableLabels() {
+    try {
+      this.availableLabels = await firstValueFrom(
+        this.labelsService.getLabels(),
+      );
+    } catch (e) {
+      console.error('Error cargando etiquetas:', e);
+    }
+  }
+
+  async openLabelsDialog(user: Usuario) {
+    this.selectedUser = { ...user };
+    this.creatingNewLabel = false;
+    this.newLabelKey = '';
+    this.newLabelValue = '';
+    this.selectedLabelId = '';
+
+    try {
+      await this.loadAvailableLabels();
+      await this.loadUserLabels(user.id);
+      this.labelsDialogVisible = true;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async loadUserLabels(userId: number) {
+    try {
+      this.userLabels = await firstValueFrom(
+        this.labelsService.getUserLabels(userId),
+      );
+    } catch (e) {
+      console.error('Error cargando etiquetas del usuario:', e);
+    }
+  }
+
+  async assignSelectedLabelToUser() {
+    if (!this.selectedUser || !this.selectedLabelId) return;
+    try {
+      await firstValueFrom(
+        this.labelsService.assignLabelToUser(
+          this.selectedUser.id,
+          this.selectedLabelId,
+        ),
+      );
+      this.toast.success('Etiqueta asignada correctamente');
+      this.selectedLabelId = '';
+      await this.loadUserLabels(this.selectedUser.id);
+      this.refresh(); // Refrescar la lista de usuarios para ver el chip
+    } catch (e) {
+      this.toast.error('No se pudo asignar la etiqueta');
+    }
+  }
+
+  async removeUserLabel(labelId: string) {
+    if (!this.selectedUser) return;
+    try {
+      await firstValueFrom(
+        this.labelsService.removeLabelFromUser(this.selectedUser.id, labelId),
+      );
+      this.toast.success('Etiqueta eliminada correctamente');
+      await this.loadUserLabels(this.selectedUser.id);
+      this.refresh(); // Refrescar la lista de usuarios para ver el cambio
+    } catch (e) {
+      this.toast.error('No se pudo eliminar la etiqueta');
+    }
+  }
+
+  async createAndAssignLabel() {
+    if (!this.selectedUser || !this.newLabelKey.trim()) {
+      this.toast.warning('La clave de la etiqueta es obligatoria');
+      return;
+    }
+
+    try {
+      await firstValueFrom(
+        this.labelsService.assignLabelByKeyValue(
+          this.selectedUser.id,
+          this.newLabelKey.trim(),
+          this.newLabelValue.trim() || undefined,
+        ),
+      );
+      this.toast.success('Etiqueta creada y asignada correctamente');
+      this.newLabelKey = '';
+      this.newLabelValue = '';
+      this.creatingNewLabel = false;
+      await this.loadAvailableLabels();
+      await this.loadUserLabels(this.selectedUser.id);
+      this.refresh(); // Refrescar la lista de usuarios para ver el chip
+    } catch (e) {
+      this.toast.error('No se pudo crear y asignar la etiqueta');
+    }
+  }
+
+  closeLabelsDialog() {
+    this.labelsDialogVisible = false;
+    this.creatingNewLabel = false;
+    this.newLabelKey = '';
+    this.newLabelValue = '';
+    this.selectedLabelId = '';
+  }
+
+  confirmarCambios(modifiedUser: Usuario) {
+    this.userService
+      .updateUser(modifiedUser.id, {
+        nombre: modifiedUser.nombre,
+        apellidos: modifiedUser.apellidos,
+        esTutor: modifiedUser.esTutor,
+        // Task C4: override admin del corte de clases grabadas. Calendario
+        // vacío → null explícito (borra el override).
+        fechaAccesoClasesGrabadas: this.editFechaClasesGrabadas
+          ? this.editFechaClasesGrabadas.toISOString()
+          : null,
+      })
+      .subscribe({
+        next: () => {
+          this.toast.success('Usuario actualizado correctamente');
+          this.editDialogVisible = false; // Cerrar el diálogo
+          this.selectedUser = null as any;
+          this.refresh();
+        },
+        error: () => {
+          this.toast.error('No se pudo actualizar el usuario');
+          this.refresh();
+        },
+      });
+  }
+
+  public deleteUser(id: number, event: Event) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: 'Vas a eliminar el usuario de la plataforma, ¿estás seguro?',
+      header: 'Confirmación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        await firstValueFrom(this.userService.eliminarUsuario(id));
+        this.toast.info('Usuario eliminado exitosamente');
+        this.refresh();
+      },
+      reject: () => {},
+    });
+  }
+
+  // Métodos para expansión de filas
+  toggleUserExpansion(userId: number, event: Event) {
+    event.stopPropagation();
+
+    if (this.expandedUserIds.has(userId)) {
+      this.expandedUserIds.delete(userId);
+    } else {
+      this.expandedUserIds.add(userId);
+      if (!this.userPlanifications.has(userId)) {
+        this.loadUserPlanifications(userId);
+      }
+      if (
+        !this.userMarcas.has(userId) &&
+        this.planificacionFisicaHabilitada()
+      ) {
+        this.loadUserMarcas(userId);
+      }
+    }
+  }
+
+  isUserExpanded(userId: number): boolean {
+    return this.expandedUserIds.has(userId);
+  }
+
+  async loadUserPlanifications(userId: number) {
+    this.loadingPlanifications.add(userId);
+    try {
+      const planifications = await firstValueFrom(
+        this.userService.getUserPlanifications$(userId),
+      );
+      this.userPlanifications.set(userId, planifications);
+    } catch (error) {
+      console.error('Error loading user planifications:', error);
+    } finally {
+      this.loadingPlanifications.delete(userId);
+    }
+  }
+
+  async loadUserMarcas(userId: number) {
+    this.loadingMarcas.add(userId);
+    try {
+      const marcas = await firstValueFrom(
+        this.planificacionFisicaService.marcasDeAlumno(userId),
+      );
+      this.userMarcas.set(userId, marcas);
+    } catch (error) {
+      console.error('Error loading user marcas:', error);
+    } finally {
+      this.loadingMarcas.delete(userId);
+    }
+  }
+
+  getUserMarcas(userId: number): MarcaPersonal[] {
+    return this.userMarcas.get(userId) || [];
+  }
+
+  isLoadingMarcas(userId: number): boolean {
+    return this.loadingMarcas.has(userId);
+  }
+
+  getUserPlanifications(userId: number): any[] {
+    return this.userPlanifications.get(userId) || [];
+  }
+
+  isLoadingPlanifications(userId: number): boolean {
+    return this.loadingPlanifications.has(userId);
+  }
+
+  async desvincularPlanificacion(planificationId: number, userId: number) {
+    try {
+      await firstValueFrom(
+        this.planificacionesService.desvincularPlanificacionMensualAdmin$(
+          planificationId,
+          userId,
+        ),
+      );
+      this.toast.success('Planificación desvinculada correctamente');
+      this.loadUserPlanifications(userId);
+    } catch (error) {
+      console.error('Error desvinculating planification:', error);
+    }
+  }
+
+  verPlanificacion(planificationId: number) {
+    this.router.navigate([
+      '/app/planificacion/planificacion-mensual',
+      planificationId,
+    ]);
+  }
+
+  @Memoize()
+  getActionItems(user: Usuario): MenuItem[] {
+    const items: MenuItem[] = [];
+    const hasWooSubs = this.hasWooManagedSubscriptions(user);
+
+    if (esAdminOSuperior(this.decodedUser.rol)) {
+      items.push({
         label: 'Acceder como usuario',
         icon: 'pi pi-user-edit',
-        command: () => this.impersonar(user),
-      },
+        command: () => this.impersonateUser(user),
+      });
+    }
+
+    items.push(
       {
-        label: 'Editar',
-        icon: 'pi pi-pencil',
-        command: () => irAFicha('editar'),
-      },
-      {
-        label: 'Suscripción',
-        icon: 'pi pi-credit-card',
-        command: () => irAFicha('suscripciones'),
+        label: hasWooSubs ? 'Suscripción (WP)' : 'Suscripción',
+        icon: hasWooSubs ? 'pi pi-lock' : 'pi pi-credit-card',
+        disabled: hasWooSubs,
+        command: () => this.openSubscriptionDialog(user),
+        tooltipOptions: hasWooSubs
+          ? {
+              tooltipLabel:
+                'Usuario de WordPress - gestiona sus suscripciones desde su panel',
+            }
+          : undefined,
       },
       {
         label: 'Gestionar etiquetas',
         icon: 'pi pi-tag',
-        command: () => irAFicha('etiquetas'),
+        command: () => this.openLabelsDialog(user),
       },
-      {
-        label: 'Eliminar',
-        icon: 'pi pi-trash',
-        command: () => irAFicha('eliminar'),
+    );
+
+    // Fase 1 plan 2026-05-11: eliminados los ítems "Verificar/Dar de baja/Denegar".
+    // El flujo de baja se hace ahora vía el botón "Suscripción" → Cancelar (Fase 2).
+    items.push({
+      label: 'Eliminar',
+      icon: 'pi pi-trash',
+      command: () => {
+        const event = new MouseEvent('click');
+        this.deleteUser(user.id, event);
       },
-    ];
+    });
+
+    return items;
   }
 
-  private impersonar(user: Usuario): void {
-    this.auth.impersonateUser$(user.id).subscribe({
-      next: () => this.router.navigate(['/app/profile']),
-      error: () => this.toast.error('No se pudo acceder como el usuario'),
+  getOnboardingCompletionPercentage(user: Usuario): number {
+    const onboardingFields = [
+      user.tipoOposicion,
+      user.nivelOposicion,
+      user.tipoDePlanificacionDuracionDeseada,
+      user.dni,
+      user.fechaNacimiento,
+      user.nombreEmpresa,
+      user.paisRegion,
+      user.direccionCalle,
+      user.codigoPostal,
+      user.poblacion,
+      user.provincia,
+      user.telefono,
+      user.municipioResidencia,
+      user.estudiosPrevaios,
+      user.actualTrabajoOcupacion,
+      user.hobbies,
+      user.descripcionSemana,
+      user.horasEstudioDiaSemana,
+      user.horasEntrenoDiaSemana,
+      user.organizacionEstudioEntreno,
+      user.temaPersonal,
+      user.oposicionesHechasResultados,
+      user.pruebasFisicas,
+      user.tecnicasEstudioUtilizadas,
+      user.objetivosSeisMeses,
+      user.objetivosUnAno,
+      user.experienciaAcademias,
+      user.queValorasAcademia,
+      user.queMenosGustaAcademias,
+      user.queEsperasAcademia,
+      user.trabajasActualmente,
+      user.agotamientoFisicoMental,
+      user.tiempoDedicableEstudio,
+      user.diasSemanaDisponibles,
+      user.otraInformacionLaboral,
+      user.comentariosAdicionales,
+    ];
+
+    const filledFields = onboardingFields.filter(
+      (field) =>
+        field !== null &&
+        field !== '' &&
+        field !== false &&
+        field !== undefined &&
+        !this.isEmptyArray(field),
+    ).length;
+
+    return Math.round((filledFields / onboardingFields.length) * 100);
+  }
+
+  private isEmptyArray(value: any): boolean {
+    return Array.isArray(value) && value.length === 0;
+  }
+
+  formatTipoOposicion(ops?: Oposicion[]): string {
+    if (!ops || ops.length === 0) {
+      return 'No proporcionado';
+    }
+    return ops.map((o) => OPOSICION_LABELS[o] ?? o).join(', ');
+  }
+
+  impersonateUser(user: Usuario) {
+    this.authService.impersonateUser$(user.id).subscribe({
+      next: (response) => {
+        this.toast.success(
+          `Ahora estás accediendo como ${user.nombre} ${user.apellidos}`,
+        );
+        // Redirigir al dashboard principal para que vean la vista de alumno
+        this.router.navigate(['/app/profile']);
+      },
+      error: (error) => {
+        console.error('Impersonation error:', error);
+      },
     });
-  }
-  getUserId = (user: Usuario): number => user.id;
-  getUserActivity(user: Usuario) {
-    return getUserActivity(user);
-  }
-  activityAriaLabel(status: UserActivityStatus): string {
-    const label =
-      status === 'active'
-        ? 'Activo'
-        : status === 'partial'
-          ? 'Parcial'
-          : 'Inactivo';
-    return `Estado de actividad: ${label}`;
-  }
-  onSelectionChange(ids: (string | number)[]): void {
-    this.selectionChange.emit(ids as number[]);
   }
 }

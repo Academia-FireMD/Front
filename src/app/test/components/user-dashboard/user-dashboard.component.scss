@@ -1,27 +1,71 @@
-.user-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem;
+.verified-chip {
+  background-color: var(--green-100);
+  color: var(--green-800);
 }
-.user-summary span {
-  display: block;
-  color: var(--text-color-secondary);
-  font-size: 0.875rem;
+
+.nonverified-chip {
+  background-color: var(--red-100);
+  color: var(--red-800);
 }
-.row-tags {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  flex: 1 1 auto;
+
+.admin-chip {
+  background-color: var(--blue-100);
+  color: var(--blue-800);
 }
-.user-row-actions {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
+
+.alumno-chip {
+  background-color: var(--gray-100);
+  color: var(--gray-800);
+}
+
+.tutor-chip {
+  background-color: var(--purple-100);
+  color: var(--purple-800);
+}
+
+.basic-chip {
+  background-color: var(--gray-100);
+  color: var(--gray-800);
+}
+
+.premium-chip {
+  background-color: var(--orange-100);
+  color: var(--orange-800);
+}
+
+.pro-chip {
+  background-color: var(--indigo-100);
+  color: var(--indigo-800);
+}
+
+.no-subscription-chip {
+  background-color: var(--red-50);
+  color: var(--red-600);
+}
+
+.wp-chip {
+  background-color: var(--teal-100);
+  color: var(--teal-800);
+  font-weight: 600;
+}
+
+/* Marcas físicas en el expanded row del usuario (Fase 5 polish) */
+.marcas-content {
+  .marca-card {
+    .marca-color {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.label-chip {
+  background-color: var(--cyan-100);
+  color: var(--cyan-800);
+  font-size: 0.85rem;
 }
 
 .status-dot {
@@ -47,12 +91,44 @@
   }
 }
 
-@media (max-width: 640px) {
-  .user-row {
-    align-items: flex-start;
-    flex-direction: column;
+// Estilos para expansión de planificaciones
+.planifications-expansion {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+
+  .planification-card {
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--surface-100) !important;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
   }
-  .row-tags {
-    justify-content: flex-start;
+}
+
+:host ::ng-deep .item-container {
+  max-height: none !important;
+}
+
+::ng-deep .small-spinner {
+  width: 24px !important;
+  height: 24px !important;
+
+  .p-progress-spinner-svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+// Animación suave para el icono de expansión
+::ng-deep p-button[pTooltip="Ver planificaciones"] button {
+  transition: transform 0.3s ease;
+}
+
+// Evitar que el texto del botón se rompa en múltiples líneas
+::ng-deep .no-wrap-button {
+  .p-button-label {
+    white-space: nowrap !important;
   }
 }

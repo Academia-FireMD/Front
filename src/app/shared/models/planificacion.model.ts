@@ -75,12 +75,3 @@ export interface AsignacionAlumno {
   alumno: Usuario;
   planificacion: PlanificacionMensual;
 }
-
-/** Minimal administrative projection returned by GET /user/planifications/:id. */
-export interface AsignacionAdministrativa {
-  planificacionId: number;
-  planificacion?: Pick<
-    PlanificacionMensual,
-    'id' | 'identificador' | 'descripcion'
-  > | null;
-}

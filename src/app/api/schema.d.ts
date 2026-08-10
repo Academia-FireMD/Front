@@ -251,22 +251,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/user/admin/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: operations['UserController_adminDetail'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/user/tutores': {
     parameters: {
       query?: never;
@@ -2053,10 +2037,9 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * @description Fase 2 bridge temario↔física: deja como máximo un sub-bloque
-     *     `esEntrenamientoFisico` por día, priorizando nombres que empiecen por
-     *     "ENTRENAMIENTO" cuando aún no existe uno. Solo ADMIN; la confirmación la
-     *     pide el front.
+     * @description Fase 2 bridge temario↔física: marca como `esEntrenamientoFisico` todos los
+     *     sub-bloques de esta planificación mensual cuyo nombre empiece por
+     *     "ENTRENAMIENTO". Solo ADMIN; la confirmación la pide el front.
      */
     post: operations['PlanificacionController_convertirBloquesFisica'];
     delete?: never;
@@ -5871,132 +5854,6 @@ export interface components {
       totalRegisters: number;
       where?: Record<string, never>;
     };
-    AdminUsersPaginationDto: {
-      where?: {
-        variasPlanificaciones?: boolean;
-      } & {
-        [key: string]: unknown;
-      };
-      skip: number;
-      take: number;
-      searchTerm: string;
-      totalRegisters: number;
-    };
-    AdminUserSubscriptionDto: {
-      id: number;
-      /** @enum {string} */
-      tipo: 'PRO' | 'NORMAL' | 'INDIVIDUAL' | 'PREMIUM' | 'ADVANCED' | 'BASIC';
-      /** @enum {string} */
-      oposicion:
-        | 'GENERAL'
-        | 'VALENCIA_AYUNTAMIENTO'
-        | 'ALICANTE_CPBA'
-        | 'MADRID';
-      /** @enum {string} */
-      status: 'ACTIVE' | 'PENDING_CANCEL' | 'CANCELLED' | 'PENDING_PAYMENT';
-      /** Format: date-time */
-      fechaInicio: string;
-      /** Format: date-time */
-      fechaFin?: string | null;
-      woocommerceSubscriptionId?: string | null;
-    };
-    AdminUserTutorDto: {
-      id: number;
-      nombre: string;
-      apellidos: string;
-      email: string;
-    };
-    AdminUserConsumibleDto: {
-      id: number;
-      tipo: string;
-      estado: string;
-      sku: string;
-      /** Format: date-time */
-      activadoEn: string;
-      /** Format: date-time */
-      expiraEn?: string | null;
-      /** Format: date-time */
-      usadoEn?: string | null;
-      /** @description Nested exam is deliberately limited to the fields consumed by Front. */
-      examen?: {
-        id?: number;
-        titulo?: string;
-      } | null;
-    };
-    AdminUserLabelDefinitionDto: {
-      id: string;
-      key: string;
-      value?: string | null;
-    };
-    AdminUserLabelDto: {
-      labelId: string;
-      label: components['schemas']['AdminUserLabelDefinitionDto'];
-    };
-    AdminUserDetailDto: {
-      id: number;
-      email: string;
-      nombre: string;
-      apellidos: string;
-      /** @enum {string} */
-      rol: 'SUPERADMIN' | 'ADMIN' | 'ALUMNO';
-      validated: boolean;
-      telefono?: string | null;
-      /** Format: date-time */
-      fechaAccesoClasesGrabadas?: string | null;
-      suscripciones: components['schemas']['AdminUserSubscriptionDto'][];
-      tutor?: components['schemas']['AdminUserTutorDto'] | null;
-      consumibles: components['schemas']['AdminUserConsumibleDto'][];
-      labels: components['schemas']['AdminUserLabelDto'][];
-      cantidadPlanificaciones: number;
-      /** Format: date-time */
-      validatedAt?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-      avatarUrl?: string | null;
-      esTutor: boolean;
-      authSource: string;
-      woocommerceCustomerId?: number | null;
-      dni?: string | null;
-      /** Format: date-time */
-      fechaNacimiento?: string | null;
-      nombreEmpresa?: string | null;
-      paisRegion?: string | null;
-      direccionCalle?: string | null;
-      codigoPostal?: string | null;
-      poblacion?: string | null;
-      provincia?: string | null;
-      municipioResidencia?: string | null;
-      estudiosPrevaios?: string | null;
-      actualTrabajoOcupacion?: string | null;
-      hobbies?: string | null;
-      descripcionSemana?: string | null;
-      horasEstudioDiaSemana?: number | null;
-      horasEntrenoDiaSemana?: number | null;
-      organizacionEstudioEntreno?: string | null;
-      temaPersonal?: string | null;
-      oposicionesHechasResultados?: string | null;
-      pruebasFisicas?: string | null;
-      tecnicasEstudioUtilizadas?: string | null;
-      objetivosSeisMeses?: string | null;
-      objetivosUnAno?: string | null;
-      experienciaAcademias?: boolean | null;
-      queValorasAcademia?: string | null;
-      queMenosGustaAcademias?: string | null;
-      queEsperasAcademia?: string | null;
-      trabajasActualmente?: string | null;
-      agotamientoFisicoMental?: string | null;
-      tiempoDedicableEstudio?: string | null;
-      diasSemanaDisponibles?: string | null;
-      otraInformacionLaboral?: string | null;
-      comentariosAdicionales?: string | null;
-      tipoOposicion: string[];
-      nivelOposicion?: string | null;
-      tipoDePlanificacionDuracionDeseada: string;
-      metodoCalificacion: string;
-      onboardingCompletado: boolean;
-    };
     NewTestDto: {
       generarTestDeRepaso: boolean;
       numPreguntas: number;
@@ -6781,54 +6638,11 @@ export interface operations {
     };
     requestBody: {
       content: {
-        'application/json': components['schemas']['AdminUsersPaginationDto'];
+        'application/json': components['schemas']['PaginationDto'];
       };
     };
     responses: {
       201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  UserController_adminDetail: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Identificador positivo del usuario */
-        id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AdminUserDetailDto'];
-        };
-      };
-      /** @description El identificador no es un entero positivo */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Solo ADMIN o SUPERADMIN */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Usuario no encontrado */
-      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -7077,7 +6891,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['AdminUserDetailDto'];
+          'application/json': Record<string, never>;
         };
       };
     };
