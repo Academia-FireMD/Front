@@ -198,17 +198,32 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     () => this.pruebaSeleccionada() === PRUEBA_OTRA_ID,
   );
 
+  /**
+   * Unidad sugerida de la prueba oficial seleccionada en el catálogo, para el
+   * placeholder del campo unidad. Vacía cuando no hay prueba o es
+   * "Otra prueba…" (entonces se muestra el texto genérico).
+   */
+  protected readonly unidadSugeridaActual = computed(() => {
+    const id = this.pruebaSeleccionada();
+    if (id == null || id === PRUEBA_OTRA_ID) {
+      return '';
+    }
+    return this.catalogo().find((d) => d.id === id)?.unidadSugerida ?? '';
+  });
+
   protected readonly hoy = new Date();
 
-  /** Cuando cambia la prueba, sugiere la unidad del catálogo. */
+  /** Cuando cambia la prueba, sugiere (y sobrescribe) la unidad del catálogo. */
   protected onPruebaChange(pruebaFisicaId: number): void {
     const nombreLibreControl = this.form.get('nombreLibre');
+    const unidadControl = this.form.get('unidad');
     if (pruebaFisicaId === PRUEBA_OTRA_ID) {
       nombreLibreControl?.setValidators([
         Validators.required,
         Validators.maxLength(60),
       ]);
       nombreLibreControl?.updateValueAndValidity();
+      unidadControl?.setValue('');
       return;
     }
     nombreLibreControl?.setValue('');
@@ -216,8 +231,8 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     nombreLibreControl?.updateValueAndValidity();
 
     const prueba = this.catalogo().find((d) => d.id === pruebaFisicaId);
-    if (prueba && !this.form.get('unidad')?.value) {
-      this.form.get('unidad')?.setValue(prueba.unidadSugerida);
+    if (prueba) {
+      unidadControl?.setValue(prueba.unidadSugerida);
     }
   }
 
