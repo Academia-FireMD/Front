@@ -1,0 +1,369 @@
+<p-confirmDialog />
+@if (loading) {
+  <div class="detail-state">
+    <p-progressSpinner /><span>Cargando ficha del alumno…</span>
+  </div>
+} @else if (notFound) {
+  <div class="detail-state">
+    <i class="pi pi-user-minus"></i>
+    <h2>El usuario ya no existe</h2>
+    <p-button label="Volver a Usuarios" (onClick)="volver()" />
+  </div>
+} @else if (error) {
+  <div class="detail-state">
+    <i class="pi pi-exclamation-triangle"></i>
+    <h2>No se pudo cargar la ficha</h2>
+    <p-button label="Reintentar" (onClick)="load()" />
+  </div>
+} @else if (user) {
+  <section class="user-detail">
+    <header class="detail-header">
+      <p-button
+        label="Volver a Usuarios"
+        icon="pi pi-arrow-left"
+        [text]="true"
+        (onClick)="volver()"
+      />
+      <div>
+        <h1>{{ user.nombre }} {{ user.apellidos }}</h1>
+        <span>{{ user.email }} · #{{ user.id }}</span>
+        <div class="chip-list">
+          <p-tag [value]="user.rol" /><p-tag
+            [value]="user.validated ? 'Validado' : 'Sin validar'"
+            [severity]="user.validated ? 'success' : 'warning'"
+          />
+          @let activity = userActivity();
+          @if (activity) {
+            <p-tag
+              [value]="
+                activity.estado === 'active'
+                  ? 'Activo'
+                  : activity.estado === 'partial'
+                    ? 'Parcial'
+                    : 'Inactivo'
+              "
+              [severity]="
+                activity.estado === 'active'
+                  ? 'success'
+                  : activity.estado === 'partial'
+                    ? 'warning'
+                    : 'danger'
+              "
+            />
+          }
+        </div>
+      </div>
+      <div class="header-actions">
+        <p-button
+          label="Editar"
+          icon="pi pi-pencil"
+          (onClick)="editar()"
+        /><p-button
+          label="Suscripciones"
+          icon="pi pi-credit-card"
+          (onClick)="abrirSuscripciones()"
+        /><p-button
+          label="Etiquetas"
+          icon="pi pi-tag"
+          (onClick)="abrirEtiquetas()"
+        /><p-button
+          label="Impersonar"
+          icon="pi pi-user-edit"
+          [loading]="impersonating"
+          (onClick)="impersonar()"
+        /><p-menu
+          #destructiveMenu
+          [model]="destructiveActions"
+          [popup]="true"
+          appendTo="body"
+        /><p-button
+          label="Más acciones"
+          icon="pi pi-ellipsis-v"
+          severity="secondary"
+          [outlined]="true"
+          ariaLabel="Abrir acciones destructivas"
+          (onClick)="destructiveMenu.toggle($event)"
+        />
+      </div>
+    </header>
+    <div class="detail-grid">
+      <p-card header="Resumen administrativo"
+        ><dl>
+          <dt>Teléfono</dt>
+          <dd>{{ user.telefono || "—" }}</dd>
+          <dt>Tutor</dt>
+          <dd>
+            {{
+              user.tutor ? user.tutor.nombre + " " + user.tutor.apellidos : "—"
+            }}
+          </dd>
+          <dt>Origen</dt>
+          <dd>{{ user.authSource || "LOCAL" }}</dd>
+          <dt>Planificaciones</dt>
+          <dd>{{ user.cantidadPlanificaciones }}</dd>
+          <dt>Onboarding</dt>
+          <dd>{{ user.onboardingCompletado ? "Completado" : "Pendiente" }}</dd>
+          <dt>Acceso a clases grabadas</dt>
+          <dd>
+            {{
+              user.fechaAccesoClasesGrabadas
+                ? (user.fechaAccesoClasesGrabadas | date: "dd/MM/yyyy")
+                : "Según primera matrícula"
+            }}
+          </dd>
+        </dl></p-card
+      >
+      <p-card header="Suscripciones"
+        ><div class="chip-list">
+          @for (sub of user.suscripciones || []; track sub.id) {
+            <p-tag
+              [value]="sub.tipo + ' · ' + sub.status"
+              [pTooltip]="sub.oposicion"
+            />
+          } @empty {
+            <span>Sin suscripciones</span>
+          }
+        </div></p-card
+      >
+      <p-card header="Consumibles"
+        ><div class="chip-list">
+          @for (consumible of user.consumibles || []; track consumible.id) {
+            <p-tag
+              [value]="consumible.tipo + ' · ' + consumible.estado"
+              [pTooltip]="consumible.examen?.titulo || consumible.sku"
+            />
+          } @empty {
+            <span>Sin consumibles</span>
+          }
+        </div></p-card
+      >
+      <p-card header="Etiquetas"
+        ><div class="chip-list">
+          @for (entry of user.labels || []; track entry.labelId) {
+            <span class="label-entry"
+              ><p-tag [value]="labelDisplay(entry.label)" /><p-button
+                icon="pi pi-times"
+                ariaLabel="Quitar etiqueta"
+                pTooltip="Quitar etiqueta"
+                [text]="true"
+                [disabled]="mutatingLabels"
+                (onClick)="quitarEtiqueta(entry.labelId)"
+            /></span>
+          } @empty {
+            <span>Sin etiquetas</span>
+          }
+        </div></p-card
+      >
+    </div>
+    <p-card header="Onboarding e información personal"
+      ><div class="completion">
+        <span>Información completada: {{ onboardingCompletion() }}%</span
+        ><p-progressBar [value]="onboardingCompletion()" />
+      </div>
+      <div class="onboarding-grid">
+        @for (field of onboardingGroups; track field[1]) {
+          <div>
+            <strong>{{ field[0] }}</strong
+            ><span>{{ valueFor(field[1]) }}</span>
+          </div>
+        }
+      </div></p-card
+    >
+    <p-card header="Planificaciones"
+      ><div class="assignment-list">
+        @if (loadingAsignaciones) {
+          <p-progressSpinner styleClass="small-spinner" />
+        } @else if (asignacionesError) {
+          <div class="section-error">
+            <span>No se pudieron cargar las planificaciones.</span>
+            <p-button
+              label="Reintentar"
+              [text]="true"
+              (onClick)="reintentarPlanificaciones()"
+            />
+          </div>
+        } @else {
+          @for (asignacion of asignaciones; track asignacion.planificacionId) {
+            <div class="assignment">
+              <div>
+                <strong>{{
+                  asignacion.planificacion?.identificador ||
+                    "Planificación #" + asignacion.planificacionId
+                }}</strong>
+                <p>{{ asignacion.planificacion?.descripcion }}</p>
+              </div>
+              <span
+                ><p-button
+                  icon="pi pi-eye"
+                  ariaLabel="Ver planificación"
+                  pTooltip="Ver planificación"
+                  [text]="true"
+                  (onClick)="
+                    verPlanificacion(asignacion.planificacionId)
+                  " /><p-button
+                  icon="pi pi-times"
+                  ariaLabel="Desvincular planificación"
+                  pTooltip="Desvincular planificación"
+                  severity="danger"
+                  [text]="true"
+                  [loading]="
+                    unlinkingPlanificacionId === asignacion.planificacionId
+                  "
+                  (onClick)="confirmarDesvincular(asignacion.planificacionId)"
+              /></span>
+            </div>
+          } @empty {
+            <span>No tiene planificaciones asignadas</span>
+          }
+        }
+      </div></p-card
+    >
+    @if (planificacionFisicaHabilitada()) {
+      <p-card header="Marcas físicas">
+        @if (loadingMarcas) {
+          <p-progressSpinner styleClass="small-spinner" />
+        } @else if (marcasError) {
+          <div class="section-error">
+            <span>No se pudieron cargar las marcas físicas.</span>
+            <p-button
+              label="Reintentar"
+              [text]="true"
+              (onClick)="reintentarMarcas()"
+            />
+          </div>
+        } @else {
+          <div class="marca-grid">
+            @for (marca of marcas; track marca.id) {
+              <article class="marca-card">
+                <span
+                  class="marca-color"
+                  [style.backgroundColor]="marca.color"
+                ></span
+                ><strong>{{ marca.pruebaNombre }}</strong
+                ><span
+                  >{{ marca.valor }} {{ marca.unidad }} ·
+                  {{ marca.fecha | date: "dd/MM/yyyy" }}</span
+                >
+                @if (marca.notas) {
+                  <small>{{ marca.notas }}</small>
+                }
+              </article>
+            } @empty {
+              <span>Sin marcas registradas</span>
+            }
+          </div>
+        }
+      </p-card>
+    }
+  </section>
+}
+<p-dialog
+  header="Editar usuario"
+  [(visible)]="editVisible"
+  [modal]="true"
+  [style]="{ width: '28rem' }"
+  [breakpoints]="{ '640px': '95vw' }"
+>
+  @if (editableUser) {
+    <div class="form-grid">
+      <label>Nombre<input pInputText [(ngModel)]="editableUser.nombre" /></label
+      ><label
+        >Apellidos<input
+          pInputText
+          [(ngModel)]="editableUser.apellidos" /></label
+      ><label
+        >Es tutor<p-inputSwitch [(ngModel)]="editableUser.esTutor" /></label
+      ><label
+        >Acceso a clases grabadas desde<p-calendar
+          [(ngModel)]="editFechaClasesGrabadas"
+          dateFormat="dd/mm/yy"
+          [showButtonBar]="true"
+      /></label>
+    </div>
+  }
+  <ng-template pTemplate="footer"
+    ><p-button
+      label="Cancelar"
+      [text]="true"
+      (onClick)="cancelarEdicion()" /><p-button
+      label="Guardar"
+      [loading]="savingEdit"
+      (onClick)="guardarEdicion()" /></ng-template
+></p-dialog>
+<p-dialog
+  header="Gestionar suscripciones"
+  [(visible)]="subscriptionVisible"
+  [modal]="true"
+  [style]="{ width: '34rem' }"
+  [breakpoints]="{ '640px': '95vw' }"
+  ><div class="form-grid">
+    <label
+      >Tipo<p-dropdown
+        [options]="subscriptionTypes"
+        [(ngModel)]="selectedSubscriptionType" /></label
+    ><label
+      >Oposición<p-dropdown
+        [options]="oposiciones"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="selectedOposicion" /></label
+    ><p-button
+      label="Añadir suscripción"
+      [loading]="mutatingSubscription"
+      (onClick)="anadirSuscripcion()"
+    />
+  </div>
+  @if (user) {
+    @for (sub of user.suscripciones || []; track sub.id) {
+      <div class="assignment">
+        <span>{{ sub.tipo }} · {{ sub.oposicion }} · {{ sub.status }}</span
+        ><span
+          ><p-button
+            label="Cancelar"
+            [text]="true"
+            [disabled]="!puedeCancelarSuscripcion(sub)"
+            (onClick)="cancelarSuscripcion(sub)" /><p-button
+            icon="pi pi-trash"
+            ariaLabel="Eliminar suscripción"
+            pTooltip="Eliminar suscripción"
+            severity="danger"
+            [text]="true"
+            [disabled]="mutatingSubscription || !!sub.woocommerceSubscriptionId"
+            (onClick)="eliminarSuscripcion(sub)"
+        /></span>
+      </div>
+    }
+  }
+</p-dialog>
+<p-dialog
+  header="Gestionar etiquetas"
+  [(visible)]="labelsVisible"
+  [modal]="true"
+  [style]="{ width: '30rem' }"
+  [breakpoints]="{ '640px': '95vw' }"
+  ><div class="form-grid">
+    <p-dropdown
+      [options]="availableLabels"
+      optionLabel="display"
+      optionValue="id"
+      [(ngModel)]="selectedLabelId"
+      placeholder="Seleccionar etiqueta"
+    /><p-button
+      label="Asignar existente"
+      [loading]="mutatingLabels"
+      (onClick)="asignarEtiqueta()"
+    /><p-button
+      [label]="creatingNewLabel ? 'Usar existente' : 'Crear etiqueta'"
+      [text]="true"
+      (onClick)="creatingNewLabel = !creatingNewLabel"
+    />
+    @if (creatingNewLabel) {
+      <label>Clave<input pInputText [(ngModel)]="newLabelKey" /></label
+      ><label>Valor<input pInputText [(ngModel)]="newLabelValue" /></label
+      ><p-button
+        label="Crear y asignar"
+        [loading]="mutatingLabels"
+        (onClick)="crearYAsignarEtiqueta()"
+      />
+    }</div
+></p-dialog>

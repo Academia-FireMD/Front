@@ -1,6 +1,7 @@
 import type { NivelOposicion } from './pregunta.model';
 import type { Oposicion, Suscripcion } from './subscription.model';
 import type { Test } from './test.model';
+import type { components } from '../../api/schema';
 
 export interface Usuario {
   id: number;
@@ -75,6 +76,11 @@ export interface Usuario {
   tipoOposicion?: Oposicion[];
   nivelOposicion?: NivelOposicion;
 }
+
+/** GET /user/admin/:id contract, generated from the Server OpenAPI schema. */
+export type UsuarioAdministrativo = components['schemas']['AdminUserDetailDto'];
+export type SuscripcionAdministrativa =
+  components['schemas']['AdminUserSubscriptionDto'];
 
 export interface Consumible {
   id: number;

@@ -685,8 +685,7 @@ export class LayoutComponent {
     this.authService.stopImpersonation$().subscribe({
       next: () => {
         this.toast.success('Has vuelto a tu cuenta de administrador');
-        // Redirigir al dashboard de admin
-        this.router.navigate(['/app/test/user-dashboard']);
+        this.router.navigate(['/app/test/user']);
       },
       error: (error) => {
         console.error('Stop impersonation error:', error);

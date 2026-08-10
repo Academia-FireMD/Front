@@ -36,12 +36,12 @@ const userBase = (id: number, hasActive: boolean) => ({
   labels: [],
 });
 
-test.describe('Admin — paginación preserva orden', () => {
+test.describe('Admin — paginación conserva el orden del listado compacto', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdminMock(page, userAdminFixture);
   });
 
-  test('cambiar de página 1 → 2 → 1 mantiene orden sin overlap', async ({
+  test('la página indicada por query conserva el orden devuelto por el servidor', async ({
     page,
   }) => {
     // Activos: ids 10,9,8 — NoActivos: 7,6,5,4,3
@@ -67,14 +67,17 @@ test.describe('Admin — paginación preserva orden', () => {
       });
     });
 
-    await page.goto('/app/test/user-dashboard');
+    await page.goto('/app/test/user?skip=5&take=5');
 
     // Esperar primera carga
-    await expect(page.locator('text=User10').first()).toBeVisible({
+    await expect(page.locator('text=User5').first()).toBeVisible({
       timeout: 15_000,
     });
 
-    // Verificar que al menos se llamó al endpoint con skip=0
-    expect(callLog[0]?.skip).toBe(0);
+    expect(callLog[0]).toEqual({ skip: 5, take: 5 });
+    await expect(page.locator('text=User10')).toHaveCount(0);
+    await expect(page.locator('[data-testid="user-actions-btn"]')).toHaveCount(
+      0,
+    );
   });
 });

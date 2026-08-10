@@ -1,4 +1,5 @@
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
@@ -95,6 +96,15 @@ describe('LayoutComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('returns an administrator to the compact user list after impersonation', () => {
+    const router = TestBed.inject(Router);
+    jest.clearAllMocks();
+
+    component.stopImpersonation();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/app/test/user']);
   });
 
   // -------- D18 filter recursivo (T1) --------

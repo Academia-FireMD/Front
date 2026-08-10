@@ -5,8 +5,9 @@ import {
   PaginatedResult,
   PaginationFilter,
 } from '../shared/models/pagination.model';
-import { Usuario } from '../shared/models/user.model';
+import { Usuario, UsuarioAdministrativo } from '../shared/models/user.model';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
+import { AsignacionAdministrativa } from '../shared/models/planificacion.model';
 import { ApiBaseService } from './api-base.service';
 
 @Injectable({
@@ -45,6 +46,10 @@ export class UserService extends ApiBaseService {
 
   public getAllUsers$(filter: PaginationFilter) {
     return this.post('/all', filter) as Observable<PaginatedResult<Usuario>>;
+  }
+
+  public getAdminUserDetail$(id: number): Observable<UsuarioAdministrativo> {
+    return this.get(`/admin/${id}`) as Observable<UsuarioAdministrativo>;
   }
 
   public getAllTutores$() {
@@ -94,10 +99,10 @@ export class UserService extends ApiBaseService {
   public deleteUserSubscription(
     userId: number,
     subscriptionId: number,
-  ): Observable<Usuario> {
+  ): Observable<UsuarioAdministrativo> {
     return this.delete(
       `/subscription/${userId}/${subscriptionId}`,
-    ) as Observable<Usuario>;
+    ) as Observable<UsuarioAdministrativo>;
   }
 
   public getAvailableSubscriptions() {
@@ -111,7 +116,9 @@ export class UserService extends ApiBaseService {
   }
 
   public getUserPlanifications$(userId: number) {
-    return this.get(`/planifications/${userId}`) as Observable<any[]>;
+    return this.get(`/planifications/${userId}`) as Observable<
+      AsignacionAdministrativa[]
+    >;
   }
 
   public updateOnboardingData$(data: OnboardingData): Observable<Usuario> {
