@@ -1,0 +1,164 @@
+.user-detail {
+  display: grid;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+.detail-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.detail-header h1 {
+  margin: 0;
+}
+.detail-header > div {
+  min-width: 0;
+}
+.detail-header h1,
+.detail-header span {
+  overflow-wrap: anywhere;
+}
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+dl {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
+}
+dt {
+  color: var(--text-color-secondary);
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.chip-list,
+.assignment-list {
+  display: grid;
+  gap: 0.5rem;
+}
+.chip-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+}
+.label-entry {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+:host ::ng-deep .chip-list .p-tag {
+  max-width: 100%;
+  white-space: normal;
+}
+:host ::ng-deep .chip-list .p-tag-value {
+  overflow-wrap: anywhere;
+}
+.assignment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--surface-border);
+  padding: 0.75rem 0;
+}
+.assignment p {
+  margin: 0.25rem 0 0;
+}
+.assignment > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.assignment > span {
+  flex-shrink: 0;
+}
+.detail-state {
+  min-height: 18rem;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1rem;
+}
+.small-spinner {
+  width: 2rem;
+  height: 2rem;
+}
+.completion {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.onboarding-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+.onboarding-grid > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem;
+  background: var(--surface-ground);
+  border-radius: var(--border-radius);
+}
+.onboarding-grid span {
+  overflow-wrap: anywhere;
+  color: var(--text-color-secondary);
+}
+.marca-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+.marca-card {
+  display: grid;
+  grid-template-columns: 0.65rem 1fr;
+  gap: 0.35rem 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+}
+.marca-card strong {
+  grid-column: 2;
+}
+.marca-card span:not(.marca-color),
+.marca-card small {
+  grid-column: 2;
+}
+.marca-color {
+  grid-row: span 3;
+  width: 0.65rem;
+  border-radius: 999px;
+}
+.section-error {
+  color: var(--red-500);
+}
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .header-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .header-actions :is(button, .p-button) {
+    flex: 1 1 auto;
+  }
+  .assignment {
+    align-items: flex-start;
+  }
+  .chip-list {
+    grid-template-columns: 1fr;
+  }
+}
