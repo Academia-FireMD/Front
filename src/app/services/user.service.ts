@@ -1,6 +1,6 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { catchError, Observable, throwError } from 'rxjs';
 import {
   PaginatedResult,
   PaginationFilter,
@@ -49,7 +49,14 @@ export class UserService extends ApiBaseService {
   }
 
   public getAdminUserDetail$(id: number): Observable<UsuarioAdministrativo> {
-    return this.get(`/admin/${id}`) as Observable<UsuarioAdministrativo>;
+    // El 404 del detalle es un estado de UI ("El usuario ya no existe"), no un
+    // error que deba tragarse ni disparar toast genérico. `ApiBaseService.get`
+    // con `ignoreError` omite el toast; aquí se RE-EMITE el HttpErrorResponse
+    // original para que `UserDetailComponent` pueda distinguir 404 de 5xx
+    // (`error?.status`), cosa que el `Error` plano de `handleError` no permite.
+    return this.get(`/admin/${id}`, true).pipe(
+      catchError((err: HttpErrorResponse) => throwError(() => err)),
+    );
   }
 
   public getAllTutores$() {
