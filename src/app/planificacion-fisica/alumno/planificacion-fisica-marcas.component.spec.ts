@@ -20,12 +20,28 @@ describe('PlanificacionFisicaMarcasComponent', () => {
 
   const catalogo: PruebaFisicaCatalogo[] = [
     {
+      id: 1,
+      codigo: 'CUERDA',
+      nombre: 'Cuerda',
+      grupo: 'CUERDA',
+      color: '#ffd1dc',
+      unidadSugerida: 'm',
+    },
+    {
       id: 3,
       codigo: 'CARRERA_60',
       nombre: 'Carrera 60 m',
       grupo: 'CARRERA',
       color: '#fdeaa8',
       unidadSugerida: 'seg',
+    },
+    {
+      id: 7,
+      codigo: 'PRESS_BANCA',
+      nombre: 'Press de banca',
+      grupo: 'FUERZA',
+      color: '#c8e6c9',
+      unidadSugerida: 'reps',
     },
   ];
   const marcas: MarcaPersonal[] = [
@@ -93,10 +109,66 @@ describe('PlanificacionFisicaMarcasComponent', () => {
     await cargar();
     expect(component['pruebaOpciones']()).toEqual([
       expect.objectContaining({ pruebaFisicaId: 3, nombre: 'Carrera 60 m' }),
+      expect.objectContaining({ pruebaFisicaId: 1, nombre: 'Cuerda' }),
+      expect.objectContaining({
+        pruebaFisicaId: 7,
+        nombre: 'Press de banca',
+      }),
       expect.objectContaining({ pruebaFisicaId: -1, nombre: 'Otra prueba…' }),
     ]);
     component['onPruebaChange'](3);
     expect(component['form'].controls.unidad.value).toBe('seg');
+  });
+
+  it('sobrescribe la unidad sugerida al cambiar de prueba (Cuerda→Carrera→Press)', async () => {
+    await cargar();
+    component['onPruebaChange'](1);
+    expect(component['form'].controls.unidad.value).toBe('m');
+    component['onPruebaChange'](3);
+    expect(component['form'].controls.unidad.value).toBe('seg');
+    component['onPruebaChange'](7);
+    expect(component['form'].controls.unidad.value).toBe('reps');
+  });
+
+  it('rellena la unidad sugerida aunque el campo ya tuviera un valor escrito', async () => {
+    await cargar();
+    component['form'].controls.unidad.setValue('min');
+    component['onPruebaChange'](3);
+    expect(component['form'].controls.unidad.value).toBe('seg');
+  });
+
+  it('limpia la unidad al cambiar a "Otra prueba…"', async () => {
+    await cargar();
+    component['onPruebaChange'](3);
+    expect(component['form'].controls.unidad.value).toBe('seg');
+    component['onPruebaChange'](-1);
+    expect(component['form'].controls.unidad.value).toBe('');
+  });
+
+  it('el campo unidad sigue siendo editable a mano tras el autocompletado', async () => {
+    await cargar();
+    component['onPruebaChange'](3);
+    expect(component['form'].controls.unidad.value).toBe('seg');
+    expect(component['form'].controls.unidad.enabled).toBe(true);
+    component['form'].controls.unidad.setValue('centésimas');
+    expect(component['form'].controls.unidad.value).toBe('centésimas');
+  });
+
+  it('muestra la unidad sugerida como placeholder según la prueba seleccionada', async () => {
+    await cargar();
+    const input = fixture.debugElement.query(
+      By.css('[data-testid="pf-marcas-input-unidad"]'),
+    );
+    expect(input.nativeElement.placeholder).toBe('min, seg, reps...');
+    component['form'].controls.pruebaFisicaId.setValue(1);
+    fixture.detectChanges();
+    expect(input.nativeElement.placeholder).toBe('m');
+    component['form'].controls.pruebaFisicaId.setValue(3);
+    fixture.detectChanges();
+    expect(input.nativeElement.placeholder).toBe('seg');
+    component['form'].controls.pruebaFisicaId.setValue(-1);
+    fixture.detectChanges();
+    expect(input.nativeElement.placeholder).toBe('min, seg, reps...');
   });
 
   it('envía pruebaFisicaId, nunca disciplinaId, al guardar una marca oficial', async () => {
