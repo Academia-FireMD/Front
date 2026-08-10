@@ -76,8 +76,13 @@ test.describe('Admin — paginación conserva el orden del listado compacto', ()
 
     expect(callLog[0]).toEqual({ skip: 5, take: 5 });
     await expect(page.locator('text=User10')).toHaveCount(0);
-    await expect(page.locator('[data-testid="user-actions-btn"]')).toHaveCount(
-      0,
-    );
+    // El menú de acciones por fila (3 puntos) existe en modo overview y abre
+    // las opciones del usuario.
+    const actionsBtn = page
+      .locator('[data-testid="user-actions-btn"]')
+      .first();
+    await expect(actionsBtn).toBeVisible();
+    await actionsBtn.click();
+    await expect(page.getByText('Ver ficha').first()).toBeVisible();
   });
 });
