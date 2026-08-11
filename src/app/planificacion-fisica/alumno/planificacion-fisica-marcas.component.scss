@@ -124,6 +124,16 @@
     gap: 1rem;
   }
 
+  /* La tarjeta de grupo no añade padding lateral propio: cada sección interna
+     (header, stats, gráfica, tabla) lleva el suyo, así la gráfica llega casi
+     al borde y no queda "encajonada" (sobre todo en móvil). */
+  &__grupo {
+    ::ng-deep .p-card-body {
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+
   &__grupo-header {
     display: flex;
     align-items: center;
@@ -210,9 +220,18 @@
   &__stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 1.5rem;
     padding: 0.75rem 1.25rem 1rem;
     border-bottom: 1px solid var(--surface-border, #e5e7eb);
+
+    /* En móvil, grid 2×2 determinista: con flex-wrap la 4ª métrica quedaba
+       sola en su fila y desalineaba toda la cabecera. */
+    @media (max-width: 576px) {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem 1rem;
+      padding: 0.75rem 1rem 1rem;
+    }
   }
 
   &__stat {
@@ -221,12 +240,8 @@
     gap: 0.2rem;
     min-width: 80px;
 
-    &--pr {
-      .pf-marcas__stat-valor {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-      }
+    @media (max-width: 576px) {
+      min-width: 0;
     }
 
     &--mejora {
@@ -246,28 +261,15 @@
     letter-spacing: 0.5px;
   }
 
+  /* Todos los valores en una sola línea y misma altura: sin píldoras ni
+     segundas líneas, que eran lo que desalineaba la fila de KPIs. */
   &__stat-valor {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
     font-size: 0.95rem;
     font-weight: 700;
-  }
-
-  &__stat--acumulado {
-    .pf-marcas__stat-valor {
-      display: inline-flex;
-      flex-direction: column;
-      gap: 0.1rem;
-      padding: 0.25rem 0.6rem;
-      border-radius: 999px;
-      background: var(--surface-ground, #f3f4f6);
-      font-size: 0.9rem;
-      line-height: 1.1;
-    }
-  }
-
-  &__stat-hint {
-    font-size: 0.7rem;
-    font-weight: 500;
-    opacity: 0.85;
+    line-height: 1.3;
   }
 
   &__pr-badge {
@@ -277,9 +279,20 @@
     }
   }
 
+  /* La altura la manda el contenedor (Chart.js responsive + sin ratio fijo);
+     p-chart no lleva atributo height para no fijar inline los 240px. */
   &__grafica {
-    padding: 1rem 1.25rem;
-    height: 240px;
+    padding: 0.75rem 0.5rem;
+    height: 280px;
     border-bottom: 1px solid var(--surface-border, #e5e7eb);
+
+    .p-chart {
+      height: 100%;
+    }
+
+    @media (max-width: 576px) {
+      padding: 0.5rem 0.25rem;
+      height: 250px;
+    }
   }
 }
