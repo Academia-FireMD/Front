@@ -110,27 +110,56 @@
 
         <div class="pf-marcas__campo">
           <label for="pf-marcas-valor">Valor</label>
-          <p-inputNumber
-            inputId="pf-marcas-valor"
-            formControlName="valor"
-            [minFractionDigits]="0"
-            [maxFractionDigits]="2"
-            styleClass="w-full"
-            data-testid="pf-marcas-input-valor"
-          ></p-inputNumber>
+          @if (esEntradaTiempo()) {
+            <input
+              id="pf-marcas-valor"
+              type="text"
+              pInputText
+              formControlName="valorTexto"
+              placeholder="mm:ss o segundos"
+              class="w-full"
+              data-testid="pf-marcas-input-valor-tiempo"
+            />
+            @if (
+              form.get("valorTexto")?.invalid && form.get("valorTexto")?.touched
+            ) {
+              <small class="p-error">
+                Introduce un tiempo válido (p. ej. 12:34 o 754).
+              </small>
+            }
+          } @else {
+            <p-inputNumber
+              inputId="pf-marcas-valor"
+              formControlName="valor"
+              [minFractionDigits]="0"
+              [maxFractionDigits]="2"
+              styleClass="w-full"
+              data-testid="pf-marcas-input-valor"
+            ></p-inputNumber>
+          }
         </div>
 
         <div class="pf-marcas__campo">
           <label for="pf-marcas-unidad">Unidad</label>
-          <input
-            id="pf-marcas-unidad"
-            type="text"
-            pInputText
-            formControlName="unidad"
-            placeholder="{{ unidadSugeridaActual() || 'min, seg, reps...' }}"
-            class="w-full"
-            data-testid="pf-marcas-input-unidad"
-          />
+          @if (unidadBloqueada()) {
+            <p-tag
+              id="pf-marcas-unidad"
+              [value]="unidadEfectiva()"
+              styleClass="pf-marcas__unidad-bloqueada"
+              data-testid="pf-marcas-unidad-bloqueada"
+            ></p-tag>
+            <input type="hidden" formControlName="unidad" />
+          } @else {
+            <input
+              id="pf-marcas-unidad"
+              type="text"
+              pInputText
+              formControlName="unidad"
+              placeholder="{{ placeholderUnidad() }}"
+              class="w-full"
+              data-testid="pf-marcas-input-unidad"
+            />
+          }
         </div>
 
         <div class="pf-marcas__campo">
@@ -200,6 +229,77 @@
               </div>
             </ng-template>
 
+            @if (grupo.mejorMarca) {
+              <div
+                class="pf-marcas__stats"
+                [attr.data-testid]="'pf-marcas-stats-' + grupo.pruebaFisicaId"
+              >
+                <div class="pf-marcas__stat pf-marcas__stat--pr">
+                  <span class="pf-marcas__stat-label">Mejor</span>
+                  <span class="pf-marcas__stat-valor">
+                    <p-tag
+                      icon="pi pi-trophy"
+                      value="PR"
+                      severity="warning"
+                      class="pf-marcas__pr-badge"
+                    ></p-tag>
+                    {{
+                      formatearMarca(
+                        grupo.mejorMarca.valor,
+                        grupo.mejorMarca.unidad
+                      )
+                    }}
+                  </span>
+                </div>
+                <div class="pf-marcas__stat">
+                  <span class="pf-marcas__stat-label">Última</span>
+                  <span class="pf-marcas__stat-valor">
+                    @if (grupo.ultimaMarca) {
+                      {{
+                        formatearMarca(
+                          grupo.ultimaMarca.valor,
+                          grupo.ultimaMarca.unidad
+                        )
+                      }}
+                    }
+                  </span>
+                </div>
+                @if (grupo.progresion !== null) {
+                  <div
+                    class="pf-marcas__stat"
+                    [class.pf-marcas__stat--mejora]="grupo.progresionEsMejora"
+                    [class.pf-marcas__stat--empeora]="!grupo.progresionEsMejora"
+                  >
+                    <span class="pf-marcas__stat-label">Progresión</span>
+                    <span class="pf-marcas__stat-valor">
+                      <i
+                        class="pi"
+                        [class.pi-arrow-down]="grupo.progresion < 0"
+                        [class.pi-arrow-up]="grupo.progresion > 0"
+                        [class.pi-minus]="grupo.progresion === 0"
+                      ></i>
+                      {{ grupo.progresion > 0 ? "+" : ""
+                      }}{{ grupo.progresion | number: "1.2-2" }}
+                    </span>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (grupo.mostrarGrafica) {
+              <div
+                class="pf-marcas__grafica"
+                [attr.data-testid]="'pf-marcas-grafica-' + grupo.pruebaFisicaId"
+              >
+                <p-chart
+                  type="line"
+                  [data]="grupo.chartData"
+                  [options]="grupo.chartOptions"
+                  height="240px"
+                ></p-chart>
+              </div>
+            }
+
             <div class="pf-marcas__tabla">
               <div class="pf-marcas__fila pf-marcas__fila--header">
                 <span>Fecha</span>
@@ -215,9 +315,9 @@
                   <span class="pf-marcas__marca-fecha">{{
                     marca.fecha | date: "dd/MM/yyyy"
                   }}</span>
-                  <span class="pf-marcas__marca-valor"
-                    >{{ marca.valor }} {{ marca.unidad }}</span
-                  >
+                  <span class="pf-marcas__marca-valor">{{
+                    formatearMarca(marca.valor, marca.unidad)
+                  }}</span>
                   <span class="pf-marcas__marca-notas">{{
                     marca.notas || "—"
                   }}</span>

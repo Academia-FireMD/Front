@@ -100,6 +100,11 @@
     color: var(--text-color-secondary);
   }
 
+  &__unidad-bloqueada {
+    width: fit-content;
+    text-transform: lowercase;
+  }
+
   // Mismo borde sutil que los puntos del calendario y del detalle de día: sin
   // él, la disciplina blanca (DESCANSO, #ffffff del catálogo) desaparece.
   &__opcion-color {
@@ -200,5 +205,62 @@
   &__marca-acciones {
     display: flex;
     justify-content: flex-end;
+  }
+
+  &__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--surface-border, #e5e7eb);
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 80px;
+
+    &--pr {
+      .pf-marcas__stat-valor {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+    }
+
+    &--mejora {
+      color: var(--green-600, #16a34a);
+    }
+
+    &--empeora {
+      color: var(--red-600, #dc2626);
+    }
+  }
+
+  &__stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__stat-valor {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  &__pr-badge {
+    ::ng-deep .p-tag {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+    }
+  }
+
+  &__grafica {
+    padding: 1rem 1.25rem;
+    height: 240px;
+    border-bottom: 1px solid var(--surface-border, #e5e7eb);
   }
 }

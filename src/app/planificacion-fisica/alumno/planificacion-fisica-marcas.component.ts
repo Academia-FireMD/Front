@@ -9,16 +9,25 @@ import {
   signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { CardModule } from 'primeng/card';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ChartModule } from 'primeng/chart';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
+import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastrService } from 'ngx-toastr';
 import { firstValueFrom } from 'rxjs';
@@ -27,11 +36,16 @@ import { AsyncButtonComponent } from '../../shared/components/async-button/async
 import {
   AccesoDenegadoPlanFisica,
   CrearMarcaDto,
-  PruebaFisicaCatalogo,
   GrupoDisciplina,
   MarcaPersonal,
   PlanificacionFisicaService,
+  PruebaFisicaCatalogo,
 } from '../services/planificacion-fisica.service';
+import {
+  esUnidadTiempo,
+  formatearValor,
+  parsearValorTiempo,
+} from '../utils/marcas-formato';
 
 const PRUEBA_OTRA_ID = -1;
 
@@ -45,14 +59,38 @@ interface PruebaOpcion {
   esOtra: boolean;
 }
 
-/** Un grupo de marcas de la misma disciplina, para pintar el histórico agrupado. */
-interface GrupoMarcas {
+/** Vista enriquecida de un grupo de marcas para pintar stats + gráfica. */
+interface GrupoMarcasVista {
   /** Id de prueba o identificador textual para marcas libres. */
   pruebaFisicaId: number | string;
   pruebaNombre: string;
   grupo: GrupoDisciplina | null;
   color: string | null;
+  /** Unidad canónica de la prueba asociada; null para libres. */
+  unidadCanonica: string | null;
+  /** Dirección de mejora (menor = mejor para tiempos). */
+  mejorEsMenor: boolean;
   marcas: MarcaPersonal[];
+  /** Mejor marca histórica según la dirección. */
+  mejorMarca: MarcaPersonal | null;
+  /** Marca más reciente. */
+  ultimaMarca: MarcaPersonal | null;
+  /** Segunda marca más reciente, para calcular progresión. */
+  anteriorMarca: MarcaPersonal | null;
+  /** Delta última vs anterior (positivo/negativo). */
+  progresion: number | null;
+  /** true cuando el delta representa una mejora. */
+  progresionEsMejora: boolean | null;
+  /** Unidad que comparten las marcas de la gráfica. */
+  unidadGrafica: string | null;
+  /** Marcas ordenadas cronológicamente que entran en la gráfica. */
+  marcasGrafica: MarcaPersonal[];
+  /** true cuando hay ≥2 marcas con la misma unidad. */
+  mostrarGrafica: boolean;
+  /** Datos para `p-chart`. */
+  chartData: unknown;
+  /** Opciones para `p-chart`. */
+  chartOptions: unknown;
 }
 
 /**
@@ -80,10 +118,12 @@ interface GrupoMarcas {
     ButtonModule,
     CalendarModule,
     CardModule,
+    ChartModule,
     ConfirmDialogModule,
     DropdownModule,
     InputNumberModule,
     InputTextModule,
+    TagModule,
     TooltipModule,
     AsyncButtonComponent,
   ],
@@ -121,8 +161,8 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       this.marcas().length === 0,
   );
 
-  protected readonly grupos = computed<GrupoMarcas[]>(() => {
-    const porPrueba = new Map<number | string, GrupoMarcas>();
+  protected readonly grupos = computed<GrupoMarcasVista[]>(() => {
+    const porPrueba = new Map<number | string, GrupoMarcasVista>();
     for (const marca of this.marcas()) {
       const key =
         marca.pruebaFisicaId ?? marca.nombreLibre ?? `libre-${marca.id}`;
@@ -130,18 +170,12 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       if (existente) {
         existente.marcas.push(marca);
       } else {
-        porPrueba.set(key, {
-          pruebaFisicaId: key,
-          pruebaNombre: marca.pruebaNombre,
-          grupo: marca.grupo,
-          color: marca.color,
-          marcas: [marca],
-        });
+        porPrueba.set(key, this.crearGrupoVista(key, marca));
       }
     }
     // El backend ya ordena `pruebaFisicaId asc, fecha desc`; Map conserva el
     // orden de inserción, así que no hace falta reordenar aquí.
-    return Array.from(porPrueba.values());
+    return Array.from(porPrueba.values()).map((g) => this.enriquecerGrupo(g));
   });
 
   /** Catálogo filtrado de pruebas (`GET /pruebas`), fuente única del selector. */
@@ -173,67 +207,148 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
   protected readonly form = this.fb.nonNullable.group({
     pruebaFisicaId: this.fb.control<number | null>(null, Validators.required),
     nombreLibre: ['', [Validators.maxLength(60)]],
+    /** Valor numérico para unidades que no son tiempo. */
     valor: this.fb.control<number | null>(null, [
       Validators.required,
       Validators.min(0.01),
     ]),
+    /** Valor textual para unidades de tiempo (mm:ss o segundos crudos). */
+    valorTexto: [''],
     unidad: ['', Validators.required],
     fecha: this.fb.control<Date | null>(null, Validators.required),
     notas: [''],
   });
 
   /**
-   * Selección actual del desplegable como signal. OJO: un `computed` que lea
-   * `form.getRawValue()` directamente queda cacheado para siempre (el form no
-   * es reactivo para signals) y el input de "Otra prueba…" no aparecería tras
-   * el primer render. Por eso se pasa por `valueChanges` + `toSignal`.
+   * Valor actual del formulario como signal. El form no es reactivo para
+   * signals por sí solo; `valueChanges` + `toSignal` permite que los computeds
+   * del template reaccionen a la prueba/unidad elegida.
    */
-  private readonly pruebaSeleccionada = toSignal(
-    this.form.controls.pruebaFisicaId.valueChanges,
-    { initialValue: this.form.controls.pruebaFisicaId.value },
-  );
+  private readonly formValue = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue(),
+  });
 
   /** True cuando el alumno ha elegido "Otra prueba…" en el selector. */
   protected readonly esOtraPruebaSeleccionada = computed(
-    () => this.pruebaSeleccionada() === PRUEBA_OTRA_ID,
+    () => this.formValue().pruebaFisicaId === PRUEBA_OTRA_ID,
   );
 
-  /**
-   * Unidad sugerida de la prueba oficial seleccionada en el catálogo, para el
-   * placeholder del campo unidad. Vacía cuando no hay prueba o es
-   * "Otra prueba…" (entonces se muestra el texto genérico).
-   */
-  protected readonly unidadSugeridaActual = computed(() => {
-    const id = this.pruebaSeleccionada();
+  /** Prueba oficial seleccionada en el catálogo; null si no aplica. */
+  protected readonly pruebaSeleccionadaCatalogo = computed(() => {
+    const id = this.formValue().pruebaFisicaId;
     if (id == null || id === PRUEBA_OTRA_ID) {
+      return null;
+    }
+    return this.catalogo().find((d) => d.id === id) ?? null;
+  });
+
+  /** Unidad efectiva del formulario según la prueba elegida. */
+  protected readonly unidadEfectiva = computed(() => {
+    const prueba = this.pruebaSeleccionadaCatalogo();
+    if (prueba?.unidad) {
+      return prueba.unidad;
+    }
+    return this.formValue().unidad ?? '';
+  });
+
+  /** true si la prueba elegida tiene una unidad canónica bloqueada. */
+  protected readonly unidadBloqueada = computed(() => {
+    return !!this.pruebaSeleccionadaCatalogo()?.unidad;
+  });
+
+  /** true si la entrada de valor debe admitir formato de tiempo. */
+  protected readonly esEntradaTiempo = computed(() =>
+    esUnidadTiempo(this.unidadEfectiva()),
+  );
+
+  /** Placeholder del campo unidad según la selección actual. */
+  protected readonly placeholderUnidad = computed(() => {
+    if (this.unidadBloqueada()) {
       return '';
     }
-    return this.catalogo().find((d) => d.id === id)?.unidadSugerida ?? '';
+    return this.unidadEfectiva() || 'min, seg, reps...';
   });
 
   protected readonly hoy = new Date();
 
-  /** Cuando cambia la prueba, sugiere (y sobrescribe) la unidad del catálogo. */
+  /** Cuando cambia la prueba, bloquea/libera la unidad y ajusta los validadores. */
   protected onPruebaChange(pruebaFisicaId: number): void {
-    const nombreLibreControl = this.form.get('nombreLibre');
-    const unidadControl = this.form.get('unidad');
+    // Asegura que el signal del form refleje la selección incluso cuando se
+    // invoca directamente (p. ej. en tests) sin pasar por el dropdown.
+    this.form.controls.pruebaFisicaId.setValue(pruebaFisicaId, {
+      emitEvent: true,
+    });
+    const nombreLibreControl = this.form.controls.nombreLibre;
+    const unidadControl = this.form.controls.unidad;
+    const prueba = this.catalogo().find((d) => d.id === pruebaFisicaId);
+
     if (pruebaFisicaId === PRUEBA_OTRA_ID) {
-      nombreLibreControl?.setValidators([
+      nombreLibreControl.setValidators([
         Validators.required,
         Validators.maxLength(60),
       ]);
-      nombreLibreControl?.updateValueAndValidity();
-      unidadControl?.setValue('');
+      nombreLibreControl.updateValueAndValidity();
+      unidadControl.setValue('');
+      unidadControl.enable();
+      this.ajustarValidadoresValor();
       return;
     }
-    nombreLibreControl?.setValue('');
-    nombreLibreControl?.setValidators([Validators.maxLength(60)]);
-    nombreLibreControl?.updateValueAndValidity();
 
-    const prueba = this.catalogo().find((d) => d.id === pruebaFisicaId);
-    if (prueba) {
-      unidadControl?.setValue(prueba.unidadSugerida);
+    nombreLibreControl.setValue('');
+    nombreLibreControl.setValidators([Validators.maxLength(60)]);
+    nombreLibreControl.updateValueAndValidity();
+
+    if (prueba?.unidad) {
+      unidadControl.setValue(prueba.unidad);
+      unidadControl.disable();
+    } else {
+      unidadControl.setValue('');
+      unidadControl.enable();
     }
+    this.ajustarValidadoresValor();
+  }
+
+  /** Activa/desactiva validadores de valor según sea entrada numérica o de tiempo. */
+  private ajustarValidadoresValor(): void {
+    const unidad = this.unidadEfectiva();
+    const esTiempo = esUnidadTiempo(unidad);
+    const valorControl = this.form.controls.valor;
+    const valorTextoControl = this.form.controls.valorTexto;
+
+    if (esTiempo) {
+      valorControl.clearValidators();
+      valorControl.setValue(null);
+      valorControl.disable();
+
+      valorTextoControl.setValidators([
+        Validators.required,
+        this.crearValidadorTiempo(),
+      ]);
+      valorTextoControl.enable();
+      valorTextoControl.updateValueAndValidity();
+    } else {
+      valorTextoControl.clearValidators();
+      valorTextoControl.setValue('');
+      valorTextoControl.disable();
+
+      valorControl.setValidators([Validators.required, Validators.min(0.01)]);
+      valorControl.enable();
+      valorControl.updateValueAndValidity();
+    }
+    valorControl.updateValueAndValidity();
+  }
+
+  private crearValidadorTiempo(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const unidad = this.form.controls.unidad.value;
+      if (!control.value || !esUnidadTiempo(unidad)) {
+        return null;
+      }
+      const parsed = parsearValorTiempo(control.value, unidad);
+      return Number.isFinite(parsed) && parsed > 0
+        ? null
+        : { tiempoInvalido: true };
+    };
   }
 
   async ngOnInit(): Promise<void> {
@@ -283,9 +398,16 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       return;
     }
     const valores = this.form.getRawValue();
+    const unidad = valores.unidad;
+    const valor = this.obtenerValorNumerico();
+    if (valor === null || Number.isNaN(valor)) {
+      this.toast.error('Revisa el valor introducido.');
+      return;
+    }
+
     const dto: CrearMarcaDto = {
-      valor: valores.valor!,
-      unidad: valores.unidad,
+      valor,
+      unidad,
       fecha: this.formatearFechaISO(valores.fecha!),
       ...(valores.notas ? { notas: valores.notas } : {}),
     };
@@ -308,11 +430,19 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     }
   };
 
+  private obtenerValorNumerico(): number | null {
+    const valores = this.form.getRawValue();
+    if (esUnidadTiempo(valores.unidad)) {
+      return parsearValorTiempo(valores.valorTexto, valores.unidad);
+    }
+    return valores.valor;
+  }
+
   protected confirmarBorrarMarca(marca: MarcaPersonal, event: Event): void {
     this.confirmationService.confirm({
       key: 'pf-marcas-borrar',
       target: event.target as EventTarget,
-      message: `Vas a eliminar esta marca de "${marca.pruebaNombre}" (${marca.valor} ${marca.unidad}, ${marca.fecha}). ¿Estás seguro?`,
+      message: `Vas a eliminar esta marca de "${marca.pruebaNombre}" (${formatearValor(marca.valor, marca.unidad)}, ${marca.fecha}). ¿Estás seguro?`,
       header: 'Confirmación',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Sí',
@@ -347,6 +477,10 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     return this.borrandoIds().has(id);
   }
 
+  protected formatearMarca(valor: number, unidad: string): string {
+    return formatearValor(valor, unidad);
+  }
+
   protected volver(): void {
     this.router.navigate(['/app/planificacion-fisica']);
   }
@@ -368,5 +502,179 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
   ): string | null {
     const body = err?.error as { message?: string } | undefined;
     return body?.message ?? null;
+  }
+
+  private crearGrupoVista(
+    key: number | string,
+    marca: MarcaPersonal,
+  ): GrupoMarcasVista {
+    return {
+      pruebaFisicaId: key,
+      pruebaNombre: marca.pruebaNombre,
+      grupo: marca.grupo,
+      color: marca.color,
+      unidadCanonica: marca.unidadCanonica,
+      mejorEsMenor: marca.mejorEsMenor,
+      marcas: [marca],
+      mejorMarca: null,
+      ultimaMarca: null,
+      anteriorMarca: null,
+      progresion: null,
+      progresionEsMejora: null,
+      unidadGrafica: null,
+      marcasGrafica: [],
+      mostrarGrafica: false,
+      chartData: null,
+      chartOptions: null,
+    };
+  }
+
+  private enriquecerGrupo(grupo: GrupoMarcasVista): GrupoMarcasVista {
+    const ordenadas = [...grupo.marcas].sort(
+      (a, b) =>
+        new Date(a.fecha).getTime() - new Date(b.fecha).getTime() ||
+        a.id - b.id,
+    );
+    const mejorEsMenor = grupo.mejorEsMenor;
+
+    const mejorMarca = [...grupo.marcas].sort((a, b) => {
+      if (mejorEsMenor) return a.valor - b.valor;
+      return b.valor - a.valor;
+    })[0];
+
+    const ultimaMarca = ordenadas[ordenadas.length - 1] ?? null;
+    const anteriorMarca = ordenadas[ordenadas.length - 2] ?? null;
+    let progresion: number | null = null;
+    let progresionEsMejora: boolean | null = null;
+    if (ultimaMarca && anteriorMarca) {
+      progresion = ultimaMarca.valor - anteriorMarca.valor;
+      progresionEsMejora = mejorEsMenor ? progresion < 0 : progresion > 0;
+    }
+
+    // Gráfica: unidad canónica para pruebas oficiales; para libres, la
+    // unidad más frecuente que tenga ≥2 marcas.
+    const unidadGrafica =
+      grupo.unidadCanonica ?? this.unidadMayoritaria(grupo.marcas);
+    const marcasGrafica = unidadGrafica
+      ? ordenadas.filter((m) => m.unidad === unidadGrafica)
+      : [];
+    const mostrarGrafica = marcasGrafica.length >= 2;
+
+    return {
+      ...grupo,
+      mejorMarca,
+      ultimaMarca,
+      anteriorMarca,
+      progresion,
+      progresionEsMejora,
+      unidadGrafica,
+      marcasGrafica,
+      mostrarGrafica,
+      chartData: mostrarGrafica
+        ? this.crearChartData(marcasGrafica, unidadGrafica!, grupo.mejorEsMenor)
+        : null,
+      chartOptions: mostrarGrafica
+        ? this.crearChartOptions(unidadGrafica!)
+        : null,
+    };
+  }
+
+  private unidadMayoritaria(marcas: MarcaPersonal[]): string | null {
+    const conteo = new Map<string, number>();
+    for (const m of marcas) {
+      conteo.set(m.unidad, (conteo.get(m.unidad) ?? 0) + 1);
+    }
+    let mejor: string | null = null;
+    let max = 1;
+    for (const [unidad, count] of conteo.entries()) {
+      if (count > max) {
+        max = count;
+        mejor = unidad;
+      }
+    }
+    return mejor;
+  }
+
+  private crearChartData(
+    marcas: MarcaPersonal[],
+    unidad: string,
+    mejorEsMenor: boolean,
+  ): unknown {
+    const labels = marcas.map((m) =>
+      new Date(m.fecha).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+      }),
+    );
+    const valores = marcas.map((m) => m.valor);
+    const color =
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--primary-color')
+        .trim() || '#c05621';
+    const colorPr =
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--green-600')
+        .trim() || '#16a34a';
+
+    const idxPr = valores.reduce((mejorIdx, v, i) => {
+      if (mejorIdx === -1) return i;
+      const mejor = valores[mejorIdx];
+      return mejorEsMenor
+        ? v < mejor
+          ? i
+          : mejorIdx
+        : v > mejor
+          ? i
+          : mejorIdx;
+    }, -1);
+
+    const pointBackgroundColor = valores.map((_, i) =>
+      i === idxPr ? colorPr : color,
+    );
+    const pointRadius = valores.map((_, i) => (i === idxPr ? 7 : 4));
+    const pointHoverRadius = valores.map((_, i) => (i === idxPr ? 9 : 6));
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: `Valor (${unidad})`,
+          data: valores,
+          fill: false,
+          borderColor: color,
+          backgroundColor: color,
+          tension: 0.2,
+          pointBackgroundColor,
+          pointRadius,
+          pointHoverRadius,
+        },
+      ],
+    };
+  }
+
+  private crearChartOptions(unidad: string): unknown {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: { parsed: { y: number } }) =>
+              formatearValor(context.parsed.y, unidad),
+          },
+        },
+      },
+      scales: {
+        y: {
+          title: {
+            display: true,
+            text: unidad,
+          },
+        },
+      },
+    };
   }
 }

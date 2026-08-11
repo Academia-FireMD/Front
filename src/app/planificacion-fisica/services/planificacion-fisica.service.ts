@@ -306,6 +306,10 @@ export interface MarcaPersonal {
   notas: string | null;
   /** Nombre libre de la prueba, cuando no viene del catálogo. */
   nombreLibre?: string | null;
+  /** Dirección de mejora de la prueba asociada (menor valor = mejor para tiempos). */
+  mejorEsMenor: boolean;
+  /** Unidad canónica de la prueba asociada; null para marcas libres. */
+  unidadCanonica: string | null;
 }
 
 /**
@@ -321,7 +325,10 @@ export interface PruebaFisicaCatalogo {
   nombre: string;
   grupo: GrupoDisciplina;
   color: string;
-  unidadSugerida: string;
+  /** Unidad canónica de la prueba; null cuando la métrica es libre. */
+  unidad: string | null;
+  /** true si un valor menor es mejor (p. ej. tiempos). */
+  mejorEsMenor: boolean;
 }
 
 /**
