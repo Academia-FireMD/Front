@@ -110,6 +110,9 @@ describe('PlanificacionFisicaMarcasComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(PlanificacionFisicaMarcasComponent);
     component = fixture.componentInstance;
+    jest.spyOn(window, 'getComputedStyle').mockReturnValue({
+      getPropertyValue: () => '',
+    } as unknown as CSSStyleDeclaration);
   });
 
   async function cargar() {
@@ -337,14 +340,279 @@ describe('PlanificacionFisicaMarcasComponent', () => {
         datasets: Array<{
           pointRadius: number[];
           pointBackgroundColor: string[];
+          borderColor: string;
         }>;
       };
       // Mejor marca = 7.2 (índice 1 en orden cronológico ascendente)
       expect(data?.datasets[0].pointRadius[1]).toBe(7);
       expect(data?.datasets[0].pointRadius[0]).toBe(4);
-      expect(data?.datasets[0].pointBackgroundColor[1]).not.toBe(
-        data?.datasets[0].pointBackgroundColor[0],
+      // El punto del PR siempre se pinta en verde; si la línea también es verde
+      // por progreso neto, el highlight se sigue viendo por el radio mayor.
+      expect(data?.datasets[0].pointBackgroundColor[1]).toBe('#16a34a');
+    });
+
+    it('invierte el eje Y solo en pruebas de tiempo (mejorEsMenor)', async () => {
+      const marcasMixtas: MarcaPersonal[] = [
+        {
+          id: 30,
+          pruebaFisicaId: 3,
+          pruebaNombre: 'Carrera 60 m',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          valor: 7.3,
+          unidad: 'seg',
+          fecha: '2026-06-01',
+          notas: null,
+          mejorEsMenor: true,
+          unidadCanonica: 'seg',
+        },
+        {
+          id: 31,
+          pruebaFisicaId: 3,
+          pruebaNombre: 'Carrera 60 m',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          valor: 7.2,
+          unidad: 'seg',
+          fecha: '2026-07-10',
+          notas: null,
+          mejorEsMenor: true,
+          unidadCanonica: 'seg',
+        },
+        {
+          id: 32,
+          pruebaFisicaId: 1,
+          pruebaNombre: 'Cuerda',
+          grupo: 'CUERDA',
+          color: '#ffd1dc',
+          valor: 10,
+          unidad: 'm',
+          fecha: '2026-06-01',
+          notas: null,
+          mejorEsMenor: false,
+          unidadCanonica: 'm',
+        },
+        {
+          id: 33,
+          pruebaFisicaId: 1,
+          pruebaNombre: 'Cuerda',
+          grupo: 'CUERDA',
+          color: '#ffd1dc',
+          valor: 12,
+          unidad: 'm',
+          fecha: '2026-07-10',
+          notas: null,
+          mejorEsMenor: false,
+          unidadCanonica: 'm',
+        },
+      ];
+      serviceMock.marcas.mockReturnValue(of(marcasMixtas));
+      await cargar();
+      const grupoCarrera = component['grupos']().find(
+        (g) => g.pruebaFisicaId === 3,
       );
+      const grupoCuerda = component['grupos']().find(
+        (g) => g.pruebaFisicaId === 1,
+      );
+      const optionsCarrera = grupoCarrera?.chartOptions as {
+        scales: { y: { reverse?: boolean } };
+      };
+      const optionsCuerda = grupoCuerda?.chartOptions as {
+        scales: { y: { reverse?: boolean } };
+      };
+      expect(optionsCarrera?.scales.y.reverse).toBe(true);
+      expect(optionsCuerda?.scales.y.reverse).toBe(false);
+    });
+
+    it('pinta la línea en verde cuando hay progreso neto y en primario cuando no', async () => {
+      const marcasMejoraTiempo: MarcaPersonal[] = [
+        {
+          id: 20,
+          pruebaFisicaId: 3,
+          pruebaNombre: 'Carrera 60 m',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          valor: 7.3,
+          unidad: 'seg',
+          fecha: '2026-06-01',
+          notas: null,
+          mejorEsMenor: true,
+          unidadCanonica: 'seg',
+        },
+        {
+          id: 21,
+          pruebaFisicaId: 3,
+          pruebaNombre: 'Carrera 60 m',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          valor: 7.2,
+          unidad: 'seg',
+          fecha: '2026-07-10',
+          notas: null,
+          mejorEsMenor: true,
+          unidadCanonica: 'seg',
+        },
+      ];
+      const marcasEmpeoraTiempo: MarcaPersonal[] = [
+        {
+          id: 22,
+          pruebaFisicaId: 3,
+          pruebaNombre: 'Carrera 60 m',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          valor: 7.3,
+          unidad: 'seg',
+          fecha: '2026-06-01',
+          notas: null,
+          mejorEsMenor: true,
+          unidadCanonica: 'seg',
+        },
+        {
+          id: 23,
+          pruebaFisicaId: 3,
+          pruebaNombre: 'Carrera 60 m',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          valor: 7.4,
+          unidad: 'seg',
+          fecha: '2026-07-10',
+          notas: null,
+          mejorEsMenor: true,
+          unidadCanonica: 'seg',
+        },
+      ];
+
+      serviceMock.marcas.mockReturnValue(of(marcasMejoraTiempo));
+      await cargar();
+      const grupoMejora = component['grupos']().find(
+        (g) => g.pruebaFisicaId === 3,
+      );
+      const dataMejora = grupoMejora?.chartData as {
+        datasets: Array<{ borderColor: string; backgroundColor: string }>;
+      };
+      expect(dataMejora?.datasets[0].borderColor).toBe('#16a34a');
+      expect(dataMejora?.datasets[0].backgroundColor).toBe('#16a34a');
+
+      serviceMock.marcas.mockReturnValue(of(marcasEmpeoraTiempo));
+      await component['cargar']();
+      const grupoEmpeora = component['grupos']().find(
+        (g) => g.pruebaFisicaId === 3,
+      );
+      const dataEmpeora = grupoEmpeora?.chartData as {
+        datasets: Array<{ borderColor: string; backgroundColor: string }>;
+      };
+      expect(dataEmpeora?.datasets[0].borderColor).toBe('#c05621');
+      expect(dataEmpeora?.datasets[0].backgroundColor).toBe('#c05621');
+    });
+
+    it('calcula el progreso acumulado direction-aware para tiempos y repeticiones', async () => {
+      const marcasTiempo: MarcaPersonal[] = [
+        {
+          id: 24,
+          pruebaFisicaId: 3,
+          pruebaNombre: 'Carrera 60 m',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          valor: 7.3,
+          unidad: 'seg',
+          fecha: '2026-06-01',
+          notas: null,
+          mejorEsMenor: true,
+          unidadCanonica: 'seg',
+        },
+        {
+          id: 25,
+          pruebaFisicaId: 3,
+          pruebaNombre: 'Carrera 60 m',
+          grupo: 'CARRERA',
+          color: '#fdeaa8',
+          valor: 7.2,
+          unidad: 'seg',
+          fecha: '2026-07-10',
+          notas: null,
+          mejorEsMenor: true,
+          unidadCanonica: 'seg',
+        },
+      ];
+      const marcasReps: MarcaPersonal[] = [
+        {
+          id: 26,
+          pruebaFisicaId: 1,
+          pruebaNombre: 'Cuerda',
+          grupo: 'CUERDA',
+          color: '#ffd1dc',
+          valor: 10,
+          unidad: 'm',
+          fecha: '2026-06-01',
+          notas: null,
+          mejorEsMenor: false,
+          unidadCanonica: 'm',
+        },
+        {
+          id: 27,
+          pruebaFisicaId: 1,
+          pruebaNombre: 'Cuerda',
+          grupo: 'CUERDA',
+          color: '#ffd1dc',
+          valor: 12,
+          unidad: 'm',
+          fecha: '2026-07-10',
+          notas: null,
+          mejorEsMenor: false,
+          unidadCanonica: 'm',
+        },
+      ];
+
+      serviceMock.marcas.mockReturnValue(of(marcasTiempo));
+      await cargar();
+      const grupoTiempo = component['grupos']().find(
+        (g) => g.pruebaFisicaId === 3,
+      );
+      expect(grupoTiempo?.progresoAcumulado).toBeCloseTo(
+        ((7.3 - 7.2) / 7.3) * 100,
+      );
+
+      serviceMock.marcas.mockReturnValue(of(marcasReps));
+      await component['cargar']();
+      const grupoReps = component['grupos']().find(
+        (g) => g.pruebaFisicaId === 1,
+      );
+      expect(grupoReps?.progresoAcumulado).toBeCloseTo(20);
+    });
+
+    it('muestra el progreso acumulado negativo cuando el rendimiento empeora', async () => {
+      const marcasEmpeoraReps: MarcaPersonal[] = [
+        {
+          id: 28,
+          pruebaFisicaId: 1,
+          pruebaNombre: 'Cuerda',
+          grupo: 'CUERDA',
+          color: '#ffd1dc',
+          valor: 12,
+          unidad: 'm',
+          fecha: '2026-06-01',
+          notas: null,
+          mejorEsMenor: false,
+          unidadCanonica: 'm',
+        },
+        {
+          id: 29,
+          pruebaFisicaId: 1,
+          pruebaNombre: 'Cuerda',
+          grupo: 'CUERDA',
+          color: '#ffd1dc',
+          valor: 10,
+          unidad: 'm',
+          fecha: '2026-07-10',
+          notas: null,
+          mejorEsMenor: false,
+          unidadCanonica: 'm',
+        },
+      ];
+      serviceMock.marcas.mockReturnValue(of(marcasEmpeoraReps));
+      await cargar();
+      const grupo = component['grupos']().find((g) => g.pruebaFisicaId === 1);
+      expect(grupo?.progresoAcumulado).toBeCloseTo(-16.67, 1);
     });
   });
 });

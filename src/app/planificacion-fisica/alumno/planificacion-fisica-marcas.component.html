@@ -283,6 +283,32 @@
                     </span>
                   </div>
                 }
+                @if (grupo.progresoAcumulado !== null) {
+                  <div
+                    class="pf-marcas__stat pf-marcas__stat--acumulado"
+                    [class.pf-marcas__stat--mejora]="
+                      grupo.progresoAcumulado > 0
+                    "
+                    [class.pf-marcas__stat--empeora]="
+                      grupo.progresoAcumulado < 0
+                    "
+                  >
+                    <span class="pf-marcas__stat-label">Desde el inicio</span>
+                    <span class="pf-marcas__stat-valor">
+                      <i
+                        class="pi"
+                        [class.pi-arrow-up]="grupo.progresoAcumulado > 0"
+                        [class.pi-arrow-down]="grupo.progresoAcumulado < 0"
+                        [class.pi-minus]="grupo.progresoAcumulado === 0"
+                      ></i>
+                      {{ grupo.progresoAcumulado > 0 ? "+" : ""
+                      }}{{ grupo.progresoAcumulado | number: "1.2-2" }}%
+                      <span class="pf-marcas__stat-hint"
+                        >desde tu primera marca</span
+                      >
+                    </span>
+                  </div>
+                }
               </div>
             }
 

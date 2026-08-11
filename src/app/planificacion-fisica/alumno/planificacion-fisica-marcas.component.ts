@@ -81,6 +81,8 @@ interface GrupoMarcasVista {
   progresion: number | null;
   /** true cuando el delta representa una mejora. */
   progresionEsMejora: boolean | null;
+  /** Porcentaje acumulado desde la primera marca hasta la última (positivo = mejora). */
+  progresoAcumulado: number | null;
   /** Unidad que comparten las marcas de la gráfica. */
   unidadGrafica: string | null;
   /** Marcas ordenadas cronológicamente que entran en la gráfica. */
@@ -521,6 +523,7 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       anteriorMarca: null,
       progresion: null,
       progresionEsMejora: null,
+      progresoAcumulado: null,
       unidadGrafica: null,
       marcasGrafica: [],
       mostrarGrafica: false,
@@ -560,6 +563,20 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       : [];
     const mostrarGrafica = marcasGrafica.length >= 2;
 
+    // Progreso acumulado desde la primera marca histórica hasta la última,
+    // direction-aware: + significa siempre mejora.
+    let progresoAcumulado: number | null = null;
+    const primeraMarca = marcasGrafica[0] ?? null;
+    if (primeraMarca && ultimaMarca && primeraMarca.id !== ultimaMarca.id) {
+      const primero = primeraMarca.valor;
+      const ultimo = ultimaMarca.valor;
+      if (primero !== 0) {
+        progresoAcumulado = mejorEsMenor
+          ? ((primero - ultimo) / primero) * 100
+          : ((ultimo - primero) / primero) * 100;
+      }
+    }
+
     return {
       ...grupo,
       mejorMarca,
@@ -567,14 +584,15 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       anteriorMarca,
       progresion,
       progresionEsMejora,
+      progresoAcumulado,
       unidadGrafica,
       marcasGrafica,
       mostrarGrafica,
       chartData: mostrarGrafica
-        ? this.crearChartData(marcasGrafica, unidadGrafica!, grupo.mejorEsMenor)
+        ? this.crearChartData(marcasGrafica, unidadGrafica!, mejorEsMenor)
         : null,
       chartOptions: mostrarGrafica
-        ? this.crearChartOptions(unidadGrafica!)
+        ? this.crearChartOptions(unidadGrafica!, mejorEsMenor)
         : null,
     };
   }
@@ -607,14 +625,19 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       }),
     );
     const valores = marcas.map((m) => m.valor);
-    const color =
+    const colorPrimario =
       getComputedStyle(document.documentElement)
         .getPropertyValue('--primary-color')
         .trim() || '#c05621';
-    const colorPr =
+    const colorVerde =
       getComputedStyle(document.documentElement)
         .getPropertyValue('--green-600')
         .trim() || '#16a34a';
+
+    const primera = valores[0];
+    const ultima = valores[valores.length - 1];
+    const hayProgresoNeto = mejorEsMenor ? ultima < primera : ultima > primera;
+    const colorLinea = hayProgresoNeto ? colorVerde : colorPrimario;
 
     const idxPr = valores.reduce((mejorIdx, v, i) => {
       if (mejorIdx === -1) return i;
@@ -629,7 +652,7 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     }, -1);
 
     const pointBackgroundColor = valores.map((_, i) =>
-      i === idxPr ? colorPr : color,
+      i === idxPr ? colorVerde : colorLinea,
     );
     const pointRadius = valores.map((_, i) => (i === idxPr ? 7 : 4));
     const pointHoverRadius = valores.map((_, i) => (i === idxPr ? 9 : 6));
@@ -641,8 +664,8 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
           label: `Valor (${unidad})`,
           data: valores,
           fill: false,
-          borderColor: color,
-          backgroundColor: color,
+          borderColor: colorLinea,
+          backgroundColor: colorLinea,
           tension: 0.2,
           pointBackgroundColor,
           pointRadius,
@@ -652,7 +675,7 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
     };
   }
 
-  private crearChartOptions(unidad: string): unknown {
+  private crearChartOptions(unidad: string, mejorEsMenor: boolean): unknown {
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -669,6 +692,7 @@ export class PlanificacionFisicaMarcasComponent implements OnInit {
       },
       scales: {
         y: {
+          reverse: mejorEsMenor,
           title: {
             display: true,
             text: unidad,

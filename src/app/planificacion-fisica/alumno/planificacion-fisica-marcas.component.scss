@@ -251,6 +251,25 @@
     font-weight: 700;
   }
 
+  &__stat--acumulado {
+    .pf-marcas__stat-valor {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      background: var(--surface-ground, #f3f4f6);
+      font-size: 0.9rem;
+      line-height: 1.1;
+    }
+  }
+
+  &__stat-hint {
+    font-size: 0.7rem;
+    font-weight: 500;
+    opacity: 0.85;
+  }
+
   &__pr-badge {
     ::ng-deep .p-tag {
       font-size: 0.7rem;
