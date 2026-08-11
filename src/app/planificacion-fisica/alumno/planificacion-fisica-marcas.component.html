@@ -303,9 +303,6 @@
                       ></i>
                       {{ grupo.progresoAcumulado > 0 ? "+" : ""
                       }}{{ grupo.progresoAcumulado | number: "1.2-2" }}%
-                      <span class="pf-marcas__stat-hint"
-                        >desde tu primera marca</span
-                      >
                     </span>
                   </div>
                 }
@@ -321,7 +318,6 @@
                   type="line"
                   [data]="grupo.chartData"
                   [options]="grupo.chartOptions"
-                  height="240px"
                 ></p-chart>
               </div>
             }
