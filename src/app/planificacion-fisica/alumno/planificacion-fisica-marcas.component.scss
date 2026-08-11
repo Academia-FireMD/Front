@@ -280,13 +280,20 @@
   }
 
   /* La altura la manda el contenedor (Chart.js responsive + sin ratio fijo);
-     p-chart no lleva atributo height para no fijar inline los 240px. */
+     p-chart no lleva atributo height para no fijar inline los 240px. El host
+     p-chart y el div interno de PrimeNG necesitan height:100% explícito — si
+     no, Chart.js no encuentra alto de referencia y deja el canvas en 150px. */
   &__grafica {
     padding: 0.75rem 0.5rem;
     height: 280px;
     border-bottom: 1px solid var(--surface-border, #e5e7eb);
 
-    .p-chart {
+    p-chart {
+      display: block;
+      height: 100%;
+    }
+
+    ::ng-deep p-chart > div {
       height: 100%;
     }
 
