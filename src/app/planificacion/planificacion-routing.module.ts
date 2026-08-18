@@ -5,11 +5,13 @@ import { SubscriptionGuard } from '../guards/subscription.guard';
 import { SuscripcionTipo } from '../shared/models/subscription.model';
 import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
+import { PlanificacionAlumnoComponent } from './planificacion-alumno/planificacion-alumno.component';
 import { PlanificacionComentariosOverviewComponent } from './planificacion-comentarios-overview/planificacion-comentarios-overview.component';
 import { PlanificacionMensualEditComponent } from './planificacion-mensual-edit/planificacion-mensual-edit.component';
 import { PlanificacionMensualOverviewComponent } from './planificacion-mensual-overview/planificacion-mensual-overview.component';
 import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantilla-semanal-edit.component';
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
+import { PlanificacionAdminComponent } from './planificacion-admin/planificacion-admin.component';
 
 const routes: Routes = [
   {
@@ -52,7 +54,11 @@ const routes: Routes = [
     component: PlanificacionMensualOverviewComponent,
     canActivate: [roleGuard, SubscriptionGuard],
     title: 'Planificación mensual',
-    data: { expectedRole: 'ALUMNO', title: 'Planificación mensual', allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
+    data: {
+      expectedRole: 'ALUMNO',
+      title: 'Planificación mensual',
+      allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM],
+    },
   },
   {
     path: 'planificacion-mensual/:id',
@@ -66,7 +72,11 @@ const routes: Routes = [
     component: PlanificacionMensualEditComponent,
     canActivate: [roleGuard, SubscriptionGuard],
     title: 'Planificación mensual',
-    data: { expectedRole: 'ALUMNO', title: 'Planificación mensual', allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM] },
+    data: {
+      expectedRole: 'ALUMNO',
+      title: 'Planificación mensual',
+      allowedSubscriptions: [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM],
+    },
   },
   {
     path: 'comentarios',
@@ -74,6 +84,18 @@ const routes: Routes = [
     canActivate: [roleGuard],
     title: 'Comentarios',
     data: { expectedRole: 'ADMIN', title: 'Comentarios' },
+  },
+  {
+    path: 'configuracion-alumno',
+    component: PlanificacionAlumnoComponent,
+    title: 'Mi planificación',
+  },
+  {
+    path: 'admin-planificacion',
+    component: PlanificacionAdminComponent,
+    canActivate: [roleGuard],
+    title: 'Administración de planificaciones',
+    data: { expectedRole: 'ADMIN', title: 'Administración de planificaciones' },
   },
 ];
 

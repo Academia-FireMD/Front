@@ -1,0 +1,211 @@
+<p-tabView>
+  <p-tabPanel header="Variantes" leftIcon="pi pi-th-large">
+    <div class="grid">
+      <div class="col-12 lg:col-5">
+        <div class="p-3 border-1 border-round surface-100">
+          <h4 class="mt-0 mb-3">
+            {{ varianteForm.value.id ? "Editar variante" : "Nueva variante" }}
+          </h4>
+          <form [formGroup]="varianteForm" class="flex flex-column gap-2">
+            <label>Código *</label>
+            <input
+              pInputText
+              formControlName="codigo"
+              placeholder="p.ej. GA4-6"
+            />
+            <label>Oposición *</label>
+            <p-dropdown
+              [options]="oposicionOptions"
+              formControlName="oposicion"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            ></p-dropdown>
+            <label>Nivel *</label>
+            <p-dropdown
+              [options]="nivelOptions"
+              formControlName="nivel"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            ></p-dropdown>
+            <label>Franja *</label>
+            <p-dropdown
+              [options]="franjaOptions"
+              formControlName="franja"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            ></p-dropdown>
+            <div class="flex align-items-center gap-2">
+              <p-inputSwitch formControlName="activa"></p-inputSwitch>
+              <label>Activa</label>
+            </div>
+            <div class="flex gap-2 pt-2">
+              <p-button
+                label="Guardar"
+                icon="pi pi-check"
+                (click)="guardarVariante()"
+              ></p-button>
+              <p-button
+                label="Limpiar"
+                styleClass="p-button-text"
+                (click)="nuevaVariante()"
+              ></p-button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="col-12 lg:col-7">
+        <p-table [value]="variantes()" [paginator]="true" [rows]="10">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Código</th>
+              <th>Oposición</th>
+              <th>Nivel</th>
+              <th>Franja</th>
+              <th>Activa</th>
+              <th></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-v>
+            <tr>
+              <td>{{ v.codigo }}</td>
+              <td>{{ labelOposicion(v.oposicion) }}</td>
+              <td>{{ v.nivel }}</td>
+              <td>
+                {{ v.franja === "FRANJA_SEIS_A_OCHO_HORAS" ? "6-8h" : "4-6h" }}
+              </td>
+              <td>
+                <p-inputSwitch
+                  [ngModel]="v.activa"
+                  (onChange)="actualizarVarianteActiva(v)"
+                ></p-inputSwitch>
+              </td>
+              <td>
+                <p-button
+                  icon="pi pi-pencil"
+                  styleClass="p-button-text"
+                  (click)="editarVariante(v)"
+                ></p-button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+  </p-tabPanel>
+
+  <p-tabPanel header="Reglas de oposición" leftIcon="pi pi-sitemap">
+    <div class="grid">
+      <div class="col-12 lg:col-5">
+        <div class="p-3 border-1 border-round surface-100">
+          <h4 class="mt-0 mb-3">
+            {{ reglaForm.value.id ? "Editar regla" : "Nueva regla" }}
+          </h4>
+          <form [formGroup]="reglaForm" class="flex flex-column gap-2">
+            <label>Oposición de suscripción *</label>
+            <p-dropdown
+              [options]="oposicionOptions"
+              formControlName="oposicionSuscripcion"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            ></p-dropdown>
+            <label>Oposición de planificación *</label>
+            <p-dropdown
+              [options]="oposicionOptions"
+              formControlName="oposicionPlanificacion"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            ></p-dropdown>
+            <div class="flex align-items-center gap-2">
+              <p-inputSwitch formControlName="activa"></p-inputSwitch>
+              <label>Activa</label>
+            </div>
+            <div class="flex gap-2 pt-2">
+              <p-button
+                label="Guardar"
+                icon="pi pi-check"
+                (click)="guardarRegla()"
+              ></p-button>
+              <p-button
+                label="Limpiar"
+                styleClass="p-button-text"
+                (click)="nuevaRegla()"
+              ></p-button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="col-12 lg:col-7">
+        <p-table [value]="reglas()" [paginator]="true" [rows]="10">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Suscripción</th>
+              <th>Planificación</th>
+              <th>Activa</th>
+              <th></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-r>
+            <tr>
+              <td>{{ labelOposicion(r.oposicionSuscripcion) }}</td>
+              <td>{{ labelOposicion(r.oposicionPlanificacion) }}</td>
+              <td>{{ r.activa ? "Sí" : "No" }}</td>
+              <td>
+                <p-button
+                  icon="pi pi-pencil"
+                  styleClass="p-button-text"
+                  (click)="editarRegla(r)"
+                ></p-button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+  </p-tabPanel>
+
+  <p-tabPanel header="Sin coincidencia" leftIcon="pi pi-exclamation-circle">
+    <p-message
+      severity="info"
+      text="Alumnos con suscripción activa cuyo perfil no coincide con ninguna variante de planificación disponible."
+      styleClass="w-full mb-3"
+    ></p-message>
+    <p-table [value]="sinCoincidencia()" [paginator]="true" [rows]="10">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Variante</th>
+          <th>Motivo</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-a>
+        <tr>
+          <td>{{ a.alumno.nombre }} {{ a.alumno.apellidos }}</td>
+          <td>{{ a.alumno.email }}</td>
+          <td>{{ a.variante?.codigo ?? "—" }}</td>
+          <td>
+            {{
+              a.motivo === "VARIANTE_INACTIVA"
+                ? "Variante desactivada"
+                : "Oposición no permitida"
+            }}
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="4" class="text-center">
+            No hay alumnos sin coincidencia.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-tabPanel>
+</p-tabView>

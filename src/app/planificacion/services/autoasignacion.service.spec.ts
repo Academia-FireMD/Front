@@ -1,0 +1,235 @@
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { ToastrService } from 'ngx-toastr';
+import { environment } from '../../../environments/environment';
+import { NivelOposicion } from '../../shared/models/pregunta.model';
+import { Oposicion } from '../../shared/models/subscription.model';
+import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
+import type { ConfiguracionPlanificacion } from '../models/autoasignacion.model';
+import { AutoasignacionService } from './autoasignacion.service';
+
+describe('AutoasignacionService', () => {
+  let service: AutoasignacionService;
+  let httpMock: HttpTestingController;
+
+  const configuracionRespuesta: ConfiguracionPlanificacion = {
+    estado: 'REQUIERE_CONFIGURACION',
+    preferenciasPrecargadas: {
+      oposicion: Oposicion.VALENCIA_AYUNTAMIENTO,
+      nivel: null,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+    },
+    oposicionesPermitidas: [
+      Oposicion.GENERAL,
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      Oposicion.ALICANTE_CPBA,
+      Oposicion.MADRID,
+    ],
+    configuracionActiva: null,
+    ultimaRecomendacion: null,
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        AutoasignacionService,
+        { provide: ToastrService, useValue: { error: jest.fn() } },
+      ],
+    });
+    service = TestBed.inject(AutoasignacionService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('GET /configuracion usa la ruta exacta', () => {
+    let recibida: unknown;
+    service.getConfiguracion$().subscribe((r) => (recibida = r));
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/configuracion`,
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.withCredentials).toBe(true);
+    request.flush(configuracionRespuesta);
+
+    expect(recibida).toEqual(configuracionRespuesta);
+  });
+
+  it('POST /recomendacion-nivel envía las 5 respuestas y devuelve la recomendación', () => {
+    const respuesta = { puntuacion: 12, nivelRecomendado: 'AVANZADO' };
+    let recibida: unknown;
+
+    service.recomendarNivel$([0, 3, 2, 1, 3]).subscribe((r) => (recibida = r));
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/recomendacion-nivel`,
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ respuestas: [0, 3, 2, 1, 3] });
+    request.flush(respuesta);
+
+    expect(recibida).toEqual(respuesta);
+  });
+
+  it('PUT /configuracion usa la ruta exacta, envía version y conserva el error 409', () => {
+    let recibida: unknown;
+    let capturado: unknown;
+
+    service
+      .guardarConfiguracion$({
+        oposicion: Oposicion.ALICANTE_CPBA,
+        nivel: NivelOposicion.AVANZADO,
+        franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+        version: 2,
+      })
+      .subscribe({
+        next: (r) => (recibida = r),
+        error: (e) => (capturado = e),
+      });
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/configuracion`,
+    );
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({
+      oposicion: 'ALICANTE_CPBA',
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+      version: 2,
+    });
+
+    request.flush(
+      { message: 'Versión desfasada' },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    expect(capturado).toBeInstanceOf(HttpErrorResponse);
+    expect((capturado as HttpErrorResponse).status).toBe(409);
+    expect(recibida).toBeUndefined();
+  });
+
+  it('POST /tutor/:id/recomendar envía el nivel', () => {
+    let recibida: unknown;
+
+    service
+      .recomendarNivelTutor$(42, NivelOposicion.AVANZADO)
+      .subscribe((r) => (recibida = r));
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/tutor/42/recomendar`,
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ nivel: NivelOposicion.AVANZADO });
+    request.flush({ ok: true, nivel: NivelOposicion.AVANZADO });
+
+    expect(recibida).toEqual({ ok: true, nivel: NivelOposicion.AVANZADO });
+  });
+
+  it('POST /tutor/:id/forzar envía oposicion, nivel, franja y motivo', () => {
+    let recibida: unknown;
+
+    service
+      .forzarConfiguracionTutor$(42, {
+        oposicion: Oposicion.GENERAL,
+        nivel: NivelOposicion.INICIACION,
+        franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+        motivo: 'Cambio por falta de disponibilidad',
+      })
+      .subscribe((r) => (recibida = r));
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/tutor/42/forzar`,
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      oposicion: Oposicion.GENERAL,
+      nivel: NivelOposicion.INICIACION,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+      motivo: 'Cambio por falta de disponibilidad',
+    });
+    request.flush(configuracionRespuesta);
+
+    expect(recibida).toEqual(configuracionRespuesta);
+  });
+
+  it('CRUD admin: variantes GET/POST/PATCH y reglas GET/POST/PATCH', () => {
+    service.getVariantes$().subscribe();
+    let req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/variantes`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+
+    service
+      .crearVariante$({
+        codigo: 'GA4-6',
+        oposicion: Oposicion.GENERAL,
+        nivel: NivelOposicion.AVANZADO,
+        franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+        activa: true,
+      })
+      .subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/variantes`,
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush({});
+
+    service.actualizarVariante$(3, { activa: false }).subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/variantes/3`,
+    );
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ activa: false });
+    req.flush({});
+
+    service.getReglas$().subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/reglas`,
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+
+    service
+      .crearRegla$({
+        oposicionSuscripcion: Oposicion.MADRID,
+        oposicionPlanificacion: Oposicion.MADRID,
+        activa: true,
+      })
+      .subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/reglas`,
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush({});
+
+    service.actualizarRegla$(5, { activa: false }).subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/reglas/5`,
+    );
+    expect(req.request.method).toBe('PATCH');
+    req.flush({});
+  });
+
+  it('GET /admin/sin-coincidencia devuelve la lista', () => {
+    let recibida: unknown;
+    const respuesta = [{ id: 1, email: 'a@a.es', nombre: 'A', apellidos: 'B' }];
+
+    service.getSinCoincidencia$().subscribe((r) => (recibida = r));
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/sin-coincidencia`,
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush(respuesta);
+
+    expect(recibida).toEqual(respuesta);
+  });
+});

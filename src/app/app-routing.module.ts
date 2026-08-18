@@ -51,7 +51,11 @@ const routes: Routes = [
           import('./planificacion/planificacion.module').then(
             (m) => m.PlanificacionModule,
           ),
-        canActivate: [SubscriptionGuard, moduloGuard],
+        // Sin SubscriptionGuard a nivel padre: el módulo debe ser VISIBLE aunque
+        // el alumno no tenga plan (Fase 1 autoasignación: pantalla bloqueada +
+        // CTA en `configuracion-alumno`). Las rutas legacy de alumno mantienen
+        // su propio SubscriptionGuard hijo.
+        canActivate: [moduloGuard],
         data: {
           allowedSubscriptions: [
             SuscripcionTipo.ADVANCED,

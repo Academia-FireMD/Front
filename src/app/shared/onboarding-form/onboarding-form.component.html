@@ -36,55 +36,13 @@
           </div>
         </ng-template>
         <div class="grid">
-          <div class="col-12 md:col-6">
-            <p-floatLabel>
-              <p-multiSelect
-                [options]="oposicionesDisponibles"
-                formControlName="tipoOposicion"
-                defaultLabel="Selecciona oposiciones"
-                class="w-full"
-                id="tipoOposicion"
-                [style]="{ width: '100%' }"
-                optionLabel="label"
-                optionValue="value"
-                display="chip"
-              />
-              <label for="tipoOposicion">Quiero opositar al *</label>
-            </p-floatLabel>
-          </div>
-
-          <div class="col-12 md:col-6">
-            <p-floatLabel>
-              <p-dropdown
-                [options]="niveles"
-                formControlName="nivelOposicion"
-                placeholder="Selecciona nivel"
-                class="w-full"
-                id="nivelOposicion"
-                [style]="{ width: '100%' }"
-                optionLabel="label"
-                optionValue="value"
-              />
-              <label for="nivelOposicion">Nivel</label>
-            </p-floatLabel>
-          </div>
-
-          <div class="col-12 md:col-6">
-            <p-floatLabel>
-              <p-dropdown
-                [options]="duraciones"
-                formControlName="tipoDePlanificacionDuracionDeseada"
-                placeholder="Selecciona duración"
-                class="w-full"
-                id="tipoDePlanificacionDuracionDeseada"
-                [style]="{ width: '100%' }"
-                optionLabel="label"
-                optionValue="value"
-              />
-              <label for="tipoDePlanificacionDuracionDeseada"
-                >Horas al día que me voy a dedicar *</label
-              >
-            </p-floatLabel>
+          <div class="col-12">
+            <app-planificacion-preferencias
+              [valoresIniciales]="valoresInicialesPreferencias"
+              [multiple]="true"
+              formIdPrefix="onboardingPreferencias"
+              (cambios)="onPreferenciasChange($event)"
+            ></app-planificacion-preferencias>
           </div>
 
           <!-- <div class="col-12 md:col-6">

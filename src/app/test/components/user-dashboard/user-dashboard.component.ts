@@ -37,6 +37,7 @@ import {
   SuscripcionTipo,
 } from '../../../shared/models/subscription.model';
 import { Rol, Usuario } from '../../../shared/models/user.model';
+import { AutoasignacionService } from '../../../planificacion/services/autoasignacion.service';
 import { PrimengModule } from '../../../shared/primeng.module';
 import {
   esAdminOSuperior,
@@ -66,6 +67,7 @@ import { SharedModule } from '../../../shared/shared.module';
 export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   userService = inject(UserService);
   planificacionesService = inject(PlanificacionesService);
+  autoasignacionService = inject(AutoasignacionService);
   confirmationService = inject(ConfirmationService);
   authService = inject(AuthService);
   labelsService = inject(LabelsService);
@@ -948,5 +950,96 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         console.error('Impersonation error:', error);
       },
     });
+  }
+
+  // ---- Fase 1 autoasignación: acciones de tutor sobre la planificación ----
+
+  /** Diálogo de "Cambiar planificación" (exige motivo). */
+  tutorForzarDialog = false;
+  tutorForzarUsuario: Usuario | null = null;
+  tutorForzarOposicion = Oposicion.VALENCIA_AYUNTAMIENTO;
+  tutorForzarNivel = 'INICIACION';
+  tutorForzarFranja = 'FRANJA_CUATRO_A_SEIS_HORAS';
+  tutorForzarMotivo = '';
+  tutorForzando = false;
+
+  /** Diálogo de "Recomendar nivel". */
+  tutorRecomendarDialog = false;
+  tutorRecomendarUsuario: Usuario | null = null;
+  tutorRecomendarNivel = 'INICIACION';
+  tutorRecomendando = false;
+
+  readonly tutorNivelOptions = [
+    { label: 'Iniciación', value: 'INICIACION' },
+    { label: 'Avanzado', value: 'AVANZADO' },
+  ];
+  readonly tutorFranjaOptions = [
+    { label: '4-6 horas', value: 'FRANJA_CUATRO_A_SEIS_HORAS' },
+    { label: '6-8 horas', value: 'FRANJA_SEIS_A_OCHO_HORAS' },
+  ];
+  readonly tutorOposicionOptions = Object.values(Oposicion)
+    .filter((o) => o !== Oposicion.GENERAL)
+    .map((o) => ({ label: OPOSICION_LABELS[o] ?? o, value: o }));
+
+  abrirRecomendarNivel(user: Usuario): void {
+    this.tutorRecomendarUsuario = { ...user };
+    this.tutorRecomendarNivel = 'INICIACION';
+    this.tutorRecomendarDialog = true;
+  }
+
+  async confirmarRecomendarNivel(): Promise<void> {
+    if (!this.tutorRecomendarUsuario) return;
+    this.tutorRecomendando = true;
+    try {
+      await firstValueFrom(
+        this.autoasignacionService.recomendarNivelTutor$(
+          this.tutorRecomendarUsuario.id,
+          this.tutorRecomendarNivel as any,
+        ),
+      );
+      this.toast.success('Nivel recomendado correctamente');
+      this.tutorRecomendarDialog = false;
+    } catch {
+      this.toast.error('No se pudo recomendar el nivel');
+    } finally {
+      this.tutorRecomendando = false;
+    }
+  }
+
+  abrirForzarPlanificacion(user: Usuario): void {
+    this.tutorForzarUsuario = { ...user };
+    this.tutorForzarOposicion = Oposicion.VALENCIA_AYUNTAMIENTO;
+    this.tutorForzarNivel = 'INICIACION';
+    this.tutorForzarFranja = 'FRANJA_CUATRO_A_SEIS_HORAS';
+    this.tutorForzarMotivo = '';
+    this.tutorForzarDialog = true;
+  }
+
+  async confirmarForzarPlanificacion(): Promise<void> {
+    if (!this.tutorForzarUsuario) return;
+    if (!this.tutorForzarMotivo.trim()) {
+      this.toast.warning('El motivo es obligatorio');
+      return;
+    }
+    this.tutorForzando = true;
+    try {
+      await firstValueFrom(
+        this.autoasignacionService.forzarConfiguracionTutor$(
+          this.tutorForzarUsuario.id,
+          {
+            oposicion: this.tutorForzarOposicion,
+            nivel: this.tutorForzarNivel as any,
+            franja: this.tutorForzarFranja,
+            motivo: this.tutorForzarMotivo.trim(),
+          },
+        ),
+      );
+      this.toast.success('Planificación cambiada correctamente');
+      this.tutorForzarDialog = false;
+    } catch {
+      this.toast.error('No se pudo cambiar la planificación');
+    } finally {
+      this.tutorForzando = false;
+    }
   }
 }

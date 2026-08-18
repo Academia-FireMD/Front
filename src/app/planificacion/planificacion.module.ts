@@ -28,13 +28,17 @@ import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
 import { CalendarHeaderComponent } from './calendar-header/calendar-header.component';
 import { EditarSubBloqueDialogComponent } from './editar-sub-bloque-dialog/editar-sub-bloque-dialog.component';
+import { PlanificacionAlumnoComponent } from './planificacion-alumno/planificacion-alumno.component';
+import { PlanificacionBloqueadaComponent } from './planificacion-bloqueada/planificacion-bloqueada.component';
 import { PlanificacionComentariosOverviewComponent } from './planificacion-comentarios-overview/planificacion-comentarios-overview.component';
+import { PlanificacionConfiguracionWizardComponent } from './planificacion-configuracion-wizard/planificacion-configuracion-wizard.component';
 import { PlanificacionMensualEditComponent } from './planificacion-mensual-edit/planificacion-mensual-edit.component';
 import { PlanificacionMensualOverviewComponent } from './planificacion-mensual-overview/planificacion-mensual-overview.component';
 import { PlanificacionRoutingModule } from './planificacion-routing.module';
 import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantilla-semanal-edit.component';
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
 import { VistaSemanalComponent } from './vista-semanal/vista-semanal.component';
+import { PlanificacionAdminComponent } from './planificacion-admin/planificacion-admin.component';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [
@@ -70,7 +74,11 @@ registerLocaleData(localeEs);
     MessageModule,
     AsyncButtonComponent,
     GenericListComponent,
-    UserDashboardComponent
+    UserDashboardComponent,
+    PlanificacionAlumnoComponent,
+    PlanificacionBloqueadaComponent,
+    PlanificacionConfiguracionWizardComponent,
+    PlanificacionAdminComponent,
   ],
   providers: [
     ConfirmationService,
@@ -81,4 +89,4 @@ registerLocaleData(localeEs);
     },
   ],
 })
-export class PlanificacionModule { }
+export class PlanificacionModule {}

@@ -110,6 +110,19 @@ export const formatFechaISO = (date: Date): string => {
   return `${y}-${m}-${d}`;
 };
 
+/**
+ * Fase 1 autoasignación (Tarea 4): inicio de la ventana visible del alumno.
+ * El alumno solo ve la semana actual + 2 semanas atrás (+ el futuro que ya
+ * muestre hoy). Devuelve la fecha (a medianoche local) 14 días antes de
+ * `hoy`. Es una capa de PRESENTACIÓN: no filtra datos en el servicio.
+ */
+export const getVentanaDosSemanasAtras = (hoy: Date = new Date()): Date => {
+  const inicio = new Date(hoy);
+  inicio.setDate(inicio.getDate() - 14);
+  inicio.setHours(0, 0, 0, 0);
+  return inicio;
+};
+
 export const getDateForDayOfWeek = (
   dayIndex: number,
   startOfWeek: Date,

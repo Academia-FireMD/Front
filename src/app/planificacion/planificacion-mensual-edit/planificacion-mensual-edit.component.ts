@@ -41,6 +41,7 @@ import {
   formatFechaISO,
   getNextWeekIfFriday,
   getStartOfWeek,
+  getVentanaDosSemanasAtras,
 } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
 
@@ -604,9 +605,12 @@ export class PlanificacionMensualEditComponent {
               });
 
               this.userService.getCurrentUser$().subscribe((user: any) => {
-                this.startDate = user.validatedAt
-                  ? new Date(user.validatedAt)
-                  : new Date(user.createdAt);
+                // Fase 1 autoasignación: el alumno solo ve la ventana de
+                // 2 semanas atrás + el futuro (el historial se conserva en
+                // backend, la UI no lo muestra). Antes se anclaba a la fecha
+                // de alta (validatedAt/createdAt), lo que podía mostrar todo
+                // el histórico.
+                this.startDate = getVentanaDosSemanasAtras();
                 this.endDate = getNextWeekIfFriday(new Date());
               });
             }

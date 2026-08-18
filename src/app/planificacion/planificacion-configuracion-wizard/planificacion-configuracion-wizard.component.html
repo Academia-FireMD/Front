@@ -1,0 +1,245 @@
+<p-stepper
+  [activeStep]="activeStep()"
+  (activeStepChange)="activeStep.set($event)"
+>
+  <!-- Paso 1: Preferencias -->
+  <p-stepperPanel header="Preferencias">
+    <ng-template pTemplate="content" let-nextCallback="nextCallback">
+      <h3 class="mt-0 mb-2">Tu planificación</h3>
+      <p class="text-600 mb-3">
+        Elige tu oposición, nivel y franja horaria. Se aplicarán a tu
+        planificación de estudio.
+      </p>
+
+      <app-planificacion-preferencias
+        [valoresIniciales]="{
+          oposicion: preferencias.oposicion,
+          nivel: preferencias.nivel,
+          franja: preferencias.franja,
+        }"
+        [oposicionesPermitidas]="oposicionesPermitidas"
+        [multiple]="false"
+        formIdPrefix="wizardPreferencias"
+        (cambios)="onPreferenciasChange($event)"
+      ></app-planificacion-preferencias>
+
+      @if (requiereConfirmacionGCV) {
+        <div class="mt-3">
+          <p-message
+            severity="warn"
+            text="La planificación general de la Comunidad Valenciana es una planificación común y no está específicamente orientada a tu oposición concreta."
+            styleClass="w-full mb-2"
+          ></p-message>
+          <div class="flex align-items-center gap-2">
+            <p-checkbox
+              [binary]="true"
+              [(ngModel)]="gcvConfirmado"
+              inputId="confirmarGcv"
+            ></p-checkbox>
+            <label for="confirmarGcv">
+              Entiendo y acepto la planificación general
+            </label>
+          </div>
+        </div>
+      }
+
+      <div class="flex justify-content-end pt-4">
+        <p-button
+          label="Continuar"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          [disabled]="!puedeContinuarPasoPreferencias"
+          (click)="irAPasoNivel(); nextCallback.emit()"
+        ></p-button>
+      </div>
+    </ng-template>
+  </p-stepperPanel>
+
+  <!-- Paso 2: Nivel -->
+  <p-stepperPanel header="Nivel">
+    <ng-template
+      pTemplate="content"
+      let-prevCallback="prevCallback"
+      let-nextCallback="nextCallback"
+    >
+      <h3 class="mt-0 mb-2">Nivel de estudio</h3>
+
+      @if (tieneNivelPrecargado && !elegirCuestionario()) {
+        <div class="flex flex-column gap-3">
+          <p>
+            Tu nivel actual es
+            <strong>{{
+              preferencias.nivel === NivelOposicion.AVANZADO
+                ? "Avanzado"
+                : "Iniciación"
+            }}</strong
+            >.
+          </p>
+          <div class="flex gap-2">
+            <p-button
+              label="Confirmar nivel"
+              icon="pi pi-check"
+              (click)="nextCallback.emit()"
+            ></p-button>
+            <p-button
+              label="Obtener recomendación"
+              icon="pi pi-magic"
+              styleClass="p-button-secondary"
+              (click)="elegirCuestionario.set(true)"
+            ></p-button>
+          </div>
+        </div>
+      } @else {
+        <div class="flex flex-column gap-3">
+          <p>Responde 5 preguntas sobre tu experiencia con el temario:</p>
+
+          @for (pregunta of preguntas; track $index) {
+            <div class="p-3 border-1 border-round surface-100">
+              <div class="mb-2 font-medium">
+                {{ $index + 1 }}. {{ pregunta }}
+              </div>
+              <div class="flex gap-3">
+                @for (
+                  opcion of [
+                    { value: 0, label: "Nada" },
+                    { value: 1, label: "Poco" },
+                    { value: 2, label: "Algo" },
+                    { value: 3, label: "Mucho" },
+                  ];
+                  track opcion.value
+                ) {
+                  <div class="flex align-items-center gap-1">
+                    <p-radioButton
+                      [name]="'pregunta' + $index"
+                      [value]="opcion.value"
+                      [(ngModel)]="respuestas[$index]"
+                    ></p-radioButton>
+                    <label>{{ opcion.label }}</label>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="flex gap-2">
+            @if (tieneNivelPrecargado) {
+              <p-button
+                label="Volver"
+                icon="pi pi-arrow-left"
+                styleClass="p-button-text"
+                (click)="elegirCuestionario.set(false)"
+              ></p-button>
+            }
+            <p-button
+              label="Obtener recomendación"
+              icon="pi pi-magic"
+              [loading]="enviandoRecomendacion()"
+              (click)="obtenerRecomendacion()"
+            ></p-button>
+          </div>
+
+          @if (recomendacion) {
+            <div class="mt-3">
+              <p-message
+                severity="success"
+                [text]="
+                  'Te recomendamos el nivel ' +
+                  (recomendacion.nivelRecomendado === NivelOposicion.AVANZADO
+                    ? 'Avanzado'
+                    : 'Iniciación') +
+                  ' (puntuación ' +
+                  recomendacion.puntuacion +
+                  ').'
+                "
+                styleClass="w-full mb-2"
+              ></p-message>
+              <div class="flex gap-2">
+                <p-button
+                  label="Aceptar recomendación"
+                  icon="pi pi-check"
+                  (click)="aceptarRecomendacion(); nextCallback.emit()"
+                ></p-button>
+                <p-button
+                  label="Elegir manualmente"
+                  styleClass="p-button-secondary"
+                  (click)="nextCallback.emit()"
+                ></p-button>
+              </div>
+            </div>
+          } @else if (tieneNivelPrecargado) {
+            <div class="flex gap-2">
+              <p-button
+                label="Usar mi nivel actual"
+                styleClass="p-button-outlined"
+                (click)="nextCallback.emit()"
+              ></p-button>
+            </div>
+          }
+        </div>
+      }
+    </ng-template>
+  </p-stepperPanel>
+
+  <!-- Paso 3: Confirmación -->
+  <p-stepperPanel header="Confirmar">
+    <ng-template pTemplate="content" let-prevCallback="prevCallback">
+      <h3 class="mt-0 mb-2">Confirma tu planificación</h3>
+
+      <div class="p-3 border-1 border-round surface-100 mb-3">
+        <div class="flex justify-content-between mb-2">
+          <span class="text-600">Oposición</span>
+          <strong>{{ preferencias.oposicion }}</strong>
+        </div>
+        <div class="flex justify-content-between mb-2">
+          <span class="text-600">Nivel</span>
+          <strong>{{
+            preferencias.nivel === NivelOposicion.AVANZADO
+              ? "Avanzado"
+              : preferencias.nivel === NivelOposicion.INICIACION
+                ? "Iniciación"
+                : "—"
+          }}</strong>
+        </div>
+        <div class="flex justify-content-between">
+          <span class="text-600">Franja horaria</span>
+          <strong>{{
+            preferencias.franja === "FRANJA_SEIS_A_OCHO_HORAS"
+              ? "6-8 horas"
+              : "4-6 horas"
+          }}</strong>
+        </div>
+      </div>
+
+      @if (hayConfiguracionAnterior) {
+        <p-message
+          severity="info"
+          text="Tu historial y progreso se conservan; la nueva planificación se aplica desde hoy."
+          styleClass="w-full mb-3"
+        ></p-message>
+      }
+
+      @if (errorGuardado) {
+        <p-message
+          severity="warn"
+          [text]="errorGuardado"
+          styleClass="w-full mb-3"
+        ></p-message>
+      }
+
+      <div class="flex gap-2">
+        <p-button
+          label="Volver"
+          icon="pi pi-arrow-left"
+          styleClass="p-button-text"
+          (click)="prevCallback.emit()"
+        ></p-button>
+        <p-button
+          label="Activar planificación"
+          icon="pi pi-check"
+          [loading]="guardando()"
+          (click)="guardarConfiguracion()"
+        ></p-button>
+      </div>
+    </ng-template>
+  </p-stepperPanel>
+</p-stepper>
