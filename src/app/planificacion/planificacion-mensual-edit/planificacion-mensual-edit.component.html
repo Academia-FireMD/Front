@@ -48,28 +48,25 @@
         </div>
       </ng-template>
     </p-stepperPanel>
-    <p-stepperPanel header="Confirmar plantilla seleccionada">
+    <p-stepperPanel header="Confirmar semana destino">
       <ng-template
         pTemplate="content"
         let-prevCallback="prevCallback"
+        let-nextCallback="nextCallback"
         let-index="index"
       >
-        <app-vista-semanal
-          *ngIf="
-            pickedEvents && pickedEvents.length > 0 && pickedEventsViewDate
-          "
-          [ngStyle]="{ height: '56vh', display: 'block', overflow: 'auto' }"
-          [events]="pickedEvents"
-          [viewDate]="pickedEventsViewDate"
-          [role]="'ADMIN'"
-          [mode]="'picker'"
-        ></app-vista-semanal>
-        <div
-          *ngIf="!pickedEvents || pickedEvents.length === 0"
-          class="p-4 text-center"
-        >
-          <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
-          <p>Cargando plantilla seleccionada...</p>
+        <div class="p-4 text-center">
+          <p class="text-lg">
+            Se insertarán los bloques en la semana del
+            <strong>{{
+              lunesDestino | date: "EEEE dd/MM/yyyy" : "" : "es"
+            }}</strong
+            >.
+          </p>
+          <p class="text-color-secondary">
+            Si quieres otra semana, cierra el diálogo, navega el calendario a la
+            semana deseada y vuelve a abrir el selector.
+          </p>
         </div>
         <div class="flex pt-4 justify-content-between">
           <p-button
@@ -78,11 +75,112 @@
             (click)="prevCallback.emit()"
           />
           <p-button
-            label="Utilizar esta plantilla semanal"
-            icon="pi pi-check"
-            (click)="applyEventsToCurrentWeek(pickedEvents)"
-            [disabled]="!pickedEvents || pickedEvents.length === 0"
+            label="Confirmar semana"
+            icon="pi pi-arrow-right"
+            (click)="confirmarSemanaDestino(nextCallback)"
+            [disabled]="!pickedPlantillaId()"
           />
+        </div>
+      </ng-template>
+    </p-stepperPanel>
+    <p-stepperPanel header="Vista previa">
+      <ng-template
+        pTemplate="content"
+        let-prevCallback="prevCallback"
+        let-index="index"
+      >
+        <div *ngIf="previewLoading()" class="p-4 text-center">
+          <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+          <p>Cargando vista previa...</p>
+        </div>
+
+        <div *ngIf="!previewLoading() && previewResult()" class="pt-2">
+          <div class="flex gap-2 mb-3 justify-content-center">
+            <p-tag
+              severity="success"
+              [value]="
+                'Se crearán ' + (previewResult()?.creados ?? 0) + ' bloques'
+              "
+            ></p-tag>
+            <p-tag
+              severity="warning"
+              [value]="
+                'Se omitirán ' +
+                (previewResult()?.omitidos ?? 0) +
+                ' (ya existían)'
+              "
+            ></p-tag>
+          </div>
+
+          <p-table
+            [value]="previewResult()?.bloques ?? []"
+            [scrollable]="true"
+            scrollHeight="40vh"
+            styleClass="p-datatable-sm"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Día</th>
+                <th>Hora</th>
+                <th>Nombre</th>
+                <th>Duración</th>
+                <th></th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-bloque>
+              <tr>
+                <td>{{ diaDeBloque(bloque) | titlecase }}</td>
+                <td>{{ horaDeBloque(bloque) }}</td>
+                <td>{{ bloque.nombre }}</td>
+                <td>{{ bloque.duracion }} min</td>
+                <td>
+                  <p-tag
+                    *ngIf="bloque.importante"
+                    severity="danger"
+                    value="Importante"
+                  ></p-tag>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="5" class="text-center">
+                  No hay bloques para crear en esta semana.
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+
+          <p-message
+            *ngIf="previewResult()?.error"
+            severity="warn"
+            [text]="previewResult()?.error ?? ''"
+            styleClass="w-full mt-2"
+          ></p-message>
+        </div>
+
+        <div
+          *ngIf="!previewLoading() && !previewResult()"
+          class="p-4 text-center"
+        >
+          <p>No se pudo cargar la vista previa.</p>
+        </div>
+
+        <div class="flex pt-4 justify-content-between">
+          <p-button
+            label="Volver atrás"
+            icon="pi pi-arrow-left"
+            (click)="prevCallback.emit()"
+            [disabled]="aplicando()"
+          />
+          <app-async-button
+            label="Aplicar plantilla semanal"
+            icon="pi pi-check"
+            [action]="aplicarPlantillaConfirmada.bind(this)"
+            [disabled]="
+              !previewResult() || (previewResult()?.creados ?? 0) === 0
+            "
+          ></app-async-button>
         </div>
       </ng-template>
     </p-stepperPanel>

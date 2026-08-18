@@ -12,6 +12,10 @@ import {
 } from '../shared/models/planificacion.model';
 import { TipoDePlanificacionDeseada } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
+import {
+  AplicarPlantillasSemanalesRequest,
+  AplicarPlantillasSemanalesResponse,
+} from '../planificacion/models/aplicar-plantillas-semanales.model';
 
 // Interfaz para la actualización de progreso
 export interface ProgresoSubBloqueDTO {
@@ -255,5 +259,18 @@ export class PlanificacionesService extends ApiBaseService {
       `/desvincular-planificacion-mensual-admin/${planificacionId}/${alumnoId}`,
       null,
     );
+  }
+
+  /**
+   * Fase 2: aplica una o varias plantillas semanales sobre planificaciones
+   * mensuales, con soporte de preview server-side (preview: true).
+   */
+  public aplicarPlantillasSemanales$(
+    body: AplicarPlantillasSemanalesRequest,
+  ): Observable<AplicarPlantillasSemanalesResponse> {
+    return this.post(
+      '/aplicar-plantillas-semanales',
+      body,
+    ) as Observable<AplicarPlantillasSemanalesResponse>;
   }
 }

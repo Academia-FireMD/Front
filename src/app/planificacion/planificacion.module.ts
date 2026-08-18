@@ -20,6 +20,7 @@ import { MessageModule } from 'primeng/message';
 import { PaginatorModule } from 'primeng/paginator';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
 import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 import { GenericListComponent } from '../shared/generic-list/generic-list.component';
 import { SharedModule } from '../shared/shared.module';
@@ -63,6 +64,7 @@ registerLocaleData(localeEs);
     StepperModule,
     SpeedDialModule,
     TableModule,
+    TagModule,
     CheckboxModule,
     ButtonModule,
     DialogModule,

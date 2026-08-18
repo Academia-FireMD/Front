@@ -34,6 +34,10 @@ import {
   PlantillaSemanal,
   SubBloque,
 } from '../../shared/models/planificacion.model';
+import {
+  ResultadoAplicarPlantillaSemanal,
+  PreviewBloque,
+} from '../models/aplicar-plantillas-semanales.model';
 import { duracionesDisponibles } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
@@ -118,7 +122,11 @@ export class PlanificacionMensualEditComponent {
   public isDialogAsignacionUsuarioVisible = false;
   public pickedEvents: CalendarEvent[] = [];
   public pickedEventsViewDate: Date = new Date();
+  public pickedPlantillaId = signal<number | null>(null);
   public activeStepSeleccionPlantilla = 0;
+  public previewResult = signal<ResultadoAplicarPlantillaSemanal | null>(null);
+  public previewLoading = signal(false);
+  public aplicando = signal(false);
   public usuariosSeleccionadosId = [] as Array<number>;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   public userFilters = computed(
@@ -399,6 +407,8 @@ export class PlanificacionMensualEditComponent {
       // Limpiar datos anteriores
       this.pickedEvents = [];
       this.pickedEventsViewDate = new Date();
+      this.pickedPlantillaId.set(plantillaOverview.id ?? null);
+      this.previewResult.set(null);
 
       const fullPlantilla = await firstValueFrom(
         this.planificacionesService.getPlantillaSemanalById(
@@ -429,7 +439,99 @@ export class PlanificacionMensualEditComponent {
       console.error('Error al cargar la plantilla:', error);
       this.pickedEvents = [];
       this.pickedEventsViewDate = new Date();
+      this.pickedPlantillaId.set(null);
     }
+  }
+
+  public get lunesDestino(): Date {
+    return getStartOfWeek(this.viewDate);
+  }
+
+  public confirmarSemanaDestino(nextCallback: any): void {
+    this.previewResult.set(null);
+    nextCallback.emit();
+    this.cargarPreview();
+  }
+
+  public async cargarPreview(): Promise<void> {
+    const plantillaId = this.pickedPlantillaId();
+    const planificacionId = this.lastLoadedPlanification()?.id;
+    if (!plantillaId || !planificacionId) {
+      return;
+    }
+
+    this.previewLoading.set(true);
+    try {
+      const res = await firstValueFrom(
+        this.planificacionesService.aplicarPlantillasSemanales$({
+          lunes: formatFechaISO(this.lunesDestino),
+          items: [{ planificacionId, plantillaSemanalId: plantillaId }],
+          preview: true,
+        }),
+      );
+      this.previewResult.set(res?.resultados?.[0] ?? null);
+    } catch (error: any) {
+      const message =
+        error?.error?.message || error?.message || 'Error al cargar el preview';
+      this.toast.error(message);
+      this.previewResult.set(null);
+    } finally {
+      this.previewLoading.set(false);
+    }
+  }
+
+  public async aplicarPlantillaConfirmada(): Promise<void> {
+    const plantillaId = this.pickedPlantillaId();
+    const planificacionId = this.lastLoadedPlanification()?.id;
+    if (!plantillaId || !planificacionId) {
+      return;
+    }
+
+    this.aplicando.set(true);
+    try {
+      const res = await firstValueFrom(
+        this.planificacionesService.aplicarPlantillasSemanales$({
+          lunes: formatFechaISO(this.lunesDestino),
+          items: [{ planificacionId, plantillaSemanalId: plantillaId }],
+          preview: false,
+        }),
+      );
+      const resultado = res?.resultados?.[0];
+      if (resultado?.error) {
+        this.toast.warning(resultado.error);
+      } else {
+        this.toast.success(
+          `Plantilla aplicada: ${resultado?.creados ?? 0} creados, ${resultado?.omitidos ?? 0} omitidos.`,
+        );
+      }
+      this.isDialogVisible = false;
+      this.pickedEvents = [];
+      this.pickedPlantillaId.set(null);
+      this.previewResult.set(null);
+      this.activeStepSeleccionPlantilla = 0;
+      this.load();
+    } catch (error: any) {
+      const message =
+        error?.error?.message ||
+        error?.message ||
+        'Error al aplicar la plantilla semanal';
+      this.toast.error(message);
+    } finally {
+      this.aplicando.set(false);
+    }
+  }
+
+  public diaDeBloque(bloque: PreviewBloque): string {
+    return new Date(bloque.horaInicio).toLocaleDateString('es-ES', {
+      weekday: 'long',
+    });
+  }
+
+  public horaDeBloque(bloque: PreviewBloque): string {
+    return new Date(bloque.horaInicio).toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   onDayClicked(data: any): void {
@@ -437,60 +539,6 @@ export class PlanificacionMensualEditComponent {
     this.viewDate = startOfWeek;
 
     this.view = CalendarView.Week;
-  }
-
-  public applyEventsToCurrentWeek(
-    eventsToApplyToCurrentWeek: CalendarEvent[],
-  ): void {
-    const startOfWeek = getStartOfWeek(this.viewDate); // Inicio de la semana actual
-    const endOfWeekExclusive = new Date(startOfWeek);
-    endOfWeekExclusive.setDate(startOfWeek.getDate() + 7);
-
-    // Filtrar eventos actuales que NO pertenecen a la semana actual
-    const eventsOutsideCurrentWeek = this.events.filter(
-      (event) => event.start < startOfWeek || event.start >= endOfWeekExclusive,
-    );
-
-    // Ajustar los eventos seleccionados a la semana actual
-    const adjustedEvents = eventsToApplyToCurrentWeek.map((event) => {
-      const dayOffset = (event.start.getDay() + 6) % 7;
-      const adjustedStart = new Date(startOfWeek);
-      adjustedStart.setDate(adjustedStart.getDate() + dayOffset);
-      adjustedStart.setHours(
-        event.start.getHours(),
-        event.start.getMinutes(),
-        0,
-        0,
-      ); // Ajustar la hora exacta
-
-      const adjustedEnd = event.end
-        ? new Date(
-            adjustedStart.getTime() +
-              (event.end.getTime() - event.start.getTime()),
-          ) // Mantener duración
-        : undefined;
-
-      const adjustedEvent = cloneDeep(event);
-      if (adjustedEvent.meta?.subBloque) {
-        (adjustedEvent.meta.subBloque as SubBloque).id = undefined;
-        (adjustedEvent.meta.subBloque as SubBloque).plantillaId = undefined;
-      }
-
-      return {
-        ...adjustedEvent,
-        start: adjustedStart,
-        end: adjustedEnd,
-      };
-    });
-    // Combinar eventos de otras semanas con los eventos ajustados para la semana actual
-    this.events = [...eventsOutsideCurrentWeek, ...adjustedEvents];
-    this.eventosModificados = true;
-
-    // Resetear el estado del diálogo y de los eventos seleccionados
-    this.isDialogVisible = false;
-    this.pickedEvents = [];
-
-    this.toast.success('Eventos aplicados correctamente a la semana actual');
   }
 
   constructor(private primengConfig: PrimeNGConfig) {

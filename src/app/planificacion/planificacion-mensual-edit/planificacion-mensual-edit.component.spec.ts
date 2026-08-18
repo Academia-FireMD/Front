@@ -78,129 +78,163 @@ describe('PlanificacionMensualEditComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('aplicar plantilla semanal', () => {
+  describe('aplicar plantilla semanal con preview server-side', () => {
     const lunesActual = new Date(2026, 7, 3, 9, 0);
 
     beforeEach(() => {
       component.viewDate = lunesActual;
+      component.lastLoadedPlanification.set({ id: 42 } as any);
+      component.pickedPlantillaId.set(7);
     });
 
-    it('reemplaza los eventos lunes y domingo de la semana actual y conserva los de semanas adyacentes', () => {
-      const lunesAnterior = {
-        title: 'Lunes anterior',
-        start: new Date(2026, 6, 27, 9, 0),
-      } as any;
-      const lunesActualEvento = {
-        title: 'Lunes actual',
-        start: new Date(2026, 7, 3, 9, 0),
-      } as any;
-      const domingoActual = {
-        title: 'Domingo actual',
-        start: new Date(2026, 7, 9, 9, 0),
-      } as any;
-      const lunesSiguiente = {
-        title: 'Lunes siguiente',
-        start: new Date(2026, 7, 10, 9, 0),
-      } as any;
-      component.events = [
-        lunesAnterior,
-        lunesActualEvento,
-        domingoActual,
-        lunesSiguiente,
-      ];
-      const plantillaLunes = {
-        title: 'Plantilla lunes',
-        start: new Date(2026, 6, 6, 10, 0),
-      } as any;
-      const plantillaDomingo = {
-        title: 'Plantilla domingo',
-        start: new Date(2026, 6, 12, 11, 0),
-      } as any;
+    it('muestra el lunes de la semana visible como destino', () => {
+      expect(component.lunesDestino).toEqual(new Date(2026, 7, 3, 0, 0, 0));
+    });
+
+    it('cargarPreview llama al endpoint con preview:true y expone el resultado', async () => {
+      // OJO: PlanificacionesService en COMMON_TEST_PROVIDERS es un Proxy que
+      // devuelve un jest.fn() NUEVO por acceso — spyOn no intercepta nada.
+      // Se sustituye la referencia del componente por un mock plano.
+      const mock = jest.fn(() =>
+        of({
+          resultados: [
+            {
+              planificacionId: 42,
+              plantillaSemanalId: 7,
+              creados: 2,
+              omitidos: 1,
+              bloques: [
+                {
+                  nombre: 'Bloque lunes',
+                  horaInicio: '2026-08-03T09:00:00',
+                  duracion: 60,
+                  importante: true,
+                },
+                {
+                  nombre: 'Bloque martes',
+                  horaInicio: '2026-08-04T10:00:00',
+                  duracion: 90,
+                },
+              ],
+            },
+          ],
+        } as any),
+      );
+      (component as any).planificacionesService = {
+        aplicarPlantillasSemanales$: mock,
+      };
+
+      await component.cargarPreview();
+
+      expect(mock).toHaveBeenCalledWith({
+        lunes: '2026-08-03',
+        items: [{ planificacionId: 42, plantillaSemanalId: 7 }],
+        preview: true,
+      });
+      expect(component.previewResult()).toEqual(
+        expect.objectContaining({
+          planificacionId: 42,
+          plantillaSemanalId: 7,
+          creados: 2,
+          omitidos: 1,
+          bloques: expect.any(Array),
+        }),
+      );
+      expect(component.previewLoading()).toBe(false);
+    });
+
+    it('confirmarSemanaDestino avanza y carga el preview', () => {
+      const nextCallback = { emit: jest.fn() };
+      const cargarSpy = jest
+        .spyOn(component, 'cargarPreview')
+        .mockResolvedValue();
+
+      component.confirmarSemanaDestino(nextCallback);
+
+      expect(nextCallback.emit).toHaveBeenCalled();
+      expect(cargarSpy).toHaveBeenCalled();
+    });
+
+    it('aplicarPlantillaConfirmada llama con preview:false, muestra toast y recarga', async () => {
+      const aplicarMock = jest.fn(() =>
+        of({
+          resultados: [
+            {
+              planificacionId: 42,
+              plantillaSemanalId: 7,
+              creados: 2,
+              omitidos: 1,
+              bloques: [],
+            },
+          ],
+        } as any),
+      );
+      (component as any).planificacionesService = {
+        aplicarPlantillasSemanales$: aplicarMock,
+      };
+      const loadSpy = jest
+        .spyOn(component as any, 'load')
+        .mockImplementation(() => {});
       const successSpy = jest.spyOn(TestBed.inject(ToastrService), 'success');
 
-      component.applyEventsToCurrentWeek([plantillaLunes, plantillaDomingo]);
+      await component.aplicarPlantillaConfirmada();
 
-      expect(component.events).toHaveLength(4);
-      expect(component.events).toEqual(
-        expect.arrayContaining([lunesAnterior, lunesSiguiente]),
-      );
-      expect(component.events.map((event) => event.title)).not.toContain(
-        'Lunes actual',
-      );
-      expect(component.events.map((event) => event.title)).not.toContain(
-        'Domingo actual',
-      );
-      expect(component.events).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            title: 'Plantilla lunes',
-            start: new Date(2026, 7, 3, 10, 0),
-          }),
-          expect.objectContaining({
-            title: 'Plantilla domingo',
-            start: new Date(2026, 7, 9, 11, 0),
-          }),
-        ]),
-      );
-      expect(component.eventosModificados).toBe(true);
+      expect(aplicarMock).toHaveBeenCalledWith({
+        lunes: '2026-08-03',
+        items: [{ planificacionId: 42, plantillaSemanalId: 7 }],
+        preview: false,
+      });
       expect(successSpy).toHaveBeenCalledWith(
-        'Eventos aplicados correctamente a la semana actual',
+        'Plantilla aplicada: 2 creados, 1 omitidos.',
+      );
+      expect(loadSpy).toHaveBeenCalled();
+      expect(component.isDialogVisible).toBe(false);
+      expect(component.pickedPlantillaId()).toBeNull();
+      expect(component.previewResult()).toBeNull();
+    });
+
+    it('aplicarPlantillaConfirmada muestra warning si el resultado trae error', async () => {
+      const aplicarMock = jest.fn(() =>
+        of({
+          resultados: [
+            {
+              planificacionId: 42,
+              plantillaSemanalId: 7,
+              creados: 0,
+              omitidos: 0,
+              bloques: [],
+              error: 'La plantilla no es compatible con esta oposición',
+            },
+          ],
+        } as any),
+      );
+      (component as any).planificacionesService = {
+        aplicarPlantillasSemanales$: aplicarMock,
+      };
+      jest.spyOn(component as any, 'load').mockImplementation(() => {});
+      const warningSpy = jest.spyOn(TestBed.inject(ToastrService), 'warning');
+
+      await component.aplicarPlantillaConfirmada();
+
+      expect(warningSpy).toHaveBeenCalledWith(
+        'La plantilla no es compatible con esta oposición',
       );
     });
 
-    it('no modifica la plantilla y limpia los ids solo en la copia ajustada', () => {
-      const plantilla = {
-        title: 'Plantilla domingo',
-        start: new Date(2026, 6, 12, 11, 0),
-        meta: { subBloque: { id: 15, plantillaId: 8, nombre: 'Bloque' } },
-      } as any;
-
-      component.applyEventsToCurrentWeek([plantilla]);
-
-      const copia = component.events[0] as any;
-      expect(plantilla.meta.subBloque).toEqual({
-        id: 15,
-        plantillaId: 8,
-        nombre: 'Bloque',
-      });
-      expect(copia.meta.subBloque).toEqual({
-        id: undefined,
-        plantillaId: undefined,
-        nombre: 'Bloque',
-      });
-      expect(copia.meta.subBloque).not.toBe(plantilla.meta.subBloque);
-    });
-
-    it('reemplaza también el domingo al cruzar de año y conserva el lunes siguiente', () => {
-      component.viewDate = new Date(2025, 11, 29, 9, 0);
-      const domingoActual = {
-        title: 'Domingo actual',
-        start: new Date(2026, 0, 4, 9, 0),
-      } as any;
-      const lunesSiguiente = {
-        title: 'Lunes siguiente',
-        start: new Date(2026, 0, 5, 9, 0),
-      } as any;
-      component.events = [domingoActual, lunesSiguiente];
-      const plantillaDomingo = {
-        title: 'Plantilla domingo',
-        start: new Date(2025, 11, 28, 11, 0),
-      } as any;
-
-      component.applyEventsToCurrentWeek([plantillaDomingo]);
-
-      expect(component.events).toEqual(
-        expect.arrayContaining([
-          lunesSiguiente,
-          expect.objectContaining({
-            title: 'Plantilla domingo',
-            start: new Date(2026, 0, 4, 11, 0),
-          }),
-        ]),
+    it('cargarPreview muestra toast de error ante 400 del endpoint', async () => {
+      const aplicarMock = jest.fn(() =>
+        throwError(() => ({ error: { message: 'Fecha fuera del mes' } })),
       );
-      expect(component.events.map((event) => event.title)).not.toContain(
-        'Domingo actual',
-      );
+      (component as any).planificacionesService = {
+        aplicarPlantillasSemanales$: aplicarMock,
+      };
+      const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
+
+      await component.cargarPreview();
+
+      expect(errorSpy).toHaveBeenCalledWith('Fecha fuera del mes');
+      expect(component.previewLoading()).toBe(false);
+      expect(component.previewResult()).toBeNull();
     });
   });
 
