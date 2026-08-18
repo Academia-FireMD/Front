@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   inject,
@@ -66,6 +67,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   private readonly autoasignacionService = inject(AutoasignacionService);
   private readonly toast = inject(ToastrService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly preguntas = PREGUNTAS_CUESTIONARIO;
   readonly Oposicion = Oposicion;
@@ -181,6 +183,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       this.toast.error('No se pudo obtener la recomendación');
     } finally {
       this.enviandoRecomendacion.set(false);
+      this.cdr.markForCheck();
     }
   }
 
@@ -227,6 +230,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       }
     } finally {
       this.guardando.set(false);
+      this.cdr.markForCheck();
     }
   }
 

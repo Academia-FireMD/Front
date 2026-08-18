@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   inject,
   OnInit,
@@ -113,6 +114,7 @@ import { PlanificacionConfiguracionWizardComponent } from '../planificacion-conf
 export class PlanificacionAlumnoComponent implements OnInit {
   private readonly autoasignacionService = inject(AutoasignacionService);
   private readonly toast = inject(ToastrService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   cargando = true;
   error: string | null = null;
@@ -138,6 +140,9 @@ export class PlanificacionAlumnoComponent implements OnInit {
       );
     } finally {
       this.cargando = false;
+      // OnPush + async/await: sin esto la vista no se re-renderiza al
+      // resolver la promesa y el shell se queda en "Cargando…".
+      this.cdr.markForCheck();
     }
   }
 
