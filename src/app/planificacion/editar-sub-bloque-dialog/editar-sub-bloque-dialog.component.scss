@@ -53,3 +53,26 @@
   color: var(--text-color-secondary);
   line-height: 1.4;
 }
+
+.catalogo-contenido-seccion {
+  background-color: var(--surface-50);
+  border-radius: 0.5rem;
+  padding: 1rem;
+
+  .catalogo-color-muestra {
+    width: 1rem;
+    height: 1rem;
+    display: inline-block;
+    border: 1px solid var(--surface-300);
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .catalogo-contenido-seccion {
+    .p-autocomplete,
+    .p-dropdown,
+    .p-button {
+      width: 100% !important;
+    }
+  }
+}

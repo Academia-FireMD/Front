@@ -16,6 +16,11 @@ import {
   AplicarPlantillasSemanalesRequest,
   AplicarPlantillasSemanalesResponse,
 } from '../planificacion/models/aplicar-plantillas-semanales.model';
+import {
+  CatalogoContenidoItem,
+  ComponerContenidoResponse,
+  TipoTrabajoCatalogo,
+} from '../planificacion/models/catalogo-contenido.model';
 
 // Interfaz para la actualización de progreso
 export interface ProgresoSubBloqueDTO {
@@ -272,5 +277,33 @@ export class PlanificacionesService extends ApiBaseService {
       '/aplicar-plantillas-semanales',
       body,
     ) as Observable<AplicarPlantillasSemanalesResponse>;
+  }
+
+  /**
+   * Fase 3: búsqueda de códigos de catálogo de contenido (máx. 10, solo activas).
+   */
+  public buscarCatalogoContenido(
+    q: string,
+  ): Observable<CatalogoContenidoItem[]> {
+    return this.get(
+      `/catalogo-contenido/buscar?q=${encodeURIComponent(q)}`,
+    ) as Observable<CatalogoContenidoItem[]>;
+  }
+
+  /**
+   * Fase 3: compone nombre, color y comentarios a partir de un código de catálogo.
+   */
+  public componerContenidoCatalogo(
+    codigo: string,
+    tipoTrabajo?: TipoTrabajoCatalogo,
+  ): Observable<ComponerContenidoResponse> {
+    return this.post(
+      '/catalogo-contenido/componer',
+      {
+        codigo,
+        tipoTrabajo,
+      },
+      true,
+    ) as Observable<ComponerContenidoResponse>;
   }
 }

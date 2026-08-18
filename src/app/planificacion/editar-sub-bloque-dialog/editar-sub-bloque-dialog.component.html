@@ -143,6 +143,85 @@
           de ese día.
         </small>
       </div>
+
+      <!-- Fase 3: rellenar sub-bloque desde catálogo de contenido -->
+      <div
+        class="col-12 catalogo-contenido-seccion"
+        *ngIf="
+          role == 'ADMIN' && !formGroup.get('esEntrenamientoFisico')?.value
+        "
+      >
+        <p-divider />
+        <h4 class="mt-0 mb-3">Rellenar desde catálogo de contenido</h4>
+        <div
+          class="flex flex-column md:flex-row align-items-start md:align-items-end gap-3"
+        >
+          <div class="flex-1 w-full">
+            <p-floatLabel>
+              <p-autoComplete
+                id="catalogoCodigo"
+                [(ngModel)]="catalogoItemSeleccionado"
+                [ngModelOptions]="{ standalone: true }"
+                [suggestions]="catalogoSugerencias"
+                (completeMethod)="buscarCatalogoContenido($event.query)"
+                field="codigo"
+                [delay]="250"
+                appendTo="body"
+                [dropdown]="true"
+                inputId="catalogoCodigo"
+                styleClass="w-full"
+                [inputStyle]="{ width: '100%' }"
+                data-testid="autocomplete-catalogo-codigo"
+              >
+                <ng-template let-item pTemplate="item">
+                  <div class="flex align-items-center gap-2">
+                    <span
+                      class="catalogo-color-muestra border-round"
+                      [style.background]="item.color"
+                    ></span>
+                    <span class="font-semibold">{{ item.codigo }}</span>
+                    <span class="text-color-secondary"
+                      >— {{ item.nombreCorto }}</span
+                    >
+                  </div>
+                </ng-template>
+              </p-autoComplete>
+              <label for="catalogoCodigo">Código de planificación</label>
+            </p-floatLabel>
+          </div>
+
+          <div class="w-full md:w-18rem">
+            <p-floatLabel>
+              <p-dropdown
+                id="tipoTrabajo"
+                [(ngModel)]="tipoTrabajoSeleccionado"
+                [ngModelOptions]="{ standalone: true }"
+                [options]="tipoTrabajoOptions"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                [showClear]="true"
+                [style]="{ width: '100%' }"
+                placeholder="Seleccione el tipo"
+                inputId="tipoTrabajo"
+                data-testid="dropdown-tipo-trabajo"
+              ></p-dropdown>
+              <label for="tipoTrabajo">Tipo de trabajo</label>
+            </p-floatLabel>
+          </div>
+
+          <p-button
+            label="Rellenar desde catálogo"
+            icon="pi pi-bolt"
+            severity="secondary"
+            [disabled]="!catalogoItemSeleccionado?.codigo"
+            (click)="rellenarDesdeCatalogo()"
+            data-testid="btn-rellenar-catalogo"
+          ></p-button>
+        </div>
+      </div>
+      <!-- Fin catálogo de contenido -->
+
       <!-- Fin nuevos controles -->
     </div>
   </form>

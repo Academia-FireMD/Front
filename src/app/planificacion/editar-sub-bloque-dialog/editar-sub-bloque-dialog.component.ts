@@ -14,11 +14,19 @@ import {
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { Editor } from '@toast-ui/editor';
 import { cloneDeep, uniqueId } from 'lodash';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AppConfigService } from '../../services/app-config.service';
+import { PlanificacionesService } from '../../services/planificaciones.service';
+import { ToastrService } from 'ngx-toastr';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { SubBloque } from '../../shared/models/planificacion.model';
 import { duracionOptions, universalEditorConfig } from '../../utils/utils';
 import { POSIBLES_TIPOS_SUBBLOQUE } from '../sub-bloque-colores';
+import {
+  CatalogoContenidoItem,
+  ComponerContenidoResponse,
+  TipoTrabajoCatalogo,
+} from '../models/catalogo-contenido.model';
 
 @Component({
   selector: 'app-editar-sub-bloque-dialog',
@@ -82,6 +90,8 @@ export class EditarSubBloqueDialogComponent
 
   fb = inject(FormBuilder);
   appConfigService = inject(AppConfigService);
+  planificacionesService = inject(PlanificacionesService);
+  toastrService = inject(ToastrService);
   planificacionFisicaHabilitada = computed(
     () =>
       this.appConfigService.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !==
@@ -111,6 +121,28 @@ export class EditarSubBloqueDialogComponent
     { label: '1 día', value: 1440 },
     { label: '2 días', value: 2880 },
   ];
+
+  catalogoSugerencias: CatalogoContenidoItem[] = [];
+  tipoTrabajoSeleccionado: TipoTrabajoCatalogo | null = null;
+  catalogoItemSeleccionado: CatalogoContenidoItem | null = null;
+
+  tipoTrabajoOptions: { label: string; value: TipoTrabajoCatalogo | null }[] = [
+    { label: 'Sin tipo (bloque especial)', value: null },
+    { label: 'ESTUDIO', value: 'ESTUDIO' },
+    { label: 'R1', value: 'R1' },
+    { label: 'R2', value: 'R2' },
+    { label: 'R3', value: 'R3' },
+    { label: 'R4', value: 'R4' },
+    { label: 'R5', value: 'R5' },
+  ];
+
+  /** Visible solo para ADMIN y cuando el bloque NO es entrenamiento físico. */
+  get mostrarSeccionCatalogo(): boolean {
+    return (
+      this.role === 'ADMIN' &&
+      !this.formGroup.get('esEntrenamientoFisico')?.value
+    );
+  }
 
   /** Texto explicativo que ve el admin cuando marca el sub-bloque como
    * entrenamiento físico (Fase 1 claridad bridge). */
@@ -210,6 +242,53 @@ export class EditarSubBloqueDialogComponent
     const value = cloneDeep(this.formGroup.value);
     this.savedSubBloque.emit(value as SubBloque);
     return Promise.resolve();
+  }
+
+  buscarCatalogoContenido(query: string): void {
+    if (!query || query.trim().length === 0) {
+      this.catalogoSugerencias = [];
+      return;
+    }
+    this.planificacionesService
+      .buscarCatalogoContenido(query.trim())
+      .subscribe((items) => {
+        this.catalogoSugerencias = items ?? [];
+      });
+  }
+
+  rellenarDesdeCatalogo(): void {
+    const codigo = this.catalogoItemSeleccionado?.codigo;
+    if (!codigo) {
+      return;
+    }
+
+    this.planificacionesService
+      .componerContenidoCatalogo(
+        codigo,
+        this.tipoTrabajoSeleccionado ?? undefined,
+      )
+      .subscribe({
+        next: (res: ComponerContenidoResponse) => {
+          this.formGroup.patchValue({
+            nombre: res.nombre,
+            color: res.color,
+            comentarios: res.comentarios,
+          });
+          if (this.editorComentarios) {
+            this.editorComentarios.setMarkdown(res.comentarios ?? '');
+          }
+          this.toastrService.success('Bloque rellenado desde catálogo');
+        },
+        error: (err: HttpErrorResponse | Error) => {
+          const status =
+            err instanceof HttpErrorResponse ? err.status : undefined;
+          if (status === 404) {
+            this.toastrService.error('Código no encontrado en el catálogo');
+          }
+          // Otros errores se dejan a ApiBaseService.handleError
+          // (llamada con ignoreError=true para poder personalizar el 404).
+        },
+      });
   }
 
   ngOnInit(): void {

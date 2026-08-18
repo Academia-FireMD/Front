@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { NgxSpinnerModule } from 'ngx-spinner';
 import { AccordionModule } from 'primeng/accordion';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { CardModule } from 'primeng/card';
@@ -46,6 +47,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { KeyComponent } from './key/key.component';
 
 const modules = [
+  AutoCompleteModule,
   OverlayPanelModule,
   ListboxModule,
   ChartModule,
@@ -91,7 +93,7 @@ const modules = [
   NgxSpinnerModule,
   MenuModule,
   SplitButtonModule,
-  ProgressSpinnerModule
+  ProgressSpinnerModule,
 ];
 
 @NgModule({
