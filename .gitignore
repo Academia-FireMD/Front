@@ -58,3 +58,6 @@ qa-playwright-*.js
 # Evidencia QA local (no se versiona)
 evidencia-sergio/
 qa-detalles-diarios-admin.png
+
+# Planes/especs locales de agentes Kimi
+.kimi-code/

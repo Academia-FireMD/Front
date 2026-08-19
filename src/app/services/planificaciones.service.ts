@@ -285,7 +285,7 @@ export class PlanificacionesService extends ApiBaseService {
 
   /**
    * Volcado completo de una variante importada (plantillas semanales cuyo
-   * identificador empieza por el prefijo dado) sobre una planificación mensual.
+   * identificador termina en el prefijo dado) sobre una planificación mensual.
    * `dryRun: true` devuelve el resumen sin escribir nada.
    */
   public volcarPlantillas$(
