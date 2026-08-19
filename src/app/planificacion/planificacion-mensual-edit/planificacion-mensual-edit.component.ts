@@ -38,6 +38,10 @@ import {
   ResultadoAplicarPlantillaSemanal,
   PreviewBloque,
 } from '../models/aplicar-plantillas-semanales.model';
+import {
+  VolcarPlantillasResponse,
+  VolcarPlantillasResultado,
+} from '../models/volcar-plantillas.model';
 import { duracionesDisponibles } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
@@ -127,6 +131,29 @@ export class PlanificacionMensualEditComponent {
   public previewResult = signal<ResultadoAplicarPlantillaSemanal | null>(null);
   public previewLoading = signal(false);
   public aplicando = signal(false);
+
+  // Volcado completo de una variante importada
+  public isDialogVolcarVisible = false;
+  public prefijoPlantillas = '';
+  public volcadoPreview: VolcarPlantillasResponse | null = null;
+  public volcadoPreviewLoading = false;
+  public volcando = false;
+  public get totalCreadosVolcado(): number {
+    return (
+      this.volcadoPreview?.resultados.reduce(
+        (acc, r) => acc + (r.creados ?? 0),
+        0,
+      ) ?? 0
+    );
+  }
+  public get totalOmitidosVolcado(): number {
+    return (
+      this.volcadoPreview?.resultados.reduce(
+        (acc, r) => acc + (r.omitidos ?? 0),
+        0,
+      ) ?? 0
+    );
+  }
   public usuariosSeleccionadosId = [] as Array<number>;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   public userFilters = computed(
@@ -288,6 +315,17 @@ export class PlanificacionMensualEditComponent {
         this.activeStepSeleccionPlantilla = 0;
         this.pickedEvents = [];
         this.isDialogVisible = true;
+      },
+    },
+    {
+      disabled: this.view != CalendarView.Week,
+      icon: 'fa-solid fa-download',
+      tooltipOptions: {
+        position: 'right',
+        tooltipLabel: 'Volcar variante completa',
+      },
+      command: () => {
+        this.abrirDialogoVolcar();
       },
     },
     {
@@ -519,6 +557,92 @@ export class PlanificacionMensualEditComponent {
     } finally {
       this.aplicando.set(false);
     }
+  }
+
+  public abrirDialogoVolcar(): void {
+    this.prefijoPlantillas = '';
+    this.volcadoPreview = null;
+    this.isDialogVolcarVisible = true;
+  }
+
+  public async cargarPreviewVolcado(): Promise<void> {
+    const planificacionId = this.lastLoadedPlanification()?.id;
+    const prefijo = this.prefijoPlantillas.trim();
+    if (!planificacionId || !prefijo) {
+      return;
+    }
+
+    this.volcadoPreviewLoading = true;
+    try {
+      const res = await firstValueFrom(
+        this.planificacionesService.volcarPlantillas$(planificacionId, {
+          prefijoPlantillas: prefijo,
+          dryRun: true,
+        }),
+      );
+      this.volcadoPreview = res;
+    } catch (error: any) {
+      const message =
+        error?.error?.message || error?.message || 'Error al cargar el preview';
+      this.toast.error(message);
+      this.volcadoPreview = null;
+    } finally {
+      this.volcadoPreviewLoading = false;
+    }
+  }
+
+  public async aplicarVolcadoConfirmado(): Promise<void> {
+    const planificacionId = this.lastLoadedPlanification()?.id;
+    const prefijo = this.prefijoPlantillas.trim();
+    if (!planificacionId || !prefijo) {
+      return;
+    }
+
+    this.volcando = true;
+    try {
+      const res = await firstValueFrom(
+        this.planificacionesService.volcarPlantillas$(planificacionId, {
+          prefijoPlantillas: prefijo,
+          dryRun: false,
+        }),
+      );
+      const totalCreados = res.resultados.reduce(
+        (acc, r) => acc + (r.creados ?? 0),
+        0,
+      );
+      const totalOmitidos = res.resultados.reduce(
+        (acc, r) => acc + (r.omitidos ?? 0),
+        0,
+      );
+      this.toast.success(
+        `Variante volcada: ${totalCreados} creados, ${totalOmitidos} omitidos en ${res.totalPlantillas} plantillas.`,
+      );
+      this.cerrarDialogoVolcar();
+      this.load();
+    } catch (error: any) {
+      const status = error?.status;
+      const backendMessage = error?.error?.message;
+      const message =
+        status === 422
+          ? backendMessage || 'No se han encontrado plantillas con ese prefijo'
+          : backendMessage || error?.message || 'Error al volcar la variante';
+      this.toast.error(message);
+    } finally {
+      this.volcando = false;
+    }
+  }
+
+  public cerrarDialogoVolcar(): void {
+    this.isDialogVolcarVisible = false;
+    this.prefijoPlantillas = '';
+    this.volcadoPreview = null;
+  }
+
+  public trackByResultado(
+    index: number,
+    resultado: VolcarPlantillasResultado,
+  ): string {
+    return resultado.identificador;
   }
 
   public diaDeBloque(bloque: PreviewBloque): string {

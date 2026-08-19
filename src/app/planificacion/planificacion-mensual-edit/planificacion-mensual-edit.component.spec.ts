@@ -238,6 +238,147 @@ describe('PlanificacionMensualEditComponent', () => {
     });
   });
 
+  describe('volcar variante completa', () => {
+    beforeEach(() => {
+      component.lastLoadedPlanification.set({ id: 42 } as any);
+    });
+
+    it('abrirDialogoVolcar resetea el estado y abre el diálogo', () => {
+      component.prefijoPlantillas = 'ABC';
+      component.volcadoPreview = { planificacionId: 1 } as any;
+
+      component.abrirDialogoVolcar();
+
+      expect(component.isDialogVolcarVisible).toBe(true);
+      expect(component.prefijoPlantillas).toBe('');
+      expect(component.volcadoPreview).toBeNull();
+    });
+
+    it('cargarPreviewVolcado llama con dryRun:true y expone el resumen', async () => {
+      const volcarMock = jest.fn(() =>
+        of({
+          planificacionId: 42,
+          totalPlantillas: 2,
+          resultados: [
+            {
+              identificador: 'S072026GI6-8H',
+              lunes: '2026-08-03',
+              creados: 3,
+              omitidos: 1,
+            },
+            {
+              identificador: 'S142026GI6-8H',
+              lunes: '2026-08-10',
+              creados: 2,
+              omitidos: 0,
+              error: 'Semana fuera de mes',
+            },
+          ],
+          warnings: ['Advertencia de prueba'],
+        } as any),
+      );
+      (component as any).planificacionesService = {
+        volcarPlantillas$: volcarMock,
+      };
+
+      component.prefijoPlantillas = 'GI6-8H';
+      await component.cargarPreviewVolcado();
+
+      expect(volcarMock).toHaveBeenCalledWith(42, {
+        prefijoPlantillas: 'GI6-8H',
+        dryRun: true,
+      });
+      expect(component.volcadoPreview).toEqual(
+        expect.objectContaining({
+          planificacionId: 42,
+          totalPlantillas: 2,
+          resultados: expect.any(Array),
+          warnings: ['Advertencia de prueba'],
+        }),
+      );
+      expect(component.totalCreadosVolcado).toBe(5);
+      expect(component.totalOmitidosVolcado).toBe(1);
+      expect(component.volcadoPreviewLoading).toBe(false);
+    });
+
+    it('aplicarVolcadoConfirmado llama con dryRun:false, muestra toast y recarga', async () => {
+      const volcarMock = jest.fn(() =>
+        of({
+          planificacionId: 42,
+          totalPlantillas: 1,
+          resultados: [
+            {
+              identificador: 'S072026GI6-8H',
+              lunes: '2026-08-03',
+              creados: 3,
+              omitidos: 1,
+            },
+          ],
+          warnings: [],
+        } as any),
+      );
+      (component as any).planificacionesService = {
+        volcarPlantillas$: volcarMock,
+      };
+      const loadSpy = jest
+        .spyOn(component as any, 'load')
+        .mockImplementation(() => {});
+      const successSpy = jest.spyOn(TestBed.inject(ToastrService), 'success');
+
+      component.prefijoPlantillas = 'GI6-8H';
+      component.volcadoPreview = { totalPlantillas: 1, resultados: [] } as any;
+      await component.aplicarVolcadoConfirmado();
+
+      expect(volcarMock).toHaveBeenCalledWith(42, {
+        prefijoPlantillas: 'GI6-8H',
+        dryRun: false,
+      });
+      expect(successSpy).toHaveBeenCalledWith(
+        'Variante volcada: 3 creados, 1 omitidos en 1 plantillas.',
+      );
+      expect(loadSpy).toHaveBeenCalled();
+      expect(component.isDialogVolcarVisible).toBe(false);
+      expect(component.volcadoPreview).toBeNull();
+    });
+
+    it('cargarPreviewVolcado muestra mensaje de error ante 422', async () => {
+      const volcarMock = jest.fn(() =>
+        throwError(() => ({
+          status: 422,
+          error: { message: 'No se han encontrado plantillas' },
+        })),
+      );
+      (component as any).planificacionesService = {
+        volcarPlantillas$: volcarMock,
+      };
+      const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
+
+      component.prefijoPlantillas = 'XYZ';
+      await component.cargarPreviewVolcado();
+
+      expect(errorSpy).toHaveBeenCalledWith('No se han encontrado plantillas');
+      expect(component.volcadoPreview).toBeNull();
+      expect(component.volcadoPreviewLoading).toBe(false);
+    });
+
+    it('aplicarVolcadoConfirmado muestra mensaje específico ante 422 sin mensaje de backend', async () => {
+      const volcarMock = jest.fn(() =>
+        throwError(() => ({ status: 422, error: {} })),
+      );
+      (component as any).planificacionesService = {
+        volcarPlantillas$: volcarMock,
+      };
+      const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
+
+      component.prefijoPlantillas = 'XYZ';
+      await component.aplicarVolcadoConfirmado();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        'No se han encontrado plantillas con ese prefijo',
+      );
+    });
+  });
+
   describe('bridge temario↔física', () => {
     it('resumenFisica arranca vacío — sin indicación hasta que cargue', () => {
       expect(component.resumenFisica()).toEqual([]);

@@ -186,6 +186,126 @@
     </p-stepperPanel>
   </p-stepper>
 </p-dialog>
+
+<p-dialog
+  *ngIf="expectedRole == 'ADMIN'"
+  header="Volcar variante completa"
+  [(visible)]="isDialogVolcarVisible"
+  [modal]="true"
+  [style]="{ width: '80vw', height: '80vh' }"
+  [dismissableMask]="true"
+  (onHide)="cerrarDialogoVolcar()"
+>
+  <div class="p-fluid">
+    <div class="field">
+      <label for="prefijoPlantillas">Prefijo de las plantillas</label>
+      <input
+        id="prefijoPlantillas"
+        type="text"
+        pInputText
+        [(ngModel)]="prefijoPlantillas"
+        placeholder="GI6-8H"
+      />
+      <small class="text-color-secondary">
+        Introduce el código de hoja (ej. GI6-8H). Se volcarán todas las
+        plantillas semanales cuyo identificador empiece por este prefijo.
+      </small>
+    </div>
+
+    <div class="flex justify-content-end mb-3">
+      <p-button
+        label="Previsualizar"
+        icon="pi pi-eye"
+        (click)="cargarPreviewVolcado()"
+        [disabled]="!prefijoPlantillas.trim() || volcadoPreviewLoading"
+      />
+    </div>
+
+    <div *ngIf="volcadoPreviewLoading" class="p-4 text-center">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Cargando vista previa...</p>
+    </div>
+
+    <div *ngIf="!volcadoPreviewLoading && volcadoPreview">
+      <div class="flex gap-2 mb-3 justify-content-center">
+        <p-tag
+          severity="info"
+          [value]="'Plantillas: ' + volcadoPreview.totalPlantillas"
+        ></p-tag>
+        <p-tag
+          severity="success"
+          [value]="'Se crearán ' + totalCreadosVolcado + ' bloques'"
+        ></p-tag>
+        <p-tag
+          severity="warning"
+          [value]="'Se omitirán ' + totalOmitidosVolcado + ' (ya existían)'"
+        ></p-tag>
+      </div>
+
+      <p-table
+        [value]="volcadoPreview.resultados"
+        [scrollable]="true"
+        scrollHeight="35vh"
+        styleClass="p-datatable-sm"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Identificador</th>
+            <th>Lunes</th>
+            <th>Creados</th>
+            <th>Omitidos</th>
+            <th></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-resultado>
+          <tr>
+            <td>{{ resultado.identificador }}</td>
+            <td>{{ resultado.lunes | date: "dd/MM/yyyy" : "" : "es" }}</td>
+            <td>{{ resultado.creados }}</td>
+            <td>{{ resultado.omitidos }}</td>
+            <td>
+              <p-tag
+                *ngIf="resultado.error"
+                severity="danger"
+                [value]="resultado.error"
+              ></p-tag>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" class="text-center">
+              No hay plantillas para volcar con ese prefijo.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <p-message
+        *ngFor="let warning of volcadoPreview.warnings"
+        severity="warn"
+        [text]="warning"
+        styleClass="w-full mt-2"
+      ></p-message>
+    </div>
+  </div>
+
+  <div class="flex pt-4 justify-content-between">
+    <p-button
+      label="Cancelar"
+      icon="pi pi-times"
+      (click)="cerrarDialogoVolcar()"
+      [disabled]="volcando"
+    />
+    <app-async-button
+      label="Volcar variante"
+      icon="pi pi-check"
+      [action]="aplicarVolcadoConfirmado.bind(this)"
+      [disabled]="!volcadoPreview"
+    ></app-async-button>
+  </div>
+</p-dialog>
+
 <div class="grid" [formGroup]="formGroup">
   <div class="col-12 content">
     <div

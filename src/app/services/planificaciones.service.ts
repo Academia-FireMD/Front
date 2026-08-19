@@ -21,6 +21,10 @@ import {
   ComponerContenidoResponse,
   TipoTrabajoCatalogo,
 } from '../planificacion/models/catalogo-contenido.model';
+import {
+  VolcarPlantillasRequest,
+  VolcarPlantillasResponse,
+} from '../planificacion/models/volcar-plantillas.model';
 
 // Interfaz para la actualización de progreso
 export interface ProgresoSubBloqueDTO {
@@ -277,6 +281,21 @@ export class PlanificacionesService extends ApiBaseService {
       '/aplicar-plantillas-semanales',
       body,
     ) as Observable<AplicarPlantillasSemanalesResponse>;
+  }
+
+  /**
+   * Volcado completo de una variante importada (plantillas semanales cuyo
+   * identificador empieza por el prefijo dado) sobre una planificación mensual.
+   * `dryRun: true` devuelve el resumen sin escribir nada.
+   */
+  public volcarPlantillas$(
+    planificacionId: number,
+    body: VolcarPlantillasRequest,
+  ): Observable<VolcarPlantillasResponse> {
+    return this.post(
+      `/planificacion-mensual/${planificacionId}/volcar-plantillas`,
+      body,
+    ) as Observable<VolcarPlantillasResponse>;
   }
 
   /**
