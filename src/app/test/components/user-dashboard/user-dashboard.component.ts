@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { cloneDeep } from 'lodash';
 import { Memoize } from 'lodash-decorators';
 import { ConfirmationService, MenuItem } from 'primeng/api';
+import { MessageModule } from 'primeng/message';
 import { firstValueFrom, tap } from 'rxjs';
 import { AppConfigService } from '../../../services/app-config.service';
 import { AuthService } from '../../../services/auth.service';
@@ -38,6 +39,17 @@ import {
 } from '../../../shared/models/subscription.model';
 import { Rol, Usuario } from '../../../shared/models/user.model';
 import { AutoasignacionService } from '../../../planificacion/services/autoasignacion.service';
+import { PlanificacionPreferenciasComponent } from '../../../shared/planificacion-preferencias/planificacion-preferencias.component';
+import type {
+  AlumnoPlanificacionTutor,
+  OpcionPlanificacionPermitida,
+  PreferenciasPrecargadas,
+} from '../../../planificacion/models/autoasignacion.model';
+import {
+  esCombinacionPublicada,
+  normalizarPreferenciasPlanificacion,
+  obtenerOpcionesCascadaPlanificacion,
+} from '../../../planificacion/planificacion-opciones.util';
 import { PrimengModule } from '../../../shared/primeng.module';
 import {
   esAdminOSuperior,
@@ -57,6 +69,8 @@ import { SharedModule } from '../../../shared/shared.module';
     PrimengModule,
     SharedModule,
     GenericListComponent,
+    PlanificacionPreferenciasComponent,
+    MessageModule,
   ],
   templateUrl: './user-dashboard.component.html',
   styleUrls: [
@@ -957,11 +971,16 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   /** Diálogo de "Cambiar planificación" (exige motivo). */
   tutorForzarDialog = false;
   tutorForzarUsuario: Usuario | null = null;
-  tutorForzarOposicion = Oposicion.VALENCIA_AYUNTAMIENTO;
-  tutorForzarNivel = 'INICIACION';
-  tutorForzarFranja = 'FRANJA_CUATRO_A_SEIS_HORAS';
+  tutorForzarConfiguracion: AlumnoPlanificacionTutor | null = null;
+  tutorForzarPreferencias: PreferenciasPrecargadas = {
+    oposicion: null,
+    nivel: null,
+    franja: null,
+  };
   tutorForzarMotivo = '';
   tutorForzando = false;
+  tutorForzarCargando = false;
+  tutorForzarError: string | null = null;
 
   /** Diálogo de "Recomendar nivel". */
   tutorRecomendarDialog = false;
@@ -973,13 +992,45 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     { label: 'Iniciación', value: 'INICIACION' },
     { label: 'Avanzado', value: 'AVANZADO' },
   ];
-  readonly tutorFranjaOptions = [
-    { label: '4-6 horas', value: 'FRANJA_CUATRO_A_SEIS_HORAS' },
-    { label: '6-8 horas', value: 'FRANJA_SEIS_A_OCHO_HORAS' },
-  ];
-  readonly tutorOposicionOptions = Object.values(Oposicion)
-    .filter((o) => o !== Oposicion.GENERAL)
-    .map((o) => ({ label: OPOSICION_LABELS[o] ?? o, value: o }));
+
+  get tutorForzarOpciones() {
+    return obtenerOpcionesCascadaPlanificacion(
+      this.tutorForzarConfiguracion?.opcionesPermitidas ?? [],
+      this.tutorForzarPreferencias,
+    );
+  }
+
+  get tutorForzarOposicionOptions() {
+    return this.tutorForzarOpciones.oposiciones.map((oposicion) => ({
+      label: OPOSICION_LABELS[oposicion] ?? oposicion,
+      value: oposicion,
+    }));
+  }
+
+  get tutorForzarNivelOptions() {
+    return this.tutorForzarOpciones.niveles.map((nivel) => ({
+      label: nivel === 'AVANZADO' ? 'Avanzado' : 'Iniciación',
+      value: nivel,
+    }));
+  }
+
+  get tutorForzarFranjaOptions() {
+    return this.tutorForzarOpciones.franjas.map((franja) => ({
+      label: franja === 'FRANJA_SEIS_A_OCHO_HORAS' ? '6-8 horas' : '4-6 horas',
+      value: franja,
+    }));
+  }
+
+  get tutorForzarOpcionSeleccionada(): OpcionPlanificacionPermitida | null {
+    return this.tutorForzarOpciones.seleccionada;
+  }
+
+  get tutorPuedeForzarPlanificacion(): boolean {
+    return Boolean(
+      esCombinacionPublicada(this.tutorForzarOpcionSeleccionada) &&
+      this.tutorForzarMotivo.trim(),
+    );
+  }
 
   abrirRecomendarNivel(user: Usuario): void {
     this.tutorRecomendarUsuario = { ...user };
@@ -1006,19 +1057,62 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     }
   }
 
-  abrirForzarPlanificacion(user: Usuario): void {
+  async abrirForzarPlanificacion(user: Usuario): Promise<void> {
     this.tutorForzarUsuario = { ...user };
-    this.tutorForzarOposicion = Oposicion.VALENCIA_AYUNTAMIENTO;
-    this.tutorForzarNivel = 'INICIACION';
-    this.tutorForzarFranja = 'FRANJA_CUATRO_A_SEIS_HORAS';
+    this.tutorForzarConfiguracion = null;
+    this.tutorForzarPreferencias = {
+      oposicion: null,
+      nivel: null,
+      franja: null,
+    };
     this.tutorForzarMotivo = '';
+    this.tutorForzarError = null;
     this.tutorForzarDialog = true;
+    this.tutorForzarCargando = true;
+    try {
+      const configuracion = await firstValueFrom(
+        this.autoasignacionService.getAdminAlumnoConfiguracion$(user.id),
+      );
+      this.tutorForzarConfiguracion = configuracion;
+      const activa = configuracion.configuracion?.variante;
+      this.tutorForzarPreferencias = normalizarPreferenciasPlanificacion(
+        configuracion.opcionesPermitidas,
+        activa ?? configuracion.preferencias,
+      );
+    } catch {
+      this.tutorForzarError =
+        'No se pudo cargar la configuración de planificación del alumno.';
+      this.toast.error(this.tutorForzarError);
+    } finally {
+      this.tutorForzarCargando = false;
+    }
+  }
+
+  onTutorForzarPreferenciasChange(preferencias: {
+    oposicion: Oposicion | Oposicion[] | null;
+    nivel: string | null;
+    franja: string | null;
+  }): void {
+    this.tutorForzarPreferencias = normalizarPreferenciasPlanificacion(
+      this.tutorForzarConfiguracion?.opcionesPermitidas ?? [],
+      {
+        oposicion: Array.isArray(preferencias.oposicion)
+          ? (preferencias.oposicion[0] ?? null)
+          : preferencias.oposicion,
+        nivel: preferencias.nivel as PreferenciasPrecargadas['nivel'],
+        franja: preferencias.franja as PreferenciasPrecargadas['franja'],
+      },
+    );
   }
 
   async confirmarForzarPlanificacion(): Promise<void> {
     if (!this.tutorForzarUsuario) return;
-    if (!this.tutorForzarMotivo.trim()) {
-      this.toast.warning('El motivo es obligatorio');
+    if (!this.tutorPuedeForzarPlanificacion) {
+      this.toast.warning(
+        this.tutorForzarMotivo.trim()
+          ? 'La combinación seleccionada no tiene una planificación publicada.'
+          : 'Selecciona una combinación publicada e indica el motivo.',
+      );
       return;
     }
     this.tutorForzando = true;
@@ -1027,9 +1121,9 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         this.autoasignacionService.forzarConfiguracionTutor$(
           this.tutorForzarUsuario.id,
           {
-            oposicion: this.tutorForzarOposicion,
-            nivel: this.tutorForzarNivel as any,
-            franja: this.tutorForzarFranja,
+            oposicion: this.tutorForzarPreferencias.oposicion as Oposicion,
+            nivel: this.tutorForzarPreferencias.nivel as any,
+            franja: this.tutorForzarPreferencias.franja as string,
             motivo: this.tutorForzarMotivo.trim(),
           },
         ),
@@ -1037,6 +1131,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       this.toast.success('Planificación cambiada correctamente');
       this.tutorForzarDialog = false;
     } catch {
+      this.tutorForzarError = 'No se pudo cambiar la planificación';
       this.toast.error('No se pudo cambiar la planificación');
     } finally {
       this.tutorForzando = false;

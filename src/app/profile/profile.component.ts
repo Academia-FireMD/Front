@@ -16,7 +16,6 @@ import { environment } from '../../environments/environment';
 import { ExamenesService } from '../examen/servicios/examen.service';
 import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
-import { PlanificacionesService } from '../services/planificaciones.service';
 import {
   MotivoBaja,
   SuscripcionManagementService,
@@ -24,7 +23,6 @@ import {
 import { UserService } from '../services/user.service';
 import { ViewportService } from '../services/viewport.service';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
-import { duracionesDisponibles } from '../shared/models/pregunta.model';
 import {
   getPlanLabel,
   isSubscriptionAccessible,
@@ -67,7 +65,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Servicios
   private userService = inject(UserService);
   private authService = inject(AuthService);
-  private planificacionService = inject(PlanificacionesService);
   private toastService = inject(ToastrService);
   private store = inject(Store<AppState>);
   private suscripcionManagementService = inject(SuscripcionManagementService);
@@ -102,9 +99,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isSaving = false;
   errors: string[] = [];
   tutores$: Observable<Usuario[]> = this.userService.getAllTutores$();
-  duracionesDisponibles = duracionesDisponibles;
-  countPlanificacionesAsignadas$ =
-    this.planificacionService.getInfoPlanificacionesAsignadas();
 
   // Control del onboarding
   showOnboardingModal = false;
@@ -262,28 +256,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   }
 
-  async autoAssignPlanificacion(): Promise<void> {
-    if (!this.user) return;
-
-    try {
-      await firstValueFrom(
-        this.planificacionService.autoAssignPlanificacionMensual(
-          this.user.tipoDePlanificacionDuracionDeseada,
-        ),
-      );
-      this.toastService.success(
-        'Planificación por defecto asignada automáticamente',
-      );
-
-      // Recargar planificaciones asignadas
-      this.countPlanificacionesAsignadas$ =
-        this.planificacionService.getInfoPlanificacionesAsignadas();
-    } catch (error: any) {
-      this.errors.push('Error al asignar planificación: ' + error.message);
-      this.toastService.error('Error al asignar planificación');
-    }
-  }
-
   private getPrimarySuscripcion() {
     if (!this.user?.suscripciones?.length) return null;
     return (
@@ -378,6 +350,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async onOnboardingUpdated(data: OnboardingData) {
+    const preferenciasHanCambiado =
+      this.preferenciasPlanificacionHanCambiado(data);
     try {
       await firstValueFrom(this.userService.updateOnboardingData$(data));
       this.toastService.success('Información actualizada correctamente');
@@ -387,10 +361,38 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       // Recargar usuario
       this.store.dispatch(UserActions.loadUser());
+
+      // El Perfil conserva el formulario compartido, pero la activación de la
+      // planificación se confirma en el wizard para que no haya una segunda
+      // regla de negocio local ni un autoasignador silencioso.
+      if (preferenciasHanCambiado) {
+        await this.router.navigate(
+          ['/app/planificacion/configuracion-alumno'],
+          {
+            queryParams: { revisar: 'preferencias' },
+          },
+        );
+      }
     } catch (error) {
       console.error('Error al actualizar onboarding:', error);
       this.toastService.error('Error al actualizar la información');
     }
+  }
+
+  private preferenciasPlanificacionHanCambiado(data: OnboardingData): boolean {
+    if (!this.user) return false;
+    const actual = [...(this.user.tipoOposicion ?? [])].sort();
+    const siguiente = [...(data.tipoOposicion ?? [])].sort();
+    return (
+      JSON.stringify(actual) !== JSON.stringify(siguiente) ||
+      (this.user.nivelOposicion ?? null) !== (data.nivelOposicion ?? null) ||
+      (this.user.tipoDePlanificacionDuracionDeseada ?? null) !==
+        (data.tipoDePlanificacionDuracionDeseada ?? null)
+    );
+  }
+
+  irAPlanificacion(): void {
+    void this.router.navigate(['/app/planificacion/configuracion-alumno']);
   }
 
   isOnboardingComplete(): boolean {

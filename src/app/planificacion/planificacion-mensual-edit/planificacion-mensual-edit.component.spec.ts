@@ -102,6 +102,7 @@ describe('PlanificacionMensualEditComponent', () => {
               planificacionId: 42,
               plantillaSemanalId: 7,
               creados: 2,
+              actualizados: 0,
               omitidos: 1,
               bloques: [
                 {
@@ -136,6 +137,7 @@ describe('PlanificacionMensualEditComponent', () => {
           planificacionId: 42,
           plantillaSemanalId: 7,
           creados: 2,
+          actualizados: 0,
           omitidos: 1,
           bloques: expect.any(Array),
         }),
@@ -163,6 +165,7 @@ describe('PlanificacionMensualEditComponent', () => {
               planificacionId: 42,
               plantillaSemanalId: 7,
               creados: 2,
+              actualizados: 1,
               omitidos: 1,
               bloques: [],
             },
@@ -185,7 +188,7 @@ describe('PlanificacionMensualEditComponent', () => {
         preview: false,
       });
       expect(successSpy).toHaveBeenCalledWith(
-        'Plantilla aplicada: 2 creados, 1 omitidos.',
+        'Plantilla aplicada: 2 creados, 1 actualizados, 1 omitidos.',
       );
       expect(loadSpy).toHaveBeenCalled();
       expect(component.isDialogVisible).toBe(false);
@@ -193,7 +196,7 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(component.previewResult()).toBeNull();
     });
 
-    it('aplicarPlantillaConfirmada muestra warning si el resultado trae error', async () => {
+    it('aplicarPlantillaConfirmada muestra error sin cerrar ni recargar si el resultado trae error', async () => {
       const aplicarMock = jest.fn(() =>
         of({
           resultados: [
@@ -201,6 +204,7 @@ describe('PlanificacionMensualEditComponent', () => {
               planificacionId: 42,
               plantillaSemanalId: 7,
               creados: 0,
+              actualizados: 0,
               omitidos: 0,
               bloques: [],
               error: 'La plantilla no es compatible con esta oposición',
@@ -211,14 +215,22 @@ describe('PlanificacionMensualEditComponent', () => {
       (component as any).planificacionesService = {
         aplicarPlantillasSemanales$: aplicarMock,
       };
-      jest.spyOn(component as any, 'load').mockImplementation(() => {});
-      const warningSpy = jest.spyOn(TestBed.inject(ToastrService), 'warning');
+      component.isDialogVisible = true;
+      component.previewResult.set({ creados: 1 } as any);
+      const loadSpy = jest
+        .spyOn(component as any, 'load')
+        .mockImplementation(() => {});
+      const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
 
       await component.aplicarPlantillaConfirmada();
 
-      expect(warningSpy).toHaveBeenCalledWith(
+      expect(errorSpy).toHaveBeenCalledWith(
         'La plantilla no es compatible con esta oposición',
       );
+      expect(loadSpy).not.toHaveBeenCalled();
+      expect(component.isDialogVisible).toBe(true);
+      expect(component.pickedPlantillaId()).toBe(7);
+      expect(component.previewResult()).toEqual({ creados: 1 });
     });
 
     it('cargarPreview muestra toast de error ante 400 del endpoint', async () => {
@@ -264,12 +276,14 @@ describe('PlanificacionMensualEditComponent', () => {
               identificador: 'S072026GI6-8H',
               lunes: '2026-08-03',
               creados: 3,
+              actualizados: 2,
               omitidos: 1,
             },
             {
               identificador: 'S142026GI6-8H',
               lunes: '2026-08-10',
               creados: 2,
+              actualizados: 0,
               omitidos: 0,
               error: 'Semana fuera de mes',
             },
@@ -297,6 +311,7 @@ describe('PlanificacionMensualEditComponent', () => {
         }),
       );
       expect(component.totalCreadosVolcado).toBe(5);
+      expect(component.totalActualizadosVolcado).toBe(2);
       expect(component.totalOmitidosVolcado).toBe(1);
       expect(component.volcadoPreviewLoading).toBe(false);
     });
@@ -311,6 +326,7 @@ describe('PlanificacionMensualEditComponent', () => {
               identificador: 'S072026GI6-8H',
               lunes: '2026-08-03',
               creados: 3,
+              actualizados: 1,
               omitidos: 1,
             },
           ],
@@ -334,11 +350,57 @@ describe('PlanificacionMensualEditComponent', () => {
         dryRun: false,
       });
       expect(successSpy).toHaveBeenCalledWith(
-        'Variante volcada: 3 creados, 1 omitidos en 1 plantillas.',
+        'Variante volcada: 3 creados, 1 actualizados, 1 omitidos en 1 plantillas.',
       );
       expect(loadSpy).toHaveBeenCalled();
       expect(component.isDialogVolcarVisible).toBe(false);
       expect(component.volcadoPreview).toBeNull();
+    });
+
+    it('aplicarVolcadoConfirmado no muestra éxito ni cierra ante un resultado parcial con error', async () => {
+      const volcarMock = jest.fn(() =>
+        of({
+          planificacionId: 42,
+          totalPlantillas: 2,
+          resultados: [
+            {
+              identificador: 'S072026GI6-8H',
+              lunes: '2026-08-03',
+              creados: 3,
+              actualizados: 0,
+              omitidos: 0,
+            },
+            {
+              identificador: 'S142026GI6-8H',
+              lunes: '2026-08-10',
+              creados: 0,
+              actualizados: 0,
+              omitidos: 0,
+              error: 'Fallo de persistencia',
+            },
+          ],
+          warnings: [],
+        } as any),
+      );
+      (component as any).planificacionesService = {
+        volcarPlantillas$: volcarMock,
+      };
+      const loadSpy = jest
+        .spyOn(component as any, 'load')
+        .mockImplementation(() => {});
+      const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
+
+      component.prefijoPlantillas = 'GI6-8H';
+      component.isDialogVolcarVisible = true;
+      component.volcadoPreview = { totalPlantillas: 2, resultados: [] } as any;
+      await component.aplicarVolcadoConfirmado();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        'No se completó el volcado de S142026GI6-8H: Fallo de persistencia',
+      );
+      expect(loadSpy).not.toHaveBeenCalled();
+      expect(component.isDialogVolcarVisible).toBe(true);
+      expect(component.volcadoPreview).not.toBeNull();
     });
 
     it('cargarPreviewVolcado muestra mensaje de error ante 422', async () => {

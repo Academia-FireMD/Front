@@ -6,7 +6,7 @@ import {
   inject,
   OnInit,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
@@ -15,7 +15,10 @@ import { catchError, firstValueFrom, of } from 'rxjs';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { ConfiguracionPlanificacion } from '../models/autoasignacion.model';
 import { PlanificacionBloqueadaComponent } from '../planificacion-bloqueada/planificacion-bloqueada.component';
-import { PlanificacionConfiguracionWizardComponent } from '../planificacion-configuracion-wizard/planificacion-configuracion-wizard.component';
+import {
+  PlanificacionConfiguracionWizardComponent,
+  ResultadoConfiguracion,
+} from '../planificacion-configuracion-wizard/planificacion-configuracion-wizard.component';
 
 /**
  * Shell de la ruta de Planificación del alumno. Consulta
@@ -56,15 +59,65 @@ import { PlanificacionConfiguracionWizardComponent } from '../planificacion-conf
       } @else if (configuracion?.estado === 'REQUIERE_CONFIGURACION') {
         <app-planificacion-configuracion-wizard
           [configuracion]="configuracion"
-          (configurada)="onConfigurada()"
+          [preferenciasPrecargadas]="
+            revisandoPreferencias
+              ? (configuracion?.preferenciasPrecargadas ?? null)
+              : null
+          "
+          (configurada)="onConfigurada($event)"
         ></app-planificacion-configuracion-wizard>
+      } @else if (configuracion?.estado === 'PENDIENTE_PUBLICACION') {
+        @if (editando) {
+          <div class="mb-4 text-center">
+            <p-message
+              severity="info"
+              text="Tus preferencias están guardadas. No necesitas repetirlas; puedes revisarlas antes de confirmar el cambio."
+              styleClass="w-full"
+            ></p-message>
+          </div>
+          <app-planificacion-configuracion-wizard
+            [configuracion]="configuracion"
+            [preferenciasPrecargadas]="
+              revisandoPreferencias
+                ? (configuracion?.preferenciasPrecargadas ?? null)
+                : null
+            "
+            [modoEdicion]="true"
+            (configurada)="onConfigurada($event)"
+            (cancelado)="cancelarEdicion()"
+          ></app-planificacion-configuracion-wizard>
+        } @else {
+          <div
+            class="flex flex-column align-items-center gap-3 py-6 text-center"
+          >
+            <i class="pi pi-clock text-4xl text-orange-500"></i>
+            <h2 class="m-0">Tu planificación está pendiente de publicación</h2>
+            <p class="text-600 m-0" style="max-width: 42rem">
+              Tus preferencias están guardadas. El equipo de la academia debe
+              publicar el plan correspondiente antes de que puedas verlo aquí.
+              No necesitas repetir tus datos.
+            </p>
+            <button
+              pButton
+              label="Cambiar preferencias"
+              icon="pi pi-pencil"
+              severity="secondary"
+              (click)="editando = true"
+            ></button>
+          </div>
+        }
       } @else if (configuracion?.estado === 'ACTIVA') {
         @if (editando) {
           <app-planificacion-configuracion-wizard
             [configuracion]="configuracion"
+            [preferenciasPrecargadas]="
+              revisandoPreferencias
+                ? (configuracion?.preferenciasPrecargadas ?? null)
+                : null
+            "
             [modoEdicion]="true"
-            (configurada)="onConfigurada()"
-            (cancelado)="editando = false"
+            (configurada)="onConfigurada($event)"
+            (cancelado)="cancelarEdicion()"
           ></app-planificacion-configuracion-wizard>
         } @else {
           <div
@@ -86,8 +139,10 @@ import { PlanificacionConfiguracionWizardComponent } from '../planificacion-conf
                 pButton
                 label="Ver mi planificación"
                 icon="pi pi-calendar"
+                [disabled]="!planificacionMensualId"
                 [routerLink]="[
                   '/app/planificacion/planificacion-mensual-alumno',
+                  planificacionMensualId,
                 ]"
               ></button>
               <button
@@ -115,13 +170,26 @@ export class PlanificacionAlumnoComponent implements OnInit {
   private readonly autoasignacionService = inject(AutoasignacionService);
   private readonly toast = inject(ToastrService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly route = inject(ActivatedRoute);
 
   cargando = true;
   error: string | null = null;
   configuracion: ConfiguracionPlanificacion | null = null;
   editando = false;
+  revisandoPreferencias = false;
+
+  get planificacionMensualId(): number | null {
+    return (
+      this.configuracion?.configuracionActiva?.planificacionMensual?.id ?? null
+    );
+  }
 
   ngOnInit(): void {
+    // Perfil llega aquí después de cambiar preferencias para que el alumno
+    // revise y confirme en el wizard, no para guardar una segunda regla local.
+    this.revisandoPreferencias =
+      this.route.snapshot.queryParamMap.get('revisar') === 'preferencias';
+    this.editando = this.revisandoPreferencias;
     this.cargar();
   }
 
@@ -147,9 +215,22 @@ export class PlanificacionAlumnoComponent implements OnInit {
   }
 
   /** Tras guardar la configuración el estado pasa a ACTIVA: recargamos. */
-  onConfigurada(): void {
+  onConfigurada(resultado: ResultadoConfiguracion = 'EXITO'): void {
+    if (resultado === 'CONFLICTO') {
+      this.toast.warning(
+        'La configuración cambió en otro dispositivo. Revisa el mensaje y vuelve a intentarlo.',
+      );
+      this.cdr.markForCheck();
+      return;
+    }
     this.editando = false;
+    this.revisandoPreferencias = false;
     this.toast.success('Tu planificación se ha activado correctamente');
     void this.cargar();
+  }
+
+  cancelarEdicion(): void {
+    this.editando = false;
+    this.revisandoPreferencias = false;
   }
 }

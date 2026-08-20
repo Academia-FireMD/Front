@@ -54,36 +54,40 @@
         {{ tutorForzarUsuario?.apellidos }}</strong
       >
     </p>
-    <div class="flex flex-column gap-2">
-      <label>Oposición</label>
-      <p-dropdown
-        [options]="tutorOposicionOptions"
-        [(ngModel)]="tutorForzarOposicion"
-        optionLabel="label"
-        optionValue="value"
-        styleClass="w-full"
-      ></p-dropdown>
-    </div>
-    <div class="flex flex-column gap-2">
-      <label>Nivel</label>
-      <p-dropdown
-        [options]="tutorNivelOptions"
-        [(ngModel)]="tutorForzarNivel"
-        optionLabel="label"
-        optionValue="value"
-        styleClass="w-full"
-      ></p-dropdown>
-    </div>
-    <div class="flex flex-column gap-2">
-      <label>Franja horaria</label>
-      <p-dropdown
-        [options]="tutorFranjaOptions"
-        [(ngModel)]="tutorForzarFranja"
-        optionLabel="label"
-        optionValue="value"
-        styleClass="w-full"
-      ></p-dropdown>
-    </div>
+    @if (tutorForzarCargando) {
+      <p-progressSpinner styleClass="w-2rem h-2rem"></p-progressSpinner>
+    } @else if (tutorForzarError) {
+      <p-message severity="warn" [text]="tutorForzarError"></p-message>
+    } @else if (tutorForzarConfiguracion) {
+      <app-planificacion-preferencias
+        [valoresIniciales]="tutorForzarPreferencias"
+        [oposicionesPermitidas]="tutorForzarOpciones.oposiciones"
+        [nivelesPermitidos]="tutorForzarOpciones.niveles"
+        [franjasPermitidas]="tutorForzarOpciones.franjas"
+        formIdPrefix="adminTutorForzar"
+        (cambios)="onTutorForzarPreferenciasChange($event)"
+      ></app-planificacion-preferencias>
+
+      @if (
+        tutorForzarPreferencias.oposicion &&
+        tutorForzarPreferencias.nivel &&
+        tutorForzarPreferencias.franja &&
+        !tutorForzarOpcionSeleccionada
+      ) {
+        <p-message
+          severity="warn"
+          text="La combinación seleccionada no está permitida para este alumno."
+        ></p-message>
+      } @else if (
+        tutorForzarOpcionSeleccionada &&
+        !tutorForzarOpcionSeleccionada.planificacionMensual
+      ) {
+        <p-message
+          severity="warn"
+          text="La combinación seleccionada todavía no tiene una planificación mensual publicada."
+        ></p-message>
+      }
+    }
     <div class="flex flex-column gap-2">
       <label>Motivo *</label>
       <textarea
@@ -104,6 +108,7 @@
         label="Cambiar planificación"
         icon="pi pi-check"
         [loading]="tutorForzando"
+        [disabled]="!tutorPuedeForzarPlanificacion"
         (click)="confirmarForzarPlanificacion()"
       ></p-button>
     </div>

@@ -199,18 +199,6 @@ export class PlanificacionesService extends ApiBaseService {
     return this.get('/count-planificationes-asignadas');
   }
 
-  public autoAssignPlanificacionMensual(
-    tipoDePlanificacion: TipoDePlanificacionDeseada,
-  ) {
-    return this.post('/auto-assign-planificacion-mensual', {
-      tipoDePlanificacion,
-    });
-  }
-
-  public autoAssignPlanificacionMensualAll() {
-    return this.post('/auto-assign-planificacion-mensual-all', {});
-  }
-
   // NUEVO: Método para actualizar el progreso de un subbloque
   public actualizarProgresoSubBloque$(dto: {
     subBloqueId: number;

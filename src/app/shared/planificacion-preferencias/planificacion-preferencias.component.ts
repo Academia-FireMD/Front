@@ -14,8 +14,10 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import {
   duracionesDisponibles,
   nivelesDisponibles,
+  NivelOposicion,
 } from '../models/pregunta.model';
 import { Oposicion, OPOSICION_LABELS } from '../models/subscription.model';
+import type { TipoDePlanificacionDeseada } from '../models/user.model';
 
 /**
  * Preferencias de planificación (oposición, nivel y franja horaria).
@@ -91,7 +93,7 @@ function oposicionOptions(permitidas: Oposicion[]): {
         <div class="col-12 md:col-6">
           <p-floatLabel>
             <p-dropdown
-              [options]="niveles"
+              [options]="opcionesNivel"
               formControlName="nivel"
               placeholder="Selecciona nivel"
               class="w-full"
@@ -100,14 +102,14 @@ function oposicionOptions(permitidas: Oposicion[]): {
               optionLabel="label"
               optionValue="value"
             />
-            <label [for]="formIdPrefix + 'Nivel'">Nivel</label>
+            <label [for]="formIdPrefix + 'Nivel'">Nivel *</label>
           </p-floatLabel>
         </div>
 
         <div class="col-12 md:col-6">
           <p-floatLabel>
             <p-dropdown
-              [options]="duraciones"
+              [options]="opcionesFranja"
               formControlName="franja"
               placeholder="Selecciona duración"
               class="w-full"
@@ -128,6 +130,10 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
   @Input() valoresIniciales?: Partial<PreferenciasPlanificacion>;
   /** Si se define, solo se listan estas oposiciones. */
   @Input() oposicionesPermitidas?: Oposicion[];
+  /** Opciones de nivel que devuelve el backend para el actor/alcance actual. */
+  @Input() nivelesPermitidos?: NivelOposicion[];
+  /** Opciones de franja que devuelve el backend para el actor/alcance actual. */
+  @Input() franjasPermitidas?: TipoDePlanificacionDeseada[];
   /** Modo multi-select (onboarding, payload Oposicion[]) vs dropdown simple. */
   @Input() multiple = false;
   /** Prefijo para los id de los inputs (evita colisiones si hay varios). */
@@ -146,10 +152,37 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
   niveles = nivelesDisponibles;
   duraciones = duracionesDisponibles;
 
+  get opcionesNivel(): { label: string; value: NivelOposicion }[] {
+    const permitidos =
+      this.nivelesPermitidos ??
+      nivelesDisponibles.map((opcion) => opcion.value as NivelOposicion);
+    return permitidos.map((value) => ({
+      label:
+        nivelesDisponibles.find((opcion) => opcion.value === value)?.label ??
+        value,
+      value,
+    }));
+  }
+
+  get opcionesFranja(): {
+    label: string;
+    value: TipoDePlanificacionDeseada;
+  }[] {
+    const permitidas =
+      this.franjasPermitidas ??
+      duracionesDisponibles.map(
+        (opcion) => opcion.value as TipoDePlanificacionDeseada,
+      );
+    return permitidas.map((value) => ({
+      label:
+        duracionesDisponibles.find((opcion) => opcion.value === value)?.label ??
+        value,
+      value,
+    }));
+  }
+
   get opcionesOposicion(): { label: string; value: Oposicion }[] {
-    const permitidas = this.oposicionesPermitidas?.length
-      ? this.oposicionesPermitidas
-      : Object.values(Oposicion);
+    const permitidas = this.oposicionesPermitidas ?? Object.values(Oposicion);
     return oposicionOptions(permitidas);
   }
 

@@ -153,30 +153,14 @@
                 class="planification-section mt-4"
                 *ngIf="user.rol === 'ALUMNO'"
               >
-                <div
-                  class="assigned-planifications flex justify-content-between align-items-center"
-                >
-                  <ng-container
-                    *ngIf="
-                      countPlanificacionesAsignadas$ | async as count;
-                      else noPlanificaciones
-                    "
-                  >
-                    <label>Planificaciones asignadas:</label>
-                    <span class="planification-count">{{ count }}</span>
-                  </ng-container>
-
-                  <ng-template #noPlanificaciones>
-                    <div class="no-planification-message">
-                      <p>No tienes planificaciones asignadas</p>
-                      <p-button
-                        styleClass="p-button-outlined"
-                        icon="pi pi-sync"
-                        label="Asignar planificación automáticamente"
-                        (click)="autoAssignPlanificacion()"
-                      ></p-button>
-                    </div>
-                  </ng-template>
+                <div class="no-planification-message">
+                  <p>Gestiona tus preferencias y confirma tu planificación.</p>
+                  <p-button
+                    styleClass="p-button-outlined"
+                    icon="pi pi-calendar-plus"
+                    label="Configurar planificación"
+                    (onClick)="irAPlanificacion()"
+                  ></p-button>
                 </div>
               </div>
 

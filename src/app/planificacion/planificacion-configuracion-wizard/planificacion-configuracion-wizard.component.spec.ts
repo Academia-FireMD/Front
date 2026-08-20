@@ -1,7 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ToastrService } from 'ngx-toastr';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
@@ -88,13 +89,38 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(component.puedeContinuarPasoPreferencias).toBe(true);
   });
 
-  it('obtiene la recomendación y la aplica al nivel', async () => {
+  it('obtiene la recomendación sin sustituir la elección hasta que el usuario la acepta', async () => {
     component.respuestas = [3, 2, 3, 1, 3];
     await component.obtenerRecomendacion();
 
     expect(service.recomendarNivel$).toHaveBeenCalledWith([3, 2, 3, 1, 3]);
     expect(component.recomendacion?.nivelRecomendado).toBe('AVANZADO');
+    expect(component.preferencias.nivel).toBeNull();
+
+    component.aceptarRecomendacion();
     expect(component.preferencias.nivel).toBe('AVANZADO');
+  });
+
+  it('mantiene las respuestas del cuestionario en null hasta que se contestan', () => {
+    expect(component.respuestas).toEqual([null, null, null, null, null]);
+    expect(component.cuestionarioCompleto).toBe(false);
+  });
+
+  it('normaliza cada respuesta elegida a número y conserva el bloqueo hasta completar', () => {
+    component.onRespuestaChange(0, '2');
+    component.onRespuestaChange(1, 2);
+
+    expect(component.respuestas).toEqual([2, 2, null, null, null]);
+    expect(component.cuestionarioCompleto).toBe(false);
+  });
+
+  it('bloquea la recomendación si falta una respuesta', async () => {
+    component.respuestas = [3, 2, null, 1, 3];
+
+    await component.obtenerRecomendacion();
+
+    expect(service.recomendarNivel$).not.toHaveBeenCalled();
+    expect(component.errorCuestionario).toContain('5 preguntas');
   });
 
   it('guarda la configuración con oposición, nivel, franja y versión', async () => {
@@ -113,7 +139,143 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
       franja: 'FRANJA_SEIS_A_OCHO_HORAS',
       version: 0,
     });
-    expect(emitSpy).toHaveBeenCalled();
+    expect(emitSpy).toHaveBeenCalledWith('EXITO');
+  });
+
+  it('emite conflicto sin reportarlo como configuración activada en un 409', async () => {
+    (service.guardarConfiguracion$ as jest.Mock).mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 409 })),
+    );
+    component.preferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    };
+    const emitSpy = jest.spyOn(component.configurada, 'emit');
+
+    await component.guardarConfiguracion();
+
+    expect(emitSpy).toHaveBeenCalledWith('CONFLICTO');
+    expect(emitSpy).not.toHaveBeenCalledWith('EXITO');
+    expect(component.errorGuardado).toContain('otro dispositivo');
+  });
+
+  it('al editar prioriza la variante activa sobre las preferencias de onboarding', () => {
+    component.configuracion = {
+      ...configuracion,
+      preferenciasPrecargadas: {
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+      },
+      configuracionActiva: {
+        variante: {
+          codigo: 'ACTIVA-68',
+          oposicion: Oposicion.ALICANTE_CPBA,
+          nivel: NivelOposicion.AVANZADO,
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+        },
+        version: 4,
+        fechaVigencia: '2026-08-19',
+        origen: 'ALUMNO',
+        planificacionMensual: null,
+      },
+    };
+    component.ngOnInit();
+
+    expect(component.preferencias).toEqual({
+      oposicion: Oposicion.ALICANTE_CPBA,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    });
+    expect(component.tieneNivelPrecargado).toBe(true);
+  });
+
+  it('prioriza las preferencias precargadas explícitas sobre la variante activa', () => {
+    component.configuracion = {
+      ...configuracion,
+      preferenciasPrecargadas: {
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+      },
+      configuracionActiva: {
+        variante: {
+          codigo: 'ACTIVA-68',
+          oposicion: Oposicion.ALICANTE_CPBA,
+          nivel: NivelOposicion.AVANZADO,
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+        },
+        version: 4,
+        fechaVigencia: '2026-08-19',
+        origen: 'ALUMNO',
+        planificacionMensual: null,
+      },
+    };
+    component.preferenciasPrecargadas = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+    };
+    component.ngOnInit();
+
+    expect(component.preferencias).toEqual({
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    });
+  });
+
+  it('bloquea el guardado si falta nivel y no aplica un default silencioso', async () => {
+    component.preferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: null,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    };
+
+    await component.guardarConfiguracion();
+
+    expect(service.guardarConfiguracion$).not.toHaveBeenCalled();
+    expect(component.errorGuardado).toContain('nivel');
+  });
+
+  it('no permite navegar al paso de confirmación sin nivel', () => {
+    component.activeStep.set(1);
+    component.preferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: null,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    };
+
+    component.irAPasoConfirmacion();
+
+    expect(component.activeStep()).toBe(1);
+  });
+
+  it('muestra Cancelar solo en edición, emite cancelado y no guarda', () => {
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Cancelar',
+    );
+
+    const canceladoSpy = jest.spyOn(component.cancelado, 'emit');
+    component.modoEdicion = true;
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Cancelar',
+    );
+    const botones = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    const botonCancelar = botones.find((button) =>
+      button.textContent?.includes('Cancelar'),
+    );
+    expect(botonCancelar).toBeTruthy();
+
+    (botonCancelar as HTMLButtonElement).click();
+
+    expect(canceladoSpy).toHaveBeenCalledTimes(1);
+    expect(service.guardarConfiguracion$).not.toHaveBeenCalled();
   });
 
   it('detecta cuando hay una configuración anterior', () => {
@@ -129,6 +291,7 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
         version: 3,
         fechaVigencia: '2026-08-01',
         origen: 'ONBOARDING',
+        planificacionMensual: null,
       },
     };
     expect(component.hayConfiguracionAnterior).toBe(true);

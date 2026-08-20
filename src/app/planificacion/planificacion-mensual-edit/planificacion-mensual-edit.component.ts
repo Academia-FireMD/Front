@@ -154,6 +154,14 @@ export class PlanificacionMensualEditComponent {
       ) ?? 0
     );
   }
+  public get totalActualizadosVolcado(): number {
+    return (
+      this.volcadoPreview?.resultados.reduce(
+        (acc, r) => acc + (r.actualizados ?? 0),
+        0,
+      ) ?? 0
+    );
+  }
   public usuariosSeleccionadosId = [] as Array<number>;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   public userFilters = computed(
@@ -536,12 +544,12 @@ export class PlanificacionMensualEditComponent {
       );
       const resultado = res?.resultados?.[0];
       if (resultado?.error) {
-        this.toast.warning(resultado.error);
-      } else {
-        this.toast.success(
-          `Plantilla aplicada: ${resultado?.creados ?? 0} creados, ${resultado?.omitidos ?? 0} omitidos.`,
-        );
+        this.toast.error(resultado.error);
+        return;
       }
+      this.toast.success(
+        `Plantilla aplicada: ${resultado?.creados ?? 0} creados, ${resultado?.actualizados ?? 0} actualizados, ${resultado?.omitidos ?? 0} omitidos.`,
+      );
       this.isDialogVisible = false;
       this.pickedEvents = [];
       this.pickedPlantillaId.set(null);
@@ -606,6 +614,15 @@ export class PlanificacionMensualEditComponent {
           dryRun: false,
         }),
       );
+      const resultadoConError = res.resultados.find(
+        (resultado) => resultado.error,
+      );
+      if (resultadoConError?.error) {
+        this.toast.error(
+          `No se completó el volcado de ${resultadoConError.identificador}: ${resultadoConError.error}`,
+        );
+        return;
+      }
       const totalCreados = res.resultados.reduce(
         (acc, r) => acc + (r.creados ?? 0),
         0,
@@ -614,8 +631,12 @@ export class PlanificacionMensualEditComponent {
         (acc, r) => acc + (r.omitidos ?? 0),
         0,
       );
+      const totalActualizados = res.resultados.reduce(
+        (acc, r) => acc + (r.actualizados ?? 0),
+        0,
+      );
       this.toast.success(
-        `Variante volcada: ${totalCreados} creados, ${totalOmitidos} omitidos en ${res.totalPlantillas} plantillas.`,
+        `Variante volcada: ${totalCreados} creados, ${totalActualizados} actualizados, ${totalOmitidos} omitidos en ${res.totalPlantillas} plantillas.`,
       );
       this.cerrarDialogoVolcar();
       this.load();

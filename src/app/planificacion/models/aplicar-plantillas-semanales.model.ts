@@ -14,12 +14,14 @@ export interface PreviewBloque {
   duracion: number;
   importante?: boolean;
   color?: string;
+  estado?: 'creado' | 'actualizado' | 'omitido';
 }
 
 export interface ResultadoAplicarPlantillaSemanal {
   planificacionId: number;
   plantillaSemanalId: number;
   creados: number;
+  actualizados: number;
   omitidos: number;
   bloques: PreviewBloque[];
   error?: string;

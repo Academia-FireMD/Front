@@ -13,7 +13,9 @@ import {
   Validators,
 } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
@@ -22,15 +24,18 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
 import { TabViewModule } from 'primeng/tabview';
 import { firstValueFrom } from 'rxjs';
+import { PlanificacionesService } from '../../services/planificaciones.service';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import {
   Oposicion,
   OPOSICION_LABELS,
 } from '../../shared/models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
+import type { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import {
   AlumnoSinCoincidencia,
   ReglaOposicionAdmin,
+  ReconciliacionPlanificaciones,
   VarianteAdmin,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
@@ -43,6 +48,7 @@ import { AutoasignacionService } from '../services/autoasignacion.service';
     FormsModule,
     ReactiveFormsModule,
     ButtonModule,
+    ConfirmDialogModule,
     DropdownModule,
     InputSwitchModule,
     InputTextModule,
@@ -56,7 +62,9 @@ import { AutoasignacionService } from '../services/autoasignacion.service';
 })
 export class PlanificacionAdminComponent implements OnInit {
   private readonly autoasignacionService = inject(AutoasignacionService);
+  private readonly planificacionesService = inject(PlanificacionesService);
   private readonly toast = inject(ToastrService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly fb = inject(FormBuilder);
 
   readonly NivelOposicion = NivelOposicion;
@@ -82,7 +90,11 @@ export class PlanificacionAdminComponent implements OnInit {
   variantes = signal<VarianteAdmin[]>([]);
   reglas = signal<ReglaOposicionAdmin[]>([]);
   sinCoincidencia = signal<AlumnoSinCoincidencia[]>([]);
+  planificacionesMensuales = signal<PlanificacionMensual[]>([]);
+  reconciliacion = signal<ReconciliacionPlanificaciones | null>(null);
+  reconciliando = signal(false);
   cargando = signal(false);
+  error = signal<string | null>(null);
 
   varianteForm = this.fb.group({
     id: [null as number | null],
@@ -90,6 +102,7 @@ export class PlanificacionAdminComponent implements OnInit {
     oposicion: [Oposicion.GENERAL as Oposicion, Validators.required],
     nivel: [NivelOposicion.INICIACION as NivelOposicion, Validators.required],
     franja: ['FRANJA_CUATRO_A_SEIS_HORAS', Validators.required],
+    planificacionMensualId: [null as number | null],
     activa: [true],
   });
 
@@ -104,20 +117,33 @@ export class PlanificacionAdminComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.varianteForm.valueChanges.subscribe(() =>
+      this.limpiarPlanificacionIncompatible(),
+    );
     this.cargarTodo();
   }
 
   async cargarTodo(): Promise<void> {
     this.cargando.set(true);
     try {
-      const [variantes, reglas, sinCoincidencia] = await Promise.all([
-        firstValueFrom(this.autoasignacionService.getVariantes$()),
-        firstValueFrom(this.autoasignacionService.getReglas$()),
-        firstValueFrom(this.autoasignacionService.getSinCoincidencia$()),
-      ]);
+      const [variantes, reglas, sinCoincidencia, planificaciones] =
+        await Promise.all([
+          firstValueFrom(this.autoasignacionService.getVariantes$()),
+          firstValueFrom(this.autoasignacionService.getReglas$()),
+          firstValueFrom(this.autoasignacionService.getSinCoincidencia$()),
+          firstValueFrom(
+            this.planificacionesService.getPlanificacionMensual$({
+              take: 9999,
+              skip: 0,
+              searchTerm: '',
+            }),
+          ),
+        ]);
       this.variantes.set(variantes ?? []);
       this.reglas.set(reglas ?? []);
       this.sinCoincidencia.set(sinCoincidencia ?? []);
+      this.planificacionesMensuales.set(planificaciones?.data ?? []);
+      this.limpiarPlanificacionIncompatible();
     } catch {
       this.toast.error('No se pudieron cargar los datos de administración');
     } finally {
@@ -132,17 +158,31 @@ export class PlanificacionAdminComponent implements OnInit {
       oposicion: v.oposicion,
       nivel: v.nivel,
       franja: v.franja,
+      planificacionMensualId:
+        v.planificacionMensualId ?? v.planificacionMensual?.id ?? null,
       activa: v.activa,
     });
+    // La identidad de una variante se usa para resolver configuraciones e
+    // historial. Solo el estado y el mapping canónico son editables después
+    // de crearla.
+    this.varianteForm.controls.codigo.disable({ emitEvent: false });
+    this.varianteForm.controls.oposicion.disable({ emitEvent: false });
+    this.varianteForm.controls.nivel.disable({ emitEvent: false });
+    this.varianteForm.controls.franja.disable({ emitEvent: false });
   }
 
   nuevaVariante(): void {
+    this.varianteForm.controls.codigo.enable({ emitEvent: false });
+    this.varianteForm.controls.oposicion.enable({ emitEvent: false });
+    this.varianteForm.controls.nivel.enable({ emitEvent: false });
+    this.varianteForm.controls.franja.enable({ emitEvent: false });
     this.varianteForm.reset({
       id: null,
       codigo: '',
       oposicion: Oposicion.GENERAL,
       nivel: NivelOposicion.INICIACION,
       franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+      planificacionMensualId: null,
       activa: true,
     });
   }
@@ -152,16 +192,13 @@ export class PlanificacionAdminComponent implements OnInit {
       this.toast.error('Revisa los campos de la variante');
       return;
     }
-    const v = this.varianteForm.value;
+    const v = this.varianteForm.getRawValue();
     try {
       if (v.id) {
         await firstValueFrom(
           this.autoasignacionService.actualizarVariante$(v.id, {
-            codigo: v.codigo ?? '',
-            oposicion: v.oposicion as Oposicion,
-            nivel: v.nivel as NivelOposicion,
-            franja: v.franja as TipoDePlanificacionDeseada,
             activa: !!v.activa,
+            planificacionMensualId: v.planificacionMensualId ?? null,
           }),
         );
         this.toast.success('Variante actualizada');
@@ -172,6 +209,7 @@ export class PlanificacionAdminComponent implements OnInit {
             oposicion: v.oposicion as Oposicion,
             nivel: v.nivel as NivelOposicion,
             franja: v.franja as TipoDePlanificacionDeseada,
+            planificacionMensualId: v.planificacionMensualId ?? null,
             activa: !!v.activa,
           }),
         );
@@ -191,9 +229,17 @@ export class PlanificacionAdminComponent implements OnInit {
       oposicionPlanificacion: r.oposicionPlanificacion,
       activa: r.activa,
     });
+    // La pareja de oposiciones identifica la regla histórica; solo su estado
+    // puede cambiar después de crearla.
+    this.reglaForm.controls.oposicionSuscripcion.disable({ emitEvent: false });
+    this.reglaForm.controls.oposicionPlanificacion.disable({
+      emitEvent: false,
+    });
   }
 
   nuevaRegla(): void {
+    this.reglaForm.controls.oposicionSuscripcion.enable({ emitEvent: false });
+    this.reglaForm.controls.oposicionPlanificacion.enable({ emitEvent: false });
     this.reglaForm.reset({
       id: null,
       oposicionSuscripcion: Oposicion.GENERAL,
@@ -207,13 +253,11 @@ export class PlanificacionAdminComponent implements OnInit {
       this.toast.error('Revisa los campos de la regla');
       return;
     }
-    const r = this.reglaForm.value;
+    const r = this.reglaForm.getRawValue();
     try {
       if (r.id) {
         await firstValueFrom(
           this.autoasignacionService.actualizarRegla$(r.id, {
-            oposicionSuscripcion: r.oposicionSuscripcion as Oposicion,
-            oposicionPlanificacion: r.oposicionPlanificacion as Oposicion,
             activa: !!r.activa,
           }),
         );
@@ -242,6 +286,8 @@ export class PlanificacionAdminComponent implements OnInit {
       await firstValueFrom(
         this.autoasignacionService.actualizarVariante$(v.id, {
           activa: !v.activa,
+          planificacionMensualId:
+            v.planificacionMensualId ?? v.planificacionMensual?.id ?? null,
         }),
       );
       this.toast.success('Variante actualizada');
@@ -249,5 +295,127 @@ export class PlanificacionAdminComponent implements OnInit {
     } catch {
       this.toast.error('No se pudo actualizar la variante');
     }
+  }
+
+  get planificacionOptions(): { label: string; value: number }[] {
+    const varianteId = this.varianteForm.controls.id.value;
+    const planesMapeadosEnOtraVariante = new Set(
+      this.variantes()
+        .filter((variante) => variante.id !== varianteId)
+        .map(
+          (variante) =>
+            variante.planificacionMensualId ??
+            variante.planificacionMensual?.id ??
+            null,
+        )
+        .filter((id): id is number => id !== null),
+    );
+    const oposicion = this.varianteForm.controls.oposicion
+      .value as Oposicion | null;
+    const franja = this.varianteForm.controls.franja
+      .value as TipoDePlanificacionDeseada | null;
+    return this.planificacionesMensuales()
+      .filter(
+        (planificacion) =>
+          !planesMapeadosEnOtraVariante.has(planificacion.id) &&
+          (!franja || planificacion.tipoDePlanificacion === franja) &&
+          (!oposicion || planificacion.relevancia?.includes(oposicion)),
+      )
+      .map((planificacion) => ({
+        label: `${planificacion.identificador} (${planificacion.mes}/${planificacion.ano})`,
+        value: planificacion.id,
+      }));
+  }
+
+  private limpiarPlanificacionIncompatible(): void {
+    const planificacionId =
+      this.varianteForm.controls.planificacionMensualId.value;
+    if (
+      planificacionId != null &&
+      !this.planificacionOptions.some(
+        (option) => option.value === planificacionId,
+      )
+    ) {
+      this.varianteForm.controls.planificacionMensualId.setValue(null, {
+        emitEvent: false,
+      });
+    }
+  }
+
+  async previsualizarReconciliacion(): Promise<void> {
+    await this.ejecutarReconciliacion(false);
+  }
+
+  async aplicarReconciliacion(): Promise<void> {
+    const preview = this.reconciliacion();
+    if (preview?.aplicar !== false || !preview.previewHash) {
+      this.toast.error('Previsualiza la reconciliación antes de aplicarla');
+      return;
+    }
+    this.confirmationService.confirm({
+      message:
+        'La reconciliación aplicará configuraciones a los alumnos elegibles. ¿Continuar?',
+      header: 'Aplicar reconciliación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Aplicar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.ejecutarReconciliacion(true),
+      reject: () => {},
+    });
+  }
+
+  private async ejecutarReconciliacion(aplicar: boolean): Promise<void> {
+    this.reconciliando.set(true);
+    this.error.set(null);
+    try {
+      const resumen = await firstValueFrom(
+        this.autoasignacionService.reconciliar$(
+          aplicar,
+          aplicar ? this.reconciliacion()?.previewHash : null,
+        ),
+      );
+      if (aplicar && !resumen.aplicar) {
+        this.reconciliacion.set(null);
+        throw new Error(
+          'La previsualización ya no es válida; vuelve a calcularla antes de aplicar.',
+        );
+      }
+      this.reconciliacion.set(resumen);
+      if (aplicar) {
+        const diagnosticoActual = await firstValueFrom(
+          this.autoasignacionService.getSinCoincidencia$(),
+        );
+        this.sinCoincidencia.set(diagnosticoActual ?? []);
+      }
+      this.toast.success(
+        aplicar
+          ? 'Reconciliación aplicada'
+          : 'Previsualización de reconciliación calculada',
+      );
+    } catch {
+      const mensaje = aplicar
+        ? 'No se pudo aplicar la reconciliación. La previsualización puede haber cambiado; vuelve a calcularla.'
+        : 'No se pudo ejecutar la previsualización de reconciliación';
+      this.error.set(mensaje);
+      this.toast.error(mensaje);
+      if (aplicar) this.reconciliacion.set(null);
+    } finally {
+      this.reconciliando.set(false);
+    }
+  }
+
+  motivoDiagnostico(motivo: AlumnoSinCoincidencia['motivo']): string {
+    const labels: Record<AlumnoSinCoincidencia['motivo'], string> = {
+      SIN_CONFIGURACION: 'Sin configuración',
+      PREFERENCIAS_INCOMPLETAS: 'Preferencias incompletas',
+      SIN_VARIANTE: 'Sin variante compatible',
+      VARIANTE_INACTIVA: 'Variante inactiva',
+      SIN_PLANIFICACION_PUBLICADA: 'Sin planificación publicada',
+      OPOSICION_NO_PERMITIDA: 'Oposición no permitida',
+      SIN_ASIGNACION: 'Sin asignación',
+      PROGRESO_INCOMPLETO: 'Progreso incompleto',
+    };
+    return labels[motivo] ?? motivo;
   }
 }

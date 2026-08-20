@@ -93,7 +93,11 @@
         <div class="flex flex-column gap-3">
           <p>Responde 5 preguntas sobre tu experiencia con el temario:</p>
 
-          @for (pregunta of preguntas; track $index) {
+          @for (
+            pregunta of preguntas;
+            track $index;
+            let preguntaIndex = $index
+          ) {
             <div class="p-3 border-1 border-round surface-100">
               <div class="mb-2 font-medium">
                 {{ $index + 1 }}. {{ pregunta }}
@@ -110,15 +114,24 @@
                 ) {
                   <div class="flex align-items-center gap-1">
                     <p-radioButton
-                      [name]="'pregunta' + $index"
+                      [name]="'pregunta' + preguntaIndex"
                       [value]="opcion.value"
-                      [(ngModel)]="respuestas[$index]"
+                      [(ngModel)]="respuestas[preguntaIndex]"
+                      (onClick)="onRespuestaChange(preguntaIndex, opcion.value)"
                     ></p-radioButton>
                     <label>{{ opcion.label }}</label>
                   </div>
                 }
               </div>
             </div>
+          }
+
+          @if (errorCuestionario) {
+            <p-message
+              severity="warn"
+              [text]="errorCuestionario"
+              styleClass="w-full"
+            ></p-message>
           }
 
           <div class="flex gap-2">
@@ -160,9 +173,19 @@
                   (click)="aceptarRecomendacion(); nextCallback.emit()"
                 ></p-button>
                 <p-button
-                  label="Elegir manualmente"
+                  label="Mantener mi nivel elegido"
                   styleClass="p-button-secondary"
-                  (click)="nextCallback.emit()"
+                  [disabled]="!puedeGuardarConfiguracion"
+                  (click)="irAPasoConfirmacion(); nextCallback.emit()"
+                ></p-button>
+                <p-button
+                  label="Volver a elegir nivel"
+                  styleClass="p-button-text"
+                  (click)="
+                    recomendacion = null;
+                    elegirCuestionario.set(false);
+                    prevCallback.emit()
+                  "
                 ></p-button>
               </div>
             </div>
@@ -237,9 +260,21 @@
           label="Activar planificación"
           icon="pi pi-check"
           [loading]="guardando()"
+          [disabled]="!puedeGuardarConfiguracion"
           (click)="guardarConfiguracion()"
         ></p-button>
       </div>
     </ng-template>
   </p-stepperPanel>
 </p-stepper>
+
+@if (modoEdicion) {
+  <div class="flex justify-content-start mt-3">
+    <p-button
+      label="Cancelar"
+      icon="pi pi-times"
+      styleClass="p-button-text"
+      (click)="cancelar()"
+    ></p-button>
+  </div>
+}

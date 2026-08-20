@@ -256,7 +256,7 @@ describe('LayoutComponent', () => {
         'Planificación pruebas físicas',
       ]);
       expect((grupo!.items as AppMenuItem[])[0].routerLink).toBe(
-        '/app/planificacion/planificacion-mensual-alumno',
+        '/app/planificacion/configuracion-alumno',
       );
       expect((grupo!.items as AppMenuItem[])[1].routerLink).toBe(
         '/app/planificacion-fisica',
@@ -300,6 +300,22 @@ describe('LayoutComponent', () => {
       const marcas = menu.find((i) => i.label === 'Mis marcas');
       expect(marcas).toBeDefined();
       expect(marcas?.routerLink).toBe('/app/planificacion-fisica/marcas');
+    });
+
+    it('tutor ve el panel acotado dentro de Planificación', () => {
+      (component as any).currentUserSignal.set({
+        ...makeAlumnoConSub(),
+        esTutor: true,
+      });
+
+      const panel = findItemByLabel(component.items(), 'Panel tutor');
+      expect(panel?.routerLink).toBe('/app/planificacion/tutor');
+    });
+
+    it('admin no ve el panel tutor dentro del menú administrativo', () => {
+      (component as any).currentUserSignal.set(makeUser(Rol.ADMIN));
+
+      expect(findItemByLabel(component.items(), 'Panel tutor')).toBeUndefined();
     });
 
     it('grupo se poda si ambos módulos hijos están OFF (sin header huérfano)', () => {

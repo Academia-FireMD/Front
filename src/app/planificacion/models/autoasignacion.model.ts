@@ -10,6 +10,7 @@ import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model'
 export type EstadoConfiguracionPlanificacion =
   | 'BLOQUEADA'
   | 'REQUIERE_CONFIGURACION'
+  | 'PENDIENTE_PUBLICACION'
   | 'ACTIVA';
 
 export interface PreferenciasPrecargadas {
@@ -19,6 +20,7 @@ export interface PreferenciasPrecargadas {
 }
 
 export interface VarianteConfiguracion {
+  id?: number;
   codigo: string;
   oposicion: Oposicion;
   nivel: NivelOposicion;
@@ -30,6 +32,15 @@ export interface ConfiguracionActiva {
   version: number;
   fechaVigencia: string;
   origen: string;
+  /** Plan mensual canónico que recibe el alumno al activar la variante. */
+  planificacionMensual: PlanificacionMensualResumen | null;
+}
+
+export interface PlanificacionMensualResumen {
+  id: number;
+  identificador: string;
+  mes: number;
+  ano: number;
 }
 
 export interface RecomendacionNivel {
@@ -59,6 +70,9 @@ export interface VarianteAdmin {
   nivel: NivelOposicion;
   franja: TipoDePlanificacionDeseada;
   activa: boolean;
+  /** Plan mensual publicado que se activa para esta variante, si existe. */
+  planificacionMensualId?: number | null;
+  planificacionMensual?: PlanificacionMensualResumen | null;
 }
 
 export interface ReglaOposicionAdmin {
@@ -71,7 +85,55 @@ export interface ReglaOposicionAdmin {
 }
 
 export interface AlumnoSinCoincidencia {
+  alumno?: { id: number; nombre: string; apellidos: string; email: string };
+  variante?: VarianteAdmin | null;
+  aplicable: boolean;
+  motivo:
+    | 'SIN_CONFIGURACION'
+    | 'PREFERENCIAS_INCOMPLETAS'
+    | 'SIN_VARIANTE'
+    | 'VARIANTE_INACTIVA'
+    | 'SIN_PLANIFICACION_PUBLICADA'
+    | 'OPOSICION_NO_PERMITIDA'
+    | 'SIN_ASIGNACION'
+    | 'PROGRESO_INCOMPLETO';
+}
+
+export interface ErrorReconciliacionPlanificacion {
+  alumnoId: number;
+  motivo: string;
+  aplicable: false;
+}
+
+export type CasoReconciliacionPlanificacion =
+  | AlumnoSinCoincidencia
+  | ErrorReconciliacionPlanificacion;
+
+export interface ReconciliacionPlanificaciones {
+  aplicar: boolean;
+  /** Huella del diagnóstico usado para proteger el apply contra cambios. */
+  previewHash: string;
+  totalElegibles: number;
+  aplicables: number;
+  aplicados: number;
+  noAplicables: number;
+  casos: CasoReconciliacionPlanificacion[];
+}
+
+export interface OpcionPlanificacionPermitida {
+  oposicion: Oposicion;
+  nivel: NivelOposicion;
+  franja: TipoDePlanificacionDeseada;
+  varianteId: number;
+  planificacionMensual: PlanificacionMensualResumen | null;
+}
+
+export interface AlumnoPlanificacionTutor {
   alumno: { id: number; nombre: string; apellidos: string; email: string };
-  variante: VarianteAdmin;
-  motivo: 'VARIANTE_INACTIVA' | 'OPOSICION_NO_PERMITIDA';
+  /** El endpoint tutor devuelve la configuración activa directamente, no el shell completo. */
+  configuracion: ConfiguracionActiva | null;
+  preferencias: PreferenciasPrecargadas;
+  oposicionesPermitidas: Oposicion[];
+  opcionesPermitidas: OpcionPlanificacionPermitida[];
+  recomendacion: RecomendacionNivel | null;
 }

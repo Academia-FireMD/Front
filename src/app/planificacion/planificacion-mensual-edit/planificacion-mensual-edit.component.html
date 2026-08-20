@@ -110,6 +110,14 @@
                 ' (ya existían)'
               "
             ></p-tag>
+            <p-tag
+              severity="info"
+              [value]="
+                'Se actualizarán ' +
+                (previewResult()?.actualizados ?? 0) +
+                ' bloques'
+              "
+            ></p-tag>
           </div>
 
           <p-table
@@ -124,6 +132,7 @@
                 <th>Hora</th>
                 <th>Nombre</th>
                 <th>Duración</th>
+                <th>Estado</th>
                 <th></th>
               </tr>
             </ng-template>
@@ -135,6 +144,18 @@
                 <td>{{ bloque.duracion }} min</td>
                 <td>
                   <p-tag
+                    [severity]="
+                      bloque.estado === 'creado'
+                        ? 'success'
+                        : bloque.estado === 'actualizado'
+                          ? 'info'
+                          : 'warning'
+                    "
+                    [value]="bloque.estado ?? 'creado'"
+                  ></p-tag>
+                </td>
+                <td>
+                  <p-tag
                     *ngIf="bloque.importante"
                     severity="danger"
                     value="Importante"
@@ -144,8 +165,8 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
               <tr>
-                <td colspan="5" class="text-center">
-                  No hay bloques para crear en esta semana.
+                <td colspan="6" class="text-center">
+                  No hay bloques para crear o actualizar en esta semana.
                 </td>
               </tr>
             </ng-template>
@@ -178,7 +199,10 @@
             icon="pi pi-check"
             [action]="aplicarPlantillaConfirmada.bind(this)"
             [disabled]="
-              !previewResult() || (previewResult()?.creados ?? 0) === 0
+              !previewResult() ||
+              (previewResult()?.creados ?? 0) +
+                (previewResult()?.actualizados ?? 0) ===
+                0
             "
           ></app-async-button>
         </div>
@@ -240,6 +264,10 @@
           severity="warning"
           [value]="'Se omitirán ' + totalOmitidosVolcado + ' (ya existían)'"
         ></p-tag>
+        <p-tag
+          severity="info"
+          [value]="'Se actualizarán ' + totalActualizadosVolcado + ' bloques'"
+        ></p-tag>
       </div>
 
       <p-table
@@ -253,6 +281,7 @@
             <th>Identificador</th>
             <th>Lunes</th>
             <th>Creados</th>
+            <th>Actualizados</th>
             <th>Omitidos</th>
             <th></th>
           </tr>
@@ -262,6 +291,7 @@
             <td>{{ resultado.identificador }}</td>
             <td>{{ resultado.lunes | date: "dd/MM/yyyy" : "" : "es" }}</td>
             <td>{{ resultado.creados }}</td>
+            <td>{{ resultado.actualizados ?? 0 }}</td>
             <td>{{ resultado.omitidos }}</td>
             <td>
               <p-tag

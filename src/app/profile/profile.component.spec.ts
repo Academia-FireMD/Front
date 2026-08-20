@@ -71,6 +71,36 @@ describe('ProfileComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('lleva la gestión de planificación al shell/wizard, sin autoasignador legacy', () => {
+    const router = TestBed.inject(Router);
+
+    component.irAPlanificacion();
+
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/app/planificacion/configuracion-alumno',
+    ]);
+  });
+
+  it('si cambian las preferencias desde Perfil, abre el wizard en modo revisión', async () => {
+    const router = TestBed.inject(Router);
+    component.user = {
+      tipoOposicion: ['MADRID'],
+      nivelOposicion: 'INICIACION',
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    } as any;
+
+    await component.onOnboardingUpdated({
+      tipoOposicion: ['VALENCIA_AYUNTAMIENTO'] as any,
+      nivelOposicion: 'AVANZADO' as any,
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS' as any,
+    });
+
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/app/planificacion/configuracion-alumno'],
+      { queryParams: { revisar: 'preferencias' } },
+    );
+  });
+
   describe('getOnboardingCompletionPercentage con tipoOposicion array', () => {
     it('no cuenta un array vacío como campo relleno', () => {
       component.onboardingData = {

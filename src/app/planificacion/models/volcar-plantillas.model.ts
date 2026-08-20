@@ -11,8 +11,9 @@ export interface VolcarPlantillasRequest {
 
 export interface VolcarPlantillasResultado {
   identificador: string;
-  lunes: string;
+  lunes: string | null;
   creados: number;
+  actualizados: number;
   omitidos: number;
   error?: string;
 }

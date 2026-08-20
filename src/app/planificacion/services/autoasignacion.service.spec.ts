@@ -159,6 +159,63 @@ describe('AutoasignacionService', () => {
     expect(recibida).toEqual(configuracionRespuesta);
   });
 
+  it('GET /tutor/alumnos usa el contrato acotado del panel tutor', () => {
+    let recibida: unknown;
+    const respuesta = [
+      {
+        alumno: { id: 42, nombre: 'Ana', apellidos: 'A', email: 'a@a.es' },
+        configuracion: null,
+        preferencias: {
+          oposicion: Oposicion.MADRID,
+          nivel: null,
+          franja: null,
+        },
+        oposicionesPermitidas: [Oposicion.MADRID],
+        opcionesPermitidas: [],
+        recomendacion: null,
+      },
+    ];
+
+    service.getTutorAlumnos$().subscribe((r) => (recibida = r));
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/tutor/alumnos`,
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.withCredentials).toBe(true);
+    request.flush(respuesta);
+
+    expect(recibida).toEqual(respuesta);
+  });
+
+  it('GET /admin/alumnos/:id/configuracion usa el contrato acotado del diálogo admin', () => {
+    let recibida: unknown;
+
+    service.getAdminAlumnoConfiguracion$(42).subscribe((r) => (recibida = r));
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/alumnos/42/configuracion`,
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.withCredentials).toBe(true);
+    request.flush({
+      alumno: { id: 42, nombre: 'Ana', apellidos: 'A', email: 'a@a.es' },
+      configuracion: null,
+      preferencias: {
+        oposicion: Oposicion.MADRID,
+        nivel: null,
+        franja: null,
+      },
+      oposicionesPermitidas: [Oposicion.MADRID],
+      opcionesPermitidas: [],
+      recomendacion: null,
+    });
+
+    expect(recibida).toEqual(
+      expect.objectContaining({ oposicionesPermitidas: [Oposicion.MADRID] }),
+    );
+  });
+
   it('CRUD admin: variantes GET/POST/PATCH y reglas GET/POST/PATCH', () => {
     service.getVariantes$().subscribe();
     let req = httpMock.expectOne(
@@ -182,12 +239,20 @@ describe('AutoasignacionService', () => {
     expect(req.request.method).toBe('POST');
     req.flush({});
 
-    service.actualizarVariante$(3, { activa: false }).subscribe();
+    service
+      .actualizarVariante$(3, {
+        activa: false,
+        planificacionMensualId: null,
+      })
+      .subscribe();
     req = httpMock.expectOne(
       `${environment.apiUrl}/planificaciones/admin/variantes/3`,
     );
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ activa: false });
+    expect(req.request.body).toEqual({
+      activa: false,
+      planificacionMensualId: null,
+    });
     req.flush({});
 
     service.getReglas$().subscribe();
@@ -231,5 +296,48 @@ describe('AutoasignacionService', () => {
     request.flush(respuesta);
 
     expect(recibida).toEqual(respuesta);
+  });
+
+  it('POST /admin/reconciliar distingue preview de apply', () => {
+    let recibida: unknown;
+
+    service.reconciliar$(false).subscribe((r) => (recibida = r));
+
+    const preview = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/reconciliar`,
+    );
+    expect(preview.request.method).toBe('POST');
+    expect(preview.request.body).toEqual({ aplicar: false });
+    preview.flush({
+      aplicar: false,
+      previewHash: 'preview-1',
+      totalElegibles: 2,
+      aplicables: 1,
+      aplicados: 0,
+      noAplicables: 1,
+      casos: [],
+    });
+
+    expect(recibida).toEqual(
+      expect.objectContaining({ aplicar: false, aplicables: 1 }),
+    );
+
+    service.reconciliar$(true, 'preview-1').subscribe();
+    const apply = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/reconciliar`,
+    );
+    expect(apply.request.body).toEqual({
+      aplicar: true,
+      previewHash: 'preview-1',
+    });
+    apply.flush({
+      aplicar: true,
+      previewHash: 'preview-1',
+      totalElegibles: 2,
+      aplicables: 1,
+      aplicados: 1,
+      noAplicables: 1,
+      casos: [],
+    });
   });
 });

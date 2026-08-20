@@ -25,6 +25,12 @@ describe('PlanificacionPreferenciasComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('marca el nivel como obligatorio', () => {
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Nivel *',
+    );
+  });
+
   it('precarga los valores iniciales', () => {
     component.valoresIniciales = {
       oposicion: Oposicion.VALENCIA_AYUNTAMIENTO,
@@ -50,6 +56,17 @@ describe('PlanificacionPreferenciasComponent', () => {
 
     const valores = component.opcionesOposicion.map((o) => o.value);
     expect(valores).toEqual([Oposicion.GENERAL, Oposicion.ALICANTE_CPBA]);
+  });
+
+  it('respeta una lista vacía devuelta por backend sin reintroducir opciones locales', () => {
+    component.oposicionesPermitidas = [];
+    component.nivelesPermitidos = [];
+    component.franjasPermitidas = [];
+    fixture.detectChanges();
+
+    expect(component.opcionesOposicion).toEqual([]);
+    expect(component.opcionesNivel).toEqual([]);
+    expect(component.opcionesFranja).toEqual([]);
   });
 
   it('por defecto lista todas las oposiciones del enum', () => {

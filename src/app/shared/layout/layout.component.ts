@@ -505,35 +505,44 @@ export class LayoutComponent {
     // píldora de upsell). Cada hijo lleva su propio `modulo`: si el tenant
     // apaga ambos, filterByModulo poda el grupo vacío. Feedback Sergio
     // 2026-07-24.
-    if (hasValidSubscription) {
-      const hijoEstudio: AppMenuItem =
-        isAdvanced || isPremium
-          ? {
-              label: 'Planificación de estudio',
-              icon: 'pi pi-calendar-plus',
-              routerLink: '/app/planificacion/planificacion-mensual-alumno',
-              modulo: ModuloApp.PLANIFICACION,
-            }
-          : {
-              label: 'Planificación de estudio',
-              icon: 'pi pi-calendar-plus',
-              modulo: ModuloApp.PLANIFICACION,
-              styleClass: 'locked-menu-item',
-              state: { locked: true },
-              command: () => this.openUpgradePage(),
-            };
+    if (hasValidSubscription || user?.esTutor) {
+      const planificacionItems: AppMenuItem[] = [];
+      if (hasValidSubscription) {
+        const hijoEstudio: AppMenuItem =
+          isAdvanced || isPremium
+            ? {
+                label: 'Planificación de estudio',
+                icon: 'pi pi-calendar-plus',
+                routerLink: '/app/planificacion/configuracion-alumno',
+                modulo: ModuloApp.PLANIFICACION,
+              }
+            : {
+                label: 'Planificación de estudio',
+                icon: 'pi pi-calendar-plus',
+                modulo: ModuloApp.PLANIFICACION,
+                styleClass: 'locked-menu-item',
+                state: { locked: true },
+                command: () => this.openUpgradePage(),
+              };
+        planificacionItems.push(hijoEstudio, {
+          label: 'Planificación pruebas físicas',
+          icon: 'pi pi-bolt',
+          routerLink: '/app/planificacion-fisica',
+          modulo: ModuloApp.PLANIFICACION_FISICA,
+        });
+      }
+      if (user?.esTutor) {
+        planificacionItems.push({
+          label: 'Panel tutor',
+          icon: 'pi pi-users',
+          routerLink: '/app/planificacion/tutor',
+          modulo: ModuloApp.PLANIFICACION,
+        });
+      }
       menu.push({
         label: 'Planificación',
         collapsed: true,
-        items: [
-          hijoEstudio,
-          {
-            label: 'Planificación pruebas físicas',
-            icon: 'pi pi-bolt',
-            routerLink: '/app/planificacion-fisica',
-            modulo: ModuloApp.PLANIFICACION_FISICA,
-          },
-        ],
+        items: planificacionItems,
       });
     }
 

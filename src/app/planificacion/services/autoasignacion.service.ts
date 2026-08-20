@@ -5,13 +5,24 @@ import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import type { NivelOposicion } from '../../shared/models/pregunta.model';
 import type {
+  AlumnoPlanificacionTutor,
   AlumnoSinCoincidencia,
   ConfiguracionPlanificacion,
   GuardarConfiguracionDTO,
   RecomendacionNivel,
   ReglaOposicionAdmin,
+  ReconciliacionPlanificaciones,
   VarianteAdmin,
 } from '../models/autoasignacion.model';
+
+export type ActualizarVarianteAdminDTO = {
+  activa: boolean;
+  planificacionMensualId: number | null;
+};
+
+export type ActualizarReglaAdminDTO = {
+  activa: boolean;
+};
 
 /**
  * Cliente de la Fase 1 autoasignación (contrato FIJO definido en el plan:
@@ -78,6 +89,20 @@ export class AutoasignacionService extends ApiBaseService {
     ) as Observable<ConfiguracionPlanificacion>;
   }
 
+  /** Alumnos visibles para el tutor actual (o para un admin autorizado). */
+  public getTutorAlumnos$(): Observable<AlumnoPlanificacionTutor[]> {
+    return this.get('/tutor/alumnos') as Observable<AlumnoPlanificacionTutor[]>;
+  }
+
+  /** Configuración acotada de un alumno para el diálogo admin legacy. */
+  public getAdminAlumnoConfiguracion$(
+    alumnoId: number,
+  ): Observable<AlumnoPlanificacionTutor> {
+    return this.get(
+      `/admin/alumnos/${alumnoId}/configuracion`,
+    ) as Observable<AlumnoPlanificacionTutor>;
+  }
+
   public getVariantes$(): Observable<VarianteAdmin[]> {
     return this.get('/admin/variantes') as Observable<VarianteAdmin[]>;
   }
@@ -90,7 +115,7 @@ export class AutoasignacionService extends ApiBaseService {
 
   public actualizarVariante$(
     id: number,
-    data: Partial<VarianteAdmin>,
+    data: ActualizarVarianteAdminDTO,
   ): Observable<VarianteAdmin> {
     return this.patch(
       '/admin/variantes/' + id,
@@ -110,7 +135,7 @@ export class AutoasignacionService extends ApiBaseService {
 
   public actualizarRegla$(
     id: number,
-    data: Partial<ReglaOposicionAdmin>,
+    data: ActualizarReglaAdminDTO,
   ): Observable<ReglaOposicionAdmin> {
     return this.patch(
       '/admin/reglas/' + id,
@@ -122,5 +147,15 @@ export class AutoasignacionService extends ApiBaseService {
     return this.get('/admin/sin-coincidencia') as Observable<
       AlumnoSinCoincidencia[]
     >;
+  }
+
+  public reconciliar$(
+    aplicar: boolean,
+    previewHash?: string | null,
+  ): Observable<ReconciliacionPlanificaciones> {
+    return this.post('/admin/reconciliar', {
+      aplicar,
+      ...(aplicar && previewHash ? { previewHash } : {}),
+    }) as Observable<ReconciliacionPlanificaciones>;
   }
 }

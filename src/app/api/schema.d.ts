@@ -1691,6 +1691,246 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/planificaciones/configuracion': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionAutoasignacionController_obtenerConfiguracion'];
+    put: operations['PlanificacionAutoasignacionController_activarOReconfigurar'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/recomendacion-nivel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionAutoasignacionController_recomendarNivel'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/tutor/{alumnoId}/recomendar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionAutoasignacionController_recomendarComoTutorOAdmin'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/tutor/{alumnoId}/forzar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionAutoasignacionController_forzarConfiguracion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/admin/alumnos/{alumnoId}/configuracion': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionAutoasignacionController_obtenerConfiguracionAlumnoAdmin'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/admin/variantes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionAutoasignacionController_listarVariantes'];
+    put?: never;
+    post: operations['PlanificacionAutoasignacionController_crearVariante'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/admin/variantes/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['PlanificacionAutoasignacionController_actualizarVariante'];
+    trace?: never;
+  };
+  '/planificaciones/admin/reglas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionAutoasignacionController_listarReglas'];
+    put?: never;
+    post: operations['PlanificacionAutoasignacionController_crearRegla'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/admin/reglas/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['PlanificacionAutoasignacionController_actualizarRegla'];
+    trace?: never;
+  };
+  '/planificaciones/admin/sin-coincidencia': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionAutoasignacionController_listarAlumnosSinCoincidencia'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/admin/reconciliar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionAutoasignacionController_reconciliar'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/tutor/alumnos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionAutoasignacionController_listarAlumnosTutor'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/catalogo-contenido/buscar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CatalogoContenidoController_buscar'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/catalogo-contenido/componer': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['CatalogoContenidoController_componer'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/catalogo-contenido/importaciones': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['CatalogoContenidoController_importaciones'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/planificaciones/bloques': {
     parameters: {
       query?: never;
@@ -1765,38 +2005,6 @@ export interface paths {
     get: operations['PlanificacionController_getBlgetCountPlanificacionesAsignadasAlumnooque'];
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/planificaciones/auto-assign-planificacion-mensual': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['PlanificacionController_autoAssignPlanificacionMensual'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/planificaciones/auto-assign-planificacion-mensual-all': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['PlanificacionController_autoAssignPlanificacionMensualAll'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1931,6 +2139,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/planificaciones/aplicar-plantillas-semanales': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionController_aplicarPlantillasSemanales'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/planificaciones/plantillas-semanales/{id}': {
     parameters: {
       query?: never;
@@ -2037,9 +2261,10 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * @description Fase 2 bridge temario↔física: marca como `esEntrenamientoFisico` todos los
-     *     sub-bloques de esta planificación mensual cuyo nombre empiece por
-     *     "ENTRENAMIENTO". Solo ADMIN; la confirmación la pide el front.
+     * @description Fase 2 bridge temario↔física: deja como máximo un sub-bloque
+     *     `esEntrenamientoFisico` por día, priorizando nombres que empiecen por
+     *     "ENTRENAMIENTO" cuando aún no existe uno. Solo ADMIN; la confirmación la
+     *     pide el front.
      */
     post: operations['PlanificacionController_convertirBloquesFisica'];
     delete?: never;
@@ -2058,6 +2283,27 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['PlanificacionController_clonarPlanificacion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/planificacion-mensual/{id}/volcar-plantillas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * @description Fase 4: vuelca todas las plantillas semanales de una variante completa
+     *     (identificador termina en prefijo, ej. `GI6-8H`) sobre una planificación
+     *     mensual, derivando automáticamente el lunes de cada semana.
+     */
+    post: operations['PlanificacionController_volcarPlantillasVariante'];
     delete?: never;
     options?: never;
     head?: never;
@@ -5950,6 +6196,53 @@ export interface components {
       flashcardId: number;
       estado: Record<string, never>;
     };
+    RecomendacionNivelDto: {
+      respuestas: number[];
+    };
+    ActivarConfiguracionDto: {
+      oposicion: Record<string, never>;
+      nivel: Record<string, never>;
+      franja: Record<string, never>;
+      version: number;
+      nivelElegidoDistintoDeRecomendacion?: Record<string, never>;
+    };
+    RecomendacionTutorDto: {
+      nivel: Record<string, never>;
+    };
+    ForzarConfiguracionDto: {
+      oposicion: Record<string, never>;
+      nivel: Record<string, never>;
+      franja: Record<string, never>;
+      motivo: string;
+    };
+    CrearVarianteDto: {
+      codigo: string;
+      oposicion: Record<string, never>;
+      nivel: Record<string, never>;
+      franja: Record<string, never>;
+      planificacionMensualId?: number | null;
+      activa?: boolean;
+    };
+    ActualizarVarianteDto: {
+      activa?: boolean;
+      planificacionMensualId?: number | null;
+    };
+    CrearReglaDto: {
+      oposicionSuscripcion: Record<string, never>;
+      oposicionPlanificacion: Record<string, never>;
+      activa?: boolean;
+    };
+    ActualizarReglaDto: {
+      activa?: boolean;
+    };
+    ReconciliarPlanificacionesDto: {
+      aplicar?: boolean;
+      previewHash?: string;
+    };
+    ComponerContenidoDto: {
+      codigo: string;
+      tipoTrabajo?: Record<string, never>;
+    };
     AsignarPlanificacionMensualDto: {
       planificacionId: number;
       alumnosIds: number[];
@@ -5983,6 +6276,16 @@ export interface components {
       descripcion?: string;
       subBloques: components['schemas']['CreateSubBloqueDto'][];
     };
+    AplicarPlantillaSemanalItemDto: {
+      planificacionId: number;
+      plantillaSemanalId: number;
+    };
+    AplicarPlantillasSemanalesDto: {
+      lunes: string;
+      items: components['schemas']['AplicarPlantillaSemanalItemDto'][];
+      /** @description true = dry-run: calcula y devuelve los bloques sin escribir en BD. */
+      preview?: boolean;
+    };
     CreateOrUpdatePlanificacionMensualDto: {
       id?: number;
       identificador: string;
@@ -5994,6 +6297,11 @@ export interface components {
       ano: number;
       subBloques: components['schemas']['CreateSubBloqueDto'][];
       alumnosAsignados?: number[];
+    };
+    VolcarPlantillasVarianteDto: {
+      prefijoPlantillas: string;
+      /** @description true = dry-run: calcula y devuelve el plan sin escribir en BD. */
+      dryRun?: boolean;
     };
     CreateOrUpdateEventoPersonalizadoDto: {
       id?: number;
@@ -8448,6 +8756,382 @@ export interface operations {
       };
     };
   };
+  PlanificacionAutoasignacionController_obtenerConfiguracion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_activarOReconfigurar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ActivarConfiguracionDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_recomendarNivel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RecomendacionNivelDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_recomendarComoTutorOAdmin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alumnoId: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RecomendacionTutorDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_forzarConfiguracion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alumnoId: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ForzarConfiguracionDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_obtenerConfiguracionAlumnoAdmin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alumnoId: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_listarVariantes: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_crearVariante: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CrearVarianteDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_actualizarVariante: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ActualizarVarianteDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_listarReglas: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_crearRegla: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CrearReglaDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_actualizarRegla: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ActualizarReglaDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_listarAlumnosSinCoincidencia: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_reconciliar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReconciliarPlanificacionesDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_listarAlumnosTutor: {
+    parameters: {
+      query: {
+        tutorId: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CatalogoContenidoController_buscar: {
+    parameters: {
+      query?: {
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  CatalogoContenidoController_componer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ComponerContenidoDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  CatalogoContenidoController_importaciones: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   PlanificacionController_getAllBloques: {
     parameters: {
       query?: never;
@@ -8562,44 +9246,6 @@ export interface operations {
         };
         content: {
           'application/json': number;
-        };
-      };
-    };
-  };
-  PlanificacionController_autoAssignPlanificacionMensual: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': Record<string, never>;
-        };
-      };
-    };
-  };
-  PlanificacionController_autoAssignPlanificacionMensualAll: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': Record<string, never>[];
         };
       };
     };
@@ -8756,6 +9402,27 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['CreateOrUpdatePlantillaSemanalDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionController_aplicarPlantillasSemanales: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AplicarPlantillasSemanalesDto'];
       };
     };
     responses: {
@@ -8924,6 +9591,29 @@ export interface operations {
       cookie?: never;
     };
     requestBody?: never;
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PlanificacionController_volcarPlantillasVariante: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['VolcarPlantillasVarianteDto'];
+      };
+    };
     responses: {
       201: {
         headers: {

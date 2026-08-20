@@ -28,6 +28,7 @@ import { PlanificacionPreferenciasComponent } from '../../shared/planificacion-p
 import {
   ConfiguracionPlanificacion,
   GuardarConfiguracionDTO,
+  PreferenciasPrecargadas,
   RecomendacionNivel,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
@@ -39,6 +40,8 @@ const PREGUNTAS_CUESTIONARIO: string[] = [
   '¿Cuántas horas a la semana dedicas al estudio?',
   '¿Cómo te sientes con los simulacros y tests?',
 ];
+
+export type ResultadoConfiguracion = 'EXITO' | 'CONFLICTO';
 
 @Component({
   selector: 'app-planificacion-configuracion-wizard',
@@ -62,7 +65,13 @@ const PREGUNTAS_CUESTIONARIO: string[] = [
 export class PlanificacionConfiguracionWizardComponent implements OnInit {
   @Input() configuracion!: ConfiguracionPlanificacion | null;
   @Input() modoEdicion = false;
-  @Output() configurada = new EventEmitter<void>();
+  /**
+   * Perfil usa esta entrada cuando acaba de guardar preferencias. Su valor
+   * tiene prioridad explícita sobre la variante activa; la edición normal no
+   * la informa y conserva la prioridad de la configuración activa.
+   */
+  @Input() preferenciasPrecargadas: PreferenciasPrecargadas | null = null;
+  @Output() configurada = new EventEmitter<ResultadoConfiguracion>();
   @Output() cancelado = new EventEmitter<void>();
 
   private readonly autoasignacionService = inject(AutoasignacionService);
@@ -86,9 +95,10 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   // Paso 2: nivel
   elegirCuestionario = signal(false);
-  respuestas: number[] = [0, 0, 0, 0, 0];
+  respuestas: Array<number | null> = Array.from({ length: 5 }, () => null);
   recomendacion: RecomendacionNivel | null = null;
   enviandoRecomendacion = signal(false);
+  errorCuestionario: string | null = null;
 
   // Paso 3: confirmación
   guardando = signal(false);
@@ -112,8 +122,18 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     return true;
   }
 
+  /** El backend no aplica valores por defecto: los tres campos son obligatorios. */
+  get puedeGuardarConfiguracion(): boolean {
+    return Boolean(
+      this.preferencias.oposicion &&
+      this.preferencias.nivel &&
+      this.preferencias.franja &&
+      (!this.requiereConfirmacionGCV || this.gcvConfirmado),
+    );
+  }
+
   get tieneNivelPrecargado(): boolean {
-    return !!this.configuracion?.preferenciasPrecargadas?.nivel;
+    return !!this.preferencias.nivel;
   }
 
   get hayConfiguracionAnterior(): boolean {
@@ -125,12 +145,15 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const prefs = this.configuracion?.preferenciasPrecargadas;
+    // Al editar, la variante activa es la fuente de verdad. Las preferencias
+    // de onboarding solo sirven para la primera configuración o cuando todavía
+    // no existe una variante activa.
+    const prefs = this.fuentePreferencias();
     if (prefs) {
       this.preferencias = {
-        oposicion: prefs.oposicion,
-        nivel: prefs.nivel,
-        franja: prefs.franja,
+        oposicion: prefs.oposicion ?? null,
+        nivel: prefs.nivel ?? null,
+        franja: prefs.franja ?? null,
       };
       this.gcvConfirmado = prefs.oposicion !== Oposicion.GENERAL;
     }
@@ -144,7 +167,19 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     this.preferencias.oposicion = (prefs.oposicion as Oposicion) ?? null;
     this.preferencias.nivel = (prefs.nivel as NivelOposicion) ?? null;
     this.preferencias.franja = prefs.franja;
+    this.gcvConfirmado = this.preferencias.oposicion !== Oposicion.GENERAL;
     this.recomendacion = null;
+  }
+
+  onRespuestaChange(indice: number, respuesta: number | string | null): void {
+    const valor = respuesta === null ? null : Number(respuesta);
+    this.respuestas = this.respuestas.map((actual, posicion) =>
+      posicion === indice &&
+      (valor === null || (Number.isInteger(valor) && valor >= 0 && valor <= 3))
+        ? valor
+        : actual,
+    );
+    this.errorCuestionario = null;
   }
 
   /** Al elegir oposición, el usuario "acepta" la confirmación GCV si no es GCV. */
@@ -163,22 +198,27 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   irAPasoConfirmacion(): void {
-    // Si no hay nivel (ni elegido ni recomendado) y no se decide el
-    // cuestionario, dejamos continuar con nivel nulo (el backend decide).
+    // El paso final solo puede abrirse con una selección completa; el mismo
+    // guard se repite en guardarConfiguracion para impedir un POST inválido.
+    if (!this.puedeGuardarConfiguracion) return;
     this.activeStep.set(2);
   }
 
   async obtenerRecomendacion(): Promise<void> {
-    if (this.respuestas.some((r) => r < 0 || r > 3)) {
-      this.toast.error('Revisa las respuestas del cuestionario (0-3)');
+    if (!this.cuestionarioCompleto) {
+      this.errorCuestionario =
+        'Responde las 5 preguntas antes de obtener una recomendación.';
+      this.toast.error(this.errorCuestionario);
       return;
     }
+    this.errorCuestionario = null;
     this.enviandoRecomendacion.set(true);
     try {
       this.recomendacion = await firstValueFrom(
-        this.autoasignacionService.recomendarNivel$(this.respuestas),
+        this.autoasignacionService.recomendarNivel$(
+          this.respuestas.map((respuesta) => respuesta as number),
+        ),
       );
-      this.preferencias.nivel = this.recomendacion.nivelRecomendado;
     } catch {
       this.toast.error('No se pudo obtener la recomendación');
     } finally {
@@ -194,14 +234,17 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   async guardarConfiguracion(): Promise<void> {
+    if (!this.puedeGuardarConfiguracion) {
+      this.errorGuardado =
+        'Selecciona oposición, nivel y franja horaria antes de guardar.';
+      return;
+    }
     this.guardando.set(true);
     this.errorGuardado = null;
     try {
       const body: GuardarConfiguracionDTO = {
         oposicion: this.preferencias.oposicion as Oposicion,
-        nivel:
-          (this.preferencias.nivel as NivelOposicion) ??
-          NivelOposicion.INICIACION,
+        nivel: this.preferencias.nivel as NivelOposicion,
         franja: this.preferencias.franja as TipoDePlanificacionDeseada,
         version: this.configuracion?.configuracionActiva?.version ?? 0,
       };
@@ -209,13 +252,13 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       await firstValueFrom(
         this.autoasignacionService.guardarConfiguracion$(body),
       );
-      this.configurada.emit();
+      this.configurada.emit('EXITO');
     } catch (err) {
       if (err instanceof HttpErrorResponse) {
         if (err.status === 409) {
           this.errorGuardado =
             'Tu configuración ha cambiado en otro dispositivo. Recargando…';
-          this.configurada.emit();
+          this.configurada.emit('CONFLICTO');
         } else if (err.status === 422) {
           this.errorGuardado =
             'Tu combinación no tiene planificación disponible, contacta con la academia.';
@@ -236,5 +279,26 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   cancelar(): void {
     this.cancelado.emit();
+  }
+
+  get cuestionarioCompleto(): boolean {
+    return (
+      this.respuestas.length === this.preguntas.length &&
+      this.respuestas.every(
+        (respuesta): respuesta is number =>
+          typeof respuesta === 'number' &&
+          Number.isInteger(respuesta) &&
+          respuesta >= 0 &&
+          respuesta <= 3,
+      )
+    );
+  }
+
+  private fuentePreferencias(): PreferenciasPrecargadas | null {
+    if (this.preferenciasPrecargadas !== null) {
+      return this.preferenciasPrecargadas;
+    }
+    const activa = this.configuracion?.configuracionActiva?.variante;
+    return activa ?? this.configuracion?.preferenciasPrecargadas ?? null;
   }
 }

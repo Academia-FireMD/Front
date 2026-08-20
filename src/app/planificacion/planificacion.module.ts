@@ -40,6 +40,7 @@ import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantill
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
 import { VistaSemanalComponent } from './vista-semanal/vista-semanal.component';
 import { PlanificacionAdminComponent } from './planificacion-admin/planificacion-admin.component';
+import { PlanificacionTutorComponent } from './planificacion-tutor/planificacion-tutor.component';
 registerLocaleData(localeEs);
 @NgModule({
   declarations: [
@@ -81,6 +82,7 @@ registerLocaleData(localeEs);
     PlanificacionBloqueadaComponent,
     PlanificacionConfiguracionWizardComponent,
     PlanificacionAdminComponent,
+    PlanificacionTutorComponent,
   ],
   providers: [
     ConfirmationService,

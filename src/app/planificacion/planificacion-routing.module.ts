@@ -12,6 +12,7 @@ import { PlanificacionMensualOverviewComponent } from './planificacion-mensual-o
 import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantilla-semanal-edit.component';
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
 import { PlanificacionAdminComponent } from './planificacion-admin/planificacion-admin.component';
+import { PlanificacionTutorComponent } from './planificacion-tutor/planificacion-tutor.component';
 
 const routes: Routes = [
   {
@@ -96,6 +97,13 @@ const routes: Routes = [
     canActivate: [roleGuard],
     title: 'Administración de planificaciones',
     data: { expectedRole: 'ADMIN', title: 'Administración de planificaciones' },
+  },
+  {
+    path: 'tutor',
+    component: PlanificacionTutorComponent,
+    canActivate: [roleGuard],
+    title: 'Panel tutor',
+    data: { expectedRole: 'ALUMNO', title: 'Panel tutor' },
   },
 ];
 

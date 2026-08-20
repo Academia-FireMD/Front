@@ -1,3 +1,5 @@
+<p-confirmDialog />
+
 <p-tabView>
   <p-tabPanel header="Variantes" leftIcon="pi pi-th-large">
     <div class="grid">
@@ -12,6 +14,7 @@
               pInputText
               formControlName="codigo"
               placeholder="p.ej. GA4-6"
+              [readonly]="varianteForm.controls.codigo.disabled"
             />
             <label>Oposición *</label>
             <p-dropdown
@@ -19,6 +22,7 @@
               formControlName="oposicion"
               optionLabel="label"
               optionValue="value"
+              [disabled]="varianteForm.controls.oposicion.disabled"
               styleClass="w-full"
             ></p-dropdown>
             <label>Nivel *</label>
@@ -27,6 +31,7 @@
               formControlName="nivel"
               optionLabel="label"
               optionValue="value"
+              [disabled]="varianteForm.controls.nivel.disabled"
               styleClass="w-full"
             ></p-dropdown>
             <label>Franja *</label>
@@ -35,6 +40,17 @@
               formControlName="franja"
               optionLabel="label"
               optionValue="value"
+              [disabled]="varianteForm.controls.franja.disabled"
+              styleClass="w-full"
+            ></p-dropdown>
+            <label>Planificación mensual publicada</label>
+            <p-dropdown
+              [options]="planificacionOptions"
+              formControlName="planificacionMensualId"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              placeholder="Sin planificación publicada"
               styleClass="w-full"
             ></p-dropdown>
             <div class="flex align-items-center gap-2">
@@ -65,6 +81,7 @@
               <th>Oposición</th>
               <th>Nivel</th>
               <th>Franja</th>
+              <th>Plan publicada</th>
               <th>Activa</th>
               <th></th>
             </tr>
@@ -76,6 +93,9 @@
               <td>{{ v.nivel }}</td>
               <td>
                 {{ v.franja === "FRANJA_SEIS_A_OCHO_HORAS" ? "6-8h" : "4-6h" }}
+              </td>
+              <td>
+                {{ v.planificacionMensual?.identificador ?? "Sin plan" }}
               </td>
               <td>
                 <p-inputSwitch
@@ -111,6 +131,7 @@
               formControlName="oposicionSuscripcion"
               optionLabel="label"
               optionValue="value"
+              [disabled]="reglaForm.controls.oposicionSuscripcion.disabled"
               styleClass="w-full"
             ></p-dropdown>
             <label>Oposición de planificación *</label>
@@ -119,6 +140,7 @@
               formControlName="oposicionPlanificacion"
               optionLabel="label"
               optionValue="value"
+              [disabled]="reglaForm.controls.oposicionPlanificacion.disabled"
               styleClass="w-full"
             ></p-dropdown>
             <div class="flex align-items-center gap-2">
@@ -170,12 +192,62 @@
     </div>
   </p-tabPanel>
 
-  <p-tabPanel header="Sin coincidencia" leftIcon="pi pi-exclamation-circle">
+  <p-tabPanel header="Diagnóstico" leftIcon="pi pi-exclamation-circle">
     <p-message
       severity="info"
       text="Alumnos con suscripción activa cuyo perfil no coincide con ninguna variante de planificación disponible."
       styleClass="w-full mb-3"
     ></p-message>
+    @if (error()) {
+      <p-message
+        severity="error"
+        [text]="error()!"
+        styleClass="w-full mb-3"
+      ></p-message>
+    }
+    <div class="flex flex-wrap gap-2 align-items-center mb-3">
+      <p-button
+        label="Previsualizar reconciliación"
+        icon="pi pi-eye"
+        [loading]="reconciliando()"
+        (onClick)="previsualizarReconciliacion()"
+      ></p-button>
+      <p-button
+        label="Aplicar reconciliación"
+        icon="pi pi-check"
+        severity="danger"
+        [loading]="reconciliando()"
+        [disabled]="reconciliacion()?.aplicar !== false"
+        (onClick)="aplicarReconciliacion()"
+      ></p-button>
+    </div>
+    @if (reconciliacion(); as resumen) {
+      <div class="grid mb-3">
+        <div class="col-12">
+          <p-message
+            severity="success"
+            [text]="
+              resumen.aplicar
+                ? 'Reconciliación aplicada'
+                : 'Previsualización: no se han escrito cambios'
+            "
+            styleClass="w-full"
+          ></p-message>
+        </div>
+        <div class="col-6 md:col-3">
+          <strong>Elegibles</strong><br />{{ resumen.totalElegibles }}
+        </div>
+        <div class="col-6 md:col-3">
+          <strong>Aplicables</strong><br />{{ resumen.aplicables }}
+        </div>
+        <div class="col-6 md:col-3">
+          <strong>Aplicados</strong><br />{{ resumen.aplicados }}
+        </div>
+        <div class="col-6 md:col-3">
+          <strong>No aplicables</strong><br />{{ resumen.noAplicables }}
+        </div>
+      </div>
+    }
     <p-table [value]="sinCoincidencia()" [paginator]="true" [rows]="10">
       <ng-template pTemplate="header">
         <tr>
@@ -183,25 +255,23 @@
           <th>Email</th>
           <th>Variante</th>
           <th>Motivo</th>
+          <th>Aplicable</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-a>
         <tr>
-          <td>{{ a.alumno.nombre }} {{ a.alumno.apellidos }}</td>
-          <td>{{ a.alumno.email }}</td>
+          <td>{{ a.alumno?.nombre }} {{ a.alumno?.apellidos }}</td>
+          <td>{{ a.alumno?.email ?? "—" }}</td>
           <td>{{ a.variante?.codigo ?? "—" }}</td>
           <td>
-            {{
-              a.motivo === "VARIANTE_INACTIVA"
-                ? "Variante desactivada"
-                : "Oposición no permitida"
-            }}
+            {{ motivoDiagnostico(a.motivo) }}
           </td>
+          <td>{{ a.aplicable ? "Sí" : "No" }}</td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="4" class="text-center">
+          <td colspan="5" class="text-center">
             No hay alumnos sin coincidencia.
           </td>
         </tr>

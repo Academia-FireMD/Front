@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../../testing';
 import { AppConfigService } from '../../../services/app-config.service';
 import { EstadoModulos } from '../../../shared/models/app-config.model';
@@ -9,6 +10,10 @@ import {
   Oposicion,
   OPOSICION_LABELS,
 } from '../../../shared/models/subscription.model';
+import { NivelOposicion } from '../../../shared/models/pregunta.model';
+import type { TipoDePlanificacionDeseada } from '../../../shared/models/user.model';
+import type { AlumnoPlanificacionTutor } from '../../../planificacion/models/autoasignacion.model';
+import { UserDashboardComponent } from './user-dashboard.component';
 
 // UserDashboardComponent has deep imports (PrimengModule, GenericListComponent)
 // that can't be resolved in the Jest test environment.
@@ -289,6 +294,148 @@ describe('UserDashboardComponent — lógica Fase 2 (plan 2026-05-11)', () => {
       expect(confirmationService.confirm).toHaveBeenCalled();
       expect(userService.cancelUserSubscription).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('UserDashboardComponent — diálogo legacy de planificación', () => {
+  const opciones = [
+    {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+      varianteId: 8,
+      planificacionMensual: {
+        id: 91,
+        identificador: 'MADRID-6-8',
+        mes: 8,
+        ano: 2026,
+      },
+    },
+    {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+      varianteId: 9,
+      planificacionMensual: null,
+    },
+  ];
+
+  const alumnoConfig: AlumnoPlanificacionTutor = {
+    alumno: { id: 42, nombre: 'Ana', apellidos: 'A', email: 'ana@test.es' },
+    configuracion: {
+      variante: {
+        id: 8,
+        codigo: 'MAD6-8',
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.AVANZADO,
+        franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+      },
+      version: 2,
+      fechaVigencia: '2026-08-20',
+      origen: 'ALUMNO',
+      planificacionMensual: {
+        id: 91,
+        identificador: 'MADRID-6-8',
+        mes: 8,
+        ano: 2026,
+      },
+    },
+    preferencias: {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+    },
+    oposicionesPermitidas: [Oposicion.MADRID],
+    opcionesPermitidas: opciones,
+    recomendacion: null,
+  };
+
+  function crearComponente(overrides: Record<string, unknown> = {}) {
+    const componente = Object.create(
+      UserDashboardComponent.prototype,
+    ) as UserDashboardComponent;
+    Object.assign(componente, {
+      toast: { success: jest.fn(), error: jest.fn(), warning: jest.fn() },
+      autoasignacionService: {
+        getAdminAlumnoConfiguracion$: jest.fn(() => of(alumnoConfig)),
+        forzarConfiguracionTutor$: jest.fn(() => of({})),
+      },
+      ...overrides,
+    });
+    return componente;
+  }
+
+  it('carga la configuración admin y deriva la cascada desde combinaciones backend', async () => {
+    const componente = crearComponente();
+
+    await componente.abrirForzarPlanificacion({ id: 42 } as any);
+
+    expect(
+      componente.autoasignacionService.getAdminAlumnoConfiguracion$,
+    ).toHaveBeenCalledWith(42);
+    expect(componente.tutorForzarPreferencias).toEqual({
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    });
+    expect(componente.tutorForzarFranjaOptions).toEqual([
+      { label: '6-8 horas', value: 'FRANJA_SEIS_A_OCHO_HORAS' },
+      { label: '4-6 horas', value: 'FRANJA_CUATRO_A_SEIS_HORAS' },
+    ]);
+  });
+
+  it('envía solo la combinación publicada y el motivo al forzar', async () => {
+    const componente = crearComponente();
+    await componente.abrirForzarPlanificacion({ id: 42 } as any);
+    componente.tutorForzarMotivo = 'Cambio acordado';
+
+    await componente.confirmarForzarPlanificacion();
+
+    expect(
+      componente.autoasignacionService.forzarConfiguracionTutor$,
+    ).toHaveBeenCalledWith(42, {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+      motivo: 'Cambio acordado',
+    });
+  });
+
+  it('bloquea una combinación sin plan publicado y muestra error visible si el force falla', async () => {
+    const warning = jest.fn();
+    const componente = crearComponente({
+      toast: { success: jest.fn(), error: jest.fn(), warning },
+    });
+    await componente.abrirForzarPlanificacion({ id: 42 } as any);
+    componente.tutorForzarPreferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+    };
+    componente.tutorForzarMotivo = 'Cambio acordado';
+    await componente.confirmarForzarPlanificacion();
+    expect(warning).toHaveBeenCalledWith(
+      'La combinación seleccionada no tiene una planificación publicada.',
+    );
+    expect(
+      componente.autoasignacionService.forzarConfiguracionTutor$,
+    ).not.toHaveBeenCalled();
+
+    componente.tutorForzarPreferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+    };
+    componente.autoasignacionService.forzarConfiguracionTutor$ = jest.fn(() =>
+      throwError(() => new Error('fallo')),
+    );
+    await componente.confirmarForzarPlanificacion();
+    expect(componente.toast.error).toHaveBeenCalledWith(
+      'No se pudo cambiar la planificación',
+    );
+    expect(componente.tutorForzarError).toBe(
+      'No se pudo cambiar la planificación',
+    );
   });
 });
 

@@ -1,8 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { COMMON_TEST_PROVIDERS } from '../../../testing';
-
-
 import { AjustesAdminComponent } from './ajustes-admin.component';
 
 describe('AjustesAdminComponent', () => {
@@ -14,8 +12,7 @@ describe('AjustesAdminComponent', () => {
       declarations: [AjustesAdminComponent],
       providers: [...COMMON_TEST_PROVIDERS],
       schemas: [NO_ERRORS_SCHEMA],
-    })
-    .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(AjustesAdminComponent);
     component = fixture.componentInstance;
@@ -23,5 +20,13 @@ describe('AjustesAdminComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('no muestra ni expone el disparador legacy de asignación total', () => {
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'Asignación automática de planificación',
+    );
   });
 });

@@ -26,7 +26,10 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     ultimaRecomendacion: null,
   };
 
-  async function montar(estado: ConfiguracionPlanificacion) {
+  async function montar(
+    estado: ConfiguracionPlanificacion,
+    revisar: string | null = null,
+  ) {
     await TestBed.configureTestingModule({
       imports: [PlanificacionAlumnoComponent],
       providers: [
@@ -36,10 +39,19 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
         },
         {
           provide: ToastrService,
-          useValue: { success: jest.fn(), error: jest.fn() },
+          useValue: {
+            success: jest.fn(),
+            error: jest.fn(),
+            warning: jest.fn(),
+          },
         },
         { provide: Router, useValue: { navigate: jest.fn() } },
-        { provide: ActivatedRoute, useValue: {} },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParamMap: { get: () => revisar } },
+          },
+        },
       ],
     }).compileComponents();
 
@@ -81,11 +93,122 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
         version: 1,
         fechaVigencia: '2026-08-18T00:00:00.000Z',
         origen: 'ALUMNO',
+        planificacionMensual: {
+          id: 42,
+          identificador: 'S082026GA4-6',
+          mes: 8,
+          ano: 2026,
+        },
       },
     });
     const html = (fixture.nativeElement as HTMLElement).innerHTML;
     expect(html).not.toContain('progressbar');
     expect(html).toContain('Tu planificación está activa');
     expect(html).toContain('AYVI4-6');
+  });
+
+  it('ACTIVA expone el id del plan mensual canónico para el enlace del calendario', async () => {
+    await montar({
+      ...estadoRequiereConfiguracion,
+      estado: 'ACTIVA',
+      configuracionActiva: {
+        variante: {
+          codigo: 'AYVI4-6',
+          oposicion: 'VALENCIA_AYUNTAMIENTO' as never,
+          nivel: 'INICIACION' as never,
+          franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as never,
+        },
+        version: 1,
+        fechaVigencia: '2026-08-18T00:00:00.000Z',
+        origen: 'ALUMNO',
+        planificacionMensual: {
+          id: 77,
+          identificador: 'S082026AYVI4-6',
+          mes: 8,
+          ano: 2026,
+        },
+      },
+    });
+
+    expect(fixture.componentInstance.planificacionMensualId).toBe(77);
+    const link = fixture.nativeElement.querySelector(
+      'button[label="Ver mi planificación"]',
+    );
+    expect(link).toBeTruthy();
+  });
+
+  it('ACTIVA vuelve al resumen cuando se cancela la edición', async () => {
+    await montar({
+      ...estadoRequiereConfiguracion,
+      estado: 'ACTIVA',
+      configuracionActiva: {
+        variante: {
+          codigo: 'AYVI4-6',
+          oposicion: 'VALENCIA_AYUNTAMIENTO' as never,
+          nivel: 'INICIACION' as never,
+          franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as never,
+        },
+        version: 1,
+        fechaVigencia: '2026-08-18T00:00:00.000Z',
+        origen: 'ALUMNO',
+        planificacionMensual: {
+          id: 77,
+          identificador: 'S082026AYVI4-6',
+          mes: 8,
+          ano: 2026,
+        },
+      },
+    });
+
+    fixture.componentInstance.editando = true;
+    fixture.detectChanges();
+
+    fixture.componentInstance.cancelarEdicion();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.editando).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Tu planificación está activa',
+    );
+  });
+
+  it('PENDIENTE_PUBLICACION informa al alumno sin pedir repetir preferencias', async () => {
+    await montar({
+      ...estadoRequiereConfiguracion,
+      estado: 'PENDIENTE_PUBLICACION',
+      configuracionActiva: null,
+    });
+
+    const html = (fixture.nativeElement as HTMLElement).innerHTML;
+    expect(html).toContain('pendiente de publicación');
+    expect(html).toContain('No necesitas repetir tus datos');
+    expect(html).toContain('Cambiar preferencias');
+  });
+
+  it('PENDIENTE_PUBLICACION abre el wizard precargado desde Perfil', async () => {
+    await montar(
+      {
+        ...estadoRequiereConfiguracion,
+        estado: 'PENDIENTE_PUBLICACION',
+      },
+      'preferencias',
+    );
+
+    const html = (fixture.nativeElement as HTMLElement).innerHTML;
+    expect(fixture.componentInstance.editando).toBe(true);
+    expect(html).toContain('Tus preferencias están guardadas');
+    expect(html).toContain('app-planificacion-configuracion-wizard');
+  });
+
+  it('un conflicto del wizard nunca muestra el toast de éxito', async () => {
+    await montar(estadoRequiereConfiguracion);
+    const toast = TestBed.inject(ToastrService);
+
+    fixture.componentInstance.onConfigurada('CONFLICTO');
+
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.stringContaining('cambió en otro dispositivo'),
+    );
   });
 });
