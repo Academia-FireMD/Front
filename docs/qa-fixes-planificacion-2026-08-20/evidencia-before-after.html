@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>QA visual — correcciones de planificación</title>
+  <style>
+    @page { size: A4 landscape; margin: 12mm; }
+    :root { color: #17202a; font-family: Arial, sans-serif; }
+    body { margin: 0; }
+    h1 { font-size: 22px; margin: 0 0 5px; }
+    h2 { font-size: 16px; margin: 22px 0 8px; }
+    p { font-size: 10px; line-height: 1.35; margin: 4px 0 10px; }
+    .meta { color: #52606d; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    figure { margin: 0; border: 1px solid #d9e2ec; padding: 5px; break-inside: avoid; }
+    figure img { display: block; width: 100%; height: auto; }
+    figcaption { font-size: 9px; font-weight: 700; padding: 4px 2px 1px; }
+    .single { max-width: 760px; }
+    .single img { width: 100%; }
+    .page-break { break-before: page; }
+  </style>
+</head>
+<body>
+  <h1>QA visual — correcciones de planificación mensual</h1>
+  <p class="meta">AcademiaFireMD · 20/08/2026 · flujo admin local/staging-like, sin despliegue ni escritura externa.</p>
+
+  <h2>1. Diálogo «Volcar variante completa»</h2>
+  <p>Se conserva el flujo y se corrige el texto de ayuda para reflejar el contrato real del backend: se buscan identificadores que <em>terminan</em> en el código de hoja.</p>
+  <div class="pair">
+    <figure><img src="assets/antes-dialogo.png"><figcaption>Antes — ayuda ambigua («empiece por»)</figcaption></figure>
+    <figure><img src="assets/despues-dialogo.png"><figcaption>Después — ayuda alineada con endsWith</figcaption></figure>
+  </div>
+
+  <h2>2. Previsualización del volcado</h2>
+  <p>La tabla ahora muestra también «Actualizados», junto a creados y omitidos, y el resumen usa los mismos contadores. La captura posterior usa dos plantillas temporales de QA local y no se volcó en la planificación.</p>
+  <div class="pair">
+    <figure><img src="assets/antes-preview.png"><figcaption>Antes — no había columna de actualizados</figcaption></figure>
+    <figure><img src="assets/despues-preview.png"><figcaption>Después — columna y resumen de actualizados</figcaption></figure>
+  </div>
+
+  <h2 class="page-break">3. Pantalla de planificación mensual</h2>
+  <p>Estado después de autenticación y navegación end-to-end al editor mensual. La pantalla queda operativa y el modal se abre desde el menú de acciones.</p>
+  <figure class="single"><img src="assets/despues-planificacion.png"><figcaption>Después — editor mensual autenticado</figcaption></figure>
+</body>
+</html>
