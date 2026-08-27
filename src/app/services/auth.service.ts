@@ -9,6 +9,8 @@ import {
   tap,
   throwError,
   catchError,
+  finalize,
+  shareReplay,
 } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Usuario } from '../shared/models/user.model';
@@ -25,6 +27,7 @@ export class AuthService extends ApiBaseService {
   // BehaviorSubject para mantener el estado del usuario actual
   private currentDecodedUserSubject = new BehaviorSubject<any | null>(null);
   private _userService!: UserService;
+  private refreshInFlight$: Observable<any> | null = null;
 
   public currentUser$ = this.currentDecodedUserSubject.pipe(
     switchMap((user) => {
@@ -120,12 +123,18 @@ export class AuthService extends ApiBaseService {
   }
 
   public refreshToken$(): Observable<any> {
+    if (this.refreshInFlight$) {
+      return this.refreshInFlight$;
+    }
+
     const refreshToken = this.getRefreshToken();
     if (!refreshToken) {
       return throwError(() => new Error('No refresh token available'));
     }
 
-    return this.post('/refresh', { refresh_token: refreshToken }).pipe(
+    const refresh$ = this.post('/refresh', {
+      refresh_token: refreshToken,
+    }).pipe(
       tap((tokens) => {
         if (tokens && tokens.access_token) {
           this.setToken(tokens.access_token);
@@ -139,7 +148,16 @@ export class AuthService extends ApiBaseService {
           }
         }
       }),
+      // El slot se libera tanto en éxito como en error. `shareReplay` evita
+      // que dos 401 simultáneos disparen dos POST de refresh.
+      finalize(() => {
+        this.refreshInFlight$ = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+
+    this.refreshInFlight$ = refresh$;
+    return refresh$;
   }
 
   public logout$(): Observable<any> {
