@@ -7,7 +7,7 @@
  *   - Modo "Encuentra la calle X": un ciclo de acierto y otro de fallo →
  *     se dispara POST /callejero/progreso y el panel de progreso se refresca.
  *   - Modo "¿Qué calle es esta?": aparecen 4 opciones; responder la correcta.
- *   - Atribución OSM + IGN visible en el mapa.
+ *   - Atribución de OpenStreetMap y de las capas de mapa visible.
  *
  * Todos los endpoints `/callejero/*` están MOCKEADOS con `page.route` (igual
  * que `cursos-alumno.e2e.spec.ts`), así que el test corre solo con `ng serve`,
@@ -59,10 +59,19 @@ interface CallejeroState {
   progresoCalls: { calleId: number; acierto: boolean }[];
   /** dominadas por zonaId (mutado por cada acierto). */
   dominadas: Record<number, number>;
+  callesApiCalls: number;
+  geocodeApiCalls: number;
+  routeApiCalls: number;
 }
 
 function freshState(): CallejeroState {
-  return { progresoCalls: [], dominadas: {} };
+  return {
+    progresoCalls: [],
+    dominadas: {},
+    callesApiCalls: 0,
+    geocodeApiCalls: 0,
+    routeApiCalls: 0,
+  };
 }
 
 const isXhr = (req: Request) => {
@@ -125,7 +134,62 @@ async function setupCallejeroInterceptors(
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(callejero.ciudades),
+      // Valencia no es la primera: el embed debe resolver por slug, no por
+      // orden de la respuesta.
+      body: JSON.stringify([
+        { id: 99, slug: 'madrid', nombre: 'Madrid' },
+        ...callejero.ciudades,
+      ]),
+    });
+  });
+
+  // GET /callejero/ciudades/:id/calles — fuente única del callejero del embed.
+  await page.route(/\/callejero\/ciudades\/1\/calles$/, (route) => {
+    if (!isXhr(route.request())) return route.continue();
+    state.callesApiCalls += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        calles: [
+          {
+            id: 101,
+            nombre: 'Calle API Real',
+            tipoVia: 'Calle',
+            lat: 39.45,
+            lng: -0.35,
+            longitudM: 500,
+            parquesCobertura: [],
+            bb: [39.4, -0.4, 39.5, -0.3],
+          },
+        ],
+      }),
+    });
+  });
+
+  // Geocodificación propia, siempre ligada a ciudadId.
+  await page.route(/\/callejero\/geocode\/buscar\?/, (route) => {
+    if (!isXhr(route.request())) return route.continue();
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('ciudadId') !== '1') return route.continue();
+    state.geocodeApiCalls += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [{ nombre: 'Calle API Real', lat: 39.45, lng: -0.35 }],
+      }),
+    });
+  });
+
+  await page.route(/\/callejero\/geocode\/reverse\?/, (route) => {
+    if (!isXhr(route.request())) return route.continue();
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('ciudadId') !== '1') return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ direccion: 'Calle API Real, 1' }),
     });
   });
 
@@ -216,15 +280,38 @@ async function setupCallejeroInterceptors(
   // GET /callejero/recorrido?calleId=...
   await page.route(/\/callejero\/recorrido(\?|$)/, (route) => {
     if (!isXhr(route.request())) return route.continue();
+    state.routeApiCalls += 1;
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        polyline: { type: 'LineString', coordinates: [] },
-        calles: ['Calle A', 'Calle B'],
+        polyline: [
+          [39.45, -0.35],
+          [39.46, -0.36],
+        ],
+        calles: ['Avenida API', 'Calle API Real'],
         km: 2.1,
         minutos: 6,
-        estacion: { nombre: 'Parc de Bombers Nord', lat: 39.48, lng: -0.37 },
+        estacion: { nombre: 'Parc API', lat: 39.44, lng: -0.34 },
+      }),
+    });
+  });
+
+  await page.route(/\/callejero\/recorrido-libre\?/, (route) => {
+    if (!isXhr(route.request())) return route.continue();
+    state.routeApiCalls += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        polyline: [
+          [39.45, -0.35],
+          [39.46, -0.36],
+        ],
+        calles: ['Avenida API', 'Calle API Real'],
+        km: 2.1,
+        minutos: 6,
+        estacion: { nombre: 'Parc API', lat: 39.44, lng: -0.34 },
       }),
     });
   });
@@ -246,11 +333,35 @@ async function irACallejero(page: Page): Promise<FrameLocator> {
 }
 
 test.describe('Módulo Callejero (alumno)', () => {
+  const forbiddenExternalDomains = [
+    'overpass-api.de',
+    'overpass.kumi.systems',
+    'nominatim.openstreetmap.org',
+    'router.project-osrm.org',
+  ];
+  let currentState: CallejeroState;
+  let blockedExternalUrls: string[];
+
   test.beforeEach(async ({ page }) => {
+    currentState = freshState();
+    blockedExternalUrls = [];
+    await page.route('**/*', async (route) => {
+      const url = route.request().url();
+      if (forbiddenExternalDomains.some((domain) => url.includes(domain))) {
+        blockedExternalUrls.push(url);
+        await route.abort();
+        return;
+      }
+      await route.continue();
+    });
     await setupShellStubs(page);
     await loginAsAlumnoMock(page);
     await setupAppConfigStubs(page);
-    await setupCallejeroInterceptors(page, freshState());
+    await setupCallejeroInterceptors(page, currentState);
+  });
+
+  test.afterEach(() => {
+    expect(blockedExternalUrls).toEqual([]);
   });
 
   test('carga el mapa, la atribución y la pestaña Recorridos (v3)', async ({
@@ -283,5 +394,183 @@ test.describe('Módulo Callejero (alumno)', () => {
     await expect(frame.locator('#difRec button[data-d="dificil"]')).toHaveClass(
       /on/,
     );
+  });
+
+  test('el embed reintenta una petición propia una vez tras 401 con el JWT nuevo', async ({
+    page,
+  }) => {
+    const refreshRequests: Request[] = [];
+    const geocodeRequests: Request[] = [];
+    let rejectFirstGeocode = true;
+
+    page.on('request', (request) => {
+      if (
+        request.url().includes('/auth/refresh') &&
+        request.method() === 'POST'
+      ) {
+        refreshRequests.push(request);
+      }
+      if (
+        request.url().includes('/callejero/geocode/buscar') &&
+        new URL(request.url()).searchParams.get('q') === 'Calle API Real'
+      ) {
+        geocodeRequests.push(request);
+      }
+    });
+
+    await page.route(/\/auth\/refresh\/?$/, (route) =>
+      route.request().method() === 'POST'
+        ? route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              access_token: 'fresh-iframe-token',
+              refresh_token: 'fresh-iframe-refresh-token',
+            }),
+          })
+        : route.fallback(),
+    );
+    await page.route(/\/callejero\/geocode\/buscar\?/, (route) => {
+      const url = new URL(route.request().url());
+      if (
+        url.searchParams.get('q') === 'Calle API Real' &&
+        rejectFirstGeocode
+      ) {
+        rejectFirstGeocode = false;
+        return route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'expired' }),
+        });
+      }
+      return route.fallback();
+    });
+
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    await frame.locator('#recTexto').fill('Calle API Real');
+    await frame.locator('#recBtnTrazar').click();
+    await expect(frame.locator('#rpBody')).toContainText('Parc API', {
+      timeout: 12_000,
+    });
+
+    expect(refreshRequests).toHaveLength(1);
+    expect(geocodeRequests).toHaveLength(2);
+    expect(geocodeRequests[0].headers()['authorization']).toMatch(/^Bearer /);
+    expect(geocodeRequests[1].headers()['authorization']).toBe(
+      'Bearer fresh-iframe-token',
+    );
+  });
+
+  test('una búsqueda A tardía no pisa el recorrido B que terminó antes', async ({
+    page,
+  }) => {
+    let releaseA!: () => void;
+    let markAStarted!: () => void;
+    const aStarted = new Promise<void>((resolve) => {
+      markAStarted = resolve;
+    });
+    const aRelease = new Promise<void>((resolve) => {
+      releaseA = resolve;
+    });
+
+    await page.route(/\/callejero\/geocode\/buscar\?/, async (route) => {
+      const query = new URL(route.request().url()).searchParams.get('q');
+      if (query === 'A') {
+        markAStarted();
+        await aRelease;
+        try {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              items: [{ nombre: 'Destino A', lat: 39.45, lng: -0.35 }],
+            }),
+          });
+        } catch (_) {
+          // La petición A puede haber sido abortada por la nueva búsqueda.
+        }
+        return;
+      }
+      if (query === 'B') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            items: [{ nombre: 'Destino B', lat: 39.46, lng: -0.36 }],
+          }),
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    const input = frame.locator('#recTexto');
+    await input.fill('A');
+    const firstSearch = frame.locator('#recBtnTrazar').click();
+    await aStarted;
+
+    await input.fill('B');
+    await frame.locator('#recBtnTrazar').click();
+    await expect(frame.locator('#rpBody')).toContainText('Destino B', {
+      timeout: 12_000,
+    });
+    await expect(frame.locator('#rpBody')).toContainText('Avenida API');
+
+    releaseA();
+    await firstSearch;
+    await expect(frame.locator('#rpTit')).toContainText('Destino B');
+    await expect(frame.locator('#rpBody')).not.toContainText('Destino A');
+    expect(
+      await frame.locator('#map .leaflet-overlay-pane path').count(),
+    ).toBeGreaterThan(0);
+  });
+
+  test('usa Valencia por slug, muestra la ruta de la API y reutiliza cache de sesión', async ({
+    page,
+  }) => {
+    let frame = await irACallejero(page);
+    await expect(frame.locator('#callejeroEstado')).toContainText('1', {
+      timeout: 12_000,
+    });
+    expect(currentState.callesApiCalls).toBe(1);
+
+    await frame.locator('#tabRecorridos').click();
+    await frame.locator('#recTexto').fill('Calle API Real');
+    await frame.locator('#recBtnTrazar').click();
+    await expect(frame.locator('#rpBody')).toContainText('Parc API', {
+      timeout: 12_000,
+    });
+    await expect(frame.locator('#rpBody')).toContainText('Avenida API');
+    await expect(frame.locator('#rpBody')).toContainText('2.1 km');
+    expect(currentState.routeApiCalls).toBe(1);
+
+    const cacheKeysBeforeReload = await page.evaluate(() =>
+      Object.keys(sessionStorage).filter((key) =>
+        key.startsWith('tf_viales_v6'),
+      ),
+    );
+    expect(cacheKeysBeforeReload).toContain('tf_viales_v6:valencia');
+    expect(
+      await page.evaluate(() =>
+        Object.keys(localStorage).filter((key) =>
+          /tf_viales_v5|tf_geo_|tf_salida/.test(key),
+        ),
+      ),
+    ).toEqual([]);
+
+    await page.reload();
+    frame = await irACallejero(page);
+    await expect(frame.locator('#callejeroEstado')).toContainText('1', {
+      timeout: 8_000,
+    });
+    expect(currentState.callesApiCalls).toBe(1);
+    expect(
+      await page.evaluate(() =>
+        Object.keys(sessionStorage).some((key) => key.includes('tf_viales_v5')),
+      ),
+    ).toBe(false);
   });
 });
