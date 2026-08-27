@@ -21,7 +21,7 @@ import {
   type Page,
   type Request,
 } from '@playwright/test';
-import { loginAsAlumnoMock } from './helpers/auth.helper';
+import { loginAsAlumnoMock, loginAsRoleMock } from './helpers/auth.helper';
 import callejero from './fixtures/callejero-valencia.json';
 import userAlumnoFixture from './fixtures/user-alumno.json';
 
@@ -59,18 +59,22 @@ interface CallejeroState {
   progresoCalls: { calleId: number; acierto: boolean }[];
   /** dominadas por zonaId (mutado por cada acierto). */
   dominadas: Record<number, number>;
+  ciudadesApiCalls: number;
   callesApiCalls: number;
   geocodeApiCalls: number;
   routeApiCalls: number;
+  valenciaAutorizada: boolean;
 }
 
 function freshState(): CallejeroState {
   return {
     progresoCalls: [],
     dominadas: {},
+    ciudadesApiCalls: 0,
     callesApiCalls: 0,
     geocodeApiCalls: 0,
     routeApiCalls: 0,
+    valenciaAutorizada: true,
   };
 }
 
@@ -131,6 +135,14 @@ async function setupCallejeroInterceptors(
   // GET /callejero/ciudades
   await page.route('**/callejero/ciudades', (route) => {
     if (!isXhr(route.request())) return route.continue();
+    state.ciudadesApiCalls += 1;
+    if (!state.valenciaAutorizada) {
+      return route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Callejero no autorizado' }),
+      });
+    }
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -536,6 +548,7 @@ test.describe('Módulo Callejero (alumno)', () => {
       timeout: 12_000,
     });
     expect(currentState.callesApiCalls).toBe(1);
+    expect(currentState.ciudadesApiCalls).toBe(1);
 
     await frame.locator('#tabRecorridos').click();
     await frame.locator('#recTexto').fill('Calle API Real');
@@ -566,11 +579,129 @@ test.describe('Módulo Callejero (alumno)', () => {
     await expect(frame.locator('#callejeroEstado')).toContainText('1', {
       timeout: 8_000,
     });
+    expect(currentState.ciudadesApiCalls).toBe(2);
     expect(currentState.callesApiCalls).toBe(1);
     expect(
       await page.evaluate(() =>
         Object.keys(sessionStorage).some((key) => key.includes('tf_viales_v5')),
       ),
     ).toBe(false);
+  });
+
+  test('coalesce consumidores concurrentes de la carga inicial del callejero', async ({
+    page,
+  }) => {
+    let releaseFirstCity!: () => void;
+    let markFirstCityStarted!: () => void;
+    let firstCitySeen = false;
+    const firstCityStarted = new Promise<void>((resolve) => {
+      markFirstCityStarted = resolve;
+    });
+    const firstCityRelease = new Promise<void>((resolve) => {
+      releaseFirstCity = resolve;
+    });
+
+    // Retiene la primera autorización para que dos consumidores puedan entrar
+    // en cargarViales() mientras resolverCiudad() sigue pendiente.
+    await page.route('**/callejero/ciudades', async (route) => {
+      if (!isXhr(route.request())) return route.fallback();
+      if (!firstCitySeen) {
+        firstCitySeen = true;
+        markFirstCityStarted();
+        await firstCityRelease;
+      }
+      return route.fallback();
+    });
+
+    try {
+      const frame = await irACallejero(page);
+      await firstCityStarted;
+      const embed = page
+        .frames()
+        .find(
+          (candidate) =>
+            candidate !== page.mainFrame() &&
+            candidate.url().includes('callejero-embed/valencia_27.html'),
+        );
+      if (!embed) throw new Error('No se encontró el frame del callejero');
+
+      // El arranque ya tiene un consumidor bloqueado. Añade dos consumidores
+      // explícitos antes de liberar la autorización compartida.
+      const concurrentLoads = embed.evaluate(() => {
+        const scope = globalThis as typeof globalThis & {
+          cargarViales?: () => Promise<unknown>;
+          __tfConcurrentLoadStarted?: boolean;
+        };
+        const load = scope.cargarViales;
+        if (typeof load !== 'function') {
+          throw new Error('cargarViales no está expuesto en el embed');
+        }
+        scope.__tfConcurrentLoadStarted = true;
+        return Promise.all([load(), load()]);
+      });
+      await expect
+        .poll(
+          () =>
+            embed.evaluate(() =>
+              Boolean(
+                (
+                  globalThis as typeof globalThis & {
+                    __tfConcurrentLoadStarted?: boolean;
+                  }
+                ).__tfConcurrentLoadStarted,
+              ),
+            ),
+          { timeout: 3_000 },
+        )
+        .toBe(true);
+      releaseFirstCity();
+      await concurrentLoads;
+
+      await expect(frame.locator('#callejeroEstado')).toContainText('1', {
+        timeout: 12_000,
+      });
+      expect(currentState.ciudadesApiCalls).toBe(1);
+      expect(currentState.callesApiCalls).toBe(1);
+    } finally {
+      releaseFirstCity();
+    }
+  });
+
+  test('no reutiliza el cache de otra cuenta si Valencia está denegada', async ({
+    page,
+  }) => {
+    let frame = await irACallejero(page);
+    await expect(frame.locator('#callejeroEstado')).toContainText('1', {
+      timeout: 12_000,
+    });
+    expect(currentState.callesApiCalls).toBe(1);
+
+    const cache = await page.evaluate(() =>
+      sessionStorage.getItem('tf_viales_v6:valencia'),
+    );
+    expect(cache).toBeTruthy();
+
+    // Simula logout y login con otra cuenta conservando únicamente el catálogo
+    // que la cuenta anterior dejó en sessionStorage.
+    currentState.valenciaAutorizada = false;
+    await page.evaluate((cached) => {
+      sessionStorage.clear();
+      if (cached) sessionStorage.setItem('tf_viales_v6:valencia', cached);
+    }, cache);
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      email: 'otro-alumno@example.invalid',
+      userFixture: userAlumnoFixture,
+    });
+
+    frame = await irACallejero(page);
+    await expect
+      .poll(() => currentState.ciudadesApiCalls, { timeout: 8_000 })
+      .toBe(2);
+    expect(currentState.callesApiCalls).toBe(1);
+    await expect(frame.locator('#listas')).not.toContainText('Calle API Real');
+    await expect(frame.locator('#callejeroEstado')).not.toContainText(
+      'calles cargadas',
+    );
   });
 });
