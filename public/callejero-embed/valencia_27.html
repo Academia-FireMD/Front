@@ -329,7 +329,7 @@ select{border:1.5px solid var(--linea);border-radius:8px;padding:7px 9px;font-si
           <label class="tgl"><input type="checkbox" id="cfgSoloZonas"><span class="lbl">Solo preguntas de parque y coopera <span class="num">(tipo test, sin localizar en el mapa)</span></span></label>
         </div>
         <button class="btn rojo" id="btnEmpezar">Empezar examen</button>
-        <p class="nota">La dificultad decide qué se pregunta. La primera vez tarda unos segundos en descargar el callejero de València; luego queda guardado.</p>
+        <p class="nota">La dificultad decide qué se pregunta. La primera vez tarda unos segundos en cargar el callejero desde la API de la academia; luego queda guardado en esta sesión.</p>
       </div>
       <div id="examLive" style="display:none">
         <div class="marcador">
@@ -354,7 +354,7 @@ select{border:1.5px solid var(--linea);border-radius:8px;padding:7px 9px;font-si
         <div id="recResultados"></div>
         <button class="btn rojo" id="recBtnTrazar">Trazar al primer resultado</button>
         <div id="recGeoMsg" class="nota"></div>
-        <p class="nota">Escribe y <b>elige el sitio</b> en la lista de OpenStreetMap para trazar el recorrido hasta él.</p>
+        <p class="nota">Escribe y <b>elige el sitio</b> en la lista del callejero de la academia para trazar el recorrido hasta él.</p>
         <input id="recBuscar" type="text" placeholder="…o filtra los lugares de la base" autocomplete="off" style="margin-top:12px">
         <div id="recLista"></div>
       </div>
@@ -413,7 +413,7 @@ select{border:1.5px solid var(--linea);border-radius:8px;padding:7px 9px;font-si
       <div class="rp-body" id="rpBody"></div>
     </div>
 
-    <div id="attrib">Zonificación: Bombers de València (Ajuntament) · Mapa: Google / © OpenStreetMap contributors, © CARTO · Geocodificación inversa: Nominatim (OSM) · Coordenadas con fines didácticos · TÉCNIKA FIRE</div>
+    <div id="attrib">Zonificación: Bombers de València (Ajuntament) · Mapa: Google / © OpenStreetMap contributors, © CARTO · Geocodificación y rutas: API de la academia · Coordenadas con fines didácticos · TÉCNIKA FIRE</div>
   </div>
 
 </div>
@@ -591,6 +591,138 @@ const FLAME_RED="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAACCCAYAAAC5F
 (()=>{const f=document.getElementById('fav'); if(f) f.href=FLAME_RED;})();
 function flameIcon(px){return L.divIcon({className:'flame-pin',html:'<img src=\"'+FLAME_RED+'\" alt=\"\" style=\"width:'+px+'px;height:auto;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))\">',iconSize:[px,px*1.35],iconAnchor:[px/2,px*1.18]});}
 
+/* ---------- AUTH / API PROPIA ---------- */
+const TF_AUTH_REQUEST='tf-callejero-auth-request';
+const TF_AUTH_RESPONSE='tf-callejero-auth';
+const TF_AUTH_TIMEOUT_MS=3000;
+const TF_REQUEST_ID_MAX=128;
+const TF_CITY_SLUG='valencia';
+const TF_VIALES_CACHE_PREFIX='tf_viales_v6';
+let __tfAuth=null;          // {token:string|null, apiBase:string}
+let __tfCiudadId=null;
+let __tfInitialAuthPromise=null;
+let __tfRefreshAuthPromise=null;
+const __tfPendingAuth=new Map();
+
+function tfExactKeys(value,keys){
+  if(!value||typeof value!=='object')return false;
+  const actual=Object.keys(value).sort(), expected=keys.slice().sort();
+  return actual.length===expected.length&&actual.every((key,i)=>key===expected[i]);
+}
+function tfValidRequestId(value){ return typeof value==='string'&&value.length>0&&value.length<=TF_REQUEST_ID_MAX; }
+function tfAuthReady(){ return !!(__tfAuth&&typeof __tfAuth.token==='string'&&__tfAuth.token.length>0&&__tfAuth.apiBase); }
+function tfNormalizeApiBase(value){
+  if(typeof value!=='string'||!value.trim())return null;
+  try{
+    const u=new URL(value);
+    if((u.protocol!=='http:'&&u.protocol!=='https:')||u.username||u.password||u.search||u.hash)return null;
+    return u.toString().replace(/\/+$/,'');
+  }catch(_){ return null; }
+}
+function tfRequestId(){
+  if(window.crypto&&typeof window.crypto.randomUUID==='function')return window.crypto.randomUUID();
+  return 'tf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+}
+function tfClearAuthSlot(force,promise){
+  if(force){ if(__tfRefreshAuthPromise===promise)__tfRefreshAuthPromise=null; }
+  else if(__tfInitialAuthPromise===promise)__tfInitialAuthPromise=null;
+}
+function tfSolicitarAuth(forceRefresh){
+  const existing=forceRefresh?__tfRefreshAuthPromise:__tfInitialAuthPromise;
+  if(existing)return existing;
+  const requestId=tfRequestId();
+  const raw=new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{
+      __tfPendingAuth.delete(requestId);
+      reject(new Error('AUTH_TIMEOUT'));
+    },TF_AUTH_TIMEOUT_MS);
+    __tfPendingAuth.set(requestId,{forceRefresh,resolve,reject,timer});
+    try{
+      window.parent.postMessage({type:TF_AUTH_REQUEST,requestId,forceRefresh},location.origin);
+    }catch(error){
+      clearTimeout(timer); __tfPendingAuth.delete(requestId); reject(error);
+    }
+  });
+  const shared=raw.then(
+    value=>{ tfClearAuthSlot(forceRefresh,shared); return value; },
+    error=>{ tfClearAuthSlot(forceRefresh,shared); throw error; },
+  );
+  if(forceRefresh)__tfRefreshAuthPromise=shared;
+  else __tfInitialAuthPromise=shared;
+  return shared;
+}
+function tfValidAuthResponse(value){
+  if(!tfExactKeys(value,['type','requestId','forceRefresh','token','apiBase']))return false;
+  return value.type===TF_AUTH_RESPONSE&&tfValidRequestId(value.requestId)&&typeof value.forceRefresh==='boolean'&&(value.token===null||typeof value.token==='string')&&!!tfNormalizeApiBase(value.apiBase);
+}
+window.addEventListener('message',(event)=>{
+  if(event.origin!==location.origin||event.source!==window.parent)return;
+  if(!tfValidAuthResponse(event.data))return;
+  const pending=__tfPendingAuth.get(event.data.requestId);
+  if(!pending||pending.forceRefresh!==event.data.forceRefresh)return;
+  clearTimeout(pending.timer); __tfPendingAuth.delete(event.data.requestId);
+  __tfAuth={token:event.data.token,apiBase:tfNormalizeApiBase(event.data.apiBase)};
+  pending.resolve(__tfAuth);
+});
+async function tfEnsureAuth(forceRefresh){
+  if(!forceRefresh&&tfAuthReady())return __tfAuth;
+  return tfSolicitarAuth(forceRefresh);
+}
+async function apiFetch(path,opts={}){
+  await tfEnsureAuth(false);
+  if(!tfAuthReady())throw new Error('AUTH_UNAVAILABLE');
+  const url=__tfAuth.apiBase+'/callejero'+path;
+  const send=()=>{
+    if(!tfAuthReady())throw new Error('AUTH_UNAVAILABLE');
+    const headers=new Headers(opts.headers||{});
+    headers.set('Authorization','Bearer '+__tfAuth.token);
+    return fetch(url,{...opts,headers});
+  };
+  let response=await send();
+  if(response.status===401){
+    await tfEnsureAuth(true);
+    response=await send();
+  }
+  return response;
+}
+async function resolverCiudad(signal){
+  if(__tfCiudadId!==null)return __tfCiudadId;
+  const response=await apiFetch('/ciudades',signal?{signal}:{});
+  if(!response.ok)throw new Error('CIUDADES_UNAVAILABLE');
+  const payload=await response.json();
+  const ciudades=Array.isArray(payload)?payload:(payload&&Array.isArray(payload.ciudades)?payload.ciudades:null);
+  if(!ciudades)throw new Error('CIUDADES_INVALID');
+  const ciudad=ciudades.find(c=>c&&c.slug===TF_CITY_SLUG&&Number.isInteger(c.id)&&c.id>0);
+  if(!ciudad)throw new Error('CIUDAD_VALENCIA_UNAVAILABLE');
+  __tfCiudadId=ciudad.id;
+  return __tfCiudadId;
+}
+function tfTimeout(ms,parentSignal){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),ms);
+  const abort=()=>controller.abort();
+  if(parentSignal){
+    if(parentSignal.aborted)abort();
+    else parentSignal.addEventListener('abort',abort,{once:true});
+  }
+  return {signal:controller.signal,stop:()=>{ clearTimeout(timer); if(parentSignal)parentSignal.removeEventListener('abort',abort); }};
+}
+function tfValidCoord(lat,lng){
+  return typeof lat==='number'&&Number.isFinite(lat)&&lat>=-90&&lat<=90&&typeof lng==='number'&&Number.isFinite(lng)&&lng>=-180&&lng<=180;
+}
+function tfValidGeoItem(item){
+  return !!item&&typeof item==='object'&&typeof item.nombre==='string'&&!!item.nombre.trim()&&tfValidCoord(item.lat,item.lng);
+}
+function tfValidBBox(bb){
+  return Array.isArray(bb)&&bb.length===4&&bb.every(Number.isFinite)&&bb[0]>=-90&&bb[2]<=90&&bb[1]>=-180&&bb[3]<=180&&bb[0]<bb[2]&&bb[1]<bb[3];
+}
+function tfValidVial(v){
+  return !!v&&Number.isInteger(v.id)&&v.id>0&&typeof v.n==='string'&&!!v.n.trim()&&tfValidCoord(v.lat,v.lng)&&typeof v.len==='number'&&Number.isFinite(v.len)&&v.len>=0&&(!v.bb||tfValidBBox(v.bb));
+}
+function tfValidRoute(route){
+  return !!route&&typeof route==='object'&&Array.isArray(route.polyline)&&route.polyline.length>=2&&route.polyline.every(p=>Array.isArray(p)&&p.length===2&&tfValidCoord(p[0],p[1]))&&Array.isArray(route.calles)&&route.calles.every(c=>typeof c==='string')&&typeof route.km==='number'&&Number.isFinite(route.km)&&route.km>=0&&typeof route.minutos==='number'&&Number.isFinite(route.minutos)&&route.minutos>=0&&tfValidGeoItem({nombre:route.estacion&&route.estacion.nombre,lat:route.estacion&&route.estacion.lat,lng:route.estacion&&route.estacion.lng});
+}
+
 /* ---------- ZONIFICACIÓN ---------- */
 let Z = JSON.parse($('#zonas-data').textContent); // {zonas, estaciones, origen}
 const hayZonas = ()=> Z.zonas && Z.zonas.length>0;
@@ -710,19 +842,22 @@ const CALLES_MOD=[
 ];
 const capaMod=L.layerGroup();
 let modNumEl=null, modCargando=false, modListo=false;
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function setEtiquetaMod(hechas){ if(modNumEl)modNumEl.textContent = hechas==null?CALLES_MOD.length:`${hechas}/${CALLES_MOD.length}`; }
 function consultaMod(nuevo,t){
   if(t==='av') return "Avinguda de l'Oest, València, España";
   if(t==='pl') return 'Plaça '+nuevo.replace(/^Pl\.?\s*/,'')+', València, España';
   return nuevo+', València, España';
 }
-function claveGeo(s){ return 'tf_geo_'+s.toLowerCase().replace(/[^a-z0-9]+/g,'_'); }
-async function geocodeUno(q){
-  const vb='-0.46,39.56,-0.27,39.25';
-  const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=1&accept-language=ca,es&countrycodes=es&viewbox=${vb}&bounded=1`;
-  const r=await fetch(url); const j=await r.json();
-  return j.length?{lat:parseFloat(j[0].lat),lng:parseFloat(j[0].lon)}:null;
+async function geocodeUno(q,signal){
+  const timeout=tfTimeout(10000,signal);
+  try{
+    const ciudadId=await resolverCiudad(timeout.signal);
+    const res=await apiFetch(`/geocode/buscar?ciudadId=${ciudadId}&q=${encodeURIComponent(q)}&limit=1`,{signal:timeout.signal});
+    if(!res.ok)throw new Error('GEOCODE_UNAVAILABLE');
+    const payload=await res.json();
+    const item=payload&&Array.isArray(payload.items)?payload.items.find(tfValidGeoItem):null;
+    return item?{nombre:item.nombre,lat:item.lat,lng:item.lng}:null;
+  }finally{ timeout.stop(); }
 }
 function marcaMod(nuevo,antiguo,c){
   const z=zonaEn(c.lat,c.lng);
@@ -742,64 +877,28 @@ async function cargarCallesMod(){
   modCargando=true; let hechas=0;
   for(const cm of CALLES_MOD){
     const nuevo=cm[0], antiguo=cm[1], t=cm[2]||'';
-    const q=consultaMod(nuevo,t); const k=claveGeo(q);
     let c=null;
-    try{ const cached=localStorage.getItem(k); if(cached){ const p=cached.split(','); c={lat:parseFloat(p[0]),lng:parseFloat(p[1])}; } }catch(_){}
-    if(c){ marcaMod(nuevo,antiguo,c); hechas++; setEtiquetaMod(hechas); continue; }
-    try{ c=await geocodeUno(q); if(c){ marcaMod(nuevo,antiguo,c); try{ localStorage.setItem(k,c.lat+','+c.lng); }catch(_){} } }catch(_){}
+    try{ c=await geocodeUno(consultaMod(nuevo,t)); if(c)marcaMod(nuevo,antiguo,c); }catch(_){}
     hechas++; setEtiquetaMod(hechas);
-    await sleep(1100);
   }
   modCargando=false; modListo=true; setEtiquetaMod(null);
 }
 function toggleMod(on){ if(on){ capaMod.addTo(map); cargarCallesMod(); } else { map.removeLayer(capaMod); } }
 
-/* ---------- CALLEJERO COMPLETO DE VALÈNCIA (OpenStreetMap · Overpass) ---------- */
+/* ---------- CALLEJERO COMPLETO DE VALÈNCIA (API de la academia) ---------- */
 let VIALES=null, vialesProm=null;
 const capaAv=L.layerGroup(), capaCalles=L.layerGroup();
 let avRender=false, callesRender=false, avNumEl=null, callesNumEl=null;
 function setNum(elx,v){ if(elx)elx.textContent=v; }
-function bboxZonas(){
-  let s=90,w=180,n=-90,e=-180;
-  Z.zonas.forEach(z=>z.polys.forEach(r=>r.forEach(p=>{ if(p[0]<s)s=p[0]; if(p[0]>n)n=p[0]; if(p[1]<w)w=p[1]; if(p[1]>e)e=p[1]; })));
-  return {s,w,n,e};
-}
 function clasificaVia(name,hw){
   const n=name.toLowerCase();
   if(/\b(avinguda|avenida|gran\s*v[ií]a|passeig|paseo)\b/.test(n)||/^(av|avd|avda|gv|pg)\.?\s/.test(n)) return 'av';
   if(['motorway','trunk','primary','secondary','tertiary'].includes(hw)) return 'principal';
   return 'otra';
 }
-async function fetchOverpass(q){
-  const eps=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
-  let err;
-  for(const ep of eps){
-    try{
-      const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),90000);
-      const r=await fetch(ep,{method:'POST',body:q,signal:ctl.signal}); clearTimeout(to);
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      return await r.json();
-    }catch(e){ err=e; }
-  }
-  throw err||new Error('Servicio Overpass no disponible');
-}
 /* longitud de calle y dificultad */
 const LEN_GRANDE=450, LEN_MEDIA=150; /* metros: umbrales de longitud (ajustables) */
 function distM(la1,lo1,la2,lo2){ const R=6371000,k=Math.PI/180; const dLa=(la2-la1)*k,dLo=(lo2-lo1)*k; const a=Math.sin(dLa/2)**2+Math.cos(la1*k)*Math.cos(la2*k)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(a)); }
-function wayLen(g){ let L=0; for(let i=1;i<g.length;i++)L+=distM(g[i-1].lat,g[i-1].lon,g[i].lat,g[i].lon); return L; }
-/* punto a media longitud de un tramo (siempre SOBRE la calle) */
-function segMid(g){
-  const total=wayLen(g); let half=total/2, acc=0;
-  for(let i=1;i<g.length;i++){ const d=distM(g[i-1].lat,g[i-1].lon,g[i].lat,g[i].lon); if(acc+d>=half){ const t=d?(half-acc)/d:0; return {lat:g[i-1].lat+(g[i].lat-g[i-1].lat)*t, lng:g[i-1].lon+(g[i].lon-g[i-1].lon)*t}; } acc+=d; }
-  const m=g[Math.floor(g.length/2)]||g[0]; return {lat:m.lat,lng:m.lon};
-}
-/* nombre normalizado para fusionar variantes (acentos, abreviaturas, tipo de vía) */
-function normNombre(n){
-  return n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^a-z0-9ñ]+/g,' ').trim()
-    .replace(/^(avinguda|avenida|avda|avgda|avg|av|gran via|passeig|paseo|carrer|calle|cl|c|placa|plaza|pl|cami|camino|ronda|rda|pont|puente|moll|muelle|baixada|costera|travessera|travessia|partida)\s+(de\s+les|de\s+la|de\s+los|de\s+l|dels|del|de|d|la|el|les|els)?\s*/,'')
-    .replace(/\s+/g,' ').trim();
-}
 function fmtLen(m){ return m>=1000?(m/1000).toFixed(1)+' km':Math.round(m)+' m'; }
 function vialesPorDif(vs,dif){
   if(dif==='dificil')return vs;
@@ -810,63 +909,52 @@ async function cargarViales(){
   if(VIALES)return VIALES;
   if(vialesProm)return vialesProm;
   vialesProm=(async()=>{
-    try{ const cch=localStorage.getItem('tf_viales_v5'); if(cch){ const a=JSON.parse(cch); if(Array.isArray(a)&&a.length){ VIALES=a; return a; } } }catch(_){}
-    const b=bboxZonas();
-    const q=`[out:json][timeout:90];way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|pedestrian|road)$"]["name"](${b.s},${b.w},${b.n},${b.e});out tags geom;`;
-    const data=await fetchOverpass(q);
-    const byName={};
-    (data.elements||[]).forEach(el=>{
-      if(el.type!=='way'||!el.geometry||el.geometry.length<2||!el.tags||!el.tags.name)return;
-      const name=el.tags.name.trim(); if(!name)return;
-      const g=el.geometry;
-      let o=byName[name];
-      if(!o)o=byName[name]={minlat:90,minlon:180,maxlat:-90,maxlon:-180,len:0,hw:el.tags.highway,bestSeg:-1,mid:null};
-      for(const p of g){ if(p.lat<o.minlat)o.minlat=p.lat; if(p.lat>o.maxlat)o.maxlat=p.lat; if(p.lon<o.minlon)o.minlon=p.lon; if(p.lon>o.maxlon)o.maxlon=p.lon; }
-      const sl=wayLen(g); o.len+=sl;
-      if(sl>o.bestSeg){ o.bestSeg=sl; o.mid=segMid(g); } /* representante SOBRE el tramo más largo */
-    });
-    /* entradas por nombre exacto */
-    let ent=Object.keys(byName).map(name=>{ const o=byName[name]; const m=o.mid||{lat:(o.minlat+o.maxlat)/2,lng:(o.minlon+o.maxlon)/2}; return {n:name,key:normNombre(name),lat:m.lat,lng:m.lng,bb:[o.minlat,o.minlon,o.maxlat,o.maxlon],len:o.len,seg:o.bestSeg,hw:o.hw}; });
-    /* fusionar variantes del MISMO nombre normalizado que estén cerca (≤600 m) */
-    const byKey={}; ent.forEach(e=>{ (byKey[e.key]=byKey[e.key]||[]).push(e); });
-    const merged=[];
-    for(const key in byKey){
-      const grp=byKey[key], used=new Array(grp.length).fill(false);
-      for(let i=0;i<grp.length;i++){
-        if(used[i])continue; const cl=[grp[i]]; used[i]=true;
-        for(let j=i+1;j<grp.length;j++){ if(!used[j]&&distM(grp[i].lat,grp[i].lng,grp[j].lat,grp[j].lng)<=600){ cl.push(grp[j]); used[j]=true; } }
-        const rep=cl.reduce((a,b)=>b.seg>a.seg?b:a); /* nombre y punto del tramo más largo */
-        const bb=[Math.min(...cl.map(e=>e.bb[0])),Math.min(...cl.map(e=>e.bb[1])),Math.max(...cl.map(e=>e.bb[2])),Math.max(...cl.map(e=>e.bb[3]))];
-        merged.push({n:rep.n,lat:rep.lat,lng:rep.lng,bb,len:cl.reduce((s,e)=>s+e.len,0),hw:rep.hw});
+    const cacheKey=TF_VIALES_CACHE_PREFIX+':'+TF_CITY_SLUG;
+    try{
+      const cached=sessionStorage.getItem(cacheKey);
+      if(cached){
+        const parsed=JSON.parse(cached);
+        if(Array.isArray(parsed)&&parsed.every(tfValidVial)){ VIALES=parsed; return parsed; }
+        sessionStorage.removeItem(cacheKey);
       }
-    }
-    const arr=[];
-    merged.forEach(m=>{ const z=zonaEn(m.lat,m.lng); if(!z||!z.Parque)return; /* sólo dentro de la zonificación (≈ municipio) */
-      arr.push({n:m.n,lat:m.lat,lng:m.lng,t:clasificaVia(m.n,m.hw),p:z.Parque,c:z.Coopera,len:Math.round(m.len),bb:m.bb.map(x=>+x.toFixed(5))}); });
-    arr.sort((a,b)=>a.n.localeCompare(b.n,'es'));
-    VIALES=arr;
-    try{ localStorage.setItem('tf_viales_v5',JSON.stringify(arr)); localStorage.setItem('tf_viales_v5_ts',String(Date.now())); }catch(_){}
-    return arr;
+    }catch(_){ }
+    const timeout=tfTimeout(25000);
+    try{
+      const ciudadId=await resolverCiudad(timeout.signal);
+      const response=await apiFetch(`/ciudades/${ciudadId}/calles`,{signal:timeout.signal});
+      if(!response.ok)throw new Error('CALLES_UNAVAILABLE');
+      const payload=await response.json();
+      if(!payload||!Array.isArray(payload.calles))throw new Error('CALLES_INVALID');
+      const arr=payload.calles.map(c=>{
+        if(!c||!Number.isInteger(c.id)||c.id<=0||typeof c.nombre!=='string'||!c.nombre.trim()||!tfValidCoord(c.lat,c.lng)||typeof c.longitudM!=='number'||!Number.isFinite(c.longitudM)||c.longitudM<0)return null;
+        const z=zonaEn(c.lat,c.lng);
+        return {n:c.nombre,id:c.id,lat:c.lat,lng:c.lng,t:clasificaVia(c.nombre,c.tipoVia),p:z&&z.Parque,c:z&&z.Coopera,len:c.longitudM,bb:tfValidBBox(c.bb)?c.bb:null};
+      }).filter(tfValidVial);
+      arr.sort((a,b)=>a.n.localeCompare(b.n,'es')||a.id-b.id);
+      VIALES=arr;
+      try{ sessionStorage.setItem(cacheKey,JSON.stringify(arr)); }catch(_){ }
+      return arr;
+    }finally{ timeout.stop(); }
   })();
   try{ return await vialesProm; } finally { vialesProm=null; }
 }
 function pintaCallejeroEstado(){
   const d=$('#callejeroEstado'); if(!d)return;
-  let ts=null; try{ ts=+localStorage.getItem('tf_viales_v5_ts')||null; }catch(_){}
+  const cacheKey=TF_VIALES_CACHE_PREFIX+':'+TF_CITY_SLUG;
+  let tieneCache=false; try{ tieneCache=!!sessionStorage.getItem(cacheKey); }catch(_){ }
   const n=(VIALES&&VIALES.length)||0;
-  const fecha=ts?new Date(ts).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'})+' '+new Date(ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'—';
   d.innerHTML=`<div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin:0 0 8px;padding:7px 9px;background:#faf6f3;border:1px solid #ece3dd;border-radius:8px;font-size:12px;color:#6b5f57;line-height:1.3">
-    <span>${n? '<b>'+n.toLocaleString('es-ES')+'</b> calles cargadas · OpenStreetMap · '+fecha : 'Callejero de OpenStreetMap (se descarga al usarlo)'}</span>
+    <span>${n? '<b>'+n.toLocaleString('es-ES')+'</b> calles cargadas · API de la academia'+(tieneCache?' · sesión actual':'') : 'Callejero de la academia (se carga al usarlo)'}</span>
     <button id="ceRefrescar" style="flex:none;border:1px solid #d9cabf;background:#fff;color:#bc2626;font-weight:700;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px">Actualizar</button>
   </div>`;
   const b=$('#ceRefrescar'); if(b)b.onclick=actualizarCallejero;
 }
 async function actualizarCallejero(){
   const b=$('#ceRefrescar'); if(b){ b.disabled=true; b.textContent='Actualizando…'; }
-  try{ localStorage.removeItem('tf_viales_v5'); localStorage.removeItem('tf_viales_v5_ts'); }catch(_){}
+  try{ sessionStorage.removeItem(TF_VIALES_CACHE_PREFIX+':'+TF_CITY_SLUG); }catch(_){ }
   VIALES=null;
   try{ await cargarViales(); montaListas(); }
-  catch(e){ alert('No se pudo actualizar el callejero desde OpenStreetMap: '+e.message); }
+  catch(e){ alert('No se pudo actualizar el callejero desde la API de la academia: '+e.message); }
   pintaCallejeroEstado();
 }
 function pinVial(v,color){
@@ -887,14 +975,14 @@ async function toggleAv(on){
   capaAv.addTo(map); if(avRender)return;
   setNum(avNumEl,'…');
   try{ const vs=await cargarViales(); const av=vs.filter(v=>v.t==='av'); capaAv.clearLayers(); av.forEach(v=>pinVial(v,'#C026D3').addTo(capaAv)); avRender=true; setNum(avNumEl,av.length); }
-  catch(e){ setNum(avNumEl,'!'); map.removeLayer(capaAv); if(inpCapa.av)inpCapa.av.checked=false; alert('No se pudo cargar el callejero de OpenStreetMap: '+e.message); }
+  catch(e){ setNum(avNumEl,'!'); map.removeLayer(capaAv); if(inpCapa.av)inpCapa.av.checked=false; alert('No se pudo cargar el callejero desde la API de la academia: '+e.message); }
 }
 async function toggleCalles(on){
   if(!on){ map.removeLayer(capaCalles); return; }
   capaCalles.addTo(map); if(callesRender)return;
   setNum(callesNumEl,'…');
   try{ const vs=await cargarViales(); const pr=vs.filter(v=>v.t==='principal'); capaCalles.clearLayers(); pr.forEach(v=>pinVial(v,'#0EA5E9').addTo(capaCalles)); callesRender=true; setNum(callesNumEl,pr.length); }
-  catch(e){ setNum(callesNumEl,'!'); map.removeLayer(capaCalles); if(inpCapa.calles)inpCapa.calles.checked=false; alert('No se pudo cargar el callejero de OpenStreetMap: '+e.message); }
+  catch(e){ setNum(callesNumEl,'!'); map.removeLayer(capaCalles); if(inpCapa.calles)inpCapa.calles.checked=false; alert('No se pudo cargar el callejero desde la API de la academia: '+e.message); }
 }
 
 /* ---------- panel de capas ---------- */
@@ -949,13 +1037,18 @@ let dirCtl=null;
 async function direccion(lat,lng,idCampo){
   try{
     if(dirCtl)dirCtl.abort(); dirCtl=new AbortController();
-    const t=setTimeout(()=>dirCtl.abort(),6000);
-    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=17&accept-language=es`,{signal:dirCtl.signal});
-    clearTimeout(t); const j=await r.json(); const a=j.address||{};
-    const via=a.road||a.pedestrian||a.footway||a.square||'';
-    const txt=[via,a.house_number,a.suburb||a.quarter||a.neighbourhood].filter(Boolean).join(', ')||j.display_name||'—';
-    const e=document.getElementById(idCampo); if(e)e.textContent=txt;
-  }catch(_){ const e=document.getElementById(idCampo); if(e)e.textContent='(sin conexión con Nominatim)'; }
+    const timeout=tfTimeout(10000,dirCtl.signal);
+    try{
+      const ciudadId=await resolverCiudad(timeout.signal);
+      const response=await apiFetch(`/geocode/reverse?ciudadId=${ciudadId}&lat=${lat}&lng=${lng}`,{signal:timeout.signal});
+      if(response.status===404){ const e=document.getElementById(idCampo); if(e)e.textContent='—'; return; }
+      if(!response.ok)throw new Error('REVERSE_UNAVAILABLE');
+      const payload=await response.json();
+      if(!payload||typeof payload.direccion!=='string'||!payload.direccion.trim())throw new Error('REVERSE_INVALID');
+      const e=document.getElementById(idCampo); if(e)e.textContent=payload.direccion;
+    }finally{ timeout.stop(); }
+    return;
+  }catch(_){ const e=document.getElementById(idCampo); if(e)e.textContent='(sin conexión con la API del Callejero)'; }
 }
 let pinTmp=null;
 function ponPin(lat,lng){ if(pinTmp)map.removeLayer(pinTmp);
@@ -1042,13 +1135,13 @@ function montaViales(filtro,cont){
     if(filtro&&ot.length) seccionViales(cont,'Otras calles de València','#64748B',ot,true);
     return;
   }
-  /* aún no cargado: muestro las de referencia (instantáneas) y disparo la descarga del callejero completo */
+  /* aún no cargado: muestro las de referencia y disparo la carga de la API propia */
   const cav=POIS.filter(p=>p.c==='avenida'), cca=POIS.filter(p=>p.c==='calle');
   const f=p=>!filtro||p.n.toLowerCase().includes(filtro);
   const av=cav.filter(f).map(p=>({n:p.n,lat:p.lat,lng:p.lng,t:'av'})), ca=cca.filter(f).map(p=>({n:p.n,lat:p.lat,lng:p.lng,t:'principal'}));
   if(av.length) seccionViales(cont,'Avenidas (principales)','#C026D3',av,!!filtro);
   if(ca.length) seccionViales(cont,'Calles (principales)','#0EA5E9',ca,!!filtro);
-  const note=el('div','lista-cat'); note.innerHTML=`<p class="nota" style="padding:6px 2px">Cargando el callejero completo de València (todas las calles, también las pequeñas)…</p>`; cont.appendChild(note);
+  const note=el('div','lista-cat'); note.innerHTML=`<p class="nota" style="padding:6px 2px">Cargando el callejero completo desde la API de la academia…</p>`; cont.appendChild(note);
   triggerViales();
 }
 function montaCallesMod(filtro,cont){
@@ -1068,34 +1161,37 @@ function montaCallesMod(filtro,cont){
 }
 async function localizaMod(nuevo,antiguo,t){
   if(innerWidth<=820)$('#sidebar').classList.remove('abierto');
-  const q=consultaMod(nuevo,t), k=claveGeo(q);
+  const q=consultaMod(nuevo,t);
   const ficha=(coord)=>{
     const z=coord?zonaEn(coord.lat,coord.lng):null;
     const filas=[{k:'Ahora se llama',v:nuevo},{k:'Antes (hasta 2017)',v:antiguo}]
-      .concat(coord?filasZona(z):[{k:'Ubicación',v:'No localizada (sin conexión con Nominatim)',peque:true}])
+      .concat(coord?filasZona(z):[{k:'Ubicación',v:'No localizada desde la API del Callejero',peque:true}])
       .concat(coord?[{k:'coordenadas',v:coord.lat.toFixed(5)+', '+coord.lng.toFixed(5),peque:true}]:[]);
     showCard(nuevo,'Calle modificada · nomenclátor 2017',filas, coord?{txt:'Centrar en el mapa',fn:()=>map.flyTo([coord.lat,coord.lng],16)}:null);
   };
   let c=null;
-  try{ const cached=localStorage.getItem(k); if(cached){ const p=cached.split(','); c={lat:parseFloat(p[0]),lng:parseFloat(p[1])}; } }catch(_){}
-  if(c){ map.flyTo([c.lat,c.lng],16); ponPin(c.lat,c.lng); ficha(c); return; }
   ficha(null);
   try{ c=await geocodeUno(q); }catch(_){}
   if(!c){ try{ c=await geocodeUno(antiguo+', València, España'); }catch(_){} }
-  if(c){ try{localStorage.setItem(k,c.lat+','+c.lng);}catch(_){} map.flyTo([c.lat,c.lng],16); ponPin(c.lat,c.lng); ficha(c); }
+  if(c){ map.flyTo([c.lat,c.lng],16); ponPin(c.lat,c.lng); ficha(c); }
 }
-/* búsqueda libre tipo mapa (OpenStreetMap / Nominatim): cualquier calle o dirección de València */
+/* búsqueda libre en la API del Callejero: cualquier calle o dirección de València */
 let gmTimer=null, gmCtl=null, gmSeq=0;
 async function geocodeVarios(q,signal){
-  const vb='-0.46,39.56,-0.27,39.25';
-  const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q+', València')}&limit=8&accept-language=ca,es&countrycodes=es&viewbox=${vb}&bounded=1&addressdetails=1`;
-  const r=await fetch(url,{signal}); const j=await r.json();
-  return (j||[]).map(o=>({lat:parseFloat(o.lat),lng:parseFloat(o.lon),label:o.display_name||q}));
+  const timeout=tfTimeout(10000,signal);
+  try{
+    const ciudadId=await resolverCiudad(timeout.signal);
+    const response=await apiFetch(`/geocode/buscar?ciudadId=${ciudadId}&q=${encodeURIComponent(q)}&limit=8`,{signal:timeout.signal});
+    if(!response.ok)throw new Error('GEOCODE_UNAVAILABLE');
+    const payload=await response.json();
+    if(!payload||!Array.isArray(payload.items))throw new Error('GEOCODE_INVALID');
+    return payload.items.filter(tfValidGeoItem).map(o=>({lat:o.lat,lng:o.lng,label:o.nombre}));
+  }finally{ timeout.stop(); }
 }
 function montaBusquedaMapa(items,q){
   const cont=$('#listas'); const prev=cont.querySelector('.lista-mapa'); if(prev)prev.remove();
   const div=el('div','lista-cat lista-mapa');
-  const h=el('h4','',`<span class="dot" style="background:#1B6FD0"></span>En el mapa · OpenStreetMap <span class="num">(${items.length})</span>`);
+  const h=el('h4','',`<span class="dot" style="background:#1B6FD0"></span>Resultados del Callejero <span class="num">(${items.length})</span>`);
   const ul=el('ul');
   h.onclick=()=>ul.style.display=ul.style.display==='none'?'block':'none';
   if(!items.length){ const li=el('li','',`Sin resultados en València para «${escHtml(q)}».`); li.style.color='var(--gris)'; li.style.cursor='default'; ul.appendChild(li); }
@@ -1104,7 +1200,7 @@ function montaBusquedaMapa(items,q){
     const resto=o.label.split(',').slice(1,3).join(',').trim();
     const li=el('li','mod-li',`<span class="mod-nuevo">${escHtml(titulo)}</span><span class="mod-antiguo">${escHtml(resto)}</span>`);
     li.onclick=()=>{ map.flyTo([o.lat,o.lng],17); ponPin(o.lat,o.lng); const z=zonaEn(o.lat,o.lng);
-      showCard(titulo,'Resultado del mapa · OpenStreetMap',[{k:'dirección',v:o.label,peque:true}].concat(filasZona(z)).concat([{k:'coordenadas',v:o.lat.toFixed(5)+', '+o.lng.toFixed(5),peque:true}]),{txt:'Centrar en el mapa',fn:()=>map.flyTo([o.lat,o.lng],17)});
+      showCard(titulo,'Resultado de la API del Callejero',[{k:'dirección',v:o.label,peque:true}].concat(filasZona(z)).concat([{k:'coordenadas',v:o.lat.toFixed(5)+', '+o.lng.toFixed(5),peque:true}]),{txt:'Centrar en el mapa',fn:()=>map.flyTo([o.lat,o.lng],17)});
       if(innerWidth<=820)$('#sidebar').classList.remove('abierto'); };
     ul.appendChild(li);
   });
@@ -1119,7 +1215,7 @@ $('#buscar').oninput=e=>{
   const seq=++gmSeq;
   gmTimer=setTimeout(async()=>{
     const cont=$('#listas'); let prev=cont.querySelector('.lista-mapa'); if(prev)prev.remove();
-    const ph=el('div','lista-cat lista-mapa'); ph.innerHTML=`<p class="nota" style="padding:6px 2px">Buscando «${escHtml(raw)}» en el mapa (OpenStreetMap)…</p>`; cont.appendChild(ph);
+    const ph=el('div','lista-cat lista-mapa'); ph.innerHTML=`<p class="nota" style="padding:6px 2px">Buscando «${escHtml(raw)}» en el Callejero…</p>`; cont.appendChild(ph);
     gmCtl=new AbortController();
     try{ const items=await geocodeVarios(raw,gmCtl.signal); if(seq!==gmSeq)return; montaBusquedaMapa(items,raw); }
     catch(err){ if(seq!==gmSeq||err.name==='AbortError')return; const p=cont.querySelector('.lista-mapa'); if(p)p.innerHTML=`<p class="nota" style="padding:6px 2px">No se pudo buscar en el mapa ahora mismo.</p>`; }
@@ -1485,33 +1581,35 @@ function abrirRecPop(){ const p=$('#recPop'); p.classList.add('show'); p.classLi
 $('#recCerrar').onclick=()=>$('#recPop').classList.remove('show');
 $('#recMin').onclick=()=>{ const on=$('#recPop').classList.toggle('min'); $('#recMin').textContent=on?'▴':'▾'; };
 
-/* escribir cualquier calle (geocodificación Nominatim, acotada a València) */
-let geoCtl=null;
+/* escribir cualquier calle (geocodificación de la API del Callejero) */
+let geoCtl=null, geoSeq=0;
 async function geocodeCalle(q){
+  const sequence=++geoSeq;
   const msg=$('#recGeoMsg'); q=(q||'').trim();
+  if(geoCtl){ geoCtl.abort(); geoCtl=null; }
   if(!q){ msg.textContent='Escribe el nombre de una calle.'; return; }
   msg.textContent='Buscando la calle…';
+  const requestCtl=new AbortController(); geoCtl=requestCtl;
   try{
-    if(geoCtl)geoCtl.abort(); geoCtl=new AbortController();
-    const t=setTimeout(()=>geoCtl.abort(),8000);
-    const vb='-0.46,39.56,-0.27,39.25';
-    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q+', València, España')}&limit=1&accept-language=es&countrycodes=es&viewbox=${vb}&bounded=1`;
-    const r=await fetch(url,{signal:geoCtl.signal}); clearTimeout(t);
-    const j=await r.json();
-    if(!j.length){ msg.textContent='No he encontrado esa calle en València. Prueba con otro nombre.'; return; }
+    const item=await geocodeUno(q,requestCtl.signal);
+    if(sequence!==geoSeq)return;
+    if(!item){ msg.textContent='No he encontrado esa calle en València. Prueba con otro nombre.'; return; }
     msg.textContent='';
-    trazarRecorrido({n:(j[0].display_name||q).split(',')[0]||q, lat:parseFloat(j[0].lat), lng:parseFloat(j[0].lon)});
-  }catch(_){ msg.textContent='No se pudo buscar la calle (sin conexión con el geocodificador).'; }
+    trazarRecorrido({n:item.nombre, lat:item.lat, lng:item.lng});
+  }catch(err){
+    if(sequence!==geoSeq||err&&err.name==='AbortError')return;
+    msg.textContent='No se pudo buscar la calle (sin conexión con la API del Callejero).';
+  }finally{ if(geoCtl===requestCtl)geoCtl=null; }
 }
 $('#recBtnTrazar').onclick=()=>geocodeCalle($('#recTexto').value);
 $('#recTexto').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();geocodeCalle($('#recTexto').value);} });
-/* resultados de OpenStreetMap bajo el destino (igual que en Estudiar): elegir el sitio traza el recorrido */
+/* resultados de la API del Callejero bajo el destino: elegir el sitio traza el recorrido */
 let rmTimer=null, rmCtl=null, rmSeq=0;
 function montaResultadosRec(items,q){
   const cont=$('#recResultados'); if(!cont)return; cont.innerHTML='';
   if(!items.length){ cont.innerHTML=`<p class="nota" style="padding:4px 2px">Sin resultados en València para «${escHtml(q)}».</p>`; return; }
   const div=el('div','lista-cat lista-mapa');
-  const h=el('h4','',`<span class="dot" style="background:#1B6FD0"></span>En el mapa · OpenStreetMap <span class="num">(${items.length})</span>`);
+  const h=el('h4','',`<span class="dot" style="background:#1B6FD0"></span>Resultados del Callejero <span class="num">(${items.length})</span>`);
   const ul=el('ul');
   h.onclick=()=>ul.style.display=ul.style.display==='none'?'block':'none';
   items.forEach(o=>{
@@ -1532,7 +1630,7 @@ $('#recTexto').oninput=e=>{
   if(raw.length<3){ if(cont)cont.innerHTML=''; return; }
   const seq=++rmSeq;
   rmTimer=setTimeout(async()=>{
-    if(cont)cont.innerHTML=`<p class="nota" style="padding:4px 2px">Buscando «${escHtml(raw)}» en el mapa (OpenStreetMap)…</p>`;
+    if(cont)cont.innerHTML=`<p class="nota" style="padding:4px 2px">Buscando «${escHtml(raw)}» en el Callejero…</p>`;
     rmCtl=new AbortController();
     try{ const items=await geocodeVarios(raw,rmCtl.signal); if(seq!==rmSeq)return; montaResultadosRec(items,raw); }
     catch(err){ if(seq!==rmSeq||err.name==='AbortError')return; if(cont)cont.innerHTML=`<p class="nota" style="padding:4px 2px">No se pudo buscar en el mapa ahora mismo.</p>`; }
@@ -1546,14 +1644,14 @@ async function preguntarCalle(){
   let pool=null;
   const enParqueR = pq => REC_PARQUES.has(pq);
   if(btn){ btn.disabled=true; btn.textContent='Cargando callejero…'; }
-  try{ const vs=await cargarViales(); pool=vialesPorDif(vs,REC_DIF).filter(v=>v.p && enParqueR(v.p)).map(v=>({n:v.n,lat:v.lat,lng:v.lng})); }catch(_){}
+  try{ const vs=await cargarViales(); pool=vialesPorDif(vs,REC_DIF).filter(v=>v.p && enParqueR(v.p)).map(v=>({n:v.n,lat:v.lat,lng:v.lng,id:v.id})); }catch(_){}
   if(btn){ btn.disabled=false; btn.textContent=t0; }
   if(!pool||!pool.length){
     pool=POIS.filter(p=>p.c==='calle'||p.c==='avenida').map(p=>({p,z:zonaEn(p.lat,p.lng)})).filter(o=>o.z&&o.z.Parque&&enParqueR(o.z.Parque)).map(o=>({n:o.p.n,lat:o.p.lat,lng:o.p.lng}));
   }
   if(!pool.length){ alert(REC_PARQUES.size<PARQUES.length?'No hay calles en esas zonas con esa dificultad. Marca más zonas o sube la dificultad.':'No hay calles disponibles ahora mismo.'); return; }
   const o=pool[Math.floor(Math.random()*pool.length)];
-  recQuizDest={n:o.n,lat:o.lat,lng:o.lng};
+  recQuizDest={n:o.n,lat:o.lat,lng:o.lng,id:o.id};
   recCapa.clearLayers(); setBase('calles');
   L.marker([recQuizDest.lat,recQuizDest.lng],{icon:destIcon(),zIndexOffset:650}).bindTooltip(recQuizDest.n,{permanent:true,direction:'top',className:'poi-tip'}).addTo(recCapa);
   map.flyTo([recQuizDest.lat,recQuizDest.lng],14);
@@ -1568,102 +1666,52 @@ async function preguntarCalle(){
 }
 $('#recBtnPregunta').onclick=()=>preguntarCalle();
 
-/* ----- calles reales por debajo de la línea del recorrido (datos OSM actuales) ----- */
-function distSegM(p,a,b){
-  const k=Math.PI/180, latm=111320, lngm=111320*Math.cos(p[0]*k);
-  const px=p[1]*lngm,py=p[0]*latm, ax=a[1]*lngm,ay=a[0]*latm, bx=b[1]*lngm,by=b[0]*latm;
-  const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy; let t=L2?((px-ax)*dx+(py-ay)*dy)/L2:0; t=t<0?0:t>1?1:t;
-  const cx=ax+t*dx,cy=ay+t*dy,ex=px-cx,ey=py-cy; return Math.sqrt(ex*ex+ey*ey);
-}
-function bearingSeg(a,b){ const k=Math.PI/180,y=Math.sin((b[1]-a[1])*k)*Math.cos(b[0]*k),x=Math.cos(a[0]*k)*Math.sin(b[0]*k)-Math.sin(a[0]*k)*Math.cos(b[0]*k)*Math.cos((b[1]-a[1])*k); return (Math.atan2(y,x)/k+360)%360; }
-function difDir(a,b){ let d=Math.abs(a-b)%180; if(d>90)d=180-d; return d; }
-async function callesDeRuta(coords){
-  if(!coords||coords.length<2)return null;
-  let mnLa=90,mnLo=180,mxLa=-90,mxLo=-180;
-  coords.forEach(c=>{ mnLa=Math.min(mnLa,c[0]); mxLa=Math.max(mxLa,c[0]); mnLo=Math.min(mnLo,c[1]); mxLo=Math.max(mxLo,c[1]); });
-  const pad=0.0025;
-  const q=`[out:json][timeout:60];way["highway"]["name"](${mnLa-pad},${mnLo-pad},${mxLa+pad},${mxLo+pad});out tags geom;`;
-  const data=await fetchOverpass(q);
-  const segs=[]; (data.elements||[]).forEach(el=>{ if(el.type!=='way'||!el.geometry||!el.tags||!el.tags.name)return; const n=el.tags.name.trim(); if(!n)return; const g=el.geometry; for(let i=1;i<g.length;i++){ const a=[g[i-1].lat,g[i-1].lon],b=[g[i].lat,g[i].lon]; segs.push({n,a,b,br:bearingSeg(a,b)}); } });
-  if(!segs.length)return null;
-  /* densifico la línea a ~10 m para no saltarme tramos */
-  let pts=[coords[0]];
-  for(let i=1;i<coords.length;i++){ const a=coords[i-1],b=coords[i],d=distM(a[0],a[1],b[0],b[1]),n=Math.floor(d/10); for(let k=1;k<=n;k++){ const t=k*10/d; pts.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]); } pts.push(b); }
-  if(pts.length>900){ const st=Math.ceil(pts.length/900); pts=pts.filter((_,i)=>i%st===0); }
-  /* dirección local de la ruta en cada punto */
-  const dir=pts.map((p,i)=>{ const a=pts[i],b=pts[Math.min(i+1,pts.length-1)]; return (b===a)?bearingSeg(pts[Math.max(i-1,0)],a):bearingSeg(a,b); });
-  /* asigno a cada punto la calle PARALELA más cercana (la que se recorre); si no hay, la más cercana muy pegada */
-  const marca=pts.map((c,i)=>{ let best=null,bd=Infinity,bp=null,bdp=Infinity;
-    for(const s of segs){ const d=distSegM(c,s.a,s.b); if(d<=30){ if(d<bd){bd=d;best=s.n;} if(difDir(dir[i],s.br)<=40&&d<bdp){bdp=d;bp=s.n;} } }
-    if(bp!==null&&bdp<=25)return bp; if(best!==null&&bd<=16)return best; return null; });
-  /* agrupo en tramos y descarto cruces muy breves (<8 m) */
-  const out=[]; let i=0;
-  while(i<pts.length){
-    const nm=marca[i]; if(nm===null){ i++; continue; }
-    let j=i,len=0; while(j+1<pts.length&&marca[j+1]===nm){ len+=distM(pts[j][0],pts[j][1],pts[j+1][0],pts[j+1][1]); j++; }
-    if(len>=8||i===0||j>=pts.length-1){ if(out[out.length-1]!==nm)out.push(nm); }
-    i=j+1;
-  }
-  return out.length?out:null;
-}
 function dedupCalles(l){ const v=new Set(),o=[]; (l||[]).forEach(n=>{ if(n&&!v.has(n)){v.add(n);o.push(n);} }); return o; }
-/* salida forzada por una dirección concreta para ciertos parques (p. ej. Campanar) */
-const SALIDA_PARQUE = { 'Campanar': "Carrer d'Antoni Reig i Ventura, 2" };
-async function puntoSalida(parque, est){
-  const dir = SALIDA_PARQUE[parque]; if(!dir) return est;
-  const k='tf_salida2_'+parque; let c=null;
-  try{ const cc=localStorage.getItem(k); if(cc){ const p=cc.split(','); if(p.length===2)c={lat:+p[0],lng:+p[1]}; } }catch(_){}
-  if(!c){
-    const intentos=[dir+', València, España', dir.replace(/,\s*\d+\w*$/,'')+', València, España'];
-    for(const q of intentos){ try{ c=await geocodeUno(q); if(c)break; }catch(_){} }
-    if(c){ try{localStorage.setItem(k,c.lat+','+c.lng);}catch(_){} }
-  }
-  if(!c) return est; /* sin conexión: usar la estación */
-  return { lat:c.lat, lng:c.lng, nombre:est.nombre, salida:dir };
-}
+function puntoSalida(parque,est){ return est; }
 /* trazar recorrido (origen por zona → destino) y mostrarlo en la ventana emergente */
 let recCtl=null, recSeq=0;
 async function trazarRecorrido(dest){
+  const sequence=++recSeq;
   const z=zonaEn(dest.lat,dest.lng);
   const pad=innerWidth<=820?{paddingTopLeft:[20,20],paddingBottomRight:[20,260]}:{paddingTopLeft:[30,210],paddingBottomRight:[30,40]};
   recCapa.clearLayers(); card.classList.remove('show'); abrirRecPop();
-  if(!hayZonas()||!z){
-    $('#rpTag').textContent='Recorrido'; $('#rpTit').textContent=dest.n; $('#rpSub').textContent='Fuera de la zonificación';
-    $('#rpBody').innerHTML='<p class="rp-instr">Este destino está fuera de la zonificación, no puedo asignar parque de origen.</p>';
-    L.marker([dest.lat,dest.lng],{icon:destIcon(),zIndexOffset:650}).addTo(recCapa); map.flyTo([dest.lat,dest.lng],15); return;
+  if(!tfValidCoord(dest.lat,dest.lng)||typeof dest.n!=='string'||!dest.n.trim()){
+    $('#rpTag').textContent='Recorrido'; $('#rpTit').textContent='Destino no válido'; $('#rpSub').textContent='Datos incompletos';
+    $('#rpBody').innerHTML='<p class="rp-instr">La API del Callejero no ha devuelto un destino válido.</p>'; return;
   }
-  const est=estacionDeParque(z.Parque)||estacionMasCercana(dest.lat,dest.lng);
-  const org=await puntoSalida(z.Parque, est);
   setBase('calles'); if(innerWidth<=820)$('#sidebar').classList.remove('abierto');
-  L.marker([org.lat,org.lng],{icon:flameIcon(32),zIndexOffset:600}).bindTooltip(org.salida?`${est.nombre} · sale por ${org.salida}`:est.nombre,{direction:'top',className:'poi-tip'}).addTo(recCapa);
   L.marker([dest.lat,dest.lng],{icon:destIcon(),zIndexOffset:650}).bindTooltip(dest.n,{permanent:true,direction:'top',className:'poi-tip'}).addTo(recCapa);
   $('#rpTag').textContent='Recorrido';
-  $('#rpTit').innerHTML=`<span class="rp-od"><span class="rec-a">A</span> ${escHtml(est.nombre)}</span><span class="rp-flecha">→</span><span class="rp-od"><span class="rec-b">B</span> ${escHtml(dest.n)}</span>`;
-  $('#rpSub').textContent=`Zona ${z.AreaName||z.nombre} · Parque ${z.Parque} · Coopera ${z.Coopera}`;
+  $('#rpTit').innerHTML=`<span class="rp-od"><span class="rec-a">A</span> Estación asignada</span><span class="rp-flecha">→</span><span class="rp-od"><span class="rec-b">B</span> ${escHtml(dest.n)}</span>`;
+  $('#rpSub').textContent=z?`Zona ${z.AreaName||z.nombre} · Parque ${z.Parque} · Coopera ${z.Coopera}`:'Recorrido calculado por la API del Callejero';
   $('#rpBody').innerHTML='<p class="rp-instr">Calculando recorrido…</p>';
+  let ruta=null;
   try{
     if(recCtl)recCtl.abort(); recCtl=new AbortController();
-    const t=setTimeout(()=>recCtl.abort(),12000);
-    const url=`https://router.project-osrm.org/route/v1/driving/${org.lng},${org.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=true`;
-    const r=await fetch(url,{signal:recCtl.signal}); clearTimeout(t);
-    const j=await r.json(); if(!j.routes||!j.routes.length)throw new Error('sin ruta');
-    const ruta=j.routes[0];
-    const coords=ruta.geometry.coordinates.map(c=>[c[1],c[0]]);
+    const timeout=tfTimeout(50000,recCtl.signal);
+    try{
+      const ciudadId=await resolverCiudad(timeout.signal);
+      const path=dest.id!=null?`/recorrido?calleId=${dest.id}`:`/recorrido-libre?ciudadId=${ciudadId}&q=${encodeURIComponent(dest.n)}`;
+      const response=await apiFetch(path,{signal:timeout.signal});
+      if(!response.ok)throw new Error('ROUTE_UNAVAILABLE');
+      const candidate=await response.json();
+      if(!tfValidRoute(candidate))throw new Error('ROUTE_INVALID');
+      ruta=candidate;
+    }finally{ timeout.stop(); }
+  }catch(_){ ruta=null; }
+  if(sequence!==recSeq)return;
+  if(ruta){
+    const coords=ruta.polyline;
     L.polyline(coords,{color:'#fff',weight:7,opacity:.35,lineCap:'round',lineJoin:'round'}).addTo(recCapa);
     L.polyline(coords,{color:'#1A73E8',weight:4,opacity:.5,lineCap:'round',lineJoin:'round'}).addTo(recCapa);
     map.fitBounds(L.latLngBounds(coords),pad);
-    const km=(ruta.distance/1000).toFixed(1), min=Math.round(ruta.duration/60);
-    /* INMEDIATO: calles que ya da el motor de rutas (sin esperas) */
-    const pasos=(ruta.legs&&ruta.legs[0]&&ruta.legs[0].steps)||[];
-    let calles=[]; pasos.forEach(s=>{ const nm=(s.name||'').trim(); if(nm&&calles[calles.length-1]!==nm)calles.push(nm); });
-    rpResultado(est,dest,dedupCalles(calles),km,min);
-    /* EN SEGUNDO PLANO: afino la lista contra OSM sin bloquear la interfaz */
-    const miSeq=++recSeq;
-    callesDeRuta(coords).then(cs=>{ if(miSeq===recSeq && cs && cs.length) rpResultado(est,dest,dedupCalles(cs),km,min); }).catch(()=>{});
-  }catch(err){
-    L.polyline([[org.lat,org.lng],[dest.lat,dest.lng]],{color:'#1A73E8',weight:3,opacity:.5,dashArray:'7 7'}).addTo(recCapa);
-    map.fitBounds(L.latLngBounds([[org.lat,org.lng],[dest.lat,dest.lng]]),pad);
-    $('#rpBody').innerHTML='<p class="rp-instr">No se pudo calcular el recorrido por calles (el servidor de rutas no respondió). Te muestro la línea recta entre el parque y el destino.</p>';
+    const km=ruta.km, min=ruta.minutos;
+    const estRuta={nombre:ruta.estacion.nombre,lat:ruta.estacion.lat,lng:ruta.estacion.lng};
+    L.marker([estRuta.lat,estRuta.lng],{icon:flameIcon(32),zIndexOffset:600}).bindTooltip(estRuta.nombre,{direction:'top',className:'poi-tip'}).addTo(recCapa);
+    $('#rpTit').innerHTML=`<span class="rp-od"><span class="rec-a">A</span> ${escHtml(estRuta.nombre)}</span><span class="rp-flecha">→</span><span class="rp-od"><span class="rec-b">B</span> ${escHtml(dest.n)}</span>`;
+    rpResultado(estRuta,dest,dedupCalles(ruta.calles||[]),km,min);
+  }else{
+    $('#rpBody').innerHTML='<p class="rp-instr">No se pudo calcular un recorrido válido desde la API del Callejero. No se muestra una línea aproximada.</p>';
   }
 }
 function rpResultado(est,dest,calles,km,min){
@@ -1685,7 +1733,7 @@ function rpResultado(est,dest,calles,km,min){
 montaCapas(); montaListas(); montaRecLista(); pintaCallejeroEstado();
 if(hayZonas()){ pintaZonas(); montaCapas(); actualizaEstadoKml(); }
 setTimeout(()=>map.invalidateSize(),200);
-/* precarga del callejero completo (OSM) en segundo plano: deja listo el examen «cualquier calle» y los recorridos */
+/* precarga del callejero propio en segundo plano: deja listo el examen «cualquier calle» y los recorridos */
 setTimeout(()=>{ cargarViales().then(()=>pintaCallejeroEstado()).catch(()=>{}); },2500);
 </script>
 </body>
