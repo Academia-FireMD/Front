@@ -1,11 +1,59 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { loginAsAlumnoMock } from './helpers/auth.helper';
 import { setupFlashcardInterceptors } from './helpers/interceptors.helper';
+import flashcardTestFixture from './fixtures/flashcard-test.json';
+
+const OVERSIZED_MARKDOWN_IMAGE_PATH = '/__e2e__/oversized-markdown-image.svg';
+const OVERSIZED_MARKDOWN_IMAGE =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1200" viewBox="0 0 2400 1200"><rect width="2400" height="1200" fill="#ff6b35"/><text x="80" y="180" font-size="120" fill="#fff">Imagen markdown de prueba</text></svg>';
+const OVERSIZED_FLASHCARD_FIXTURE = {
+  ...flashcardTestFixture,
+  flashcards: flashcardTestFixture.flashcards.map((item) => ({
+    ...item,
+    flashcard: {
+      ...item.flashcard,
+      descripcion: `![Imagen de prueba](${OVERSIZED_MARKDOWN_IMAGE_PATH})`,
+      solucion: `![Imagen de prueba](${OVERSIZED_MARKDOWN_IMAGE_PATH})`,
+    },
+  })),
+};
+
+async function serveOversizedMarkdownImage(page: Page): Promise<void> {
+  await page.route(`**${OVERSIZED_MARKDOWN_IMAGE_PATH}`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml',
+      body: OVERSIZED_MARKDOWN_IMAGE,
+    }),
+  );
+}
+
+async function assertMarkdownImageFits(image: Locator): Promise<void> {
+  await expect(image).toBeVisible();
+  const dimensions = await image.evaluate((element) => {
+    const host = element.closest('.markdown-images');
+    const container = host?.parentElement;
+    if (!host || !container) {
+      throw new Error('La imagen markdown no está dentro de su contenedor');
+    }
+    return {
+      imageWidth: element.getBoundingClientRect().width,
+      containerWidth: container.getBoundingClientRect().width,
+    };
+  });
+  expect(dimensions.imageWidth).toBeLessThanOrEqual(
+    dimensions.containerWidth + 1,
+  );
+}
 
 test.describe('Completar Flashcards (Alumno)', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAlumnoMock(page);
-    await setupFlashcardInterceptors(page);
+    await setupFlashcardInterceptors(
+      page,
+      OVERSIZED_FLASHCARD_FIXTURE as typeof flashcardTestFixture,
+    );
+    await serveOversizedMarkdownImage(page);
   });
 
   test('muestra la cara frontal de la primera flashcard', async ({ page }) => {
@@ -35,6 +83,26 @@ test.describe('Completar Flashcards (Alumno)', () => {
     await expect(
       page.locator('[data-testid="flashcard-solucion"]'),
     ).toBeVisible();
+  });
+
+  test('limita las imágenes markdown de descripción y solución al contenedor', async ({
+    page,
+  }) => {
+    await page.goto('/app/test/alumno/realizar-flash-cards-test/1');
+    await expect(
+      page.locator('[data-testid="flashcard-container"]'),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await assertMarkdownImageFits(
+      page.locator(
+        '[data-testid="flashcard-descripcion"] .markdown-images img',
+      ),
+    );
+
+    await page.locator('[data-testid="ver-solucion-btn"]').click();
+    await assertMarkdownImageFits(
+      page.locator('[data-testid="flashcard-solucion"] .markdown-images img'),
+    );
   });
 
   test('tecla Space muestra la solución', async ({ page }) => {

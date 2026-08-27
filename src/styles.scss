@@ -318,6 +318,15 @@ app-completar-test-simulacro {
   width: 32px;
 }
 
+/* Las imágenes dentro de contenido markdown (enunciados, soluciones de
+   flashcards, respuestas de examen/simulacro) nunca desbordan su contenedor:
+   sin esta regla una imagen grande mantiene su tamaño natural, corta el
+   contenido y fuerza scroll horizontal (reporte Raúl 2026-08-26). */
+.markdown-images img {
+  max-width: 100%;
+  height: auto;
+}
+
 .no-wrap {
   text-wrap: nowrap;
 }

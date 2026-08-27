@@ -101,6 +101,7 @@
                     <div class="flex flex-column gap-3">
                       <p data-testid="flashcard-descripcion">
                         <markdown
+                          class="markdown-images"
                           [data]="
                             pregunta.flashcard.descripcion &&
                             pregunta.flashcard.descripcion.length > 0
@@ -118,6 +119,7 @@
                       >
                         <strong>Solución:</strong>
                         <markdown
+                          class="markdown-images"
                           [data]="
                             pregunta.flashcard.solucion &&
                             pregunta.flashcard.solucion.length > 0
