@@ -62,6 +62,7 @@ interface CallejeroState {
   ciudadesApiCalls: number;
   callesApiCalls: number;
   geocodeApiCalls: number;
+  geocodeQueries: string[];
   routeApiCalls: number;
   valenciaAutorizada: boolean;
 }
@@ -73,6 +74,7 @@ function freshState(): CallejeroState {
     ciudadesApiCalls: 0,
     callesApiCalls: 0,
     geocodeApiCalls: 0,
+    geocodeQueries: [],
     routeApiCalls: 0,
     valenciaAutorizada: true,
   };
@@ -185,6 +187,7 @@ async function setupCallejeroInterceptors(
     const url = new URL(route.request().url());
     if (url.searchParams.get('ciudadId') !== '1') return route.continue();
     state.geocodeApiCalls += 1;
+    state.geocodeQueries.push(url.searchParams.get('q') ?? '');
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -584,6 +587,274 @@ test.describe('Módulo Callejero (alumno)', () => {
     expect(
       await page.evaluate(() =>
         Object.keys(sessionStorage).some((key) => key.includes('tf_viales_v5')),
+      ),
+    ).toBe(false);
+  });
+
+  test('la capa de calles modificadas reutiliza cache válida y completa solo faltantes', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const key = JSON.stringify(['Del Oeste', 'Barón de Cárcer', 'av']);
+      const secondKey = JSON.stringify([
+        'Manuela Solís Claràs',
+        'Amado Granell',
+        '',
+      ]);
+      localStorage.setItem(
+        'tf_mod_v1:valencia',
+        JSON.stringify({
+          version: 1,
+          entries: {
+            [key]: { nombre: 'Avenida del Oeste', lat: 39.4705, lng: -0.3795 },
+            [secondKey]: {
+              nombre: 'Manuela Solís Claràs',
+              lat: 39.465,
+              lng: -0.37,
+            },
+          },
+        }),
+      );
+    });
+
+    const frame = await irACallejero(page);
+    await frame.locator('#tglMod').check();
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const raw = localStorage.getItem('tf_mod_v1:valencia');
+            if (!raw) return 0;
+            const parsed = JSON.parse(raw) as { entries?: object };
+            return parsed.entries ? Object.keys(parsed.entries).length : 0;
+          }),
+        { timeout: 20_000 },
+      )
+      .toBe(52);
+
+    expect(currentState.geocodeApiCalls).toBe(50);
+    expect(currentState.geocodeQueries).not.toContain(
+      "Avinguda de l'Oest, València, España",
+    );
+    expect(currentState.geocodeQueries).not.toContain(
+      'Manuela Solís Claràs, València, España',
+    );
+  });
+
+  test('comparte la cache de modificadas entre localizaMod y la capa', async ({
+    page,
+  }) => {
+    const frame = await irACallejero(page);
+    const embed = page
+      .frames()
+      .find(
+        (candidate) =>
+          candidate !== page.mainFrame() &&
+          candidate.url().includes('callejero-embed/valencia_27.html'),
+      );
+    if (!embed) throw new Error('No se encontró el frame del callejero');
+
+    await embed.evaluate(async () => {
+      const scope = globalThis as typeof globalThis & {
+        localizaMod?: (
+          nuevo: string,
+          antiguo: string,
+          tipo?: string,
+        ) => Promise<void>;
+      };
+      if (typeof scope.localizaMod !== 'function') {
+        throw new Error('No se encontró localizaMod en el embed');
+      }
+      await scope.localizaMod('Del Oeste', 'Barón de Cárcer', 'av');
+      localStorage.removeItem('tf_mod_v1:valencia');
+    });
+    expect(currentState.geocodeApiCalls).toBe(1);
+
+    await frame.locator('#tglMod').check();
+    await expect
+      .poll(() => currentState.geocodeApiCalls, { timeout: 20_000 })
+      .toBe(52);
+  });
+
+  test('apagar calles modificadas aborta el geocode activo y no continúa la cola', async ({
+    page,
+  }) => {
+    let releaseFirst!: () => void;
+    let markFirstStarted!: () => void;
+    const firstStarted = new Promise<void>((resolve) => {
+      markFirstStarted = resolve;
+    });
+    const firstRelease = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let markFirstFinished!: () => void;
+    const firstFinished = new Promise<void>((resolve) => {
+      markFirstFinished = resolve;
+    });
+    let firstHeld = false;
+
+    await page.route(/\/callejero\/geocode\/buscar\?/, async (route) => {
+      if (!isXhr(route.request())) return route.fallback();
+      const url = new URL(route.request().url());
+      if (url.searchParams.get('ciudadId') !== '1' || firstHeld) {
+        return route.fallback();
+      }
+      firstHeld = true;
+      currentState.geocodeApiCalls += 1;
+      currentState.geocodeQueries.push(url.searchParams.get('q') ?? '');
+      markFirstStarted();
+      await firstRelease;
+      try {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            items: [{ nombre: 'Calle liberada', lat: 39.45, lng: -0.35 }],
+          }),
+        });
+      } catch (_) {
+        // Al apagar la capa, el fetch se aborta y la ruta puede quedar cerrada.
+      } finally {
+        markFirstFinished();
+      }
+    });
+
+    try {
+      const frame = await irACallejero(page);
+      await frame.locator('#tglMod').check();
+      await firstStarted;
+      expect(currentState.geocodeApiCalls).toBe(1);
+
+      await frame.locator('#tglMod').uncheck();
+      await page.waitForTimeout(250);
+      expect(currentState.geocodeApiCalls).toBe(1);
+    } finally {
+      releaseFirst();
+      await firstFinished;
+    }
+    // Libera la request retenida y confirma también después de su resolución
+    // que abortar la capa no reanuda la cola pendiente.
+    await page.waitForTimeout(250);
+    expect(currentState.geocodeApiCalls).toBe(1);
+  });
+
+  test('ignora cache hostil y conserva el contrato de clasificacion de viales', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const key = JSON.stringify(['Del Oeste', 'Barón de Cárcer', 'av']);
+      localStorage.setItem(
+        'tf_mod_v1:valencia',
+        JSON.stringify({
+          version: 1,
+          entries: {
+            [key]: {
+              nombre: '<img src=x onerror=window.__tfXss=1>',
+              lat: 999,
+              lng: 0,
+            },
+          },
+        }),
+      );
+    });
+
+    const frame = await irACallejero(page);
+    const embed = page
+      .frames()
+      .find(
+        (candidate) =>
+          candidate !== page.mainFrame() &&
+          candidate.url().includes('callejero-embed/valencia_27.html'),
+      );
+    if (!embed) throw new Error('No se encontró el frame del callejero');
+    const clasificaciones = await embed.evaluate(() => {
+      const scope = globalThis as typeof globalThis & {
+        clasificaVia?: (name: string, hw: string) => string;
+      };
+      if (typeof scope.clasificaVia !== 'function') {
+        throw new Error('clasificaVia no está expuesta en el embed');
+      }
+      return {
+        primary: scope.clasificaVia('Ronda Norte', 'PRIMARY'),
+        secondary: scope.clasificaVia('Ronda Sur', 'secondary'),
+        tertiary: scope.clasificaVia('Ronda Este', 'TeRtIaRy'),
+        avenidaPorTipo: scope.clasificaVia('Gran vía', 'AVENIDA'),
+        avenidaPorNombre: scope.clasificaVia(
+          'Avenida del Puerto',
+          'residential',
+        ),
+        calleGenerica: scope.clasificaVia('Calle Colón', 'CALLE'),
+        plazaGenerica: scope.clasificaVia('Plaza del Ayuntamiento', 'PLAZA'),
+      };
+    });
+    expect(clasificaciones).toEqual({
+      primary: 'principal',
+      secondary: 'principal',
+      tertiary: 'principal',
+      avenidaPorTipo: 'av',
+      avenidaPorNombre: 'av',
+      calleGenerica: 'otra',
+      plazaGenerica: 'otra',
+    });
+
+    await frame.locator('#tglMod').check();
+    await expect
+      .poll(() => currentState.geocodeApiCalls, { timeout: 20_000 })
+      .toBe(52);
+    expect(currentState.geocodeQueries[0]).toBe(
+      "Avinguda de l'Oest, València, España",
+    );
+  });
+
+  test('los tooltips de viales tratan nombres externos como texto', async ({
+    page,
+  }) => {
+    const xssPayload = '<img src=x onerror="window.__tfXss=1">';
+    await page.route(/\/callejero\/ciudades\/1\/calles$/, async (route) => {
+      if (!isXhr(route.request())) return route.fallback();
+      currentState.callesApiCalls += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          calles: [
+            {
+              id: 9001,
+              nombre: xssPayload,
+              tipoVia: 'primary',
+              lat: 39.45,
+              lng: -0.35,
+              longitudM: 500,
+              parquesCobertura: [],
+              bb: [39.4, -0.4, 39.5, -0.3],
+            },
+          ],
+        }),
+      });
+    });
+
+    const frame = await irACallejero(page);
+    const embed = page
+      .frames()
+      .find(
+        (candidate) =>
+          candidate !== page.mainFrame() &&
+          candidate.url().includes('callejero-embed/valencia_27.html'),
+      );
+    if (!embed) throw new Error('No se encontró el frame del callejero');
+    await frame.locator('#tglCalles').check();
+    await expect(
+      frame.locator('#tglCalles').locator('xpath=..').locator('.num'),
+    ).toHaveText('1');
+    const marker = frame.locator('#map .leaflet-overlay-pane path').last();
+    await marker.hover({ force: true });
+    const tooltip = frame.locator('.leaflet-tooltip').last();
+    await expect(tooltip).toBeVisible();
+    expect(await tooltip.textContent()).toContain(xssPayload);
+    expect(await tooltip.locator('img').count()).toBe(0);
+    expect(
+      await embed.evaluate(() =>
+        Boolean((window as typeof window & { __tfXss?: number }).__tfXss),
       ),
     ).toBe(false);
   });

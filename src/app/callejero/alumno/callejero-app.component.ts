@@ -507,6 +507,17 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * Crea contenido de tooltip como nodo de texto, nunca como HTML. Los nombres
+   * de BD/Nominatim/OSRM son datos externos y Leaflet interpreta los strings
+   * recibidos por `bindTooltip` como `innerHTML`.
+   */
+  private tooltipTexto(value: unknown): HTMLElement {
+    const element = document.createElement('span');
+    element.textContent = String(value ?? '');
+    return element;
+  }
+
   // ============ Carga de datos ============
 
   private cargarCiudades(): void {
@@ -648,7 +659,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       const layer = L.geoJSON(fc, {
         style: { color, weight: 2, fillColor: color, fillOpacity: 0.18 },
       });
-      layer.bindTooltip(z.areaName || z.nombre, {
+      layer.bindTooltip(this.tooltipTexto(z.areaName || z.nombre), {
         sticky: true,
         className: 'poi-tip',
       });
@@ -679,7 +690,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
               fillColor: CATS[cat]?.color ?? '#5B6B7F',
               fillOpacity: 0.95,
             });
-      m.bindTooltip(p.nombre, {
+      m.bindTooltip(this.tooltipTexto(p.nombre), {
         direction: 'top',
         className: 'poi-tip',
         offset: [0, -6],
@@ -864,7 +875,9 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
    * simplemente no aparece en la ficha).
    */
   private geocodeReverseAsync(lat: number, lng: number): void {
-    this.service.geocodeReverse(lat, lng).subscribe({
+    const ciudad = this.ciudadSel();
+    if (!ciudad) return;
+    this.service.geocodeReverse(ciudad.id, lat, lng).subscribe({
       next: (r) => {
         // Solo actualizar si la ficha sigue abierta (el usuario puede haberla cerrado).
         if (this.ficha()) this.fichaDireccion.set(r.direccion);
@@ -1267,7 +1280,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       fillColor: '#F9B112',
       fillOpacity: 1,
     })
-      .bindTooltip(nombre, {
+      .bindTooltip(this.tooltipTexto(nombre), {
         permanent: true,
         direction: 'top',
         className: 'poi-tip',
@@ -1320,7 +1333,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
           fillColor: '#F9B112',
           fillOpacity: 1,
         })
-          .bindTooltip(p.nombre, {
+          .bindTooltip(this.tooltipTexto(p.nombre), {
             permanent: true,
             direction: 'top',
             className: 'poi-tip',
@@ -1581,7 +1594,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
 
     if (rec.estacion) {
       L.marker([rec.estacion.lat, rec.estacion.lng], { icon: flameIcon(26) })
-        .bindTooltip(rec.estacion.nombre, {
+        .bindTooltip(this.tooltipTexto(rec.estacion.nombre), {
           direction: 'top',
           className: 'poi-tip',
         })
@@ -1595,7 +1608,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       fillColor: '#F9B112',
       fillOpacity: 1,
     })
-      .bindTooltip(destino?.nombre ?? 'Destino', {
+      .bindTooltip(this.tooltipTexto(destino?.nombre ?? 'Destino'), {
         permanent: true,
         direction: 'top',
         className: 'poi-tip',
@@ -1794,9 +1807,8 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     }
 
     if (rec.estacion) {
-      // Escapado: dato externo del backend (modo libre). bindTooltip = innerHTML.
       L.marker([rec.estacion.lat, rec.estacion.lng], { icon: flameIcon(26) })
-        .bindTooltip(this.escapeHtml(rec.estacion.nombre), {
+        .bindTooltip(this.tooltipTexto(rec.estacion.nombre), {
           direction: 'top',
           className: 'poi-tip',
         })
@@ -1810,9 +1822,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       fillColor: '#F9B112',
       fillOpacity: 1,
     })
-      // Escapado: `direccionResuelta` viene de Nominatim/OSM (XSS). NOTA: los POIs
-      // preexistentes (mapa/examen) quedan fuera de scope de este fix.
-      .bindTooltip(this.escapeHtml(rec.direccionResuelta), {
+      .bindTooltip(this.tooltipTexto(rec.direccionResuelta), {
         permanent: true,
         direction: 'top',
         className: 'poi-tip',
@@ -1988,7 +1998,12 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       this.geocodeSugerencias.set([]);
       return;
     }
-    this.service.geocodeBuscar(q).subscribe({
+    const ciudad = this.ciudadSel();
+    if (!ciudad) {
+      this.geocodeSugerencias.set([]);
+      return;
+    }
+    this.service.geocodeBuscar(ciudad.id, q).subscribe({
       next: (items) => this.geocodeSugerencias.set(items),
       error: () => this.geocodeSugerencias.set([]),
     });

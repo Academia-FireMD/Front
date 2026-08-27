@@ -587,6 +587,7 @@ const $ = s => document.querySelector(s);
 const el = (t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
 const shuffle = a => {a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const escHtml=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+const tooltipTexto=value=>{const e=document.createElement('span');e.textContent=String(value??'');return e;};
 const FLAME_RED="data:image/png;base64,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";
 (()=>{const f=document.getElementById('fav'); if(f) f.href=FLAME_RED;})();
 function flameIcon(px){return L.divIcon({className:'flame-pin',html:'<img src=\"'+FLAME_RED+'\" alt=\"\" style=\"width:'+px+'px;height:auto;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))\">',iconSize:[px,px*1.35],iconAnchor:[px/2,px*1.18]});}
@@ -598,6 +599,8 @@ const TF_AUTH_TIMEOUT_MS=3000;
 const TF_REQUEST_ID_MAX=128;
 const TF_CITY_SLUG='valencia';
 const TF_VIALES_CACHE_PREFIX='tf_viales_v6';
+const TF_MOD_CACHE_VERSION=1;
+const TF_MOD_CACHE_KEY=`tf_mod_v${TF_MOD_CACHE_VERSION}:${TF_CITY_SLUG}`;
 let __tfAuth=null;          // {token:string|null, apiBase:string}
 let __tfCiudadId=null;
 let __tfInitialAuthPromise=null;
@@ -761,7 +764,7 @@ POIS.forEach(p=>{
   const m = p.c==='bomberos'
     ? L.marker([p.lat,p.lng],{icon:flameIcon(28),zIndexOffset:400})
     : L.circleMarker([p.lat,p.lng],{radius:(p.c==='calle'||p.c==='avenida')?5:7,color:'#fff',weight:1.6,fillColor:CATS[p.c].color,fillOpacity:.95});
-  m.bindTooltip(p.n,{direction:'top',className:'poi-tip',offset:[0,-6]});
+  m.bindTooltip(tooltipTexto(p.n),{direction:'top',className:'poi-tip',offset:[0,-6]});
   m.on('click',e=>{ L.DomEvent.stopPropagation(e); if(!EX.on) fichaPOI(p); });
   m.addTo(capas[p.c]); marcas[p.c].push(m); p._m=m;
 });
@@ -773,14 +776,14 @@ function pintaZonas(){
   Z.zonas.forEach(z=>{
     z.polys.forEach(ring=>{
       const pg=L.polygon(ring,{color:z.stroke||'#D7263D',weight:2,fillColor:z.fill||z.stroke||'#D7263D',fillOpacity:.18});
-      pg.bindTooltip(z.AreaName||z.nombre,{sticky:true,className:'poi-tip'});
+      pg.bindTooltip(tooltipTexto(z.AreaName||z.nombre),{sticky:true,className:'poi-tip'});
       pg.on('click',e=>{ L.DomEvent.stopPropagation(e); if(!EX.on) fichaPunto(e.latlng); });
       pg.addTo(capaZonas);
     });
   });
   Z.estaciones.forEach(s=>{
     L.marker([s.lat,s.lng],{icon:flameIcon(32),zIndexOffset:500})
-      .bindTooltip(s.nombre,{direction:'top',className:'poi-tip'}).addTo(capaEst);
+      .bindTooltip(tooltipTexto(s.nombre),{direction:'top',className:'poi-tip'}).addTo(capaEst);
   });
 }
 
@@ -841,8 +844,38 @@ const CALLES_MOD=[
  ["De la Ilustración","Matrimonio Alcántara-Ríos"]
 ];
 const capaMod=L.layerGroup();
-let modNumEl=null, modCargando=false, modListo=false;
+let modNumEl=null, modCargando=false, modListo=false, modAbortCtl=null, modRunId=0;
 function setEtiquetaMod(hechas){ if(modNumEl)modNumEl.textContent = hechas==null?CALLES_MOD.length:`${hechas}/${CALLES_MOD.length}`; }
+function claveMod(nuevo,antiguo,t){ return JSON.stringify([nuevo,antiguo,t||'']); }
+function tfValidModCacheEntry(value){
+  return tfExactKeys(value,['nombre','lat','lng'])&&tfValidGeoItem(value);
+}
+function leerCacheMod(){
+  let raw=null;
+  try{ raw=localStorage.getItem(TF_MOD_CACHE_KEY); }catch(_){ return new Map(); }
+  if(!raw)return new Map();
+  try{
+    const parsed=JSON.parse(raw);
+    if(!parsed||parsed.version!==TF_MOD_CACHE_VERSION||!parsed.entries||typeof parsed.entries!=='object'||Array.isArray(parsed.entries))throw new Error('MOD_CACHE_SHAPE');
+    const validKeys=new Set(CALLES_MOD.map(cm=>claveMod(cm[0],cm[1],cm[2]||'')));
+    const cache=new Map();
+    for(const [key,value] of Object.entries(parsed.entries)){
+      if(!validKeys.has(key)||!tfValidModCacheEntry(value))throw new Error('MOD_CACHE_ENTRY');
+      cache.set(key,{nombre:value.nombre,lat:value.lat,lng:value.lng});
+    }
+    return cache;
+  }catch(_){
+    try{ localStorage.removeItem(TF_MOD_CACHE_KEY); }catch(_){ }
+    return new Map();
+  }
+}
+/* Una sola caché por pestaña: la capa y localizaMod comparten lo ya resuelto. */
+const modCache=leerCacheMod();
+function persistirCacheMod(cache){
+  const entries={};
+  cache.forEach((value,key)=>{ entries[key]=value; });
+  try{ localStorage.setItem(TF_MOD_CACHE_KEY,JSON.stringify({version:TF_MOD_CACHE_VERSION,entries})); }catch(_){ }
+}
 function consultaMod(nuevo,t){
   if(t==='av') return "Avinguda de l'Oest, València, España";
   if(t==='pl') return 'Plaça '+nuevo.replace(/^Pl\.?\s*/,'')+', València, España';
@@ -862,7 +895,7 @@ async function geocodeUno(q,signal){
 function marcaMod(nuevo,antiguo,c){
   const z=zonaEn(c.lat,c.lng);
   const m=L.circleMarker([c.lat,c.lng],{radius:7,color:'#fff',weight:2,fillColor:'#0E9F8E',fillOpacity:.95});
-  m.bindTooltip('↻ '+nuevo,{direction:'top',className:'poi-tip'});
+  m.bindTooltip(tooltipTexto('↻ '+nuevo),{direction:'top',className:'poi-tip'});
   m.on('click',e=>{ L.DomEvent.stopPropagation(e); if(EX.on)return;
     const filas=[{k:'Ahora se llama',v:nuevo},{k:'Antes (hasta 2017)',v:antiguo}].concat(filasZona(z))
       .concat([{k:'coordenadas',v:c.lat.toFixed(5)+', '+c.lng.toFixed(5),peque:true}]);
@@ -874,16 +907,52 @@ function marcaMod(nuevo,antiguo,c){
 }
 async function cargarCallesMod(){
   if(modCargando||modListo)return;
-  modCargando=true; let hechas=0;
-  for(const cm of CALLES_MOD){
-    const nuevo=cm[0], antiguo=cm[1], t=cm[2]||'';
-    let c=null;
-    try{ c=await geocodeUno(consultaMod(nuevo,t)); if(c)marcaMod(nuevo,antiguo,c); }catch(_){}
-    hechas++; setEtiquetaMod(hechas);
+  modCargando=true; modListo=false;
+  const runId=++modRunId;
+  const controller=new AbortController();
+  modAbortCtl=controller;
+  capaMod.clearLayers();
+  let hechas=0;
+  setEtiquetaMod(hechas);
+  try{
+    for(const cm of CALLES_MOD){
+      if(controller.signal.aborted||runId!==modRunId)break;
+      const nuevo=cm[0], antiguo=cm[1], t=cm[2]||'';
+      const key=claveMod(nuevo,antiguo,t);
+      const cached=modCache.get(key);
+      if(cached){
+        marcaMod(nuevo,antiguo,cached);
+        hechas++; setEtiquetaMod(hechas);
+        continue;
+      }
+      let c=null;
+      try{ c=await geocodeUno(consultaMod(nuevo,t),controller.signal); }
+      catch(_){ if(controller.signal.aborted||runId!==modRunId)break; }
+      if(controller.signal.aborted||runId!==modRunId)break;
+      if(c&&tfValidGeoItem(c)){
+        modCache.set(key,c);
+        persistirCacheMod(modCache);
+        marcaMod(nuevo,antiguo,c);
+        hechas++;
+      }
+      setEtiquetaMod(hechas);
+    }
+  }finally{
+    if(runId===modRunId){
+      modCargando=false;
+      modListo=modCache.size===CALLES_MOD.length;
+      setEtiquetaMod(modListo?null:hechas);
+      if(modAbortCtl===controller)modAbortCtl=null;
+    }
   }
-  modCargando=false; modListo=true; setEtiquetaMod(null);
 }
-function toggleMod(on){ if(on){ capaMod.addTo(map); cargarCallesMod(); } else { map.removeLayer(capaMod); } }
+function toggleMod(on){
+  if(on){ capaMod.addTo(map); cargarCallesMod(); return; }
+  modRunId++;
+  if(modAbortCtl){ modAbortCtl.abort(); modAbortCtl=null; }
+  modCargando=false; modListo=false;
+  map.removeLayer(capaMod);
+}
 
 /* ---------- CALLEJERO COMPLETO DE VALÈNCIA (API de la academia) ---------- */
 let VIALES=null, vialesProm=null;
@@ -891,9 +960,13 @@ const capaAv=L.layerGroup(), capaCalles=L.layerGroup();
 let avRender=false, callesRender=false, avNumEl=null, callesNumEl=null;
 function setNum(elx,v){ if(elx)elx.textContent=v; }
 function clasificaVia(name,hw){
-  const n=name.toLowerCase();
-  if(/\b(avinguda|avenida|gran\s*v[ií]a|passeig|paseo)\b/.test(n)||/^(av|avd|avda|gv|pg)\.?\s/.test(n)) return 'av';
-  if(['motorway','trunk','primary','secondary','tertiary'].includes(hw)) return 'principal';
+  const normaliza=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const n=normaliza(name), tipo=normaliza(hw);
+  // Contrato del callejero: highway primary/secondary/tertiary => principal;
+  // CALLE/PLAZA genéricas => otra; AVENIDA se reconoce por tipo o nombre.
+  if(tipo==='avenida'||tipo==='avinguda'||tipo==='av'||/\b(avinguda|avenida|gran\s*via|passeig|paseo)\b/.test(n)||/^(av|avd|avda|gv|pg)\.?\s/.test(n)) return 'av';
+  if(['calle','carrer','plaza','placa'].includes(tipo)) return 'otra';
+  if(['motorway','trunk','primary','secondary','tertiary'].includes(tipo)) return 'principal';
   return 'otra';
 }
 /* longitud de calle y dificultad */
@@ -962,7 +1035,7 @@ async function actualizarCallejero(){
 }
 function pinVial(v,color){
   const m=L.circleMarker([v.lat,v.lng],{radius:5,color:'#fff',weight:1.4,fillColor:color,fillOpacity:.95});
-  m.bindTooltip(v.n,{direction:'top',className:'poi-tip'});
+  m.bindTooltip(tooltipTexto(v.n),{direction:'top',className:'poi-tip'});
   m.on('click',e=>{ L.DomEvent.stopPropagation(e); if(EX.on)return;
     const z=zonaEn(v.lat,v.lng);
     showCard(v.n, v.t==='av'?'Avenida':'Calle principal',
@@ -1165,6 +1238,7 @@ function montaCallesMod(filtro,cont){
 async function localizaMod(nuevo,antiguo,t){
   if(innerWidth<=820)$('#sidebar').classList.remove('abierto');
   const q=consultaMod(nuevo,t);
+  const key=claveMod(nuevo,antiguo,t);
   const ficha=(coord)=>{
     const z=coord?zonaEn(coord.lat,coord.lng):null;
     const filas=[{k:'Ahora se llama',v:nuevo},{k:'Antes (hasta 2017)',v:antiguo}]
@@ -1174,8 +1248,10 @@ async function localizaMod(nuevo,antiguo,t){
   };
   let c=null;
   ficha(null);
-  try{ c=await geocodeUno(q); }catch(_){}
+  c=modCache.get(key)||null;
+  if(!c){ try{ c=await geocodeUno(q); }catch(_){} }
   if(!c){ try{ c=await geocodeUno(antiguo+', València, España'); }catch(_){} }
+  if(c&&tfValidGeoItem(c)){ modCache.set(key,c); persistirCacheMod(modCache); }
   if(c){ map.flyTo([c.lat,c.lng],16); ponPin(c.lat,c.lng); ficha(c); }
 }
 /* búsqueda libre en la API del Callejero: cualquier calle o dirección de València */
@@ -1419,7 +1495,7 @@ function respLocaliza(latlng){
   else { d=Math.round(map.distance(latlng,obj)); tol=EX.tol+((p.c==='calle'||p.c==='avenida')?100:0); }
   const ok=d<=tol;
   L.circleMarker(latlng,{radius:7,color:'#fff',weight:2,fillColor:ok?'#15803D':'#D7263D',fillOpacity:1}).addTo(EX.capa);
-  L.circleMarker(obj,{radius:9,color:'#fff',weight:2,fillColor:'#F9B112',fillOpacity:1}).bindTooltip(p.n,{permanent:true,direction:'top',className:'poi-tip'}).addTo(EX.capa);
+  L.circleMarker(obj,{radius:9,color:'#fff',weight:2,fillColor:'#F9B112',fillOpacity:1}).bindTooltip(tooltipTexto(p.n),{permanent:true,direction:'top',className:'poi-tip'}).addTo(EX.capa);
   L.polyline([latlng,obj],{color:ok?'#15803D':'#D7263D',weight:2,dashArray:'6 6'}).addTo(EX.capa);
   registra(q,ok,`a ${d} m (tolerancia ${tol} m)`);
   if(ok){ feedback(true,`¡Correcto!`, tieneBB?`Has acertado la calle (a ${d} m).`:`Has caído a ${d} m del objetivo.`); }
@@ -1446,7 +1522,7 @@ function respOpcion(btn,v,correcto){
   else{
     feedback(false,'Fallo',`La respuesta correcta era ${correcto}. Te llevo al punto.`);
     const p=q.poi; map.flyTo([p.lat,p.lng],15.5);
-    L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillColor:'#F9B112',fillOpacity:1}).bindTooltip(p.n,{permanent:true,direction:'top',className:'poi-tip'}).addTo(EX.capa);
+    L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillColor:'#F9B112',fillOpacity:1}).bindTooltip(tooltipTexto(p.n),{permanent:true,direction:'top',className:'poi-tip'}).addTo(EX.capa);
     setTimeout(()=>fichaPOI(p),700);
   }
 }
@@ -1474,7 +1550,7 @@ $('#btnLoc').onclick=()=>{
   if(innerWidth<=820)$('#sidebar').classList.remove('abierto');
   map.flyTo([p.lat,p.lng],16);
   L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillColor:'#F9B112',fillOpacity:1})
-    .bindTooltip(p.n,{permanent:true,direction:'top',className:'poi-tip'}).addTo(EX.capa);
+    .bindTooltip(tooltipTexto(p.n),{permanent:true,direction:'top',className:'poi-tip'}).addTo(EX.capa);
   setTimeout(()=>fichaPOI(p),650);
 };
 function registra(q,ok,detalle){
@@ -1656,7 +1732,7 @@ async function preguntarCalle(){
   const o=pool[Math.floor(Math.random()*pool.length)];
   recQuizDest={n:o.n,lat:o.lat,lng:o.lng,id:o.id};
   recCapa.clearLayers(); setBase('calles');
-  L.marker([recQuizDest.lat,recQuizDest.lng],{icon:destIcon(),zIndexOffset:650}).bindTooltip(recQuizDest.n,{permanent:true,direction:'top',className:'poi-tip'}).addTo(recCapa);
+  L.marker([recQuizDest.lat,recQuizDest.lng],{icon:destIcon(),zIndexOffset:650}).bindTooltip(tooltipTexto(recQuizDest.n),{permanent:true,direction:'top',className:'poi-tip'}).addTo(recCapa);
   map.flyTo([recQuizDest.lat,recQuizDest.lng],14);
   if(innerWidth<=820)$('#sidebar').classList.remove('abierto');
   abrirRecPop();
@@ -1683,7 +1759,7 @@ async function trazarRecorrido(dest){
     $('#rpBody').innerHTML='<p class="rp-instr">La API del Callejero no ha devuelto un destino válido.</p>'; return;
   }
   setBase('calles'); if(innerWidth<=820)$('#sidebar').classList.remove('abierto');
-  L.marker([dest.lat,dest.lng],{icon:destIcon(),zIndexOffset:650}).bindTooltip(dest.n,{permanent:true,direction:'top',className:'poi-tip'}).addTo(recCapa);
+  L.marker([dest.lat,dest.lng],{icon:destIcon(),zIndexOffset:650}).bindTooltip(tooltipTexto(dest.n),{permanent:true,direction:'top',className:'poi-tip'}).addTo(recCapa);
   $('#rpTag').textContent='Recorrido';
   $('#rpTit').innerHTML=`<span class="rp-od"><span class="rec-a">A</span> Estación asignada</span><span class="rp-flecha">→</span><span class="rp-od"><span class="rec-b">B</span> ${escHtml(dest.n)}</span>`;
   $('#rpSub').textContent=z?`Zona ${z.AreaName||z.nombre} · Parque ${z.Parque} · Coopera ${z.Coopera}`:'Recorrido calculado por la API del Callejero';
@@ -1710,7 +1786,7 @@ async function trazarRecorrido(dest){
     map.fitBounds(L.latLngBounds(coords),pad);
     const km=ruta.km, min=ruta.minutos;
     const estRuta={nombre:ruta.estacion.nombre,lat:ruta.estacion.lat,lng:ruta.estacion.lng};
-    L.marker([estRuta.lat,estRuta.lng],{icon:flameIcon(32),zIndexOffset:600}).bindTooltip(estRuta.nombre,{direction:'top',className:'poi-tip'}).addTo(recCapa);
+    L.marker([estRuta.lat,estRuta.lng],{icon:flameIcon(32),zIndexOffset:600}).bindTooltip(tooltipTexto(estRuta.nombre),{direction:'top',className:'poi-tip'}).addTo(recCapa);
     $('#rpTit').innerHTML=`<span class="rp-od"><span class="rec-a">A</span> ${escHtml(estRuta.nombre)}</span><span class="rp-flecha">→</span><span class="rp-od"><span class="rec-b">B</span> ${escHtml(dest.n)}</span>`;
     rpResultado(estRuta,dest,dedupCalles(ruta.calles||[]),km,min);
   }else{

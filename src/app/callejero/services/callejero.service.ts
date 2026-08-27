@@ -73,26 +73,34 @@ export class CallejeroService extends ApiBaseService {
   }
 
   /**
-   * GET /callejero/geocode/reverse?lat=&lng= — dirección aproximada a partir
-   * de coordenadas (se usa en la ficha de punto). `ignoreError=true` para
-   * degradar silenciosamente si el servicio no está disponible.
+   * GET /callejero/geocode/reverse?ciudadId=&lat=&lng= — dirección aproximada
+   * a partir de coordenadas (se usa en la ficha de punto). `ignoreError=true`
+   * para degradar silenciosamente si el servicio no está disponible.
    */
-  geocodeReverse(lat: number, lng: number): Observable<GeocodeReverseResponse> {
+  geocodeReverse(
+    ciudadId: number,
+    lat: number,
+    lng: number,
+  ): Observable<GeocodeReverseResponse> {
     return this.get(
-      `/geocode/reverse?lat=${lat}&lng=${lng}`,
+      `/geocode/reverse?ciudadId=${ciudadId}&lat=${lat}&lng=${lng}`,
       true,
     ) as Observable<GeocodeReverseResponse>;
   }
 
   /**
-   * GET /callejero/geocode/buscar?q=&limit= — sugerencias OSM para el
-   * autocomplete de dirección libre (Recorridos). `ignoreError=true` para
+   * GET /callejero/geocode/buscar?ciudadId=&q=&limit= — sugerencias OSM para
+   * el autocomplete de dirección libre (Recorridos). `ignoreError=true` para
    * degradar a lista vacía si falla.
    */
-  geocodeBuscar(q: string, limit = 5): Observable<GeocodeBuscarItem[]> {
+  geocodeBuscar(
+    ciudadId: number,
+    q: string,
+    limit = 5,
+  ): Observable<GeocodeBuscarItem[]> {
     return (
       this.get(
-        `/geocode/buscar?q=${encodeURIComponent(q)}&limit=${limit}`,
+        `/geocode/buscar?ciudadId=${ciudadId}&q=${encodeURIComponent(q)}&limit=${limit}`,
         true,
       ) as Observable<GeocodeBuscarResponse>
     ).pipe(map((r) => r.items));
