@@ -1,11 +1,56 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { loginAsAlumnoMock } from './helpers/auth.helper';
 import { setupTestPracticaInterceptors } from './helpers/interceptors.helper';
+import testGeneradoFixture from './fixtures/test-generado.json';
+
+const OVERSIZED_MARKDOWN_IMAGE_PATH = '/__e2e__/oversized-markdown-image.svg';
+const OVERSIZED_MARKDOWN_IMAGE =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1200" viewBox="0 0 2400 1200"><rect width="2400" height="1200" fill="#004e89"/><text x="80" y="180" font-size="120" fill="#fff">Imagen markdown de prueba</text></svg>';
+const OVERSIZED_TEST_FIXTURE = {
+  ...testGeneradoFixture,
+  preguntas: testGeneradoFixture.preguntas.map((pregunta) => ({
+    ...pregunta,
+    descripcion: `![Imagen de prueba](${OVERSIZED_MARKDOWN_IMAGE_PATH})`,
+    solucion: `![Imagen de prueba](${OVERSIZED_MARKDOWN_IMAGE_PATH})`,
+  })),
+};
+
+async function serveOversizedMarkdownImage(page: Page): Promise<void> {
+  await page.route(`**${OVERSIZED_MARKDOWN_IMAGE_PATH}`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml',
+      body: OVERSIZED_MARKDOWN_IMAGE,
+    }),
+  );
+}
+
+async function assertMarkdownImageFits(image: Locator): Promise<void> {
+  await expect(image).toBeVisible();
+  const dimensions = await image.evaluate((element) => {
+    const host = element.closest('.markdown-images');
+    const container = host?.parentElement;
+    if (!host || !container) {
+      throw new Error('La imagen markdown no está dentro de su contenedor');
+    }
+    return {
+      imageWidth: element.getBoundingClientRect().width,
+      containerWidth: container.getBoundingClientRect().width,
+    };
+  });
+  expect(dimensions.imageWidth).toBeLessThanOrEqual(
+    dimensions.containerWidth + 1,
+  );
+}
 
 test.describe('Completar Test de Práctica (Alumno)', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAlumnoMock(page);
-    await setupTestPracticaInterceptors(page);
+    await setupTestPracticaInterceptors(
+      page,
+      OVERSIZED_TEST_FIXTURE as typeof testGeneradoFixture,
+    );
+    await serveOversizedMarkdownImage(page);
   });
 
   test('muestra la primera pregunta con sus opciones de respuesta', async ({
@@ -25,6 +70,30 @@ test.describe('Completar Test de Práctica (Alumno)', () => {
 
     const opciones = page.locator('[data-testid="opcion-respuesta"]');
     await expect(opciones).toHaveCount(4);
+  });
+
+  test('limita las imágenes markdown de pregunta y solución al contenedor', async ({
+    page,
+  }) => {
+    await page.goto('/app/test/alumno/realizar-test/123');
+    await expect(page.locator('[data-testid="pregunta-card"]')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await assertMarkdownImageFits(
+      page.locator('[data-testid="enunciado-pregunta"] .markdown-images img'),
+    );
+
+    await Promise.all([
+      page.waitForResponse('**/tests/registrar-respuesta'),
+      page.locator('[data-testid="opcion-respuesta"]').first().click(),
+    ]);
+    await expect(
+      page.locator('[data-testid="solucion-container"]'),
+    ).toBeVisible();
+    await assertMarkdownImageFits(
+      page.locator('[data-testid="solucion-texto"] .markdown-images img'),
+    );
   });
 
   test('seleccionar una respuesta llama a registrar-respuesta con los datos correctos', async ({

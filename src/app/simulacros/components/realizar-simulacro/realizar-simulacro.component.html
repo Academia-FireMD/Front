@@ -115,7 +115,10 @@
           data-testid="simulacro-description"
         >
           <p-divider></p-divider>
-          <markdown [data]="lastLoadedExamen()?.descripcion"></markdown>
+          <markdown
+            class="markdown-images"
+            [data]="lastLoadedExamen()?.descripcion"
+          ></markdown>
         </div>
 
         <div class="start-button-container">

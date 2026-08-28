@@ -399,6 +399,7 @@
                 >
                   <p data-testid="enunciado-pregunta">
                     <markdown
+                      class="markdown-images"
                       [data]="
                         pregunta.descripcion && pregunta.descripcion.length > 0
                           ? pregunta.descripcion
@@ -546,6 +547,7 @@
                   <strong>Solución:</strong>
                   <p class="m-0" data-testid="solucion-texto">
                     <markdown
+                      class="markdown-images"
                       [data]="
                         pregunta.solucion && pregunta.solucion.length > 0
                           ? pregunta.solucion

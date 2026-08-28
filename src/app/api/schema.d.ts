@@ -2037,9 +2037,10 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * @description Fase 2 bridge temario↔física: marca como `esEntrenamientoFisico` todos los
-     *     sub-bloques de esta planificación mensual cuyo nombre empiece por
-     *     "ENTRENAMIENTO". Solo ADMIN; la confirmación la pide el front.
+     * @description Fase 2 bridge temario↔física: deja como máximo un sub-bloque
+     *     `esEntrenamientoFisico` por día, priorizando nombres que empiecen por
+     *     "ENTRENAMIENTO" cuando aún no existe uno. Solo ADMIN; la confirmación la
+     *     pide el front.
      */
     post: operations['PlanificacionController_convertirBloquesFisica'];
     delete?: never;
@@ -13371,6 +13372,7 @@ export interface operations {
   CallejeroController_geocodeReverse: {
     parameters: {
       query: {
+        ciudadId?: number;
         lat: number;
         lng: number;
       };
@@ -13391,6 +13393,7 @@ export interface operations {
   CallejeroController_geocodeBuscar: {
     parameters: {
       query: {
+        ciudadId?: number;
         q: string;
         limit?: number;
       };

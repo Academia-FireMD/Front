@@ -324,10 +324,10 @@ describe('CallejeroService', () => {
   it('GET /callejero/geocode/reverse devuelve la dirección aproximada', () => {
     let received: { direccion: string } | undefined;
 
-    service.geocodeReverse(39.471, -0.362).subscribe((r) => (received = r));
+    service.geocodeReverse(1, 39.471, -0.362).subscribe((r) => (received = r));
 
     const req = httpMock.expectOne(
-      `${API}/callejero/geocode/reverse?lat=39.471&lng=-0.362`,
+      `${API}/callejero/geocode/reverse?ciudadId=1&lat=39.471&lng=-0.362`,
     );
     expect(req.request.method).toBe('GET');
     expect(req.request.withCredentials).toBe(true);
@@ -342,10 +342,10 @@ describe('CallejeroService', () => {
     ];
     let received: GeocodeBuscarItem[] | undefined;
 
-    service.geocodeBuscar('Puerto 12').subscribe((r) => (received = r));
+    service.geocodeBuscar(1, 'Puerto 12').subscribe((r) => (received = r));
 
     const req = httpMock.expectOne(
-      `${API}/callejero/geocode/buscar?q=Puerto%2012&limit=5`,
+      `${API}/callejero/geocode/buscar?ciudadId=1&q=Puerto%2012&limit=5`,
     );
     expect(req.request.method).toBe('GET');
     req.flush({ items });
@@ -355,10 +355,10 @@ describe('CallejeroService', () => {
   });
 
   it('GET /callejero/geocode/buscar respeta el limit personalizado', () => {
-    service.geocodeBuscar('Colón', 10).subscribe();
+    service.geocodeBuscar(1, 'Colón', 10).subscribe();
 
     const req = httpMock.expectOne(
-      `${API}/callejero/geocode/buscar?q=Col%C3%B3n&limit=10`,
+      `${API}/callejero/geocode/buscar?ciudadId=1&q=Col%C3%B3n&limit=10`,
     );
     req.flush({ items: [] });
 

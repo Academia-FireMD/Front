@@ -495,6 +495,26 @@ describe('CallejeroAppComponent', () => {
     expect(out).toContain('&#39;');
   });
 
+  it('geocode usa siempre la ciudad seleccionada y degrada sin request si falta', () => {
+    component.onGeocodeBuscarLibre('Calle Colón');
+    expect(svc.geocodeBuscar).toHaveBeenCalledWith(1, 'Calle Colón');
+
+    component.ciudadSel.set(null);
+    component.onGeocodeBuscarLibre('Calle Colón');
+    expect(svc.geocodeBuscar).toHaveBeenCalledTimes(1);
+    (component as any).geocodeReverseAsync(39.47, -0.37);
+    expect(svc.geocodeReverse).not.toHaveBeenCalled();
+  });
+
+  it('tooltips dinámicos usan un HTMLElement de texto y no crean HTML', () => {
+    const tooltip = (component as any).tooltipTexto(
+      '<img src=x onerror=alert(1)>',
+    ) as HTMLElement;
+    expect(tooltip).toBeInstanceOf(HTMLElement);
+    expect(tooltip.textContent).toBe('<img src=x onerror=alert(1)>');
+    expect(tooltip.querySelector('img')).toBeNull();
+  });
+
   it('toggleFichaMinimizada alterna el estado y cerrarFicha lo resetea', () => {
     component.ficha.set({
       titulo: 'Calle Colón',

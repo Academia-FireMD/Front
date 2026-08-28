@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { loginAsAlumnoMock } from './helpers/auth.helper';
+import examenFixture from './fixtures/examen.json';
 import {
   setupSimulacroInterceptors,
   setupTestPracticaInterceptors,
@@ -7,6 +8,51 @@ import {
 
 const EXAMEN_ID = 5;
 const TEST_ID = 42;
+const OVERSIZED_MARKDOWN_IMAGE_PATH = '/__e2e__/oversized-markdown-image.svg';
+const OVERSIZED_MARKDOWN_IMAGE =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1200" viewBox="0 0 2400 1200"><rect width="2400" height="1200" fill="#1f2937"/><text x="80" y="180" font-size="120" fill="#fff">Imagen markdown de prueba</text></svg>';
+
+async function serveOversizedMarkdownImage(page: Page): Promise<void> {
+  await page.route(`**${OVERSIZED_MARKDOWN_IMAGE_PATH}`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml',
+      body: OVERSIZED_MARKDOWN_IMAGE,
+    }),
+  );
+}
+
+async function serveOversizedExamenDescription(page: Page): Promise<void> {
+  await page.route(`**/examenes/simulacro/${EXAMEN_ID}`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...examenFixture,
+        id: EXAMEN_ID,
+        descripcion: `![Imagen de prueba](${OVERSIZED_MARKDOWN_IMAGE_PATH})`,
+      }),
+    }),
+  );
+}
+
+async function assertMarkdownImageFits(image: Locator): Promise<void> {
+  await expect(image).toBeVisible();
+  const dimensions = await image.evaluate((element) => {
+    const host = element.closest('.markdown-images');
+    const container = host?.parentElement;
+    if (!host || !container) {
+      throw new Error('La imagen markdown no está dentro de su contenedor');
+    }
+    return {
+      imageWidth: element.getBoundingClientRect().width,
+      containerWidth: container.getBoundingClientRect().width,
+    };
+  });
+  expect(dimensions.imageWidth).toBeLessThanOrEqual(
+    dimensions.containerWidth + 1,
+  );
+}
 
 test.describe('Realizar Simulacro (Alumno)', () => {
   test.beforeEach(async ({ page }) => {
@@ -15,6 +61,8 @@ test.describe('Realizar Simulacro (Alumno)', () => {
       examenId: EXAMEN_ID,
       testId: TEST_ID,
     });
+    await serveOversizedMarkdownImage(page);
+    await serveOversizedExamenDescription(page);
   });
 
   test('muestra el nombre del simulacro y el botón de iniciar', async ({
@@ -44,6 +92,20 @@ test.describe('Realizar Simulacro (Alumno)', () => {
 
     // The examen fixture has titulo "Simulacro Bomberos 2024 - Convocatoria Estatal"
     await expect(page.locator('body')).toContainText('Simulacro Bomberos');
+  });
+
+  test('limita la imagen markdown de la descripción al contenedor', async ({
+    page,
+  }) => {
+    await page.goto(`/simulacros/realizar-simulacro/${EXAMEN_ID}`);
+    await expect(
+      page.locator('[data-testid="simulacro-description"]'),
+    ).toBeVisible({ timeout: 10_000 });
+    await assertMarkdownImageFits(
+      page.locator(
+        '[data-testid="simulacro-description"] .markdown-images img',
+      ),
+    );
   });
 
   test('iniciar simulacro llama a verificar-acceso y luego a start-simulacro', async ({
