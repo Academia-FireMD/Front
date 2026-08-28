@@ -1,8 +1,10 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
+import { moduloGuard } from '../guards/modulo.guard';
 import { SubscriptionGuard } from '../guards/subscription.guard';
 import { SuscripcionTipo } from '../shared/models/subscription.model';
+import { ModuloApp } from '../shared/models/modulo-app.enum';
 import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
 import { PlanificacionAlumnoComponent } from './planificacion-alumno/planificacion-alumno.component';
@@ -89,21 +91,31 @@ const routes: Routes = [
   {
     path: 'configuracion-alumno',
     component: PlanificacionAlumnoComponent,
+    canActivate: [moduloGuard],
     title: 'Mi planificación',
+    data: { modulo: ModuloApp.PLANIFICACION_AUTOASIGNACION },
   },
   {
     path: 'admin-planificacion',
     component: PlanificacionAdminComponent,
-    canActivate: [roleGuard],
+    canActivate: [roleGuard, moduloGuard],
     title: 'Administración de planificaciones',
-    data: { expectedRole: 'ADMIN', title: 'Administración de planificaciones' },
+    data: {
+      expectedRole: 'ADMIN',
+      title: 'Administración de planificaciones',
+      modulo: ModuloApp.PLANIFICACION_AUTOASIGNACION,
+    },
   },
   {
     path: 'tutor',
     component: PlanificacionTutorComponent,
-    canActivate: [roleGuard],
+    canActivate: [roleGuard, moduloGuard],
     title: 'Panel tutor',
-    data: { expectedRole: 'ALUMNO', title: 'Panel tutor' },
+    data: {
+      expectedRole: 'ALUMNO',
+      title: 'Panel tutor',
+      modulo: ModuloApp.PLANIFICACION_AUTOASIGNACION,
+    },
   },
 ];
 

@@ -462,11 +462,17 @@
             <span>{{ day.date | date: "d" }}</span>
           </div>
 
-          <!-- Bridge temario↔física: insignia compacta.
-               OCULTO (Fase 5, decisión producto): mismo criterio que la vista
-               semanal — el fallback del header se elimina; el bloque vinculado
-               ya es la indicación. Si el día no tiene bloque vinculado, el
-               alumno no ve nada en el temario. -->
+          <!-- Bridge temario↔física: insignia compacta para el alumno. -->
+          <button
+            *ngIf="expectedRole == 'ALUMNO' && tieneFisica(day.date)"
+            type="button"
+            class="temario-fisica-bridge"
+            data-testid="temario-fisica-bridge"
+            (click)="abrirFisica(day.date, $event)"
+          >
+            <span class="font-medium">Entrenamiento físico</span>
+            <small>{{ etiquetaFisica(day.date) }}</small>
+          </button>
 
           <!-- Progreso Diario -->
           <div *ngIf="events.length > 0" class="progress-container">

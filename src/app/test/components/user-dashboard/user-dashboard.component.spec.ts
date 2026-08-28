@@ -398,6 +398,7 @@ describe('UserDashboardComponent — diálogo legacy de planificación', () => {
       nivel: NivelOposicion.AVANZADO,
       franja: 'FRANJA_SEIS_A_OCHO_HORAS',
       motivo: 'Cambio acordado',
+      version: 2,
     });
   });
 

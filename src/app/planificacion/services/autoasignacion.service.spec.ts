@@ -132,7 +132,7 @@ describe('AutoasignacionService', () => {
     expect(recibida).toEqual({ ok: true, nivel: NivelOposicion.AVANZADO });
   });
 
-  it('POST /tutor/:id/forzar envía oposicion, nivel, franja y motivo', () => {
+  it('POST /tutor/:id/forzar envía combinación, motivo y versión', () => {
     let recibida: unknown;
 
     service
@@ -141,6 +141,7 @@ describe('AutoasignacionService', () => {
         nivel: NivelOposicion.INICIACION,
         franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
         motivo: 'Cambio por falta de disponibilidad',
+        version: 2,
       })
       .subscribe((r) => (recibida = r));
 
@@ -153,6 +154,7 @@ describe('AutoasignacionService', () => {
       nivel: NivelOposicion.INICIACION,
       franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
       motivo: 'Cambio por falta de disponibilidad',
+      version: 2,
     });
     request.flush(configuracionRespuesta);
 

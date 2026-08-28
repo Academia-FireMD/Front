@@ -172,7 +172,15 @@ import {
 
               <div class="flex justify-content-end mt-3">
                 <p-button
-                  label="Guardar preferencias"
+                  label="Recomendar nivel"
+                  icon="pi pi-lightbulb"
+                  severity="secondary"
+                  [loading]="recomendando()"
+                  [disabled]="!puedeRecomendar"
+                  (onClick)="recomendar()"
+                />
+                <p-button
+                  label="Forzar configuración"
                   icon="pi pi-check"
                   [loading]="guardando()"
                   [disabled]="!puedeGuardar"
@@ -195,6 +203,7 @@ export class PlanificacionTutorComponent implements OnInit {
   readonly alumnoSeleccionado = signal<AlumnoPlanificacionTutor | null>(null);
   readonly cargando = signal(true);
   readonly guardando = signal(false);
+  readonly recomendando = signal(false);
   readonly error = signal<string | null>(null);
 
   preferenciasEditadas: PreferenciasPrecargadas = {
@@ -225,6 +234,12 @@ export class PlanificacionTutorComponent implements OnInit {
       this.preferenciasCompletas &&
       this.opcionSeleccionada?.planificacionMensual &&
       this.motivo.trim(),
+    );
+  }
+
+  get puedeRecomendar(): boolean {
+    return Boolean(
+      this.alumnoSeleccionado() && this.preferenciasEditadas.nivel,
     );
   }
 
@@ -298,6 +313,7 @@ export class PlanificacionTutorComponent implements OnInit {
           franja: this.preferenciasEditadas
             .franja as TipoDePlanificacionDeseada,
           motivo: this.motivo.trim(),
+          version: alumno.configuracion?.version ?? 0,
         }),
       );
       await this.cargar(alumno.alumno.id);
@@ -306,6 +322,31 @@ export class PlanificacionTutorComponent implements OnInit {
       this.toast.error('No se pudieron guardar las preferencias del alumno.');
     } finally {
       this.guardando.set(false);
+      this.cdr.markForCheck();
+    }
+  }
+
+  async recomendar(): Promise<void> {
+    const alumno = this.alumnoSeleccionado();
+    const nivel = this.preferenciasEditadas.nivel as NivelOposicion | null;
+    if (!alumno || !nivel) return;
+
+    this.recomendando.set(true);
+    this.error.set(null);
+    try {
+      await firstValueFrom(
+        this.autoasignacionService.recomendarNivelTutor$(
+          alumno.alumno.id,
+          nivel,
+        ),
+      );
+      this.toast.success('Nivel recomendado correctamente.');
+      await this.cargar(alumno.alumno.id);
+    } catch {
+      this.error.set('No se pudo recomendar el nivel del alumno.');
+      this.toast.error('No se pudo recomendar el nivel del alumno.');
+    } finally {
+      this.recomendando.set(false);
       this.cdr.markForCheck();
     }
   }

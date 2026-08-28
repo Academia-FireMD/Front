@@ -362,12 +362,15 @@ export class AppConfigService {
   }
 
   /**
-   * Convenience getter: lee del signal. Si el módulo no está en el map
-   * (caso bug), fail-open → true (consistente con backend default).
+   * Convenience getter: lee del signal. El flag de autoasignación es
+   * fail-closed incluso si el mapa llega de un Server anterior sin esa clave;
+   * los módulos legacy conservan el fallback fail-open histórico.
    */
   isModuloHabilitado(modulo: ModuloApp): boolean {
     const map = this._estadoModulos();
-    if (!(modulo in map)) return true;
+    if (!(modulo in map)) {
+      return modulo === ModuloApp.PLANIFICACION_AUTOASIGNACION ? false : true;
+    }
     return map[modulo] === true;
   }
 

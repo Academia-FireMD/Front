@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import userAlumnoFixture from '../fixtures/user-alumno.json';
+import type { EstadoModulos } from '../../src/app/shared/models/app-config.model';
 
 function buildMockJwt(payload: Record<string, unknown>): string {
   const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
@@ -7,6 +8,14 @@ function buildMockJwt(payload: Record<string, unknown>): string {
 }
 
 type Rol = 'ALUMNO' | 'ADMIN' | 'SUPERADMIN';
+type ModulosMock = Partial<EstadoModulos>;
+
+type LoginAsRoleMockOptions = {
+  rol: Rol;
+  email?: string;
+  userFixture?: unknown;
+  modulos?: ModulosMock;
+};
 
 /**
  * Login mockeado genérico por rol. Mismo flujo robusto que el de alumno
@@ -16,7 +25,7 @@ type Rol = 'ALUMNO' | 'ADMIN' | 'SUPERADMIN';
  */
 export async function loginAsRoleMock(
   page: Page,
-  opts: { rol: Rol; email?: string; userFixture?: unknown } = { rol: 'ALUMNO' }
+  opts: LoginAsRoleMockOptions = { rol: 'ALUMNO' },
 ): Promise<void> {
   const email = opts.email ?? `${opts.rol.toLowerCase()}@test.com`;
   const userFixture = opts.userFixture ?? userAlumnoFixture;
@@ -40,7 +49,7 @@ export async function loginAsRoleMock(
             refresh_token: mockJwt,
           }),
         })
-      : route.continue()
+      : route.continue(),
   );
 
   await page.route('**/user/get-by-email', (route) =>
@@ -48,7 +57,7 @@ export async function loginAsRoleMock(
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(userFixture),
-    })
+    }),
   );
 
   // El layout pide /api/app-config al arrancar; sin stub, generateShades()
@@ -64,7 +73,7 @@ export async function loginAsRoleMock(
         secondaryColor: '#1F2937',
         updatedAt: new Date().toISOString(),
       }),
-    })
+    }),
   );
 
   // El app-shell evolucionado (asistente IA, white-label, perfil) pide más
@@ -85,29 +94,30 @@ export async function loginAsRoleMock(
         FLASHCARDS: true,
         FACTURACION: true,
         CALLEJERO: true,
+        ...opts.modulos,
       }),
-    })
+    }),
   );
   await page.route('**/api/config', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ verifactuEnabled: false }),
-    })
+    }),
   );
   await page.route('**/user/profile', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(userFixture),
-    })
+    }),
   );
   await page.route('**/ai-assistant/token', (route) =>
     route.fulfill({
       status: 403,
       contentType: 'application/json',
       body: JSON.stringify({ reason: 'DISABLED' }),
-    })
+    }),
   );
 
   await page.goto('/auth/login');
@@ -129,7 +139,7 @@ export async function loginAsAlumnoMock(page: Page): Promise<void> {
 
 export async function loginAsAdminMock(
   page: Page,
-  userFixture?: unknown
+  userFixture?: unknown,
 ): Promise<void> {
   await loginAsRoleMock(page, {
     rol: 'ADMIN',
@@ -140,7 +150,7 @@ export async function loginAsAdminMock(
 
 export async function loginAsSuperadminMock(
   page: Page,
-  userFixture?: unknown
+  userFixture?: unknown,
 ): Promise<void> {
   await loginAsRoleMock(page, {
     rol: 'SUPERADMIN',

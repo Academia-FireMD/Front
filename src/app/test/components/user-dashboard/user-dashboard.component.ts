@@ -1125,6 +1125,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
             nivel: this.tutorForzarPreferencias.nivel as any,
             franja: this.tutorForzarPreferencias.franja as string,
             motivo: this.tutorForzarMotivo.trim(),
+            version: this.tutorForzarConfiguracion?.configuracion?.version ?? 0,
           },
         ),
       );

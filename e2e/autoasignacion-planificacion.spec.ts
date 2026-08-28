@@ -58,6 +58,7 @@ async function loginAlumno(page: Parameters<typeof loginAsRoleMock>[0]) {
     rol: 'ALUMNO',
     email: 'alumno-plan@test.com',
     userFixture: alumnoConPlan,
+    modulos: { PLANIFICACION_AUTOASIGNACION: true },
   });
 }
 

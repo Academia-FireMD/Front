@@ -8,6 +8,8 @@ import { NO_ERRORS_SCHEMA, Pipe, PipeTransform, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { ToastrService } from 'ngx-toastr';
+import { CalendarModule, DateAdapter } from 'angular-calendar';
+import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
 import { of, Subject, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 import { PlanificacionesService } from '../../services/planificaciones.service';
@@ -62,6 +64,12 @@ describe('PlanificacionMensualEditComponent', () => {
     appConfigService = makeMockAppConfigService(true);
     await TestBed.configureTestingModule({
       declarations: [PlanificacionMensualEditComponent, MockCalendarDatePipe],
+      imports: [
+        CalendarModule.forRoot({
+          provide: DateAdapter,
+          useFactory: adapterFactory,
+        }),
+      ],
       providers: [
         ...COMMON_TEST_PROVIDERS,
         { provide: AppConfigService, useValue: appConfigService },
@@ -562,6 +570,7 @@ describe('PlanificacionMensualEditComponent', () => {
           ],
         },
       ]);
+      component.viewDate = dia;
     });
 
     it('tieneFisica es true para un día con disciplinas y false para uno sin datos', () => {
@@ -624,33 +633,29 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(router.navigate).toHaveBeenCalled();
     });
 
-    it('renderiza la insignia data-testid="temario-fisica-bridge" en un día con física para ALUMNO, y su click llama a abrirFisica sin disparar el click de la celda', () => {
+    it('renderiza la insignia data-testid="temario-fisica-bridge" y su click navega sin disparar el click de la celda', () => {
       component.expectedRole = 'ALUMNO';
+      component.view = component.calendarView.Month;
       fixture.detectChanges();
 
       const badge = fixture.nativeElement.querySelector(
         '[data-testid="temario-fisica-bridge"]',
       );
-      // Puede no renderizarse si la vista activa es la semanal (el
-      // customCellTemplate solo se instancia dentro de la vista mensual de
-      // mwl-calendar-month-view); lo relevante para este test es que, si
-      // existe en el DOM, dispara abrirFisica y no el click de la celda.
-      if (badge) {
-        const abrirFisicaSpy = jest.spyOn(component, 'abrirFisica');
-        badge.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        expect(abrirFisicaSpy).toHaveBeenCalled();
-      } else {
-        // Verificación equivalente a nivel de componente: mismo contrato
-        // que la insignia usaría al pulsarse.
-        const domEvent = {
-          stopPropagation: jest.fn(),
-          preventDefault: jest.fn(),
-        } as unknown as Event;
-        expect(component.tieneFisica(dia)).toBe(true);
-        component.abrirFisica(dia, domEvent);
-        expect(domEvent.stopPropagation).toHaveBeenCalled();
-        expect(router.navigate).toHaveBeenCalled();
-      }
+      expect(badge).not.toBeNull();
+      const abrirFisicaSpy = jest.spyOn(component, 'abrirFisica');
+      const onDayClickedSpy = jest.spyOn(component, 'onDayClicked');
+      badge.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(abrirFisicaSpy).toHaveBeenCalled();
+      expect(onDayClickedSpy).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(
+        ['/app/planificacion-fisica', 'dia', '2026-07-15'],
+        {
+          queryParams: {
+            bloqueId: 33,
+            originPlanificacionId: undefined,
+          },
+        },
+      );
     });
   });
 

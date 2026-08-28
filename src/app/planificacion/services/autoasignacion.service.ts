@@ -81,6 +81,7 @@ export class AutoasignacionService extends ApiBaseService {
       nivel: NivelOposicion;
       franja: string;
       motivo: string;
+      version: number;
     },
   ): Observable<ConfiguracionPlanificacion> {
     return this.post(

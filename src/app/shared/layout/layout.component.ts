@@ -323,6 +323,12 @@ export class LayoutComponent {
             icon: 'fa fa-comment',
             routerLink: '/app/planificacion/comentarios',
           },
+          {
+            label: 'Autoasignación',
+            icon: 'pi pi-sliders-h',
+            routerLink: '/app/planificacion/admin-planificacion',
+            modulo: ModuloApp.PLANIFICACION_AUTOASIGNACION,
+          },
         ],
       },
       {
@@ -437,6 +443,10 @@ export class LayoutComponent {
     const isAdvanced = highestTier === SuscripcionTipo.ADVANCED;
     const isPremium = highestTier === SuscripcionTipo.PREMIUM;
     const hasValidSubscription = isBasic || isAdvanced || isPremium;
+    const autoasignacionHabilitada =
+      this.appConfigService.estadoModulos()[
+        ModuloApp.PLANIFICACION_AUTOASIGNACION
+      ] === true;
 
     const menu: AppMenuItem[] = [];
 
@@ -508,12 +518,18 @@ export class LayoutComponent {
     if (hasValidSubscription || user?.esTutor) {
       const planificacionItems: AppMenuItem[] = [];
       if (hasValidSubscription) {
-        const hijoEstudio: AppMenuItem =
-          isAdvanced || isPremium
+        const hijoEstudio: AppMenuItem = autoasignacionHabilitada
+          ? {
+              label: 'Planificación de estudio',
+              icon: 'pi pi-calendar-plus',
+              routerLink: '/app/planificacion/configuracion-alumno',
+              modulo: ModuloApp.PLANIFICACION_AUTOASIGNACION,
+            }
+          : isAdvanced || isPremium
             ? {
                 label: 'Planificación de estudio',
                 icon: 'pi pi-calendar-plus',
-                routerLink: '/app/planificacion/configuracion-alumno',
+                routerLink: '/app/planificacion/planificacion-mensual-alumno',
                 modulo: ModuloApp.PLANIFICACION,
               }
             : {
@@ -531,12 +547,12 @@ export class LayoutComponent {
           modulo: ModuloApp.PLANIFICACION_FISICA,
         });
       }
-      if (user?.esTutor) {
+      if (user?.esTutor && autoasignacionHabilitada) {
         planificacionItems.push({
           label: 'Panel tutor',
           icon: 'pi pi-users',
           routerLink: '/app/planificacion/tutor',
-          modulo: ModuloApp.PLANIFICACION,
+          modulo: ModuloApp.PLANIFICACION_AUTOASIGNACION,
         });
       }
       menu.push({

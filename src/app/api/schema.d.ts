@@ -6214,6 +6214,7 @@ export interface components {
       nivel: Record<string, never>;
       franja: Record<string, never>;
       motivo: string;
+      version: number;
     };
     CrearVarianteDto: {
       codigo: string;

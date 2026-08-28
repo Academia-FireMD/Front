@@ -15,7 +15,9 @@ describe('PlanificacionTutorComponent', () => {
   let service: {
     getTutorAlumnos$: jest.Mock;
     forzarConfiguracionTutor$: jest.Mock;
+    recomendarNivelTutor$: jest.Mock;
   };
+  let toast: { error: jest.Mock; success: jest.Mock };
 
   const alumno: AlumnoPlanificacionTutor = {
     alumno: { id: 42, nombre: 'Ana', apellidos: 'A', email: 'a@a.es' },
@@ -64,13 +66,15 @@ describe('PlanificacionTutorComponent', () => {
     service = {
       getTutorAlumnos$: jest.fn(() => of([alumno])),
       forzarConfiguracionTutor$: jest.fn(() => of({})),
+      recomendarNivelTutor$: jest.fn(() => of({ ok: true })),
     };
+    toast = { error: jest.fn(), success: jest.fn() };
 
     await TestBed.configureTestingModule({
       imports: [PlanificacionTutorComponent],
       providers: [
         { provide: AutoasignacionService, useValue: service },
-        { provide: ToastrService, useValue: { error: jest.fn() } },
+        { provide: ToastrService, useValue: toast },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -170,7 +174,46 @@ describe('PlanificacionTutorComponent', () => {
       nivel: NivelOposicion.AVANZADO,
       franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
       motivo: 'Ajuste acordado',
+      version: 2,
     });
+  });
+
+  it('recomendar envía el nivel seleccionado al endpoint y muestra éxito', async () => {
+    component.preferenciasEditadas = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+    };
+
+    await component.recomendar();
+
+    expect(service.recomendarNivelTutor$).toHaveBeenCalledWith(
+      42,
+      NivelOposicion.AVANZADO,
+    );
+    expect(toast.success).toHaveBeenCalledWith(
+      'Nivel recomendado correctamente.',
+    );
+  });
+
+  it('recomendar muestra error visible y toast si falla el endpoint', async () => {
+    service.recomendarNivelTutor$.mockReturnValueOnce(
+      throwError(() => new Error('fallo')),
+    );
+    component.preferenciasEditadas = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+    };
+
+    await component.recomendar();
+
+    expect(component.error()).toBe(
+      'No se pudo recomendar el nivel del alumno.',
+    );
+    expect(toast.error).toHaveBeenCalledWith(
+      'No se pudo recomendar el nivel del alumno.',
+    );
   });
 
   it('bloquea una combinación exacta sin planificación publicada', async () => {

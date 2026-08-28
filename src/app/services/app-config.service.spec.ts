@@ -33,6 +33,7 @@ const sampleModulos: EstadoModulos = {
   [ModuloApp.FACTURACION]: true,
   [ModuloApp.CALLEJERO]: true,
   [ModuloApp.PLANIFICACION_FISICA]: true,
+  [ModuloApp.PLANIFICACION_AUTOASIGNACION]: false,
 };
 
 function mockAuth(rol: string | null) {
@@ -134,6 +135,20 @@ describe('AppConfigService', () => {
     await promise;
     expect(service.appConfig().appName).toBe('AcmeAcademy');
     jest.useRealTimers();
+  });
+
+  it('flag de autoasignación ausente falla cerrado, legacy ausente conserva fallback', async () => {
+    const { [ModuloApp.PLANIFICACION_AUTOASIGNACION]: _auto, ...legacy } =
+      sampleModulos;
+    const promise = service.load();
+    httpMock.expectOne(CONFIG_URL).flush(sampleConfig);
+    httpMock.expectOne(MODULOS_URL).flush(legacy);
+    await promise;
+
+    expect(
+      service.isModuloHabilitado(ModuloApp.PLANIFICACION_AUTOASIGNACION),
+    ).toBe(false);
+    expect(service.isModuloHabilitado(ModuloApp.HORARIOS)).toBe(true);
   });
 
   it('updateConfig 409 dispara reload y devuelve STALE_CONFIG', async () => {

@@ -242,7 +242,7 @@ describe('LayoutComponent', () => {
 
   // -------- Grupo Planificación (feedback Sergio 2026-07-24) --------
   describe('grupo Planificación (feedback Sergio 2026-07-24)', () => {
-    it('ADVANCED: grupo "Planificación" con hijos estudio (ruta mensual) y pruebas físicas', () => {
+    it('ADVANCED con autoasignación ON: estudio usa configuración y pruebas físicas', () => {
       (component as any).currentUserSignal.set(
         makeAlumnoConSub(SuscripcionTipo.ADVANCED),
       );
@@ -258,12 +258,15 @@ describe('LayoutComponent', () => {
       expect((grupo!.items as AppMenuItem[])[0].routerLink).toBe(
         '/app/planificacion/configuracion-alumno',
       );
+      expect((grupo!.items as AppMenuItem[])[0].modulo).toBe(
+        ModuloApp.PLANIFICACION_AUTOASIGNACION,
+      );
       expect((grupo!.items as AppMenuItem[])[1].routerLink).toBe(
         '/app/planificacion-fisica',
       );
     });
 
-    it('BASIC: hijo estudio bloqueado (locked-menu-item + upsell), hijo físicas visible', () => {
+    it('BASIC con autoasignación ON navega a configuración para mostrar bloqueo/CTA', () => {
       (component as any).currentUserSignal.set(
         makeAlumnoConSub(SuscripcionTipo.BASIC),
       );
@@ -272,10 +275,47 @@ describe('LayoutComponent', () => {
       const grupo = menu.find((i) => i.label === 'Planificación');
       expect(grupo).toBeDefined();
       const hijos = grupo!.items as AppMenuItem[];
-      expect(hijos[0].styleClass).toBe('locked-menu-item');
-      expect(hijos[0].routerLink).toBeUndefined();
-      // El 403 de tier lo resuelve la vista (píldora de upsell).
+      expect(hijos[0].routerLink).toBe(
+        '/app/planificacion/configuracion-alumno',
+      );
+      expect(hijos[0].modulo).toBe(ModuloApp.PLANIFICACION_AUTOASIGNACION);
       expect(hijos[1].routerLink).toBe('/app/planificacion-fisica');
+    });
+
+    it('ADVANCED con autoasignación OFF conserva la ruta legacy mensual', () => {
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION_AUTOASIGNACION]: false,
+      });
+      (component as any).currentUserSignal.set(
+        makeAlumnoConSub(SuscripcionTipo.ADVANCED),
+      );
+
+      const estudio = findItemByLabel(
+        component.items(),
+        'Planificación de estudio',
+      );
+      expect(estudio?.routerLink).toBe(
+        '/app/planificacion/planificacion-mensual-alumno',
+      );
+      expect(estudio?.modulo).toBe(ModuloApp.PLANIFICACION);
+    });
+
+    it('BASIC con autoasignación OFF conserva el comportamiento legacy bloqueado', () => {
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION_AUTOASIGNACION]: false,
+      });
+      (component as any).currentUserSignal.set(
+        makeAlumnoConSub(SuscripcionTipo.BASIC),
+      );
+
+      const estudio = findItemByLabel(
+        component.items(),
+        'Planificación de estudio',
+      );
+      expect(estudio?.routerLink).toBeUndefined();
+      expect(estudio?.styleClass).toBe('locked-menu-item');
     });
 
     it('sin suscripción vigente: el grupo no aparece', () => {
@@ -310,6 +350,20 @@ describe('LayoutComponent', () => {
 
       const panel = findItemByLabel(component.items(), 'Panel tutor');
       expect(panel?.routerLink).toBe('/app/planificacion/tutor');
+      expect(panel?.modulo).toBe(ModuloApp.PLANIFICACION_AUTOASIGNACION);
+    });
+
+    it('tutor no ve el panel cuando autoasignación está OFF', () => {
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION_AUTOASIGNACION]: false,
+      });
+      (component as any).currentUserSignal.set({
+        ...makeAlumnoConSub(),
+        esTutor: true,
+      });
+
+      expect(findItemByLabel(component.items(), 'Panel tutor')).toBeUndefined();
     });
 
     it('admin no ve el panel tutor dentro del menú administrativo', () => {
@@ -323,11 +377,27 @@ describe('LayoutComponent', () => {
         ...appConfigService.estadoModulos(),
         [ModuloApp.PLANIFICACION]: false,
         [ModuloApp.PLANIFICACION_FISICA]: false,
+        [ModuloApp.PLANIFICACION_AUTOASIGNACION]: false,
       });
       (component as any).currentUserSignal.set(makeAlumnoConSub());
 
       expect(
         component.items().find((i) => i.label === 'Planificación'),
+      ).toBeUndefined();
+    });
+
+    it('admin ve Autoasignación dentro de Planificación solo cuando el flag está ON', () => {
+      (component as any).currentUserSignal.set(makeUser(Rol.ADMIN));
+      const link = findItemByLabel(component.items(), 'Autoasignación');
+      expect(link?.routerLink).toBe('/app/planificacion/admin-planificacion');
+      expect(link?.modulo).toBe(ModuloApp.PLANIFICACION_AUTOASIGNACION);
+
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.PLANIFICACION_AUTOASIGNACION]: false,
+      });
+      expect(
+        findItemByLabel(component.items(), 'Autoasignación'),
       ).toBeUndefined();
     });
   });
