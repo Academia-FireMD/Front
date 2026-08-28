@@ -571,6 +571,70 @@
           </div>
         </div>
 
+        <!-- Saldo de tutorías Madrid incluido en Tutor12 -->
+        <div
+          class="subscription-card mt-4"
+          *ngIf="madridTutoriaBalance || madridTutoriaBalanceLoading"
+          data-testid="madrid-tutoria-balance-card"
+        >
+          <div class="card-header">
+            <h2><i class="pi pi-calendar-plus"></i> Tutorías Madrid</h2>
+          </div>
+          <div class="card-content" *ngIf="madridTutoriaBalance as balance">
+            <div class="grid text-center mb-3">
+              <div class="col-4">
+                <strong class="text-2xl">{{ balance.disponibles }}</strong>
+                <div class="text-sm text-color-secondary">Disponibles</div>
+              </div>
+              <div class="col-4">
+                <strong class="text-2xl">{{ balance.reservados }}</strong>
+                <div class="text-sm text-color-secondary">Reservadas</div>
+              </div>
+              <div class="col-4">
+                <strong class="text-2xl">{{ balance.consumidos }}</strong>
+                <div class="text-sm text-color-secondary">Consumidas</div>
+              </div>
+            </div>
+            <p class="text-color-secondary text-sm mb-2">
+              Una tutoría no utilizada no se acumula al siguiente ciclo.
+            </p>
+            <div
+              class="text-sm border-top-1 surface-border pt-2"
+              *ngFor="let credito of balance.historial | slice: 0 : 6"
+            >
+              <div class="flex justify-content-between align-items-center py-1">
+                <span>Ciclo {{ credito.ciclo }}</span>
+                <span
+                  class="font-semibold"
+                  [ngClass]="{
+                    'text-green-600': credito.estado === 'DISPONIBLE',
+                    'text-orange-600': credito.estado === 'RESERVADO',
+                    'text-color-secondary':
+                      credito.estado === 'CONSUMIDO' ||
+                      credito.estado === 'EXPIRADO',
+                  }"
+                >
+                  {{
+                    credito.estado === "DISPONIBLE"
+                      ? "Disponible"
+                      : credito.estado === "RESERVADO"
+                        ? "Reservada"
+                        : credito.estado === "CONSUMIDO"
+                          ? "Consumida"
+                          : "Expirada"
+                  }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div
+            class="card-content"
+            *ngIf="madridTutoriaBalanceLoading && !madridTutoriaBalance"
+          >
+            <i class="pi pi-spin pi-spinner mr-2"></i> Cargando saldo…
+          </div>
+        </div>
+
         <!-- Card de Consumibles (Simulacros) - SIEMPRE VISIBLE -->
         <div class="subscription-card mt-4">
           <div class="card-header">

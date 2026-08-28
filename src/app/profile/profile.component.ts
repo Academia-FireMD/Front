@@ -21,6 +21,10 @@ import {
   SuscripcionManagementService,
 } from '../services/suscripcion-management.service';
 import { UserService } from '../services/user.service';
+import {
+  MadridTutoriasService,
+  MadridTutoriaBalance,
+} from '../services/madrid-tutorias.service';
 import { ViewportService } from '../services/viewport.service';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
 import {
@@ -73,6 +77,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private examenesService = inject(ExamenesService);
   private appConfigService = inject(AppConfigService);
+  private madridTutoriasService = inject(MadridTutoriasService);
+
+  madridTutoriaBalance: MadridTutoriaBalance | null = null;
+  madridTutoriaBalanceLoading = false;
 
   /** Fase 3 bridge física: la tarjeta de marcas personales solo se muestra
    * cuando el módulo PLANIFICACION_FISICA está habilitado. Fail-open
@@ -182,6 +190,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       (user) => {
         this.user = cloneDeep(user);
         this.loadOnboardingData();
+        this.loadMadridTutoriaBalance();
 
         // Verificar si es primer acceso y abrir modal automáticamente
         this.checkFirstTimeAccess();
@@ -215,6 +224,29 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
+  }
+
+  private loadMadridTutoriaBalance(): void {
+    const tieneMadrid = this.user?.suscripciones?.some(
+      (suscripcion) =>
+        suscripcion.oposicion === Oposicion.MADRID &&
+        (suscripcion.status === SuscripcionStatus.ACTIVE ||
+          suscripcion.status === SuscripcionStatus.PENDING_CANCEL),
+    );
+    if (!tieneMadrid) return;
+
+    this.madridTutoriaBalanceLoading = true;
+    this.madridTutoriasService.getCreditBalance().subscribe({
+      next: (balance) => {
+        this.madridTutoriaBalance = balance;
+        this.madridTutoriaBalanceLoading = false;
+      },
+      error: () => {
+        // El saldo es informativo; no bloquea el perfil si el endpoint está
+        // temporalmente indisponible.
+        this.madridTutoriaBalanceLoading = false;
+      },
+    });
   }
 
   async saveProfile(): Promise<void> {
