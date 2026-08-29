@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -27,7 +27,6 @@ import { PlanificacionesService } from '../../services/planificaciones.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
-import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { EntidadTipo } from '../../shared/models/attachment.model';
 import {
   PlanificacionMensual,
@@ -123,7 +122,6 @@ export class PlanificacionMensualEditComponent {
    */
   resumenFisica = signal<ResumenDiaFisica[]>([]);
   public isDialogVisible = false;
-  public isDialogAsignacionUsuarioVisible = false;
   public pickedEvents: CalendarEvent[] = [];
   public pickedEventsViewDate: Date = new Date();
   public pickedPlantillaId = signal<number | null>(null);
@@ -162,36 +160,7 @@ export class PlanificacionMensualEditComponent {
       ) ?? 0
     );
   }
-  public usuariosSeleccionadosId = [] as Array<number>;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
-  public userFilters = computed(
-    () =>
-      [
-        {
-          key: 'asignaciones',
-          label: 'Planificación asignada',
-          type: 'toggle',
-          placeholder: 'Solo usuarios con esta planificación asignada',
-          defaultValue: false,
-          filterInterpolation: (value: boolean) => {
-            if (!value) {
-              return {};
-            }
-            const planificacionId = this.lastLoadedPlanification()?.id;
-            if (!planificacionId || planificacionId === 0) {
-              return {};
-            }
-            return {
-              asignaciones: {
-                some: {
-                  planificacionId: { equals: planificacionId },
-                },
-              },
-            };
-          },
-        },
-      ] as FilterConfig[],
-  );
   public getEventsForDay = this.eventsService.getEventsForDay;
   public getProgressBarColor = this.eventsService.getProgressBarColor;
   public getCompletedSubBlocksForDay =
@@ -207,30 +176,6 @@ export class PlanificacionMensualEditComponent {
   // Para el componente de adjuntos
   public entidadTipoPlanificacion = EntidadTipo.PLANIFICACION_MENSUAL;
   public Number = Number;
-
-  planificationIdEffect = effect(() => {
-    if (
-      this.lastLoadedPlanification() &&
-      this.lastLoadedPlanification() !== null &&
-      this.expectedRole === 'ADMIN'
-    ) {
-      firstValueFrom(
-        this.userService
-          .getUsersByPlanification$(
-            this.lastLoadedPlanification()?.id as number,
-          )
-          .pipe(
-            tap((e) => {
-              this.usuariosSeleccionadosId = e.map((e) => e.id);
-            }),
-          ),
-      );
-    }
-  });
-
-  public onUserSelectionChange(selectedIds: number[]) {
-    this.usuariosSeleccionadosId = selectedIds;
-  }
 
   public uniqueEventsForDay = (events: CalendarEvent[], date: Date) => {
     const res = this.getEventsForDay(events, date);
@@ -302,16 +247,6 @@ export class PlanificacionMensualEditComponent {
     return lines.join('\r\n');
   };
   items = computed(() => [
-    {
-      icon: 'fa-solid fa-user-pen',
-      tooltipOptions: {
-        tooltipLabel: 'Asignar a usuarios',
-        position: 'right',
-      },
-      command: () => {
-        this.isDialogAsignacionUsuarioVisible = true;
-      },
-    },
     {
       disabled: this.view != CalendarView.Week,
       icon: 'fa-regular fa-hand-pointer',
@@ -429,23 +364,6 @@ export class PlanificacionMensualEditComponent {
         this.expectedRole = expectedRole;
       }),
     );
-  }
-
-  async confirmarSeleccion() {
-    this.isDialogAsignacionUsuarioVisible = false;
-    try {
-      const res = await firstValueFrom(
-        this.planificacionesService.asignarPlanificacionMensual$(
-          Number(this.activedRoute.snapshot.paramMap.get('id')),
-          this.usuariosSeleccionadosId,
-        ),
-      );
-      this.toast.success(`${res.message}`);
-      this.load();
-      this.usuariosSeleccionadosId = [];
-    } catch (error) {
-      this.toast.error('Hubo un error al asignar la planificación');
-    }
   }
 
   public async pickedPlantilla(plantillaOverview: Partial<PlantillaSemanal>) {
@@ -813,7 +731,6 @@ export class PlanificacionMensualEditComponent {
               this.relevancia.push(new FormControl(e)),
             );
 
-            this.usuariosSeleccionadosId = [];
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();
           }),

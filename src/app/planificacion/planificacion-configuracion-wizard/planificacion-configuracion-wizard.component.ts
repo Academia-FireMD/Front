@@ -32,7 +32,7 @@ import {
   RecomendacionNivel,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
-/** Textos del cuestionario de recomendación. TODO(textos): validar con Sergio. */
+/** Textos definitivos del cuestionario de recomendación, validados con Sergio. */
 const PREGUNTAS_CUESTIONARIO: string[] = [
   '¿Cuánto tiempo llevas estudiando el temario?',
   '¿Cómo valoras tu dominio actual del temario?',

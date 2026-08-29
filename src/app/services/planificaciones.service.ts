@@ -185,16 +185,6 @@ export class PlanificacionesService extends ApiBaseService {
     return this.post('/plantilla-semanal/clonar/' + id, null);
   }
 
-  public asignarPlanificacionMensual$(
-    planificacionId: number,
-    alumnosIds: number[],
-  ): Observable<any> {
-    return this.post('/asignar-planificacion-mensual', {
-      planificacionId,
-      alumnosIds,
-    });
-  }
-
   public getInfoPlanificacionesAsignadas() {
     return this.get('/count-planificationes-asignadas');
   }
@@ -242,20 +232,6 @@ export class PlanificacionesService extends ApiBaseService {
       planificacionId,
       realizado,
     });
-  }
-
-  public desvincularPlanificacionMensual$(id: number): Observable<any> {
-    return this.post(`/desvincular-planificacion-mensual/${id}`, null);
-  }
-
-  public desvincularPlanificacionMensualAdmin$(
-    planificacionId: number,
-    alumnoId: number,
-  ): Observable<any> {
-    return this.post(
-      `/desvincular-planificacion-mensual-admin/${planificacionId}/${alumnoId}`,
-      null,
-    );
   }
 
   /**

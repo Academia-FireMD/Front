@@ -1,31 +1,21 @@
 import {
-    Component,
-    computed,
-    ElementRef,
-    inject,
-    ViewChild,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  ViewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
-import {
-    combineLatest,
-    filter,
-    firstValueFrom,
-    map,
-    Observable,
-    switchMap,
-    tap,
-} from 'rxjs';
+import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
-import { UserService } from '../../services/user.service';
 import { FilterConfig } from '../../shared/generic-list/generic-list.component';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import {
-    duracionesDisponibles,
-    matchKeyWithLabel,
+  duracionesDisponibles,
+  matchKeyWithLabel,
 } from '../../shared/models/pregunta.model';
-import { Usuario } from '../../shared/models/user.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
 
 @Component({
@@ -37,17 +27,9 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   planificacionesService = inject(PlanificacionesService);
   confirmationService = inject(ConfirmationService);
   activatedRoute = inject(ActivatedRoute);
-  userService = inject(UserService);
   @ViewChild('fileInput') fileInput!: ElementRef;
   duracionesDisponibles = duracionesDisponibles;
   public uploadingFile = false;
-  allUsers$ = this.userService
-    .getAllUsers$({
-      take: 9999999,
-      skip: 0,
-      searchTerm: '',
-    })
-    .pipe(map((e) => (e.data ?? []) as Array<Usuario>)) as Observable<any>;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
 
   // Configuración de filtros para el GenericListComponent
@@ -88,8 +70,8 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
       filterInterpolation: (value: boolean) => {
         return {
           esPorDefecto: Boolean(value),
-        }
-      }
+        };
+      },
     },
     {
       key: 'relevancia',
@@ -124,10 +106,11 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
           if (this.expectedRole === 'ALUMNO' && result?.data?.length === 1) {
             const planificacion = result.data[0];
             this.router.navigate([
-              '/app/planificacion/planificacion-mensual-alumno/' + planificacion.id
+              '/app/planificacion/planificacion-mensual-alumno/' +
+                planificacion.id,
             ]);
           }
-        })
+        }),
       );
     });
   }
@@ -143,7 +126,7 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
         const { expectedRole, type } = data;
         this.expectedRole = expectedRole;
         return this.commMap(pagination)[this.expectedRole];
-      })
+      }),
     );
   }
 
@@ -166,54 +149,31 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   };
 
   public eliminar(id: number, event: Event) {
-
-    if (this.expectedRole == 'ALUMNO') {
-      this.confirmationService.confirm({
-        target: event.target as EventTarget,
-        message: `Vas a desvincular una planificación mensual con el ID ${id} perdiendo todo tu progreso, ¿estás seguro?`,
-        header: 'Confirmación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptIcon: 'none',
-        acceptLabel: 'Sí',
-        rejectLabel: 'No',
-        rejectIcon: 'none',
-        rejectButtonStyleClass: 'p-button-text',
-        accept: async () => {
-          await firstValueFrom(
-            this.planificacionesService.desvincularPlanificacionMensual$(id)
-          );
-          this.toast.info('Planificación mensual desvinculada exitosamente');
-          this.refresh();
-        },
-        reject: () => { },
-      });
-    } else {
-
-      this.confirmationService.confirm({
-        target: event.target as EventTarget,
-        message: `Vas a eliminar una planificación mensual con el ID ${id}, ¿estás seguro?`,
-        header: 'Confirmación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptIcon: 'none',
-        acceptLabel: 'Sí',
-        rejectLabel: 'No',
-        rejectIcon: 'none',
-        rejectButtonStyleClass: 'p-button-text',
-        accept: async () => {
-          await firstValueFrom(
-            this.planificacionesService.deletePlanificacionMensual$(id)
-          );
-          this.toast.info('Planificación mensual eliminada exitosamente');
-          this.refresh();
-        },
-        reject: () => { },
-      });
-    }
+    if (this.expectedRole !== 'ADMIN') return;
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: `Vas a eliminar una planificación mensual con el ID ${id}, ¿estás seguro?`,
+      header: 'Confirmación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'none',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      rejectIcon: 'none',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        await firstValueFrom(
+          this.planificacionesService.deletePlanificacionMensual$(id),
+        );
+        this.toast.info('Planificación mensual eliminada exitosamente');
+        this.refresh();
+      },
+      reject: () => {},
+    });
   }
 
   public async clonarPlanificacion(id: number) {
     await firstValueFrom(
-      this.planificacionesService.clonarPlanificacionMensual$(id)
+      this.planificacionesService.clonarPlanificacionMensual$(id),
     );
     this.toast.info('Planificación mensual clonada');
     this.refresh();

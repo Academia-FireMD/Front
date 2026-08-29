@@ -660,6 +660,21 @@ describe('PlanificacionMensualEditComponent', () => {
   });
 
   describe('conversión masiva de bloques ENTRENAMIENTO', () => {
+    it('no ofrece la asignación manual de usuarios', () => {
+      const accion = component
+        .items()
+        .find((item) =>
+          item.tooltipOptions?.tooltipLabel?.includes('Asignar a usuarios'),
+        );
+
+      expect(accion).toBeUndefined();
+      component.expectedRole = 'ADMIN';
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'Asignar planificación mensual',
+      );
+    });
+
     it('items() incluye la acción de conversión para admin cuando PLANIFICACION_FISICA está habilitada', () => {
       const items = component.items();
       const accion = items.find((i) =>

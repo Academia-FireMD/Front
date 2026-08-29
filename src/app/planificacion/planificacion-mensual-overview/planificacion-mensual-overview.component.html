@@ -110,13 +110,14 @@
         <span
           class="text-xs hidden md:block unbreakable-text"
           pTooltip="Fecha de creación: {{
-            item.createdAt | date : 'dd/MM/yyyy HH:mm'
+            item.createdAt | date: 'dd/MM/yyyy HH:mm'
           }}"
           tooltipPosition="top"
         >
-          {{ item.createdAt | date : "short" }}</span
+          {{ item.createdAt | date: "short" }}</span
         >
         <p-button
+          *ngIf="expectedRole == 'ADMIN'"
           (click)="
             $event.stopPropagation();
             $event.preventDefault();

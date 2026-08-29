@@ -2011,54 +2011,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/planificaciones/asignar-planificacion-mensual': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['PlanificacionController_asignarPlanificacionMensual'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/planificaciones/desvincular-planificacion-mensual/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['PlanificacionController_desvincularPlanificacionMensual'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/planificaciones/desvincular-planificacion-mensual-admin/{planificacionId}/{alumnoId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['PlanificacionController_desvincularPlanificacionMensualAdmin'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/planificaciones/actualizar-progreso-subbloque': {
     parameters: {
       query?: never;
@@ -4499,6 +4451,55 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/madrid-tutorias/creditos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['MadridTutoriasController_getCreditos'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/madrid-tutorias/compras/pendientes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['MadridTutoriasController_getComprasPendientes'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/madrid-tutorias/compras/{compraId}/vincular-reserva': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description El pago ya consta como PENDIENTE; solo admin puede hacer el vínculo. */
+    post: operations['MadridTutoriasController_vincularReserva'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/flashcards/oficiales': {
     parameters: {
       query?: never;
@@ -6244,10 +6245,6 @@ export interface components {
       codigo: string;
       tipoTrabajo?: Record<string, never>;
     };
-    AsignarPlanificacionMensualDto: {
-      planificacionId: number;
-      alumnosIds: number[];
-    };
     UpdateProgresoSubBloqueDto: {
       subBloqueId: number;
       planificacionId: number;
@@ -6437,6 +6434,8 @@ export interface components {
     };
     CrearReservaDto: {
       notas?: string;
+      /** @description Crédito concreto opcional; si se omite se toma el más próximo a expirar. */
+      creditoId?: number;
     };
     UpdateEstadoReservaDto: {
       reservaId: number;
@@ -6470,6 +6469,7 @@ export interface components {
       clienteCodigoPostal?: string;
       clientePais?: string;
     };
+    VincularCompraTutoriaDto: Record<string, never>;
     AppConfigUpdateDto: {
       appName?: string;
       primaryColor?: string;
@@ -9247,72 +9247,6 @@ export interface operations {
         };
         content: {
           'application/json': number;
-        };
-      };
-    };
-  };
-  PlanificacionController_asignarPlanificacionMensual: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['AsignarPlanificacionMensualDto'];
-      };
-    };
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': Record<string, never>;
-        };
-      };
-    };
-  };
-  PlanificacionController_desvincularPlanificacionMensual: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': Record<string, never>;
-        };
-      };
-    };
-  };
-  PlanificacionController_desvincularPlanificacionMensualAdmin: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        planificacionId: string;
-        alumnoId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': Record<string, never>;
         };
       };
     };
@@ -12508,6 +12442,67 @@ export interface operations {
       };
     };
   };
+  MadridTutoriasController_getCreditos: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  MadridTutoriasController_getComprasPendientes: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  MadridTutoriasController_vincularReserva: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        compraId: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['VincularCompraTutoriaDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   FlashcardsAiController_obtenerFlashcardsOficiales: {
     parameters: {
       query?: never;
@@ -14062,6 +14057,7 @@ export interface operations {
   CallejeroController_geocodeReverse: {
     parameters: {
       query: {
+        ciudadId: number;
         lat: number;
         lng: number;
       };
@@ -14082,6 +14078,7 @@ export interface operations {
   CallejeroController_geocodeBuscar: {
     parameters: {
       query: {
+        ciudadId: number;
         q: string;
         limit?: number;
       };

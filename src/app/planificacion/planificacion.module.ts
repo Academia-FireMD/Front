@@ -24,7 +24,6 @@ import { TagModule } from 'primeng/tag';
 import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 import { GenericListComponent } from '../shared/generic-list/generic-list.component';
 import { SharedModule } from '../shared/shared.module';
-import { UserDashboardComponent } from '../test/components/user-dashboard/user-dashboard.component';
 import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
 import { CalendarHeaderComponent } from './calendar-header/calendar-header.component';
@@ -77,7 +76,6 @@ registerLocaleData(localeEs);
     MessageModule,
     AsyncButtonComponent,
     GenericListComponent,
-    UserDashboardComponent,
     PlanificacionAlumnoComponent,
     PlanificacionBloqueadaComponent,
     PlanificacionConfiguracionWizardComponent,

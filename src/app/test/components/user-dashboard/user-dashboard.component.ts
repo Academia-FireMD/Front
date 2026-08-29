@@ -819,21 +819,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     return this.loadingPlanifications.has(userId);
   }
 
-  async desvincularPlanificacion(planificationId: number, userId: number) {
-    try {
-      await firstValueFrom(
-        this.planificacionesService.desvincularPlanificacionMensualAdmin$(
-          planificationId,
-          userId,
-        ),
-      );
-      this.toast.success('Planificación desvinculada correctamente');
-      this.loadUserPlanifications(userId);
-    } catch (error) {
-      console.error('Error desvinculating planification:', error);
-    }
-  }
-
   verPlanificacion(planificationId: number) {
     this.router.navigate([
       '/app/planificacion/planificacion-mensual',
