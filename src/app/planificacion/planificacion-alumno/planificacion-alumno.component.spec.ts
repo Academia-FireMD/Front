@@ -68,6 +68,28 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     expect(html).toContain('app-planificacion-configuracion-wizard');
   });
 
+  it('REQUIERE_CONFIGURACION sin oposiciones permitidas muestra que la publicación está pendiente', async () => {
+    await montar({
+      ...estadoRequiereConfiguracion,
+      oposicionesPermitidas: [],
+    });
+
+    const shell = fixture.nativeElement as HTMLElement;
+
+    expect(
+      shell.querySelector('app-planificacion-configuracion-wizard'),
+    ).toBeNull();
+    expect(shell.textContent).toContain(
+      'Tu planificación está pendiente de publicación',
+    );
+    expect(shell.textContent).toContain(
+      'Se están preparando variantes compatibles con tu oposición',
+    );
+    expect(shell.textContent).toContain(
+      'No necesitas completar el cuestionario todavía',
+    );
+  });
+
   it('BLOQUEADA renderiza la pantalla de bloqueo con CTA', async () => {
     await montar({
       ...estadoRequiereConfiguracion,

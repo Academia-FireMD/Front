@@ -56,6 +56,18 @@ import {
         <p-message severity="warn" [text]="error"></p-message>
       } @else if (configuracion?.estado === 'BLOQUEADA') {
         <app-planificacion-bloqueada></app-planificacion-bloqueada>
+      } @else if (
+        configuracion?.estado === 'REQUIERE_CONFIGURACION' &&
+        configuracion?.oposicionesPermitidas?.length === 0
+      ) {
+        <div class="flex flex-column align-items-center gap-3 py-6 text-center">
+          <i class="pi pi-clock text-4xl text-orange-500"></i>
+          <h2 class="m-0">Tu planificación está pendiente de publicación</h2>
+          <p class="text-600 m-0" style="max-width: 42rem">
+            Se están preparando variantes compatibles con tu oposición. No
+            necesitas completar el cuestionario todavía.
+          </p>
+        </div>
       } @else if (configuracion?.estado === 'REQUIERE_CONFIGURACION') {
         <app-planificacion-configuracion-wizard
           [configuracion]="configuracion"
