@@ -1,0 +1,71 @@
+:host {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:host ::ng-deep {
+  .planificacion-admin-tabs {
+    min-width: 0;
+
+    .p-tabview-nav-container,
+    .p-tabview-nav-content {
+      min-width: 0;
+    }
+
+    .p-tabview-nav {
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+    }
+
+    .p-tabview-nav-link {
+      min-height: 44px;
+      white-space: nowrap;
+    }
+
+    .p-tabview-panels {
+      padding-inline: clamp(0.5rem, 2vw, 1.25rem);
+    }
+  }
+
+  .planificacion-admin-table .p-datatable-wrapper {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .planificacion-admin-table table {
+    min-width: 44rem;
+  }
+
+  .p-dropdown,
+  .p-inputtext {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 575px) {
+  :host ::ng-deep {
+    .planificacion-admin-tabs .p-tabview-panels {
+      padding: 0.75rem 0.25rem;
+    }
+
+    .planificacion-admin-tabs .p-tabview-nav-link {
+      padding-inline: 0.85rem;
+    }
+
+    .planificacion-admin-table table {
+      min-width: 40rem;
+    }
+
+    .p-paginator {
+      justify-content: flex-start;
+      overflow-x: auto;
+    }
+  }
+
+  form .flex.gap-2 {
+    flex-wrap: wrap;
+  }
+}

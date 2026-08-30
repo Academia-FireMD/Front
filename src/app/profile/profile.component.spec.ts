@@ -97,7 +97,7 @@ describe('ProfileComponent', () => {
 
     expect(router.navigate).toHaveBeenCalledWith(
       ['/app/planificacion/configuracion-alumno'],
-      { queryParams: { revisar: 'preferencias' } },
+      { queryParams: { gestionar: 'preferencias' } },
     );
   });
 

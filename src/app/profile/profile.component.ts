@@ -401,7 +401,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         await this.router.navigate(
           ['/app/planificacion/configuracion-alumno'],
           {
-            queryParams: { revisar: 'preferencias' },
+            queryParams: { gestionar: 'preferencias' },
           },
         );
       }

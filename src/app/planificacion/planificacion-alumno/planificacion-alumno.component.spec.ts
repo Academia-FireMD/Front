@@ -13,6 +13,7 @@ import { ConfiguracionPlanificacion } from '../models/autoasignacion.model';
  */
 describe('PlanificacionAlumnoComponent — render por estado', () => {
   let fixture: ComponentFixture<PlanificacionAlumnoComponent>;
+  let router: { navigate: jest.Mock };
 
   const estadoRequiereConfiguracion: ConfiguracionPlanificacion = {
     estado: 'REQUIERE_CONFIGURACION',
@@ -28,8 +29,9 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
 
   async function montar(
     estado: ConfiguracionPlanificacion,
-    revisar: string | null = null,
+    gestionar: string | null = null,
   ) {
+    router = { navigate: jest.fn(() => Promise.resolve(true)) };
     await TestBed.configureTestingModule({
       imports: [PlanificacionAlumnoComponent],
       providers: [
@@ -45,11 +47,15 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
             warning: jest.fn(),
           },
         },
-        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: Router, useValue: router },
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { queryParamMap: { get: () => revisar } },
+            snapshot: {
+              queryParamMap: {
+                get: (key: string) => (key === 'gestionar' ? gestionar : null),
+              },
+            },
           },
         },
       ],
@@ -101,7 +107,7 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     expect(html).toContain('Planificación no disponible');
   });
 
-  it('ACTIVA renderiza el resumen de la variante vigente', async () => {
+  it('ACTIVA abre directamente la planificación mensual vigente', async () => {
     await montar({
       ...estadoRequiereConfiguracion,
       estado: 'ACTIVA',
@@ -125,8 +131,10 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     });
     const html = (fixture.nativeElement as HTMLElement).innerHTML;
     expect(html).not.toContain('progressbar');
-    expect(html).toContain('Tu planificación está activa');
-    expect(html).toContain('AYVI4-6');
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/app/planificacion/planificacion-mensual-alumno', 42],
+      { replaceUrl: true },
+    );
   });
 
   it('ACTIVA expone el id del plan mensual canónico para el enlace del calendario', async () => {
@@ -157,6 +165,41 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
       'button[label="Ver mi planificación"]',
     );
     expect(link).toBeTruthy();
+  });
+
+  it('ACTIVA no redirige cuando se abre la gestión explícita de preferencias', async () => {
+    await montar(
+      {
+        ...estadoRequiereConfiguracion,
+        estado: 'ACTIVA',
+        configuracionActiva: {
+          variante: {
+            codigo: 'AYVI4-6',
+            oposicion: 'VALENCIA_AYUNTAMIENTO' as never,
+            nivel: 'INICIACION' as never,
+            franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as never,
+          },
+          version: 1,
+          fechaVigencia: '2026-08-18T00:00:00.000Z',
+          origen: 'ALUMNO',
+          planificacionMensual: {
+            id: 77,
+            identificador: 'S082026AYVI4-6',
+            mes: 8,
+            ano: 2026,
+          },
+        },
+      },
+      'preferencias',
+    );
+
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.editando).toBe(true);
+    expect(
+      fixture.nativeElement.querySelector(
+        'app-planificacion-configuracion-wizard',
+      ),
+    ).toBeTruthy();
   });
 
   it('ACTIVA vuelve al resumen cuando se cancela la edición', async () => {

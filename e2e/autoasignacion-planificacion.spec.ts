@@ -85,8 +85,6 @@ test('shell activo enlaza directamente al plan mensual canónico', async ({
   await loginAlumno(page);
   await page.goto('/app/planificacion/configuracion-alumno');
 
-  await expect(page.getByText('Tu planificación está activa')).toBeVisible();
-  await page.getByRole('button', { name: 'Ver mi planificación' }).click();
   await expect(page).toHaveURL(/planificacion-mensual-alumno\/321$/);
 });
 
@@ -195,7 +193,5 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   await page.getByRole('button', { name: 'Aceptar recomendación' }).click();
   await page.getByRole('button', { name: 'Activar planificación' }).click();
 
-  await expect(page.getByText('Tu planificación está activa')).toBeVisible();
-  await page.getByRole('button', { name: 'Ver mi planificación' }).click();
   await expect(page).toHaveURL(/planificacion-mensual-alumno\/321$/);
 });

@@ -1,6 +1,6 @@
 <p-confirmDialog />
 
-<p-tabView>
+<p-tabView styleClass="planificacion-admin-tabs">
   <p-tabPanel header="Variantes" leftIcon="pi pi-th-large">
     <div class="grid">
       <div class="col-12 lg:col-5">
@@ -74,7 +74,12 @@
       </div>
 
       <div class="col-12 lg:col-7">
-        <p-table [value]="variantes()" [paginator]="true" [rows]="10">
+        <p-table
+          [value]="variantes()"
+          [paginator]="true"
+          [rows]="10"
+          styleClass="planificacion-admin-table"
+        >
           <ng-template pTemplate="header">
             <tr>
               <th>Código</th>
@@ -164,7 +169,12 @@
       </div>
 
       <div class="col-12 lg:col-7">
-        <p-table [value]="reglas()" [paginator]="true" [rows]="10">
+        <p-table
+          [value]="reglas()"
+          [paginator]="true"
+          [rows]="10"
+          styleClass="planificacion-admin-table"
+        >
           <ng-template pTemplate="header">
             <tr>
               <th>Suscripción</th>
@@ -248,7 +258,12 @@
         </div>
       </div>
     }
-    <p-table [value]="sinCoincidencia()" [paginator]="true" [rows]="10">
+    <p-table
+      [value]="sinCoincidencia()"
+      [paginator]="true"
+      [rows]="10"
+      styleClass="planificacion-admin-table"
+    >
       <ng-template pTemplate="header">
         <tr>
           <th>Nombre</th>

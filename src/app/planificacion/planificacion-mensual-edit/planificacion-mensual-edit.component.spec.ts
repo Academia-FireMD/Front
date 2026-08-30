@@ -86,6 +86,15 @@ describe('PlanificacionMensualEditComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('ofrece una salida explícita para gestionar preferencias sin volver a interponer el wizard', () => {
+    component.gestionarPreferencias();
+
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/app/planificacion/configuracion-alumno'],
+      { queryParams: { gestionar: 'preferencias' } },
+    );
+  });
+
   describe('aplicar plantilla semanal con preview server-side', () => {
     const lunesActual = new Date(2026, 7, 3, 9, 0);
 

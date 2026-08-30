@@ -59,6 +59,7 @@ import { AutoasignacionService } from '../services/autoasignacion.service';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './planificacion-admin.component.html',
+  styleUrl: './planificacion-admin.component.scss',
 })
 export class PlanificacionAdminComponent implements OnInit {
   private readonly autoasignacionService = inject(AutoasignacionService);

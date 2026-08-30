@@ -6,7 +6,7 @@ import {
   inject,
   OnInit,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
@@ -183,6 +183,7 @@ export class PlanificacionAlumnoComponent implements OnInit {
   private readonly toast = inject(ToastrService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   cargando = true;
   error: string | null = null;
@@ -197,9 +198,10 @@ export class PlanificacionAlumnoComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Perfil llega aquí después de cambiar preferencias para que el alumno
-    // revise y confirme en el wizard, no para guardar una segunda regla local.
+    // La entrada normal abre directamente el calendario si ya existe un plan.
+    // Este query param conserva una ruta explícita y compartible de gestión.
     this.revisandoPreferencias =
+      this.route.snapshot.queryParamMap.get('gestionar') === 'preferencias' ||
       this.route.snapshot.queryParamMap.get('revisar') === 'preferencias';
     this.editando = this.revisandoPreferencias;
     this.cargar();
@@ -218,6 +220,19 @@ export class PlanificacionAlumnoComponent implements OnInit {
           }),
         ),
       );
+      if (
+        this.configuracion?.estado === 'ACTIVA' &&
+        this.planificacionMensualId &&
+        !this.revisandoPreferencias
+      ) {
+        void this.router.navigate(
+          [
+            '/app/planificacion/planificacion-mensual-alumno',
+            this.planificacionMensualId,
+          ],
+          { replaceUrl: true },
+        );
+      }
     } finally {
       this.cargando = false;
       // OnPush + async/await: sin esto la vista no se re-renderiza al

@@ -509,6 +509,16 @@
       />
     </div>
     <div class="col-12 pt-2" *ngIf="expectedRole == 'ALUMNO'">
+      <div class="flex justify-content-end mb-2">
+        <button
+          pButton
+          type="button"
+          label="Gestionar mi planificación"
+          icon="pi pi-cog"
+          class="p-button-outlined"
+          (click)="gestionarPreferencias()"
+        ></button>
+      </div>
       <p-message
         severity="info"
         text="Puedes marcar tus tareas como completadas y agregar comentarios haciendo clic en cada evento."

@@ -660,6 +660,12 @@ export class PlanificacionMensualEditComponent {
     return this.activedRoute.snapshot.paramMap.get('id') as number | 'new';
   }
 
+  public gestionarPreferencias(): void {
+    void this.router.navigate(['/app/planificacion/configuracion-alumno'], {
+      queryParams: { gestionar: 'preferencias' },
+    });
+  }
+
   ngOnInit(): void {
     this.load();
   }
