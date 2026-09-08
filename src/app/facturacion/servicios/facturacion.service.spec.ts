@@ -1,4 +1,7 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import {
+  HttpClientTestingModule,
+  HttpTestingController,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import { PaginationFilter } from '../../shared/models/pagination.model';
@@ -62,7 +65,11 @@ describe('FacturacionService', () => {
   // ─────────────────────────────────────────────────────────────
   describe('listar$', () => {
     it('convierte skip/take a pagina/porPagina correctamente', () => {
-      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 0,
+        take: 20,
+        searchTerm: '',
+      };
 
       service.listar$(pagination).subscribe();
 
@@ -73,7 +80,11 @@ describe('FacturacionService', () => {
     });
 
     it('calcula pagina correctamente con skip > 0', () => {
-      const pagination: PaginationFilter = { skip: 40, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 40,
+        take: 20,
+        searchTerm: '',
+      };
 
       service.listar$(pagination).subscribe();
 
@@ -83,7 +94,11 @@ describe('FacturacionService', () => {
     });
 
     it('mapea la respuesta al formato PaginatedResult<Factura>', () => {
-      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 0,
+        take: 20,
+        searchTerm: '',
+      };
       let result: any;
 
       service.listar$(pagination).subscribe((r) => (result = r));
@@ -103,7 +118,12 @@ describe('FacturacionService', () => {
         skip: 0,
         take: 10,
         searchTerm: '',
-        where: { tipo: 'NORMAL', estado: 'EMITIDA', desde: '2026-01-01', hasta: '2026-12-31' },
+        where: {
+          tipo: 'NORMAL',
+          estado: 'EMITIDA',
+          desde: '2026-01-01',
+          hasta: '2026-12-31',
+        },
       };
 
       service.listar$(pagination).subscribe();
@@ -117,7 +137,11 @@ describe('FacturacionService', () => {
     });
 
     it('no incluye filtros vacíos en los params', () => {
-      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 0,
+        take: 20,
+        searchTerm: '',
+      };
 
       service.listar$(pagination).subscribe();
 
@@ -191,7 +215,11 @@ describe('FacturacionService', () => {
   // ─────────────────────────────────────────────────────────────
   describe('crearManual$', () => {
     it('hace POST a /manual con el DTO', () => {
-      const dto = { clienteNombre: 'Test', concepto: 'Servicio', baseImponible: 100 } as any;
+      const dto = {
+        clienteNombre: 'Test',
+        concepto: 'Servicio',
+        baseImponible: 100,
+      } as any;
       let result: any;
 
       service.crearManual$(dto).subscribe((r) => (result = r));
@@ -224,6 +252,26 @@ describe('FacturacionService', () => {
     });
   });
 
+  describe('crearDevolucion$', () => {
+    it('hace POST a /:id/devoluciones con el contrato idempotente', () => {
+      const dto = {
+        importeTotal: 20.98,
+        motivo: 'IVA duplicado',
+        idempotencyKey: 'refund_factura_5_abc',
+      };
+      let result: any;
+
+      service.crearDevolucion$(5, dto).subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne(`${BASE}/5/devoluciones`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(dto);
+      req.flush({ id: 10, estado: 'COMPLETED', ...dto });
+
+      expect(result.estado).toBe('COMPLETED');
+    });
+  });
+
   // ─────────────────────────────────────────────────────────────
   // descargarPdf$
   // ─────────────────────────────────────────────────────────────
@@ -243,12 +291,18 @@ describe('FacturacionService', () => {
   // ─────────────────────────────────────────────────────────────
   describe('misFacturas$', () => {
     it('hace GET a /mis-facturas y mapea la respuesta', () => {
-      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 0,
+        take: 20,
+        searchTerm: '',
+      };
       let result: any;
 
       service.misFacturas$(pagination).subscribe((r) => (result = r));
 
-      const req = httpMock.expectOne((r) => r.url.includes(`${BASE}/mis-facturas`));
+      const req = httpMock.expectOne((r) =>
+        r.url.includes(`${BASE}/mis-facturas`),
+      );
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('pagina')).toBe('1');
       expect(req.request.params.get('porPagina')).toBe('20');
@@ -259,9 +313,13 @@ describe('FacturacionService', () => {
     });
 
     it('pasa searchTerm como query param', () => {
-      service.misFacturas$({ skip: 0, take: 20, searchTerm: 'test' }).subscribe();
+      service
+        .misFacturas$({ skip: 0, take: 20, searchTerm: 'test' })
+        .subscribe();
 
-      const req = httpMock.expectOne((r) => r.url.includes(`${BASE}/mis-facturas`));
+      const req = httpMock.expectOne((r) =>
+        r.url.includes(`${BASE}/mis-facturas`),
+      );
       expect(req.request.params.get('searchTerm')).toBe('test');
       req.flush(apiResponse);
     });

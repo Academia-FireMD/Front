@@ -390,26 +390,86 @@
   </ng-template>
 </p-dialog>
 
-<!-- Dialog: Devolver factura -->
+<!-- Dialog: reembolso WooCommerce + rectificativa ContaSimple -->
 <p-dialog
-  header="Devolver factura"
+  header="Devolver y rectificar factura"
   [visible]="mostrarDialogRectificativa()"
   (visibleChange)="mostrarDialogRectificativa.set($event)"
   [modal]="true"
   [style]="{ width: '480px' }"
   [draggable]="false"
 >
-  <div *ngIf="facturaSeleccionada() as factura" class="rectificativa-info">
-    <div class="factura-ref">
-      <span class="label">Factura original:</span>
-      <strong>{{ factura.numero }}</strong>
-      <span>— {{ factura.total | number: "1.2-2" }} €</span>
+  <ng-container *ngIf="facturaSeleccionada() as factura">
+    <div class="rectificativa-info">
+      <div class="factura-ref">
+        <span class="label">Factura original:</span>
+        <strong>{{ factura.numero }}</strong>
+        <span>— {{ factura.total | number: "1.2-2" }} €</span>
+      </div>
+      <div class="factura-ref">
+        <span class="label">Cliente:</span>
+        <span>{{ factura.clienteNombre }}</span>
+      </div>
     </div>
-    <div class="factura-ref">
-      <span class="label">Cliente:</span>
-      <span>{{ factura.clienteNombre }}</span>
+
+    <div class="devolucion-warning">
+      <span class="pi pi-exclamation-triangle" aria-hidden="true"></span>
+      <span
+        >Esta acción devuelve dinero en WooCommerce y emite una rectificativa
+        fiscal en ContaSimple.</span
+      >
     </div>
-  </div>
+
+    <div class="devolucion-mode" style="margin-top: 1rem">
+      <button
+        pButton
+        type="button"
+        label="Parcial"
+        [outlined]="tipoDevolucion !== 'PARCIAL'"
+        (click)="seleccionarTipoDevolucion('PARCIAL')"
+      ></button>
+      <button
+        pButton
+        type="button"
+        label="Total"
+        severity="danger"
+        [outlined]="tipoDevolucion !== 'TOTAL'"
+        (click)="seleccionarTipoDevolucion('TOTAL')"
+      ></button>
+    </div>
+
+    <div class="field" style="margin-top: 1rem">
+      <label>Importe total a devolver <span class="required">*</span></label>
+      <p-inputNumber
+        [(ngModel)]="importeDevolucion"
+        mode="currency"
+        currency="EUR"
+        locale="es-ES"
+        [min]="0.01"
+        [max]="factura.total"
+        [minFractionDigits]="2"
+        [maxFractionDigits]="2"
+        [disabled]="tipoDevolucion === 'TOTAL'"
+      ></p-inputNumber>
+    </div>
+
+    <div class="devolucion-preview" *ngIf="(importeDevolucion || 0) > 0">
+      <span
+        >Base a rectificar:
+        <strong
+          >-{{ desgloseDevolucion.base | number: "1.2-2" }} €</strong
+        ></span
+      >
+      <span
+        >IVA {{ factura.tipoIva | number: "1.0-2" }} %:
+        <strong>-{{ desgloseDevolucion.iva | number: "1.2-2" }} €</strong></span
+      >
+      <span
+        >Total:
+        <strong>-{{ importeDevolucion | number: "1.2-2" }} €</strong></span
+      >
+    </div>
+  </ng-container>
 
   <div class="field" style="margin-top: 1rem">
     <label>Motivo de la devolución <span class="required">*</span></label>
@@ -430,10 +490,11 @@
     ></button>
     <button
       pButton
-      label="Confirmar devolución"
+      label="Devolver y rectificar"
       icon="pi pi-check"
       class="p-button-warning"
       [loading]="guardandoRectificativa()"
+      [disabled]="!devolucionValida"
       (click)="guardarRectificativa()"
     ></button>
   </ng-template>

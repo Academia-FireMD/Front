@@ -15,6 +15,21 @@ const mockFacturacionService = {
   ),
   crearManual$: jest.fn(() => of({ id: 1 })),
   crearRectificativa$: jest.fn(() => of({ id: 2, tipo: 'RECTIFICATIVA' })),
+  crearDevolucion$: jest.fn(() =>
+    of({
+      id: 10,
+      estado: 'COMPLETED',
+      importeTotal: 20.98,
+      baseImponible: 17.34,
+      cuotaIva: 3.64,
+      tipoIva: 21,
+      wooRefundId: '900',
+      rectificativaId: 2,
+      rectificativaNumero: 'R-2026-0001',
+      contasimpleId: 'CS-R-1',
+      ultimoError: null,
+    }),
+  ),
   descargarPdf$: jest.fn(() => of(new Blob(['%PDF']))),
 };
 
@@ -190,7 +205,60 @@ describe('FacturacionAdminComponent', () => {
 
     expect(component.facturaSeleccionada()).toEqual(factura);
     expect(component.motivoRectificativa).toBe('');
+    expect(component.tipoDevolucion).toBe('PARCIAL');
+    expect(component.importeDevolucion).toBeNull();
+    expect(component.idempotencyKeyDevolucion).toBeTruthy();
     expect(component.mostrarDialogRectificativa()).toBe(true);
+  });
+
+  it('seleccionar devolución total rellena el total absoluto de la factura', () => {
+    component.abrirDialogRectificativa({
+      id: 5,
+      tipo: 'NORMAL',
+      estado: 'EMITIDA',
+      total: -79.9,
+      tipoIva: 21,
+    } as any);
+
+    component.seleccionarTipoDevolucion('TOTAL');
+
+    expect(component.tipoDevolucion).toBe('TOTAL');
+    expect(component.importeDevolucion).toBe(79.9);
+  });
+
+  it('previsualiza base e IVA en céntimos para una devolución parcial', () => {
+    component.abrirDialogRectificativa({
+      id: 5,
+      tipo: 'NORMAL',
+      estado: 'EMITIDA',
+      total: 79.9,
+      tipoIva: 21,
+    } as any);
+    component.importeDevolucion = 20.98;
+
+    expect(component.desgloseDevolucion).toEqual({ base: 17.34, iva: 3.64 });
+  });
+
+  it('envía importe, motivo y la misma clave idempotente al confirmar', async () => {
+    component.abrirDialogRectificativa({
+      id: 5,
+      tipo: 'NORMAL',
+      estado: 'EMITIDA',
+      total: 79.9,
+      tipoIva: 21,
+    } as any);
+    component.importeDevolucion = 20.98;
+    component.motivoRectificativa = 'IVA duplicado';
+    const key = component.idempotencyKeyDevolucion;
+
+    await component.guardarRectificativa();
+
+    expect(mockFacturacionService.crearDevolucion$).toHaveBeenCalledWith(5, {
+      importeTotal: 20.98,
+      motivo: 'IVA duplicado',
+      idempotencyKey: key,
+    });
+    expect(component.mostrarDialogRectificativa()).toBe(false);
   });
 
   it('filters tiene tipo, estado y dateRange', () => {

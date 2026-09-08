@@ -12,6 +12,8 @@ import {
   CompletarFiscalDto,
   CrearFacturaManualDto,
   CrearRectificativaDto,
+  CrearDevolucionDto,
+  DevolucionOperacion,
   EliminarFacturaResult,
   Factura,
   FacturasResponse,
@@ -89,6 +91,16 @@ export class FacturacionService extends ApiBaseService {
     dto: CrearRectificativaDto,
   ): Observable<Factura> {
     return this.post(`/${id}/rectificativa`, dto) as Observable<Factura>;
+  }
+
+  crearDevolucion$(
+    id: number,
+    dto: CrearDevolucionDto,
+  ): Observable<DevolucionOperacion> {
+    return this.post(
+      `/${id}/devoluciones`,
+      dto,
+    ) as Observable<DevolucionOperacion>;
   }
 
   descargarPdf$(id: number): Observable<Blob> {
