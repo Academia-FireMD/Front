@@ -27,19 +27,12 @@ import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model'
 import { PlanificacionPreferenciasComponent } from '../../shared/planificacion-preferencias/planificacion-preferencias.component';
 import {
   ConfiguracionPlanificacion,
+  CuestionarioNivel,
   GuardarConfiguracionDTO,
   PreferenciasPrecargadas,
   RecomendacionNivel,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
-/** Textos definitivos del cuestionario de recomendación, validados con Sergio. */
-const PREGUNTAS_CUESTIONARIO: string[] = [
-  '¿Cuánto tiempo llevas estudiando el temario?',
-  '¿Cómo valoras tu dominio actual del temario?',
-  '¿Has aprobado algún examen o parcial recientemente?',
-  '¿Cuántas horas a la semana dedicas al estudio?',
-  '¿Cómo te sientes con los simulacros y tests?',
-];
 
 export type ResultadoConfiguracion = 'EXITO' | 'CONFLICTO';
 
@@ -78,7 +71,9 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   private readonly toast = inject(ToastrService);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  readonly preguntas = PREGUNTAS_CUESTIONARIO;
+  cuestionario: CuestionarioNivel | null = null;
+  preguntas: CuestionarioNivel['preguntas'] = [];
+  cargandoCuestionario = signal(true);
   readonly Oposicion = Oposicion;
   readonly NivelOposicion = NivelOposicion;
 
@@ -95,7 +90,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   // Paso 2: nivel
   elegirCuestionario = signal(false);
-  respuestas: Array<number | null> = Array.from({ length: 5 }, () => null);
+  respuestas: Array<number | null> = [];
   recomendacion: RecomendacionNivel | null = null;
   enviandoRecomendacion = signal(false);
   errorCuestionario: string | null = null;
@@ -157,6 +152,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       };
       this.gcvConfirmado = prefs.oposicion !== Oposicion.GENERAL;
     }
+    this.cargarCuestionario();
   }
 
   onPreferenciasChange(prefs: {
@@ -205,9 +201,13 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   async obtenerRecomendacion(): Promise<void> {
-    if (!this.cuestionarioCompleto) {
+    if (!this.cuestionario) {
       this.errorCuestionario =
-        'Responde las 5 preguntas antes de obtener una recomendación.';
+        'No se pudo cargar el cuestionario. Inténtalo de nuevo.';
+      return;
+    }
+    if (!this.cuestionarioCompleto) {
+      this.errorCuestionario = `Responde las ${this.preguntas.length} preguntas antes de obtener una recomendación.`;
       this.toast.error(this.errorCuestionario);
       return;
     }
@@ -217,10 +217,21 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       this.recomendacion = await firstValueFrom(
         this.autoasignacionService.recomendarNivel$(
           this.respuestas.map((respuesta) => respuesta as number),
+          this.cuestionario.version,
         ),
       );
-    } catch {
-      this.toast.error('No se pudo obtener la recomendación');
+    } catch (error) {
+      if (
+        error instanceof HttpErrorResponse &&
+        error.status === 409 &&
+        error.error?.codigo === 'CUESTIONARIO_DESACTUALIZADO'
+      ) {
+        this.cargarCuestionario(
+          'El cuestionario cambió mientras respondías. Se ha recargado.',
+        );
+      } else {
+        this.toast.error('No se pudo obtener la recomendación');
+      }
     } finally {
       this.enviandoRecomendacion.set(false);
       this.cdr.markForCheck();
@@ -283,6 +294,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   get cuestionarioCompleto(): boolean {
     return (
+      this.preguntas.length > 0 &&
       this.respuestas.length === this.preguntas.length &&
       this.respuestas.every(
         (respuesta): respuesta is number =>
@@ -292,6 +304,33 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
           respuesta <= 3,
       )
     );
+  }
+
+  private cargarCuestionario(mensaje?: string): void {
+    this.cargandoCuestionario.set(true);
+    this.errorCuestionario = null;
+    this.autoasignacionService.getCuestionarioNivel$().subscribe({
+      next: (cuestionario) => {
+        this.cuestionario = cuestionario;
+        this.preguntas = cuestionario.preguntas;
+        this.respuestas = Array.from(
+          { length: cuestionario.preguntas.length },
+          () => null,
+        );
+        this.recomendacion = null;
+        this.cargandoCuestionario.set(false);
+        if (mensaje) this.toast.warning(mensaje);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cuestionario = null;
+        this.preguntas = [];
+        this.respuestas = [];
+        this.cargandoCuestionario.set(false);
+        this.errorCuestionario = 'No se pudo cargar el cuestionario.';
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   private fuentePreferencias(): PreferenciasPrecargadas | null {

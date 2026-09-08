@@ -396,6 +396,25 @@
         }
       </div>
     </div>
+    @if (
+      expectedRole === "ADMIN" &&
+      lastLoadedPlanification()?.estado &&
+      lastLoadedPlanification()?.estado !== "BORRADOR"
+    ) {
+      <div class="col-12">
+        <p-message
+          severity="info"
+          [text]="
+            'Release ' +
+            lastLoadedPlanification()?.estado +
+            ' v' +
+            (lastLoadedPlanification()?.version ?? 1) +
+            ': al guardar se creará un borrador nuevo; esta versión no se modifica.'
+          "
+          styleClass="w-full"
+        ></p-message>
+      </div>
+    }
     <div class="col-12 calendar-info">
       <div class="visualizando">
         <span>{{ viewDate | calendarDate: view + "ViewTitle" : "es" }}</span>

@@ -37,7 +37,24 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
       providers: [
         {
           provide: AutoasignacionService,
-          useValue: { getConfiguracion$: jest.fn(() => of(estado)) },
+          useValue: {
+            getConfiguracion$: jest.fn(() => of(estado)),
+            getCuestionarioNivel$: jest.fn(() =>
+              of({
+                version: 1,
+                preguntas: Array.from({ length: 5 }, (_, indice) => ({
+                  id: `nivel-${indice + 1}`,
+                  texto: `Pregunta ${indice + 1}`,
+                  opciones: [
+                    { valor: 0, etiqueta: 'Nada' },
+                    { valor: 1, etiqueta: 'Poco' },
+                    { valor: 2, etiqueta: 'Algo' },
+                    { valor: 3, etiqueta: 'Mucho' },
+                  ],
+                })),
+              }),
+            ),
+          },
         },
         {
           provide: ToastrService,

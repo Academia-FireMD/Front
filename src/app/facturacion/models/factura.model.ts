@@ -80,6 +80,35 @@ export interface CrearRectificativaDto {
   motivo: string;
 }
 
+export interface CrearDevolucionDto {
+  importeTotal: number;
+  motivo: string;
+  idempotencyKey: string;
+}
+
+export type DevolucionEstado =
+  | 'PENDING'
+  | 'REFUNDING'
+  | 'REFUNDED'
+  | 'RECTIFYING'
+  | 'COMPLETED'
+  | 'NEEDS_REVIEW'
+  | 'FAILED';
+
+export interface DevolucionOperacion {
+  id: number;
+  estado: DevolucionEstado;
+  importeTotal: number;
+  baseImponible: number;
+  cuotaIva: number;
+  tipoIva: number;
+  wooRefundId?: string | null;
+  rectificativaId?: number | null;
+  rectificativaNumero?: string | null;
+  contasimpleId?: string | null;
+  ultimoError?: string | null;
+}
+
 export interface ReconciliacionResult {
   logId: number;
   totalRevisadas: number;

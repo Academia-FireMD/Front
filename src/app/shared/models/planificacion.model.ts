@@ -60,6 +60,10 @@ export interface PlanificacionMensual {
   tipoDePlanificacion?: TipoDePlanificacionDeseada;
   relevancia: Array<Oposicion>;
   updatedAt: Date;
+  estado?: 'BORRADOR' | 'PUBLICADA' | 'ARCHIVADA';
+  version?: number;
+  publicadaAt?: Date | string | null;
+  planificacionAnteriorId?: number | null;
 }
 
 export interface PlanificacionMensualPlantilla {

@@ -1,6 +1,6 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import type { NivelOposicion } from '../../shared/models/pregunta.model';
@@ -8,6 +8,7 @@ import type {
   AlumnoPlanificacionTutor,
   AlumnoSinCoincidencia,
   ConfiguracionPlanificacion,
+  CuestionarioNivel,
   GuardarConfiguracionDTO,
   RecomendacionNivel,
   ReglaOposicionAdmin,
@@ -29,9 +30,9 @@ export type ActualizarReglaAdminDTO = {
  * `.kimi-code/plans/fase1-autoasignacion-frontend.md`). Todos los endpoints
  * viven bajo `/planificaciones`.
  *
- * `guardarConfiguracion` hace la llamada HTTP en bruto (sin pasar por
- * `ApiBaseService.put`, que descarta el status) porque el asistente necesita
- * distinguir 409 (versión desfasada) / 422 `SIN_VARIANTE` / 403.
+ * `recomendarNivel` y `guardarConfiguracion` hacen la llamada HTTP en bruto
+ * (sin pasar por `ApiBaseService`, que descarta el status) porque el asistente
+ * necesita distinguir 409 (versión desfasada) / 422 `SIN_VARIANTE` / 403.
  */
 @Injectable({
   providedIn: 'root',
@@ -48,10 +49,17 @@ export class AutoasignacionService extends ApiBaseService {
 
   public recomendarNivel$(
     respuestas: number[],
+    versionCuestionario: number,
   ): Observable<RecomendacionNivel> {
-    return this.post('/recomendacion-nivel', {
-      respuestas,
-    }) as Observable<RecomendacionNivel>;
+    return this.http.post<RecomendacionNivel>(
+      environment.apiUrl + '/planificaciones/recomendacion-nivel',
+      { respuestas, versionCuestionario },
+      { withCredentials: true },
+    );
+  }
+
+  public getCuestionarioNivel$(): Observable<CuestionarioNivel> {
+    return this.get('/cuestionario-nivel') as Observable<CuestionarioNivel>;
   }
 
   /** PUT en bruto: conserva el HttpErrorResponse para gestionar 409/422/403. */
@@ -122,6 +130,15 @@ export class AutoasignacionService extends ApiBaseService {
       '/admin/variantes/' + id,
       data,
     ) as Observable<VarianteAdmin>;
+  }
+
+  public publicarVariante$(
+    id: number,
+    planificacionMensualId: number,
+  ): Observable<VarianteAdmin> {
+    return this.post(`/admin/variantes/${id}/publicar`, {
+      planificacionMensualId,
+    }) as Observable<VarianteAdmin>;
   }
 
   public getReglas$(): Observable<ReglaOposicionAdmin[]> {

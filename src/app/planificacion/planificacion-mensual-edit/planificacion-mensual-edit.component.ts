@@ -784,7 +784,12 @@ export class PlanificacionMensualEditComponent {
     );
     this.eventosModificados = false;
     if (this.expectedRole == 'ADMIN') {
-      this.toast.success('Planificacion mensual actualizada con exito');
+      const idAnterior = this.getId() === 'new' ? null : Number(this.getId());
+      this.toast.success(
+        idAnterior !== null && res.id !== idAnterior
+          ? `Release publicada protegida. Se ha creado el borrador v${res.version ?? 1}.`
+          : 'Planificación mensual actualizada con éxito',
+      );
 
       await this.router.navigate([
         '/app/planificacion/planificacion-mensual/' + res.id,

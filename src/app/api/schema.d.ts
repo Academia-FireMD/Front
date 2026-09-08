@@ -1707,6 +1707,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/planificaciones/cuestionario-nivel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PlanificacionAutoasignacionController_obtenerCuestionarioNivel'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/planificaciones/recomendacion-nivel': {
     parameters: {
       query?: never;
@@ -1801,6 +1817,22 @@ export interface paths {
     options?: never;
     head?: never;
     patch: operations['PlanificacionAutoasignacionController_actualizarVariante'];
+    trace?: never;
+  };
+  '/planificaciones/admin/variantes/{id}/publicar': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PlanificacionAutoasignacionController_publicarVariante'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/planificaciones/admin/reglas': {
@@ -4291,6 +4323,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/admin/facturas/{id}/devoluciones': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['FacturacionController_crearDevolucion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/admin/facturas/mis-facturas/{id}/pdf': {
     parameters: {
       query?: never;
@@ -6199,6 +6247,7 @@ export interface components {
     };
     RecomendacionNivelDto: {
       respuestas: number[];
+      versionCuestionario: number;
     };
     ActivarConfiguracionDto: {
       oposicion: Record<string, never>;
@@ -6228,6 +6277,9 @@ export interface components {
     ActualizarVarianteDto: {
       activa?: boolean;
       planificacionMensualId?: number | null;
+    };
+    PublicarVarianteDto: {
+      planificacionMensualId: number;
     };
     CrearReglaDto: {
       oposicionSuscripcion: Record<string, never>;
@@ -6441,6 +6493,11 @@ export interface components {
       reservaId: number;
       estado: Record<string, never>;
       motivoCancelacion?: string;
+    };
+    CrearDevolucionDto: {
+      importeTotal: number;
+      motivo: string;
+      idempotencyKey: string;
     };
     CrearFacturaManualDto: {
       clienteNombre: string;
@@ -8797,6 +8854,23 @@ export interface operations {
       };
     };
   };
+  PlanificacionAutoasignacionController_obtenerCuestionarioNivel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   PlanificacionAutoasignacionController_recomendarNivel: {
     parameters: {
       query?: never;
@@ -8943,6 +9017,31 @@ export interface operations {
     };
     responses: {
       200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  PlanificacionAutoasignacionController_publicarVariante: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PublicarVarianteDto'];
+      };
+    };
+    responses: {
+      201: {
         headers: {
           [name: string]: unknown;
         };
@@ -12221,6 +12320,29 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FacturacionController_crearDevolucion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CrearDevolucionDto'];
+      };
+    };
+    responses: {
+      201: {
         headers: {
           [name: string]: unknown;
         };

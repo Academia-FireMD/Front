@@ -91,7 +91,18 @@
         </div>
       } @else {
         <div class="flex flex-column gap-3">
-          <p>Responde 5 preguntas sobre tu experiencia con el temario:</p>
+          <p>
+            Responde {{ preguntas.length }} preguntas sobre tu experiencia con
+            el temario:
+          </p>
+
+          @if (cargandoCuestionario()) {
+            <p-message
+              severity="info"
+              text="Cargando cuestionario…"
+              styleClass="w-full"
+            ></p-message>
+          }
 
           @for (
             pregunta of preguntas;
@@ -100,26 +111,18 @@
           ) {
             <div class="p-3 border-1 border-round surface-100">
               <div class="mb-2 font-medium">
-                {{ $index + 1 }}. {{ pregunta }}
+                {{ $index + 1 }}. {{ pregunta.texto }}
               </div>
               <div class="flex gap-3">
-                @for (
-                  opcion of [
-                    { value: 0, label: "Nada" },
-                    { value: 1, label: "Poco" },
-                    { value: 2, label: "Algo" },
-                    { value: 3, label: "Mucho" },
-                  ];
-                  track opcion.value
-                ) {
+                @for (opcion of pregunta.opciones; track opcion.valor) {
                   <div class="flex align-items-center gap-1">
                     <p-radioButton
                       [name]="'pregunta' + preguntaIndex"
-                      [value]="opcion.value"
+                      [value]="opcion.valor"
                       [(ngModel)]="respuestas[preguntaIndex]"
-                      (onClick)="onRespuestaChange(preguntaIndex, opcion.value)"
+                      (onClick)="onRespuestaChange(preguntaIndex, opcion.valor)"
                     ></p-radioButton>
-                    <label>{{ opcion.label }}</label>
+                    <label>{{ opcion.etiqueta }}</label>
                   </div>
                 }
               </div>
@@ -147,6 +150,7 @@
               label="Obtener recomendación"
               icon="pi pi-magic"
               [loading]="enviandoRecomendacion()"
+              [disabled]="cargandoCuestionario() || !cuestionario"
               (click)="obtenerRecomendacion()"
             ></p-button>
           </div>

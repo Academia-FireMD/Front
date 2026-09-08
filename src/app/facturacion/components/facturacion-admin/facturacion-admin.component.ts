@@ -20,6 +20,7 @@ import { SharedModule } from '../../../shared/shared.module';
 import { UserDashboardComponent } from '../../../test/components/user-dashboard/user-dashboard.component';
 import {
   CrearFacturaManualDto,
+  DevolucionOperacion,
   Factura,
   FacturaEstado,
   FacturaTipo,
@@ -109,6 +110,9 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   guardandoRectificativa = signal(false);
   facturaSeleccionada = signal<Factura | null>(null);
   motivoRectificativa = '';
+  tipoDevolucion: 'PARCIAL' | 'TOTAL' = 'PARCIAL';
+  importeDevolucion: number | null = null;
+  idempotencyKeyDevolucion = '';
 
   descargandoPdf = signal<number | null>(null);
 
@@ -234,29 +238,86 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   abrirDialogRectificativa(factura: Factura) {
     this.facturaSeleccionada.set(factura);
     this.motivoRectificativa = '';
+    this.tipoDevolucion = 'PARCIAL';
+    this.importeDevolucion = null;
+    this.idempotencyKeyDevolucion = this.createIdempotencyKey(factura.id);
     this.mostrarDialogRectificativa.set(true);
+  }
+
+  seleccionarTipoDevolucion(tipo: 'PARCIAL' | 'TOTAL') {
+    this.tipoDevolucion = tipo;
+    this.importeDevolucion =
+      tipo === 'TOTAL'
+        ? Math.abs(this.facturaSeleccionada()?.total ?? 0)
+        : null;
+  }
+
+  get desgloseDevolucion(): { base: number; iva: number } {
+    const total = Number(this.importeDevolucion ?? 0);
+    const rate = Number(this.facturaSeleccionada()?.tipoIva ?? 0);
+    if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(rate)) {
+      return { base: 0, iva: 0 };
+    }
+    const base = Math.round((total / (1 + rate / 100)) * 100) / 100;
+    return { base, iva: Math.round((total - base) * 100) / 100 };
+  }
+
+  get devolucionValida(): boolean {
+    const factura = this.facturaSeleccionada();
+    const amount = Number(this.importeDevolucion);
+    return Boolean(
+      factura &&
+      this.motivoRectificativa.trim() &&
+      Number.isFinite(amount) &&
+      amount > 0 &&
+      amount <= Math.abs(factura.total) &&
+      this.idempotencyKeyDevolucion,
+    );
   }
 
   async guardarRectificativa() {
     const factura = this.facturaSeleccionada();
-    if (!factura || !this.motivoRectificativa.trim()) {
-      this.toast.warning('El motivo es obligatorio');
+    if (!factura || !this.devolucionValida) {
+      this.toast.warning('Revisa el importe y el motivo de la devolución');
       return;
     }
     this.guardandoRectificativa.set(true);
     try {
-      await firstValueFrom(
-        this.facturacionService.crearRectificativa$(factura.id, {
+      const result = await firstValueFrom(
+        this.facturacionService.crearDevolucion$(factura.id, {
+          importeTotal: Number(this.importeDevolucion),
           motivo: this.motivoRectificativa,
+          idempotencyKey: this.idempotencyKeyDevolucion,
         }),
       );
-      this.toast.success('Factura rectificativa creada correctamente');
+      this.showDevolucionResult(result);
       this.mostrarDialogRectificativa.set(false);
       this.refresh();
     } catch {
     } finally {
       this.guardandoRectificativa.set(false);
     }
+  }
+
+  private showDevolucionResult(result: DevolucionOperacion) {
+    if (result.estado === 'COMPLETED') {
+      this.toast.success(
+        `Reembolso ${result.wooRefundId} y rectificativa ${result.rectificativaNumero} completados`,
+      );
+      return;
+    }
+    if (result.estado === 'NEEDS_REVIEW') {
+      this.toast.warning(
+        'La operación requiere revisión manual. No vuelvas a emitir el reembolso.',
+      );
+      return;
+    }
+    this.toast.info(`Operación guardada con estado ${result.estado}`);
+  }
+
+  private createIdempotencyKey(facturaId: number): string {
+    const uuid = globalThis.crypto?.randomUUID?.();
+    return uuid ?? `factura-${facturaId}-${Date.now()}`;
   }
 
   async descargarPdf(factura: Factura, event: Event) {
