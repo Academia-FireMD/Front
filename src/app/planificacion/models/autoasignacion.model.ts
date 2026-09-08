@@ -152,3 +152,60 @@ export interface AlumnoPlanificacionTutor {
   opcionesPermitidas: OpcionPlanificacionPermitida[];
   recomendacion: RecomendacionNivel | null;
 }
+
+export interface IncidenciaImportacionPlantilla {
+  hoja: string;
+  semana?: number;
+  dia?: string;
+  filaExcel?: number;
+  mensaje: string;
+}
+
+export interface SemanaImportacionPlantilla {
+  numero: number;
+  fechaInicio: string;
+  bloques: number;
+  entrenamientos: number;
+  esqueleto: boolean;
+}
+
+export interface HojaImportacionPlantilla {
+  hoja: string;
+  valida: boolean;
+  totalBloques: number;
+  totalEntrenamientos: number;
+  semanas: SemanaImportacionPlantilla[];
+  errores: IncidenciaImportacionPlantilla[];
+  warnings: Array<
+    Pick<IncidenciaImportacionPlantilla, 'hoja' | 'semana' | 'mensaje'>
+  >;
+}
+
+export interface PreviewImportacionPlantillas {
+  fileName: string;
+  fileHash: string;
+  puedeAplicar: boolean;
+  yaAplicado: boolean;
+  requiereConfirmacionSobrescritura: boolean;
+  sobrescrituras: string[];
+  totales: {
+    hojas: number;
+    semanas: number;
+    bloques: number;
+    entrenamientos: number;
+    errores: number;
+  };
+  hojas: HojaImportacionPlantilla[];
+}
+
+export interface ResultadoImportacionPlantillas {
+  yaAplicado: boolean;
+  version: number | null;
+  hojas: Array<{
+    hoja: string;
+    semanasCreadas: number;
+    semanasActualizadas: number;
+    bloquesCreados: number;
+    errores: number;
+  }>;
+}

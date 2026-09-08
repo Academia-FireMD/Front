@@ -365,4 +365,32 @@ describe('AutoasignacionService', () => {
       casos: [],
     });
   });
+
+  it('usa multipart y el hash de preview para importar plantillas', () => {
+    const file = new File(['xlsx'], 'madrid.xlsx');
+
+    service.previewImportacionPlantillas$(file, 'CMI6-8').subscribe();
+    let request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/preview`,
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.body).toBeInstanceOf(FormData);
+    expect(((request.request.body as FormData).get('file') as File).name).toBe(
+      file.name,
+    );
+    expect((request.request.body as FormData).get('sheetName')).toBe('CMI6-8');
+    request.flush({});
+
+    service.applyImportacionPlantillas$(file, 'a'.repeat(64), true).subscribe();
+    request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/apply`,
+    );
+    expect(request.request.method).toBe('POST');
+    const body = request.request.body as FormData;
+    expect((body.get('file') as File).name).toBe(file.name);
+    expect(body.get('expectedFileHash')).toBe('a'.repeat(64));
+    expect(body.get('forzarSobrescritura')).toBe('true');
+    request.flush({});
+  });
 });

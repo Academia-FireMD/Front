@@ -49,6 +49,27 @@ describe('PlanificacionAdminComponent', () => {
           casos: [],
         }),
       ),
+      previewImportacionPlantillas$: jest.fn(() =>
+        of({
+          fileName: 'madrid.xlsx',
+          fileHash: 'a'.repeat(64),
+          puedeAplicar: true,
+          yaAplicado: false,
+          requiereConfirmacionSobrescritura: false,
+          sobrescrituras: [],
+          totales: {
+            hojas: 1,
+            semanas: 2,
+            bloques: 12,
+            entrenamientos: 2,
+            errores: 0,
+          },
+          hojas: [],
+        }),
+      ),
+      applyImportacionPlantillas$: jest.fn(() =>
+        of({ yaAplicado: false, version: 3, hojas: [] }),
+      ),
     };
     confirmation = new ConfirmationService();
     const confirmOriginal = confirmation.confirm.bind(confirmation);
@@ -457,5 +478,59 @@ describe('PlanificacionAdminComponent', () => {
 
     expect(component.error()).toContain('No se pudo aplicar');
     expect(component.reconciliacion()).toBeNull();
+  });
+
+  it('previsualiza el Excel sin aplicar y conserva el hash del servidor', async () => {
+    const file = new File(['xlsx'], 'madrid.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    component.seleccionarArchivoImportacion({
+      target: { files: [file], value: 'madrid.xlsx' },
+    } as unknown as Event);
+
+    await component.previsualizarImportacion();
+
+    expect(service.previewImportacionPlantillas$).toHaveBeenCalledWith(file);
+    expect(service.applyImportacionPlantillas$).not.toHaveBeenCalled();
+    expect(component.previewImportacion()?.fileHash).toBe('a'.repeat(64));
+    expect(component.puedeAplicarImportacion).toBe(true);
+  });
+
+  it('bloquea el apply con sobrescrituras hasta confirmar dos veces', async () => {
+    const file = new File(['xlsx'], 'madrid.xlsx');
+    component.archivoImportacion.set(file);
+    component.previewImportacion.set({
+      fileName: file.name,
+      fileHash: 'a'.repeat(64),
+      puedeAplicar: true,
+      yaAplicado: false,
+      requiereConfirmacionSobrescritura: true,
+      sobrescrituras: ['S012026CMI6-8H'],
+      totales: {
+        hojas: 1,
+        semanas: 1,
+        bloques: 6,
+        entrenamientos: 1,
+        errores: 0,
+      },
+      hojas: [],
+    });
+
+    expect(component.puedeAplicarImportacion).toBe(false);
+    component.confirmarAplicacionImportacion();
+    expect(confirmation.confirm).not.toHaveBeenCalled();
+
+    component.confirmarSobrescritura.set(true);
+    component.confirmarAplicacionImportacion();
+    expect(service.applyImportacionPlantillas$).not.toHaveBeenCalled();
+    const config = (confirmation.confirm as jest.Mock).mock.calls[0][0];
+    await config.accept();
+
+    expect(service.applyImportacionPlantillas$).toHaveBeenCalledWith(
+      file,
+      'a'.repeat(64),
+      true,
+    );
+    expect(component.previewImportacion()?.yaAplicado).toBe(true);
   });
 });
