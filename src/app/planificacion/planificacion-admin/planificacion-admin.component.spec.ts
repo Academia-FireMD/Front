@@ -35,6 +35,7 @@ describe('PlanificacionAdminComponent', () => {
       getSinCoincidencia$: jest.fn(() => of([])),
       crearVariante$: jest.fn(() => of({})),
       actualizarVariante$: jest.fn(() => of({})),
+      publicarVariante$: jest.fn(() => of({})),
       crearRegla$: jest.fn(() => of({})),
       actualizarRegla$: jest.fn(() => of({})),
       reconciliar$: jest.fn(() =>
@@ -198,6 +199,8 @@ describe('PlanificacionAdminComponent', () => {
         tipoDePlanificacion:
           TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
         relevancia: [Oposicion.GENERAL],
+        estado: 'PUBLICADA',
+        version: 1,
       } as PlanificacionMensual,
     ]);
     component.varianteForm.patchValue({
@@ -253,6 +256,8 @@ describe('PlanificacionAdminComponent', () => {
         tipoDePlanificacion:
           TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
         relevancia: [Oposicion.GENERAL],
+        estado: 'PUBLICADA',
+        version: 1,
       } as PlanificacionMensual,
       {
         id: 2,
@@ -262,6 +267,8 @@ describe('PlanificacionAdminComponent', () => {
         tipoDePlanificacion:
           TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
         relevancia: [Oposicion.GENERAL],
+        estado: 'PUBLICADA',
+        version: 1,
       } as PlanificacionMensual,
       {
         id: 3,
@@ -271,6 +278,8 @@ describe('PlanificacionAdminComponent', () => {
         tipoDePlanificacion:
           TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
         relevancia: [Oposicion.MADRID],
+        estado: 'PUBLICADA',
+        version: 1,
       } as PlanificacionMensual,
     ]);
     component.varianteForm.patchValue({
@@ -279,7 +288,11 @@ describe('PlanificacionAdminComponent', () => {
     });
 
     expect(component.planificacionOptions).toEqual([
-      { label: 'GENERAL-4-6 (8/2026)', value: 1 },
+      {
+        label: 'GENERAL-4-6 v1 · PUBLICADA (8/2026)',
+        value: 1,
+        estado: 'PUBLICADA',
+      },
     ]);
   });
 
@@ -293,6 +306,8 @@ describe('PlanificacionAdminComponent', () => {
         tipoDePlanificacion:
           TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
         relevancia: [Oposicion.MADRID],
+        estado: 'PUBLICADA',
+        version: 1,
       } as PlanificacionMensual,
     ]);
     component.varianteForm.patchValue({
@@ -319,6 +334,8 @@ describe('PlanificacionAdminComponent', () => {
         tipoDePlanificacion:
           TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
         relevancia: [Oposicion.GENERAL],
+        estado: 'PUBLICADA',
+        version: 1,
       } as PlanificacionMensual,
     ]);
     component.variantes.set([
@@ -341,8 +358,44 @@ describe('PlanificacionAdminComponent', () => {
 
     component.editarVariante(component.variantes()[0]);
     expect(component.planificacionOptions).toEqual([
-      { label: 'GENERAL-4-6 (8/2026)', value: 17 },
+      {
+        label: 'GENERAL-4-6 v1 · PUBLICADA (8/2026)',
+        value: 17,
+        estado: 'PUBLICADA',
+      },
     ]);
+  });
+
+  it('publica y asigna un borrador solo tras confirmación explícita', async () => {
+    component.planificacionesMensuales.set([
+      {
+        id: 17,
+        identificador: 'MADRID-4-6',
+        mes: 9,
+        ano: 2026,
+        estado: 'BORRADOR',
+        version: 2,
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+        relevancia: [Oposicion.MADRID],
+      } as PlanificacionMensual,
+    ]);
+    component.editarVariante({
+      id: 7,
+      codigo: 'MI4-6',
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+      activa: false,
+    });
+    component.varianteForm.controls.planificacionMensualId.setValue(17);
+
+    component.publicarPlanSeleccionado();
+
+    expect(service.publicarVariante$).not.toHaveBeenCalled();
+    const config = (confirmation.confirm as jest.Mock).mock.calls.at(-1)[0];
+    await config.accept();
+    expect(service.publicarVariante$).toHaveBeenCalledWith(7, 17);
   });
 
   it('ofrece preview y exige confirmación explícita antes de aplicar', async () => {

@@ -43,16 +43,26 @@
               [disabled]="varianteForm.controls.franja.disabled"
               styleClass="w-full"
             ></p-dropdown>
-            <label>Planificación mensual publicada</label>
+            <label>Release de planificación mensual</label>
             <p-dropdown
               [options]="planificacionOptions"
               formControlName="planificacionMensualId"
               optionLabel="label"
               optionValue="value"
               [showClear]="true"
-              placeholder="Sin planificación publicada"
+              placeholder="Sin release asignada"
               styleClass="w-full"
             ></p-dropdown>
+            @if (esPlanSeleccionadoBorrador) {
+              <p-message
+                severity="info"
+                [text]="
+                  varianteForm.value.id
+                    ? 'Este borrador debe validarse y publicarse antes de asignarlo.'
+                    : 'Crea primero la variante sin plan; después podrás publicar y asignar este borrador.'
+                "
+              ></p-message>
+            }
             <div class="flex align-items-center gap-2">
               <p-inputSwitch formControlName="activa"></p-inputSwitch>
               <label>Activa</label>
@@ -61,8 +71,17 @@
               <p-button
                 label="Guardar"
                 icon="pi pi-check"
+                [disabled]="esPlanSeleccionadoBorrador"
                 (click)="guardarVariante()"
               ></p-button>
+              @if (varianteForm.value.id && esPlanSeleccionadoBorrador) {
+                <p-button
+                  label="Publicar y asignar"
+                  icon="pi pi-send"
+                  severity="warning"
+                  (click)="publicarPlanSeleccionado()"
+                ></p-button>
+              }
               <p-button
                 label="Limpiar"
                 styleClass="p-button-text"
@@ -86,7 +105,7 @@
               <th>Oposición</th>
               <th>Nivel</th>
               <th>Franja</th>
-              <th>Plan publicada</th>
+              <th>Release publicada</th>
               <th>Activa</th>
               <th></th>
             </tr>
@@ -100,7 +119,12 @@
                 {{ v.franja === "FRANJA_SEIS_A_OCHO_HORAS" ? "6-8h" : "4-6h" }}
               </td>
               <td>
-                {{ v.planificacionMensual?.identificador ?? "Sin plan" }}
+                @if (v.planificacionMensual) {
+                  {{ v.planificacionMensual.identificador }}
+                  v{{ v.planificacionMensual.version ?? 1 }}
+                } @else {
+                  Sin plan
+                }
               </td>
               <td>
                 <p-inputSwitch

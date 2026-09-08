@@ -194,6 +194,14 @@ export class PlanificacionAdminComponent implements OnInit {
       return;
     }
     const v = this.varianteForm.getRawValue();
+    if (this.esPlanSeleccionadoBorrador) {
+      this.toast.error(
+        v.id
+          ? 'Usa “Publicar y asignar” para una planificación en borrador.'
+          : 'Crea primero la variante sin plan y después publica el borrador desde su edición.',
+      );
+      return;
+    }
     try {
       if (v.id) {
         await firstValueFrom(
@@ -221,6 +229,42 @@ export class PlanificacionAdminComponent implements OnInit {
     } catch {
       this.toast.error('No se pudo guardar la variante');
     }
+  }
+
+  publicarPlanSeleccionado(): void {
+    const varianteId = this.varianteForm.controls.id.value;
+    const planificacion = this.planSeleccionado;
+    if (!varianteId || !planificacion || planificacion.estado !== 'BORRADOR') {
+      this.toast.error(
+        'Selecciona una variante y una planificación en borrador',
+      );
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Publicar planificación',
+      message:
+        'Se validará estudio y física, se publicará la release y se asignará a la variante. Los alumnos actuales conservarán su release anterior.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Publicar y asignar',
+      rejectLabel: 'Cancelar',
+      accept: async () => {
+        try {
+          await firstValueFrom(
+            this.autoasignacionService.publicarVariante$(
+              varianteId,
+              planificacion.id,
+            ),
+          );
+          this.toast.success('Planificación publicada y asignada');
+          this.nuevaVariante();
+          await this.cargarTodo();
+        } catch {
+          this.toast.error(
+            'No se pudo publicar. Revisa la cobertura de estudio y física.',
+          );
+        }
+      },
+    });
   }
 
   editarRegla(r: ReglaOposicionAdmin): void {
@@ -298,7 +342,11 @@ export class PlanificacionAdminComponent implements OnInit {
     }
   }
 
-  get planificacionOptions(): { label: string; value: number }[] {
+  get planificacionOptions(): {
+    label: string;
+    value: number;
+    estado: string;
+  }[] {
     const varianteId = this.varianteForm.controls.id.value;
     const planesMapeadosEnOtraVariante = new Set(
       this.variantes()
@@ -323,9 +371,21 @@ export class PlanificacionAdminComponent implements OnInit {
           (!oposicion || planificacion.relevancia?.includes(oposicion)),
       )
       .map((planificacion) => ({
-        label: `${planificacion.identificador} (${planificacion.mes}/${planificacion.ano})`,
+        label: `${planificacion.identificador} v${planificacion.version ?? 1} · ${planificacion.estado ?? 'BORRADOR'} (${planificacion.mes}/${planificacion.ano})`,
         value: planificacion.id,
+        estado: planificacion.estado ?? 'BORRADOR',
       }));
+  }
+
+  get planSeleccionado(): PlanificacionMensual | null {
+    const id = this.varianteForm.controls.planificacionMensualId.value;
+    return (
+      this.planificacionesMensuales().find((plan) => plan.id === id) ?? null
+    );
+  }
+
+  get esPlanSeleccionadoBorrador(): boolean {
+    return this.planSeleccionado?.estado === 'BORRADOR';
   }
 
   private limpiarPlanificacionIncompatible(): void {

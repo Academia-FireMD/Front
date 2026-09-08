@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>QA visual — facturación y releases de planificación</title>
+    <style>
+      @page {
+        size: A4 landscape;
+        margin: 12mm;
+      }
+      :root {
+        color: #17202a;
+        font-family: Arial, sans-serif;
+      }
+      body {
+        margin: 0;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 5px;
+      }
+      h2 {
+        font-size: 17px;
+        margin: 22px 0 8px;
+      }
+      p {
+        font-size: 10px;
+        line-height: 1.4;
+        margin: 4px 0 10px;
+      }
+      .meta {
+        color: #52606d;
+      }
+      .pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        align-items: start;
+      }
+      figure {
+        margin: 0;
+        border: 1px solid #d9e2ec;
+        padding: 6px;
+        break-inside: avoid;
+      }
+      figure img {
+        display: block;
+        max-width: 100%;
+        max-height: 145mm;
+        margin: 0 auto;
+      }
+      figcaption {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 5px 2px 1px;
+      }
+      .single {
+        max-width: 950px;
+        margin: 0 auto;
+      }
+      .single img {
+        width: 100%;
+        height: auto;
+      }
+      .page-break {
+        break-before: page;
+      }
+      .note {
+        border-left: 4px solid #ff6435;
+        padding-left: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>QA visual — facturación y releases de planificación</h1>
+    <p class="meta">
+      AcademiaFireMD · 08/09/2026 · capturas deterministas de Playwright con API
+      mockeada, sin datos personales reales ni escrituras externas.
+    </p>
+
+    <h2>1. Devolución y factura rectificativa</h2>
+    <p>
+      La operación deja de ser una confirmación opaca: permite devolución
+      parcial o total, presenta el desglose fiscal y exige un motivo antes de
+      ejecutar el reembolso idempotente.
+    </p>
+    <div class="pair">
+      <figure>
+        <img src="assets/antes-devolucion.png" />
+        <figcaption>Antes — solo motivo y confirmación genérica</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/despues-devolucion.png" />
+        <figcaption>
+          Después — importe, modo parcial/total, desglose y acción explícita
+        </figcaption>
+      </figure>
+    </div>
+
+    <h2 class="page-break">2. Cuestionario canónico de nivel</h2>
+    <p class="note">
+      Solo se muestra el estado posterior: antes el contenido estaba duplicado
+      dentro del frontend. Ahora la pantalla consume preguntas y versión desde
+      el backend, evitando que cliente y servidor diverjan.
+    </p>
+    <figure class="single">
+      <img src="assets/despues-cuestionario-canonico.png" />
+      <figcaption>
+        Después — cinco preguntas servidas por el contrato canónico y respuestas
+        sin valores implícitos
+      </figcaption>
+    </figure>
+
+    <h2 class="page-break">3. Publicación explícita de una release</h2>
+    <p class="note">
+      Solo se muestra el estado posterior: el flujo de publicación y asignación
+      no existía en la UI anterior. Un borrador no puede guardarse como si ya
+      estuviera publicado; la acción dedicada activa la validación atómica del
+      backend.
+    </p>
+    <figure class="single">
+      <img src="assets/despues-publicacion-release.png" />
+      <figcaption>
+        Después — release versionada, estado visible y botón «Publicar y
+        asignar»
+      </figcaption>
+    </figure>
+  </body>
+</html>

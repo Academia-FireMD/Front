@@ -53,7 +53,34 @@ const configuracionInicial = {
   ultimaRecomendacion: null,
 };
 
+const cuestionarioNivel = {
+  version: 1,
+  preguntas: [
+    '¿Cuánto tiempo llevas estudiando el temario?',
+    '¿Cómo valoras tu dominio actual del temario?',
+    '¿Has aprobado algún examen o parcial recientemente?',
+    '¿Cuántas horas a la semana dedicas al estudio?',
+    '¿Cómo te sientes con los simulacros y tests?',
+  ].map((texto, indice) => ({
+    id: `nivel-${indice + 1}`,
+    texto,
+    opciones: [
+      { valor: 0, etiqueta: 'Nada' },
+      { valor: 1, etiqueta: 'Poco' },
+      { valor: 2, etiqueta: 'Algo' },
+      { valor: 3, etiqueta: 'Mucho' },
+    ],
+  })),
+};
+
 async function loginAlumno(page: Parameters<typeof loginAsRoleMock>[0]) {
+  await page.route('**/planificaciones/cuestionario-nivel', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(cuestionarioNivel),
+    }),
+  );
   await loginAsRoleMock(page, {
     rol: 'ALUMNO',
     email: 'alumno-plan@test.com',
@@ -156,6 +183,10 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   });
   await page.route('**/planificaciones/recomendacion-nivel', (route) => {
     expect(route.request().method()).toBe('POST');
+    expect(route.request().postDataJSON()).toEqual({
+      respuestas: [2, 2, 2, 2, 2],
+      versionCuestionario: 1,
+    });
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -188,6 +219,12 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   const respuestas = page.locator('.p-radiobutton-box');
   for (let pregunta = 0; pregunta < 5; pregunta++) {
     await respuestas.nth(pregunta * 4 + 2).click();
+  }
+  const screenshotPath = process.env['AUTOASSIGN_SCREENSHOT_PATH'];
+  if (screenshotPath) {
+    await page.locator('app-planificacion-configuracion-wizard').screenshot({
+      path: screenshotPath,
+    });
   }
   await page.getByRole('button', { name: 'Obtener recomendación' }).click();
   await page.getByRole('button', { name: 'Aceptar recomendación' }).click();

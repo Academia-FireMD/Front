@@ -66,16 +66,31 @@ describe('AutoasignacionService', () => {
     const respuesta = { puntuacion: 12, nivelRecomendado: 'AVANZADO' };
     let recibida: unknown;
 
-    service.recomendarNivel$([0, 3, 2, 1, 3]).subscribe((r) => (recibida = r));
+    service
+      .recomendarNivel$([0, 3, 2, 1, 3], 1)
+      .subscribe((r) => (recibida = r));
 
     const request = httpMock.expectOne(
       `${environment.apiUrl}/planificaciones/recomendacion-nivel`,
     );
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ respuestas: [0, 3, 2, 1, 3] });
+    expect(request.request.body).toEqual({
+      respuestas: [0, 3, 2, 1, 3],
+      versionCuestionario: 1,
+    });
     request.flush(respuesta);
 
     expect(recibida).toEqual(respuesta);
+  });
+
+  it('GET /cuestionario-nivel obtiene la definición canónica versionada', () => {
+    service.getCuestionarioNivel$().subscribe();
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/cuestionario-nivel`,
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush({ version: 1, preguntas: [] });
   });
 
   it('PUT /configuracion usa la ruta exacta, envía version y conserva el error 409', () => {
@@ -239,6 +254,14 @@ describe('AutoasignacionService', () => {
       `${environment.apiUrl}/planificaciones/admin/variantes`,
     );
     expect(req.request.method).toBe('POST');
+    req.flush({});
+
+    service.publicarVariante$(3, 17).subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/variantes/3/publicar`,
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ planificacionMensualId: 17 });
     req.flush({});
 
     service

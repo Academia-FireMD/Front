@@ -41,11 +41,26 @@ export interface PlanificacionMensualResumen {
   identificador: string;
   mes: number;
   ano: number;
+  estado?: EstadoPlanificacionMensual;
+  version?: number;
+  publicadaAt?: string | null;
+}
+
+export type EstadoPlanificacionMensual = 'BORRADOR' | 'PUBLICADA' | 'ARCHIVADA';
+
+export interface CuestionarioNivel {
+  version: number;
+  preguntas: Array<{
+    id: string;
+    texto: string;
+    opciones: Array<{ valor: number; etiqueta: string }>;
+  }>;
 }
 
 export interface RecomendacionNivel {
   puntuacion: number;
   nivelRecomendado: NivelOposicion;
+  versionCuestionario?: number;
 }
 
 export interface ConfiguracionPlanificacion {
