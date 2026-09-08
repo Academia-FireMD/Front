@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>AcademiaFireMD · Importación segura de plantillas</title>
+    <style>
+      @page {
+        size: A4 landscape;
+        margin: 10mm;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: #263238;
+        font-family: Arial, sans-serif;
+      }
+
+      header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12mm;
+        margin-bottom: 6mm;
+        padding-bottom: 4mm;
+        border-bottom: 2px solid #f15b40;
+      }
+
+      h1 {
+        margin: 0 0 2mm;
+        font-size: 20pt;
+      }
+
+      header p,
+      .card p {
+        margin: 0;
+        color: #52626b;
+        font-size: 9.5pt;
+        line-height: 1.35;
+      }
+
+      .status {
+        padding: 2mm 3mm;
+        border: 1px solid #7bbf82;
+        border-radius: 999px;
+        color: #25652d;
+        background: #f0faf1;
+        font-size: 9pt;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6mm;
+      }
+
+      .card {
+        overflow: hidden;
+        border: 1px solid #d8e0e4;
+        border-radius: 3mm;
+        background: #fff;
+      }
+
+      .card__copy {
+        min-height: 24mm;
+        padding: 4mm;
+        background: #f7f9fa;
+      }
+
+      h2 {
+        margin: 0 0 1.5mm;
+        font-size: 13pt;
+      }
+
+      .before h2 {
+        color: #7b4d32;
+      }
+
+      .after h2 {
+        color: #20762d;
+      }
+
+      .shot {
+        display: flex;
+        height: 125mm;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 3mm;
+        background: #eef2f4;
+      }
+
+      .shot img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: top center;
+      }
+
+      footer {
+        margin-top: 4mm;
+        color: #65757e;
+        font-size: 8.5pt;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Importación segura de plantillas semanales</h1>
+        <p>Comparativa visual · AcademiaFireMD · 8 de septiembre de 2026</p>
+      </div>
+      <span class="status">Validado en runtime local</span>
+    </header>
+
+    <main>
+      <section class="card before">
+        <div class="card__copy">
+          <h2>Antes · staging histórico</h2>
+          <p>
+            El panel de autoasignación no ofrecía una importación auditada. La
+            carga directa anterior no enseñaba fechas, errores ni sobrescrituras
+            antes de escribir.
+          </p>
+        </div>
+        <div class="shot">
+          <img
+            src="antes-admin-variantes.png"
+            alt="Panel de administración antes del nuevo importador"
+          />
+        </div>
+      </section>
+
+      <section class="card after">
+        <div class="card__copy">
+          <h2>Después · rama local</h2>
+          <p>
+            Nueva previsualización sin escrituras, fechas exactas, recuentos y
+            confirmación doble cuando se perderían ediciones manuales. El apply
+            vuelve a validar el hash y usa una única transacción.
+          </p>
+        </div>
+        <div class="shot">
+          <img
+            src="despues-importacion-plantillas.png"
+            alt="Previsualización validada del nuevo importador"
+          />
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Evidencia de interfaz. No se ha ejecutado ningún apply real ni se ha
+      desplegado a staging o producción.
+    </footer>
+  </body>
+</html>

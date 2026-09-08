@@ -136,10 +136,6 @@ export class PlanificacionesService extends ApiBaseService {
     ) as Observable<PlanificacionBloque>;
   }
 
-  public importarExcel(file: FormData) {
-    return this.post('/importar-excel', file);
-  }
-
   public deleteBloque$(id: number) {
     return this.delete('/' + id);
   }

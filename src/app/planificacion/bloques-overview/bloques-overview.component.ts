@@ -1,10 +1,4 @@
-import {
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  ViewChild,
-} from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom, tap } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
@@ -20,8 +14,6 @@ import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.compon
 export class BloquesOverviewComponent extends SharedGridComponent<PlanificacionBloque> {
   planificacionesService = inject(PlanificacionesService);
   confirmationService = inject(ConfirmationService);
-  @ViewChild('fileInput') fileInput!: ElementRef;
-  public uploadingFile = false;
 
   // Configuración de filtros para el GenericListComponent
   public filters: FilterConfig[] = [
@@ -61,39 +53,6 @@ export class BloquesOverviewComponent extends SharedGridComponent<PlanificacionB
   public navigateToDetailview = (id: number | 'new') => {
     this.router.navigate(['/app/planificacion/bloques/' + id]);
   };
-
-  async onFileSelected(event: Event) {
-    try {
-      const input = event.target as HTMLInputElement;
-      if (input.files && input.files.length > 0) {
-        const selectedFile = input.files[0];
-        if (!selectedFile) {
-          this.toast.error('Por favor, selecciona un archivo primero.');
-          return;
-        }
-        const formData = new FormData();
-        formData.append('file', selectedFile, selectedFile.name);
-        this.uploadingFile = true;
-        try {
-          const response = await firstValueFrom(
-            this.planificacionesService.importarExcel(formData),
-          );
-          this.toast.success(
-            `Archivo importado exitosamente con ${
-              response.count ?? 0
-            } insertadas y ${response.ignoradas ?? 0} ignoradas.`,
-          );
-          this.uploadingFile = false;
-        } catch (error) {
-          this.uploadingFile = false;
-        }
-        this.refresh();
-        this.fileInput.nativeElement.value = '';
-      }
-    } catch (error) {
-      this.fileInput.nativeElement.value = '';
-    }
-  }
 
   public eliminarBloque(id: number, event: Event) {
     this.confirmationService.confirm({

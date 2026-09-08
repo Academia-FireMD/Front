@@ -1915,6 +1915,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/planificaciones/admin/importaciones/plantillas/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Previsualiza y valida plantillas sin escribir */
+    post: operations['ImportacionPlantillasAdminController_preview'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/planificaciones/admin/importaciones/plantillas/apply': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Aplica una previsualización validada */
+    post: operations['ImportacionPlantillasAdminController_apply'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/planificaciones/catalogo-contenido/buscar': {
     parameters: {
       query?: never;
@@ -2053,22 +2087,6 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['PlanificacionController_actualizarProgresoSubBloque'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/planificaciones/importar-excel': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['PlanificacionController_importarExcel'];
     delete?: never;
     options?: never;
     head?: never;
@@ -6004,7 +6022,7 @@ export interface paths {
      *     que el calendario del TEMARIO (Front, otra tarea) pinta en cada día con
      *     entrenamiento. Ese calendario lo usan TODOS los alumnos, incluidos
      *     BASIC — a diferencia del resto de endpoints de este controller, aquí
-     *     NO propagamos el 403 de `verificarAcceso()`: un alumno sin acceso al
+     *     NO propagamos el 403 de `acceso.verificarAcceso()`: un alumno sin acceso al
      *     módulo de física (BASIC, sin suscripción vigente, o sin bloque para su
      *     oposición) simplemente no tiene bridge que mostrar, y debe fallar en
      *     silencio a `[]` — un 403 aquí rompería la carga del calendario de
@@ -6076,7 +6094,7 @@ export interface paths {
      * @description Fase 5 polish: marcas de UN ALUMNO concreto, solo para ADMIN. Reutiliza
      *     `listarMias` (que ya valida el aislamiento por alumnoId); aquí el
      *     `alumnoId` viene de query param, pero solo un ADMIN puede pedirlo —
-     *     un ALUMNO sigue recibiendo 403 en `verificarAcceso`.
+     *     un ALUMNO sigue recibiendo 403 en `acceso.verificarAcceso`.
      */
     get: operations['PlanificacionFisicaAlumnoController_marcasDeAlumno'];
     put?: never;
@@ -9171,6 +9189,59 @@ export interface operations {
       };
     };
   };
+  ImportacionPlantillasAdminController_preview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          /** Format: binary */
+          file: string;
+          sheetName?: string;
+        };
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ImportacionPlantillasAdminController_apply: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          /** Format: binary */
+          file: string;
+          expectedFileHash: string;
+          /** @enum {string} */
+          forzarSobrescritura?: 'true' | 'false';
+          sheetName?: string;
+        };
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   CatalogoContenidoController_buscar: {
     parameters: {
       query?: {
@@ -9362,23 +9433,6 @@ export interface operations {
         'application/json': components['schemas']['UpdateProgresoSubBloqueDto'];
       };
     };
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PlanificacionController_importarExcel: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
     responses: {
       201: {
         headers: {

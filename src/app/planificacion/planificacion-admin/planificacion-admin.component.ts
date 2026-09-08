@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -34,6 +35,7 @@ import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model'
 import type { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import {
   AlumnoSinCoincidencia,
+  PreviewImportacionPlantillas,
   ReglaOposicionAdmin,
   ReconciliacionPlanificaciones,
   VarianteAdmin,
@@ -96,6 +98,11 @@ export class PlanificacionAdminComponent implements OnInit {
   reconciliando = signal(false);
   cargando = signal(false);
   error = signal<string | null>(null);
+  archivoImportacion = signal<File | null>(null);
+  previewImportacion = signal<PreviewImportacionPlantillas | null>(null);
+  previsualizandoImportacion = signal(false);
+  aplicandoImportacion = signal(false);
+  confirmarSobrescritura = signal(false);
 
   varianteForm = this.fb.group({
     id: [null as number | null],
@@ -478,5 +485,144 @@ export class PlanificacionAdminComponent implements OnInit {
       PROGRESO_INCOMPLETO: 'Progreso incompleto',
     };
     return labels[motivo] ?? motivo;
+  }
+
+  seleccionarArchivoImportacion(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.previewImportacion.set(null);
+    this.confirmarSobrescritura.set(false);
+
+    if (!file) {
+      this.archivoImportacion.set(null);
+      return;
+    }
+    if (!/\.(xlsx|xls)$/i.test(file.name) || file.size > 10 * 1024 * 1024) {
+      this.archivoImportacion.set(null);
+      input.value = '';
+      this.toast.error('Selecciona un Excel .xlsx o .xls de hasta 10 MB');
+      return;
+    }
+    this.archivoImportacion.set(file);
+  }
+
+  async previsualizarImportacion(): Promise<void> {
+    const file = this.archivoImportacion();
+    if (!file) {
+      this.toast.error('Selecciona primero un archivo Excel');
+      return;
+    }
+
+    this.previsualizandoImportacion.set(true);
+    this.previewImportacion.set(null);
+    this.confirmarSobrescritura.set(false);
+    try {
+      const preview = await firstValueFrom(
+        this.autoasignacionService.previewImportacionPlantillas$(file),
+      );
+      this.previewImportacion.set(preview);
+      if (preview.puedeAplicar) {
+        this.toast.success(
+          'Previsualización validada; aún no se ha escrito nada',
+        );
+      } else {
+        this.toast.error('El Excel contiene errores. No se puede aplicar');
+      }
+    } catch (error) {
+      this.toast.error(
+        this.mensajeErrorImportacion(
+          error,
+          'No se pudo previsualizar el archivo',
+        ),
+      );
+    } finally {
+      this.previsualizandoImportacion.set(false);
+    }
+  }
+
+  get puedeAplicarImportacion(): boolean {
+    const preview = this.previewImportacion();
+    return !!(
+      this.archivoImportacion() &&
+      preview?.puedeAplicar &&
+      !this.previsualizandoImportacion() &&
+      !this.aplicandoImportacion() &&
+      (!preview.requiereConfirmacionSobrescritura ||
+        this.confirmarSobrescritura())
+    );
+  }
+
+  confirmarAplicacionImportacion(): void {
+    const preview = this.previewImportacion();
+    if (!preview || !this.puedeAplicarImportacion) {
+      this.toast.error('Previsualiza y corrige el Excel antes de aplicarlo');
+      return;
+    }
+    const sobrescribe = preview.requiereConfirmacionSobrescritura;
+    this.confirmationService.confirm({
+      header: sobrescribe
+        ? 'Confirmar reemplazo de plantillas'
+        : 'Aplicar importación',
+      message: sobrescribe
+        ? `Se reemplazarán plantillas existentes (${preview.sobrescrituras.length}) y sus ediciones manuales. ¿Continuar?`
+        : `Se aplicarán ${preview.totales.semanas} semanas validadas en una única transacción. ¿Continuar?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: sobrescribe ? 'Reemplazar plantillas' : 'Aplicar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: sobrescribe ? 'p-button-danger' : undefined,
+      accept: () => this.ejecutarAplicacionImportacion(),
+    });
+  }
+
+  formatearFechaIso(fecha: string): string {
+    const [year, month, day] = fecha.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : fecha;
+  }
+
+  private async ejecutarAplicacionImportacion(): Promise<void> {
+    const file = this.archivoImportacion();
+    const preview = this.previewImportacion();
+    if (!file || !preview) return;
+
+    this.aplicandoImportacion.set(true);
+    try {
+      const resultado = await firstValueFrom(
+        this.autoasignacionService.applyImportacionPlantillas$(
+          file,
+          preview.fileHash,
+          preview.requiereConfirmacionSobrescritura &&
+            this.confirmarSobrescritura(),
+        ),
+      );
+      this.previewImportacion.set({
+        ...preview,
+        yaAplicado: true,
+        requiereConfirmacionSobrescritura: false,
+      });
+      this.confirmarSobrescritura.set(false);
+      this.toast.success(
+        resultado.yaAplicado
+          ? 'Este archivo ya estaba aplicado; no se ha escrito nada'
+          : `Importación aplicada como versión ${resultado.version}`,
+      );
+    } catch (error) {
+      this.previewImportacion.set(null);
+      this.confirmarSobrescritura.set(false);
+      this.toast.error(
+        this.mensajeErrorImportacion(
+          error,
+          'No se pudo aplicar. Vuelve a previsualizar el archivo',
+        ),
+      );
+    } finally {
+      this.aplicandoImportacion.set(false);
+    }
+  }
+
+  private mensajeErrorImportacion(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse) {
+      return error.error?.message ?? fallback;
+    }
+    return fallback;
   }
 }

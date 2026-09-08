@@ -1,0 +1,153 @@
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.import-panel {
+  display: grid;
+  gap: 1.25rem;
+
+  &__header,
+  .import-actions,
+  .import-apply,
+  .overwrite-warning {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__header h3,
+  &__header p,
+  .overwrite-warning p {
+    margin: 0;
+  }
+
+  &__header p,
+  .import-apply small,
+  .overwrite-warning p,
+  .import-actions__filename {
+    color: var(--text-color-secondary);
+  }
+
+  &__safety {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--green-300);
+    border-radius: 999px;
+    color: var(--green-800);
+    background: var(--green-50);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .import-actions {
+    justify-content: flex-start;
+    padding: 1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 0.75rem;
+    background: var(--surface-50);
+
+    &__filename {
+      min-width: min(18rem, 100%);
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .import-summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.75rem;
+
+    &__metric {
+      display: grid;
+      gap: 0.35rem;
+      min-width: 0;
+      padding: 0.9rem;
+      border: 1px solid var(--surface-border);
+      border-radius: 0.75rem;
+      background: var(--surface-card);
+
+      span {
+        color: var(--text-color-secondary);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      strong {
+        font-size: 1.4rem;
+      }
+
+      &--error {
+        border-color: var(--red-300);
+        color: var(--red-700);
+        background: var(--red-50);
+      }
+    }
+  }
+
+  .overwrite-warning {
+    padding: 1rem;
+    border: 1px solid var(--orange-400);
+    border-radius: 0.75rem;
+    background: var(--orange-50);
+  }
+
+  .import-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+
+    &--valid {
+      color: var(--green-700);
+    }
+
+    &--invalid {
+      color: var(--red-700);
+    }
+  }
+
+  .week-list,
+  .issue-list {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .issue-list__error {
+    color: var(--red-700);
+  }
+
+  .issue-list__warning {
+    color: var(--orange-700);
+  }
+
+  .import-apply {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 575px) {
+  .import-panel {
+    .import-summary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    &__safety,
+    .import-actions__filename,
+    .import-apply small {
+      width: 100%;
+    }
+  }
+}

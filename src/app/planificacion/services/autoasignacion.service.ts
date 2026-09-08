@@ -10,9 +10,11 @@ import type {
   ConfiguracionPlanificacion,
   CuestionarioNivel,
   GuardarConfiguracionDTO,
+  PreviewImportacionPlantillas,
   RecomendacionNivel,
   ReglaOposicionAdmin,
   ReconciliacionPlanificaciones,
+  ResultadoImportacionPlantillas,
   VarianteAdmin,
 } from '../models/autoasignacion.model';
 
@@ -175,5 +177,39 @@ export class AutoasignacionService extends ApiBaseService {
       aplicar,
       ...(aplicar && previewHash ? { previewHash } : {}),
     }) as Observable<ReconciliacionPlanificaciones>;
+  }
+
+  public previewImportacionPlantillas$(
+    file: File,
+    sheetName?: string,
+  ): Observable<PreviewImportacionPlantillas> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    if (sheetName) body.append('sheetName', sheetName);
+    return this.http.post<PreviewImportacionPlantillas>(
+      environment.apiUrl +
+        '/planificaciones/admin/importaciones/plantillas/preview',
+      body,
+      { withCredentials: true },
+    );
+  }
+
+  public applyImportacionPlantillas$(
+    file: File,
+    expectedFileHash: string,
+    forzarSobrescritura = false,
+    sheetName?: string,
+  ): Observable<ResultadoImportacionPlantillas> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    body.append('expectedFileHash', expectedFileHash);
+    body.append('forzarSobrescritura', String(forzarSobrescritura));
+    if (sheetName) body.append('sheetName', sheetName);
+    return this.http.post<ResultadoImportacionPlantillas>(
+      environment.apiUrl +
+        '/planificaciones/admin/importaciones/plantillas/apply',
+      body,
+      { withCredentials: true },
+    );
   }
 }

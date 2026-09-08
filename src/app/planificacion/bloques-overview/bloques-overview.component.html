@@ -31,28 +31,11 @@
         [link]="true"
         (click)="navigateToDetailview('new')"
       ></p-button>
-      <p-button
-        label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Importar'
-        }}"
-        icon="pi pi-upload"
-        [loading]="uploadingFile"
-        (click)="fileInput.click()"
-      ></p-button>
-      <input
-        type="file"
-        accept=".xlsx, .xls"
-        #fileInput
-        style="display: none"
-        (change)="onFileSelected($event)"
-      />
     </div>
   </div>
 
   <div empty-template>
-    <div class="text-center p-4">
-      No hay bloques disponibles
-    </div>
+    <div class="text-center p-4">No hay bloques disponibles</div>
   </div>
 </app-generic-list>
 
@@ -61,24 +44,24 @@
   <div class="flex flex-row align-items-between">
     <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
       <div class="text-lg font-medium flex gap-2 align-items-center">
-        <span 
-          class="identifier" 
-          pTooltip="{{ item.identificador }}" 
+        <span
+          class="identifier"
+          pTooltip="{{ item.identificador }}"
           tooltipPosition="top"
         >
           {{ item.identificador }}
         </span>
-        <span 
-          class="badge bg-primary text-white" 
-          pTooltip="Número de sub-bloques" 
+        <span
+          class="badge bg-primary text-white"
+          pTooltip="Número de sub-bloques"
           tooltipPosition="top"
         >
           {{ item.subBloques.length }} sub-bloques
         </span>
       </div>
-      <span 
-        class="descripcion" 
-        pTooltip="{{ item.descripcion }}" 
+      <span
+        class="descripcion"
+        pTooltip="{{ item.descripcion }}"
         tooltipPosition="top"
       >
         {{ item.descripcion }}
@@ -86,28 +69,42 @@
     </div>
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
-        <span 
-          class="text-xs hidden md:block unbreakable-text" 
-          pTooltip="Fecha de creación: {{ item.createdAt | date : 'dd/MM/yyyy HH:mm' }}" 
+        <span
+          class="text-xs hidden md:block unbreakable-text"
+          pTooltip="Fecha de creación: {{
+            item.createdAt | date: 'dd/MM/yyyy HH:mm'
+          }}"
           tooltipPosition="top"
         >
-          {{ item.createdAt | date : "short" }}
+          {{ item.createdAt | date: "short" }}
         </span>
         <p-button
           icon="pi pi-trash"
           styleClass="p-button-danger"
           pTooltip="Eliminar bloque"
-          (click)="$event.stopPropagation();$event.preventDefault();eliminarBloque(item.id, $event)"
+          (click)="
+            $event.stopPropagation();
+            $event.preventDefault();
+            eliminarBloque(item.id, $event)
+          "
         ></p-button>
         <p-button
           icon="pi pi-copy"
           pTooltip="Clonar bloque"
-          (click)="$event.stopPropagation();$event.preventDefault();clonarBloque(item.id)"
+          (click)="
+            $event.stopPropagation();
+            $event.preventDefault();
+            clonarBloque(item.id)
+          "
         ></p-button>
         <p-button
           icon="pi pi-pencil"
           pTooltip="Editar bloque"
-          (click)="$event.stopPropagation();$event.preventDefault();navigateToDetailview(item.id)"
+          (click)="
+            $event.stopPropagation();
+            $event.preventDefault();
+            navigateToDetailview(item.id)
+          "
         ></p-button>
       </div>
     </div>
