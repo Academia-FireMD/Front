@@ -81,11 +81,20 @@ async function loginAlumno(page: Parameters<typeof loginAsRoleMock>[0]) {
       body: JSON.stringify(cuestionarioNivel),
     }),
   );
+  await page.route('**/adjuntos/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
+  await page.route('**/planificaciones/eventos-personalizados/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
   await loginAsRoleMock(page, {
     rol: 'ALUMNO',
     email: 'alumno-plan@test.com',
     userFixture: alumnoConPlan,
-    modulos: { PLANIFICACION_AUTOASIGNACION: true },
+    modulos: {
+      PLANIFICACION_AUTOASIGNACION: true,
+      PLANIFICACION_FISICA: false,
+    },
   });
 }
 

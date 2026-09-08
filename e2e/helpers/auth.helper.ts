@@ -112,6 +112,13 @@ export async function loginAsRoleMock(
       body: JSON.stringify(userFixture),
     }),
   );
+  await page.route('**/user/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(userFixture),
+    }),
+  );
   await page.route('**/ai-assistant/token', (route) =>
     route.fulfill({
       status: 403,
