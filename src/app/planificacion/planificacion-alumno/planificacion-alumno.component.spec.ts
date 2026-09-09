@@ -41,15 +41,16 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
             getConfiguracion$: jest.fn(() => of(estado)),
             getCuestionarioNivel$: jest.fn(() =>
               of({
-                version: 1,
+                // El shell solo propaga la definición dinámica del backend.
+                version: 42,
                 preguntas: Array.from({ length: 5 }, (_, indice) => ({
                   id: `nivel-${indice + 1}`,
                   texto: `Pregunta ${indice + 1}`,
                   opciones: [
-                    { valor: 0, etiqueta: 'Nada' },
-                    { valor: 1, etiqueta: 'Poco' },
-                    { valor: 2, etiqueta: 'Algo' },
-                    { valor: 3, etiqueta: 'Mucho' },
+                    { valor: 0, etiqueta: 'Opción 0' },
+                    { valor: 1, etiqueta: 'Opción 1' },
+                    { valor: 2, etiqueta: 'Opción 2' },
+                    { valor: 3, etiqueta: 'Opción 3' },
                   ],
                 })),
               }),
