@@ -54,21 +54,20 @@ const configuracionInicial = {
 };
 
 const cuestionarioNivel = {
-  version: 1,
-  preguntas: [
-    '¿Cuánto tiempo llevas estudiando el temario?',
-    '¿Cómo valoras tu dominio actual del temario?',
-    '¿Has aprobado algún examen o parcial recientemente?',
-    '¿Cuántas horas a la semana dedicas al estudio?',
-    '¿Cómo te sientes con los simulacros y tests?',
-  ].map((texto, indice) => ({
+  // El Front consume el contrato dinámico; no debe fijar la versión ni el copy.
+  version: 42,
+  preguntas: Array.from({ length: 5 }, (_, indice) => ({
     id: `nivel-${indice + 1}`,
-    texto,
+    texto: `Pregunta dinámica ${indice + 1} con un enunciado suficientemente largo`,
     opciones: [
-      { valor: 0, etiqueta: 'Nada' },
-      { valor: 1, etiqueta: 'Poco' },
-      { valor: 2, etiqueta: 'Algo' },
-      { valor: 3, etiqueta: 'Mucho' },
+      { valor: 0, etiqueta: 'Respuesta dinámica cero' },
+      { valor: 1, etiqueta: 'Respuesta dinámica uno' },
+      {
+        valor: 2,
+        etiqueta:
+          'Respuesta dinámica dos suficientemente larga para validar el ajuste responsive',
+      },
+      { valor: 3, etiqueta: 'Respuesta dinámica tres' },
     ],
   })),
 };
@@ -164,6 +163,7 @@ test('shell pendiente de publicación no obliga a repetir preferencias', async (
 test('primera entrada permite completar wizard, activar version 0 y abrir calendario', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   let lecturasConfiguracion = 0;
   await page.route('**/planificaciones/configuracion', (route) => {
     if (route.request().method() === 'PUT') {
@@ -194,7 +194,7 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
     expect(route.request().method()).toBe('POST');
     expect(route.request().postDataJSON()).toEqual({
       respuestas: [2, 2, 2, 2, 2],
-      versionCuestionario: 1,
+      versionCuestionario: cuestionarioNivel.version,
     });
     return route.fulfill({
       status: 200,
@@ -222,6 +222,28 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   await franja.click();
   await page.locator('.p-dropdown-panel').last().getByText('4-6 horas').click();
   await page.getByRole('button', { name: 'Continuar' }).click();
+
+  const nav = page.locator('.p-stepper-nav');
+  const confirmar = page.locator('.p-stepper-title', { hasText: 'Confirmar' });
+  await expect(confirmar).toBeVisible();
+  const [navBox, confirmarBox] = await Promise.all([
+    nav.boundingBox(),
+    confirmar.boundingBox(),
+  ]);
+  expect(navBox).not.toBeNull();
+  expect(confirmarBox).not.toBeNull();
+  expect(confirmarBox!.x + confirmarBox!.width).toBeLessThanOrEqual(
+    navBox!.x + navBox!.width + 1,
+  );
+  const dimensiones = await page
+    .locator('app-planificacion-configuracion-wizard')
+    .evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+  expect(dimensiones.scrollWidth).toBeLessThanOrEqual(
+    dimensiones.clientWidth + 1,
+  );
 
   // El cuestionario no tiene defaults: responde las cinco preguntas con
   // opciones reales antes de pedir la recomendación.

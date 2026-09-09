@@ -1,3 +1,35 @@
 :host {
   display: block;
 }
+
+@media (max-width: 480px) {
+  :host ::ng-deep .p-stepper .p-stepper-header {
+    min-width: 0;
+    padding: 0.125rem;
+  }
+
+  :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-action {
+    min-width: 0;
+  }
+
+  :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-number {
+    min-width: 1.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    line-height: 1.75rem;
+    font-size: 1rem;
+  }
+
+  :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-title {
+    margin-left: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  :host ::ng-deep .p-stepper .p-stepper-separator {
+    margin-inline-start: 0.25rem;
+  }
+
+  :host ::ng-deep .p-stepper .p-stepper-panels {
+    padding-inline: 0.5rem;
+  }
+}
