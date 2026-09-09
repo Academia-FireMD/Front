@@ -67,7 +67,7 @@ describe('AutoasignacionService', () => {
     let recibida: unknown;
 
     service
-      .recomendarNivel$([0, 3, 2, 1, 3], 1)
+      .recomendarNivel$([0, 3, 2, 1, 3], 42)
       .subscribe((r) => (recibida = r));
 
     const request = httpMock.expectOne(
@@ -76,7 +76,7 @@ describe('AutoasignacionService', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({
       respuestas: [0, 3, 2, 1, 3],
-      versionCuestionario: 1,
+      versionCuestionario: 42,
     });
     request.flush(respuesta);
 
@@ -90,7 +90,7 @@ describe('AutoasignacionService', () => {
       `${environment.apiUrl}/planificaciones/cuestionario-nivel`,
     );
     expect(request.request.method).toBe('GET');
-    request.flush({ version: 1, preguntas: [] });
+    request.flush({ version: 42, preguntas: [] });
   });
 
   it('PUT /configuracion usa la ruta exacta, envía version y conserva el error 409', () => {

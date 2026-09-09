@@ -113,16 +113,26 @@
               <div class="mb-2 font-medium">
                 {{ $index + 1 }}. {{ pregunta.texto }}
               </div>
-              <div class="flex gap-3">
+              <div class="flex flex-column gap-2">
                 @for (opcion of pregunta.opciones; track opcion.valor) {
-                  <div class="flex align-items-center gap-1">
+                  <div class="flex align-items-start gap-2">
                     <p-radioButton
                       [name]="'pregunta' + preguntaIndex"
+                      [inputId]="
+                        'pregunta' + preguntaIndex + 'opcion' + opcion.valor
+                      "
                       [value]="opcion.valor"
                       [(ngModel)]="respuestas[preguntaIndex]"
                       (onClick)="onRespuestaChange(preguntaIndex, opcion.valor)"
                     ></p-radioButton>
-                    <label>{{ opcion.etiqueta }}</label>
+                    <label
+                      class="line-height-3 cursor-pointer"
+                      [for]="
+                        'pregunta' + preguntaIndex + 'opcion' + opcion.valor
+                      "
+                    >
+                      {{ opcion.etiqueta }}
+                    </label>
                   </div>
                 }
               </div>

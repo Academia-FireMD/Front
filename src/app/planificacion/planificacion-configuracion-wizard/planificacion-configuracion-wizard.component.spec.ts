@@ -27,15 +27,17 @@ const configuracion: ConfiguracionPlanificacion = {
 };
 
 const cuestionario = {
-  version: 1,
+  // Valor deliberadamente ajeno a la versión real: el Front consume el
+  // contrato del backend y no debe mantener una copia local del cuestionario.
+  version: 42,
   preguntas: Array.from({ length: 5 }, (_, indice) => ({
     id: `nivel-${indice + 1}`,
     texto: `Pregunta ${indice + 1}`,
     opciones: [
-      { valor: 0, etiqueta: 'Nada' },
-      { valor: 1, etiqueta: 'Poco' },
-      { valor: 2, etiqueta: 'Algo' },
-      { valor: 3, etiqueta: 'Mucho' },
+      { valor: 0, etiqueta: 'Opción 0' },
+      { valor: 1, etiqueta: 'Opción 1' },
+      { valor: 2, etiqueta: 'Opción 2' },
+      { valor: 3, etiqueta: 'Opción 3' },
     ],
   })),
 };
@@ -108,7 +110,10 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     component.respuestas = [3, 2, 3, 1, 3];
     await component.obtenerRecomendacion();
 
-    expect(service.recomendarNivel$).toHaveBeenCalledWith([3, 2, 3, 1, 3], 1);
+    expect(service.recomendarNivel$).toHaveBeenCalledWith(
+      [3, 2, 3, 1, 3],
+      cuestionario.version,
+    );
     expect(component.recomendacion?.nivelRecomendado).toBe('AVANZADO');
     expect(component.preferencias.nivel).toBeNull();
 
