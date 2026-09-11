@@ -4,6 +4,7 @@ export type FacturaEstado =
   | 'EMITIDA'
   | 'ANULADA'
   | 'ELIMINADA_LOCAL'
+  | 'OMITIDA_PRUEBA'
   | 'ERROR';
 export type OrigenAnulacion = 'LOCAL' | 'CONTASIMPLE';
 
@@ -34,6 +35,7 @@ export interface Factura {
   total: number;
   pdfUrl?: string;
   errorMessage?: string;
+  motivoOmision?: string;
   dryRun: boolean;
   origenAnulacion?: OrigenAnulacion;
   fechaAnulacion?: string;
@@ -84,6 +86,7 @@ export interface ReconciliacionResult {
   logId: number;
   totalRevisadas: number;
   anuladas: number;
+  renumeradas: number;
   errores: number;
   estado: 'OK' | 'ABORTED' | 'ERROR';
   duracionMs: number;

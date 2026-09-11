@@ -80,6 +80,7 @@ export class MisFacturasComponent extends GenericListComponent<Factura> {
       PENDIENTE: 'estado-pendiente-chip',
       ANULADA: 'estado-anulada-chip',
       ELIMINADA_LOCAL: 'estado-anulada-chip',
+      OMITIDA_PRUEBA: 'estado-pendiente-chip',
       ERROR: 'estado-error-chip',
     };
     return map[estado] ?? 'estado-pendiente-chip';

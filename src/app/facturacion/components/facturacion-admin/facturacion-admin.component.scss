@@ -41,6 +41,12 @@
   color: var(--red-800);
 }
 
+.estado-omitida-prueba-chip {
+  background-color: var(--surface-200);
+  color: var(--text-color-secondary);
+  border: 1px dashed var(--surface-500);
+}
+
 .total-cell {
   font-weight: 600;
   color: var(--primary-color);

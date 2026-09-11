@@ -5,26 +5,27 @@ import { environment } from '../../environments/environment';
 
 export interface AppConfig {
   verifactuEnabled: boolean;
+  hardDeleteFacturasEnabled: boolean;
 }
 
 /**
  * Configuración runtime del Frontend leída desde GET /api/config al bootstrap.
  *
- * Actualmente expone solo `verifactuEnabled` para que la UI oculte el botón
- * "Eliminar factura" cuando Verifactu esté activo.
+ * Expone las capacidades fiscales que modifican la UI. El backend mantiene la
+ * decisión final y bloquea igualmente cualquier hard delete en producción.
  *
  * NO expone `billingEnabled`: con billing off, la UI sigue visible (alumnos
  * siguen viendo su histórico). Solo los endpoints de escritura devuelven 404.
  *
- * Fail-safe: si el backend no responde, se asume verifactuEnabled=false
- * (deja ver el botón eliminar — comportamiento más útil en desarrollo).
- * En producción, si el backend se cae, la UI igual funcionará con el último
- * valor conocido.
+ * Fail-safe: si el backend no responde, el borrado permanece oculto.
  */
 @Injectable({ providedIn: 'root' })
 export class ConfigService {
   private readonly _verifactuEnabled = signal<boolean>(false);
   readonly verifactuEnabled = this._verifactuEnabled.asReadonly();
+  private readonly _hardDeleteFacturasEnabled = signal<boolean>(false);
+  readonly hardDeleteFacturasEnabled =
+    this._hardDeleteFacturasEnabled.asReadonly();
 
   constructor(private readonly http: HttpClient) {}
 
@@ -36,9 +37,13 @@ export class ConfigService {
         }),
       );
       this._verifactuEnabled.set(Boolean(config?.verifactuEnabled));
+      this._hardDeleteFacturasEnabled.set(
+        config?.hardDeleteFacturasEnabled === true,
+      );
     } catch (err) {
       console.warn('[ConfigService] no se pudo cargar /api/config:', err);
       this._verifactuEnabled.set(false);
+      this._hardDeleteFacturasEnabled.set(false);
     }
   }
 }
