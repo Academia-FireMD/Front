@@ -85,7 +85,9 @@
             [pTooltip]="
               item.origenAnulacion === 'CONTASIMPLE'
                 ? 'Anulada en Contasimple (detectada por sincronización)'
-                : 'Estado: ' + item.estado
+                : item.estado === 'OMITIDA_PRUEBA'
+                  ? 'No enviada a ContaSimple: ' + item.motivoOmision
+                  : 'Estado: ' + item.estado
             "
             tooltipPosition="top"
           ></p-chip>
@@ -139,6 +141,7 @@
 
         <div class="admin-controls">
           <p-button
+            *ngIf="item.contasimpleId"
             icon="pi pi-file-pdf"
             severity="danger"
             [text]="true"
@@ -166,7 +169,11 @@
             (click)="abrirDialogCompletarFiscal(item, $event)"
           ></p-button>
           <p-button
-            *ngIf="!verifactuEnabled() && item.estado !== 'ELIMINADA_LOCAL'"
+            *ngIf="
+              hardDeleteFacturasEnabled() &&
+              item.estado !== 'ELIMINADA_LOCAL' &&
+              item.estado !== 'OMITIDA_PRUEBA'
+            "
             icon="pi pi-trash"
             severity="danger"
             [text]="true"

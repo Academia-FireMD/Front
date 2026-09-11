@@ -55,7 +55,8 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   private configService = inject(ConfigService);
   override toast = inject(ToastrService);
 
-  readonly verifactuEnabled = this.configService.verifactuEnabled;
+  readonly hardDeleteFacturasEnabled =
+    this.configService.hardDeleteFacturasEnabled;
 
   override filters: FilterConfig[] = [
     {
@@ -94,6 +95,7 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
         { label: 'Emitida', value: 'EMITIDA' },
         { label: 'Anulada', value: 'ANULADA' },
         { label: 'Eliminada (local)', value: 'ELIMINADA_LOCAL' },
+        { label: 'Omitida (prueba)', value: 'OMITIDA_PRUEBA' },
         { label: 'Error', value: 'ERROR' },
       ],
       filterInterpolation: (v: string) => (v ? { estado: v } : {}),
@@ -401,6 +403,9 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
           `${result.totalRevisadas} revisadas`,
           `${result.anuladas} anuladas`,
         ];
+        if (result.renumeradas > 0) {
+          partes.push(`${result.renumeradas} renumeradas`);
+        }
         if (result.errores > 0) partes.push(`${result.errores} errores`);
         const mensaje = `Sincronización ${result.estado}: ${partes.join(', ')}`;
         if (result.estado === 'OK') {
@@ -473,6 +478,7 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       PENDIENTE: 'estado-pendiente-chip',
       ANULADA: 'estado-anulada-chip',
       ELIMINADA_LOCAL: 'estado-anulada-chip',
+      OMITIDA_PRUEBA: 'estado-omitida-prueba-chip',
       ERROR: 'estado-error-chip',
     };
     return map[estado] ?? 'estado-pendiente-chip';
@@ -486,6 +492,7 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       return 'Anulada desde Contasimple';
     }
     if (factura.estado === 'ELIMINADA_LOCAL') return 'Eliminada';
+    if (factura.estado === 'OMITIDA_PRUEBA') return 'Omitida · prueba';
     return factura.estado;
   }
 

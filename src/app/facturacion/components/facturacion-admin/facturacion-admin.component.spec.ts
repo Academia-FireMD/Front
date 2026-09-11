@@ -87,6 +87,9 @@ describe('FacturacionAdminComponent', () => {
       'estado-pendiente-chip',
     );
     expect(component.getEstadoChipClass('ANULADA')).toBe('estado-anulada-chip');
+    expect(component.getEstadoChipClass('OMITIDA_PRUEBA')).toBe(
+      'estado-omitida-prueba-chip',
+    );
     expect(component.getEstadoChipClass('ERROR')).toBe('estado-error-chip');
   });
 

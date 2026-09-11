@@ -12363,6 +12363,7 @@ export interface operations {
           | 'EMITIDA'
           | 'ANULADA'
           | 'ELIMINADA_LOCAL'
+          | 'OMITIDA_PRUEBA'
           | 'ERROR';
         searchTerm?: string;
         usuarioId?: number;
@@ -12436,6 +12437,7 @@ export interface operations {
           | 'EMITIDA'
           | 'ANULADA'
           | 'ELIMINADA_LOCAL'
+          | 'OMITIDA_PRUEBA'
           | 'ERROR';
         searchTerm?: string;
         usuarioId?: number;
