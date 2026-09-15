@@ -1,0 +1,42 @@
+@if (destino === "selector") {
+  <main class="cj-entry" data-testid="callejero-selector">
+    <section class="cj-entry__panel" aria-labelledby="callejero-title">
+      <p class="cj-entry__eyebrow">Callejero</p>
+      <h1 id="callejero-title">Elige tu oposición</h1>
+      <p>
+        Accede al callejero y al examen de la convocatoria que quieras preparar.
+      </p>
+
+      <nav class="cj-entry__options" aria-label="Callejeros disponibles">
+        <a
+          class="cj-entry__option"
+          routerLink="/app/callejero/valencia"
+          data-testid="callejero-oposicion-valencia"
+        >
+          <span>Ayuntamiento de Valencia</span>
+          <small>Abrir callejero</small>
+        </a>
+        <a
+          class="cj-entry__option"
+          routerLink="/app/callejero/alicante"
+          data-testid="callejero-oposicion-alicante"
+        >
+          <span>Consorcio de Alicante</span>
+          <small>Abrir beta</small>
+        </a>
+      </nav>
+    </section>
+  </main>
+} @else if (destino === "sin-acceso") {
+  <main class="cj-entry" data-testid="callejero-sin-oposicion">
+    <section class="cj-entry__panel" aria-labelledby="callejero-title">
+      <p class="cj-entry__eyebrow">Callejero</p>
+      <h1 id="callejero-title">No tienes un callejero disponible</h1>
+      <p>
+        Tu cuenta no tiene activa una oposición de Valencia o Alicante con
+        acceso a esta herramienta.
+      </p>
+      <a class="cj-entry__back" routerLink="/app/profile">Volver al perfil</a>
+    </section>
+  </main>
+}

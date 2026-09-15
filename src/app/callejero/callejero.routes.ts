@@ -1,13 +1,17 @@
 import { Routes } from '@angular/router';
+import { callejeroAlicanteGuard } from '../guards/callejero-alicante.guard';
 import { CallejeroAppComponent } from './alumno/callejero-app.component';
+import { CallejeroAlicanteComponent } from './alicante/callejero-alicante.component';
 import { CallejeroEmbedComponent } from './embed/callejero-embed.component';
+import { CallejeroEntradaComponent } from './entrada/callejero-entrada.component';
 
 /**
  * Rutas standalone del módulo Callejero.
  * Lazy-loaded desde `app-routing.module.ts` bajo `/app/callejero`.
  *
- * - `''`      → EMBED (iframe del HTML de Raúl, paridad 1:1 exacta). Es lo que
- *               ve el alumno hoy.
+ * - `''`       → decide automáticamente por oposición o muestra el selector.
+ * - `valencia` → EMBED existente de Valencia, incluido su puente de auth.
+ * - `alicante` → beta autónoma de Alicante, sin credenciales de la plataforma.
  * - `nativo`  → port nativo Angular (`CallejeroAppComponent`), CONSERVADO para
  *               retomar la re-introducción a futuro (leaderboard, progreso,
  *               examen server-side, gating por oposición, multi-ciudad).
@@ -15,8 +19,20 @@ import { CallejeroEmbedComponent } from './embed/callejero-embed.component';
 export const routes: Routes = [
   {
     path: '',
-    component: CallejeroEmbedComponent,
+    pathMatch: 'full',
+    component: CallejeroEntradaComponent,
     data: { title: 'Callejero' },
+  },
+  {
+    path: 'valencia',
+    component: CallejeroEmbedComponent,
+    data: { title: 'Callejero Valencia' },
+  },
+  {
+    path: 'alicante',
+    component: CallejeroAlicanteComponent,
+    canActivate: [callejeroAlicanteGuard],
+    data: { title: 'Callejero Alicante' },
   },
   {
     path: 'nativo',

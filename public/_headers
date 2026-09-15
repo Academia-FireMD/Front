@@ -1,0 +1,5 @@
+/callejero-embed/alicante_16.html
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tile.opentopomap.org https://server.arcgisonline.com https://tile.openstreetmap.de https://tile.openstreetmap.org https://*.basemaps.cartocdn.com https://www.ign.es; font-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://overpass-api.de; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
