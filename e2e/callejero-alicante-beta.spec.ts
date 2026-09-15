@@ -40,7 +40,6 @@ const EXTERNAL_HOSTS = [
   'openstreetmap.org',
   'openstreetmap.de',
   'arcgisonline.com',
-  'basemaps.cartocdn.com',
   'ign.es',
   'nominatim.openstreetmap.org',
   'router.project-osrm.org',
@@ -55,6 +54,12 @@ function usuarioCon(
     ...userAlumnoFixture,
     rol,
     oposiciones,
+    suscripciones: oposiciones.map((oposicion, index) => ({
+      ...(userAlumnoFixture.suscripciones[0] ?? {}),
+      id: index + 1,
+      oposicion,
+      status: 'ACTIVE',
+    })),
   };
 }
 
@@ -314,6 +319,17 @@ test.describe('Callejero Alicante — beta autónoma', () => {
     const frame = await iframeAlicante(page);
 
     await expect(frame.locator('#mapa.leaflet-container')).toBeVisible();
+    expect(
+      solicitudesExternas.some((request) =>
+        new URL(request.url()).hostname.endsWith('arcgisonline.com'),
+      ),
+    ).toBe(true);
+    expect(
+      solicitudesExternas.some((request) =>
+        new URL(request.url()).hostname.endsWith('tile.opentopomap.org'),
+      ),
+    ).toBe(false);
+    await expect(frame.locator('#mapa canvas').first()).toBeVisible();
     await frame.locator('#tab2Rec').click();
     await expect(frame.locator('#rec2BoxEscribo')).toBeVisible();
     await frame.locator('#rec2Texto').fill('Agost');

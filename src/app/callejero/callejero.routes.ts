@@ -1,5 +1,8 @@
 import { Routes } from '@angular/router';
-import { callejeroAlicanteGuard } from '../guards/callejero-alicante.guard';
+import {
+  callejeroAlicanteGuard,
+  callejeroValenciaGuard,
+} from '../guards/callejero-alicante.guard';
 import { CallejeroAppComponent } from './alumno/callejero-app.component';
 import { CallejeroAlicanteComponent } from './alicante/callejero-alicante.component';
 import { CallejeroEmbedComponent } from './embed/callejero-embed.component';
@@ -26,6 +29,7 @@ export const routes: Routes = [
   {
     path: 'valencia',
     component: CallejeroEmbedComponent,
+    canActivate: [callejeroValenciaGuard],
     data: { title: 'Callejero Valencia' },
   },
   {
