@@ -64,156 +64,41 @@
     >
       <h3 class="mt-0 mb-2">Nivel de estudio</h3>
 
-      @if (tieneNivelPrecargado && !elegirCuestionario()) {
-        <div class="flex flex-column gap-3">
-          <p>
-            Tu nivel actual es
-            <strong>{{
-              preferencias.nivel === NivelOposicion.AVANZADO
-                ? "Avanzado"
-                : "Iniciación"
-            }}</strong
-            >.
-          </p>
-          <div class="flex gap-2">
-            <p-button
-              label="Confirmar nivel"
-              icon="pi pi-check"
-              (click)="nextCallback.emit()"
-            ></p-button>
-            <p-button
-              label="Obtener recomendación"
-              icon="pi pi-magic"
-              styleClass="p-button-secondary"
-              (click)="elegirCuestionario.set(true)"
-            ></p-button>
-          </div>
+      <div class="flex flex-column gap-3">
+        <p>
+          Nivel seleccionado:
+          <strong>{{
+            preferencias.nivel === NivelOposicion.AVANZADO
+              ? "Avanzado"
+              : preferencias.nivel === NivelOposicion.INICIACION
+                ? "Iniciación"
+                : "Sin seleccionar"
+          }}</strong
+          >. Puedes mantenerlo o hacer el test para recibir una recomendación.
+        </p>
+
+        <app-cuestionario-nivel
+          [estadoTest]="configuracion?.estadoTest ?? null"
+          [nivelActual]="preferencias.nivel"
+          (nivelAceptado)="aplicarNivelRecomendado($event)"
+        />
+
+        <div class="flex justify-content-between gap-2 pt-2">
+          <p-button
+            label="Volver"
+            icon="pi pi-arrow-left"
+            styleClass="p-button-text"
+            (click)="prevCallback.emit()"
+          />
+          <p-button
+            label="Continuar con este nivel"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            [disabled]="!puedeGuardarConfiguracion"
+            (click)="irAPasoConfirmacion(); nextCallback.emit()"
+          />
         </div>
-      } @else {
-        <div class="flex flex-column gap-3">
-          <p>
-            Responde {{ preguntas.length }} preguntas sobre tu experiencia con
-            el temario:
-          </p>
-
-          @if (cargandoCuestionario()) {
-            <p-message
-              severity="info"
-              text="Cargando cuestionario…"
-              styleClass="w-full"
-            ></p-message>
-          }
-
-          @for (
-            pregunta of preguntas;
-            track $index;
-            let preguntaIndex = $index
-          ) {
-            <div class="p-3 border-1 border-round surface-100">
-              <div class="mb-2 font-medium">
-                {{ $index + 1 }}. {{ pregunta.texto }}
-              </div>
-              <div class="flex flex-column gap-2">
-                @for (opcion of pregunta.opciones; track opcion.valor) {
-                  <div class="flex align-items-start gap-2">
-                    <p-radioButton
-                      [name]="'pregunta' + preguntaIndex"
-                      [inputId]="
-                        'pregunta' + preguntaIndex + 'opcion' + opcion.valor
-                      "
-                      [value]="opcion.valor"
-                      [(ngModel)]="respuestas[preguntaIndex]"
-                      (onClick)="onRespuestaChange(preguntaIndex, opcion.valor)"
-                    ></p-radioButton>
-                    <label
-                      class="line-height-3 cursor-pointer"
-                      [for]="
-                        'pregunta' + preguntaIndex + 'opcion' + opcion.valor
-                      "
-                    >
-                      {{ opcion.etiqueta }}
-                    </label>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-
-          @if (errorCuestionario) {
-            <p-message
-              severity="warn"
-              [text]="errorCuestionario"
-              styleClass="w-full"
-            ></p-message>
-          }
-
-          <div class="flex gap-2">
-            @if (tieneNivelPrecargado) {
-              <p-button
-                label="Volver"
-                icon="pi pi-arrow-left"
-                styleClass="p-button-text"
-                (click)="elegirCuestionario.set(false)"
-              ></p-button>
-            }
-            <p-button
-              label="Obtener recomendación"
-              icon="pi pi-magic"
-              [loading]="enviandoRecomendacion()"
-              [disabled]="cargandoCuestionario() || !cuestionario"
-              (click)="obtenerRecomendacion()"
-            ></p-button>
-          </div>
-
-          @if (recomendacion) {
-            <div class="mt-3">
-              <p-message
-                severity="success"
-                [text]="
-                  'Te recomendamos el nivel ' +
-                  (recomendacion.nivelRecomendado === NivelOposicion.AVANZADO
-                    ? 'Avanzado'
-                    : 'Iniciación') +
-                  ' (puntuación ' +
-                  recomendacion.puntuacion +
-                  ').'
-                "
-                styleClass="w-full mb-2"
-              ></p-message>
-              <div class="flex gap-2">
-                <p-button
-                  label="Aceptar recomendación"
-                  icon="pi pi-check"
-                  (click)="aceptarRecomendacion(); nextCallback.emit()"
-                ></p-button>
-                <p-button
-                  label="Mantener mi nivel elegido"
-                  styleClass="p-button-secondary"
-                  [disabled]="!puedeGuardarConfiguracion"
-                  (click)="irAPasoConfirmacion(); nextCallback.emit()"
-                ></p-button>
-                <p-button
-                  label="Volver a elegir nivel"
-                  styleClass="p-button-text"
-                  (click)="
-                    recomendacion = null;
-                    elegirCuestionario.set(false);
-                    prevCallback.emit()
-                  "
-                ></p-button>
-              </div>
-            </div>
-          } @else if (tieneNivelPrecargado) {
-            <div class="flex gap-2">
-              <p-button
-                label="Usar mi nivel actual"
-                styleClass="p-button-outlined"
-                (click)="nextCallback.emit()"
-              ></p-button>
-            </div>
-          }
-        </div>
-      }
+      </div>
     </ng-template>
   </p-stepperPanel>
 

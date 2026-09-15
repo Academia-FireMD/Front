@@ -133,9 +133,11 @@ export class PlanificacionMensualEditComponent {
   // Volcado completo de una variante importada
   public isDialogVolcarVisible = false;
   public prefijoPlantillas = '';
+  public codigosHojaDisponibles: string[] = [];
   public volcadoPreview: VolcarPlantillasResponse | null = null;
   public volcadoPreviewLoading = false;
   public volcando = false;
+  private prefijoVolcadoPrevisualizado: string | null = null;
   public get totalCreadosVolcado(): number {
     return (
       this.volcadoPreview?.resultados.reduce(
@@ -360,8 +362,27 @@ export class PlanificacionMensualEditComponent {
       filter((e) => !!e),
       tap((e) => {
         const [data, queryParams] = e;
-        const { expectedRole, type } = data;
+        const { expectedRole } = data;
         this.expectedRole = expectedRole;
+        const codigos = queryParams['codigosHoja'];
+        this.codigosHojaDisponibles = Array.from(
+          new Set(
+            (Array.isArray(codigos)
+              ? codigos
+              : typeof codigos === 'string'
+                ? codigos.split(',')
+                : []
+            )
+              .map((codigo) => String(codigo).trim())
+              .filter(Boolean),
+          ),
+        );
+        if (
+          this.codigosHojaDisponibles.length &&
+          !this.codigosHojaDisponibles.includes(this.prefijoPlantillas)
+        ) {
+          this.prefijoPlantillas = this.codigosHojaDisponibles[0];
+        }
       }),
     );
   }
@@ -486,9 +507,28 @@ export class PlanificacionMensualEditComponent {
   }
 
   public abrirDialogoVolcar(): void {
-    this.prefijoPlantillas = '';
+    if (this.lastLoadedPlanification()?.estado !== 'BORRADOR') {
+      this.toast.error(
+        'Solo se pueden incorporar semanas a una planificación en borrador.',
+      );
+      return;
+    }
+    if (this.eventosModificados) {
+      this.toast.error(
+        'Guarda o descarta los cambios del calendario antes de incorporar semanas.',
+      );
+      return;
+    }
+    this.prefijoPlantillas = this.codigosHojaDisponibles[0] ?? '';
     this.volcadoPreview = null;
+    this.prefijoVolcadoPrevisualizado = null;
     this.isDialogVolcarVisible = true;
+  }
+
+  public onPrefijoPlantillasChange(prefijo: string): void {
+    this.prefijoPlantillas = prefijo;
+    this.volcadoPreview = null;
+    this.prefijoVolcadoPrevisualizado = null;
   }
 
   public async cargarPreviewVolcado(): Promise<void> {
@@ -507,6 +547,7 @@ export class PlanificacionMensualEditComponent {
         }),
       );
       this.volcadoPreview = res;
+      this.prefijoVolcadoPrevisualizado = prefijo;
     } catch (error: any) {
       const message =
         error?.error?.message || error?.message || 'Error al cargar el preview';
@@ -521,6 +562,19 @@ export class PlanificacionMensualEditComponent {
     const planificacionId = this.lastLoadedPlanification()?.id;
     const prefijo = this.prefijoPlantillas.trim();
     if (!planificacionId || !prefijo) {
+      return;
+    }
+    if (!this.volcadoPreview || this.prefijoVolcadoPrevisualizado !== prefijo) {
+      this.toast.error('Previsualiza este código antes de incorporarlo.');
+      return;
+    }
+    if (
+      this.lastLoadedPlanification()?.estado !== 'BORRADOR' ||
+      this.eventosModificados
+    ) {
+      this.toast.error(
+        'La planificación debe seguir en borrador y sin cambios pendientes.',
+      );
       return;
     }
 
@@ -557,7 +611,7 @@ export class PlanificacionMensualEditComponent {
         `Variante volcada: ${totalCreados} creados, ${totalActualizados} actualizados, ${totalOmitidos} omitidos en ${res.totalPlantillas} plantillas.`,
       );
       this.cerrarDialogoVolcar();
-      this.load();
+      this.load(res.rangoFechas?.desde);
     } catch (error: any) {
       const status = error?.status;
       const backendMessage = error?.error?.message;
@@ -575,6 +629,7 @@ export class PlanificacionMensualEditComponent {
     this.isDialogVolcarVisible = false;
     this.prefijoPlantillas = '';
     this.volcadoPreview = null;
+    this.prefijoVolcadoPrevisualizado = null;
   }
 
   public trackByResultado(
@@ -670,7 +725,7 @@ export class PlanificacionMensualEditComponent {
     this.load();
   }
 
-  private load() {
+  private load(fechaFoco?: string) {
     this.eventosModificados = false;
     const itemId = this.getId();
     if (itemId === 'new') {
@@ -688,6 +743,7 @@ export class PlanificacionMensualEditComponent {
 
             // Convertir los subbloques a eventos
             this.events = this.eventsService.fromSubbloquesToEvents(subBloques);
+            this.centrarCalendario(entry, this.events, fechaFoco);
 
             // Para alumnos, cargar también los eventos personalizados
             if (this.expectedRole === 'ALUMNO') {
@@ -743,6 +799,47 @@ export class PlanificacionMensualEditComponent {
         ),
       );
     }
+  }
+
+  /**
+   * Evita abrir una planificación en el mes de hoy. El contenido real manda;
+   * si no existe, se usa el mes/año declarados por la planificación.
+   */
+  private centrarCalendario(
+    planificacion: PlanificacionMensual,
+    eventos: CalendarEvent[],
+    fechaFoco?: string,
+  ): void {
+    const foco = fechaFoco ? this.fechaCivil(fechaFoco) : null;
+    if (foco) {
+      this.viewDate = foco;
+      return;
+    }
+    if (eventos.length > 0) {
+      this.viewDate = this.eventsService.calculateMinDate(eventos);
+      return;
+    }
+    const ano = Number(planificacion.ano);
+    const mes = Number(planificacion.mes);
+    if (
+      Number.isInteger(ano) &&
+      Number.isInteger(mes) &&
+      mes >= 1 &&
+      mes <= 12
+    ) {
+      this.viewDate = new Date(ano, mes - 1, 1);
+    }
+  }
+
+  private fechaCivil(valor: string): Date | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
+    if (!match) return null;
+    const fecha = new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+    );
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
   }
 
   private loadEventosPersonalizados(planificacionId: number) {

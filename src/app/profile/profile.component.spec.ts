@@ -81,6 +81,15 @@ describe('ProfileComponent', () => {
     ]);
   });
 
+  it('expone el test de perfil solo con PLANIFICACION_AUTOASIGNACION activo', () => {
+    expect(component.planificacionAutoasignacionHabilitada()).toBe(true);
+    appConfigService.setEstado({
+      ...appConfigService.estadoModulos(),
+      [ModuloApp.PLANIFICACION_AUTOASIGNACION]: false,
+    });
+    expect(component.planificacionAutoasignacionHabilitada()).toBe(false);
+  });
+
   it('si cambian las preferencias desde Perfil, abre el wizard en modo revisión', async () => {
     const router = TestBed.inject(Router);
     component.user = {

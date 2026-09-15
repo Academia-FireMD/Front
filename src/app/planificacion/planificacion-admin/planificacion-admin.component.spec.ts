@@ -1,8 +1,10 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { of } from 'rxjs';
+import { Router } from '@angular/router';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
@@ -22,6 +24,7 @@ describe('PlanificacionAdminComponent', () => {
   let fixture: ComponentFixture<PlanificacionAdminComponent>;
   let service: AutoasignacionService;
   let confirmation: ConfirmationService;
+  let router: { navigate: jest.Mock };
 
   beforeAll(() => {
     // PrimeNG Table/TabView requieren ResizeObserver en el entorno de test.
@@ -72,6 +75,7 @@ describe('PlanificacionAdminComponent', () => {
       ),
     };
     confirmation = new ConfirmationService();
+    router = { navigate: jest.fn() };
     const confirmOriginal = confirmation.confirm.bind(confirmation);
     jest.spyOn(confirmation, 'confirm').mockImplementation((config) => {
       confirmOriginal(config);
@@ -81,6 +85,7 @@ describe('PlanificacionAdminComponent', () => {
     await TestBed.configureTestingModule({
       imports: [PlanificacionAdminComponent],
       providers: [
+        provideNoopAnimations(),
         { provide: AutoasignacionService, useValue: serviceMock },
         {
           provide: PlanificacionesService,
@@ -93,6 +98,7 @@ describe('PlanificacionAdminComponent', () => {
           useValue: { error: jest.fn(), success: jest.fn() },
         },
         { provide: ConfirmationService, useValue: confirmation },
+        { provide: Router, useValue: router },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -532,5 +538,71 @@ describe('PlanificacionAdminComponent', () => {
       true,
     );
     expect(component.previewImportacion()?.yaAplicado).toBe(true);
+  });
+
+  it('tras importar distingue el siguiente paso y navega al borrador con los códigos de hoja', async () => {
+    const file = new File(['xlsx'], 'plan.xlsx');
+    component.archivoImportacion.set(file);
+    component.previewImportacion.set({
+      fileName: file.name,
+      fileHash: 'b'.repeat(64),
+      puedeAplicar: true,
+      yaAplicado: false,
+      requiereConfirmacionSobrescritura: false,
+      sobrescrituras: [],
+      totales: {
+        hojas: 1,
+        semanas: 2,
+        bloques: 12,
+        entrenamientos: 2,
+        errores: 0,
+      },
+      hojas: [
+        {
+          hoja: 'MI4-6H',
+          valida: true,
+          totalBloques: 12,
+          totalEntrenamientos: 2,
+          semanas: [
+            {
+              numero: 1,
+              fechaInicio: '2026-10-05',
+              bloques: 6,
+              entrenamientos: 1,
+              esqueleto: false,
+            },
+          ],
+          errores: [],
+          warnings: [],
+        },
+      ],
+    });
+    component.planificacionesMensuales.set([
+      {
+        id: 17,
+        identificador: 'MADRID-ANUAL',
+        mes: 10,
+        ano: 2026,
+        estado: 'BORRADOR',
+      } as PlanificacionMensual,
+    ]);
+
+    component.confirmarAplicacionImportacion();
+    const config = (confirmation.confirm as jest.Mock).mock.calls.at(-1)[0];
+    await config.accept();
+    fixture.detectChanges();
+
+    expect(component.codigosUltimaImportacion()).toEqual(['MI4-6H']);
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="importacion-incorporar-cta"]',
+      ),
+    ).toBeTruthy();
+    component.planificacionDestinoImportacion.set(17);
+    component.incorporarSemanasEnPlanificacion();
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/app/planificacion/planificacion-mensual', 17],
+      { queryParams: { codigosHoja: ['MI4-6H'] } },
+    );
   });
 });

@@ -25,6 +25,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
 import { TabViewModule } from 'primeng/tabview';
 import { firstValueFrom } from 'rxjs';
+import { Router } from '@angular/router';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import {
@@ -38,6 +39,7 @@ import {
   PreviewImportacionPlantillas,
   ReglaOposicionAdmin,
   ReconciliacionPlanificaciones,
+  ResultadoImportacionPlantillas,
   VarianteAdmin,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
@@ -69,6 +71,7 @@ export class PlanificacionAdminComponent implements OnInit {
   private readonly toast = inject(ToastrService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
 
   readonly NivelOposicion = NivelOposicion;
   readonly OPOSICION_LABELS = OPOSICION_LABELS;
@@ -103,6 +106,9 @@ export class PlanificacionAdminComponent implements OnInit {
   previsualizandoImportacion = signal(false);
   aplicandoImportacion = signal(false);
   confirmarSobrescritura = signal(false);
+  resultadoImportacion = signal<ResultadoImportacionPlantillas | null>(null);
+  codigosUltimaImportacion = signal<string[]>([]);
+  planificacionDestinoImportacion = signal<number | null>(null);
 
   varianteForm = this.fb.group({
     id: [null as number | null],
@@ -492,6 +498,9 @@ export class PlanificacionAdminComponent implements OnInit {
     const file = input.files?.[0] ?? null;
     this.previewImportacion.set(null);
     this.confirmarSobrescritura.set(false);
+    this.resultadoImportacion.set(null);
+    this.codigosUltimaImportacion.set([]);
+    this.planificacionDestinoImportacion.set(null);
 
     if (!file) {
       this.archivoImportacion.set(null);
@@ -579,6 +588,37 @@ export class PlanificacionAdminComponent implements OnInit {
     return year && month && day ? `${day}/${month}/${year}` : fecha;
   }
 
+  get planificacionesBorradorOptions(): Array<{
+    label: string;
+    value: number;
+  }> {
+    return this.planificacionesMensuales()
+      .filter(
+        (planificacion) =>
+          !planificacion.estado || planificacion.estado === 'BORRADOR',
+      )
+      .map((planificacion) => ({
+        label: `${planificacion.identificador} (${planificacion.mes}/${planificacion.ano})`,
+        value: planificacion.id,
+      }));
+  }
+
+  incorporarSemanasEnPlanificacion(): void {
+    const planificacionId = this.planificacionDestinoImportacion();
+    if (!planificacionId) {
+      this.toast.error('Selecciona una planificación en borrador');
+      return;
+    }
+    void this.router.navigate(
+      ['/app/planificacion/planificacion-mensual', planificacionId],
+      {
+        queryParams: {
+          codigosHoja: this.codigosUltimaImportacion(),
+        },
+      },
+    );
+  }
+
   private async ejecutarAplicacionImportacion(): Promise<void> {
     const file = this.archivoImportacion();
     const preview = this.previewImportacion();
@@ -599,6 +639,16 @@ export class PlanificacionAdminComponent implements OnInit {
         yaAplicado: true,
         requiereConfirmacionSobrescritura: false,
       });
+      this.resultadoImportacion.set(resultado);
+      this.codigosUltimaImportacion.set(
+        Array.from(
+          new Set(
+            preview.hojas
+              .filter((hoja) => hoja.semanas.length > 0)
+              .map((hoja) => hoja.hoja),
+          ),
+        ),
+      );
       this.confirmarSobrescritura.set(false);
       this.toast.success(
         resultado.yaAplicado

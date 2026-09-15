@@ -23,4 +23,6 @@ export interface VolcarPlantillasResponse {
   totalPlantillas: number;
   resultados: VolcarPlantillasResultado[];
   warnings: string[];
+  /** Rango civil afectado, calculado por el servidor en Europe/Madrid. */
+  rangoFechas: { desde: string; hasta: string } | null;
 }

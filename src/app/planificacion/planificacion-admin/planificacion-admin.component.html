@@ -418,6 +418,53 @@
           </small>
         </div>
       }
+
+      @if (resultadoImportacion()) {
+        <div
+          class="import-next-step mt-4 p-4 border-1 border-round surface-50"
+          data-testid="importacion-incorporar-cta"
+        >
+          <h4 class="mt-0 mb-2">Plantillas importadas</h4>
+          <p class="mt-0">
+            Paso 1 completado: las semanas ya están guardadas como plantillas.
+            Aún no están incorporadas a una planificación ni publicadas para
+            alumnos.
+          </p>
+          <div
+            class="flex flex-column md:flex-row gap-2 align-items-stretch md:align-items-end"
+          >
+            <div class="flex-1">
+              <label for="planificacion-destino-importacion" class="block mb-2">
+                Planificación en borrador
+              </label>
+              <p-dropdown
+                inputId="planificacion-destino-importacion"
+                [options]="planificacionesBorradorOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Selecciona un borrador"
+                [ngModel]="planificacionDestinoImportacion()"
+                (ngModelChange)="planificacionDestinoImportacion.set($event)"
+                styleClass="w-full"
+              />
+            </div>
+            <p-button
+              label="Incorporar semanas a una planificación"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              [disabled]="!planificacionDestinoImportacion()"
+              (onClick)="incorporarSemanasEnPlanificacion()"
+            />
+          </div>
+          @if (!planificacionesBorradorOptions.length) {
+            <p-message
+              severity="warn"
+              text="No hay borradores disponibles. Crea una planificación antes de incorporar las semanas."
+              styleClass="w-full mt-3"
+            />
+          }
+        </div>
+      }
     </section>
   </p-tabPanel>
 

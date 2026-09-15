@@ -109,6 +109,42 @@ describe('PlanificacionTutorComponent', () => {
     });
   });
 
+  it('muestra la elección aceptada y no la recomendación cuando difieren', () => {
+    const conNivelAceptado: AlumnoPlanificacionTutor = {
+      ...alumno,
+      recomendacion: {
+        nivelRecomendado: NivelOposicion.INICIACION,
+        nivelElegido: NivelOposicion.AVANZADO,
+      },
+    };
+    component.alumnos.set([conNivelAceptado]);
+    component.seleccionarAlumno(conNivelAceptado);
+    fixture.detectChanges();
+
+    const contenido = fixture.nativeElement.textContent as string;
+    expect(contenido).toContain('Nivel aceptado por el alumno: AVANZADO.');
+    expect(contenido).not.toContain(
+      'Nivel aceptado por el alumno: INICIACION.',
+    );
+  });
+
+  it('mantiene visible una recomendación pendiente después de recargar', () => {
+    const conRecomendacionPendiente: AlumnoPlanificacionTutor = {
+      ...alumno,
+      recomendacion: {
+        nivelRecomendado: NivelOposicion.INICIACION,
+        nivelElegido: null,
+      },
+    };
+    component.alumnos.set([conRecomendacionPendiente]);
+    component.seleccionarAlumno(conRecomendacionPendiente);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent as string).toContain(
+      'Recomendación pendiente: INICIACION.',
+    );
+  });
+
   it('filtra nivel y franja por la combinación de oposición seleccionada', () => {
     component.preferenciasEditadas = {
       oposicion: Oposicion.MADRID,

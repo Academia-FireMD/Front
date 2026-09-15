@@ -91,6 +91,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
       false,
   );
 
+  /** Fuera de las rutas gateadas el acceso al test debe ser fail-closed. */
+  planificacionAutoasignacionHabilitada = computed(
+    () =>
+      this.appConfigService.estadoModulos()[
+        ModuloApp.PLANIFICACION_AUTOASIGNACION
+      ] === true,
+  );
+
   oposiciones = oposiciones;
 
   // URLs de WordPress desde environment

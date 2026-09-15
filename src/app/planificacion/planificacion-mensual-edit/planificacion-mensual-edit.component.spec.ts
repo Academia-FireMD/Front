@@ -17,6 +17,7 @@ import { PlanificacionFisicaService } from '../../planificacion-fisica/services/
 import { AppConfigService } from '../../services/app-config.service';
 import { EstadoModulos } from '../../shared/models/app-config.model';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
+import { EventsService } from '../services/events.service';
 
 import { PlanificacionMensualEditComponent } from './planificacion-mensual-edit.component';
 
@@ -72,6 +73,7 @@ describe('PlanificacionMensualEditComponent', () => {
       ],
       providers: [
         ...COMMON_TEST_PROVIDERS,
+        { provide: EventsService, useClass: EventsService },
         { provide: AppConfigService, useValue: appConfigService },
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -84,6 +86,64 @@ describe('PlanificacionMensualEditComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('ancla del calendario', () => {
+    it('centra la primera actividad real al cargar', () => {
+      const primera = new Date(2027, 2, 8, 9, 0);
+      const segunda = new Date(2027, 2, 10, 9, 0);
+
+      (component as any).centrarCalendario({ ano: 2027, mes: 3 }, [
+        { start: segunda },
+        { start: primera },
+      ]);
+
+      expect(component.viewDate).toEqual(primera);
+    });
+
+    it('si no hay actividades usa mes y año del plan, no el mes actual', () => {
+      (component as any).centrarCalendario({ ano: 2027, mes: 3 }, []);
+
+      expect(component.viewDate).toEqual(new Date(2027, 2, 1));
+    });
+
+    it('prioriza el inicio del rango devuelto por el volcado', () => {
+      (component as any).centrarCalendario(
+        { ano: 2026, mes: 9 },
+        [{ start: new Date(2026, 8, 1) }],
+        '2027-03-08',
+      );
+
+      expect(component.viewDate).toEqual(new Date(2027, 2, 8));
+    });
+  });
+
+  it('muestra el volcado como acción visible y usa selector si recibe códigos', () => {
+    fixture.detectChanges();
+    component.expectedRole = 'ADMIN';
+    component.lastLoadedPlanification.set({
+      id: 42,
+      estado: 'BORRADOR',
+    } as any);
+    component.codigosHojaDisponibles = ['MI4-6H', 'MI6-8H'];
+    component.isDialogVolcarVisible = true;
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="volcar-variante-visible"]',
+      ),
+    ).toBeTruthy();
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="selector-codigo-hoja"]',
+      ),
+    ).toBeTruthy();
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="codigo-hoja-fallback"]',
+      ),
+    ).toBeNull();
   });
 
   it('ofrece una salida explícita para gestionar preferencias sin volver a interponer el wizard', () => {
@@ -269,7 +329,10 @@ describe('PlanificacionMensualEditComponent', () => {
 
   describe('volcar variante completa', () => {
     beforeEach(() => {
-      component.lastLoadedPlanification.set({ id: 42 } as any);
+      component.lastLoadedPlanification.set({
+        id: 42,
+        estado: 'BORRADOR',
+      } as any);
     });
 
     it('abrirDialogoVolcar resetea el estado y abre el diálogo', () => {
@@ -348,6 +411,7 @@ describe('PlanificacionMensualEditComponent', () => {
             },
           ],
           warnings: [],
+          rangoFechas: { desde: '2026-08-03', hasta: '2026-08-09' },
         } as any),
       );
       (component as any).planificacionesService = {
@@ -360,6 +424,7 @@ describe('PlanificacionMensualEditComponent', () => {
 
       component.prefijoPlantillas = 'GI6-8H';
       component.volcadoPreview = { totalPlantillas: 1, resultados: [] } as any;
+      (component as any).prefijoVolcadoPrevisualizado = 'GI6-8H';
       await component.aplicarVolcadoConfirmado();
 
       expect(volcarMock).toHaveBeenCalledWith(42, {
@@ -370,6 +435,7 @@ describe('PlanificacionMensualEditComponent', () => {
         'Variante volcada: 3 creados, 1 actualizados, 1 omitidos en 1 plantillas.',
       );
       expect(loadSpy).toHaveBeenCalled();
+      expect(loadSpy).toHaveBeenCalledWith('2026-08-03');
       expect(component.isDialogVolcarVisible).toBe(false);
       expect(component.volcadoPreview).toBeNull();
     });
@@ -410,6 +476,7 @@ describe('PlanificacionMensualEditComponent', () => {
       component.prefijoPlantillas = 'GI6-8H';
       component.isDialogVolcarVisible = true;
       component.volcadoPreview = { totalPlantillas: 2, resultados: [] } as any;
+      (component as any).prefijoVolcadoPrevisualizado = 'GI6-8H';
       await component.aplicarVolcadoConfirmado();
 
       expect(errorSpy).toHaveBeenCalledWith(
@@ -450,10 +517,47 @@ describe('PlanificacionMensualEditComponent', () => {
       const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
 
       component.prefijoPlantillas = 'XYZ';
+      component.volcadoPreview = { totalPlantillas: 1, resultados: [] } as any;
+      (component as any).prefijoVolcadoPrevisualizado = 'XYZ';
       await component.aplicarVolcadoConfirmado();
 
       expect(errorSpy).toHaveBeenCalledWith(
         'No se han encontrado plantillas con ese prefijo',
+      );
+    });
+
+    it('invalida el preview al cambiar de código y no permite aplicar otro', async () => {
+      const volcarMock = jest.fn();
+      (component as any).planificacionesService = {
+        volcarPlantillas$: volcarMock,
+      };
+      const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
+      component.prefijoPlantillas = 'MI4-6H';
+      component.volcadoPreview = { totalPlantillas: 1, resultados: [] } as any;
+      (component as any).prefijoVolcadoPrevisualizado = 'MI4-6H';
+
+      component.onPrefijoPlantillasChange('MI6-8H');
+      await component.aplicarVolcadoConfirmado();
+
+      expect(component.volcadoPreview).toBeNull();
+      expect(volcarMock).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Previsualiza este código antes de incorporarlo.',
+      );
+    });
+
+    it('no abre el volcado en una planificación publicada', () => {
+      const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
+      component.lastLoadedPlanification.set({
+        id: 42,
+        estado: 'PUBLICADA',
+      } as any);
+
+      component.abrirDialogoVolcar();
+
+      expect(component.isDialogVolcarVisible).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Solo se pueden incorporar semanas a una planificación en borrador.',
       );
     });
   });

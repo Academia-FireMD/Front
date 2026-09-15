@@ -6272,7 +6272,6 @@ export interface components {
       nivel: Record<string, never>;
       franja: Record<string, never>;
       version: number;
-      nivelElegidoDistintoDeRecomendacion?: Record<string, never>;
     };
     RecomendacionTutorDto: {
       nivel: Record<string, never>;

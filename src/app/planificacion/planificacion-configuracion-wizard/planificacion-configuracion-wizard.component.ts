@@ -12,25 +12,23 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { StepperModule } from 'primeng/stepper';
 import { firstValueFrom } from 'rxjs';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import { PlanificacionPreferenciasComponent } from '../../shared/planificacion-preferencias/planificacion-preferencias.component';
+import { CuestionarioNivelComponent } from '../../shared/cuestionario-nivel/cuestionario-nivel.component';
 import {
   ConfiguracionPlanificacion,
-  CuestionarioNivel,
+  EstadoTestNivel,
   GuardarConfiguracionDTO,
   PreferenciasPrecargadas,
-  RecomendacionNivel,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 
@@ -47,9 +45,9 @@ export type ResultadoConfiguracion = 'EXITO' | 'CONFLICTO';
     DropdownModule,
     InputTextModule,
     MessageModule,
-    RadioButtonModule,
     StepperModule,
     PlanificacionPreferenciasComponent,
+    CuestionarioNivelComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './planificacion-configuracion-wizard.component.html',
@@ -68,12 +66,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   @Output() cancelado = new EventEmitter<void>();
 
   private readonly autoasignacionService = inject(AutoasignacionService);
-  private readonly toast = inject(ToastrService);
   private readonly cdr = inject(ChangeDetectorRef);
-
-  cuestionario: CuestionarioNivel | null = null;
-  preguntas: CuestionarioNivel['preguntas'] = [];
-  cargandoCuestionario = signal(true);
   readonly Oposicion = Oposicion;
   readonly NivelOposicion = NivelOposicion;
 
@@ -89,12 +82,6 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   gcvConfirmado = false;
 
   // Paso 2: nivel
-  elegirCuestionario = signal(false);
-  respuestas: Array<number | null> = [];
-  recomendacion: RecomendacionNivel | null = null;
-  enviandoRecomendacion = signal(false);
-  errorCuestionario: string | null = null;
-
   // Paso 3: confirmación
   guardando = signal(false);
   errorGuardado: string | null = null;
@@ -152,7 +139,6 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       };
       this.gcvConfirmado = prefs.oposicion !== Oposicion.GENERAL;
     }
-    this.cargarCuestionario();
   }
 
   onPreferenciasChange(prefs: {
@@ -164,18 +150,6 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     this.preferencias.nivel = (prefs.nivel as NivelOposicion) ?? null;
     this.preferencias.franja = prefs.franja;
     this.gcvConfirmado = this.preferencias.oposicion !== Oposicion.GENERAL;
-    this.recomendacion = null;
-  }
-
-  onRespuestaChange(indice: number, respuesta: number | string | null): void {
-    const valor = respuesta === null ? null : Number(respuesta);
-    this.respuestas = this.respuestas.map((actual, posicion) =>
-      posicion === indice &&
-      (valor === null || (Number.isInteger(valor) && valor >= 0 && valor <= 3))
-        ? valor
-        : actual,
-    );
-    this.errorCuestionario = null;
   }
 
   /** Al elegir oposición, el usuario "acepta" la confirmación GCV si no es GCV. */
@@ -200,48 +174,12 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     this.activeStep.set(2);
   }
 
-  async obtenerRecomendacion(): Promise<void> {
-    if (!this.cuestionario) {
-      this.errorCuestionario =
-        'No se pudo cargar el cuestionario. Inténtalo de nuevo.';
-      return;
-    }
-    if (!this.cuestionarioCompleto) {
-      this.errorCuestionario = `Responde las ${this.preguntas.length} preguntas antes de obtener una recomendación.`;
-      this.toast.error(this.errorCuestionario);
-      return;
-    }
-    this.errorCuestionario = null;
-    this.enviandoRecomendacion.set(true);
-    try {
-      this.recomendacion = await firstValueFrom(
-        this.autoasignacionService.recomendarNivel$(
-          this.respuestas.map((respuesta) => respuesta as number),
-          this.cuestionario.version,
-        ),
-      );
-    } catch (error) {
-      if (
-        error instanceof HttpErrorResponse &&
-        error.status === 409 &&
-        error.error?.codigo === 'CUESTIONARIO_DESACTUALIZADO'
-      ) {
-        this.cargarCuestionario(
-          'El cuestionario cambió mientras respondías. Se ha recargado.',
-        );
-      } else {
-        this.toast.error('No se pudo obtener la recomendación');
-      }
-    } finally {
-      this.enviandoRecomendacion.set(false);
-      this.cdr.markForCheck();
-    }
-  }
-
-  aceptarRecomendacion(): void {
-    if (this.recomendacion) {
-      this.preferencias.nivel = this.recomendacion.nivelRecomendado;
-    }
+  aplicarNivelRecomendado(estado: EstadoTestNivel): void {
+    // Aceptar persiste el test, pero no guarda el wizard. El plan solo cambia
+    // tras la confirmación expresa del último paso.
+    this.preferencias.nivel = estado.nivelElegido;
+    if (this.configuracion) this.configuracion.estadoTest = estado;
+    this.cdr.markForCheck();
   }
 
   async guardarConfiguracion(): Promise<void> {
@@ -290,47 +228,6 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   cancelar(): void {
     this.cancelado.emit();
-  }
-
-  get cuestionarioCompleto(): boolean {
-    return (
-      this.preguntas.length > 0 &&
-      this.respuestas.length === this.preguntas.length &&
-      this.respuestas.every(
-        (respuesta): respuesta is number =>
-          typeof respuesta === 'number' &&
-          Number.isInteger(respuesta) &&
-          respuesta >= 0 &&
-          respuesta <= 3,
-      )
-    );
-  }
-
-  private cargarCuestionario(mensaje?: string): void {
-    this.cargandoCuestionario.set(true);
-    this.errorCuestionario = null;
-    this.autoasignacionService.getCuestionarioNivel$().subscribe({
-      next: (cuestionario) => {
-        this.cuestionario = cuestionario;
-        this.preguntas = cuestionario.preguntas;
-        this.respuestas = Array.from(
-          { length: cuestionario.preguntas.length },
-          () => null,
-        );
-        this.recomendacion = null;
-        this.cargandoCuestionario.set(false);
-        if (mensaje) this.toast.warning(mensaje);
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.cuestionario = null;
-        this.preguntas = [];
-        this.respuestas = [];
-        this.cargandoCuestionario.set(false);
-        this.errorCuestionario = 'No se pudo cargar el cuestionario.';
-        this.cdr.markForCheck();
-      },
-    });
   }
 
   private fuentePreferencias(): PreferenciasPrecargadas | null {

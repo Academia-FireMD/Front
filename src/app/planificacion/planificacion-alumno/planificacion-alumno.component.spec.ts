@@ -24,7 +24,7 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
       franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as never,
     },
     configuracionActiva: null,
-    ultimaRecomendacion: null,
+    estadoTest: null,
   };
 
   async function montar(

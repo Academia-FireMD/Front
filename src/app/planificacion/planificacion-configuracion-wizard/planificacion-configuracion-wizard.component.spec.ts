@@ -23,7 +23,7 @@ const configuracion: ConfiguracionPlanificacion = {
     Oposicion.MADRID,
   ],
   configuracionActiva: null,
-  ultimaRecomendacion: null,
+  estadoTest: null,
 };
 
 const cuestionario = {
@@ -56,8 +56,9 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
           useValue: {
             getCuestionarioNivel$: jest.fn(() => of(cuestionario)),
             recomendarNivel$: jest.fn(() =>
-              of({ puntuacion: 12, nivelRecomendado: 'AVANZADO' }),
+              of({ evaluacionId: 8, nivelRecomendado: 'AVANZADO' }),
             ),
+            aceptarEvaluacionNivel$: jest.fn(),
             guardarConfiguracion$: jest.fn(() => of(configuracion)),
           },
         },
@@ -106,70 +107,20 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(component.puedeContinuarPasoPreferencias).toBe(true);
   });
 
-  it('obtiene la recomendación sin sustituir la elección hasta que el usuario la acepta', async () => {
-    component.respuestas = [3, 2, 3, 1, 3];
-    await component.obtenerRecomendacion();
+  it('aplica un test ya aceptado al borrador sin guardar el wizard', () => {
+    const guardar = service.guardarConfiguracion$ as jest.Mock;
+    component.aplicarNivelRecomendado({
+      evaluacionId: 8,
+      completado: true,
+      nivelRecomendado: NivelOposicion.AVANZADO,
+      nivelElegido: NivelOposicion.AVANZADO,
+      versionCuestionario: 42,
+      aceptadaEn: '2026-09-15T12:00:00.000Z',
+    });
 
-    expect(service.recomendarNivel$).toHaveBeenCalledWith(
-      [3, 2, 3, 1, 3],
-      cuestionario.version,
-    );
-    expect(component.recomendacion?.nivelRecomendado).toBe('AVANZADO');
-    expect(component.preferencias.nivel).toBeNull();
-
-    component.aceptarRecomendacion();
-    expect(component.preferencias.nivel).toBe('AVANZADO');
-  });
-
-  it('mantiene las respuestas del cuestionario en null hasta que se contestan', () => {
-    expect(component.respuestas).toEqual([null, null, null, null, null]);
-    expect(component.cuestionarioCompleto).toBe(false);
-  });
-
-  it('renderiza la definición del backend y no una copia local', () => {
-    expect(service.getCuestionarioNivel$).toHaveBeenCalled();
-    expect(component.preguntas.map((pregunta) => pregunta.texto)).toEqual([
-      'Pregunta 1',
-      'Pregunta 2',
-      'Pregunta 3',
-      'Pregunta 4',
-      'Pregunta 5',
-    ]);
-  });
-
-  it('recarga y limpia respuestas si el backend rechaza una versión obsoleta', async () => {
-    (service.recomendarNivel$ as jest.Mock).mockReturnValueOnce(
-      throwError(
-        () =>
-          new HttpErrorResponse({
-            status: 409,
-            error: { codigo: 'CUESTIONARIO_DESACTUALIZADO' },
-          }),
-      ),
-    );
-    component.respuestas = [3, 2, 3, 1, 3];
-
-    await component.obtenerRecomendacion();
-
-    expect(service.getCuestionarioNivel$).toHaveBeenCalledTimes(2);
-    expect(component.respuestas).toEqual([null, null, null, null, null]);
-  });
-
-  it('normaliza cada respuesta elegida a número y conserva el bloqueo hasta completar', () => {
-    component.onRespuestaChange(0, '2');
-    component.onRespuestaChange(1, 2);
-
-    expect(component.respuestas).toEqual([2, 2, null, null, null]);
-    expect(component.cuestionarioCompleto).toBe(false);
-  });
-
-  it('bloquea la recomendación si falta una respuesta', async () => {
-    component.respuestas = [3, 2, null, 1, 3];
-
-    await component.obtenerRecomendacion();
-
-    expect(service.recomendarNivel$).not.toHaveBeenCalled();
-    expect(component.errorCuestionario).toContain('5 preguntas');
+    expect(component.preferencias.nivel).toBe(NivelOposicion.AVANZADO);
+    expect(component.configuracion?.estadoTest?.evaluacionId).toBe(8);
+    expect(guardar).not.toHaveBeenCalled();
   });
 
   it('guarda la configuración con oposición, nivel, franja y versión', async () => {

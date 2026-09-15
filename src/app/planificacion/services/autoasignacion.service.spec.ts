@@ -30,7 +30,7 @@ describe('AutoasignacionService', () => {
       Oposicion.MADRID,
     ],
     configuracionActiva: null,
-    ultimaRecomendacion: null,
+    estadoTest: null,
   };
 
   beforeEach(() => {
@@ -63,7 +63,7 @@ describe('AutoasignacionService', () => {
   });
 
   it('POST /recomendacion-nivel envía las 5 respuestas y devuelve la recomendación', () => {
-    const respuesta = { puntuacion: 12, nivelRecomendado: 'AVANZADO' };
+    const respuesta = { evaluacionId: 8, nivelRecomendado: 'AVANZADO' };
     let recibida: unknown;
 
     service
@@ -81,6 +81,26 @@ describe('AutoasignacionService', () => {
     request.flush(respuesta);
 
     expect(recibida).toEqual(respuesta);
+  });
+
+  it('POST /evaluaciones-nivel/:id/aceptar persiste el nivel elegido', () => {
+    service.aceptarEvaluacionNivel$(8, NivelOposicion.AVANZADO).subscribe();
+
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/evaluaciones-nivel/8/aceptar`,
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      nivelElegido: NivelOposicion.AVANZADO,
+    });
+    request.flush({
+      evaluacionId: 8,
+      completado: true,
+      nivelRecomendado: NivelOposicion.AVANZADO,
+      nivelElegido: NivelOposicion.AVANZADO,
+      versionCuestionario: 42,
+      aceptadaEn: '2026-09-15T12:00:00.000Z',
+    });
   });
 
   it('GET /cuestionario-nivel obtiene la definición canónica versionada', () => {

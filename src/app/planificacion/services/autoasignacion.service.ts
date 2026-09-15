@@ -9,6 +9,7 @@ import type {
   AlumnoSinCoincidencia,
   ConfiguracionPlanificacion,
   CuestionarioNivel,
+  EstadoTestNivel,
   GuardarConfiguracionDTO,
   PreviewImportacionPlantillas,
   RecomendacionNivel,
@@ -62,6 +63,18 @@ export class AutoasignacionService extends ApiBaseService {
 
   public getCuestionarioNivel$(): Observable<CuestionarioNivel> {
     return this.get('/cuestionario-nivel') as Observable<CuestionarioNivel>;
+  }
+
+  /** La recomendación solo queda completada cuando el alumno la acepta. */
+  public aceptarEvaluacionNivel$(
+    evaluacionId: number,
+    nivelElegido: NivelOposicion,
+  ): Observable<EstadoTestNivel> {
+    return this.http.post<EstadoTestNivel>(
+      `${environment.apiUrl}/planificaciones/evaluaciones-nivel/${evaluacionId}/aceptar`,
+      { nivelElegido },
+      { withCredentials: true },
+    );
   }
 
   /** PUT en bruto: conserva el HttpErrorResponse para gestionar 409/422/403. */

@@ -64,8 +64,16 @@ test('admin previsualiza y confirma una importación sin escrituras implícitas'
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        data: [],
-        pagination: { skip: 0, take: 9999, count: 0 },
+        data: [
+          {
+            id: 17,
+            identificador: 'MADRID-ANUAL',
+            mes: 9,
+            ano: 2026,
+            estado: 'BORRADOR',
+          },
+        ],
+        pagination: { skip: 0, take: 9999, count: 1 },
       }),
     }),
   );
@@ -141,4 +149,12 @@ test('admin previsualiza y confirma una importación sin escrituras implícitas'
   await expect(
     page.getByText('Importación aplicada como versión 4'),
   ).toBeVisible();
+  await expect(page.getByTestId('importacion-incorporar-cta')).toContainText(
+    'Aún no están incorporadas',
+  );
+  await expect(
+    page.getByRole('button', {
+      name: 'Incorporar semanas a una planificación',
+    }),
+  ).toBeDisabled();
 });

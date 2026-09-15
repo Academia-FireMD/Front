@@ -147,11 +147,13 @@ import {
                   severity="info"
                   styleClass="w-full mt-3"
                   [text]="
-                    'Recomendación del servidor: ' +
-                    recomendacion.nivelRecomendado +
-                    ' (puntuación ' +
-                    recomendacion.puntuacion +
-                    ').'
+                    recomendacion.nivelElegido
+                      ? 'Nivel aceptado por el alumno: ' +
+                        recomendacion.nivelElegido +
+                        '.'
+                      : 'Recomendación pendiente: ' +
+                        recomendacion.nivelRecomendado +
+                        '.'
                   "
                 />
               }

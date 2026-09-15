@@ -58,9 +58,19 @@ export interface CuestionarioNivel {
 }
 
 export interface RecomendacionNivel {
-  puntuacion: number;
+  evaluacionId: number;
   nivelRecomendado: NivelOposicion;
-  versionCuestionario?: number;
+}
+
+/** Evaluación que el alumno aceptó expresamente. Un cálculo sin aceptar
+ * nunca aparece aquí ni sustituye la selección persistida anterior. */
+export interface EstadoTestNivel {
+  evaluacionId: number;
+  completado: true;
+  nivelRecomendado: NivelOposicion;
+  nivelElegido: NivelOposicion;
+  versionCuestionario: number | null;
+  aceptadaEn: string;
 }
 
 export interface ConfiguracionPlanificacion {
@@ -68,7 +78,7 @@ export interface ConfiguracionPlanificacion {
   preferenciasPrecargadas: PreferenciasPrecargadas;
   oposicionesPermitidas: Oposicion[];
   configuracionActiva: ConfiguracionActiva | null;
-  ultimaRecomendacion: RecomendacionNivel | null;
+  estadoTest: EstadoTestNivel | null;
 }
 
 export interface GuardarConfiguracionDTO {
@@ -150,7 +160,10 @@ export interface AlumnoPlanificacionTutor {
   preferencias: PreferenciasPrecargadas;
   oposicionesPermitidas: Oposicion[];
   opcionesPermitidas: OpcionPlanificacionPermitida[];
-  recomendacion: RecomendacionNivel | null;
+  recomendacion: {
+    nivelRecomendado: NivelOposicion;
+    nivelElegido: NivelOposicion | null;
+  } | null;
 }
 
 export interface IncidenciaImportacionPlantilla {

@@ -32,6 +32,12 @@ import {
 import { Oposicion } from '../models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../models/user.model';
 import {
+  EstadoTestNivel,
+  ConfiguracionPlanificacion,
+} from '../../planificacion/models/autoasignacion.model';
+import { AutoasignacionService } from '../../planificacion/services/autoasignacion.service';
+import { CuestionarioNivelComponent } from '../cuestionario-nivel/cuestionario-nivel.component';
+import {
   PlanificacionPreferenciasComponent,
   PreferenciasPlanificacion,
 } from '../planificacion-preferencias/planificacion-preferencias.component';
@@ -113,6 +119,7 @@ export interface OnboardingData {
     ChipsModule,
     BadgeModule,
     PlanificacionPreferenciasComponent,
+    CuestionarioNivelComponent,
   ],
   templateUrl: './onboarding-form.component.html',
   styleUrls: ['./onboarding-form.component.scss'],
@@ -122,11 +129,14 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
   @Input() isOptional = true;
   @Input() showTitle = true;
   @Input() showSkipButton = true;
+  /** El contenedor decide el feature flag. El formulario no conoce AppConfig. */
+  @Input() permitirTestNivel = false;
   @Output() dataSubmitted = new EventEmitter<OnboardingData>();
   @Output() skipped = new EventEmitter<void>();
   public today = new Date();
 
   private fb = inject(FormBuilder);
+  private autoasignacionService = inject(AutoasignacionService);
 
   formGroup!: FormGroup;
 
@@ -138,9 +148,17 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
 
   niveles = nivelesDisponibles;
 
+  estadoTest: EstadoTestNivel | null = null;
+  private configuracionTestCargada = false;
+
+  get nivelActualTest(): NivelOposicion | null {
+    return (this.formGroup?.value.nivelOposicion as NivelOposicion) ?? null;
+  }
+
   ngOnInit() {
     this.initializeForm();
     this.actualizarValoresInicialesPreferencias();
+    this.cargarEstadoTest();
   }
 
   ngOnChanges() {
@@ -148,6 +166,7 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
       this.initializeForm();
       this.actualizarValoresInicialesPreferencias();
     }
+    if (this.formGroup) this.cargarEstadoTest();
   }
 
   /** Valores iniciales para el subcomponente compartido de preferencias.
@@ -180,6 +199,44 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
       nivelOposicion: (prefs.nivel as NivelOposicion) ?? null,
       tipoDePlanificacionDuracionDeseada:
         (prefs.franja as TipoDePlanificacionDeseada) ?? null,
+    });
+  }
+
+  aplicarNivelRecomendado(estado: EstadoTestNivel): void {
+    this.estadoTest = estado;
+    this.formGroup.patchValue({ nivelOposicion: estado.nivelElegido });
+    this.valoresInicialesPreferencias = {
+      ...this.valoresInicialesPreferencias,
+      nivel: estado.nivelElegido,
+    };
+  }
+
+  private cargarEstadoTest(): void {
+    if (!this.permitirTestNivel || this.configuracionTestCargada) return;
+    this.configuracionTestCargada = true;
+    this.autoasignacionService.getConfiguracion$().subscribe({
+      next: (configuracion: ConfiguracionPlanificacion) => {
+        this.estadoTest = configuracion.estadoTest;
+        const activa = configuracion.configuracionActiva?.variante;
+        if (!activa) return;
+
+        // La configuración activa manda sobre los campos legacy del perfil.
+        this.valoresInicialesPreferencias = {
+          oposicion: [activa.oposicion],
+          nivel: activa.nivel,
+          franja: activa.franja,
+        };
+        this.formGroup.patchValue({
+          tipoOposicion: [activa.oposicion],
+          nivelOposicion: activa.nivel,
+          tipoDePlanificacionDuracionDeseada: activa.franja,
+        });
+      },
+      error: () => {
+        // El perfil continúa operativo. El backend volverá a validar al
+        // calcular/aceptar y el gate de servidor sigue siendo autoritativo.
+        this.configuracionTestCargada = false;
+      },
     });
   }
 

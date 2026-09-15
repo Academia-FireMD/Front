@@ -43,6 +43,16 @@
               formIdPrefix="onboardingPreferencias"
               (cambios)="onPreferenciasChange($event)"
             ></app-planificacion-preferencias>
+
+            @if (permitirTestNivel) {
+              <div class="mt-4" data-testid="onboarding-test-nivel">
+                <app-cuestionario-nivel
+                  [estadoTest]="estadoTest"
+                  [nivelActual]="nivelActualTest"
+                  (nivelAceptado)="aplicarNivelRecomendado($event)"
+                />
+              </div>
+            }
           </div>
 
           <!-- <div class="col-12 md:col-6">

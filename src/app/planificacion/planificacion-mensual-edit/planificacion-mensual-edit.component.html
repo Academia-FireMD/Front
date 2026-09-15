@@ -196,16 +196,34 @@
   <div class="p-fluid">
     <div class="field">
       <label for="prefijoPlantillas">Prefijo de las plantillas</label>
-      <input
-        id="prefijoPlantillas"
-        type="text"
-        pInputText
-        [(ngModel)]="prefijoPlantillas"
-        placeholder="GI6-8H"
-      />
+      @if (codigosHojaDisponibles.length) {
+        <p-dropdown
+          inputId="prefijoPlantillas"
+          [options]="codigosHojaDisponibles"
+          [ngModel]="prefijoPlantillas"
+          (ngModelChange)="onPrefijoPlantillasChange($event)"
+          placeholder="Selecciona un código de hoja"
+          styleClass="w-full"
+          data-testid="selector-codigo-hoja"
+        />
+      } @else {
+        <input
+          id="prefijoPlantillas"
+          type="text"
+          pInputText
+          [ngModel]="prefijoPlantillas"
+          (ngModelChange)="onPrefijoPlantillasChange($event)"
+          placeholder="Ej. GI6-8H"
+          data-testid="codigo-hoja-fallback"
+        />
+      }
       <small class="text-color-secondary">
-        Introduce el código de hoja (ej. GI6-8H). Se volcarán todas las
-        plantillas semanales cuyo identificador termine en este código.
+        @if (codigosHojaDisponibles.length) {
+          Estos códigos proceden de la última importación validada.
+        } @else {
+          No hay contexto de importación. Introduce el código exacto de la hoja;
+          se incorporarán todas sus semanas.
+        }
       </small>
     </div>
 
@@ -393,6 +411,19 @@
             [action]="guardarCambios.bind(this)"
             label="Guardar cambios"
           ></app-async-button>
+          @if (
+            getId() !== "new" &&
+            lastLoadedPlanification()?.estado === "BORRADOR"
+          ) {
+            <p-button
+              label="Incorporar semanas"
+              icon="pi pi-download"
+              severity="secondary"
+              [disabled]="eventosModificados"
+              data-testid="volcar-variante-visible"
+              (onClick)="abrirDialogoVolcar()"
+            />
+          }
         }
       </div>
     </div>
