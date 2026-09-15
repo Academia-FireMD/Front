@@ -9,31 +9,11 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { filter, take } from 'rxjs';
-import { Oposicion } from '../../shared/models/subscription.model';
-import { Usuario } from '../../shared/models/user.model';
-import { esAdminOSuperior } from '../../shared/utils/rol.utils';
 import { selectCurrentUser } from '../../store/user/user.selectors';
-
-export type DestinoCallejero =
-  | 'valencia'
-  | 'alicante'
-  | 'selector'
-  | 'sin-acceso';
-
-export function resolverDestinoCallejero(
-  user: Pick<Usuario, 'rol' | 'oposiciones'>,
-): DestinoCallejero {
-  if (esAdminOSuperior(user.rol)) return 'selector';
-
-  const oposiciones = user.oposiciones ?? [];
-  const tieneValencia = oposiciones.includes(Oposicion.VALENCIA_AYUNTAMIENTO);
-  const tieneAlicante = oposiciones.includes(Oposicion.ALICANTE_CPBA);
-
-  if (tieneValencia && tieneAlicante) return 'selector';
-  if (tieneValencia) return 'valencia';
-  if (tieneAlicante) return 'alicante';
-  return 'sin-acceso';
-}
+import {
+  DestinoCallejero,
+  resolverDestinoCallejero,
+} from '../callejero-acceso.util';
 
 @Component({
   selector: 'app-callejero-entrada',

@@ -2,18 +2,28 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { of } from 'rxjs';
-import { Oposicion } from '../../shared/models/subscription.model';
-import { Rol, Usuario } from '../../shared/models/user.model';
 import {
-  CallejeroEntradaComponent,
-  resolverDestinoCallejero,
-} from './callejero-entrada.component';
+  Oposicion,
+  Suscripcion,
+  SuscripcionStatus,
+} from '../../shared/models/subscription.model';
+import { Rol, Usuario } from '../../shared/models/user.model';
+import { resolverDestinoCallejero } from '../callejero-acceso.util';
+import { CallejeroEntradaComponent } from './callejero-entrada.component';
 
 describe('resolverDestinoCallejero', () => {
   const user = (
     rol: Rol,
     oposiciones: Oposicion[],
-  ): Pick<Usuario, 'rol' | 'oposiciones'> => ({ rol, oposiciones });
+  ): Pick<Usuario, 'rol' | 'oposiciones' | 'suscripciones'> => ({
+    rol,
+    oposiciones,
+  });
+
+  const suscripcion = (
+    oposicion: Oposicion,
+    status: SuscripcionStatus,
+  ): Suscripcion => ({ oposicion, status }) as Suscripcion;
 
   it('envía directamente a Valencia cuando es la única oposición compatible', () => {
     expect(
@@ -51,6 +61,25 @@ describe('resolverDestinoCallejero', () => {
     expect(resolverDestinoCallejero(user(Rol.ALUMNO, [Oposicion.MADRID]))).toBe(
       'sin-acceso',
     );
+  });
+
+  it('prioriza las suscripciones accesibles sobre el campo derivado', () => {
+    expect(
+      resolverDestinoCallejero({
+        rol: Rol.ALUMNO,
+        oposiciones: [Oposicion.VALENCIA_AYUNTAMIENTO],
+        suscripciones: [
+          suscripcion(
+            Oposicion.VALENCIA_AYUNTAMIENTO,
+            SuscripcionStatus.CANCELLED,
+          ),
+          suscripcion(
+            Oposicion.ALICANTE_CPBA,
+            SuscripcionStatus.PENDING_CANCEL,
+          ),
+        ],
+      }),
+    ).toBe('alicante');
   });
 });
 

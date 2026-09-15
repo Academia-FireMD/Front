@@ -1107,23 +1107,22 @@ const COLOR_COMARCA = Object.fromEntries(COMARCAS.map(x=>[x.n,x.c]));
 const COLOR_ZONA = {}; ESTRUCTURA_ZONAS.forEach(a=>a.agrupaciones.forEach(g=>g.zonas.forEach(z=>COLOR_ZONA[z.n]=z.c)));
 
 /* ══ MAPA BASE ══ */
-const mapa = L.map('mapa',{zoomControl:true}).setView([38.48,-0.6],9);
+const mapa = L.map('mapa',{zoomControl:true,preferCanvas:true}).setView([38.48,-0.6],9);
 mapa.zoomControl.setPosition('bottomright');
-const baseRelieve = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'&copy; OpenStreetMap, SRTM | &copy; OpenTopoMap (CC-BY-SA)'}).addTo(mapa);
-const baseEsriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri, HERE, Garmin, FAO, NOAA'});
-const baseSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri, Maxar, Earthstar Geographics'});
-const OSM_URL = location.protocol==='file:' ? 'https://tile.openstreetmap.de/{z}/{x}/{y}.png' : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const baseOSM = L.tileLayer(OSM_URL,{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'});
-let osmFallback=false;
-baseOSM.on('tileerror',()=>{ if(osmFallback||!navigator.onLine) return; osmFallback=true; baseOSM.setUrl('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'); if(mapa.attributionControl){ mapa.attributionControl.removeAttribution('&copy; OpenStreetMap contributors'); mapa.attributionControl.addAttribution('&copy; OpenStreetMap &copy; CARTO'); } });
-const baseClaro = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'});
+const TILE_PERF = {updateWhenIdle:true,updateWhenZooming:false,keepBuffer:2};
+const baseRelieve = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{...TILE_PERF,maxZoom:17,attribution:'&copy; OpenStreetMap, SRTM | &copy; OpenTopoMap (CC-BY-SA)'});
+const baseEsriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxZoom:19,attribution:'Esri, HERE, Garmin, FAO, NOAA'});
+const baseSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxZoom:19,attribution:'Esri, Maxar, Earthstar Geographics'});
+const baseCallesEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxZoom:19,attribution:'Esri, HERE, Garmin, FAO, NOAA'});
+const baseClaro = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxNativeZoom:16,maxZoom:19,attribution:'Esri, HERE, Garmin'}).addTo(mapa);
 /* Ortofoto PNOA (IGN): NO se añade al mapa al inicio → Leaflet solo descarga
    sus teselas cuando el usuario la selecciona en el control de capas */
 const baseOrto = L.tileLayer('https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&tilematrix={z}&tilerow={y}&tilecol={x}',{
-  maxZoom:19, attribution:'PNOA &copy; Instituto Geogr&aacute;fico Nacional'});
-const baseMudoRelieve = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:13,maxZoom:19,attribution:'Esri'});
-const baseMudoClaro0 = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'});
-L.control.layers({"Relieve (OpenTopoMap)":baseRelieve,"Relieve (Esri Topo)":baseEsriTopo,"OpenStreetMap":baseOSM,"Fondo claro (CARTO)":baseClaro,"Satélite (Esri)":baseSat,"Ortofoto PNOA (IGN)":baseOrto,"Mapa mudo · relieve (Esri)":baseMudoRelieve,"Mapa mudo · claro (CARTO)":baseMudoClaro0},{},{collapsed:true,position:'topright'}).addTo(mapa);
+  ...TILE_PERF,maxZoom:19, attribution:'PNOA &copy; Instituto Geogr&aacute;fico Nacional'});
+const baseMudoRelieve = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxNativeZoom:13,maxZoom:19,attribution:'Esri'});
+const baseMudoClaro0 = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxNativeZoom:16,maxZoom:19,attribution:'Esri, HERE, Garmin'});
+const basePredeterminada = baseClaro;
+L.control.layers({"Fondo claro (Esri)":baseClaro,"Callejero (Esri)":baseCallesEsri,"Relieve (OpenTopoMap)":baseRelieve,"Relieve (Esri Topo)":baseEsriTopo,"Satélite (Esri)":baseSat,"Ortofoto PNOA (IGN)":baseOrto,"Mapa mudo · relieve (Esri)":baseMudoRelieve,"Mapa mudo · claro (Esri)":baseMudoClaro0},{},{collapsed:true,position:'topright'}).addTo(mapa);
 
 /* ══ ESTADO ══ */
 let modo = 'comarcas';                 // 'comarcas' | 'zonas'
@@ -1138,10 +1137,10 @@ Object.keys(COLOR_ZONA).forEach(z => gruposZona[z] = L.layerGroup());
 gruposZona[FUERA.n] = L.layerGroup();
 
 /* ══ ESTILOS Y COMPORTAMIENTO DE POLÍGONOS ══ */
-const estiloComarca = f => ({color:"#fff",weight:1.1,opacity:.9,fillColor:COLOR_COMARCA[f.properties.comarca],fillOpacity:.42});
+const estiloComarca = f => ({color:"#fff",weight:1.1,opacity:.9,fillColor:COLOR_COMARCA[f.properties.comarca],fillOpacity:.22});
 const estiloZona = f => f.properties.zona
-  ? {color:"#fff",weight:1.1,opacity:.9,fillColor:COLOR_ZONA[f.properties.zona],fillOpacity:.42}
-  : {color:"#3C434D",weight:1.4,opacity:1,dashArray:"5 4",fillColor:FUERA.c,fillOpacity:.38};
+  ? {color:"#fff",weight:1.1,opacity:.9,fillColor:COLOR_ZONA[f.properties.zona],fillOpacity:.22}
+  : {color:"#3C434D",weight:1.4,opacity:1,dashArray:"5 4",fillColor:FUERA.c,fillOpacity:.2};
 
 function hudMostrar(p, tema){
   hud.querySelector('.h-muni').textContent = p.nombre;
@@ -1170,7 +1169,7 @@ function popupHTML(p){
 }
 function prepararCapa(l, p, tema, estiloFn){
   l.on({
-    mouseover:e=>{ e.target.setStyle({weight:2.6,color:"#111",fillOpacity:.62}); e.target.bringToFront(); hudMostrar(p, tema); },
+    mouseover:e=>{ e.target.setStyle({weight:2.6,color:"#111",fillOpacity:.42}); e.target.bringToFront(); hudMostrar(p, tema); },
     mouseout:e=>{ e.target.setStyle(estiloFn(e.target.feature)); hud.classList.remove('visible'); }
   });
   l.bindPopup(()=>popupHTML(p));
@@ -2791,13 +2790,12 @@ function genFor(it, prefer){
 /* ── mapa: mostrar / revelar ──────────────────────────────────── */
 const qzLayer=L.layerGroup().addTo(mapa);
 let qzBaseAntes=null;
-const baseMudo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:13,maxZoom:19,attribution:'Esri'});
-const baseMudoClaro = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'});
-function baseActual(){ let b=null; mapa.eachLayer(l=>{ if(l instanceof L.TileLayer && l!==baseMudo && l!==baseMudoClaro) b=l; }); return b; }
+const baseMudoClaro = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxNativeZoom:16,maxZoom:19,attribution:'Esri, HERE, Garmin'});
+function baseActual(){ let b=null; mapa.eachLayer(l=>{ if(l instanceof L.TileLayer && l!==baseMudoClaro) b=l; }); return b; }
 function qzMapMode(on){
   document.body.classList.toggle('qz-on',on);
   if(on){
-    if(QZ.mute){ qzBaseAntes=baseActual(); if(qzBaseAntes) mapa.removeLayer(qzBaseAntes); baseMudo.addTo(mapa); }
+    if(QZ.mute){ qzBaseAntes=baseActual(); if(qzBaseAntes) mapa.removeLayer(qzBaseAntes); baseMudoClaro.addTo(mapa); }
     indice.forEach(it=>{ it.capaC.setStyle({fillOpacity:0,color:'#555',weight:1,opacity:.8}); if(it.capaZ) it.capaZ.setStyle({fillOpacity:0,color:'#555',weight:1,opacity:.8}); });
     rec2Pop.classList.remove('show'); rec2Capa.clearLayers(); mapa.closePopup();
     QZ.layersAntes=Object.keys(atlLayer).filter(c=>mapa.hasLayer(atlLayer[c])); QZ.layersAntes.forEach(c=>atlShow(c,false));
@@ -2807,7 +2805,10 @@ function qzMapMode(on){
     (QZ.layersAntes||[]).forEach(c=>atlShow(c,true)); QZ.layersAntes=null;
     (QZ.r150Antes||[]).forEach(z=>fijarR150z(z,true)); if(QZ.r150Antes){ sincR150(); QZ.r150Antes=null; }
     if(QZ.etqAntes){ capaEtiquetas.addTo(mapa); QZ.etqAntes=false; }
-    if(mapa.hasLayer(baseMudo)){ mapa.removeLayer(baseMudo); (qzBaseAntes||baseRelieve).addTo(mapa); }
+    if(mapa.hasLayer(baseMudoClaro)){
+      mapa.removeLayer(baseMudoClaro);
+      (qzBaseAntes||basePredeterminada).addTo(mapa);
+    }
     indice.forEach(it=>{ it.capaC.setStyle(estiloComarca(it.capaC.feature)); if(it.capaZ) it.capaZ.setStyle(estiloZona(it.capaZ.feature)); });
     qzLayer.clearLayers(); document.getElementById('mapa').classList.remove('qz-click');
   }
