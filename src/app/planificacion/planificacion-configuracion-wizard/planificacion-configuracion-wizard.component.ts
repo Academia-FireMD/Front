@@ -127,9 +127,9 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Al editar, la variante activa es la fuente de verdad. Las preferencias
-    // de onboarding solo sirven para la primera configuración o cuando todavía
-    // no existe una variante activa.
+    // La variante activa conserva oposición y franja al editar. El nivel del
+    // último test aceptado se comparte entre accesos, pero el plan solo cambia
+    // cuando se confirma y guarda el wizard.
     const prefs = this.fuentePreferencias();
     if (prefs) {
       this.preferencias = {
@@ -231,10 +231,19 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   private fuentePreferencias(): PreferenciasPrecargadas | null {
-    if (this.preferenciasPrecargadas !== null) {
-      return this.preferenciasPrecargadas;
-    }
-    const activa = this.configuracion?.configuracionActiva?.variante;
-    return activa ?? this.configuracion?.preferenciasPrecargadas ?? null;
+    const base =
+      this.preferenciasPrecargadas ??
+      this.configuracion?.configuracionActiva?.variante ??
+      this.configuracion?.preferenciasPrecargadas ??
+      null;
+    const nivelAceptado = this.configuracion?.estadoTest?.nivelElegido ?? null;
+
+    if (!base && !nivelAceptado) return null;
+
+    return {
+      oposicion: base?.oposicion ?? null,
+      nivel: nivelAceptado ?? base?.nivel ?? null,
+      franja: base?.franja ?? null,
+    };
   }
 }

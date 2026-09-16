@@ -60,12 +60,12 @@ describe('OnboardingFormComponent (regresión tras extraer preferencias)', () =>
     expect(autoasignacion.getConfiguracion$).not.toHaveBeenCalled();
   });
 
-  it('con el flag activo recupera estadoTest y precarga la configuración activa', () => {
+  it('con el flag activo recupera estadoTest y sincroniza su nivel sobre la configuración activa', () => {
     const estadoTest = {
       evaluacionId: 8,
       completado: true,
       nivelRecomendado: NivelOposicion.AVANZADO,
-      nivelElegido: NivelOposicion.AVANZADO,
+      nivelElegido: NivelOposicion.INICIACION,
       versionCuestionario: 42,
       aceptadaEn: '2026-09-15T12:00:00.000Z',
     };
@@ -102,7 +102,7 @@ describe('OnboardingFormComponent (regresión tras extraer preferencias)', () =>
     expect(component.formGroup.value).toEqual(
       expect.objectContaining({
         tipoOposicion: [Oposicion.MADRID],
-        nivelOposicion: NivelOposicion.AVANZADO,
+        nivelOposicion: NivelOposicion.INICIACION,
         tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS',
       }),
     );
@@ -111,6 +111,45 @@ describe('OnboardingFormComponent (regresión tras extraer preferencias)', () =>
         '[data-testid="onboarding-test-nivel"]',
       ),
     ).toBeTruthy();
+  });
+
+  it('sin configuración activa conserva los demás campos y precarga el nivel aceptado', () => {
+    component.formGroup.patchValue({
+      tipoOposicion: [Oposicion.ALICANTE_CPBA],
+      nivelOposicion: NivelOposicion.AVANZADO,
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    });
+    autoasignacion.getConfiguracion$.mockReturnValueOnce(
+      of({
+        estado: 'REQUIERE_CONFIGURACION',
+        preferenciasPrecargadas: {
+          oposicion: Oposicion.ALICANTE_CPBA,
+          nivel: NivelOposicion.AVANZADO,
+          franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+        },
+        oposicionesPermitidas: [Oposicion.ALICANTE_CPBA],
+        configuracionActiva: null,
+        estadoTest: {
+          evaluacionId: 9,
+          completado: true,
+          nivelRecomendado: NivelOposicion.INICIACION,
+          nivelElegido: NivelOposicion.INICIACION,
+          versionCuestionario: 42,
+          aceptadaEn: '2026-09-16T09:00:00.000Z',
+        },
+      }),
+    );
+
+    component.permitirTestNivel = true;
+    component.ngOnChanges();
+
+    expect(component.formGroup.value).toEqual(
+      expect.objectContaining({
+        tipoOposicion: [Oposicion.ALICANTE_CPBA],
+        nivelOposicion: NivelOposicion.INICIACION,
+        tipoDePlanificacionDuracionDeseada: 'FRANJA_CUATRO_A_SEIS_HORAS',
+      }),
+    );
   });
 
   it('should create', () => {

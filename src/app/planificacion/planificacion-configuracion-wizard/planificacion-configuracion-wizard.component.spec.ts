@@ -79,7 +79,11 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
       PlanificacionConfiguracionWizardComponent,
     );
     component = fixture.componentInstance;
-    component.configuracion = configuracion;
+    component.configuracion = {
+      ...configuracion,
+      preferenciasPrecargadas: { ...configuracion.preferenciasPrecargadas },
+      estadoTest: null,
+    };
     fixture.detectChanges();
   });
 
@@ -189,6 +193,40 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
       franja: 'FRANJA_SEIS_A_OCHO_HORAS',
     });
     expect(component.tieneNivelPrecargado).toBe(true);
+  });
+
+  it('sincroniza el nivel aceptado aunque la variante activa tuviera otro', () => {
+    component.configuracion = {
+      ...configuracion,
+      estadoTest: {
+        evaluacionId: 12,
+        completado: true,
+        nivelRecomendado: NivelOposicion.INICIACION,
+        nivelElegido: NivelOposicion.INICIACION,
+        versionCuestionario: 42,
+        aceptadaEn: '2026-09-16T09:00:00.000Z',
+      },
+      configuracionActiva: {
+        variante: {
+          codigo: 'ACTIVA-68',
+          oposicion: Oposicion.ALICANTE_CPBA,
+          nivel: NivelOposicion.AVANZADO,
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+        },
+        version: 4,
+        fechaVigencia: '2026-08-19',
+        origen: 'ALUMNO',
+        planificacionMensual: null,
+      },
+    };
+
+    component.ngOnInit();
+
+    expect(component.preferencias).toEqual({
+      oposicion: Oposicion.ALICANTE_CPBA,
+      nivel: NivelOposicion.INICIACION,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    });
   });
 
   it('prioriza las preferencias precargadas explícitas sobre la variante activa', () => {

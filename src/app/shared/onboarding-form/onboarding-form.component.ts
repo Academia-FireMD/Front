@@ -218,18 +218,33 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
       next: (configuracion: ConfiguracionPlanificacion) => {
         this.estadoTest = configuracion.estadoTest;
         const activa = configuracion.configuracionActiva?.variante;
-        if (!activa) return;
+        const nivelAceptado = configuracion.estadoTest?.nivelElegido ?? null;
+        if (!activa && !nivelAceptado) return;
 
-        // La configuración activa manda sobre los campos legacy del perfil.
+        // La configuración activa conserva oposición y franja. El último
+        // test aceptado es la fuente compartida del nivel mostrado; guardar el
+        // perfil o el wizard sigue siendo necesario para cambiar el plan.
+        const oposicion = activa
+          ? [activa.oposicion]
+          : (this.formGroup.value.tipoOposicion ?? []);
+        const nivel =
+          nivelAceptado ??
+          activa?.nivel ??
+          this.formGroup.value.nivelOposicion ??
+          null;
+        const franja =
+          activa?.franja ??
+          this.formGroup.value.tipoDePlanificacionDuracionDeseada ??
+          null;
         this.valoresInicialesPreferencias = {
-          oposicion: [activa.oposicion],
-          nivel: activa.nivel,
-          franja: activa.franja,
+          oposicion,
+          nivel,
+          franja,
         };
         this.formGroup.patchValue({
-          tipoOposicion: [activa.oposicion],
-          nivelOposicion: activa.nivel,
-          tipoDePlanificacionDuracionDeseada: activa.franja,
+          tipoOposicion: oposicion,
+          nivelOposicion: nivel,
+          tipoDePlanificacionDuracionDeseada: franja,
         });
       },
       error: () => {
