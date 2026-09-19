@@ -669,7 +669,7 @@ export class PlanificacionAdminComponent implements OnInit {
           new Set(
             preview.hojas
               .filter((hoja) => hoja.semanas.length > 0)
-              .map((hoja) => hoja.hoja),
+              .map((hoja) => this.codigoVarianteImportada(hoja.hoja)),
           ),
         ),
       );
@@ -691,6 +691,11 @@ export class PlanificacionAdminComponent implements OnInit {
     } finally {
       this.aplicandoImportacion.set(false);
     }
+  }
+
+  private codigoVarianteImportada(codigoHoja: string): string {
+    const codigo = codigoHoja.trim();
+    return /(4-6|6-8)$/i.test(codigo) ? `${codigo}H` : codigo;
   }
 
   private mensajeErrorImportacion(error: unknown, fallback: string): string {

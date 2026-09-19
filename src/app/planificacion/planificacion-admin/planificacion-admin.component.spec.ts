@@ -721,4 +721,49 @@ describe('PlanificacionAdminComponent', () => {
       { queryParams: { codigosHoja: ['MI4-6H'] } },
     );
   });
+
+  it('normaliza el código de hoja de Sergio al sufijo de plantilla', async () => {
+    const file = new File(['xlsx'], 'sergio.xlsx');
+    component.archivoImportacion.set(file);
+    component.previewImportacion.set({
+      fileName: file.name,
+      fileHash: 'c'.repeat(64),
+      puedeAplicar: true,
+      yaAplicado: false,
+      requiereConfirmacionSobrescritura: false,
+      sobrescrituras: [],
+      totales: {
+        hojas: 1,
+        semanas: 1,
+        bloques: 7,
+        entrenamientos: 0,
+        errores: 0,
+      },
+      hojas: [
+        {
+          hoja: 'GI6-8',
+          valida: true,
+          totalBloques: 7,
+          totalEntrenamientos: 0,
+          semanas: [
+            {
+              numero: 7,
+              fechaInicio: '2026-02-09',
+              bloques: 7,
+              entrenamientos: 0,
+              esqueleto: false,
+            },
+          ],
+          errores: [],
+          warnings: [],
+        },
+      ],
+    });
+
+    component.confirmarAplicacionImportacion();
+    const config = (confirmation.confirm as jest.Mock).mock.calls.at(-1)[0];
+    await config.accept();
+
+    expect(component.codigosUltimaImportacion()).toEqual(['GI6-8H']);
+  });
 });
