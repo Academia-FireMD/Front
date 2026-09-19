@@ -766,4 +766,59 @@ describe('PlanificacionAdminComponent', () => {
 
     expect(component.codigosUltimaImportacion()).toEqual(['GI6-8H']);
   });
+
+  it('solo añade el sufijo H a franjas válidas que aún no lo contienen', async () => {
+    const file = new File(['xlsx'], 'variantes.xlsx');
+    component.archivoImportacion.set(file);
+    const hoja = (codigo: string) => ({
+      hoja: codigo,
+      valida: true,
+      totalBloques: 1,
+      totalEntrenamientos: 0,
+      semanas: [
+        {
+          numero: 1,
+          fechaInicio: '2026-02-09',
+          bloques: 1,
+          entrenamientos: 0,
+          esqueleto: false,
+        },
+      ],
+      errores: [],
+      warnings: [],
+    });
+    component.previewImportacion.set({
+      fileName: file.name,
+      fileHash: 'd'.repeat(64),
+      puedeAplicar: true,
+      yaAplicado: false,
+      requiereConfirmacionSobrescritura: false,
+      sobrescrituras: [],
+      totales: {
+        hojas: 5,
+        semanas: 5,
+        bloques: 5,
+        entrenamientos: 0,
+        errores: 0,
+      },
+      hojas: [
+        hoja('GI4-6'),
+        hoja('GI4-6H'),
+        hoja('H6-8'),
+        hoja('14-6'),
+        hoja('URG'),
+      ],
+    });
+
+    component.confirmarAplicacionImportacion();
+    const config = (confirmation.confirm as jest.Mock).mock.calls.at(-1)[0];
+    await config.accept();
+
+    expect(component.codigosUltimaImportacion()).toEqual([
+      'GI4-6H',
+      'H6-8',
+      '14-6',
+      'URG',
+    ]);
+  });
 });

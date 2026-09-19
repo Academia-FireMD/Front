@@ -693,9 +693,15 @@ export class PlanificacionAdminComponent implements OnInit {
     }
   }
 
-  private codigoVarianteImportada(codigoHoja: string): string {
-    const codigo = codigoHoja.trim();
-    return /(4-6|6-8)$/i.test(codigo) ? `${codigo}H` : codigo;
+  private codigoVarianteImportada(
+    codigoHoja: string | null | undefined,
+  ): string {
+    const codigo = codigoHoja?.trim() ?? '';
+    if (!codigo || /h/i.test(codigo)) {
+      return codigo;
+    }
+
+    return /(?:^|[^0-9])(4-6|6-8)$/i.test(codigo) ? `${codigo}H` : codigo;
   }
 
   private mensajeErrorImportacion(error: unknown, fallback: string): string {
