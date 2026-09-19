@@ -767,7 +767,7 @@ describe('PlanificacionAdminComponent', () => {
     expect(component.codigosUltimaImportacion()).toEqual(['GI6-8H']);
   });
 
-  it('solo añade el sufijo H a franjas válidas que aún no lo contienen', async () => {
+  it('normaliza y deduplica los códigos válidos de hoja antes del volcado', async () => {
     const file = new File(['xlsx'], 'variantes.xlsx');
     component.archivoImportacion.set(file);
     const hoja = (codigo: string) => ({
@@ -802,8 +802,8 @@ describe('PlanificacionAdminComponent', () => {
         errores: 0,
       },
       hojas: [
-        hoja('GI4-6'),
-        hoja('GI4-6H'),
+        hoja('GI6-8'),
+        hoja('GI6-8H'),
         hoja('H6-8'),
         hoja('14-6'),
         hoja('URG'),
@@ -815,10 +815,25 @@ describe('PlanificacionAdminComponent', () => {
     await config.accept();
 
     expect(component.codigosUltimaImportacion()).toEqual([
-      'GI4-6H',
+      'GI6-8H',
       'H6-8',
       '14-6',
       'URG',
     ]);
+  });
+
+  it('solo normaliza variantes con el formato de franja admitido', () => {
+    const normalizar = (codigo: string | null | undefined) =>
+      (component as any).codigoVarianteImportada(codigo);
+
+    expect(normalizar(' gi6-8h ')).toBe('GI6-8H');
+    expect(normalizar('H6-8')).toBe('H6-8');
+    expect(normalizar('NOCHE4-6')).toBe('NOCHE4-6H');
+    expect(normalizar('14-6')).toBe('14-6');
+    expect(normalizar('-4-6')).toBe('-4-6');
+    expect(normalizar('URG')).toBe('URG');
+    expect(normalizar('   ')).toBe('');
+    expect(normalizar(null)).toBe('');
+    expect(normalizar(undefined)).toBe('');
   });
 });

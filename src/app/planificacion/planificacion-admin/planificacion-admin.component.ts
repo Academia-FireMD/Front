@@ -697,11 +697,14 @@ export class PlanificacionAdminComponent implements OnInit {
     codigoHoja: string | null | undefined,
   ): string {
     const codigo = codigoHoja?.trim() ?? '';
-    if (!codigo || /h/i.test(codigo)) {
+    if (!/^[a-z]+(?:4-6|6-8)h?$/i.test(codigo)) {
       return codigo;
     }
 
-    return /(?:^|[^0-9])(4-6|6-8)$/i.test(codigo) ? `${codigo}H` : codigo;
+    const codigoCanonico = codigo.toUpperCase();
+    return codigoCanonico.endsWith('H') || /^H(?:4-6|6-8)$/.test(codigoCanonico)
+      ? codigoCanonico
+      : `${codigoCanonico}H`;
   }
 
   private mensajeErrorImportacion(error: unknown, fallback: string): string {
