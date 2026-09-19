@@ -42,7 +42,10 @@ import {
   VolcarPlantillasResultado,
 } from '../models/volcar-plantillas.model';
 import { duracionesDisponibles } from '../../shared/models/pregunta.model';
-import { Oposicion } from '../../shared/models/subscription.model';
+import {
+  Oposicion,
+  PLANIFICACION_OPOSICION_LABELS,
+} from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import {
   formatFechaISO,
@@ -162,7 +165,16 @@ export class PlanificacionMensualEditComponent {
       ) ?? 0
     );
   }
+  public get totalEliminadosVolcado(): number {
+    return (
+      this.volcadoPreview?.resultados.reduce(
+        (total, r) => total + (r.eliminados ?? 0),
+        0,
+      ) ?? 0
+    );
+  }
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  public planificacionOposicionLabels = PLANIFICACION_OPOSICION_LABELS;
   public getEventsForDay = this.eventsService.getEventsForDay;
   public getProgressBarColor = this.eventsService.getProgressBarColor;
   public getCompletedSubBlocksForDay =
@@ -487,7 +499,7 @@ export class PlanificacionMensualEditComponent {
         return;
       }
       this.toast.success(
-        `Plantilla aplicada: ${resultado?.creados ?? 0} creados, ${resultado?.actualizados ?? 0} actualizados, ${resultado?.omitidos ?? 0} omitidos.`,
+        `Plantilla aplicada: ${resultado?.creados ?? 0} creados, ${resultado?.actualizados ?? 0} actualizados, ${resultado?.omitidos ?? 0} omitidos, ${resultado?.eliminados ?? 0} eliminados.`,
       );
       this.isDialogVisible = false;
       this.pickedEvents = [];
@@ -608,7 +620,7 @@ export class PlanificacionMensualEditComponent {
         0,
       );
       this.toast.success(
-        `Variante volcada: ${totalCreados} creados, ${totalActualizados} actualizados, ${totalOmitidos} omitidos en ${res.totalPlantillas} plantillas.`,
+        `Variante volcada: ${totalCreados} creados, ${totalActualizados} actualizados, ${totalOmitidos} omitidos, ${res.resultados.reduce((n, r) => n + (r.eliminados ?? 0), 0)} eliminados en ${res.totalPlantillas} plantillas.`,
       );
       this.cerrarDialogoVolcar();
       this.load(res.rangoFechas?.desde);

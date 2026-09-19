@@ -14,7 +14,7 @@ export interface PreviewBloque {
   duracion: number;
   importante?: boolean;
   color?: string;
-  estado?: 'creado' | 'actualizado' | 'omitido';
+  estado?: 'creado' | 'actualizado' | 'omitido' | 'eliminado';
 }
 
 export interface ResultadoAplicarPlantillaSemanal {
@@ -23,6 +23,7 @@ export interface ResultadoAplicarPlantillaSemanal {
   creados: number;
   actualizados: number;
   omitidos: number;
+  eliminados?: number;
   bloques: PreviewBloque[];
   error?: string;
 }

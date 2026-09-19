@@ -40,16 +40,17 @@
             <app-planificacion-preferencias
               [valoresIniciales]="valoresInicialesPreferencias"
               [multiple]="true"
+              [permitirTestNivel]="permitirTestNivel"
               formIdPrefix="onboardingPreferencias"
               (cambios)="onPreferenciasChange($event)"
+              (testNivelSolicitado)="abrirCuestionarioNivel()"
             ></app-planificacion-preferencias>
 
-            @if (permitirTestNivel) {
-              <div class="mt-4" data-testid="onboarding-test-nivel">
+            @if (mostrarCuestionarioNivel) {
+              <div class="mt-4">
                 <app-cuestionario-nivel
-                  [estadoTest]="estadoTest"
-                  [nivelActual]="nivelActualTest"
                   (nivelAceptado)="aplicarNivelRecomendado($event)"
+                  (cancelado)="mostrarCuestionarioNivel = false"
                 />
               </div>
             }

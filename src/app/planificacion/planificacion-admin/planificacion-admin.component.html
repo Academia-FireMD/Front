@@ -9,13 +9,18 @@
             {{ varianteForm.value.id ? "Editar variante" : "Nueva variante" }}
           </h4>
           <form [formGroup]="varianteForm" class="flex flex-column gap-2">
-            <label>Código *</label>
+            <label for="variante-codigo">Código (calculado) *</label>
             <input
               pInputText
+              id="variante-codigo"
               formControlName="codigo"
-              placeholder="p.ej. GA4-6"
-              [readonly]="varianteForm.controls.codigo.disabled"
+              placeholder="Se genera al completar la variante"
+              readonly
             />
+            <small class="text-500"
+              >Se genera automáticamente a partir de la oposición, el nivel y
+              las horas de estudio.</small
+            >
             <label>Oposición *</label>
             <p-dropdown
               [options]="oposicionOptions"
@@ -34,15 +39,22 @@
               [disabled]="varianteForm.controls.nivel.disabled"
               styleClass="w-full"
             ></p-dropdown>
-            <label>Franja *</label>
+            <label for="variante-franja"
+              >Horas disponibles para el estudio *</label
+            >
             <p-dropdown
               [options]="franjaOptions"
               formControlName="franja"
               optionLabel="label"
               optionValue="value"
               [disabled]="varianteForm.controls.franja.disabled"
+              inputId="variante-franja"
               styleClass="w-full"
             ></p-dropdown>
+            <small class="text-500"
+              >Únicamente horas de estudio, no incluye el tiempo dedicado a la
+              preparación física.</small
+            >
             <label>Release de planificación mensual</label>
             <p-dropdown
               [options]="planificacionOptions"
@@ -104,7 +116,7 @@
               <th>Código</th>
               <th>Oposición</th>
               <th>Nivel</th>
-              <th>Franja</th>
+              <th>Horas disponibles para el estudio</th>
               <th>Release publicada</th>
               <th>Activa</th>
               <th></th>
@@ -233,7 +245,7 @@
           <h3>Importación validada de plantillas semanales</h3>
           <p>
             Primero previsualiza el Excel. La aplicación solo se habilita si
-            todas las hojas, fechas y semanas son válidas.
+            las semanas rellenadas son válidas. Las semanas y pestañas vacías se omiten sin borrar contenido existente.
           </p>
         </div>
         <span class="import-panel__safety">
@@ -299,7 +311,7 @@
         @if (preview.yaAplicado) {
           <p-message
             severity="info"
-            text="Este mismo archivo ya fue aplicado. Un nuevo apply será un no-op seguro."
+            text="El contenido de este archivo ya está cargado y no ha cambiado. Repetir la carga no lo duplicará."
             styleClass="w-full"
           ></p-message>
         }
@@ -361,7 +373,7 @@
                     [class.pi-check-circle]="hoja.valida"
                     [class.pi-times-circle]="!hoja.valida"
                   ></i>
-                  {{ hoja.valida ? "Válida" : "Con errores" }}
+                  {{ !hoja.valida ? "Con errores" : hoja.semanas.length ? "Válida" : "Omitida" }}
                 </span>
               </td>
               <td>
@@ -370,7 +382,7 @@
                     <span>
                       S{{ semana.numero }} ·
                       {{ formatearFechaIso(semana.fechaInicio) }} ·
-                      {{ semana.bloques }} bloques
+                      {{ semana.bloques }} bloques · {{ semana.estado || 'creada' }}
                     </span>
                   }
                 </div>
@@ -384,6 +396,10 @@
                   @for (error of hoja.errores; track $index) {
                     <span class="issue-list__error">
                       <i class="pi pi-times-circle"></i>
+                      @if (error.semana) { Semana {{ error.semana }} · }
+                      @if (error.dia) { {{ error.dia }} · }
+                      @if (error.filaExcel) { Fila {{ error.filaExcel }}: }
+                      @if (error.campo) { Campo {{ error.campo }} · }
                       {{ error.mensaje }}
                     </span>
                   }
@@ -413,8 +429,7 @@
             (onClick)="confirmarAplicacionImportacion()"
           ></p-button>
           <small>
-            El servidor vuelve a validar el hash y aplica todas las hojas en una
-            única transacción.
+            Antes de guardar se vuelve a validar el archivo. Si hay errores, no se carga ninguna semana.
           </small>
         </div>
       }

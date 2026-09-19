@@ -25,6 +25,7 @@ import { environment } from '../../../environments/environment';
 import {
   getPlanCssClass,
   getPlanLabel,
+  getPlanificacionOposicionLabel,
 } from '../../shared/models/subscription.model';
 
 @Component({
@@ -272,6 +273,7 @@ export class CambioSuscripcionComponent implements OnInit {
 
   getTipoBadge = getPlanLabel;
   getTipoBadgeSeverity = getPlanCssClass;
+  getOposicionLabel = getPlanificacionOposicionLabel;
 
   getPeriodoLabel(plan: PlanDisponible): string {
     const periodos: Record<string, string> = {

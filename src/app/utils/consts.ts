@@ -155,7 +155,10 @@ function mismoConjuntoOposiciones(a: Oposicion[], b: Oposicion[]): boolean {
  */
 export function colapsarOposiciones(
   ops: Oposicion[],
-  opts: { excluirGeneral?: boolean } = {},
+  opts: {
+    excluirGeneral?: boolean;
+    labels?: Partial<Record<Oposicion, string>>;
+  } = {},
 ): OposicionColapsada[] {
   const lista = opts.excluirGeneral
     ? (ops ?? []).filter((o) => o !== Oposicion.GENERAL)
@@ -176,7 +179,7 @@ export function colapsarOposiciones(
   }
   return lista.map((o) => ({
     code: o,
-    label: oposiciones[o]?.name ?? o,
+    label: opts.labels?.[o] ?? oposiciones[o]?.name ?? o,
     icon: oposiciones[o]?.icon ?? '📋',
     image: oposiciones[o]?.image ?? null,
   }));

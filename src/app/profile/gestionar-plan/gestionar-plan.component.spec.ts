@@ -159,7 +159,7 @@ describe('GestionarPlanComponent', () => {
     expect(values).toContain(Oposicion.ALICANTE_CPBA); // crossgrade disponible
     expect(values).toContain(Oposicion.MADRID);
     expect(values).not.toContain(Oposicion.GENERAL);
-    expect(component.oposicionLabel).toBe('Valencia Ayuntamiento');
+    expect(component.oposicionLabel).toBe('Ayuntamiento de Valencia');
   });
 
   // ── Chips: en cambiar se excluyen las ya contratadas (evita OPOSICION_DUPLICADA) ──
@@ -184,7 +184,7 @@ describe('GestionarPlanComponent', () => {
     expect(component.esCrossgrade).toBe(false); // preseleccionada = la actual
     component.seleccionarOposicion(Oposicion.ALICANTE_CPBA);
     expect(component.esCrossgrade).toBe(true);
-    expect(component.oposicionDestinoLabel).toBe('CPBA Alicante');
+    expect(component.oposicionDestinoLabel).toBe('Consorcio de Alicante');
   });
 
   // ── Gating: aviso OPOSICION_DUPLICADA bloquea el confirmar ──

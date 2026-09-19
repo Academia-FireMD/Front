@@ -93,6 +93,12 @@
             ></p-tag>
           </div>
 
+          <p-tag
+            severity="danger"
+            [value]="
+              'Se eliminarán ' + (previewResult()?.eliminados ?? 0) + ' bloques'
+            "
+          />
           <p-table
             [value]="previewResult()?.bloques ?? []"
             [scrollable]="true"
@@ -174,7 +180,8 @@
             [disabled]="
               !previewResult() ||
               (previewResult()?.creados ?? 0) +
-                (previewResult()?.actualizados ?? 0) ===
+                (previewResult()?.actualizados ?? 0) +
+                (previewResult()?.eliminados ?? 0) ===
                 0
             "
           ></app-async-button>
@@ -261,6 +268,14 @@
         ></p-tag>
       </div>
 
+      <p-tag
+        severity="danger"
+        [value]="'Se eliminarán ' + totalEliminadosVolcado + ' bloques'"
+      />
+      <p class="text-sm">
+        Solo se retiran actividades procedentes de las semanas seleccionadas.
+        Las actividades con progreso requieren una nueva versión.
+      </p>
       <p-table
         [value]="volcadoPreview.resultados"
         [scrollable]="true"
@@ -274,6 +289,7 @@
             <th>Creados</th>
             <th>Actualizados</th>
             <th>Omitidos</th>
+            <th>Eliminados</th>
             <th></th>
           </tr>
         </ng-template>
@@ -284,6 +300,7 @@
             <td>{{ resultado.creados }}</td>
             <td>{{ resultado.actualizados ?? 0 }}</td>
             <td>{{ resultado.omitidos }}</td>
+            <td>{{ resultado.eliminados ?? 0 }}</td>
             <td>
               <p-tag
                 *ngIf="resultado.error"
@@ -378,6 +395,7 @@
             <app-oposicion-picker
               [allowAdd]="false"
               [oposiciones]="relevancia.value"
+              [labelMap]="planificacionOposicionLabels"
             ></app-oposicion-picker>
           </div>
         }
@@ -399,6 +417,7 @@
             <app-oposicion-picker
               [allowAdd]="true"
               [oposiciones]="relevancia.value"
+              [labelMap]="planificacionOposicionLabels"
               (updateSelection)="updateOposicionSelection($event)"
             ></app-oposicion-picker>
           </div>
@@ -424,6 +443,17 @@
               (onClick)="abrirDialogoVolcar()"
             />
           }
+        }
+        @if (expectedRole == "ALUMNO" && getId() !== "new") {
+          <button
+            pButton
+            type="button"
+            label="Cambiar mi planificación"
+            icon="pi pi-cog"
+            class="p-button-outlined gestionar-preferencias"
+            data-testid="gestionar-preferencias"
+            (click)="gestionarPreferencias()"
+          ></button>
         }
       </div>
     </div>
@@ -559,16 +589,6 @@
       />
     </div>
     <div class="col-12 pt-2" *ngIf="expectedRole == 'ALUMNO'">
-      <div class="flex justify-content-end mb-2">
-        <button
-          pButton
-          type="button"
-          label="Gestionar mi planificación"
-          icon="pi pi-cog"
-          class="p-button-outlined"
-          (click)="gestionarPreferencias()"
-        ></button>
-      </div>
       <p-message
         severity="info"
         text="Puedes marcar tus tareas como completadas y agregar comentarios haciendo clic en cada evento."

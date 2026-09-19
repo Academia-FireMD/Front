@@ -92,6 +92,8 @@ describe('ProfileComponent', () => {
 
   it('si cambian las preferencias desde Perfil, abre el wizard en modo revisión', async () => {
     const router = TestBed.inject(Router);
+    const updateOnboardingData$ = jest.fn().mockReturnValue(of(null));
+    (component as any).userService = { updateOnboardingData$ };
     component.user = {
       tipoOposicion: ['MADRID'],
       nivelOposicion: 'INICIACION',
@@ -106,7 +108,13 @@ describe('ProfileComponent', () => {
 
     expect(router.navigate).toHaveBeenCalledWith(
       ['/app/planificacion/configuracion-alumno'],
-      { queryParams: { gestionar: 'preferencias' } },
+      {
+        queryParams: { gestionar: 'preferencias' },
+        state: { desdeFicha: true, nivelBorrador: 'AVANZADO' },
+      },
+    );
+    expect(updateOnboardingData$).toHaveBeenCalledWith(
+      expect.not.objectContaining({ nivelOposicion: expect.anything() }),
     );
   });
 

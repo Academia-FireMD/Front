@@ -1,7 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ToastrService } from 'ngx-toastr';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { AutoasignacionService } from '../../planificacion/services/autoasignacion.service';
 import { NivelOposicion } from '../models/pregunta.model';
 import { CuestionarioNivelComponent } from './cuestionario-nivel.component';
@@ -21,27 +22,17 @@ const cuestionario = {
 describe('CuestionarioNivelComponent', () => {
   let component: CuestionarioNivelComponent;
   let fixture: ComponentFixture<CuestionarioNivelComponent>;
-  const estadoAceptado = {
-    evaluacionId: 8,
-    completado: true as const,
-    nivelRecomendado: NivelOposicion.AVANZADO,
-    nivelElegido: NivelOposicion.AVANZADO,
-    versionCuestionario: 42,
-    aceptadaEn: '2026-09-15T12:00:00.000Z',
-  };
   let service: {
     getCuestionarioNivel$: jest.Mock;
     recomendarNivel$: jest.Mock;
-    aceptarEvaluacionNivel$: jest.Mock;
   };
 
   beforeEach(async () => {
     service = {
       getCuestionarioNivel$: jest.fn(() => of(cuestionario)),
       recomendarNivel$: jest.fn(() =>
-        of({ evaluacionId: 8, nivelRecomendado: NivelOposicion.AVANZADO }),
+        of({ puntuacion: 12, nivelRecomendado: NivelOposicion.AVANZADO }),
       ),
-      aceptarEvaluacionNivel$: jest.fn(() => of(estadoAceptado)),
     };
     await TestBed.configureTestingModule({
       imports: [CuestionarioNivelComponent],
@@ -60,55 +51,56 @@ describe('CuestionarioNivelComponent', () => {
     fixture.detectChanges();
   });
 
-  it('calcular y cancelar no marcan el test como completado', async () => {
-    component.abrir();
+  it('carga del servidor la definición del cuestionario', () => {
+    expect(service.getCuestionarioNivel$).toHaveBeenCalledTimes(1);
+    expect(component.preguntas.map((pregunta) => pregunta.texto)).toEqual([
+      'Pregunta 1',
+      'Pregunta 2',
+      'Pregunta 3',
+      'Pregunta 4',
+      'Pregunta 5',
+    ]);
+  });
+
+  it('calcula sin emitir nivel hasta que se acepta la recomendación', async () => {
+    const emitSpy = jest.spyOn(component.nivelAceptado, 'emit');
     component.respuestas = [3, 2, 3, 1, 3];
 
     await component.obtenerRecomendacion();
-    component.cancelar();
 
     expect(service.recomendarNivel$).toHaveBeenCalledWith([3, 2, 3, 1, 3], 42);
-    expect(service.aceptarEvaluacionNivel$).not.toHaveBeenCalled();
-    expect(component.estadoTest).toBeNull();
+    expect(emitSpy).not.toHaveBeenCalled();
+
+    component.aceptarRecomendacion();
+    expect(emitSpy).toHaveBeenCalledWith(NivelOposicion.AVANZADO);
   });
 
-  it('persiste antes de emitir el nivel aceptado', async () => {
-    const emitSpy = jest.spyOn(component.nivelAceptado, 'emit');
-    component.abrir();
+  it('no muestra la puntuación al alumno', async () => {
     component.respuestas = [3, 2, 3, 1, 3];
     await component.obtenerRecomendacion();
-
-    await component.aceptarRecomendacion();
-
-    expect(service.aceptarEvaluacionNivel$).toHaveBeenCalledWith(
-      8,
-      NivelOposicion.AVANZADO,
-    );
-    expect(emitSpy).toHaveBeenCalledWith(estadoAceptado);
-    expect(component.estadoTest).toEqual(estadoAceptado);
-  });
-
-  it('permite aceptar el test manteniendo un nivel distinto del recomendado', async () => {
-    component.nivelActual = NivelOposicion.INICIACION;
-    component.abrir();
-    component.respuestas = [3, 2, 3, 1, 3];
-    await component.obtenerRecomendacion();
-
-    await component.aceptarNivel(NivelOposicion.INICIACION);
-
-    expect(service.aceptarEvaluacionNivel$).toHaveBeenCalledWith(
-      8,
-      NivelOposicion.INICIACION,
-    );
-  });
-
-  it('muestra el estado persistido sin exponer puntuación bruta', () => {
-    fixture.componentRef.setInput('estadoTest', estadoAceptado);
     fixture.detectChanges();
 
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(texto).toContain('Test completado');
-    expect(texto).toContain('Avanzado');
+    expect(texto).toContain('Te recomendamos el nivel Avanzado.');
     expect(texto.toLowerCase()).not.toContain('puntuación');
+    expect(texto).not.toContain('12');
+  });
+
+  it('recarga y limpia respuestas ante una versión obsoleta', async () => {
+    service.recomendarNivel$.mockReturnValueOnce(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { codigo: 'CUESTIONARIO_DESACTUALIZADO' },
+          }),
+      ),
+    );
+    component.respuestas = [3, 2, 3, 1, 3];
+
+    await component.obtenerRecomendacion();
+
+    expect(service.getCuestionarioNivel$).toHaveBeenCalledTimes(2);
+    expect(component.respuestas).toEqual([null, null, null, null, null]);
   });
 });

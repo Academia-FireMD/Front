@@ -7,6 +7,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
@@ -14,6 +15,10 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { ConfiguracionPlanificacion } from '../models/autoasignacion.model';
+import type { PreferenciasPrecargadas } from '../models/autoasignacion.model';
+import { NivelOposicion } from '../../shared/models/pregunta.model';
+import type { AppState } from '../../store/app.state';
+import * as UserActions from '../../store/user/user.actions';
 import { PlanificacionBloqueadaComponent } from '../planificacion-bloqueada/planificacion-bloqueada.component';
 import {
   PlanificacionConfiguracionWizardComponent,
@@ -72,10 +77,9 @@ import {
         <app-planificacion-configuracion-wizard
           [configuracion]="configuracion"
           [preferenciasPrecargadas]="
-            revisandoPreferencias
-              ? (configuracion?.preferenciasPrecargadas ?? null)
-              : null
+            revisandoPreferencias ? preferenciasWizard : null
           "
+          [abrirEnNivel]="abrirWizardEnNivel"
           (configurada)="onConfigurada($event)"
         ></app-planificacion-configuracion-wizard>
       } @else if (configuracion?.estado === 'PENDIENTE_PUBLICACION') {
@@ -90,10 +94,9 @@ import {
           <app-planificacion-configuracion-wizard
             [configuracion]="configuracion"
             [preferenciasPrecargadas]="
-              revisandoPreferencias
-                ? (configuracion?.preferenciasPrecargadas ?? null)
-                : null
+              revisandoPreferencias ? preferenciasWizard : null
             "
+            [abrirEnNivel]="abrirWizardEnNivel"
             [modoEdicion]="true"
             (configurada)="onConfigurada($event)"
             (cancelado)="cancelarEdicion()"
@@ -123,10 +126,9 @@ import {
           <app-planificacion-configuracion-wizard
             [configuracion]="configuracion"
             [preferenciasPrecargadas]="
-              revisandoPreferencias
-                ? (configuracion?.preferenciasPrecargadas ?? null)
-                : null
+              revisandoPreferencias ? preferenciasWizard : null
             "
+            [abrirEnNivel]="abrirWizardEnNivel"
             [modoEdicion]="true"
             (configurada)="onConfigurada($event)"
             (cancelado)="cancelarEdicion()"
@@ -184,12 +186,16 @@ export class PlanificacionAlumnoComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly store = inject(Store<AppState>, { optional: true });
 
   cargando = true;
   error: string | null = null;
   configuracion: ConfiguracionPlanificacion | null = null;
   editando = false;
   revisandoPreferencias = false;
+  preferenciasWizard: PreferenciasPrecargadas | null = null;
+  abrirWizardEnNivel = false;
+  private nivelBorrador: NivelOposicion | null = null;
 
   get planificacionMensualId(): number | null {
     return (
@@ -203,6 +209,20 @@ export class PlanificacionAlumnoComponent implements OnInit {
     this.revisandoPreferencias =
       this.route.snapshot.queryParamMap.get('gestionar') === 'preferencias' ||
       this.route.snapshot.queryParamMap.get('revisar') === 'preferencias';
+    // NavigationExtras.state solo se consume durante esta navegación. No se
+    // lee history.state: ese valor sobrevive a un reload y resucitaría un
+    // borrador que el alumno todavía no confirmó.
+    const estadoNavegacion =
+      this.router.getCurrentNavigation?.()?.extras.state ?? null;
+    const nivelBorrador = estadoNavegacion?.['nivelBorrador'];
+    const desdeFicha = estadoNavegacion?.['desdeFicha'] === true;
+    if (
+      nivelBorrador === NivelOposicion.INICIACION ||
+      nivelBorrador === NivelOposicion.AVANZADO
+    ) {
+      this.nivelBorrador = nivelBorrador;
+    }
+    this.abrirWizardEnNivel = desdeFicha;
     this.editando = this.revisandoPreferencias;
     this.cargar();
   }
@@ -220,10 +240,17 @@ export class PlanificacionAlumnoComponent implements OnInit {
           }),
         ),
       );
+      if (this.revisandoPreferencias && this.configuracion) {
+        this.preferenciasWizard = {
+          ...this.configuracion.preferenciasPrecargadas,
+          ...(this.nivelBorrador ? { nivel: this.nivelBorrador } : {}),
+        };
+      }
       if (
         this.configuracion?.estado === 'ACTIVA' &&
         this.planificacionMensualId &&
-        !this.revisandoPreferencias
+        !this.revisandoPreferencias &&
+        !this.editando
       ) {
         void this.router.navigate(
           [
@@ -245,13 +272,20 @@ export class PlanificacionAlumnoComponent implements OnInit {
   onConfigurada(resultado: ResultadoConfiguracion = 'EXITO'): void {
     if (resultado === 'CONFLICTO') {
       this.toast.warning(
-        'La configuración cambió en otro dispositivo. Revisa el mensaje y vuelve a intentarlo.',
+        'La configuración cambió en otro dispositivo. Se ha recargado el estado actual.',
       );
-      this.cdr.markForCheck();
+      // Desechamos el borrador/versiones obsoletos antes de volver a mostrar
+      // el asistente; un reintento no puede repetir el mismo 409.
+      this.revisandoPreferencias = false;
+      this.preferenciasWizard = null;
+      this.nivelBorrador = null;
+      this.abrirWizardEnNivel = false;
+      void this.cargar();
       return;
     }
     this.editando = false;
     this.revisandoPreferencias = false;
+    this.store?.dispatch(UserActions.loadUser());
     this.toast.success('Tu planificación se ha activado correctamente');
     void this.cargar();
   }
@@ -259,5 +293,8 @@ export class PlanificacionAlumnoComponent implements OnInit {
   cancelarEdicion(): void {
     this.editando = false;
     this.revisandoPreferencias = false;
+    this.preferenciasWizard = null;
+    this.nivelBorrador = null;
+    this.abrirWizardEnNivel = false;
   }
 }

@@ -1,10 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
+import { PlanificacionPreferenciasComponent } from '../../shared/planificacion-preferencias/planificacion-preferencias.component';
 import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { ConfiguracionPlanificacion } from '../models/autoasignacion.model';
@@ -23,23 +25,7 @@ const configuracion: ConfiguracionPlanificacion = {
     Oposicion.MADRID,
   ],
   configuracionActiva: null,
-  estadoTest: null,
-};
-
-const cuestionario = {
-  // Valor deliberadamente ajeno a la versión real: el Front consume el
-  // contrato del backend y no debe mantener una copia local del cuestionario.
-  version: 42,
-  preguntas: Array.from({ length: 5 }, (_, indice) => ({
-    id: `nivel-${indice + 1}`,
-    texto: `Pregunta ${indice + 1}`,
-    opciones: [
-      { valor: 0, etiqueta: 'Opción 0' },
-      { valor: 1, etiqueta: 'Opción 1' },
-      { valor: 2, etiqueta: 'Opción 2' },
-      { valor: 3, etiqueta: 'Opción 3' },
-    ],
-  })),
+  ultimaRecomendacion: null,
 };
 
 describe('PlanificacionConfiguracionWizardComponent', () => {
@@ -54,11 +40,8 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
         {
           provide: AutoasignacionService,
           useValue: {
-            getCuestionarioNivel$: jest.fn(() => of(cuestionario)),
-            recomendarNivel$: jest.fn(() =>
-              of({ evaluacionId: 8, nivelRecomendado: 'AVANZADO' }),
-            ),
-            aceptarEvaluacionNivel$: jest.fn(),
+            getCuestionarioNivel$: jest.fn(),
+            recomendarNivel$: jest.fn(),
             guardarConfiguracion$: jest.fn(() => of(configuracion)),
           },
         },
@@ -79,17 +62,36 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
       PlanificacionConfiguracionWizardComponent,
     );
     component = fixture.componentInstance;
-    component.configuracion = {
-      ...configuracion,
-      preferenciasPrecargadas: { ...configuracion.preferenciasPrecargadas },
-      estadoTest: null,
-    };
+    component.configuracion = configuracion;
     fixture.detectChanges();
   });
 
   it('precarga las preferencias desde preferenciasPrecargadas', () => {
     expect(component.preferencias.oposicion).toBe('ALICANTE_CPBA');
     expect(component.preferencias.franja).toBe('FRANJA_CUATRO_A_SEIS_HORAS');
+  });
+
+  it('limita preferencias a las combinaciones publicadas desde el primer paso', () => {
+    const preferencias = fixture.debugElement.query(
+      By.directive(PlanificacionPreferenciasComponent),
+    ).componentInstance as PlanificacionPreferenciasComponent;
+
+    expect(preferencias.mostrarNivel).toBe(true);
+
+    component.activeStep.set(1);
+    fixture.detectChanges();
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(texto).toContain('Hacer test de recomendación de nivel');
+    expect(fixture.nativeElement.querySelectorAll('#wizardNivel')).toHaveLength(
+      1,
+    );
+  });
+
+  it('abre directamente el paso Nivel al llegar con un borrador completo de ficha', () => {
+    component.abrirEnNivel = true;
+    component.ngOnInit();
+
+    expect(component.activeStep()).toBe(1);
   });
 
   it('no puede continuar sin oposición o franja', () => {
@@ -111,20 +113,52 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(component.puedeContinuarPasoPreferencias).toBe(true);
   });
 
-  it('aplica un test ya aceptado al borrador sin guardar el wizard', () => {
-    const guardar = service.guardarConfiguracion$ as jest.Mock;
-    component.aplicarNivelRecomendado({
-      evaluacionId: 8,
-      completado: true,
-      nivelRecomendado: NivelOposicion.AVANZADO,
-      nivelElegido: NivelOposicion.AVANZADO,
-      versionCuestionario: 42,
-      aceptadaEn: '2026-09-15T12:00:00.000Z',
-    });
+  it('muestra la explicación completa de GCV antes de elegirla, sin checkbox prematuro', () => {
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(texto).toContain(
+      'La planificación General Comunidad Valenciana está diseñada para trabajar de forma global los contenidos comunes a las distintas oposiciones de bombero de la Comunidad Valenciana.',
+    );
+    expect(texto).toContain(
+      'Recuerda cambiar la selección cuando quieras preparar una convocatoria concreta.',
+    );
+    expect(
+      fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
+    ).toBeNull();
+  });
+
+  it('muestra la confirmación únicamente cuando la selección es GENERAL', () => {
+    component.preferencias = {
+      oposicion: Oposicion.GENERAL,
+      nivel: NivelOposicion.INICIACION,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    };
+    component.gcvConfirmado = false;
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
+    ).toBeTruthy();
+
+    component.preferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    };
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
+    ).toBeNull();
+  });
+
+  it('aceptar el test actualiza el mismo borrador sin guardar todavía', () => {
+    component.preferencias.nivel = NivelOposicion.INICIACION;
+
+    component.aplicarNivelRecomendado(NivelOposicion.AVANZADO);
 
     expect(component.preferencias.nivel).toBe(NivelOposicion.AVANZADO);
-    expect(component.configuracion?.estadoTest?.evaluacionId).toBe(8);
-    expect(guardar).not.toHaveBeenCalled();
+    expect(service.guardarConfiguracion$).not.toHaveBeenCalled();
   });
 
   it('guarda la configuración con oposición, nivel, franja y versión', async () => {
@@ -164,9 +198,10 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(component.errorGuardado).toContain('otro dispositivo');
   });
 
-  it('al editar prioriza la variante activa sobre las preferencias de onboarding', () => {
+  it('al editar una configuración ACTIVA prioriza su variante sobre onboarding', () => {
     component.configuracion = {
       ...configuracion,
+      estado: 'ACTIVA',
       preferenciasPrecargadas: {
         oposicion: Oposicion.MADRID,
         nivel: NivelOposicion.INICIACION,
@@ -193,40 +228,6 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
       franja: 'FRANJA_SEIS_A_OCHO_HORAS',
     });
     expect(component.tieneNivelPrecargado).toBe(true);
-  });
-
-  it('sincroniza el nivel aceptado aunque la variante activa tuviera otro', () => {
-    component.configuracion = {
-      ...configuracion,
-      estadoTest: {
-        evaluacionId: 12,
-        completado: true,
-        nivelRecomendado: NivelOposicion.INICIACION,
-        nivelElegido: NivelOposicion.INICIACION,
-        versionCuestionario: 42,
-        aceptadaEn: '2026-09-16T09:00:00.000Z',
-      },
-      configuracionActiva: {
-        variante: {
-          codigo: 'ACTIVA-68',
-          oposicion: Oposicion.ALICANTE_CPBA,
-          nivel: NivelOposicion.AVANZADO,
-          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
-        },
-        version: 4,
-        fechaVigencia: '2026-08-19',
-        origen: 'ALUMNO',
-        planificacionMensual: null,
-      },
-    };
-
-    component.ngOnInit();
-
-    expect(component.preferencias).toEqual({
-      oposicion: Oposicion.ALICANTE_CPBA,
-      nivel: NivelOposicion.INICIACION,
-      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
-    });
   });
 
   it('prioriza las preferencias precargadas explícitas sobre la variante activa', () => {
@@ -334,5 +335,38 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     };
     expect(component.hayConfiguracionAnterior).toBe(true);
     expect(component.configuracionAnterior?.codigo).toBe('CA4-6');
+  });
+
+  it('expone la configuración actual para compararla con la nueva', () => {
+    component.configuracion = {
+      ...configuracion,
+      configuracionActiva: {
+        variante: {
+          codigo: 'PCAI4-6H',
+          oposicion: Oposicion.ALICANTE_CPBA,
+          nivel: NivelOposicion.INICIACION,
+          franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+        },
+        version: 3,
+        fechaVigencia: '2026-08-01',
+        origen: 'ONBOARDING',
+        planificacionMensual: null,
+      },
+    };
+    component.preferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.AVANZADO,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    };
+    component.activeStep.set(2);
+    fixture.detectChanges();
+
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(texto).toContain('Configuración actual');
+    expect(texto).toContain('Nueva configuración');
+    expect(texto).toContain('Consorcio de Alicante');
+    expect(texto).toContain('Comunidad de Madrid');
+    expect(texto).toContain('4-6 horas');
+    expect(texto).toContain('6-8 horas');
   });
 });

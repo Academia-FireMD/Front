@@ -16,7 +16,10 @@ import {
   nivelesDisponibles,
   NivelOposicion,
 } from '../models/pregunta.model';
-import { Oposicion, OPOSICION_LABELS } from '../models/subscription.model';
+import {
+  getPlanificacionOposicionLabel,
+  Oposicion,
+} from '../models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../models/user.model';
 
 /**
@@ -36,7 +39,7 @@ function oposicionOptions(permitidas: Oposicion[]): {
   value: Oposicion;
 }[] {
   return permitidas.map((o) => ({
-    label: OPOSICION_LABELS[o] ?? o,
+    label: getPlanificacionOposicionLabel(o),
     value: o,
   }));
 }
@@ -90,36 +93,56 @@ function oposicionOptions(permitidas: Oposicion[]): {
           </p-floatLabel>
         </div>
 
-        <div class="col-12 md:col-6">
-          <p-floatLabel>
-            <p-dropdown
-              [options]="opcionesNivel"
-              formControlName="nivel"
-              placeholder="Selecciona nivel"
-              class="w-full"
-              [id]="formIdPrefix + 'Nivel'"
-              [style]="{ width: '100%' }"
-              optionLabel="label"
-              optionValue="value"
-            />
-            <label [for]="formIdPrefix + 'Nivel'">Nivel *</label>
-          </p-floatLabel>
-        </div>
+        @if (mostrarNivel) {
+          <div class="col-12 md:col-6">
+            <p-floatLabel>
+              <p-dropdown
+                [options]="opcionesNivel"
+                formControlName="nivel"
+                placeholder="Selecciona nivel"
+                class="w-full"
+                [id]="formIdPrefix + 'Nivel'"
+                [style]="{ width: '100%' }"
+                optionLabel="label"
+                optionValue="value"
+              />
+              <label [for]="formIdPrefix + 'Nivel'">Nivel *</label>
+            </p-floatLabel>
+            @if (permitirTestNivel) {
+              <button
+                type="button"
+                class="p-button-link border-none bg-transparent p-0 mt-2 cursor-pointer"
+                (click)="testNivelSolicitado.emit()"
+              >
+                Hacer test de recomendación de nivel
+              </button>
+            }
+          </div>
+        }
 
         <div class="col-12 md:col-6">
           <p-floatLabel>
             <p-dropdown
               [options]="opcionesFranja"
               formControlName="franja"
-              placeholder="Selecciona duración"
+              placeholder="Selecciona tus horas de estudio"
               class="w-full"
               [id]="formIdPrefix + 'Franja'"
               [style]="{ width: '100%' }"
               optionLabel="label"
               optionValue="value"
             />
-            <label [for]="formIdPrefix + 'Franja'">Franja horaria *</label>
+            <label [for]="formIdPrefix + 'Franja'"
+              >Horas disponibles para el estudio *</label
+            >
           </p-floatLabel>
+          <small
+            class="block text-500 mt-2"
+            [id]="formIdPrefix + 'FranjaAyuda'"
+          >
+            Únicamente horas de estudio, no incluye el tiempo dedicado a la
+            preparación física.
+          </small>
         </div>
       </div>
     </div>
@@ -136,10 +159,15 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
   @Input() franjasPermitidas?: TipoDePlanificacionDeseada[];
   /** Modo multi-select (onboarding, payload Oposicion[]) vs dropdown simple. */
   @Input() multiple = false;
+  /** Oculta el selector para reutilizar oposición y horas en el primer paso. */
+  @Input() mostrarNivel = true;
+  /** Muestra el acceso al test únicamente en superficies de alumno. */
+  @Input() permitirTestNivel = false;
   /** Prefijo para los id de los inputs (evita colisiones si hay varios). */
   @Input() formIdPrefix = 'planificacion-preferencias';
   /** Emite cada cambio de los tres controles (y el valor inicial). */
   @Output() cambios = new EventEmitter<PreferenciasPlanificacion>();
+  @Output() testNivelSolicitado = new EventEmitter<void>();
 
   private fb = new FormBuilder();
 

@@ -77,6 +77,8 @@ export interface ConfiguracionPlanificacion {
   estado: EstadoConfiguracionPlanificacion;
   preferenciasPrecargadas: PreferenciasPrecargadas;
   oposicionesPermitidas: Oposicion[];
+  /** Combinaciones activas que el alumno puede confirmar. */
+  opcionesPermitidas?: OpcionPlanificacionPermitida[];
   configuracionActiva: ConfiguracionActiva | null;
   estadoTest: EstadoTestNivel | null;
 }
@@ -171,6 +173,7 @@ export interface IncidenciaImportacionPlantilla {
   semana?: number;
   dia?: string;
   filaExcel?: number;
+  campo?: string;
   mensaje: string;
 }
 
@@ -180,6 +183,7 @@ export interface SemanaImportacionPlantilla {
   bloques: number;
   entrenamientos: number;
   esqueleto: boolean;
+  estado?: 'creada' | 'actualizada' | 'omitida' | 'error' | 'sobrescritura';
 }
 
 export interface HojaImportacionPlantilla {

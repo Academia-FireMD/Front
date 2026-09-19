@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { PlanificacionAlumnoComponent } from './planificacion-alumno.component';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { ConfiguracionPlanificacion } from '../models/autoasignacion.model';
+import { NivelOposicion } from '../../shared/models/pregunta.model';
 
 /**
  * Regresión (QA staging 2026-08-18): con ChangeDetectionStrategy.OnPush y
@@ -13,7 +14,7 @@ import { ConfiguracionPlanificacion } from '../models/autoasignacion.model';
  */
 describe('PlanificacionAlumnoComponent — render por estado', () => {
   let fixture: ComponentFixture<PlanificacionAlumnoComponent>;
-  let router: { navigate: jest.Mock };
+  let router: { navigate: jest.Mock; getCurrentNavigation: jest.Mock };
 
   const estadoRequiereConfiguracion: ConfiguracionPlanificacion = {
     estado: 'REQUIERE_CONFIGURACION',
@@ -30,8 +31,14 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
   async function montar(
     estado: ConfiguracionPlanificacion,
     gestionar: string | null = null,
+    navigationState: Record<string, unknown> | null = null,
   ) {
-    router = { navigate: jest.fn(() => Promise.resolve(true)) };
+    router = {
+      navigate: jest.fn(() => Promise.resolve(true)),
+      getCurrentNavigation: jest.fn(() =>
+        navigationState ? { extras: { state: navigationState } } : null,
+      ),
+    };
     await TestBed.configureTestingModule({
       imports: [PlanificacionAlumnoComponent],
       providers: [
@@ -244,12 +251,19 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     });
 
     fixture.componentInstance.editando = true;
+    fixture.componentInstance.preferenciasWizard = {
+      ...estadoRequiereConfiguracion.preferenciasPrecargadas,
+      nivel: NivelOposicion.AVANZADO,
+    };
+    fixture.componentInstance.abrirWizardEnNivel = true;
     fixture.detectChanges();
 
     fixture.componentInstance.cancelarEdicion();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.editando).toBe(false);
+    expect(fixture.componentInstance.preferenciasWizard).toBeNull();
+    expect(fixture.componentInstance.abrirWizardEnNivel).toBe(false);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Tu planificación está activa',
     );
@@ -281,6 +295,35 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     expect(fixture.componentInstance.editando).toBe(true);
     expect(html).toContain('Tus preferencias están guardadas');
     expect(html).toContain('app-planificacion-configuracion-wizard');
+  });
+
+  it('transporta el nivel de la ficha como borrador y abre directamente el paso Nivel', async () => {
+    await montar(estadoRequiereConfiguracion, 'preferencias', {
+      desdeFicha: true,
+      nivelBorrador: NivelOposicion.AVANZADO,
+    });
+
+    expect(fixture.componentInstance.preferenciasWizard?.nivel).toBe(
+      NivelOposicion.AVANZADO,
+    );
+    expect(fixture.componentInstance.abrirWizardEnNivel).toBe(true);
+  });
+
+  it('tras recargar descarta el borrador de navegación y recupera el nivel persistido', async () => {
+    const persistida = {
+      ...estadoRequiereConfiguracion,
+      preferenciasPrecargadas: {
+        ...estadoRequiereConfiguracion.preferenciasPrecargadas,
+        nivel: NivelOposicion.INICIACION,
+      },
+    };
+
+    await montar(persistida, 'preferencias', null);
+
+    expect(fixture.componentInstance.preferenciasWizard?.nivel).toBe(
+      NivelOposicion.INICIACION,
+    );
+    expect(fixture.componentInstance.abrirWizardEnNivel).toBe(false);
   });
 
   it('un conflicto del wizard nunca muestra el toast de éxito', async () => {

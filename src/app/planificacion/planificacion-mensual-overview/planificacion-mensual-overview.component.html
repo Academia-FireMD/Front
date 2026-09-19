@@ -105,6 +105,7 @@
         <app-oposicion-picker
           *ngIf="item.relevancia?.length"
           [oposiciones]="item.relevancia"
+          [labelMap]="planificacionOposicionLabels"
           [allowAdd]="false"
         ></app-oposicion-picker>
         <span

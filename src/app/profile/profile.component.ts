@@ -29,6 +29,7 @@ import { ViewportService } from '../services/viewport.service';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
 import {
   getPlanLabel,
+  getPlanificacionOposicionLabel,
   isSubscriptionAccessible,
   Oposicion,
   Suscripcion,
@@ -62,6 +63,7 @@ import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.co
 })
 export class ProfileComponent implements OnInit, OnDestroy {
   readonly getPlanLabel = getPlanLabel;
+  readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
 
   @ViewChild(BajaSuscripcionComponent)
   bajaSuscripcionComponent?: BajaSuscripcionComponent;
@@ -392,8 +394,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
   async onOnboardingUpdated(data: OnboardingData) {
     const preferenciasHanCambiado =
       this.preferenciasPlanificacionHanCambiado(data);
+    const nivelBorrador = data.nivelOposicion ?? null;
+    // El nivel solo se confirma junto con la configuración de planificación.
+    // El resto de la ficha se guarda ahora, conservando intacto el nivel
+    // persistido si el alumno cancela o abandona el asistente.
+    const datosPersistibles = { ...data };
+    delete datosPersistibles.nivelOposicion;
     try {
-      await firstValueFrom(this.userService.updateOnboardingData$(data));
+      await firstValueFrom(
+        this.userService.updateOnboardingData$(datosPersistibles),
+      );
       this.toastService.success('Información actualizada correctamente');
       this.showOnboardingModal = false;
 
@@ -410,6 +420,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           ['/app/planificacion/configuracion-alumno'],
           {
             queryParams: { gestionar: 'preferencias' },
+            state: { desdeFicha: true, nivelBorrador },
           },
         );
       }
@@ -1147,8 +1158,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Genera el tooltip con info de la suscripción
   getSubscriptionTooltip(suscripcion: Suscripcion): string {
-    const nombre =
-      oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion;
+    const nombre = getPlanificacionOposicionLabel(suscripcion.oposicion);
     const plan =
       suscripcion.tipo === 'BASIC'
         ? 'Básico'

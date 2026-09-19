@@ -7,8 +7,8 @@
     <ng-template pTemplate="content" let-nextCallback="nextCallback">
       <h3 class="mt-0 mb-2">Tu planificación</h3>
       <p class="text-600 mb-3">
-        Elige tu oposición, nivel y franja horaria. Se aplicarán a tu
-        planificación de estudio.
+        Elige tu oposición y horas disponibles para el estudio. Se aplicarán a
+        tu planificación de estudio.
       </p>
 
       <app-planificacion-preferencias
@@ -18,28 +18,44 @@
           franja: preferencias.franja,
         }"
         [oposicionesPermitidas]="oposicionesPermitidas"
+        [nivelesPermitidos]="nivelesPermitidos"
+        [franjasPermitidas]="franjasPermitidas"
         [multiple]="false"
+        [mostrarNivel]="true"
         formIdPrefix="wizardPreferencias"
         (cambios)="onPreferenciasChange($event)"
       ></app-planificacion-preferencias>
 
-      @if (requiereConfirmacionGCV) {
-        <div class="mt-3">
-          <p-message
-            severity="warn"
-            text="La planificación general de la Comunidad Valenciana es una planificación común y no está específicamente orientada a tu oposición concreta."
-            styleClass="w-full mb-2"
-          ></p-message>
-          <div class="flex align-items-center gap-2">
-            <p-checkbox
-              [binary]="true"
-              [(ngModel)]="gcvConfirmado"
-              inputId="confirmarGcv"
-            ></p-checkbox>
-            <label for="confirmarGcv">
-              Entiendo y acepto la planificación general
-            </label>
-          </div>
+      @if (generalPermitida) {
+        <div
+          class="planificacion-general-info mt-3 p-3 border-1 border-round surface-100"
+        >
+          <p class="m-0 line-height-3">
+            La planificación General Comunidad Valenciana está diseñada para
+            trabajar de forma global los contenidos comunes a las distintas
+            oposiciones de bombero de la Comunidad Valenciana. Si estás
+            preparando una oposición concreta, te recomendamos seleccionar su
+            planificación específica, ya que estará adaptada a su temario,
+            estructura y necesidades particulares. Puedes elegir la
+            planificación General Comunidad Valenciana si prefieres una
+            preparación más amplia o si todavía no quieres centrarte
+            exclusivamente en una convocatoria concreta. Recuerda cambiar la
+            selección cuando quieras preparar una convocatoria concreta.
+          </p>
+
+          @if (requiereConfirmacionGCV) {
+            <div class="flex align-items-start gap-2 mt-3">
+              <p-checkbox
+                [binary]="true"
+                [(ngModel)]="gcvConfirmado"
+                inputId="confirmarGcv"
+              ></p-checkbox>
+              <label for="confirmarGcv" class="line-height-3">
+                ¿Quieres continuar con la planificación General Comunidad
+                Valenciana?
+              </label>
+            </div>
+          }
         </div>
       }
 
@@ -63,42 +79,54 @@
       let-nextCallback="nextCallback"
     >
       <h3 class="mt-0 mb-2">Nivel de estudio</h3>
-
-      <div class="flex flex-column gap-3">
-        <p>
-          Nivel seleccionado:
-          <strong>{{
-            preferencias.nivel === NivelOposicion.AVANZADO
-              ? "Avanzado"
-              : preferencias.nivel === NivelOposicion.INICIACION
-                ? "Iniciación"
-                : "Sin seleccionar"
-          }}</strong
-          >. Puedes mantenerlo o hacer el test para recibir una recomendación.
-        </p>
-
+      @if (elegirCuestionario()) {
         <app-cuestionario-nivel
-          [estadoTest]="configuracion?.estadoTest ?? null"
-          [nivelActual]="preferencias.nivel"
           (nivelAceptado)="aplicarNivelRecomendado($event)"
+          (cancelado)="elegirCuestionario.set(false)"
         />
+      } @else {
+        <div class="flex flex-column gap-3">
+          <div>
+            <label class="block mb-2 font-medium" for="wizardNivel"
+              >Nivel *</label
+            >
+            <p-dropdown
+              [options]="opcionesNivel"
+              [(ngModel)]="preferencias.nivel"
+              (ngModelChange)="aplicarNivelRecomendado($event)"
+              placeholder="Selecciona nivel"
+              class="w-full"
+              inputId="wizardNivel"
+              [style]="{ width: '100%' }"
+              optionLabel="label"
+              optionValue="value"
+            />
+            <button
+              type="button"
+              class="p-button-link border-none bg-transparent p-0 mt-2 cursor-pointer"
+              (click)="elegirCuestionario.set(true)"
+            >
+              Hacer test de recomendación de nivel
+            </button>
+          </div>
 
-        <div class="flex justify-content-between gap-2 pt-2">
-          <p-button
-            label="Volver"
-            icon="pi pi-arrow-left"
-            styleClass="p-button-text"
-            (click)="prevCallback.emit()"
-          />
-          <p-button
-            label="Continuar con este nivel"
-            icon="pi pi-arrow-right"
-            iconPos="right"
-            [disabled]="!puedeGuardarConfiguracion"
-            (click)="irAPasoConfirmacion(); nextCallback.emit()"
-          />
+          <div class="flex flex-wrap gap-2">
+            <p-button
+              label="Volver"
+              icon="pi pi-arrow-left"
+              styleClass="p-button-text"
+              (click)="prevCallback.emit()"
+            />
+            <p-button
+              label="Continuar"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              [disabled]="!puedeGuardarConfiguracion"
+              (click)="irAPasoConfirmacion(); nextCallback.emit()"
+            />
+          </div>
         </div>
-      </div>
+      }
     </ng-template>
   </p-stepperPanel>
 
@@ -107,28 +135,47 @@
     <ng-template pTemplate="content" let-prevCallback="prevCallback">
       <h3 class="mt-0 mb-2">Confirma tu planificación</h3>
 
-      <div class="p-3 border-1 border-round surface-100 mb-3">
-        <div class="flex justify-content-between mb-2">
-          <span class="text-600">Oposición</span>
-          <strong>{{ preferencias.oposicion }}</strong>
-        </div>
-        <div class="flex justify-content-between mb-2">
-          <span class="text-600">Nivel</span>
-          <strong>{{
-            preferencias.nivel === NivelOposicion.AVANZADO
-              ? "Avanzado"
-              : preferencias.nivel === NivelOposicion.INICIACION
-                ? "Iniciación"
-                : "—"
-          }}</strong>
-        </div>
-        <div class="flex justify-content-between">
-          <span class="text-600">Franja horaria</span>
-          <strong>{{
-            preferencias.franja === "FRANJA_SEIS_A_OCHO_HORAS"
-              ? "6-8 horas"
-              : "4-6 horas"
-          }}</strong>
+      <div class="grid mb-3">
+        @if (configuracionAnterior; as anterior) {
+          <div class="col-12 md:col-6">
+            <div class="h-full p-3 border-1 border-round surface-100">
+              <h4 class="mt-0 mb-3">Configuración actual</h4>
+              <div class="flex justify-content-between gap-3 mb-2">
+                <span class="text-600">Oposición</span>
+                <strong class="text-right">{{
+                  getPlanificacionOposicionLabel(anterior.oposicion)
+                }}</strong>
+              </div>
+              <div class="flex justify-content-between gap-3 mb-2">
+                <span class="text-600">Nivel</span>
+                <strong>{{ getNivelLabel(anterior.nivel) }}</strong>
+              </div>
+              <div class="flex justify-content-between gap-3">
+                <span class="text-600">Horas disponibles para el estudio</span>
+                <strong>{{ getFranjaLabel(anterior.franja) }}</strong>
+              </div>
+            </div>
+          </div>
+        }
+
+        <div [class]="configuracionAnterior ? 'col-12 md:col-6' : 'col-12'">
+          <div class="h-full p-3 border-1 border-round surface-100">
+            <h4 class="mt-0 mb-3">Nueva configuración</h4>
+            <div class="flex justify-content-between gap-3 mb-2">
+              <span class="text-600">Oposición</span>
+              <strong class="text-right">{{
+                getPlanificacionOposicionLabel(preferencias.oposicion)
+              }}</strong>
+            </div>
+            <div class="flex justify-content-between gap-3 mb-2">
+              <span class="text-600">Nivel</span>
+              <strong>{{ getNivelLabel(preferencias.nivel) }}</strong>
+            </div>
+            <div class="flex justify-content-between gap-3">
+              <span class="text-600">Horas disponibles para el estudio</span>
+              <strong>{{ getFranjaLabel(preferencias.franja) }}</strong>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -156,7 +203,7 @@
           (click)="prevCallback.emit()"
         ></p-button>
         <p-button
-          label="Activar planificación"
+          label="Confirmar planificación"
           icon="pi pi-check"
           [loading]="guardando()"
           [disabled]="!puedeGuardarConfiguracion"

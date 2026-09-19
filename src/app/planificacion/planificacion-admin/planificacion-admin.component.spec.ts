@@ -121,7 +121,6 @@ describe('PlanificacionAdminComponent', () => {
 
   it('crea una variante nueva con el payload correcto', async () => {
     component.varianteForm.patchValue({
-      codigo: 'GA4-6',
       oposicion: Oposicion.GENERAL,
       nivel: NivelOposicion.AVANZADO,
       franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
@@ -131,13 +130,130 @@ describe('PlanificacionAdminComponent', () => {
     await component.guardarVariante();
 
     expect(service.crearVariante$).toHaveBeenCalledWith({
-      codigo: 'GA4-6',
+      codigo: 'PGCVA4-6H',
       oposicion: Oposicion.GENERAL,
       nivel: NivelOposicion.AVANZADO,
       franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
       planificacionMensualId: null,
       activa: true,
     });
+  });
+
+  it.each([
+    [
+      Oposicion.GENERAL,
+      NivelOposicion.INICIACION,
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+      'PGCVI4-6H',
+    ],
+    [
+      Oposicion.GENERAL,
+      NivelOposicion.INICIACION,
+      'FRANJA_SEIS_A_OCHO_HORAS',
+      'PGCVI6-8H',
+    ],
+    [
+      Oposicion.GENERAL,
+      NivelOposicion.AVANZADO,
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+      'PGCVA4-6H',
+    ],
+    [
+      Oposicion.GENERAL,
+      NivelOposicion.AVANZADO,
+      'FRANJA_SEIS_A_OCHO_HORAS',
+      'PGCVA6-8H',
+    ],
+    [
+      Oposicion.ALICANTE_CPBA,
+      NivelOposicion.INICIACION,
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+      'PCAI4-6H',
+    ],
+    [
+      Oposicion.ALICANTE_CPBA,
+      NivelOposicion.INICIACION,
+      'FRANJA_SEIS_A_OCHO_HORAS',
+      'PCAI6-8H',
+    ],
+    [
+      Oposicion.ALICANTE_CPBA,
+      NivelOposicion.AVANZADO,
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+      'PCAA4-6H',
+    ],
+    [
+      Oposicion.ALICANTE_CPBA,
+      NivelOposicion.AVANZADO,
+      'FRANJA_SEIS_A_OCHO_HORAS',
+      'PCAA6-8H',
+    ],
+    [
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      NivelOposicion.INICIACION,
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+      'PAVI4-6H',
+    ],
+    [
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      NivelOposicion.INICIACION,
+      'FRANJA_SEIS_A_OCHO_HORAS',
+      'PAVI6-8H',
+    ],
+    [
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      NivelOposicion.AVANZADO,
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+      'PAVA4-6H',
+    ],
+    [
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      NivelOposicion.AVANZADO,
+      'FRANJA_SEIS_A_OCHO_HORAS',
+      'PAVA6-8H',
+    ],
+    [
+      Oposicion.MADRID,
+      NivelOposicion.INICIACION,
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+      'PCMI4-6H',
+    ],
+    [
+      Oposicion.MADRID,
+      NivelOposicion.INICIACION,
+      'FRANJA_SEIS_A_OCHO_HORAS',
+      'PCMI6-8H',
+    ],
+    [
+      Oposicion.MADRID,
+      NivelOposicion.AVANZADO,
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+      'PCMA4-6H',
+    ],
+    [
+      Oposicion.MADRID,
+      NivelOposicion.AVANZADO,
+      'FRANJA_SEIS_A_OCHO_HORAS',
+      'PCMA6-8H',
+    ],
+  ])(
+    'calcula el código canónico %s/%s/%s',
+    (oposicion, nivel, franja, codigo) => {
+      component.nuevaVariante();
+      component.varianteForm.patchValue({ oposicion, nivel, franja });
+
+      expect(component.varianteForm.controls.codigo.value).toBe(codigo);
+    },
+  );
+
+  it('muestra el código calculado como solo lectura en el formulario de alta', () => {
+    const input = fixture.nativeElement.querySelector(
+      '#variante-codigo',
+    ) as HTMLInputElement;
+
+    expect(input).toBeTruthy();
+    expect(input.readOnly).toBe(true);
+    expect(component.varianteForm.controls.codigo.enabled).toBe(true);
   });
 
   it('actualiza una variante existente con su id', async () => {

@@ -31,6 +31,67 @@ describe('PlanificacionPreferenciasComponent', () => {
     );
   });
 
+  it('no muestra el acceso al test por defecto', () => {
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Hacer test de recomendación de nivel',
+    );
+  });
+
+  it('permite habilitar el acceso al test solo en una superficie de alumno', () => {
+    const emitSpy = jest.spyOn(component.testNivelSolicitado, 'emit');
+    component.permitirTestNivel = true;
+    fixture.detectChanges();
+
+    const boton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ).find((element: Element) =>
+      element.textContent?.includes('Hacer test de recomendación de nivel'),
+    ) as HTMLButtonElement;
+
+    expect(boton).toBeTruthy();
+    boton.click();
+    expect(emitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('puede ocultar por completo el selector de nivel', () => {
+    component.mostrarNivel = false;
+    component.permitirTestNivel = true;
+    fixture.detectChanges();
+
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(texto).not.toContain('Nivel *');
+    expect(texto).not.toContain('Hacer test de recomendación de nivel');
+  });
+
+  it('muestra la etiqueta y la aclaración de horas de estudio', () => {
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(texto).toContain('Horas disponibles para el estudio *');
+    expect(texto).toContain(
+      'Únicamente horas de estudio, no incluye el tiempo dedicado a la preparación física.',
+    );
+  });
+
+  it('usa los nombres de oposición del contexto de planificación', () => {
+    expect(component.opcionesOposicion).toEqual(
+      expect.arrayContaining([
+        {
+          label: 'General Comunidad Valenciana',
+          value: Oposicion.GENERAL,
+        },
+        {
+          label: 'Consorcio de Alicante',
+          value: Oposicion.ALICANTE_CPBA,
+        },
+        {
+          label: 'Ayuntamiento de Valencia',
+          value: Oposicion.VALENCIA_AYUNTAMIENTO,
+        },
+        { label: 'Comunidad de Madrid', value: Oposicion.MADRID },
+      ]),
+    );
+  });
+
   it('precarga los valores iniciales', () => {
     component.valoresIniciales = {
       oposicion: Oposicion.VALENCIA_AYUNTAMIENTO,

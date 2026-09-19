@@ -42,6 +42,8 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
   @Input() oposiciones: Array<Oposicion> = [];
   @Input() allowAdd = false;
   @Input() multiple = true;
+  /** Etiquetas opcionales por contexto; por defecto conserva el copy histórico. */
+  @Input() labelMap?: Partial<Record<Oposicion, string>>;
   // La firma pública NO cambia: siempre se emite Oposicion[] reales (nunca el grupo sintético).
   @Output() updateSelection = new EventEmitter<Oposicion[]>();
 
@@ -109,23 +111,32 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
       );
       this.listboxValue = [parent, ...memberOpts];
     } else {
-      this.listboxValue = this.selected.map((op) => this.toIndividualOption(op));
+      this.listboxValue = this.selected.map((op) =>
+        this.toIndividualOption(op),
+      );
     }
 
     // displayItems = badges RESUMEN. Usa la MISMA lógica de colapso compartida
     // (colapsarOposiciones) que las tarjetas/overviews → consistencia garantizada:
     // Valencia + Alicante se muestran como un solo badge "Comunidad Valenciana".
-    this.displayItems = colapsarOposiciones(this.selected);
+    this.displayItems = colapsarOposiciones(this.selected, {
+      labels: this.labelMap,
+    });
   }
 
   /** ¿Está seleccionado solo el comodín GENERAL ("todas las oposiciones")? */
   private esWildcardActivo(): boolean {
-    return this.selected.length === 1 && this.selected[0] === OPOSICION_WILDCARD;
+    return (
+      this.selected.length === 1 && this.selected[0] === OPOSICION_WILDCARD
+    );
   }
 
   private nodoToOption(n: NodoOposicion): PickerOption {
     return {
-      label: n.label,
+      label:
+        n.tipo === 'GRUPO'
+          ? n.label
+          : (this.labelMap?.[n.code as Oposicion] ?? n.label),
       code: n.code,
       icon: n.icon,
       image: n.image,
@@ -240,7 +251,7 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
 
   private toIndividualOption(op: Oposicion): PickerOption {
     return {
-      label: this.map[op]?.name || op,
+      label: this.labelMap?.[op] ?? this.map[op]?.name ?? op,
       code: op,
       icon: this.map[op]?.icon || '📋',
       image: this.map[op]?.image || null,

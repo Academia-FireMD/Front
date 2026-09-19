@@ -13,29 +13,21 @@ import { OnboardingFormComponent } from './onboarding-form.component';
 describe('OnboardingFormComponent (regresión tras extraer preferencias)', () => {
   let component: OnboardingFormComponent;
   let fixture: ComponentFixture<OnboardingFormComponent>;
-  let autoasignacion: { getConfiguracion$: jest.Mock };
 
   beforeEach(async () => {
-    autoasignacion = {
-      getConfiguracion$: jest.fn(() =>
-        of({
-          estado: 'REQUIERE_CONFIGURACION',
-          preferenciasPrecargadas: {
-            oposicion: null,
-            nivel: null,
-            franja: null,
-          },
-          oposicionesPermitidas: [],
-          configuracionActiva: null,
-          estadoTest: null,
-        }),
-      ),
-    };
     await TestBed.configureTestingModule({
       imports: [OnboardingFormComponent, PlanificacionPreferenciasComponent],
       providers: [
         provideNoopAnimations(),
-        { provide: AutoasignacionService, useValue: autoasignacion },
+        {
+          provide: AutoasignacionService,
+          useValue: {
+            getCuestionarioNivel$: jest.fn(() =>
+              of({ version: 1, preguntas: [] }),
+            ),
+            recomendarNivel$: jest.fn(),
+          },
+        },
         {
           provide: ToastrService,
           useValue: { error: jest.fn(), warning: jest.fn() },
@@ -47,109 +39,6 @@ describe('OnboardingFormComponent (regresión tras extraer preferencias)', () =>
     fixture = TestBed.createComponent(OnboardingFormComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-  });
-
-  it('no muestra ni consulta el test cuando el feature flag está apagado', () => {
-    fixture.detectChanges();
-
-    expect(
-      fixture.nativeElement.querySelector(
-        '[data-testid="onboarding-test-nivel"]',
-      ),
-    ).toBeNull();
-    expect(autoasignacion.getConfiguracion$).not.toHaveBeenCalled();
-  });
-
-  it('con el flag activo recupera estadoTest y sincroniza su nivel sobre la configuración activa', () => {
-    const estadoTest = {
-      evaluacionId: 8,
-      completado: true,
-      nivelRecomendado: NivelOposicion.AVANZADO,
-      nivelElegido: NivelOposicion.INICIACION,
-      versionCuestionario: 42,
-      aceptadaEn: '2026-09-15T12:00:00.000Z',
-    };
-    autoasignacion.getConfiguracion$.mockReturnValueOnce(
-      of({
-        estado: 'ACTIVA',
-        preferenciasPrecargadas: {
-          oposicion: Oposicion.MADRID,
-          nivel: NivelOposicion.INICIACION,
-          franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
-        },
-        oposicionesPermitidas: [Oposicion.MADRID],
-        estadoTest,
-        configuracionActiva: {
-          variante: {
-            codigo: 'MADRID-A-68',
-            oposicion: Oposicion.MADRID,
-            nivel: NivelOposicion.AVANZADO,
-            franja: 'FRANJA_SEIS_A_OCHO_HORAS',
-          },
-          version: 2,
-          fechaVigencia: '2026-09-15',
-          origen: 'ALUMNO',
-          planificacionMensual: null,
-        },
-      }),
-    );
-    component.permitirTestNivel = true;
-    component.ngOnChanges();
-    fixture.detectChanges();
-
-    expect(autoasignacion.getConfiguracion$).toHaveBeenCalled();
-    expect(component.estadoTest).toEqual(estadoTest);
-    expect(component.formGroup.value).toEqual(
-      expect.objectContaining({
-        tipoOposicion: [Oposicion.MADRID],
-        nivelOposicion: NivelOposicion.INICIACION,
-        tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS',
-      }),
-    );
-    expect(
-      fixture.nativeElement.querySelector(
-        '[data-testid="onboarding-test-nivel"]',
-      ),
-    ).toBeTruthy();
-  });
-
-  it('sin configuración activa conserva los demás campos y precarga el nivel aceptado', () => {
-    component.formGroup.patchValue({
-      tipoOposicion: [Oposicion.ALICANTE_CPBA],
-      nivelOposicion: NivelOposicion.AVANZADO,
-      tipoDePlanificacionDuracionDeseada: 'FRANJA_CUATRO_A_SEIS_HORAS',
-    });
-    autoasignacion.getConfiguracion$.mockReturnValueOnce(
-      of({
-        estado: 'REQUIERE_CONFIGURACION',
-        preferenciasPrecargadas: {
-          oposicion: Oposicion.ALICANTE_CPBA,
-          nivel: NivelOposicion.AVANZADO,
-          franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
-        },
-        oposicionesPermitidas: [Oposicion.ALICANTE_CPBA],
-        configuracionActiva: null,
-        estadoTest: {
-          evaluacionId: 9,
-          completado: true,
-          nivelRecomendado: NivelOposicion.INICIACION,
-          nivelElegido: NivelOposicion.INICIACION,
-          versionCuestionario: 42,
-          aceptadaEn: '2026-09-16T09:00:00.000Z',
-        },
-      }),
-    );
-
-    component.permitirTestNivel = true;
-    component.ngOnChanges();
-
-    expect(component.formGroup.value).toEqual(
-      expect.objectContaining({
-        tipoOposicion: [Oposicion.ALICANTE_CPBA],
-        nivelOposicion: NivelOposicion.INICIACION,
-        tipoDePlanificacionDuracionDeseada: 'FRANJA_CUATRO_A_SEIS_HORAS',
-      }),
-    );
   });
 
   it('should create', () => {
@@ -199,5 +88,19 @@ describe('OnboardingFormComponent (regresión tras extraer preferencias)', () =>
     expect(component.formGroup.value.tipoDePlanificacionDuracionDeseada).toBe(
       'FRANJA_CUATRO_A_SEIS_HORAS',
     );
+  });
+
+  it('aplica la recomendación al borrador de la ficha sin enviar el formulario', () => {
+    const submitSpy = jest.spyOn(component.dataSubmitted, 'emit');
+
+    component.aplicarNivelRecomendado(NivelOposicion.AVANZADO);
+
+    expect(component.formGroup.value.nivelOposicion).toBe(
+      NivelOposicion.AVANZADO,
+    );
+    expect(component.valoresInicialesPreferencias.nivel).toBe(
+      NivelOposicion.AVANZADO,
+    );
+    expect(submitSpy).not.toHaveBeenCalled();
   });
 });

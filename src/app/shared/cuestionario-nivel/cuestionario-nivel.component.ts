@@ -6,7 +6,6 @@ import {
   Component,
   EventEmitter,
   inject,
-  Input,
   OnInit,
   Output,
   signal,
@@ -17,16 +16,14 @@ import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { firstValueFrom } from 'rxjs';
-import type {
-  EstadoTestNivel,
-  RecomendacionNivel,
-} from '../../planificacion/models/autoasignacion.model';
+import type { RecomendacionNivel } from '../../planificacion/models/autoasignacion.model';
 import { AutoasignacionService } from '../../planificacion/services/autoasignacion.service';
 import { NivelOposicion } from '../models/pregunta.model';
 
 /**
- * Launcher y cuestionario reutilizable. Calcular es reversible y no altera el
- * estado completado; solo `aceptarEvaluacionNivel` persiste y emite el nivel.
+ * Cuestionario reutilizable de recomendación de nivel.
+ * Calcula una recomendación y solo emite el nivel cuando el alumno la acepta;
+ * no persiste preferencias ni conoce el formulario que lo aloja.
  */
 @Component({
   selector: 'app-cuestionario-nivel',
@@ -40,37 +37,17 @@ import { NivelOposicion } from '../models/pregunta.model';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="flex flex-column gap-3" data-testid="cuestionario-nivel">
-      @if (!abierto()) {
-        @if (estadoTest) {
-          <p-message
-            severity="success"
-            [text]="
-              'Test completado. Elegiste el nivel ' +
-              getNivelLabel(estadoTest.nivelElegido) +
-              '.'
-            "
-            styleClass="w-full"
-          />
-        }
-        <p-button
-          [label]="estadoTest ? 'Repetir test de nivel' : 'Hacer test de nivel'"
-          icon="pi pi-magic"
-          styleClass="p-button-outlined"
-          data-testid="abrir-test-nivel"
-          (click)="abrir()"
-        />
-      } @else if (cargando()) {
+    <div class="flex flex-column gap-3" data-testid="cuestionario-nivel">
+      @if (cargando()) {
         <p-message
           severity="info"
           text="Cargando cuestionario…"
           styleClass="w-full"
         />
       } @else {
-        <p class="m-0">
+        <p>
           Responde {{ preguntas.length }} preguntas sobre tu experiencia con el
-          temario. El resultado no cambiará tu planificación hasta que lo
-          aceptes y confirmes el asistente.
+          temario:
         </p>
 
         @for (
@@ -107,83 +84,63 @@ import { NivelOposicion } from '../models/pregunta.model';
             </div>
           </div>
         }
-
-        @if (error) {
-          <p-message severity="warn" [text]="error" styleClass="w-full" />
-        }
-
-        @if (recomendacion) {
-          <p-message
-            severity="success"
-            [text]="
-              'Te recomendamos el nivel ' +
-              getNivelLabel(recomendacion.nivelRecomendado) +
-              '.'
-            "
-            styleClass="w-full"
-          />
-          <div class="flex flex-wrap gap-2">
-            <p-button
-              label="Aceptar recomendación"
-              icon="pi pi-check"
-              [loading]="aceptando()"
-              data-testid="aceptar-test-nivel"
-              (click)="aceptarRecomendacion()"
-            />
-            @if (
-              nivelActual && nivelActual !== recomendacion.nivelRecomendado
-            ) {
-              <p-button
-                [label]="'Mantener nivel ' + getNivelLabel(nivelActual)"
-                styleClass="p-button-secondary"
-                [disabled]="aceptando()"
-                data-testid="mantener-nivel-test"
-                (click)="aceptarNivel(nivelActual)"
-              />
-            }
-            <p-button
-              label="Volver a responder"
-              styleClass="p-button-text"
-              [disabled]="aceptando()"
-              (click)="reiniciar()"
-            />
-          </div>
-        } @else {
-          <div class="flex flex-wrap gap-2">
-            <p-button
-              label="Obtener recomendación"
-              icon="pi pi-magic"
-              [loading]="enviando()"
-              [disabled]="preguntas.length === 0"
-              (click)="obtenerRecomendacion()"
-            />
-            <p-button
-              label="Cancelar"
-              styleClass="p-button-text"
-              data-testid="cancelar-test-nivel"
-              (click)="cancelar()"
-            />
-          </div>
-        }
       }
-    </section>
+
+      @if (error) {
+        <p-message severity="warn" [text]="error" styleClass="w-full" />
+      }
+
+      @if (recomendacion) {
+        <p-message
+          severity="success"
+          [text]="
+            'Te recomendamos el nivel ' +
+            getNivelLabel(recomendacion.nivelRecomendado) +
+            '.'
+          "
+          styleClass="w-full"
+        />
+        <div class="flex flex-wrap gap-2">
+          <p-button
+            label="Aceptar recomendación"
+            icon="pi pi-check"
+            (click)="aceptarRecomendacion()"
+          />
+          <p-button
+            label="Volver a elegir nivel"
+            styleClass="p-button-text"
+            (click)="reiniciar()"
+          />
+        </div>
+      } @else {
+        <div class="flex flex-wrap gap-2">
+          <p-button
+            label="Obtener recomendación"
+            icon="pi pi-magic"
+            [loading]="enviando()"
+            [disabled]="cargando() || preguntas.length === 0"
+            (click)="obtenerRecomendacion()"
+          />
+          <p-button
+            label="Cancelar"
+            styleClass="p-button-text"
+            (click)="cancelado.emit()"
+          />
+        </div>
+      }
+    </div>
   `,
 })
 export class CuestionarioNivelComponent implements OnInit {
-  @Input() estadoTest: EstadoTestNivel | null = null;
-  @Input() nivelActual: NivelOposicion | null = null;
-  @Input() abiertoInicialmente = false;
-  @Output() nivelAceptado = new EventEmitter<EstadoTestNivel>();
+  @Output() nivelAceptado = new EventEmitter<NivelOposicion>();
   @Output() cancelado = new EventEmitter<void>();
 
   private readonly autoasignacionService = inject(AutoasignacionService);
   private readonly toast = inject(ToastrService);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  readonly abierto = signal(false);
-  readonly cargando = signal(false);
+  readonly cargando = signal(true);
   readonly enviando = signal(false);
-  readonly aceptando = signal(false);
   preguntas: Array<{
     id: string;
     texto: string;
@@ -195,20 +152,7 @@ export class CuestionarioNivelComponent implements OnInit {
   error: string | null = null;
 
   ngOnInit(): void {
-    if (this.abiertoInicialmente) this.abrir();
-  }
-
-  abrir(): void {
-    this.abierto.set(true);
     this.cargarCuestionario();
-  }
-
-  cancelar(): void {
-    this.abierto.set(false);
-    this.recomendacion = null;
-    this.respuestas = [];
-    this.error = null;
-    this.cancelado.emit();
   }
 
   onRespuestaChange(indice: number, respuesta: number | string | null): void {
@@ -257,31 +201,9 @@ export class CuestionarioNivelComponent implements OnInit {
     }
   }
 
-  async aceptarRecomendacion(): Promise<void> {
-    if (!this.recomendacion) return;
-    await this.aceptarNivel(this.recomendacion.nivelRecomendado);
-  }
-
-  async aceptarNivel(nivelElegido: NivelOposicion): Promise<void> {
-    if (!this.recomendacion) return;
-    this.aceptando.set(true);
-    try {
-      const estado = await firstValueFrom(
-        this.autoasignacionService.aceptarEvaluacionNivel$(
-          this.recomendacion.evaluacionId,
-          nivelElegido,
-        ),
-      );
-      this.estadoTest = estado;
-      this.abierto.set(false);
-      this.recomendacion = null;
-      this.nivelAceptado.emit(estado);
-    } catch {
-      this.error = 'No se pudo guardar tu elección. Inténtalo de nuevo.';
-      this.toast.error(this.error);
-    } finally {
-      this.aceptando.set(false);
-      this.cdr.markForCheck();
+  aceptarRecomendacion(): void {
+    if (this.recomendacion) {
+      this.nivelAceptado.emit(this.recomendacion.nivelRecomendado);
     }
   }
 

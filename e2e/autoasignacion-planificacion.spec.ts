@@ -23,14 +23,14 @@ const configuracionActiva = {
   configuracionActiva: {
     variante: {
       id: 11,
-      codigo: 'GA4-6',
+      codigo: 'PGCVA4-6H',
       oposicion: 'GENERAL',
       nivel: 'AVANZADO',
       franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
     },
     planificacionMensual: {
       id: 321,
-      identificador: 'AGOSTO-GA4-6',
+      identificador: 'AGOSTO-PGCVA4-6H',
       mes: 8,
       ano: 2026,
     },
@@ -38,7 +38,7 @@ const configuracionActiva = {
     fechaVigencia: '2026-08-20T00:00:00.000Z',
     origen: 'ALUMNO',
   },
-  estadoTest: null,
+  ultimaRecomendacion: null,
 };
 
 const configuracionInicial = {
@@ -50,7 +50,7 @@ const configuracionInicial = {
   },
   oposicionesPermitidas: ['MADRID'],
   configuracionActiva: null,
-  estadoTest: null,
+  ultimaRecomendacion: null,
 };
 
 const cuestionarioNivel = {
@@ -113,7 +113,7 @@ test('shell activo enlaza directamente al plan mensual canónico', async ({
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ id: 321, identificador: 'AGOSTO-GA4-6' }),
+        body: JSON.stringify({ id: 321, identificador: 'AGOSTO-PGCVA4-6H' }),
       }),
   );
 
@@ -153,7 +153,7 @@ test('shell pendiente de publicación no obliga a repetir preferencias', async (
     page.getByRole('heading', { name: 'Tu planificación', exact: true }),
   ).toBeVisible();
   await expect(page.locator('#wizardPreferenciasOposicion')).toContainText(
-    'General',
+    'General Comunidad Valenciana',
   );
   await expect(page.locator('#wizardPreferenciasFranja')).toContainText(
     '4-6 Horas',
@@ -164,7 +164,7 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  let configuracionGuardada = false;
+  let lecturasConfiguracion = 0;
   await page.route('**/planificaciones/configuracion', (route) => {
     if (route.request().method() === 'PUT') {
       expect(route.request().postDataJSON()).toEqual({
@@ -173,18 +173,20 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
         franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
         version: 0,
       });
-      configuracionGuardada = true;
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(configuracionActiva),
       });
     }
+    lecturasConfiguracion++;
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(
-        configuracionGuardada ? configuracionActiva : configuracionInicial,
+        lecturasConfiguracion === 1
+          ? configuracionInicial
+          : configuracionActiva,
       ),
     });
   });
@@ -197,37 +199,16 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ evaluacionId: 81, nivelRecomendado: 'AVANZADO' }),
+      body: JSON.stringify({ puntuacion: 12, nivelRecomendado: 'AVANZADO' }),
     });
   });
-  await page.route(
-    '**/planificaciones/evaluaciones-nivel/81/aceptar',
-    (route) => {
-      expect(route.request().method()).toBe('POST');
-      expect(route.request().postDataJSON()).toEqual({
-        nivelElegido: 'AVANZADO',
-      });
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          evaluacionId: 81,
-          completado: true,
-          nivelRecomendado: 'AVANZADO',
-          nivelElegido: 'AVANZADO',
-          versionCuestionario: 42,
-          aceptadaEn: '2026-09-15T12:00:00.000Z',
-        }),
-      });
-    },
-  );
   await page.route(
     '**/planificaciones/planificaciones-mensuales/321',
     (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ id: 321, identificador: 'AGOSTO-GA4-6' }),
+        body: JSON.stringify({ id: 321, identificador: 'AGOSTO-PGCVA4-6H' }),
       }),
   );
 
@@ -236,7 +217,11 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
 
   const oposicion = page.locator('#wizardPreferenciasOposicion');
   await oposicion.click();
-  await page.locator('.p-dropdown-panel').last().getByText('Madrid').click();
+  await page
+    .locator('.p-dropdown-panel')
+    .last()
+    .getByText('Comunidad de Madrid', { exact: true })
+    .click();
   const franja = page.locator('#wizardPreferenciasFranja');
   await franja.click();
   await page.locator('.p-dropdown-panel').last().getByText('4-6 horas').click();
@@ -266,7 +251,9 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
 
   // El cuestionario no tiene defaults: responde las cinco preguntas con
   // opciones reales antes de pedir la recomendación.
-  await page.getByRole('button', { name: 'Hacer test de nivel' }).click();
+  await page
+    .getByRole('button', { name: 'Hacer test de recomendación de nivel' })
+    .click();
   const respuestas = page.locator('.p-radiobutton-box');
   for (let pregunta = 0; pregunta < 5; pregunta++) {
     await respuestas.nth(pregunta * 4 + 2).click();
@@ -278,10 +265,13 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
     });
   }
   await page.getByRole('button', { name: 'Obtener recomendación' }).click();
+  await expect(
+    page.getByText('Te recomendamos el nivel Avanzado.'),
+  ).toBeVisible();
+  await expect(page.getByText(/puntuación/i)).toHaveCount(0);
   await page.getByRole('button', { name: 'Aceptar recomendación' }).click();
-  await expect(page.getByText('Test completado')).toBeVisible();
-  await page.getByRole('button', { name: 'Continuar con este nivel' }).click();
-  await page.getByRole('button', { name: 'Activar planificación' }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await page.getByRole('button', { name: 'Confirmar planificación' }).click();
 
   await expect(page).toHaveURL(/planificacion-mensual-alumno\/321$/);
 });

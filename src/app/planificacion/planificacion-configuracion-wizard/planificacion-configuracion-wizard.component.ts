@@ -15,21 +15,29 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DropdownModule } from 'primeng/dropdown';
-import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { StepperModule } from 'primeng/stepper';
 import { firstValueFrom } from 'rxjs';
-import { NivelOposicion } from '../../shared/models/pregunta.model';
-import { Oposicion } from '../../shared/models/subscription.model';
-import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
-import { PlanificacionPreferenciasComponent } from '../../shared/planificacion-preferencias/planificacion-preferencias.component';
 import { CuestionarioNivelComponent } from '../../shared/cuestionario-nivel/cuestionario-nivel.component';
 import {
+  nivelesDisponibles,
+  NivelOposicion,
+} from '../../shared/models/pregunta.model';
+import {
+  getPlanificacionOposicionLabel,
+  Oposicion,
+} from '../../shared/models/subscription.model';
+import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
+import { PlanificacionPreferenciasComponent } from '../../shared/planificacion-preferencias/planificacion-preferencias.component';
+import {
   ConfiguracionPlanificacion,
-  EstadoTestNivel,
   GuardarConfiguracionDTO,
   PreferenciasPrecargadas,
 } from '../models/autoasignacion.model';
+import {
+  normalizarPreferenciasPlanificacion,
+  obtenerOpcionesCascadaPlanificacion,
+} from '../planificacion-opciones.util';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 
 export type ResultadoConfiguracion = 'EXITO' | 'CONFLICTO';
@@ -43,7 +51,6 @@ export type ResultadoConfiguracion = 'EXITO' | 'CONFLICTO';
     ButtonModule,
     CheckboxModule,
     DropdownModule,
-    InputTextModule,
     MessageModule,
     StepperModule,
     PlanificacionPreferenciasComponent,
@@ -62,13 +69,17 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
    * la informa y conserva la prioridad de la configuración activa.
    */
   @Input() preferenciasPrecargadas: PreferenciasPrecargadas | null = null;
+  @Input() abrirEnNivel = false;
   @Output() configurada = new EventEmitter<ResultadoConfiguracion>();
   @Output() cancelado = new EventEmitter<void>();
 
   private readonly autoasignacionService = inject(AutoasignacionService);
   private readonly cdr = inject(ChangeDetectorRef);
+
   readonly Oposicion = Oposicion;
   readonly NivelOposicion = NivelOposicion;
+  readonly opcionesNivelBase = nivelesDisponibles;
+  readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
 
   /** Paso actual del stepper (0-based). */
   activeStep = signal(0);
@@ -82,12 +93,45 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   gcvConfirmado = false;
 
   // Paso 2: nivel
+  elegirCuestionario = signal(false);
+
   // Paso 3: confirmación
   guardando = signal(false);
   errorGuardado: string | null = null;
 
   get oposicionesPermitidas(): Oposicion[] {
-    return this.configuracion?.oposicionesPermitidas ?? [];
+    const desdeVariantes = this.opcionesCascada.oposiciones;
+    return desdeVariantes.length > 0
+      ? desdeVariantes
+      : (this.configuracion?.oposicionesPermitidas ?? []);
+  }
+
+  get opcionesCascada() {
+    return obtenerOpcionesCascadaPlanificacion(
+      this.configuracion?.opcionesPermitidas ?? [],
+      this.preferencias as PreferenciasPrecargadas,
+    );
+  }
+
+  get nivelesPermitidos(): NivelOposicion[] {
+    return this.opcionesCascada.niveles;
+  }
+
+  get franjasPermitidas(): TipoDePlanificacionDeseada[] {
+    return this.opcionesCascada.franjas;
+  }
+
+  get opcionesNivel() {
+    const permitidos = this.nivelesPermitidos;
+    return permitidos.length === 0
+      ? []
+      : this.opcionesNivelBase.filter((opcion) =>
+          permitidos.includes(opcion.value as NivelOposicion),
+        );
+  }
+
+  get generalPermitida(): boolean {
+    return this.oposicionesPermitidas.includes(Oposicion.GENERAL);
   }
 
   get requiereConfirmacionGCV(): boolean {
@@ -106,11 +150,15 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   /** El backend no aplica valores por defecto: los tres campos son obligatorios. */
   get puedeGuardarConfiguracion(): boolean {
+    const opciones = this.configuracion?.opcionesPermitidas ?? [];
+    const combinacionPublicada =
+      opciones.length === 0 || this.opcionesCascada.seleccionada !== null;
     return Boolean(
       this.preferencias.oposicion &&
       this.preferencias.nivel &&
       this.preferencias.franja &&
-      (!this.requiereConfirmacionGCV || this.gcvConfirmado),
+      (!this.requiereConfirmacionGCV || this.gcvConfirmado) &&
+        combinacionPublicada,
     );
   }
 
@@ -126,10 +174,22 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     return this.configuracion?.configuracionActiva?.variante;
   }
 
+  getNivelLabel(nivel: NivelOposicion | string | null | undefined): string {
+    if (nivel === NivelOposicion.AVANZADO) return 'Avanzado';
+    if (nivel === NivelOposicion.INICIACION) return 'Iniciación';
+    return '—';
+  }
+
+  getFranjaLabel(franja: string | null | undefined): string {
+    if (franja === 'FRANJA_SEIS_A_OCHO_HORAS') return '6-8 horas';
+    if (franja === 'FRANJA_CUATRO_A_SEIS_HORAS') return '4-6 horas';
+    return '—';
+  }
+
   ngOnInit(): void {
-    // La variante activa conserva oposición y franja al editar. El nivel del
-    // último test aceptado se comparte entre accesos, pero el plan solo cambia
-    // cuando se confirma y guarda el wizard.
+    // Al editar, la variante activa es la fuente de verdad. Las preferencias
+    // de onboarding solo sirven para la primera configuración o cuando todavía
+    // no existe una variante activa.
     const prefs = this.fuentePreferencias();
     if (prefs) {
       this.preferencias = {
@@ -139,6 +199,9 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       };
       this.gcvConfirmado = prefs.oposicion !== Oposicion.GENERAL;
     }
+    if (this.abrirEnNivel && this.puedeContinuarPasoPreferencias) {
+      this.activeStep.set(1);
+    }
   }
 
   onPreferenciasChange(prefs: {
@@ -146,9 +209,13 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     nivel: string | null;
     franja: string | null;
   }): void {
-    this.preferencias.oposicion = (prefs.oposicion as Oposicion) ?? null;
-    this.preferencias.nivel = (prefs.nivel as NivelOposicion) ?? null;
-    this.preferencias.franja = prefs.franja;
+    this.preferencias = this.normalizarPreferencias(
+      {
+        oposicion: (prefs.oposicion as Oposicion) ?? null,
+        nivel: prefs.nivel as NivelOposicion | null,
+        franja: prefs.franja as TipoDePlanificacionDeseada | null,
+      },
+    );
     this.gcvConfirmado = this.preferencias.oposicion !== Oposicion.GENERAL;
   }
 
@@ -174,18 +241,18 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     this.activeStep.set(2);
   }
 
-  aplicarNivelRecomendado(estado: EstadoTestNivel): void {
-    // Aceptar persiste el test, pero no guarda el wizard. El plan solo cambia
-    // tras la confirmación expresa del último paso.
-    this.preferencias.nivel = estado.nivelElegido;
-    if (this.configuracion) this.configuracion.estadoTest = estado;
-    this.cdr.markForCheck();
+  aplicarNivelRecomendado(nivel: NivelOposicion): void {
+    this.preferencias.nivel = nivel;
+    this.preferencias = this.normalizarPreferencias(
+      this.preferencias as PreferenciasPrecargadas,
+    );
+    this.elegirCuestionario.set(false);
   }
 
   async guardarConfiguracion(): Promise<void> {
     if (!this.puedeGuardarConfiguracion) {
       this.errorGuardado =
-        'Selecciona oposición, nivel y franja horaria antes de guardar.';
+        'Selecciona oposición, nivel y horas disponibles para el estudio antes de guardar.';
       return;
     }
     this.guardando.set(true);
@@ -231,19 +298,21 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   private fuentePreferencias(): PreferenciasPrecargadas | null {
-    const base =
-      this.preferenciasPrecargadas ??
-      this.configuracion?.configuracionActiva?.variante ??
-      this.configuracion?.preferenciasPrecargadas ??
-      null;
-    const nivelAceptado = this.configuracion?.estadoTest?.nivelElegido ?? null;
+    if (this.preferenciasPrecargadas !== null) {
+      return this.preferenciasPrecargadas;
+    }
+    const activa = this.configuracion?.configuracionActiva?.variante;
+    return this.configuracion?.estado === 'ACTIVA' && activa
+      ? activa
+      : (this.configuracion?.preferenciasPrecargadas ?? null);
+  }
 
-    if (!base && !nivelAceptado) return null;
-
-    return {
-      oposicion: base?.oposicion ?? null,
-      nivel: nivelAceptado ?? base?.nivel ?? null,
-      franja: base?.franja ?? null,
-    };
+  private normalizarPreferencias(
+    preferencias: PreferenciasPrecargadas,
+  ): PreferenciasPrecargadas {
+    const opciones = this.configuracion?.opcionesPermitidas ?? [];
+    return opciones.length > 0
+      ? normalizarPreferenciasPlanificacion(opciones, preferencias)
+      : preferencias;
   }
 }

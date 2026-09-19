@@ -20,6 +20,43 @@
 .right {
   justify-content: end;
 }
+
+.gestionar-preferencias {
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .left,
+  .right {
+    width: 100%;
+  }
+
+  .right {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .gestionar-preferencias {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .right {
+    align-items: stretch;
+  }
+
+  .gestionar-preferencias {
+    width: 100%;
+    margin-left: 0;
+  }
+}
 :host ::ng-deep {
   app-generic-list {
     .shared-grid {

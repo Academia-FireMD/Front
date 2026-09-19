@@ -125,6 +125,11 @@
     gap: 0.35rem;
   }
 
+  .week-list, .issue-list {
+    max-height: 16rem;
+    overflow-y: auto;
+  }
+
   .issue-list__error {
     color: var(--red-700);
   }

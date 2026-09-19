@@ -214,4 +214,30 @@ describe('OposicionPickerComponent', () => {
     expect(emit).toHaveBeenLastCalledWith([MAD]);
     expect(component.grupoActivo).toBe(false);
   });
+
+  it('aplica las etiquetas del contexto sin cambiar los valores emitidos', () => {
+    component.multiple = false;
+    component.labelMap = {
+      [Oposicion.GENERAL]: 'General Comunidad Valenciana',
+      [Oposicion.ALICANTE_CPBA]: 'Consorcio de Alicante',
+      [Oposicion.VALENCIA_AYUNTAMIENTO]: 'Ayuntamiento de Valencia',
+      [Oposicion.MADRID]: 'Comunidad de Madrid',
+    };
+    load([
+      Oposicion.GENERAL,
+      Oposicion.ALICANTE_CPBA,
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      Oposicion.MADRID,
+    ]);
+
+    expect(component.listboxOptions.map((option) => option.label)).toEqual([
+      'General Comunidad Valenciana',
+      'Ayuntamiento de Valencia',
+      'Consorcio de Alicante',
+      'Comunidad de Madrid',
+    ]);
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    component.onSelectionChange(component.listboxOptions[2]);
+    expect(emit).toHaveBeenLastCalledWith([Oposicion.ALICANTE_CPBA]);
+  });
 });

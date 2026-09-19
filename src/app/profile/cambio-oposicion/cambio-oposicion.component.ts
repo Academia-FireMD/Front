@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { SuscripcionesService } from '../../services/suscripciones.service';
-import { getPlanLabel, Oposicion } from '../../shared/models/subscription.model';
+import { getPlanLabel, getPlanificacionOposicionLabel, Oposicion } from '../../shared/models/subscription.model';
 import { AppState } from '../../store/app.state';
 import * as UserActions from '../../store/user/user.actions';
 import { oposiciones } from '../../utils/consts';
@@ -115,11 +115,10 @@ export class CambioOposicionComponent implements OnInit {
   }
 
   getOposicionNombre(oposicion: Oposicion): string {
-    return this.oposiciones[oposicion]?.name || oposicion;
+    return getPlanificacionOposicionLabel(oposicion);
   }
 
   getOposicionImagen(oposicion: Oposicion): string {
     return this.oposiciones[oposicion]?.image || '';
   }
 }
-

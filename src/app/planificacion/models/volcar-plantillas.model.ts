@@ -15,6 +15,7 @@ export interface VolcarPlantillasResultado {
   creados: number;
   actualizados: number;
   omitidos: number;
+  eliminados?: number;
   error?: string;
 }
 

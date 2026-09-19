@@ -29,8 +29,9 @@ import { Router } from '@angular/router';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import {
+  getPlanificacionOposicionLabel,
+  getPlanificacionVarianteCodigo,
   Oposicion,
-  OPOSICION_LABELS,
 } from '../../shared/models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import type { PlanificacionMensual } from '../../shared/models/planificacion.model';
@@ -74,14 +75,14 @@ export class PlanificacionAdminComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly NivelOposicion = NivelOposicion;
-  readonly OPOSICION_LABELS = OPOSICION_LABELS;
+  readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
 
   labelOposicion(op: Oposicion | string | null | undefined): string {
-    return OPOSICION_LABELS[op as Oposicion] ?? (op as string) ?? '';
+    return getPlanificacionOposicionLabel(op);
   }
 
   oposicionOptions = Object.values(Oposicion).map((o) => ({
-    label: OPOSICION_LABELS[o] ?? o,
+    label: getPlanificacionOposicionLabel(o),
     value: o,
   }));
   nivelOptions = [
@@ -131,9 +132,11 @@ export class PlanificacionAdminComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.varianteForm.valueChanges.subscribe(() =>
-      this.limpiarPlanificacionIncompatible(),
-    );
+    this.varianteForm.valueChanges.subscribe(() => {
+      this.actualizarCodigoCanonico();
+      this.limpiarPlanificacionIncompatible();
+    });
+    this.actualizarCodigoCanonico();
     this.cargarTodo();
   }
 
@@ -199,6 +202,7 @@ export class PlanificacionAdminComponent implements OnInit {
       planificacionMensualId: null,
       activa: true,
     });
+    this.actualizarCodigoCanonico();
   }
 
   async guardarVariante(): Promise<void> {
@@ -206,6 +210,7 @@ export class PlanificacionAdminComponent implements OnInit {
       this.toast.error('Revisa los campos de la variante');
       return;
     }
+    this.actualizarCodigoCanonico();
     const v = this.varianteForm.getRawValue();
     if (this.esPlanSeleccionadoBorrador) {
       this.toast.error(
@@ -244,6 +249,25 @@ export class PlanificacionAdminComponent implements OnInit {
     }
   }
 
+  /**
+   * La identidad de una variante nueva siempre deriva de sus tres
+   * dimensiones. En edición el servidor conserva la identidad histórica y el
+   * control ya está deshabilitado, por lo que no se recalcula.
+   */
+  private actualizarCodigoCanonico(): void {
+    if (this.varianteForm.controls.id.value !== null) return;
+
+    const codigo = getPlanificacionVarianteCodigo(
+      this.varianteForm.controls.oposicion.value,
+      this.varianteForm.controls.nivel.value,
+      this.varianteForm.controls.franja.value,
+    );
+    const control = this.varianteForm.controls.codigo;
+    if (control.value !== codigo) {
+      control.setValue(codigo, { emitEvent: false });
+    }
+  }
+
   publicarPlanSeleccionado(): void {
     const varianteId = this.varianteForm.controls.id.value;
     const planificacion = this.planSeleccionado;
@@ -256,7 +280,7 @@ export class PlanificacionAdminComponent implements OnInit {
     this.confirmationService.confirm({
       header: 'Publicar planificación',
       message:
-        'Se validará estudio y física, se publicará la release y se asignará a la variante. Los alumnos actuales conservarán su release anterior.',
+        'Se validarán estudio y física y se publicará la planificación. Los alumnos actuales recibirán esta versión, conservando el progreso de las actividades que continúan, sus eventos personales y el historial anterior.',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Publicar y asignar',
       rejectLabel: 'Cancelar',
@@ -271,9 +295,9 @@ export class PlanificacionAdminComponent implements OnInit {
           this.toast.success('Planificación publicada y asignada');
           this.nuevaVariante();
           await this.cargarTodo();
-        } catch {
+        } catch (error) {
           this.toast.error(
-            'No se pudo publicar. Revisa la cobertura de estudio y física.',
+            this.mensajeErrorImportacion(error, 'No se pudo publicar. Revisa la cobertura de estudio y física.'),
           );
         }
       },

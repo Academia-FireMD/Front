@@ -14,8 +14,8 @@ import {
 import {
   getPlanCssClass,
   getPlanLabel,
+  getPlanificacionOposicionLabel,
   Oposicion,
-  OPOSICION_LABELS,
 } from '../../shared/models/subscription.model';
 
 /** Opción del dropdown de oposición (valor + etiqueta legible). */
@@ -75,7 +75,7 @@ export class AnadirPlanComponent {
   get oposicionesDisponibles(): OposicionOption[] {
     return (Object.values(Oposicion) as Oposicion[])
       .filter((op) => !this.oposicionesContratadas.includes(op))
-      .map((op) => ({ value: op, label: OPOSICION_LABELS[op] }));
+      .map((op) => ({ value: op, label: getPlanificacionOposicionLabel(op) }));
   }
 
   /** Planes encontrados pero sin ninguno utilizable (lista vacía tras cargar). */

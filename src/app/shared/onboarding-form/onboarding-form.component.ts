@@ -32,15 +32,10 @@ import {
 import { Oposicion } from '../models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../models/user.model';
 import {
-  EstadoTestNivel,
-  ConfiguracionPlanificacion,
-} from '../../planificacion/models/autoasignacion.model';
-import { AutoasignacionService } from '../../planificacion/services/autoasignacion.service';
-import { CuestionarioNivelComponent } from '../cuestionario-nivel/cuestionario-nivel.component';
-import {
   PlanificacionPreferenciasComponent,
   PreferenciasPlanificacion,
 } from '../planificacion-preferencias/planificacion-preferencias.component';
+import { CuestionarioNivelComponent } from '../cuestionario-nivel/cuestionario-nivel.component';
 
 export interface OnboardingData {
   // Datos personales
@@ -129,14 +124,12 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
   @Input() isOptional = true;
   @Input() showTitle = true;
   @Input() showSkipButton = true;
-  /** El contenedor decide el feature flag. El formulario no conoce AppConfig. */
-  @Input() permitirTestNivel = false;
+  @Input() permitirTestNivel = true;
   @Output() dataSubmitted = new EventEmitter<OnboardingData>();
   @Output() skipped = new EventEmitter<void>();
   public today = new Date();
 
   private fb = inject(FormBuilder);
-  private autoasignacionService = inject(AutoasignacionService);
 
   formGroup!: FormGroup;
 
@@ -148,17 +141,11 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
 
   niveles = nivelesDisponibles;
 
-  estadoTest: EstadoTestNivel | null = null;
-  private configuracionTestCargada = false;
-
-  get nivelActualTest(): NivelOposicion | null {
-    return (this.formGroup?.value.nivelOposicion as NivelOposicion) ?? null;
-  }
+  mostrarCuestionarioNivel = false;
 
   ngOnInit() {
     this.initializeForm();
     this.actualizarValoresInicialesPreferencias();
-    this.cargarEstadoTest();
   }
 
   ngOnChanges() {
@@ -166,7 +153,6 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
       this.initializeForm();
       this.actualizarValoresInicialesPreferencias();
     }
-    if (this.formGroup) this.cargarEstadoTest();
   }
 
   /** Valores iniciales para el subcomponente compartido de preferencias.
@@ -202,57 +188,17 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
     });
   }
 
-  aplicarNivelRecomendado(estado: EstadoTestNivel): void {
-    this.estadoTest = estado;
-    this.formGroup.patchValue({ nivelOposicion: estado.nivelElegido });
-    this.valoresInicialesPreferencias = {
-      ...this.valoresInicialesPreferencias,
-      nivel: estado.nivelElegido,
-    };
+  abrirCuestionarioNivel(): void {
+    this.mostrarCuestionarioNivel = true;
   }
 
-  private cargarEstadoTest(): void {
-    if (!this.permitirTestNivel || this.configuracionTestCargada) return;
-    this.configuracionTestCargada = true;
-    this.autoasignacionService.getConfiguracion$().subscribe({
-      next: (configuracion: ConfiguracionPlanificacion) => {
-        this.estadoTest = configuracion.estadoTest;
-        const activa = configuracion.configuracionActiva?.variante;
-        const nivelAceptado = configuracion.estadoTest?.nivelElegido ?? null;
-        if (!activa && !nivelAceptado) return;
-
-        // La configuración activa conserva oposición y franja. El último
-        // test aceptado es la fuente compartida del nivel mostrado; guardar el
-        // perfil o el wizard sigue siendo necesario para cambiar el plan.
-        const oposicion = activa
-          ? [activa.oposicion]
-          : (this.formGroup.value.tipoOposicion ?? []);
-        const nivel =
-          nivelAceptado ??
-          activa?.nivel ??
-          this.formGroup.value.nivelOposicion ??
-          null;
-        const franja =
-          activa?.franja ??
-          this.formGroup.value.tipoDePlanificacionDuracionDeseada ??
-          null;
-        this.valoresInicialesPreferencias = {
-          oposicion,
-          nivel,
-          franja,
-        };
-        this.formGroup.patchValue({
-          tipoOposicion: oposicion,
-          nivelOposicion: nivel,
-          tipoDePlanificacionDuracionDeseada: franja,
-        });
-      },
-      error: () => {
-        // El perfil continúa operativo. El backend volverá a validar al
-        // calcular/aceptar y el gate de servidor sigue siendo autoritativo.
-        this.configuracionTestCargada = false;
-      },
-    });
+  aplicarNivelRecomendado(nivel: NivelOposicion): void {
+    this.formGroup.patchValue({ nivelOposicion: nivel });
+    this.valoresInicialesPreferencias = {
+      ...this.valoresInicialesPreferencias,
+      nivel,
+    };
+    this.mostrarCuestionarioNivel = false;
   }
 
   private initializeForm() {

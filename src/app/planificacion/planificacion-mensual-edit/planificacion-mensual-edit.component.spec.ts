@@ -265,7 +265,7 @@ describe('PlanificacionMensualEditComponent', () => {
         preview: false,
       });
       expect(successSpy).toHaveBeenCalledWith(
-        'Plantilla aplicada: 2 creados, 1 actualizados, 1 omitidos.',
+        'Plantilla aplicada: 2 creados, 1 actualizados, 1 omitidos, 0 eliminados.',
       );
       expect(loadSpy).toHaveBeenCalled();
       expect(component.isDialogVisible).toBe(false);
@@ -432,7 +432,7 @@ describe('PlanificacionMensualEditComponent', () => {
         dryRun: false,
       });
       expect(successSpy).toHaveBeenCalledWith(
-        'Variante volcada: 3 creados, 1 actualizados, 1 omitidos en 1 plantillas.',
+        'Variante volcada: 3 creados, 1 actualizados, 1 omitidos, 0 eliminados en 1 plantillas.',
       );
       expect(loadSpy).toHaveBeenCalled();
       expect(loadSpy).toHaveBeenCalledWith('2026-08-03');

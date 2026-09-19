@@ -21,8 +21,8 @@ import {
 import {
   getPlanCssClass,
   getPlanLabel,
+  getPlanificacionOposicionLabel,
   Oposicion,
-  OPOSICION_LABELS,
   Suscripcion,
 } from '../../shared/models/subscription.model';
 import { oposiciones } from '../../utils/consts';
@@ -153,13 +153,15 @@ export class GestionarPlanComponent implements OnInit {
 
     return disponibles.map((op) => ({
       value: op,
-      label: OPOSICION_LABELS[op],
+      label: getPlanificacionOposicionLabel(op),
     }));
   }
 
   /** Etiqueta legible de la oposición de la suscripción (contexto en modo cambiar). */
   get oposicionLabel(): string {
-    return this.suscripcion ? OPOSICION_LABELS[this.suscripcion.oposicion] : '';
+    return this.suscripcion
+      ? getPlanificacionOposicionLabel(this.suscripcion.oposicion)
+      : '';
   }
 
   /** true si la oposición elegida difiere de la de la sub → es un cambio de oposición. */
@@ -175,7 +177,7 @@ export class GestionarPlanComponent implements OnInit {
   /** Etiqueta de la oposición destino actualmente seleccionada. */
   get oposicionDestinoLabel(): string {
     return this.oposicionSeleccionada
-      ? OPOSICION_LABELS[this.oposicionSeleccionada]
+      ? getPlanificacionOposicionLabel(this.oposicionSeleccionada)
       : '';
   }
 

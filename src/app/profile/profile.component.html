@@ -263,12 +263,16 @@
                 <div class="subscription-header">
                   <img
                     [src]="oposiciones[suscripcion.oposicion]?.image"
-                    [alt]="oposiciones[suscripcion.oposicion]?.name"
+                    [alt]="
+                      getPlanificacionOposicionLabel(suscripcion.oposicion)
+                    "
                     class="subscription-logo"
                   />
                   <div class="subscription-title">
                     <span class="oposicion-name">
-                      {{ oposiciones[suscripcion.oposicion]?.name }}
+                      {{
+                        getPlanificacionOposicionLabel(suscripcion.oposicion)
+                      }}
                     </span>
                     <span
                       class="plan-badge"

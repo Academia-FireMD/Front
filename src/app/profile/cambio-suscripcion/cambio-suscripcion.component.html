@@ -41,7 +41,9 @@
             <span class="banner-text">
               Tu cambio a
               <strong>{{ getTipoBadge(programado.tipoNuevo) }}</strong>
-              (<strong>{{ programado.oposicionNueva }}</strong
+              (<strong>{{
+                getOposicionLabel(programado.oposicionNueva)
+              }}</strong
               >) está programado para el
               <strong>{{
                 programado.fechaProgramada | date: "dd/MM/yyyy"
@@ -124,7 +126,9 @@
             <span class="banner-text">
               Tu cambio a
               <strong>{{ getTipoBadge(programado.tipoNuevo) }}</strong>
-              (<strong>{{ programado.oposicionNueva }}</strong
+              (<strong>{{
+                getOposicionLabel(programado.oposicionNueva)
+              }}</strong
               >) está programado para el
               <strong>{{
                 programado.fechaProgramada | date: "dd/MM/yyyy"
@@ -565,7 +569,7 @@
         <p class="conf-aviso">
           ¿Seguro que quieres cancelar tu cambio programado a
           <strong>{{ getTipoBadge(programado.tipoNuevo) }}</strong>
-          (<strong>{{ programado.oposicionNueva }}</strong
+          (<strong>{{ getOposicionLabel(programado.oposicionNueva) }}</strong
           >)?
         </p>
         <p class="conf-fecha">
