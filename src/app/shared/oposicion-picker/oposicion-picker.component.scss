@@ -63,6 +63,16 @@
   border-radius: 4px;
 }
 
+:host ::ng-deep .oposicion-field-dropdown.p-dropdown {
+  min-height: 44px;
+  width: 100%;
+}
+
+:host ::ng-deep .oposicion-field-dropdown .p-dropdown-label {
+  align-items: center;
+  display: flex;
+}
+
 // Árbol del dropdown en dos niveles bajo el comodín GENERAL:
 //   nivel 0 (raíz "Todas las oposiciones") · nivel 1 (comunidades: Madrid, CV) ·
 //   nivel 2 (provincias: Valencia, Alicante, indentadas bajo su comunidad).

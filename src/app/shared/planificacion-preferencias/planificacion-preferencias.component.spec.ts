@@ -73,6 +73,24 @@ describe('PlanificacionPreferenciasComponent', () => {
     );
   });
 
+  it('alinea oposición y horas con etiquetas superiores y dropdowns estándar', () => {
+    component.mostrarNivel = false;
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const labels = Array.from(
+      element.querySelectorAll('.planificacion-field > label'),
+    );
+    const dropdowns = element.querySelectorAll('p-dropdown');
+
+    expect(labels.map((label) => label.textContent?.trim())).toEqual([
+      'Oposición *',
+      'Horas disponibles para el estudio *',
+    ]);
+    expect(dropdowns).toHaveLength(2);
+    expect(element.querySelector('p-floatlabel')).toBeNull();
+  });
+
   it('usa los nombres de oposición del contexto de planificación', () => {
     expect(component.planificacionLabelMap[Oposicion.GENERAL]).toBe(
       'General Comunidad Valenciana',

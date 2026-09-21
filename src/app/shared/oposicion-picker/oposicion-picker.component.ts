@@ -15,6 +15,7 @@ import {
   NG_VALUE_ACCESSOR,
 } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { DropdownModule } from 'primeng/dropdown';
 import { ListboxModule } from 'primeng/listbox';
 import { OverlayPanel, OverlayPanelModule } from 'primeng/overlaypanel';
 import { TooltipModule } from 'primeng/tooltip';
@@ -60,6 +61,7 @@ export interface OposicionPickerOption {
     CommonModule,
     FormsModule,
     ButtonModule,
+    DropdownModule,
     ListboxModule,
     OverlayPanelModule,
     TooltipModule,

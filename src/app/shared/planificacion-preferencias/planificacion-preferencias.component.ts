@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { DropdownModule } from 'primeng/dropdown';
-import { FloatLabelModule } from 'primeng/floatlabel';
 import { ButtonModule } from 'primeng/button';
 import {
   duracionesDisponibles,
@@ -50,14 +49,13 @@ export interface PreferenciasPlanificacion {
     CommonModule,
     ReactiveFormsModule,
     DropdownModule,
-    FloatLabelModule,
     ButtonModule,
     OposicionPickerComponent,
   ],
   template: `
     <div [formGroup]="formGroup">
       <div class="grid">
-        <div class="col-12 md:col-6">
+        <div class="col-12 md:col-6 planificacion-field">
           <label
             class="block font-medium mb-2"
             [for]="formIdPrefix + 'Oposicion'"
@@ -65,6 +63,7 @@ export interface PreferenciasPlanificacion {
             Oposición *
           </label>
           <app-oposicion-picker
+            class="block w-full"
             presentation="field"
             [multiple]="multiple"
             [opciones]="opcionesSelector"
@@ -84,20 +83,24 @@ export interface PreferenciasPlanificacion {
         </div>
 
         @if (mostrarNivel) {
-          <div class="col-12 md:col-6">
-            <p-floatLabel>
-              <p-dropdown
-                [options]="opcionesNivel"
-                formControlName="nivel"
-                placeholder="Selecciona nivel"
-                class="w-full"
-                [id]="formIdPrefix + 'Nivel'"
-                [style]="{ width: '100%' }"
-                optionLabel="label"
-                optionValue="value"
-              />
-              <label [for]="formIdPrefix + 'Nivel'">Nivel *</label>
-            </p-floatLabel>
+          <div class="col-12 md:col-6 planificacion-field">
+            <label
+              class="block font-medium mb-2"
+              [for]="formIdPrefix + 'Nivel'"
+            >
+              Nivel *
+            </label>
+            <p-dropdown
+              [options]="opcionesNivel"
+              formControlName="nivel"
+              placeholder="Selecciona nivel"
+              class="w-full"
+              styleClass="planificacion-dropdown"
+              [inputId]="formIdPrefix + 'Nivel'"
+              [style]="{ width: '100%' }"
+              optionLabel="label"
+              optionValue="value"
+            />
             @if (permitirTestNivel) {
               <p-button
                 type="button"
@@ -111,22 +114,22 @@ export interface PreferenciasPlanificacion {
           </div>
         }
 
-        <div class="col-12 md:col-6">
-          <p-floatLabel>
-            <p-dropdown
-              [options]="opcionesFranja"
-              formControlName="franja"
-              placeholder="Selecciona tus horas de estudio"
-              class="w-full"
-              [id]="formIdPrefix + 'Franja'"
-              [style]="{ width: '100%' }"
-              optionLabel="label"
-              optionValue="value"
-            />
-            <label [for]="formIdPrefix + 'Franja'"
-              >Horas disponibles para el estudio *</label
-            >
-          </p-floatLabel>
+        <div class="col-12 md:col-6 planificacion-field">
+          <label class="block font-medium mb-2" [for]="formIdPrefix + 'Franja'">
+            Horas disponibles para el estudio *
+          </label>
+          <p-dropdown
+            [options]="opcionesFranja"
+            formControlName="franja"
+            placeholder="Selecciona tus horas de estudio"
+            class="w-full"
+            styleClass="planificacion-dropdown"
+            [inputId]="formIdPrefix + 'Franja'"
+            [style]="{ width: '100%' }"
+            optionLabel="label"
+            optionValue="value"
+            [attr.aria-describedby]="formIdPrefix + 'FranjaAyuda'"
+          />
           <small
             class="block text-500 mt-2"
             [id]="formIdPrefix + 'FranjaAyuda'"
@@ -141,6 +144,14 @@ export interface PreferenciasPlanificacion {
   styles: [
     `
       :host ::ng-deep .planificacion-test-button {
+        min-height: 44px;
+      }
+
+      .planificacion-field {
+        min-width: 0;
+      }
+
+      :host ::ng-deep .planificacion-dropdown.p-dropdown {
         min-height: 44px;
       }
 

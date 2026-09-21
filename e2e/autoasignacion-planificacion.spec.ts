@@ -20,9 +20,7 @@ const configuracionActiva = {
     franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
   },
   oposicionesPermitidas: ['GENERAL'],
-  disponibilidadOposiciones: [
-    { oposicion: 'GENERAL', estado: 'DISPONIBLE' },
-  ],
+  disponibilidadOposiciones: [{ oposicion: 'GENERAL', estado: 'DISPONIBLE' }],
   opcionesPermitidas: [
     {
       oposicion: 'GENERAL',
@@ -66,9 +64,7 @@ const configuracionInicial = {
     franja: null,
   },
   oposicionesPermitidas: ['MADRID'],
-  disponibilidadOposiciones: [
-    { oposicion: 'MADRID', estado: 'DISPONIBLE' },
-  ],
+  disponibilidadOposiciones: [{ oposicion: 'MADRID', estado: 'DISPONIBLE' }],
   opcionesPermitidas: [
     {
       oposicion: 'MADRID',
@@ -249,13 +245,27 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   await loginAlumno(page);
   await page.goto('/app/planificacion/configuracion-alumno');
 
-  await page
-    .getByRole('button', { name: 'Selecciona oposición' })
-    .click();
+  const oposicion = page.locator('#wizardPreferenciasOposicion');
+  const franja = page.locator('#wizardPreferenciasFranja');
+  await expect(oposicion).toHaveAttribute('role', 'combobox');
+  const [oposicionBox, franjaBox] = await Promise.all([
+    oposicion.boundingBox(),
+    franja.boundingBox(),
+  ]);
+  expect(oposicionBox).not.toBeNull();
+  expect(franjaBox).not.toBeNull();
+  expect(Math.abs(oposicionBox!.x - franjaBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(oposicionBox!.width - franjaBox!.width)).toBeLessThanOrEqual(
+    1,
+  );
+  expect(
+    Math.abs(oposicionBox!.height - franjaBox!.height),
+  ).toBeLessThanOrEqual(1);
+
+  await oposicion.click();
   await page
     .getByRole('option', { name: 'Comunidad de Madrid', exact: true })
     .click();
-  const franja = page.locator('#wizardPreferenciasFranja');
   await franja.click();
   await page.locator('.p-dropdown-panel').last().getByText('4-6 horas').click();
   await page.getByRole('button', { name: 'Continuar' }).click();
@@ -284,9 +294,7 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
 
   // El cuestionario no tiene defaults: responde las cinco preguntas con
   // opciones reales antes de pedir la recomendación.
-  await page
-    .getByRole('button', { name: 'Hacer test de nivel' })
-    .click();
+  await page.getByRole('button', { name: 'Hacer test de nivel' }).click();
   const respuestas = page.locator('.p-radiobutton-box');
   for (let pregunta = 0; pregunta < 5; pregunta++) {
     await respuestas.nth(pregunta * 4 + 2).click();

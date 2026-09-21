@@ -213,6 +213,16 @@ describe('OposicionPickerComponent', () => {
     expect(component.grupoActivo).toBe(false);
   });
 
+  it('usa el dropdown estándar de PrimeNG en presentación field simple', () => {
+    component.multiple = false;
+    component.presentation = 'field';
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('p-dropdown')).toBeTruthy();
+    expect(element.querySelector('button.oposicion-field')).toBeNull();
+  });
+
   it('aplica las etiquetas del contexto sin cambiar los valores emitidos', () => {
     component.multiple = false;
     component.labelMap = {

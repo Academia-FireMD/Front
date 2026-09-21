@@ -108,7 +108,7 @@ test('admin publica y asigna una release mediante la acción explícita', async 
   await page.getByRole('button', { name: 'Publicar y asignar' }).click();
   const confirmacion = page.getByRole('alertdialog');
   await expect(confirmacion).toContainText(
-    'Los alumnos actuales conservarán su release anterior',
+    'Los alumnos actuales recibirán esta versión, conservando el progreso',
   );
   await confirmacion
     .getByRole('button', { name: 'Publicar y asignar' })
