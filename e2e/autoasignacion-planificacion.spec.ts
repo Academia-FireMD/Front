@@ -265,10 +265,16 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   await oposicion.click();
   await page
     .getByRole('option', { name: 'Comunidad de Madrid', exact: true })
+    .waitFor();
+  await page
+    .getByRole('option', { name: 'Comunidad de Madrid', exact: true })
     .click();
   await franja.click();
   await page.locator('.p-dropdown-panel').last().getByText('4-6 horas').click();
   await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Nivel de estudio' }),
+  ).toBeVisible();
 
   const nav = page.locator('.p-stepper-nav');
   const confirmar = page.locator('.p-stepper-title', { hasText: 'Confirmar' });
@@ -295,6 +301,17 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   // El cuestionario no tiene defaults: responde las cinco preguntas con
   // opciones reales antes de pedir la recomendación.
   await page.getByRole('button', { name: 'Hacer test de nivel' }).click();
+  await expect(page.getByText(/1\. Pregunta dinámica 1/)).toBeVisible();
+  const [cuestionarioBox, obtenerRecomendacionBox] = await Promise.all([
+    page.getByTestId('cuestionario-nivel').boundingBox(),
+    page.getByRole('button', { name: 'Obtener recomendación' }).boundingBox(),
+  ]);
+  expect(cuestionarioBox).not.toBeNull();
+  expect(obtenerRecomendacionBox).not.toBeNull();
+  expect(
+    Math.abs(cuestionarioBox!.width - obtenerRecomendacionBox!.width),
+  ).toBeLessThanOrEqual(1);
+  expect(obtenerRecomendacionBox!.height).toBeGreaterThanOrEqual(44);
   const respuestas = page.locator('.p-radiobutton-box');
   for (let pregunta = 0; pregunta < 5; pregunta++) {
     await respuestas.nth(pregunta * 4 + 2).click();
@@ -312,6 +329,19 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   await expect(page.getByText(/puntuación/i)).toHaveCount(0);
   await page.getByRole('button', { name: 'Aceptar recomendación' }).click();
   await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Confirma tu planificación' }),
+  ).toBeVisible();
+  const [navConfirmacionBox, confirmarActivoBox] = await Promise.all([
+    nav.boundingBox(),
+    confirmar.boundingBox(),
+  ]);
+  expect(navConfirmacionBox).not.toBeNull();
+  expect(confirmarActivoBox).not.toBeNull();
+  expect(confirmarActivoBox!.x).toBeGreaterThanOrEqual(navConfirmacionBox!.x);
+  expect(confirmarActivoBox!.x + confirmarActivoBox!.width).toBeLessThanOrEqual(
+    navConfirmacionBox!.x + navConfirmacionBox!.width + 1,
+  );
   await page.getByRole('button', { name: 'Confirmar planificación' }).click();
 
   await expect(page).toHaveURL(/planificacion-mensual-alumno\/321$/);

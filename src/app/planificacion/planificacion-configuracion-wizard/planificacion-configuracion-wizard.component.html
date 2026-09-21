@@ -128,20 +128,34 @@
             />
           </div>
 
-          <div class="wizard-actions">
-            <p-button
-              label="Volver"
-              icon="pi pi-arrow-left"
-              styleClass="p-button-text"
-              (click)="prevCallback.emit()"
-            />
-            <p-button
-              label="Continuar"
-              icon="pi pi-arrow-right"
-              iconPos="right"
-              [disabled]="!puedeGuardarConfiguracion"
-              (click)="irAPasoConfirmacion(); nextCallback.emit()"
-            />
+          <div
+            class="wizard-actions"
+            [class.wizard-actions--between]="modoEdicion"
+            [class.wizard-actions--end]="!modoEdicion"
+          >
+            @if (modoEdicion) {
+              <p-button
+                label="Cancelar"
+                icon="pi pi-times"
+                styleClass="p-button-text"
+                (click)="cancelar()"
+              />
+            }
+            <div class="wizard-actions__navigation">
+              <p-button
+                label="Volver"
+                icon="pi pi-arrow-left"
+                styleClass="p-button-text"
+                (click)="prevCallback.emit()"
+              />
+              <p-button
+                label="Continuar"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                [disabled]="!puedeGuardarConfiguracion"
+                (click)="irAPasoConfirmacion(); nextCallback.emit()"
+              />
+            </div>
           </div>
         </div>
       }
@@ -215,32 +229,35 @@
         </div>
       }
 
-      <div class="wizard-actions">
-        <p-button
-          label="Volver"
-          icon="pi pi-arrow-left"
-          styleClass="p-button-text"
-          (click)="prevCallback.emit()"
-        ></p-button>
-        <p-button
-          label="Confirmar planificación"
-          icon="pi pi-check"
-          [loading]="guardando()"
-          [disabled]="!puedeGuardarConfiguracion"
-          (click)="guardarConfiguracion()"
-        ></p-button>
+      <div
+        class="wizard-actions"
+        [class.wizard-actions--between]="modoEdicion"
+        [class.wizard-actions--end]="!modoEdicion"
+      >
+        @if (modoEdicion) {
+          <p-button
+            label="Cancelar"
+            icon="pi pi-times"
+            styleClass="p-button-text"
+            (click)="cancelar()"
+          />
+        }
+        <div class="wizard-actions__navigation">
+          <p-button
+            label="Volver"
+            icon="pi pi-arrow-left"
+            styleClass="p-button-text"
+            (click)="prevCallback.emit()"
+          ></p-button>
+          <p-button
+            label="Confirmar planificación"
+            icon="pi pi-check"
+            [loading]="guardando()"
+            [disabled]="!puedeGuardarConfiguracion"
+            (click)="guardarConfiguracion()"
+          ></p-button>
+        </div>
       </div>
     </ng-template>
   </p-stepperPanel>
 </p-stepper>
-
-@if (modoEdicion && activeStep() !== 0) {
-  <div class="wizard-actions mt-3">
-    <p-button
-      label="Cancelar"
-      icon="pi pi-times"
-      styleClass="p-button-text"
-      (click)="cancelar()"
-    ></p-button>
-  </div>
-}

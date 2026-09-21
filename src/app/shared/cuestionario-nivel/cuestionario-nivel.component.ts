@@ -36,14 +36,53 @@ import { NivelOposicion } from '../models/pregunta.model';
     RadioButtonModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    :host {
+      display: block;
+      min-width: 0;
+    }
+
+    .cuestionario-opcion {
+      min-height: 44px;
+      padding-block: 0.25rem;
+    }
+
+    .cuestionario-opcion label {
+      align-self: stretch;
+      display: flex;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .cuestionario-acciones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    @media (max-width: 480px) {
+      .cuestionario-acciones {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      :host ::ng-deep .cuestionario-acciones .p-button {
+        justify-content: center;
+        min-height: 44px;
+        width: 100%;
+      }
+    }
+  `,
   template: `
     <div class="flex flex-column gap-3" data-testid="cuestionario-nivel">
       @if (cargando()) {
-        <p-message
-          severity="info"
-          text="Cargando cuestionario…"
-          styleClass="w-full"
-        />
+        <div role="status" aria-live="polite">
+          <p-message
+            severity="info"
+            text="Cargando cuestionario…"
+            styleClass="w-full"
+          />
+        </div>
       } @else {
         <p>
           Responde {{ preguntas.length }} preguntas sobre tu experiencia con el
@@ -61,7 +100,7 @@ import { NivelOposicion } from '../models/pregunta.model';
             </div>
             <div class="flex flex-column gap-2">
               @for (opcion of pregunta.opciones; track opcion.valor) {
-                <div class="flex align-items-start gap-2">
+                <div class="cuestionario-opcion flex align-items-start gap-2">
                   <p-radioButton
                     [name]="'preguntaNivel' + preguntaIndex"
                     [inputId]="
@@ -86,21 +125,25 @@ import { NivelOposicion } from '../models/pregunta.model';
         }
       }
 
-      @if (error) {
-        <p-message severity="warn" [text]="error" styleClass="w-full" />
-      }
+      <div aria-live="polite">
+        @if (error) {
+          <p-message severity="warn" [text]="error" styleClass="w-full" />
+        }
+      </div>
 
       @if (recomendacion) {
-        <p-message
-          severity="success"
-          [text]="
-            'Te recomendamos el nivel ' +
-            getNivelLabel(recomendacion.nivelRecomendado) +
-            '.'
-          "
-          styleClass="w-full"
-        />
-        <div class="flex flex-wrap gap-2">
+        <div aria-live="polite">
+          <p-message
+            severity="success"
+            [text]="
+              'Te recomendamos el nivel ' +
+              getNivelLabel(recomendacion.nivelRecomendado) +
+              '.'
+            "
+            styleClass="w-full"
+          />
+        </div>
+        <div class="cuestionario-acciones">
           <p-button
             label="Aceptar recomendación"
             icon="pi pi-check"
@@ -113,7 +156,7 @@ import { NivelOposicion } from '../models/pregunta.model';
           />
         </div>
       } @else {
-        <div class="flex flex-wrap gap-2">
+        <div class="cuestionario-acciones">
           <p-button
             label="Obtener recomendación"
             icon="pi pi-magic"

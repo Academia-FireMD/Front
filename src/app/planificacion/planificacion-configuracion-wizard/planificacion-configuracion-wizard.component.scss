@@ -16,17 +16,25 @@
   }
 }
 
+.wizard-actions__navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 :host ::ng-deep .wizard-test-button {
   min-height: 44px;
 }
 
 @media (max-width: 480px) {
   :host ::ng-deep .p-stepper .p-stepper-header {
+    flex: 1 1 0;
     min-width: 0;
     padding: 0.125rem;
   }
 
   :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-action {
+    justify-content: center;
     min-width: 0;
   }
 
@@ -44,6 +52,7 @@
   }
 
   :host ::ng-deep .p-stepper .p-stepper-separator {
+    flex: 0 1 0.75rem;
     margin-inline-start: 0.25rem;
   }
 
@@ -53,12 +62,18 @@
 
   .wizard-actions,
   .wizard-actions--end,
-  .wizard-actions--between {
+  .wizard-actions--between,
+  .wizard-actions__navigation {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .wizard-actions__navigation {
+    width: 100%;
+  }
+
   :host ::ng-deep .wizard-actions .p-button,
+  :host ::ng-deep .wizard-actions__navigation .p-button,
   :host ::ng-deep .wizard-test-button {
     justify-content: center;
     min-height: 44px;

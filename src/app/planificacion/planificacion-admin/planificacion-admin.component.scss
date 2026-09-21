@@ -87,6 +87,11 @@
       white-space: nowrap;
     }
 
+    .p-tabview-nav-prev,
+    .p-tabview-nav-next {
+      min-width: 44px;
+    }
+
     .p-tabview-panels {
       padding-inline: clamp(0.5rem, 2vw, 1.25rem);
     }
