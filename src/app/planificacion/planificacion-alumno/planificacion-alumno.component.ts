@@ -25,6 +25,11 @@ import {
   ResultadoConfiguracion,
 } from '../planificacion-configuracion-wizard/planificacion-configuracion-wizard.component';
 import { EnvironmentBadgeComponent } from '../../shared/environment-badge/environment-badge.component';
+import { getPlanificacionOposicionLabel } from '../../shared/models/subscription.model';
+import {
+  getFranjaPlanificacionLabel,
+  getNivelOposicionLabel,
+} from '../../shared/utils/planificacion-labels.util';
 
 /**
  * Shell de la ruta de Planificación del alumno. Consulta
@@ -151,15 +156,16 @@ import { EnvironmentBadgeComponent } from '../../shared/environment-badge/enviro
           >
             <i class="pi pi-check-circle text-4xl text-green-500"></i>
             <h2 class="m-0">Tu planificación está activa</h2>
-            <p class="text-600 m-0">
-              Variante
-              <strong>{{
-                configuracion?.configuracionActiva?.variante?.codigo
-              }}</strong>
-              ·
-              {{ configuracion?.configuracionActiva?.variante?.nivel }} ·
-              {{ configuracion?.configuracionActiva?.variante?.franja }}
-            </p>
+            @if (
+              configuracion?.configuracionActiva?.variante;
+              as varianteActiva
+            ) {
+              <p class="text-600 m-0">
+                {{ getPlanificacionOposicionLabel(varianteActiva.oposicion) }} ·
+                {{ getNivelOposicionLabel(varianteActiva.nivel) }} ·
+                {{ getFranjaPlanificacionLabel(varianteActiva.franja) }}
+              </p>
+            }
             <div class="flex gap-2 mt-3">
               <button
                 pButton
@@ -208,6 +214,9 @@ export class PlanificacionAlumnoComponent implements OnInit {
   preferenciasWizard: PreferenciasPrecargadas | null = null;
   abrirWizardEnNivel = false;
   private nivelBorrador: NivelOposicion | null = null;
+  readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
+  readonly getNivelOposicionLabel = getNivelOposicionLabel;
+  readonly getFranjaPlanificacionLabel = getFranjaPlanificacionLabel;
 
   get planificacionMensualId(): number | null {
     return (

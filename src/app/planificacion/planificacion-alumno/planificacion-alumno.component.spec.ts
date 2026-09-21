@@ -226,6 +226,37 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     expect(link).toBeTruthy();
   });
 
+  it('ACTIVA muestra etiquetas humanas y oculta identificadores internos al alumno', async () => {
+    await montar({
+      ...estadoRequiereConfiguracion,
+      estado: 'ACTIVA',
+      configuracionActiva: {
+        variante: {
+          codigo: 'AYVI4-6',
+          oposicion: 'VALENCIA_AYUNTAMIENTO' as never,
+          nivel: 'INICIACION' as never,
+          franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as never,
+        },
+        version: 1,
+        fechaVigencia: '2026-08-18T00:00:00.000Z',
+        origen: 'ALUMNO',
+        planificacionMensual: {
+          id: 77,
+          identificador: 'S082026AYVI4-6',
+          mes: 8,
+          ano: 2026,
+        },
+      },
+    });
+
+    const contenido = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(contenido).toContain('Ayuntamiento de Valencia');
+    expect(contenido).toContain('Iniciación');
+    expect(contenido).toContain('4-6 horas');
+    expect(contenido).not.toContain('AYVI4-6');
+    expect(contenido).not.toContain('FRANJA_CUATRO_A_SEIS_HORAS');
+  });
+
   it('ACTIVA no redirige cuando se abre la gestión explícita de preferencias', async () => {
     await montar(
       {
