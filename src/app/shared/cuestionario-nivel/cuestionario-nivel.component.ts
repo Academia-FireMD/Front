@@ -19,6 +19,7 @@ import { firstValueFrom } from 'rxjs';
 import type { RecomendacionNivel } from '../../planificacion/models/autoasignacion.model';
 import { AutoasignacionService } from '../../planificacion/services/autoasignacion.service';
 import { NivelOposicion } from '../models/pregunta.model';
+import { getNivelOposicionLabel } from '../utils/planificacion-labels.util';
 
 /**
  * Cuestionario reutilizable de recomendación de nivel.
@@ -271,7 +272,7 @@ export class CuestionarioNivelComponent implements OnInit {
   }
 
   getNivelLabel(nivel: NivelOposicion): string {
-    return nivel === NivelOposicion.AVANZADO ? 'Avanzado' : 'Iniciación';
+    return getNivelOposicionLabel(nivel);
   }
 
   private cargarCuestionario(mensaje?: string): void {

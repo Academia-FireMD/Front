@@ -41,6 +41,7 @@ import {
   ReglaOposicionAdmin,
   ReconciliacionPlanificaciones,
   ResultadoImportacionPlantillas,
+  SemanaImportacionPlantilla,
   VarianteAdmin,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
@@ -49,6 +50,21 @@ import {
   OposicionPickerOption,
 } from '../../shared/oposicion-picker/oposicion-picker.component';
 import { EnvironmentBadgeComponent } from '../../shared/environment-badge/environment-badge.component';
+import {
+  getFranjaPlanificacionLabel,
+  getNivelOposicionLabel,
+} from '../../shared/utils/planificacion-labels.util';
+
+const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
+  NonNullable<SemanaImportacionPlantilla['estado']>,
+  string
+> = {
+  creada: 'Creada',
+  actualizada: 'Actualizada',
+  omitida: 'Omitida',
+  error: 'Con error',
+  sobrescritura: 'Sobrescrita',
+};
 
 @Component({
   selector: 'app-planificacion-admin',
@@ -84,9 +100,17 @@ export class PlanificacionAdminComponent implements OnInit {
 
   readonly NivelOposicion = NivelOposicion;
   readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
+  readonly getNivelOposicionLabel = getNivelOposicionLabel;
+  readonly getFranjaPlanificacionLabel = getFranjaPlanificacionLabel;
 
   labelOposicion(op: Oposicion | string | null | undefined): string {
     return getPlanificacionOposicionLabel(op);
+  }
+
+  getEstadoSemanaImportacionLabel(
+    estado: SemanaImportacionPlantilla['estado'],
+  ): string {
+    return estado ? ETIQUETAS_ESTADO_SEMANA_IMPORTACION[estado] : 'Creada';
   }
 
   oposicionOptions: OposicionPickerOption[] = Object.values(Oposicion).map(

@@ -35,10 +35,12 @@ import {
   GuardarConfiguracionDTO,
   PreferenciasPrecargadas,
 } from '../models/autoasignacion.model';
-import {
-  obtenerOpcionesCascadaPlanificacion,
-} from '../planificacion-opciones.util';
+import { obtenerOpcionesCascadaPlanificacion } from '../planificacion-opciones.util';
 import { AutoasignacionService } from '../services/autoasignacion.service';
+import {
+  getFranjaPlanificacionLabel,
+  getNivelOposicionLabel,
+} from '../../shared/utils/planificacion-labels.util';
 
 export type ResultadoConfiguracion = 'EXITO' | 'CONFLICTO';
 
@@ -80,6 +82,8 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   readonly NivelOposicion = NivelOposicion;
   readonly opcionesNivelBase = nivelesDisponibles;
   readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
+  readonly getNivelLabel = getNivelOposicionLabel;
+  readonly getFranjaLabel = getFranjaPlanificacionLabel;
 
   /** Paso actual del stepper (0-based). */
   activeStep = signal(0);
@@ -156,9 +160,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     return [
       ...new Set(
         opciones
-          .filter(
-            (opcion) => opcion.oposicion === this.preferencias.oposicion,
-          )
+          .filter((opcion) => opcion.oposicion === this.preferencias.oposicion)
           .map((opcion) => opcion.franja),
       ),
     ];
@@ -215,18 +217,6 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   get configuracionAnterior() {
     return this.configuracion?.configuracionActiva?.variante;
-  }
-
-  getNivelLabel(nivel: NivelOposicion | string | null | undefined): string {
-    if (nivel === NivelOposicion.AVANZADO) return 'Avanzado';
-    if (nivel === NivelOposicion.INICIACION) return 'Iniciación';
-    return '—';
-  }
-
-  getFranjaLabel(franja: string | null | undefined): string {
-    if (franja === 'FRANJA_SEIS_A_OCHO_HORAS') return '6-8 horas';
-    if (franja === 'FRANJA_CUATRO_A_SEIS_HORAS') return '4-6 horas';
-    return '—';
   }
 
   ngOnInit(): void {
@@ -367,9 +357,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     if (opciones.length === 0) return preferencias;
 
     const opcionesOposicion = preferencias.oposicion
-      ? opciones.filter(
-          (opcion) => opcion.oposicion === preferencias.oposicion,
-        )
+      ? opciones.filter((opcion) => opcion.oposicion === preferencias.oposicion)
       : [];
     if (!preferencias.oposicion || opcionesOposicion.length === 0) {
       return { oposicion: null, nivel: null, franja: null };

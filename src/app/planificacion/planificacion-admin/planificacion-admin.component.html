@@ -131,10 +131,8 @@
             <tr>
               <td>{{ v.codigo }}</td>
               <td>{{ labelOposicion(v.oposicion) }}</td>
-              <td>{{ v.nivel }}</td>
-              <td>
-                {{ v.franja === "FRANJA_SEIS_A_OCHO_HORAS" ? "6-8h" : "4-6h" }}
-              </td>
+              <td>{{ getNivelOposicionLabel(v.nivel) }}</td>
+              <td>{{ getFranjaPlanificacionLabel(v.franja) }}</td>
               <td>
                 @if (v.planificacionMensual) {
                   {{ v.planificacionMensual.identificador }}
@@ -392,11 +390,12 @@
               </td>
               <td>
                 @if (hoja.variante; as variante) {
-                  <strong>{{ variante.codigo }}</strong
+                  <strong translate="no">{{ variante.codigo }}</strong
                   ><br />
                   <small>
                     {{ labelOposicion(variante.oposicion) }} ·
-                    {{ variante.nivel }} · {{ variante.franja }}
+                    {{ getNivelOposicionLabel(variante.nivel) }} ·
+                    {{ getFranjaPlanificacionLabel(variante.franja) }}
                   </small>
                 } @else {
                   <span class="text-red-600">Sin resolver</span>
@@ -429,7 +428,7 @@
                       S{{ semana.numero }} ·
                       {{ formatearFechaIso(semana.fechaInicio) }} ·
                       {{ semana.bloques }} bloques ·
-                      {{ semana.estado || "creada" }}
+                      {{ getEstadoSemanaImportacionLabel(semana.estado) }}
                     </span>
                   }
                 </div>
@@ -494,9 +493,10 @@
               </div>
               @if (hoja.variante; as variante) {
                 <small>
-                  {{ variante.codigo }} ·
+                  <span translate="no">{{ variante.codigo }}</span> ·
                   {{ labelOposicion(variante.oposicion) }} ·
-                  {{ variante.nivel }} · {{ variante.franja }}
+                  {{ getNivelOposicionLabel(variante.nivel) }} ·
+                  {{ getFranjaPlanificacionLabel(variante.franja) }}
                 </small>
               }
               <div class="week-list mt-2">
@@ -505,7 +505,7 @@
                     S{{ semana.numero }} ·
                     {{ formatearFechaIso(semana.fechaInicio) }} ·
                     {{ semana.bloques }} bloques ·
-                    {{ semana.estado || "creada" }}
+                    {{ getEstadoSemanaImportacionLabel(semana.estado) }}
                   </span>
                 }
               </div>

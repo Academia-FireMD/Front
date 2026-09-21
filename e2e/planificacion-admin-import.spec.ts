@@ -53,6 +53,11 @@ const preview = {
 test('admin previsualiza y confirma una importación sin escrituras implícitas', async ({
   page,
 }) => {
+  const mobilePreview = process.env['PLAN_IMPORT_MOBILE'] === 'true';
+  if (mobilePreview) {
+    await page.setViewportSize({ width: 375, height: 667 });
+  }
+
   let previewCalls = 0;
   let applyBody = '';
 
@@ -143,7 +148,22 @@ test('admin previsualiza y confirma una importación sin escrituras implícitas'
   await expect(page.getByTestId('importacion-plantillas-panel')).toContainText(
     '14/09/2026',
   );
-  await expect(page.getByText('14 totales')).toBeVisible();
+  if (mobilePreview) {
+    await expect(
+      page.getByTestId('importacion-plantillas-panel'),
+    ).toContainText(/Bloques\s*14/i);
+  } else {
+    await expect(page.getByText('14 totales')).toBeVisible();
+  }
+  await expect(page.getByTestId('importacion-plantillas-panel')).toContainText(
+    'Iniciación · 6-8 horas',
+  );
+  await expect(
+    page.getByTestId('importacion-plantillas-panel'),
+  ).not.toContainText('FRANJA_SEIS_A_OCHO_HORAS');
+  await expect(
+    page.getByTestId('importacion-plantillas-panel'),
+  ).not.toContainText('INICIACION');
   const apply = page.getByRole('button', { name: 'Aplicar importación' });
   await expect(apply).toBeDisabled();
 

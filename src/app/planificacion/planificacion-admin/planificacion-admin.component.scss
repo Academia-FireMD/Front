@@ -58,6 +58,12 @@
   border: 1px solid var(--surface-border);
   border-radius: var(--border-radius);
   padding: 1rem;
+
+  small,
+  .week-list,
+  .issue-list {
+    overflow-wrap: anywhere;
+  }
 }
 
 .import-card__header {
