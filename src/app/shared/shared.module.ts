@@ -39,7 +39,6 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
   declarations: [
     SharedGridComponent,
     ComunidadDropdownComponent,
-    OposicionPickerComponent,
     PieChartComponent,
     CountdownPipe,
     DificultadDropdownComponent,
@@ -75,6 +74,7 @@ import { TemaSelectComponent } from './tema-select/tema-select.component';
     NgxEchartsModule,
     OnboardingFormComponent,
     AsyncButtonComponent,
+    OposicionPickerComponent,
   ],
   exports: [
     SharedGridComponent,

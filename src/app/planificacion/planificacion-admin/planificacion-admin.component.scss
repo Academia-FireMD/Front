@@ -4,6 +4,69 @@
   max-width: 100%;
 }
 
+.import-steps {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+
+.import-steps__item {
+  align-items: center;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  display: flex;
+  gap: 0.75rem;
+  min-height: 56px;
+  padding: 0.75rem;
+
+  span {
+    align-items: center;
+    background: var(--surface-200);
+    border-radius: 50%;
+    display: inline-flex;
+    flex: 0 0 2rem;
+    height: 2rem;
+    justify-content: center;
+  }
+
+  &--active {
+    background: var(--primary-50);
+    border-color: var(--primary-color);
+
+    span {
+      background: var(--primary-color);
+      color: var(--primary-color-text);
+    }
+  }
+}
+
+.import-panel__separation {
+  background: var(--blue-50);
+  border-left: 3px solid var(--blue-500);
+  line-height: 1.5;
+  padding: 0.75rem;
+}
+
+.import-cards {
+  display: none;
+}
+
+.import-card {
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+}
+
+.import-card__header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
 :host ::ng-deep {
   .planificacion-admin-tabs {
     min-width: 0;
@@ -46,6 +109,19 @@
 }
 
 @media (max-width: 575px) {
+  .import-steps {
+    grid-template-columns: 1fr;
+  }
+
+  :host ::ng-deep .import-table--desktop {
+    display: none;
+  }
+
+  .import-cards {
+    display: grid;
+    gap: 0.75rem;
+  }
+
   :host ::ng-deep {
     .planificacion-admin-tabs .p-tabview-panels {
       padding: 0.75rem 0.25rem;
@@ -67,5 +143,13 @@
 
   form .flex.gap-2 {
     flex-wrap: wrap;
+  }
+
+  :host ::ng-deep .import-actions .p-button,
+  :host ::ng-deep .import-apply .p-button,
+  :host ::ng-deep .import-next-step .p-button {
+    justify-content: center;
+    min-height: 44px;
+    width: 100%;
   }
 }

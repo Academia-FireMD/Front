@@ -10,7 +10,7 @@ import {
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { DropdownModule } from 'primeng/dropdown';
 import { FloatLabelModule } from 'primeng/floatlabel';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { ButtonModule } from 'primeng/button';
 import {
   duracionesDisponibles,
   nivelesDisponibles,
@@ -21,6 +21,10 @@ import {
   Oposicion,
 } from '../models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../models/user.model';
+import {
+  OposicionPickerComponent,
+  OposicionPickerOption,
+} from '../oposicion-picker/oposicion-picker.component';
 
 /**
  * Preferencias de planificación (oposición, nivel y franja horaria).
@@ -31,17 +35,6 @@ export interface PreferenciasPlanificacion {
   oposicion: Oposicion | Oposicion[] | null;
   nivel: string | null;
   franja: string | null;
-}
-
-/** Opciones de oposición con label humano. */
-function oposicionOptions(permitidas: Oposicion[]): {
-  label: string;
-  value: Oposicion;
-}[] {
-  return permitidas.map((o) => ({
-    label: getPlanificacionOposicionLabel(o),
-    value: o,
-  }));
 }
 
 /**
@@ -57,40 +50,37 @@ function oposicionOptions(permitidas: Oposicion[]): {
     CommonModule,
     ReactiveFormsModule,
     DropdownModule,
-    MultiSelectModule,
     FloatLabelModule,
+    ButtonModule,
+    OposicionPickerComponent,
   ],
   template: `
     <div [formGroup]="formGroup">
       <div class="grid">
         <div class="col-12 md:col-6">
-          <p-floatLabel>
-            @if (multiple) {
-              <p-multiSelect
-                [options]="opcionesOposicion"
-                formControlName="oposicion"
-                defaultLabel="Selecciona oposiciones"
-                class="w-full"
-                [id]="formIdPrefix + 'Oposicion'"
-                [style]="{ width: '100%' }"
-                optionLabel="label"
-                optionValue="value"
-                display="chip"
-              />
-            } @else {
-              <p-dropdown
-                [options]="opcionesOposicion"
-                formControlName="oposicion"
-                placeholder="Selecciona oposición"
-                class="w-full"
-                [id]="formIdPrefix + 'Oposicion'"
-                [style]="{ width: '100%' }"
-                optionLabel="label"
-                optionValue="value"
-              />
-            }
-            <label [for]="formIdPrefix + 'Oposicion'">Oposición *</label>
-          </p-floatLabel>
+          <label
+            class="block font-medium mb-2"
+            [for]="formIdPrefix + 'Oposicion'"
+          >
+            Oposición *
+          </label>
+          <app-oposicion-picker
+            presentation="field"
+            [multiple]="multiple"
+            [opciones]="opcionesSelector"
+            [labelMap]="planificacionLabelMap"
+            [inputId]="formIdPrefix + 'Oposicion'"
+            [placeholder]="
+              multiple ? 'Selecciona oposiciones' : 'Selecciona oposición'
+            "
+            formControlName="oposicion"
+          />
+          @if (tieneOpcionesNoDisponibles) {
+            <small class="block text-500 mt-2">
+              Las opciones no disponibles se muestran con el motivo
+              correspondiente.
+            </small>
+          }
         </div>
 
         @if (mostrarNivel) {
@@ -109,13 +99,14 @@ function oposicionOptions(permitidas: Oposicion[]): {
               <label [for]="formIdPrefix + 'Nivel'">Nivel *</label>
             </p-floatLabel>
             @if (permitirTestNivel) {
-              <button
+              <p-button
                 type="button"
-                class="p-button-link border-none bg-transparent p-0 mt-2 cursor-pointer"
-                (click)="testNivelSolicitado.emit()"
-              >
-                Hacer test de recomendación de nivel
-              </button>
+                styleClass="planificacion-test-button mt-2"
+                [outlined]="true"
+                icon="pi pi-check-square"
+                label="Hacer test de nivel"
+                (onClick)="testNivelSolicitado.emit()"
+              />
             }
           </div>
         }
@@ -147,12 +138,28 @@ function oposicionOptions(permitidas: Oposicion[]): {
       </div>
     </div>
   `,
+  styles: [
+    `
+      :host ::ng-deep .planificacion-test-button {
+        min-height: 44px;
+      }
+
+      @media (max-width: 575px) {
+        :host ::ng-deep .planificacion-test-button {
+          justify-content: center;
+          width: 100%;
+        }
+      }
+    `,
+  ],
 })
 export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
   /** Valores iniciales para precargar los controles. */
   @Input() valoresIniciales?: Partial<PreferenciasPlanificacion>;
   /** Si se define, solo se listan estas oposiciones. */
   @Input() oposicionesPermitidas?: Oposicion[];
+  /** Opciones contextualizadas, incluidas las no disponibles con su motivo. */
+  @Input() opcionesOposicion?: OposicionPickerOption[];
   /** Opciones de nivel que devuelve el backend para el actor/alcance actual. */
   @Input() nivelesPermitidos?: NivelOposicion[];
   /** Opciones de franja que devuelve el backend para el actor/alcance actual. */
@@ -179,8 +186,56 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
 
   niveles = nivelesDisponibles;
   duraciones = duracionesDisponibles;
+  readonly planificacionLabelMap = Object.fromEntries(
+    Object.values(Oposicion).map((oposicion) => [
+      oposicion,
+      getPlanificacionOposicionLabel(oposicion),
+    ]),
+  ) as Record<Oposicion, string>;
+  private opcionesNivelCache: { label: string; value: NivelOposicion }[] = [];
+  private opcionesNivelKey: string | null = null;
+  private opcionesFranjaCache: {
+    label: string;
+    value: TipoDePlanificacionDeseada;
+  }[] = [];
+  private opcionesFranjaKey: string | null = null;
+  private opcionesSelectorCache: OposicionPickerOption[] = [];
+  private opcionesSelectorKey: string | null = null;
 
   get opcionesNivel(): { label: string; value: NivelOposicion }[] {
+    const siguientes = this.crearOpcionesNivel();
+    const key = JSON.stringify(siguientes);
+    if (key !== this.opcionesNivelKey) {
+      this.opcionesNivelCache = siguientes;
+      this.opcionesNivelKey = key;
+    }
+    return this.opcionesNivelCache;
+  }
+
+  get opcionesFranja(): {
+    label: string;
+    value: TipoDePlanificacionDeseada;
+  }[] {
+    const siguientes = this.crearOpcionesFranja();
+    const key = JSON.stringify(siguientes);
+    if (key !== this.opcionesFranjaKey) {
+      this.opcionesFranjaCache = siguientes;
+      this.opcionesFranjaKey = key;
+    }
+    return this.opcionesFranjaCache;
+  }
+
+  get opcionesSelector(): OposicionPickerOption[] {
+    const siguientes = this.crearOpcionesSelector();
+    const key = JSON.stringify(siguientes);
+    if (key !== this.opcionesSelectorKey) {
+      this.opcionesSelectorCache = siguientes;
+      this.opcionesSelectorKey = key;
+    }
+    return this.opcionesSelectorCache;
+  }
+
+  private crearOpcionesNivel(): { label: string; value: NivelOposicion }[] {
     const permitidos =
       this.nivelesPermitidos ??
       nivelesDisponibles.map((opcion) => opcion.value as NivelOposicion);
@@ -192,7 +247,7 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
     }));
   }
 
-  get opcionesFranja(): {
+  private crearOpcionesFranja(): {
     label: string;
     value: TipoDePlanificacionDeseada;
   }[] {
@@ -209,9 +264,15 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
     }));
   }
 
-  get opcionesOposicion(): { label: string; value: Oposicion }[] {
-    const permitidas = this.oposicionesPermitidas ?? Object.values(Oposicion);
-    return oposicionOptions(permitidas);
+  private crearOpcionesSelector(): OposicionPickerOption[] {
+    if (this.opcionesOposicion) return this.opcionesOposicion;
+    return (this.oposicionesPermitidas ?? Object.values(Oposicion)).map(
+      (value) => ({ value }),
+    );
+  }
+
+  get tieneOpcionesNoDisponibles(): boolean {
+    return this.opcionesSelector.some((opcion) => opcion.disabled);
   }
 
   ngOnInit(): void {

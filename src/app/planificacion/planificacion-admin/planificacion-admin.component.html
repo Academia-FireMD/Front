@@ -1,6 +1,10 @@
 <p-confirmDialog />
+<app-environment-badge />
 
-<p-tabView styleClass="planificacion-admin-tabs">
+<p-tabView
+  styleClass="planificacion-admin-tabs"
+  [(activeIndex)]="activeTabIndex"
+>
   <p-tabPanel header="Variantes" leftIcon="pi pi-th-large">
     <div class="grid">
       <div class="col-12 lg:col-5">
@@ -21,15 +25,15 @@
               >Se genera automáticamente a partir de la oposición, el nivel y
               las horas de estudio.</small
             >
-            <label>Oposición *</label>
-            <p-dropdown
-              [options]="oposicionOptions"
+            <label for="variante-oposicion">Oposición *</label>
+            <app-oposicion-picker
+              presentation="field"
+              [multiple]="false"
+              [opciones]="oposicionOptions"
+              [labelMap]="planificacionLabelMap"
+              inputId="variante-oposicion"
               formControlName="oposicion"
-              optionLabel="label"
-              optionValue="value"
-              [disabled]="varianteForm.controls.oposicion.disabled"
-              styleClass="w-full"
-            ></p-dropdown>
+            />
             <label>Nivel *</label>
             <p-dropdown
               [options]="nivelOptions"
@@ -166,24 +170,28 @@
             {{ reglaForm.value.id ? "Editar regla" : "Nueva regla" }}
           </h4>
           <form [formGroup]="reglaForm" class="flex flex-column gap-2">
-            <label>Oposición de suscripción *</label>
-            <p-dropdown
-              [options]="oposicionOptions"
+            <label for="regla-oposicion-suscripcion"
+              >Oposición de suscripción *</label
+            >
+            <app-oposicion-picker
+              presentation="field"
+              [multiple]="false"
+              [opciones]="oposicionOptions"
+              [labelMap]="planificacionLabelMap"
+              inputId="regla-oposicion-suscripcion"
               formControlName="oposicionSuscripcion"
-              optionLabel="label"
-              optionValue="value"
-              [disabled]="reglaForm.controls.oposicionSuscripcion.disabled"
-              styleClass="w-full"
-            ></p-dropdown>
-            <label>Oposición de planificación *</label>
-            <p-dropdown
-              [options]="oposicionOptions"
+            />
+            <label for="regla-oposicion-planificacion"
+              >Oposición de planificación *</label
+            >
+            <app-oposicion-picker
+              presentation="field"
+              [multiple]="false"
+              [opciones]="oposicionOptions"
+              [labelMap]="planificacionLabelMap"
+              inputId="regla-oposicion-planificacion"
               formControlName="oposicionPlanificacion"
-              optionLabel="label"
-              optionValue="value"
-              [disabled]="reglaForm.controls.oposicionPlanificacion.disabled"
-              styleClass="w-full"
-            ></p-dropdown>
+            />
             <div class="flex align-items-center gap-2">
               <p-inputSwitch formControlName="activa"></p-inputSwitch>
               <label>Activa</label>
@@ -240,12 +248,30 @@
 
   <p-tabPanel header="Importar plantillas" leftIcon="pi pi-file-excel">
     <section class="import-panel" data-testid="importacion-plantillas-panel">
+      <ol class="import-steps" aria-label="Fases de la importación">
+        <li class="import-steps__item import-steps__item--active">
+          <span>1</span><strong>Validar e importar</strong>
+        </li>
+        <li class="import-steps__item">
+          <span>2</span><strong>Elegir o crear borrador</strong>
+        </li>
+        <li class="import-steps__item">
+          <span>3</span><strong>Previsualizar e incorporar</strong>
+        </li>
+      </ol>
       <div class="import-panel__header">
         <div>
           <h3>Importación validada de plantillas semanales</h3>
           <p>
-            Primero previsualiza el Excel. La aplicación solo se habilita si
-            las semanas rellenadas son válidas. Las semanas y pestañas vacías se omiten sin borrar contenido existente.
+            Primero previsualiza el Excel. La aplicación solo se habilita si las
+            semanas rellenadas son válidas. Las semanas y pestañas vacías se
+            omiten sin borrar contenido existente.
+          </p>
+          <p class="import-panel__separation">
+            Importar guarda plantillas. Incorporarlas copia su contenido a un
+            borrador. Publicar y asignar es una acción posterior y separada. El
+            número de semanas importadas no cambia la apertura semanal de los
+            viernes.
           </p>
         </div>
         <span class="import-panel__safety">
@@ -346,11 +372,12 @@
 
         <p-table
           [value]="preview.hojas"
-          styleClass="planificacion-admin-table import-table"
+          styleClass="planificacion-admin-table import-table import-table--desktop"
         >
           <ng-template pTemplate="header">
             <tr>
               <th>Hoja</th>
+              <th>Variante resuelta</th>
               <th>Estado</th>
               <th>Semanas y fechas exactas</th>
               <th>Bloques</th>
@@ -363,6 +390,18 @@
                 <strong>{{ hoja.hoja }}</strong>
               </td>
               <td>
+                @if (hoja.variante; as variante) {
+                  <strong>{{ variante.codigo }}</strong
+                  ><br />
+                  <small>
+                    {{ labelOposicion(variante.oposicion) }} ·
+                    {{ variante.nivel }} · {{ variante.franja }}
+                  </small>
+                } @else {
+                  <span class="text-red-600">Sin resolver</span>
+                }
+              </td>
+              <td>
                 <span
                   class="import-status"
                   [class.import-status--valid]="hoja.valida"
@@ -373,7 +412,13 @@
                     [class.pi-check-circle]="hoja.valida"
                     [class.pi-times-circle]="!hoja.valida"
                   ></i>
-                  {{ !hoja.valida ? "Con errores" : hoja.semanas.length ? "Válida" : "Omitida" }}
+                  {{
+                    !hoja.valida
+                      ? "Con errores"
+                      : hoja.semanas.length
+                        ? "Válida"
+                        : "Omitida"
+                  }}
                 </span>
               </td>
               <td>
@@ -382,7 +427,8 @@
                     <span>
                       S{{ semana.numero }} ·
                       {{ formatearFechaIso(semana.fechaInicio) }} ·
-                      {{ semana.bloques }} bloques · {{ semana.estado || 'creada' }}
+                      {{ semana.bloques }} bloques ·
+                      {{ semana.estado || "creada" }}
                     </span>
                   }
                 </div>
@@ -396,10 +442,18 @@
                   @for (error of hoja.errores; track $index) {
                     <span class="issue-list__error">
                       <i class="pi pi-times-circle"></i>
-                      @if (error.semana) { Semana {{ error.semana }} · }
-                      @if (error.dia) { {{ error.dia }} · }
-                      @if (error.filaExcel) { Fila {{ error.filaExcel }}: }
-                      @if (error.campo) { Campo {{ error.campo }} · }
+                      @if (error.semana) {
+                        Semana {{ error.semana }} ·
+                      }
+                      @if (error.dia) {
+                        {{ error.dia }} ·
+                      }
+                      @if (error.filaExcel) {
+                        Fila {{ error.filaExcel }}:
+                      }
+                      @if (error.campo) {
+                        Campo {{ error.campo }} ·
+                      }
                       {{ error.mensaje }}
                     </span>
                   }
@@ -418,6 +472,72 @@
           </ng-template>
         </p-table>
 
+        <div class="import-cards" aria-label="Detalle de hojas importadas">
+          @for (hoja of preview.hojas; track hoja.hoja) {
+            <article class="import-card">
+              <div class="import-card__header">
+                <strong>{{ hoja.hoja }}</strong>
+                <span
+                  class="import-status"
+                  [class.import-status--valid]="hoja.valida"
+                  [class.import-status--invalid]="!hoja.valida"
+                >
+                  {{
+                    !hoja.valida
+                      ? "Con errores"
+                      : hoja.semanas.length
+                        ? "Válida"
+                        : "Omitida"
+                  }}
+                </span>
+              </div>
+              @if (hoja.variante; as variante) {
+                <small>
+                  {{ variante.codigo }} ·
+                  {{ labelOposicion(variante.oposicion) }} ·
+                  {{ variante.nivel }} · {{ variante.franja }}
+                </small>
+              }
+              <div class="week-list mt-2">
+                @for (semana of hoja.semanas; track $index) {
+                  <span>
+                    S{{ semana.numero }} ·
+                    {{ formatearFechaIso(semana.fechaInicio) }} ·
+                    {{ semana.bloques }} bloques ·
+                    {{ semana.estado || "creada" }}
+                  </span>
+                }
+              </div>
+              <div class="issue-list mt-2">
+                @for (error of hoja.errores; track $index) {
+                  <span class="issue-list__error">
+                    <i class="pi pi-times-circle"></i>
+                    @if (error.semana) {
+                      Semana {{ error.semana }} ·
+                    }
+                    @if (error.dia) {
+                      {{ error.dia }} ·
+                    }
+                    @if (error.filaExcel) {
+                      Fila {{ error.filaExcel }}:
+                    }
+                    @if (error.campo) {
+                      Campo {{ error.campo }} ·
+                    }
+                    {{ error.mensaje }}
+                  </span>
+                }
+                @for (warning of hoja.warnings; track $index) {
+                  <span class="issue-list__warning">
+                    <i class="pi pi-exclamation-triangle"></i>
+                    {{ warning.mensaje }}
+                  </span>
+                }
+              </div>
+            </article>
+          }
+        </div>
+
         <div class="import-apply">
           <p-button
             label="Aplicar importación"
@@ -429,17 +549,18 @@
             (onClick)="confirmarAplicacionImportacion()"
           ></p-button>
           <small>
-            Antes de guardar se vuelve a validar el archivo. Si hay errores, no se carga ninguna semana.
+            Antes de guardar se vuelve a validar el archivo. Si hay errores, no
+            se carga ninguna semana.
           </small>
         </div>
       }
 
-      @if (resultadoImportacion()) {
+      @if (resultadoImportacion() || codigosUltimaImportacion().length) {
         <div
           class="import-next-step mt-4 p-4 border-1 border-round surface-50"
           data-testid="importacion-incorporar-cta"
         >
-          <h4 class="mt-0 mb-2">Plantillas importadas</h4>
+          <h4 class="mt-0 mb-2">Paso 2 · Elige el borrador</h4>
           <p class="mt-0">
             Paso 1 completado: las semanas ya están guardadas como plantillas.
             Aún no están incorporadas a una planificación ni publicadas para
@@ -448,6 +569,20 @@
           <div
             class="flex flex-column md:flex-row gap-2 align-items-stretch md:align-items-end"
           >
+            @if (codigosUltimaImportacion().length > 1) {
+              <div class="flex-1">
+                <label for="codigo-importacion" class="block mb-2">
+                  Variante que vas a incorporar
+                </label>
+                <p-dropdown
+                  inputId="codigo-importacion"
+                  [options]="codigosUltimaImportacion()"
+                  [ngModel]="codigoImportacionSeleccionado()"
+                  (ngModelChange)="seleccionarCodigoImportacion($event)"
+                  styleClass="w-full"
+                />
+              </div>
+            }
             <div class="flex-1">
               <label for="planificacion-destino-importacion" class="block mb-2">
                 Planificación en borrador
@@ -464,7 +599,7 @@
               />
             </div>
             <p-button
-              label="Incorporar semanas a una planificación"
+              label="Abrir borrador y previsualizar"
               icon="pi pi-arrow-right"
               iconPos="right"
               [disabled]="!planificacionDestinoImportacion()"
@@ -474,8 +609,15 @@
           @if (!planificacionesBorradorOptions.length) {
             <p-message
               severity="warn"
-              text="No hay borradores disponibles. Crea una planificación antes de incorporar las semanas."
+              text="No hay borradores compatibles con esta oposición y franja."
               styleClass="w-full mt-3"
+            />
+            <p-button
+              label="Crear planificación en borrador"
+              icon="pi pi-plus"
+              styleClass="mt-3"
+              [outlined]="true"
+              (onClick)="crearBorradorParaImportacion()"
             />
           }
         </div>

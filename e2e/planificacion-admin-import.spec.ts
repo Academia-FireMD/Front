@@ -19,6 +19,12 @@ const preview = {
   hojas: [
     {
       hoja: 'CMI6-8',
+      variante: {
+        codigo: 'PCMI6-8H',
+        oposicion: 'MADRID',
+        nivel: 'INICIACION',
+        franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+      },
       valida: true,
       totalBloques: 14,
       totalEntrenamientos: 2,
@@ -51,7 +57,21 @@ test('admin previsualiza y confirma una importación sin escrituras implícitas'
   let applyBody = '';
 
   await page.route('**/planificaciones/admin/variantes', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 7,
+          codigo: 'PCMI6-8H',
+          oposicion: 'MADRID',
+          nivel: 'INICIACION',
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+          activa: true,
+          planificacionMensual: null,
+        },
+      ]),
+    }),
   );
   await page.route('**/planificaciones/admin/reglas', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
@@ -71,6 +91,8 @@ test('admin previsualiza y confirma una importación sin escrituras implícitas'
             mes: 9,
             ano: 2026,
             estado: 'BORRADOR',
+            relevancia: ['MADRID'],
+            tipoDePlanificacion: 'FRANJA_SEIS_A_OCHO_HORAS',
           },
         ],
         pagination: { skip: 0, take: 9999, count: 1 },
@@ -154,7 +176,7 @@ test('admin previsualiza y confirma una importación sin escrituras implícitas'
   );
   await expect(
     page.getByRole('button', {
-      name: 'Incorporar semanas a una planificación',
+      name: 'Abrir borrador y previsualizar',
     }),
-  ).toBeDisabled();
+  ).toBeEnabled();
 });

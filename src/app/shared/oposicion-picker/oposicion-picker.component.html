@@ -1,4 +1,9 @@
-<p-overlayPanel #op>
+<p-overlayPanel
+  #op
+  styleClass="oposicion-picker-overlay"
+  (onShow)="overlayOpen = true"
+  (onHide)="marcarTocado()"
+>
   <div class="flex flex-column gap-3">
     <p-listbox
       [options]="listboxOptions"
@@ -6,10 +11,11 @@
       dataKey="code"
       [className]="'oposicion-picker-listbox'"
       [listStyle]="{ 'max-height': '250px' }"
-      [style]="{ width: '18rem' }"
+      [style]="{ width: 'min(18rem, calc(100vw - 2rem))' }"
       [multiple]="multiple"
+      optionDisabled="disabled"
       [ngModel]="listboxValue"
-      (onChange)="onSelectionChange($event.value)"
+      (onChange)="onSelectionChange($event.value, op)"
     >
       <ng-template let-item pTemplate="item">
         <div
@@ -18,6 +24,7 @@
           [class.oposicion-item--n1]="item.nivel === 1"
           [class.oposicion-item--n2]="item.nivel === 2"
           [class.oposicion-item--grupo]="!!item.members"
+          [class.oposicion-item--disabled]="item.disabled"
         >
           <img
             *ngIf="item.image"
@@ -26,42 +33,65 @@
             class="oposicion-img-dropdown"
           />
           <span *ngIf="!item.image" class="text-lg">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
+          <span class="oposicion-item__copy">
+            <span>{{ item.label }}</span>
+            <small *ngIf="item.disabledReason">{{ item.disabledReason }}</small>
+          </span>
         </div>
       </ng-template>
     </p-listbox>
   </div>
 </p-overlayPanel>
 
-<div class="contenedor-oposiciones">
-  <div class="list flex align-items-center gap-1">
-    @if (displayItems.length === 0) {
-      <span class="text-sm text-600">Sin oposiciones</span>
-    }
-    @for (item of displayItems; track item.code) {
-      <span
-        class="oposicion-badge"
-        [class.oposicion-badge--grupo]="!!item.members"
-        [pTooltip]="item.label"
-        tooltipPosition="top"
-      >
-        <img
-          *ngIf="item.image"
-          [src]="item.image"
-          [alt]="item.label"
-          class="oposicion-img"
-        />
-        <span *ngIf="!item.image">{{ item.icon }}</span>
-      </span>
-    }
-  </div>
+@if (presentation === "field") {
+  <button
+    type="button"
+    class="oposicion-field"
+    [class.oposicion-field--invalid]="invalid"
+    [class.oposicion-field--placeholder]="!displayItems.length"
+    [id]="inputId"
+    [disabled]="disabled"
+    aria-haspopup="listbox"
+    [attr.aria-label]="fieldLabel"
+    [attr.aria-expanded]="overlayOpen"
+    (click)="op.toggle($event)"
+  >
+    <span>{{ fieldLabel }}</span>
+    <i class="pi pi-chevron-down" aria-hidden="true"></i>
+  </button>
+} @else {
+  <div class="contenedor-oposiciones">
+    <div class="list flex align-items-center gap-1">
+      @if (displayItems.length === 0) {
+        <span class="text-sm text-600">Sin oposiciones</span>
+      }
+      @for (item of displayItems; track item.code) {
+        <span
+          class="oposicion-badge"
+          [class.oposicion-badge--grupo]="!!item.members"
+          [pTooltip]="item.label"
+          tooltipPosition="top"
+        >
+          <img
+            *ngIf="item.image"
+            [src]="item.image"
+            [alt]="item.label"
+            class="oposicion-img"
+          />
+          <span *ngIf="!item.image">{{ item.icon }}</span>
+        </span>
+      }
+    </div>
 
-  <p-button
-    [link]="true"
-    *ngIf="allowAdd"
-    (onClick)="op.toggle($event)"
-    icon="pi pi-plus-circle"
-    pTooltip="Asignar oposiciones"
-    tooltipPosition="top"
-  />
-</div>
+    <p-button
+      [link]="true"
+      *ngIf="allowAdd"
+      (onClick)="op.toggle($event)"
+      icon="pi pi-plus-circle"
+      ariaLabel="Asignar oposiciones"
+      [disabled]="disabled"
+      pTooltip="Asignar oposiciones"
+      tooltipPosition="top"
+    />
+  </div>
+}

@@ -77,10 +77,25 @@ export interface ConfiguracionPlanificacion {
   estado: EstadoConfiguracionPlanificacion;
   preferenciasPrecargadas: PreferenciasPrecargadas;
   oposicionesPermitidas: Oposicion[];
+  disponibilidadOposiciones?: DisponibilidadOposicion[];
   /** Combinaciones activas que el alumno puede confirmar. */
   opcionesPermitidas?: OpcionPlanificacionPermitida[];
   configuracionActiva: ConfiguracionActiva | null;
   estadoTest: EstadoTestNivel | null;
+  ultimaRecomendacion?: {
+    puntuacion: number;
+    nivelRecomendado: NivelOposicion;
+  } | null;
+}
+
+export type EstadoDisponibilidadOposicion =
+  | 'DISPONIBLE'
+  | 'SIN_VARIANTE_ACTIVA'
+  | 'SIN_PLANIFICACION_PUBLICADA';
+
+export interface DisponibilidadOposicion {
+  oposicion: Oposicion;
+  estado: EstadoDisponibilidadOposicion;
 }
 
 export interface GuardarConfiguracionDTO {
@@ -188,6 +203,7 @@ export interface SemanaImportacionPlantilla {
 
 export interface HojaImportacionPlantilla {
   hoja: string;
+  variante?: VarianteConfiguracion | null;
   valida: boolean;
   totalBloques: number;
   totalEntrenamientos: number;

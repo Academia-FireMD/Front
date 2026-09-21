@@ -25,7 +25,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
 import { TabViewModule } from 'primeng/tabview';
 import { firstValueFrom } from 'rxjs';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import {
@@ -33,7 +33,7 @@ import {
   getPlanificacionVarianteCodigo,
   Oposicion,
 } from '../../shared/models/subscription.model';
-import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
+import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import type { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import {
   AlumnoSinCoincidencia,
@@ -44,6 +44,11 @@ import {
   VarianteAdmin,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
+import {
+  OposicionPickerComponent,
+  OposicionPickerOption,
+} from '../../shared/oposicion-picker/oposicion-picker.component';
+import { EnvironmentBadgeComponent } from '../../shared/environment-badge/environment-badge.component';
 
 @Component({
   selector: 'app-planificacion-admin',
@@ -61,6 +66,8 @@ import { AutoasignacionService } from '../services/autoasignacion.service';
     ProgressSpinnerModule,
     TableModule,
     TabViewModule,
+    OposicionPickerComponent,
+    EnvironmentBadgeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './planificacion-admin.component.html',
@@ -73,6 +80,7 @@ export class PlanificacionAdminComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly NivelOposicion = NivelOposicion;
   readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
@@ -81,10 +89,15 @@ export class PlanificacionAdminComponent implements OnInit {
     return getPlanificacionOposicionLabel(op);
   }
 
-  oposicionOptions = Object.values(Oposicion).map((o) => ({
-    label: getPlanificacionOposicionLabel(o),
-    value: o,
-  }));
+  oposicionOptions: OposicionPickerOption[] = Object.values(Oposicion).map(
+    (value) => ({ value }),
+  );
+  readonly planificacionLabelMap = Object.fromEntries(
+    Object.values(Oposicion).map((oposicion) => [
+      oposicion,
+      getPlanificacionOposicionLabel(oposicion),
+    ]),
+  ) as Record<Oposicion, string>;
   nivelOptions = [
     { label: 'Iniciación', value: NivelOposicion.INICIACION },
     { label: 'Avanzado', value: NivelOposicion.AVANZADO },
@@ -109,7 +122,9 @@ export class PlanificacionAdminComponent implements OnInit {
   confirmarSobrescritura = signal(false);
   resultadoImportacion = signal<ResultadoImportacionPlantillas | null>(null);
   codigosUltimaImportacion = signal<string[]>([]);
+  codigoImportacionSeleccionado = signal<string | null>(null);
   planificacionDestinoImportacion = signal<number | null>(null);
+  activeTabIndex = 0;
 
   varianteForm = this.fb.group({
     id: [null as number | null],
@@ -132,6 +147,20 @@ export class PlanificacionAdminComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    const codigos = this.route.snapshot.queryParamMap
+      .getAll('codigosHoja')
+      .flatMap((codigo) => codigo.split(','))
+      .map((codigo) => codigo.trim())
+      .filter(Boolean);
+    if (codigos.length) {
+      this.codigosUltimaImportacion.set([...new Set(codigos)]);
+      this.codigoImportacionSeleccionado.set(
+        this.route.snapshot.queryParamMap.get('codigoActivo') ?? codigos[0],
+      );
+    }
+    if (this.route.snapshot.queryParamMap.get('paso') === 'destino') {
+      this.activeTabIndex = 2;
+    }
     this.varianteForm.valueChanges.subscribe(() => {
       this.actualizarCodigoCanonico();
       this.limpiarPlanificacionIncompatible();
@@ -161,6 +190,7 @@ export class PlanificacionAdminComponent implements OnInit {
       this.sinCoincidencia.set(sinCoincidencia ?? []);
       this.planificacionesMensuales.set(planificaciones?.data ?? []);
       this.limpiarPlanificacionIncompatible();
+      this.sincronizarDestinoImportacion();
     } catch {
       this.toast.error('No se pudieron cargar los datos de administración');
     } finally {
@@ -297,7 +327,10 @@ export class PlanificacionAdminComponent implements OnInit {
           await this.cargarTodo();
         } catch (error) {
           this.toast.error(
-            this.mensajeErrorImportacion(error, 'No se pudo publicar. Revisa la cobertura de estudio y física.'),
+            this.mensajeErrorImportacion(
+              error,
+              'No se pudo publicar. Revisa la cobertura de estudio y física.',
+            ),
           );
         }
       },
@@ -616,15 +649,73 @@ export class PlanificacionAdminComponent implements OnInit {
     label: string;
     value: number;
   }> {
+    const variante = this.varianteImportacionSeleccionada;
+    if (this.codigoImportacionSeleccionado() && !variante) {
+      return [];
+    }
     return this.planificacionesMensuales()
       .filter(
         (planificacion) =>
-          !planificacion.estado || planificacion.estado === 'BORRADOR',
+          (!planificacion.estado || planificacion.estado === 'BORRADOR') &&
+          (!variante ||
+            (planificacion.relevancia?.includes(variante.oposicion) &&
+              planificacion.tipoDePlanificacion === variante.franja)),
       )
       .map((planificacion) => ({
         label: `${planificacion.identificador} (${planificacion.mes}/${planificacion.ano})`,
         value: planificacion.id,
       }));
+  }
+
+  get varianteImportacionSeleccionada(): VarianteAdmin | null {
+    const codigo = this.codigoImportacionSeleccionado();
+    if (!codigo) return null;
+    const desdePreview = this.previewImportacion()?.hojas.find(
+      (hoja) => this.codigoPlantillaImportada(hoja.hoja) === codigo,
+    )?.variante;
+    if (desdePreview) {
+      return {
+        ...desdePreview,
+        activa: true,
+      } as VarianteAdmin;
+    }
+    const identidad = this.identidadVarianteImportada(codigo);
+    if (!identidad) return null;
+    return (
+      this.variantes().find(
+        (variante) =>
+          variante.oposicion === identidad.oposicion &&
+          variante.nivel === identidad.nivel &&
+          variante.franja === identidad.franja,
+      ) ?? null
+    );
+  }
+
+  seleccionarCodigoImportacion(codigo: string | null): void {
+    this.codigoImportacionSeleccionado.set(codigo);
+    this.planificacionDestinoImportacion.set(null);
+    this.sincronizarDestinoImportacion();
+  }
+
+  crearBorradorParaImportacion(): void {
+    const variante = this.varianteImportacionSeleccionada;
+    const codigoActivo = this.codigoImportacionSeleccionado();
+    if (!variante || !codigoActivo) {
+      this.toast.error('Selecciona primero la variante que quieres incorporar');
+      return;
+    }
+    void this.router.navigate(
+      ['/app/planificacion/planificacion-mensual', 'new'],
+      {
+        queryParams: {
+          origen: 'importacion-plantillas',
+          codigosHoja: this.codigosUltimaImportacion(),
+          codigoActivo,
+          oposicion: variante.oposicion,
+          franja: variante.franja,
+        },
+      },
+    );
   }
 
   incorporarSemanasEnPlanificacion(): void {
@@ -638,6 +729,9 @@ export class PlanificacionAdminComponent implements OnInit {
       {
         queryParams: {
           codigosHoja: this.codigosUltimaImportacion(),
+          codigoActivo: this.codigoImportacionSeleccionado(),
+          origen: 'importacion-plantillas',
+          abrirVolcado: '1',
         },
       },
     );
@@ -669,10 +763,14 @@ export class PlanificacionAdminComponent implements OnInit {
           new Set(
             preview.hojas
               .filter((hoja) => hoja.semanas.length > 0)
-              .map((hoja) => this.codigoVarianteImportada(hoja.hoja)),
+              .map((hoja) => this.codigoPlantillaImportada(hoja.hoja)),
           ),
         ),
       );
+      this.codigoImportacionSeleccionado.set(
+        this.codigosUltimaImportacion()[0] ?? null,
+      );
+      this.sincronizarDestinoImportacion();
       this.confirmarSobrescritura.set(false);
       this.toast.success(
         resultado.yaAplicado
@@ -693,18 +791,87 @@ export class PlanificacionAdminComponent implements OnInit {
     }
   }
 
-  private codigoVarianteImportada(
+  private identidadVarianteImportada(codigoHoja: string | null | undefined): {
+    oposicion: Oposicion;
+    nivel: NivelOposicion;
+    franja: TipoDePlanificacionDeseada;
+  } | null {
+    const codigoPlantilla = this.codigoPlantillaImportada(codigoHoja);
+    const coincidencia = codigoPlantilla.match(/^([A-Z]+)(4-6|6-8)H$/);
+    if (!coincidencia) return null;
+    const identidadBase: Record<
+      string,
+      { oposicion: Oposicion; nivel: NivelOposicion }
+    > = {
+      GI: {
+        oposicion: Oposicion.GENERAL,
+        nivel: NivelOposicion.INICIACION,
+      },
+      GA: { oposicion: Oposicion.GENERAL, nivel: NivelOposicion.AVANZADO },
+      CBAI: {
+        oposicion: Oposicion.ALICANTE_CPBA,
+        nivel: NivelOposicion.INICIACION,
+      },
+      CBAA: {
+        oposicion: Oposicion.ALICANTE_CPBA,
+        nivel: NivelOposicion.AVANZADO,
+      },
+      AYVI: {
+        oposicion: Oposicion.VALENCIA_AYUNTAMIENTO,
+        nivel: NivelOposicion.INICIACION,
+      },
+      AYVA: {
+        oposicion: Oposicion.VALENCIA_AYUNTAMIENTO,
+        nivel: NivelOposicion.AVANZADO,
+      },
+      CMI: {
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+      },
+      CMA: {
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.AVANZADO,
+      },
+    };
+    const base = identidadBase[coincidencia[1]];
+    if (!base) return null;
+    return {
+      ...base,
+      franja:
+        coincidencia[2] === '4-6'
+          ? TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS
+          : TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+    };
+  }
+
+  private codigoPlantillaImportada(
     codigoHoja: string | null | undefined,
   ): string {
-    const codigo = codigoHoja?.trim() ?? '';
-    if (!/^[a-z]+(?:4-6|6-8)h?$/i.test(codigo)) {
-      return codigo;
-    }
+    const codigo = codigoHoja?.trim().toUpperCase().replace(/\s+/g, '') ?? '';
+    if (/^H(?:4-6|6-8)H?$/.test(codigo)) return codigo;
+    const coincidencia = codigo.match(/^([A-Z]+)(4-6|6-8)H?$/);
+    if (!coincidencia) return codigo;
+    const alias: Record<string, string> = {
+      CAI: 'CBAI',
+      CAA: 'CBAA',
+      AVI: 'AYVI',
+      AVA: 'AYVA',
+    };
+    return `${alias[coincidencia[1]] ?? coincidencia[1]}${coincidencia[2]}H`;
+  }
 
-    const codigoCanonico = codigo.toUpperCase();
-    return codigoCanonico.endsWith('H') || /^H(?:4-6|6-8)$/.test(codigoCanonico)
-      ? codigoCanonico
-      : `${codigoCanonico}H`;
+  private sincronizarDestinoImportacion(): void {
+    const opciones = this.planificacionesBorradorOptions;
+    const seleccionActual = this.planificacionDestinoImportacion();
+    if (
+      seleccionActual &&
+      opciones.some((opcion) => opcion.value === seleccionActual)
+    ) {
+      return;
+    }
+    this.planificacionDestinoImportacion.set(
+      opciones.length === 1 ? opciones[0].value : null,
+    );
   }
 
   private mensajeErrorImportacion(error: unknown, fallback: string): string {

@@ -3,7 +3,8 @@
   header="Selector de plantillas semanales"
   [(visible)]="isDialogVisible"
   [modal]="true"
-  [style]="{ width: '80vw', height: '80vh' }"
+  [style]="{ width: 'min(80vw, 70rem)', maxHeight: 'calc(100dvh - 2rem)' }"
+  [breakpoints]="{ '960px': '90vw', '575px': 'calc(100vw - 1rem)' }"
   [dismissableMask]="true"
 >
   <p-stepper [(activeStep)]="activeStepSeleccionPlantilla">
@@ -196,7 +197,8 @@
   header="Volcar variante completa"
   [(visible)]="isDialogVolcarVisible"
   [modal]="true"
-  [style]="{ width: '80vw', height: '80vh' }"
+  [style]="{ width: 'min(80vw, 70rem)', maxHeight: 'calc(100dvh - 2rem)' }"
+  [breakpoints]="{ '960px': '90vw', '575px': 'calc(100vw - 1rem)' }"
   [dismissableMask]="true"
   (onHide)="cerrarDialogoVolcar()"
 >
@@ -328,7 +330,7 @@
     </div>
   </div>
 
-  <div class="flex pt-4 justify-content-between">
+  <div class="volcado-actions flex pt-4 justify-content-between gap-2">
     <p-button
       label="Cancelar"
       icon="pi pi-times"
@@ -336,10 +338,10 @@
       [disabled]="volcando"
     />
     <app-async-button
-      label="Volcar variante"
+      label="Incorporar semanas"
       icon="pi pi-check"
       [action]="aplicarVolcadoConfirmado.bind(this)"
-      [disabled]="!volcadoPreview"
+      [disabled]="!volcadoPreview?.previewHash"
     ></app-async-button>
   </div>
 </p-dialog>
@@ -400,6 +402,16 @@
           </div>
         }
         @if (expectedRole == "ADMIN") {
+          @if (esFlujoImportacion) {
+            <p-button
+              [label]="
+                getId() === 'new' ? 'Cancelar creación' : 'Volver al importador'
+              "
+              icon="pi pi-arrow-left"
+              [outlined]="true"
+              (onClick)="volverAImportacion()"
+            />
+          }
           <div class="duracion">
             <p-dropdown
               class="w-full"

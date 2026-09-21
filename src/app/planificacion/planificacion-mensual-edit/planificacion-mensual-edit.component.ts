@@ -141,6 +141,7 @@ export class PlanificacionMensualEditComponent {
   public volcadoPreviewLoading = false;
   public volcando = false;
   private prefijoVolcadoPrevisualizado: string | null = null;
+  private volcadoAbiertoDesdeImportacion = false;
   public get totalCreadosVolcado(): number {
     return (
       this.volcadoPreview?.resultados.reduce(
@@ -389,7 +390,13 @@ export class PlanificacionMensualEditComponent {
               .filter(Boolean),
           ),
         );
+        const codigoActivo = String(queryParams['codigoActivo'] ?? '').trim();
         if (
+          codigoActivo &&
+          this.codigosHojaDisponibles.includes(codigoActivo)
+        ) {
+          this.prefijoPlantillas = codigoActivo;
+        } else if (
           this.codigosHojaDisponibles.length &&
           !this.codigosHojaDisponibles.includes(this.prefijoPlantillas)
         ) {
@@ -531,7 +538,9 @@ export class PlanificacionMensualEditComponent {
       );
       return;
     }
-    this.prefijoPlantillas = this.codigosHojaDisponibles[0] ?? '';
+    if (!this.codigosHojaDisponibles.includes(this.prefijoPlantillas)) {
+      this.prefijoPlantillas = this.codigosHojaDisponibles[0] ?? '';
+    }
     this.volcadoPreview = null;
     this.prefijoVolcadoPrevisualizado = null;
     this.isDialogVolcarVisible = true;
@@ -596,6 +605,7 @@ export class PlanificacionMensualEditComponent {
         this.planificacionesService.volcarPlantillas$(planificacionId, {
           prefijoPlantillas: prefijo,
           dryRun: false,
+          previewHash: this.volcadoPreview.previewHash,
         }),
       );
       const resultadoConError = res.resultados.find(
@@ -627,10 +637,18 @@ export class PlanificacionMensualEditComponent {
     } catch (error: any) {
       const status = error?.status;
       const backendMessage = error?.error?.message;
+      if (status === 409) {
+        this.volcadoPreview = null;
+        this.prefijoVolcadoPrevisualizado = null;
+      }
       const message =
-        status === 422
-          ? backendMessage || 'No se han encontrado plantillas con ese prefijo'
-          : backendMessage || error?.message || 'Error al volcar la variante';
+        status === 409
+          ? backendMessage ||
+            'El borrador cambió. Vuelve a previsualizar antes de incorporar.'
+          : status === 422
+            ? backendMessage ||
+              'No se han encontrado plantillas con ese prefijo'
+            : backendMessage || error?.message || 'Error al volcar la variante';
       this.toast.error(message);
     } finally {
       this.volcando = false;
@@ -742,10 +760,24 @@ export class PlanificacionMensualEditComponent {
     const itemId = this.getId();
     if (itemId === 'new') {
       this.formGroup.reset();
+      const oposicion = this.activedRoute.snapshot.queryParamMap.get(
+        'oposicion',
+      ) as Oposicion | null;
+      const franja = this.activedRoute.snapshot.queryParamMap.get(
+        'franja',
+      ) as TipoDePlanificacionDeseada | null;
       this.formGroup.patchValue({
         ano: new Date().getFullYear(),
         mes: new Date().getMonth() + 1,
+        tipoDePlanificacion:
+          franja && Object.values(TipoDePlanificacionDeseada).includes(franja)
+            ? franja
+            : TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
       });
+      this.relevancia.clear();
+      if (oposicion && Object.values(Oposicion).includes(oposicion)) {
+        this.relevancia.push(new FormControl(oposicion));
+      }
     } else {
       firstValueFrom(
         this.planificacionesService.getPlanificacionMensualById$(itemId).pipe(
@@ -807,6 +839,14 @@ export class PlanificacionMensualEditComponent {
 
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();
+            if (
+              this.activedRoute.snapshot.queryParamMap.get('abrirVolcado') ===
+                '1' &&
+              !this.volcadoAbiertoDesdeImportacion
+            ) {
+              this.volcadoAbiertoDesdeImportacion = true;
+              this.abrirDialogoVolcar();
+            }
           }),
         ),
       );
@@ -894,16 +934,51 @@ export class PlanificacionMensualEditComponent {
     this.eventosModificados = false;
     if (this.expectedRole == 'ADMIN') {
       const idAnterior = this.getId() === 'new' ? null : Number(this.getId());
+      const flujoImportacion = this.esFlujoImportacion;
       this.toast.success(
         idAnterior !== null && res.id !== idAnterior
           ? `Release publicada protegida. Se ha creado el borrador v${res.version ?? 1}.`
           : 'Planificación mensual actualizada con éxito',
       );
 
-      await this.router.navigate([
-        '/app/planificacion/planificacion-mensual/' + res.id,
-      ]);
+      await this.router.navigate(
+        ['/app/planificacion/planificacion-mensual/' + res.id],
+        {
+          queryParams: flujoImportacion
+            ? {
+                origen: 'importacion-plantillas',
+                codigosHoja: this.codigosHojaDisponibles,
+                codigoActivo: this.prefijoPlantillas,
+                abrirVolcado: '1',
+              }
+            : undefined,
+        },
+      );
+      if (flujoImportacion) {
+        this.volcadoAbiertoDesdeImportacion = false;
+        this.load();
+      }
     }
+  }
+
+  get esFlujoImportacion(): boolean {
+    return (
+      this.activedRoute.snapshot.queryParamMap.get('origen') ===
+      'importacion-plantillas'
+    );
+  }
+
+  volverAImportacion(): void {
+    void this.router.navigate(['/app/planificacion/admin-planificacion'], {
+      queryParams: {
+        codigosHoja: this.codigosHojaDisponibles,
+        codigoActivo:
+          this.prefijoPlantillas ||
+          this.activedRoute.snapshot.queryParamMap.get('codigoActivo') ||
+          undefined,
+        paso: 'destino',
+      },
+    });
   }
 
   /**

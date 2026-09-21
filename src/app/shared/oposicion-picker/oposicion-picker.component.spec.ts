@@ -19,7 +19,7 @@ describe('OposicionPickerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [OposicionPickerComponent],
+      imports: [OposicionPickerComponent],
       providers: [...COMMON_TEST_PROVIDERS],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -108,9 +108,7 @@ describe('OposicionPickerComponent', () => {
 
   it('(e bis) con la agrupadora activa, el dropdown marca el padre Y sus dos hijas', () => {
     load([VAL, ALI]);
-    const codes = (
-      component.listboxValue as PickerOption[]
-    ).map((o) => o.code);
+    const codes = (component.listboxValue as PickerOption[]).map((o) => o.code);
     expect(codes).toContain(GRUPO_COMUNIDAD_VALENCIANA.code);
     expect(codes).toContain(VAL);
     expect(codes).toContain(ALI);
@@ -239,5 +237,76 @@ describe('OposicionPickerComponent', () => {
     const emit = jest.spyOn(component.updateSelection, 'emit');
     component.onSelectionChange(component.listboxOptions[2]);
     expect(emit).toHaveBeenLastCalledWith([Oposicion.ALICANTE_CPBA]);
+  });
+
+  it('no permite seleccionar una oposición deshabilitada y conserva el motivo', () => {
+    component.multiple = false;
+    component.opciones = [
+      {
+        value: MAD,
+        disabled: true,
+        disabledReason: 'Pendiente de publicación',
+      },
+      { value: VAL },
+    ];
+    component.ngOnChanges({
+      opciones: new SimpleChange(undefined, component.opciones, true),
+    });
+
+    const madrid = indOption(MAD);
+    expect(madrid.disabled).toBe(true);
+    expect(madrid.disabledReason).toBe('Pendiente de publicación');
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    component.onSelectionChange(madrid);
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('no reintroduce el enum cuando el consumidor declara cero opciones', () => {
+    component.multiple = false;
+    component.opciones = [];
+    component.ngOnChanges({
+      opciones: new SimpleChange(undefined, component.opciones, true),
+    });
+
+    expect(component.listboxOptions).toEqual([]);
+  });
+
+  it('la agrupadora solo selecciona miembros habilitados', () => {
+    component.opciones = [
+      { value: VAL },
+      { value: ALI, disabled: true, disabledReason: 'Sin planificación' },
+    ];
+    component.ngOnChanges({
+      opciones: new SimpleChange(undefined, component.opciones, true),
+    });
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+
+    component.onSelectionChange([grupoOption()]);
+
+    expect(emit).toHaveBeenLastCalledWith([VAL]);
+  });
+
+  it('expone escalar por ControlValueAccessor en modo simple', () => {
+    component.multiple = false;
+    load([]);
+    const onChange = jest.fn();
+    const onTouched = jest.fn();
+    component.registerOnChange(onChange);
+    component.registerOnTouched(onTouched);
+
+    component.onSelectionChange(indOption(MAD));
+
+    expect(onChange).toHaveBeenCalledWith(MAD);
+    expect(onTouched).toHaveBeenCalled();
+  });
+
+  it('cierra el overlay al elegir una opción en modo simple', () => {
+    component.multiple = false;
+    load([]);
+    const overlay = { hide: jest.fn() };
+
+    component.onSelectionChange(indOption(MAD), overlay as never);
+
+    expect(overlay.hide).toHaveBeenCalledTimes(1);
   });
 });

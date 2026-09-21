@@ -7,6 +7,7 @@
 export interface VolcarPlantillasRequest {
   prefijoPlantillas: string;
   dryRun?: boolean;
+  previewHash?: string;
 }
 
 export interface VolcarPlantillasResultado {
@@ -24,6 +25,7 @@ export interface VolcarPlantillasResponse {
   totalPlantillas: number;
   resultados: VolcarPlantillasResultado[];
   warnings: string[];
+  previewHash: string;
   /** Rango civil afectado, calculado por el servidor en Europe/Madrid. */
   rangoFechas: { desde: string; hasta: string } | null;
 }

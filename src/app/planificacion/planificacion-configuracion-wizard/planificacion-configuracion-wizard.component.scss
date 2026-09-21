@@ -2,6 +2,20 @@
   display: block;
 }
 
+.wizard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  &--end {
+    justify-content: flex-end;
+  }
+}
+
+:host ::ng-deep .wizard-test-button {
+  min-height: 44px;
+}
+
 @media (max-width: 480px) {
   :host ::ng-deep .p-stepper .p-stepper-header {
     min-width: 0;
@@ -22,7 +36,7 @@
 
   :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-title {
     margin-left: 0.25rem;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
 
   :host ::ng-deep .p-stepper .p-stepper-separator {
@@ -31,5 +45,18 @@
 
   :host ::ng-deep .p-stepper .p-stepper-panels {
     padding-inline: 0.5rem;
+  }
+
+  .wizard-actions,
+  .wizard-actions--end {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  :host ::ng-deep .wizard-actions .p-button,
+  :host ::ng-deep .wizard-test-button {
+    justify-content: center;
+    min-height: 44px;
+    width: 100%;
   }
 }

@@ -20,6 +20,23 @@ const configuracionActiva = {
     franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
   },
   oposicionesPermitidas: ['GENERAL'],
+  disponibilidadOposiciones: [
+    { oposicion: 'GENERAL', estado: 'DISPONIBLE' },
+  ],
+  opcionesPermitidas: [
+    {
+      oposicion: 'GENERAL',
+      nivel: 'AVANZADO',
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+      varianteId: 11,
+      planificacionMensual: {
+        id: 321,
+        identificador: 'AGOSTO-PGCVA4-6H',
+        mes: 8,
+        ano: 2026,
+      },
+    },
+  ],
   configuracionActiva: {
     variante: {
       id: 11,
@@ -49,6 +66,23 @@ const configuracionInicial = {
     franja: null,
   },
   oposicionesPermitidas: ['MADRID'],
+  disponibilidadOposiciones: [
+    { oposicion: 'MADRID', estado: 'DISPONIBLE' },
+  ],
+  opcionesPermitidas: [
+    {
+      oposicion: 'MADRID',
+      nivel: 'AVANZADO',
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+      varianteId: 12,
+      planificacionMensual: {
+        id: 321,
+        identificador: 'AGOSTO-PCMA4-6H',
+        mes: 8,
+        ano: 2026,
+      },
+    },
+  ],
   configuracionActiva: null,
   ultimaRecomendacion: null,
 };
@@ -215,12 +249,11 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   await loginAlumno(page);
   await page.goto('/app/planificacion/configuracion-alumno');
 
-  const oposicion = page.locator('#wizardPreferenciasOposicion');
-  await oposicion.click();
   await page
-    .locator('.p-dropdown-panel')
-    .last()
-    .getByText('Comunidad de Madrid', { exact: true })
+    .getByRole('button', { name: 'Selecciona oposición' })
+    .click();
+  await page
+    .getByRole('option', { name: 'Comunidad de Madrid', exact: true })
     .click();
   const franja = page.locator('#wizardPreferenciasFranja');
   await franja.click();
@@ -252,7 +285,7 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   // El cuestionario no tiene defaults: responde las cinco preguntas con
   // opciones reales antes de pedir la recomendación.
   await page
-    .getByRole('button', { name: 'Hacer test de recomendación de nivel' })
+    .getByRole('button', { name: 'Hacer test de nivel' })
     .click();
   const respuestas = page.locator('.p-radiobutton-box');
   for (let pregunta = 0; pregunta < 5; pregunta++) {

@@ -24,6 +24,7 @@ import {
   PlanificacionConfiguracionWizardComponent,
   ResultadoConfiguracion,
 } from '../planificacion-configuracion-wizard/planificacion-configuracion-wizard.component';
+import { EnvironmentBadgeComponent } from '../../shared/environment-badge/environment-badge.component';
 
 /**
  * Shell de la ruta de Planificación del alumno. Consulta
@@ -48,10 +49,12 @@ import {
     ProgressSpinnerModule,
     PlanificacionBloqueadaComponent,
     PlanificacionConfiguracionWizardComponent,
+    EnvironmentBadgeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="planificacion-alumno-shell">
+      <app-environment-badge />
       @if (cargando) {
         <div class="flex flex-column align-items-center gap-3 py-6">
           <p-progressSpinner styleClass="w-3rem h-3rem" />
@@ -63,7 +66,9 @@ import {
         <app-planificacion-bloqueada></app-planificacion-bloqueada>
       } @else if (
         configuracion?.estado === 'REQUIERE_CONFIGURACION' &&
-        configuracion?.oposicionesPermitidas?.length === 0
+        (configuracion?.disponibilidadOposiciones?.length ??
+          configuracion?.oposicionesPermitidas?.length ??
+          0) === 0
       ) {
         <div class="flex flex-column align-items-center gap-3 py-6 text-center">
           <i class="pi pi-clock text-4xl text-orange-500"></i>
@@ -74,6 +79,13 @@ import {
           </p>
         </div>
       } @else if (configuracion?.estado === 'REQUIERE_CONFIGURACION') {
+        @if (configuracion?.configuracionActiva) {
+          <p-message
+            severity="warn"
+            text="Tu configuración anterior ya no está disponible. Tu calendario actual se mantiene sin cambios hasta que confirmes una nueva opción."
+            styleClass="w-full mb-4"
+          ></p-message>
+        }
         <app-planificacion-configuracion-wizard
           [configuracion]="configuracion"
           [preferenciasPrecargadas]="

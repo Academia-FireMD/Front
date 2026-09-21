@@ -1,4 +1,30 @@
-import { getVentanaDosSemanasAtras } from './utils';
+import { getNextWeekIfFriday, getVentanaDosSemanasAtras } from './utils';
+
+describe('getNextWeekIfFriday', () => {
+  it.each([
+    ['viernes', new Date(2026, 8, 18, 12), 25],
+    ['sábado', new Date(2026, 8, 19, 12), 26],
+    ['domingo', new Date(2026, 8, 20, 12), 27],
+  ])(
+    'desde %s permite consultar la semana siguiente',
+    (_dia, fecha, esperado) => {
+      expect(getNextWeekIfFriday(fecha).getDate()).toBe(esperado);
+    },
+  );
+
+  it('el jueves todavía conserva la semana actual', () => {
+    const jueves = new Date(2026, 8, 17, 12);
+
+    expect(getNextWeekIfFriday(jueves).getTime()).toBe(jueves.getTime());
+  });
+
+  it('no modifica la fecha recibida', () => {
+    const viernes = new Date(2026, 8, 18, 12);
+    getNextWeekIfFriday(viernes);
+
+    expect(viernes.getDate()).toBe(18);
+  });
+});
 
 describe('getVentanaDosSemanasAtras (Tarea 4: ventana de 2 semanas)', () => {
   it('devuelve la fecha 14 días atrás a medianoche', () => {

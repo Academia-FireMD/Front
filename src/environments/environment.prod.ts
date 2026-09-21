@@ -1,4 +1,5 @@
 export const environment = {
+  name: 'production' as const,
   production: true,
   apiUrl: 'https://server-production-0727.up.railway.app',
   wordpressUrl: 'https://tecnikafire.com',

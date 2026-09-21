@@ -29,13 +29,13 @@ import {
 } from '../../shared/models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import { PlanificacionPreferenciasComponent } from '../../shared/planificacion-preferencias/planificacion-preferencias.component';
+import { OposicionPickerOption } from '../../shared/oposicion-picker/oposicion-picker.component';
 import {
   ConfiguracionPlanificacion,
   GuardarConfiguracionDTO,
   PreferenciasPrecargadas,
 } from '../models/autoasignacion.model';
 import {
-  normalizarPreferenciasPlanificacion,
   obtenerOpcionesCascadaPlanificacion,
 } from '../planificacion-opciones.util';
 import { AutoasignacionService } from '../services/autoasignacion.service';
@@ -94,6 +94,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
 
   // Paso 2: nivel
   elegirCuestionario = signal(false);
+  private nivelAntesTest: NivelOposicion | null = null;
 
   // Paso 3: confirmación
   guardando = signal(false);
@@ -106,6 +107,23 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       : (this.configuracion?.oposicionesPermitidas ?? []);
   }
 
+  get opcionesOposicion(): OposicionPickerOption[] {
+    const disponibilidad = this.configuracion?.disponibilidadOposiciones;
+    if (!disponibilidad?.length) {
+      return this.oposicionesPermitidas.map((value) => ({ value }));
+    }
+    return disponibilidad.map(({ oposicion, estado }) => ({
+      value: oposicion,
+      disabled: estado !== 'DISPONIBLE',
+      disabledReason:
+        estado === 'SIN_VARIANTE_ACTIVA'
+          ? 'Pendiente de configurar por la academia'
+          : estado === 'SIN_PLANIFICACION_PUBLICADA'
+            ? 'Pendiente de planificación publicada'
+            : undefined,
+    }));
+  }
+
   get opcionesCascada() {
     return obtenerOpcionesCascadaPlanificacion(
       this.configuracion?.opcionesPermitidas ?? [],
@@ -114,11 +132,36 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   get nivelesPermitidos(): NivelOposicion[] {
-    return this.opcionesCascada.niveles;
+    const opciones = this.configuracion?.opcionesPermitidas ?? [];
+    if (opciones.length === 0) return this.opcionesCascada.niveles;
+    if (!this.preferencias.oposicion) return [];
+    return [
+      ...new Set(
+        opciones
+          .filter(
+            (opcion) =>
+              opcion.oposicion === this.preferencias.oposicion &&
+              (!this.preferencias.franja ||
+                opcion.franja === this.preferencias.franja),
+          )
+          .map((opcion) => opcion.nivel),
+      ),
+    ];
   }
 
   get franjasPermitidas(): TipoDePlanificacionDeseada[] {
-    return this.opcionesCascada.franjas;
+    const opciones = this.configuracion?.opcionesPermitidas ?? [];
+    if (opciones.length === 0) return this.opcionesCascada.franjas;
+    if (!this.preferencias.oposicion) return [];
+    return [
+      ...new Set(
+        opciones
+          .filter(
+            (opcion) => opcion.oposicion === this.preferencias.oposicion,
+          )
+          .map((opcion) => opcion.franja),
+      ),
+    ];
   }
 
   get opcionesNivel() {
@@ -158,7 +201,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       this.preferencias.nivel &&
       this.preferencias.franja &&
       (!this.requiereConfirmacionGCV || this.gcvConfirmado) &&
-        combinacionPublicada,
+      combinacionPublicada,
     );
   }
 
@@ -209,13 +252,11 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     nivel: string | null;
     franja: string | null;
   }): void {
-    this.preferencias = this.normalizarPreferencias(
-      {
-        oposicion: (prefs.oposicion as Oposicion) ?? null,
-        nivel: prefs.nivel as NivelOposicion | null,
-        franja: prefs.franja as TipoDePlanificacionDeseada | null,
-      },
-    );
+    this.preferencias = this.normalizarPreferencias({
+      oposicion: (prefs.oposicion as Oposicion) ?? null,
+      nivel: prefs.nivel as NivelOposicion | null,
+      franja: prefs.franja as TipoDePlanificacionDeseada | null,
+    });
     this.gcvConfirmado = this.preferencias.oposicion !== Oposicion.GENERAL;
   }
 
@@ -246,6 +287,18 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     this.preferencias = this.normalizarPreferencias(
       this.preferencias as PreferenciasPrecargadas,
     );
+    this.elegirCuestionario.set(false);
+    this.nivelAntesTest = null;
+  }
+
+  iniciarCuestionario(): void {
+    this.nivelAntesTest = this.preferencias.nivel;
+    this.elegirCuestionario.set(true);
+  }
+
+  cancelarCuestionario(): void {
+    this.preferencias.nivel = this.nivelAntesTest;
+    this.nivelAntesTest = null;
     this.elegirCuestionario.set(false);
   }
 
@@ -311,8 +364,33 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     preferencias: PreferenciasPrecargadas,
   ): PreferenciasPrecargadas {
     const opciones = this.configuracion?.opcionesPermitidas ?? [];
-    return opciones.length > 0
-      ? normalizarPreferenciasPlanificacion(opciones, preferencias)
-      : preferencias;
+    if (opciones.length === 0) return preferencias;
+
+    const opcionesOposicion = preferencias.oposicion
+      ? opciones.filter(
+          (opcion) => opcion.oposicion === preferencias.oposicion,
+        )
+      : [];
+    if (!preferencias.oposicion || opcionesOposicion.length === 0) {
+      return { oposicion: null, nivel: null, franja: null };
+    }
+
+    // El asistente pide la franja antes que el nivel. Por eso se valida la
+    // franja contra toda la oposición y después se acotan los niveles
+    // compatibles, en vez de aplicar la cascada administrativa nivel→franja.
+    const franja = opcionesOposicion.some(
+      (opcion) => opcion.franja === preferencias.franja,
+    )
+      ? preferencias.franja
+      : null;
+    const nivel = opcionesOposicion.some(
+      (opcion) =>
+        opcion.nivel === preferencias.nivel &&
+        (!franja || opcion.franja === franja),
+    )
+      ? preferencias.nivel
+      : null;
+
+    return { oposicion: preferencias.oposicion, nivel, franja };
   }
 }

@@ -18,10 +18,11 @@
           franja: preferencias.franja,
         }"
         [oposicionesPermitidas]="oposicionesPermitidas"
+        [opcionesOposicion]="opcionesOposicion"
         [nivelesPermitidos]="nivelesPermitidos"
         [franjasPermitidas]="franjasPermitidas"
         [multiple]="false"
-        [mostrarNivel]="true"
+        [mostrarNivel]="false"
         formIdPrefix="wizardPreferencias"
         (cambios)="onPreferenciasChange($event)"
       ></app-planificacion-preferencias>
@@ -59,7 +60,7 @@
         </div>
       }
 
-      <div class="flex justify-content-end pt-4">
+      <div class="wizard-actions wizard-actions--end pt-4">
         <p-button
           label="Continuar"
           icon="pi pi-arrow-right"
@@ -82,7 +83,7 @@
       @if (elegirCuestionario()) {
         <app-cuestionario-nivel
           (nivelAceptado)="aplicarNivelRecomendado($event)"
-          (cancelado)="elegirCuestionario.set(false)"
+          (cancelado)="cancelarCuestionario()"
         />
       } @else {
         <div class="flex flex-column gap-3">
@@ -101,16 +102,21 @@
               optionLabel="label"
               optionValue="value"
             />
-            <button
+            <p-button
               type="button"
-              class="p-button-link border-none bg-transparent p-0 mt-2 cursor-pointer"
-              (click)="elegirCuestionario.set(true)"
-            >
-              Hacer test de recomendación de nivel
-            </button>
+              styleClass="wizard-test-button mt-3"
+              [outlined]="true"
+              icon="pi pi-check-square"
+              [label]="
+                tieneNivelPrecargado
+                  ? 'Repetir test de nivel'
+                  : 'Hacer test de nivel'
+              "
+              (onClick)="iniciarCuestionario()"
+            />
           </div>
 
-          <div class="flex flex-wrap gap-2">
+          <div class="wizard-actions">
             <p-button
               label="Volver"
               icon="pi pi-arrow-left"
@@ -188,14 +194,16 @@
       }
 
       @if (errorGuardado) {
-        <p-message
-          severity="warn"
-          [text]="errorGuardado"
-          styleClass="w-full mb-3"
-        ></p-message>
+        <div role="alert" aria-live="assertive">
+          <p-message
+            severity="warn"
+            [text]="errorGuardado"
+            styleClass="w-full mb-3"
+          ></p-message>
+        </div>
       }
 
-      <div class="flex gap-2">
+      <div class="wizard-actions">
         <p-button
           label="Volver"
           icon="pi pi-arrow-left"
@@ -215,7 +223,7 @@
 </p-stepper>
 
 @if (modoEdicion) {
-  <div class="flex justify-content-start mt-3">
+  <div class="wizard-actions mt-3">
     <p-button
       label="Cancelar"
       icon="pi pi-times"

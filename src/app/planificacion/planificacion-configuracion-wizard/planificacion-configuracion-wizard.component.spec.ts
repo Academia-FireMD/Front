@@ -25,6 +25,7 @@ const configuracion: ConfiguracionPlanificacion = {
     Oposicion.MADRID,
   ],
   configuracionActiva: null,
+  estadoTest: null,
   ultimaRecomendacion: null,
 };
 
@@ -76,12 +77,12 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
       By.directive(PlanificacionPreferenciasComponent),
     ).componentInstance as PlanificacionPreferenciasComponent;
 
-    expect(preferencias.mostrarNivel).toBe(true);
+    expect(preferencias.mostrarNivel).toBe(false);
 
     component.activeStep.set(1);
     fixture.detectChanges();
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(texto).toContain('Hacer test de recomendación de nivel');
+    expect(texto).toContain('Hacer test de nivel');
     expect(fixture.nativeElement.querySelectorAll('#wizardNivel')).toHaveLength(
       1,
     );
@@ -97,6 +98,41 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
   it('no puede continuar sin oposición o franja', () => {
     component.preferencias = { oposicion: null, nivel: null, franja: null };
     expect(component.puedeContinuarPasoPreferencias).toBe(false);
+  });
+
+  it('conserva la franja elegida antes del nivel y ofrece solo niveles compatibles', () => {
+    component.configuracion = {
+      ...configuracion,
+      opcionesPermitidas: [
+        {
+          oposicion: Oposicion.MADRID,
+          nivel: NivelOposicion.AVANZADO,
+          franja:
+            'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+          varianteId: 1,
+          planificacionMensual: null,
+        },
+        {
+          oposicion: Oposicion.MADRID,
+          nivel: NivelOposicion.INICIACION,
+          franja:
+            'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+          varianteId: 2,
+          planificacionMensual: null,
+        },
+      ],
+    };
+
+    component.onPreferenciasChange({
+      oposicion: Oposicion.MADRID,
+      nivel: null,
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    });
+
+    expect(component.preferencias.franja).toBe(
+      'FRANJA_CUATRO_A_SEIS_HORAS',
+    );
+    expect(component.nivelesPermitidos).toEqual([NivelOposicion.AVANZADO]);
   });
 
   it('si elige GENERAL, exige confirmación GCV para continuar', () => {
@@ -140,16 +176,12 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
       fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
     ).toBeTruthy();
 
-    component.preferencias = {
+    component.onPreferenciasChange({
       oposicion: Oposicion.MADRID,
       nivel: NivelOposicion.INICIACION,
       franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
-    };
-    fixture.detectChanges();
-
-    expect(
-      fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
-    ).toBeNull();
+    });
+    expect(component.requiereConfirmacionGCV).toBe(false);
   });
 
   it('aceptar el test actualiza el mismo borrador sin guardar todavía', () => {
@@ -158,6 +190,18 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     component.aplicarNivelRecomendado(NivelOposicion.AVANZADO);
 
     expect(component.preferencias.nivel).toBe(NivelOposicion.AVANZADO);
+    expect(service.guardarConfiguracion$).not.toHaveBeenCalled();
+  });
+
+  it('cancelar el test restaura el nivel del borrador y no persiste', () => {
+    component.preferencias.nivel = NivelOposicion.INICIACION;
+    component.iniciarCuestionario();
+    component.preferencias.nivel = NivelOposicion.AVANZADO;
+
+    component.cancelarCuestionario();
+
+    expect(component.preferencias.nivel).toBe(NivelOposicion.INICIACION);
+    expect(component.elegirCuestionario()).toBe(false);
     expect(service.guardarConfiguracion$).not.toHaveBeenCalled();
   });
 

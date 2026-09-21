@@ -30,7 +30,10 @@
   background: var(--surface-100);
   border: 1px solid var(--surface-border);
   cursor: default;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
   width: 34px;
   height: 34px;
 
@@ -67,6 +70,23 @@
 .oposicion-item {
   width: 100%;
   position: relative;
+
+  &__copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    small {
+      color: var(--text-color-secondary);
+      font-weight: 400;
+      line-height: 1.25;
+      white-space: normal;
+    }
+  }
+
+  &--disabled {
+    opacity: 0.72;
+  }
 
   // Raíz: el comodín "Todas las oposiciones" se destaca como padre de todos.
   &--raiz {
@@ -125,4 +145,46 @@
       background: var(--surface-400, #9ca3af);
     }
   }
+}
+
+.oposicion-field {
+  align-items: center;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  color: var(--text-color);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0.75rem;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  width: 100%;
+
+  &:focus-visible {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-100);
+    outline: none;
+  }
+
+  &:disabled {
+    background: var(--surface-100);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  &--invalid {
+    border-color: var(--red-500);
+  }
+
+  &--placeholder {
+    color: var(--text-color-secondary);
+  }
+}
+
+:host ::ng-deep .oposicion-picker-overlay {
+  max-width: calc(100vw - 1rem);
 }

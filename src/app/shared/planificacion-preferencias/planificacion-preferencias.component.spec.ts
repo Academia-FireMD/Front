@@ -1,5 +1,6 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NivelOposicion } from '../models/pregunta.model';
 import { Oposicion } from '../models/subscription.model';
 import {
   PlanificacionPreferenciasComponent,
@@ -33,7 +34,7 @@ describe('PlanificacionPreferenciasComponent', () => {
 
   it('no muestra el acceso al test por defecto', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
-      'Hacer test de recomendación de nivel',
+      'Hacer test de nivel',
     );
   });
 
@@ -45,7 +46,7 @@ describe('PlanificacionPreferenciasComponent', () => {
     const boton = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
     ).find((element: Element) =>
-      element.textContent?.includes('Hacer test de recomendación de nivel'),
+      element.textContent?.includes('Hacer test de nivel'),
     ) as HTMLButtonElement;
 
     expect(boton).toBeTruthy();
@@ -60,7 +61,7 @@ describe('PlanificacionPreferenciasComponent', () => {
 
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(texto).not.toContain('Nivel *');
-    expect(texto).not.toContain('Hacer test de recomendación de nivel');
+    expect(texto).not.toContain('Hacer test de nivel');
   });
 
   it('muestra la etiqueta y la aclaración de horas de estudio', () => {
@@ -73,22 +74,11 @@ describe('PlanificacionPreferenciasComponent', () => {
   });
 
   it('usa los nombres de oposición del contexto de planificación', () => {
-    expect(component.opcionesOposicion).toEqual(
-      expect.arrayContaining([
-        {
-          label: 'General Comunidad Valenciana',
-          value: Oposicion.GENERAL,
-        },
-        {
-          label: 'Consorcio de Alicante',
-          value: Oposicion.ALICANTE_CPBA,
-        },
-        {
-          label: 'Ayuntamiento de Valencia',
-          value: Oposicion.VALENCIA_AYUNTAMIENTO,
-        },
-        { label: 'Comunidad de Madrid', value: Oposicion.MADRID },
-      ]),
+    expect(component.planificacionLabelMap[Oposicion.GENERAL]).toBe(
+      'General Comunidad Valenciana',
+    );
+    expect(component.planificacionLabelMap[Oposicion.MADRID]).toBe(
+      'Comunidad de Madrid',
     );
   });
 
@@ -115,7 +105,7 @@ describe('PlanificacionPreferenciasComponent', () => {
     ];
     fixture.detectChanges();
 
-    const valores = component.opcionesOposicion.map((o) => o.value);
+    const valores = component.opcionesSelector.map((o) => o.value);
     expect(valores).toEqual([Oposicion.GENERAL, Oposicion.ALICANTE_CPBA]);
   });
 
@@ -125,14 +115,29 @@ describe('PlanificacionPreferenciasComponent', () => {
     component.franjasPermitidas = [];
     fixture.detectChanges();
 
-    expect(component.opcionesOposicion).toEqual([]);
+    expect(component.opcionesSelector).toEqual([]);
     expect(component.opcionesNivel).toEqual([]);
     expect(component.opcionesFranja).toEqual([]);
   });
 
   it('por defecto lista todas las oposiciones del enum', () => {
-    const valores = component.opcionesOposicion.map((o) => o.value);
+    const valores = component.opcionesSelector.map((o) => o.value);
     expect(valores).toHaveLength(4);
+  });
+
+  it('conserva las referencias de opciones si el padre recrea arrays equivalentes', () => {
+    component.oposicionesPermitidas = [Oposicion.GENERAL];
+    component.nivelesPermitidos = [NivelOposicion.INICIACION];
+    component.ngOnChanges();
+    const selector = component.opcionesSelector;
+    const niveles = component.opcionesNivel;
+
+    component.oposicionesPermitidas = [Oposicion.GENERAL];
+    component.nivelesPermitidos = [NivelOposicion.INICIACION];
+    component.ngOnChanges();
+
+    expect(component.opcionesSelector).toBe(selector);
+    expect(component.opcionesNivel).toBe(niveles);
   });
 
   it('emite los cambios al modificar un control (modo simple)', () => {

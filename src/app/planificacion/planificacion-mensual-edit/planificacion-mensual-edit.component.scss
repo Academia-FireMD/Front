@@ -233,3 +233,15 @@
   cursor: pointer;
   position: relative;
 }
+@media (max-width: 575px) {
+  .volcado-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  :host ::ng-deep .volcado-actions .p-button {
+    justify-content: center;
+    min-height: 44px;
+    width: 100%;
+  }
+}

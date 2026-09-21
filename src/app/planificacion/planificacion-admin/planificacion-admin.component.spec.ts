@@ -4,7 +4,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { of } from 'rxjs';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
@@ -99,6 +99,17 @@ describe('PlanificacionAdminComponent', () => {
         },
         { provide: ConfirmationService, useValue: confirmation },
         { provide: Router, useValue: router },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              queryParamMap: {
+                get: jest.fn(() => null),
+                getAll: jest.fn(() => []),
+              },
+            },
+          },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -675,7 +686,7 @@ describe('PlanificacionAdminComponent', () => {
       },
       hojas: [
         {
-          hoja: 'MI4-6H',
+          hoja: 'CMI4-6H',
           valida: true,
           totalBloques: 12,
           totalEntrenamientos: 2,
@@ -708,7 +719,7 @@ describe('PlanificacionAdminComponent', () => {
     await config.accept();
     fixture.detectChanges();
 
-    expect(component.codigosUltimaImportacion()).toEqual(['MI4-6H']);
+    expect(component.codigosUltimaImportacion()).toEqual(['CMI4-6H']);
     expect(
       fixture.nativeElement.querySelector(
         '[data-testid="importacion-incorporar-cta"]',
@@ -718,7 +729,94 @@ describe('PlanificacionAdminComponent', () => {
     component.incorporarSemanasEnPlanificacion();
     expect(router.navigate).toHaveBeenCalledWith(
       ['/app/planificacion/planificacion-mensual', 17],
-      { queryParams: { codigosHoja: ['MI4-6H'] } },
+      {
+        queryParams: {
+          codigosHoja: ['CMI4-6H'],
+          codigoActivo: 'CMI4-6H',
+          origen: 'importacion-plantillas',
+          abrirVolcado: '1',
+        },
+      },
+    );
+  });
+
+  it('autoselecciona solo un borrador compatible y exige elegir cuando hay varios', () => {
+    component.variantes.set([
+      {
+        codigo: 'MI4-6H',
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+        activa: true,
+      },
+    ]);
+    component.codigoImportacionSeleccionado.set('CMI4-6H');
+    const compatible = {
+      id: 17,
+      identificador: 'MADRID-BORRADOR-1',
+      mes: 10,
+      ano: 2026,
+      estado: 'BORRADOR',
+      relevancia: [Oposicion.MADRID],
+      tipoDePlanificacion:
+        TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+    } as PlanificacionMensual;
+    component.planificacionesMensuales.set([
+      compatible,
+      {
+        ...compatible,
+        id: 18,
+        identificador: 'OTRA-FRANJA',
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+      },
+    ]);
+
+    component.seleccionarCodigoImportacion('CMI4-6H');
+    expect(
+      component.planificacionesBorradorOptions.map((op) => op.value),
+    ).toEqual([17]);
+    expect(component.planificacionDestinoImportacion()).toBe(17);
+
+    component.planificacionesMensuales.set([
+      compatible,
+      { ...compatible, id: 19, identificador: 'MADRID-BORRADOR-2' },
+    ]);
+    component.seleccionarCodigoImportacion('CMI4-6H');
+    expect(component.planificacionDestinoImportacion()).toBeNull();
+
+    component.planificacionesMensuales.set([]);
+    component.seleccionarCodigoImportacion('CMI4-6H');
+    expect(component.planificacionesBorradorOptions).toEqual([]);
+    expect(component.planificacionDestinoImportacion()).toBeNull();
+  });
+
+  it('abre la creación guiada conservando oposición, franja y contexto', () => {
+    component.variantes.set([
+      {
+        codigo: 'MI4-6H',
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+        activa: true,
+      },
+    ]);
+    component.codigosUltimaImportacion.set(['CMI4-6H', 'CMA4-6H']);
+    component.codigoImportacionSeleccionado.set('CMI4-6H');
+
+    component.crearBorradorParaImportacion();
+
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/app/planificacion/planificacion-mensual', 'new'],
+      {
+        queryParams: {
+          origen: 'importacion-plantillas',
+          codigosHoja: ['CMI4-6H', 'CMA4-6H'],
+          codigoActivo: 'CMI4-6H',
+          oposicion: Oposicion.MADRID,
+          franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+        },
+      },
     );
   });
 
@@ -765,6 +863,58 @@ describe('PlanificacionAdminComponent', () => {
     await config.accept();
 
     expect(component.codigosUltimaImportacion()).toEqual(['GI6-8H']);
+  });
+
+  it('separa el prefijo de plantilla del código canónico de variante', async () => {
+    const file = new File(['xlsx'], 'madrid.xlsx');
+    component.archivoImportacion.set(file);
+    component.previewImportacion.set({
+      fileName: file.name,
+      fileHash: 'e'.repeat(64),
+      puedeAplicar: true,
+      yaAplicado: false,
+      requiereConfirmacionSobrescritura: false,
+      sobrescrituras: [],
+      totales: {
+        hojas: 1,
+        semanas: 1,
+        bloques: 1,
+        entrenamientos: 0,
+        errores: 0,
+      },
+      hojas: [
+        {
+          hoja: 'CMI6-8',
+          valida: true,
+          variante: {
+            codigo: 'PCMI6-8H',
+            oposicion: Oposicion.MADRID,
+            nivel: NivelOposicion.INICIACION,
+            franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+          },
+          totalBloques: 1,
+          totalEntrenamientos: 0,
+          semanas: [
+            {
+              numero: 1,
+              fechaInicio: '2026-02-09',
+              bloques: 1,
+              entrenamientos: 0,
+              esqueleto: false,
+            },
+          ],
+          errores: [],
+          warnings: [],
+        },
+      ],
+    });
+
+    component.confirmarAplicacionImportacion();
+    const config = (confirmation.confirm as jest.Mock).mock.calls.at(-1)[0];
+    await config.accept();
+
+    expect(component.codigosUltimaImportacion()).toEqual(['CMI6-8H']);
+    expect(component.varianteImportacionSeleccionada?.codigo).toBe('PCMI6-8H');
   });
 
   it('normaliza y deduplica los códigos válidos de hoja antes del volcado', async () => {
@@ -822,18 +972,30 @@ describe('PlanificacionAdminComponent', () => {
     ]);
   });
 
-  it('solo normaliza variantes con el formato de franja admitido', () => {
-    const normalizar = (codigo: string | null | undefined) =>
-      (component as any).codigoVarianteImportada(codigo);
+  it('resuelve la identidad de hoja sin depender del código de variante', () => {
+    const identidad = (codigo: string | null | undefined) =>
+      (component as any).identidadVarianteImportada(codigo);
 
-    expect(normalizar(' gi6-8h ')).toBe('GI6-8H');
-    expect(normalizar('H6-8')).toBe('H6-8');
-    expect(normalizar('NOCHE4-6')).toBe('NOCHE4-6H');
-    expect(normalizar('14-6')).toBe('14-6');
-    expect(normalizar('-4-6')).toBe('-4-6');
-    expect(normalizar('URG')).toBe('URG');
-    expect(normalizar('   ')).toBe('');
-    expect(normalizar(null)).toBe('');
-    expect(normalizar(undefined)).toBe('');
+    expect(identidad(' cmi6-8h ')).toEqual({
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+    });
+    expect(identidad('CAI4-6')).toEqual({
+      oposicion: Oposicion.ALICANTE_CPBA,
+      nivel: NivelOposicion.INICIACION,
+      franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+    });
+    expect(identidad('H6-8')).toBeNull();
+    expect(identidad(null)).toBeNull();
+  });
+
+  it('normaliza aliases de hoja a la identidad real de las plantillas', () => {
+    const normalizar = (codigo: string) =>
+      (component as any).codigoPlantillaImportada(codigo);
+
+    expect(normalizar('CAI6-8')).toBe('CBAI6-8H');
+    expect(normalizar('AVI4-6H')).toBe('AYVI4-6H');
+    expect(normalizar('CMI6-8')).toBe('CMI6-8H');
   });
 });

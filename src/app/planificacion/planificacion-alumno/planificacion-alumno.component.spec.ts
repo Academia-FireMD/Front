@@ -99,6 +99,40 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     expect(html).toContain('app-planificacion-configuracion-wizard');
   });
 
+  it('avisa si la configuración activa dejó de ser válida y conserva el calendario', async () => {
+    await montar({
+      ...estadoRequiereConfiguracion,
+      configuracionActiva: {
+        variante: {
+          codigo: 'LEGACY',
+          oposicion: 'VALENCIA_AYUNTAMIENTO' as never,
+          nivel: 'INICIACION' as never,
+          franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as never,
+        },
+        version: 3,
+        fechaVigencia: '2026-09-21T00:00:00.000Z',
+        origen: 'ALUMNO',
+        planificacionMensual: {
+          id: 14,
+          identificador: 'Configuración anterior',
+          mes: 9,
+          ano: 2026,
+        },
+      },
+    });
+
+    const shell = fixture.nativeElement as HTMLElement;
+    expect(shell.textContent).toContain(
+      'Tu configuración anterior ya no está disponible',
+    );
+    expect(shell.textContent).toContain(
+      'Tu calendario actual se mantiene sin cambios',
+    );
+    expect(
+      shell.querySelector('app-planificacion-configuracion-wizard'),
+    ).toBeTruthy();
+  });
+
   it('REQUIERE_CONFIGURACION sin oposiciones permitidas muestra que la publicación está pendiente', async () => {
     await montar({
       ...estadoRequiereConfiguracion,

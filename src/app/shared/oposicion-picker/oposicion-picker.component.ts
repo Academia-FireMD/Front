@@ -1,12 +1,23 @@
 import {
   Component,
   EventEmitter,
+  forwardRef,
   Input,
   OnChanges,
   OnInit,
   Output,
   SimpleChanges,
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR,
+} from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { ListboxModule } from 'primeng/listbox';
+import { OverlayPanel, OverlayPanelModule } from 'primeng/overlaypanel';
+import { TooltipModule } from 'primeng/tooltip';
 import {
   ARBOL_OPOSICIONES,
   colapsarOposiciones,
@@ -29,19 +40,52 @@ export interface PickerOption {
   icon: string;
   image: string | null;
   members?: Oposicion[];
+  enabledMembers?: Oposicion[];
+  disabled?: boolean;
+  disabledReason?: string;
   /** Nivel de indentación en el árbol: 0=raíz (GENERAL), 1=comunidad, 2=provincia. */
   nivel?: number;
 }
 
+export interface OposicionPickerOption {
+  value: Oposicion;
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
 @Component({
   selector: 'app-oposicion-picker',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    ButtonModule,
+    ListboxModule,
+    OverlayPanelModule,
+    TooltipModule,
+  ],
   templateUrl: './oposicion-picker.component.html',
   styleUrl: './oposicion-picker.component.scss',
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => OposicionPickerComponent),
+      multi: true,
+    },
+  ],
 })
-export class OposicionPickerComponent implements OnChanges, OnInit {
+export class OposicionPickerComponent
+  implements OnChanges, OnInit, ControlValueAccessor
+{
   @Input() oposiciones: Array<Oposicion> = [];
   @Input() allowAdd = false;
   @Input() multiple = true;
+  @Input() presentation: 'compact' | 'field' = 'compact';
+  @Input() opciones?: OposicionPickerOption[];
+  @Input() inputId = 'oposicion-picker';
+  @Input() placeholder = 'Selecciona oposición';
+  @Input() invalid = false;
+  @Input() disabled = false;
   /** Etiquetas opcionales por contexto; por defecto conserva el copy histórico. */
   @Input() labelMap?: Partial<Record<Oposicion, string>>;
   // La firma pública NO cambia: siempre se emite Oposicion[] reales (nunca el grupo sintético).
@@ -64,6 +108,11 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
   public displayItems: PickerOption[] = [];
   /** true si la agrupadora se muestra activa (para template). */
   public grupoActivo = false;
+  public overlayOpen = false;
+
+  private onChange: (value: Oposicion | Oposicion[] | null) => void = () =>
+    undefined;
+  private onTouched: () => void = () => undefined;
 
   ngOnInit(): void {
     // Estado inicial memoizado (por si no llega ningún ngOnChanges con inputs).
@@ -79,7 +128,31 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
       // En modo simple la agrupadora no aplica: degradar a individual.
       this.grupoActivoRef = null;
     }
+    if (changes['opciones']) {
+      this.selected = this.normalizarSeleccion(this.selected);
+    }
     this.recompute();
+  }
+
+  writeValue(value: Oposicion | Oposicion[] | null): void {
+    const values = value == null ? [] : Array.isArray(value) ? value : [value];
+    this.selected = this.normalizarSeleccion(values);
+    this.grupoActivoRef = this.multiple
+      ? this.findGrupoExacto(this.selected)
+      : null;
+    this.recompute();
+  }
+
+  registerOnChange(fn: (value: Oposicion | Oposicion[] | null) => void): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: () => void): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    this.disabled = isDisabled;
   }
 
   /** Recalcula las vistas memoizadas desde el estado interno. Referencias estables. */
@@ -89,8 +162,10 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
     //   Valenciana (grupo) → Valencia / Alicante (provincias, indentadas).
     // En modo simple no hay árbol: lista plana de oposiciones reales.
     this.listboxOptions = this.multiple
-      ? ARBOL_OPOSICIONES.map((n) => this.nodoToOption(n))
-      : Object.values(Oposicion).map((op) => this.toIndividualOption(op));
+      ? ARBOL_OPOSICIONES.map((n) => this.nodoToOption(n)).filter(
+          (option): option is PickerOption => option !== null,
+        )
+      : this.valoresVisibles().map((op) => this.toIndividualOption(op));
 
     this.grupoActivo = !!this.grupoActivoRef;
 
@@ -131,7 +206,15 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
     );
   }
 
-  private nodoToOption(n: NodoOposicion): PickerOption {
+  private nodoToOption(n: NodoOposicion): PickerOption | null {
+    if (n.tipo !== 'GRUPO' && !this.esVisible(n.code as Oposicion)) {
+      return null;
+    }
+    const members = n.members?.filter((member) => this.esVisible(member));
+    if (n.tipo === 'GRUPO' && !members?.length) return null;
+    const enabledMembers = members?.filter((member) =>
+      this.estaHabilitada(member),
+    );
     return {
       label:
         n.tipo === 'GRUPO'
@@ -141,7 +224,18 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
       icon: n.icon,
       image: n.image,
       nivel: n.nivel,
-      members: n.members,
+      members,
+      enabledMembers,
+      disabled:
+        n.tipo === 'GRUPO'
+          ? enabledMembers?.length === 0
+          : !this.estaHabilitada(n.code as Oposicion),
+      disabledReason:
+        n.tipo === 'GRUPO'
+          ? enabledMembers?.length === 0
+            ? 'No hay oposiciones disponibles en este grupo'
+            : undefined
+          : this.opcionConfigurada(n.code as Oposicion)?.disabledReason,
     };
   }
 
@@ -156,12 +250,21 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
    * Reacciona a un cambio de selección del listbox. `value` es lo que emite PrimeNG:
    * un array de opciones (multiple) o una única opción / null (simple).
    */
-  onSelectionChange(value: PickerOption[] | PickerOption | null): void {
+  onSelectionChange(
+    value: PickerOption[] | PickerOption | null,
+    overlay?: OverlayPanel,
+  ): void {
+    if (this.disabled) return;
     if (!this.multiple) {
       const op = value as PickerOption | null;
+      if (op?.disabled) {
+        this.onTouched();
+        return;
+      }
       this.selected = op && !op.members ? [op.code as Oposicion] : [];
       this.grupoActivoRef = null;
       this.emit();
+      overlay?.hide();
       return;
     }
 
@@ -169,7 +272,9 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
     // nueva selección contra lo que estaba marcado (padre + hijas cuando el grupo
     // está activo) para distinguir "clic en el padre" de "clic/quitar una hija".
     // Robusto al orden y a eventos multi-cambio (p.ej. limpiar todo → []).
-    const nextOpts = (value as PickerOption[]) ?? [];
+    const nextOpts = ((value as PickerOption[]) ?? []).filter(
+      (option) => !option.disabled,
+    );
     const prevCodes = new Set(this.listboxValueCodes());
     const nextCodes = new Set(nextOpts.map((o) => o.code));
     const added = [...nextCodes].filter((c) => !prevCodes.has(c));
@@ -195,12 +300,14 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
           (op) => op !== OPOSICION_WILDCARD && !grupoAdded.members.includes(op),
         ),
       );
-      grupoAdded.members.forEach((m) => set.add(m));
+      (grupoAdded.members ?? [])
+        .filter((member) => this.estaHabilitada(member))
+        .forEach((m) => set.add(m));
       this.selected = [...set];
     } else if (grupoRemoved) {
       // Desmarcar el padre = quitar sus miembros de golpe (rompe/limpia el grupo).
       this.selected = this.selected.filter(
-        (op) => !grupoRemoved.members.includes(op),
+        (op) => !(grupoRemoved.members ?? []).includes(op),
       );
     } else {
       // Toggles de oposiciones individuales. Elegir una concreta quita GENERAL.
@@ -224,6 +331,24 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
     // refleje el nuevo estado sin depender de getters por-tick.
     this.recompute();
     this.updateSelection.emit([...this.selected]);
+    this.onChange(
+      this.multiple ? [...this.selected] : (this.selected[0] ?? null),
+    );
+    this.onTouched();
+  }
+
+  marcarTocado(): void {
+    this.overlayOpen = false;
+    this.onTouched();
+  }
+
+  get fieldLabel(): string {
+    if (!this.selected.length) return this.placeholder;
+    if (!this.multiple) {
+      return this.toIndividualOption(this.selected[0]).label;
+    }
+    if (this.displayItems.length === 1) return this.displayItems[0].label;
+    return `${this.selected.length} oposiciones seleccionadas`;
   }
 
   /**
@@ -233,9 +358,12 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
    * externa genuina y recomputamos si toca agrupar.
    */
   private syncFromInput(input: Oposicion[]): void {
-    if (this.sameSet(input, this.selected)) return;
-    this.selected = [...input];
-    this.grupoActivoRef = this.multiple ? this.findGrupoExacto(input) : null;
+    const normalizada = this.normalizarSeleccion(input);
+    if (this.sameSet(normalizada, this.selected)) return;
+    this.selected = normalizada;
+    this.grupoActivoRef = this.multiple
+      ? this.findGrupoExacto(normalizada)
+      : null;
   }
 
   /** Grupo cuyos miembros coinciden EXACTAMENTE (como conjunto) con `input`, o null. */
@@ -250,11 +378,14 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
   }
 
   private toIndividualOption(op: Oposicion): PickerOption {
+    const configured = this.opcionConfigurada(op);
     return {
       label: this.labelMap?.[op] ?? this.map[op]?.name ?? op,
       code: op,
       icon: this.map[op]?.icon || '📋',
       image: this.map[op]?.image || null,
+      disabled: configured?.disabled ?? false,
+      disabledReason: configured?.disabledReason,
     };
   }
 
@@ -265,6 +396,40 @@ export class OposicionPickerComponent implements OnChanges, OnInit {
       icon: g.icon,
       image: g.image,
       members: g.members,
+      enabledMembers: g.members.filter((member) => this.estaHabilitada(member)),
     };
+  }
+
+  private valoresVisibles(): Oposicion[] {
+    const values = this.opciones?.map((option) => option.value);
+    return this.opciones !== undefined
+      ? (values ?? [])
+      : Object.values(Oposicion);
+  }
+
+  private opcionConfigurada(
+    oposicion: Oposicion,
+  ): OposicionPickerOption | undefined {
+    return this.opciones?.find((option) => option.value === oposicion);
+  }
+
+  private esVisible(oposicion: Oposicion): boolean {
+    return (
+      !this.opciones ||
+      this.opciones.some((option) => option.value === oposicion)
+    );
+  }
+
+  private estaHabilitada(oposicion: Oposicion): boolean {
+    return (
+      this.esVisible(oposicion) && !this.opcionConfigurada(oposicion)?.disabled
+    );
+  }
+
+  private normalizarSeleccion(input: Oposicion[]): Oposicion[] {
+    const unicas = [...new Set(input)].filter((oposicion) =>
+      this.estaHabilitada(oposicion),
+    );
+    return this.multiple ? unicas : unicas.slice(0, 1);
   }
 }

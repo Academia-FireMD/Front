@@ -346,6 +346,16 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(component.volcadoPreview).toBeNull();
     });
 
+    it('conserva el segundo código activo al abrir desde una importación múltiple', () => {
+      component.codigosHojaDisponibles = ['GI6-8H', 'CMI6-8H'];
+      component.prefijoPlantillas = 'CMI6-8H';
+
+      component.abrirDialogoVolcar();
+
+      expect(component.prefijoPlantillas).toBe('CMI6-8H');
+      expect(component.isDialogVolcarVisible).toBe(true);
+    });
+
     it('cargarPreviewVolcado llama con dryRun:true y expone el resumen', async () => {
       const volcarMock = jest.fn(() =>
         of({
@@ -369,6 +379,7 @@ describe('PlanificacionMensualEditComponent', () => {
             },
           ],
           warnings: ['Advertencia de prueba'],
+          previewHash: 'preview-hash',
         } as any),
       );
       (component as any).planificacionesService = {
@@ -411,6 +422,7 @@ describe('PlanificacionMensualEditComponent', () => {
             },
           ],
           warnings: [],
+          previewHash: 'preview-hash',
           rangoFechas: { desde: '2026-08-03', hasta: '2026-08-09' },
         } as any),
       );
@@ -423,13 +435,18 @@ describe('PlanificacionMensualEditComponent', () => {
       const successSpy = jest.spyOn(TestBed.inject(ToastrService), 'success');
 
       component.prefijoPlantillas = 'GI6-8H';
-      component.volcadoPreview = { totalPlantillas: 1, resultados: [] } as any;
+      component.volcadoPreview = {
+        totalPlantillas: 1,
+        resultados: [],
+        previewHash: 'preview-hash',
+      } as any;
       (component as any).prefijoVolcadoPrevisualizado = 'GI6-8H';
       await component.aplicarVolcadoConfirmado();
 
       expect(volcarMock).toHaveBeenCalledWith(42, {
         prefijoPlantillas: 'GI6-8H',
         dryRun: false,
+        previewHash: 'preview-hash',
       });
       expect(successSpy).toHaveBeenCalledWith(
         'Variante volcada: 3 creados, 1 actualizados, 1 omitidos, 0 eliminados en 1 plantillas.',
@@ -524,6 +541,36 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(errorSpy).toHaveBeenCalledWith(
         'No se han encontrado plantillas con ese prefijo',
       );
+    });
+
+    it('un 409 invalida la previsualización y obliga a repetirla', async () => {
+      const volcarMock = jest.fn(() =>
+        throwError(() => ({
+          status: 409,
+          error: { message: 'El borrador cambió' },
+        })),
+      );
+      (component as any).planificacionesService = {
+        volcarPlantillas$: volcarMock,
+      };
+      const errorSpy = jest.spyOn(TestBed.inject(ToastrService), 'error');
+      component.prefijoPlantillas = 'GI6-8H';
+      component.volcadoPreview = {
+        totalPlantillas: 1,
+        resultados: [],
+        previewHash: 'preview-hash',
+      } as any;
+      (component as any).prefijoVolcadoPrevisualizado = 'GI6-8H';
+
+      await component.aplicarVolcadoConfirmado();
+
+      expect(volcarMock).toHaveBeenCalledWith(42, {
+        prefijoPlantillas: 'GI6-8H',
+        dryRun: false,
+        previewHash: 'preview-hash',
+      });
+      expect(component.volcadoPreview).toBeNull();
+      expect(errorSpy).toHaveBeenCalledWith('El borrador cambió');
     });
 
     it('invalida el preview al cambiar de código y no permite aplicar otro', async () => {
