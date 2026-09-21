@@ -60,7 +60,19 @@
         </div>
       }
 
-      <div class="wizard-actions wizard-actions--end pt-4">
+      <div
+        class="wizard-actions pt-4"
+        [class.wizard-actions--between]="modoEdicion"
+        [class.wizard-actions--end]="!modoEdicion"
+      >
+        @if (modoEdicion) {
+          <p-button
+            label="Cancelar"
+            icon="pi pi-times"
+            styleClass="p-button-text"
+            (click)="cancelar()"
+          ></p-button>
+        }
         <p-button
           label="Continuar"
           icon="pi pi-arrow-right"
@@ -222,7 +234,7 @@
   </p-stepperPanel>
 </p-stepper>
 
-@if (modoEdicion) {
+@if (modoEdicion && activeStep() !== 0) {
   <div class="wizard-actions mt-3">
     <p-button
       label="Cancelar"

@@ -10,6 +10,10 @@
   &--end {
     justify-content: flex-end;
   }
+
+  &--between {
+    justify-content: space-between;
+  }
 }
 
 :host ::ng-deep .wizard-test-button {
@@ -48,7 +52,8 @@
   }
 
   .wizard-actions,
-  .wizard-actions--end {
+  .wizard-actions--end,
+  .wizard-actions--between {
     align-items: stretch;
     flex-direction: column;
   }
