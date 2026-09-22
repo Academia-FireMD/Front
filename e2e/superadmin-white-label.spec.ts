@@ -251,8 +251,8 @@ test.describe('White-label superadmin panel', () => {
     state.config.logoUrl = 'https://cdn/old-logo.png';
     await loginAs(page, 'SUPERADMIN');
     await page.goto('/app/superadmin/config');
-    page.on('dialog', (d) => d.accept());
     await page.locator('[data-testid="btn-delete-logo"]').click();
+    await page.getByRole('button', { name: 'Sí, eliminar' }).click();
     // logo del sidenav debería ser el fallback /white_logo.png
     await expect
       .poll(() =>

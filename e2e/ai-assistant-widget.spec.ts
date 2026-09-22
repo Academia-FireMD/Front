@@ -82,7 +82,13 @@ test.describe('AI assistant widget integration', () => {
       .toBeDefined();
 
     const boot = await page.evaluate(() => (window as any).__widgetBoot);
-    expect(boot.apiUrl).toMatch(/:3100\/api$/);
+    const widgetApiUrl = new URL(boot.apiUrl);
+    expect(widgetApiUrl.pathname).toBe('/api');
+    expect([
+      'localhost:3100',
+      'unique-fascination-staging.up.railway.app',
+      'ai-api.tecnikafire.com',
+    ]).toContain(widgetApiUrl.host);
     expect(boot.embedToken).toBeTruthy();
     expect(boot.preAuthToken).toBe('eyTEST.preAuthJwtMock.SIG');
     expect(boot.mode).toBe('floating');

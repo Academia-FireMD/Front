@@ -21,9 +21,17 @@ import {
   type Page,
   type Request,
 } from '@playwright/test';
-import { loginAsAlumnoMock, loginAsRoleMock } from './helpers/auth.helper';
+import { loginAsRoleMock } from './helpers/auth.helper';
 import callejero from './fixtures/callejero-valencia.json';
 import userAlumnoFixture from './fixtures/user-alumno.json';
+
+const userAlumnoValenciaFixture = {
+  ...userAlumnoFixture,
+  suscripciones: userAlumnoFixture.suscripciones.map((suscripcion) => ({
+    ...suscripcion,
+    oposicion: 'VALENCIA_AYUNTAMIENTO',
+  })),
+};
 
 /**
  * Stubs NARROW del app-shell que el módulo evolucionado (v3/v10 + asistente IA)
@@ -36,7 +44,7 @@ async function setupShellStubs(page: Page): Promise<void> {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(userAlumnoFixture),
+      body: JSON.stringify(userAlumnoValenciaFixture),
     }),
   );
   await page.route('**/ai-assistant/token', (route) =>
@@ -367,7 +375,11 @@ test.describe('Módulo Callejero (alumno)', () => {
       await route.continue();
     });
     await setupShellStubs(page);
-    await loginAsAlumnoMock(page);
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      email: 'alumno@test.com',
+      userFixture: userAlumnoValenciaFixture,
+    });
     await setupAppConfigStubs(page);
     await setupCallejeroInterceptors(page, currentState);
   });
@@ -691,7 +703,7 @@ test.describe('Módulo Callejero (alumno)', () => {
     await loginAsRoleMock(page, {
       rol: 'ALUMNO',
       email: 'otro-alumno@example.invalid',
-      userFixture: userAlumnoFixture,
+      userFixture: userAlumnoValenciaFixture,
     });
 
     frame = await irACallejero(page);
