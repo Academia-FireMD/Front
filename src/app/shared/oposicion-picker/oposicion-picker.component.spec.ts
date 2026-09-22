@@ -114,13 +114,13 @@ describe('OposicionPickerComponent', () => {
     expect(codes).toContain(ALI);
   });
 
-  it('(e ter) el árbol tiene niveles: GENERAL raíz (0), Madrid/CV comunidad (1), Valencia/Alicante provincia (2)', () => {
+  it('(e ter) GENERAL, Madrid y CV son opciones principales; solo Valencia/Alicante cuelgan de CV', () => {
     load([]);
     expect(indOption(GEN).nivel).toBe(0);
-    expect(indOption(MAD).nivel).toBe(1);
-    expect(grupoOption().nivel).toBe(1);
-    expect(indOption(VAL).nivel).toBe(2);
-    expect(indOption(ALI).nivel).toBe(2);
+    expect(indOption(MAD).nivel).toBe(0);
+    expect(grupoOption().nivel).toBe(0);
+    expect(indOption(VAL).nivel).toBe(1);
+    expect(indOption(ALI).nivel).toBe(1);
   });
 
   it('(e quater) Madrid se muestra como comunidad ("Comunidad de Madrid") y GENERAL como raíz', () => {
@@ -223,14 +223,9 @@ describe('OposicionPickerComponent', () => {
     expect(element.querySelector('button.oposicion-field')).toBeNull();
   });
 
-  it('aplica las etiquetas del contexto sin cambiar los valores emitidos', () => {
+  it('aplica las etiquetas de planificación sin cambiar los valores emitidos', () => {
     component.multiple = false;
-    component.labelMap = {
-      [Oposicion.GENERAL]: 'General Comunidad Valenciana',
-      [Oposicion.ALICANTE_CPBA]: 'Consorcio de Alicante',
-      [Oposicion.VALENCIA_AYUNTAMIENTO]: 'Ayuntamiento de Valencia',
-      [Oposicion.MADRID]: 'Comunidad de Madrid',
-    };
+    component.context = 'planificacion';
     load([
       Oposicion.GENERAL,
       Oposicion.ALICANTE_CPBA,
@@ -247,6 +242,36 @@ describe('OposicionPickerComponent', () => {
     const emit = jest.spyOn(component.updateSelection, 'emit');
     component.onSelectionChange(component.listboxOptions[2]);
     expect(emit).toHaveBeenLastCalledWith([Oposicion.ALICANTE_CPBA]);
+  });
+
+  it('no convierte GENERAL en padre visual de Madrid en catálogo', () => {
+    component.context = 'catalogo';
+    component.multiple = true;
+    load([]);
+
+    expect(indOption(GEN)).toMatchObject({
+      label: 'Todas las oposiciones',
+      nivel: 0,
+      tipo: 'WILDCARD',
+    });
+    expect(indOption(MAD)).toMatchObject({
+      label: 'Comunidad de Madrid',
+      nivel: 0,
+      tipo: 'OPOSICION',
+    });
+  });
+
+  it('GENERAL solo es exclusivo en catálogo, no por usar selección múltiple', () => {
+    component.context = 'planificacion';
+    component.multiple = true;
+    load([]);
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    const general = indOption(GEN);
+    const madrid = indOption(MAD);
+
+    component.onSelectionChange([general, madrid]);
+
+    expect(emit).toHaveBeenLastCalledWith([GEN, MAD]);
   });
 
   it('no permite seleccionar una oposición deshabilitada y conserva el motivo', () => {

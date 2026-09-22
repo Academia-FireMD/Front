@@ -28,7 +28,13 @@ import {
   oposiciones,
   OPOSICION_WILDCARD,
 } from '../../utils/consts';
-import { Oposicion } from '../models/subscription.model';
+import {
+  CATALOGO_OPOSICION_LABELS,
+  Oposicion,
+  PLANIFICACION_OPOSICION_LABELS,
+} from '../models/subscription.model';
+
+export type OposicionPickerContext = 'catalogo' | 'planificacion';
 
 /**
  * Opción del listbox / badge. Puede ser una oposición individual (sin `members`)
@@ -44,8 +50,9 @@ export interface PickerOption {
   enabledMembers?: Oposicion[];
   disabled?: boolean;
   disabledReason?: string;
-  /** Nivel de indentación en el árbol: 0=raíz (GENERAL), 1=comunidad, 2=provincia. */
+  /** Nivel de indentación visual: 0=principal, 1=miembro de una agrupación. */
   nivel?: number;
+  tipo?: NodoOposicion['tipo'];
 }
 
 export interface OposicionPickerOption {
@@ -82,9 +89,13 @@ export class OposicionPickerComponent
   @Input() oposiciones: Array<Oposicion> = [];
   @Input() allowAdd = false;
   @Input() multiple = true;
+  /** Define la semántica de GENERAL y las etiquetas; nunca se infiere del modo. */
+  @Input({ required: true }) context: OposicionPickerContext = 'catalogo';
   @Input() presentation: 'compact' | 'field' = 'compact';
   @Input() opciones?: OposicionPickerOption[];
   @Input() inputId = 'oposicion-picker';
+  @Input() ariaDescribedBy?: string;
+  @Input() ariaLabel?: string;
   @Input() placeholder = 'Selecciona oposición';
   @Input() invalid = false;
   @Input() disabled = false;
@@ -126,7 +137,7 @@ export class OposicionPickerComponent
     if (changes['oposiciones']) {
       this.syncFromInput(this.oposiciones ?? []);
     }
-    if (changes['multiple'] && !this.multiple) {
+    if ((changes['multiple'] || changes['context']) && !this.usaArbolCatalogo) {
       // En modo simple la agrupadora no aplica: degradar a individual.
       this.grupoActivoRef = null;
     }
@@ -139,7 +150,7 @@ export class OposicionPickerComponent
   writeValue(value: Oposicion | Oposicion[] | null): void {
     const values = value == null ? [] : Array.isArray(value) ? value : [value];
     this.selected = this.normalizarSeleccion(values);
-    this.grupoActivoRef = this.multiple
+    this.grupoActivoRef = this.usaArbolCatalogo
       ? this.findGrupoExacto(this.selected)
       : null;
     this.recompute();
@@ -159,11 +170,9 @@ export class OposicionPickerComponent
 
   /** Recalcula las vistas memoizadas desde el estado interno. Referencias estables. */
   private recompute(): void {
-    // Opciones del listbox = el ÁRBOL de oposiciones (dos niveles bajo GENERAL):
-    //   Todas las oposiciones (raíz) · Comunidad de Madrid (hoja) · Comunidad
-    //   Valenciana (grupo) → Valencia / Alicante (provincias, indentadas).
-    // En modo simple no hay árbol: lista plana de oposiciones reales.
-    this.listboxOptions = this.multiple
+    // El árbol solo existe en el catálogo. Planificación siempre consume una
+    // lista plana de variantes/oposiciones resueltas por el backend.
+    this.listboxOptions = this.usaArbolCatalogo
       ? ARBOL_OPOSICIONES.map((n) => this.nodoToOption(n)).filter(
           (option): option is PickerOption => option !== null,
         )
@@ -196,15 +205,32 @@ export class OposicionPickerComponent
     // displayItems = badges RESUMEN. Usa la MISMA lógica de colapso compartida
     // (colapsarOposiciones) que las tarjetas/overviews → consistencia garantizada:
     // Valencia + Alicante se muestran como un solo badge "Comunidad Valenciana".
-    this.displayItems = colapsarOposiciones(this.selected, {
-      labels: this.labelMap,
-    });
+    this.displayItems = this.usaArbolCatalogo
+      ? colapsarOposiciones(this.selected, {
+          labels: this.etiquetasContexto,
+        })
+      : this.selected.map((op) => this.toIndividualOption(op));
+  }
+
+  private get usaArbolCatalogo(): boolean {
+    return this.context === 'catalogo' && this.multiple;
+  }
+
+  private get etiquetasContexto(): Partial<Record<Oposicion, string>> {
+    return {
+      ...(this.context === 'planificacion'
+        ? PLANIFICACION_OPOSICION_LABELS
+        : CATALOGO_OPOSICION_LABELS),
+      ...(this.labelMap ?? {}),
+    };
   }
 
   /** ¿Está seleccionado solo el comodín GENERAL ("todas las oposiciones")? */
   private esWildcardActivo(): boolean {
     return (
-      this.selected.length === 1 && this.selected[0] === OPOSICION_WILDCARD
+      this.usaArbolCatalogo &&
+      this.selected.length === 1 &&
+      this.selected[0] === OPOSICION_WILDCARD
     );
   }
 
@@ -221,11 +247,12 @@ export class OposicionPickerComponent
       label:
         n.tipo === 'GRUPO'
           ? n.label
-          : (this.labelMap?.[n.code as Oposicion] ?? n.label),
+          : (this.etiquetasContexto[n.code as Oposicion] ?? n.label),
       code: n.code,
       icon: n.icon,
       image: n.image,
       nivel: n.nivel,
+      tipo: n.tipo,
       members,
       enabledMembers,
       disabled:
@@ -282,12 +309,19 @@ export class OposicionPickerComponent
     const added = [...nextCodes].filter((c) => !prevCodes.has(c));
     const removed = [...prevCodes].filter((c) => !nextCodes.has(c));
 
-    const wildcardAdded = added.includes(OPOSICION_WILDCARD);
-    const wildcardRemoved = removed.includes(OPOSICION_WILDCARD);
-    const grupoAdded = gruposOposicion.find((g) => added.includes(g.code));
-    const grupoRemoved = gruposOposicion.find((g) => removed.includes(g.code));
+    const wildcardAdded =
+      this.usaArbolCatalogo && added.includes(OPOSICION_WILDCARD);
+    const wildcardRemoved =
+      this.usaArbolCatalogo && removed.includes(OPOSICION_WILDCARD);
+    const grupoAdded = this.usaArbolCatalogo
+      ? gruposOposicion.find((g) => added.includes(g.code))
+      : undefined;
+    const grupoRemoved = this.usaArbolCatalogo
+      ? gruposOposicion.find((g) => removed.includes(g.code))
+      : undefined;
     const esGrupo = (c: string) => gruposOposicion.some((g) => g.code === c);
-    const esWildcard = (c: string) => c === OPOSICION_WILDCARD;
+    const esWildcard = (c: string) =>
+      this.usaArbolCatalogo && c === OPOSICION_WILDCARD;
 
     if (wildcardAdded) {
       // GENERAL ("todas las oposiciones") es EXCLUSIVO: al marcarlo, limpia el resto.
@@ -312,9 +346,12 @@ export class OposicionPickerComponent
         (op) => !(grupoRemoved.members ?? []).includes(op),
       );
     } else {
-      // Toggles de oposiciones individuales. Elegir una concreta quita GENERAL.
+      // En catálogo, elegir una concreta quita el comodín GENERAL. En
+      // planificación GENERAL es una oposición de negocio y no es exclusiva.
       const set = new Set<Oposicion>(
-        this.selected.filter((op) => op !== OPOSICION_WILDCARD),
+        this.selected.filter(
+          (op) => !this.usaArbolCatalogo || op !== OPOSICION_WILDCARD,
+        ),
       );
       for (const c of added)
         if (!esGrupo(c) && !esWildcard(c)) set.add(c as Oposicion);
@@ -324,7 +361,9 @@ export class OposicionPickerComponent
     }
 
     // Se pinta agrupado solo si el resultado coincide EXACTAMENTE con un grupo.
-    this.grupoActivoRef = this.findGrupoExacto(this.selected);
+    this.grupoActivoRef = this.usaArbolCatalogo
+      ? this.findGrupoExacto(this.selected)
+      : null;
     this.emit();
   }
 
@@ -363,7 +402,7 @@ export class OposicionPickerComponent
     const normalizada = this.normalizarSeleccion(input);
     if (this.sameSet(normalizada, this.selected)) return;
     this.selected = normalizada;
-    this.grupoActivoRef = this.multiple
+    this.grupoActivoRef = this.usaArbolCatalogo
       ? this.findGrupoExacto(normalizada)
       : null;
   }
@@ -382,7 +421,7 @@ export class OposicionPickerComponent
   private toIndividualOption(op: Oposicion): PickerOption {
     const configured = this.opcionConfigurada(op);
     return {
-      label: this.labelMap?.[op] ?? this.map[op]?.name ?? op,
+      label: this.etiquetasContexto[op] ?? this.map[op]?.name ?? op,
       code: op,
       icon: this.map[op]?.icon || '📋',
       image: this.map[op]?.image || null,

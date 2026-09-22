@@ -54,6 +54,7 @@
                 data-testid="descargar-word-btn"
               />
               <app-oposicion-picker
+                context="catalogo"
                 [allowAdd]="true"
                 [oposiciones]="relevancia.value"
                 (updateSelection)="updateOposicionSelection($event)"

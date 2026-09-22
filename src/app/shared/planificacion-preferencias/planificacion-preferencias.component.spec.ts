@@ -1,11 +1,13 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { NivelOposicion } from '../models/pregunta.model';
 import { Oposicion } from '../models/subscription.model';
 import {
   PlanificacionPreferenciasComponent,
   PreferenciasPlanificacion,
 } from './planificacion-preferencias.component';
+import { OposicionPickerComponent } from '../oposicion-picker/oposicion-picker.component';
 
 describe('PlanificacionPreferenciasComponent', () => {
   let component: PlanificacionPreferenciasComponent;
@@ -19,6 +21,7 @@ describe('PlanificacionPreferenciasComponent', () => {
 
     fixture = TestBed.createComponent(PlanificacionPreferenciasComponent);
     component = fixture.componentInstance;
+    component.oposicionContext = 'planificacion';
     fixture.detectChanges();
   });
 
@@ -91,12 +94,44 @@ describe('PlanificacionPreferenciasComponent', () => {
     expect(element.querySelector('p-floatlabel')).toBeNull();
   });
 
-  it('usa los nombres de oposición del contexto de planificación', () => {
-    expect(component.planificacionLabelMap[Oposicion.GENERAL]).toBe(
-      'General Comunidad Valenciana',
+  it('propaga explícitamente el contexto de planificación al selector', () => {
+    const picker = fixture.debugElement.query(
+      By.directive(OposicionPickerComponent),
+    ).componentInstance as OposicionPickerComponent;
+
+    expect(picker.context).toBe('planificacion');
+    expect(
+      picker.listboxOptions.find((o) => o.code === Oposicion.GENERAL)?.label,
+    ).toBe('General Comunidad Valenciana');
+  });
+
+  it('en perfil aclara que la selección expresa interés y no concede acceso', () => {
+    component.oposicionContext = 'catalogo';
+    component.multiple = true;
+    fixture.detectChanges();
+
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(texto).toContain('Oposiciones de interés *');
+    expect(texto).toContain(
+      'Esta preferencia no modifica tus suscripciones ni concede acceso a una planificación.',
     );
-    expect(component.planificacionLabelMap[Oposicion.MADRID]).toBe(
-      'Comunidad de Madrid',
+  });
+
+  it('en el asistente explica que las opciones dependen de las suscripciones activas', () => {
+    component.mostrarAyudaSuscripciones = true;
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
+    );
+    const picker = fixture.debugElement.query(
+      By.directive(OposicionPickerComponent),
+    ).componentInstance as OposicionPickerComponent;
+    expect(picker.ariaDescribedBy).toBe(
+      'planificacion-preferenciasOposicionAyuda',
+    );
+    expect(picker.ariaLabel).toBe(
+      'Oposición. Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
     );
   });
 

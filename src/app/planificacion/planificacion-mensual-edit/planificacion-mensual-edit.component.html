@@ -395,9 +395,9 @@
         @if (expectedRole == "ALUMNO" && relevancia.value?.length) {
           <div class="relevancia">
             <app-oposicion-picker
+              context="catalogo"
               [allowAdd]="false"
               [oposiciones]="relevancia.value"
-              [labelMap]="planificacionOposicionLabels"
             ></app-oposicion-picker>
           </div>
         }
@@ -427,9 +427,9 @@
           </div>
           <div class="relevancia">
             <app-oposicion-picker
+              context="catalogo"
               [allowAdd]="true"
               [oposiciones]="relevancia.value"
-              [labelMap]="planificacionOposicionLabels"
               (updateSelection)="updateOposicionSelection($event)"
             ></app-oposicion-picker>
           </div>

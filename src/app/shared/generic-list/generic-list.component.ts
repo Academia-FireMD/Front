@@ -248,6 +248,7 @@ export type GenericListMode = 'overview' | 'selection';
               filter.type === 'oposicion-picker' &&
               getFilterControl(filter.key) as control
             "
+            context="catalogo"
             [oposiciones]="control.value || []"
             [allowAdd]="true"
             (updateSelection)="control.setValue($event)"

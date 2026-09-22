@@ -16,7 +16,6 @@ import {
   duracionesDisponibles,
   matchKeyWithLabel,
 } from '../../shared/models/pregunta.model';
-import { PLANIFICACION_OPOSICION_LABELS } from '../../shared/models/subscription.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
 
 @Component({
@@ -30,7 +29,6 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   activatedRoute = inject(ActivatedRoute);
   @ViewChild('fileInput') fileInput!: ElementRef;
   duracionesDisponibles = duracionesDisponibles;
-  planificacionOposicionLabels = PLANIFICACION_OPOSICION_LABELS;
   public uploadingFile = false;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
 

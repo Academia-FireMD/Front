@@ -28,10 +28,10 @@
             >
             <label for="variante-oposicion">Oposición *</label>
             <app-oposicion-picker
+              context="planificacion"
               presentation="field"
               [multiple]="false"
               [opciones]="oposicionOptions"
-              [labelMap]="planificacionLabelMap"
               inputId="variante-oposicion"
               formControlName="oposicion"
             />
@@ -173,10 +173,10 @@
               >Oposición de suscripción *</label
             >
             <app-oposicion-picker
+              context="planificacion"
               presentation="field"
               [multiple]="false"
               [opciones]="oposicionOptions"
-              [labelMap]="planificacionLabelMap"
               inputId="regla-oposicion-suscripcion"
               formControlName="oposicionSuscripcion"
             />
@@ -184,10 +184,10 @@
               >Oposición de planificación *</label
             >
             <app-oposicion-picker
+              context="planificacion"
               presentation="field"
               [multiple]="false"
               [opciones]="oposicionOptions"
-              [labelMap]="planificacionLabelMap"
               inputId="regla-oposicion-planificacion"
               formControlName="oposicionPlanificacion"
             />

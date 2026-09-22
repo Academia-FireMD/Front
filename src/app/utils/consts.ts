@@ -162,7 +162,7 @@ export function colapsarOposiciones(
 ): OposicionColapsada[] {
   const lista = opts.excluirGeneral
     ? (ops ?? []).filter((o) => o !== Oposicion.GENERAL)
-    : ops ?? [];
+    : (ops ?? []);
   const grupo = gruposOposicion.find((g) =>
     mismoConjuntoOposiciones(g.members, lista),
   );
@@ -187,7 +187,7 @@ export function colapsarOposiciones(
 
 /**
  * Nodo del árbol del selector de oposiciones.
- * `nivel`: 0 = raíz (comodín GENERAL), 1 = comunidad, 2 = provincia.
+ * `nivel`: 0 = opción principal, 1 = miembro de una agrupación.
  * `tipo`: WILDCARD (GENERAL, exclusivo, "todas"), GRUPO (agrupadora con members),
  * OPOSICION (valor real del enum, hoja).
  */
@@ -196,7 +196,7 @@ export interface NodoOposicion {
   label: string;
   icon: string;
   image: string | null;
-  nivel: 0 | 1 | 2;
+  nivel: 0 | 1;
   tipo: 'WILDCARD' | 'GRUPO' | 'OPOSICION';
   members?: Oposicion[];
 }
@@ -205,12 +205,13 @@ export interface NodoOposicion {
 export const OPOSICION_WILDCARD = Oposicion.GENERAL;
 
 /**
- * Árbol de oposiciones del selector (dos niveles bajo el comodín GENERAL):
- *   Todas las oposiciones (GENERAL)   ← raíz/comodín, exclusivo
- *     Comunidad de Madrid             ← comunidad sin provincias (hoja)
- *     Comunidad Valenciana            ← comunidad (grupo)
- *       Valencia Ayuntamiento         ← provincia
- *       CPBA Alicante                 ← provincia
+ * Modelo visual del selector de catálogo. El comodín GENERAL es una acción
+ * independiente, no el padre geográfico de las demás opciones:
+ *   Todas las oposiciones (GENERAL)   ← comodín global y exclusivo
+ *   Comunidad de Madrid              ← opción principal independiente
+ *   Comunidad Valenciana             ← agrupación visual
+ *     Ayuntamiento de Valencia       ← miembro
+ *     Consorcio de Alicante          ← miembro
  * El orden de este array ES el orden en que se pintan las filas.
  */
 export const ARBOL_OPOSICIONES: NodoOposicion[] = [
@@ -227,7 +228,7 @@ export const ARBOL_OPOSICIONES: NodoOposicion[] = [
     label: 'Comunidad de Madrid',
     icon: oposiciones[Oposicion.MADRID].icon,
     image: oposiciones[Oposicion.MADRID].image,
-    nivel: 1,
+    nivel: 0,
     tipo: 'OPOSICION',
   },
   {
@@ -235,7 +236,7 @@ export const ARBOL_OPOSICIONES: NodoOposicion[] = [
     label: GRUPO_COMUNIDAD_VALENCIANA.name,
     icon: GRUPO_COMUNIDAD_VALENCIANA.icon,
     image: GRUPO_COMUNIDAD_VALENCIANA.image,
-    nivel: 1,
+    nivel: 0,
     tipo: 'GRUPO',
     members: GRUPO_COMUNIDAD_VALENCIANA.members,
   },
@@ -244,7 +245,7 @@ export const ARBOL_OPOSICIONES: NodoOposicion[] = [
     label: oposiciones[Oposicion.VALENCIA_AYUNTAMIENTO].name,
     icon: oposiciones[Oposicion.VALENCIA_AYUNTAMIENTO].icon,
     image: oposiciones[Oposicion.VALENCIA_AYUNTAMIENTO].image,
-    nivel: 2,
+    nivel: 1,
     tipo: 'OPOSICION',
   },
   {
@@ -252,7 +253,7 @@ export const ARBOL_OPOSICIONES: NodoOposicion[] = [
     label: oposiciones[Oposicion.ALICANTE_CPBA].name,
     icon: oposiciones[Oposicion.ALICANTE_CPBA].icon,
     image: oposiciones[Oposicion.ALICANTE_CPBA].image,
-    nivel: 2,
+    nivel: 1,
     tipo: 'OPOSICION',
   },
 ];

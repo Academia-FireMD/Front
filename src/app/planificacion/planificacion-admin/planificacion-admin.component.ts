@@ -116,12 +116,6 @@ export class PlanificacionAdminComponent implements OnInit {
   oposicionOptions: OposicionPickerOption[] = Object.values(Oposicion).map(
     (value) => ({ value }),
   );
-  readonly planificacionLabelMap = Object.fromEntries(
-    Object.values(Oposicion).map((oposicion) => [
-      oposicion,
-      getPlanificacionOposicionLabel(oposicion),
-    ]),
-  ) as Record<Oposicion, string>;
   nivelOptions = [
     { label: 'Iniciación', value: NivelOposicion.INICIACION },
     { label: 'Avanzado', value: NivelOposicion.AVANZADO },

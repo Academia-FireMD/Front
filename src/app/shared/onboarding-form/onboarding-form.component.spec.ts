@@ -45,6 +45,18 @@ describe('OnboardingFormComponent (regresión tras extraer preferencias)', () =>
     expect(component).toBeTruthy();
   });
 
+  it('usa el selector de catálogo y diferencia interés de acceso', () => {
+    const preferencias = fixture.debugElement.query(
+      (de) =>
+        de.componentInstance instanceof PlanificacionPreferenciasComponent,
+    ).componentInstance as PlanificacionPreferenciasComponent;
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(preferencias.oposicionContext).toBe('catalogo');
+    expect(texto).toContain('Oposiciones de interés');
+    expect(texto).toContain('no modifica tus suscripciones');
+  });
+
   it('emite los mismos campos de oposición/nivel/franja al enviar con datos iniciales', () => {
     component.initialData = {
       tipoOposicion: [Oposicion.VALENCIA_AYUNTAMIENTO],

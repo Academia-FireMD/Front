@@ -27,6 +27,7 @@
         <div class="col-12 md:col-6 lg:col-3">
           <label class="block mb-2 text-sm text-600">Oposiciones</label>
           <app-oposicion-picker
+            context="catalogo"
             [allowAdd]="true"
             [oposiciones]="relevancia.value"
             (updateSelection)="updateOposicionSelection($event)"

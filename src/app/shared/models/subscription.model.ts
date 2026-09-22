@@ -35,7 +35,21 @@ export const OPOSICION_LABELS: Record<Oposicion, string> = {
 };
 
 /**
- * Etiquetas que usa el flujo de planificación y el perfil.
+ * Etiquetas del selector de catálogo y del perfil.
+ *
+ * En este contexto GENERAL conserva su semántica histórica de comodín global.
+ * No reutilizar estas etiquetas para variantes de planificación, donde GENERAL
+ * representa la planificación General Comunidad Valenciana.
+ */
+export const CATALOGO_OPOSICION_LABELS: Record<Oposicion, string> = {
+  [Oposicion.GENERAL]: 'Todas las oposiciones',
+  [Oposicion.VALENCIA_AYUNTAMIENTO]: 'Ayuntamiento de Valencia',
+  [Oposicion.ALICANTE_CPBA]: 'Consorcio de Alicante',
+  [Oposicion.MADRID]: 'Comunidad de Madrid',
+};
+
+/**
+ * Etiquetas que usa exclusivamente el flujo de planificación.
  *
  * `OPOSICION_LABELS` se conserva porque otros módulos muestran sus nombres
  * históricos. Este mapa permite actualizar el copy solicitado por Sergio sin

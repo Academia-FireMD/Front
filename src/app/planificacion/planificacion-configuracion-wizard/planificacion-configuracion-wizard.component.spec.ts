@@ -78,6 +78,8 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     ).componentInstance as PlanificacionPreferenciasComponent;
 
     expect(preferencias.mostrarNivel).toBe(false);
+    expect(preferencias.oposicionContext).toBe('planificacion');
+    expect(preferencias.mostrarAyudaSuscripciones).toBe(true);
 
     component.activeStep.set(1);
     fixture.detectChanges();
@@ -85,6 +87,14 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(texto).toContain('Hacer test de nivel');
     expect(fixture.nativeElement.querySelectorAll('#wizardNivel')).toHaveLength(
       1,
+    );
+  });
+
+  it('explica que el selector solo muestra oposiciones incluidas en suscripciones activas', () => {
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(texto).toContain(
+      'Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
     );
   });
 
@@ -107,16 +117,14 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
         {
           oposicion: Oposicion.MADRID,
           nivel: NivelOposicion.AVANZADO,
-          franja:
-            'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
+          franja: 'FRANJA_CUATRO_A_SEIS_HORAS' as TipoDePlanificacionDeseada,
           varianteId: 1,
           planificacionMensual: null,
         },
         {
           oposicion: Oposicion.MADRID,
           nivel: NivelOposicion.INICIACION,
-          franja:
-            'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
           varianteId: 2,
           planificacionMensual: null,
         },
@@ -129,9 +137,7 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
       franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
     });
 
-    expect(component.preferencias.franja).toBe(
-      'FRANJA_CUATRO_A_SEIS_HORAS',
-    );
+    expect(component.preferencias.franja).toBe('FRANJA_CUATRO_A_SEIS_HORAS');
     expect(component.nivelesPermitidos).toEqual([NivelOposicion.AVANZADO]);
   });
 

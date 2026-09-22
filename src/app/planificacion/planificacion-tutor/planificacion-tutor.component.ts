@@ -116,6 +116,7 @@ import {
 
               <app-planificacion-preferencias
                 [valoresIniciales]="preferenciasEditadas"
+                oposicionContext="planificacion"
                 [oposicionesPermitidas]="opciones.oposiciones"
                 [nivelesPermitidos]="opciones.niveles"
                 [franjasPermitidas]="opciones.franjas"

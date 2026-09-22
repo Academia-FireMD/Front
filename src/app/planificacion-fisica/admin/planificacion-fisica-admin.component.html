@@ -164,6 +164,7 @@
             <td>{{ bloque.numSemanas }}</td>
             <td>
               <app-oposicion-picker
+                context="catalogo"
                 [allowAdd]="true"
                 [oposiciones]="bloque.relevancia"
                 (updateSelection)="guardarRelevancia(bloque, $event)"

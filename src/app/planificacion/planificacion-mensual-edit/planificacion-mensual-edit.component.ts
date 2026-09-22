@@ -42,10 +42,7 @@ import {
   VolcarPlantillasResultado,
 } from '../models/volcar-plantillas.model';
 import { duracionesDisponibles } from '../../shared/models/pregunta.model';
-import {
-  Oposicion,
-  PLANIFICACION_OPOSICION_LABELS,
-} from '../../shared/models/subscription.model';
+import { Oposicion } from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import {
   formatFechaISO,
@@ -175,7 +172,6 @@ export class PlanificacionMensualEditComponent {
     );
   }
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
-  public planificacionOposicionLabels = PLANIFICACION_OPOSICION_LABELS;
   public getEventsForDay = this.eventsService.getEventsForDay;
   public getProgressBarColor = this.eventsService.getProgressBarColor;
   public getCompletedSubBlocksForDay =

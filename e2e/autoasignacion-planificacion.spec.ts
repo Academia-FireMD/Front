@@ -83,6 +83,40 @@ const configuracionInicial = {
   ultimaRecomendacion: null,
 };
 
+const configuracionVariasOposiciones = {
+  ...configuracionInicial,
+  oposicionesPermitidas: [
+    'GENERAL',
+    'VALENCIA_AYUNTAMIENTO',
+    'ALICANTE_CPBA',
+    'MADRID',
+  ],
+  disponibilidadOposiciones: [
+    { oposicion: 'GENERAL', estado: 'DISPONIBLE' },
+    { oposicion: 'VALENCIA_AYUNTAMIENTO', estado: 'DISPONIBLE' },
+    { oposicion: 'ALICANTE_CPBA', estado: 'DISPONIBLE' },
+    { oposicion: 'MADRID', estado: 'DISPONIBLE' },
+  ],
+  opcionesPermitidas: [
+    ...configuracionInicial.opcionesPermitidas,
+    {
+      ...configuracionInicial.opcionesPermitidas[0],
+      oposicion: 'GENERAL',
+      varianteId: 13,
+    },
+    {
+      ...configuracionInicial.opcionesPermitidas[0],
+      oposicion: 'VALENCIA_AYUNTAMIENTO',
+      varianteId: 14,
+    },
+    {
+      ...configuracionInicial.opcionesPermitidas[0],
+      oposicion: 'ALICANTE_CPBA',
+      varianteId: 15,
+    },
+  ],
+};
+
 const cuestionarioNivel = {
   // El Front consume el contrato dinámico; no debe fijar la versión ni el copy.
   version: 42,
@@ -188,6 +222,44 @@ test('shell pendiente de publicación no obliga a repetir preferencias', async (
   await expect(page.locator('#wizardPreferenciasFranja')).toContainText(
     '4-6 Horas',
   );
+});
+
+test('el asistente usa el selector compartido con semántica de planificación', async ({
+  page,
+}) => {
+  await page.route('**/planificaciones/configuracion', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(configuracionVariasOposiciones),
+    }),
+  );
+
+  await loginAlumno(page);
+  await page.goto('/app/planificacion/configuracion-alumno');
+
+  await expect(page.locator('#wizardPreferenciasOposicion')).toHaveAttribute(
+    'aria-label',
+    'Oposición. Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
+  );
+  await expect(
+    page.getByText(
+      'Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
+    ),
+  ).toBeVisible();
+  await page.locator('#wizardPreferenciasOposicion').click();
+
+  for (const opcion of [
+    'General Comunidad Valenciana',
+    'Ayuntamiento de Valencia',
+    'Consorcio de Alicante',
+    'Comunidad de Madrid',
+  ]) {
+    await expect(page.getByRole('option', { name: opcion })).toBeVisible();
+  }
+  await expect(
+    page.getByRole('option', { name: 'Todas las oposiciones' }),
+  ).toHaveCount(0);
 });
 
 test('primera entrada permite completar wizard, activar version 0 y abrir calendario', async ({

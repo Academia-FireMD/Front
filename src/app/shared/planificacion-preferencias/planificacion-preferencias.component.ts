@@ -15,13 +15,11 @@ import {
   nivelesDisponibles,
   NivelOposicion,
 } from '../models/pregunta.model';
-import {
-  getPlanificacionOposicionLabel,
-  Oposicion,
-} from '../models/subscription.model';
+import { Oposicion } from '../models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../models/user.model';
 import {
   OposicionPickerComponent,
+  OposicionPickerContext,
   OposicionPickerOption,
 } from '../oposicion-picker/oposicion-picker.component';
 
@@ -59,21 +57,32 @@ export interface PreferenciasPlanificacion {
           <label
             class="block font-medium mb-2"
             [for]="formIdPrefix + 'Oposicion'"
+            >{{ etiquetaOposicion }} *</label
           >
-            Oposición *
-          </label>
           <app-oposicion-picker
             class="block w-full"
             presentation="field"
             [multiple]="multiple"
+            [context]="oposicionContext"
             [opciones]="opcionesSelector"
-            [labelMap]="planificacionLabelMap"
             [inputId]="formIdPrefix + 'Oposicion'"
+            [ariaDescribedBy]="
+              ayudaOposicion ? formIdPrefix + 'OposicionAyuda' : undefined
+            "
+            [ariaLabel]="etiquetaOposicionAccesible"
             [placeholder]="
               multiple ? 'Selecciona oposiciones' : 'Selecciona oposición'
             "
             formControlName="oposicion"
           />
+          @if (ayudaOposicion) {
+            <small
+              class="block text-500 mt-2 line-height-3"
+              [id]="formIdPrefix + 'OposicionAyuda'"
+            >
+              {{ ayudaOposicion }}
+            </small>
+          }
           @if (tieneOpcionesNoDisponibles) {
             <small class="block text-500 mt-2">
               Las opciones no disponibles se muestran con el motivo
@@ -177,6 +186,11 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
   @Input() franjasPermitidas?: TipoDePlanificacionDeseada[];
   /** Modo multi-select (onboarding, payload Oposicion[]) vs dropdown simple. */
   @Input() multiple = false;
+  /** Semántica explícita del selector; no se deduce de `multiple`. */
+  @Input({ required: true }) oposicionContext: OposicionPickerContext =
+    'planificacion';
+  /** Explica en el asistente por qué el catálogo depende de la suscripción. */
+  @Input() mostrarAyudaSuscripciones = false;
   /** Oculta el selector para reutilizar oposición y horas en el primer paso. */
   @Input() mostrarNivel = true;
   /** Muestra el acceso al test únicamente en superficies de alumno. */
@@ -197,12 +211,26 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
 
   niveles = nivelesDisponibles;
   duraciones = duracionesDisponibles;
-  readonly planificacionLabelMap = Object.fromEntries(
-    Object.values(Oposicion).map((oposicion) => [
-      oposicion,
-      getPlanificacionOposicionLabel(oposicion),
-    ]),
-  ) as Record<Oposicion, string>;
+  get etiquetaOposicion(): string {
+    return this.oposicionContext === 'catalogo' && this.multiple
+      ? 'Oposiciones de interés'
+      : 'Oposición';
+  }
+
+  get ayudaOposicion(): string | null {
+    if (this.oposicionContext === 'catalogo' && this.multiple) {
+      return 'Esta preferencia no modifica tus suscripciones ni concede acceso a una planificación.';
+    }
+    return this.mostrarAyudaSuscripciones
+      ? 'Solo se muestran las oposiciones incluidas en tus suscripciones activas.'
+      : null;
+  }
+
+  get etiquetaOposicionAccesible(): string {
+    return this.ayudaOposicion
+      ? `${this.etiquetaOposicion}. ${this.ayudaOposicion}`
+      : this.etiquetaOposicion;
+  }
   private opcionesNivelCache: { label: string; value: NivelOposicion }[] = [];
   private opcionesNivelKey: string | null = null;
   private opcionesFranjaCache: {

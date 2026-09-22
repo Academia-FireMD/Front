@@ -103,9 +103,9 @@
     <div class="right-side col-3 flex align-items-center justify-content-end">
       <div class="flex flex-row align-items-center justify-content-end gap-2">
         <app-oposicion-picker
+          context="catalogo"
           *ngIf="item.relevancia?.length"
           [oposiciones]="item.relevancia"
-          [labelMap]="planificacionOposicionLabels"
           [allowAdd]="false"
         ></app-oposicion-picker>
         <span
