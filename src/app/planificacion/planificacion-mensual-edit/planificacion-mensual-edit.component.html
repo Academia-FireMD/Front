@@ -438,11 +438,11 @@
       </div>
 
       <div class="right gap-2">
-        @if (getId() !== "new") {
+        @if (getId() !== "new" && expectedRole !== "ADMIN") {
           <app-attachments-manager
             [entidadTipo]="entidadTipoPlanificacion"
             [entidadId]="Number(getId())"
-            [mode]="expectedRole === 'ADMIN' ? 'admin' : 'view'"
+            mode="view"
           ></app-attachments-manager>
         }
         @if (expectedRole == "ALUMNO" && relevancia.value?.length) {
@@ -456,6 +456,13 @@
         }
         @if (expectedRole == "ADMIN") {
           <div class="monthly-admin-controls">
+            @if (getId() !== "new") {
+              <app-attachments-manager
+                [entidadTipo]="entidadTipoPlanificacion"
+                [entidadId]="Number(getId())"
+                mode="admin"
+              ></app-attachments-manager>
+            }
             <div class="duracion">
               <label
                 for="tipoDePlanificacionDuracionDeseada"

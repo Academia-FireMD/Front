@@ -301,6 +301,17 @@ test('sin borradores compatibles ofrece creación guiada también en móvil', as
     expect(Math.abs(box!.width - reference!.width)).toBeLessThanOrEqual(2);
     expect(box!.height).toBeGreaterThanOrEqual(40);
   }
+  const duracionMobile = await page
+    .locator('.monthly-admin-controls .duracion')
+    .boundingBox();
+  const oposicionesMobile = await page
+    .locator('.monthly-admin-controls .relevancia')
+    .boundingBox();
+  expect(duracionMobile).not.toBeNull();
+  expect(oposicionesMobile).not.toBeNull();
+  expect(
+    oposicionesMobile!.y - (duracionMobile!.y + duracionMobile!.height),
+  ).toBeLessThanOrEqual(24);
 
   const screenshotPath = process.env['PLAN_GUIDED_MOBILE_SCREENSHOT_PATH'];
   if (screenshotPath) {
@@ -309,9 +320,20 @@ test('sin borradores compatibles ofrece creación guiada también en móvil', as
 
   const desktopScreenshotPath =
     process.env['PLAN_GUIDED_DESKTOP_SCREENSHOT_PATH'];
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.locator('.header--admin').scrollIntoViewIfNeeded();
+  const duracionDesktop = await page
+    .locator('.monthly-admin-controls .duracion')
+    .boundingBox();
+  const oposicionesDesktop = await page
+    .locator('.monthly-admin-controls .relevancia')
+    .boundingBox();
+  expect(duracionDesktop).not.toBeNull();
+  expect(oposicionesDesktop).not.toBeNull();
+  expect(
+    Math.abs(duracionDesktop!.y - oposicionesDesktop!.y),
+  ).toBeLessThanOrEqual(2);
   if (desktopScreenshotPath) {
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.locator('.header--admin').scrollIntoViewIfNeeded();
     await page.screenshot({ path: desktopScreenshotPath });
   }
 });
