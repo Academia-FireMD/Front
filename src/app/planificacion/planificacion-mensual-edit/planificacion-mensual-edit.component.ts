@@ -681,7 +681,10 @@ export class PlanificacionMensualEditComponent {
         `Variante volcada: ${totalCreados} creados, ${totalActualizados} actualizados, ${totalOmitidos} omitidos, ${res.resultados.reduce((n, r) => n + (r.eliminados ?? 0), 0)} eliminados en ${res.totalPlantillas} plantillas.`,
       );
       this.cerrarDialogoVolcar();
-      this.load(res.rangoFechas?.desde);
+      this.load(
+        this.activedRoute.snapshot.queryParamMap.get('fechaFoco') ??
+          res.rangoFechas?.desde,
+      );
     } catch (error: any) {
       const status = error?.status;
       const backendMessage = error?.error?.message;
@@ -1012,6 +1015,8 @@ export class PlanificacionMensualEditComponent {
                 origen: 'importacion-plantillas',
                 codigosHoja: this.codigosHojaDisponibles,
                 codigoActivo: this.prefijoPlantillas,
+                fechaFoco:
+                  this.activedRoute.snapshot.queryParamMap.get('fechaFoco'),
                 abrirVolcado: '1',
               }
             : undefined,
@@ -1048,6 +1053,7 @@ export class PlanificacionMensualEditComponent {
           this.prefijoPlantillas ||
           this.activedRoute.snapshot.queryParamMap.get('codigoActivo') ||
           undefined,
+        fechaFoco: this.activedRoute.snapshot.queryParamMap.get('fechaFoco'),
         paso: 'destino',
       },
     });

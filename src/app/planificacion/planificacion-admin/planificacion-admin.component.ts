@@ -730,6 +730,14 @@ export class PlanificacionAdminComponent implements OnInit {
     this.sincronizarDestinoImportacion();
   }
 
+  private get fechaFocoImportacion(): string | null {
+    const codigo = this.codigoImportacionSeleccionado();
+    const fecha = this.previewImportacion()?.hojas
+      .find((hoja) => codigoPlantillaImportada(hoja.hoja) === codigo)
+      ?.semanas.find((semana) => semana.bloques > 0)?.fechaInicio;
+    return fecha ?? this.route.snapshot.queryParamMap.get('fechaFoco');
+  }
+
   crearBorradorParaImportacion(): void {
     const variante = this.varianteImportacionSeleccionada;
     const codigoActivo = this.codigoImportacionSeleccionado();
@@ -744,6 +752,7 @@ export class PlanificacionAdminComponent implements OnInit {
           origen: 'importacion-plantillas',
           codigosHoja: this.codigosUltimaImportacion(),
           codigoActivo,
+          fechaFoco: this.fechaFocoImportacion,
           oposicion: variante.oposicion,
           franja: variante.franja,
         },
@@ -768,6 +777,7 @@ export class PlanificacionAdminComponent implements OnInit {
         queryParams: {
           codigosHoja: this.codigosUltimaImportacion(),
           codigoActivo: this.codigoImportacionSeleccionado(),
+          fechaFoco: this.fechaFocoImportacion,
           origen: 'importacion-plantillas',
           abrirVolcado: '1',
         },

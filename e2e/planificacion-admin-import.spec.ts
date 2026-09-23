@@ -202,6 +202,10 @@ test('admin previsualiza y confirma una importación sin escrituras implícitas'
       name: 'Abrir borrador y previsualizar',
     }),
   ).toBeEnabled();
+  await page
+    .getByRole('button', { name: 'Abrir borrador y previsualizar' })
+    .click();
+  await expect(page).toHaveURL(/fechaFoco=2026-09-07/);
 });
 
 async function abrirSeleccionDeBorrador(

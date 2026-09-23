@@ -749,6 +749,7 @@ describe('PlanificacionAdminComponent', () => {
         queryParams: {
           codigosHoja: ['CMI4-6H'],
           codigoActivo: 'CMI4-6H',
+          fechaFoco: '2026-10-05',
           origen: 'importacion-plantillas',
           abrirVolcado: '1',
         },
@@ -863,6 +864,7 @@ describe('PlanificacionAdminComponent', () => {
           origen: 'importacion-plantillas',
           codigosHoja: ['CMI4-6H', 'CMA4-6H'],
           codigoActivo: 'CMI4-6H',
+          fechaFoco: null,
           oposicion: Oposicion.MADRID,
           franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
         },
