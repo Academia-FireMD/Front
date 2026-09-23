@@ -705,7 +705,7 @@ export class PlanificacionMensualEditComponent {
 
   public cerrarDialogoVolcar(): void {
     this.isDialogVolcarVisible = false;
-    this.prefijoPlantillas = '';
+    if (!this.esFlujoImportacion) this.prefijoPlantillas = '';
     this.volcadoPreview = null;
     this.prefijoVolcadoPrevisualizado = null;
   }

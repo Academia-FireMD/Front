@@ -194,7 +194,7 @@
 
 <p-dialog
   *ngIf="expectedRole == 'ADMIN'"
-  header="Volcar variante completa"
+  header="Incorporar semanas al borrador"
   [(visible)]="isDialogVolcarVisible"
   [modal]="true"
   [style]="{ width: 'min(80vw, 70rem)', maxHeight: 'calc(100dvh - 2rem)' }"
@@ -244,6 +244,11 @@
           se incorporarán todas sus semanas.
         }
       </small>
+      <p class="text-sm text-color-secondary mt-2 mb-0">
+        La previsualización incluye todas las plantillas guardadas de esta
+        variante, no solo las del último Excel. El borrador no cambia hasta que
+        confirmes la incorporación.
+      </p>
       @if (codigosHojaDisponibles.length && !codigosHojaOptions.length) {
         <p-message
           severity="warn"
@@ -476,7 +481,7 @@
                 Oposiciones
               </label>
               <app-oposicion-picker
-                context="catalogo"
+                context="planificacion"
                 presentation="field"
                 inputId="planificacion-oposiciones"
                 ariaLabel="Oposiciones de la planificación"

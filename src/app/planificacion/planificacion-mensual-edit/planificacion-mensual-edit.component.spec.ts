@@ -416,6 +416,18 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(component.puedePrevisualizarVolcado).toBe(true);
     });
 
+    it('conserva el nombre de la variante en el recorrido de importación tras incorporar', () => {
+      jest.spyOn(component, 'esFlujoImportacion', 'get').mockReturnValue(true);
+      component.prefijoPlantillas = 'GI6-8H';
+
+      component.cerrarDialogoVolcar();
+
+      expect(component.prefijoPlantillas).toBe('GI6-8H');
+      expect(component.etiquetaVarianteImportada(component.prefijoPlantillas)).toBe(
+        'General Comunidad Valenciana · Iniciación · 6-8 horas',
+      );
+    });
+
     it('sin hojas compatibles no permite previsualizar ni llama al servidor', async () => {
       component.lastLoadedPlanification.set({
         id: 42,
