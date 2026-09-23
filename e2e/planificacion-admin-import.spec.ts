@@ -322,16 +322,18 @@ test('sin borradores compatibles ofrece creación guiada también en móvil', as
     process.env['PLAN_GUIDED_DESKTOP_SCREENSHOT_PATH'];
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.locator('.header--admin').scrollIntoViewIfNeeded();
-  const duracionDesktop = await page
-    .locator('.monthly-admin-controls .duracion')
-    .boundingBox();
-  const oposicionesDesktop = await page
-    .locator('.monthly-admin-controls .relevancia')
-    .boundingBox();
-  expect(duracionDesktop).not.toBeNull();
-  expect(oposicionesDesktop).not.toBeNull();
+  const camposDesktop = await Promise.all(
+    [
+      '.header--admin .identificador',
+      '.header--admin .nombre',
+      '.monthly-admin-controls .duracion',
+      '.monthly-admin-controls .relevancia',
+    ].map((selector) => page.locator(selector).boundingBox()),
+  );
+  expect(camposDesktop.every(Boolean)).toBe(true);
+  const basesDesktop = camposDesktop.map((box) => box!.y + box!.height);
   expect(
-    Math.abs(duracionDesktop!.y - oposicionesDesktop!.y),
+    Math.max(...basesDesktop) - Math.min(...basesDesktop),
   ).toBeLessThanOrEqual(2);
   if (desktopScreenshotPath) {
     await page.screenshot({ path: desktopScreenshotPath });
