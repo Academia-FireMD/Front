@@ -460,13 +460,6 @@
         }
         @if (expectedRole == "ADMIN") {
           <div class="monthly-admin-controls">
-            @if (getId() !== "new") {
-              <app-attachments-manager
-                [entidadTipo]="entidadTipoPlanificacion"
-                [entidadId]="Number(getId())"
-                mode="admin"
-              ></app-attachments-manager>
-            }
             <div class="duracion">
               <label
                 for="tipoDePlanificacionDuracionDeseada"
@@ -506,6 +499,13 @@
                 <label for="switch1">Por defecto</label>
                 <p-inputSwitch [formControl]="esPorDefecto" inputId="switch1" />
               </div>
+            }
+            @if (getId() !== "new") {
+              <app-attachments-manager
+                [entidadTipo]="entidadTipoPlanificacion"
+                [entidadId]="Number(getId())"
+                mode="admin"
+              ></app-attachments-manager>
             }
           </div>
           <div class="monthly-admin-actions">
