@@ -208,13 +208,22 @@
       @if (codigosHojaDisponibles.length) {
         <p-dropdown
           inputId="prefijoPlantillas"
-          [options]="codigosHojaDisponibles"
+          [options]="codigosHojaOptions"
+          optionLabel="label"
+          optionValue="value"
           [ngModel]="prefijoPlantillas"
           (ngModelChange)="onPrefijoPlantillasChange($event)"
-          placeholder="Selecciona un código de hoja"
+          placeholder="Selecciona una variante"
+          [disabled]="!codigosHojaOptions.length"
+          appendTo="body"
           styleClass="w-full"
           data-testid="selector-codigo-hoja"
-        />
+        >
+          <ng-template pTemplate="item" let-option>
+            <span class="block">{{ option.label }}</span>
+            <small class="text-color-secondary">{{ option.value }}</small>
+          </ng-template>
+        </p-dropdown>
       } @else {
         <input
           id="prefijoPlantillas"
@@ -228,12 +237,20 @@
       }
       <small class="text-color-secondary">
         @if (codigosHojaDisponibles.length) {
-          Estos códigos proceden de la última importación validada.
+          Código de hoja: {{ prefijoPlantillas || "sin seleccionar" }}. Se
+          muestran las variantes compatibles con este borrador.
         } @else {
           No hay contexto de importación. Introduce el código exacto de la hoja;
           se incorporarán todas sus semanas.
         }
       </small>
+      @if (codigosHojaDisponibles.length && !codigosHojaOptions.length) {
+        <p-message
+          severity="warn"
+          text="Ninguna hoja importada coincide con la oposición y las horas de este borrador. Vuelve al importador y elige otro destino."
+          styleClass="w-full mt-2"
+        />
+      }
     </div>
 
     <div class="flex justify-content-end mb-3">
@@ -241,7 +258,7 @@
         label="Previsualizar"
         icon="pi pi-eye"
         (click)="cargarPreviewVolcado()"
-        [disabled]="!prefijoPlantillas.trim() || volcadoPreviewLoading"
+        [disabled]="!puedePrevisualizarVolcado || volcadoPreviewLoading"
       />
     </div>
 
@@ -346,10 +363,33 @@
   </div>
 </p-dialog>
 
+@if (expectedRole === "ADMIN" && esFlujoImportacion) {
+  <div class="import-guidance" role="status">
+    <strong>
+      {{
+        getId() === "new"
+          ? "Paso 2 · Crear borrador"
+          : "Paso 3 · Incorporar semanas"
+      }}
+    </strong>
+    <p class="mb-0">
+      {{ etiquetaVarianteImportada(prefijoPlantillas) }}.
+      @if (getId() === "new") {
+        Guarda el borrador para abrir la previsualización. Todavía no se
+        incorporarán ni publicarán semanas.
+      } @else {
+        Previsualiza las semanas y confirma la incorporación. Publicar y asignar
+        es un paso posterior.
+      }
+    </p>
+  </div>
+}
+
 <div class="grid" [formGroup]="formGroup">
   <div class="col-12 content">
     <div
       class="col-12 header flex justify-content-between align-items-center pt-4 gap-3"
+      [class.header--admin]="expectedRole === 'ADMIN'"
     >
       <div class="left gap-2">
         <div class="identificador">
@@ -359,7 +399,11 @@
             }
             <strong>{{ formGroup.value.identificador }}</strong>
           } @else {
+            <label for="planificacion-identificador" class="block mb-1">
+              Identificador *
+            </label>
             <input
+              id="planificacion-identificador"
               type="text"
               pInputText
               class="w-full"
@@ -369,15 +413,19 @@
           }
         </div>
 
-        <div class="nombre w-full" *ngIf="viewportService.screenWidth != 'xs'">
+        <div class="nombre w-full">
           @if (expectedRole == "ALUMNO") {
             <span>{{ formGroup.value.descripcion }}</span>
           } @else {
+            <label for="planificacion-descripcion" class="block mb-1">
+              Descripción *
+            </label>
             <input
+              id="planificacion-descripcion"
               type="text"
               pInputText
               class="w-full"
-              placeholder="Descripcion"
+              placeholder="Descripción"
               formControlName="descripcion"
             />
           }
@@ -395,66 +443,96 @@
         @if (expectedRole == "ALUMNO" && relevancia.value?.length) {
           <div class="relevancia">
             <app-oposicion-picker
-              context="catalogo"
+              [context]="esFlujoImportacion ? 'planificacion' : 'catalogo'"
               [allowAdd]="false"
               [oposiciones]="relevancia.value"
             ></app-oposicion-picker>
           </div>
         }
         @if (expectedRole == "ADMIN") {
-          @if (esFlujoImportacion) {
-            <p-button
-              [label]="
-                getId() === 'new' ? 'Cancelar creación' : 'Volver al importador'
+          <div class="monthly-admin-controls">
+            <div class="duracion">
+              <label
+                for="tipoDePlanificacionDuracionDeseada"
+                class="block mb-1"
+              >
+                Horas de estudio
+              </label>
+              <p-dropdown
+                class="w-full"
+                id="tipoDePlanificacionDuracionDeseada"
+                [style]="{ width: '100%' }"
+                [options]="duracionesDisponibles"
+                [formControl]="tipoDePlanificacion"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                placeholder="Seleccione una duración"
+              >
+              </p-dropdown>
+            </div>
+            <div class="relevancia">
+              <label for="planificacion-oposiciones" class="block mb-1">
+                Oposiciones
+              </label>
+              <app-oposicion-picker
+                context="catalogo"
+                presentation="field"
+                inputId="planificacion-oposiciones"
+                ariaLabel="Oposiciones de la planificación"
+                [allowAdd]="true"
+                [oposiciones]="relevancia.value"
+                (updateSelection)="updateOposicionSelection($event)"
+              ></app-oposicion-picker>
+            </div>
+            @if (!(esFlujoImportacion && getId() === "new")) {
+              <div class="por-defecto gap-2">
+                <label for="switch1">Por defecto</label>
+                <p-inputSwitch [formControl]="esPorDefecto" inputId="switch1" />
+              </div>
+            }
+          </div>
+          <div class="monthly-admin-actions">
+            @if (esFlujoImportacion) {
+              <p-button
+                [label]="
+                  getId() === 'new'
+                    ? 'Cancelar creación'
+                    : 'Volver al importador'
+                "
+                icon="pi pi-arrow-left"
+                [outlined]="true"
+                (onClick)="volverAImportacion()"
+              />
+            }
+            <app-async-button
+              [disabled]="
+                formGroup.invalid ||
+                (esFlujoImportacion &&
+                  getId() === 'new' &&
+                  !borradorImportacionCompatible)
               "
-              icon="pi pi-arrow-left"
-              [outlined]="true"
-              (onClick)="volverAImportacion()"
-            />
-          }
-          <div class="duracion">
-            <p-dropdown
-              class="w-full"
-              id="tipoDePlanificacionDuracionDeseada"
-              [options]="duracionesDisponibles"
-              [formControl]="tipoDePlanificacion"
-              optionLabel="label"
-              optionValue="value"
-              appendTo="body"
-              placeholder="Seleccione una duración"
-            >
-            </p-dropdown>
+              [action]="guardarCambios.bind(this)"
+              [label]="
+                esFlujoImportacion && getId() === 'new'
+                  ? 'Guardar borrador y previsualizar'
+                  : 'Guardar cambios'
+              "
+            ></app-async-button>
+            @if (
+              getId() !== "new" &&
+              lastLoadedPlanification()?.estado === "BORRADOR"
+            ) {
+              <p-button
+                label="Incorporar semanas"
+                icon="pi pi-download"
+                severity="secondary"
+                [disabled]="eventosModificados"
+                data-testid="volcar-variante-visible"
+                (onClick)="abrirDialogoVolcar()"
+              />
+            }
           </div>
-          <div class="relevancia">
-            <app-oposicion-picker
-              context="catalogo"
-              [allowAdd]="true"
-              [oposiciones]="relevancia.value"
-              (updateSelection)="updateOposicionSelection($event)"
-            ></app-oposicion-picker>
-          </div>
-          <div class="por-defecto gap-2">
-            <label for="switch1">Por defecto</label>
-            <p-inputSwitch [formControl]="esPorDefecto" />
-          </div>
-          <app-async-button
-            [disabled]="formGroup.invalid"
-            [action]="guardarCambios.bind(this)"
-            label="Guardar cambios"
-          ></app-async-button>
-          @if (
-            getId() !== "new" &&
-            lastLoadedPlanification()?.estado === "BORRADOR"
-          ) {
-            <p-button
-              label="Incorporar semanas"
-              icon="pi pi-download"
-              severity="secondary"
-              [disabled]="eventosModificados"
-              data-testid="volcar-variante-visible"
-              (onClick)="abrirDialogoVolcar()"
-            />
-          }
         }
         @if (expectedRole == "ALUMNO" && getId() !== "new") {
           <button
@@ -593,11 +671,10 @@
       }
 
       <p-speedDial
-        *ngIf="expectedRole == 'ADMIN'"
+        *ngIf="expectedRole == 'ADMIN' && getId() !== 'new'"
         [model]="items()"
         direction="up"
         transitionDelay="80"
-        [disabled]="getId() == 'new'"
       />
     </div>
     <div class="col-12 pt-2" *ngIf="expectedRole == 'ALUMNO'">

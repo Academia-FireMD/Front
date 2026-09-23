@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   OnInit,
   signal,
@@ -54,6 +55,11 @@ import {
   getFranjaPlanificacionLabel,
   getNivelOposicionLabel,
 } from '../../shared/utils/planificacion-labels.util';
+import {
+  codigoPlantillaImportada,
+  etiquetaVarianteImportada,
+  identidadVarianteImportada,
+} from '../utils/variante-importada.util';
 
 const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
   NonNullable<SemanaImportacionPlantilla['estado']>,
@@ -140,6 +146,15 @@ export class PlanificacionAdminComponent implements OnInit {
   confirmarSobrescritura = signal(false);
   resultadoImportacion = signal<ResultadoImportacionPlantillas | null>(null);
   codigosUltimaImportacion = signal<string[]>([]);
+  pasoImportacionActual = computed(() =>
+    this.resultadoImportacion() || this.codigosUltimaImportacion().length ? 2 : 1,
+  );
+  codigosImportacionOptions = computed(() =>
+    this.codigosUltimaImportacion().map((codigo) => ({
+      label: etiquetaVarianteImportada(codigo),
+      value: codigo,
+    })),
+  );
   codigoImportacionSeleccionado = signal<string | null>(null);
   planificacionDestinoImportacion = signal<number | null>(null);
   activeTabIndex = 0;
@@ -674,7 +689,7 @@ export class PlanificacionAdminComponent implements OnInit {
     return this.planificacionesMensuales()
       .filter(
         (planificacion) =>
-          (!planificacion.estado || planificacion.estado === 'BORRADOR') &&
+          planificacion.estado === 'BORRADOR' &&
           (!variante ||
             (planificacion.relevancia?.includes(variante.oposicion) &&
               planificacion.tipoDePlanificacion === variante.franja)),
@@ -689,7 +704,7 @@ export class PlanificacionAdminComponent implements OnInit {
     const codigo = this.codigoImportacionSeleccionado();
     if (!codigo) return null;
     const desdePreview = this.previewImportacion()?.hojas.find(
-      (hoja) => this.codigoPlantillaImportada(hoja.hoja) === codigo,
+      (hoja) => codigoPlantillaImportada(hoja.hoja) === codigo,
     )?.variante;
     if (desdePreview) {
       return {
@@ -697,7 +712,7 @@ export class PlanificacionAdminComponent implements OnInit {
         activa: true,
       } as VarianteAdmin;
     }
-    const identidad = this.identidadVarianteImportada(codigo);
+    const identidad = identidadVarianteImportada(codigo);
     if (!identidad) return null;
     return (
       this.variantes().find(
@@ -738,8 +753,13 @@ export class PlanificacionAdminComponent implements OnInit {
 
   incorporarSemanasEnPlanificacion(): void {
     const planificacionId = this.planificacionDestinoImportacion();
-    if (!planificacionId) {
-      this.toast.error('Selecciona una planificación en borrador');
+    if (
+      !planificacionId ||
+      !this.planificacionesBorradorOptions.some(
+        (opcion) => opcion.value === planificacionId,
+      )
+    ) {
+      this.toast.error('Selecciona un borrador compatible con la variante');
       return;
     }
     void this.router.navigate(
@@ -781,7 +801,7 @@ export class PlanificacionAdminComponent implements OnInit {
           new Set(
             preview.hojas
               .filter((hoja) => hoja.semanas.length > 0)
-              .map((hoja) => this.codigoPlantillaImportada(hoja.hoja)),
+              .map((hoja) => codigoPlantillaImportada(hoja.hoja)),
           ),
         ),
       );
@@ -807,75 +827,6 @@ export class PlanificacionAdminComponent implements OnInit {
     } finally {
       this.aplicandoImportacion.set(false);
     }
-  }
-
-  private identidadVarianteImportada(codigoHoja: string | null | undefined): {
-    oposicion: Oposicion;
-    nivel: NivelOposicion;
-    franja: TipoDePlanificacionDeseada;
-  } | null {
-    const codigoPlantilla = this.codigoPlantillaImportada(codigoHoja);
-    const coincidencia = codigoPlantilla.match(/^([A-Z]+)(4-6|6-8)H$/);
-    if (!coincidencia) return null;
-    const identidadBase: Record<
-      string,
-      { oposicion: Oposicion; nivel: NivelOposicion }
-    > = {
-      GI: {
-        oposicion: Oposicion.GENERAL,
-        nivel: NivelOposicion.INICIACION,
-      },
-      GA: { oposicion: Oposicion.GENERAL, nivel: NivelOposicion.AVANZADO },
-      CBAI: {
-        oposicion: Oposicion.ALICANTE_CPBA,
-        nivel: NivelOposicion.INICIACION,
-      },
-      CBAA: {
-        oposicion: Oposicion.ALICANTE_CPBA,
-        nivel: NivelOposicion.AVANZADO,
-      },
-      AYVI: {
-        oposicion: Oposicion.VALENCIA_AYUNTAMIENTO,
-        nivel: NivelOposicion.INICIACION,
-      },
-      AYVA: {
-        oposicion: Oposicion.VALENCIA_AYUNTAMIENTO,
-        nivel: NivelOposicion.AVANZADO,
-      },
-      CMI: {
-        oposicion: Oposicion.MADRID,
-        nivel: NivelOposicion.INICIACION,
-      },
-      CMA: {
-        oposicion: Oposicion.MADRID,
-        nivel: NivelOposicion.AVANZADO,
-      },
-    };
-    const base = identidadBase[coincidencia[1]];
-    if (!base) return null;
-    return {
-      ...base,
-      franja:
-        coincidencia[2] === '4-6'
-          ? TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS
-          : TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
-    };
-  }
-
-  private codigoPlantillaImportada(
-    codigoHoja: string | null | undefined,
-  ): string {
-    const codigo = codigoHoja?.trim().toUpperCase().replace(/\s+/g, '') ?? '';
-    if (/^H(?:4-6|6-8)H?$/.test(codigo)) return codigo;
-    const coincidencia = codigo.match(/^([A-Z]+)(4-6|6-8)H?$/);
-    if (!coincidencia) return codigo;
-    const alias: Record<string, string> = {
-      CAI: 'CBAI',
-      CAA: 'CBAA',
-      AVI: 'AYVI',
-      AVA: 'AYVA',
-    };
-    return `${alias[coincidencia[1]] ?? coincidencia[1]}${coincidencia[2]}H`;
   }
 
   private sincronizarDestinoImportacion(): void {

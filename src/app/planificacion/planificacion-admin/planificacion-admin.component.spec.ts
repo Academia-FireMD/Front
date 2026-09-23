@@ -12,6 +12,10 @@ import { Oposicion } from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import type { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import { PlanificacionAdminComponent } from './planificacion-admin.component';
+import {
+  codigoPlantillaImportada,
+  identidadVarianteImportada,
+} from '../utils/variante-importada.util';
 
 class ResizeObserverMock {
   observe(): void {}
@@ -711,7 +715,19 @@ describe('PlanificacionAdminComponent', () => {
         mes: 10,
         ano: 2026,
         estado: 'BORRADOR',
+        relevancia: [Oposicion.MADRID],
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
       } as PlanificacionMensual,
+    ]);
+    component.variantes.set([
+      {
+        codigo: 'PCMI4-6H',
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+        activa: true,
+      },
     ]);
 
     component.confirmarAplicacionImportacion();
@@ -789,6 +805,40 @@ describe('PlanificacionAdminComponent', () => {
     component.seleccionarCodigoImportacion('CMI4-6H');
     expect(component.planificacionesBorradorOptions).toEqual([]);
     expect(component.planificacionDestinoImportacion()).toBeNull();
+  });
+
+  it('explica cada variante y no trata un estado desconocido como borrador', () => {
+    component.codigosUltimaImportacion.set(['CMI6-8H', 'CBAA4-6H']);
+    expect(component.codigosImportacionOptions()).toEqual([
+      {
+        label: 'Comunidad de Madrid · Iniciación · 6-8 horas',
+        value: 'CMI6-8H',
+      },
+      {
+        label: 'Consorcio de Alicante · Avanzado · 4-6 horas',
+        value: 'CBAA4-6H',
+      },
+    ]);
+    component.codigoImportacionSeleccionado.set('CMI6-8H');
+    component.variantes.set([
+      {
+        codigo: 'PCMI6-8H',
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+        activa: true,
+      },
+    ]);
+    component.planificacionesMensuales.set([
+      {
+        id: 20,
+        identificador: 'SIN-ESTADO',
+        relevancia: [Oposicion.MADRID],
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+      } as PlanificacionMensual,
+    ]);
+    expect(component.planificacionesBorradorOptions).toEqual([]);
   });
 
   it('abre la creación guiada conservando oposición, franja y contexto', () => {
@@ -973,8 +1023,7 @@ describe('PlanificacionAdminComponent', () => {
   });
 
   it('resuelve la identidad de hoja sin depender del código de variante', () => {
-    const identidad = (codigo: string | null | undefined) =>
-      (component as any).identidadVarianteImportada(codigo);
+    const identidad = identidadVarianteImportada;
 
     expect(identidad(' cmi6-8h ')).toEqual({
       oposicion: Oposicion.MADRID,
@@ -991,8 +1040,7 @@ describe('PlanificacionAdminComponent', () => {
   });
 
   it('normaliza aliases de hoja a la identidad real de las plantillas', () => {
-    const normalizar = (codigo: string) =>
-      (component as any).codigoPlantillaImportada(codigo);
+    const normalizar = codigoPlantillaImportada;
 
     expect(normalizar('CAI6-8')).toBe('CBAI6-8H');
     expect(normalizar('AVI4-6H')).toBe('AYVI4-6H');

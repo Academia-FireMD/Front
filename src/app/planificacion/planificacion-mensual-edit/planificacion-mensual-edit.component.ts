@@ -51,6 +51,10 @@ import {
   getVentanaDosSemanasAtras,
 } from '../../utils/utils';
 import { EventsService } from '../services/events.service';
+import {
+  etiquetaVarianteImportada,
+  identidadVarianteImportada,
+} from '../utils/variante-importada.util';
 
 @Component({
   selector: 'app-planificacion-mensual-edit',
@@ -134,6 +138,8 @@ export class PlanificacionMensualEditComponent {
   public isDialogVolcarVisible = false;
   public prefijoPlantillas = '';
   public codigosHojaDisponibles: string[] = [];
+  public codigosHojaOptions: Array<{ label: string; value: string }> = [];
+  public readonly etiquetaVarianteImportada = etiquetaVarianteImportada;
   public volcadoPreview: VolcarPlantillasResponse | null = null;
   public volcadoPreviewLoading = false;
   public volcando = false;
@@ -398,8 +404,35 @@ export class PlanificacionMensualEditComponent {
         ) {
           this.prefijoPlantillas = this.codigosHojaDisponibles[0];
         }
+        this.actualizarCodigosHojaCompatibles();
       }),
     );
+  }
+
+  private actualizarCodigosHojaCompatibles(): void {
+    const destino = this.lastLoadedPlanification();
+    this.codigosHojaOptions = this.codigosHojaDisponibles
+      .filter((codigo) => {
+        const identidad = identidadVarianteImportada(codigo);
+        return (
+          identidad &&
+          (!destino ||
+            (destino.relevancia?.includes(identidad.oposicion) &&
+              destino.tipoDePlanificacion === identidad.franja))
+        );
+      })
+      .map((codigo) => ({
+        label: etiquetaVarianteImportada(codigo),
+        value: codigo,
+      }));
+    if (
+      destino &&
+      !this.codigosHojaOptions.some(
+        (opcion) => opcion.value === this.prefijoPlantillas,
+      )
+    ) {
+      this.prefijoPlantillas = this.codigosHojaOptions[0]?.value ?? '';
+    }
   }
 
   public async pickedPlantilla(plantillaOverview: Partial<PlantillaSemanal>) {
@@ -534,8 +567,17 @@ export class PlanificacionMensualEditComponent {
       );
       return;
     }
-    if (!this.codigosHojaDisponibles.includes(this.prefijoPlantillas)) {
-      this.prefijoPlantillas = this.codigosHojaDisponibles[0] ?? '';
+    if (this.codigosHojaDisponibles.length) {
+      this.actualizarCodigosHojaCompatibles();
+      if (
+        !this.codigosHojaOptions.some(
+          (opcion) => opcion.value === this.prefijoPlantillas,
+        )
+      ) {
+        this.prefijoPlantillas = this.codigosHojaOptions[0]?.value ?? '';
+      }
+    } else {
+      this.prefijoPlantillas = '';
     }
     this.volcadoPreview = null;
     this.prefijoVolcadoPrevisualizado = null;
@@ -548,10 +590,20 @@ export class PlanificacionMensualEditComponent {
     this.prefijoVolcadoPrevisualizado = null;
   }
 
+  get puedePrevisualizarVolcado(): boolean {
+    return (
+      !!this.prefijoPlantillas.trim() &&
+      (!this.codigosHojaDisponibles.length ||
+        this.codigosHojaOptions.some(
+          (opcion) => opcion.value === this.prefijoPlantillas,
+        ))
+    );
+  }
+
   public async cargarPreviewVolcado(): Promise<void> {
     const planificacionId = this.lastLoadedPlanification()?.id;
     const prefijo = this.prefijoPlantillas.trim();
-    if (!planificacionId || !prefijo) {
+    if (!planificacionId || !this.puedePrevisualizarVolcado) {
       return;
     }
 
@@ -578,7 +630,7 @@ export class PlanificacionMensualEditComponent {
   public async aplicarVolcadoConfirmado(): Promise<void> {
     const planificacionId = this.lastLoadedPlanification()?.id;
     const prefijo = this.prefijoPlantillas.trim();
-    if (!planificacionId || !prefijo) {
+    if (!planificacionId || !this.puedePrevisualizarVolcado) {
       return;
     }
     if (!this.volcadoPreview || this.prefijoVolcadoPrevisualizado !== prefijo) {
@@ -755,6 +807,7 @@ export class PlanificacionMensualEditComponent {
     this.eventosModificados = false;
     const itemId = this.getId();
     if (itemId === 'new') {
+      this.lastLoadedPlanification.set(null);
       this.formGroup.reset();
       const oposicion = this.activedRoute.snapshot.queryParamMap.get(
         'oposicion',
@@ -835,6 +888,7 @@ export class PlanificacionMensualEditComponent {
 
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();
+            this.actualizarCodigosHojaCompatibles();
             if (
               this.activedRoute.snapshot.queryParamMap.get('abrirVolcado') ===
                 '1' &&
@@ -909,6 +963,16 @@ export class PlanificacionMensualEditComponent {
   }
 
   public async guardarCambios() {
+    if (
+      this.esFlujoImportacion &&
+      this.getId() === 'new' &&
+      !this.borradorImportacionCompatible
+    ) {
+      this.toast.error(
+        'El borrador debe conservar la oposición y las horas de la variante importada.',
+      );
+      return;
+    }
     const res = await firstValueFrom(
       this.planificacionesService.createPlanificacionMensual$({
         identificador: this.formGroup.value.identificador ?? '',
@@ -918,7 +982,10 @@ export class PlanificacionMensualEditComponent {
         id: this.getId() == 'new' ? undefined : Number(this.getId()),
         relevancia:
           (this.formGroup?.value?.relevancia as Array<Oposicion>) ?? [],
-        esPorDefecto: this.formGroup.value.esPorDefecto ?? false,
+        esPorDefecto:
+          this.esFlujoImportacion && this.getId() === 'new'
+            ? false
+            : (this.formGroup.value.esPorDefecto ?? false),
         tipoDePlanificacion:
           this.formGroup.value.tipoDePlanificacion ??
           TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
@@ -961,6 +1028,15 @@ export class PlanificacionMensualEditComponent {
     return (
       this.activedRoute.snapshot.queryParamMap.get('origen') ===
       'importacion-plantillas'
+    );
+  }
+
+  get borradorImportacionCompatible(): boolean {
+    const identidad = identidadVarianteImportada(this.prefijoPlantillas);
+    return (
+      !!identidad &&
+      this.relevancia.value.includes(identidad.oposicion) &&
+      this.tipoDePlanificacion.value === identidad.franja
     );
   }
 

@@ -248,10 +248,19 @@
   <p-tabPanel header="Importar plantillas" leftIcon="pi pi-file-excel">
     <section class="import-panel" data-testid="importacion-plantillas-panel">
       <ol class="import-steps" aria-label="Fases de la importación">
-        <li class="import-steps__item import-steps__item--active">
+        <li
+          class="import-steps__item"
+          [class.import-steps__item--active]="pasoImportacionActual() === 1"
+          [class.import-steps__item--completed]="pasoImportacionActual() > 1"
+          [attr.aria-current]="pasoImportacionActual() === 1 ? 'step' : null"
+        >
           <span>1</span><strong>Validar e importar</strong>
         </li>
-        <li class="import-steps__item">
+        <li
+          class="import-steps__item"
+          [class.import-steps__item--active]="pasoImportacionActual() === 2"
+          [attr.aria-current]="pasoImportacionActual() === 2 ? 'step' : null"
+        >
           <span>2</span><strong>Elegir o crear borrador</strong>
         </li>
         <li class="import-steps__item">
@@ -570,42 +579,71 @@
           <div
             class="flex flex-column md:flex-row gap-2 align-items-stretch md:align-items-end"
           >
-            @if (codigosUltimaImportacion().length > 1) {
-              <div class="flex-1">
+            <div class="flex-1 min-w-0">
+              @if (codigosUltimaImportacion().length > 1) {
                 <label for="codigo-importacion" class="block mb-2">
                   Variante que vas a incorporar
                 </label>
                 <p-dropdown
                   inputId="codigo-importacion"
-                  [options]="codigosUltimaImportacion()"
+                  [options]="codigosImportacionOptions()"
+                  optionLabel="label"
+                  optionValue="value"
                   [ngModel]="codigoImportacionSeleccionado()"
                   (ngModelChange)="seleccionarCodigoImportacion($event)"
                   styleClass="w-full"
-                />
-              </div>
-            }
-            <div class="flex-1">
-              <label for="planificacion-destino-importacion" class="block mb-2">
-                Planificación en borrador
-              </label>
-              <p-dropdown
-                inputId="planificacion-destino-importacion"
-                [options]="planificacionesBorradorOptions"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Selecciona un borrador"
-                [ngModel]="planificacionDestinoImportacion()"
-                (ngModelChange)="planificacionDestinoImportacion.set($event)"
-                styleClass="w-full"
-              />
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <span class="block">{{ option.label }}</span>
+                    <small class="text-color-secondary">{{
+                      option.value
+                    }}</small>
+                  </ng-template>
+                </p-dropdown>
+              } @else {
+                <span class="block mb-2">Variante que vas a incorporar</span>
+                <div class="import-selected-variant">
+                  <strong>{{ codigosImportacionOptions()[0]?.label }}</strong>
+                </div>
+              }
+              <small class="block mt-1 text-color-secondary">
+                Código de hoja: {{ codigoImportacionSeleccionado() }}
+              </small>
             </div>
-            <p-button
-              label="Abrir borrador y previsualizar"
-              icon="pi pi-arrow-right"
-              iconPos="right"
-              [disabled]="!planificacionDestinoImportacion()"
-              (onClick)="incorporarSemanasEnPlanificacion()"
-            />
+            @if (planificacionesBorradorOptions.length) {
+              <div class="flex-1 min-w-0">
+                <label
+                  for="planificacion-destino-importacion"
+                  class="block mb-2"
+                >
+                  Planificación en borrador
+                </label>
+                <p-dropdown
+                  inputId="planificacion-destino-importacion"
+                  [options]="planificacionesBorradorOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Selecciona un borrador"
+                  [ngModel]="planificacionDestinoImportacion()"
+                  (ngModelChange)="planificacionDestinoImportacion.set($event)"
+                  styleClass="w-full"
+                />
+                <small class="block mt-1 text-color-secondary">
+                  @if (planificacionesBorradorOptions.length === 1) {
+                    Se ha seleccionado el único borrador compatible.
+                  } @else {
+                    Hay varios borradores compatibles; elige uno para continuar.
+                  }
+                </small>
+              </div>
+              <p-button
+                label="Abrir borrador y previsualizar"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                [disabled]="!planificacionDestinoImportacion()"
+                (onClick)="incorporarSemanasEnPlanificacion()"
+              />
+            }
           </div>
           @if (!planificacionesBorradorOptions.length) {
             <p-message

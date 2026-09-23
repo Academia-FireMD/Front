@@ -41,6 +41,15 @@
       color: var(--primary-color-text);
     }
   }
+
+  &--completed {
+    border-color: var(--green-500);
+
+    span {
+      background: var(--green-50);
+      color: var(--green-700);
+    }
+  }
 }
 
 .import-panel__separation {
@@ -52,6 +61,16 @@
 
 .import-cards {
   display: none;
+}
+
+.import-selected-variant {
+  align-items: center;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  display: flex;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  padding: 0.65rem 0.75rem;
 }
 
 .import-card {

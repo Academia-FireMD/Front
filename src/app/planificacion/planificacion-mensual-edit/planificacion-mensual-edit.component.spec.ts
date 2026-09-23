@@ -18,6 +18,8 @@ import { AppConfigService } from '../../services/app-config.service';
 import { EstadoModulos } from '../../shared/models/app-config.model';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { EventsService } from '../services/events.service';
+import { Oposicion } from '../../shared/models/subscription.model';
+import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 
 import { PlanificacionMensualEditComponent } from './planificacion-mensual-edit.component';
 
@@ -144,6 +146,38 @@ describe('PlanificacionMensualEditComponent', () => {
         '[data-testid="codigo-hoja-fallback"]',
       ),
     ).toBeNull();
+  });
+
+  it('mantiene visible la descripción obligatoria al crear un borrador en móvil', () => {
+    component.expectedRole = 'ADMIN';
+    component.viewportService.screenWidth = 'xs';
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('#planificacion-descripcion'),
+    ).toBeTruthy();
+    expect(
+      fixture.nativeElement.querySelector('#planificacion-identificador'),
+    ).toBeTruthy();
+  });
+
+  it('no crea un borrador de otra oposición para la hoja importada', async () => {
+    jest.spyOn(component, 'esFlujoImportacion', 'get').mockReturnValue(true);
+    jest.spyOn(component, 'getId').mockReturnValue('new');
+    component.prefijoPlantillas = 'CMI6-8H';
+    component.updateOposicionSelection([Oposicion.GENERAL]);
+    component.tipoDePlanificacion.setValue(
+      TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+    );
+    const crear = jest.fn();
+    (component as any).planificacionesService = {
+      createPlanificacionMensual$: crear,
+    };
+
+    await component.guardarCambios();
+
+    expect(crear).not.toHaveBeenCalled();
+    expect(component.borradorImportacionCompatible).toBe(false);
   });
 
   it('ofrece una salida explícita para gestionar preferencias sin volver a interponer el wizard', () => {
@@ -347,6 +381,13 @@ describe('PlanificacionMensualEditComponent', () => {
     });
 
     it('conserva el segundo código activo al abrir desde una importación múltiple', () => {
+      component.lastLoadedPlanification.set({
+        id: 42,
+        estado: 'BORRADOR',
+        relevancia: [Oposicion.MADRID],
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+      } as any);
       component.codigosHojaDisponibles = ['GI6-8H', 'CMI6-8H'];
       component.prefijoPlantillas = 'CMI6-8H';
 
@@ -354,6 +395,68 @@ describe('PlanificacionMensualEditComponent', () => {
 
       expect(component.prefijoPlantillas).toBe('CMI6-8H');
       expect(component.isDialogVolcarVisible).toBe(true);
+    });
+
+    it('al cancelar y reabrir no selecciona una hoja incompatible', () => {
+      component.lastLoadedPlanification.set({
+        id: 42,
+        estado: 'BORRADOR',
+        relevancia: [Oposicion.MADRID],
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+      } as any);
+      component.codigosHojaDisponibles = ['GI6-8H', 'CMI6-8H'];
+
+      component.abrirDialogoVolcar();
+      expect(component.prefijoPlantillas).toBe('CMI6-8H');
+      component.cerrarDialogoVolcar();
+      component.abrirDialogoVolcar();
+
+      expect(component.prefijoPlantillas).toBe('CMI6-8H');
+      expect(component.puedePrevisualizarVolcado).toBe(true);
+    });
+
+    it('sin hojas compatibles no permite previsualizar ni llama al servidor', async () => {
+      component.lastLoadedPlanification.set({
+        id: 42,
+        estado: 'BORRADOR',
+        relevancia: [Oposicion.MADRID],
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+      } as any);
+      component.codigosHojaDisponibles = ['GI6-8H'];
+      const volcar = jest.fn();
+      (component as any).planificacionesService = { volcarPlantillas$: volcar };
+
+      component.abrirDialogoVolcar();
+      expect(component.codigosHojaOptions).toEqual([]);
+      expect(component.prefijoPlantillas).toBe('');
+      expect(component.puedePrevisualizarVolcado).toBe(false);
+      component.prefijoPlantillas = 'GI6-8H';
+      await component.cargarPreviewVolcado();
+      expect(volcar).not.toHaveBeenCalled();
+    });
+
+    it('solo ofrece hojas compatibles con la oposición y horas del borrador', () => {
+      component.lastLoadedPlanification.set({
+        id: 42,
+        estado: 'BORRADOR',
+        relevancia: [Oposicion.MADRID],
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+      } as any);
+      component.codigosHojaDisponibles = ['GI6-8H', 'CMI6-8H', 'CMI4-6H'];
+      component.prefijoPlantillas = 'GI6-8H';
+
+      (component as any).actualizarCodigosHojaCompatibles();
+
+      expect(component.codigosHojaOptions).toEqual([
+        {
+          label: 'Comunidad de Madrid · Iniciación · 6-8 horas',
+          value: 'CMI6-8H',
+        },
+      ]);
+      expect(component.prefijoPlantillas).toBe('CMI6-8H');
     });
 
     it('cargarPreviewVolcado llama con dryRun:true y expone el resumen', async () => {

@@ -194,9 +194,147 @@ test('admin previsualiza y confirma una importación sin escrituras implícitas'
   await expect(page.getByTestId('importacion-incorporar-cta')).toContainText(
     'Aún no están incorporadas',
   );
+  await expect(page.getByTestId('importacion-incorporar-cta')).toContainText(
+    'Comunidad de Madrid · Iniciación · 6-8 horas',
+  );
   await expect(
     page.getByRole('button', {
       name: 'Abrir borrador y previsualizar',
     }),
   ).toBeEnabled();
+});
+
+async function abrirSeleccionDeBorrador(
+  page: import('@playwright/test').Page,
+  borradores: object[],
+) {
+  await page.route('**/planificaciones/admin/variantes', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 7,
+          codigo: 'PCMI6-8H',
+          oposicion: 'MADRID',
+          nivel: 'INICIACION',
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+          activa: true,
+        },
+      ]),
+    }),
+  );
+  await page.route('**/planificaciones/admin/reglas', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
+  await page.route('**/planificaciones/admin/sin-coincidencia', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
+  await page.route('**/planificaciones/planificaciones-mensuales', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: borradores,
+        pagination: { skip: 0, take: 9999, count: borradores.length },
+      }),
+    }),
+  );
+  await loginAsRoleMock(page, {
+    rol: 'ADMIN',
+    email: 'admin@test.com',
+    userFixture: userAdminFixture,
+    modulos: { PLANIFICACION_AUTOASIGNACION: true },
+  });
+  await page.goto(
+    '/app/planificacion/admin-planificacion?codigosHoja=CMI6-8H&paso=destino',
+  );
+  await expect(page.getByTestId('importacion-incorporar-cta')).toBeVisible();
+  const pasos = page.locator('.import-steps__item');
+  await expect(pasos.nth(1)).toHaveAttribute('aria-current', 'step');
+  await expect(pasos.nth(0)).not.toHaveAttribute('aria-current', 'step');
+}
+
+test('sin borradores compatibles ofrece creación guiada también en móvil', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await abrirSeleccionDeBorrador(page, []);
+  await expect(page.getByTestId('importacion-incorporar-cta')).toContainText(
+    'Comunidad de Madrid · Iniciación · 6-8 horas',
+  );
+  await expect(
+    page.getByRole('button', { name: 'Abrir borrador y previsualizar' }),
+  ).toHaveCount(0);
+
+  await page
+    .getByRole('button', { name: 'Crear planificación en borrador' })
+    .click();
+  await expect(page).toHaveURL(/planificacion-mensual\/new/);
+  await expect(page.locator('#planificacion-descripcion')).toBeVisible();
+  await expect(page.locator('#planificacion-identificador')).toBeVisible();
+  await expect(page.getByText('Paso 2 · Crear borrador')).toBeVisible();
+  await expect(page.locator('p-speeddial')).toHaveCount(0);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth,
+  );
+  expect(overflow).toBe(false);
+
+  const formControls = [
+    page.locator('#planificacion-identificador'),
+    page.locator('#planificacion-descripcion'),
+    page.locator('.monthly-admin-controls .p-dropdown'),
+    page.locator('#planificacion-oposiciones'),
+    page.getByRole('button', { name: 'Cancelar creación' }),
+    page.getByRole('button', { name: 'Guardar borrador y previsualizar' }),
+  ];
+  const reference = await formControls[0].boundingBox();
+  expect(reference).not.toBeNull();
+  for (const control of formControls.slice(1)) {
+    const box = await control.boundingBox();
+    expect(box).not.toBeNull();
+    expect(Math.abs(box!.x - reference!.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(box!.width - reference!.width)).toBeLessThanOrEqual(2);
+    expect(box!.height).toBeGreaterThanOrEqual(40);
+  }
+
+  const screenshotPath = process.env['PLAN_GUIDED_MOBILE_SCREENSHOT_PATH'];
+  if (screenshotPath) {
+    await page.screenshot({ path: screenshotPath });
+  }
+
+  const desktopScreenshotPath =
+    process.env['PLAN_GUIDED_DESKTOP_SCREENSHOT_PATH'];
+  if (desktopScreenshotPath) {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.locator('.header--admin').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: desktopScreenshotPath });
+  }
+});
+
+test('con varios borradores exige elegir uno antes de abrir la previsualización', async ({
+  page,
+}) => {
+  const base = {
+    mes: 9,
+    ano: 2026,
+    estado: 'BORRADOR',
+    relevancia: ['MADRID'],
+    tipoDePlanificacion: 'FRANJA_SEIS_A_OCHO_HORAS',
+  };
+  await abrirSeleccionDeBorrador(page, [
+    { ...base, id: 17, identificador: 'MADRID-1' },
+    { ...base, id: 18, identificador: 'MADRID-2' },
+  ]);
+
+  const abrir = page.getByRole('button', {
+    name: 'Abrir borrador y previsualizar',
+  });
+  await expect(abrir).toBeDisabled();
+  await expect(page.getByTestId('importacion-incorporar-cta')).toContainText(
+    'Hay varios borradores compatibles',
+  );
+  await page.locator('#planificacion-destino-importacion').click();
+  await page.getByRole('option', { name: /MADRID-2/ }).click();
+  await expect(abrir).toBeEnabled();
 });
