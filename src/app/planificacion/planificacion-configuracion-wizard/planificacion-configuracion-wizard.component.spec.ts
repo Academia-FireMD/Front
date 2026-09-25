@@ -405,6 +405,9 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Cancelar',
     );
+    expect(
+      fixture.nativeElement.querySelector('.wizard-actions.fab-safe-area'),
+    ).toBeTruthy();
     const canceladoSpy = jest.spyOn(component.cancelado, 'emit');
     const botones = Array.from(
       fixture.nativeElement.querySelectorAll('button'),
