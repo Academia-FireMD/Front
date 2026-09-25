@@ -294,7 +294,8 @@
       @if (previewImportacion(); as invalidacion) {
         <div role="alert" class="overwrite-warning">
           @if (
-            invalidacion.totales.semanas === 0 &&
+            invalidacion.totales.bloques === 0 &&
+            invalidacion.totales.entrenamientos === 0 &&
             invalidacion.totales.errores === 0
           ) {
             <strong

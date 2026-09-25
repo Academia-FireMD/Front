@@ -745,7 +745,7 @@ describe('PlanificacionAdminComponent', () => {
       sobrescrituras: [],
       totales: {
         hojas: 1,
-        semanas: 0,
+        semanas: 1,
         bloques: 0,
         entrenamientos: 0,
         errores: 0,
