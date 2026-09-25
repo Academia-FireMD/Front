@@ -64,6 +64,26 @@ export interface PlanificacionMensual {
   version?: number;
   publicadaAt?: Date | string | null;
   planificacionAnteriorId?: number | null;
+  varianteBorradorId?: number | null;
+  planificacionAnterior?: {
+    id: number;
+    identificador: string;
+    version: number;
+    estado: string;
+  } | null;
+  varianteBorrador?: {
+    id: number;
+    codigo: string;
+    oposicion: Oposicion;
+    nivel: string;
+    franja: TipoDePlanificacionDeseada;
+    planificacionMensual?: {
+      id: number;
+      identificador: string;
+      version: number;
+      estado: string;
+    } | null;
+  } | null;
 }
 
 export interface PlanificacionMensualPlantilla {

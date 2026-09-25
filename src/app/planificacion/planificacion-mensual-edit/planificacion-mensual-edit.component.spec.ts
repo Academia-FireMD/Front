@@ -120,7 +120,7 @@ describe('PlanificacionMensualEditComponent', () => {
     });
   });
 
-  it('muestra el volcado como acción visible y usa selector si recibe códigos', () => {
+  it('no ofrece el volcado legacy como acción principal y conserva su selector de compatibilidad', () => {
     fixture.detectChanges();
     component.expectedRole = 'ADMIN';
     component.lastLoadedPlanification.set({
@@ -135,7 +135,7 @@ describe('PlanificacionMensualEditComponent', () => {
       fixture.nativeElement.querySelector(
         '[data-testid="volcar-variante-visible"]',
       ),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
       fixture.nativeElement.querySelector(
         '[data-testid="selector-codigo-hoja"]',
@@ -146,6 +146,27 @@ describe('PlanificacionMensualEditComponent', () => {
         '[data-testid="codigo-hoja-fallback"]',
       ),
     ).toBeNull();
+  });
+
+  it('presenta la identidad de un borrador vinculado sin selectores editables', () => {
+    component.expectedRole = 'ADMIN';
+    fixture.detectChanges();
+    component.lastLoadedPlanification.set({
+      id: 42,
+      estado: 'BORRADOR',
+      varianteBorrador: {
+        id: 7,
+        codigo: 'PCMI6-8H',
+        oposicion: 'MADRID',
+        nivel: 'INICIACION',
+        franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+      },
+    } as any);
+    fixture.detectChanges();
+    const html = fixture.nativeElement as HTMLElement;
+    expect(html.textContent).toContain('Comunidad de Madrid');
+    expect(html.querySelector('#planificacion-oposiciones')).toBeNull();
+    expect(html.querySelector('#tipoDePlanificacionDuracionDeseada')).toBeNull();
   });
 
   it('mantiene visible la descripción obligatoria al crear un borrador en móvil', () => {

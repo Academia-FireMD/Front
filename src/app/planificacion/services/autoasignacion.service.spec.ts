@@ -328,6 +328,40 @@ describe('AutoasignacionService', () => {
     req.flush({});
   });
 
+  it('envía Excel, destinos, hash e idempotencia al endpoint de carga conjunta', () => {
+    const file = new File(['excel'], 'semanas.xlsx');
+    const destinos = { PGCVI68H: { tipo: 'COPIAR' as const } };
+    service.previewCargaSemanas$(file, destinos).subscribe();
+    let req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/preview`,
+    );
+    expect(req.request.body.get('file')).toMatchObject({
+      name: file.name,
+      size: file.size,
+    });
+    expect(JSON.parse(req.request.body.get('destinos'))).toEqual(destinos);
+    req.flush({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [],
+    });
+
+    service
+      .applyCargaSemanas$(file, destinos, 'a'.repeat(64), true, 'qa-retry-1')
+      .subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/apply`,
+    );
+    expect(req.request.body.get('previewHash')).toBe('a'.repeat(64));
+    expect(req.request.body.get('confirmarSustituciones')).toBe('true');
+    expect(req.request.body.get('idempotencyKey')).toBe('qa-retry-1');
+    req.flush({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [],
+    });
+  });
+
   it('GET /admin/sin-coincidencia devuelve la lista', () => {
     let recibida: unknown;
     const respuesta = [{ id: 1, email: 'a@a.es', nombre: 'A', apellidos: 'B' }];

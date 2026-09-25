@@ -52,6 +52,12 @@ import {
 } from '../store/user/user.selectors';
 import { oposiciones } from '../utils/consts';
 import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.component';
+import { AutoasignacionService } from '../planificacion/services/autoasignacion.service';
+import { ConfiguracionPlanificacion } from '../planificacion/models/autoasignacion.model';
+import {
+  getFranjaPlanificacionLabel,
+  getNivelOposicionLabel,
+} from '../shared/utils/planificacion-labels.util';
 
 @Component({
   selector: 'app-profile',
@@ -64,6 +70,8 @@ import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.co
 export class ProfileComponent implements OnInit, OnDestroy {
   readonly getPlanLabel = getPlanLabel;
   readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
+  readonly getFranjaPlanificacionLabel = getFranjaPlanificacionLabel;
+  readonly getNivelOposicionLabel = getNivelOposicionLabel;
 
   @ViewChild(BajaSuscripcionComponent)
   bajaSuscripcionComponent?: BajaSuscripcionComponent;
@@ -80,6 +88,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private examenesService = inject(ExamenesService);
   private appConfigService = inject(AppConfigService);
   private madridTutoriasService = inject(MadridTutoriasService);
+  private autoasignacionService = inject(AutoasignacionService);
+
+  configuracionPlanificacion: ConfiguracionPlanificacion | null = null;
+  configuracionPlanificacionCargando = true;
+  configuracionPlanificacionError = false;
 
   madridTutoriaBalance: MadridTutoriaBalance | null = null;
   madridTutoriaBalanceLoading = false;
@@ -201,6 +214,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.user = cloneDeep(user);
         this.loadOnboardingData();
         this.loadMadridTutoriaBalance();
+        if (user.rol === Rol.ALUMNO)
+          void this.cargarConfiguracionPlanificacion();
 
         // Verificar si es primer acceso y abrir modal automáticamente
         this.checkFirstTimeAccess();
@@ -257,6 +272,22 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.madridTutoriaBalanceLoading = false;
       },
     });
+  }
+
+  private async cargarConfiguracionPlanificacion(): Promise<void> {
+    this.configuracionPlanificacionCargando = true;
+    this.configuracionPlanificacionError = false;
+    try {
+      this.configuracionPlanificacion = await firstValueFrom(
+        this.autoasignacionService.getConfiguracion$(),
+      );
+    } catch {
+      // La ficha personal sigue disponible si el módulo está deshabilitado.
+      this.configuracionPlanificacion = null;
+      this.configuracionPlanificacionError = true;
+    } finally {
+      this.configuracionPlanificacionCargando = false;
+    }
   }
 
   async saveProfile(): Promise<void> {
@@ -380,10 +411,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
       diasSemanaDisponibles: this.user.diasSemanaDisponibles,
       otraInformacionLaboral: this.user.otraInformacionLaboral,
       comentariosAdicionales: this.user.comentariosAdicionales,
-      tipoOposicion: this.user.tipoOposicion,
-      nivelOposicion: this.user.nivelOposicion,
-      tipoDePlanificacionDuracionDeseada:
-        this.user.tipoDePlanificacionDuracionDeseada,
     };
   }
 
@@ -392,14 +419,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async onOnboardingUpdated(data: OnboardingData) {
-    const preferenciasHanCambiado =
-      this.preferenciasPlanificacionHanCambiado(data);
-    const nivelBorrador = data.nivelOposicion ?? null;
-    // El nivel solo se confirma junto con la configuración de planificación.
-    // El resto de la ficha se guarda ahora, conservando intacto el nivel
-    // persistido si el alumno cancela o abandona el asistente.
     const datosPersistibles = { ...data };
+    delete datosPersistibles.tipoOposicion;
     delete datosPersistibles.nivelOposicion;
+    delete datosPersistibles.tipoDePlanificacionDuracionDeseada;
     try {
       await firstValueFrom(
         this.userService.updateOnboardingData$(datosPersistibles),
@@ -411,35 +434,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       // Recargar usuario
       this.store.dispatch(UserActions.loadUser());
-
-      // El Perfil conserva el formulario compartido, pero la activación de la
-      // planificación se confirma en el wizard para que no haya una segunda
-      // regla de negocio local ni un autoasignador silencioso.
-      if (preferenciasHanCambiado) {
-        await this.router.navigate(
-          ['/app/planificacion/configuracion-alumno'],
-          {
-            queryParams: { gestionar: 'preferencias' },
-            state: { desdeFicha: true, nivelBorrador },
-          },
-        );
-      }
     } catch (error) {
       console.error('Error al actualizar onboarding:', error);
       this.toastService.error('Error al actualizar la información');
     }
-  }
-
-  private preferenciasPlanificacionHanCambiado(data: OnboardingData): boolean {
-    if (!this.user) return false;
-    const actual = [...(this.user.tipoOposicion ?? [])].sort();
-    const siguiente = [...(data.tipoOposicion ?? [])].sort();
-    return (
-      JSON.stringify(actual) !== JSON.stringify(siguiente) ||
-      (this.user.nivelOposicion ?? null) !== (data.nivelOposicion ?? null) ||
-      (this.user.tipoDePlanificacionDuracionDeseada ?? null) !==
-        (data.tipoDePlanificacionDuracionDeseada ?? null)
-    );
   }
 
   irAPlanificacion(): void {
@@ -456,7 +454,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   getOnboardingCompletionPercentage(): number {
     const data = this.onboardingData;
-    const fields = Object.values(data);
+    const fields = Object.entries(data)
+      .filter(
+        ([key]) =>
+          ![
+            'tipoOposicion',
+            'nivelOposicion',
+            'tipoDePlanificacionDuracionDeseada',
+          ].includes(key),
+      )
+      .map(([, value]) => value);
+    if (!fields.length) return 0;
     const filledFields = fields.filter(
       (value) =>
         value !== null &&
@@ -1126,9 +1134,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
   /** Oposiciones en las que el alumno ya tiene una suscripción activa (ACTIVE/PENDING_CANCEL). */
   get oposicionesContratadas(): Oposicion[] {
     const subs = this.user?.suscripciones ?? [];
-    return subs
-      .filter((s) => isSubscriptionAccessible(s.status))
-      .map((s) => s.oposicion);
+    return [
+      ...new Set(
+        subs
+          .filter(
+            (s) =>
+              isSubscriptionAccessible(s.status) &&
+              (!s.fechaFin || new Date(s.fechaFin).getTime() > Date.now()),
+          )
+          .map((s) => s.oposicion),
+      ),
+    ];
   }
 
   /**

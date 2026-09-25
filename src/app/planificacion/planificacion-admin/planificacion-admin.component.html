@@ -245,418 +245,216 @@
     </div>
   </p-tabPanel>
 
-  <p-tabPanel header="Importar plantillas" leftIcon="pi pi-file-excel">
-    <section class="import-panel" data-testid="importacion-plantillas-panel">
-      <ol class="import-steps" aria-label="Fases de la importación">
-        <li
-          class="import-steps__item"
-          [class.import-steps__item--active]="pasoImportacionActual() === 1"
-          [class.import-steps__item--completed]="pasoImportacionActual() > 1"
-          [attr.aria-current]="pasoImportacionActual() === 1 ? 'step' : null"
-        >
-          <span>1</span><strong>Validar e importar</strong>
-        </li>
-        <li
-          class="import-steps__item"
-          [class.import-steps__item--active]="pasoImportacionActual() === 2"
-          [attr.aria-current]="pasoImportacionActual() === 2 ? 'step' : null"
-        >
-          <span>2</span><strong>Elegir o crear borrador</strong>
-        </li>
-        <li class="import-steps__item">
-          <span>3</span><strong>Previsualizar e incorporar</strong>
-        </li>
-      </ol>
+  <p-tabPanel header="Cargar semanas" leftIcon="pi pi-file-excel">
+    <section
+      class="import-panel carga-directa"
+      aria-label="Cargar semanas en borrador"
+    >
       <div class="import-panel__header">
         <div>
-          <h3>Importación validada de plantillas semanales</h3>
+          <h3>Cargar semanas desde Excel</h3>
           <p>
-            Primero previsualiza el Excel. La aplicación solo se habilita si las
-            semanas rellenadas son válidas. Las semanas y pestañas vacías se
-            omiten sin borrar contenido existente.
+            Sube el archivo, revisa qué cambiará por oposición y semana y guarda
+            todas las hojas en borrador de una sola vez.
           </p>
-          <p class="import-panel__separation">
-            Importar guarda plantillas. Incorporarlas copia su contenido a un
-            borrador. Publicar y asignar es una acción posterior y separada. El
-            número de semanas importadas no cambia la apertura semanal de los
-            viernes.
+          <p>
+            <strong>Los alumnos no verán estos cambios</strong> hasta que
+            publiques y asignes la planificación por separado. Una semana vacía
+            o ausente no modifica el calendario.
           </p>
         </div>
-        <span class="import-panel__safety">
-          <i class="pi pi-shield"></i>
-          Sin escrituras durante la previsualización
-        </span>
       </div>
-
       <div class="import-actions">
         <input
-          #plantillasFileInput
+          #cargaFileInput
           type="file"
           accept=".xlsx,.xls"
-          data-testid="importacion-plantillas-file"
           class="sr-only"
+          aria-label="Archivo Excel con semanas"
           (change)="seleccionarArchivoImportacion($event)"
         />
         <p-button
           label="Seleccionar Excel"
           icon="pi pi-folder-open"
           severity="secondary"
-          (onClick)="plantillasFileInput.click()"
-        ></p-button>
-        <span class="import-actions__filename">
-          {{ archivoImportacion()?.name ?? "Ningún archivo seleccionado" }}
-        </span>
+          (onClick)="cargaFileInput.click()"
+        />
+        <span class="import-actions__filename">{{
+          archivoImportacion()?.name ?? "Ningún archivo seleccionado"
+        }}</span>
         <p-button
-          label="Previsualizar"
+          label="Previsualizar cambios"
           icon="pi pi-eye"
-          data-testid="importacion-plantillas-preview"
           [loading]="previsualizandoImportacion()"
           [disabled]="!archivoImportacion() || aplicandoImportacion()"
-          (onClick)="previsualizarImportacion()"
-        ></p-button>
+          (onClick)="previsualizarCargaSemanas()"
+        />
       </div>
 
-      @if (previewImportacion(); as preview) {
-        <div
-          class="import-summary"
-          data-testid="importacion-plantillas-summary"
-        >
-          <div class="import-summary__metric">
-            <span>Hojas</span><strong>{{ preview.totales.hojas }}</strong>
-          </div>
-          <div class="import-summary__metric">
-            <span>Semanas</span><strong>{{ preview.totales.semanas }}</strong>
-          </div>
-          <div class="import-summary__metric">
-            <span>Bloques</span><strong>{{ preview.totales.bloques }}</strong>
-          </div>
-          <div class="import-summary__metric">
-            <span>Entrenamientos</span
-            ><strong>{{ preview.totales.entrenamientos }}</strong>
-          </div>
-          <div
-            class="import-summary__metric"
-            [class.import-summary__metric--error]="preview.totales.errores > 0"
+      @if (previewImportacion(); as invalidacion) {
+        <div role="alert" class="overwrite-warning">
+          <strong
+            >El Excel contiene errores; no se ha guardado ninguna hoja.</strong
           >
-            <span>Errores</span><strong>{{ preview.totales.errores }}</strong>
-          </div>
-        </div>
-
-        @if (preview.yaAplicado) {
-          <p-message
-            severity="info"
-            text="El contenido de este archivo ya está cargado y no ha cambiado. Repetir la carga no lo duplicará."
-            styleClass="w-full"
-          ></p-message>
-        }
-        @if (!preview.puedeAplicar) {
-          <p-message
-            severity="error"
-            text="Importación bloqueada: corrige todos los errores y vuelve a previsualizar."
-            styleClass="w-full"
-          ></p-message>
-        }
-        @if (preview.requiereConfirmacionSobrescritura) {
-          <div class="overwrite-warning">
-            <div>
-              <strong>Se reemplazarán plantillas existentes</strong>
+          @for (hoja of invalidacion.hojas; track hoja.hoja) {
+            @for (error of hoja.errores; track $index) {
               <p>
-                {{ preview.sobrescrituras.length }} plantillas perderán sus
-                ediciones manuales actuales.
+                {{ hoja.hoja }} · Semana {{ error.semana ?? "—" }} ·
+                {{ error.dia ?? "—" }} · Fila {{ error.filaExcel ?? "—" }} ·
+                {{ error.campo ?? "actividad" }}: {{ error.mensaje }}
               </p>
-            </div>
+            }
+          }
+        </div>
+      }
+
+      @if (previewCarga(); as preview) {
+        @if (preview.requiereEleccion) {
+          <p-message
+            severity="warn"
+            text="Hay varios borradores compatibles. Elige el destino de cada variante y vuelve a previsualizar."
+            styleClass="w-full"
+          />
+        }
+        <div class="carga-directa__variantes" aria-live="polite">
+          @for (variante of preview.variantes; track variante.codigo) {
+            <article class="carga-directa__variante">
+              <h4>
+                {{ labelOposicion(variante.oposicion) }} ·
+                {{ getNivelOposicionLabel(variante.nivel) }} ·
+                {{ getFranjaPlanificacionLabel(variante.franja) }}
+              </h4>
+              <p class="text-color-secondary">
+                Versión publicada vigente:
+                {{
+                  variante.publicada
+                    ? variante.publicada.identificador +
+                      " (v" +
+                      variante.publicada.version +
+                      ")"
+                    : "ninguna"
+                }}
+              </p>
+              <label [for]="'destino-' + variante.codigo">Guardar en</label>
+              <p-dropdown
+                [inputId]="'destino-' + variante.codigo"
+                [options]="opcionesDestinoCarga(variante)"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="valorDestinoCarga(variante)"
+                (onChange)="cambiarDestinoCarga(variante, $event.value)"
+                styleClass="w-full"
+              />
+              @if (valorDestinoCarga(variante) === "CREAR") {
+                <label [for]="'nombre-' + variante.codigo" class="block mt-3"
+                  >Nombre del borrador</label
+                >
+                <input
+                  pInputText
+                  [id]="'nombre-' + variante.codigo"
+                  class="w-full"
+                  [value]="
+                    destinosCarga()[variante.codigo]?.tipo === 'CREAR'
+                      ? $any(destinosCarga()[variante.codigo]).identificador
+                      : 'Importación ' + variante.codigo
+                  "
+                  (input)="
+                    cambiarNombreBorradorCarga(
+                      variante.codigo,
+                      $any($event.target).value
+                    )
+                  "
+                />
+              }
+              @if (variante.semanas?.length) {
+                <ul class="carga-directa__semanas">
+                  @for (
+                    semana of variante.semanas;
+                    track semana.hoja + semana.lunes
+                  ) {
+                    <li>
+                      <strong
+                        >Semana {{ semana.numero }} ·
+                        {{ formatearFechaIso(semana.lunes) }}</strong
+                      >
+                      <span
+                        >{{ semana.creados }} creados ·
+                        {{ semana.actualizados }} actualizados ·
+                        {{ semana.eliminados }} retirados ·
+                        {{ semana.omitidos }} sin cambios</span
+                      >
+                      @if (semana.actualizados || semana.eliminados) {
+                        <ul>
+                          @for (bloque of semana.bloques; track $index) {
+                            @if (
+                              bloque.estado === "actualizado" ||
+                              bloque.estado === "eliminado"
+                            ) {
+                              <li>{{ bloque.nombre }} · {{ bloque.estado }}</li>
+                            }
+                          }
+                        </ul>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </article>
+          }
+        </div>
+        @if (preview.requiereConfirmacion) {
+          <div class="overwrite-warning">
+            <strong
+              >Hay actividades que se actualizarán o retirarán. Revisa el
+              detalle antes de confirmar.</strong
+            >
+            @if (preview.plantillasActualizadas?.length) {
+              <p>
+                Plantillas existentes que cambiarán:
+                {{ preview.plantillasActualizadas?.join(", ") }}
+              </p>
+            }
             <div class="flex align-items-center gap-2">
               <p-inputSwitch
-                inputId="confirmar-sobrescritura"
+                inputId="confirmar-cambios-carga"
                 [ngModel]="confirmarSobrescritura()"
                 (ngModelChange)="confirmarSobrescritura.set($event)"
-              ></p-inputSwitch>
-              <label for="confirmar-sobrescritura"
-                >Confirmo la sobrescritura</label
+              />
+              <label for="confirmar-cambios-carga"
+                >Confirmo estos cambios</label
               >
             </div>
           </div>
         }
-
-        <p-table
-          [value]="preview.hojas"
-          styleClass="planificacion-admin-table import-table import-table--desktop"
-        >
-          <ng-template pTemplate="header">
-            <tr>
-              <th>Hoja</th>
-              <th>Variante resuelta</th>
-              <th>Estado</th>
-              <th>Semanas y fechas exactas</th>
-              <th>Bloques</th>
-              <th>Incidencias</th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-hoja>
-            <tr>
-              <td>
-                <strong>{{ hoja.hoja }}</strong>
-              </td>
-              <td>
-                @if (hoja.variante; as variante) {
-                  <strong translate="no">{{ variante.codigo }}</strong
-                  ><br />
-                  <small>
-                    {{ labelOposicion(variante.oposicion) }} ·
-                    {{ getNivelOposicionLabel(variante.nivel) }} ·
-                    {{ getFranjaPlanificacionLabel(variante.franja) }}
-                  </small>
-                } @else {
-                  <span class="text-red-600">Sin resolver</span>
-                }
-              </td>
-              <td>
-                <span
-                  class="import-status"
-                  [class.import-status--valid]="hoja.valida"
-                  [class.import-status--invalid]="!hoja.valida"
-                >
-                  <i
-                    class="pi"
-                    [class.pi-check-circle]="hoja.valida"
-                    [class.pi-times-circle]="!hoja.valida"
-                  ></i>
-                  {{
-                    !hoja.valida
-                      ? "Con errores"
-                      : hoja.semanas.length
-                        ? "Válida"
-                        : "Omitida"
-                  }}
-                </span>
-              </td>
-              <td>
-                <div class="week-list">
-                  @for (semana of hoja.semanas; track $index) {
-                    <span>
-                      S{{ semana.numero }} ·
-                      {{ formatearFechaIso(semana.fechaInicio) }} ·
-                      {{ semana.bloques }} bloques ·
-                      {{ getEstadoSemanaImportacionLabel(semana.estado) }}
-                    </span>
-                  }
-                </div>
-              </td>
-              <td>
-                {{ hoja.totalBloques }} totales<br />
-                <small>{{ hoja.totalEntrenamientos }} físicos</small>
-              </td>
-              <td>
-                <div class="issue-list">
-                  @for (error of hoja.errores; track $index) {
-                    <span class="issue-list__error">
-                      <i class="pi pi-times-circle"></i>
-                      @if (error.semana) {
-                        Semana {{ error.semana }} ·
-                      }
-                      @if (error.dia) {
-                        {{ error.dia }} ·
-                      }
-                      @if (error.filaExcel) {
-                        Fila {{ error.filaExcel }}:
-                      }
-                      @if (error.campo) {
-                        Campo {{ error.campo }} ·
-                      }
-                      {{ error.mensaje }}
-                    </span>
-                  }
-                  @for (warning of hoja.warnings; track $index) {
-                    <span class="issue-list__warning">
-                      <i class="pi pi-exclamation-triangle"></i>
-                      {{ warning.mensaje }}
-                    </span>
-                  }
-                  @if (!hoja.errores.length && !hoja.warnings.length) {
-                    <span>Sin incidencias</span>
-                  }
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-
-        <div class="import-cards" aria-label="Detalle de hojas importadas">
-          @for (hoja of preview.hojas; track hoja.hoja) {
-            <article class="import-card">
-              <div class="import-card__header">
-                <strong>{{ hoja.hoja }}</strong>
-                <span
-                  class="import-status"
-                  [class.import-status--valid]="hoja.valida"
-                  [class.import-status--invalid]="!hoja.valida"
-                >
-                  {{
-                    !hoja.valida
-                      ? "Con errores"
-                      : hoja.semanas.length
-                        ? "Válida"
-                        : "Omitida"
-                  }}
-                </span>
-              </div>
-              @if (hoja.variante; as variante) {
-                <small>
-                  <span translate="no">{{ variante.codigo }}</span> ·
-                  {{ labelOposicion(variante.oposicion) }} ·
-                  {{ getNivelOposicionLabel(variante.nivel) }} ·
-                  {{ getFranjaPlanificacionLabel(variante.franja) }}
-                </small>
-              }
-              <div class="week-list mt-2">
-                @for (semana of hoja.semanas; track $index) {
-                  <span>
-                    S{{ semana.numero }} ·
-                    {{ formatearFechaIso(semana.fechaInicio) }} ·
-                    {{ semana.bloques }} bloques ·
-                    {{ getEstadoSemanaImportacionLabel(semana.estado) }}
-                  </span>
-                }
-              </div>
-              <div class="issue-list mt-2">
-                @for (error of hoja.errores; track $index) {
-                  <span class="issue-list__error">
-                    <i class="pi pi-times-circle"></i>
-                    @if (error.semana) {
-                      Semana {{ error.semana }} ·
-                    }
-                    @if (error.dia) {
-                      {{ error.dia }} ·
-                    }
-                    @if (error.filaExcel) {
-                      Fila {{ error.filaExcel }}:
-                    }
-                    @if (error.campo) {
-                      Campo {{ error.campo }} ·
-                    }
-                    {{ error.mensaje }}
-                  </span>
-                }
-                @for (warning of hoja.warnings; track $index) {
-                  <span class="issue-list__warning">
-                    <i class="pi pi-exclamation-triangle"></i>
-                    {{ warning.mensaje }}
-                  </span>
-                }
-              </div>
-            </article>
-          }
-        </div>
-
         <div class="import-apply">
           <p-button
-            label="Aplicar importación"
-            icon="pi pi-check"
-            severity="danger"
-            data-testid="importacion-plantillas-apply"
+            label="Guardar semanas en borrador"
+            icon="pi pi-save"
             [loading]="aplicandoImportacion()"
-            [disabled]="!puedeAplicarImportacion"
-            (onClick)="confirmarAplicacionImportacion()"
-          ></p-button>
-          <small>
-            Antes de guardar se vuelve a validar el archivo. Si hay errores, no
-            se carga ninguna semana.
-          </small>
+            [disabled]="
+              !preview.puedeAplicar ||
+              !preview.previewHash ||
+              (preview.requiereConfirmacion && !confirmarSobrescritura())
+            "
+            (onClick)="guardarCargaSemanas()"
+          />
+          <small
+            >Publicar y asignar es una acción posterior. Esta carga no cambia el
+            calendario del alumno.</small
+          >
         </div>
       }
-
-      @if (resultadoImportacion() || codigosUltimaImportacion().length) {
-        <div
-          class="import-next-step mt-4 p-4 border-1 border-round surface-50"
-          data-testid="importacion-incorporar-cta"
-        >
-          <h4 class="mt-0 mb-2">Paso 2 · Elige el borrador</h4>
-          <p class="mt-0">
-            Paso 1 completado: las semanas ya están guardadas como plantillas.
-            Aún no están incorporadas a una planificación ni publicadas para
-            alumnos.
-          </p>
-          <div
-            class="flex flex-column md:flex-row gap-2 align-items-stretch md:align-items-end"
-          >
-            <div class="flex-1 min-w-0">
-              @if (codigosUltimaImportacion().length > 1) {
-                <label for="codigo-importacion" class="block mb-2">
-                  Variante que vas a incorporar
-                </label>
-                <p-dropdown
-                  inputId="codigo-importacion"
-                  [options]="codigosImportacionOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  [ngModel]="codigoImportacionSeleccionado()"
-                  (ngModelChange)="seleccionarCodigoImportacion($event)"
-                  styleClass="w-full"
-                >
-                  <ng-template pTemplate="item" let-option>
-                    <span class="block">{{ option.label }}</span>
-                    <small class="text-color-secondary">{{
-                      option.value
-                    }}</small>
-                  </ng-template>
-                </p-dropdown>
-              } @else {
-                <span class="block mb-2">Variante que vas a incorporar</span>
-                <div class="import-selected-variant">
-                  <strong>{{ codigosImportacionOptions()[0]?.label }}</strong>
-                </div>
-              }
-              <small class="block mt-1 text-color-secondary">
-                Código de hoja: {{ codigoImportacionSeleccionado() }}
-              </small>
-            </div>
-            @if (planificacionesBorradorOptions.length) {
-              <div class="flex-1 min-w-0">
-                <label
-                  for="planificacion-destino-importacion"
-                  class="block mb-2"
-                >
-                  Planificación en borrador
-                </label>
-                <p-dropdown
-                  inputId="planificacion-destino-importacion"
-                  [options]="planificacionesBorradorOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Selecciona un borrador"
-                  [ngModel]="planificacionDestinoImportacion()"
-                  (ngModelChange)="planificacionDestinoImportacion.set($event)"
-                  styleClass="w-full"
-                />
-                <small class="block mt-1 text-color-secondary">
-                  @if (planificacionesBorradorOptions.length === 1) {
-                    Se ha seleccionado el único borrador compatible.
-                  } @else {
-                    Hay varios borradores compatibles; elige uno para continuar.
-                  }
-                </small>
-              </div>
-              <p-button
-                label="Abrir borrador y previsualizar"
-                icon="pi pi-arrow-right"
-                iconPos="right"
-                [disabled]="!planificacionDestinoImportacion()"
-                (onClick)="incorporarSemanasEnPlanificacion()"
-              />
-            }
-          </div>
-          @if (!planificacionesBorradorOptions.length) {
-            <p-message
-              severity="warn"
-              text="No hay borradores compatibles con esta oposición y franja."
-              styleClass="w-full mt-3"
-            />
+      @if (resultadoCarga(); as resultado) {
+        <div class="carga-directa__resultado" aria-live="polite">
+          <h4>Semanas guardadas en borrador</h4>
+          @for (variante of resultado.variantes; track variante.codigo) {
             <p-button
-              label="Crear planificación en borrador"
-              icon="pi pi-plus"
-              styleClass="mt-3"
+              [label]="
+                'Abrir calendario · ' + labelOposicion(variante.oposicion)
+              "
+              icon="pi pi-calendar"
               [outlined]="true"
-              (onClick)="crearBorradorParaImportacion()"
+              (onClick)="abrirCalendarioCarga(variante)"
             />
           }
         </div>
@@ -667,7 +465,7 @@
   <p-tabPanel header="Diagnóstico" leftIcon="pi pi-exclamation-circle">
     <p-message
       severity="info"
-      text="Alumnos con suscripción activa cuyo perfil no coincide con ninguna variante de planificación disponible."
+      text="Alumnos con suscripción activa cuya configuración confirmada o asignación requiere revisión. La antigua oposición de interés del perfil no cambia la planificación."
       styleClass="w-full mb-3"
     ></p-message>
     @if (error()) {

@@ -24,61 +24,6 @@
 
   <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="onboarding-form">
     <p-accordion [multiple]="true" [activeIndex]="[0]">
-      <!-- Datos Principales -->
-      <p-accordionTab [selected]="true">
-        <ng-template pTemplate="header">
-          <div class="flex align-items-center justify-content-between w-full">
-            <span>Información Principal</span>
-            <p-badge
-              [value]="getSectionBadgeConfig('datos-principales').value"
-              [severity]="getSectionBadgeConfig('datos-principales').severity"
-            ></p-badge>
-          </div>
-        </ng-template>
-        <div class="grid">
-          <div class="col-12">
-            <app-planificacion-preferencias
-              [valoresIniciales]="valoresInicialesPreferencias"
-              [multiple]="true"
-              oposicionContext="catalogo"
-              [permitirTestNivel]="permitirTestNivel"
-              formIdPrefix="onboardingPreferencias"
-              (cambios)="onPreferenciasChange($event)"
-              (testNivelSolicitado)="abrirCuestionarioNivel()"
-            ></app-planificacion-preferencias>
-
-            @if (mostrarCuestionarioNivel) {
-              <div class="mt-4">
-                <app-cuestionario-nivel
-                  (nivelAceptado)="aplicarNivelRecomendado($event)"
-                  (cancelado)="mostrarCuestionarioNivel = false"
-                />
-              </div>
-            }
-          </div>
-
-          <!-- <div class="col-12 md:col-6">
-            <p-floatLabel>
-              <p-dropdown
-                [options]="planificacionesDisponibles"
-                formControlName="planificacionSeleccionada"
-                placeholder="Selecciona planificación"
-                class="w-full"
-                id="planificacionSeleccionada"
-                [style]="{ width: '100%' }"
-                optionLabel="label"
-                optionValue="value"
-                [disabled]="planificacionesDisponibles.length === 0"
-              />
-              <label for="planificacionSeleccionada">Planificación *</label>
-            </p-floatLabel>
-            <small class="text-500" *ngIf="planificacionesDisponibles.length === 0">
-              Selecciona primero las horas de dedicación para ver las planificaciones disponibles
-            </small>
-          </div> -->
-        </div>
-      </p-accordionTab>
-
       <!-- Datos Personales -->
       <p-accordionTab [selected]="true">
         <ng-template pTemplate="header">

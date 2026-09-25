@@ -39,6 +39,9 @@ import type { PlanificacionMensual } from '../../shared/models/planificacion.mod
 import {
   AlumnoSinCoincidencia,
   PreviewImportacionPlantillas,
+  PreviewCargaSemanas,
+  DestinoCargaSemanas,
+  VarianteCargaSemanas,
   ReglaOposicionAdmin,
   ReconciliacionPlanificaciones,
   ResultadoImportacionPlantillas,
@@ -140,6 +143,10 @@ export class PlanificacionAdminComponent implements OnInit {
   cargando = signal(false);
   error = signal<string | null>(null);
   archivoImportacion = signal<File | null>(null);
+  previewCarga = signal<PreviewCargaSemanas | null>(null);
+  resultadoCarga = signal<PreviewCargaSemanas | null>(null);
+  destinosCarga = signal<Record<string, DestinoCargaSemanas>>({});
+  idempotencyKeyCarga: string | null = null;
   previewImportacion = signal<PreviewImportacionPlantillas | null>(null);
   previsualizandoImportacion = signal(false);
   aplicandoImportacion = signal(false);
@@ -147,7 +154,9 @@ export class PlanificacionAdminComponent implements OnInit {
   resultadoImportacion = signal<ResultadoImportacionPlantillas | null>(null);
   codigosUltimaImportacion = signal<string[]>([]);
   pasoImportacionActual = computed(() =>
-    this.resultadoImportacion() || this.codigosUltimaImportacion().length ? 2 : 1,
+    this.resultadoImportacion() || this.codigosUltimaImportacion().length
+      ? 2
+      : 1,
   );
   codigosImportacionOptions = computed(() =>
     this.codigosUltimaImportacion().map((codigo) => ({
@@ -180,6 +189,9 @@ export class PlanificacionAdminComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('tab') === 'variantes') {
+      this.activeTabIndex = 0;
+    }
     const codigos = this.route.snapshot.queryParamMap
       .getAll('codigosHoja')
       .flatMap((codigo) => codigo.split(','))
@@ -224,6 +236,23 @@ export class PlanificacionAdminComponent implements OnInit {
       this.planificacionesMensuales.set(planificaciones?.data ?? []);
       this.limpiarPlanificacionIncompatible();
       this.sincronizarDestinoImportacion();
+      const varianteId = Number(
+        this.route.snapshot.queryParamMap.get('varianteId'),
+      );
+      const borradorId = Number(
+        this.route.snapshot.queryParamMap.get('borradorId'),
+      );
+      const variante = variantes?.find((v) => v.id === varianteId);
+      if (
+        variante &&
+        borradorId &&
+        this.planificacionesMensuales().some(
+          (p) => p.id === borradorId && p.estado === 'BORRADOR',
+        )
+      ) {
+        this.editarVariante(variante);
+        this.varianteForm.controls.planificacionMensualId.setValue(borradorId);
+      }
     } catch {
       this.toast.error('No se pudieron cargar los datos de administración');
     } finally {
@@ -466,12 +495,20 @@ export class PlanificacionAdminComponent implements OnInit {
       .value as Oposicion | null;
     const franja = this.varianteForm.controls.franja
       .value as TipoDePlanificacionDeseada | null;
+    const publicadaId =
+      this.variantes().find((v) => v.id === varianteId)
+        ?.planificacionMensualId ?? null;
     return this.planificacionesMensuales()
       .filter(
         (planificacion) =>
           !planesMapeadosEnOtraVariante.has(planificacion.id) &&
           (!franja || planificacion.tipoDePlanificacion === franja) &&
-          (!oposicion || planificacion.relevancia?.includes(oposicion)),
+          (!oposicion || planificacion.relevancia?.includes(oposicion)) &&
+          (planificacion.estado !== 'BORRADOR' ||
+            !varianteId ||
+            ((planificacion.planificacionAnteriorId ?? null) === publicadaId &&
+              (!planificacion.varianteBorradorId ||
+                planificacion.varianteBorradorId === varianteId))),
       )
       .map((planificacion) => ({
         label: `${planificacion.identificador} v${planificacion.version ?? 1} · ${planificacion.estado ?? 'BORRADOR'} (${planificacion.mes}/${planificacion.ano})`,
@@ -587,6 +624,10 @@ export class PlanificacionAdminComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     this.previewImportacion.set(null);
+    this.previewCarga.set(null);
+    this.resultadoCarga.set(null);
+    this.destinosCarga.set({});
+    this.idempotencyKeyCarga = null;
     this.confirmarSobrescritura.set(false);
     this.resultadoImportacion.set(null);
     this.codigosUltimaImportacion.set([]);
@@ -603,6 +644,155 @@ export class PlanificacionAdminComponent implements OnInit {
       return;
     }
     this.archivoImportacion.set(file);
+  }
+
+  opcionesDestinoCarga(
+    variante: VarianteCargaSemanas,
+  ): Array<{ label: string; value: string }> {
+    return [
+      ...(variante.candidatos ?? []).map((c) => ({
+        label: `Usar borrador: ${c.identificador}`,
+        value: `EXISTENTE:${c.id}`,
+      })),
+      ...(variante.publicadaId
+        ? [{ label: 'Crear copia de la versión publicada', value: 'COPIAR' }]
+        : []),
+      { label: 'Crear borrador nuevo', value: 'CREAR' },
+    ];
+  }
+
+  valorDestinoCarga(variante: VarianteCargaSemanas): string | null {
+    const destino = this.destinosCarga()[variante.codigo] ?? variante.destino;
+    if (!destino) return null;
+    return destino.tipo === 'EXISTENTE'
+      ? `EXISTENTE:${destino.planificacionId}`
+      : destino.tipo;
+  }
+
+  cambiarDestinoCarga(variante: VarianteCargaSemanas, valor: string): void {
+    const destino: DestinoCargaSemanas = valor.startsWith('EXISTENTE:')
+      ? { tipo: 'EXISTENTE', planificacionId: Number(valor.slice(10)) }
+      : valor === 'COPIAR'
+        ? { tipo: 'COPIAR' }
+        : { tipo: 'CREAR', identificador: `Importación ${variante.codigo}` };
+    this.destinosCarga.update((actual) => ({
+      ...actual,
+      [variante.codigo]: destino,
+    }));
+    this.previewCarga.update((previo) =>
+      previo ? { ...previo, puedeAplicar: false, previewHash: null } : null,
+    );
+    this.idempotencyKeyCarga = null;
+  }
+
+  cambiarNombreBorradorCarga(codigo: string, identificador: string): void {
+    this.destinosCarga.update((actual) => ({
+      ...actual,
+      [codigo]: { tipo: 'CREAR', identificador },
+    }));
+    this.previewCarga.update((previo) =>
+      previo ? { ...previo, puedeAplicar: false, previewHash: null } : null,
+    );
+    this.idempotencyKeyCarga = null;
+  }
+
+  async previsualizarCargaSemanas(): Promise<void> {
+    const file = this.archivoImportacion();
+    if (!file) return;
+    this.previsualizandoImportacion.set(true);
+    this.resultadoCarga.set(null);
+    this.previewImportacion.set(null);
+    this.confirmarSobrescritura.set(false);
+    try {
+      const preview = await firstValueFrom(
+        this.autoasignacionService.previewCargaSemanas$(
+          file,
+          this.destinosCarga(),
+        ),
+      );
+      this.previewCarga.set(preview);
+      this.idempotencyKeyCarga = preview.puedeAplicar
+        ? (globalThis.crypto?.randomUUID?.() ??
+          `${Date.now()}-${Math.random().toString(36).slice(2)}`)
+        : null;
+      if (preview.requiereEleccion) {
+        this.toast.info(
+          'Elige un borrador para cada variante y previsualiza de nuevo.',
+        );
+      } else if (preview.puedeAplicar) {
+        this.toast.success(
+          'Revisa los cambios; todavía no se ha guardado nada.',
+        );
+      }
+    } catch (error) {
+      this.previewCarga.set(null);
+      if (error instanceof HttpErrorResponse && error.error?.preview) {
+        this.previewImportacion.set(
+          error.error.preview as PreviewImportacionPlantillas,
+        );
+      }
+      this.toast.error(
+        this.mensajeErrorImportacion(
+          error,
+          'No se pudo previsualizar el Excel.',
+        ),
+      );
+    } finally {
+      this.previsualizandoImportacion.set(false);
+    }
+  }
+
+  async guardarCargaSemanas(): Promise<void> {
+    const file = this.archivoImportacion();
+    const preview = this.previewCarga();
+    if (
+      !file ||
+      !preview?.puedeAplicar ||
+      !preview.previewHash ||
+      !this.idempotencyKeyCarga
+    )
+      return;
+    if (preview.requiereConfirmacion && !this.confirmarSobrescritura()) {
+      this.toast.error(
+        'Confirma las actualizaciones o retiradas antes de guardar.',
+      );
+      return;
+    }
+    this.aplicandoImportacion.set(true);
+    try {
+      const resultado = await firstValueFrom(
+        this.autoasignacionService.applyCargaSemanas$(
+          file,
+          this.destinosCarga(),
+          preview.previewHash,
+          this.confirmarSobrescritura(),
+          this.idempotencyKeyCarga,
+        ),
+      );
+      this.resultadoCarga.set(resultado);
+      this.previewCarga.set(null);
+      this.toast.success('Semanas guardadas en borrador; no se han publicado.');
+      if (resultado.variantes.length === 1)
+        this.abrirCalendarioCarga(resultado.variantes[0]);
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 409) {
+        this.previewCarga.set(null);
+        this.confirmarSobrescritura.set(false);
+      }
+      this.toast.error(
+        this.mensajeErrorImportacion(error, 'No se pudo guardar el Excel.'),
+      );
+    } finally {
+      this.aplicandoImportacion.set(false);
+    }
+  }
+
+  abrirCalendarioCarga(variante: VarianteCargaSemanas): void {
+    if (!variante.planificacionId) return;
+    void this.router.navigate(
+      ['/app/planificacion/planificacion-mensual', variante.planificacionId],
+      { queryParams: { fechaFoco: variante.primeraSemana } },
+    );
   }
 
   async previsualizarImportacion(): Promise<void> {
@@ -732,8 +922,8 @@ export class PlanificacionAdminComponent implements OnInit {
 
   private get fechaFocoImportacion(): string | null {
     const codigo = this.codigoImportacionSeleccionado();
-    const fecha = this.previewImportacion()?.hojas
-      .find((hoja) => codigoPlantillaImportada(hoja.hoja) === codigo)
+    const fecha = this.previewImportacion()
+      ?.hojas.find((hoja) => codigoPlantillaImportada(hoja.hoja) === codigo)
       ?.semanas.find((semana) => semana.bloques > 0)?.fechaInicio;
     return fecha ?? this.route.snapshot.queryParamMap.get('fechaFoco');
   }

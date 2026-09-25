@@ -242,3 +242,46 @@ export interface ResultadoImportacionPlantillas {
     errores: number;
   }>;
 }
+
+export type DestinoCargaSemanas =
+  | { tipo: 'EXISTENTE'; planificacionId: number }
+  | { tipo: 'COPIAR' }
+  | { tipo: 'CREAR'; identificador: string; descripcion?: string };
+
+export interface VarianteCargaSemanas {
+  codigo: string;
+  oposicion?: Oposicion;
+  nivel?: NivelOposicion;
+  franja?: TipoDePlanificacionDeseada;
+  publicadaId?: number | null;
+  publicada?: { identificador: string; version: number } | null;
+  candidatos?: Array<{ id: number; identificador: string }>;
+  destino: DestinoCargaSemanas | null;
+  planificacionId?: number;
+  primeraSemana?: string;
+  semanas?: Array<{
+    hoja: string;
+    numero: number;
+    lunes: string;
+    creados: number;
+    actualizados: number;
+    omitidos: number;
+    eliminados: number;
+    bloques: Array<{
+      nombre: string;
+      estado: 'creado' | 'actualizado' | 'omitido' | 'eliminado';
+      horaInicio: string;
+      duracion: number;
+    }>;
+  }>;
+}
+
+export interface PreviewCargaSemanas {
+  puedeAplicar: boolean;
+  requiereEleccion?: boolean;
+  requiereConfirmacion?: boolean;
+  previewHash: string | null;
+  plantillasActualizadas?: string[];
+  variantes: VarianteCargaSemanas[];
+  mensaje?: string;
+}

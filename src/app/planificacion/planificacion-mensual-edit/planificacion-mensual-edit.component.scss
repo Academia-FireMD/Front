@@ -372,3 +372,32 @@
     width: 100%;
   }
 }
+
+.borrador-aviso {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem;
+  padding: 1rem;
+  border: 1px solid #c4841c;
+  border-left-width: 4px;
+  border-radius: 0.5rem;
+  background: #fff8e9;
+  color: #49310b;
+}
+.borrador-aviso p {
+  margin: 0.35rem 0 0;
+}
+@media (max-width: 575px) {
+  .borrador-aviso {
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0.75rem;
+  }
+  :host ::ng-deep .borrador-aviso .p-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+}

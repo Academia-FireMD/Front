@@ -90,8 +90,9 @@ describe('ProfileComponent', () => {
     expect(component.planificacionAutoasignacionHabilitada()).toBe(false);
   });
 
-  it('si cambian las preferencias desde Perfil, abre el wizard en modo revisión', async () => {
+  it('la ficha no persiste ni reinterpreta preferencias de planificación legadas', async () => {
     const router = TestBed.inject(Router);
+    (router.navigate as jest.Mock).mockClear();
     const updateOnboardingData$ = jest.fn().mockReturnValue(of(null));
     (component as any).userService = { updateOnboardingData$ };
     component.user = {
@@ -106,33 +107,41 @@ describe('ProfileComponent', () => {
       tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS' as any,
     });
 
-    expect(router.navigate).toHaveBeenCalledWith(
-      ['/app/planificacion/configuracion-alumno'],
-      {
-        queryParams: { gestionar: 'preferencias' },
-        state: { desdeFicha: true, nivelBorrador: 'AVANZADO' },
-      },
-    );
+    expect(router.navigate).not.toHaveBeenCalled();
     expect(updateOnboardingData$).toHaveBeenCalledWith(
-      expect.not.objectContaining({ nivelOposicion: expect.anything() }),
+      expect.not.objectContaining({
+        tipoOposicion: expect.anything(),
+        nivelOposicion: expect.anything(),
+        tipoDePlanificacionDuracionDeseada: expect.anything(),
+      }),
     );
   });
 
-  describe('getOnboardingCompletionPercentage con tipoOposicion array', () => {
-    it('no cuenta un array vacío como campo relleno', () => {
+  it('un fallo al consultar la configuración no se presenta como pendiente', async () => {
+    (component as any).autoasignacionService = {
+      getConfiguracion$: () => throwError(() => new Error('sin conexión')),
+    };
+    await (component as any).cargarConfiguracionPlanificacion();
+    expect(component.configuracionPlanificacion).toBeNull();
+    expect(component.configuracionPlanificacionCargando).toBe(false);
+    expect(component.configuracionPlanificacionError).toBe(true);
+  });
+
+  describe('progreso de ficha sin campos legados de planificación', () => {
+    it('no cuenta una oposición antigua vacía', () => {
       component.onboardingData = {
         tipoOposicion: [],
         nivelOposicion: 'INICIACION',
       } as any;
-      expect(component.getOnboardingCompletionPercentage()).toBe(50);
+      expect(component.getOnboardingCompletionPercentage()).toBe(0);
     });
 
-    it('cuenta un array con oposiciones como campo relleno', () => {
+    it('tampoco cuenta una oposición antigua rellenada', () => {
       component.onboardingData = {
         tipoOposicion: ['MADRID'],
         nivelOposicion: 'INICIACION',
       } as any;
-      expect(component.getOnboardingCompletionPercentage()).toBe(100);
+      expect(component.getOnboardingCompletionPercentage()).toBe(0);
     });
   });
 

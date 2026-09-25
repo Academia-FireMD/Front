@@ -154,11 +154,59 @@
                 *ngIf="user.rol === 'ALUMNO'"
               >
                 <div class="no-planification-message">
-                  <p>Gestiona tus preferencias y confirma tu planificación.</p>
+                  <h3>Mi planificación</h3>
+                  <p>
+                    <strong>Oposiciones contratadas:</strong>
+                    <ng-container
+                      *ngIf="oposicionesContratadas.length; else sinSuscripcion"
+                    >
+                      <span
+                        *ngFor="
+                          let oposicion of oposicionesContratadas;
+                          let ultimo = last
+                        "
+                      >
+                        {{ getPlanificacionOposicionLabel(oposicion)
+                        }}{{ ultimo ? "" : ", " }}
+                      </span>
+                    </ng-container>
+                    <ng-template #sinSuscripcion
+                      >Pendiente de suscripción vigente</ng-template
+                    >
+                  </p>
+                  <p
+                    *ngIf="
+                      configuracionPlanificacion?.configuracionActiva
+                        ?.variante as variante;
+                      else sinConfiguracion
+                    "
+                  >
+                    <strong>Configuración confirmada:</strong>
+                    {{ getPlanificacionOposicionLabel(variante.oposicion) }} ·
+                    {{ getNivelOposicionLabel(variante.nivel) }} ·
+                    {{ getFranjaPlanificacionLabel(variante.franja) }}
+                  </p>
+                  <ng-template #sinConfiguracion>
+                    <p *ngIf="configuracionPlanificacionCargando">
+                      <strong>Configuración confirmada:</strong> cargando…
+                    </p>
+                    <p *ngIf="configuracionPlanificacionError" role="alert">
+                      No se pudo consultar tu planificación. Inténtalo más
+                      tarde.
+                    </p>
+                    <p
+                      *ngIf="
+                        !configuracionPlanificacionCargando &&
+                        !configuracionPlanificacionError
+                      "
+                    >
+                      <strong>Configuración confirmada:</strong> pendiente
+                    </p>
+                  </ng-template>
                   <p-button
                     styleClass="p-button-outlined"
                     icon="pi pi-calendar-plus"
-                    label="Configurar planificación"
+                    label="Gestionar mi planificación"
                     (onClick)="irAPlanificacion()"
                   ></p-button>
                 </div>
@@ -856,13 +904,16 @@
     La información que recopilamos nos permite ofrecerte un servicio más
     personalizado y eficiente.
   </p>
+  <p *ngIf="user?.rol === 'ALUMNO'" class="text-600">
+    La oposición, el nivel y las horas se eligen en «Gestionar mi
+    planificación»; esta ficha solo guarda tus datos personales.
+  </p>
   <app-onboarding-form
     #onboardingForm
     [initialData]="onboardingData"
     [isOptional]="true"
     [showTitle]="false"
     [showSkipButton]="false"
-    [permitirTestNivel]="planificacionAutoasignacionHabilitada()"
     (dataSubmitted)="onOnboardingUpdated($event)"
   ></app-onboarding-form>
 

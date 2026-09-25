@@ -77,6 +77,8 @@ describe('PlanificacionAdminComponent', () => {
       applyImportacionPlantillas$: jest.fn(() =>
         of({ yaAplicado: false, version: 3, hojas: [] }),
       ),
+      previewCargaSemanas$: jest.fn(),
+      applyCargaSemanas$: jest.fn(),
     };
     confirmation = new ConfirmationService();
     router = { navigate: jest.fn() };
@@ -671,89 +673,61 @@ describe('PlanificacionAdminComponent', () => {
     expect(component.previewImportacion()?.yaAplicado).toBe(true);
   });
 
-  it('tras importar distingue el siguiente paso y navega al borrador con los códigos de hoja', async () => {
+  it('previsualiza el Excel completo y abre el borrador tras una única confirmación', async () => {
     const file = new File(['xlsx'], 'plan.xlsx');
-    component.archivoImportacion.set(file);
-    component.previewImportacion.set({
-      fileName: file.name,
-      fileHash: 'b'.repeat(64),
-      puedeAplicar: true,
-      yaAplicado: false,
-      requiereConfirmacionSobrescritura: false,
-      sobrescrituras: [],
-      totales: {
-        hojas: 1,
-        semanas: 2,
-        bloques: 12,
-        entrenamientos: 2,
-        errores: 0,
-      },
-      hojas: [
+    const variante = {
+      codigo: 'PCMI4-6H',
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+      publicadaId: 9,
+      destino: { tipo: 'COPIAR' as const },
+      candidatos: [],
+      planificacionId: 17,
+      primeraSemana: '2026-10-05',
+      semanas: [
         {
           hoja: 'CMI4-6H',
-          valida: true,
-          totalBloques: 12,
-          totalEntrenamientos: 2,
-          semanas: [
-            {
-              numero: 1,
-              fechaInicio: '2026-10-05',
-              bloques: 6,
-              entrenamientos: 1,
-              esqueleto: false,
-            },
-          ],
-          errores: [],
-          warnings: [],
+          numero: 40,
+          lunes: '2026-10-05',
+          creados: 6,
+          actualizados: 0,
+          eliminados: 0,
+          omitidos: 0,
+          bloques: [],
         },
       ],
-    });
-    component.planificacionesMensuales.set([
-      {
-        id: 17,
-        identificador: 'MADRID-ANUAL',
-        mes: 10,
-        ano: 2026,
-        estado: 'BORRADOR',
-        relevancia: [Oposicion.MADRID],
-        tipoDePlanificacion:
-          TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
-      } as PlanificacionMensual,
-    ]);
-    component.variantes.set([
-      {
-        codigo: 'PCMI4-6H',
-        oposicion: Oposicion.MADRID,
-        nivel: NivelOposicion.INICIACION,
-        franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
-        activa: true,
-      },
-    ]);
-
-    component.confirmarAplicacionImportacion();
-    const config = (confirmation.confirm as jest.Mock).mock.calls.at(-1)[0];
-    await config.accept();
+    };
+    (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(
+      of({
+        puedeAplicar: true,
+        previewHash: 'a'.repeat(64),
+        requiereConfirmacion: false,
+        variantes: [variante],
+      }),
+    );
+    (service.applyCargaSemanas$ as jest.Mock).mockReturnValue(
+      of({
+        puedeAplicar: true,
+        previewHash: 'a'.repeat(64),
+        requiereConfirmacion: false,
+        variantes: [variante],
+      }),
+    );
+    component.archivoImportacion.set(file);
+    await component.previsualizarCargaSemanas();
     fixture.detectChanges();
-
-    expect(component.codigosUltimaImportacion()).toEqual(['CMI4-6H']);
-    expect(
-      fixture.nativeElement.querySelector(
-        '[data-testid="importacion-incorporar-cta"]',
-      ),
-    ).toBeTruthy();
-    component.planificacionDestinoImportacion.set(17);
-    component.incorporarSemanasEnPlanificacion();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Guardar semanas en borrador',
+    );
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Semana 40',
+    );
+    await component.guardarCargaSemanas();
+    expect(service.applyCargaSemanas$).toHaveBeenCalledTimes(1);
     expect(router.navigate).toHaveBeenCalledWith(
       ['/app/planificacion/planificacion-mensual', 17],
-      {
-        queryParams: {
-          codigosHoja: ['CMI4-6H'],
-          codigoActivo: 'CMI4-6H',
-          fechaFoco: '2026-10-05',
-          origen: 'importacion-plantillas',
-          abrirVolcado: '1',
-        },
-      },
+      { queryParams: { fechaFoco: '2026-10-05' } },
     );
   });
 

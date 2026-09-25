@@ -390,6 +390,42 @@
   </div>
 }
 
+@if (
+  expectedRole === "ADMIN" && lastLoadedPlanification()?.estado === "BORRADOR"
+) {
+  <div class="borrador-aviso" role="status">
+    <div>
+      <strong>BORRADOR · Los alumnos aún no ven estos cambios</strong>
+      <p>
+        Versión publicada vigente:
+        @if (
+          lastLoadedPlanification()?.varianteBorrador?.planificacionMensual;
+          as publicada
+        ) {
+          {{ publicada.identificador }} (v{{ publicada.version }}).
+        } @else {
+          Ninguna.
+        }
+        Puedes seguir editando este calendario antes de publicarlo.
+      </p>
+    </div>
+    <p-button
+      label="Publicar y asignar"
+      icon="pi pi-send"
+      [outlined]="true"
+      (onClick)="
+        router.navigate(['/app/planificacion/admin-planificacion'], {
+          queryParams: {
+            tab: 'variantes',
+            varianteId: lastLoadedPlanification()?.varianteBorrador?.id,
+            borradorId: lastLoadedPlanification()?.id,
+          },
+        })
+      "
+    />
+  </div>
+}
+
 <div class="grid" [formGroup]="formGroup">
   <div class="col-12 content">
     <div
@@ -459,55 +495,83 @@
           </div>
         }
         @if (expectedRole == "ADMIN") {
-          <div class="monthly-admin-controls">
-            <div class="duracion">
-              <label
-                for="tipoDePlanificacionDuracionDeseada"
-                class="block mb-1"
-              >
-                Horas de estudio
-              </label>
-              <p-dropdown
-                class="w-full"
-                id="tipoDePlanificacionDuracionDeseada"
-                [style]="{ width: '100%' }"
-                [options]="duracionesDisponibles"
-                [formControl]="tipoDePlanificacion"
-                optionLabel="label"
-                optionValue="value"
-                appendTo="body"
-                placeholder="Seleccione una duración"
-              >
-              </p-dropdown>
-            </div>
-            <div class="relevancia">
-              <label for="planificacion-oposiciones" class="block mb-1">
-                Oposiciones
-              </label>
-              <app-oposicion-picker
-                context="planificacion"
-                presentation="field"
-                inputId="planificacion-oposiciones"
-                ariaLabel="Oposiciones de la planificación"
-                [allowAdd]="true"
-                [oposiciones]="relevancia.value"
-                (updateSelection)="updateOposicionSelection($event)"
-              ></app-oposicion-picker>
-            </div>
-            @if (!(esFlujoImportacion && getId() === "new")) {
-              <div class="por-defecto gap-2">
-                <label for="switch1">Por defecto</label>
-                <p-inputSwitch [formControl]="esPorDefecto" inputId="switch1" />
+          @if (lastLoadedPlanification()?.varianteBorrador; as variante) {
+            <div
+              class="monthly-admin-controls"
+              aria-label="Variante del borrador"
+            >
+              <div class="duracion">
+                <span class="block mb-1">Horas de estudio</span>
+                <strong>{{
+                  variante.franja === "FRANJA_SEIS_A_OCHO_HORAS"
+                    ? "6-8 horas"
+                    : "4-6 horas"
+                }}</strong>
               </div>
-            }
-            @if (getId() !== "new") {
-              <app-attachments-manager
-                [entidadTipo]="entidadTipoPlanificacion"
-                [entidadId]="Number(getId())"
-                mode="admin"
-              ></app-attachments-manager>
-            }
-          </div>
+              <div class="relevancia">
+                <span class="block mb-1">Oposición y nivel</span>
+                <strong
+                  >{{ getPlanificacionOposicionLabel(variante.oposicion) }} ·
+                  {{
+                    variante.nivel === "AVANZADO" ? "Avanzado" : "Iniciación"
+                  }}</strong
+                >
+              </div>
+            </div>
+          } @else {
+            <div class="monthly-admin-controls">
+              <div class="duracion">
+                <label
+                  for="tipoDePlanificacionDuracionDeseada"
+                  class="block mb-1"
+                >
+                  Horas de estudio
+                </label>
+                <p-dropdown
+                  class="w-full"
+                  id="tipoDePlanificacionDuracionDeseada"
+                  [style]="{ width: '100%' }"
+                  [options]="duracionesDisponibles"
+                  [formControl]="tipoDePlanificacion"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                  placeholder="Seleccione una duración"
+                >
+                </p-dropdown>
+              </div>
+              <div class="relevancia">
+                <label for="planificacion-oposiciones" class="block mb-1">
+                  Oposiciones
+                </label>
+                <app-oposicion-picker
+                  context="planificacion"
+                  presentation="field"
+                  inputId="planificacion-oposiciones"
+                  ariaLabel="Oposiciones de la planificación"
+                  [allowAdd]="true"
+                  [oposiciones]="relevancia.value"
+                  (updateSelection)="updateOposicionSelection($event)"
+                ></app-oposicion-picker>
+              </div>
+              @if (!(esFlujoImportacion && getId() === "new")) {
+                <div class="por-defecto gap-2">
+                  <label for="switch1">Por defecto</label>
+                  <p-inputSwitch
+                    [formControl]="esPorDefecto"
+                    inputId="switch1"
+                  />
+                </div>
+              }
+              @if (getId() !== "new") {
+                <app-attachments-manager
+                  [entidadTipo]="entidadTipoPlanificacion"
+                  [entidadId]="Number(getId())"
+                  mode="admin"
+                ></app-attachments-manager>
+              }
+            </div>
+          }
           <div class="monthly-admin-actions">
             @if (esFlujoImportacion) {
               <p-button
@@ -535,19 +599,6 @@
                   : 'Guardar cambios'
               "
             ></app-async-button>
-            @if (
-              getId() !== "new" &&
-              lastLoadedPlanification()?.estado === "BORRADOR"
-            ) {
-              <p-button
-                label="Incorporar semanas"
-                icon="pi pi-download"
-                severity="secondary"
-                [disabled]="eventosModificados"
-                data-testid="volcar-variante-visible"
-                (onClick)="abrirDialogoVolcar()"
-              />
-            }
           </div>
         }
         @if (expectedRole == "ALUMNO" && getId() !== "new") {

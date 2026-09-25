@@ -875,9 +875,6 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   getOnboardingCompletionPercentage(user: Usuario): number {
     const onboardingFields = [
-      user.tipoOposicion,
-      user.nivelOposicion,
-      user.tipoDePlanificacionDuracionDeseada,
       user.dni,
       user.fechaNacimiento,
       user.nombreEmpresa,
@@ -929,11 +926,19 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     return Array.isArray(value) && value.length === 0;
   }
 
-  formatTipoOposicion(ops?: Oposicion[]): string {
-    if (!ops || ops.length === 0) {
-      return 'No proporcionado';
-    }
-    return ops.map((o) => OPOSICION_LABELS[o] ?? o).join(', ');
+  formatSuscripcionesPlanificacion(user: Usuario): string {
+    const oposiciones = [
+      ...new Set(
+        this.getActiveSuscripciones(user)
+          .filter(
+            (s) => !s.fechaFin || new Date(s.fechaFin).getTime() > Date.now(),
+          )
+          .map((s) => s.oposicion),
+      ),
+    ];
+    return oposiciones.length
+      ? oposiciones.map((o) => OPOSICION_LABELS[o] ?? o).join(', ')
+      : 'Sin suscripción vigente';
   }
 
   impersonateUser(user: Usuario) {
@@ -1013,7 +1018,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   get tutorPuedeForzarPlanificacion(): boolean {
     return Boolean(
       esCombinacionPublicada(this.tutorForzarOpcionSeleccionada) &&
-      this.tutorForzarMotivo.trim(),
+        this.tutorForzarMotivo.trim(),
     );
   }
 

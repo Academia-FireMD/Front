@@ -42,7 +42,10 @@ import {
   VolcarPlantillasResultado,
 } from '../models/volcar-plantillas.model';
 import { duracionesDisponibles } from '../../shared/models/pregunta.model';
-import { Oposicion } from '../../shared/models/subscription.model';
+import {
+  Oposicion,
+  getPlanificacionOposicionLabel,
+} from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import {
   formatFechaISO,
@@ -185,6 +188,7 @@ export class PlanificacionMensualEditComponent {
   public getProgressPercentageForDay =
     this.eventsService.getProgressPercentageForDay;
   duracionesDisponibles = duracionesDisponibles;
+  getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
 
   // Add properties for date range
   public startDate: Date | null = null;
@@ -275,17 +279,6 @@ export class PlanificacionMensualEditComponent {
         this.activeStepSeleccionPlantilla = 0;
         this.pickedEvents = [];
         this.isDialogVisible = true;
-      },
-    },
-    {
-      disabled: this.view != CalendarView.Week,
-      icon: 'fa-solid fa-download',
-      tooltipOptions: {
-        position: 'right',
-        tooltipLabel: 'Volcar variante completa',
-      },
-      command: () => {
-        this.abrirDialogoVolcar();
       },
     },
     {

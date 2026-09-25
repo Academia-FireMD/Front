@@ -24,18 +24,9 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { paises, provinciasEspanolas } from '../../utils/consts';
-import {
-  duracionesDisponibles,
-  nivelesDisponibles,
-  NivelOposicion,
-} from '../models/pregunta.model';
+import { NivelOposicion } from '../models/pregunta.model';
 import { Oposicion } from '../models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../models/user.model';
-import {
-  PlanificacionPreferenciasComponent,
-  PreferenciasPlanificacion,
-} from '../planificacion-preferencias/planificacion-preferencias.component';
-import { CuestionarioNivelComponent } from '../cuestionario-nivel/cuestionario-nivel.component';
 
 export interface OnboardingData {
   // Datos personales
@@ -113,8 +104,6 @@ export interface OnboardingData {
     InputTextareaModule,
     ChipsModule,
     BadgeModule,
-    PlanificacionPreferenciasComponent,
-    CuestionarioNivelComponent,
   ],
   templateUrl: './onboarding-form.component.html',
   styleUrls: ['./onboarding-form.component.scss'],
@@ -124,7 +113,6 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
   @Input() isOptional = true;
   @Input() showTitle = true;
   @Input() showSkipButton = true;
-  @Input() permitirTestNivel = true;
   @Output() dataSubmitted = new EventEmitter<OnboardingData>();
   @Output() skipped = new EventEmitter<void>();
   public today = new Date();
@@ -137,68 +125,14 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
 
   paises = paises;
 
-  duraciones = duracionesDisponibles;
-
-  niveles = nivelesDisponibles;
-
-  mostrarCuestionarioNivel = false;
-
   ngOnInit() {
     this.initializeForm();
-    this.actualizarValoresInicialesPreferencias();
   }
 
   ngOnChanges() {
     if (this.initialData) {
       this.initializeForm();
-      this.actualizarValoresInicialesPreferencias();
     }
-  }
-
-  /** Valores iniciales para el subcomponente compartido de preferencias.
-   * Campo estable (no getter): un getter devuelve un objeto nuevo en cada
-   * ciclo de CD y re-dispara ngOnChanges del subcomponente en bucle. */
-  valoresInicialesPreferencias: PreferenciasPlanificacion = {
-    oposicion: [],
-    nivel: null,
-    franja: null,
-  };
-
-  private actualizarValoresInicialesPreferencias(): void {
-    this.valoresInicialesPreferencias = {
-      oposicion: this.initialData?.tipoOposicion ?? [],
-      nivel: this.initialData?.nivelOposicion ?? null,
-      franja: this.initialData?.tipoDePlanificacionDuracionDeseada ?? null,
-    };
-  }
-
-  /** Sincroniza los cambios del subcomponente con el formGroup del onboarding
-   * (payload intacto: `tipoOposicion`, `nivelOposicion`,
-   * `tipoDePlanificacionDuracionDeseada`). */
-  onPreferenciasChange(prefs: PreferenciasPlanificacion): void {
-    this.formGroup?.patchValue({
-      tipoOposicion: Array.isArray(prefs.oposicion)
-        ? prefs.oposicion
-        : prefs.oposicion
-          ? [prefs.oposicion]
-          : [],
-      nivelOposicion: (prefs.nivel as NivelOposicion) ?? null,
-      tipoDePlanificacionDuracionDeseada:
-        (prefs.franja as TipoDePlanificacionDeseada) ?? null,
-    });
-  }
-
-  abrirCuestionarioNivel(): void {
-    this.mostrarCuestionarioNivel = true;
-  }
-
-  aplicarNivelRecomendado(nivel: NivelOposicion): void {
-    this.formGroup.patchValue({ nivelOposicion: nivel });
-    this.valoresInicialesPreferencias = {
-      ...this.valoresInicialesPreferencias,
-      nivel,
-    };
-    this.mostrarCuestionarioNivel = false;
   }
 
   private initializeForm() {
@@ -259,13 +193,6 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
 
       // Comentarios adicionales
       comentariosAdicionales: [this.initialData?.comentariosAdicionales || ''],
-
-      // Campos de oposiciones y planificación
-      tipoOposicion: [this.initialData?.tipoOposicion ?? []],
-      nivelOposicion: [this.initialData?.nivelOposicion || null],
-      tipoDePlanificacionDuracionDeseada: [
-        this.initialData?.tipoDePlanificacionDuracionDeseada || null,
-      ],
     });
   }
 
@@ -302,11 +229,6 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
 
   private obtainSectionFields(section: string): string[] {
     const sectionFields: { [key: string]: string[] } = {
-      'datos-principales': [
-        'tipoOposicion',
-        'nivelOposicion',
-        'tipoDePlanificacionDuracionDeseada',
-      ],
       'datos-personales': [
         'dni',
         'fechaNacimiento',

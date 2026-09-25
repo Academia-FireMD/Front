@@ -183,3 +183,54 @@
     width: 100%;
   }
 }
+
+.carga-directa__variantes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+  margin-block: 1rem;
+}
+
+.carga-directa__variante {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.75rem;
+}
+
+.carga-directa__variante h4 {
+  margin: 0 0 0.5rem;
+}
+.carga-directa__variante label {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.carga-directa__semanas {
+  padding-left: 1.25rem;
+}
+.carga-directa__semanas li {
+  margin-block: 0.5rem;
+}
+.carga-directa__semanas span {
+  display: block;
+}
+.carga-directa__resultado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.carga-directa__resultado h4 {
+  flex-basis: 100%;
+}
+
+@media (max-width: 575px) {
+  .carga-directa__variante {
+    padding: 0.75rem;
+  }
+  :host ::ng-deep .carga-directa .p-button {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+  }
+}

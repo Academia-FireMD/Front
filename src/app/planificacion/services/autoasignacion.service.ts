@@ -12,6 +12,8 @@ import type {
   EstadoTestNivel,
   GuardarConfiguracionDTO,
   PreviewImportacionPlantillas,
+  PreviewCargaSemanas,
+  DestinoCargaSemanas,
   RecomendacionNivel,
   ReglaOposicionAdmin,
   ReconciliacionPlanificaciones,
@@ -48,6 +50,42 @@ export class AutoasignacionService extends ApiBaseService {
 
   public getConfiguracion$(): Observable<ConfiguracionPlanificacion> {
     return this.get('/configuracion') as Observable<ConfiguracionPlanificacion>;
+  }
+
+  public previewCargaSemanas$(
+    file: File,
+    destinos: Record<string, DestinoCargaSemanas>,
+  ): Observable<PreviewCargaSemanas> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    body.append('destinos', JSON.stringify(destinos));
+    return this.http.post<PreviewCargaSemanas>(
+      environment.apiUrl +
+        '/planificaciones/admin/importaciones/plantillas/carga-borrador/preview',
+      body,
+      { withCredentials: true },
+    );
+  }
+
+  public applyCargaSemanas$(
+    file: File,
+    destinos: Record<string, DestinoCargaSemanas>,
+    previewHash: string,
+    confirmarSustituciones: boolean,
+    idempotencyKey: string,
+  ): Observable<PreviewCargaSemanas> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    body.append('destinos', JSON.stringify(destinos));
+    body.append('previewHash', previewHash);
+    body.append('confirmarSustituciones', String(confirmarSustituciones));
+    body.append('idempotencyKey', idempotencyKey);
+    return this.http.post<PreviewCargaSemanas>(
+      environment.apiUrl +
+        '/planificaciones/admin/importaciones/plantillas/carga-borrador/apply',
+      body,
+      { withCredentials: true },
+    );
   }
 
   public recomendarNivel$(

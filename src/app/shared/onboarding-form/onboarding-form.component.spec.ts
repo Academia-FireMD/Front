@@ -1,118 +1,47 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { ToastrService } from 'ngx-toastr';
-import { of } from 'rxjs';
-import { AutoasignacionService } from '../../planificacion/services/autoasignacion.service';
-import { NivelOposicion } from '../models/pregunta.model';
-import { Oposicion } from '../models/subscription.model';
-import type { TipoDePlanificacionDeseada } from '../models/user.model';
-import { PlanificacionPreferenciasComponent } from '../planificacion-preferencias/planificacion-preferencias.component';
 import { OnboardingFormComponent } from './onboarding-form.component';
 
-describe('OnboardingFormComponent (regresión tras extraer preferencias)', () => {
+describe('OnboardingFormComponent — ficha personal sin preferencias duplicadas', () => {
   let component: OnboardingFormComponent;
   let fixture: ComponentFixture<OnboardingFormComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [OnboardingFormComponent, PlanificacionPreferenciasComponent],
-      providers: [
-        provideNoopAnimations(),
-        {
-          provide: AutoasignacionService,
-          useValue: {
-            getCuestionarioNivel$: jest.fn(() =>
-              of({ version: 1, preguntas: [] }),
-            ),
-            recomendarNivel$: jest.fn(),
-          },
-        },
-        {
-          provide: ToastrService,
-          useValue: { error: jest.fn(), warning: jest.fn() },
-        },
-      ],
+      imports: [OnboardingFormComponent],
+      providers: [provideNoopAnimations()],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
-
     fixture = TestBed.createComponent(OnboardingFormComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('usa el selector de catálogo y diferencia interés de acceso', () => {
-    const preferencias = fixture.debugElement.query(
-      (de) =>
-        de.componentInstance instanceof PlanificacionPreferenciasComponent,
-    ).componentInstance as PlanificacionPreferenciasComponent;
+  it('no ofrece oposición, nivel u horas como controles editables', () => {
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
-
-    expect(preferencias.oposicionContext).toBe('catalogo');
-    expect(texto).toContain('Oposiciones de interés');
-    expect(texto).toContain('no modifica tus suscripciones');
+    expect(texto).not.toContain('Oposiciones de interés');
+    expect(component.formGroup.contains('tipoOposicion')).toBe(false);
+    expect(component.formGroup.contains('nivelOposicion')).toBe(false);
+    expect(
+      component.formGroup.contains('tipoDePlanificacionDuracionDeseada'),
+    ).toBe(false);
   });
 
-  it('emite los mismos campos de oposición/nivel/franja al enviar con datos iniciales', () => {
+  it('no envía valores legados de planificación aunque existan en los datos iniciales', () => {
     component.initialData = {
-      tipoOposicion: [Oposicion.VALENCIA_AYUNTAMIENTO],
-      nivelOposicion: NivelOposicion.AVANZADO,
-      tipoDePlanificacionDuracionDeseada:
-        'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+      dni: '12345678Z',
+      tipoOposicion: [] as any,
+      nivelOposicion: 'AVANZADO' as any,
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS' as any,
     };
     component.ngOnChanges();
-    fixture.detectChanges();
-
     let emitido: any;
     component.dataSubmitted.subscribe((data) => (emitido = data));
-
     component.onSubmit();
-
-    expect(emitido?.tipoOposicion).toEqual([Oposicion.VALENCIA_AYUNTAMIENTO]);
-    expect(emitido?.nivelOposicion).toBe(NivelOposicion.AVANZADO);
-    expect(emitido?.tipoDePlanificacionDuracionDeseada).toBe(
-      'FRANJA_SEIS_A_OCHO_HORAS',
-    );
-  });
-
-  it('el subcomponente compartido actualiza el formGroup del onboarding', () => {
-    const preferencias = fixture.debugElement.query(
-      (de) =>
-        de.componentInstance instanceof PlanificacionPreferenciasComponent,
-    );
-
-    preferencias.componentInstance.formGroup.patchValue({
-      oposicion: [Oposicion.ALICANTE_CPBA],
-      nivel: NivelOposicion.INICIACION,
-      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
-    });
-
-    expect(component.formGroup.value.tipoOposicion).toEqual([
-      Oposicion.ALICANTE_CPBA,
-    ]);
-    expect(component.formGroup.value.nivelOposicion).toBe(
-      NivelOposicion.INICIACION,
-    );
-    expect(component.formGroup.value.tipoDePlanificacionDuracionDeseada).toBe(
-      'FRANJA_CUATRO_A_SEIS_HORAS',
-    );
-  });
-
-  it('aplica la recomendación al borrador de la ficha sin enviar el formulario', () => {
-    const submitSpy = jest.spyOn(component.dataSubmitted, 'emit');
-
-    component.aplicarNivelRecomendado(NivelOposicion.AVANZADO);
-
-    expect(component.formGroup.value.nivelOposicion).toBe(
-      NivelOposicion.AVANZADO,
-    );
-    expect(component.valoresInicialesPreferencias.nivel).toBe(
-      NivelOposicion.AVANZADO,
-    );
-    expect(submitSpy).not.toHaveBeenCalled();
+    expect(emitido.dni).toBe('12345678Z');
+    expect(emitido.tipoOposicion).toBeUndefined();
+    expect(emitido.nivelOposicion).toBeUndefined();
+    expect(emitido.tipoDePlanificacionDuracionDeseada).toBeUndefined();
   });
 });
