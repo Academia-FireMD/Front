@@ -267,30 +267,12 @@ export class PlanificacionMensualEditComponent {
     lines.push('END:VCALENDAR');
     return lines.join('\r\n');
   };
-  items = computed(() => [
-    {
-      disabled: this.view != CalendarView.Week,
-      icon: 'fa-regular fa-hand-pointer',
-      tooltipOptions: {
-        position: 'right',
-        tooltipLabel: 'Seleccionar una plantilla semanal',
-      },
-      command: () => {
-        this.activeStepSeleccionPlantilla = 0;
-        this.pickedEvents = [];
-        this.isDialogVisible = true;
-      },
-    },
-    {
-      visible: this.planificacionFisicaHabilitada(),
-      icon: 'pi pi-bolt',
-      tooltipOptions: {
-        position: 'right',
-        tooltipLabel: 'Convertir bloques ENTRENAMIENTO en física vinculada',
-      },
-      command: () => this.confirmarConversionBloquesFisica(),
-    },
-  ]);
+  abrirSeleccionPlantilla(): void {
+    if (this.view !== CalendarView.Week) return;
+    this.activeStepSeleccionPlantilla = 0;
+    this.pickedEvents = [];
+    this.isDialogVisible = true;
+  }
 
   /**
    * Fase 2 bridge temario↔física: convierte los sub-bloques "ENTRENAMIENTO%"

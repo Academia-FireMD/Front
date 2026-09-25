@@ -498,12 +498,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const hasSeenOnboarding = localStorage.getItem(storageKey);
     const onboardingComplete = this.isOnboardingComplete();
 
-    // Mostrar modal si:
-    // 1. Nunca ha visto el onboarding Y no está completo
-    // 2. O si el onboarding está muy incompleto (< 20%) incluso si ya lo vio
-    const completionPercentage = this.getOnboardingCompletionPercentage();
-    const shouldShowModal =
-      (!hasSeenOnboarding && !onboardingComplete) || completionPercentage < 20;
+    // La ficha incompleta sigue visible en Perfil, pero el diálogo no debe
+    // interrumpir cada visita después de que el alumno lo haya cerrado.
+    const shouldShowModal = !hasSeenOnboarding && !onboardingComplete;
 
     if (shouldShowModal) {
       setTimeout(() => {

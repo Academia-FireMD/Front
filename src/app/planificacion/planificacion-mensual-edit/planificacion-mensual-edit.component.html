@@ -640,6 +640,7 @@
 
       <p-button
         icon="pi pi-calendar-plus"
+        ariaLabel="Descargar calendario"
         [link]="true"
         pTooltip="Descargar calendario"
         class="p-button-primary"
@@ -648,6 +649,7 @@
 
       <p-button
         icon="pi pi-arrow-right-arrow-left"
+        ariaLabel="Cambiar entre vista semanal y mensual"
         [link]="true"
         pTooltip="Cambiar vista entre semanal/mensual"
         class="p-button-primary"
@@ -664,6 +666,27 @@
       >
       </app-calendar-header>
     </div>
+    @if (expectedRole === "ADMIN" && getId() !== "new") {
+      <div class="col-12 calendar-tools">
+        <p-button
+          type="button"
+          label="Seleccionar plantilla semanal"
+          icon="pi pi-calendar-plus"
+          [outlined]="true"
+          [disabled]="view !== calendarView.Week"
+          (onClick)="abrirSeleccionPlantilla()"
+        />
+        @if (planificacionFisicaHabilitada()) {
+          <p-button
+            type="button"
+            label="Vincular entrenamientos con física"
+            icon="pi pi-bolt"
+            [outlined]="true"
+            (onClick)="confirmarConversionBloquesFisica()"
+          />
+        }
+      </div>
+    }
     <div class="row relative weekly-calendar">
       <ng-template #customCellTemplate let-day="day" let-locale="locale">
         <div class="custom-cell">
@@ -736,13 +759,6 @@
           [cellTemplate]="customCellTemplate"
         ></mwl-calendar-month-view>
       }
-
-      <p-speedDial
-        *ngIf="expectedRole == 'ADMIN' && getId() !== 'new'"
-        [model]="items()"
-        direction="up"
-        transitionDelay="80"
-      />
     </div>
     <div class="col-12 pt-2" *ngIf="expectedRole == 'ALUMNO'">
       <p-message

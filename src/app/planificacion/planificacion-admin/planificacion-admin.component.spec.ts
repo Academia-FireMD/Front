@@ -717,6 +717,10 @@ describe('PlanificacionAdminComponent', () => {
     component.archivoImportacion.set(file);
     await component.previsualizarCargaSemanas();
     fixture.detectChanges();
+    expect(TestBed.inject(ToastrService).success).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Previsualización: todavía no se ha guardado nada',
+    );
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Guardar semanas en borrador',
     );
@@ -728,6 +732,30 @@ describe('PlanificacionAdminComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(
       ['/app/planificacion/planificacion-mensual', 17],
       { queryParams: { fechaFoco: '2026-10-05' } },
+    );
+  });
+
+  it('explica el Excel sin semanas con contenido junto a la previsualización', () => {
+    component.previewImportacion.set({
+      fileName: 'vacio.xlsx',
+      fileHash: 'a'.repeat(64),
+      puedeAplicar: false,
+      yaAplicado: false,
+      requiereConfirmacionSobrescritura: false,
+      sobrescrituras: [],
+      totales: {
+        hojas: 1,
+        semanas: 0,
+        bloques: 0,
+        entrenamientos: 0,
+        errores: 0,
+      },
+      hojas: [],
+    });
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'El Excel no contiene semanas con actividades',
     );
   });
 

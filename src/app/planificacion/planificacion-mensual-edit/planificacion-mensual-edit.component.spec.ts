@@ -8,7 +8,7 @@ import { NO_ERRORS_SCHEMA, Pipe, PipeTransform, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { ToastrService } from 'ngx-toastr';
-import { CalendarModule, DateAdapter } from 'angular-calendar';
+import { CalendarModule, CalendarView, DateAdapter } from 'angular-calendar';
 import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
 import { of, Subject, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
@@ -92,10 +92,9 @@ describe('PlanificacionMensualEditComponent', () => {
 
   describe('ancla del calendario', () => {
     it('usa la semana recién cargada al abrir el borrador desde el importador', () => {
-      const route = jest.spyOn(
-        (component as any).activedRoute.snapshot.queryParamMap,
-        'get',
-      ).mockReturnValue('2028-05-08');
+      const route = jest
+        .spyOn((component as any).activedRoute.snapshot.queryParamMap, 'get')
+        .mockReturnValue('2028-05-08');
       const load = jest.spyOn(component as any, 'load');
 
       component.ngOnInit();
@@ -180,7 +179,9 @@ describe('PlanificacionMensualEditComponent', () => {
     const html = fixture.nativeElement as HTMLElement;
     expect(html.textContent).toContain('Comunidad de Madrid');
     expect(html.querySelector('#planificacion-oposiciones')).toBeNull();
-    expect(html.querySelector('#tipoDePlanificacionDuracionDeseada')).toBeNull();
+    expect(
+      html.querySelector('#tipoDePlanificacionDuracionDeseada'),
+    ).toBeNull();
   });
 
   it('mantiene visible la descripción obligatoria al crear un borrador en móvil', () => {
@@ -458,9 +459,9 @@ describe('PlanificacionMensualEditComponent', () => {
       component.cerrarDialogoVolcar();
 
       expect(component.prefijoPlantillas).toBe('GI6-8H');
-      expect(component.etiquetaVarianteImportada(component.prefijoPlantillas)).toBe(
-        'General Comunidad Valenciana · Iniciación · 6-8 horas',
-      );
+      expect(
+        component.etiquetaVarianteImportada(component.prefijoPlantillas),
+      ).toBe('General Comunidad Valenciana · Iniciación · 6-8 horas');
     });
 
     it('sin hojas compatibles no permite previsualizar ni llama al servidor', async () => {
@@ -971,13 +972,6 @@ describe('PlanificacionMensualEditComponent', () => {
 
   describe('conversión masiva de bloques ENTRENAMIENTO', () => {
     it('no ofrece la asignación manual de usuarios', () => {
-      const accion = component
-        .items()
-        .find((item) =>
-          item.tooltipOptions?.tooltipLabel?.includes('Asignar a usuarios'),
-        );
-
-      expect(accion).toBeUndefined();
       component.expectedRole = 'ADMIN';
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).not.toContain(
@@ -985,27 +979,45 @@ describe('PlanificacionMensualEditComponent', () => {
       );
     });
 
-    it('items() incluye la acción de conversión para admin cuando PLANIFICACION_FISICA está habilitada', () => {
-      const items = component.items();
-      const accion = items.find((i) =>
-        i.tooltipOptions?.tooltipLabel?.includes('Convertir bloques'),
-      );
-      expect(accion).toBeDefined();
-      expect(accion?.visible).not.toBe(false);
+    it('ofrece acciones con texto junto al calendario, sin botón flotante', () => {
+      component.expectedRole = 'ADMIN';
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement as HTMLElement;
+      expect(
+        html.querySelector('p-button[label="Seleccionar plantilla semanal"]'),
+      ).toBeTruthy();
+      expect(
+        html.querySelector(
+          'p-button[label="Vincular entrenamientos con física"]',
+        ),
+      ).toBeTruthy();
+      expect(html.querySelector('p-speedDial')).toBeNull();
     });
 
-    it('items() oculta la acción de conversión cuando PLANIFICACION_FISICA está deshabilitada', () => {
+    it('solo abre la selección de plantilla en vista semanal', () => {
+      component.view = CalendarView.Month;
+      component.abrirSeleccionPlantilla();
+      expect(component.isDialogVisible).toBe(false);
+
+      component.view = CalendarView.Week;
+      component.abrirSeleccionPlantilla();
+      expect(component.isDialogVisible).toBe(true);
+    });
+
+    it('oculta la conversión cuando PLANIFICACION_FISICA está deshabilitada', () => {
       appConfigService.setEstado({
         ...appConfigService.estadoModulos(),
         [ModuloApp.PLANIFICACION_FISICA]: false,
       });
+      component.expectedRole = 'ADMIN';
       fixture.detectChanges();
 
-      const items = component.items();
-      const accion = items.find((i) =>
-        i.tooltipOptions?.tooltipLabel?.includes('Convertir bloques'),
-      );
-      expect(accion?.visible).toBe(false);
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector(
+          'p-button[label="Vincular entrenamientos con física"]',
+        ),
+      ).toBeNull();
     });
 
     it('confirmarConversionBloquesFisica NO abre el confirm si PLANIFICACION_FISICA está deshabilitada (defensa en profundidad)', () => {

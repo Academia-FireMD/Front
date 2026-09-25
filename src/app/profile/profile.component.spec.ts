@@ -71,6 +71,19 @@ describe('ProfileComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('no vuelve a abrir automáticamente la ficha incompleta tras descartarla', () => {
+    component.user = { id: 98765, rol: 'ALUMNO' } as any;
+    localStorage.setItem('onboarding_shown_98765', 'true');
+    jest.spyOn(component, 'isOnboardingComplete').mockReturnValue(false);
+
+    try {
+      (component as any).checkFirstTimeAccess();
+      expect(component.showOnboardingModal).toBe(false);
+    } finally {
+      localStorage.removeItem('onboarding_shown_98765');
+    }
+  });
+
   it('lleva la gestión de planificación al shell/wizard, sin autoasignador legacy', () => {
     const router = TestBed.inject(Router);
 

@@ -293,9 +293,21 @@
 
       @if (previewImportacion(); as invalidacion) {
         <div role="alert" class="overwrite-warning">
-          <strong
-            >El Excel contiene errores; no se ha guardado ninguna hoja.</strong
-          >
+          @if (
+            invalidacion.totales.semanas === 0 &&
+            invalidacion.totales.errores === 0
+          ) {
+            <strong
+              >El Excel no contiene semanas con actividades. Añade al menos una
+              actividad y vuelve a previsualizar. No se ha guardado
+              nada.</strong
+            >
+          } @else {
+            <strong
+              >El Excel contiene errores; no se ha guardado ninguna
+              hoja.</strong
+            >
+          }
           @for (hoja of invalidacion.hojas; track hoja.hoja) {
             @for (error of hoja.errores; track $index) {
               <p>
@@ -309,6 +321,11 @@
       }
 
       @if (previewCarga(); as preview) {
+        <p-message
+          severity="info"
+          text="Previsualización: todavía no se ha guardado nada. Revisa las semanas y el destino antes de confirmar."
+          styleClass="w-full"
+        />
         @if (preview.requiereEleccion) {
           <p-message
             severity="warn"

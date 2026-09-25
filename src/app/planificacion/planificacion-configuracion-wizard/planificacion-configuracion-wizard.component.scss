@@ -28,32 +28,33 @@
 
 @media (max-width: 480px) {
   :host ::ng-deep .p-stepper .p-stepper-header {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 0.125rem;
+    flex: 0 0 auto;
+    padding: 0;
   }
 
   :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-action {
     justify-content: center;
-    min-width: 0;
+    gap: 0.2rem;
   }
 
   :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-number {
-    min-width: 1.75rem;
-    width: 1.75rem;
-    height: 1.75rem;
-    line-height: 1.75rem;
-    font-size: 1rem;
-  }
-
-  :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-title {
-    margin-left: 0.25rem;
+    min-width: 1.625rem;
+    width: 1.625rem;
+    height: 1.625rem;
+    line-height: 1.625rem;
     font-size: 0.875rem;
   }
 
+  :host ::ng-deep .p-stepper .p-stepper-header .p-stepper-title {
+    margin-left: 0.15rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
   :host ::ng-deep .p-stepper .p-stepper-separator {
-    flex: 0 1 0.75rem;
-    margin-inline-start: 0.25rem;
+    flex: 1 1 0.2rem;
+    min-width: 0.2rem;
+    margin-inline: 0.15rem;
   }
 
   :host ::ng-deep .p-stepper .p-stepper-panels {

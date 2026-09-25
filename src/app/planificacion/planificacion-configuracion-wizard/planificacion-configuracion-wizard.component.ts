@@ -99,6 +99,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   // Paso 2: nivel
   elegirCuestionario = signal(false);
   private nivelAntesTest: NivelOposicion | null = null;
+  avisoNivelTest: string | null = null;
 
   // Paso 3: confirmación
   guardando = signal(false);
@@ -175,10 +176,6 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
         );
   }
 
-  get generalPermitida(): boolean {
-    return this.oposicionesPermitidas.includes(Oposicion.GENERAL);
-  }
-
   get requiereConfirmacionGCV(): boolean {
     return this.preferencias.oposicion === Oposicion.GENERAL;
   }
@@ -247,6 +244,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       nivel: prefs.nivel as NivelOposicion | null,
       franja: prefs.franja as TipoDePlanificacionDeseada | null,
     });
+    this.avisoNivelTest = null;
     this.gcvConfirmado = this.preferencias.oposicion !== Oposicion.GENERAL;
   }
 
@@ -273,12 +271,25 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   }
 
   aplicarNivelRecomendado(nivel: NivelOposicion): void {
-    this.preferencias.nivel = nivel;
-    this.preferencias = this.normalizarPreferencias(
-      this.preferencias as PreferenciasPrecargadas,
+    const hayOpcionesPublicadas = Boolean(
+      this.configuracion?.opcionesPermitidas?.length,
     );
+    if (hayOpcionesPublicadas && !this.nivelesPermitidos.includes(nivel)) {
+      const siguientePaso = this.preferencias.nivel
+        ? 'Conservamos tu nivel anterior; puedes elegir otro nivel disponible o volver para cambiar tus preferencias.'
+        : 'Selecciona un nivel disponible o vuelve para cambiar tus preferencias.';
+      this.avisoNivelTest = `El test recomienda ${this.getNivelLabel(nivel)}, pero ese nivel no está disponible para la oposición y las horas elegidas. ${siguientePaso}`;
+    } else {
+      this.preferencias.nivel = nivel;
+      this.avisoNivelTest = null;
+    }
     this.elegirCuestionario.set(false);
     this.nivelAntesTest = null;
+  }
+
+  seleccionarNivel(nivel: NivelOposicion | null): void {
+    this.preferencias.nivel = nivel;
+    this.avisoNivelTest = null;
   }
 
   iniciarCuestionario(): void {
@@ -289,6 +300,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   cancelarCuestionario(): void {
     this.preferencias.nivel = this.nivelAntesTest;
     this.nivelAntesTest = null;
+    this.avisoNivelTest = null;
     this.elegirCuestionario.set(false);
   }
 

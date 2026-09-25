@@ -4,7 +4,6 @@ import { LOCALE_ID, NgModule } from '@angular/core';
 import { CalendarModule, DateAdapter } from 'angular-calendar';
 import { ConfirmationService } from 'primeng/api';
 import { CardModule } from 'primeng/card';
-import { SpeedDialModule } from 'primeng/speeddial';
 import { StepperModule } from 'primeng/stepper';
 
 import localeEs from '@angular/common/locales/es';
@@ -62,7 +61,6 @@ registerLocaleData(localeEs);
     CalendarModule,
     CardModule,
     StepperModule,
-    SpeedDialModule,
     TableModule,
     TagModule,
     CheckboxModule,

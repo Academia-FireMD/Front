@@ -155,15 +155,9 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(component.puedeContinuarPasoPreferencias).toBe(true);
   });
 
-  it('muestra la explicación completa de GCV antes de elegirla, sin checkbox prematuro', () => {
+  it('no muestra la explicación de General antes de elegirla', () => {
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
-
-    expect(texto).toContain(
-      'La planificación General Comunidad Valenciana está diseñada para trabajar de forma global los contenidos comunes a las distintas oposiciones de bombero de la Comunidad Valenciana.',
-    );
-    expect(texto).toContain(
-      'Recuerda cambiar la selección cuando quieras preparar una convocatoria concreta.',
-    );
+    expect(texto).not.toContain('La planificación General trabaja');
     expect(
       fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
     ).toBeNull();
@@ -177,6 +171,10 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     };
     component.gcvConfirmado = false;
     fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'La planificación General trabaja los contenidos comunes',
+    );
 
     expect(
       fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
@@ -196,6 +194,68 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     component.aplicarNivelRecomendado(NivelOposicion.AVANZADO);
 
     expect(component.preferencias.nivel).toBe(NivelOposicion.AVANZADO);
+    expect(service.guardarConfiguracion$).not.toHaveBeenCalled();
+  });
+
+  it('una recomendación sin variante conserva el nivel anterior y explica qué hacer', () => {
+    component.configuracion = {
+      ...configuracion,
+      opcionesPermitidas: [
+        {
+          oposicion: Oposicion.MADRID,
+          nivel: NivelOposicion.INICIACION,
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+          varianteId: 26,
+          planificacionMensual: null,
+        },
+      ],
+    };
+    component.preferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    };
+    component.iniciarCuestionario();
+
+    component.aplicarNivelRecomendado(NivelOposicion.AVANZADO);
+    component.activeStep.set(1);
+    fixture.detectChanges();
+
+    expect(component.preferencias.nivel).toBe(NivelOposicion.INICIACION);
+    expect(component.avisoNivelTest).toContain('no está disponible');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Conservamos tu nivel anterior',
+    );
+    expect(service.guardarConfiguracion$).not.toHaveBeenCalled();
+  });
+
+  it('una recomendación no disponible sin nivel previo pide elegir uno sin afirmar que lo conserva', () => {
+    component.configuracion = {
+      ...configuracion,
+      opcionesPermitidas: [
+        {
+          oposicion: Oposicion.MADRID,
+          nivel: NivelOposicion.INICIACION,
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+          varianteId: 26,
+          planificacionMensual: null,
+        },
+      ],
+    };
+    component.preferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: null,
+      franja: 'FRANJA_SEIS_A_OCHO_HORAS',
+    };
+    component.iniciarCuestionario();
+
+    component.aplicarNivelRecomendado(NivelOposicion.AVANZADO);
+
+    expect(component.preferencias.nivel).toBeNull();
+    expect(component.avisoNivelTest).toContain(
+      'Selecciona un nivel disponible',
+    );
+    expect(component.avisoNivelTest).not.toContain('Conservamos');
     expect(service.guardarConfiguracion$).not.toHaveBeenCalled();
   });
 
@@ -341,18 +401,11 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(component.activeStep()).toBe(1);
   });
 
-  it('muestra Cancelar solo en edición, emite cancelado y no guarda', () => {
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
-      'Cancelar',
-    );
-
-    const canceladoSpy = jest.spyOn(component.cancelado, 'emit');
-    component.modoEdicion = true;
-    fixture.detectChanges();
-
+  it('muestra Cancelar también en la primera configuración, emite cancelado y no guarda', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Cancelar',
     );
+    const canceladoSpy = jest.spyOn(component.cancelado, 'emit');
     const botones = Array.from(
       fixture.nativeElement.querySelectorAll('button'),
     ) as HTMLButtonElement[];

@@ -234,19 +234,6 @@
       height: calc(100vh - 40px);
     }
   }
-  p-speeddial {
-    position: fixed;
-    bottom: 270px;
-    right: 6rem;
-    display: flex;
-    justify-content: end;
-    align-items: center;
-    z-index: 1000;
-    button {
-      width: 3rem;
-      height: 3rem;
-    }
-  }
   .rejilla {
     max-height: calc(100% - 10rem);
     overflow: auto;
@@ -262,6 +249,35 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.calendar-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 575px) {
+  .calendar-info {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .calendar-info .visualizando {
+    flex-basis: 100%;
+    text-align: center;
+  }
+
+  .calendar-tools {
+    flex-direction: column;
+  }
+
+  :host ::ng-deep .calendar-tools .p-button {
+    justify-content: center;
+    min-height: 44px;
+    width: 100%;
+  }
 }
 
 .por-defecto {

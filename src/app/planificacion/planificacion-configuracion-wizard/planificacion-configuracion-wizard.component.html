@@ -29,52 +29,38 @@
         (cambios)="onPreferenciasChange($event)"
       ></app-planificacion-preferencias>
 
-      @if (generalPermitida) {
+      @if (requiereConfirmacionGCV) {
         <div
           class="planificacion-general-info mt-3 p-3 border-1 border-round surface-100"
         >
           <p class="m-0 line-height-3">
-            La planificación General Comunidad Valenciana está diseñada para
-            trabajar de forma global los contenidos comunes a las distintas
-            oposiciones de bombero de la Comunidad Valenciana. Si estás
-            preparando una oposición concreta, te recomendamos seleccionar su
-            planificación específica, ya que estará adaptada a su temario,
-            estructura y necesidades particulares. Puedes elegir la
-            planificación General Comunidad Valenciana si prefieres una
-            preparación más amplia o si todavía no quieres centrarte
-            exclusivamente en una convocatoria concreta. Recuerda cambiar la
-            selección cuando quieras preparar una convocatoria concreta.
+            La planificación General trabaja los contenidos comunes de las
+            oposiciones de bombero de la Comunidad Valenciana. Si preparas una
+            convocatoria concreta, su planificación específica se ajusta mejor
+            al temario. Podrás cambiar esta elección más adelante.
           </p>
 
-          @if (requiereConfirmacionGCV) {
-            <div class="flex align-items-start gap-2 mt-3">
-              <p-checkbox
-                [binary]="true"
-                [(ngModel)]="gcvConfirmado"
-                inputId="confirmarGcv"
-              ></p-checkbox>
-              <label for="confirmarGcv" class="line-height-3">
-                ¿Quieres continuar con la planificación General Comunidad
-                Valenciana?
-              </label>
-            </div>
-          }
+          <div class="flex align-items-start gap-2 mt-3">
+            <p-checkbox
+              [binary]="true"
+              [(ngModel)]="gcvConfirmado"
+              inputId="confirmarGcv"
+            ></p-checkbox>
+            <label for="confirmarGcv" class="line-height-3">
+              Quiero continuar con la planificación General Comunidad
+              Valenciana.
+            </label>
+          </div>
         </div>
       }
 
-      <div
-        class="wizard-actions pt-4"
-        [class.wizard-actions--between]="modoEdicion"
-        [class.wizard-actions--end]="!modoEdicion"
-      >
-        @if (modoEdicion) {
-          <p-button
-            label="Cancelar"
-            icon="pi pi-times"
-            styleClass="p-button-text"
-            (click)="cancelar()"
-          ></p-button>
-        }
+      <div class="wizard-actions wizard-actions--between pt-4">
+        <p-button
+          label="Cancelar"
+          icon="pi pi-times"
+          styleClass="p-button-text"
+          (click)="cancelar()"
+        ></p-button>
         <p-button
           label="Continuar"
           icon="pi pi-arrow-right"
@@ -108,7 +94,7 @@
             <p-dropdown
               [options]="opcionesNivel"
               [(ngModel)]="preferencias.nivel"
-              (ngModelChange)="aplicarNivelRecomendado($event)"
+              (ngModelChange)="seleccionarNivel($event)"
               placeholder="Selecciona nivel"
               class="w-full"
               inputId="wizardNivel"
@@ -128,21 +114,24 @@
               "
               (onClick)="iniciarCuestionario()"
             />
+            @if (avisoNivelTest) {
+              <div role="status" aria-live="polite" class="mt-3">
+                <p-message
+                  severity="warn"
+                  [text]="avisoNivelTest"
+                  styleClass="w-full"
+                />
+              </div>
+            }
           </div>
 
-          <div
-            class="wizard-actions"
-            [class.wizard-actions--between]="modoEdicion"
-            [class.wizard-actions--end]="!modoEdicion"
-          >
-            @if (modoEdicion) {
-              <p-button
-                label="Cancelar"
-                icon="pi pi-times"
-                styleClass="p-button-text"
-                (click)="cancelar()"
-              />
-            }
+          <div class="wizard-actions wizard-actions--between">
+            <p-button
+              label="Cancelar"
+              icon="pi pi-times"
+              styleClass="p-button-text"
+              (click)="cancelar()"
+            />
             <div class="wizard-actions__navigation">
               <p-button
                 label="Volver"
@@ -231,19 +220,13 @@
         </div>
       }
 
-      <div
-        class="wizard-actions"
-        [class.wizard-actions--between]="modoEdicion"
-        [class.wizard-actions--end]="!modoEdicion"
-      >
-        @if (modoEdicion) {
-          <p-button
-            label="Cancelar"
-            icon="pi pi-times"
-            styleClass="p-button-text"
-            (click)="cancelar()"
-          />
-        }
+      <div class="wizard-actions wizard-actions--between">
+        <p-button
+          label="Cancelar"
+          icon="pi pi-times"
+          styleClass="p-button-text"
+          (click)="cancelar()"
+        />
         <div class="wizard-actions__navigation">
           <p-button
             label="Volver"

@@ -98,6 +98,7 @@ import {
           "
           [abrirEnNivel]="abrirWizardEnNivel"
           (configurada)="onConfigurada($event)"
+          (cancelado)="cancelarConfiguracionInicial()"
         ></app-planificacion-configuracion-wizard>
       } @else if (configuracion?.estado === 'PENDIENTE_PUBLICACION') {
         @if (editando) {
@@ -317,5 +318,10 @@ export class PlanificacionAlumnoComponent implements OnInit {
     this.preferenciasWizard = null;
     this.nivelBorrador = null;
     this.abrirWizardEnNivel = false;
+  }
+
+  cancelarConfiguracionInicial(): void {
+    this.cancelarEdicion();
+    void this.router.navigate(['/app/profile']);
   }
 }

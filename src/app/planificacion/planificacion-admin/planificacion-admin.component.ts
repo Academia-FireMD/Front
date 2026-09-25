@@ -715,15 +715,6 @@ export class PlanificacionAdminComponent implements OnInit {
         ? (globalThis.crypto?.randomUUID?.() ??
           `${Date.now()}-${Math.random().toString(36).slice(2)}`)
         : null;
-      if (preview.requiereEleccion) {
-        this.toast.info(
-          'Elige un borrador para cada variante y previsualiza de nuevo.',
-        );
-      } else if (preview.puedeAplicar) {
-        this.toast.success(
-          'Revisa los cambios; todavía no se ha guardado nada.',
-        );
-      }
     } catch (error) {
       this.previewCarga.set(null);
       if (error instanceof HttpErrorResponse && error.error?.preview) {
@@ -731,12 +722,14 @@ export class PlanificacionAdminComponent implements OnInit {
           error.error.preview as PreviewImportacionPlantillas,
         );
       }
-      this.toast.error(
-        this.mensajeErrorImportacion(
-          error,
-          'No se pudo previsualizar el Excel.',
-        ),
-      );
+      if (!this.previewImportacion()) {
+        this.toast.error(
+          this.mensajeErrorImportacion(
+            error,
+            'No se pudo previsualizar el Excel.',
+          ),
+        );
+      }
     } finally {
       this.previsualizandoImportacion.set(false);
     }

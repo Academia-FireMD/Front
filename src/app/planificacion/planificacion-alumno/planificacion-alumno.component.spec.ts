@@ -99,6 +99,19 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     expect(html).toContain('app-planificacion-configuracion-wizard');
   });
 
+  it('Cancelar la primera configuración descarta el borrador y vuelve al perfil', async () => {
+    await montar(estadoRequiereConfiguracion);
+    fixture.componentInstance.preferenciasWizard = {
+      ...estadoRequiereConfiguracion.preferenciasPrecargadas,
+      nivel: NivelOposicion.AVANZADO,
+    };
+
+    fixture.componentInstance.cancelarConfiguracionInicial();
+
+    expect(fixture.componentInstance.preferenciasWizard).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/app/profile']);
+  });
+
   it('avisa si la configuración activa dejó de ser válida y conserva el calendario', async () => {
     await montar({
       ...estadoRequiereConfiguracion,
