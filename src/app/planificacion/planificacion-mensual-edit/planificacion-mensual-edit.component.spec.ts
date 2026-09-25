@@ -91,6 +91,20 @@ describe('PlanificacionMensualEditComponent', () => {
   });
 
   describe('ancla del calendario', () => {
+    it('usa la semana recién cargada al abrir el borrador desde el importador', () => {
+      const route = jest.spyOn(
+        (component as any).activedRoute.snapshot.queryParamMap,
+        'get',
+      ).mockReturnValue('2028-05-08');
+      const load = jest.spyOn(component as any, 'load');
+
+      component.ngOnInit();
+
+      expect(load).toHaveBeenCalledWith('2028-05-08');
+      route.mockRestore();
+      load.mockRestore();
+    });
+
     it('centra la primera actividad real al cargar', () => {
       const primera = new Date(2027, 2, 8, 9, 0);
       const segunda = new Date(2027, 2, 10, 9, 0);

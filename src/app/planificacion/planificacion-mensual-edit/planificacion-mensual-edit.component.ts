@@ -796,7 +796,9 @@ export class PlanificacionMensualEditComponent {
   }
 
   ngOnInit(): void {
-    this.load();
+    this.load(
+      this.activedRoute.snapshot.queryParamMap.get('fechaFoco') ?? undefined,
+    );
   }
 
   private load(fechaFoco?: string) {
