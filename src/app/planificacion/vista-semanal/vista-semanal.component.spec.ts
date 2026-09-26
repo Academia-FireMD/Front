@@ -28,6 +28,22 @@ describe('VistaSemanalComponent', () => {
   });
 
   describe('menú de contexto — añadir entrenamiento físico', () => {
+    it('no abre el menú de la franja al pulsar una actividad', () => {
+      const sourceEvent = {
+        target: { closest: jest.fn().mockReturnValue({}) },
+        stopPropagation: jest.fn(),
+      };
+      const menu = { show: jest.fn() };
+
+      component.onTimeClicked(
+        { date: new Date(2027, 0, 4, 7), sourceEvent },
+        menu as any,
+      );
+
+      expect(menu.show).not.toHaveBeenCalled();
+      expect(sourceEvent.stopPropagation).not.toHaveBeenCalled();
+    });
+
     it('crea el evento con el color de tipo Entrenamiento', () => {
       const fecha = new Date(2026, 6, 15, 10, 0, 0);
       (component as any).onTimeClickedDate = fecha;

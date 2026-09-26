@@ -244,6 +244,7 @@
             : null
         "
         (click)="
+          $event.stopPropagation();
           role == 'ALUMNO' &&
           esEventoFisicaVinculado(weekEvent.event) &&
           tieneFisica(weekEvent.event.start)

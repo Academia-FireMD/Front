@@ -763,6 +763,7 @@ export class VistaSemanalComponent {
   }
 
   onTimeClicked({ date, sourceEvent }: any, cm: ContextMenu): void {
+    if ((sourceEvent.target as Element | null)?.closest?.('.wrapper')) return;
     sourceEvent.stopPropagation();
     this.onTimeClickedDate = date;
     cm.show(sourceEvent);
