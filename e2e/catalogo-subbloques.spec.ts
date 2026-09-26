@@ -81,6 +81,17 @@ for (const viewport of [
       height: viewport.height,
     });
     const aplicaciones = await prepararPagina(page);
+    if (viewport.width === 375) {
+      const busqueda = await page
+        .getByRole('searchbox', { name: 'Buscar subbloques' })
+        .boundingBox();
+      const accion = await page
+        .getByRole('button', { name: 'Importar catálogo' })
+        .boundingBox();
+      expect(busqueda?.width).toBeGreaterThan(280);
+      expect(accion?.width).toBeGreaterThan(280);
+      expect(Math.abs((busqueda?.x ?? 0) - (accion?.x ?? 0))).toBeLessThan(3);
+    }
     await expect(page.getByText('Explicación completa')).toBeVisible();
     await page.getByRole('button', { name: 'Importar catálogo' }).click();
     const dialogo = page.getByRole('dialog', {

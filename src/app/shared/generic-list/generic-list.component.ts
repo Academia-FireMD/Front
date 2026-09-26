@@ -58,7 +58,10 @@ export type GenericListMode = 'overview' | 'selection';
     <div class="shared-grid grid">
       <!-- Top Action Bar -->
       <div class="col-12">
-        <div class="top-action-bar">
+        <div
+          class="top-action-bar"
+          [class.mobile-stack-actions]="stackActionsOnMobile"
+        >
           <!-- Left Actions - Siempre visible -->
           <div class="left-actions">
             <ng-content select="[left-actions]"></ng-content>
@@ -315,6 +318,7 @@ export class GenericListComponent<T>
   @Input() itemTemplate!: TemplateRef<any>;
   @Input() showPagination: boolean = true;
   @Input() autoItemHeight = false;
+  @Input() stackActionsOnMobile = false;
   @Input() filters?: FilterConfig[];
   @Input() mode: GenericListMode = 'overview';
   @Input() singleSelection = false;

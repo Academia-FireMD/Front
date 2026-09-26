@@ -146,6 +146,10 @@
   :host {
     padding: 0.65rem;
   }
+  #buscar-subbloques {
+    width: 100%;
+    min-height: 44px;
+  }
   .catalogo-acciones {
     flex-direction: column;
     align-items: stretch;
