@@ -67,12 +67,9 @@ test('admin confirma la normalización de física y el editor recarga el plan', 
   await page.goto(
     `/app/planificacion/planificacion-mensual/${PLANIFICACION_ID}`,
   );
-  await expect(page.locator('p-speeddial .p-speeddial-button')).toBeVisible();
-
-  await page.locator('p-speeddial .p-speeddial-button').click();
-  // PrimeNG SpeedDial no expone el tooltip como nombre accesible: el icono es
-  // el selector estable de la acción de física.
-  await page.locator('.p-speeddial-action:has(.pi-bolt)').click();
+  await page
+    .getByRole('button', { name: 'Vincular entrenamientos con física' })
+    .click();
 
   const dialogo = page.getByRole('alertdialog', {
     name: 'Convertir bloques a física',

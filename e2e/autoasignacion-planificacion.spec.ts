@@ -266,7 +266,7 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  let lecturasConfiguracion = 0;
+  let configuracionConfirmada = false;
   await page.route('**/planificaciones/configuracion', (route) => {
     if (route.request().method() === 'PUT') {
       expect(route.request().postDataJSON()).toEqual({
@@ -275,20 +275,18 @@ test('primera entrada permite completar wizard, activar version 0 y abrir calend
         franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
         version: 0,
       });
+      configuracionConfirmada = true;
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(configuracionActiva),
       });
     }
-    lecturasConfiguracion++;
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(
-        lecturasConfiguracion === 1
-          ? configuracionInicial
-          : configuracionActiva,
+        configuracionConfirmada ? configuracionActiva : configuracionInicial,
       ),
     });
   });
