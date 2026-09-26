@@ -105,6 +105,7 @@ describe('PlanificacionMensualEditComponent', () => {
     });
 
     it('centra la primera actividad real al cargar', () => {
+      component.expectedRole = 'ADMIN';
       const primera = new Date(2027, 2, 8, 9, 0);
       const segunda = new Date(2027, 2, 10, 9, 0);
 
@@ -117,12 +118,14 @@ describe('PlanificacionMensualEditComponent', () => {
     });
 
     it('si no hay actividades usa mes y año del plan, no el mes actual', () => {
+      component.expectedRole = 'ADMIN';
       (component as any).centrarCalendario({ ano: 2027, mes: 3 }, []);
 
       expect(component.viewDate).toEqual(new Date(2027, 2, 1));
     });
 
     it('prioriza el inicio del rango devuelto por el volcado', () => {
+      component.expectedRole = 'ADMIN';
       (component as any).centrarCalendario(
         { ano: 2026, mes: 9 },
         [{ start: new Date(2026, 8, 1) }],
@@ -130,6 +133,72 @@ describe('PlanificacionMensualEditComponent', () => {
       );
 
       expect(component.viewDate).toEqual(new Date(2027, 2, 8));
+    });
+
+    it('abre la semana actual del alumno aunque el plan tenga contenido histórico', () => {
+      jest.useFakeTimers().setSystemTime(new Date(2026, 8, 26, 12));
+      try {
+        component.expectedRole = 'ALUMNO';
+        (component as any).centrarCalendario({ ano: 2026, mes: 1 }, [
+          { start: new Date(2026, 0, 12, 9) },
+        ]);
+
+        expect(component.viewDate).toEqual(new Date(2026, 8, 26, 12));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('respeta el foco del alumno solo dentro de su ventana visible', () => {
+      jest.useFakeTimers().setSystemTime(new Date(2026, 8, 26, 12));
+      try {
+        component.expectedRole = 'ALUMNO';
+        (component as any).centrarCalendario(
+          { ano: 2026, mes: 1 },
+          [],
+          '2026-09-28',
+        );
+        expect(component.viewDate).toEqual(new Date(2026, 8, 28));
+
+        (component as any).centrarCalendario(
+          { ano: 2026, mes: 1 },
+          [],
+          '2026-01-12',
+        );
+        expect(component.viewDate).toEqual(new Date(2026, 8, 26, 12));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('acepta un foco posterior de la misma semana aunque aún no sea ese día', () => {
+      jest.useFakeTimers().setSystemTime(new Date(2026, 8, 28, 14, 30));
+      try {
+        component.expectedRole = 'ALUMNO';
+        (component as any).centrarCalendario(
+          { ano: 2026, mes: 9 },
+          [],
+          '2026-09-29',
+        );
+        expect(component.viewDate).toEqual(new Date(2026, 8, 29));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('acepta el domingo de la semana siguiente desde el viernes', () => {
+      jest.useFakeTimers().setSystemTime(new Date(2026, 8, 25, 14, 30));
+      try {
+        component.expectedRole = 'ALUMNO';
+        (component as any).centrarCalendario(
+          { ano: 2026, mes: 9 },
+          [],
+          '2026-10-04',
+        );
+        expect(component.viewDate).toEqual(new Date(2026, 9, 4));
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

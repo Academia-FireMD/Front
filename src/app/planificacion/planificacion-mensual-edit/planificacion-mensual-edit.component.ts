@@ -883,16 +883,23 @@ export class PlanificacionMensualEditComponent {
     }
   }
 
-  /**
-   * Evita abrir una planificación en el mes de hoy. El contenido real manda;
-   * si no existe, se usa el mes/año declarados por la planificación.
-   */
+  /** El alumno entra en la semana actual; el admin puede revisar desde el primer contenido. */
   private centrarCalendario(
     planificacion: PlanificacionMensual,
     eventos: CalendarEvent[],
     fechaFoco?: string,
   ): void {
     const foco = fechaFoco ? this.fechaCivil(fechaFoco) : null;
+    if (this.expectedRole === 'ALUMNO') {
+      const hoy = new Date();
+      const inicio = getVentanaDosSemanasAtras(hoy);
+      const fin = getNextWeekIfFriday(hoy);
+      // La navegación limita semanas completas, no el instante actual.
+      fin.setDate(fin.getDate() + ((7 - fin.getDay()) % 7));
+      fin.setHours(23, 59, 59, 999);
+      this.viewDate = foco && foco >= inicio && foco <= fin ? foco : hoy;
+      return;
+    }
     if (foco) {
       this.viewDate = foco;
       return;
