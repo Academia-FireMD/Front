@@ -81,7 +81,7 @@
                     }
                   </div>
                 </div>
-                <span class="font-bold">
+                <span class="subbloque-comentario">
                   {{ subBloque.comentarios || "Sin comentarios" }}
                 </span>
                 <div class="actions">
@@ -90,6 +90,9 @@
                     pRipple
                     icon="pi pi-pencil"
                     class="p-button-text p-button-icon-only"
+                    [attr.aria-label]="
+                      'Editar ' + (subBloque.nombre || 'subbloque')
+                    "
                     (click)="editarSubBloque(index)"
                   ></button>
                   <button
@@ -97,6 +100,9 @@
                     pRipple
                     icon="pi pi-copy"
                     class="p-button-text p-button-icon-only"
+                    [attr.aria-label]="
+                      'Clonar ' + (subBloque.nombre || 'subbloque')
+                    "
                     (click)="clonarSubbloque(subBloque, index)"
                   ></button>
                   <button
@@ -104,6 +110,9 @@
                     pRipple
                     icon="pi pi-trash"
                     class="p-button-text p-button-icon-only"
+                    [attr.aria-label]="
+                      'Eliminar ' + (subBloque.nombre || 'subbloque')
+                    "
                     (click)="eliminarSubBloque(index)"
                   ></button>
                 </div>
