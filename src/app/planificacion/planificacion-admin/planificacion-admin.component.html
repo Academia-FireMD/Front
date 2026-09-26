@@ -430,6 +430,15 @@
         />
       </div>
 
+      @if (errorCarga(); as mensaje) {
+        <p-message
+          severity="error"
+          [text]="mensaje"
+          styleClass="w-full"
+          role="alert"
+        />
+      }
+
       @if (previewImportacion(); as invalidacion) {
         <div role="alert" class="overwrite-warning">
           @if (

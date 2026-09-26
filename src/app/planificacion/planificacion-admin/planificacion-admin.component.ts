@@ -254,6 +254,7 @@ export class PlanificacionAdminComponent
   error = signal<string | null>(null);
   archivoImportacion = signal<File | null>(null);
   previewCarga = signal<PreviewCargaSemanas | null>(null);
+  errorCarga = signal<string | null>(null);
   resultadoCarga = signal<PreviewCargaSemanas | null>(null);
   destinosCarga = signal<Record<string, DestinoCargaSemanas>>({});
   idempotencyKeyCarga: string | null = null;
@@ -774,6 +775,7 @@ export class PlanificacionAdminComponent
     const file = input.files?.[0] ?? null;
     this.previewImportacion.set(null);
     this.previewCarga.set(null);
+    this.errorCarga.set(null);
     this.resultadoCarga.set(null);
     this.destinosCarga.set({});
     this.idempotencyKeyCarga = null;
@@ -851,6 +853,7 @@ export class PlanificacionAdminComponent
     this.previsualizandoImportacion.set(true);
     this.resultadoCarga.set(null);
     this.previewImportacion.set(null);
+    this.errorCarga.set(null);
     this.confirmarSobrescritura.set(false);
     try {
       const preview = await firstValueFrom(
@@ -872,7 +875,7 @@ export class PlanificacionAdminComponent
         );
       }
       if (!this.previewImportacion()) {
-        this.toast.error(
+        this.errorCarga.set(
           this.mensajeErrorImportacion(
             error,
             'No se pudo previsualizar el Excel.',

@@ -1,9 +1,10 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, throwError } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
@@ -837,6 +838,33 @@ describe('PlanificacionAdminComponent', () => {
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'El Excel no contiene semanas con actividades',
+    );
+  });
+
+  it('mantiene visible el error de la carga semanal si el servidor no devuelve una previsualización', async () => {
+    component.archivoImportacion.set(
+      new File(['contenido'], 'semanas.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+    );
+    (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 422,
+            error: { message: 'Corrige el Excel antes de guardar semanas.' },
+          }),
+      ),
+    );
+
+    await component.previsualizarCargaSemanas();
+    fixture.detectChanges();
+
+    expect(component.errorCarga()).toBe(
+      'Corrige el Excel antes de guardar semanas.',
+    );
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Corrige el Excel antes de guardar semanas.',
     );
   });
 
