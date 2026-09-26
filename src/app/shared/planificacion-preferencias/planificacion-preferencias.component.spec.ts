@@ -87,7 +87,7 @@ describe('PlanificacionPreferenciasComponent', () => {
     const dropdowns = element.querySelectorAll('p-dropdown');
 
     expect(labels.map((label) => label.textContent?.trim())).toEqual([
-      'Oposición *',
+      'Plan de estudio *',
       'Horas disponibles para el estudio *',
     ]);
     expect(dropdowns).toHaveLength(2);
@@ -102,7 +102,7 @@ describe('PlanificacionPreferenciasComponent', () => {
     expect(picker.context).toBe('planificacion');
     expect(
       picker.listboxOptions.find((o) => o.code === Oposicion.GENERAL)?.label,
-    ).toBe('General Comunidad Valenciana');
+    ).toBe('Plan común de Comunidad Valenciana');
   });
 
   it('en perfil aclara que la selección expresa interés y no concede acceso', () => {
@@ -122,7 +122,7 @@ describe('PlanificacionPreferenciasComponent', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
+      'El plan común de Comunidad Valenciana sirve para Valencia y Alicante; no añade otra suscripción ni otro calendario.',
     );
     const picker = fixture.debugElement.query(
       By.directive(OposicionPickerComponent),
@@ -131,7 +131,7 @@ describe('PlanificacionPreferenciasComponent', () => {
       'planificacion-preferenciasOposicionAyuda',
     );
     expect(picker.ariaLabel).toBe(
-      'Oposición. Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
+      'Plan de estudio. El plan común de Comunidad Valenciana sirve para Valencia y Alicante; no añade otra suscripción ni otro calendario.',
     );
   });
 
@@ -200,6 +200,27 @@ describe('PlanificacionPreferenciasComponent', () => {
     component.formGroup.patchValue({ oposicion: Oposicion.MADRID });
 
     expect(emitido?.oposicion).toBe(Oposicion.MADRID);
+  });
+
+  it('habilita nivel y horas solo cuando sus elecciones previas son válidas', () => {
+    expect(component.formGroup.controls['nivel'].disabled).toBe(true);
+    expect(component.formGroup.controls['franja'].disabled).toBe(true);
+
+    component.formGroup.patchValue({ oposicion: Oposicion.MADRID });
+    expect(component.formGroup.controls['nivel'].enabled).toBe(true);
+    expect(component.formGroup.controls['franja'].disabled).toBe(true);
+
+    component.formGroup.patchValue({ nivel: NivelOposicion.INICIACION });
+    expect(component.formGroup.controls['franja'].enabled).toBe(true);
+  });
+
+  it('sin selector de nivel, las horas dependen solo del plan elegido', () => {
+    component.mostrarNivel = false;
+    component.ngOnChanges();
+    expect(component.formGroup.controls['franja'].disabled).toBe(true);
+
+    component.formGroup.patchValue({ oposicion: Oposicion.MADRID });
+    expect(component.formGroup.controls['franja'].enabled).toBe(true);
   });
 
   it('en modo multiple la oposición se emite como array', () => {

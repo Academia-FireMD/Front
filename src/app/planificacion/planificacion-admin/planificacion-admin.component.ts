@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,7 +26,6 @@ import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TabViewModule } from 'primeng/tabview';
 import { firstValueFrom, of } from 'rxjs';
@@ -44,13 +44,11 @@ import {
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import type { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import {
-  AlumnoSinCoincidencia,
   PreviewImportacionPlantillas,
   PreviewCargaSemanas,
   DestinoCargaSemanas,
   VarianteCargaSemanas,
   ReglaOposicionAdmin,
-  ReconciliacionPlanificaciones,
   ResultadoImportacionPlantillas,
   SemanaImportacionPlantilla,
   VarianteAdmin,
@@ -99,7 +97,6 @@ const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
     InputTextModule,
     MessageModule,
     ProgressSpinnerModule,
-    TableModule,
     TagModule,
     TabViewModule,
     GenericListComponent,
@@ -142,6 +139,7 @@ export class PlanificacionAdminComponent
       (option) => option.value !== Oposicion.GENERAL,
     );
   oposicionSuscripcionOptions = this.oposicionSuscripcionNuevasOptions;
+  oposicionPlanificacionReglaOptions: OposicionPickerOption[] = [];
   nivelOptions = [
     { label: 'Iniciación', value: NivelOposicion.INICIACION },
     { label: 'Avanzado', value: NivelOposicion.AVANZADO },
@@ -194,16 +192,18 @@ export class PlanificacionAdminComponent
   readonly reglaFilters: FilterConfig[] = [
     {
       key: 'oposicionSuscripcion',
-      label: 'Oposición de suscripción',
+      label: 'Oposición contratada',
       type: 'dropdown',
-      options: Object.values(Oposicion).map((value) => ({
-        label: getPlanificacionOposicionLabel(value),
-        value,
-      })),
+      options: Object.values(Oposicion)
+        .filter((value) => value !== Oposicion.GENERAL)
+        .map((value) => ({
+          label: getPlanificacionOposicionLabel(value),
+          value,
+        })),
     },
     {
       key: 'oposicionPlanificacion',
-      label: 'Oposición de planificación',
+      label: 'Plan de estudio',
       type: 'dropdown',
       options: Object.values(Oposicion).map((value) => ({
         label: getPlanificacionOposicionLabel(value),
@@ -249,10 +249,7 @@ export class PlanificacionAdminComponent
       },
     });
   });
-  sinCoincidencia = signal<AlumnoSinCoincidencia[]>([]);
   planificacionesMensuales = signal<PlanificacionMensual[]>([]);
-  reconciliacion = signal<ReconciliacionPlanificaciones | null>(null);
-  reconciliando = signal(false);
   cargando = signal(false);
   error = signal<string | null>(null);
   archivoImportacion = signal<File | null>(null);
@@ -295,15 +292,16 @@ export class PlanificacionAdminComponent
   reglaForm = this.fb.group({
     id: [null as number | null],
     oposicionSuscripcion: [null as Oposicion | null, Validators.required],
-    oposicionPlanificacion: [
-      Oposicion.GENERAL as Oposicion,
-      Validators.required,
-    ],
+    oposicionPlanificacion: [null as Oposicion | null, Validators.required],
     activa: [true],
   });
 
   constructor() {
     super();
+    this.reglaForm.controls.oposicionSuscripcion.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((oposicion) => this.actualizarDestinosRegla(oposicion));
+    this.actualizarDestinosRegla(null);
     this.fetchItems$ = computed(() => {
       const { skip, take, searchTerm, where } = this.pagination();
       const filtros = (where ?? {}) as Partial<VarianteAdmin>;
@@ -363,22 +361,19 @@ export class PlanificacionAdminComponent
   async cargarTodo(): Promise<void> {
     this.cargando.set(true);
     try {
-      const [variantes, reglas, sinCoincidencia, planificaciones] =
-        await Promise.all([
-          firstValueFrom(this.autoasignacionService.getVariantes$()),
-          firstValueFrom(this.autoasignacionService.getReglas$()),
-          firstValueFrom(this.autoasignacionService.getSinCoincidencia$()),
-          firstValueFrom(
-            this.planificacionesService.getPlanificacionMensual$({
-              take: 9999,
-              skip: 0,
-              searchTerm: '',
-            }),
-          ),
-        ]);
+      const [variantes, reglas, planificaciones] = await Promise.all([
+        firstValueFrom(this.autoasignacionService.getVariantes$()),
+        firstValueFrom(this.autoasignacionService.getReglas$()),
+        firstValueFrom(
+          this.planificacionesService.getPlanificacionMensual$({
+            take: 9999,
+            skip: 0,
+            searchTerm: '',
+          }),
+        ),
+      ]);
       this.variantes.set(variantes ?? []);
       this.reglas.set(reglas ?? []);
-      this.sinCoincidencia.set(sinCoincidencia ?? []);
       this.planificacionesMensuales.set(planificaciones?.data ?? []);
       this.limpiarPlanificacionIncompatible();
       this.sincronizarDestinoImportacion();
@@ -509,8 +504,10 @@ export class PlanificacionAdminComponent
       }
       this.cerrarDialogoVariante();
       await this.cargarTodo();
-    } catch {
-      this.toast.error('No se pudo guardar la variante');
+    } catch (error) {
+      this.toast.error(
+        this.mensajeErrorImportacion(error, 'No se pudo guardar la variante'),
+      );
     }
   }
 
@@ -583,6 +580,9 @@ export class PlanificacionAdminComponent
       oposicionPlanificacion: r.oposicionPlanificacion,
       activa: r.activa,
     });
+    this.oposicionPlanificacionReglaOptions = this.oposicionOptions.filter(
+      (option) => option.value === r.oposicionPlanificacion,
+    );
     // La pareja de oposiciones identifica la regla histórica; solo su estado
     // puede cambiar después de crearla.
     this.reglaForm.controls.oposicionSuscripcion.disable({ emitEvent: false });
@@ -615,13 +615,33 @@ export class PlanificacionAdminComponent
   nuevaRegla(): void {
     this.oposicionSuscripcionOptions = this.oposicionSuscripcionNuevasOptions;
     this.reglaForm.controls.oposicionSuscripcion.enable({ emitEvent: false });
-    this.reglaForm.controls.oposicionPlanificacion.enable({ emitEvent: false });
     this.reglaForm.reset({
       id: null,
       oposicionSuscripcion: null,
-      oposicionPlanificacion: Oposicion.GENERAL,
+      oposicionPlanificacion: null,
       activa: true,
     });
+    this.actualizarDestinosRegla(null);
+  }
+
+  actualizarDestinosRegla(oposicion: Oposicion | null): void {
+    const control = this.reglaForm.controls.oposicionPlanificacion;
+    this.oposicionPlanificacionReglaOptions = this.oposicionOptions.filter(
+      (option) =>
+        option.value === oposicion ||
+        (option.value === Oposicion.GENERAL &&
+          (oposicion === Oposicion.VALENCIA_AYUNTAMIENTO ||
+            oposicion === Oposicion.ALICANTE_CPBA)),
+    );
+    if (
+      !this.oposicionPlanificacionReglaOptions.some(
+        (option) => option.value === control.value,
+      )
+    ) {
+      control.setValue(null);
+    }
+    if (oposicion) control.enable({ emitEvent: false });
+    else control.disable({ emitEvent: false });
   }
 
   async guardarRegla(): Promise<void> {
@@ -650,8 +670,10 @@ export class PlanificacionAdminComponent
       }
       this.cerrarDialogoRegla();
       await this.cargarTodo();
-    } catch {
-      this.toast.error('No se pudo guardar la regla');
+    } catch (error) {
+      this.toast.error(
+        this.mensajeErrorImportacion(error, 'No se pudo guardar la regla'),
+      );
     }
   }
 
@@ -668,8 +690,13 @@ export class PlanificacionAdminComponent
       );
       this.toast.success('Variante actualizada');
       await this.cargarTodo();
-    } catch {
-      this.toast.error('No se pudo actualizar la variante');
+    } catch (error) {
+      this.toast.error(
+        this.mensajeErrorImportacion(
+          error,
+          'No se pudo actualizar la variante',
+        ),
+      );
     }
   }
 
@@ -740,83 +767,6 @@ export class PlanificacionAdminComponent
         emitEvent: false,
       });
     }
-  }
-
-  async previsualizarReconciliacion(): Promise<void> {
-    await this.ejecutarReconciliacion(false);
-  }
-
-  async aplicarReconciliacion(): Promise<void> {
-    const preview = this.reconciliacion();
-    if (preview?.aplicar !== false || !preview.previewHash) {
-      this.toast.error('Previsualiza la reconciliación antes de aplicarla');
-      return;
-    }
-    this.confirmationService.confirm({
-      message:
-        'La reconciliación aplicará configuraciones a los alumnos elegibles. ¿Continuar?',
-      header: 'Aplicar reconciliación',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Aplicar',
-      rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => this.ejecutarReconciliacion(true),
-      reject: () => {},
-    });
-  }
-
-  private async ejecutarReconciliacion(aplicar: boolean): Promise<void> {
-    this.reconciliando.set(true);
-    this.error.set(null);
-    try {
-      const resumen = await firstValueFrom(
-        this.autoasignacionService.reconciliar$(
-          aplicar,
-          aplicar ? this.reconciliacion()?.previewHash : null,
-        ),
-      );
-      if (aplicar && !resumen.aplicar) {
-        this.reconciliacion.set(null);
-        throw new Error(
-          'La previsualización ya no es válida; vuelve a calcularla antes de aplicar.',
-        );
-      }
-      this.reconciliacion.set(resumen);
-      if (aplicar) {
-        const diagnosticoActual = await firstValueFrom(
-          this.autoasignacionService.getSinCoincidencia$(),
-        );
-        this.sinCoincidencia.set(diagnosticoActual ?? []);
-      }
-      this.toast.success(
-        aplicar
-          ? 'Reconciliación aplicada'
-          : 'Previsualización de reconciliación calculada',
-      );
-    } catch {
-      const mensaje = aplicar
-        ? 'No se pudo aplicar la reconciliación. La previsualización puede haber cambiado; vuelve a calcularla.'
-        : 'No se pudo ejecutar la previsualización de reconciliación';
-      this.error.set(mensaje);
-      this.toast.error(mensaje);
-      if (aplicar) this.reconciliacion.set(null);
-    } finally {
-      this.reconciliando.set(false);
-    }
-  }
-
-  motivoDiagnostico(motivo: AlumnoSinCoincidencia['motivo']): string {
-    const labels: Record<AlumnoSinCoincidencia['motivo'], string> = {
-      SIN_CONFIGURACION: 'Sin configuración',
-      PREFERENCIAS_INCOMPLETAS: 'Preferencias incompletas',
-      SIN_VARIANTE: 'Sin variante compatible',
-      VARIANTE_INACTIVA: 'Variante inactiva',
-      SIN_PLANIFICACION_PUBLICADA: 'Sin planificación publicada',
-      OPOSICION_NO_PERMITIDA: 'Oposición no permitida',
-      SIN_ASIGNACION: 'Sin asignación',
-      PROGRESO_INCOMPLETO: 'Progreso incompleto',
-    };
-    return labels[motivo] ?? motivo;
   }
 
   seleccionarArchivoImportacion(event: Event): void {

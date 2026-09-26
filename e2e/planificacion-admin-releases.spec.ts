@@ -37,7 +37,7 @@ const reglas = [
   {
     id: 11,
     oposicionSuscripcion: 'MADRID',
-    oposicionPlanificacion: 'GENERAL',
+    oposicionPlanificacion: 'MADRID',
     activa: true,
   },
   {
@@ -247,7 +247,7 @@ test('reglas usan la rejilla compartida y el diálogo se cierra desde la X', asy
     modulos: { PLANIFICACION_AUTOASIGNACION: true },
   });
   await page.goto('/app/planificacion/admin-planificacion');
-  await page.getByRole('tab', { name: /Reglas de oposición/ }).click();
+  await page.getByRole('tab', { name: /Opciones por suscripción/ }).click();
 
   const lista = page.locator('.reglas-list');
   await expect(lista.locator('.item-container')).toHaveCount(2);
@@ -257,7 +257,7 @@ test('reglas usan la rejilla compartida y el diálogo se cierra desde la X', asy
 
   await page.setViewportSize({ width: 375, height: 667 });
   await page.reload();
-  await page.getByRole('tab', { name: /Reglas de oposición/ }).click();
+  await page.getByRole('tab', { name: /Opciones por suscripción/ }).click();
   await expect(
     lista.locator('.item-container').first().locator('.identifier'),
   ).toBeInViewport();
@@ -293,6 +293,10 @@ test('reglas usan la rejilla compartida y el diálogo se cierra desde la X', asy
   const dialogo = page.getByRole('dialog', { name: 'Nueva regla' });
   await expect(dialogo).toBeVisible();
   await expect(dialogo.getByText('Selecciona oposición')).toBeVisible();
+  await expect(
+    dialogo.getByText('Elige antes la oposición contratada'),
+  ).toBeVisible();
+  await expect(dialogo.getByRole('button', { name: 'Guardar' })).toBeDisabled();
   await dialogo.screenshot({
     path: testInfo.outputPath('regla-dialog-mobile.png'),
   });

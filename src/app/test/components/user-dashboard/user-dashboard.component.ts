@@ -441,7 +441,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
    */
   getFirstAvailableOposicion(): Oposicion {
     for (const op of Object.values(Oposicion)) {
-      if (!this.hasSubscriptionForOposicion(op)) {
+      if (op !== Oposicion.GENERAL && !this.hasSubscriptionForOposicion(op)) {
         return op;
       }
     }
@@ -1018,7 +1018,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   get tutorPuedeForzarPlanificacion(): boolean {
     return Boolean(
       esCombinacionPublicada(this.tutorForzarOpcionSeleccionada) &&
-        this.tutorForzarMotivo.trim(),
+      this.tutorForzarMotivo.trim(),
     );
   }
 

@@ -234,7 +234,7 @@ describe('OposicionPickerComponent', () => {
     ]);
 
     expect(component.listboxOptions.map((option) => option.label)).toEqual([
-      'General Comunidad Valenciana',
+      'Plan común de Comunidad Valenciana',
       'Ayuntamiento de Valencia',
       'Consorcio de Alicante',
       'Comunidad de Madrid',

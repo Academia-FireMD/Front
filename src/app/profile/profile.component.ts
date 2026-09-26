@@ -1137,6 +1137,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           .filter(
             (s) =>
               isSubscriptionAccessible(s.status) &&
+              s.oposicion !== Oposicion.GENERAL &&
               (!s.fechaFin || new Date(s.fechaFin).getTime() > Date.now()),
           )
           .map((s) => s.oposicion),
@@ -1150,8 +1151,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
    * se ocultan porque ya no dan acceso y solo ensucian la vista.
    */
   get suscripcionesVisibles(): Suscripcion[] {
-    return (this.user?.suscripciones ?? []).filter((s) =>
-      isSubscriptionAccessible(s.status),
+    return (this.user?.suscripciones ?? []).filter(
+      (s) =>
+        isSubscriptionAccessible(s.status) && s.oposicion !== Oposicion.GENERAL,
     );
   }
 

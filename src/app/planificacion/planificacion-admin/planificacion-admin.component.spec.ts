@@ -131,10 +131,10 @@ describe('PlanificacionAdminComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('carga variantes, reglas y sin-coincidencia al iniciar', () => {
+  it('carga variantes y reglas sin abrir diagnósticos técnicos', () => {
     expect(service.getVariantes$).toHaveBeenCalled();
     expect(service.getReglas$).toHaveBeenCalled();
-    expect(service.getSinCoincidencia$).toHaveBeenCalled();
+    expect(service.getSinCoincidencia$).not.toHaveBeenCalled();
   });
 
   it('crea una variante nueva con el payload correcto', async () => {
@@ -349,6 +349,41 @@ describe('PlanificacionAdminComponent', () => {
     expect(service.crearRegla$).not.toHaveBeenCalled();
   });
 
+  it('solo ofrece el plan propio y, para Valencia o Alicante, el común', () => {
+    component.abrirNuevaRegla();
+    expect(component.reglaForm.controls.oposicionPlanificacion.disabled).toBe(
+      true,
+    );
+
+    component.reglaForm.controls.oposicionSuscripcion.setValue(
+      Oposicion.MADRID,
+    );
+    expect(
+      component.oposicionPlanificacionReglaOptions.map((o) => o.value),
+    ).toEqual([Oposicion.MADRID]);
+    component.reglaForm.controls.oposicionPlanificacion.setValue(
+      Oposicion.MADRID,
+    );
+
+    component.reglaForm.controls.oposicionSuscripcion.setValue(
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+    );
+    expect(component.reglaForm.controls.oposicionPlanificacion.value).toBe(
+      null,
+    );
+    expect(
+      component.oposicionPlanificacionReglaOptions.map((o) => o.value),
+    ).toEqual(
+      expect.arrayContaining([
+        Oposicion.GENERAL,
+        Oposicion.VALENCIA_AYUNTAMIENTO,
+      ]),
+    );
+    expect(
+      component.oposicionPlanificacionReglaOptions.map((o) => o.value),
+    ).not.toContain(Oposicion.MADRID);
+  });
+
   it('mantiene visible una regla histórica con General como suscripción al editar', () => {
     component.editarRegla({
       id: 9,
@@ -506,31 +541,11 @@ describe('PlanificacionAdminComponent', () => {
     );
   });
 
-  it('muestra todos los motivos del diagnóstico backend', () => {
-    expect(component.motivoDiagnostico('SIN_CONFIGURACION')).toBe(
-      'Sin configuración',
-    );
-    expect(component.motivoDiagnostico('PREFERENCIAS_INCOMPLETAS')).toBe(
-      'Preferencias incompletas',
-    );
-    expect(component.motivoDiagnostico('SIN_VARIANTE')).toBe(
-      'Sin variante compatible',
-    );
-    expect(component.motivoDiagnostico('VARIANTE_INACTIVA')).toBe(
-      'Variante inactiva',
-    );
-    expect(component.motivoDiagnostico('SIN_PLANIFICACION_PUBLICADA')).toBe(
-      'Sin planificación publicada',
-    );
-    expect(component.motivoDiagnostico('OPOSICION_NO_PERMITIDA')).toBe(
-      'Oposición no permitida',
-    );
-    expect(component.motivoDiagnostico('SIN_ASIGNACION')).toBe(
-      'Sin asignación',
-    );
-    expect(component.motivoDiagnostico('PROGRESO_INCOMPLETO')).toBe(
-      'Progreso incompleto',
-    );
+  it('no ofrece reconciliación manual en administración', () => {
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(texto).not.toContain('Diagnóstico');
+    expect(texto).not.toContain('Aplicar reconciliación');
+    expect(service.getSinCoincidencia$).not.toHaveBeenCalled();
   });
 
   it('filtra las planificaciones por franja y relevancia de la variante', () => {
@@ -683,67 +698,6 @@ describe('PlanificacionAdminComponent', () => {
     const config = (confirmation.confirm as jest.Mock).mock.calls.at(-1)[0];
     await config.accept();
     expect(service.publicarVariante$).toHaveBeenCalledWith(7, 17);
-  });
-
-  it('ofrece preview y exige confirmación explícita antes de aplicar', async () => {
-    const reconcile = service.reconciliar$ as jest.Mock;
-    const preview = {
-      aplicar: false,
-      previewHash: 'preview-1',
-      totalElegibles: 3,
-      aplicables: 2,
-      aplicados: 0,
-      noAplicables: 1,
-      casos: [],
-    };
-    reconcile.mockReturnValueOnce(of(preview));
-
-    await component.previsualizarReconciliacion();
-
-    expect(reconcile).toHaveBeenCalledWith(false, null);
-    expect(component.reconciliacion()).toEqual(preview);
-    expect(component.reconciliacion()?.totalElegibles).toBe(3);
-
-    await component.aplicarReconciliacion();
-    expect(confirmation.confirm).toHaveBeenCalledTimes(1);
-    const confirmacion = (confirmation.confirm as jest.Mock).mock.calls[0][0];
-    confirmacion.reject();
-    expect(reconcile).toHaveBeenCalledTimes(1);
-
-    reconcile.mockReturnValueOnce(
-      of({ ...preview, aplicar: true, aplicados: 2 }),
-    );
-    await component.aplicarReconciliacion();
-    const segundaConfirmacion = (confirmation.confirm as jest.Mock).mock
-      .calls[1][0];
-    await segundaConfirmacion.accept();
-
-    expect(reconcile).toHaveBeenLastCalledWith(true, 'preview-1');
-    expect(component.reconciliacion()?.aplicados).toBe(2);
-    expect(service.getSinCoincidencia$).toHaveBeenCalledTimes(2);
-  });
-
-  it('muestra error visible y mantiene el apply bloqueado si el preview cambia', async () => {
-    const reconcile = service.reconciliar$ as jest.Mock;
-    const preview = {
-      aplicar: false,
-      previewHash: 'preview-2',
-      totalElegibles: 1,
-      aplicables: 1,
-      aplicados: 0,
-      noAplicables: 0,
-      casos: [],
-    };
-    reconcile.mockReturnValueOnce(of(preview));
-    await component.previsualizarReconciliacion();
-    await component.aplicarReconciliacion();
-    const confirmacion = (confirmation.confirm as jest.Mock).mock.calls[0][0];
-    reconcile.mockReturnValueOnce(of({ ...preview, aplicar: false }));
-
-    await confirmacion.accept();
-
-    expect(component.error()).toContain('No se pudo aplicar');
-    expect(component.reconciliacion()).toBeNull();
   });
 
   it('previsualiza el Excel sin aplicar y conserva el hash del servidor', async () => {

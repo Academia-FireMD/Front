@@ -56,7 +56,7 @@ export const CATALOGO_OPOSICION_LABELS: Record<Oposicion, string> = {
  * cambiar esas pantallas ajenas ni los valores del enum/API.
  */
 export const PLANIFICACION_OPOSICION_LABELS: Record<Oposicion, string> = {
-  [Oposicion.GENERAL]: 'General Comunidad Valenciana',
+  [Oposicion.GENERAL]: 'Plan común de Comunidad Valenciana',
   [Oposicion.VALENCIA_AYUNTAMIENTO]: 'Ayuntamiento de Valencia',
   [Oposicion.ALICANTE_CPBA]: 'Consorcio de Alicante',
   [Oposicion.MADRID]: 'Comunidad de Madrid',

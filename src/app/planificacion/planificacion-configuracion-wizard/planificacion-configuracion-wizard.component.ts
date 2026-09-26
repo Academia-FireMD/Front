@@ -13,7 +13,6 @@ import {
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
 import { DropdownModule } from 'primeng/dropdown';
 import { MessageModule } from 'primeng/message';
 import { StepperModule } from 'primeng/stepper';
@@ -51,7 +50,6 @@ export type ResultadoConfiguracion = 'EXITO' | 'CONFLICTO';
     CommonModule,
     FormsModule,
     ButtonModule,
-    CheckboxModule,
     DropdownModule,
     MessageModule,
     StepperModule,
@@ -94,7 +92,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     nivel: null as NivelOposicion | null,
     franja: null as string | null,
   };
-  gcvConfirmado = false;
+  modalidad: 'ESPECIFICA' | 'COMUN' | null = null;
 
   // Paso 2: nivel
   elegirCuestionario = signal(false);
@@ -127,6 +125,43 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
             ? 'Pendiente de planificación publicada'
             : undefined,
     }));
+  }
+
+  get opcionesEspecificas(): OposicionPickerOption[] {
+    return this.opcionesOposicion.filter(
+      (opcion) => opcion.value !== Oposicion.GENERAL,
+    );
+  }
+
+  get hayPlanComun(): boolean {
+    return this.opcionesOposicion.some(
+      (opcion) => opcion.value === Oposicion.GENERAL,
+    );
+  }
+
+  get planComunDisponible(): boolean {
+    return this.opcionesOposicion.some(
+      (opcion) => opcion.value === Oposicion.GENERAL && !opcion.disabled,
+    );
+  }
+
+  get planEspecificoDisponible(): boolean {
+    return this.opcionesEspecificas.some((opcion) => !opcion.disabled);
+  }
+
+  get motivoPlanEspecificoNoDisponible(): string {
+    return (
+      this.opcionesEspecificas.find((opcion) => opcion.disabledReason)
+        ?.disabledReason ?? 'No disponible con tus suscripciones actuales'
+    );
+  }
+
+  get motivoPlanComunNoDisponible(): string {
+    return (
+      this.opcionesOposicion.find(
+        (opcion) => opcion.value === Oposicion.GENERAL,
+      )?.disabledReason ?? 'No disponible todavía'
+    );
   }
 
   get opcionesCascada() {
@@ -176,30 +211,24 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
         );
   }
 
-  get requiereConfirmacionGCV(): boolean {
-    return this.preferencias.oposicion === Oposicion.GENERAL;
-  }
-
   get puedeContinuarPasoPreferencias(): boolean {
-    if (!this.preferencias.oposicion || !this.preferencias.franja) {
-      return false;
-    }
-    if (this.requiereConfirmacionGCV && !this.gcvConfirmado) {
-      return false;
-    }
-    return true;
+    return !!(
+      this.modalidad &&
+      this.preferencias.oposicion &&
+      this.preferencias.franja
+    );
   }
 
   /** El backend no aplica valores por defecto: los tres campos son obligatorios. */
   get puedeGuardarConfiguracion(): boolean {
     const opciones = this.configuracion?.opcionesPermitidas ?? [];
     const combinacionPublicada =
-      opciones.length === 0 || this.opcionesCascada.seleccionada !== null;
+      opciones.length > 0 && this.opcionesCascada.seleccionada !== null;
     return Boolean(
       this.preferencias.oposicion &&
       this.preferencias.nivel &&
       this.preferencias.franja &&
-      (!this.requiereConfirmacionGCV || this.gcvConfirmado) &&
+      this.modalidad &&
       combinacionPublicada,
     );
   }
@@ -227,7 +256,20 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
         nivel: prefs.nivel ?? null,
         franja: prefs.franja ?? null,
       };
-      this.gcvConfirmado = prefs.oposicion !== Oposicion.GENERAL;
+      this.modalidad =
+        prefs.oposicion === Oposicion.GENERAL
+          ? 'COMUN'
+          : prefs.oposicion
+            ? 'ESPECIFICA'
+            : null;
+    }
+    if (
+      !this.modalidad &&
+      this.planComunDisponible !== this.planEspecificoDisponible
+    ) {
+      this.seleccionarModalidad(
+        this.planComunDisponible ? 'COMUN' : 'ESPECIFICA',
+      );
     }
     if (this.abrirEnNivel && this.puedeContinuarPasoPreferencias) {
       this.activeStep.set(1);
@@ -245,18 +287,30 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       franja: prefs.franja as TipoDePlanificacionDeseada | null,
     });
     this.avisoNivelTest = null;
-    this.gcvConfirmado = this.preferencias.oposicion !== Oposicion.GENERAL;
   }
 
-  /** Al elegir oposición, el usuario "acepta" la confirmación GCV si no es GCV. */
-  onOposicionChange(op: Oposicion | null): void {
-    if (op !== Oposicion.GENERAL) {
-      this.gcvConfirmado = false;
-    }
-  }
-
-  confirmarGCV(): void {
-    this.gcvConfirmado = true;
+  seleccionarModalidad(modalidad: 'ESPECIFICA' | 'COMUN'): void {
+    if (modalidad === 'COMUN' && !this.planComunDisponible) return;
+    if (modalidad === 'ESPECIFICA' && !this.planEspecificoDisponible) return;
+    this.modalidad = modalidad;
+    const anterior = this.preferencias.oposicion;
+    const especificas = this.opcionesEspecificas
+      .filter((opcion) => !opcion.disabled)
+      .map((opcion) => opcion.value);
+    const oposicion =
+      modalidad === 'COMUN'
+        ? Oposicion.GENERAL
+        : anterior && especificas.includes(anterior)
+          ? anterior
+          : especificas.length === 1
+            ? especificas[0]
+            : null;
+    this.preferencias = this.normalizarPreferencias({
+      ...this.preferencias,
+      oposicion,
+      franja: this.preferencias.franja as TipoDePlanificacionDeseada | null,
+    });
+    this.avisoNivelTest = null;
   }
 
   irAPasoNivel(): void {
@@ -307,7 +361,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   async guardarConfiguracion(): Promise<void> {
     if (!this.puedeGuardarConfiguracion) {
       this.errorGuardado =
-        'Selecciona oposición, nivel y horas disponibles para el estudio antes de guardar.';
+        'Selecciona tu plan, nivel y horas disponibles para el estudio antes de guardar.';
       return;
     }
     this.guardando.set(true);

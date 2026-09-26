@@ -71,7 +71,7 @@ describe('AnadirPlanComponent', () => {
     expect(valores).not.toContain(Oposicion.VALENCIA_AYUNTAMIENTO);
     expect(valores).toContain(Oposicion.ALICANTE_CPBA);
     expect(valores).toContain(Oposicion.MADRID);
-    expect(valores).toContain(Oposicion.GENERAL);
+    expect(valores).not.toContain(Oposicion.GENERAL);
   });
 
   // (2) Elegir oposición llama a obtenerPlanesDisponibles.

@@ -141,7 +141,7 @@
           >Se genera automáticamente a partir de la oposición, el nivel y las
           horas de estudio.</small
         >
-        <label for="variante-oposicion">Oposición *</label>
+        <label for="variante-oposicion">Plan de estudio *</label>
         <app-oposicion-picker
           context="planificacion"
           presentation="field"
@@ -227,11 +227,12 @@
     </p-dialog>
   </p-tabPanel>
 
-  <p-tabPanel header="Reglas de oposición" leftIcon="pi pi-sitemap">
+  <p-tabPanel header="Opciones por suscripción" leftIcon="pi pi-sitemap">
     <p class="text-color-secondary mb-3">
-      Estas reglas indican qué opciones de planificación puede elegir un alumno
-      según su suscripción. General puede ser un destino, no una suscripción.
-      Las reglas no publican ni asignan calendarios.
+      Indica qué plan puede elegir cada alumno según la oposición que tiene
+      contratada. El plan común de Comunidad Valenciana puede ofrecerse con
+      Valencia o Alicante; no es otra suscripción. Aquí no se publican
+      calendarios.
     </p>
     <app-generic-list
       class="reglas-list"
@@ -329,9 +330,7 @@
       appendTo="body"
     >
       <form [formGroup]="reglaForm" class="flex flex-column gap-2">
-        <label for="regla-oposicion-suscripcion"
-          >Oposición de suscripción *</label
-        >
+        <label for="regla-oposicion-suscripcion">Oposición contratada *</label>
         <app-oposicion-picker
           context="planificacion"
           presentation="field"
@@ -341,16 +340,29 @@
           formControlName="oposicionSuscripcion"
         />
         <label for="regla-oposicion-planificacion"
-          >Oposición de planificación *</label
+          >Plan de estudio disponible *</label
         >
         <app-oposicion-picker
           context="planificacion"
           presentation="field"
           [multiple]="false"
-          [opciones]="oposicionOptions"
+          [opciones]="oposicionPlanificacionReglaOptions"
           inputId="regla-oposicion-planificacion"
+          [placeholder]="
+            reglaForm.controls.oposicionSuscripcion.value
+              ? 'Selecciona plan de estudio'
+              : 'Elige antes la oposición contratada'
+          "
+          ariaDescribedBy="regla-plan-ayuda"
           formControlName="oposicionPlanificacion"
         />
+        <small id="regla-plan-ayuda" aria-live="polite">
+          {{
+            reglaForm.controls.oposicionSuscripcion.value
+              ? "Solo se muestran planes compatibles con la oposición contratada."
+              : "Elige una oposición contratada para ver los planes disponibles."
+          }}
+        </small>
         <div class="flex align-items-center gap-2">
           <p-inputSwitch inputId="regla-activa" formControlName="activa" />
           <label for="regla-activa">Activa</label>
@@ -359,6 +371,7 @@
           <p-button
             label="Guardar"
             icon="pi pi-check"
+            [disabled]="reglaForm.invalid"
             (click)="guardarRegla()"
           />
           <p-button
@@ -604,97 +617,5 @@
         </div>
       }
     </section>
-  </p-tabPanel>
-
-  <p-tabPanel header="Diagnóstico" leftIcon="pi pi-exclamation-circle">
-    <p-message
-      severity="info"
-      text="Alumnos con suscripción activa cuya configuración confirmada o asignación requiere revisión. La antigua oposición de interés del perfil no cambia la planificación."
-      styleClass="w-full mb-3"
-    ></p-message>
-    @if (error()) {
-      <p-message
-        severity="error"
-        [text]="error()!"
-        styleClass="w-full mb-3"
-      ></p-message>
-    }
-    <div class="flex flex-wrap gap-2 align-items-center mb-3">
-      <p-button
-        label="Previsualizar reconciliación"
-        icon="pi pi-eye"
-        [loading]="reconciliando()"
-        (onClick)="previsualizarReconciliacion()"
-      ></p-button>
-      <p-button
-        label="Aplicar reconciliación"
-        icon="pi pi-check"
-        severity="danger"
-        [loading]="reconciliando()"
-        [disabled]="reconciliacion()?.aplicar !== false"
-        (onClick)="aplicarReconciliacion()"
-      ></p-button>
-    </div>
-    @if (reconciliacion(); as resumen) {
-      <div class="grid mb-3">
-        <div class="col-12">
-          <p-message
-            severity="success"
-            [text]="
-              resumen.aplicar
-                ? 'Reconciliación aplicada'
-                : 'Previsualización: no se han escrito cambios'
-            "
-            styleClass="w-full"
-          ></p-message>
-        </div>
-        <div class="col-6 md:col-3">
-          <strong>Elegibles</strong><br />{{ resumen.totalElegibles }}
-        </div>
-        <div class="col-6 md:col-3">
-          <strong>Aplicables</strong><br />{{ resumen.aplicables }}
-        </div>
-        <div class="col-6 md:col-3">
-          <strong>Aplicados</strong><br />{{ resumen.aplicados }}
-        </div>
-        <div class="col-6 md:col-3">
-          <strong>No aplicables</strong><br />{{ resumen.noAplicables }}
-        </div>
-      </div>
-    }
-    <p-table
-      [value]="sinCoincidencia()"
-      [paginator]="true"
-      [rows]="10"
-      styleClass="planificacion-admin-table"
-    >
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Nombre</th>
-          <th>Email</th>
-          <th>Variante</th>
-          <th>Motivo</th>
-          <th>Aplicable</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-a>
-        <tr>
-          <td>{{ a.alumno?.nombre }} {{ a.alumno?.apellidos }}</td>
-          <td>{{ a.alumno?.email ?? "—" }}</td>
-          <td>{{ a.variante?.codigo ?? "—" }}</td>
-          <td>
-            {{ motivoDiagnostico(a.motivo) }}
-          </td>
-          <td>{{ a.aplicable ? "Sí" : "No" }}</td>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="emptymessage">
-        <tr>
-          <td colspan="5" class="text-center">
-            No hay alumnos sin coincidencia.
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
   </p-tabPanel>
 </p-tabView>

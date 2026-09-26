@@ -94,7 +94,7 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
     expect(texto).toContain(
-      'Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
+      'Solo aparecen planes de estudio permitidos por tus suscripciones activas.',
     );
   });
 
@@ -141,51 +141,51 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(component.nivelesPermitidos).toEqual([NivelOposicion.AVANZADO]);
   });
 
-  it('si elige GENERAL, exige confirmación GCV para continuar', () => {
-    component.preferencias = {
-      oposicion: Oposicion.GENERAL,
-      nivel: null,
-      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
-    };
-    component.gcvConfirmado = false;
-    expect(component.requiereConfirmacionGCV).toBe(true);
+  it('elegir el plan común es una acción explícita y no otra suscripción', () => {
+    component.preferencias = { oposicion: null, nivel: null, franja: null };
+    component.modalidad = null;
+    component.seleccionarModalidad('COMUN');
+    expect(component.modalidad).toBe('COMUN');
+    expect(component.preferencias.oposicion).toBe(Oposicion.GENERAL);
     expect(component.puedeContinuarPasoPreferencias).toBe(false);
-
-    component.confirmarGCV();
-    expect(component.puedeContinuarPasoPreferencias).toBe(true);
   });
 
-  it('no muestra la explicación de General antes de elegirla', () => {
+  it('muestra la explicación del plan común antes de elegirlo', () => {
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(texto).not.toContain('La planificación General trabaja');
-    expect(
-      fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
-    ).toBeNull();
+    expect(texto).toContain('contenidos compartidos por Valencia y Alicante');
   });
 
-  it('muestra la confirmación únicamente cuando la selección es GENERAL', () => {
-    component.preferencias = {
-      oposicion: Oposicion.GENERAL,
-      nivel: NivelOposicion.INICIACION,
-      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+  it('Madrid no muestra la modalidad común si el backend no la autoriza', () => {
+    component.configuracion = {
+      ...configuracion,
+      oposicionesPermitidas: [Oposicion.MADRID],
     };
-    component.gcvConfirmado = false;
+    component.preferencias = {
+      oposicion: Oposicion.MADRID,
+      nivel: null,
+      franja: null,
+    };
+    component.modalidad = 'ESPECIFICA';
+    fixture.detectChanges();
+    expect(component.hayPlanComun).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Plan común de Comunidad Valenciana',
+    );
+  });
+
+  it('explica por qué un plan todavía no se puede elegir', () => {
+    component.configuracion = {
+      ...configuracion,
+      disponibilidadOposiciones: [
+        { oposicion: Oposicion.MADRID, estado: 'SIN_VARIANTE_ACTIVA' },
+        { oposicion: Oposicion.GENERAL, estado: 'SIN_PLANIFICACION_PUBLICADA' },
+      ],
+    };
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'La planificación General trabaja los contenidos comunes',
-    );
-
-    expect(
-      fixture.nativeElement.querySelector('p-checkbox[inputId="confirmarGcv"]'),
-    ).toBeTruthy();
-
-    component.onPreferenciasChange({
-      oposicion: Oposicion.MADRID,
-      nivel: NivelOposicion.INICIACION,
-      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
-    });
-    expect(component.requiereConfirmacionGCV).toBe(false);
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(texto).toContain('Pendiente de configurar por la academia');
+    expect(texto).toContain('Pendiente de planificación publicada');
   });
 
   it('aceptar el test actualiza el mismo borrador sin guardar todavía', () => {
@@ -272,6 +272,19 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
   });
 
   it('guarda la configuración con oposición, nivel, franja y versión', async () => {
+    component.configuracion = {
+      ...configuracion,
+      opcionesPermitidas: [
+        {
+          oposicion: Oposicion.MADRID,
+          nivel: NivelOposicion.AVANZADO,
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+          varianteId: 1,
+          planificacionMensual: null,
+        },
+      ],
+    };
+    component.modalidad = 'ESPECIFICA';
     component.preferencias = {
       oposicion: Oposicion.MADRID,
       nivel: NivelOposicion.AVANZADO,
@@ -291,6 +304,19 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
   });
 
   it('emite conflicto sin reportarlo como configuración activada en un 409', async () => {
+    component.configuracion = {
+      ...configuracion,
+      opcionesPermitidas: [
+        {
+          oposicion: Oposicion.MADRID,
+          nivel: NivelOposicion.AVANZADO,
+          franja: 'FRANJA_SEIS_A_OCHO_HORAS' as TipoDePlanificacionDeseada,
+          varianteId: 1,
+          planificacionMensual: null,
+        },
+      ],
+    };
+    component.modalidad = 'ESPECIFICA';
     (service.guardarConfiguracion$ as jest.Mock).mockReturnValueOnce(
       throwError(() => new HttpErrorResponse({ status: 409 })),
     );

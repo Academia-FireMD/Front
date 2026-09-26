@@ -74,7 +74,10 @@ export class AnadirPlanComponent {
   /** Oposiciones del enum MENOS las que el alumno ya tiene activas. */
   get oposicionesDisponibles(): OposicionOption[] {
     return (Object.values(Oposicion) as Oposicion[])
-      .filter((op) => !this.oposicionesContratadas.includes(op))
+      .filter(
+        (op) =>
+          op !== Oposicion.GENERAL && !this.oposicionesContratadas.includes(op),
+      )
       .map((op) => ({ value: op, label: getPlanificacionOposicionLabel(op) }));
   }
 

@@ -461,7 +461,7 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(component.prefijoPlantillas).toBe('GI6-8H');
       expect(
         component.etiquetaVarianteImportada(component.prefijoPlantillas),
-      ).toBe('General Comunidad Valenciana · Iniciación · 6-8 horas');
+      ).toBe('Plan común de Comunidad Valenciana · Iniciación · 6-8 horas');
     });
 
     it('sin hojas compatibles no permite previsualizar ni llama al servidor', async () => {

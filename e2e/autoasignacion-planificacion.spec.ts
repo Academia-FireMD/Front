@@ -216,9 +216,9 @@ test('shell pendiente de publicación no obliga a repetir preferencias', async (
   await expect(
     page.getByRole('heading', { name: 'Tu planificación', exact: true }),
   ).toBeVisible();
-  await expect(page.locator('#wizardPreferenciasOposicion')).toContainText(
-    'General Comunidad Valenciana',
-  );
+  await expect(
+    page.getByRole('button', { name: /Plan común de Comunidad Valenciana/ }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#wizardPreferenciasFranja')).toContainText(
     '4-6 Horas',
   );
@@ -238,19 +238,20 @@ test('el asistente usa el selector compartido con semántica de planificación',
   await loginAlumno(page);
   await page.goto('/app/planificacion/configuracion-alumno');
 
+  await page.getByRole('button', { name: /Plan específico/ }).click();
+
   await expect(page.locator('#wizardPreferenciasOposicion')).toHaveAttribute(
     'aria-label',
-    'Oposición. Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
+    'Oposición. Solo aparecen planes de estudio permitidos por tus suscripciones activas.',
   );
   await expect(
     page.getByText(
-      'Solo se muestran las oposiciones incluidas en tus suscripciones activas.',
+      'Solo aparecen planes de estudio permitidos por tus suscripciones activas.',
     ),
   ).toBeVisible();
   await page.locator('#wizardPreferenciasOposicion').click();
 
   for (const opcion of [
-    'General Comunidad Valenciana',
     'Ayuntamiento de Valencia',
     'Consorcio de Alicante',
     'Comunidad de Madrid',
@@ -260,6 +261,67 @@ test('el asistente usa el selector compartido con semántica de planificación',
   await expect(
     page.getByRole('option', { name: 'Todas las oposiciones' }),
   ).toHaveCount(0);
+});
+
+test('la elección específico/común se adapta a escritorio y móvil sin desbordar', async ({
+  page,
+}) => {
+  await page.route('**/planificaciones/configuracion', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(configuracionVariasOposiciones),
+    }),
+  );
+  await loginAlumno(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/app/planificacion/configuracion-alumno');
+
+  const especifico = page.getByRole('button', { name: /Plan específico/ });
+  const comun = page.getByRole('button', {
+    name: /Plan común de Comunidad Valenciana/,
+  });
+  await expect(especifico).toBeVisible();
+  await expect(comun).toBeVisible();
+  const desktopEspecifico = await especifico.boundingBox();
+  const desktopComun = await comun.boundingBox();
+  expect(desktopEspecifico).not.toBeNull();
+  expect(desktopComun).not.toBeNull();
+  expect(Math.abs(desktopEspecifico!.y - desktopComun!.y)).toBeLessThanOrEqual(
+    1,
+  );
+  await page.screenshot({
+    path: 'test-results/planificacion-modalidad-desktop.png',
+  });
+
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect
+    .poll(async () => {
+      const [mobileEspecifico, mobileComun] = await Promise.all([
+        especifico.boundingBox(),
+        comun.boundingBox(),
+      ]);
+      return Boolean(
+        mobileEspecifico && mobileComun && mobileComun.y > mobileEspecifico.y,
+      );
+    })
+    .toBe(true);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(375);
+  await page.screenshot({
+    path: 'test-results/planificacion-modalidad-mobile.png',
+  });
+  await especifico.click();
+  await expect(page.locator('#wizardPreferenciasOposicion')).toBeVisible();
+  await expect(page.locator('#wizardPreferenciasFranja')).toBeVisible();
+  await expect(page.locator('#wizardPreferenciasFranja')).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+  await page.screenshot({
+    path: 'test-results/planificacion-especifica-mobile.png',
+  });
 });
 
 test('primera entrada permite completar wizard, activar version 0 y abrir calendario', async ({

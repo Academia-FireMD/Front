@@ -53,43 +53,45 @@ export interface PreferenciasPlanificacion {
   template: `
     <div [formGroup]="formGroup">
       <div class="grid">
-        <div class="col-12 md:col-6 planificacion-field">
-          <label
-            class="block font-medium mb-2"
-            [for]="formIdPrefix + 'Oposicion'"
-            >{{ etiquetaOposicion }} *</label
-          >
-          <app-oposicion-picker
-            class="block w-full"
-            presentation="field"
-            [multiple]="multiple"
-            [context]="oposicionContext"
-            [opciones]="opcionesSelector"
-            [inputId]="formIdPrefix + 'Oposicion'"
-            [ariaDescribedBy]="
-              ayudaOposicion ? formIdPrefix + 'OposicionAyuda' : undefined
-            "
-            [ariaLabel]="etiquetaOposicionAccesible"
-            [placeholder]="
-              multiple ? 'Selecciona oposiciones' : 'Selecciona oposición'
-            "
-            formControlName="oposicion"
-          />
-          @if (ayudaOposicion) {
-            <small
-              class="block text-500 mt-2 line-height-3"
-              [id]="formIdPrefix + 'OposicionAyuda'"
+        @if (mostrarOposicion) {
+          <div class="col-12 md:col-6 planificacion-field">
+            <label
+              class="block font-medium mb-2"
+              [for]="formIdPrefix + 'Oposicion'"
+              >{{ etiquetaOposicion }} *</label
             >
-              {{ ayudaOposicion }}
-            </small>
-          }
-          @if (tieneOpcionesNoDisponibles) {
-            <small class="block text-500 mt-2">
-              Las opciones no disponibles se muestran con el motivo
-              correspondiente.
-            </small>
-          }
-        </div>
+            <app-oposicion-picker
+              class="block w-full"
+              presentation="field"
+              [multiple]="multiple"
+              [context]="oposicionContext"
+              [opciones]="opcionesSelector"
+              [inputId]="formIdPrefix + 'Oposicion'"
+              [ariaDescribedBy]="
+                ayudaOposicion ? formIdPrefix + 'OposicionAyuda' : undefined
+              "
+              [ariaLabel]="etiquetaOposicionAccesible"
+              [placeholder]="
+                multiple ? 'Selecciona oposiciones' : 'Selecciona oposición'
+              "
+              formControlName="oposicion"
+            />
+            @if (ayudaOposicion) {
+              <small
+                class="block text-500 mt-2 line-height-3"
+                [id]="formIdPrefix + 'OposicionAyuda'"
+              >
+                {{ ayudaOposicion }}
+              </small>
+            }
+            @if (tieneOpcionesNoDisponibles) {
+              <small class="block text-500 mt-2">
+                Las opciones no disponibles se muestran con el motivo
+                correspondiente.
+              </small>
+            }
+          </div>
+        }
 
         @if (mostrarNivel) {
           <div class="col-12 md:col-6 planificacion-field">
@@ -110,6 +112,11 @@ export interface PreferenciasPlanificacion {
               optionLabel="label"
               optionValue="value"
             />
+            @if (formGroup.controls['nivel'].disabled) {
+              <small class="block text-500 mt-2" role="status"
+                >Elige primero un plan de estudio.</small
+              >
+            }
             @if (permitirTestNivel) {
               <p-button
                 type="button"
@@ -139,6 +146,11 @@ export interface PreferenciasPlanificacion {
             optionValue="value"
             [attr.aria-describedby]="formIdPrefix + 'FranjaAyuda'"
           />
+          @if (formGroup.controls['franja'].disabled) {
+            <small class="block text-500 mt-2" role="status"
+              >Completa primero las opciones anteriores.</small
+            >
+          }
           <small
             class="block text-500 mt-2"
             [id]="formIdPrefix + 'FranjaAyuda'"
@@ -193,6 +205,8 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
   @Input() mostrarAyudaSuscripciones = false;
   /** Oculta el selector para reutilizar oposición y horas en el primer paso. */
   @Input() mostrarNivel = true;
+  /** El plan común ya queda elegido en la tarjeta; no duplica su selector. */
+  @Input() mostrarOposicion = true;
   /** Muestra el acceso al test únicamente en superficies de alumno. */
   @Input() permitirTestNivel = false;
   /** Prefijo para los id de los inputs (evita colisiones si hay varios). */
@@ -212,8 +226,12 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
   niveles = nivelesDisponibles;
   duraciones = duracionesDisponibles;
   get etiquetaOposicion(): string {
-    return this.oposicionContext === 'catalogo' && this.multiple
-      ? 'Oposiciones de interés'
+    if (this.oposicionContext === 'catalogo' && this.multiple) {
+      return 'Oposiciones de interés';
+    }
+    return this.oposicionContext === 'planificacion' &&
+      this.opcionesSelector.some((opcion) => opcion.value === Oposicion.GENERAL)
+      ? 'Plan de estudio'
       : 'Oposición';
   }
 
@@ -221,8 +239,14 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
     if (this.oposicionContext === 'catalogo' && this.multiple) {
       return 'Esta preferencia no modifica tus suscripciones ni concede acceso a una planificación.';
     }
+    if (
+      this.oposicionContext === 'planificacion' &&
+      this.opcionesSelector.some((opcion) => opcion.value === Oposicion.GENERAL)
+    ) {
+      return 'El plan común de Comunidad Valenciana sirve para Valencia y Alicante; no añade otra suscripción ni otro calendario.';
+    }
     return this.mostrarAyudaSuscripciones
-      ? 'Solo se muestran las oposiciones incluidas en tus suscripciones activas.'
+      ? 'Solo aparecen planes de estudio permitidos por tus suscripciones activas.'
       : null;
   }
 
@@ -316,11 +340,16 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.precargar();
-    this.formGroup.valueChanges.subscribe(() => this.emitirCambios());
+    this.actualizarCamposDependientes();
+    this.formGroup.valueChanges.subscribe(() => {
+      this.actualizarCamposDependientes();
+      this.emitirCambios();
+    });
   }
 
   ngOnChanges(): void {
     this.precargar();
+    this.actualizarCamposDependientes();
   }
 
   private precargar(): void {
@@ -332,8 +361,9 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
     // Sin este guard, un @Input con identidad inestable (objeto inline o getter
     // en el padre) dispara ngOnChanges → patchValue → CD → ngOnChanges… y
     // bloquea el main thread (bug detectado en /app/profile, e2e 2026-08-18).
-    if (this.valoresIguales(this.formGroup.value, siguiente)) return;
+    if (this.valoresIguales(this.formGroup.getRawValue(), siguiente)) return;
     this.formGroup.patchValue(siguiente, { emitEvent: false });
+    this.actualizarCamposDependientes();
   }
 
   private valoresIguales(
@@ -354,6 +384,27 @@ export class PlanificacionPreferenciasComponent implements OnInit, OnChanges {
   }
 
   private emitirCambios(): void {
-    this.cambios.emit(this.formGroup.value as PreferenciasPlanificacion);
+    this.cambios.emit(
+      this.formGroup.getRawValue() as PreferenciasPlanificacion,
+    );
+  }
+
+  private actualizarCamposDependientes(): void {
+    const { oposicion, nivel } = this.formGroup.getRawValue();
+    const hayOposicion = Array.isArray(oposicion)
+      ? oposicion.length > 0
+      : !!oposicion;
+    const nivelHabilitado = hayOposicion && this.opcionesNivel.length > 0;
+    const franjaHabilitada =
+      hayOposicion &&
+      (!this.mostrarNivel || !!nivel) &&
+      this.opcionesFranja.length > 0;
+    for (const [control, habilitado] of [
+      [this.formGroup.controls['nivel'], nivelHabilitado],
+      [this.formGroup.controls['franja'], franjaHabilitada],
+    ] as const) {
+      if (habilitado && control.disabled) control.enable({ emitEvent: false });
+      if (!habilitado && control.enabled) control.disable({ emitEvent: false });
+    }
   }
 }
