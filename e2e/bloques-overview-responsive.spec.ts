@@ -35,10 +35,20 @@ test('los controles del bloque no pisan el contenido en móvil', async ({
   await expect(item).toBeVisible();
   const details = await item.locator('.bloque-item__details').boundingBox();
   const actions = await item.locator('.bloque-item__actions').boundingBox();
+  const card = await page
+    .locator('.item-container')
+    .filter({ has: item })
+    .first()
+    .boundingBox();
   expect(details).not.toBeNull();
   expect(actions).not.toBeNull();
+  expect(card).not.toBeNull();
   expect(actions!.y).toBeGreaterThanOrEqual(details!.y + details!.height - 1);
   expect(actions!.x + actions!.width).toBeLessThanOrEqual(375);
+  expect(card!.y).toBeLessThanOrEqual(details!.y);
+  expect(card!.y + card!.height).toBeGreaterThanOrEqual(
+    actions!.y + actions!.height - 1,
+  );
 
   for (const button of await item
     .locator('.bloque-item__actions button')
