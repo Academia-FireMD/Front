@@ -18,6 +18,9 @@ import {
 } from '../planificacion/models/aplicar-plantillas-semanales.model';
 import {
   CatalogoContenidoItem,
+  CatalogoFilaEditable,
+  CatalogoLista,
+  CatalogoPreview,
   ComponerContenidoResponse,
   TipoTrabajoCatalogo,
 } from '../planificacion/models/catalogo-contenido.model';
@@ -284,5 +287,57 @@ export class PlanificacionesService extends ApiBaseService {
       },
       true,
     ) as Observable<ComponerContenidoResponse>;
+  }
+
+  public listarCatalogoContenido(): Observable<CatalogoLista> {
+    return this.get('/catalogo-contenido') as Observable<CatalogoLista>;
+  }
+
+  public previsualizarCatalogo(file: File): Observable<CatalogoPreview> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.post(
+      '/catalogo-contenido/importar/preview',
+      form,
+    ) as Observable<CatalogoPreview>;
+  }
+
+  public aplicarCatalogo(
+    file: File,
+    previewHash: string,
+    confirmarCambios: boolean,
+  ): Observable<CatalogoPreview> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('previewHash', previewHash);
+    form.append('confirmarCambios', String(confirmarCambios));
+    return this.post(
+      '/catalogo-contenido/importar/apply',
+      form,
+    ) as Observable<CatalogoPreview>;
+  }
+
+  public previsualizarCambioCatalogo(
+    fila?: CatalogoFilaEditable,
+    leyendas?: Partial<Record<TipoTrabajoCatalogo, string>>,
+  ): Observable<CatalogoPreview> {
+    return this.post('/catalogo-contenido/cambio/preview', {
+      fila,
+      leyendas,
+    }) as Observable<CatalogoPreview>;
+  }
+
+  public guardarCambioCatalogo(
+    previewHash: string,
+    confirmarCambios: boolean,
+    fila?: CatalogoFilaEditable,
+    leyendas?: Partial<Record<TipoTrabajoCatalogo, string>>,
+  ): Observable<CatalogoPreview> {
+    return this.post('/catalogo-contenido/cambio/apply', {
+      fila,
+      leyendas,
+      previewHash,
+      confirmarCambios,
+    }) as Observable<CatalogoPreview>;
   }
 }

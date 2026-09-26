@@ -21,6 +21,16 @@ export interface SubBloque {
   tiempoAviso?: number;
   nombre: string;
   comentarios?: string;
+  catalogoContenidoId?: number | null;
+  tipoTrabajoPlanificacion?:
+    | 'ESTUDIO'
+    | 'R1'
+    | 'R2'
+    | 'R3'
+    | 'R4'
+    | 'R5'
+    | null;
+  ordenBloque?: number | null;
   bloqueId?: number; // Relación opcional con PlanificacionBloque
   bloque?: PlanificacionBloque; // Referencia opcional al bloque
   plantillaId?: number; // Relación con PlantillaSemanal

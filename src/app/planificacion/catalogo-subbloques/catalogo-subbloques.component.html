@@ -1,0 +1,354 @@
+<div class="catalogo-cabecera">
+  <div>
+    <h1>Subbloques</h1>
+    <p>
+      Aquí se define el contenido que reutilizan los bloques y los Excel de
+      semanas. La duración y el día se deciden en cada planificación.
+    </p>
+  </div>
+</div>
+
+<app-generic-list
+  [fetchItems$]="fetchItems$"
+  [itemTemplate]="filaTemplate"
+  [autoItemHeight]="true"
+  (onItemClick)="abrirEdicion($event)"
+>
+  <div left-actions>
+    <label class="sr-only" for="buscar-subbloques">Buscar subbloques</label>
+    <input
+      id="buscar-subbloques"
+      pInputText
+      type="search"
+      placeholder="Buscar código o contenido"
+      [value]="pagination().searchTerm"
+      (input)="valueChanged($event)"
+    />
+  </div>
+  <div right-actions class="catalogo-acciones">
+    <p-button
+      label="Tipos de trabajo"
+      icon="pi pi-list"
+      [outlined]="true"
+      (click)="abrirLeyendas()"
+    ></p-button>
+    <p-button
+      label="Importar catálogo"
+      icon="pi pi-upload"
+      [outlined]="true"
+      (click)="abrirImportacion()"
+    ></p-button>
+    <p-button
+      label="Nuevo subbloque"
+      icon="pi pi-plus"
+      (click)="abrirNuevo()"
+    ></p-button>
+  </div>
+  <div empty-template class="empty-state">
+    No hay subbloques para esta búsqueda.
+  </div>
+</app-generic-list>
+
+<ng-template #filaTemplate let-item>
+  <div class="catalogo-fila">
+    <span
+      class="muestra-color"
+      [style.backgroundColor]="item.color"
+      aria-hidden="true"
+    ></span>
+    <div class="catalogo-fila-texto">
+      <div class="catalogo-fila-titulo">
+        <strong>{{ item.codigo }}</strong>
+        <span>{{ item.nombreCorto }}</span>
+      </div>
+      <small>{{ item.nombreDescriptivo || "Sin descripción ampliada" }}</small>
+    </div>
+    <p-button
+      icon="pi pi-pencil"
+      [text]="true"
+      ariaLabel="Editar {{ item.codigo }}"
+      (click)="$event.stopPropagation(); abrirEdicion(item)"
+    ></p-button>
+  </div>
+</ng-template>
+
+<p-dialog
+  [header]="esNuevo ? 'Nuevo subbloque' : 'Editar ' + fila.codigo"
+  [(visible)]="dialogoEdicion"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(94vw, 760px)', maxHeight: '94vh' }"
+  (onHide)="resetPreview()"
+>
+  <div class="formulario-catalogo">
+    <label for="catalogo-codigo">Código</label>
+    <input
+      id="catalogo-codigo"
+      pInputText
+      [(ngModel)]="fila.codigo"
+      (ngModelChange)="resetPreview()"
+      [disabled]="!esNuevo"
+      maxlength="24"
+    />
+    <small *ngIf="!esNuevo"
+      >El código no se puede cambiar. Crea otro y revincula los usos si
+      necesitas corregirlo.</small
+    >
+
+    <label for="catalogo-nombre">Nombre corto</label>
+    <input
+      id="catalogo-nombre"
+      pInputText
+      [(ngModel)]="fila.nombreCorto"
+      (ngModelChange)="resetPreview()"
+      maxlength="160"
+    />
+
+    <label for="catalogo-descripcion">Explicación</label>
+    <textarea
+      id="catalogo-descripcion"
+      pInputTextarea
+      [(ngModel)]="fila.nombreDescriptivo"
+      (ngModelChange)="resetPreview()"
+      rows="3"
+    ></textarea>
+
+    <label for="catalogo-puntos">Puntos importantes</label>
+    <textarea
+      id="catalogo-puntos"
+      pInputTextarea
+      [(ngModel)]="fila.puntosImportantes"
+      (ngModelChange)="resetPreview()"
+      rows="4"
+    ></textarea>
+
+    <label for="catalogo-color">Color</label>
+    <div class="campo-color">
+      <input
+        id="catalogo-color"
+        pInputText
+        [(ngModel)]="fila.color"
+        (ngModelChange)="resetPreview()"
+        maxlength="7"
+      />
+      <span
+        class="muestra-color"
+        [style.backgroundColor]="fila.color"
+        aria-hidden="true"
+      ></span>
+    </div>
+
+    <p class="aviso-impacto">
+      Cambiar este contenido actualizará inmediatamente todos sus usos
+      vinculados, incluso los que ya ven los alumnos. No cambiará fechas,
+      duración ni progreso.
+    </p>
+    <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="dialogo-acciones">
+      <p-button
+        label="Cancelar"
+        [text]="true"
+        (click)="dialogoEdicion = false"
+      ></p-button>
+      <p-button
+        label="Revisar cambios"
+        [outlined]="true"
+        [loading]="cargando()"
+        (click)="revisarEdicion()"
+      ></p-button>
+      <p-button
+        label="Guardar"
+        [disabled]="!puedeAplicar"
+        [loading]="guardando()"
+        (click)="aplicar()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  header="Tipos de trabajo"
+  [(visible)]="dialogoLeyendas"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: 'min(94vw, 760px)', maxHeight: '94vh' }"
+  (onHide)="resetPreview()"
+>
+  <div class="formulario-catalogo">
+    <p>
+      Estas descripciones se combinan con los subbloques del catálogo en cada
+      uso.
+    </p>
+    <ng-container *ngFor="let tipo of tiposTrabajo">
+      <label [for]="'leyenda-' + tipo">{{ tipo }}</label>
+      <textarea
+        [id]="'leyenda-' + tipo"
+        pInputTextarea
+        [(ngModel)]="leyendas[tipo]"
+        (ngModelChange)="resetPreview()"
+        rows="2"
+      ></textarea>
+    </ng-container>
+    <p class="aviso-impacto">
+      Cambiar una descripción actualizará también las actividades vinculadas ya
+      publicadas.
+    </p>
+    <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="dialogo-acciones">
+      <p-button
+        label="Cancelar"
+        [text]="true"
+        (click)="dialogoLeyendas = false"
+      ></p-button>
+      <p-button
+        label="Revisar cambios"
+        [outlined]="true"
+        [loading]="cargando()"
+        (click)="revisarEdicion()"
+      ></p-button>
+      <p-button
+        label="Guardar"
+        [disabled]="!puedeAplicar"
+        [loading]="guardando()"
+        (click)="aplicar()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  header="Importar catálogo de subbloques"
+  [(visible)]="dialogoImportacion"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: 'min(94vw, 820px)', maxHeight: '94vh' }"
+  (onHide)="resetPreview()"
+>
+  <div class="formulario-catalogo">
+    <p>
+      Sube el Excel del catálogo. Los códigos ausentes no se borrarán. Importar
+      contenido no publica semanas nuevas.
+    </p>
+    <label for="catalogo-archivo">Archivo Excel (.xlsx)</label>
+    <input
+      id="catalogo-archivo"
+      type="file"
+      accept=".xlsx"
+      (change)="seleccionarArchivo($event)"
+    />
+    <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="dialogo-acciones">
+      <p-button
+        label="Cancelar"
+        [text]="true"
+        (click)="dialogoImportacion = false"
+      ></p-button>
+      <p-button
+        label="Revisar Excel"
+        [outlined]="true"
+        [disabled]="!archivo"
+        [loading]="cargando()"
+        (click)="revisarExcel()"
+      ></p-button>
+      <p-button
+        label="Importar"
+        [disabled]="!puedeAplicar"
+        [loading]="guardando()"
+        (click)="aplicar()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<ng-template #resumenPreview>
+  <div *ngIf="preview as resultado" class="preview-catalogo" aria-live="polite">
+    <ng-container *ngIf="resultado.errores?.length; else previewValido">
+      <h3>Corrige el Excel antes de continuar</h3>
+      <p *ngFor="let error of resultado.errores" class="error-catalogo">
+        {{ error.hoja || "Archivo"
+        }}<span *ngIf="error.fila"> · fila {{ error.fila }}</span
+        >: {{ error.mensaje }}
+      </p>
+    </ng-container>
+    <ng-template #previewValido>
+      <h3>Qué cambiará</h3>
+      <div class="impacto-grid" *ngIf="resultado.impacto as impacto">
+        <span
+          ><strong>{{ impacto.bloques }}</strong> bloques</span
+        >
+        <span
+          ><strong>{{ impacto.plantillas }}</strong> plantillas</span
+        >
+        <span
+          ><strong>{{ impacto.borradores }}</strong> borradores</span
+        >
+        <span
+          ><strong>{{ impacto.publicadas }}</strong> calendarios
+          publicados</span
+        >
+      </div>
+      <p *ngIf="resultado.impacto?.publicadas" class="aviso-impacto">
+        Atención: estos cambios de contenido serán visibles inmediatamente para
+        alumnos.
+      </p>
+      <ul class="lista-cambios">
+        <li
+          *ngFor="let cambio of resultado.cambios"
+          [hidden]="cambio.estado === 'sinCambios'"
+        >
+          <strong>{{ cambio.codigo }}</strong> ·
+          {{ cambio.estado === "creada" ? "Nuevo" : "Modificado" }}
+          <div *ngIf="cambio.estado === 'creada'" class="detalle-cambio">
+            <strong>{{ cambio.nueva.nombreCorto }}</strong>
+            <span>{{
+              cambio.nueva.nombreDescriptivo || "Sin explicación"
+            }}</span>
+          </div>
+          <dl *ngIf="cambio.estado === 'actualizada'" class="detalle-cambio">
+            <div *ngFor="let campo of cambio.camposCambiados">
+              <dt>{{ campo }}</dt>
+              <dd>Antes: {{ valorCambio(cambio.anterior, campo) }}</dd>
+              <dd>Después: {{ valorCambio(cambio.nueva, campo) }}</dd>
+            </div>
+          </dl>
+        </li>
+        <li *ngFor="let cambio of resultado.cambiosTrabajo">
+          <strong>{{ cambio.trabajo }}</strong> · Leyenda de trabajo
+          <div class="detalle-cambio">
+            <span>Antes: {{ cambio.anterior || "—" }}</span>
+            <span>Después: {{ cambio.nueva || "—" }}</span>
+          </div>
+        </li>
+      </ul>
+      <p *ngIf="cantidadSinCambios(resultado)" class="aviso-menor">
+        {{ cantidadSinCambios(resultado) }} subbloques sin cambios; se
+        conservarán tal como están.
+      </p>
+      <p *ngIf="!cantidadConCambios(resultado)">
+        No hay diferencias que guardar.
+      </p>
+      <div *ngIf="resultado.requiereConfirmacion" class="confirmacion-cambios">
+        <p-checkbox
+          inputId="confirmar-catalogo"
+          [(ngModel)]="confirmado"
+          [binary]="true"
+        ></p-checkbox>
+        <label for="confirmar-catalogo"
+          >Confirmo que quiero sustituir el contenido indicado.</label
+        >
+      </div>
+    </ng-template>
+    <p *ngFor="let aviso of resultado.warnings" class="aviso-menor">
+      {{ aviso.hoja || "Archivo"
+      }}<span *ngIf="aviso.fila"> · fila {{ aviso.fila }}</span
+      >: {{ aviso.mensaje }}
+    </p>
+  </div>
+</ng-template>

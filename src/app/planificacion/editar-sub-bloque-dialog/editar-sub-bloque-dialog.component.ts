@@ -36,38 +36,47 @@ import {
 export class EditarSubBloqueDialogComponent
   implements OnDestroy, AfterViewInit, OnInit
 {
+  private currentData: any;
   @Input() set data(data: any) {
+    this.currentData = data;
     this.isAddingNew = !data?.id;
     // Forzamos el reset de esEntrenamientoFisico para que un payload antiguo
     // (o un nuevo evento sin ese campo) no herede el valor del diálogo anterior.
     this.formGroup.patchValue({
       ...data,
       esEntrenamientoFisico: !!data?.esEntrenamientoFisico,
+      catalogoContenidoId: data?.catalogoContenidoId ?? null,
+      tipoTrabajoPlanificacion: data?.tipoTrabajoPlanificacion ?? null,
     });
+    this.tipoTrabajoSeleccionado = data?.tipoTrabajoPlanificacion ?? null;
+    this.catalogoItemSeleccionado = null;
     //Si data.id es falsey, significa que el alumno está intentando crear un evento, cosa que está permitida
-    if (this.role == 'ADMIN' || this.isAddingNew) {
-      this.formGroup.enable();
-    } else {
-      this.formGroup.disable();
-      this.formGroup.get(['nombre', 'comentarios'])?.enable();
-    }
+    this.aplicarPermisos();
 
     // Esperar a que el diálogo esté visible y el DOM actualizado
-    if (this.isDialogVisible) {
+    if (this.isDialogVisible && !data?.catalogoContenidoId) {
       setTimeout(() => {
         this.initEditor(data?.comentarios ?? '');
       }, 100);
     }
   }
 
-  @Input() role: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  private _role: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  @Input() set role(value: 'ADMIN' | 'ALUMNO') {
+    this._role = value;
+    if (this.currentData !== undefined) this.aplicarPermisos();
+  }
+  get role(): 'ADMIN' | 'ALUMNO' {
+    return this._role;
+  }
   @Input() set isDialogVisible(value: boolean) {
     this._isDialogVisible = value;
     if (value) {
       // Pequeño delay para asegurar que el DOM esté listo
       setTimeout(() => {
         const currentData = this.formGroup.value;
-        this.initEditor(currentData.comentarios ?? '');
+        if (!this.contenidoVinculado)
+          this.initEditor(currentData.comentarios ?? '');
       }, 100);
     } else {
       this.destroyEditor();
@@ -98,6 +107,8 @@ export class EditarSubBloqueDialogComponent
       false,
   );
   public formGroup = this.fb.group({
+    catalogoContenidoId: [null as number | null],
+    tipoTrabajoPlanificacion: [null as TipoTrabajoCatalogo | null],
     duracion: [60, [Validators.required, Validators.min(1)]],
     nombre: ['', [Validators.required]],
     comentarios: [''],
@@ -125,6 +136,56 @@ export class EditarSubBloqueDialogComponent
   catalogoSugerencias: CatalogoContenidoItem[] = [];
   tipoTrabajoSeleccionado: TipoTrabajoCatalogo | null = null;
   catalogoItemSeleccionado: CatalogoContenidoItem | null = null;
+
+  get contenidoVinculado(): boolean {
+    return !!this.formGroup.get('catalogoContenidoId')?.value;
+  }
+
+  private bloquearContenidoVinculado() {
+    for (const campo of ['nombre', 'comentarios', 'color'])
+      this.formGroup.get(campo)?.disable({ emitEvent: false });
+    this.destroyEditor();
+  }
+
+  private aplicarPermisos() {
+    if (this.role === 'ADMIN' || this.isAddingNew) {
+      this.formGroup.enable({ emitEvent: false });
+      if (this.currentData?.catalogoContenidoId && this.role === 'ADMIN') {
+        this.bloquearContenidoVinculado();
+        this.planificacionesService
+          .listarCatalogoContenido()
+          .subscribe((catalogo) => {
+            this.catalogoItemSeleccionado =
+              catalogo.filas.find(
+                (item) => item.id === this.currentData.catalogoContenidoId,
+              ) ?? null;
+          });
+      }
+    } else {
+      this.formGroup.disable({ emitEvent: false });
+      if (!this.currentData?.catalogoContenidoId) {
+        this.formGroup
+          .get(['nombre', 'comentarios'])
+          ?.enable({ emitEvent: false });
+      }
+    }
+  }
+
+  desvincularCatalogo() {
+    this.formGroup.patchValue({
+      catalogoContenidoId: null,
+      tipoTrabajoPlanificacion: null,
+    });
+    for (const campo of ['nombre', 'comentarios', 'color'])
+      this.formGroup.get(campo)?.enable({ emitEvent: false });
+    this.catalogoItemSeleccionado = null;
+    this.tipoTrabajoSeleccionado = null;
+    if (this.isDialogVisible)
+      setTimeout(
+        () => this.initEditor(this.formGroup.get('comentarios')?.value ?? ''),
+        0,
+      );
+  }
 
   tipoTrabajoOptions: { label: string; value: TipoTrabajoCatalogo | null }[] = [
     { label: 'Sin tipo (bloque especial)', value: null },
@@ -194,6 +255,7 @@ export class EditarSubBloqueDialogComponent
   }
 
   private initEditor(initialValueComentarios: string): void {
+    if (this.contenidoVinculado) return;
     // Destruir editor existente si hay uno
     this.destroyEditor();
 
@@ -239,8 +301,9 @@ export class EditarSubBloqueDialogComponent
   public async guardarEdicion() {
     this.isDialogVisible = false;
     this.isDialogVisibleChange.emit(false);
-    const value = cloneDeep(this.formGroup.value);
-    this.savedSubBloque.emit(value as SubBloque);
+    const value = cloneDeep(this.formGroup.getRawValue());
+    // El diálogo devuelve los campos editables; el calendario aporta ID y hora.
+    this.savedSubBloque.emit(value as unknown as SubBloque);
     return Promise.resolve();
   }
 
@@ -270,14 +333,14 @@ export class EditarSubBloqueDialogComponent
       .subscribe({
         next: (res: ComponerContenidoResponse) => {
           this.formGroup.patchValue({
+            catalogoContenidoId: this.catalogoItemSeleccionado!.id,
+            tipoTrabajoPlanificacion: this.tipoTrabajoSeleccionado,
             nombre: res.nombre,
             color: res.color,
             comentarios: res.comentarios,
           });
-          if (this.editorComentarios) {
-            this.editorComentarios.setMarkdown(res.comentarios ?? '');
-          }
-          this.toastrService.success('Bloque rellenado desde catálogo');
+          this.bloquearContenidoVinculado();
+          this.toastrService.success('Subbloque vinculado al catálogo');
         },
         error: (err: HttpErrorResponse | Error) => {
           const status =

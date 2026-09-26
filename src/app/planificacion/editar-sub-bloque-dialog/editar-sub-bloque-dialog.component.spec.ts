@@ -48,6 +48,7 @@ describe('EditarSubBloqueDialogComponent', () => {
     appConfigService = makeMockAppConfigService(true);
     planificacionesService = {
       buscarCatalogoContenido: jest.fn(() => of([])),
+      listarCatalogoContenido: jest.fn(() => of({ filas: [], trabajos: [] })),
       componerContenidoCatalogo: jest.fn(() =>
         of({
           codigo: 'T01',
@@ -179,9 +180,7 @@ describe('EditarSubBloqueDialogComponent', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('rellenarDesdeCatalogo patchea nombre, color y comentarios y actualiza el editor', () => {
-      const setMarkdownSpy = jest.fn();
-      component.editorComentarios = { setMarkdown: setMarkdownSpy } as any;
+    it('vincular al catálogo fija la referencia y bloquea solo el contenido compartido', () => {
       component.catalogoItemSeleccionado = {
         id: 1,
         codigo: 'T01',
@@ -199,10 +198,29 @@ describe('EditarSubBloqueDialogComponent', () => {
       expect(component.formGroup.get('comentarios')?.value).toBe(
         'Comentarios compuestos',
       );
-      expect(setMarkdownSpy).toHaveBeenCalledWith('Comentarios compuestos');
+      expect(component.formGroup.get('catalogoContenidoId')?.value).toBe(1);
+      expect(component.formGroup.get('nombre')?.disabled).toBe(true);
+      expect(component.formGroup.get('duracion')?.enabled).toBe(true);
       expect(toastrService.success).toHaveBeenCalledWith(
-        'Bloque rellenado desde catálogo',
+        'Subbloque vinculado al catálogo',
       );
+    });
+
+    it('desvincular permite personalizar sin borrar la duración', () => {
+      component.role = 'ADMIN';
+      component.data = {
+        id: 4,
+        catalogoContenidoId: 9,
+        nombre: 'Compartido',
+        comentarios: 'Común',
+        color: '#abcdef',
+        duracion: 75,
+      };
+      expect(component.contenidoVinculado).toBe(true);
+      component.desvincularCatalogo();
+      expect(component.formGroup.get('catalogoContenidoId')?.value).toBeNull();
+      expect(component.formGroup.get('nombre')?.enabled).toBe(true);
+      expect(component.formGroup.get('duracion')?.value).toBe(75);
     });
 
     it('rellenarDesdeCatalogo incluye el tipo de trabajo cuando se selecciona', () => {

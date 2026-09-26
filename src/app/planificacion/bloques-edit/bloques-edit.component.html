@@ -48,6 +48,7 @@
             [value]="subBloques.value"
             header="Sub-bloques"
             [dragdrop]="true"
+            (onReorder)="reordenarSubBloques($event)"
           >
             <ng-template let-subBloque let-index="index" pTemplate="item">
               <div

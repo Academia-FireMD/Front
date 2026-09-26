@@ -23,6 +23,9 @@ export class EventsService {
         tiempoAviso: event.meta?.subBloque?.tiempoAviso ?? null,
         esEntrenamientoFisico:
           event.meta?.subBloque?.esEntrenamientoFisico ?? false,
+        catalogoContenidoId: event.meta?.subBloque?.catalogoContenidoId ?? null,
+        tipoTrabajoPlanificacion:
+          event.meta?.subBloque?.tipoTrabajoPlanificacion ?? null,
         horaInicio: event.start,
         duracion:
           event.meta?.subBloque?.duracion ||

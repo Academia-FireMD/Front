@@ -65,6 +65,8 @@ export class BloquesEditComponent {
   private getEmptySubBloqueForm() {
     return this.fb.group({
       id: [null],
+      catalogoContenidoId: [null as number | null],
+      tipoTrabajoPlanificacion: [null as SubBloque['tipoTrabajoPlanificacion']],
       duracion: [60, [Validators.required, Validators.min(1)]],
       nombre: ['', [Validators.required]],
       comentarios: [''],
@@ -73,6 +75,7 @@ export class BloquesEditComponent {
       controlId: [uniqueId()],
       importante: [false],
       tiempoAviso: [0],
+      esEntrenamientoFisico: [false],
     });
   }
 
@@ -104,12 +107,29 @@ export class BloquesEditComponent {
     let subBloqueAClonar = cloneDeep(subBloque);
     const form = this.getEmptySubBloqueForm();
     subBloqueAClonar.id = null;
+    delete (subBloqueAClonar as SubBloque & { controlId?: string }).controlId;
     form.patchValue(subBloqueAClonar);
     (this.subBloques as FormArray).insert(index, form);
   }
 
   public eliminarSubBloque(index: number) {
     this.subBloques.removeAt(index);
+  }
+
+  public reordenarSubBloques(event: { value?: Array<{ controlId: string }> }) {
+    const orden = event.value?.map((item) => item.controlId) ?? [];
+    if (orden.length !== this.subBloques.length) return;
+    const controles = new Map(
+      this.subBloques.controls.map((control: any) => [
+        control.value.controlId,
+        control,
+      ]),
+    );
+    const ordenados = orden.map((id) => controles.get(id));
+    if (ordenados.some((control) => !control)) return;
+    this.subBloques.clear();
+    ordenados.forEach((control) => this.subBloques.push(control));
+    this.formGroup.markAsDirty();
   }
 
   private load() {
@@ -129,31 +149,26 @@ export class BloquesEditComponent {
             });
             this.formGroup.patchValue(entry);
             this.formGroup.markAsPristine();
-          })
-        )
+          }),
+        ),
       );
     }
   }
 
   private async update() {
-    const order = cloneDeep(this.subBloques.value.map((e: any) => e.controlId));
     const merged = cloneDeep({
       ...this.lastLoaded,
       ...this.formGroup.getRawValue(),
     });
-
-    merged.subBloques.sort((a: any, b: any) => {
-      return order.indexOf(a.controlId) - order.indexOf(b.controlId);
-    });
-
-    merged.subBloques.forEach((e: any) => {
+    merged.subBloques.forEach((e: any, orden: number) => {
       if (!e['id']) delete e['id'];
+      e.ordenBloque = orden;
       delete e['siendoEditado'];
       delete e['controlId'];
     });
 
     const updated = await firstValueFrom(
-      this.planificacionesService.updateBloque$(merged as PlanificacionBloque)
+      this.planificacionesService.updateBloque$(merged as PlanificacionBloque),
     );
     return updated;
   }

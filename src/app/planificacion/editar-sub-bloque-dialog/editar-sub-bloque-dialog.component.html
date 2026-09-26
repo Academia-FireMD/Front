@@ -44,7 +44,7 @@
       </div>
       <div
         class="col-12 md:col-5 flex align-items-center justify-content-start md:justify-content-end gap-2"
-        *ngIf="isRoleAdminOrAddingNew()"
+        *ngIf="isRoleAdminOrAddingNew() && !contenidoVinculado"
       >
         <p-floatLabel>
           <p-dropdown
@@ -152,7 +152,15 @@
         "
       >
         <p-divider />
-        <h4 class="mt-0 mb-3">Rellenar desde catálogo de contenido</h4>
+        <h4 class="mt-0 mb-3">Catálogo de subbloques</h4>
+        <p *ngIf="contenidoVinculado" aria-live="polite">
+          Vinculado a
+          <strong>{{
+            catalogoItemSeleccionado?.codigo || "un subbloque del catálogo"
+          }}</strong
+          >. El nombre, la explicación y el color se editan en Subbloques y se
+          actualizan en todos sus usos.
+        </p>
         <div
           class="flex flex-column md:flex-row align-items-start md:align-items-end gap-3"
         >
@@ -211,12 +219,19 @@
           </div>
 
           <p-button
-            label="Rellenar desde catálogo"
+            label="Vincular al catálogo"
             icon="pi pi-bolt"
             severity="secondary"
             [disabled]="!catalogoItemSeleccionado?.codigo"
             (click)="rellenarDesdeCatalogo()"
             data-testid="btn-rellenar-catalogo"
+          ></p-button>
+          <p-button
+            *ngIf="contenidoVinculado"
+            label="Desvincular y personalizar"
+            icon="pi pi-link"
+            [outlined]="true"
+            (click)="desvincularCatalogo()"
           ></p-button>
         </div>
       </div>

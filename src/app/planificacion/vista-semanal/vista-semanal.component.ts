@@ -535,6 +535,9 @@ export class VistaSemanalComponent {
             importante: subbloque.importante,
             tiempoAviso: subbloque.tiempoAviso,
             esEntrenamientoFisico: subbloque.esEntrenamientoFisico ?? false,
+            catalogoContenidoId: subbloque.catalogoContenidoId ?? null,
+            tipoTrabajoPlanificacion:
+              subbloque.tipoTrabajoPlanificacion ?? null,
           },
         },
       };

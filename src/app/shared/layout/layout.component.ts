@@ -304,6 +304,11 @@ export class LayoutComponent {
         modulo: ModuloApp.PLANIFICACION,
         items: [
           {
+            label: 'Subbloques',
+            icon: 'pi pi-list',
+            routerLink: '/app/planificacion/subbloques',
+          },
+          {
             label: 'Bloques',
             icon: 'pi pi-th-large',
             routerLink: '/app/planificacion/bloques',

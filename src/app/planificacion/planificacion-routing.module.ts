@@ -15,8 +15,16 @@ import { PlantillaSemanalEditComponent } from './plantilla-semanal-edit/plantill
 import { PlantillaSemanalOverviewComponent } from './plantilla-semanal-overview/plantilla-semanal-overview.component';
 import { PlanificacionAdminComponent } from './planificacion-admin/planificacion-admin.component';
 import { PlanificacionTutorComponent } from './planificacion-tutor/planificacion-tutor.component';
+import { CatalogoSubbloquesComponent } from './catalogo-subbloques/catalogo-subbloques.component';
 
 const routes: Routes = [
+  {
+    path: 'subbloques',
+    component: CatalogoSubbloquesComponent,
+    canActivate: [roleGuard],
+    title: 'Subbloques',
+    data: { expectedRole: 'ADMIN', title: 'Subbloques' },
+  },
   {
     path: 'bloques',
     component: BloquesOverviewComponent,

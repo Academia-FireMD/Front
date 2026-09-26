@@ -1,0 +1,169 @@
+:host {
+  display: block;
+  padding: 1rem;
+  max-width: 100%;
+}
+
+.catalogo-cabecera h1 {
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+}
+
+.catalogo-cabecera p {
+  margin: 0 0 1rem;
+  color: var(--text-color-secondary);
+}
+
+.catalogo-acciones,
+.catalogo-fila,
+.catalogo-fila-titulo,
+.campo-color,
+.confirmacion-cambios,
+.dialogo-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.catalogo-acciones {
+  flex-wrap: wrap;
+}
+.catalogo-fila {
+  padding: 0.75rem;
+  min-width: 0;
+}
+.catalogo-fila-texto {
+  flex: 1;
+  min-width: 0;
+}
+.catalogo-fila-titulo {
+  flex-wrap: wrap;
+}
+.catalogo-fila-texto small {
+  color: var(--text-color-secondary);
+}
+.muestra-color {
+  display: inline-block;
+  flex: 0 0 1.6rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.35rem;
+}
+.empty-state {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.formulario-catalogo {
+  display: grid;
+  gap: 0.6rem;
+  max-height: calc(94vh - 11rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.25rem;
+}
+.formulario-catalogo label {
+  font-weight: 600;
+}
+.formulario-catalogo input:not([type="file"]),
+.formulario-catalogo textarea {
+  width: 100%;
+}
+.formulario-catalogo small {
+  color: var(--text-color-secondary);
+}
+.campo-color input {
+  min-width: 0;
+}
+.aviso-impacto {
+  margin: 0.6rem 0;
+  padding: 0.8rem;
+  border-left: 3px solid var(--primary-color);
+  background: var(--surface-100);
+}
+.preview-catalogo {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--surface-border);
+  padding-top: 0.75rem;
+}
+.preview-catalogo h3 {
+  margin: 0 0 0.75rem;
+}
+.impacto-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.impacto-grid span {
+  padding: 0.55rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.35rem;
+}
+.lista-cambios {
+  max-height: 15rem;
+  overflow-y: auto;
+  padding-left: 1.25rem;
+}
+.lista-cambios li {
+  margin-bottom: 0.35rem;
+  overflow-wrap: anywhere;
+}
+.detalle-cambio {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.5rem;
+  border-left: 2px solid var(--surface-border);
+  white-space: pre-wrap;
+}
+.detalle-cambio div {
+  display: grid;
+  gap: 0.2rem;
+}
+.detalle-cambio dt {
+  font-weight: 600;
+}
+.detalle-cambio dd {
+  margin: 0;
+}
+.error-catalogo {
+  color: var(--red-600);
+}
+.aviso-menor {
+  color: var(--text-color-secondary);
+}
+.dialogo-acciones {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.confirmacion-cambios {
+  align-items: flex-start;
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  :host {
+    padding: 0.65rem;
+  }
+  .catalogo-acciones {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .catalogo-acciones ::ng-deep .p-button,
+  .dialogo-acciones ::ng-deep .p-button {
+    width: 100%;
+    min-height: 44px;
+  }
+  .dialogo-acciones {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .impacto-grid {
+    grid-template-columns: 1fr;
+  }
+  .catalogo-fila {
+    padding: 0.6rem 0.3rem;
+  }
+}
