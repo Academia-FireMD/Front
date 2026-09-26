@@ -1,7 +1,50 @@
+@import "../../shared/styles/list-styles.scss";
+
 :host {
   display: block;
   min-width: 0;
   max-width: 100%;
+}
+
+.variantes-search {
+  min-height: 44px;
+  width: min(100%, 24rem);
+}
+
+.variante-list-item {
+  min-width: 0;
+  width: 100%;
+
+  .left-side {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  .right-side {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .descripcion,
+  .variant-release {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .variant-release {
+    max-width: 12rem;
+  }
+}
+
+.variant-switch-target {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 48px;
 }
 
 .import-steps {
@@ -132,6 +175,11 @@
     min-width: 44rem;
   }
 
+  .variantes-list .p-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
   .p-dropdown,
   .p-inputtext {
     max-width: 100%;
@@ -139,6 +187,10 @@
 }
 
 @media (max-width: 575px) {
+  .variantes-search {
+    min-width: 0;
+  }
+
   .import-steps {
     grid-template-columns: 1fr;
   }

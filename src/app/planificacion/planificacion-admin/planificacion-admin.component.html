@@ -7,158 +7,221 @@
   [scrollable]="true"
 >
   <p-tabPanel header="Variantes" leftIcon="pi pi-th-large">
-    <div class="grid">
-      <div class="col-12 lg:col-5">
-        <div class="p-3 border-1 border-round surface-100">
-          <h4 class="mt-0 mb-3">
-            {{ varianteForm.value.id ? "Editar variante" : "Nueva variante" }}
-          </h4>
-          <form [formGroup]="varianteForm" class="flex flex-column gap-2">
-            <label for="variante-codigo">Código (calculado) *</label>
-            <input
-              pInputText
-              id="variante-codigo"
-              formControlName="codigo"
-              placeholder="Se genera al completar la variante"
-              readonly
-            />
-            <small class="text-500"
-              >Se genera automáticamente a partir de la oposición, el nivel y
-              las horas de estudio.</small
+    <app-generic-list
+      class="variantes-list"
+      [fetchItems$]="fetchItems$"
+      [itemTemplate]="varianteItemTemplate"
+      [filters]="filters"
+      [autoItemHeight]="true"
+      (filtersChanged)="onFiltersChanged($event)"
+      (onItemClick)="editarVariante($any($event))"
+    >
+      <div left-actions>
+        <p-iconField iconPosition="left">
+          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+          <input
+            pInputText
+            type="search"
+            class="variantes-search"
+            placeholder="Buscar variantes"
+            aria-label="Buscar variantes"
+            [value]="pagination().searchTerm"
+            (input)="buscarVariante($event)"
+          />
+        </p-iconField>
+      </div>
+      <div right-actions>
+        <p-button
+          [label]="
+            viewportService.screenWidth === 'xs' ? 'Nuevo' : 'Nueva variante'
+          "
+          icon="pi pi-plus"
+          [link]="true"
+          ariaLabel="Nueva variante"
+          (click)="abrirNuevaVariante()"
+        />
+      </div>
+      <div empty-template class="text-center p-4">
+        No hay variantes que coincidan con la búsqueda.
+      </div>
+    </app-generic-list>
+
+    <ng-template #varianteItemTemplate let-v>
+      <div class="flex flex-row align-items-center variante-list-item">
+        <div
+          class="flex flex-column py-2 col-9 left-side truncate-flex-content"
+        >
+          <div class="text-lg font-medium flex gap-2 align-items-center">
+            <strong class="identifier">{{ v.codigo }}</strong>
+            <span class="text-xs hidden md:block">
+              {{ v.activa ? "Activa" : "Inactiva" }}
+            </span>
+          </div>
+          <span
+            class="descripcion"
+            [title]="
+              labelOposicion(v.oposicion) +
+              ' · ' +
+              getNivelOposicionLabel(v.nivel) +
+              ' · ' +
+              getFranjaPlanificacionLabel(v.franja)
+            "
+          >
+            {{ labelOposicion(v.oposicion) }} ·
+            {{ getNivelOposicionLabel(v.nivel) }} ·
+            {{ getFranjaPlanificacionLabel(v.franja) }}
+          </span>
+        </div>
+        <div
+          class="right-side col-3 flex align-items-center justify-content-end"
+        >
+          <div class="admin-controls">
+            <span
+              class="variant-release text-xs hidden md:block unbreakable-text"
+              [title]="
+                v.planificacionMensual?.identificador ?? 'Sin plan publicado'
+              "
             >
-            <label for="variante-oposicion">Oposición *</label>
-            <app-oposicion-picker
-              context="planificacion"
-              presentation="field"
-              [multiple]="false"
-              [opciones]="oposicionOptions"
-              inputId="variante-oposicion"
-              formControlName="oposicion"
-            />
-            <label>Nivel *</label>
-            <p-dropdown
-              [options]="nivelOptions"
-              formControlName="nivel"
-              optionLabel="label"
-              optionValue="value"
-              [disabled]="varianteForm.controls.nivel.disabled"
-              styleClass="w-full"
-            ></p-dropdown>
-            <label for="variante-franja"
-              >Horas disponibles para el estudio *</label
-            >
-            <p-dropdown
-              [options]="franjaOptions"
-              formControlName="franja"
-              optionLabel="label"
-              optionValue="value"
-              [disabled]="varianteForm.controls.franja.disabled"
-              inputId="variante-franja"
-              styleClass="w-full"
-            ></p-dropdown>
-            <small class="text-500"
-              >Únicamente horas de estudio, no incluye el tiempo dedicado a la
-              preparación física.</small
-            >
-            <label>Release de planificación mensual</label>
-            <p-dropdown
-              [options]="planificacionOptions"
-              formControlName="planificacionMensualId"
-              optionLabel="label"
-              optionValue="value"
-              [showClear]="true"
-              placeholder="Sin release asignada"
-              styleClass="w-full"
-            ></p-dropdown>
-            @if (esPlanSeleccionadoBorrador) {
-              <p-message
-                severity="info"
-                [text]="
-                  varianteForm.value.id
-                    ? 'Este borrador debe validarse y publicarse antes de asignarlo.'
-                    : 'Crea primero la variante sin plan; después podrás publicar y asignar este borrador.'
-                "
-              ></p-message>
-            }
-            <div class="flex align-items-center gap-2">
-              <p-inputSwitch formControlName="activa"></p-inputSwitch>
-              <label>Activa</label>
-            </div>
-            <div class="flex gap-2 pt-2">
-              <p-button
-                label="Guardar"
-                icon="pi pi-check"
-                [disabled]="esPlanSeleccionadoBorrador"
-                (click)="guardarVariante()"
-              ></p-button>
-              @if (varianteForm.value.id && esPlanSeleccionadoBorrador) {
-                <p-button
-                  label="Publicar y asignar"
-                  icon="pi pi-send"
-                  severity="warning"
-                  (click)="publicarPlanSeleccionado()"
-                ></p-button>
+              @if (v.planificacionMensual) {
+                {{ v.planificacionMensual.identificador }}
+                v{{ v.planificacionMensual.version ?? 1 }}
+              } @else {
+                Sin plan
               }
-              <p-button
-                label="Limpiar"
-                styleClass="p-button-text"
-                (click)="nuevaVariante()"
-              ></p-button>
-            </div>
-          </form>
+            </span>
+            <span
+              class="variant-switch-target"
+              (click)="$event.stopPropagation(); actualizarVarianteActiva(v)"
+            >
+              <p-inputSwitch
+                [ngModel]="v.activa"
+                [ariaLabel]="'Cambiar estado de ' + v.codigo"
+                (click)="$event.stopPropagation()"
+                (onChange)="actualizarVarianteActiva(v)"
+              />
+            </span>
+            <p-button
+              icon="pi pi-pencil"
+              [text]="true"
+              severity="info"
+              size="small"
+              [ariaLabel]="'Editar variante ' + v.codigo"
+              (click)="$event.stopPropagation(); editarVariante(v)"
+            />
+          </div>
         </div>
       </div>
+    </ng-template>
 
-      <div class="col-12 lg:col-7">
-        <p-table
-          [value]="variantes()"
-          [paginator]="true"
-          [rows]="10"
-          styleClass="planificacion-admin-table"
+    <p-dialog
+      [header]="varianteForm.value.id ? 'Editar variante' : 'Nueva variante'"
+      [visible]="dialogoVarianteVisible()"
+      (onHide)="cerrarDialogoVariante()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [breakpoints]="{ '640px': 'calc(100vw - 1rem)' }"
+      [style]="{ width: '36rem', maxWidth: 'calc(100vw - 1rem)' }"
+      [contentStyle]="{ maxHeight: 'calc(100vh - 10rem)', overflow: 'auto' }"
+      appendTo="body"
+    >
+      <form [formGroup]="varianteForm" class="flex flex-column gap-2">
+        <label for="variante-codigo">Código (calculado) *</label>
+        <input
+          pInputText
+          id="variante-codigo"
+          formControlName="codigo"
+          placeholder="Se genera al completar la variante"
+          readonly
+        />
+        <small class="text-500"
+          >Se genera automáticamente a partir de la oposición, el nivel y las
+          horas de estudio.</small
         >
-          <ng-template pTemplate="header">
-            <tr>
-              <th>Código</th>
-              <th>Oposición</th>
-              <th>Nivel</th>
-              <th>Horas disponibles para el estudio</th>
-              <th>Release publicada</th>
-              <th>Activa</th>
-              <th></th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-v>
-            <tr>
-              <td>{{ v.codigo }}</td>
-              <td>{{ labelOposicion(v.oposicion) }}</td>
-              <td>{{ getNivelOposicionLabel(v.nivel) }}</td>
-              <td>{{ getFranjaPlanificacionLabel(v.franja) }}</td>
-              <td>
-                @if (v.planificacionMensual) {
-                  {{ v.planificacionMensual.identificador }}
-                  v{{ v.planificacionMensual.version ?? 1 }}
-                } @else {
-                  Sin plan
-                }
-              </td>
-              <td>
-                <p-inputSwitch
-                  [ngModel]="v.activa"
-                  (onChange)="actualizarVarianteActiva(v)"
-                ></p-inputSwitch>
-              </td>
-              <td>
-                <p-button
-                  icon="pi pi-pencil"
-                  styleClass="p-button-text"
-                  (click)="editarVariante(v)"
-                ></p-button>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
-    </div>
+        <label for="variante-oposicion">Oposición *</label>
+        <app-oposicion-picker
+          context="planificacion"
+          presentation="field"
+          [multiple]="false"
+          [opciones]="oposicionOptions"
+          inputId="variante-oposicion"
+          formControlName="oposicion"
+        />
+        <label for="variante-nivel">Nivel *</label>
+        <p-dropdown
+          [options]="nivelOptions"
+          formControlName="nivel"
+          optionLabel="label"
+          optionValue="value"
+          [disabled]="varianteForm.controls.nivel.disabled"
+          inputId="variante-nivel"
+          styleClass="w-full"
+        ></p-dropdown>
+        <label for="variante-franja">Horas disponibles para el estudio *</label>
+        <p-dropdown
+          [options]="franjaOptions"
+          formControlName="franja"
+          optionLabel="label"
+          optionValue="value"
+          [disabled]="varianteForm.controls.franja.disabled"
+          inputId="variante-franja"
+          styleClass="w-full"
+        ></p-dropdown>
+        <small class="text-500"
+          >Únicamente horas de estudio, no incluye el tiempo dedicado a la
+          preparación física.</small
+        >
+        <label for="variante-release">Release de planificación mensual</label>
+        <p-dropdown
+          [options]="planificacionOptions"
+          formControlName="planificacionMensualId"
+          optionLabel="label"
+          optionValue="value"
+          inputId="variante-release"
+          [showClear]="true"
+          placeholder="Sin release asignada"
+          styleClass="w-full"
+        ></p-dropdown>
+        @if (esPlanSeleccionadoBorrador) {
+          <p-message
+            severity="info"
+            [text]="
+              varianteForm.value.id
+                ? 'Este borrador debe validarse y publicarse antes de asignarlo.'
+                : 'Crea primero la variante sin plan; después podrás publicar y asignar este borrador.'
+            "
+          ></p-message>
+        }
+        <div class="flex align-items-center gap-2">
+          <p-inputSwitch
+            inputId="variante-activa"
+            formControlName="activa"
+          ></p-inputSwitch>
+          <label for="variante-activa">Activa</label>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <p-button
+            label="Guardar"
+            icon="pi pi-check"
+            [disabled]="esPlanSeleccionadoBorrador"
+            (click)="guardarVariante()"
+          ></p-button>
+          @if (varianteForm.value.id && esPlanSeleccionadoBorrador) {
+            <p-button
+              label="Publicar y asignar"
+              icon="pi pi-send"
+              severity="warning"
+              (click)="publicarPlanSeleccionado()"
+            ></p-button>
+          }
+          <p-button
+            label="Cancelar"
+            styleClass="p-button-text"
+            (click)="cerrarDialogoVariante()"
+          ></p-button>
+        </div>
+      </form>
+    </p-dialog>
   </p-tabPanel>
 
   <p-tabPanel header="Reglas de oposición" leftIcon="pi pi-sitemap">

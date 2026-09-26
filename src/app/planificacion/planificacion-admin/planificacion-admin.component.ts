@@ -14,19 +14,25 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
 import { TabViewModule } from 'primeng/tabview';
-import { firstValueFrom } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom, of } from 'rxjs';
+import {
+  GenericListComponent,
+  FilterConfig,
+} from '../../shared/generic-list/generic-list.component';
+import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import {
@@ -84,13 +90,17 @@ const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
     ReactiveFormsModule,
     ButtonModule,
     ConfirmDialogModule,
+    DialogModule,
     DropdownModule,
+    IconFieldModule,
+    InputIconModule,
     InputSwitchModule,
     InputTextModule,
     MessageModule,
     ProgressSpinnerModule,
     TableModule,
     TabViewModule,
+    GenericListComponent,
     OposicionPickerComponent,
     EnvironmentBadgeComponent,
   ],
@@ -98,14 +108,14 @@ const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
   templateUrl: './planificacion-admin.component.html',
   styleUrl: './planificacion-admin.component.scss',
 })
-export class PlanificacionAdminComponent implements OnInit {
+export class PlanificacionAdminComponent
+  extends SharedGridComponent<VarianteAdmin>
+  implements OnInit
+{
   private readonly autoasignacionService = inject(AutoasignacionService);
   private readonly planificacionesService = inject(PlanificacionesService);
-  private readonly toast = inject(ToastrService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly fb = inject(FormBuilder);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
 
   readonly NivelOposicion = NivelOposicion;
   readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
@@ -135,6 +145,39 @@ export class PlanificacionAdminComponent implements OnInit {
   ];
 
   variantes = signal<VarianteAdmin[]>([]);
+  dialogoVarianteVisible = signal(false);
+  readonly filters: FilterConfig[] = [
+    {
+      key: 'oposicion',
+      label: 'Oposición',
+      type: 'dropdown',
+      options: Object.values(Oposicion).map((value) => ({
+        label: getPlanificacionOposicionLabel(value),
+        value,
+      })),
+    },
+    {
+      key: 'nivel',
+      label: 'Nivel',
+      type: 'dropdown',
+      options: this.nivelOptions,
+    },
+    {
+      key: 'franja',
+      label: 'Horas de estudio',
+      type: 'dropdown',
+      options: this.franjaOptions,
+    },
+    {
+      key: 'activa',
+      label: 'Estado',
+      type: 'dropdown',
+      options: [
+        { label: 'Activas', value: true },
+        { label: 'Inactivas', value: false },
+      ],
+    },
+  ];
   reglas = signal<ReglaOposicionAdmin[]>([]);
   sinCoincidencia = signal<AlumnoSinCoincidencia[]>([]);
   planificacionesMensuales = signal<PlanificacionMensual[]>([]);
@@ -167,6 +210,7 @@ export class PlanificacionAdminComponent implements OnInit {
   codigoImportacionSeleccionado = signal<string | null>(null);
   planificacionDestinoImportacion = signal<number | null>(null);
   activeTabIndex = 0;
+  private abrirVarianteDesdeRutaPendiente = true;
 
   varianteForm = this.fb.group({
     id: [null as number | null],
@@ -188,7 +232,39 @@ export class PlanificacionAdminComponent implements OnInit {
     activa: [true],
   });
 
-  ngOnInit(): void {
+  constructor() {
+    super();
+    this.fetchItems$ = computed(() => {
+      const { skip, take, searchTerm, where } = this.pagination();
+      const filtros = (where ?? {}) as Partial<VarianteAdmin>;
+      const busqueda = searchTerm.trim().toLocaleLowerCase('es');
+      const coincidencias = this.variantes().filter(
+        (variante) =>
+          (!filtros.oposicion || variante.oposicion === filtros.oposicion) &&
+          (!filtros.nivel || variante.nivel === filtros.nivel) &&
+          (!filtros.franja || variante.franja === filtros.franja) &&
+          (filtros.activa === undefined ||
+            variante.activa === filtros.activa) &&
+          (!busqueda ||
+            [
+              variante.codigo,
+              getPlanificacionOposicionLabel(variante.oposicion),
+              getNivelOposicionLabel(variante.nivel),
+              getFranjaPlanificacionLabel(variante.franja),
+              variante.planificacionMensual?.identificador ?? '',
+            ].some((texto) =>
+              texto.toLocaleLowerCase('es').includes(busqueda),
+            )),
+      );
+      return of({
+        data: coincidencias.slice(skip, skip + take),
+        pagination: { skip, take, searchTerm, count: coincidencias.length },
+      });
+    });
+  }
+
+  override ngOnInit(): void {
+    super.ngOnInit();
     if (this.route.snapshot.queryParamMap.get('tab') === 'variantes') {
       this.activeTabIndex = 0;
     }
@@ -236,22 +312,27 @@ export class PlanificacionAdminComponent implements OnInit {
       this.planificacionesMensuales.set(planificaciones?.data ?? []);
       this.limpiarPlanificacionIncompatible();
       this.sincronizarDestinoImportacion();
-      const varianteId = Number(
-        this.route.snapshot.queryParamMap.get('varianteId'),
-      );
-      const borradorId = Number(
-        this.route.snapshot.queryParamMap.get('borradorId'),
-      );
-      const variante = variantes?.find((v) => v.id === varianteId);
-      if (
-        variante &&
-        borradorId &&
-        this.planificacionesMensuales().some(
-          (p) => p.id === borradorId && p.estado === 'BORRADOR',
-        )
-      ) {
-        this.editarVariante(variante);
-        this.varianteForm.controls.planificacionMensualId.setValue(borradorId);
+      if (this.abrirVarianteDesdeRutaPendiente) {
+        this.abrirVarianteDesdeRutaPendiente = false;
+        const varianteId = Number(
+          this.route.snapshot.queryParamMap.get('varianteId'),
+        );
+        const borradorId = Number(
+          this.route.snapshot.queryParamMap.get('borradorId'),
+        );
+        const variante = variantes?.find((v) => v.id === varianteId);
+        if (
+          variante &&
+          borradorId &&
+          this.planificacionesMensuales().some(
+            (p) => p.id === borradorId && p.estado === 'BORRADOR',
+          )
+        ) {
+          this.editarVariante(variante);
+          this.varianteForm.controls.planificacionMensualId.setValue(
+            borradorId,
+          );
+        }
       }
     } catch {
       this.toast.error('No se pudieron cargar los datos de administración');
@@ -278,6 +359,28 @@ export class PlanificacionAdminComponent implements OnInit {
     this.varianteForm.controls.oposicion.disable({ emitEvent: false });
     this.varianteForm.controls.nivel.disable({ emitEvent: false });
     this.varianteForm.controls.franja.disable({ emitEvent: false });
+    this.dialogoVarianteVisible.set(true);
+  }
+
+  abrirNuevaVariante(): void {
+    this.nuevaVariante();
+    this.dialogoVarianteVisible.set(true);
+  }
+
+  cerrarDialogoVariante(): void {
+    this.dialogoVarianteVisible.set(false);
+    this.nuevaVariante();
+  }
+
+  buscarVariante(event: Event): void {
+    this.updatePaginationSafe({
+      searchTerm: (event.target as HTMLInputElement).value,
+      skip: 0,
+    });
+  }
+
+  onFiltersChanged(where?: Partial<VarianteAdmin>): void {
+    this.updatePaginationSafe({ where, skip: 0 });
   }
 
   nuevaVariante(): void {
@@ -334,7 +437,7 @@ export class PlanificacionAdminComponent implements OnInit {
         );
         this.toast.success('Variante creada');
       }
-      this.nuevaVariante();
+      this.cerrarDialogoVariante();
       await this.cargarTodo();
     } catch {
       this.toast.error('No se pudo guardar la variante');
@@ -385,7 +488,7 @@ export class PlanificacionAdminComponent implements OnInit {
             ),
           );
           this.toast.success('Planificación publicada y asignada');
-          this.nuevaVariante();
+          this.cerrarDialogoVariante();
           await this.cargarTodo();
         } catch (error) {
           this.toast.error(

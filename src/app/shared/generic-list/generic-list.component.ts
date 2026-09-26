@@ -114,6 +114,7 @@ export type GenericListMode = 'overview' | 'selection';
                 [ngClass]="{
                   pointer: mode === 'overview',
                   'selection-mode': mode === 'selection',
+                  'auto-item-height': autoItemHeight,
                 }"
                 *ngFor="let item of data"
                 (click)="handleItemClick(item, $event)"
@@ -309,6 +310,7 @@ export class GenericListComponent<T>
 {
   @Input() itemTemplate!: TemplateRef<any>;
   @Input() showPagination: boolean = true;
+  @Input() autoItemHeight = false;
   @Input() filters?: FilterConfig[];
   @Input() mode: GenericListMode = 'overview';
   @Input() singleSelection = false;

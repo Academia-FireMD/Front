@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
@@ -108,6 +108,7 @@ describe('PlanificacionAdminComponent', () => {
         {
           provide: ActivatedRoute,
           useValue: {
+            queryParams: of({}),
             snapshot: {
               queryParamMap: {
                 get: jest.fn(() => null),
@@ -264,13 +265,72 @@ describe('PlanificacionAdminComponent', () => {
   );
 
   it('muestra el código calculado como solo lectura en el formulario de alta', () => {
-    const input = fixture.nativeElement.querySelector(
+    expect(component.dialogoVarianteVisible()).toBe(false);
+    component.abrirNuevaVariante();
+    fixture.detectChanges();
+    const input = document.querySelector(
       '#variante-codigo',
     ) as HTMLInputElement;
 
     expect(input).toBeTruthy();
     expect(input.readOnly).toBe(true);
     expect(component.varianteForm.controls.codigo.enabled).toBe(true);
+  });
+
+  it('abre la edición en un diálogo y descarta el formulario al cancelar', () => {
+    component.editarVariante({
+      id: 7,
+      codigo: 'PCMI6-8H',
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+      activa: true,
+    });
+
+    expect(component.dialogoVarianteVisible()).toBe(true);
+    expect(component.varianteForm.controls.id.value).toBe(7);
+    component.cerrarDialogoVariante();
+    expect(component.dialogoVarianteVisible()).toBe(false);
+    expect(component.varianteForm.controls.id.value).toBeNull();
+  });
+
+  it('reutiliza búsqueda, filtros y paginación para las variantes', async () => {
+    component.variantes.set([
+      {
+        id: 1,
+        codigo: 'PCMI6-8H',
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+        activa: true,
+      },
+      {
+        id: 2,
+        codigo: 'PAVI4-6H',
+        oposicion: Oposicion.VALENCIA_AYUNTAMIENTO,
+        nivel: NivelOposicion.INICIACION,
+        franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+        activa: false,
+      },
+    ]);
+    component.pagination.set({ skip: 0, take: 1, searchTerm: '' });
+
+    const primeraPagina = await firstValueFrom(component.fetchItems$());
+    expect(primeraPagina?.pagination.count).toBe(2);
+    expect(primeraPagina?.data.map((v) => v.id)).toEqual([1]);
+
+    component.onFiltersChanged({ activa: false });
+    const filtrado = await firstValueFrom(component.fetchItems$());
+    expect(filtrado?.pagination.count).toBe(1);
+    expect(filtrado?.data.map((v) => v.id)).toEqual([2]);
+
+    component.onFiltersChanged();
+    component.buscarVariante({
+      target: { value: 'madrid' },
+    } as unknown as Event);
+    const buscado = await firstValueFrom(component.fetchItems$());
+    expect(buscado?.pagination.count).toBe(1);
+    expect(buscado?.data.map((v) => v.id)).toEqual([1]);
   });
 
   it('actualiza una variante existente con su id', async () => {
