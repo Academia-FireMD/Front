@@ -1,2 +1,67 @@
-@import '../../shared/styles/list-styles.scss';
+@import "../../shared/styles/list-styles.scss";
 
+.bloque-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.bloque-item__details {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-block: 0.5rem;
+}
+
+.bloque-item__heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.bloque-item__heading .identifier,
+.bloque-item__details .descripcion {
+  overflow-wrap: anywhere;
+}
+
+.bloque-item__details .descripcion {
+  display: block;
+}
+
+.bloque-item__meta,
+.bloque-item__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.bloque-item__meta {
+  flex: 0 0 auto;
+}
+
+.bloque-item__actions {
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .bloque-item {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .bloque-item__details {
+    padding-block: 0.25rem;
+  }
+
+  .bloque-item__meta {
+    width: 100%;
+  }
+
+  :host ::ng-deep .bloque-item__actions .p-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

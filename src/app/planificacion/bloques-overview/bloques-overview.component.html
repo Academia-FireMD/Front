@@ -41,9 +41,9 @@
 
 <!-- Template para el item de bloque -->
 <ng-template #bloqueItemTemplate let-item>
-  <div class="flex flex-row align-items-between">
-    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
-      <div class="text-lg font-medium flex gap-2 align-items-center">
+  <div class="bloque-item">
+    <div class="bloque-item__details">
+      <div class="bloque-item__heading text-lg font-medium">
         <span
           class="identifier"
           pTooltip="{{ item.identificador }}"
@@ -67,8 +67,8 @@
         {{ item.descripcion }}
       </span>
     </div>
-    <div class="right-side col-3 flex align-items-center justify-content-end">
-      <div class="flex flex-row align-items-center justify-content-end gap-2">
+    <div class="bloque-item__meta">
+      <div class="bloque-item__actions">
         <span
           class="text-xs hidden md:block unbreakable-text"
           pTooltip="Fecha de creación: {{
