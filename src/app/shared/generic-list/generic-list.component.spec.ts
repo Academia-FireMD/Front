@@ -102,6 +102,33 @@ describe('GenericListComponent', () => {
       expect(onItemClick).toHaveBeenCalledWith(item);
     });
 
+    it('permite abrir la fila con teclado sin interceptar controles internos', () => {
+      component.mode = 'overview';
+      const onItemClick = jest.fn();
+      component.onItemClick.subscribe(onItemClick);
+      const fila = document.createElement('div');
+      fila.setAttribute('role', 'button');
+      const accion = document.createElement('button');
+      fila.appendChild(accion);
+      fila.addEventListener('keydown', (event) =>
+        component.handleItemKeydown(item, event),
+      );
+
+      const intro = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      });
+      fila.dispatchEvent(intro);
+      expect(intro.defaultPrevented).toBe(true);
+      expect(onItemClick).toHaveBeenCalledTimes(1);
+
+      accion.dispatchEvent(
+        new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
+      );
+      expect(onItemClick).toHaveBeenCalledTimes(1);
+    });
+
     it.each([
       ['un botón', () => document.createElement('button')],
       [

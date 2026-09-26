@@ -33,7 +33,25 @@ const borrador = {
   varianteBorradorId: 7,
 };
 
-async function mockDatosAdmin(page: Page): Promise<void> {
+const reglas = [
+  {
+    id: 11,
+    oposicionSuscripcion: 'MADRID',
+    oposicionPlanificacion: 'GENERAL',
+    activa: true,
+  },
+  {
+    id: 12,
+    oposicionSuscripcion: 'VALENCIA_AYUNTAMIENTO',
+    oposicionPlanificacion: 'VALENCIA_AYUNTAMIENTO',
+    activa: false,
+  },
+];
+
+async function mockDatosAdmin(
+  page: Page,
+  reglasRespuesta: typeof reglas = [],
+): Promise<void> {
   await page.route('**/planificaciones/admin/variantes', (route) =>
     route.fulfill({
       status: 200,
@@ -42,7 +60,11 @@ async function mockDatosAdmin(page: Page): Promise<void> {
     }),
   );
   await page.route('**/planificaciones/admin/reglas', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(reglasRespuesta),
+    }),
   );
   await page.route('**/planificaciones/admin/sin-coincidencia', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
@@ -89,11 +111,23 @@ test('admin publica y asigna una release mediante la acción explícita', async 
   await expect(
     page.getByRole('button', { name: 'Nueva variante' }),
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Nueva variante' }),
+  ).not.toHaveClass(/p-button-link/);
+  await expect(page.locator('.variantes-list .p-tag-success')).toBeVisible();
   await page.locator('.variantes-list').screenshot({
     path: testInfo.outputPath('variantes-desktop.png'),
   });
 
-  await page.getByRole('button', { name: 'Editar variante GA4-6' }).click();
+  await page.getByRole('button', { name: 'Nueva variante' }).click();
+  const alta = page.getByRole('dialog', { name: 'Nueva variante' });
+  await expect(alta).toBeVisible();
+  await alta.locator('.p-dialog-header-close').click();
+  await expect(alta).toHaveCount(0);
+
+  await page
+    .getByRole('button', { name: 'Editar variante GA4-6', exact: true })
+    .click();
   const dialogo = page.getByRole('dialog', { name: 'Editar variante' });
   await expect(dialogo).toBeVisible();
   const releaseDropdown = dialogo.locator('p-dropdown').last();
@@ -200,4 +234,78 @@ test('la rejilla y el alta de variantes caben en móvil', async ({
   ).toBeLessThanOrEqual(375);
   await dialogo.getByRole('button', { name: 'Cancelar' }).click();
   await expect(dialogo).toHaveCount(0);
+});
+
+test('reglas usan la rejilla compartida y el diálogo se cierra desde la X', async ({
+  page,
+}, testInfo) => {
+  await mockDatosAdmin(page, reglas);
+  await loginAsRoleMock(page, {
+    rol: 'ADMIN',
+    email: 'admin@test.com',
+    userFixture: userAdminFixture,
+    modulos: { PLANIFICACION_AUTOASIGNACION: true },
+  });
+  await page.goto('/app/planificacion/admin-planificacion');
+  await page.getByRole('tab', { name: /Reglas de oposición/ }).click();
+
+  const lista = page.locator('.reglas-list');
+  await expect(lista.locator('.item-container')).toHaveCount(2);
+  await expect(lista.locator('.p-tag-success')).toBeVisible();
+  await expect(lista.locator('.p-tag-secondary')).toBeVisible();
+  await lista.screenshot({ path: testInfo.outputPath('reglas-desktop.png') });
+
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.reload();
+  await page.getByRole('tab', { name: /Reglas de oposición/ }).click();
+  await expect(
+    lista.locator('.item-container').first().locator('.identifier'),
+  ).toBeInViewport();
+  await expect(
+    lista.locator('.item-container').first().locator('.regla-destino'),
+  ).toBeInViewport();
+  await lista.screenshot({ path: testInfo.outputPath('reglas-mobile.png') });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(375);
+
+  await lista.getByRole('searchbox', { name: 'Buscar reglas' }).fill('Madrid');
+  await expect(lista.locator('.item-container')).toHaveCount(1);
+  await lista.getByRole('searchbox', { name: 'Buscar reglas' }).fill('');
+
+  await lista.getByRole('button', { name: 'Filtros', exact: true }).click();
+  const filtros = page.getByRole('dialog', { name: 'Filtros' });
+  await filtros.locator('p-dropdown').nth(2).click();
+  await page.getByRole('option', { name: 'Inactivas' }).click();
+  await filtros.getByRole('button', { name: 'Aplicar' }).click();
+  await expect(lista.locator('.item-container')).toHaveCount(1);
+  await expect(lista.locator('.item-container')).toContainText(
+    'Ayuntamiento de Valencia',
+  );
+  await lista.getByRole('button', { name: 'Filtros', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Filtros' })
+    .getByRole('button', { name: 'Limpiar filtros' })
+    .click();
+  await expect(lista.locator('.item-container')).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'Nueva regla' }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Nueva regla' });
+  await expect(dialogo).toBeVisible();
+  await expect(dialogo.getByText('Selecciona oposición')).toBeVisible();
+  await dialogo.screenshot({
+    path: testInfo.outputPath('regla-dialog-mobile.png'),
+  });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(375);
+  await dialogo.locator('.p-dialog-header-close').click();
+  await expect(dialogo).toHaveCount(0);
+
+  await lista
+    .locator('button[aria-label^="Editar regla Comunidad de Madrid"]')
+    .click();
+  await expect(
+    page.getByRole('dialog', { name: 'Editar regla' }),
+  ).toBeVisible();
 });

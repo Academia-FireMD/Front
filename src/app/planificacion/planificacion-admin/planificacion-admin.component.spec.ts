@@ -333,6 +333,73 @@ describe('PlanificacionAdminComponent', () => {
     expect(buscado?.data.map((v) => v.id)).toEqual([1]);
   });
 
+  it('abre y descarta el diálogo de reglas sin guardar', () => {
+    expect(component.dialogoReglaVisible()).toBe(false);
+    component.abrirNuevaRegla();
+    expect(component.dialogoReglaVisible()).toBe(true);
+    component.reglaForm.patchValue({ oposicionSuscripcion: Oposicion.MADRID });
+
+    component.cerrarDialogoRegla();
+
+    expect(component.dialogoReglaVisible()).toBe(false);
+    expect(component.reglaForm.controls.oposicionSuscripcion.value).toBe(null);
+    expect(
+      component.oposicionSuscripcionOptions.map((option) => option.value),
+    ).not.toContain(Oposicion.GENERAL);
+    expect(service.crearRegla$).not.toHaveBeenCalled();
+  });
+
+  it('mantiene visible una regla histórica con General como suscripción al editar', () => {
+    component.editarRegla({
+      id: 9,
+      oposicionSuscripcion: Oposicion.GENERAL,
+      oposicionPlanificacion: Oposicion.MADRID,
+      activa: true,
+    });
+
+    expect(
+      component.oposicionSuscripcionOptions.map((option) => option.value),
+    ).toContain(Oposicion.GENERAL);
+    expect(component.reglaForm.controls.oposicionSuscripcion.value).toBe(
+      Oposicion.GENERAL,
+    );
+    component.cerrarDialogoRegla();
+    expect(
+      component.oposicionSuscripcionOptions.map((option) => option.value),
+    ).not.toContain(Oposicion.GENERAL);
+  });
+
+  it('filtra reglas por búsqueda, oposición y estado sin mezclar la rejilla de variantes', async () => {
+    component.reglas.set([
+      {
+        id: 1,
+        oposicionSuscripcion: Oposicion.MADRID,
+        oposicionPlanificacion: Oposicion.GENERAL,
+        activa: true,
+      },
+      {
+        id: 2,
+        oposicionSuscripcion: Oposicion.VALENCIA_AYUNTAMIENTO,
+        oposicionPlanificacion: Oposicion.VALENCIA_AYUNTAMIENTO,
+        activa: false,
+      },
+    ]);
+    const todas = await firstValueFrom(component.fetchReglas$());
+    expect(todas?.data.map((r) => r.id)).toEqual([1, 2]);
+
+    component.onReglaFiltersChanged({ reglaActiva: false });
+    const inactivas = await firstValueFrom(component.fetchReglas$());
+    expect(inactivas?.data.map((r) => r.id)).toEqual([2]);
+
+    component.onReglaFiltersChanged({
+      oposicionPlanificacion: Oposicion.GENERAL,
+    });
+    component.buscarRegla({ target: { value: 'Madrid' } } as unknown as Event);
+    const madrid = await firstValueFrom(component.fetchReglas$());
+    expect(madrid?.data.map((r) => r.id)).toEqual([1]);
+    expect(component.pagination().searchTerm).toBe('');
+  });
+
   it('actualiza una variante existente con su id', async () => {
     component.editarVariante({
       id: 7,

@@ -26,6 +26,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
 import { TabViewModule } from 'primeng/tabview';
 import { firstValueFrom, of } from 'rxjs';
 import {
@@ -99,6 +100,7 @@ const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
     MessageModule,
     ProgressSpinnerModule,
     TableModule,
+    TagModule,
     TabViewModule,
     GenericListComponent,
     OposicionPickerComponent,
@@ -135,6 +137,11 @@ export class PlanificacionAdminComponent
   oposicionOptions: OposicionPickerOption[] = Object.values(Oposicion).map(
     (value) => ({ value }),
   );
+  private readonly oposicionSuscripcionNuevasOptions =
+    this.oposicionOptions.filter(
+      (option) => option.value !== Oposicion.GENERAL,
+    );
+  oposicionSuscripcionOptions = this.oposicionSuscripcionNuevasOptions;
   nivelOptions = [
     { label: 'Iniciación', value: NivelOposicion.INICIACION },
     { label: 'Avanzado', value: NivelOposicion.AVANZADO },
@@ -179,6 +186,69 @@ export class PlanificacionAdminComponent
     },
   ];
   reglas = signal<ReglaOposicionAdmin[]>([]);
+  dialogoReglaVisible = signal(false);
+  busquedaReglas = signal('');
+  filtrosReglas = signal<
+    Partial<ReglaOposicionAdmin> & { reglaActiva?: boolean }
+  >({});
+  readonly reglaFilters: FilterConfig[] = [
+    {
+      key: 'oposicionSuscripcion',
+      label: 'Oposición de suscripción',
+      type: 'dropdown',
+      options: Object.values(Oposicion).map((value) => ({
+        label: getPlanificacionOposicionLabel(value),
+        value,
+      })),
+    },
+    {
+      key: 'oposicionPlanificacion',
+      label: 'Oposición de planificación',
+      type: 'dropdown',
+      options: Object.values(Oposicion).map((value) => ({
+        label: getPlanificacionOposicionLabel(value),
+        value,
+      })),
+    },
+    {
+      key: 'reglaActiva',
+      label: 'Estado',
+      type: 'dropdown',
+      options: [
+        { label: 'Activas', value: true },
+        { label: 'Inactivas', value: false },
+      ],
+    },
+  ];
+  readonly fetchReglas$ = computed(() => {
+    const busqueda = this.busquedaReglas().trim().toLocaleLowerCase('es');
+    const filtros = this.filtrosReglas();
+    const data = this.reglas().filter(
+      (regla) =>
+        (!filtros.oposicionSuscripcion ||
+          regla.oposicionSuscripcion === filtros.oposicionSuscripcion) &&
+        (!filtros.oposicionPlanificacion ||
+          regla.oposicionPlanificacion === filtros.oposicionPlanificacion) &&
+        (filtros.reglaActiva === undefined ||
+          regla.activa === filtros.reglaActiva) &&
+        (!busqueda ||
+          [regla.oposicionSuscripcion, regla.oposicionPlanificacion].some(
+            (oposicion) =>
+              getPlanificacionOposicionLabel(oposicion)
+                .toLocaleLowerCase('es')
+                .includes(busqueda),
+          )),
+    );
+    return of({
+      data,
+      pagination: {
+        skip: 0,
+        take: data.length,
+        searchTerm: busqueda,
+        count: data.length,
+      },
+    });
+  });
   sinCoincidencia = signal<AlumnoSinCoincidencia[]>([]);
   planificacionesMensuales = signal<PlanificacionMensual[]>([]);
   reconciliacion = signal<ReconciliacionPlanificaciones | null>(null);
@@ -224,7 +294,7 @@ export class PlanificacionAdminComponent
 
   reglaForm = this.fb.group({
     id: [null as number | null],
-    oposicionSuscripcion: [Oposicion.GENERAL as Oposicion, Validators.required],
+    oposicionSuscripcion: [null as Oposicion | null, Validators.required],
     oposicionPlanificacion: [
       Oposicion.GENERAL as Oposicion,
       Validators.required,
@@ -503,6 +573,10 @@ export class PlanificacionAdminComponent
   }
 
   editarRegla(r: ReglaOposicionAdmin): void {
+    this.oposicionSuscripcionOptions =
+      r.oposicionSuscripcion === Oposicion.GENERAL
+        ? this.oposicionOptions
+        : this.oposicionSuscripcionNuevasOptions;
     this.reglaForm.patchValue({
       id: r.id ?? null,
       oposicionSuscripcion: r.oposicionSuscripcion,
@@ -515,14 +589,36 @@ export class PlanificacionAdminComponent
     this.reglaForm.controls.oposicionPlanificacion.disable({
       emitEvent: false,
     });
+    this.dialogoReglaVisible.set(true);
+  }
+
+  abrirNuevaRegla(): void {
+    this.nuevaRegla();
+    this.dialogoReglaVisible.set(true);
+  }
+
+  cerrarDialogoRegla(): void {
+    this.dialogoReglaVisible.set(false);
+    this.nuevaRegla();
+  }
+
+  buscarRegla(event: Event): void {
+    this.busquedaReglas.set((event.target as HTMLInputElement).value);
+  }
+
+  onReglaFiltersChanged(
+    where?: Partial<ReglaOposicionAdmin> & { reglaActiva?: boolean },
+  ): void {
+    this.filtrosReglas.set(where ?? {});
   }
 
   nuevaRegla(): void {
+    this.oposicionSuscripcionOptions = this.oposicionSuscripcionNuevasOptions;
     this.reglaForm.controls.oposicionSuscripcion.enable({ emitEvent: false });
     this.reglaForm.controls.oposicionPlanificacion.enable({ emitEvent: false });
     this.reglaForm.reset({
       id: null,
-      oposicionSuscripcion: Oposicion.GENERAL,
+      oposicionSuscripcion: null,
       oposicionPlanificacion: Oposicion.GENERAL,
       activa: true,
     });
@@ -552,7 +648,7 @@ export class PlanificacionAdminComponent
         );
         this.toast.success('Regla creada');
       }
-      this.nuevaRegla();
+      this.cerrarDialogoRegla();
       await this.cargarTodo();
     } catch {
       this.toast.error('No se pudo guardar la regla');

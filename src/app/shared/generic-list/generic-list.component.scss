@@ -98,7 +98,11 @@
     border-radius: 8px;
     margin-bottom: 0.75rem;
     padding: 0.75rem;
-    transition: all 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 
     // Altura más compacta para todos los items
@@ -114,6 +118,11 @@
       border-color: var(--primary-color);
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
     }
 
     .left-side {

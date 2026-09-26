@@ -90,6 +90,7 @@ export type GenericListMode = 'overview' | 'selection';
             <p-button
               icon="pi pi-filter"
               styleClass="p-button-outlined"
+              ariaLabel="Filtros"
               [tooltipPosition]="'left'"
               pTooltip="Filtros"
               (click)="showFiltersDialog = true"
@@ -117,7 +118,10 @@ export type GenericListMode = 'overview' | 'selection';
                   'auto-item-height': autoItemHeight,
                 }"
                 *ngFor="let item of data"
+                [attr.role]="mode === 'overview' ? 'button' : null"
+                [attr.tabindex]="mode === 'overview' ? 0 : null"
                 (click)="handleItemClick(item, $event)"
+                (keydown)="handleItemKeydown(item, $event)"
               >
                 <!-- Checkbox para modo selección -->
                 <div
@@ -709,10 +713,21 @@ export class GenericListComponent<T>
     if (event.defaultPrevented) return true;
 
     const target = event.target;
-    return (
-      target instanceof Element &&
-      target.closest(this.itemClickIgnoreSelector) !== null
-    );
+    if (!(target instanceof Element)) return false;
+    const interactive = target.closest(this.itemClickIgnoreSelector);
+    return interactive !== null && interactive !== event.currentTarget;
+  }
+
+  handleItemKeydown(item: T, event: KeyboardEvent): void {
+    if (
+      this.mode !== 'overview' ||
+      event.target !== event.currentTarget ||
+      (event.key !== 'Enter' && event.key !== ' ')
+    ) {
+      return;
+    }
+    event.preventDefault();
+    this.onItemClick.emit(item);
   }
 
   // Métodos para modo selección

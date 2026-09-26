@@ -11,7 +11,8 @@
   width: min(100%, 24rem);
 }
 
-.variante-list-item {
+.variante-list-item,
+.regla-list-item {
   min-width: 0;
   width: 100%;
 
@@ -35,6 +36,23 @@
 
   .variant-release {
     max-width: 12rem;
+  }
+}
+
+.regla-list-item {
+  gap: 0.5rem;
+
+  .identifier,
+  .regla-destino {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .regla-destino {
+    color: var(--text-color);
   }
 }
 
@@ -175,9 +193,16 @@
     min-width: 44rem;
   }
 
-  .variantes-list .p-button {
+  .variantes-list .p-button,
+  .reglas-list .p-button {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  .variantes-list .p-tag-secondary,
+  .reglas-list .p-tag-secondary {
+    background: var(--surface-200);
+    color: var(--text-color-secondary);
   }
 
   .p-dropdown,
@@ -189,6 +214,27 @@
 @media (max-width: 575px) {
   .variantes-search {
     min-width: 0;
+  }
+
+  .regla-list-item {
+    .left-side > div {
+      align-items: flex-start !important;
+      flex-direction: column;
+      gap: 0.15rem !important;
+    }
+
+    .left-side > div > span[aria-hidden] {
+      display: none;
+    }
+
+    .regla-destino::before {
+      content: "→ ";
+    }
+
+    .identifier,
+    .regla-destino {
+      max-width: 100%;
+    }
   }
 
   .import-steps {

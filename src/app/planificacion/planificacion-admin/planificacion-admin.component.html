@@ -22,8 +22,10 @@
           <input
             pInputText
             type="search"
+            name="buscarVariantes"
+            autocomplete="off"
             class="variantes-search"
-            placeholder="Buscar variantes"
+            placeholder="Buscar variantes…"
             aria-label="Buscar variantes"
             [value]="pagination().searchTerm"
             (input)="buscarVariante($event)"
@@ -36,7 +38,6 @@
             viewportService.screenWidth === 'xs' ? 'Nuevo' : 'Nueva variante'
           "
           icon="pi pi-plus"
-          [link]="true"
           ariaLabel="Nueva variante"
           (click)="abrirNuevaVariante()"
         />
@@ -53,9 +54,11 @@
         >
           <div class="text-lg font-medium flex gap-2 align-items-center">
             <strong class="identifier">{{ v.codigo }}</strong>
-            <span class="text-xs hidden md:block">
-              {{ v.activa ? "Activa" : "Inactiva" }}
-            </span>
+            <p-tag
+              class="hidden md:block"
+              [value]="v.activa ? 'Activa' : 'Inactiva'"
+              [severity]="v.activa ? 'success' : 'secondary'"
+            />
           </div>
           <span
             class="descripcion"
@@ -103,7 +106,7 @@
             <p-button
               icon="pi pi-pencil"
               [text]="true"
-              severity="info"
+              severity="secondary"
               size="small"
               [ariaLabel]="'Editar variante ' + v.codigo"
               (click)="$event.stopPropagation(); editarVariante(v)"
@@ -116,7 +119,7 @@
     <p-dialog
       [header]="varianteForm.value.id ? 'Editar variante' : 'Nueva variante'"
       [visible]="dialogoVarianteVisible()"
-      (onHide)="cerrarDialogoVariante()"
+      (visibleChange)="!$event && cerrarDialogoVariante()"
       [modal]="true"
       [draggable]="false"
       [resizable]="false"
@@ -225,87 +228,147 @@
   </p-tabPanel>
 
   <p-tabPanel header="Reglas de oposición" leftIcon="pi pi-sitemap">
-    <div class="grid">
-      <div class="col-12 lg:col-5">
-        <div class="p-3 border-1 border-round surface-100">
-          <h4 class="mt-0 mb-3">
-            {{ reglaForm.value.id ? "Editar regla" : "Nueva regla" }}
-          </h4>
-          <form [formGroup]="reglaForm" class="flex flex-column gap-2">
-            <label for="regla-oposicion-suscripcion"
-              >Oposición de suscripción *</label
+    <p class="text-color-secondary mb-3">
+      Estas reglas indican qué opciones de planificación puede elegir un alumno
+      según su suscripción. General puede ser un destino, no una suscripción.
+      Las reglas no publican ni asignan calendarios.
+    </p>
+    <app-generic-list
+      class="reglas-list"
+      [fetchItems$]="fetchReglas$"
+      [itemTemplate]="reglaItemTemplate"
+      [filters]="reglaFilters"
+      [showPagination]="false"
+      [autoItemHeight]="true"
+      (filtersChanged)="onReglaFiltersChanged($event)"
+      (onItemClick)="editarRegla($any($event))"
+    >
+      <div left-actions>
+        <p-iconField iconPosition="left">
+          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+          <input
+            pInputText
+            type="search"
+            name="buscarReglas"
+            autocomplete="off"
+            class="variantes-search"
+            placeholder="Buscar reglas…"
+            aria-label="Buscar reglas"
+            [value]="busquedaReglas()"
+            (input)="buscarRegla($event)"
+          />
+        </p-iconField>
+      </div>
+      <div right-actions>
+        <p-button
+          [label]="
+            viewportService.screenWidth === 'xs' ? 'Nueva' : 'Nueva regla'
+          "
+          icon="pi pi-plus"
+          ariaLabel="Nueva regla"
+          (click)="abrirNuevaRegla()"
+        />
+      </div>
+      <div empty-template class="text-center p-4">
+        No hay reglas que coincidan con la búsqueda.
+      </div>
+    </app-generic-list>
+
+    <ng-template #reglaItemTemplate let-r>
+      <div class="flex flex-row align-items-center regla-list-item">
+        <div class="flex flex-column py-2 left-side truncate-flex-content">
+          <div class="flex gap-2 align-items-center">
+            <strong
+              class="identifier"
+              [title]="labelOposicion(r.oposicionSuscripcion)"
             >
-            <app-oposicion-picker
-              context="planificacion"
-              presentation="field"
-              [multiple]="false"
-              [opciones]="oposicionOptions"
-              inputId="regla-oposicion-suscripcion"
-              formControlName="oposicionSuscripcion"
-            />
-            <label for="regla-oposicion-planificacion"
-              >Oposición de planificación *</label
+              {{ labelOposicion(r.oposicionSuscripcion) }}
+            </strong>
+            <span aria-hidden="true">→</span>
+            <span
+              class="regla-destino"
+              [title]="labelOposicion(r.oposicionPlanificacion)"
             >
-            <app-oposicion-picker
-              context="planificacion"
-              presentation="field"
-              [multiple]="false"
-              [opciones]="oposicionOptions"
-              inputId="regla-oposicion-planificacion"
-              formControlName="oposicionPlanificacion"
-            />
-            <div class="flex align-items-center gap-2">
-              <p-inputSwitch formControlName="activa"></p-inputSwitch>
-              <label>Activa</label>
-            </div>
-            <div class="flex gap-2 pt-2">
-              <p-button
-                label="Guardar"
-                icon="pi pi-check"
-                (click)="guardarRegla()"
-              ></p-button>
-              <p-button
-                label="Limpiar"
-                styleClass="p-button-text"
-                (click)="nuevaRegla()"
-              ></p-button>
-            </div>
-          </form>
+              {{ labelOposicion(r.oposicionPlanificacion) }}
+            </span>
+          </div>
+        </div>
+        <div
+          class="right-side flex align-items-center justify-content-end gap-2"
+        >
+          <p-tag
+            [value]="r.activa ? 'Activa' : 'Inactiva'"
+            [severity]="r.activa ? 'success' : 'secondary'"
+          />
+          <p-button
+            icon="pi pi-pencil"
+            [text]="true"
+            severity="secondary"
+            [ariaLabel]="
+              'Editar regla ' +
+              labelOposicion(r.oposicionSuscripcion) +
+              ' a ' +
+              labelOposicion(r.oposicionPlanificacion)
+            "
+            (click)="$event.stopPropagation(); editarRegla(r)"
+          />
         </div>
       </div>
+    </ng-template>
 
-      <div class="col-12 lg:col-7">
-        <p-table
-          [value]="reglas()"
-          [paginator]="true"
-          [rows]="10"
-          styleClass="planificacion-admin-table"
+    <p-dialog
+      [header]="reglaForm.value.id ? 'Editar regla' : 'Nueva regla'"
+      [visible]="dialogoReglaVisible()"
+      (visibleChange)="!$event && cerrarDialogoRegla()"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [breakpoints]="{ '640px': 'calc(100vw - 1rem)' }"
+      [style]="{ width: '36rem', maxWidth: 'calc(100vw - 1rem)' }"
+      [contentStyle]="{ maxHeight: 'calc(100vh - 10rem)', overflow: 'auto' }"
+      appendTo="body"
+    >
+      <form [formGroup]="reglaForm" class="flex flex-column gap-2">
+        <label for="regla-oposicion-suscripcion"
+          >Oposición de suscripción *</label
         >
-          <ng-template pTemplate="header">
-            <tr>
-              <th>Suscripción</th>
-              <th>Planificación</th>
-              <th>Activa</th>
-              <th></th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-r>
-            <tr>
-              <td>{{ labelOposicion(r.oposicionSuscripcion) }}</td>
-              <td>{{ labelOposicion(r.oposicionPlanificacion) }}</td>
-              <td>{{ r.activa ? "Sí" : "No" }}</td>
-              <td>
-                <p-button
-                  icon="pi pi-pencil"
-                  styleClass="p-button-text"
-                  (click)="editarRegla(r)"
-                ></p-button>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
-    </div>
+        <app-oposicion-picker
+          context="planificacion"
+          presentation="field"
+          [multiple]="false"
+          [opciones]="oposicionSuscripcionOptions"
+          inputId="regla-oposicion-suscripcion"
+          formControlName="oposicionSuscripcion"
+        />
+        <label for="regla-oposicion-planificacion"
+          >Oposición de planificación *</label
+        >
+        <app-oposicion-picker
+          context="planificacion"
+          presentation="field"
+          [multiple]="false"
+          [opciones]="oposicionOptions"
+          inputId="regla-oposicion-planificacion"
+          formControlName="oposicionPlanificacion"
+        />
+        <div class="flex align-items-center gap-2">
+          <p-inputSwitch inputId="regla-activa" formControlName="activa" />
+          <label for="regla-activa">Activa</label>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <p-button
+            label="Guardar"
+            icon="pi pi-check"
+            (click)="guardarRegla()"
+          />
+          <p-button
+            label="Cancelar"
+            [text]="true"
+            (click)="cerrarDialogoRegla()"
+          />
+        </div>
+      </form>
+    </p-dialog>
   </p-tabPanel>
 
   <p-tabPanel header="Cargar semanas" leftIcon="pi pi-file-excel">
