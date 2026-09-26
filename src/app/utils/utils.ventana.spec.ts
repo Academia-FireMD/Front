@@ -27,13 +27,13 @@ describe('getNextWeekIfFriday', () => {
 });
 
 describe('getVentanaDosSemanasAtras (Tarea 4: ventana de 2 semanas)', () => {
-  it('devuelve la fecha 14 días atrás a medianoche', () => {
+  it('devuelve el lunes de la semana de hace dos semanas a medianoche', () => {
     const hoy = new Date(2026, 7, 18, 14, 30, 0); // 18 ago 2026 14:30
     const resultado = getVentanaDosSemanasAtras(hoy);
 
     expect(resultado.getFullYear()).toBe(2026);
     expect(resultado.getMonth()).toBe(7);
-    expect(resultado.getDate()).toBe(4); // 18 - 14 = 4
+    expect(resultado.getDate()).toBe(3); // 18 - 14 = martes 4; lunes = 3
     expect(resultado.getHours()).toBe(0);
     expect(resultado.getMinutes()).toBe(0);
     expect(resultado.getSeconds()).toBe(0);
@@ -49,7 +49,14 @@ describe('getVentanaDosSemanasAtras (Tarea 4: ventana de 2 semanas)', () => {
     const resultado = getVentanaDosSemanasAtras();
     const esperado = new Date();
     esperado.setDate(esperado.getDate() - 14);
+    esperado.setDate(esperado.getDate() - ((esperado.getDay() + 6) % 7));
     esperado.setHours(0, 0, 0, 0);
     expect(resultado.getTime()).toBe(esperado.getTime());
+  });
+
+  it('incluye el lunes completo de hace dos semanas cuando hoy es domingo', () => {
+    expect(getVentanaDosSemanasAtras(new Date(2026, 8, 27, 12))).toEqual(
+      new Date(2026, 8, 7),
+    );
   });
 });

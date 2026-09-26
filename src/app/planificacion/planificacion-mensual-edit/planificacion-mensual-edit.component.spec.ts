@@ -200,6 +200,21 @@ describe('PlanificacionMensualEditComponent', () => {
         jest.useRealTimers();
       }
     });
+
+    it('acepta el lunes de hace dos semanas cuando hoy es domingo', () => {
+      jest.useFakeTimers().setSystemTime(new Date(2026, 8, 27, 12));
+      try {
+        component.expectedRole = 'ALUMNO';
+        (component as any).centrarCalendario(
+          { ano: 2026, mes: 9 },
+          [],
+          '2026-09-07',
+        );
+        expect(component.viewDate).toEqual(new Date(2026, 8, 7));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 
   it('no ofrece el volcado legacy como acción principal y conserva su selector de compatibilidad', () => {

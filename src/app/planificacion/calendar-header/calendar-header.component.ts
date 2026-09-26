@@ -24,7 +24,7 @@ export class CalendarHeaderComponent {
     if (!this.startDate) return false;
 
     const nextDate = this.getNextDate('previous');
-    return nextDate < this.startDate;
+    return this.dayKey(nextDate) < this.dayKey(this.startDate);
   }
 
   isNextDisabled(): boolean {
@@ -32,10 +32,14 @@ export class CalendarHeaderComponent {
     if (!this.endDate) return false;
 
     const nextDate = this.getNextDate('next');
-    return nextDate > this.endDate;
+    return this.dayKey(nextDate) > this.dayKey(this.endDate);
   }
 
-
+  private dayKey(date: Date): number {
+    return (
+      date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()
+    );
+  }
 
   private getNextDate(direction: 'previous' | 'next'): Date {
     const increment = direction === 'previous' ? -1 : 1;
@@ -53,8 +57,10 @@ export class CalendarHeaderComponent {
   }
 
   changeViewDate(direction: 'previous' | 'next'): void {
-    if ((direction === 'previous' && this.isPreviousDisabled()) ||
-        (direction === 'next' && this.isNextDisabled())) {
+    if (
+      (direction === 'previous' && this.isPreviousDisabled()) ||
+      (direction === 'next' && this.isNextDisabled())
+    ) {
       return;
     }
 
@@ -85,15 +91,18 @@ export class CalendarHeaderComponent {
     // Para alumnos con restricciones de fechas
     if (this.startDate && this.endDate) {
       // Si hoy está dentro del rango permitido, usar hoy
-      if (targetDate >= this.startDate && targetDate <= this.endDate) {
+      if (
+        this.dayKey(targetDate) >= this.dayKey(this.startDate) &&
+        this.dayKey(targetDate) <= this.dayKey(this.endDate)
+      ) {
         this.viewDate = targetDate;
       }
       // Si hoy está antes del rango permitido, ir a la fecha de inicio
-      else if (targetDate < this.startDate) {
+      else if (this.dayKey(targetDate) < this.dayKey(this.startDate)) {
         this.viewDate = new Date(this.startDate);
       }
       // Si hoy está después del rango permitido, ir a la fecha final
-      else if (targetDate > this.endDate) {
+      else if (this.dayKey(targetDate) > this.dayKey(this.endDate)) {
         this.viewDate = new Date(this.endDate);
       }
 
