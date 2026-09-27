@@ -65,7 +65,12 @@ async function prepararPagina(page: Page) {
     userFixture: userAdminFixture,
   });
   await page.goto('/app/planificacion/subbloques');
-  await expect(page.getByRole('heading', { name: 'Subbloques' })).toBeVisible();
+  await expect(
+    page.getByRole('searchbox', { name: 'Buscar subbloques' }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Subbloques' })).toHaveCount(
+    0,
+  );
   return () => aplicaciones;
 }
 
@@ -75,24 +80,39 @@ for (const viewport of [
 ]) {
   test(`catálogo: previsualización, impacto y confirmación en ${viewport.name}`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.setViewportSize({
       width: viewport.width,
       height: viewport.height,
     });
     const aplicaciones = await prepararPagina(page);
+    const busqueda = await page
+      .getByRole('searchbox', { name: 'Buscar subbloques' })
+      .boundingBox();
+    const accion = await page
+      .getByRole('button', { name: 'Importar catálogo' })
+      .boundingBox();
+    const filtro = await page
+      .getByRole('button', { name: 'Filtros' })
+      .boundingBox();
+    expect(busqueda).not.toBeNull();
+    expect(accion).not.toBeNull();
+    expect(filtro).not.toBeNull();
+    expect(Math.abs((busqueda?.y ?? 0) - (accion?.y ?? 0))).toBeLessThan(5);
+    expect(Math.abs((busqueda?.y ?? 0) - (filtro?.y ?? 0))).toBeLessThan(5);
+    expect((busqueda?.x ?? 0) + (busqueda?.width ?? 0)).toBeLessThan(
+      accion?.x ?? 0,
+    );
+    expect((accion?.x ?? 0) + (accion?.width ?? 0)).toBeLessThan(
+      filtro?.x ?? 0,
+    );
     if (viewport.width === 375) {
-      const busqueda = await page
-        .getByRole('searchbox', { name: 'Buscar subbloques' })
-        .boundingBox();
-      const accion = await page
-        .getByRole('button', { name: 'Importar catálogo' })
-        .boundingBox();
-      expect(busqueda?.width).toBeGreaterThan(280);
-      expect(accion?.width).toBeGreaterThan(280);
-      expect(Math.abs((busqueda?.x ?? 0) - (accion?.x ?? 0))).toBeLessThan(3);
+      expect(accion?.width).toBeGreaterThanOrEqual(44);
     }
     await expect(page.getByText('Explicación completa')).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`catalogo-overview-${viewport.width}.png`),
+    });
     await page.getByRole('button', { name: 'Importar catálogo' }).click();
     const dialogo = page.getByRole('dialog', {
       name: 'Importar catálogo de subbloques',
@@ -127,33 +147,55 @@ for (const viewport of [
   });
 }
 
-test('catálogo: filtra y abre el editor Markdown compartido', async ({ page }, testInfo) => {
+test('catálogo: filtra y abre el editor Markdown compartido', async ({
+  page,
+}, testInfo) => {
   await prepararPagina(page);
-  await page.getByRole('searchbox', { name: 'Buscar subbloques' }).fill('sin coincidencias');
+  await page
+    .getByRole('searchbox', { name: 'Buscar subbloques' })
+    .fill('sin coincidencias');
   await expect(page.getByText('L01 · Temario')).toHaveCount(0);
-  await page.getByRole('searchbox', { name: 'Buscar subbloques' }).fill('explicación completa');
+  await page
+    .getByRole('searchbox', { name: 'Buscar subbloques' })
+    .fill('explicación completa');
   await page.getByText('L01 · Temario').click();
   const dialogo = page.getByRole('dialog', { name: 'Editar L01' });
   await expect(dialogo).toBeVisible();
   await expect(dialogo.locator('.toastui-editor-defaultUI')).toHaveCount(2);
   await expect(dialogo.getByRole('button', { name: 'Guardar' })).toBeDisabled();
-  await page.screenshot({ path: testInfo.outputPath('catalogo-editor-desktop.png') });
+  await page.screenshot({
+    path: testInfo.outputPath('catalogo-editor-desktop.png'),
+  });
 });
 
-test('catálogo: editor Markdown usable en móvil sin desbordamiento', async ({ page }, testInfo) => {
+test('catálogo: editor Markdown usable en móvil sin desbordamiento', async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 375, height: 667 });
   await prepararPagina(page);
   await page.getByText('L01 · Temario').click();
   const dialogo = page.getByRole('dialog', { name: 'Editar L01' });
   await expect(dialogo.locator('.toastui-editor-defaultUI')).toHaveCount(2);
   await expect(dialogo.getByLabel('Código')).toBeInViewport();
-  await expect(dialogo.getByText('Puntos importantes · Markdown')).toBeVisible();
-  await expect(dialogo.getByRole('button', { name: 'Guardar' })).toBeInViewport();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
-  await page.screenshot({ path: testInfo.outputPath('catalogo-editor-mobile.png') });
+  await expect(
+    dialogo.getByText('Puntos importantes · Markdown'),
+  ).toBeVisible();
+  await expect(
+    dialogo.getByRole('button', { name: 'Guardar' }),
+  ).toBeInViewport();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+  ).toBe(false);
+  await page.screenshot({
+    path: testInfo.outputPath('catalogo-editor-mobile.png'),
+  });
 });
 
-test('Bloques: selector reutilizado añade dos usos y cancelar no crea filas', async ({ page }, testInfo) => {
+test('Bloques: selector reutilizado añade dos usos y cancelar no crea filas', async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 375, height: 667 });
   await page.route('**/planificaciones/catalogo-contenido', (route) =>
     route.fulfill({
@@ -165,27 +207,62 @@ test('Bloques: selector reutilizado añade dos usos y cancelar no crea filas', a
       }),
     }),
   );
-  await page.route('**/planificaciones/catalogo-contenido/componer', (route) => {
-    const codigo = route.request().postDataJSON().codigo as string;
-    return route.fulfill({ status: 200, contentType: 'application/json',
-      body: JSON.stringify({ codigo, nombre: codigo, color: '#b8f6fb', comentarios: '**Contenido**' }) });
-  });
-  await page.route('**/planificaciones/24', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json',
-      body: JSON.stringify({ id: 24, identificador: 'QA', descripcion: 'Bloque de prueba', subBloques: [] }) }),
+  await page.route(
+    '**/planificaciones/catalogo-contenido/componer',
+    (route) => {
+      const codigo = route.request().postDataJSON().codigo as string;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          codigo,
+          nombre: codigo,
+          color: '#b8f6fb',
+          comentarios: '**Contenido**',
+        }),
+      });
+    },
   );
-  await loginAsRoleMock(page, { rol: 'ADMIN', email: 'admin@test.com', userFixture: userAdminFixture });
+  await page.route('**/planificaciones/24', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 24,
+        identificador: 'QA',
+        descripcion: 'Bloque de prueba',
+        subBloques: [],
+      }),
+    }),
+  );
+  await loginAsRoleMock(page, {
+    rol: 'ADMIN',
+    email: 'admin@test.com',
+    userFixture: userAdminFixture,
+  });
   await page.goto('/app/planificacion/bloques/24');
   await page.getByRole('button', { name: 'Añadir subbloques' }).click();
   const opciones = page.getByRole('dialog', { name: 'Añadir subbloques' });
   await opciones.getByRole('button', { name: 'Crear manualmente' }).click();
-  await expect(page.getByRole('dialog', { name: 'Editar Sub-Bloque' })).toBeVisible();
-  await page.getByRole('dialog', { name: 'Editar Sub-Bloque' }).getByRole('button', { name: 'Cancelar' }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Editar Sub-Bloque' }),
+  ).toBeVisible();
+  await page
+    .getByRole('dialog', { name: 'Editar Sub-Bloque' })
+    .getByRole('button', { name: 'Cancelar' })
+    .click();
   await expect(page.getByText('Sin nombre')).toHaveCount(0);
   await page.getByRole('button', { name: 'Añadir subbloques' }).click();
-  await page.getByRole('dialog', { name: 'Añadir subbloques' }).getByRole('button', { name: 'Seleccionar del catálogo' }).click();
-  const selector = page.getByRole('dialog', { name: 'Seleccionar subbloques del catálogo' });
-  await selector.getByRole('checkbox', { name: 'Seleccionar L01 · Temario' }).focus();
+  await page
+    .getByRole('dialog', { name: 'Añadir subbloques' })
+    .getByRole('button', { name: 'Seleccionar del catálogo' })
+    .click();
+  const selector = page.getByRole('dialog', {
+    name: 'Seleccionar subbloques del catálogo',
+  });
+  await selector
+    .getByRole('checkbox', { name: 'Seleccionar L01 · Temario' })
+    .focus();
   await page.keyboard.press('Space');
   await expect(selector.getByText('1 seleccionado')).toBeVisible();
   await selector.getByText('L02 · Repaso').click();
@@ -193,6 +270,12 @@ test('Bloques: selector reutilizado añade dos usos y cancelar no crea filas', a
   await selector.getByRole('button', { name: 'Añadir 2 al Bloque' }).click();
   await expect(page.getByText('L01', { exact: true })).toBeVisible();
   await expect(page.getByText('L02', { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
-  await page.screenshot({ path: testInfo.outputPath('bloque-selector-mobile.png') });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+  ).toBe(false);
+  await page.screenshot({
+    path: testInfo.outputPath('bloque-selector-mobile.png'),
+  });
 });

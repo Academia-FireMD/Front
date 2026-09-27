@@ -1,35 +1,9 @@
-<div class="catalogo-cabecera">
-  <div>
-    <h1>Subbloques</h1>
-    <p>
-      Aquí se define el contenido que reutilizan los bloques y los Excel de
-      semanas. La duración y el día se deciden en cada planificación.
-    </p>
-  </div>
-  <div class="catalogo-acciones">
-    <p-button
-      label="Tipos de trabajo"
-      icon="pi pi-list"
-      [outlined]="true"
-      (click)="abrirLeyendas()"
-    ></p-button>
-    <p-button
-      label="Importar catálogo"
-      icon="pi pi-upload"
-      [outlined]="true"
-      (click)="abrirImportacion()"
-    ></p-button>
-    <p-button
-      label="Nuevo subbloque"
-      icon="pi pi-plus"
-      (click)="abrirNuevo()"
-    ></p-button>
-  </div>
-</div>
-
 <app-catalogo-subbloques-list
   [items]="catalogo().filas"
   (editRequested)="abrirEdicion($event)"
+  (leyendasRequested)="abrirLeyendas()"
+  (importRequested)="abrirImportacion()"
+  (newRequested)="abrirNuevo()"
 ></app-catalogo-subbloques-list>
 
 <app-editar-sub-bloque-dialog

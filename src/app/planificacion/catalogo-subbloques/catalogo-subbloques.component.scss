@@ -1,66 +1,13 @@
 :host {
   display: block;
-  padding: 1rem;
   max-width: 100%;
 }
-
-.catalogo-cabecera {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.catalogo-cabecera h1 {
-  margin: 0 0 0.4rem;
-  font-size: clamp(1.4rem, 2.5vw, 2rem);
-}
-
-.catalogo-cabecera p {
-  margin: 0 0 1rem;
-  color: var(--text-color-secondary);
-}
-
-.catalogo-acciones,
-.catalogo-fila,
-.catalogo-fila-titulo,
 .campo-color,
 .confirmacion-cambios,
 .dialogo-acciones {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-}
-
-.catalogo-acciones {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.catalogo-fila {
-  padding: 0.75rem;
-  min-width: 0;
-}
-.catalogo-fila-texto {
-  flex: 1;
-  min-width: 0;
-}
-.catalogo-fila-titulo {
-  flex-wrap: wrap;
-}
-.catalogo-fila-texto small {
-  color: var(--text-color-secondary);
-}
-.muestra-color {
-  display: inline-block;
-  flex: 0 0 1.6rem;
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 0.35rem;
-}
-.empty-state {
-  padding: 1.5rem;
-  text-align: center;
 }
 
 .formulario-catalogo {
@@ -151,22 +98,6 @@
 }
 
 @media (max-width: 640px) {
-  .catalogo-cabecera {
-    flex-direction: column;
-  }
-  :host {
-    padding: 0.65rem;
-  }
-  #buscar-subbloques {
-    width: 100%;
-    min-height: 44px;
-  }
-  .catalogo-acciones {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-  .catalogo-acciones ::ng-deep .p-button,
   .dialogo-acciones ::ng-deep .p-button {
     width: 100%;
     min-height: 44px;
@@ -177,8 +108,5 @@
   }
   .impacto-grid {
     grid-template-columns: 1fr;
-  }
-  .catalogo-fila {
-    padding: 0.6rem 0.3rem;
   }
 }

@@ -9,6 +9,9 @@ import {
 } from '@angular/core';
 import { of } from 'rxjs';
 import { InputTextModule } from 'primeng/inputtext';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import {
   FilterConfig,
@@ -21,7 +24,15 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
 @Component({
   selector: 'app-catalogo-subbloques-list',
   standalone: true,
-  imports: [CommonModule, GenericListComponent, InputTextModule, TagModule],
+  imports: [
+    CommonModule,
+    GenericListComponent,
+    InputTextModule,
+    IconFieldModule,
+    InputIconModule,
+    ButtonModule,
+    TagModule,
+  ],
   template: `
     <app-generic-list
       [fetchItems$]="fetchItems$"
@@ -34,21 +45,62 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
       [sharedPagination]="pagination"
       [routeSyncEnabled]="routeSyncEnabled"
       [autoItemHeight]="true"
-      [stackActionsOnMobile]="true"
       (onItemClick)="editRequested.emit($event)"
       (selectionChange)="selectedIdsChange.emit($event)"
       (filtersChanged)="onFiltersChanged($event)"
     >
       <div left-actions>
         <label class="sr-only" for="buscar-subbloques">Buscar subbloques</label>
-        <input
-          id="buscar-subbloques"
-          pInputText
-          type="search"
-          placeholder="Buscar código o contenido"
-          [value]="pagination().searchTerm"
-          (input)="onSearch($event)"
-        />
+        <p-iconField iconPosition="left">
+          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+          <input
+            id="buscar-subbloques"
+            pInputText
+            type="search"
+            [placeholder]="
+              viewportService.screenWidth === 'xs'
+                ? 'Buscar'
+                : 'Buscar código o contenido'
+            "
+            [value]="pagination().searchTerm"
+            (input)="onSearch($event)"
+          />
+        </p-iconField>
+      </div>
+      <div right-actions *ngIf="mode === 'overview'" class="catalogo-acciones">
+        <p-button
+          [label]="
+            viewportService.screenWidth === 'xs'
+              ? undefined
+              : 'Tipos de trabajo'
+          "
+          ariaLabel="Tipos de trabajo"
+          icon="pi pi-list"
+          [outlined]="true"
+          styleClass="catalogo-accion"
+          (click)="leyendasRequested.emit()"
+        ></p-button>
+        <p-button
+          [label]="
+            viewportService.screenWidth === 'xs'
+              ? undefined
+              : 'Importar catálogo'
+          "
+          ariaLabel="Importar catálogo"
+          icon="pi pi-upload"
+          [outlined]="true"
+          styleClass="catalogo-accion"
+          (click)="importRequested.emit()"
+        ></p-button>
+        <p-button
+          [label]="
+            viewportService.screenWidth === 'xs' ? undefined : 'Nuevo subbloque'
+          "
+          ariaLabel="Nuevo subbloque"
+          icon="pi pi-plus"
+          styleClass="catalogo-accion"
+          (click)="newRequested.emit()"
+        ></p-button>
       </div>
       <div empty-template class="text-center p-4">
         No hay subbloques para esta búsqueda.
@@ -108,8 +160,21 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
         border: 1px solid var(--surface-border);
         border-radius: 0.35rem;
       }
-      input[type='search'] {
+      p-iconField {
+        display: block;
         width: min(100%, 24rem);
+      }
+      input[type='search'] {
+        width: 100%;
+        min-height: 44px;
+      }
+      .catalogo-acciones {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      :host ::ng-deep .catalogo-accion {
+        min-width: 44px;
         min-height: 44px;
       }
       @media (max-width: 640px) {
@@ -141,6 +206,9 @@ export class CatalogoSubbloquesListComponent extends SharedGridComponent<Catalog
   @Input() selectedIds: (string | number)[] = [];
   @Output() selectedIdsChange = new EventEmitter<(string | number)[]>();
   @Output() editRequested = new EventEmitter<CatalogoContenidoCompleto>();
+  @Output() leyendasRequested = new EventEmitter<void>();
+  @Output() importRequested = new EventEmitter<void>();
+  @Output() newRequested = new EventEmitter<void>();
 
   readonly getItemId = (item: CatalogoContenidoCompleto) => item.id;
   readonly getSelectionLabel = (item: CatalogoContenidoCompleto) =>
