@@ -8,27 +8,17 @@ import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { InputTextareaModule } from 'primeng/inputtextarea';
 import { TagModule } from 'primeng/tag';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { CatalogoSubbloquesListComponent } from './catalogo-subbloques-list.component';
 import { EditarSubBloqueDialogComponent } from '../editar-sub-bloque-dialog/editar-sub-bloque-dialog.component';
+import { ExcelFilePickerComponent } from '../../shared/excel-file-picker/excel-file-picker.component';
 import {
   CatalogoContenidoCompleto,
   CatalogoFilaEditable,
   CatalogoLista,
   CatalogoPreview,
-  TipoTrabajoCatalogo,
 } from '../models/catalogo-contenido.model';
-
-const TIPOS_TRABAJO: TipoTrabajoCatalogo[] = [
-  'ESTUDIO',
-  'R1',
-  'R2',
-  'R3',
-  'R4',
-  'R5',
-];
 
 @Component({
   selector: 'app-catalogo-subbloques',
@@ -40,8 +30,8 @@ const TIPOS_TRABAJO: TipoTrabajoCatalogo[] = [
     CheckboxModule,
     DialogModule,
     InputTextModule,
-    InputTextareaModule,
     TagModule,
+    ExcelFilePickerComponent,
     CatalogoSubbloquesListComponent,
     EditarSubBloqueDialogComponent,
   ],
@@ -54,14 +44,11 @@ export class CatalogoSubbloquesComponent implements OnInit {
   readonly catalogo = signal<CatalogoLista>({ filas: [], trabajos: [] });
   readonly cargando = signal(false);
   readonly guardando = signal(false);
-  readonly tiposTrabajo = TIPOS_TRABAJO;
 
   dialogoEdicion = false;
-  dialogoLeyendas = false;
   dialogoImportacion = false;
   esNuevo = false;
   fila: CatalogoFilaEditable = this.filaVacia();
-  leyendas: Partial<Record<TipoTrabajoCatalogo, string>> = {};
   archivo: File | null = null;
   preview: CatalogoPreview | null = null;
   confirmado = false;
@@ -113,26 +100,14 @@ export class CatalogoSubbloquesComponent implements OnInit {
     this.dialogoEdicion = true;
   }
 
-  abrirLeyendas() {
-    this.leyendas = Object.fromEntries(
-      this.catalogo().trabajos.map((trabajo) => [
-        trabajo.trabajo,
-        trabajo.descripcion,
-      ]),
-    );
-    this.resetPreview();
-    this.dialogoLeyendas = true;
-  }
-
   abrirImportacion() {
     this.archivo = null;
     this.resetPreview();
     this.dialogoImportacion = true;
   }
 
-  seleccionarArchivo(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.archivo = input.files?.[0] ?? null;
+  seleccionarArchivo(archivo: File | null) {
+    this.archivo = archivo;
     this.resetPreview();
   }
 
@@ -163,10 +138,7 @@ export class CatalogoSubbloquesComponent implements OnInit {
     this.cargando.set(true);
     try {
       this.preview = await firstValueFrom(
-        this.servicio.previsualizarCambioCatalogo(
-          this.dialogoLeyendas ? undefined : this.fila,
-          this.dialogoLeyendas ? this.leyendas : undefined,
-        ),
+        this.servicio.previsualizarCambioCatalogo(this.fila, undefined),
       );
       this.confirmado = false;
     } catch {
@@ -238,13 +210,12 @@ export class CatalogoSubbloquesComponent implements OnInit {
           this.servicio.guardarCambioCatalogo(
             this.preview.previewHash,
             this.confirmado,
-            this.dialogoLeyendas ? undefined : this.fila,
-            this.dialogoLeyendas ? this.leyendas : undefined,
+            this.fila,
+            undefined,
           ),
         );
       this.toast.success('Catálogo guardado');
       this.dialogoEdicion = false;
-      this.dialogoLeyendas = false;
       this.dialogoImportacion = false;
       this.resetPreview();
       await this.cargar();

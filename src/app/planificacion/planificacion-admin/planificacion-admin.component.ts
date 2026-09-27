@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -27,7 +26,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
-import { TabViewModule } from 'primeng/tabview';
 import { firstValueFrom, of } from 'rxjs';
 import {
   GenericListComponent,
@@ -58,7 +56,8 @@ import {
   OposicionPickerComponent,
   OposicionPickerOption,
 } from '../../shared/oposicion-picker/oposicion-picker.component';
-import { EnvironmentBadgeComponent } from '../../shared/environment-badge/environment-badge.component';
+import { ExcelFilePickerComponent } from '../../shared/excel-file-picker/excel-file-picker.component';
+import { GRUPO_COMUNIDAD_VALENCIANA, oposiciones } from '../../utils/consts';
 import {
   getFranjaPlanificacionLabel,
   getNivelOposicionLabel,
@@ -98,10 +97,9 @@ const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
     MessageModule,
     ProgressSpinnerModule,
     TagModule,
-    TabViewModule,
     GenericListComponent,
     OposicionPickerComponent,
-    EnvironmentBadgeComponent,
+    ExcelFilePickerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './planificacion-admin.component.html',
@@ -120,9 +118,40 @@ export class PlanificacionAdminComponent
   readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
   readonly getNivelOposicionLabel = getNivelOposicionLabel;
   readonly getFranjaPlanificacionLabel = getFranjaPlanificacionLabel;
+  readonly accesosPlanComun = [
+    { oposicion: Oposicion.VALENCIA_AYUNTAMIENTO, label: 'Valencia' },
+    { oposicion: Oposicion.ALICANTE_CPBA, label: 'Alicante' },
+  ];
+  readonly guardandoAccesoPlanComun = signal<Oposicion | null>(null);
+  readonly imagenesFallidas = signal<Set<Oposicion>>(new Set());
+
+  imagenOposicion(oposicion: Oposicion): string | null {
+    if (this.imagenesFallidas().has(oposicion)) return null;
+    const image =
+      oposicion === Oposicion.GENERAL
+        ? GRUPO_COMUNIDAD_VALENCIANA.image
+        : oposiciones[oposicion]?.image;
+    return image ? `/${image}` : null;
+  }
+
+  marcarImagenFallida(oposicion: Oposicion): void {
+    this.imagenesFallidas.update((actual) => new Set([...actual, oposicion]));
+  }
+
+  iconoOposicion(oposicion: Oposicion): string {
+    return oposicion === Oposicion.GENERAL
+      ? GRUPO_COMUNIDAD_VALENCIANA.icon
+      : (oposiciones[oposicion]?.icon ?? '🔥');
+  }
 
   labelOposicion(op: Oposicion | string | null | undefined): string {
     return getPlanificacionOposicionLabel(op);
+  }
+
+  tienePlanPublicado(variante: VarianteAdmin): boolean {
+    return !!(
+      variante.planificacionMensualId ?? variante.planificacionMensual?.id
+    );
   }
 
   getEstadoSemanaImportacionLabel(
@@ -134,12 +163,6 @@ export class PlanificacionAdminComponent
   oposicionOptions: OposicionPickerOption[] = Object.values(Oposicion).map(
     (value) => ({ value }),
   );
-  private readonly oposicionSuscripcionNuevasOptions =
-    this.oposicionOptions.filter(
-      (option) => option.value !== Oposicion.GENERAL,
-    );
-  oposicionSuscripcionOptions = this.oposicionSuscripcionNuevasOptions;
-  oposicionPlanificacionReglaOptions: OposicionPickerOption[] = [];
   nivelOptions = [
     { label: 'Iniciación', value: NivelOposicion.INICIACION },
     { label: 'Avanzado', value: NivelOposicion.AVANZADO },
@@ -182,73 +205,17 @@ export class PlanificacionAdminComponent
         { label: 'Inactivas', value: false },
       ],
     },
-  ];
-  reglas = signal<ReglaOposicionAdmin[]>([]);
-  dialogoReglaVisible = signal(false);
-  busquedaReglas = signal('');
-  filtrosReglas = signal<
-    Partial<ReglaOposicionAdmin> & { reglaActiva?: boolean }
-  >({});
-  readonly reglaFilters: FilterConfig[] = [
     {
-      key: 'oposicionSuscripcion',
-      label: 'Oposición contratada',
-      type: 'dropdown',
-      options: Object.values(Oposicion)
-        .filter((value) => value !== Oposicion.GENERAL)
-        .map((value) => ({
-          label: getPlanificacionOposicionLabel(value),
-          value,
-        })),
-    },
-    {
-      key: 'oposicionPlanificacion',
-      label: 'Plan de estudio',
-      type: 'dropdown',
-      options: Object.values(Oposicion).map((value) => ({
-        label: getPlanificacionOposicionLabel(value),
-        value,
-      })),
-    },
-    {
-      key: 'reglaActiva',
-      label: 'Estado',
+      key: 'publicada',
+      label: 'Planificación publicada',
       type: 'dropdown',
       options: [
-        { label: 'Activas', value: true },
-        { label: 'Inactivas', value: false },
+        { label: 'Con planificación', value: 'con' },
+        { label: 'Sin planificación', value: 'sin' },
       ],
     },
   ];
-  readonly fetchReglas$ = computed(() => {
-    const busqueda = this.busquedaReglas().trim().toLocaleLowerCase('es');
-    const filtros = this.filtrosReglas();
-    const data = this.reglas().filter(
-      (regla) =>
-        (!filtros.oposicionSuscripcion ||
-          regla.oposicionSuscripcion === filtros.oposicionSuscripcion) &&
-        (!filtros.oposicionPlanificacion ||
-          regla.oposicionPlanificacion === filtros.oposicionPlanificacion) &&
-        (filtros.reglaActiva === undefined ||
-          regla.activa === filtros.reglaActiva) &&
-        (!busqueda ||
-          [regla.oposicionSuscripcion, regla.oposicionPlanificacion].some(
-            (oposicion) =>
-              getPlanificacionOposicionLabel(oposicion)
-                .toLocaleLowerCase('es')
-                .includes(busqueda),
-          )),
-    );
-    return of({
-      data,
-      pagination: {
-        skip: 0,
-        take: data.length,
-        searchTerm: busqueda,
-        count: data.length,
-      },
-    });
-  });
+  reglas = signal<ReglaOposicionAdmin[]>([]);
   planificacionesMensuales = signal<PlanificacionMensual[]>([]);
   cargando = signal(false);
   error = signal<string | null>(null);
@@ -277,7 +244,7 @@ export class PlanificacionAdminComponent
   );
   codigoImportacionSeleccionado = signal<string | null>(null);
   planificacionDestinoImportacion = signal<number | null>(null);
-  activeTabIndex = 0;
+  dialogoImportacionVisible = signal(false);
   private abrirVarianteDesdeRutaPendiente = true;
 
   varianteForm = this.fb.group({
@@ -290,22 +257,13 @@ export class PlanificacionAdminComponent
     activa: [true],
   });
 
-  reglaForm = this.fb.group({
-    id: [null as number | null],
-    oposicionSuscripcion: [null as Oposicion | null, Validators.required],
-    oposicionPlanificacion: [null as Oposicion | null, Validators.required],
-    activa: [true],
-  });
-
   constructor() {
     super();
-    this.reglaForm.controls.oposicionSuscripcion.valueChanges
-      .pipe(takeUntilDestroyed())
-      .subscribe((oposicion) => this.actualizarDestinosRegla(oposicion));
-    this.actualizarDestinosRegla(null);
     this.fetchItems$ = computed(() => {
       const { skip, take, searchTerm, where } = this.pagination();
-      const filtros = (where ?? {}) as Partial<VarianteAdmin>;
+      const filtros = (where ?? {}) as Partial<VarianteAdmin> & {
+        publicada?: string;
+      };
       const busqueda = searchTerm.trim().toLocaleLowerCase('es');
       const coincidencias = this.variantes().filter(
         (variante) =>
@@ -314,6 +272,8 @@ export class PlanificacionAdminComponent
           (!filtros.franja || variante.franja === filtros.franja) &&
           (filtros.activa === undefined ||
             variante.activa === filtros.activa) &&
+          (filtros.publicada !== 'con' || this.tienePlanPublicado(variante)) &&
+          (filtros.publicada !== 'sin' || !this.tienePlanPublicado(variante)) &&
           (!busqueda ||
             [
               variante.codigo,
@@ -334,9 +294,6 @@ export class PlanificacionAdminComponent
 
   override ngOnInit(): void {
     super.ngOnInit();
-    if (this.route.snapshot.queryParamMap.get('tab') === 'variantes') {
-      this.activeTabIndex = 0;
-    }
     const codigos = this.route.snapshot.queryParamMap
       .getAll('codigosHoja')
       .flatMap((codigo) => codigo.split(','))
@@ -349,7 +306,7 @@ export class PlanificacionAdminComponent
       );
     }
     if (this.route.snapshot.queryParamMap.get('paso') === 'destino') {
-      this.activeTabIndex = 2;
+      this.dialogoImportacionVisible.set(true);
     }
     this.varianteForm.valueChanges.subscribe(() => {
       this.actualizarCodigoCanonico();
@@ -407,6 +364,74 @@ export class PlanificacionAdminComponent
     }
   }
 
+  planComunActivo(oposicion: Oposicion): boolean {
+    return this.reglas().some(
+      (regla) =>
+        regla.oposicionSuscripcion === oposicion &&
+        regla.oposicionPlanificacion === Oposicion.GENERAL &&
+        regla.activa,
+    );
+  }
+
+  async cambiarAccesoPlanComun(
+    oposicion: Oposicion,
+    activa: boolean,
+  ): Promise<void> {
+    if (this.guardandoAccesoPlanComun()) return;
+    const regla = this.reglas().find(
+      (item) =>
+        item.oposicionSuscripcion === oposicion &&
+        item.oposicionPlanificacion === Oposicion.GENERAL,
+    );
+    if (regla?.activa === activa) return;
+    const reglasAnteriores = this.reglas();
+    this.guardandoAccesoPlanComun.set(oposicion);
+    this.reglas.update((actual) =>
+      regla
+        ? actual.map((item) => (item === regla ? { ...item, activa } : item))
+        : [
+            ...actual,
+            {
+              oposicionSuscripcion: oposicion,
+              oposicionPlanificacion: Oposicion.GENERAL,
+              activa,
+            },
+          ],
+    );
+    try {
+      if (regla?.id) {
+        await firstValueFrom(
+          this.autoasignacionService.actualizarRegla$(regla.id, { activa }),
+        );
+      } else if (activa) {
+        await firstValueFrom(
+          this.autoasignacionService.crearRegla$({
+            oposicionSuscripcion: oposicion,
+            oposicionPlanificacion: Oposicion.GENERAL,
+            activa: true,
+          }),
+        );
+      }
+      await this.cargarTodo();
+      this.toast.success('Acceso al plan común actualizado');
+    } catch (error) {
+      this.reglas.set(reglasAnteriores);
+      this.toast.error(
+        this.mensajeErrorImportacion(
+          error,
+          'No se pudo cambiar el acceso al plan común',
+        ),
+      );
+      await this.cargarTodo();
+    } finally {
+      this.guardandoAccesoPlanComun.set(null);
+    }
+  }
+
+  abrirImportacionSemanas(): void {
+    this.dialogoImportacionVisible.set(true);
+  }
+
   editarVariante(v: VarianteAdmin): void {
     this.varianteForm.patchValue({
       id: v.id ?? null,
@@ -445,7 +470,9 @@ export class PlanificacionAdminComponent
     });
   }
 
-  onFiltersChanged(where?: Partial<VarianteAdmin>): void {
+  onFiltersChanged(
+    where?: Partial<VarianteAdmin> & { publicada?: string },
+  ): void {
     this.updatePaginationSafe({ where, skip: 0 });
   }
 
@@ -570,114 +597,6 @@ export class PlanificacionAdminComponent
     });
   }
 
-  editarRegla(r: ReglaOposicionAdmin): void {
-    this.oposicionSuscripcionOptions =
-      r.oposicionSuscripcion === Oposicion.GENERAL
-        ? this.oposicionOptions
-        : this.oposicionSuscripcionNuevasOptions;
-    this.reglaForm.patchValue({
-      id: r.id ?? null,
-      oposicionSuscripcion: r.oposicionSuscripcion,
-      oposicionPlanificacion: r.oposicionPlanificacion,
-      activa: r.activa,
-    });
-    this.oposicionPlanificacionReglaOptions = this.oposicionOptions.filter(
-      (option) => option.value === r.oposicionPlanificacion,
-    );
-    // La pareja de oposiciones identifica la regla histórica; solo su estado
-    // puede cambiar después de crearla.
-    this.reglaForm.controls.oposicionSuscripcion.disable({ emitEvent: false });
-    this.reglaForm.controls.oposicionPlanificacion.disable({
-      emitEvent: false,
-    });
-    this.dialogoReglaVisible.set(true);
-  }
-
-  abrirNuevaRegla(): void {
-    this.nuevaRegla();
-    this.dialogoReglaVisible.set(true);
-  }
-
-  cerrarDialogoRegla(): void {
-    this.dialogoReglaVisible.set(false);
-    this.nuevaRegla();
-  }
-
-  buscarRegla(event: Event): void {
-    this.busquedaReglas.set((event.target as HTMLInputElement).value);
-  }
-
-  onReglaFiltersChanged(
-    where?: Partial<ReglaOposicionAdmin> & { reglaActiva?: boolean },
-  ): void {
-    this.filtrosReglas.set(where ?? {});
-  }
-
-  nuevaRegla(): void {
-    this.oposicionSuscripcionOptions = this.oposicionSuscripcionNuevasOptions;
-    this.reglaForm.controls.oposicionSuscripcion.enable({ emitEvent: false });
-    this.reglaForm.reset({
-      id: null,
-      oposicionSuscripcion: null,
-      oposicionPlanificacion: null,
-      activa: true,
-    });
-    this.actualizarDestinosRegla(null);
-  }
-
-  actualizarDestinosRegla(oposicion: Oposicion | null): void {
-    const control = this.reglaForm.controls.oposicionPlanificacion;
-    this.oposicionPlanificacionReglaOptions = this.oposicionOptions.filter(
-      (option) =>
-        option.value === oposicion ||
-        (option.value === Oposicion.GENERAL &&
-          (oposicion === Oposicion.VALENCIA_AYUNTAMIENTO ||
-            oposicion === Oposicion.ALICANTE_CPBA)),
-    );
-    if (
-      !this.oposicionPlanificacionReglaOptions.some(
-        (option) => option.value === control.value,
-      )
-    ) {
-      control.setValue(null);
-    }
-    if (oposicion) control.enable({ emitEvent: false });
-    else control.disable({ emitEvent: false });
-  }
-
-  async guardarRegla(): Promise<void> {
-    if (this.reglaForm.invalid) {
-      this.toast.error('Revisa los campos de la regla');
-      return;
-    }
-    const r = this.reglaForm.getRawValue();
-    try {
-      if (r.id) {
-        await firstValueFrom(
-          this.autoasignacionService.actualizarRegla$(r.id, {
-            activa: !!r.activa,
-          }),
-        );
-        this.toast.success('Regla actualizada');
-      } else {
-        await firstValueFrom(
-          this.autoasignacionService.crearRegla$({
-            oposicionSuscripcion: r.oposicionSuscripcion as Oposicion,
-            oposicionPlanificacion: r.oposicionPlanificacion as Oposicion,
-            activa: !!r.activa,
-          }),
-        );
-        this.toast.success('Regla creada');
-      }
-      this.cerrarDialogoRegla();
-      await this.cargarTodo();
-    } catch (error) {
-      this.toast.error(
-        this.mensajeErrorImportacion(error, 'No se pudo guardar la regla'),
-      );
-    }
-  }
-
   /** Toggle rápido de activa/inactiva desde la tabla. */
   async actualizarVarianteActiva(v: VarianteAdmin): Promise<void> {
     if (!v.id) return;
@@ -770,9 +689,12 @@ export class PlanificacionAdminComponent
     }
   }
 
-  seleccionarArchivoImportacion(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
+  seleccionarArchivoImportacion(selected: File | null | Event): void {
+    const input =
+      selected instanceof File || selected === null
+        ? null
+        : (selected.target as HTMLInputElement);
+    const file = input ? (input.files?.[0] ?? null) : (selected as File | null);
     this.previewImportacion.set(null);
     this.previewCarga.set(null);
     this.errorCarga.set(null);
@@ -790,7 +712,7 @@ export class PlanificacionAdminComponent
     }
     if (!/\.(xlsx|xls)$/i.test(file.name) || file.size > 10 * 1024 * 1024) {
       this.archivoImportacion.set(null);
-      input.value = '';
+      if (input) input.value = '';
       this.toast.error('Selecciona un Excel .xlsx o .xls de hasta 10 MB');
       return;
     }

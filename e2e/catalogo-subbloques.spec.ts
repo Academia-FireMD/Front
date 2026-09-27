@@ -89,7 +89,7 @@ test('catálogo: buscador flexible y paginador visible con muchas filas en escri
     .getByRole('searchbox', { name: 'Buscar subbloques' })
     .boundingBox();
   const actions = await page
-    .getByRole('button', { name: 'Tipos de trabajo' })
+    .getByRole('button', { name: 'Importar catálogo' })
     .boundingBox();
   expect(search?.width).toBeGreaterThan(480);
   expect(actions?.height ?? 0).toBeLessThan(44);
@@ -127,7 +127,7 @@ for (const viewport of [
       .getByRole('searchbox', { name: 'Buscar subbloques' })
       .boundingBox();
     const accion = await page
-      .getByRole('button', { name: 'Importar subbloques' })
+      .getByRole('button', { name: 'Importar catálogo' })
       .boundingBox();
     const filtro = await page
       .getByRole('button', { name: 'Filtros' })
@@ -150,9 +150,9 @@ for (const viewport of [
     await page.screenshot({
       path: testInfo.outputPath(`catalogo-overview-${viewport.width}.png`),
     });
-    await page.getByRole('button', { name: 'Importar subbloques' }).click();
+    await page.getByRole('button', { name: 'Importar catálogo' }).click();
     const dialogo = page.getByRole('dialog', {
-      name: 'Importar subbloques',
+      name: 'Importar catálogo',
     });
     await dialogo.locator('input[type="file"]').setInputFiles({
       name: 'catalogo.xlsx',
@@ -171,13 +171,13 @@ for (const viewport of [
     );
     expect(aplicaciones()).toBe(0);
     await expect(
-      dialogo.getByRole('button', { name: 'Importar', exact: true }),
+      dialogo.getByRole('button', { name: 'Confirmar importación' }),
     ).toBeDisabled();
     await dialogo
       .getByText('Confirmo los cambios en las fichas indicadas.')
       .click();
     await dialogo
-      .getByRole('button', { name: 'Importar', exact: true })
+      .getByRole('button', { name: 'Confirmar importación' })
       .click();
     await expect.poll(aplicaciones).toBe(1);
     expect(
@@ -187,6 +187,52 @@ for (const viewport of [
     ).toBe(false);
   });
 }
+
+test('catálogo: no se cierra ni cambia el archivo durante la aplicación', async ({
+  page,
+}) => {
+  await prepararPagina(page);
+  let liberarAplicacion!: () => void;
+  const aplicacionPendiente = new Promise<void>((resolve) => {
+    liberarAplicacion = resolve;
+  });
+  await page.route('**/catalogo-contenido/importar/apply', async (route) => {
+    await aplicacionPendiente;
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: '{}',
+    });
+  });
+
+  await page.getByRole('button', { name: 'Importar catálogo' }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Importar catálogo' });
+  await dialogo.locator('input[type="file"]').setInputFiles({
+    name: 'catalogo.xlsx',
+    mimeType:
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from('excel-de-prueba'),
+  });
+  await dialogo.getByRole('button', { name: 'Revisar Excel' }).click();
+  await dialogo
+    .getByText('Confirmo los cambios en las fichas indicadas.')
+    .click();
+  const solicitud = page.waitForRequest('**/catalogo-contenido/importar/apply');
+  await dialogo.getByRole('button', { name: 'Confirmar importación' }).click();
+  await solicitud;
+  try {
+    await expect(dialogo.locator('input[type="file"]')).toBeDisabled();
+    await expect(
+      dialogo.getByRole('button', { name: 'Cancelar' }),
+    ).toBeDisabled();
+    await expect(dialogo.locator('.p-dialog-header-close')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(dialogo).toBeVisible();
+  } finally {
+    liberarAplicacion();
+  }
+  await expect(dialogo).toBeHidden();
+});
 
 test('catálogo: filtra y abre el editor Markdown compartido', async ({
   page,

@@ -1,630 +1,512 @@
 <p-confirmDialog />
-<app-environment-badge />
-
-<p-tabView
-  styleClass="planificacion-admin-tabs"
-  [(activeIndex)]="activeTabIndex"
-  [scrollable]="true"
->
-  <p-tabPanel header="Variantes" leftIcon="pi pi-th-large">
-    <app-generic-list
-      class="variantes-list"
-      [fetchItems$]="fetchItems$"
-      [itemTemplate]="varianteItemTemplate"
-      [filters]="filters"
-      [autoItemHeight]="true"
-      (filtersChanged)="onFiltersChanged($event)"
-      (onItemClick)="editarVariante($any($event))"
-    >
-      <div left-actions>
-        <p-iconField iconPosition="left">
-          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-          <input
-            pInputText
-            type="search"
-            name="buscarVariantes"
-            autocomplete="off"
-            class="variantes-search"
-            placeholder="Buscar variantes…"
-            aria-label="Buscar variantes"
-            [value]="pagination().searchTerm"
-            (input)="buscarVariante($event)"
-          />
-        </p-iconField>
-      </div>
-      <div right-actions>
-        <p-button
-          [label]="
-            viewportService.screenWidth === 'xs' ? 'Nuevo' : 'Nueva variante'
-          "
-          icon="pi pi-plus"
-          ariaLabel="Nueva variante"
-          (click)="abrirNuevaVariante()"
+<section class="plan-comun" aria-labelledby="plan-comun-titulo">
+  <div>
+    <h2 id="plan-comun-titulo">Acceso al plan común valenciano</h2>
+    <p>
+      Permite elegir el plan común además del específico. No modifica las
+      suscripciones.
+    </p>
+  </div>
+  <div class="plan-comun__opciones" aria-live="polite">
+    @for (acceso of accesosPlanComun; track acceso.oposicion) {
+      <div class="plan-comun__opcion">
+        <label [for]="'plan-comun-' + acceso.oposicion">{{
+          acceso.label
+        }}</label>
+        <p-inputSwitch
+          [inputId]="'plan-comun-' + acceso.oposicion"
+          [ngModel]="planComunActivo(acceso.oposicion)"
+          [disabled]="guardandoAccesoPlanComun() !== null"
+          (onChange)="cambiarAccesoPlanComun(acceso.oposicion, $event.checked)"
         />
       </div>
-      <div empty-template class="text-center p-4">
-        No hay variantes que coincidan con la búsqueda.
-      </div>
-    </app-generic-list>
+    }
+  </div>
+</section>
 
-    <ng-template #varianteItemTemplate let-v>
-      <div class="flex flex-row align-items-center variante-list-item">
-        <div
-          class="flex flex-column py-2 col-9 left-side truncate-flex-content"
-        >
-          <div class="text-lg font-medium flex gap-2 align-items-center">
-            <strong class="identifier">{{ v.codigo }}</strong>
-            <p-tag
-              class="hidden md:block"
-              [value]="v.activa ? 'Activa' : 'Inactiva'"
-              [severity]="v.activa ? 'success' : 'secondary'"
-            />
-          </div>
-          <span
-            class="descripcion"
-            [title]="
-              labelOposicion(v.oposicion) +
-              ' · ' +
-              getNivelOposicionLabel(v.nivel) +
-              ' · ' +
-              getFranjaPlanificacionLabel(v.franja)
-            "
-          >
-            {{ labelOposicion(v.oposicion) }} ·
-            {{ getNivelOposicionLabel(v.nivel) }} ·
-            {{ getFranjaPlanificacionLabel(v.franja) }}
-          </span>
-        </div>
-        <div
-          class="right-side col-3 flex align-items-center justify-content-end"
-        >
-          <div class="admin-controls">
-            <span
-              class="variant-release text-xs hidden md:block unbreakable-text"
-              [title]="
-                v.planificacionMensual?.identificador ?? 'Sin plan publicado'
-              "
-            >
-              @if (v.planificacionMensual) {
-                {{ v.planificacionMensual.identificador }}
-                v{{ v.planificacionMensual.version ?? 1 }}
-              } @else {
-                Sin plan
-              }
-            </span>
-            <span
-              class="variant-switch-target"
-              (click)="$event.stopPropagation(); actualizarVarianteActiva(v)"
-            >
-              <p-inputSwitch
-                [ngModel]="v.activa"
-                [ariaLabel]="'Cambiar estado de ' + v.codigo"
-                (click)="$event.stopPropagation()"
-                (onChange)="actualizarVarianteActiva(v)"
-              />
-            </span>
-            <p-button
-              icon="pi pi-pencil"
-              [text]="true"
-              severity="secondary"
-              size="small"
-              [ariaLabel]="'Editar variante ' + v.codigo"
-              (click)="$event.stopPropagation(); editarVariante(v)"
-            />
-          </div>
-        </div>
-      </div>
-    </ng-template>
-
-    <p-dialog
-      [header]="varianteForm.value.id ? 'Editar variante' : 'Nueva variante'"
-      [visible]="dialogoVarianteVisible()"
-      (visibleChange)="!$event && cerrarDialogoVariante()"
-      [modal]="true"
-      [draggable]="false"
-      [resizable]="false"
-      [breakpoints]="{ '640px': 'calc(100vw - 1rem)' }"
-      [style]="{ width: '36rem', maxWidth: 'calc(100vw - 1rem)' }"
-      [contentStyle]="{ maxHeight: 'calc(100vh - 10rem)', overflow: 'auto' }"
-      appendTo="body"
-    >
-      <form [formGroup]="varianteForm" class="flex flex-column gap-2">
-        <label for="variante-codigo">Código (calculado) *</label>
+<section class="planes-perfil" aria-label="Planes por perfil">
+  <app-generic-list
+    class="variantes-list"
+    [fetchItems$]="fetchItems$"
+    [itemTemplate]="varianteItemTemplate"
+    [filters]="filters"
+    [autoItemHeight]="true"
+    (filtersChanged)="onFiltersChanged($event)"
+    (onItemClick)="editarVariante($any($event))"
+  >
+    <div left-actions>
+      <p-iconField iconPosition="left">
+        <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
         <input
           pInputText
-          id="variante-codigo"
-          formControlName="codigo"
-          placeholder="Se genera al completar la variante"
-          readonly
+          type="search"
+          name="buscarVariantes"
+          autocomplete="off"
+          class="variantes-search"
+          placeholder="Buscar plan por perfil…"
+          aria-label="Buscar plan por perfil"
+          [value]="pagination().searchTerm"
+          (input)="buscarVariante($event)"
         />
-        <small class="text-500"
-          >Se genera automáticamente a partir de la oposición, el nivel y las
-          horas de estudio.</small
-        >
-        <label for="variante-oposicion">Plan de estudio *</label>
-        <app-oposicion-picker
-          context="planificacion"
-          presentation="field"
-          [multiple]="false"
-          [opciones]="oposicionOptions"
-          inputId="variante-oposicion"
-          formControlName="oposicion"
-        />
-        <label for="variante-nivel">Nivel *</label>
-        <p-dropdown
-          [options]="nivelOptions"
-          formControlName="nivel"
-          optionLabel="label"
-          optionValue="value"
-          [disabled]="varianteForm.controls.nivel.disabled"
-          inputId="variante-nivel"
-          styleClass="w-full"
-        ></p-dropdown>
-        <label for="variante-franja">Horas disponibles para el estudio *</label>
-        <p-dropdown
-          [options]="franjaOptions"
-          formControlName="franja"
-          optionLabel="label"
-          optionValue="value"
-          [disabled]="varianteForm.controls.franja.disabled"
-          inputId="variante-franja"
-          styleClass="w-full"
-        ></p-dropdown>
-        <small class="text-500"
-          >Únicamente horas de estudio, no incluye el tiempo dedicado a la
-          preparación física.</small
-        >
-        <label for="variante-release">Release de planificación mensual</label>
-        <p-dropdown
-          [options]="planificacionOptions"
-          formControlName="planificacionMensualId"
-          optionLabel="label"
-          optionValue="value"
-          inputId="variante-release"
-          [showClear]="true"
-          placeholder="Sin release asignada"
-          styleClass="w-full"
-        ></p-dropdown>
-        @if (esPlanSeleccionadoBorrador) {
-          <p-message
-            severity="info"
-            [text]="
-              varianteForm.value.id
-                ? 'Este borrador debe validarse y publicarse antes de asignarlo.'
-                : 'Crea primero la variante sin plan; después podrás publicar y asignar este borrador.'
-            "
-          ></p-message>
+      </p-iconField>
+    </div>
+    <div right-actions>
+      <p-button
+        label="Importar semanas"
+        icon="pi pi-upload"
+        ariaLabel="Importar semanas"
+        [outlined]="true"
+        styleClass="autoasignacion-action"
+        (click)="abrirImportacionSemanas()"
+      />
+      <p-button
+        label="Nueva variante"
+        icon="pi pi-plus"
+        ariaLabel="Nueva variante"
+        styleClass="autoasignacion-action"
+        (click)="abrirNuevaVariante()"
+      />
+    </div>
+    <div empty-template class="text-center p-4">
+      No hay planes por perfil que coincidan con la búsqueda.
+    </div>
+  </app-generic-list>
+
+  <ng-template #varianteItemTemplate let-v>
+    <div class="flex flex-row align-items-center variante-list-item">
+      <span
+        class="variante-logo"
+        [attr.aria-label]="labelOposicion(v.oposicion)"
+      >
+        @if (imagenOposicion(v.oposicion); as imagen) {
+          <img
+            [src]="imagen"
+            [alt]="labelOposicion(v.oposicion)"
+            (error)="marcarImagenFallida(v.oposicion)"
+          />
+        } @else {
+          <span aria-hidden="true">{{ iconoOposicion(v.oposicion) }}</span>
         }
-        <div class="flex align-items-center gap-2">
-          <p-inputSwitch
-            inputId="variante-activa"
-            formControlName="activa"
-          ></p-inputSwitch>
-          <label for="variante-activa">Activa</label>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <p-button
-            label="Guardar"
-            icon="pi pi-check"
-            [disabled]="esPlanSeleccionadoBorrador"
-            (click)="guardarVariante()"
-          ></p-button>
-          @if (varianteForm.value.id && esPlanSeleccionadoBorrador) {
-            <p-button
-              label="Publicar y asignar"
-              icon="pi pi-send"
-              severity="warning"
-              (click)="publicarPlanSeleccionado()"
-            ></p-button>
-          }
-          <p-button
-            label="Cancelar"
-            styleClass="p-button-text"
-            (click)="cerrarDialogoVariante()"
-          ></p-button>
-        </div>
-      </form>
-    </p-dialog>
-  </p-tabPanel>
-
-  <p-tabPanel header="Opciones por suscripción" leftIcon="pi pi-sitemap">
-    <p class="text-color-secondary mb-3">
-      Indica qué plan puede elegir cada alumno según la oposición que tiene
-      contratada. El plan común de Comunidad Valenciana puede ofrecerse con
-      Valencia o Alicante; no es otra suscripción. Aquí no se publican
-      calendarios.
-    </p>
-    <app-generic-list
-      class="reglas-list"
-      [fetchItems$]="fetchReglas$"
-      [itemTemplate]="reglaItemTemplate"
-      [filters]="reglaFilters"
-      [showPagination]="false"
-      [autoItemHeight]="true"
-      (filtersChanged)="onReglaFiltersChanged($event)"
-      (onItemClick)="editarRegla($any($event))"
-    >
-      <div left-actions>
-        <p-iconField iconPosition="left">
-          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
-          <input
-            pInputText
-            type="search"
-            name="buscarReglas"
-            autocomplete="off"
-            class="variantes-search"
-            placeholder="Buscar reglas…"
-            aria-label="Buscar reglas"
-            [value]="busquedaReglas()"
-            (input)="buscarRegla($event)"
-          />
-        </p-iconField>
-      </div>
-      <div right-actions>
-        <p-button
-          [label]="
-            viewportService.screenWidth === 'xs' ? 'Nueva' : 'Nueva regla'
-          "
-          icon="pi pi-plus"
-          ariaLabel="Nueva regla"
-          (click)="abrirNuevaRegla()"
-        />
-      </div>
-      <div empty-template class="text-center p-4">
-        No hay reglas que coincidan con la búsqueda.
-      </div>
-    </app-generic-list>
-
-    <ng-template #reglaItemTemplate let-r>
-      <div class="flex flex-row align-items-center regla-list-item">
-        <div class="flex flex-column py-2 left-side truncate-flex-content">
-          <div class="flex gap-2 align-items-center">
-            <strong
-              class="identifier"
-              [title]="labelOposicion(r.oposicionSuscripcion)"
-            >
-              {{ labelOposicion(r.oposicionSuscripcion) }}
-            </strong>
-            <span aria-hidden="true">→</span>
-            <span
-              class="regla-destino"
-              [title]="labelOposicion(r.oposicionPlanificacion)"
-            >
-              {{ labelOposicion(r.oposicionPlanificacion) }}
-            </span>
-          </div>
-        </div>
-        <div
-          class="right-side flex align-items-center justify-content-end gap-2"
-        >
+      </span>
+      <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
+        <div class="text-lg font-medium flex gap-2 align-items-center">
+          <strong class="identifier">{{ labelOposicion(v.oposicion) }}</strong>
           <p-tag
-            [value]="r.activa ? 'Activa' : 'Inactiva'"
-            [severity]="r.activa ? 'success' : 'secondary'"
+            class="hidden md:block"
+            [value]="v.activa ? 'Activa' : 'Inactiva'"
+            [severity]="v.activa ? 'success' : 'secondary'"
           />
+        </div>
+        <span
+          class="descripcion"
+          [title]="
+            labelOposicion(v.oposicion) +
+            ' · ' +
+            getNivelOposicionLabel(v.nivel) +
+            ' · ' +
+            getFranjaPlanificacionLabel(v.franja)
+          "
+        >
+          {{ v.codigo }} · {{ getNivelOposicionLabel(v.nivel) }} ·
+          {{ getFranjaPlanificacionLabel(v.franja) }}
+        </span>
+        <small class="variant-release-mobile">
+          {{
+            v.planificacionMensual
+              ? "Publicada: " + v.planificacionMensual.identificador
+              : tienePlanPublicado(v)
+                ? "Planificación publicada"
+                : "Sin planificación publicada"
+          }}
+        </small>
+      </div>
+      <div class="right-side col-3 flex align-items-center justify-content-end">
+        <div class="admin-controls">
+          <span
+            class="variant-release text-xs hidden md:block unbreakable-text"
+            [title]="
+              v.planificacionMensual?.identificador ?? 'Sin plan publicado'
+            "
+          >
+            @if (v.planificacionMensual) {
+              {{ v.planificacionMensual.identificador }}
+              v{{ v.planificacionMensual.version ?? 1 }}
+            } @else if (tienePlanPublicado(v)) {
+              Planificación publicada
+            } @else {
+              Sin planificación publicada
+            }
+          </span>
+          <span
+            class="variant-switch-target"
+            (click)="$event.stopPropagation()"
+          >
+            <p-inputSwitch
+              [ngModel]="v.activa"
+              [ariaLabel]="'Cambiar estado de ' + v.codigo"
+              (click)="$event.stopPropagation()"
+              (onChange)="actualizarVarianteActiva(v)"
+            />
+          </span>
           <p-button
             icon="pi pi-pencil"
             [text]="true"
             severity="secondary"
-            [ariaLabel]="
-              'Editar regla ' +
-              labelOposicion(r.oposicionSuscripcion) +
-              ' a ' +
-              labelOposicion(r.oposicionPlanificacion)
-            "
-            (click)="$event.stopPropagation(); editarRegla(r)"
+            size="small"
+            [ariaLabel]="'Editar variante ' + v.codigo"
+            (click)="$event.stopPropagation(); editarVariante(v)"
           />
         </div>
       </div>
-    </ng-template>
+    </div>
+  </ng-template>
 
-    <p-dialog
-      [header]="reglaForm.value.id ? 'Editar regla' : 'Nueva regla'"
-      [visible]="dialogoReglaVisible()"
-      (visibleChange)="!$event && cerrarDialogoRegla()"
-      [modal]="true"
-      [draggable]="false"
-      [resizable]="false"
-      [breakpoints]="{ '640px': 'calc(100vw - 1rem)' }"
-      [style]="{ width: '36rem', maxWidth: 'calc(100vw - 1rem)' }"
-      [contentStyle]="{ maxHeight: 'calc(100vh - 10rem)', overflow: 'auto' }"
-      appendTo="body"
-    >
-      <form [formGroup]="reglaForm" class="flex flex-column gap-2">
-        <label for="regla-oposicion-suscripcion">Oposición contratada *</label>
-        <app-oposicion-picker
-          context="planificacion"
-          presentation="field"
-          [multiple]="false"
-          [opciones]="oposicionSuscripcionOptions"
-          inputId="regla-oposicion-suscripcion"
-          formControlName="oposicionSuscripcion"
-        />
-        <label for="regla-oposicion-planificacion"
-          >Plan de estudio disponible *</label
-        >
-        <app-oposicion-picker
-          context="planificacion"
-          presentation="field"
-          [multiple]="false"
-          [opciones]="oposicionPlanificacionReglaOptions"
-          inputId="regla-oposicion-planificacion"
-          [placeholder]="
-            reglaForm.controls.oposicionSuscripcion.value
-              ? 'Selecciona plan de estudio'
-              : 'Elige antes la oposición contratada'
-          "
-          ariaDescribedBy="regla-plan-ayuda"
-          formControlName="oposicionPlanificacion"
-        />
-        <small id="regla-plan-ayuda" aria-live="polite">
-          {{
-            reglaForm.controls.oposicionSuscripcion.value
-              ? "Solo se muestran planes compatibles con la oposición contratada."
-              : "Elige una oposición contratada para ver los planes disponibles."
-          }}
-        </small>
-        <div class="flex align-items-center gap-2">
-          <p-inputSwitch inputId="regla-activa" formControlName="activa" />
-          <label for="regla-activa">Activa</label>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <p-button
-            label="Guardar"
-            icon="pi pi-check"
-            [disabled]="reglaForm.invalid"
-            (click)="guardarRegla()"
-          />
-          <p-button
-            label="Cancelar"
-            [text]="true"
-            (click)="cerrarDialogoRegla()"
-          />
-        </div>
-      </form>
-    </p-dialog>
-  </p-tabPanel>
-
-  <p-tabPanel header="Cargar semanas" leftIcon="pi pi-file-excel">
-    <section
-      class="import-panel carga-directa"
-      aria-label="Cargar semanas en borrador"
-    >
-      <div class="import-panel__header">
-        <div>
-          <h3>Cargar semanas desde Excel</h3>
-          <p>
-            Sube el archivo, revisa qué cambiará por oposición y semana y guarda
-            todas las hojas en borrador de una sola vez.
-          </p>
-          <p>
-            <strong>Los alumnos no verán estos cambios</strong> hasta que
-            publiques y asignes la planificación por separado. Una semana vacía
-            o ausente no modifica el calendario.
-          </p>
-        </div>
-      </div>
-      <div class="import-actions">
-        <input
-          #cargaFileInput
-          type="file"
-          accept=".xlsx,.xls"
-          class="sr-only"
-          aria-label="Archivo Excel con semanas"
-          (change)="seleccionarArchivoImportacion($event)"
-        />
-        <p-button
-          label="Seleccionar Excel"
-          icon="pi pi-folder-open"
-          severity="secondary"
-          (onClick)="cargaFileInput.click()"
-        />
-        <span class="import-actions__filename">{{
-          archivoImportacion()?.name ?? "Ningún archivo seleccionado"
-        }}</span>
-        <p-button
-          label="Previsualizar cambios"
-          icon="pi pi-eye"
-          [loading]="previsualizandoImportacion()"
-          [disabled]="!archivoImportacion() || aplicandoImportacion()"
-          (onClick)="previsualizarCargaSemanas()"
-        />
-      </div>
-
-      @if (errorCarga(); as mensaje) {
-        <p-message
-          severity="error"
-          [text]="mensaje"
-          styleClass="w-full"
-          role="alert"
-        />
-      }
-
-      @if (previewImportacion(); as invalidacion) {
-        <div role="alert" class="overwrite-warning">
-          @if (
-            invalidacion.totales.bloques === 0 &&
-            invalidacion.totales.entrenamientos === 0 &&
-            invalidacion.totales.errores === 0
-          ) {
-            <strong
-              >El Excel no contiene semanas con actividades. Añade al menos una
-              actividad y vuelve a previsualizar. No se ha guardado
-              nada.</strong
-            >
-          } @else {
-            <strong
-              >El Excel contiene errores; no se ha guardado ninguna
-              hoja.</strong
-            >
-          }
-          @for (hoja of invalidacion.hojas; track hoja.hoja) {
-            @for (error of hoja.errores; track $index) {
-              <p>
-                {{ hoja.hoja }} · Semana {{ error.semana ?? "—" }} ·
-                {{ error.dia ?? "—" }} · Fila {{ error.filaExcel ?? "—" }} ·
-                {{ error.campo ?? "actividad" }}: {{ error.mensaje }}
-              </p>
-            }
-          }
-        </div>
-      }
-
-      @if (previewCarga(); as preview) {
+  <p-dialog
+    [header]="varianteForm.value.id ? 'Editar variante' : 'Nueva variante'"
+    [visible]="dialogoVarianteVisible()"
+    (visibleChange)="!$event && cerrarDialogoVariante()"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [breakpoints]="{ '640px': 'calc(100vw - 1rem)' }"
+    [style]="{ width: '36rem', maxWidth: 'calc(100vw - 1rem)' }"
+    [contentStyle]="{ maxHeight: 'calc(100vh - 10rem)', overflow: 'auto' }"
+    appendTo="body"
+  >
+    <form [formGroup]="varianteForm" class="flex flex-column gap-2">
+      <label for="variante-codigo">Código (calculado) *</label>
+      <input
+        pInputText
+        id="variante-codigo"
+        formControlName="codigo"
+        placeholder="Se genera al completar la variante"
+        readonly
+      />
+      <small class="text-500"
+        >Se genera automáticamente a partir de la oposición, el nivel y las
+        horas de estudio.</small
+      >
+      <label for="variante-oposicion">Plan de estudio *</label>
+      <app-oposicion-picker
+        context="planificacion"
+        presentation="field"
+        [multiple]="false"
+        [opciones]="oposicionOptions"
+        inputId="variante-oposicion"
+        formControlName="oposicion"
+      />
+      <label for="variante-nivel">Nivel *</label>
+      <p-dropdown
+        [options]="nivelOptions"
+        formControlName="nivel"
+        optionLabel="label"
+        optionValue="value"
+        [disabled]="varianteForm.controls.nivel.disabled"
+        inputId="variante-nivel"
+        styleClass="w-full"
+      ></p-dropdown>
+      <label for="variante-franja">Horas disponibles para el estudio *</label>
+      <p-dropdown
+        [options]="franjaOptions"
+        formControlName="franja"
+        optionLabel="label"
+        optionValue="value"
+        [disabled]="varianteForm.controls.franja.disabled"
+        inputId="variante-franja"
+        styleClass="w-full"
+      ></p-dropdown>
+      <small class="text-500"
+        >Únicamente horas de estudio, no incluye el tiempo dedicado a la
+        preparación física.</small
+      >
+      <label for="variante-release">Planificación mensual</label>
+      <p-dropdown
+        [options]="planificacionOptions"
+        formControlName="planificacionMensualId"
+        optionLabel="label"
+        optionValue="value"
+        inputId="variante-release"
+        [showClear]="true"
+        placeholder="Sin planificación asignada"
+        styleClass="w-full"
+      ></p-dropdown>
+      @if (esPlanSeleccionadoBorrador) {
         <p-message
           severity="info"
-          text="Previsualización: todavía no se ha guardado nada. Revisa las semanas y el destino antes de confirmar."
+          [text]="
+            varianteForm.value.id
+              ? 'Este borrador debe validarse y publicarse antes de asignarlo.'
+              : 'Crea primero la variante sin plan; después podrás publicar y asignar este borrador.'
+          "
+        ></p-message>
+      }
+      <div class="flex align-items-center gap-2">
+        <p-inputSwitch
+          inputId="variante-activa"
+          formControlName="activa"
+        ></p-inputSwitch>
+        <label for="variante-activa">Activa</label>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <p-button
+          label="Guardar"
+          icon="pi pi-check"
+          [disabled]="esPlanSeleccionadoBorrador"
+          (click)="guardarVariante()"
+        ></p-button>
+        @if (varianteForm.value.id && esPlanSeleccionadoBorrador) {
+          <p-button
+            label="Publicar y asignar"
+            icon="pi pi-send"
+            severity="warning"
+            (click)="publicarPlanSeleccionado()"
+          ></p-button>
+        }
+        <p-button
+          label="Cancelar"
+          styleClass="p-button-text"
+          (click)="cerrarDialogoVariante()"
+        ></p-button>
+      </div>
+    </form>
+  </p-dialog>
+</section>
+
+<p-dialog
+  header="Importar semanas"
+  [visible]="dialogoImportacionVisible()"
+  (visibleChange)="
+    !aplicandoImportacion() && dialogoImportacionVisible.set($event)
+  "
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!aplicandoImportacion()"
+  [closeOnEscape]="!aplicandoImportacion()"
+  [style]="{ width: '100vw', height: '100vh', maxHeight: '100vh', margin: '0' }"
+  [contentStyle]="{ height: 'calc(100vh - 5rem)', overflow: 'auto' }"
+  styleClass="asistente-semanas"
+  appendTo="body"
+>
+  <section
+    class="import-panel carga-directa"
+    aria-label="Cargar semanas en borrador"
+  >
+    <div class="import-panel__header">
+      <div>
+        <h3>Selecciona y revisa el Excel</h3>
+        <p>
+          Revisa los cambios por oposición y semana antes de guardarlos.
+          <strong>Solo se guardan en borrador:</strong> los alumnos no verán
+          nada hasta publicar y asignar. Las semanas vacías o ausentes no
+          modifican el calendario.
+        </p>
+      </div>
+    </div>
+    <div class="import-actions">
+      <app-excel-file-picker
+        [file]="archivoImportacion()"
+        ariaLabel="Archivo Excel con semanas"
+        [disabled]="previsualizandoImportacion() || aplicandoImportacion()"
+        (fileSelected)="seleccionarArchivoImportacion($event)"
+      />
+      <p-button
+        label="Previsualizar cambios"
+        icon="pi pi-eye"
+        [loading]="previsualizandoImportacion()"
+        [disabled]="!archivoImportacion() || aplicandoImportacion()"
+        (onClick)="previsualizarCargaSemanas()"
+      />
+    </div>
+
+    @if (errorCarga(); as mensaje) {
+      <p-message
+        severity="error"
+        [text]="mensaje"
+        styleClass="w-full"
+        role="alert"
+      />
+    }
+
+    @if (previewImportacion(); as invalidacion) {
+      <div role="alert" class="overwrite-warning">
+        @if (
+          invalidacion.totales.bloques === 0 &&
+          invalidacion.totales.entrenamientos === 0 &&
+          invalidacion.totales.errores === 0
+        ) {
+          <strong
+            >El Excel no contiene semanas con actividades. Añade al menos una
+            actividad y vuelve a previsualizar. No se ha guardado nada.</strong
+          >
+        } @else {
+          <strong
+            >El Excel contiene errores; no se ha guardado ninguna hoja.</strong
+          >
+        }
+        @for (hoja of invalidacion.hojas; track hoja.hoja) {
+          @for (error of hoja.errores; track $index) {
+            <p>
+              {{ hoja.hoja }} · Semana {{ error.semana ?? "—" }} ·
+              {{ error.dia ?? "—" }} · Fila {{ error.filaExcel ?? "—" }} ·
+              {{ error.campo ?? "actividad" }}: {{ error.mensaje }}
+            </p>
+          }
+        }
+      </div>
+    }
+
+    @if (previewCarga(); as preview) {
+      <p-message
+        severity="info"
+        text="Previsualización: todavía no se ha guardado nada. Revisa las semanas y el destino antes de confirmar."
+        styleClass="w-full"
+      />
+      @if (preview.requiereEleccion) {
+        <p-message
+          severity="warn"
+          text="Hay varios borradores compatibles. Elige el destino de cada variante y vuelve a previsualizar."
           styleClass="w-full"
         />
-        @if (preview.requiereEleccion) {
-          <p-message
-            severity="warn"
-            text="Hay varios borradores compatibles. Elige el destino de cada variante y vuelve a previsualizar."
-            styleClass="w-full"
-          />
-        }
-        <div class="carga-directa__variantes" aria-live="polite">
-          @for (variante of preview.variantes; track variante.codigo) {
-            <article class="carga-directa__variante">
-              <h4>
-                {{ labelOposicion(variante.oposicion) }} ·
-                {{ getNivelOposicionLabel(variante.nivel) }} ·
-                {{ getFranjaPlanificacionLabel(variante.franja) }}
-              </h4>
-              <p class="text-color-secondary">
-                Versión publicada vigente:
-                {{
-                  variante.publicada
-                    ? variante.publicada.identificador +
-                      " (v" +
-                      variante.publicada.version +
-                      ")"
-                    : "ninguna"
-                }}
-              </p>
-              <label [for]="'destino-' + variante.codigo">Guardar en</label>
-              <p-dropdown
-                [inputId]="'destino-' + variante.codigo"
-                [options]="opcionesDestinoCarga(variante)"
-                optionLabel="label"
-                optionValue="value"
-                [ngModel]="valorDestinoCarga(variante)"
-                (onChange)="cambiarDestinoCarga(variante, $event.value)"
-                styleClass="w-full"
-              />
-              @if (valorDestinoCarga(variante) === "CREAR") {
-                <label [for]="'nombre-' + variante.codigo" class="block mt-3"
-                  >Nombre del borrador</label
-                >
-                <input
-                  pInputText
-                  [id]="'nombre-' + variante.codigo"
-                  class="w-full"
-                  [value]="
-                    destinosCarga()[variante.codigo]?.tipo === 'CREAR'
-                      ? $any(destinosCarga()[variante.codigo]).identificador
-                      : 'Importación ' + variante.codigo
-                  "
-                  (input)="
-                    cambiarNombreBorradorCarga(
-                      variante.codigo,
-                      $any($event.target).value
-                    )
-                  "
-                />
-              }
-              @if (variante.semanas?.length) {
-                <ul class="carga-directa__semanas">
-                  @for (
-                    semana of variante.semanas;
-                    track semana.hoja + semana.lunes
-                  ) {
-                    <li>
-                      <strong
-                        >Semana {{ semana.numero }} ·
-                        {{ formatearFechaIso(semana.lunes) }}</strong
-                      >
-                      <span
-                        >{{ semana.creados }} creados ·
-                        {{ semana.actualizados }} actualizados ·
-                        {{ semana.eliminados }} retirados ·
-                        {{ semana.omitidos }} sin cambios</span
-                      >
-                      @if (semana.actualizados || semana.eliminados) {
-                        <ul>
-                          @for (bloque of semana.bloques; track $index) {
-                            @if (
-                              bloque.estado === "actualizado" ||
-                              bloque.estado === "eliminado"
-                            ) {
-                              <li>{{ bloque.nombre }} · {{ bloque.estado }}</li>
-                            }
-                          }
-                        </ul>
-                      }
-                    </li>
-                  }
-                </ul>
-              }
-            </article>
-          }
-        </div>
-        @if (preview.requiereConfirmacion) {
-          <div class="overwrite-warning">
-            <strong
-              >Hay actividades que se actualizarán o retirarán. Revisa el
-              detalle antes de confirmar.</strong
-            >
-            @if (preview.plantillasActualizadas?.length) {
-              <p>
-                Plantillas existentes que cambiarán:
-                {{ preview.plantillasActualizadas?.join(", ") }}
-              </p>
-            }
-            <div class="flex align-items-center gap-2">
-              <p-inputSwitch
-                inputId="confirmar-cambios-carga"
-                [ngModel]="confirmarSobrescritura()"
-                (ngModelChange)="confirmarSobrescritura.set($event)"
-              />
-              <label for="confirmar-cambios-carga"
-                >Confirmo estos cambios</label
-              >
-            </div>
-          </div>
-        }
-        <div class="import-apply">
-          <p-button
-            label="Guardar semanas en borrador"
-            icon="pi pi-save"
-            [loading]="aplicandoImportacion()"
-            [disabled]="
-              !preview.puedeAplicar ||
-              !preview.previewHash ||
-              (preview.requiereConfirmacion && !confirmarSobrescritura())
-            "
-            (onClick)="guardarCargaSemanas()"
-          />
-          <small
-            >Publicar y asignar es una acción posterior. Esta carga no cambia el
-            calendario del alumno.</small
-          >
-        </div>
       }
-      @if (resultadoCarga(); as resultado) {
-        <div class="carga-directa__resultado" aria-live="polite">
-          <h4>Semanas guardadas en borrador</h4>
-          @for (variante of resultado.variantes; track variante.codigo) {
-            <p-button
-              [label]="
-                'Abrir calendario · ' + labelOposicion(variante.oposicion)
-              "
-              icon="pi pi-calendar"
-              [outlined]="true"
-              (onClick)="abrirCalendarioCarga(variante)"
+      <div class="carga-directa__variantes" aria-live="polite">
+        @for (variante of preview.variantes; track variante.codigo) {
+          <article class="carga-directa__variante">
+            <h4>
+              {{ labelOposicion(variante.oposicion) }} ·
+              {{ getNivelOposicionLabel(variante.nivel) }} ·
+              {{ getFranjaPlanificacionLabel(variante.franja) }}
+            </h4>
+            <p class="text-color-secondary">
+              Versión publicada vigente:
+              {{
+                variante.publicada
+                  ? variante.publicada.identificador +
+                    " (v" +
+                    variante.publicada.version +
+                    ")"
+                  : "ninguna"
+              }}
+            </p>
+            <label [for]="'destino-' + variante.codigo">Guardar en</label>
+            <p-dropdown
+              [inputId]="'destino-' + variante.codigo"
+              [options]="opcionesDestinoCarga(variante)"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="valorDestinoCarga(variante)"
+              (onChange)="cambiarDestinoCarga(variante, $event.value)"
+              styleClass="w-full"
             />
+            @if (valorDestinoCarga(variante) === "CREAR") {
+              <label [for]="'nombre-' + variante.codigo" class="block mt-3"
+                >Nombre del borrador</label
+              >
+              <input
+                pInputText
+                [id]="'nombre-' + variante.codigo"
+                class="w-full"
+                [value]="
+                  destinosCarga()[variante.codigo]?.tipo === 'CREAR'
+                    ? $any(destinosCarga()[variante.codigo]).identificador
+                    : 'Importación ' + variante.codigo
+                "
+                (input)="
+                  cambiarNombreBorradorCarga(
+                    variante.codigo,
+                    $any($event.target).value
+                  )
+                "
+              />
+            }
+            @if (variante.semanas?.length) {
+              <ul class="carga-directa__semanas">
+                @for (
+                  semana of variante.semanas;
+                  track semana.hoja + semana.lunes
+                ) {
+                  <li>
+                    <strong
+                      >Semana {{ semana.numero }} ·
+                      {{ formatearFechaIso(semana.lunes) }}</strong
+                    >
+                    <span
+                      >{{ semana.creados }} creados ·
+                      {{ semana.actualizados }} actualizados ·
+                      {{ semana.eliminados }} retirados ·
+                      {{ semana.omitidos }} sin cambios</span
+                    >
+                    @if (semana.actualizados || semana.eliminados) {
+                      <ul>
+                        @for (bloque of semana.bloques; track $index) {
+                          @if (
+                            bloque.estado === "actualizado" ||
+                            bloque.estado === "eliminado"
+                          ) {
+                            <li>{{ bloque.nombre }} · {{ bloque.estado }}</li>
+                          }
+                        }
+                      </ul>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </article>
+        }
+      </div>
+      @if (preview.requiereConfirmacion) {
+        <div class="overwrite-warning">
+          <strong
+            >Hay actividades que se actualizarán o retirarán. Revisa el detalle
+            antes de confirmar.</strong
+          >
+          @if (preview.plantillasActualizadas?.length) {
+            <p>
+              Plantillas existentes que cambiarán:
+              {{ preview.plantillasActualizadas?.join(", ") }}
+            </p>
           }
+          <div class="flex align-items-center gap-2">
+            <p-inputSwitch
+              inputId="confirmar-cambios-carga"
+              [ngModel]="confirmarSobrescritura()"
+              (ngModelChange)="confirmarSobrescritura.set($event)"
+            />
+            <label for="confirmar-cambios-carga">Confirmo estos cambios</label>
+          </div>
         </div>
       }
-    </section>
-  </p-tabPanel>
-</p-tabView>
+      <div class="import-apply">
+        <p-button
+          label="Guardar semanas en borrador"
+          icon="pi pi-save"
+          [loading]="aplicandoImportacion()"
+          [disabled]="
+            !preview.puedeAplicar ||
+            !preview.previewHash ||
+            (preview.requiereConfirmacion && !confirmarSobrescritura())
+          "
+          (onClick)="guardarCargaSemanas()"
+        />
+        <small
+          >Publicar y asignar es una acción posterior. Esta carga no cambia el
+          calendario del alumno.</small
+        >
+      </div>
+    }
+    @if (resultadoCarga(); as resultado) {
+      <div class="carga-directa__resultado" aria-live="polite">
+        <h4>Semanas guardadas en borrador</h4>
+        @for (variante of resultado.variantes; track variante.codigo) {
+          <p-button
+            [label]="'Abrir calendario · ' + labelOposicion(variante.oposicion)"
+            icon="pi pi-calendar"
+            [outlined]="true"
+            (onClick)="abrirCalendarioCarga(variante)"
+          />
+        }
+      </div>
+    }
+  </section>
+</p-dialog>

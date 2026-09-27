@@ -10,6 +10,21 @@
   border: 0;
 }
 
+.asistente-semanas.p-dialog {
+  border-radius: 0;
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  margin: 0;
+}
+.asistente-semanas .p-dialog-content {
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  overflow-x: hidden;
+}
+.asistente-semanas .p-dialog-header {
+  border-bottom: 1px solid var(--surface-border);
+}
+
 .import-panel {
   display: grid;
   gap: 1.25rem;
@@ -125,7 +140,8 @@
     gap: 0.35rem;
   }
 
-  .week-list, .issue-list {
+  .week-list,
+  .issue-list {
     max-height: 16rem;
     overflow-y: auto;
   }

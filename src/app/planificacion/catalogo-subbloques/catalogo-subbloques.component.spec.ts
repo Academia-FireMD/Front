@@ -123,6 +123,39 @@ describe('CatalogoSubbloquesComponent', () => {
     expect(component.selectedIds).toEqual([1]);
   });
 
+  it('filtra por presencia de explicación y puntos sin marcar contenidos como incompletos', async () => {
+    const fixture = TestBed.createComponent(CatalogoSubbloquesListComponent);
+    const component = fixture.componentInstance;
+    component.routeSyncEnabled = false;
+    component.items = [
+      {
+        ...lista.filas[0],
+        nombreDescriptivo: 'Detalle',
+        puntosImportantes: '',
+      },
+      {
+        ...lista.filas[0],
+        id: 8,
+        codigo: 'L02',
+        nombreDescriptivo: '',
+        puntosImportantes: 'Clave',
+      },
+    ];
+    const { firstValueFrom } = await import('rxjs');
+    component.onFiltersChanged({ explicacion: 'con', puntos: 'sin' });
+    expect(
+      (await firstValueFrom(component.fetchItems$()))?.data.map(
+        (item) => item.id,
+      ),
+    ).toEqual([7]);
+    component.onFiltersChanged({ explicacion: 'sin', puntos: 'con' });
+    expect(
+      (await firstValueFrom(component.fetchItems$()))?.data.map(
+        (item) => item.id,
+      ),
+    ).toEqual([8]);
+  });
+
   it('exige confirmar la sustitución publicada antes de importar', async () => {
     const fixture = TestBed.createComponent(CatalogoSubbloquesComponent);
     fixture.detectChanges();

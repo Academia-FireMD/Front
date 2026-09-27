@@ -1,14 +1,90 @@
 @import "../../shared/styles/list-styles.scss";
 
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   min-width: 0;
   max-width: 100%;
+  gap: 0.75rem;
+}
+
+.plan-comun {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  background: var(--surface-card);
+}
+.plan-comun h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.plan-comun p {
+  margin: 0.25rem 0 0;
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.plan-comun__opciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+}
+.plan-comun__opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+}
+.planes-perfil {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.variantes-list {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.variante-logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-100);
+  overflow: hidden;
+  margin-left: 0.5rem;
+}
+.variante-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.variant-release-mobile {
+  display: none;
+  color: var(--text-color-secondary);
+  overflow-wrap: anywhere;
 }
 
 .variantes-search {
   min-height: 44px;
-  width: min(100%, 24rem);
+  width: 100%;
+}
+
+p-iconField {
+  display: block;
+  width: 100%;
 }
 
 .variante-list-item,
@@ -214,6 +290,81 @@
 @media (max-width: 575px) {
   .variantes-search {
     min-width: 0;
+  }
+  .plan-comun {
+    padding: 0.65rem 0.8rem;
+  }
+  .plan-comun__opciones {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .variante-logo {
+    margin-left: 0;
+    width: 2rem;
+    height: 2rem;
+    flex-basis: 2rem;
+  }
+  .variante-list-item {
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+  .variante-list-item .left-side {
+    padding-block: 0.15rem !important;
+  }
+  .variante-list-item .left-side strong.identifier {
+    display: block;
+    overflow: visible;
+    line-height: 1.2;
+    font-size: 0.9rem;
+    max-width: none;
+    white-space: normal;
+    text-wrap: wrap;
+  }
+  .variante-list-item .descripcion {
+    font-size: 0.75rem;
+  }
+  .variant-release-mobile {
+    display: block;
+    font-size: 0.7rem;
+    line-height: 1.2;
+  }
+  :host ::ng-deep .variantes-list .p-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  :host ::ng-deep .variantes-list .autoasignacion-action .p-button-label {
+    display: none;
+  }
+  :host ::ng-deep .variantes-list .autoasignacion-action .p-button-icon {
+    margin: 0;
+  }
+  :host ::ng-deep .variantes-list .top-action-bar {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+  }
+  :host ::ng-deep .variantes-list .top-action-bar .left-actions {
+    flex: 1 1 0;
+    width: auto;
+    max-width: calc(100% - 9.5rem);
+    min-width: 0;
+  }
+  :host ::ng-deep .variantes-list .top-action-bar .right-actions {
+    flex: 0 0 auto;
+    width: auto;
+    gap: 0.4rem;
+  }
+  :host
+    ::ng-deep
+    .variantes-list
+    .top-action-bar
+    .right-actions
+    > [right-actions] {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+  }
+  :host ::ng-deep .variantes-list .top-action-bar .filter-button-wrapper {
+    flex: 0 0 auto;
   }
 
   .regla-list-item {

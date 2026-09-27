@@ -72,21 +72,9 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
           [label]="
             viewportService.screenWidth === 'xs'
               ? undefined
-              : 'Tipos de trabajo'
+              : 'Importar catálogo'
           "
-          ariaLabel="Tipos de trabajo"
-          icon="pi pi-list"
-          [outlined]="true"
-          styleClass="catalogo-accion"
-          (click)="leyendasRequested.emit()"
-        ></p-button>
-        <p-button
-          [label]="
-            viewportService.screenWidth === 'xs'
-              ? undefined
-              : 'Importar subbloques'
-          "
-          ariaLabel="Importar subbloques"
+          ariaLabel="Importar catálogo"
           icon="pi pi-upload"
           [outlined]="true"
           styleClass="catalogo-accion"
@@ -207,7 +195,6 @@ export class CatalogoSubbloquesListComponent extends SharedGridComponent<Catalog
   @Input() selectedIds: (string | number)[] = [];
   @Output() selectedIdsChange = new EventEmitter<(string | number)[]>();
   @Output() editRequested = new EventEmitter<CatalogoContenidoCompleto>();
-  @Output() leyendasRequested = new EventEmitter<void>();
   @Output() importRequested = new EventEmitter<void>();
   @Output() newRequested = new EventEmitter<void>();
 
@@ -229,7 +216,30 @@ export class CatalogoSubbloquesListComponent extends SharedGridComponent<Catalog
       { label: 'Inactivos', value: 'inactiva' },
     ],
   };
-  readonly filtrosVista = [this.filtrosSerie, this.filtrosEstado];
+  readonly filtrosExplicacion: FilterConfig = {
+    key: 'explicacion',
+    label: 'Explicación',
+    type: 'dropdown',
+    options: [
+      { label: 'Con explicación', value: 'con' },
+      { label: 'Sin explicación', value: 'sin' },
+    ],
+  };
+  readonly filtrosPuntos: FilterConfig = {
+    key: 'puntos',
+    label: 'Puntos importantes',
+    type: 'dropdown',
+    options: [
+      { label: 'Con puntos', value: 'con' },
+      { label: 'Sin puntos', value: 'sin' },
+    ],
+  };
+  readonly filtrosVista = [
+    this.filtrosSerie,
+    this.filtrosEstado,
+    this.filtrosExplicacion,
+    this.filtrosPuntos,
+  ];
   readonly filtrosSeleccion = [this.filtrosSerie];
 
   get filters(): FilterConfig[] {
@@ -242,13 +252,26 @@ export class CatalogoSubbloquesListComponent extends SharedGridComponent<Catalog
       const page = this.pagination();
       const search = page.searchTerm.trim().toLocaleLowerCase('es');
       const where = page.where as
-        | { serie?: string; estado?: string }
+        | {
+            serie?: string;
+            estado?: string;
+            explicacion?: string;
+            puntos?: string;
+          }
         | undefined;
       const matching = this.rows().filter((item) => {
         if (this.mode === 'selection' && !item.activa) return false;
         if (where?.estado === 'activa' && !item.activa) return false;
         if (where?.estado === 'inactiva' && item.activa) return false;
         if (where?.serie && this.serie(item.codigo) !== where.serie)
+          return false;
+        if (where?.explicacion === 'con' && !item.nombreDescriptivo?.trim())
+          return false;
+        if (where?.explicacion === 'sin' && !!item.nombreDescriptivo?.trim())
+          return false;
+        if (where?.puntos === 'con' && !item.puntosImportantes?.trim())
+          return false;
+        if (where?.puntos === 'sin' && !!item.puntosImportantes?.trim())
           return false;
         return (
           !search ||

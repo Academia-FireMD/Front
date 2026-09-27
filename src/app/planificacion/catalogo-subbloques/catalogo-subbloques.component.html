@@ -1,7 +1,6 @@
 <app-catalogo-subbloques-list
   [items]="catalogo().filas"
   (editRequested)="abrirEdicion($event)"
-  (leyendasRequested)="abrirLeyendas()"
   (importRequested)="abrirImportacion()"
   (newRequested)="abrirNuevo()"
 ></app-catalogo-subbloques-list>
@@ -22,77 +21,34 @@
 </app-editar-sub-bloque-dialog>
 
 <p-dialog
-  header="Tipos de trabajo"
-  [(visible)]="dialogoLeyendas"
-  [modal]="true"
-  [draggable]="false"
-  [style]="{ width: 'min(94vw, 760px)', maxHeight: '94vh' }"
-  (onHide)="resetPreview()"
->
-  <div class="formulario-catalogo">
-    <p>
-      Estas descripciones se aplican al crear nuevas actividades. Las copias
-      existentes no cambian.
-    </p>
-    <ng-container *ngFor="let tipo of tiposTrabajo">
-      <label [for]="'leyenda-' + tipo">{{ tipo }}</label>
-      <textarea
-        [id]="'leyenda-' + tipo"
-        pInputTextarea
-        [(ngModel)]="leyendas[tipo]"
-        (ngModelChange)="resetPreview()"
-        rows="2"
-      ></textarea>
-    </ng-container>
-    <p class="aviso-impacto">
-      Los Bloques y calendarios existentes conservarán su contenido.
-    </p>
-    <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
-  </div>
-  <ng-template pTemplate="footer">
-    <div class="dialogo-acciones">
-      <p-button
-        label="Cancelar"
-        [text]="true"
-        (click)="dialogoLeyendas = false"
-      ></p-button>
-      <p-button
-        label="Revisar cambios"
-        [outlined]="true"
-        [loading]="cargando()"
-        (click)="revisarEdicion()"
-      ></p-button>
-      <p-button
-        label="Guardar"
-        [disabled]="!puedeAplicar"
-        [loading]="guardando()"
-        (click)="aplicar()"
-      ></p-button>
-    </div>
-  </ng-template>
-</p-dialog>
-
-<p-dialog
-  header="Importar subbloques"
+  header="Importar catálogo"
   [(visible)]="dialogoImportacion"
   [modal]="true"
   [draggable]="false"
+  [closable]="!guardando()"
+  [closeOnEscape]="!guardando()"
   [style]="{ width: 'min(94vw, 820px)', maxHeight: '94vh' }"
   (onHide)="resetPreview()"
 >
   <div class="formulario-catalogo">
-    <p>
-      Sube el Excel de subbloques. Reimportar un código actualiza solo su ficha;
-      los códigos ausentes no se borran. Los Bloques y calendarios existentes no
-      cambian.
-    </p>
-    <label for="catalogo-archivo">Archivo Excel (.xlsx)</label>
-    <input
-      id="catalogo-archivo"
-      type="file"
+    <div class="importacion-intro">
+      <strong>1. Selecciona el Excel de Sergio</strong>
+      <p>
+        Los códigos nuevos se añadirán. Los existentes solo cambiarán tras
+        revisar y confirmar las diferencias. Los códigos ausentes y las copias
+        ya usadas en Bloques o calendarios se conservan.
+      </p>
+    </div>
+    <app-excel-file-picker
+      [file]="archivo"
       accept=".xlsx"
-      (change)="seleccionarArchivo($event)"
+      ariaLabel="Archivo Excel del catálogo"
+      [disabled]="cargando() || guardando()"
+      (fileSelected)="seleccionarArchivo($event)"
     />
+    @if (archivo) {
+      <strong>2. Revisa los cambios antes de importar</strong>
+    }
     <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
   </div>
   <ng-template pTemplate="footer">
@@ -100,6 +56,7 @@
       <p-button
         label="Cancelar"
         [text]="true"
+        [disabled]="guardando()"
         (click)="dialogoImportacion = false"
       ></p-button>
       <p-button
@@ -110,7 +67,7 @@
         (click)="revisarExcel()"
       ></p-button>
       <p-button
-        label="Importar"
+        label="Confirmar importación"
         [disabled]="!puedeAplicar"
         [loading]="guardando()"
         (click)="aplicar()"

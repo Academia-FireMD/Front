@@ -78,7 +78,10 @@ async function prepararAdmin(page: Page, variantes = [madrid]) {
     modulos: { PLANIFICACION_AUTOASIGNACION: true },
   });
   await page.goto('/app/planificacion/admin-planificacion');
-  await page.getByRole('tab', { name: 'Cargar semanas' }).click();
+  await page.getByRole('button', { name: 'Importar semanas' }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Importar semanas' }),
+  ).toBeVisible();
   return () => applyCalls;
 }
 
@@ -93,9 +96,7 @@ async function subirYPrevisualizar(page: Page) {
     });
   await page.getByRole('button', { name: 'Previsualizar cambios' }).click();
   await expect(page.getByText('Semana 37').first()).toBeVisible();
-  await expect(
-    page.getByText('Los alumnos no verán estos cambios'),
-  ).toBeVisible();
+  await expect(page.getByText(/los alumnos no verán/)).toBeVisible();
 }
 
 for (const viewport of [
@@ -104,13 +105,18 @@ for (const viewport of [
 ]) {
   test(`Excel a calendario de borrador en ${viewport.name}`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.setViewportSize({
       width: viewport.width,
       height: viewport.height,
     });
     const aplicarLlamadas = await prepararAdmin(page);
     await subirYPrevisualizar(page);
+    const dialogo = page.getByRole('dialog', { name: 'Importar semanas' });
+    await expect(dialogo).toBeVisible();
+    await dialogo.screenshot({
+      path: testInfo.outputPath(`importar-semanas-${viewport.width}.png`),
+    });
     expect(aplicarLlamadas()).toBe(0);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,
@@ -145,4 +151,49 @@ test('un Excel con varias oposiciones muestra un enlace a cada borrador', async 
     page.getByRole('button', { name: /Abrir calendario/ }),
   ).toHaveCount(2);
   await expect(page).toHaveURL(/admin-planificacion/);
+});
+
+test('el asistente se puede cerrar sin guardar', async ({ page }) => {
+  const aplicarLlamadas = await prepararAdmin(page);
+  await expect(
+    page.getByRole('dialog', { name: 'Importar semanas' }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(
+    page.getByRole('dialog', { name: 'Importar semanas' }),
+  ).toBeHidden();
+  expect(aplicarLlamadas()).toBe(0);
+});
+
+test('el asistente permanece abierto mientras guarda semanas', async ({
+  page,
+}) => {
+  await prepararAdmin(page);
+  await subirYPrevisualizar(page);
+  let liberarAplicacion!: () => void;
+  const aplicacionPendiente = new Promise<void>((resolve) => {
+    liberarAplicacion = resolve;
+  });
+  await page.route('**/carga-borrador/apply', async (route) => {
+    await aplicacionPendiente;
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ variantes: [] }),
+    });
+  });
+  const dialogo = page.getByRole('dialog', { name: 'Importar semanas' });
+  const solicitud = page.waitForRequest('**/carga-borrador/apply');
+  await dialogo
+    .getByRole('button', { name: 'Guardar semanas en borrador' })
+    .click();
+  await solicitud;
+  try {
+    await expect(dialogo.locator('input[type="file"]')).toBeDisabled();
+    await expect(dialogo.locator('.p-dialog-header-close')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(dialogo).toBeVisible();
+  } finally {
+    liberarAplicacion();
+  }
 });

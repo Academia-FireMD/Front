@@ -150,7 +150,7 @@ test('admin publica y asigna una release mediante la acción explícita', async 
 
   const screenshotPath = process.env['PLAN_RELEASE_SCREENSHOT_PATH'];
   if (screenshotPath) {
-    await page.locator('.planificacion-admin-tabs').screenshot({
+    await page.locator('.planes-perfil').screenshot({
       path: screenshotPath,
     });
   }
@@ -196,7 +196,7 @@ test('la rejilla y el alta de variantes caben en móvil', async ({
   });
   await page.goto('/app/planificacion/admin-planificacion');
 
-  await expect(page.getByText('GA4-6', { exact: true })).toBeVisible();
+  await expect(page.getByText(/GA4-6 · Avanzado/)).toBeVisible();
   const fila = page.locator('.variantes-list .item-container');
   const medidas = await fila.evaluate((elemento) => ({
     alto: elemento.clientHeight,
@@ -215,7 +215,7 @@ test('la rejilla y el alta de variantes caben en móvil', async ({
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(375);
 
-  await page.locator('.variant-switch-target').click();
+  await page.locator('.variant-switch-target .p-inputswitch').click();
   await expect.poll(() => cambiosEstado).toBe(1);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
@@ -236,10 +236,30 @@ test('la rejilla y el alta de variantes caben en móvil', async ({
   await expect(dialogo).toHaveCount(0);
 });
 
-test('reglas usan la rejilla compartida y el diálogo se cierra desde la X', async ({
+test('acceso al plan común: controles claros y rechazo seguro en móvil', async ({
   page,
 }, testInfo) => {
-  await mockDatosAdmin(page, reglas);
+  await mockDatosAdmin(page, [
+    {
+      id: 11,
+      oposicionSuscripcion: 'VALENCIA_AYUNTAMIENTO',
+      oposicionPlanificacion: 'GENERAL',
+      activa: true,
+    },
+    {
+      id: 12,
+      oposicionSuscripcion: 'ALICANTE_CPBA',
+      oposicionPlanificacion: 'GENERAL',
+      activa: false,
+    },
+  ]);
+  await page.route('**/planificaciones/admin/reglas/11', (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: 'Hay alumnos que usan este acceso.' }),
+    }),
+  );
   await loginAsRoleMock(page, {
     rol: 'ADMIN',
     email: 'admin@test.com',
@@ -247,69 +267,43 @@ test('reglas usan la rejilla compartida y el diálogo se cierra desde la X', asy
     modulos: { PLANIFICACION_AUTOASIGNACION: true },
   });
   await page.goto('/app/planificacion/admin-planificacion');
-  await page.getByRole('tab', { name: /Opciones por suscripción/ }).click();
-
-  const lista = page.locator('.reglas-list');
-  await expect(lista.locator('.item-container')).toHaveCount(2);
-  await expect(lista.locator('.p-tag-success')).toBeVisible();
-  await expect(lista.locator('.p-tag-secondary')).toBeVisible();
-  await lista.screenshot({ path: testInfo.outputPath('reglas-desktop.png') });
-
+  const controles = page.locator('.plan-comun');
+  await expect(
+    controles.getByText('Acceso al plan común valenciano'),
+  ).toBeVisible();
+  await expect(page.getByRole('tab')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Importar semanas' }),
+  ).toBeVisible();
+  await expect(page.getByText(/GENERAL-AGOSTO v1/)).toBeVisible();
   await page.setViewportSize({ width: 375, height: 667 });
-  await page.reload();
-  await page.getByRole('tab', { name: /Opciones por suscripción/ }).click();
-  await expect(
-    lista.locator('.item-container').first().locator('.identifier'),
-  ).toBeInViewport();
-  await expect(
-    lista.locator('.item-container').first().locator('.regla-destino'),
-  ).toBeInViewport();
-  await lista.screenshot({ path: testInfo.outputPath('reglas-mobile.png') });
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth),
-  ).toBeLessThanOrEqual(375);
-
-  await lista.getByRole('searchbox', { name: 'Buscar reglas' }).fill('Madrid');
-  await expect(lista.locator('.item-container')).toHaveCount(1);
-  await lista.getByRole('searchbox', { name: 'Buscar reglas' }).fill('');
-
-  await lista.getByRole('button', { name: 'Filtros', exact: true }).click();
-  const filtros = page.getByRole('dialog', { name: 'Filtros' });
-  await filtros.locator('p-dropdown').nth(2).click();
-  await page.getByRole('option', { name: 'Inactivas' }).click();
-  await filtros.getByRole('button', { name: 'Aplicar' }).click();
-  await expect(lista.locator('.item-container')).toHaveCount(1);
-  await expect(lista.locator('.item-container')).toContainText(
-    'Ayuntamiento de Valencia',
-  );
-  await lista.getByRole('button', { name: 'Filtros', exact: true }).click();
-  await page
-    .getByRole('dialog', { name: 'Filtros' })
-    .getByRole('button', { name: 'Limpiar filtros' })
-    .click();
-  await expect(lista.locator('.item-container')).toHaveCount(2);
-
-  await page.getByRole('button', { name: 'Nueva regla' }).click();
-  const dialogo = page.getByRole('dialog', { name: 'Nueva regla' });
-  await expect(dialogo).toBeVisible();
-  await expect(dialogo.getByText('Selecciona oposición')).toBeVisible();
-  await expect(
-    dialogo.getByText('Elige antes la oposición contratada'),
-  ).toBeVisible();
-  await expect(dialogo.getByRole('button', { name: 'Guardar' })).toBeDisabled();
-  await dialogo.screenshot({
-    path: testInfo.outputPath('regla-dialog-mobile.png'),
+  await page.screenshot({
+    path: testInfo.outputPath('planes-perfil-mobile.png'),
   });
+  const importar = await page
+    .getByRole('button', { name: 'Importar semanas' })
+    .boundingBox();
+  const nueva = await page
+    .getByRole('button', { name: 'Nueva variante' })
+    .boundingBox();
   expect(
-    await page.evaluate(() => document.documentElement.scrollWidth),
-  ).toBeLessThanOrEqual(375);
-  await dialogo.locator('.p-dialog-header-close').click();
-  await expect(dialogo).toHaveCount(0);
-
-  await lista
-    .locator('button[aria-label^="Editar regla Comunidad de Madrid"]')
+    Math.abs((importar?.y ?? 0) - (nueva?.y ?? 0)),
+    JSON.stringify({ importar, nueva }),
+  ).toBeLessThan(5);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+  ).toBe(false);
+  await controles
+    .locator('.plan-comun__opcion')
+    .first()
+    .locator('.p-inputswitch')
     .click();
   await expect(
-    page.getByRole('dialog', { name: 'Editar regla' }),
+    page.getByText('Hay alumnos que usan este acceso.'),
   ).toBeVisible();
+  await expect(
+    controles.locator('#plan-comun-VALENCIA_AYUNTAMIENTO'),
+  ).toBeChecked();
 });

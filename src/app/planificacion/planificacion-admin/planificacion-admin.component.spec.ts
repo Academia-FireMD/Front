@@ -138,6 +138,70 @@ describe('PlanificacionAdminComponent', () => {
     expect(service.getSinCoincidencia$).not.toHaveBeenCalled();
   });
 
+  it('ofrece el plan común de Valencia creando la regla compatible', async () => {
+    await component.cambiarAccesoPlanComun(
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      true,
+    );
+    expect(service.crearRegla$).toHaveBeenCalledWith({
+      oposicionSuscripcion: Oposicion.VALENCIA_AYUNTAMIENTO,
+      oposicionPlanificacion: Oposicion.GENERAL,
+      activa: true,
+    });
+  });
+
+  it('restaura el control cuando el servidor rechaza quitar un acceso vigente', async () => {
+    const regla = {
+      id: 12,
+      oposicionSuscripcion: Oposicion.ALICANTE_CPBA,
+      oposicionPlanificacion: Oposicion.GENERAL,
+      activa: true,
+    };
+    (service.getReglas$ as jest.Mock).mockReturnValue(of([regla]));
+    component.reglas.set([regla]);
+    (service.actualizarRegla$ as jest.Mock).mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 409 })),
+    );
+    await component.cambiarAccesoPlanComun(Oposicion.ALICANTE_CPBA, false);
+    expect(component.planComunActivo(Oposicion.ALICANTE_CPBA)).toBe(true);
+    expect(TestBed.inject(ToastrService).error).toHaveBeenCalled();
+  });
+
+  it('filtra perfiles por existencia de planificación publicada', async () => {
+    component.variantes.set([
+      {
+        id: 1,
+        codigo: 'PCMI4-6H',
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+        activa: true,
+        planificacionMensual: {
+          id: 5,
+          identificador: 'Madrid',
+          mes: 9,
+          ano: 2026,
+        },
+      },
+      {
+        id: 2,
+        codigo: 'PCMI6-8H',
+        oposicion: Oposicion.MADRID,
+        nivel: NivelOposicion.INICIACION,
+        franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+        activa: true,
+      },
+    ]);
+    component.onFiltersChanged({ publicada: 'sin' });
+    expect(
+      (await firstValueFrom(component.fetchItems$()))?.data.map((v) => v.id),
+    ).toEqual([2]);
+    component.onFiltersChanged({ publicada: 'con' });
+    expect(
+      (await firstValueFrom(component.fetchItems$()))?.data.map((v) => v.id),
+    ).toEqual([1]);
+  });
+
   it('crea una variante nueva con el payload correcto', async () => {
     component.varianteForm.patchValue({
       oposicion: Oposicion.GENERAL,
@@ -334,108 +398,6 @@ describe('PlanificacionAdminComponent', () => {
     expect(buscado?.data.map((v) => v.id)).toEqual([1]);
   });
 
-  it('abre y descarta el diálogo de reglas sin guardar', () => {
-    expect(component.dialogoReglaVisible()).toBe(false);
-    component.abrirNuevaRegla();
-    expect(component.dialogoReglaVisible()).toBe(true);
-    component.reglaForm.patchValue({ oposicionSuscripcion: Oposicion.MADRID });
-
-    component.cerrarDialogoRegla();
-
-    expect(component.dialogoReglaVisible()).toBe(false);
-    expect(component.reglaForm.controls.oposicionSuscripcion.value).toBe(null);
-    expect(
-      component.oposicionSuscripcionOptions.map((option) => option.value),
-    ).not.toContain(Oposicion.GENERAL);
-    expect(service.crearRegla$).not.toHaveBeenCalled();
-  });
-
-  it('solo ofrece el plan propio y, para Valencia o Alicante, el común', () => {
-    component.abrirNuevaRegla();
-    expect(component.reglaForm.controls.oposicionPlanificacion.disabled).toBe(
-      true,
-    );
-
-    component.reglaForm.controls.oposicionSuscripcion.setValue(
-      Oposicion.MADRID,
-    );
-    expect(
-      component.oposicionPlanificacionReglaOptions.map((o) => o.value),
-    ).toEqual([Oposicion.MADRID]);
-    component.reglaForm.controls.oposicionPlanificacion.setValue(
-      Oposicion.MADRID,
-    );
-
-    component.reglaForm.controls.oposicionSuscripcion.setValue(
-      Oposicion.VALENCIA_AYUNTAMIENTO,
-    );
-    expect(component.reglaForm.controls.oposicionPlanificacion.value).toBe(
-      null,
-    );
-    expect(
-      component.oposicionPlanificacionReglaOptions.map((o) => o.value),
-    ).toEqual(
-      expect.arrayContaining([
-        Oposicion.GENERAL,
-        Oposicion.VALENCIA_AYUNTAMIENTO,
-      ]),
-    );
-    expect(
-      component.oposicionPlanificacionReglaOptions.map((o) => o.value),
-    ).not.toContain(Oposicion.MADRID);
-  });
-
-  it('mantiene visible una regla histórica con General como suscripción al editar', () => {
-    component.editarRegla({
-      id: 9,
-      oposicionSuscripcion: Oposicion.GENERAL,
-      oposicionPlanificacion: Oposicion.MADRID,
-      activa: true,
-    });
-
-    expect(
-      component.oposicionSuscripcionOptions.map((option) => option.value),
-    ).toContain(Oposicion.GENERAL);
-    expect(component.reglaForm.controls.oposicionSuscripcion.value).toBe(
-      Oposicion.GENERAL,
-    );
-    component.cerrarDialogoRegla();
-    expect(
-      component.oposicionSuscripcionOptions.map((option) => option.value),
-    ).not.toContain(Oposicion.GENERAL);
-  });
-
-  it('filtra reglas por búsqueda, oposición y estado sin mezclar la rejilla de variantes', async () => {
-    component.reglas.set([
-      {
-        id: 1,
-        oposicionSuscripcion: Oposicion.MADRID,
-        oposicionPlanificacion: Oposicion.GENERAL,
-        activa: true,
-      },
-      {
-        id: 2,
-        oposicionSuscripcion: Oposicion.VALENCIA_AYUNTAMIENTO,
-        oposicionPlanificacion: Oposicion.VALENCIA_AYUNTAMIENTO,
-        activa: false,
-      },
-    ]);
-    const todas = await firstValueFrom(component.fetchReglas$());
-    expect(todas?.data.map((r) => r.id)).toEqual([1, 2]);
-
-    component.onReglaFiltersChanged({ reglaActiva: false });
-    const inactivas = await firstValueFrom(component.fetchReglas$());
-    expect(inactivas?.data.map((r) => r.id)).toEqual([2]);
-
-    component.onReglaFiltersChanged({
-      oposicionPlanificacion: Oposicion.GENERAL,
-    });
-    component.buscarRegla({ target: { value: 'Madrid' } } as unknown as Event);
-    const madrid = await firstValueFrom(component.fetchReglas$());
-    expect(madrid?.data.map((r) => r.id)).toEqual([1]);
-    expect(component.pagination().searchTerm).toBe('');
-  });
-
   it('actualiza una variante existente con su id', async () => {
     component.editarVariante({
       id: 7,
@@ -473,43 +435,6 @@ describe('PlanificacionAdminComponent', () => {
     expect(component.varianteForm.controls.oposicion.enabled).toBe(true);
     expect(component.varianteForm.controls.nivel.enabled).toBe(true);
     expect(component.varianteForm.controls.franja.enabled).toBe(true);
-  });
-
-  it('crea una regla de oposición', async () => {
-    component.reglaForm.patchValue({
-      oposicionSuscripcion: Oposicion.MADRID,
-      oposicionPlanificacion: Oposicion.MADRID,
-      activa: true,
-    });
-    await component.guardarRegla();
-
-    expect(service.crearRegla$).toHaveBeenCalledWith({
-      oposicionSuscripcion: Oposicion.MADRID,
-      oposicionPlanificacion: Oposicion.MADRID,
-      activa: true,
-    });
-  });
-
-  it('edita una regla con identidad bloqueada y PATCH solo de activa', async () => {
-    component.editarRegla({
-      id: 5,
-      oposicionSuscripcion: Oposicion.MADRID,
-      oposicionPlanificacion: Oposicion.GENERAL,
-      activa: true,
-    });
-
-    expect(component.reglaForm.controls.oposicionSuscripcion.disabled).toBe(
-      true,
-    );
-    expect(component.reglaForm.controls.oposicionPlanificacion.disabled).toBe(
-      true,
-    );
-    component.reglaForm.patchValue({ activa: false });
-    await component.guardarRegla();
-
-    expect(service.actualizarRegla$).toHaveBeenCalledWith(5, {
-      activa: false,
-    });
   });
 
   it('mapea una planificación mensual canónica al guardar una variante', async () => {
@@ -798,6 +723,7 @@ describe('PlanificacionAdminComponent', () => {
     );
     component.archivoImportacion.set(file);
     await component.previsualizarCargaSemanas();
+    component.abrirImportacionSemanas();
     fixture.detectChanges();
     expect(TestBed.inject(ToastrService).success).not.toHaveBeenCalled();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
@@ -834,6 +760,7 @@ describe('PlanificacionAdminComponent', () => {
       },
       hojas: [],
     });
+    component.abrirImportacionSemanas();
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
@@ -858,6 +785,7 @@ describe('PlanificacionAdminComponent', () => {
     );
 
     await component.previsualizarCargaSemanas();
+    component.abrirImportacionSemanas();
     fixture.detectChanges();
 
     expect(component.errorCarga()).toBe(

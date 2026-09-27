@@ -29,6 +29,15 @@ app-catalogo-subbloques-list {
 .formulario-catalogo label {
   font-weight: 600;
 }
+.importacion-intro {
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  background: var(--surface-100);
+  line-height: 1.5;
+}
+.importacion-intro p {
+  margin: 0.5rem 0 0;
+}
 .formulario-catalogo input:not([type="file"]),
 .formulario-catalogo textarea {
   width: 100%;
