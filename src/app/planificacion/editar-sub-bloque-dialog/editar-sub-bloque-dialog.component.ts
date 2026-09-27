@@ -8,17 +8,12 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
 import { cloneDeep, uniqueId } from 'lodash';
-import { HttpErrorResponse } from '@angular/common/http';
 import { AppConfigService } from '../../services/app-config.service';
-import { PlanificacionesService } from '../../services/planificaciones.service';
-import { ToastrService } from 'ngx-toastr';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { SubBloque } from '../../shared/models/planificacion.model';
 import { duracionOptions } from '../../utils/utils';
 import {
-  CatalogoContenidoItem,
   CatalogoFilaEditable,
-  ComponerContenidoResponse,
   TipoTrabajoCatalogo,
 } from '../models/catalogo-contenido.model';
 import { CommonModule } from '@angular/common';
@@ -56,8 +51,6 @@ export class EditarSubBloqueDialogComponent {
       catalogoContenidoId: data?.catalogoContenidoId ?? null,
       tipoTrabajoPlanificacion: data?.tipoTrabajoPlanificacion ?? null,
     });
-    this.tipoTrabajoSeleccionado = data?.tipoTrabajoPlanificacion ?? null;
-    this.catalogoItemSeleccionado = null;
     //Si data.id es falsey, significa que el alumno está intentando crear un evento, cosa que está permitida
     this.aplicarPermisos();
   }
@@ -88,8 +81,6 @@ export class EditarSubBloqueDialogComponent {
 
   fb = inject(FormBuilder);
   appConfigService = inject(AppConfigService);
-  planificacionesService = inject(PlanificacionesService);
-  toastrService = inject(ToastrService);
   planificacionFisicaHabilitada = computed(
     () =>
       this.appConfigService.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !==
@@ -122,70 +113,12 @@ export class EditarSubBloqueDialogComponent {
     { label: '2 días', value: 2880 },
   ];
 
-  catalogoSugerencias: CatalogoContenidoItem[] = [];
-  tipoTrabajoSeleccionado: TipoTrabajoCatalogo | null = null;
-  catalogoItemSeleccionado: CatalogoContenidoItem | null = null;
-
-  get contenidoVinculado(): boolean {
-    return !!this.formGroup.get('catalogoContenidoId')?.value;
-  }
-
-  private bloquearContenidoVinculado() {
-    for (const campo of ['nombre', 'comentarios', 'color'])
-      this.formGroup.get(campo)?.disable({ emitEvent: false });
-  }
-
   private aplicarPermisos() {
     if (this.role === 'ADMIN' || this.isAddingNew) {
       this.formGroup.enable({ emitEvent: false });
-      if (this.currentData?.catalogoContenidoId && this.role === 'ADMIN') {
-        this.bloquearContenidoVinculado();
-        this.planificacionesService
-          .listarCatalogoContenido()
-          .subscribe((catalogo) => {
-            this.catalogoItemSeleccionado =
-              catalogo.filas.find(
-                (item) => item.id === this.currentData.catalogoContenidoId,
-              ) ?? null;
-          });
-      }
     } else {
       this.formGroup.disable({ emitEvent: false });
-      if (!this.currentData?.catalogoContenidoId) {
-        this.formGroup
-          .get(['nombre', 'comentarios'])
-          ?.enable({ emitEvent: false });
-      }
     }
-  }
-
-  desvincularCatalogo() {
-    this.formGroup.patchValue({
-      catalogoContenidoId: null,
-      tipoTrabajoPlanificacion: null,
-    });
-    for (const campo of ['nombre', 'comentarios', 'color'])
-      this.formGroup.get(campo)?.enable({ emitEvent: false });
-    this.catalogoItemSeleccionado = null;
-    this.tipoTrabajoSeleccionado = null;
-  }
-
-  tipoTrabajoOptions: { label: string; value: TipoTrabajoCatalogo | null }[] = [
-    { label: 'Sin tipo (bloque especial)', value: null },
-    { label: 'ESTUDIO', value: 'ESTUDIO' },
-    { label: 'R1', value: 'R1' },
-    { label: 'R2', value: 'R2' },
-    { label: 'R3', value: 'R3' },
-    { label: 'R4', value: 'R4' },
-    { label: 'R5', value: 'R5' },
-  ];
-
-  /** Visible solo para ADMIN y cuando el bloque NO es entrenamiento físico. */
-  get mostrarSeccionCatalogo(): boolean {
-    return (
-      this.role === 'ADMIN' &&
-      !this.formGroup.get('esEntrenamientoFisico')?.value
-    );
   }
 
   /** Texto explicativo que ve el admin cuando marca el sub-bloque como
@@ -223,56 +156,5 @@ export class EditarSubBloqueDialogComponent {
     // El diálogo devuelve los campos editables; el calendario aporta ID y hora.
     this.savedSubBloque.emit(value as unknown as SubBloque);
     return Promise.resolve();
-  }
-
-  buscarCatalogoContenido(query: string): void {
-    if (!query || query.trim().length === 0) {
-      this.catalogoSugerencias = [];
-      return;
-    }
-    this.planificacionesService
-      .buscarCatalogoContenido(query.trim())
-      .subscribe((items) => {
-        this.catalogoSugerencias = items ?? [];
-      });
-  }
-
-  rellenarDesdeCatalogo(): void {
-    const codigo = this.catalogoItemSeleccionado?.codigo;
-    if (!codigo) {
-      return;
-    }
-
-    this.planificacionesService
-      .componerContenidoCatalogo(
-        codigo,
-        this.tipoTrabajoSeleccionado ?? undefined,
-      )
-      .subscribe({
-        next: (res: ComponerContenidoResponse) => {
-          this.formGroup.patchValue({
-            catalogoContenidoId: this.catalogoItemSeleccionado!.id,
-            tipoTrabajoPlanificacion: this.tipoTrabajoSeleccionado,
-            nombre: res.nombre,
-            color: res.color,
-            comentarios: res.comentarios,
-          });
-          this.bloquearContenidoVinculado();
-          this.toastrService.success('Subbloque vinculado al catálogo');
-        },
-        error: (err: HttpErrorResponse | Error) => {
-          const status =
-            err instanceof HttpErrorResponse ? err.status : undefined;
-          if (status === 404) {
-            this.toastrService.error('Código no encontrado en el catálogo');
-          }
-          // Otros errores se dejan a ApiBaseService.handleError
-          // (llamada con ignoreError=true para poder personalizar el 404).
-        },
-      });
-  }
-
-  ngOnInit(): void {
-    // Additional initialization logic if needed
   }
 }

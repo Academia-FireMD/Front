@@ -84,9 +84,9 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
           [label]="
             viewportService.screenWidth === 'xs'
               ? undefined
-              : 'Importar catálogo'
+              : 'Importar subbloques'
           "
-          ariaLabel="Importar catálogo"
+          ariaLabel="Importar subbloques"
           icon="pi pi-upload"
           [outlined]="true"
           styleClass="catalogo-accion"

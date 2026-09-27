@@ -22,12 +22,14 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 import { GenericListComponent } from '../shared/generic-list/generic-list.component';
+import { MarkdownContentComponent } from '../shared/markdown-content/markdown-content.component';
 import { SharedModule } from '../shared/shared.module';
 import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
 import { CalendarHeaderComponent } from './calendar-header/calendar-header.component';
 import { EditarSubBloqueDialogComponent } from './editar-sub-bloque-dialog/editar-sub-bloque-dialog.component';
 import { CatalogoSubbloquesListComponent } from './catalogo-subbloques/catalogo-subbloques-list.component';
+import { SeleccionarSubbloquesDialogComponent } from './catalogo-subbloques/seleccionar-subbloques-dialog.component';
 import { PlanificacionAlumnoComponent } from './planificacion-alumno/planificacion-alumno.component';
 import { PlanificacionBloqueadaComponent } from './planificacion-bloqueada/planificacion-bloqueada.component';
 import { PlanificacionComentariosOverviewComponent } from './planificacion-comentarios-overview/planificacion-comentarios-overview.component';
@@ -74,8 +76,10 @@ registerLocaleData(localeEs);
     MessageModule,
     AsyncButtonComponent,
     GenericListComponent,
+    MarkdownContentComponent,
     EditarSubBloqueDialogComponent,
     CatalogoSubbloquesListComponent,
+    SeleccionarSubbloquesDialogComponent,
     PlanificacionAlumnoComponent,
     PlanificacionBloqueadaComponent,
     PlanificacionConfiguracionWizardComponent,

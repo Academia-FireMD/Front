@@ -53,6 +53,12 @@
   (savedSubBloque)="saveEvent($event)"
 ></app-editar-sub-bloque-dialog>
 
+<app-seleccionar-subbloques-dialog
+  *ngIf="role === 'ADMIN'"
+  [(visible)]="seleccionandoSubbloques"
+  (selected)="subbloquesSeleccionados($event)"
+></app-seleccionar-subbloques-dialog>
+
 <p-dialog
   *ngIf="role == 'ADMIN'"
   class="select-bloque-asignable-dialog"
@@ -123,9 +129,10 @@
               <span class="text-sm"> {{ subBloque.duracion }} minutos </span>
             </div>
           </div>
-          <span class="font-bold text-sm text-overflow-ellipsis">
-            {{ subBloque.comentarios || "Sin comentarios" }}
-          </span>
+          <app-markdown-content
+            class="text-sm"
+            [content]="subBloque.comentarios"
+          ></app-markdown-content>
         </div>
       </div>
     </p-card>

@@ -61,6 +61,7 @@ export type GenericListMode = 'overview' | 'selection';
         <div
           class="top-action-bar"
           [class.mobile-stack-actions]="stackActionsOnMobile"
+          [class.selection-mode]="mode === 'selection'"
         >
           <!-- Left Actions - Siempre visible -->
           <div class="left-actions">
@@ -68,7 +69,7 @@ export type GenericListMode = 'overview' | 'selection';
           </div>
           <div
             *ngIf="mode === 'selection' && !singleSelection"
-            class="flex align-items-center gap-2 ml-2"
+            class="select-page-control flex align-items-center gap-2"
           >
             <p-checkbox
               [binary]="true"

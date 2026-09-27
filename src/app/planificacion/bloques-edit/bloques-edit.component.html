@@ -15,90 +15,31 @@
 >
   <p>Elige cómo quieres añadir contenido a este Bloque.</p>
   <div class="opciones-agregar">
-    <p-button
-      label="Crear manualmente"
-      icon="pi pi-pencil"
-      [outlined]="true"
+    <button
+      type="button"
+      class="opcion-agregar"
       (click)="crearSubBloqueManual()"
-    ></p-button>
-    <p-button
-      label="Seleccionar del catálogo"
-      icon="pi pi-list"
-      [loading]="cargandoCatalogo"
+    >
+      <i class="pi pi-pencil" aria-hidden="true"></i>
+      <strong>Crear manualmente</strong>
+      <span>Contenido propio de este Bloque.</span>
+    </button>
+    <button
+      type="button"
+      class="opcion-agregar"
       (click)="abrirSelectorCatalogo()"
-    ></p-button>
+    >
+      <i class="pi pi-list" aria-hidden="true"></i>
+      <strong>Seleccionar existentes</strong>
+      <span>Copias editables de los subbloques importados o creados.</span>
+    </button>
   </div>
 </p-dialog>
 
-<p-dialog
-  header="Seleccionar subbloques del catálogo"
+<app-seleccionar-subbloques-dialog
   [(visible)]="mostrarSelectorCatalogo"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: 'min(96vw, 68rem)', maxHeight: '95vh' }"
-  [contentStyle]="{ maxHeight: 'calc(95vh - 9rem)', overflow: 'auto' }"
->
-  <app-catalogo-subbloques-list
-    mode="selection"
-    [items]="catalogoDisponible"
-    [selectedIds]="seleccionCatalogo"
-    [routeSyncEnabled]="false"
-    (selectedIdsChange)="onSeleccionCatalogo($event)"
-  ></app-catalogo-subbloques-list>
-  <div class="configuracion-comun">
-    <div>
-      <label for="duracion-comun">Duración de cada uso (minutos)</label>
-      <p-inputNumber
-        inputId="duracion-comun"
-        [(ngModel)]="duracionComun"
-        [min]="1"
-        [maxFractionDigits]="0"
-        [showButtons]="true"
-      ></p-inputNumber>
-      <small *ngIf="!duracionComunValida" class="p-error" aria-live="polite">
-        Introduce un número entero de minutos mayor que cero.
-      </small>
-    </div>
-    <div>
-      <label for="trabajo-comun">Tipo de trabajo para todos</label>
-      <p-dropdown
-        inputId="trabajo-comun"
-        [(ngModel)]="tipoTrabajoComun"
-        [options]="tipoTrabajoComunOptions"
-        optionLabel="label"
-        optionValue="value"
-        appendTo="body"
-        styleClass="w-full"
-      ></p-dropdown>
-    </div>
-  </div>
-  <p class="text-color-secondary">
-    Puedes ajustar después cada uso por separado. Se guardarán al actualizar el
-    Bloque.
-  </p>
-  <ng-template pTemplate="footer">
-    <div class="acciones-selector">
-      <span aria-live="polite"
-        >{{ seleccionCatalogo.length }}
-        {{
-          seleccionCatalogo.length === 1 ? "seleccionado" : "seleccionados"
-        }}</span
-      >
-      <p-button
-        label="Cancelar"
-        [text]="true"
-        (click)="mostrarSelectorCatalogo = false"
-      ></p-button>
-      <p-button
-        [label]="'Añadir ' + seleccionCatalogo.length + ' al Bloque'"
-        [disabled]="!seleccionCatalogo.length || !duracionComunValida"
-        [loading]="agregandoSeleccionados"
-        (click)="anadirSeleccionCatalogo()"
-      ></p-button>
-    </div>
-  </ng-template>
-</p-dialog>
+  (selected)="onSubbloquesSeleccionados($event)"
+></app-seleccionar-subbloques-dialog>
 
 <div class="grid" [formGroup]="formGroup">
   <div class="col-12 content">
@@ -176,9 +117,10 @@
                     }
                   </div>
                 </div>
-                <span class="subbloque-comentario">
-                  {{ subBloque.comentarios || "Sin comentarios" }}
-                </span>
+                <app-markdown-content
+                  class="subbloque-comentario"
+                  [content]="subBloque.comentarios"
+                ></app-markdown-content>
                 <div class="actions">
                   <button
                     pButton

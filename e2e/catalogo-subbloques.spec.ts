@@ -39,11 +39,11 @@ async function prepararPagina(page: Page, filas = [fila]) {
         ],
         cambiosTrabajo: [],
         impacto: {
-          usos: 3,
-          bloques: 1,
+          usos: 0,
+          bloques: 0,
           plantillas: 0,
-          borradores: 1,
-          publicadas: 1,
+          borradores: 0,
+          publicadas: 0,
         },
         requiereConfirmacion: true,
         errores: [],
@@ -74,7 +74,9 @@ async function prepararPagina(page: Page, filas = [fila]) {
   return () => aplicaciones;
 }
 
-test('catálogo: buscador flexible y paginador visible con muchas filas en escritorio', async ({ page }, testInfo) => {
+test('catálogo: buscador flexible y paginador visible con muchas filas en escritorio', async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const filas = Array.from({ length: 24 }, (_, index) => ({
     ...fila,
@@ -83,25 +85,37 @@ test('catálogo: buscador flexible y paginador visible con muchas filas en escri
   }));
   await prepararPagina(page, filas);
 
-  const search = await page.getByRole('searchbox', { name: 'Buscar subbloques' }).boundingBox();
-  const actions = await page.getByRole('button', { name: 'Tipos de trabajo' }).boundingBox();
-  expect(search?.width).toBeGreaterThan(500);
-  expect((actions?.height ?? 0)).toBeLessThan(44);
+  const search = await page
+    .getByRole('searchbox', { name: 'Buscar subbloques' })
+    .boundingBox();
+  const actions = await page
+    .getByRole('button', { name: 'Tipos de trabajo' })
+    .boundingBox();
+  expect(search?.width).toBeGreaterThan(480);
+  expect(actions?.height ?? 0).toBeLessThan(44);
 
   const list = page.locator('app-catalogo-subbloques-list .list-generic');
   const paginator = page.locator('app-catalogo-subbloques-list p-paginator');
   await expect(paginator).toBeInViewport();
-  expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
-  await list.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  expect(
+    await list.evaluate(
+      (element) => element.scrollHeight > element.clientHeight,
+    ),
+  ).toBe(true);
+  await list.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
   await expect(paginator).toBeInViewport();
-  await page.screenshot({ path: testInfo.outputPath('catalogo-paginador-desktop.png') });
+  await page.screenshot({
+    path: testInfo.outputPath('catalogo-paginador-desktop.png'),
+  });
 });
 
 for (const viewport of [
   { name: 'escritorio', width: 1280, height: 800 },
   { name: 'móvil 375 px', width: 375, height: 667 },
 ]) {
-  test(`catálogo: previsualización, impacto y confirmación en ${viewport.name}`, async ({
+  test(`catálogo: previsualización y confirmación en ${viewport.name}`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({
@@ -113,7 +127,7 @@ for (const viewport of [
       .getByRole('searchbox', { name: 'Buscar subbloques' })
       .boundingBox();
     const accion = await page
-      .getByRole('button', { name: 'Importar catálogo' })
+      .getByRole('button', { name: 'Importar subbloques' })
       .boundingBox();
     const filtro = await page
       .getByRole('button', { name: 'Filtros' })
@@ -136,9 +150,9 @@ for (const viewport of [
     await page.screenshot({
       path: testInfo.outputPath(`catalogo-overview-${viewport.width}.png`),
     });
-    await page.getByRole('button', { name: 'Importar catálogo' }).click();
+    await page.getByRole('button', { name: 'Importar subbloques' }).click();
     const dialogo = page.getByRole('dialog', {
-      name: 'Importar catálogo de subbloques',
+      name: 'Importar subbloques',
     });
     await dialogo.locator('input[type="file"]').setInputFiles({
       name: 'catalogo.xlsx',
@@ -147,7 +161,11 @@ for (const viewport of [
       buffer: Buffer.from('excel-de-prueba'),
     });
     await dialogo.getByRole('button', { name: 'Revisar Excel' }).click();
-    await expect(dialogo.getByText('1 calendarios publicados')).toBeVisible();
+    await expect(
+      dialogo.getByText(
+        'Los Bloques, plantillas y calendarios existentes no cambiarán.',
+      ),
+    ).toBeVisible();
     await expect(dialogo.getByRole('listitem').first()).toContainText(
       /L01.*Modificado.*explicación.*Antes: Explicación completa.*Después: Explicación nueva/,
     );
@@ -156,7 +174,7 @@ for (const viewport of [
       dialogo.getByRole('button', { name: 'Importar', exact: true }),
     ).toBeDisabled();
     await dialogo
-      .getByText('Confirmo que quiero sustituir el contenido indicado.')
+      .getByText('Confirmo los cambios en las fichas indicadas.')
       .click();
     await dialogo
       .getByRole('button', { name: 'Importar', exact: true })
@@ -278,10 +296,10 @@ test('Bloques: selector reutilizado añade dos usos y cancelar no crea filas', a
   await page.getByRole('button', { name: 'Añadir subbloques' }).click();
   await page
     .getByRole('dialog', { name: 'Añadir subbloques' })
-    .getByRole('button', { name: 'Seleccionar del catálogo' })
+    .getByRole('button', { name: 'Seleccionar existentes' })
     .click();
   const selector = page.getByRole('dialog', {
-    name: 'Seleccionar subbloques del catálogo',
+    name: 'Seleccionar subbloques',
   });
   await selector
     .getByRole('checkbox', { name: 'Seleccionar L01 · Temario' })
@@ -290,9 +308,19 @@ test('Bloques: selector reutilizado añade dos usos y cancelar no crea filas', a
   await expect(selector.getByText('1 seleccionado')).toBeVisible();
   await selector.getByText('L02 · Repaso').click();
   expect(new URL(page.url()).pathname).toBe('/app/planificacion/bloques/24');
-  await selector.getByRole('button', { name: 'Añadir 2 al Bloque' }).click();
+  await page.screenshot({
+    path: testInfo.outputPath('selector-paso-1-mobile.png'),
+  });
+  await selector.getByRole('button', { name: 'Continuar' }).click();
+  await expect(selector.getByText('Duración (minutos)')).toHaveCount(2);
+  await page.screenshot({
+    path: testInfo.outputPath('selector-paso-2-mobile.png'),
+  });
+  await selector.getByRole('button', { name: 'Añadir copias' }).click();
+  await expect(selector).toBeHidden();
   await expect(page.getByText('L01', { exact: true })).toBeVisible();
   await expect(page.getByText('L02', { exact: true })).toBeVisible();
+  await expect(page.locator('app-markdown-content strong')).toHaveCount(2);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,

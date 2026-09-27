@@ -13,11 +13,6 @@ import {
   SubBloque,
 } from '../../shared/models/planificacion.model';
 import { groupedTemas } from '../../utils/utils';
-import {
-  CatalogoContenidoCompleto,
-  CatalogoTrabajo,
-  TipoTrabajoCatalogo,
-} from '../models/catalogo-contenido.model';
 @Component({
   selector: 'app-bloques-edit',
   templateUrl: './bloques-edit.component.html',
@@ -35,27 +30,6 @@ export class BloquesEditComponent {
   private editingIndex = 0;
   public mostrarOpcionesAgregar = false;
   public mostrarSelectorCatalogo = false;
-  public cargandoCatalogo = false;
-  public agregandoSeleccionados = false;
-  public catalogoDisponible: CatalogoContenidoCompleto[] = [];
-  public trabajosCatalogo: CatalogoTrabajo[] = [];
-  public seleccionCatalogo: number[] = [];
-  public duracionComun = 60;
-  public tipoTrabajoComun: TipoTrabajoCatalogo | null = null;
-
-  get duracionComunValida(): boolean {
-    return Number.isInteger(this.duracionComun) && this.duracionComun > 0;
-  }
-
-  get tipoTrabajoComunOptions() {
-    return [
-      { label: 'Sin tipo', value: null },
-      ...this.trabajosCatalogo.map((item) => ({
-        label: item.trabajo,
-        value: item.trabajo,
-      })),
-    ];
-  }
 
   public checked = {};
 
@@ -93,79 +67,28 @@ export class BloquesEditComponent {
     this.openDialog(this.getEmptySubBloqueForm().value as SubBloque);
   }
 
-  public async abrirSelectorCatalogo(): Promise<void> {
+  public abrirSelectorCatalogo(): void {
     this.mostrarOpcionesAgregar = false;
-    this.seleccionCatalogo = [];
-    this.duracionComun = 60;
-    this.tipoTrabajoComun = null;
-    this.cargandoCatalogo = true;
-    try {
-      const catalogo = await firstValueFrom(
-        this.planificacionesService.listarCatalogoContenido(),
-      );
-      this.catalogoDisponible = catalogo.filas;
-      this.trabajosCatalogo = catalogo.trabajos;
-      this.mostrarSelectorCatalogo = true;
-    } catch {
-      this.toast.error('No se pudo cargar el catálogo de subbloques.');
-    } finally {
-      this.cargandoCatalogo = false;
-    }
+    this.mostrarSelectorCatalogo = true;
   }
 
-  public onSeleccionCatalogo(ids: (string | number)[]): void {
-    this.seleccionCatalogo = ids.map(Number);
-  }
-
-  public async anadirSeleccionCatalogo(): Promise<void> {
-    if (!this.seleccionCatalogo.length || !this.duracionComunValida) return;
-    const filas = this.seleccionCatalogo.map((id) =>
-      this.catalogoDisponible.find((item) => item.id === id && item.activa),
+  public onSubbloquesSeleccionados(copias: SubBloque[]): void {
+    const idsActuales = new Set<number>(
+      this.subBloques.value
+        .map((item: SubBloque) => item.catalogoContenidoId)
+        .filter((id: number | undefined): id is number => !!id),
     );
-    if (filas.some((fila) => !fila)) {
-      this.toast.error(
-        'Alguno de los subbloques seleccionados ya no está disponible.',
+    if (copias.some((copia) => idsActuales.has(copia.catalogoContenidoId!))) {
+      this.toast.info(
+        'Este subbloque ya aparece en el Bloque. Se añadirá otra copia independiente.',
       );
-      return;
     }
-    this.agregandoSeleccionados = true;
-    try {
-      const compuestos = await Promise.all(
-        (filas as CatalogoContenidoCompleto[]).map((fila) =>
-          firstValueFrom(
-            this.planificacionesService.componerContenidoCatalogo(
-              fila.codigo,
-              this.tipoTrabajoComun ?? undefined,
-            ),
-          ),
-        ),
-      );
-      if (compuestos.some((contenido) => !contenido)) {
-        throw new Error('El catálogo devolvió contenido incompleto');
-      }
-      const nuevos = compuestos.map((contenido, index) => {
-        const form = this.getEmptySubBloqueForm();
-        form.patchValue({
-          catalogoContenidoId: (filas[index] as CatalogoContenidoCompleto).id,
-          tipoTrabajoPlanificacion: this.tipoTrabajoComun,
-          duracion: this.duracionComun,
-          nombre: contenido.nombre,
-          comentarios: contenido.comentarios,
-          color: contenido.color,
-        });
-        return form;
-      });
-      nuevos.forEach((form) => this.subBloques.push(form));
-      this.formGroup.markAsDirty();
-      this.mostrarSelectorCatalogo = false;
-      this.seleccionCatalogo = [];
-    } catch {
-      this.toast.error(
-        'No se pudieron añadir los subbloques. Revisa el catálogo e inténtalo de nuevo.',
-      );
-    } finally {
-      this.agregandoSeleccionados = false;
+    for (const copia of copias) {
+      const form = this.getEmptySubBloqueForm();
+      form.patchValue(copia);
+      this.subBloques.push(form);
     }
+    this.formGroup.markAsDirty();
   }
 
   private getEmptySubBloqueForm() {

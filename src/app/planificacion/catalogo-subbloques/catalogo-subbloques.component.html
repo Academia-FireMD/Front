@@ -31,8 +31,8 @@
 >
   <div class="formulario-catalogo">
     <p>
-      Estas descripciones se combinan con los subbloques del catálogo en cada
-      uso.
+      Estas descripciones se aplican al crear nuevas actividades. Las copias
+      existentes no cambian.
     </p>
     <ng-container *ngFor="let tipo of tiposTrabajo">
       <label [for]="'leyenda-' + tipo">{{ tipo }}</label>
@@ -45,8 +45,7 @@
       ></textarea>
     </ng-container>
     <p class="aviso-impacto">
-      Cambiar una descripción actualizará también las actividades vinculadas ya
-      publicadas.
+      Los Bloques y calendarios existentes conservarán su contenido.
     </p>
     <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
   </div>
@@ -74,7 +73,7 @@
 </p-dialog>
 
 <p-dialog
-  header="Importar catálogo de subbloques"
+  header="Importar subbloques"
   [(visible)]="dialogoImportacion"
   [modal]="true"
   [draggable]="false"
@@ -83,8 +82,9 @@
 >
   <div class="formulario-catalogo">
     <p>
-      Sube el Excel del catálogo. Los códigos ausentes no se borrarán. Importar
-      contenido no publica semanas nuevas.
+      Sube el Excel de subbloques. Reimportar un código actualiza solo su ficha;
+      los códigos ausentes no se borran. Los Bloques y calendarios existentes no
+      cambian.
     </p>
     <label for="catalogo-archivo">Archivo Excel (.xlsx)</label>
     <input
@@ -131,24 +131,8 @@
     </ng-container>
     <ng-template #previewValido>
       <h3>Qué cambiará</h3>
-      <div class="impacto-grid" *ngIf="resultado.impacto as impacto">
-        <span
-          ><strong>{{ impacto.bloques }}</strong> bloques</span
-        >
-        <span
-          ><strong>{{ impacto.plantillas }}</strong> plantillas</span
-        >
-        <span
-          ><strong>{{ impacto.borradores }}</strong> borradores</span
-        >
-        <span
-          ><strong>{{ impacto.publicadas }}</strong> calendarios
-          publicados</span
-        >
-      </div>
-      <p *ngIf="resultado.impacto?.publicadas" class="aviso-impacto">
-        Atención: estos cambios de contenido serán visibles inmediatamente para
-        alumnos.
+      <p class="aviso-menor">
+        Los Bloques, plantillas y calendarios existentes no cambiarán.
       </p>
       <ul class="lista-cambios">
         <li
@@ -193,7 +177,7 @@
           [binary]="true"
         ></p-checkbox>
         <label for="confirmar-catalogo"
-          >Confirmo que quiero sustituir el contenido indicado.</label
+          >Confirmo los cambios en las fichas indicadas.</label
         >
       </div>
     </ng-template>

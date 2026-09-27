@@ -60,6 +60,7 @@ export class VistaSemanalComponent {
   view = CalendarView.Month;
   public isDialogVisible: boolean = false;
   public seleccionandoBloquesAsignables = false;
+  public seleccionandoSubbloques = false;
   @Input() public set events(data: CalendarEvent[]) {
     data.forEach((e) => {
       if (this.mode == 'edit') e.draggable = true;
@@ -224,8 +225,19 @@ export class VistaSemanalComponent {
       command: () => (this.seleccionandoBloquesAsignables = true),
     };
 
+    const seleccionarSubbloques = {
+      label: 'Seleccionar subbloques',
+      icon: 'pi pi-list',
+      command: () => (this.seleccionandoSubbloques = true),
+    };
+
     if (role == 'ADMIN') {
-      return [addNew, addEntrenamientoFisico, aplicarBloqueAsignable];
+      return [
+        addNew,
+        seleccionarSubbloques,
+        addEntrenamientoFisico,
+        aplicarBloqueAsignable,
+      ];
     }
 
     // Para alumnos, mostrar opción de agregar evento personal
@@ -563,6 +575,18 @@ export class VistaSemanalComponent {
 
   public bloqueAsignableSeleccionado(planificacionBloque: PlanificacionBloque) {
     this.applyPlanificacionBloque(planificacionBloque, this.onTimeClickedDate);
+    this.actualizarTrasInsertarSubbloques();
+    this.seleccionandoBloquesAsignables = false;
+  }
+
+  public subbloquesSeleccionados(copias: SubBloque[]): void {
+    if (!this.onTimeClickedDate || !copias.length) return;
+    this.applySubbloques(copias, this.onTimeClickedDate);
+    this.actualizarTrasInsertarSubbloques();
+    this.seleccionandoSubbloques = false;
+  }
+
+  private actualizarTrasInsertarSubbloques(): void {
     this.events = [...this.events];
     if (this.view === 'month') {
       this.viewDate = this.onTimeClickedDate;
@@ -571,43 +595,40 @@ export class VistaSemanalComponent {
     this.eventsChange.emit(this.events);
     this.refresh.next();
     this.onTimeClickedDate = null as any;
-    this.seleccionandoBloquesAsignables = false;
   }
 
   private applyPlanificacionBloque(
     planificacionBloque: PlanificacionBloque,
     newStart: Date,
   ) {
-    // Supongamos que el `CalendarEvent` tiene una referencia al `PlanificacionBloque`
-
     if (planificacionBloque) {
-      // Establecemos la hora de inicio base en newStart
-      let currentStartDate = new Date(newStart);
-      let clonedPlanificacion = cloneDeep(planificacionBloque);
-      // Iteramos sobre los subBloques y creamos eventos basados en ellos
-      clonedPlanificacion.subBloques.forEach((subBloque) => {
-        subBloque.id = null;
-        const subEvent: CalendarEvent = {
-          title: subBloque.nombre,
-          color: {
-            primary: subBloque.color || this.colors.yellow.primary,
-            secondary: subBloque.color || this.colors.yellow.secondary,
-          },
-          start: new Date(currentStartDate),
-          end: new Date(
-            currentStartDate.getTime() + subBloque.duracion * 60000,
-          ),
-          meta: { subBloque },
-          draggable: true,
-        };
-
-        // Añadimos el sub-evento a los eventos
-        this.events.push(subEvent);
-
-        // Actualizamos currentStart para el próximo subBloque
-        currentStartDate = new Date(subEvent.end as Date);
-      });
+      this.applySubbloques(planificacionBloque.subBloques, newStart);
     }
+  }
+
+  private applySubbloques(subbloques: SubBloque[], newStart: Date): void {
+    let currentStartDate = new Date(newStart);
+    cloneDeep(subbloques).forEach((subBloque) => {
+      subBloque.id = null;
+      subBloque.horaInicio = new Date(currentStartDate);
+      const subEvent: CalendarEvent = {
+        title: subBloque.nombre,
+        color: {
+          primary: subBloque.color || this.colors.yellow.primary,
+          secondary: subBloque.color || this.colors.yellow.secondary,
+        },
+        start: new Date(currentStartDate),
+        end: new Date(currentStartDate.getTime() + subBloque.duracion * 60000),
+        meta: { subBloque },
+        draggable: true,
+      };
+
+      // Añadimos el sub-evento a los eventos
+      this.events.push(subEvent);
+
+      // Actualizamos currentStart para el próximo subBloque
+      currentStartDate = new Date(subEvent.end as Date);
+    });
   }
 
   eventDropped(

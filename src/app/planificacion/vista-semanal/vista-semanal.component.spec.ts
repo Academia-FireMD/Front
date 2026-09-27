@@ -27,6 +27,38 @@ describe('VistaSemanalComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('copia subbloques en el calendario manual sin guardarlos antes de confirmar el padre', () => {
+    const inicio = new Date(2026, 8, 28, 9, 0);
+    (component as any).onTimeClickedDate = inicio;
+    component.seleccionandoSubbloques = true;
+    const emit = jest.spyOn(component.eventsChange, 'emit');
+    const save = jest.spyOn(component.saveChanges, 'emit');
+    component.subbloquesSeleccionados([
+      {
+        catalogoContenidoId: 7,
+        nombre: 'Tema uno',
+        duracion: 45,
+        comentarios: '**Nota**',
+        color: '#123456',
+      },
+      {
+        catalogoContenidoId: 7,
+        nombre: 'Tema dos',
+        duracion: 30,
+        comentarios: 'Otra nota',
+        color: '#123456',
+      },
+    ] as any);
+    expect(component.events).toHaveLength(2);
+    expect(component.events[0].meta.subBloque.id).toBeNull();
+    expect(component.events[1].start.getTime()).toBe(
+      inicio.getTime() + 45 * 60000,
+    );
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(save).not.toHaveBeenCalled();
+    expect(component.seleccionandoSubbloques).toBe(false);
+  });
+
   describe('menú de contexto — añadir entrenamiento físico', () => {
     it('no abre el menú de la franja al pulsar una actividad', () => {
       const sourceEvent = {
