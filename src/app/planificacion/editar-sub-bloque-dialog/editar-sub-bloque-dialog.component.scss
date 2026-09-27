@@ -76,3 +76,63 @@
     }
   }
 }
+
+.catalogo-editor-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.65rem;
+  max-height: calc(94vh - 11rem);
+  overflow: auto;
+  padding: 0.25rem;
+  text-align: left;
+}
+.catalogo-editor-form label {
+  font-weight: 600;
+  justify-self: start;
+  text-align: left;
+}
+.catalogo-editor-form > input {
+  width: 100%;
+}
+.catalogo-editor-form small {
+  color: var(--text-color-secondary);
+}
+.catalogo-editor-color {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.catalogo-editor-color input {
+  flex: 1;
+  min-width: 0;
+}
+.catalogo-editor-color span {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.35rem;
+}
+.catalogo-editor-warning {
+  padding: 0.8rem;
+  border-left: 3px solid var(--primary-color);
+  background: var(--surface-100);
+}
+.catalogo-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .catalogo-editor-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .catalogo-editor-actions p-button:last-child {
+    grid-column: 1 / -1;
+  }
+  .catalogo-editor-actions ::ng-deep .p-button {
+    width: 100%;
+    min-height: 44px;
+  }
+}

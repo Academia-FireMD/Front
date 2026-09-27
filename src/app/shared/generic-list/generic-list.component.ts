@@ -72,13 +72,12 @@ export type GenericListMode = 'overview' | 'selection';
           >
             <p-checkbox
               [binary]="true"
+              ariaLabel="Seleccionar todos los elementos de esta página"
               [ngModel]="isAllSelected()"
               (ngModelChange)="toggleSelectAll()"
               styleClass="select-all-checkbox"
             />
-            <label class="text-sm" *ngIf="viewportService.screenWidth != 'xs'"
-              >Seleccionar todo</label
-            >
+            <span class="text-sm">Seleccionar página</span>
           </div>
           <!-- Right Actions - Siempre visible -->
           <div class="right-actions">
@@ -133,6 +132,7 @@ export type GenericListMode = 'overview' | 'selection';
                 >
                   <p-checkbox
                     [binary]="true"
+                    [ariaLabel]="getSelectionLabel(item)"
                     [ngModel]="isItemSelected(item)"
                     (ngModelChange)="toggleItemSelection(item)"
                     (click)="$event.stopPropagation()"
@@ -323,7 +323,12 @@ export class GenericListComponent<T>
   @Input() mode: GenericListMode = 'overview';
   @Input() singleSelection = false;
   @Input() selectedItemIds: (string | number)[] = [];
+  @Input() getSelectionLabel: (item: T) => string = (item) =>
+    `Seleccionar elemento ${this.getItemId(item)}`;
   @Input() getItemId: (item: T) => string | number = (item: any) => item.id;
+  @Input() set sharedPagination(value: typeof this.pagination) {
+    if (value) this.pagination = value;
+  }
   @Output() onItemClick = new EventEmitter<T>();
   @Output() filtersChanged = new EventEmitter<any>();
   @Output() selectionChange = new EventEmitter<(string | number)[]>();
@@ -356,6 +361,7 @@ export class GenericListComponent<T>
   override ngOnInit() {
     super.ngOnInit();
     this.initializeFilters();
+    if (!this.routeSyncEnabled) return;
 
     // Suscribirse a cambios en queryParams para recargar filtros automáticamente
     firstValueFrom(this.route.queryParams).then((params) => {
@@ -533,6 +539,7 @@ export class GenericListComponent<T>
   }
 
   private saveFiltersToQueryParams(where: any) {
+    if (!this.routeSyncEnabled) return;
     const queryParams: any = { ...this.route.snapshot.queryParams };
 
     // Limpiar TODOS los filtros anteriores (no solo los que están en filterControls)
@@ -555,6 +562,7 @@ export class GenericListComponent<T>
   }
 
   updateQueryParamsFilters(queryParams: any) {
+    if (!this.routeSyncEnabled) return;
     const currentQueryParams = { ...this.route.snapshot.queryParams };
 
     // Limpiar TODOS los filtros anteriores

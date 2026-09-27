@@ -27,6 +27,7 @@ import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
 import { CalendarHeaderComponent } from './calendar-header/calendar-header.component';
 import { EditarSubBloqueDialogComponent } from './editar-sub-bloque-dialog/editar-sub-bloque-dialog.component';
+import { CatalogoSubbloquesListComponent } from './catalogo-subbloques/catalogo-subbloques-list.component';
 import { PlanificacionAlumnoComponent } from './planificacion-alumno/planificacion-alumno.component';
 import { PlanificacionBloqueadaComponent } from './planificacion-bloqueada/planificacion-bloqueada.component';
 import { PlanificacionComentariosOverviewComponent } from './planificacion-comentarios-overview/planificacion-comentarios-overview.component';
@@ -48,7 +49,6 @@ registerLocaleData(localeEs);
     PlantillaSemanalEditComponent,
     PlanificacionMensualOverviewComponent,
     PlanificacionMensualEditComponent,
-    EditarSubBloqueDialogComponent,
     VistaSemanalComponent,
     CalendarHeaderComponent,
     PlanificacionComentariosOverviewComponent,
@@ -74,6 +74,8 @@ registerLocaleData(localeEs);
     MessageModule,
     AsyncButtonComponent,
     GenericListComponent,
+    EditarSubBloqueDialogComponent,
+    CatalogoSubbloquesListComponent,
     PlanificacionAlumnoComponent,
     PlanificacionBloqueadaComponent,
     PlanificacionConfiguracionWizardComponent,

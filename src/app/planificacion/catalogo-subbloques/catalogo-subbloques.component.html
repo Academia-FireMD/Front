@@ -6,27 +6,7 @@
       semanas. La duración y el día se deciden en cada planificación.
     </p>
   </div>
-</div>
-
-<app-generic-list
-  [fetchItems$]="fetchItems$"
-  [itemTemplate]="filaTemplate"
-  [autoItemHeight]="true"
-  [stackActionsOnMobile]="true"
-  (onItemClick)="abrirEdicion($event)"
->
-  <div left-actions>
-    <label class="sr-only" for="buscar-subbloques">Buscar subbloques</label>
-    <input
-      id="buscar-subbloques"
-      pInputText
-      type="search"
-      placeholder="Buscar código o contenido"
-      [value]="pagination().searchTerm"
-      (input)="valueChanged($event)"
-    />
-  </div>
-  <div right-actions class="catalogo-acciones">
+  <div class="catalogo-acciones">
     <p-button
       label="Tipos de trabajo"
       icon="pi pi-list"
@@ -45,130 +25,27 @@
       (click)="abrirNuevo()"
     ></p-button>
   </div>
-  <div empty-template class="empty-state">
-    No hay subbloques para esta búsqueda.
-  </div>
-</app-generic-list>
+</div>
 
-<ng-template #filaTemplate let-item>
-  <div class="catalogo-fila">
-    <span
-      class="muestra-color"
-      [style.backgroundColor]="item.color"
-      aria-hidden="true"
-    ></span>
-    <div class="catalogo-fila-texto">
-      <div class="catalogo-fila-titulo">
-        <strong>{{ item.codigo }}</strong>
-        <span>{{ item.nombreCorto }}</span>
-      </div>
-      <small>{{ item.nombreDescriptivo || "Sin descripción ampliada" }}</small>
-    </div>
-    <p-button
-      icon="pi pi-pencil"
-      [text]="true"
-      ariaLabel="Editar {{ item.codigo }}"
-      (click)="$event.stopPropagation(); abrirEdicion(item)"
-    ></p-button>
-  </div>
-</ng-template>
+<app-catalogo-subbloques-list
+  [items]="catalogo().filas"
+  (editRequested)="abrirEdicion($event)"
+></app-catalogo-subbloques-list>
 
-<p-dialog
-  [header]="esNuevo ? 'Nuevo subbloque' : 'Editar ' + fila.codigo"
-  [(visible)]="dialogoEdicion"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: 'min(94vw, 760px)', maxHeight: '94vh' }"
-  (onHide)="resetPreview()"
+<app-editar-sub-bloque-dialog
+  modo="catalogo"
+  [(isDialogVisible)]="dialogoEdicion"
+  [catalogoFila]="fila"
+  [catalogoNuevo]="esNuevo"
+  [catalogoPuedeAplicar]="puedeAplicar"
+  [catalogoCargando]="cargando()"
+  [catalogoGuardando]="guardando()"
+  (catalogoChanged)="resetPreview()"
+  (revisarCatalogo)="revisarEdicion()"
+  (aplicarCatalogo)="aplicar()"
 >
-  <div class="formulario-catalogo">
-    <label for="catalogo-codigo">Código</label>
-    <input
-      id="catalogo-codigo"
-      pInputText
-      [(ngModel)]="fila.codigo"
-      (ngModelChange)="resetPreview()"
-      [disabled]="!esNuevo"
-      maxlength="24"
-    />
-    <small *ngIf="!esNuevo"
-      >El código no se puede cambiar. Crea otro y revincula los usos si
-      necesitas corregirlo.</small
-    >
-
-    <label for="catalogo-nombre">Nombre corto</label>
-    <input
-      id="catalogo-nombre"
-      pInputText
-      [(ngModel)]="fila.nombreCorto"
-      (ngModelChange)="resetPreview()"
-      maxlength="160"
-    />
-
-    <label for="catalogo-descripcion">Explicación</label>
-    <textarea
-      id="catalogo-descripcion"
-      pInputTextarea
-      [(ngModel)]="fila.nombreDescriptivo"
-      (ngModelChange)="resetPreview()"
-      rows="3"
-    ></textarea>
-
-    <label for="catalogo-puntos">Puntos importantes</label>
-    <textarea
-      id="catalogo-puntos"
-      pInputTextarea
-      [(ngModel)]="fila.puntosImportantes"
-      (ngModelChange)="resetPreview()"
-      rows="4"
-    ></textarea>
-
-    <label for="catalogo-color">Color</label>
-    <div class="campo-color">
-      <input
-        id="catalogo-color"
-        pInputText
-        [(ngModel)]="fila.color"
-        (ngModelChange)="resetPreview()"
-        maxlength="7"
-      />
-      <span
-        class="muestra-color"
-        [style.backgroundColor]="fila.color"
-        aria-hidden="true"
-      ></span>
-    </div>
-
-    <p class="aviso-impacto">
-      Cambiar este contenido actualizará inmediatamente todos sus usos
-      vinculados, incluso los que ya ven los alumnos. No cambiará fechas,
-      duración ni progreso.
-    </p>
-    <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
-  </div>
-  <ng-template pTemplate="footer">
-    <div class="dialogo-acciones">
-      <p-button
-        label="Cancelar"
-        [text]="true"
-        (click)="dialogoEdicion = false"
-      ></p-button>
-      <p-button
-        label="Revisar cambios"
-        [outlined]="true"
-        [loading]="cargando()"
-        (click)="revisarEdicion()"
-      ></p-button>
-      <p-button
-        label="Guardar"
-        [disabled]="!puedeAplicar"
-        [loading]="guardando()"
-        (click)="aplicar()"
-      ></p-button>
-    </div>
-  </ng-template>
-</p-dialog>
+  <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
+</app-editar-sub-bloque-dialog>
 
 <p-dialog
   header="Tipos de trabajo"

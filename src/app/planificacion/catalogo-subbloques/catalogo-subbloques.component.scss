@@ -4,6 +4,13 @@
   max-width: 100%;
 }
 
+.catalogo-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .catalogo-cabecera h1 {
   margin: 0 0 0.4rem;
   font-size: clamp(1.4rem, 2.5vw, 2rem);
@@ -27,6 +34,7 @@
 
 .catalogo-acciones {
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .catalogo-fila {
   padding: 0.75rem;
@@ -143,6 +151,9 @@
 }
 
 @media (max-width: 640px) {
+  .catalogo-cabecera {
+    flex-direction: column;
+  }
   :host {
     padding: 0.65rem;
   }

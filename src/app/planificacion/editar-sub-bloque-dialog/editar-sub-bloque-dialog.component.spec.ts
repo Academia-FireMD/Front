@@ -66,8 +66,11 @@ describe('EditarSubBloqueDialogComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [EditarSubBloqueDialogComponent],
-      imports: [ReactiveFormsModule, FormsModule],
+      imports: [
+        EditarSubBloqueDialogComponent,
+        ReactiveFormsModule,
+        FormsModule,
+      ],
       providers: [
         ...COMMON_TEST_PROVIDERS,
         { provide: AppConfigService, useValue: appConfigService },

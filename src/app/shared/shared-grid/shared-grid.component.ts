@@ -30,8 +30,9 @@ export class SharedGridComponent<T> implements OnInit, OnDestroy {
   route = inject(ActivatedRoute);
 
   @Input() fetchItems$: Signal<Observable<PaginatedResult<T> | null>> = signal(
-    of(null)
+    of(null),
   );
+  @Input() routeSyncEnabled = true;
 
   // Estado inicial de la paginación
   public pagination = signal<PaginationFilter>({
@@ -47,12 +48,16 @@ export class SharedGridComponent<T> implements OnInit, OnDestroy {
   private readonly PROGRAMMATIC_CHANGE_THRESHOLD = 100; // ms
 
   ngOnInit() {
+    if (!this.routeSyncEnabled) return;
     // Leer los parámetros de la URL si existen
     this.route.queryParams.subscribe((params) => {
       const now = Date.now();
 
       // Si este cambio ocurrió muy cerca de un cambio programático, ignorarlo
-      if (now - this.lastProgrammaticChangeTimestamp < this.PROGRAMMATIC_CHANGE_THRESHOLD) {
+      if (
+        now - this.lastProgrammaticChangeTimestamp <
+        this.PROGRAMMATIC_CHANGE_THRESHOLD
+      ) {
         return;
       }
 
@@ -63,7 +68,11 @@ export class SharedGridComponent<T> implements OnInit, OnDestroy {
       const current = this.pagination();
 
       // Solo actualizar si los valores realmente cambiaron
-      if (current.skip !== skip || current.take !== take || current.searchTerm !== searchTerm) {
+      if (
+        current.skip !== skip ||
+        current.take !== take ||
+        current.searchTerm !== searchTerm
+      ) {
         this.pagination.set({ ...current, skip, take, searchTerm });
       }
     });
@@ -99,7 +108,7 @@ export class SharedGridComponent<T> implements OnInit, OnDestroy {
     this.pagination.set(
       cloneDeep({
         ...this.pagination(),
-      })
+      }),
     );
     this.updateQueryParamsSafe(this.pagination());
   }
@@ -115,6 +124,7 @@ export class SharedGridComponent<T> implements OnInit, OnDestroy {
   }
 
   private updateQueryParamsSafe(pagination: PaginationFilter) {
+    if (!this.routeSyncEnabled) return;
     // Marcar el timestamp de este cambio programático
     this.lastProgrammaticChangeTimestamp = Date.now();
     this.updateQueryParams(pagination);

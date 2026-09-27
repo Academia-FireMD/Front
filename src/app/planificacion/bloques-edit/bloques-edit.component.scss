@@ -61,3 +61,42 @@
     min-width: 0;
   }
 }
+:host ::ng-deep .opciones-agregar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.configuracion-comun {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.configuracion-comun > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.acciones-selector {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .opciones-agregar,
+  .acciones-selector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .configuracion-comun {
+    grid-template-columns: 1fr;
+  }
+  :host ::ng-deep .opciones-agregar .p-button,
+  :host ::ng-deep .acciones-selector .p-button {
+    width: 100%;
+    min-height: 44px;
+  }
+}

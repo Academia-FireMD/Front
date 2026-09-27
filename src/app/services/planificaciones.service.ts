@@ -12,6 +12,7 @@ import {
 } from '../shared/models/planificacion.model';
 import { TipoDePlanificacionDeseada } from '../shared/models/user.model';
 import { ApiBaseService } from './api-base.service';
+import { environment } from '../../environments/environment';
 import {
   AplicarPlantillasSemanalesRequest,
   AplicarPlantillasSemanalesResponse,
@@ -311,10 +312,10 @@ export class PlanificacionesService extends ApiBaseService {
     form.append('file', file);
     form.append('previewHash', previewHash);
     form.append('confirmarCambios', String(confirmarCambios));
-    return this.post(
+    return this.postCatalogoConEstado(
       '/catalogo-contenido/importar/apply',
       form,
-    ) as Observable<CatalogoPreview>;
+    );
   }
 
   public previsualizarCambioCatalogo(
@@ -333,11 +334,24 @@ export class PlanificacionesService extends ApiBaseService {
     fila?: CatalogoFilaEditable,
     leyendas?: Partial<Record<TipoTrabajoCatalogo, string>>,
   ): Observable<CatalogoPreview> {
-    return this.post('/catalogo-contenido/cambio/apply', {
+    return this.postCatalogoConEstado('/catalogo-contenido/cambio/apply', {
       fila,
       leyendas,
       previewHash,
       confirmarCambios,
-    }) as Observable<CatalogoPreview>;
+    });
+  }
+
+  private postCatalogoConEstado(
+    endpoint: string,
+    body: unknown,
+  ): Observable<CatalogoPreview> {
+    // El editor debe distinguir un 409 de otros errores para descartar una
+    // previsualización obsoleta. ApiBaseService convierte el estado en Error.
+    return this._http.post<CatalogoPreview>(
+      environment.apiUrl + this.controllerPrefix + endpoint,
+      body,
+      { withCredentials: true },
+    );
   }
 }

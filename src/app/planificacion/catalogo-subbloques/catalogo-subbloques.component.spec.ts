@@ -1,8 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { CatalogoSubbloquesComponent } from './catalogo-subbloques.component';
+import { CatalogoSubbloquesListComponent } from './catalogo-subbloques-list.component';
 
 describe('CatalogoSubbloquesComponent', () => {
   const lista = {
@@ -24,6 +26,7 @@ describe('CatalogoSubbloquesComponent', () => {
       {
         codigo: 'L01',
         estado: 'actualizada' as const,
+        camposCambiados: ['nombre'],
         anterior: { codigo: 'L01', nombreCorto: 'Antes', color: '#ffffff' },
         nueva: { codigo: 'L01', nombreCorto: 'Temario', color: '#ffffff' },
       },
@@ -60,20 +63,64 @@ describe('CatalogoSubbloquesComponent', () => {
       .overrideComponent(CatalogoSubbloquesComponent, {
         set: { template: '', styles: [] },
       })
+      .overrideComponent(CatalogoSubbloquesListComponent, {
+        set: { template: '', styles: [] },
+      })
       .compileComponents();
   });
 
-  it('lista el mismo catálogo que usa la composición y permite buscar', async () => {
+  it('lista el mismo catálogo que usa la composición', async () => {
     const fixture = TestBed.createComponent(CatalogoSubbloquesComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     const component = fixture.componentInstance;
     expect(component.catalogo().filas[0].codigo).toBe('L01');
-    component.pagination.set({ take: 10, skip: 0, searchTerm: 'inexistente' });
-    const resultado = await import('rxjs').then(({ firstValueFrom }) =>
-      firstValueFrom(component.fetchItems$()),
+  });
+
+  it('la rejilla permite filtros y selección sin alterar la URL del Bloque', async () => {
+    const fixture = TestBed.createComponent(CatalogoSubbloquesListComponent);
+    const component = fixture.componentInstance;
+    component.routeSyncEnabled = false;
+    component.mode = 'selection';
+    component.items = [
+      lista.filas[0],
+      { ...lista.filas[0], id: 8, codigo: 'T01', activa: false },
+    ];
+    fixture.detectChanges();
+    const { firstValueFrom } = await import('rxjs');
+    const initial = await firstValueFrom(component.fetchItems$());
+    expect(initial?.data.map((item) => item.id)).toEqual([7]);
+    component.onSearch({
+      target: { value: 'inexistente' },
+    } as unknown as Event);
+    const filtered = await firstValueFrom(component.fetchItems$());
+    expect(filtered?.data).toHaveLength(0);
+    component.onSearch({ target: { value: '' } } as unknown as Event);
+    component.onFiltersChanged({ serie: 'L' });
+    const serie = await firstValueFrom(component.fetchItems$());
+    expect(serie?.data.map((item) => item.id)).toEqual([7]);
+  });
+
+  it('conserva la selección al cambiar de página y solo muestra entradas activas', async () => {
+    const fixture = TestBed.createComponent(CatalogoSubbloquesListComponent);
+    const component = fixture.componentInstance;
+    component.mode = 'selection';
+    component.routeSyncEnabled = false;
+    component.items = Array.from({ length: 12 }, (_, index) => ({
+      ...lista.filas[0],
+      id: index + 1,
+      codigo: `T${index + 1}`,
+      activa: index !== 11,
+    }));
+    component.selectedIds = [1];
+    const { firstValueFrom } = await import('rxjs');
+    expect((await firstValueFrom(component.fetchItems$()))?.data).toHaveLength(
+      10,
     );
-    expect(resultado?.data).toHaveLength(0);
+    component.onPageChange({ first: 10, rows: 10, page: 1, pageCount: 2 });
+    const paginaDos = await firstValueFrom(component.fetchItems$());
+    expect(paginaDos?.data.map((item) => item.id)).toEqual([11]);
+    expect(component.selectedIds).toEqual([1]);
   });
 
   it('exige confirmar la sustitución publicada antes de importar', async () => {
@@ -94,5 +141,41 @@ describe('CatalogoSubbloquesComponent', () => {
       preview.previewHash,
       true,
     );
+  });
+
+  it('envía ambos campos Markdown a la revisión, sin guardado directo', async () => {
+    const fixture = TestBed.createComponent(CatalogoSubbloquesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+    component.abrirEdicion({ ...lista.filas[0], nombreDescriptivo: 'Antes' });
+    component.fila!.nombreDescriptivo = '## Explicación\n\n- Paso';
+    component.fila!.puntosImportantes = '**Atención**';
+    await component.revisarEdicion();
+    expect(servicio.previsualizarCambioCatalogo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nombreDescriptivo: '## Explicación\n\n- Paso',
+        puntosImportantes: '**Atención**',
+      }),
+      undefined,
+    );
+    expect(servicio.guardarCambioCatalogo).not.toHaveBeenCalled();
+  });
+
+  it('descarta el hash obsoleto y recarga el catálogo tras un 409', async () => {
+    const fixture = TestBed.createComponent(CatalogoSubbloquesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+    component.abrirEdicion(lista.filas[0]);
+    component.preview = preview;
+    component.confirmado = true;
+    servicio.guardarCambioCatalogo.mockImplementationOnce(() =>
+      throwError(() => new HttpErrorResponse({ status: 409 })),
+    );
+    await component.aplicar();
+    expect(component.preview).toBeNull();
+    expect(component.dialogoEdicion).toBe(true);
+    expect(servicio.listarCatalogoContenido).toHaveBeenCalledTimes(2);
   });
 });

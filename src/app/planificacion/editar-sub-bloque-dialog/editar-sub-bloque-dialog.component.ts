@@ -5,14 +5,8 @@ import {
   inject,
   Input,
   Output,
-  ViewChild,
-  ElementRef,
-  OnDestroy,
-  AfterViewInit,
-  OnInit,
 } from '@angular/core';
 import { FormBuilder, FormControl, Validators } from '@angular/forms';
-import { Editor } from '@toast-ui/editor';
 import { cloneDeep, uniqueId } from 'lodash';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AppConfigService } from '../../services/app-config.service';
@@ -20,22 +14,36 @@ import { PlanificacionesService } from '../../services/planificaciones.service';
 import { ToastrService } from 'ngx-toastr';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { SubBloque } from '../../shared/models/planificacion.model';
-import { duracionOptions, universalEditorConfig } from '../../utils/utils';
-import { POSIBLES_TIPOS_SUBBLOQUE } from '../sub-bloque-colores';
+import { duracionOptions } from '../../utils/utils';
 import {
   CatalogoContenidoItem,
+  CatalogoFilaEditable,
   ComponerContenidoResponse,
   TipoTrabajoCatalogo,
 } from '../models/catalogo-contenido.model';
+import { CommonModule } from '@angular/common';
+import { SharedModule } from '../../shared/shared.module';
+import { SubBloqueMarkdownFieldComponent } from './sub-bloque-markdown-field.component';
+import { POSIBLES_TIPOS_SUBBLOQUE } from '../sub-bloque-colores';
 
 @Component({
   selector: 'app-editar-sub-bloque-dialog',
+  standalone: true,
+  imports: [CommonModule, SharedModule, SubBloqueMarkdownFieldComponent],
   templateUrl: './editar-sub-bloque-dialog.component.html',
   styleUrl: './editar-sub-bloque-dialog.component.scss',
 })
-export class EditarSubBloqueDialogComponent
-  implements OnDestroy, AfterViewInit, OnInit
-{
+export class EditarSubBloqueDialogComponent {
+  @Input() modo: 'uso' | 'catalogo' = 'uso';
+  @Input() catalogoFila: CatalogoFilaEditable | null = null;
+  @Input() catalogoNuevo = false;
+  @Input() catalogoPuedeAplicar = false;
+  @Input() catalogoCargando = false;
+  @Input() catalogoGuardando = false;
+  @Output() catalogoChanged = new EventEmitter<void>();
+  @Output() revisarCatalogo = new EventEmitter<void>();
+  @Output() aplicarCatalogo = new EventEmitter<void>();
+
   private currentData: any;
   @Input() set data(data: any) {
     this.currentData = data;
@@ -52,13 +60,6 @@ export class EditarSubBloqueDialogComponent
     this.catalogoItemSeleccionado = null;
     //Si data.id es falsey, significa que el alumno está intentando crear un evento, cosa que está permitida
     this.aplicarPermisos();
-
-    // Esperar a que el diálogo esté visible y el DOM actualizado
-    if (this.isDialogVisible && !data?.catalogoContenidoId) {
-      setTimeout(() => {
-        this.initEditor(data?.comentarios ?? '');
-      }, 100);
-    }
   }
 
   private _role: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
@@ -71,16 +72,6 @@ export class EditarSubBloqueDialogComponent
   }
   @Input() set isDialogVisible(value: boolean) {
     this._isDialogVisible = value;
-    if (value) {
-      // Pequeño delay para asegurar que el DOM esté listo
-      setTimeout(() => {
-        const currentData = this.formGroup.value;
-        if (!this.contenidoVinculado)
-          this.initEditor(currentData.comentarios ?? '');
-      }, 100);
-    } else {
-      this.destroyEditor();
-    }
   }
 
   get isDialogVisible(): boolean {
@@ -91,8 +82,6 @@ export class EditarSubBloqueDialogComponent
   @Output() isDialogVisibleChange = new EventEmitter<boolean>();
   @Output() savedSubBloque = new EventEmitter<SubBloque>();
 
-  editorComentarios!: any;
-  private editorInitialized = false;
   public isAddingNew = false;
   public isRoleAdminOrAddingNew = () =>
     this.role == 'ADMIN' || this.isAddingNew;
@@ -144,7 +133,6 @@ export class EditarSubBloqueDialogComponent
   private bloquearContenidoVinculado() {
     for (const campo of ['nombre', 'comentarios', 'color'])
       this.formGroup.get(campo)?.disable({ emitEvent: false });
-    this.destroyEditor();
   }
 
   private aplicarPermisos() {
@@ -180,11 +168,6 @@ export class EditarSubBloqueDialogComponent
       this.formGroup.get(campo)?.enable({ emitEvent: false });
     this.catalogoItemSeleccionado = null;
     this.tipoTrabajoSeleccionado = null;
-    if (this.isDialogVisible)
-      setTimeout(
-        () => this.initEditor(this.formGroup.get('comentarios')?.value ?? ''),
-        0,
-      );
   }
 
   tipoTrabajoOptions: { label: string; value: TipoTrabajoCatalogo | null }[] = [
@@ -228,74 +211,9 @@ export class EditarSubBloqueDialogComponent
     this.color.setValue(selectedColor, { emitEvent: true }); // Actualiza el control del formulario
   }
 
-  ngAfterViewInit(): void {
-    // Inicialización movida al setter de isDialogVisible para mejor timing
-  }
-
-  ngOnDestroy(): void {
-    this.destroyEditor();
-  }
-
   public cancelarEdicion() {
     this.isDialogVisible = false;
     this.isDialogVisibleChange.emit(false);
-  }
-
-  private destroyEditor(): void {
-    if (this.editorComentarios) {
-      try {
-        this.editorComentarios.destroy();
-      } catch (error) {
-        console.warn('Error destroying editor:', error);
-      } finally {
-        this.editorComentarios = null;
-        this.editorInitialized = false;
-      }
-    }
-  }
-
-  private initEditor(initialValueComentarios: string): void {
-    if (this.contenidoVinculado) return;
-    // Destruir editor existente si hay uno
-    this.destroyEditor();
-
-    const controlId = this.formGroup.get('controlId')?.value;
-    const editorElement = document.querySelector(
-      `#editor-comentarios-${controlId}`,
-    );
-
-    if (!editorElement) {
-      console.warn('Editor element not found, retrying...');
-      // Retry after a short delay
-      setTimeout(() => {
-        this.initEditor(initialValueComentarios);
-      }, 50);
-      return;
-    }
-
-    try {
-      this.editorComentarios = new Editor({
-        el: editorElement,
-        ...universalEditorConfig,
-        initialValue: initialValueComentarios || '',
-        events: {
-          change: () => {
-            if (this.editorComentarios && this.editorInitialized) {
-              try {
-                const markdown = this.editorComentarios.getMarkdown();
-                this.formGroup.get('comentarios')?.patchValue(markdown);
-              } catch (error) {
-                console.warn('Error getting markdown from editor:', error);
-              }
-            }
-          },
-        },
-      });
-      this.editorInitialized = true;
-    } catch (error) {
-      console.error('Error initializing editor:', error);
-      this.editorInitialized = false;
-    }
   }
 
   public async guardarEdicion() {

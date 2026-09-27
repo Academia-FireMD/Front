@@ -1,259 +1,333 @@
 <p-dialog
-  header="{{
-    isRoleAdminOrAddingNew() ? 'Editar Sub-Bloque' : 'Visualizar Sub-Bloque'
-  }}"
+  [header]="
+    modo === 'catalogo'
+      ? catalogoNuevo
+        ? 'Nuevo subbloque'
+        : 'Editar ' + catalogoFila?.codigo
+      : isRoleAdminOrAddingNew()
+        ? 'Editar Sub-Bloque'
+        : 'Visualizar Sub-Bloque'
+  "
   [(visible)]="isDialogVisible"
   [modal]="true"
   (onHide)="isDialogVisibleChange.emit(false)"
-  [style]="{ width: '90vw', maxWidth: '800px' }"
-  [breakpoints]="{ '960px': '95vw', '640px': '100vw' }"
+  [style]="{ width: 'min(94vw, 800px)', maxHeight: '94vh' }"
+  [breakpoints]="{ '960px': '95vw', '640px': 'calc(100vw - 1rem)' }"
   styleClass="p-fluid"
 >
-  <form [formGroup]="formGroup">
-    <div class="grid py-5">
-      <div class="col-12 md:col-4">
-        @if (formGroup.get("nombre")?.disabled) {
-          Nombre:
-          <strong>{{ formGroup.get("nombre")?.value }}</strong>
-        } @else {
+  @if (modo === "catalogo") {
+    @if (catalogoFila; as fila) {
+      <div class="catalogo-editor-form">
+        <label for="catalogo-codigo">Código</label>
+        <input
+          id="catalogo-codigo"
+          pInputText
+          [(ngModel)]="fila.codigo"
+          (ngModelChange)="catalogoChanged.emit()"
+          [readonly]="!catalogoNuevo"
+          maxlength="24"
+        />
+        @if (!catalogoNuevo) {
+          <small
+            >El código es estable. Para corregirlo, crea otro subbloque y
+            revincula los usos.</small
+          >
+        }
+        <label for="catalogo-nombre">Nombre corto</label>
+        <input
+          id="catalogo-nombre"
+          pInputText
+          [(ngModel)]="fila.nombreCorto"
+          (ngModelChange)="catalogoChanged.emit()"
+          maxlength="160"
+        />
+        <label>Explicación · Markdown</label>
+        <app-sub-bloque-markdown-field
+          [value]="fila.nombreDescriptivo"
+          (valueChange)="
+            fila.nombreDescriptivo = $event; catalogoChanged.emit()
+          "
+        ></app-sub-bloque-markdown-field>
+        <label>Puntos importantes · Markdown</label>
+        <app-sub-bloque-markdown-field
+          [value]="fila.puntosImportantes"
+          (valueChange)="
+            fila.puntosImportantes = $event; catalogoChanged.emit()
+          "
+        ></app-sub-bloque-markdown-field>
+        <label for="catalogo-color">Color</label>
+        <div class="catalogo-editor-color">
+          <input
+            id="catalogo-color"
+            pInputText
+            [(ngModel)]="fila.color"
+            (ngModelChange)="catalogoChanged.emit()"
+            maxlength="7"
+          />
+          <span [style.backgroundColor]="fila.color" aria-hidden="true"></span>
+        </div>
+        <p class="catalogo-editor-warning">
+          Editar contenido vinculado actualizará inmediatamente sus usos,
+          incluidos calendarios publicados. No cambiará fechas, duración ni
+          progreso.
+        </p>
+        <ng-content></ng-content>
+      </div>
+    }
+    <p-footer class="catalogo-editor-actions">
+      <p-button
+        label="Cancelar"
+        [text]="true"
+        (click)="cancelarEdicion()"
+      ></p-button>
+      <p-button
+        label="Revisar cambios"
+        [outlined]="true"
+        [loading]="catalogoCargando"
+        (click)="revisarCatalogo.emit()"
+      ></p-button>
+      <p-button
+        label="Guardar"
+        [disabled]="!catalogoPuedeAplicar"
+        [loading]="catalogoGuardando"
+        (click)="aplicarCatalogo.emit()"
+      ></p-button>
+    </p-footer>
+  } @else {
+    <form [formGroup]="formGroup">
+      <div class="grid py-5">
+        <div class="col-12 md:col-4">
+          @if (formGroup.get("nombre")?.disabled) {
+            Nombre:
+            <strong>{{ formGroup.get("nombre")?.value }}</strong>
+          } @else {
+            <p-floatLabel>
+              <input
+                id="nombre"
+                style="width: 100%"
+                type="text"
+                pInputText
+                formControlName="nombre"
+              />
+              <label for="nombre">Nombre</label>
+            </p-floatLabel>
+          }
+        </div>
+
+        <div class="col-12 md:col-3" *ngIf="isRoleAdminOrAddingNew()">
           <p-floatLabel>
-            <input
-              id="nombre"
-              style="width: 100%"
-              type="text"
-              pInputText
-              formControlName="nombre"
-            />
-            <label for="nombre">Nombre</label>
+            <p-dropdown
+              id="duracion"
+              [style]="{ width: '100%', height: '100%' }"
+              formControlName="duracion"
+              [options]="duracionOptions"
+              appendTo="body"
+              placeholder="Seleccione la duración"
+            ></p-dropdown>
+            <label for="duracion">Duración</label>
           </p-floatLabel>
-        }
-      </div>
-
-      <div class="col-12 md:col-3" *ngIf="isRoleAdminOrAddingNew()">
-        <p-floatLabel>
-          <p-dropdown
-            id="duracion"
-            [style]="{ width: '100%', height: '100%' }"
-            formControlName="duracion"
-            [options]="duracionOptions"
-            appendTo="body"
-            placeholder="Seleccione la duración"
-          ></p-dropdown>
-          <label for="duracion">Duración</label>
-        </p-floatLabel>
-      </div>
-      <div
-        class="col-12 md:col-5 flex align-items-center justify-content-start md:justify-content-end gap-2"
-        *ngIf="isRoleAdminOrAddingNew() && !contenidoVinculado"
-      >
-        <p-floatLabel>
-          <p-dropdown
-            id="color"
-            [style]="{ width: '100%', height: '100%' }"
-            [formControl]="color"
-            (onChange)="onColorTypeChange($event)"
-            optionValue="value"
-            optionLabel="label"
-            [options]="posiblesTipos"
-            appendTo="body"
-            placeholder="Seleccione el tipo"
-          ></p-dropdown>
-          <label for="color">Tipo</label>
-        </p-floatLabel>
-        <p-divider layout="vertical" />
-        <p-colorPicker [formControl]="color" appendTo="body" />
-      </div>
-      <div class="col-12" [ngClass]="{ 'py-3': isRoleAdminOrAddingNew() }">
-        @if (formGroup.get("comentarios")?.disabled) {
-          <p>
-            Comentarios:
-            <markdown [data]="formGroup.get('comentarios')?.value"></markdown>
-          </p>
-        } @else {
-          <div class="col-12 py-3">
-            <div class="markdown-container">
-              <div class="editor">
-                <h3>Comentarios:</h3>
-                <div
-                  [id]="
-                    'editor-comentarios-' + formGroup.get('controlId')?.value
-                  "
-                ></div>
-              </div>
-            </div>
-          </div>
-        }
-      </div>
-
-      <!-- Nuevos controles -->
-      <div
-        class="col-12 flex flex-column md:flex-row align-items-start md:align-items-center gap-3"
-        *ngIf="role == 'ADMIN'"
-      >
-        <p-checkbox
-          [formControl]="importante"
-          [binary]="true"
-          label="Marcar como importante"
+        </div>
+        <div
+          class="col-12 md:col-5 flex align-items-center justify-content-start md:justify-content-end gap-2"
+          *ngIf="isRoleAdminOrAddingNew() && !contenidoVinculado"
         >
-        </p-checkbox>
+          <p-floatLabel>
+            <p-dropdown
+              id="color"
+              [style]="{ width: '100%', height: '100%' }"
+              [formControl]="color"
+              (onChange)="onColorTypeChange($event)"
+              optionValue="value"
+              optionLabel="label"
+              [options]="posiblesTipos"
+              appendTo="body"
+              placeholder="Seleccione el tipo"
+            ></p-dropdown>
+            <label for="color">Tipo</label>
+          </p-floatLabel>
+          <p-divider layout="vertical" />
+          <p-colorPicker [formControl]="color" appendTo="body" />
+        </div>
+        <div class="col-12" [ngClass]="{ 'py-3': isRoleAdminOrAddingNew() }">
+          <h3>Comentarios:</h3>
+          <app-sub-bloque-markdown-field
+            [value]="formGroup.get('comentarios')?.value"
+            [readOnly]="!!formGroup.get('comentarios')?.disabled"
+            (valueChange)="formGroup.get('comentarios')?.setValue($event)"
+          ></app-sub-bloque-markdown-field>
+        </div>
 
-        <p-floatLabel *ngIf="importante.value">
-          <p-dropdown
-            id="tiempoAviso"
-            [style]="{ width: '200px' }"
-            [formControl]="tiempoAviso"
-            [options]="tiempoAvisoOptions"
-            appendTo="body"
-            placeholder="Seleccione el tiempo"
-          ></p-dropdown>
-          <label for="tiempoAviso">Avisar con antelación de</label>
-        </p-floatLabel>
-      </div>
+        <!-- Nuevos controles -->
+        <div
+          class="col-12 flex flex-column md:flex-row align-items-start md:align-items-center gap-3"
+          *ngIf="role == 'ADMIN'"
+        >
+          <p-checkbox
+            [formControl]="importante"
+            [binary]="true"
+            label="Marcar como importante"
+          >
+          </p-checkbox>
 
-      <!-- Vínculo con la planificación física (rediseño bridge 2026-07-22):
+          <p-floatLabel *ngIf="importante.value">
+            <p-dropdown
+              id="tiempoAviso"
+              [style]="{ width: '200px' }"
+              [formControl]="tiempoAviso"
+              [options]="tiempoAvisoOptions"
+              appendTo="body"
+              placeholder="Seleccione el tiempo"
+            ></p-dropdown>
+            <label for="tiempoAviso">Avisar con antelación de</label>
+          </p-floatLabel>
+        </div>
+
+        <!-- Vínculo con la planificación física (rediseño bridge 2026-07-22):
            el alumno verá las disciplinas reales del día y su estado hecho
            derivado del módulo de física, y el click navegará al detalle del
            día de entrenamiento. -->
-      <div
-        class="col-12 flex flex-column gap-2"
-        *ngIf="role == 'ADMIN' && planificacionFisicaHabilitada()"
-        [ngClass]="{
-          'fisica-check-activo': formGroup.get('esEntrenamientoFisico')?.value,
-        }"
-      >
-        <div class="flex align-items-center gap-2">
-          <p-checkbox
-            formControlName="esEntrenamientoFisico"
-            [binary]="true"
-            inputId="esEntrenamientoFisico"
-            data-testid="checkbox-entrenamiento-fisico"
-          ></p-checkbox>
-          <label for="esEntrenamientoFisico" class="font-semibold">
-            Este sub-bloque es entrenamiento físico
-          </label>
-        </div>
-        <small
-          *ngIf="formGroup.get('esEntrenamientoFisico')?.value"
-          class="fisica-explicacion"
-          data-testid="fisica-explicacion"
-        >
-          El alumno verá este bloque en su temario con las disciplinas reales
-          del día y su estado de progreso, leídas en vivo del módulo de
-          planificación física. Al hacer click, irá al detalle del entrenamiento
-          de ese día.
-        </small>
-      </div>
-
-      <!-- Fase 3: rellenar sub-bloque desde catálogo de contenido -->
-      <div
-        class="col-12 catalogo-contenido-seccion"
-        *ngIf="
-          role == 'ADMIN' && !formGroup.get('esEntrenamientoFisico')?.value
-        "
-      >
-        <p-divider />
-        <h4 class="mt-0 mb-3">Catálogo de subbloques</h4>
-        <p *ngIf="contenidoVinculado" aria-live="polite">
-          Vinculado a
-          <strong>{{
-            catalogoItemSeleccionado?.codigo || "un subbloque del catálogo"
-          }}</strong
-          >. El nombre, la explicación y el color se editan en Subbloques y se
-          actualizan en todos sus usos.
-        </p>
         <div
-          class="flex flex-column md:flex-row align-items-start md:align-items-end gap-3"
+          class="col-12 flex flex-column gap-2"
+          *ngIf="role == 'ADMIN' && planificacionFisicaHabilitada()"
+          [ngClass]="{
+            'fisica-check-activo': formGroup.get('esEntrenamientoFisico')
+              ?.value,
+          }"
         >
-          <div class="flex-1 w-full">
-            <p-floatLabel>
-              <p-autoComplete
-                id="catalogoCodigo"
-                [(ngModel)]="catalogoItemSeleccionado"
-                [ngModelOptions]="{ standalone: true }"
-                [suggestions]="catalogoSugerencias"
-                (completeMethod)="buscarCatalogoContenido($event.query)"
-                field="codigo"
-                [delay]="250"
-                appendTo="body"
-                [dropdown]="true"
-                inputId="catalogoCodigo"
-                styleClass="w-full"
-                [inputStyle]="{ width: '100%' }"
-                data-testid="autocomplete-catalogo-codigo"
-              >
-                <ng-template let-item pTemplate="item">
-                  <div class="flex align-items-center gap-2">
-                    <span
-                      class="catalogo-color-muestra border-round"
-                      [style.background]="item.color"
-                    ></span>
-                    <span class="font-semibold">{{ item.codigo }}</span>
-                    <span class="text-color-secondary"
-                      >— {{ item.nombreCorto }}</span
-                    >
-                  </div>
-                </ng-template>
-              </p-autoComplete>
-              <label for="catalogoCodigo">Código de planificación</label>
-            </p-floatLabel>
+          <div class="flex align-items-center gap-2">
+            <p-checkbox
+              formControlName="esEntrenamientoFisico"
+              [binary]="true"
+              inputId="esEntrenamientoFisico"
+              data-testid="checkbox-entrenamiento-fisico"
+            ></p-checkbox>
+            <label for="esEntrenamientoFisico" class="font-semibold">
+              Este sub-bloque es entrenamiento físico
+            </label>
           </div>
-
-          <div class="w-full md:w-18rem">
-            <p-floatLabel>
-              <p-dropdown
-                id="tipoTrabajo"
-                [(ngModel)]="tipoTrabajoSeleccionado"
-                [ngModelOptions]="{ standalone: true }"
-                [options]="tipoTrabajoOptions"
-                optionLabel="label"
-                optionValue="value"
-                appendTo="body"
-                [showClear]="true"
-                [style]="{ width: '100%' }"
-                placeholder="Seleccione el tipo"
-                inputId="tipoTrabajo"
-                data-testid="dropdown-tipo-trabajo"
-              ></p-dropdown>
-              <label for="tipoTrabajo">Tipo de trabajo</label>
-            </p-floatLabel>
-          </div>
-
-          <p-button
-            label="Vincular al catálogo"
-            icon="pi pi-bolt"
-            severity="secondary"
-            [disabled]="!catalogoItemSeleccionado?.codigo"
-            (click)="rellenarDesdeCatalogo()"
-            data-testid="btn-rellenar-catalogo"
-          ></p-button>
-          <p-button
-            *ngIf="contenidoVinculado"
-            label="Desvincular y personalizar"
-            icon="pi pi-link"
-            [outlined]="true"
-            (click)="desvincularCatalogo()"
-          ></p-button>
+          <small
+            *ngIf="formGroup.get('esEntrenamientoFisico')?.value"
+            class="fisica-explicacion"
+            data-testid="fisica-explicacion"
+          >
+            El alumno verá este bloque en su temario con las disciplinas reales
+            del día y su estado de progreso, leídas en vivo del módulo de
+            planificación física. Al hacer click, irá al detalle del
+            entrenamiento de ese día.
+          </small>
         </div>
-      </div>
-      <!-- Fin catálogo de contenido -->
 
-      <!-- Fin nuevos controles -->
-    </div>
-  </form>
-  <p-footer
-    class="flex flex-column sm:flex-row justify-content-center sm:justify-content-end gap-2"
-  >
-    <button
-      pButton
-      label="{{ isRoleAdminOrAddingNew() ? 'Cancelar' : 'Cerrar' }}"
-      (click)="cancelarEdicion()"
-      class="p-button-text"
-    ></button>
-    <app-async-button
-      *ngIf="isRoleAdminOrAddingNew()"
-      label="Guardar"
-      [action]="guardarEdicion.bind(this)"
-      [disabled]="formGroup.invalid"
-    ></app-async-button>
-  </p-footer>
+        <!-- Fase 3: rellenar sub-bloque desde catálogo de contenido -->
+        <div
+          class="col-12 catalogo-contenido-seccion"
+          *ngIf="
+            role == 'ADMIN' && !formGroup.get('esEntrenamientoFisico')?.value
+          "
+        >
+          <p-divider />
+          <h4 class="mt-0 mb-3">Catálogo de subbloques</h4>
+          <p *ngIf="contenidoVinculado" aria-live="polite">
+            Vinculado a
+            <strong>{{
+              catalogoItemSeleccionado?.codigo || "un subbloque del catálogo"
+            }}</strong
+            >. El nombre, la explicación y el color se editan en Subbloques y se
+            actualizan en todos sus usos.
+          </p>
+          <div
+            class="flex flex-column md:flex-row align-items-start md:align-items-end gap-3"
+          >
+            <div class="flex-1 w-full">
+              <p-floatLabel>
+                <p-autoComplete
+                  id="catalogoCodigo"
+                  [(ngModel)]="catalogoItemSeleccionado"
+                  [ngModelOptions]="{ standalone: true }"
+                  [suggestions]="catalogoSugerencias"
+                  (completeMethod)="buscarCatalogoContenido($event.query)"
+                  field="codigo"
+                  [delay]="250"
+                  appendTo="body"
+                  [dropdown]="true"
+                  inputId="catalogoCodigo"
+                  styleClass="w-full"
+                  [inputStyle]="{ width: '100%' }"
+                  data-testid="autocomplete-catalogo-codigo"
+                >
+                  <ng-template let-item pTemplate="item">
+                    <div class="flex align-items-center gap-2">
+                      <span
+                        class="catalogo-color-muestra border-round"
+                        [style.background]="item.color"
+                      ></span>
+                      <span class="font-semibold">{{ item.codigo }}</span>
+                      <span class="text-color-secondary"
+                        >— {{ item.nombreCorto }}</span
+                      >
+                    </div>
+                  </ng-template>
+                </p-autoComplete>
+                <label for="catalogoCodigo">Código de planificación</label>
+              </p-floatLabel>
+            </div>
+
+            <div class="w-full md:w-18rem">
+              <p-floatLabel>
+                <p-dropdown
+                  id="tipoTrabajo"
+                  [(ngModel)]="tipoTrabajoSeleccionado"
+                  [ngModelOptions]="{ standalone: true }"
+                  [options]="tipoTrabajoOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                  [showClear]="true"
+                  [style]="{ width: '100%' }"
+                  placeholder="Seleccione el tipo"
+                  inputId="tipoTrabajo"
+                  data-testid="dropdown-tipo-trabajo"
+                ></p-dropdown>
+                <label for="tipoTrabajo">Tipo de trabajo</label>
+              </p-floatLabel>
+            </div>
+
+            <p-button
+              label="Vincular al catálogo"
+              icon="pi pi-bolt"
+              severity="secondary"
+              [disabled]="!catalogoItemSeleccionado?.codigo"
+              (click)="rellenarDesdeCatalogo()"
+              data-testid="btn-rellenar-catalogo"
+            ></p-button>
+            <p-button
+              *ngIf="contenidoVinculado"
+              label="Desvincular y personalizar"
+              icon="pi pi-link"
+              [outlined]="true"
+              (click)="desvincularCatalogo()"
+            ></p-button>
+          </div>
+        </div>
+        <!-- Fin catálogo de contenido -->
+
+        <!-- Fin nuevos controles -->
+      </div>
+    </form>
+    <p-footer
+      class="flex flex-column sm:flex-row justify-content-center sm:justify-content-end gap-2"
+    >
+      <button
+        pButton
+        label="{{ isRoleAdminOrAddingNew() ? 'Cancelar' : 'Cerrar' }}"
+        (click)="cancelarEdicion()"
+        class="p-button-text"
+      ></button>
+      <app-async-button
+        *ngIf="isRoleAdminOrAddingNew()"
+        label="Guardar"
+        [action]="guardarEdicion.bind(this)"
+        [disabled]="formGroup.invalid"
+      ></app-async-button>
+    </p-footer>
+  }
 </p-dialog>

@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
@@ -10,8 +11,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { TagModule } from 'primeng/tag';
 import { PlanificacionesService } from '../../services/planificaciones.service';
-import { GenericListComponent } from '../../shared/generic-list/generic-list.component';
-import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
+import { CatalogoSubbloquesListComponent } from './catalogo-subbloques-list.component';
+import { EditarSubBloqueDialogComponent } from '../editar-sub-bloque-dialog/editar-sub-bloque-dialog.component';
 import {
   CatalogoContenidoCompleto,
   CatalogoFilaEditable,
@@ -41,16 +42,15 @@ const TIPOS_TRABAJO: TipoTrabajoCatalogo[] = [
     InputTextModule,
     InputTextareaModule,
     TagModule,
-    GenericListComponent,
+    CatalogoSubbloquesListComponent,
+    EditarSubBloqueDialogComponent,
   ],
   templateUrl: './catalogo-subbloques.component.html',
   styleUrl: './catalogo-subbloques.component.scss',
 })
-export class CatalogoSubbloquesComponent
-  extends SharedGridComponent<CatalogoContenidoCompleto>
-  implements OnInit
-{
+export class CatalogoSubbloquesComponent implements OnInit {
   private readonly servicio = inject(PlanificacionesService);
+  private readonly toast = inject(ToastrService);
   readonly catalogo = signal<CatalogoLista>({ filas: [], trabajos: [] });
   readonly cargando = signal(false);
   readonly guardando = signal(false);
@@ -66,27 +66,7 @@ export class CatalogoSubbloquesComponent
   preview: CatalogoPreview | null = null;
   confirmado = false;
 
-  constructor() {
-    super();
-    this.fetchItems$ = computed(() => {
-      const filtro = this.pagination();
-      const texto = filtro.searchTerm.trim().toLocaleLowerCase('es');
-      const filas = this.catalogo().filas.filter(
-        (fila) =>
-          !texto ||
-          `${fila.codigo} ${fila.nombreCorto} ${fila.nombreDescriptivo ?? ''}`
-            .toLocaleLowerCase('es')
-            .includes(texto),
-      );
-      return of({
-        data: filas.slice(filtro.skip, filtro.skip + filtro.take),
-        pagination: { ...filtro, count: filas.length },
-      });
-    });
-  }
-
-  override ngOnInit(): void {
-    super.ngOnInit();
+  ngOnInit(): void {
     void this.cargar();
   }
 
