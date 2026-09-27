@@ -131,6 +131,7 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
       :host {
         display: block;
         min-width: 0;
+        min-height: 0;
       }
       .catalogo-fila {
         display: flex;
@@ -162,7 +163,7 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
       }
       p-iconField {
         display: block;
-        width: min(100%, 24rem);
+        width: 100%;
       }
       input[type='search'] {
         width: 100%;
@@ -173,11 +174,11 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
         align-items: center;
         gap: 0.5rem;
       }
-      :host ::ng-deep .catalogo-accion {
-        min-width: 44px;
-        min-height: 44px;
-      }
       @media (max-width: 640px) {
+        :host ::ng-deep .catalogo-accion {
+          min-width: 44px;
+          min-height: 44px;
+        }
         input[type='search'] {
           width: 100%;
         }

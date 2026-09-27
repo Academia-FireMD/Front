@@ -13,13 +13,13 @@ const fila = {
   activa: true,
 };
 
-async function prepararPagina(page: Page) {
+async function prepararPagina(page: Page, filas = [fila]) {
   let aplicaciones = 0;
   await page.route('**/planificaciones/catalogo-contenido', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ filas: [fila], trabajos: [] }),
+      body: JSON.stringify({ filas, trabajos: [] }),
     }),
   );
   await page.route('**/catalogo-contenido/importar/preview', (route) =>
@@ -73,6 +73,29 @@ async function prepararPagina(page: Page) {
   );
   return () => aplicaciones;
 }
+
+test('catálogo: buscador flexible y paginador visible con muchas filas en escritorio', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const filas = Array.from({ length: 24 }, (_, index) => ({
+    ...fila,
+    id: index + 1,
+    codigo: `Q${String(index + 1).padStart(2, '0')}`,
+  }));
+  await prepararPagina(page, filas);
+
+  const search = await page.getByRole('searchbox', { name: 'Buscar subbloques' }).boundingBox();
+  const actions = await page.getByRole('button', { name: 'Tipos de trabajo' }).boundingBox();
+  expect(search?.width).toBeGreaterThan(500);
+  expect((actions?.height ?? 0)).toBeLessThan(44);
+
+  const list = page.locator('app-catalogo-subbloques-list .list-generic');
+  const paginator = page.locator('app-catalogo-subbloques-list p-paginator');
+  await expect(paginator).toBeInViewport();
+  expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await list.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await expect(paginator).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath('catalogo-paginador-desktop.png') });
+});
 
 for (const viewport of [
   { name: 'escritorio', width: 1280, height: 800 },
