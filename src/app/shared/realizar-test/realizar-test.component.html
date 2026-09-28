@@ -238,6 +238,15 @@
           ></p-inputSwitch>
         </div>
 
+        <div class="switch-group" *ngIf="!formGroup.value.generarTestDesafio">
+          <label for="switchOrdenPreguntas">Orden aleatorio</label>
+          <p-inputSwitch
+            inputId="switchOrdenPreguntas"
+            [formControl]="formGroup.controls.aleatorio"
+            data-testid="orden-preguntas-switch"
+          ></p-inputSwitch>
+        </div>
+
         <div class="switch-group">
           <label for="switchDesafio">Test desafío</label>
           <p-inputSwitch
@@ -278,7 +287,7 @@
 
         <i
           class="pi pi-info-circle text-primary cursor-pointer ml-2"
-          pTooltip="Las preguntas se seleccionan aleatoriamente de los temas y dificultades elegidos."
+          pTooltip="En orden, las preguntas avanzan por tema y número entre tests finalizados. Las opciones de respuesta siempre se mezclan."
           tooltipPosition="top"
         ></i>
 

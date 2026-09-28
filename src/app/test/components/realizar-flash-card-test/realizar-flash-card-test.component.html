@@ -59,6 +59,7 @@
         <div class="col-12 md:col-4">
           <app-tema-select
             [formControl]="formGroup.controls.temas"
+            data-testid="temas-select"
           ></app-tema-select>
         </div>
       </div>
@@ -73,15 +74,18 @@
           ></p-inputSwitch>
         </ng-container>
 
-        <label for="switchAleatorio">Orden aleatorio</label>
-        <p-inputSwitch
-          inputId="switchAleatorio"
-          [formControl]="formGroup.controls.aleatorio"
-        ></p-inputSwitch>
+        <div class="switch-group">
+          <label for="switchAleatorio">Orden aleatorio</label>
+          <p-inputSwitch
+            inputId="switchAleatorio"
+            [formControl]="formGroup.controls.aleatorio"
+            data-testid="orden-tarjetas-switch"
+          ></p-inputSwitch>
+        </div>
 
         <i
           class="pi pi-info-circle text-primary cursor-pointer ml-2"
-          pTooltip="El test prioriza fichas nuevas y las que necesitas repasar. Si solicitas más fichas de las disponibles, se incluirán todas."
+          pTooltip="En aleatorio se priorizan fichas nuevas y de repaso. En orden, avanzas por tema y número al finalizar cada test."
           tooltipPosition="top"
         ></i>
 

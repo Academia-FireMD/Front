@@ -27,6 +27,7 @@ export interface GenerarFlashcardTestDto {
   generarTestDeRepaso: boolean;
   sobreescribir?: boolean;
   aleatorio?: boolean;
+  ordenSecuencial?: boolean;
 }
 @Injectable({
   providedIn: 'root',

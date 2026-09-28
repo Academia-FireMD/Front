@@ -27,6 +27,7 @@ export interface GenerarTestDto {
   generarTestDeRepaso: boolean;
   duracion?: number;
   sobreescribir?: boolean;
+  ordenSecuencial?: boolean;
 }
 
 export interface DateRangeDto {

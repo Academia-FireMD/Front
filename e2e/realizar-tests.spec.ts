@@ -55,6 +55,64 @@ test.describe('Realizar Tests - Configuración y Generación', () => {
         page.locator('[data-testid="generar-test-btn"]'),
       ).toBeDisabled();
     });
+
+    test('el selector conserva aleatorio por defecto y envía ordenSecuencial en móvil', async ({
+      page,
+    }) => {
+      await seleccionarPrimerTema(page);
+      await page.locator('[data-testid="generar-test-btn"]').click();
+      const peticionAleatoria = page.waitForRequest('**/tests/start');
+      await page.locator('.p-confirm-dialog-accept').click();
+      expect((await peticionAleatoria).postDataJSON().ordenSecuencial).toBe(
+        false,
+      );
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('/app/test/alumno/realizar-test');
+      await seleccionarPrimerTema(page);
+      await page.locator('[data-testid="orden-preguntas-switch"]').click();
+      await page.locator('[data-testid="generar-test-btn"]').click();
+      const peticionOrdenada = page.waitForRequest('**/tests/start');
+      await page.locator('.p-confirm-dialog-accept').click();
+      expect((await peticionOrdenada).postDataJSON().ordenSecuencial).toBe(
+        true,
+      );
+    });
+
+    test('tarjetas permite elegir orden secuencial en móvil', async ({
+      page,
+    }) => {
+      await page.route('**/flashcards/tests', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: '[]',
+        }),
+      );
+      await page.route('**/flashcards/obtener-fallos-count', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: '0',
+        }),
+      );
+      await page.route('**/flashcards/start-test', (route) =>
+        route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: '{"id":123}',
+        }),
+      );
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('/app/test/alumno/realizar-flash-cards-test');
+      await seleccionarPrimerTema(page);
+      await page.locator('[data-testid="orden-tarjetas-switch"]').click();
+      const peticion = page.waitForRequest('**/flashcards/start-test');
+      await page.getByRole('button', { name: 'Generar test' }).click();
+      expect((await peticion).postDataJSON()).toEqual(
+        expect.objectContaining({ aleatorio: false, ordenSecuencial: true }),
+      );
+    });
   });
 
   test.describe('Test Normal', () => {

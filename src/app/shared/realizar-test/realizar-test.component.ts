@@ -35,6 +35,7 @@ export class RealizarTestComponent {
     generarTestDeRepaso: [false],
     generarTestDeExamen: [false],
     generarTestDesafio: [false],
+    aleatorio: [true],
     tiempoLimiteEnMinutos: [null as number | null],
     // Cuánto tiempo la sala del desafío acepta que se unan/compitan (deadline
     // que cierra el ranking). En horas para casar con el nombre del campo.
@@ -239,6 +240,7 @@ export class RealizarTestComponent {
       dificultades: this.formGroup.value.dificultad ?? [Dificultad.INTERMEDIO],
       temas: this.formGroup.value.temas ?? [],
       generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
+      ordenSecuencial: !this.formGroup.value.aleatorio,
       duracion: this.formGroup.value.generarTestDeExamen
         ? (this.formGroup.value.tiempoLimiteEnMinutos ?? numPreguntas)
         : undefined,

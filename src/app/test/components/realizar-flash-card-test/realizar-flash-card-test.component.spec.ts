@@ -23,14 +23,16 @@ describe('RealizarFlashCardTestComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('por defecto el payload lleva aleatorio=false', () => {
-    const payload = (component as any).buildPayload();
-    expect(payload.aleatorio).toBe(false);
-  });
-
-  it('al activar el toggle el payload lleva aleatorio=true', () => {
-    component.formGroup.get('aleatorio')?.setValue(true);
+  it('por defecto genera tarjetas aleatorias', () => {
     const payload = (component as any).buildPayload();
     expect(payload.aleatorio).toBe(true);
+    expect(payload.ordenSecuencial).toBe(false);
+  });
+
+  it('al desactivar el toggle solicita la secuencia ordenada', () => {
+    component.formGroup.get('aleatorio')?.setValue(false);
+    const payload = (component as any).buildPayload();
+    expect(payload.aleatorio).toBe(false);
+    expect(payload.ordenSecuencial).toBe(true);
   });
 });

@@ -36,7 +36,7 @@ export class RealizarFlashCardTestComponent {
     ],
     temas: [[], Validators.required],
     generarTestDeRepaso: [false],
-    aleatorio: [false],
+    aleatorio: [true],
   });
   public getFallosCount$ = this.flashcardService.obtenerFallosCount();
   public getAllTestsComenzados$ = this.flashcardService.getAllTest();
@@ -51,6 +51,7 @@ export class RealizarFlashCardTestComponent {
       temas: this.formGroup.value.temas ?? [],
       generarTestDeRepaso: this.formGroup.value.generarTestDeRepaso,
       aleatorio: this.formGroup.value.aleatorio ?? false,
+      ordenSecuencial: !this.formGroup.value.aleatorio,
       sobreescribir,
     } as GenerarFlashcardTestDto;
   }
