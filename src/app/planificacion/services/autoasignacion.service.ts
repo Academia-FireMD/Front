@@ -55,10 +55,12 @@ export class AutoasignacionService extends ApiBaseService {
   public previewCargaSemanas$(
     file: File,
     destinos: Record<string, DestinoCargaSemanas>,
+    modoCarga: 'CONTINUAR' | 'NUEVA' = 'CONTINUAR',
   ): Observable<PreviewCargaSemanas> {
     const body = new FormData();
     body.append('file', file, file.name);
     body.append('destinos', JSON.stringify(destinos));
+    body.append('modoCarga', modoCarga);
     return this.http.post<PreviewCargaSemanas>(
       environment.apiUrl +
         '/planificaciones/admin/importaciones/plantillas/carga-borrador/preview',
@@ -73,10 +75,12 @@ export class AutoasignacionService extends ApiBaseService {
     previewHash: string,
     confirmarSustituciones: boolean,
     idempotencyKey: string,
+    modoCarga: 'CONTINUAR' | 'NUEVA' = 'CONTINUAR',
   ): Observable<PreviewCargaSemanas> {
     const body = new FormData();
     body.append('file', file, file.name);
     body.append('destinos', JSON.stringify(destinos));
+    body.append('modoCarga', modoCarga);
     body.append('previewHash', previewHash);
     body.append('confirmarSustituciones', String(confirmarSustituciones));
     body.append('idempotencyKey', idempotencyKey);

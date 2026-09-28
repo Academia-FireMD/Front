@@ -743,6 +743,25 @@ describe('PlanificacionAdminComponent', () => {
     );
   });
 
+  it('permite elegir nuevas planificaciones antes de previsualizar y descarta un hash anterior', async () => {
+    const file = new File(['xlsx'], 'sergio.xlsx');
+    component.archivoImportacion.set(file);
+    component.previewCarga.set({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [],
+    });
+    component.cambiarModoCarga(true);
+    expect(component.modoCarga()).toBe('NUEVA');
+    expect(component.previewCarga()).toBeNull();
+    await component.previsualizarCargaSemanas();
+    expect(service.previewCargaSemanas$).toHaveBeenCalledWith(
+      file,
+      {},
+      'NUEVA',
+    );
+  });
+
   it('explica el Excel sin semanas con contenido junto a la previsualización', () => {
     component.previewImportacion.set({
       fileName: 'vacio.xlsx',

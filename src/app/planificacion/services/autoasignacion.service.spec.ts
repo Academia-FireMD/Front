@@ -340,6 +340,7 @@ describe('AutoasignacionService', () => {
       size: file.size,
     });
     expect(JSON.parse(req.request.body.get('destinos'))).toEqual(destinos);
+    expect(req.request.body.get('modoCarga')).toBe('CONTINUAR');
     req.flush({
       puedeAplicar: true,
       previewHash: 'a'.repeat(64),
@@ -355,6 +356,34 @@ describe('AutoasignacionService', () => {
     expect(req.request.body.get('previewHash')).toBe('a'.repeat(64));
     expect(req.request.body.get('confirmarSustituciones')).toBe('true');
     expect(req.request.body.get('idempotencyKey')).toBe('qa-retry-1');
+    expect(req.request.body.get('modoCarga')).toBe('CONTINUAR');
+    req.flush({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [],
+    });
+  });
+
+  it('envía el modo de crear planificaciones nuevas en preview y apply', () => {
+    const file = new File(['excel'], 'sergio.xlsx');
+    service.previewCargaSemanas$(file, {}, 'NUEVA').subscribe();
+    let req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/preview`,
+    );
+    expect(req.request.body.get('modoCarga')).toBe('NUEVA');
+    req.flush({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [],
+    });
+
+    service
+      .applyCargaSemanas$(file, {}, 'a'.repeat(64), false, 'qa-nueva', 'NUEVA')
+      .subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/apply`,
+    );
+    expect(req.request.body.get('modoCarga')).toBe('NUEVA');
     req.flush({
       puedeAplicar: true,
       previewHash: 'a'.repeat(64),

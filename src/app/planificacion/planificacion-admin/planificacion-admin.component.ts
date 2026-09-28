@@ -224,6 +224,7 @@ export class PlanificacionAdminComponent
   errorCarga = signal<string | null>(null);
   resultadoCarga = signal<PreviewCargaSemanas | null>(null);
   destinosCarga = signal<Record<string, DestinoCargaSemanas>>({});
+  modoCarga = signal<'CONTINUAR' | 'NUEVA'>('CONTINUAR');
   idempotencyKeyCarga: string | null = null;
   previewImportacion = signal<PreviewImportacionPlantillas | null>(null);
   previsualizandoImportacion = signal(false);
@@ -719,6 +720,16 @@ export class PlanificacionAdminComponent
     this.archivoImportacion.set(file);
   }
 
+  cambiarModoCarga(nueva: boolean): void {
+    this.modoCarga.set(nueva ? 'NUEVA' : 'CONTINUAR');
+    this.destinosCarga.set({});
+    this.previewCarga.set(null);
+    this.previewImportacion.set(null);
+    this.errorCarga.set(null);
+    this.confirmarSobrescritura.set(false);
+    this.idempotencyKeyCarga = null;
+  }
+
   opcionesDestinoCarga(
     variante: VarianteCargaSemanas,
   ): Array<{ label: string; value: string }> {
@@ -782,6 +793,7 @@ export class PlanificacionAdminComponent
         this.autoasignacionService.previewCargaSemanas$(
           file,
           this.destinosCarga(),
+          this.modoCarga(),
         ),
       );
       this.previewCarga.set(preview);
@@ -834,6 +846,7 @@ export class PlanificacionAdminComponent
           preview.previewHash,
           this.confirmarSobrescritura(),
           this.idempotencyKeyCarga,
+          this.modoCarga(),
         ),
       );
       this.resultadoCarga.set(resultado);

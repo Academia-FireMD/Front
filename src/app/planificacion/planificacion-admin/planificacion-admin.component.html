@@ -318,6 +318,25 @@
         (onClick)="previsualizarCargaSemanas()"
       />
     </div>
+    <div class="flex align-items-start gap-3 mt-3 mb-3">
+      <p-inputSwitch
+        inputId="nueva-planificacion-excel"
+        [ngModel]="modoCarga() === 'NUEVA'"
+        (ngModelChange)="cambiarModoCarga($event)"
+        [disabled]="previsualizandoImportacion() || aplicandoImportacion()"
+      />
+      <div>
+        <label
+          for="nueva-planificacion-excel"
+          class="font-semibold cursor-pointer"
+          >Crear borradores nuevos desde este Excel</label
+        >
+        <p class="m-0 text-sm text-color-secondary">
+          Conserva intactos los calendarios actuales. Para añadir semanas a un
+          borrador existente, deja esta opción desactivada.
+        </p>
+      </div>
+    </div>
 
     @if (errorCarga(); as mensaje) {
       <p-message
