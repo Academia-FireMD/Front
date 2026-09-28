@@ -30,6 +30,7 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   @ViewChild('fileInput') fileInput!: ElementRef;
   duracionesDisponibles = duracionesDisponibles;
   public uploadingFile = false;
+  public searchReadOnly = true;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
 
   // Configuración de filtros para el GenericListComponent
@@ -95,6 +96,15 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   };
 
   public matchKeyWithLabel = matchKeyWithLabel;
+
+  public activarBusqueda(event: FocusEvent): void {
+    // El navegador puede autocompletar aquí el email de login sin emitir input.
+    // Se habilita al recibir foco y se conserva solo el filtro real de la URL.
+    const input = event.target as HTMLInputElement;
+    this.searchReadOnly = false;
+    input.readOnly = false;
+    input.value = this.pagination().searchTerm ?? '';
+  }
 
   public esAutomatica(plan: PlanificacionMensual): boolean {
     return Boolean(

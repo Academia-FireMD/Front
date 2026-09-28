@@ -17,7 +17,9 @@
         pInputText
         class="w-full"
         name="buscar-planificacion-mensual"
-        autocomplete="new-password"
+        autocomplete="off"
+        [readOnly]="searchReadOnly"
+        (focus)="activarBusqueda($event)"
         aria-label="Buscar planificación"
         placeholder="Buscar planificación"
         [value]="pagination().searchTerm"
