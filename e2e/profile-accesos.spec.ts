@@ -62,6 +62,9 @@ test('el alumno sin suscripción ve sus accesos compactos en escritorio y móvil
   await page.route('**/user/get-by-email', (route) =>
     route.fulfill(json(usuario)),
   );
+  await page.route('**/ai-assistant/token', (route) =>
+    route.fulfill({ ...json({}), status: 403 }),
+  );
   await page.route('**/user/profile', (route) => route.fulfill(json(usuario)));
   await page.route('**/cursos/mios', (route) => route.fulfill(json([curso])));
   await page.route('**/cursos/opositor-de-elite-nivel-1', (route) => {
@@ -122,4 +125,20 @@ test('el alumno sin suscripción ve sus accesos compactos en escritorio y móvil
 
   await card.getByRole('button', { name: /Ver curso/ }).click();
   await page.waitForURL('**/app/cursos/opositor-de-elite-nivel-1');
+
+  const sinAccesos = { ...usuario, consumibles: [] };
+  await page.route('**/user/get-by-email', (route) =>
+    route.fulfill(json(sinAccesos)),
+  );
+  await page.route('**/user/profile', (route) =>
+    route.fulfill(json(sinAccesos)),
+  );
+  await page.route('**/cursos/mios', (route) => route.fulfill(json([])));
+  await page.goto('/app/profile');
+  await expect(card.getByText('Aún no tienes acceso')).toBeVisible();
+  await expect(card.locator('.accesos-tabs')).toHaveCount(0);
+  if (screenshots)
+    await card.screenshot({
+      path: join(screenshots, 'mis-accesos-vacio.png'),
+    });
 });
