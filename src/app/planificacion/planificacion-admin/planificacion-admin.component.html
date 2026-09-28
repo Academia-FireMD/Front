@@ -42,6 +42,8 @@
           type="search"
           name="buscarVariantes"
           autocomplete="off"
+          [readOnly]="searchReadOnly"
+          (focus)="activarBusqueda($event)"
           class="variantes-search"
           placeholder="Buscar plan por perfil…"
           aria-label="Buscar plan por perfil"

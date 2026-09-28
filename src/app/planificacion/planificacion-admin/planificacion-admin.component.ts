@@ -174,6 +174,7 @@ export class PlanificacionAdminComponent
 
   variantes = signal<VarianteAdmin[]>([]);
   dialogoVarianteVisible = signal(false);
+  searchReadOnly = true;
   readonly filters: FilterConfig[] = [
     {
       key: 'oposicion',
@@ -472,6 +473,13 @@ export class PlanificacionAdminComponent
       searchTerm: (event.target as HTMLInputElement).value,
       skip: 0,
     });
+  }
+
+  activarBusqueda(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
+    this.searchReadOnly = false;
+    input.readOnly = false;
+    input.value = this.pagination().searchTerm ?? '';
   }
 
   onFiltersChanged(

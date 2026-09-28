@@ -398,6 +398,22 @@ describe('PlanificacionAdminComponent', () => {
     expect(buscado?.data.map((v) => v.id)).toEqual([1]);
   });
 
+  it('ignora el correo autocompletado en el buscador hasta recibir foco', () => {
+    fixture.detectChanges();
+    const input = document.querySelector(
+      'input[name="buscarVariantes"]',
+    ) as HTMLInputElement;
+    expect(input.readOnly).toBe(true);
+
+    input.value = 'shishi2@gmail.com';
+    input.dispatchEvent(new FocusEvent('focus'));
+    fixture.detectChanges();
+
+    expect(input.readOnly).toBe(false);
+    expect(input.value).toBe('');
+    expect(component.pagination().searchTerm).toBe('');
+  });
+
   it('actualiza una variante existente con su id', async () => {
     component.editarVariante({
       id: 7,
