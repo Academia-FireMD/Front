@@ -7,12 +7,14 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { AccesoConCurso } from '../models/curso.model';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { CursoCardComponent } from '../ui/curso-card.component';
 import { ProgressRingComponent } from '../ui/progress-ring.component';
 import { calcularPorcentajeCurso, leccionContinuar } from '../ui/progreso.util';
+import { environment } from '../../../environments/environment';
 
 /**
  * Modo de la pantalla (CQ1, 2026-06-29). Reutilizamos este componente para dos
@@ -33,12 +35,13 @@ interface AccesoVista {
 @Component({
   selector: 'app-mis-cursos-page',
   standalone: true,
-  imports: [ButtonModule, CursoCardComponent, ProgressRingComponent],
+  imports: [ButtonModule, CursoCardComponent, ProgressRingComponent, DatePipe],
   templateUrl: './mis-cursos-page.component.html',
   styleUrl: './mis-cursos-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MisCursosPageComponent implements OnInit {
+  readonly tiendaUrl = environment.wooCommerceUrl;
   private readonly service = inject(CursosAlumnoService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

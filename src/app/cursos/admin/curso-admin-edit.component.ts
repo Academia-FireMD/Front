@@ -192,6 +192,7 @@ export class CursoAdminEditComponent implements OnInit {
     slug: [{ value: '', disabled: true }],
     descripcion: [''],
     wooProductId: [null as number | null],
+    duracionAccesoDias: [null as number | null, Validators.min(1)],
     esGratuito: [false],
     esClaseGrabada: [false],
     /**
@@ -309,6 +310,7 @@ export class CursoAdminEditComponent implements OnInit {
         slug: data.slug,
         descripcion: data.descripcion ?? '',
         wooProductId: data.wooProductId ?? null,
+        duracionAccesoDias: data.duracionAccesoDias ?? null,
         esGratuito: data.esGratuito ?? false,
         esClaseGrabada: data.esClaseGrabada ?? false,
         fechaPublicacion: data.fechaPublicacion
@@ -406,6 +408,7 @@ export class CursoAdminEditComponent implements OnInit {
           descripcion: raw.descripcion ?? undefined,
           // Sin venta (gratuito o clase grabada) → sin producto WC.
           wooProductId: sinVenta ? null : (raw.wooProductId ?? null),
+          duracionAccesoDias: sinVenta ? null : raw.duracionAccesoDias,
           relevancia: this.relevancia(),
           esGratuito,
           esClaseGrabada,
@@ -437,6 +440,7 @@ export class CursoAdminEditComponent implements OnInit {
           // Sin `slug` (2026-07-03): el backend lo genera server-side.
           descripcion: raw.descripcion ?? undefined,
           wooProductId: sinVenta ? null : (raw.wooProductId ?? null),
+          duracionAccesoDias: sinVenta ? null : raw.duracionAccesoDias,
           relevancia: this.relevancia(),
           esGratuito,
           esClaseGrabada,

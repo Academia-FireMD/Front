@@ -7,6 +7,7 @@ import { of } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { MisCursosPageComponent } from './mis-cursos-page.component';
+import { environment } from '../../../environments/environment';
 
 /**
  * CQ1 (2026-06-29): `MisCursosPageComponent` se reutiliza parametrizado por
@@ -84,5 +85,34 @@ describe('MisCursosPageComponent (parametrizado tipo)', () => {
     const fixture = setup(undefined);
     expect(serviceMock.listMisCursos).toHaveBeenCalledTimes(1);
     expect(fixture.componentInstance.tipo()).toBe('cursos');
+  });
+
+  it('muestra el vencimiento del curso temporal', () => {
+    const fixture = setup('cursos');
+    fixture.componentInstance.accesos.set([
+      {
+        id: 1,
+        usuarioId: 5,
+        cursoId: 10,
+        expiraEn: '2026-12-14T12:00:00.000Z',
+        curso: {
+          id: 10,
+          titulo: 'Opositor de Élite Nivel 1',
+          slug: 'opositor-de-elite-nivel-1',
+          estado: 'PUBLICADO',
+          wooProductId: 1860,
+          secciones: [],
+        },
+      },
+    ]);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Acceso hasta el 14/12/2026',
+    );
+    expect(
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLAnchorElement>('.acceso-ampliar')
+        ?.getAttribute('href'),
+    ).toBe(`${environment.wooCommerceUrl}?add-to-cart=1860`);
   });
 });
