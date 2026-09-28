@@ -240,6 +240,17 @@ describe('LayoutComponent', () => {
     expect(findItemByLabel(component.items(), 'Mis marcas')).toBeUndefined();
   });
 
+  it('ALUMNO sin suscripción puede encontrar sus cursos comprados y el catálogo', () => {
+    (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO));
+
+    const menu = component.items();
+    expect(findItemByLabel(menu, 'Mis cursos')?.routerLink).toBe('/app/cursos');
+    expect(findItemByLabel(menu, 'Catálogo')?.routerLink).toBe(
+      '/app/cursos/catalogo',
+    );
+    expect(findItemByLabel(menu, 'Clases grabadas')).toBeUndefined();
+  });
+
   // -------- Grupo Planificación (feedback Sergio 2026-07-24) --------
   describe('grupo Planificación (feedback Sergio 2026-07-24)', () => {
     it('ADVANCED: grupo "Planificación" con hijos estudio (ruta mensual) y pruebas físicas', () => {

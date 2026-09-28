@@ -335,4 +335,69 @@ describe('ProfileComponent', () => {
       expect(card).toBeFalsy();
     });
   });
+
+  describe('resumen de accesos', () => {
+    beforeEach(() => {
+      jest.spyOn(component, 'ngOnInit').mockImplementation(() => {});
+      component.cursosCargando = false;
+    });
+
+    it('muestra solo un estado vacío compacto cuando no hay accesos', () => {
+      component.user = { rol: 'ALUMNO', consumibles: [] } as any;
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector(
+        '[data-testid="profile-accesos-card"]',
+      );
+      expect(card.querySelector('.accesos-empty')).toBeTruthy();
+      expect(card.querySelector('.accesos-tabs')).toBeFalsy();
+      expect(card.textContent).toContain('Explorar la tienda');
+    });
+
+    it('separa simulacros y cursos y abre el curso desde el perfil', () => {
+      const router = TestBed.inject(Router);
+      component.user = {
+        rol: 'ALUMNO',
+        consumibles: [
+          {
+            id: 1,
+            tipo: 'SIMULACRO',
+            estado: 'ACTIVADO',
+            sku: 'SIM-1',
+            examen: { id: 2, titulo: 'Simulacro de prueba' },
+          },
+        ],
+      } as any;
+      component.cursos = [
+        {
+          id: 3,
+          curso: {
+            id: 4,
+            titulo: 'Opositor de Élite nivel 1',
+            slug: 'opositor-de-elite-nivel-1',
+          },
+          expiraEn: '2026-12-07T12:39:00.000Z',
+        },
+      ] as any;
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector(
+        '[data-testid="profile-accesos-card"]',
+      );
+      expect(card.querySelectorAll('.accesos-tabs button')).toHaveLength(2);
+      expect(card.textContent).toContain('Opositor de Élite nivel 1');
+      card.querySelectorAll('.accesos-tabs button')[0].click();
+      fixture.detectChanges();
+      expect(card.textContent).toContain('Simulacro de prueba');
+      card.querySelectorAll('.accesos-tabs button')[1].click();
+      fixture.detectChanges();
+      expect(card.textContent).toContain('Opositor de Élite nivel 1');
+      expect(card.textContent).toContain('07/12/2026');
+      card.querySelector('.acceso-view-button').click();
+      expect(router.navigate).toHaveBeenCalledWith([
+        '/app/cursos',
+        'opositor-de-elite-nivel-1',
+      ]);
+    });
+  });
 });
