@@ -23,6 +23,12 @@ describe('RealizarTestComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('genera tests aleatorios por defecto y permite recorrer el banco en orden', () => {
+    expect(component.generateDto().ordenSecuencial).toBe(false);
+    component.formGroup.controls.aleatorio.setValue(false);
+    expect(component.generateDto().ordenSecuencial).toBe(true);
+  });
+
   describe('exclusividad de switches (desafío)', () => {
     beforeEach(() => {
       component.ngOnInit();

@@ -6174,6 +6174,7 @@ export interface components {
       temas: number[];
       duracion?: number;
       sobreescribir?: boolean;
+      ordenSecuencial?: boolean;
     };
     UpdateFactorDto: {
       name?: Record<string, never>;
@@ -6256,6 +6257,7 @@ export interface components {
       temas: number[];
       sobreescribir?: boolean;
       aleatorio?: boolean;
+      ordenSecuencial?: boolean;
     };
     RegistrarRespuestaFlashcardDto: {
       testId: number;
