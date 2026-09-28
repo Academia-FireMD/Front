@@ -295,6 +295,9 @@ test('la elección específico/común se adapta a escritorio y móvil sin desbor
   });
 
   await page.setViewportSize({ width: 375, height: 667 });
+  await page.locator('.layout-content').evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await expect
     .poll(async () => {
       const [mobileEspecifico, mobileComun] = await Promise.all([
@@ -309,6 +312,9 @@ test('la elección específico/común se adapta a escritorio y móvil sin desbor
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(375);
+  expect(
+    (await page.locator('.p-stepper-header').first().boundingBox())?.y,
+  ).toBeGreaterThanOrEqual(44);
   await page.screenshot({
     path: 'test-results/planificacion-modalidad-mobile.png',
   });

@@ -74,6 +74,10 @@
 }
 
 @media (max-width: 480px) {
+  :host {
+    padding-top: 1rem;
+  }
+
   .modalidad-grid {
     grid-template-columns: minmax(0, 1fr);
   }
