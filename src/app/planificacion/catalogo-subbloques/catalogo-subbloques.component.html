@@ -127,7 +127,10 @@
       <p *ngIf="!cantidadConCambios(resultado)">
         No hay diferencias que guardar.
       </p>
-      <div *ngIf="resultado.requiereConfirmacion" class="confirmacion-cambios">
+      <div
+        *ngIf="resultado.requiereConfirmacion && dialogoImportacion"
+        class="confirmacion-cambios"
+      >
         <p-checkbox
           inputId="confirmar-catalogo"
           [(ngModel)]="confirmado"

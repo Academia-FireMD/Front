@@ -195,6 +195,26 @@ describe('CatalogoSubbloquesComponent', () => {
     expect(servicio.guardarCambioCatalogo).not.toHaveBeenCalled();
   });
 
+  it('permite confirmar una edición aislada sin una casilla adicional', async () => {
+    const fixture = TestBed.createComponent(CatalogoSubbloquesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+    component.abrirEdicion({ ...lista.filas[0], codigo: 'L01.2' });
+    await component.revisarEdicion();
+    expect(component.confirmado).toBe(false);
+    expect(component.puedeAplicar).toBe(true);
+
+    await component.aplicar();
+
+    expect(servicio.guardarCambioCatalogo).toHaveBeenCalledWith(
+      preview.previewHash,
+      true,
+      expect.objectContaining({ codigo: 'L01.2' }),
+      undefined,
+    );
+  });
+
   it('descarta el hash obsoleto y recarga el catálogo tras un 409', async () => {
     const fixture = TestBed.createComponent(CatalogoSubbloquesComponent);
     fixture.detectChanges();

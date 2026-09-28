@@ -155,7 +155,10 @@ export class CatalogoSubbloquesComponent implements OnInit {
     return (
       !!this.preview?.previewHash &&
       !this.preview.errores?.length &&
-      (!this.preview.requiereConfirmacion || this.confirmado)
+      this.cantidadConCambios(this.preview) > 0 &&
+      (this.dialogoEdicion ||
+        !this.preview.requiereConfirmacion ||
+        this.confirmado)
     );
   }
 
@@ -209,7 +212,7 @@ export class CatalogoSubbloquesComponent implements OnInit {
         await firstValueFrom(
           this.servicio.guardarCambioCatalogo(
             this.preview.previewHash,
-            this.confirmado,
+            true,
             this.fila,
             undefined,
           ),

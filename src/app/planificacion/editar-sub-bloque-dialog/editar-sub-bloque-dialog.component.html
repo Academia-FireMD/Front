@@ -68,7 +68,8 @@
         </div>
         <p class="catalogo-editor-warning">
           Este cambio afecta solo a esta ficha. Los Bloques y calendarios que ya
-          copiaron su contenido no cambiarán.
+          copiaron su contenido no cambiarán. Antes de confirmarlo verás las
+          diferencias para evitar guardar sobre una edición más reciente.
         </p>
         <ng-content></ng-content>
       </div>
@@ -80,17 +81,18 @@
         (click)="cancelarEdicion()"
       ></p-button>
       <p-button
-        label="Revisar cambios"
+        label="Revisar y guardar"
         [outlined]="true"
         [loading]="catalogoCargando"
         (click)="revisarCatalogo.emit()"
       ></p-button>
-      <p-button
-        label="Guardar"
-        [disabled]="!catalogoPuedeAplicar"
-        [loading]="catalogoGuardando"
-        (click)="aplicarCatalogo.emit()"
-      ></p-button>
+      @if (catalogoPuedeAplicar) {
+        <p-button
+          label="Confirmar guardado"
+          [loading]="catalogoGuardando"
+          (click)="aplicarCatalogo.emit()"
+        ></p-button>
+      }
     </p-footer>
   } @else {
     <form [formGroup]="formGroup">
