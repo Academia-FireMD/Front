@@ -306,7 +306,10 @@ export class PlanificacionAdminComponent
         this.route.snapshot.queryParamMap.get('codigoActivo') ?? codigos[0],
       );
     }
-    if (this.route.snapshot.queryParamMap.get('paso') === 'destino') {
+    if (
+      this.route.snapshot.queryParamMap.get('paso') === 'destino' ||
+      this.route.snapshot.queryParamMap.get('importar') === '1'
+    ) {
       this.dialogoImportacionVisible.set(true);
     }
     this.varianteForm.valueChanges.subscribe(() => {

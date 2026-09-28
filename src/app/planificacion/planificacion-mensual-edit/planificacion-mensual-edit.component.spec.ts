@@ -1286,4 +1286,63 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(component.eventosModificados).toBe(true);
     });
   });
+
+  describe('asignación manual', () => {
+    it('descarta la respuesta tardía del alumno anterior', async () => {
+      const respuestaA = new Subject<any>();
+      const respuestaB = new Subject<any>();
+      const estadoSpy = jest.fn((id: number) =>
+        id === 1 ? respuestaA : respuestaB,
+      );
+      (component as any).planificacionesService = {
+        estadoPlanManualAlumno$: estadoSpy,
+      };
+
+      const peticionA = component.seleccionarAlumnoManual([1]);
+      const peticionB = component.seleccionarAlumnoManual([2]);
+      expect(estadoSpy).toHaveBeenNthCalledWith(1, 1);
+      expect(estadoSpy).toHaveBeenNthCalledWith(2, 2);
+      respuestaB.next({
+        alumno: { id: 2, email: 'b@example.test' },
+        automatica: null,
+        configuracion: null,
+        manual: null,
+      });
+      respuestaB.complete();
+      await peticionB;
+      respuestaA.next({
+        alumno: { id: 1, email: 'a@example.test' },
+        automatica: null,
+        configuracion: null,
+        manual: null,
+      });
+      respuestaA.complete();
+      await peticionA;
+
+      expect(component.alumnoManualSeleccionado).toBe(2);
+      expect(component.errorPlanManual).toBeNull();
+      expect(component.estadoPlanManual?.alumno.id).toBe(2);
+    });
+
+    it('no envía una confirmación si el estado pertenece a otro alumno', async () => {
+      const publicar = jest.spyOn(
+        component.planificacionesService,
+        'publicarPlanManual$',
+      );
+      component.lastLoadedPlanification.set({ id: 30 } as any);
+      component.alumnoManualSeleccionado = 2;
+      component.estadoPlanManual = {
+        alumno: { id: 1, email: 'a@example.test' },
+        automatica: null,
+        configuracion: null,
+        manual: null,
+      };
+      component.motivoPlanManual = 'Adaptación';
+
+      await component.confirmarPlanManual();
+
+      expect(publicar).not.toHaveBeenCalled();
+      expect(component.errorPlanManual).toMatch(/Selecciona un alumno/);
+    });
+  });
 });

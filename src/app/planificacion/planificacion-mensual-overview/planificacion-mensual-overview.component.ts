@@ -52,26 +52,25 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
       options: duracionesDisponibles,
     },
     {
-      key: 'asignada',
-      label: 'Tipo',
+      key: 'modoGestion',
+      label: 'Gestión',
       type: 'dropdown',
-      placeholder: 'Seleccionar tipo',
+      placeholder: 'Automáticas o manuales',
       options: [
-        { label: 'Asignadas', value: true },
-        { label: 'Sin asignar', value: false },
+        { label: 'Automáticas', value: 'AUTOMATICA' },
+        { label: 'Manuales', value: 'MANUAL' },
       ],
     },
     {
-      key: 'esPorDefecto',
-      label: 'Planificación por defecto',
-      type: 'toggle',
-      placeholder: 'Mostrar planificación por defecto',
-      defaultValue: false,
-      filterInterpolation: (value: boolean) => {
-        return {
-          esPorDefecto: Boolean(value),
-        };
-      },
+      key: 'estado',
+      label: 'Estado',
+      type: 'dropdown',
+      placeholder: 'Seleccionar estado',
+      options: [
+        { label: 'Borradores', value: 'BORRADOR' },
+        { label: 'Publicadas', value: 'PUBLICADA' },
+        { label: 'Archivadas', value: 'ARCHIVADA' },
+      ],
     },
     {
       key: 'relevancia',
@@ -96,6 +95,32 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   };
 
   public matchKeyWithLabel = matchKeyWithLabel;
+
+  public esAutomatica(plan: PlanificacionMensual): boolean {
+    return Boolean(
+      plan.varianteOrigenId ||
+      plan.varianteBorradorId ||
+      plan.variantesAutoasignacion?.length,
+    );
+  }
+
+  public abrirImportacion(): void {
+    void this.router.navigate(['/app/planificacion/admin-planificacion'], {
+      queryParams: { importar: '1' },
+    });
+  }
+
+  public abrirPerfiles(): void {
+    void this.router.navigate(['/app/planificacion/admin-planificacion']);
+  }
+
+  public async crearCopiaManual(id: number): Promise<void> {
+    const resultado = await firstValueFrom(
+      this.planificacionesService.clonarParaAlumno$(id),
+    );
+    this.toast.info('Copia personal en borrador. Revísala antes de asignarla.');
+    this.navigateToDetailview(resultado.nuevaPlanificacion.id);
+  }
 
   constructor() {
     super();

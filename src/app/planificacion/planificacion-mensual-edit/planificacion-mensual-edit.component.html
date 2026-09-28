@@ -368,6 +368,136 @@
   </div>
 </p-dialog>
 
+<p-dialog
+  *ngIf="expectedRole === 'ADMIN'"
+  [header]="
+    accionPlanManual === 'ASIGNAR'
+      ? 'Asignar plan personal'
+      : 'Volver al plan automático'
+  "
+  [(visible)]="dialogoPlanManualVisible"
+  [modal]="true"
+  [draggable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: 'min(90vw, 75rem)', maxHeight: 'calc(100dvh - 1rem)' }"
+  [breakpoints]="{ '600px': 'calc(100vw - 1rem)' }"
+>
+  @if (accionPlanManual === "ASIGNAR" && pasoPlanManual === "ALUMNO") {
+    <p class="mt-0">
+      Paso 1 de 2 · Elige un alumno. El plan personal sustituirá su calendario
+      automático hasta que la academia retire la excepción.
+    </p>
+    <div class="selector-alumno-manual">
+      <app-user-dashboard
+        mode="selection"
+        [singleSelection]="true"
+        [selectedUserIds]="
+          alumnoManualSeleccionado ? [alumnoManualSeleccionado] : []
+        "
+        (selectionChange)="seleccionarAlumnoManual($event)"
+      />
+    </div>
+    @if (cargandoPlanManual) {
+      <p role="status">Comprobando la planificación del alumno…</p>
+    }
+    @if (errorPlanManual) {
+      <p-message severity="warn" [text]="errorPlanManual" />
+    }
+    <div class="flex justify-content-end mt-3">
+      <p-button
+        label="Continuar"
+        icon="pi pi-arrow-right"
+        iconPos="right"
+        [disabled]="!estadoPlanManual || cargandoPlanManual"
+        (onClick)="pasoPlanManual = 'CONFIRMAR'"
+      />
+    </div>
+  } @else {
+    @if (estadoPlanManual; as estado) {
+      <p class="mt-0">
+        {{
+          accionPlanManual === "ASIGNAR"
+            ? "Paso 2 de 2 · Confirma el cambio"
+            : "Confirma el regreso al plan automático"
+        }}
+      </p>
+      <div class="plan-manual-resumen">
+        <p>
+          <strong>Alumno:</strong> {{ estado.alumno.nombre }}
+          {{ estado.alumno.apellidos }} · {{ estado.alumno.email }}
+        </p>
+        <p>
+          <strong>Plan automático conservado:</strong>
+          {{ estado.automatica?.identificador || "Aún no configurado" }}
+        </p>
+        @if (accionPlanManual === "ASIGNAR" && !estado.automatica) {
+          <p>
+            Este plan personal será el único calendario activo. Para retirarlo
+            más adelante, primero habrá que configurar un plan automático.
+          </p>
+        }
+        @if (accionPlanManual === "ASIGNAR") {
+          <p>
+            <strong>Plan personal nuevo:</strong>
+            {{ lastLoadedPlanification()?.identificador }}
+          </p>
+        } @else {
+          <p>
+            <strong>Plan personal actual:</strong>
+            {{ estado.manual?.planificacion?.identificador }}
+          </p>
+        }
+        <p class="mb-0">
+          El progreso anterior no se borra. El alumno verá un solo calendario
+          activo.
+        </p>
+      </div>
+      <label for="motivo-plan-manual" class="block mt-3 mb-2 font-medium"
+        >Motivo del cambio *</label
+      >
+      <textarea
+        id="motivo-plan-manual"
+        class="p-inputtext w-full"
+        rows="3"
+        maxlength="500"
+        [(ngModel)]="motivoPlanManual"
+        placeholder="Explica por qué este alumno necesita un plan personal"
+      ></textarea>
+      @if (errorPlanManual) {
+        <div role="alert" aria-live="assertive" class="mt-3">
+          <p-message severity="warn" [text]="errorPlanManual" />
+        </div>
+      }
+      <div class="flex flex-wrap justify-content-between gap-2 mt-3">
+        <p-button
+          [label]="accionPlanManual === 'ASIGNAR' ? 'Volver' : 'Cancelar'"
+          icon="pi pi-arrow-left"
+          [text]="true"
+          (onClick)="
+            accionPlanManual === 'ASIGNAR'
+              ? (pasoPlanManual = 'ALUMNO')
+              : (dialogoPlanManualVisible = false)
+          "
+        />
+        <p-button
+          [label]="
+            accionPlanManual === 'ASIGNAR'
+              ? 'Publicar y asignar a este alumno'
+              : 'Volver al plan automático'
+          "
+          icon="pi pi-check"
+          [loading]="guardandoPlanManual"
+          [disabled]="
+            !motivoPlanManual.trim() ||
+            (accionPlanManual === 'RETIRAR' && !estado.automatica)
+          "
+          (onClick)="confirmarPlanManual()"
+        />
+      </div>
+    }
+  }
+</p-dialog>
+
 @if (expectedRole === "ADMIN" && esFlujoImportacion) {
   <div class="import-guidance" role="status">
     <strong>
@@ -396,32 +526,70 @@
   <div class="borrador-aviso" role="status">
     <div>
       <strong>BORRADOR · Los alumnos aún no ven estos cambios</strong>
+      @if (esPlanAutomatico) {
+        <p>
+          Versión publicada vigente:
+          @if (
+            lastLoadedPlanification()?.varianteBorrador?.planificacionMensual;
+            as publicada
+          ) {
+            {{ publicada.identificador }} (v{{ publicada.version }}).
+          } @else {
+            Ninguna.
+          }
+          Puedes seguir editando este calendario antes de publicarlo.
+        </p>
+      } @else {
+        <p>
+          Plan manual. Guárdalo y revísalo antes de asignarlo a un alumno
+          concreto.
+        </p>
+      }
+    </div>
+    @if (esPlanAutomatico) {
+      <p-button
+        label="Publicar y asignar"
+        icon="pi pi-send"
+        [outlined]="true"
+        (onClick)="
+          router.navigate(['/app/planificacion/admin-planificacion'], {
+            queryParams: {
+              tab: 'variantes',
+              varianteId: lastLoadedPlanification()?.varianteBorrador?.id,
+              borradorId: lastLoadedPlanification()?.id,
+            },
+          })
+        "
+      />
+    } @else {
+      <p-button
+        label="Asignar a un alumno"
+        icon="pi pi-user-plus"
+        [outlined]="true"
+        (onClick)="abrirAsignacionManual()"
+      />
+    }
+  </div>
+}
+
+@if (
+  expectedRole === "ADMIN" && lastLoadedPlanification()?.excepcionManual;
+  as excepcion
+) {
+  <div class="borrador-aviso" role="status">
+    <div>
+      <strong>PLAN PERSONAL ACTIVO</strong>
       <p>
-        Versión publicada vigente:
-        @if (
-          lastLoadedPlanification()?.varianteBorrador?.planificacionMensual;
-          as publicada
-        ) {
-          {{ publicada.identificador }} (v{{ publicada.version }}).
-        } @else {
-          Ninguna.
-        }
-        Puedes seguir editando este calendario antes de publicarlo.
+        Asignado a {{ excepcion.alumno?.nombre }}
+        {{ excepcion.alumno?.apellidos }}. Su calendario automático está
+        conservado.
       </p>
     </div>
     <p-button
-      label="Publicar y asignar"
-      icon="pi pi-send"
+      label="Volver al plan automático"
+      icon="pi pi-undo"
       [outlined]="true"
-      (onClick)="
-        router.navigate(['/app/planificacion/admin-planificacion'], {
-          queryParams: {
-            tab: 'variantes',
-            varianteId: lastLoadedPlanification()?.varianteBorrador?.id,
-            borradorId: lastLoadedPlanification()?.id,
-          },
-        })
-      "
+      (onClick)="abrirRetiradaManual()"
     />
   </div>
 }

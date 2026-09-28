@@ -4,6 +4,8 @@
   [fetchItems$]="fetchItems$"
   [itemTemplate]="planificacionItemTemplate"
   [filters]="filters"
+  [stackActionsOnMobile]="true"
+  [autoItemHeight]="true"
   (onItemClick)="navigateToDetailview($any($event).id)"
   (filtersChanged)="onFiltersChanged($event)"
 >
@@ -22,7 +24,7 @@
   </div>
 
   <div right-actions>
-    <div class="flex gap-2">
+    <div class="flex gap-2 monthly-actions">
       <p-button
         icon="pi pi-sync"
         [link]="true"
@@ -33,10 +35,31 @@
       <p-button
         *ngIf="expectedRole == 'ADMIN'"
         label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Crear nueva'
+          viewportService.screenWidth == 'xs' ? undefined : 'Crear manual'
         }}"
+        ariaLabel="Crear manual"
         icon="pi pi-plus"
+        pTooltip="Crear planificación personal"
         (click)="navigateToDetailview('new')"
+      ></p-button>
+      <p-button
+        *ngIf="expectedRole == 'ADMIN'"
+        label="{{
+          viewportService.screenWidth == 'xs' ? undefined : 'Importar semanas'
+        }}"
+        ariaLabel="Importar semanas"
+        icon="pi pi-upload"
+        [outlined]="true"
+        pTooltip="Importar las semanas del Excel a borradores automáticos"
+        (click)="abrirImportacion()"
+      ></p-button>
+      <p-button
+        *ngIf="expectedRole == 'ADMIN'"
+        icon="pi pi-cog"
+        [text]="true"
+        pTooltip="Configurar perfiles automáticos"
+        ariaLabel="Configurar perfiles automáticos"
+        (click)="abrirPerfiles()"
       ></p-button>
     </div>
   </div>
@@ -50,9 +73,20 @@
 
 <!-- Template para el item de planificación -->
 <ng-template #planificacionItemTemplate let-item>
-  <div class="flex flex-row align-items-between">
-    <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
-      <div class="text-lg font-medium flex gap-2 align-items-center">
+  <div
+    class="flex w-full monthly-row"
+    [ngClass]="
+      viewportService.screenWidth === 'xs' ? 'flex-column' : 'flex-row'
+    "
+  >
+    <div
+      class="flex flex-column py-2 col-9 left-side truncate-flex-content monthly-row__main"
+      [style.width]="viewportService.screenWidth === 'xs' ? '100%' : null"
+      [style.flex]="viewportService.screenWidth === 'xs' ? '0 0 auto' : '1 1 0'"
+    >
+      <div
+        class="text-lg font-medium flex flex-wrap gap-2 align-items-center monthly-row__top"
+      >
         <div class="flex gap-1">
           <strong
             class="identifier"
@@ -61,12 +95,26 @@
             >{{ item.identificador }}</strong
           >
         </div>
-        <div class="flex gap-1 align-items-center">
+        <div class="flex flex-wrap gap-1 align-items-center monthly-row__chips">
           <p-chip
-            *ngIf="item.esPorDefecto"
-            label="Por defecto"
-            pTooltip="Planificación por defecto"
+            *ngIf="expectedRole === 'ADMIN'"
+            [label]="esAutomatica(item) ? 'Automática' : 'Manual'"
+            [pTooltip]="
+              esAutomatica(item)
+                ? 'Se publica por perfil'
+                : 'Se asigna a un alumno concreto'
+            "
             tooltipPosition="top"
+          />
+          <p-chip
+            *ngIf="item.estado"
+            [label]="
+              item.estado === 'BORRADOR'
+                ? 'Borrador'
+                : item.estado === 'PUBLICADA'
+                  ? 'Publicada'
+                  : 'Archivada'
+            "
           />
           <p-chip
             label="{{ matchKeyWithLabel(item.tipoDePlanificacion) }}"
@@ -100,8 +148,16 @@
         }}</span
       >
     </div>
-    <div class="right-side col-3 flex align-items-center justify-content-end">
-      <div class="flex flex-row align-items-center justify-content-end gap-2">
+    <div
+      class="right-side col-3 flex align-items-center justify-content-end monthly-row__side"
+      [style.width]="viewportService.screenWidth === 'xs' ? '100%' : null"
+      [style.flex]="
+        viewportService.screenWidth === 'xs' ? '0 0 auto' : '0 0 25%'
+      "
+    >
+      <div
+        class="flex flex-row flex-wrap align-items-center justify-content-end gap-2 monthly-row__actions"
+      >
         <app-oposicion-picker
           context="catalogo"
           *ngIf="item.relevancia?.length"
@@ -119,6 +175,13 @@
         >
         <p-button
           *ngIf="expectedRole == 'ADMIN'"
+          (click)="$event.stopPropagation(); crearCopiaManual(item.id)"
+          icon="pi pi-user-plus"
+          pTooltip="Crear una copia personal independiente"
+          ariaLabel="Crear una copia personal independiente"
+        ></p-button>
+        <p-button
+          *ngIf="expectedRole == 'ADMIN'"
           (click)="
             $event.stopPropagation();
             $event.preventDefault();
@@ -126,6 +189,7 @@
           "
           icon="pi pi-trash"
           pTooltip="Eliminar planificación"
+          ariaLabel="Eliminar planificación"
           styleClass="p-button-danger"
         ></p-button>
         <p-button
@@ -136,16 +200,7 @@
           "
           icon="pi pi-pencil"
           pTooltip="Editar planificación"
-        ></p-button>
-        <p-button
-          *ngIf="expectedRole == 'ADMIN'"
-          (click)="
-            $event.stopPropagation();
-            $event.preventDefault();
-            clonarPlanificacion(item.id)
-          "
-          icon="pi pi-copy"
-          pTooltip="Clonar planificación"
+          ariaLabel="Editar planificación"
         ></p-button>
       </div>
     </div>

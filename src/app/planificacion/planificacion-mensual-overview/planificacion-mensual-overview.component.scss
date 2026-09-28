@@ -1,2 +1,25 @@
-@import '../../shared/styles/list-styles.scss';
+@import "../../shared/styles/list-styles.scss";
 
+@media (max-width: 768px) {
+  :host ::ng-deep .top-action-bar.mobile-stack-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+
+    .left-actions {
+      grid-column: 1 / -1;
+      min-width: 0;
+    }
+
+    .right-actions {
+      grid-column: 1;
+      width: auto;
+      min-width: 0;
+    }
+
+    .filter-button-wrapper {
+      grid-column: 2;
+      justify-self: end;
+    }
+  }
+}

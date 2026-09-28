@@ -75,6 +75,11 @@ export interface EstadoTestNivel {
 
 export interface ConfiguracionPlanificacion {
   estado: EstadoConfiguracionPlanificacion;
+  planificacionManual?: {
+    id: number;
+    identificador: string;
+    fechaVigencia: string;
+  } | null;
   preferenciasPrecargadas: PreferenciasPrecargadas;
   oposicionesPermitidas: Oposicion[];
   disponibilidadOposiciones?: DisponibilidadOposicion[];
@@ -103,6 +108,7 @@ export interface GuardarConfiguracionDTO {
   nivel: NivelOposicion;
   franja: TipoDePlanificacionDeseada;
   version: number;
+  aceptaPlanComun?: boolean;
 }
 
 export interface VarianteAdmin {

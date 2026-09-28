@@ -13,6 +13,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { DropdownModule } from 'primeng/dropdown';
 import { MessageModule } from 'primeng/message';
 import { StepperModule } from 'primeng/stepper';
@@ -50,6 +51,7 @@ export type ResultadoConfiguracion = 'EXITO' | 'CONFLICTO';
     CommonModule,
     FormsModule,
     ButtonModule,
+    CheckboxModule,
     DropdownModule,
     MessageModule,
     StepperModule,
@@ -93,6 +95,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     franja: null as string | null,
   };
   modalidad: 'ESPECIFICA' | 'COMUN' | null = null;
+  planComunConfirmado = false;
 
   // Paso 2: nivel
   elegirCuestionario = signal(false);
@@ -214,6 +217,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
   get puedeContinuarPasoPreferencias(): boolean {
     return !!(
       this.modalidad &&
+      (this.modalidad !== 'COMUN' || this.planComunConfirmado) &&
       this.preferencias.oposicion &&
       this.preferencias.franja
     );
@@ -229,6 +233,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
       this.preferencias.nivel &&
       this.preferencias.franja &&
       this.modalidad &&
+      (this.modalidad !== 'COMUN' || this.planComunConfirmado) &&
       combinacionPublicada,
     );
   }
@@ -293,6 +298,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
     if (modalidad === 'COMUN' && !this.planComunDisponible) return;
     if (modalidad === 'ESPECIFICA' && !this.planEspecificoDisponible) return;
     this.modalidad = modalidad;
+    this.planComunConfirmado = false;
     const anterior = this.preferencias.oposicion;
     const especificas = this.opcionesEspecificas
       .filter((opcion) => !opcion.disabled)
@@ -372,6 +378,7 @@ export class PlanificacionConfiguracionWizardComponent implements OnInit {
         nivel: this.preferencias.nivel as NivelOposicion,
         franja: this.preferencias.franja as TipoDePlanificacionDeseada,
         version: this.configuracion?.configuracionActiva?.version ?? 0,
+        ...(this.modalidad === 'COMUN' && { aceptaPlanComun: true }),
       };
 
       await firstValueFrom(

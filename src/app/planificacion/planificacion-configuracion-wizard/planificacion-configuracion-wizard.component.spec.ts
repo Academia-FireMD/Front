@@ -150,6 +150,22 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
     expect(component.puedeContinuarPasoPreferencias).toBe(false);
   });
 
+  it('explica y exige aceptar el plan común, incluso con horas elegidas', () => {
+    component.preferencias = { oposicion: null, nivel: null, franja: null };
+    component.modalidad = null;
+    component.seleccionarModalidad('COMUN');
+    component.preferencias.franja = 'FRANJA_CUATRO_A_SEIS_HORAS';
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'te recomendamos seleccionar su planificación específica',
+    );
+    expect(component.puedeContinuarPasoPreferencias).toBe(false);
+    component.planComunConfirmado = true;
+    expect(component.puedeContinuarPasoPreferencias).toBe(true);
+    component.seleccionarModalidad('ESPECIFICA');
+    expect(component.planComunConfirmado).toBe(false);
+  });
+
   it('muestra la explicación del plan común antes de elegirlo', () => {
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(texto).toContain('contenidos compartidos por Valencia y Alicante');

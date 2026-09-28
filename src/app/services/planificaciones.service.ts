@@ -6,6 +6,7 @@ import {
   PaginationFilter,
 } from '../shared/models/pagination.model';
 import {
+  EstadoPlanManualAlumno,
   PlanificacionBloque,
   PlanificacionMensual,
   PlantillaSemanal,
@@ -154,6 +155,59 @@ export class PlanificacionesService extends ApiBaseService {
 
   public clonarPlanificacionMensual$(id: number) {
     return this.post('/planificacion-mensual/clonar/' + id, null);
+  }
+
+  public clonarParaAlumno$(id: number): Observable<{
+    nuevaPlanificacion: PlanificacionMensual;
+  }> {
+    return this.post(
+      `/planificacion-mensual/${id}/clonar-manual`,
+      null,
+    ) as Observable<{ nuevaPlanificacion: PlanificacionMensual }>;
+  }
+
+  public estadoPlanManualAlumno$(
+    alumnoId: number,
+  ): Observable<EstadoPlanManualAlumno> {
+    return this.get(
+      `/admin/alumnos/${alumnoId}/plan-manual`,
+    ) as Observable<EstadoPlanManualAlumno>;
+  }
+
+  public publicarPlanManual$(
+    planificacionId: number,
+    data: {
+      alumnoId: number;
+      motivo: string;
+      versionExcepcion: number;
+      fechaPlanEsperada: string;
+      configuracionIdEsperada: number;
+      versionConfiguracionEsperada: number;
+      planificacionAutomaticaEsperadaId: number;
+    },
+  ): Observable<unknown> {
+    return this.http.post(
+      `${environment.apiUrl}/planificaciones/planificacion-mensual/${planificacionId}/publicar-manual`,
+      data,
+      { withCredentials: true },
+    );
+  }
+
+  public terminarPlanManual$(
+    alumnoId: number,
+    data: {
+      motivo: string;
+      versionExcepcion: number;
+      configuracionIdEsperada: number;
+      versionConfiguracionEsperada: number;
+      planificacionAutomaticaEsperadaId: number;
+    },
+  ): Observable<unknown> {
+    return this.http.post(
+      `${environment.apiUrl}/planificaciones/admin/alumnos/${alumnoId}/plan-manual/terminar`,
+      data,
+      { withCredentials: true },
+    );
   }
 
   /**

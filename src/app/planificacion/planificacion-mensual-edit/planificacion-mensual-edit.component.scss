@@ -417,3 +417,29 @@
     justify-content: center;
   }
 }
+/* El selector reutiliza la rejilla de alumnos sin desbordar el diálogo. */
+.selector-alumno-manual {
+  min-height: 18rem;
+  max-height: min(60dvh, 42rem);
+  overflow: auto;
+}
+
+.plan-manual-resumen {
+  padding: 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.5rem;
+  background: var(--surface-50);
+
+  p {
+    margin: 0 0 0.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .selector-alumno-manual {
+    max-height: 52dvh;
+  }
+  :host ::ng-deep .p-dialog .p-button {
+    min-height: 44px;
+  }
+}

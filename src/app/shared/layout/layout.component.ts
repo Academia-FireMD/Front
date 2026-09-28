@@ -328,12 +328,6 @@ export class LayoutComponent {
             icon: 'fa fa-comment',
             routerLink: '/app/planificacion/comentarios',
           },
-          {
-            label: 'Autoasignación',
-            icon: 'pi pi-sliders-h',
-            routerLink: '/app/planificacion/admin-planificacion',
-            modulo: ModuloApp.PLANIFICACION_AUTOASIGNACION,
-          },
         ],
       },
       {

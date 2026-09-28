@@ -69,6 +69,58 @@ import {
         <p-message severity="warn" [text]="error"></p-message>
       } @else if (configuracion?.estado === 'BLOQUEADA') {
         <app-planificacion-bloqueada></app-planificacion-bloqueada>
+      } @else if (configuracion?.planificacionManual) {
+        @if (configuracion?.planificacionManual; as planManual) {
+          @if (editando) {
+            <p-message
+              severity="info"
+              text="Puedes preparar tu planificación automática. El plan personal seguirá siendo el único calendario visible hasta que la academia lo retire."
+              styleClass="w-full mb-4"
+            />
+            <app-planificacion-configuracion-wizard
+              [configuracion]="configuracion"
+              [preferenciasPrecargadas]="
+                revisandoPreferencias ? preferenciasWizard : null
+              "
+              [abrirEnNivel]="abrirWizardEnNivel"
+              [modoEdicion]="true"
+              (configurada)="onConfigurada($event)"
+              (cancelado)="cancelarEdicion()"
+            />
+          } @else {
+            <div
+              class="flex flex-column align-items-center gap-3 py-6 text-center"
+            >
+              <i class="pi pi-calendar text-4xl text-primary"></i>
+              <h2 class="m-0">Tu planificación personal está activa</h2>
+              <p class="text-600 m-0" style="max-width: 42rem">
+                La academia ha preparado «{{ planManual.identificador }}» para
+                ti. Mientras esté activa, este es tu único calendario. Tu
+                configuración automática y tu progreso anterior se conservan.
+              </p>
+              <p-message
+                severity="info"
+                text="Para cambiar o retirar esta planificación personal, contacta con la academia."
+              />
+              <button
+                pButton
+                label="Ver mi planificación"
+                icon="pi pi-calendar"
+                [routerLink]="[
+                  '/app/planificacion/planificacion-mensual-alumno',
+                  planManual.id,
+                ]"
+              ></button>
+              <button
+                pButton
+                label="Preparar planificación automática"
+                icon="pi pi-cog"
+                severity="secondary"
+                (click)="editando = true"
+              ></button>
+            </div>
+          }
+        }
       } @else if (
         configuracion?.estado === 'REQUIERE_CONFIGURACION' &&
         (configuracion?.disponibilidadOposiciones?.length ??
@@ -221,7 +273,9 @@ export class PlanificacionAlumnoComponent implements OnInit {
 
   get planificacionMensualId(): number | null {
     return (
-      this.configuracion?.configuracionActiva?.planificacionMensual?.id ?? null
+      this.configuracion?.planificacionManual?.id ??
+      this.configuracion?.configuracionActiva?.planificacionMensual?.id ??
+      null
     );
   }
 
@@ -269,7 +323,8 @@ export class PlanificacionAlumnoComponent implements OnInit {
         };
       }
       if (
-        this.configuracion?.estado === 'ACTIVA' &&
+        (this.configuracion?.estado === 'ACTIVA' ||
+          !!this.configuracion?.planificacionManual) &&
         this.planificacionMensualId &&
         !this.revisandoPreferencias &&
         !this.editando
@@ -308,7 +363,11 @@ export class PlanificacionAlumnoComponent implements OnInit {
     this.editando = false;
     this.revisandoPreferencias = false;
     this.store?.dispatch(UserActions.loadUser());
-    this.toast.success('Tu planificación se ha activado correctamente');
+    this.toast.success(
+      this.configuracion?.planificacionManual
+        ? 'Tu plan automático está preparado. El plan personal sigue activo hasta que la academia lo retire.'
+        : 'Tu planificación se ha activado correctamente',
+    );
     void this.cargar();
   }
 

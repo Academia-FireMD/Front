@@ -157,9 +157,9 @@
   <div class="flex flex-row align-items-between">
     <div
       class="flex flex-column py-2 left-side truncate-flex-content"
-      [ngClass]="mode === 'selection' ? 'col-9' : 'col-9'"
+      [ngClass]="mode === 'selection' ? 'col-12' : 'col-9'"
     >
-      <div class="text-lg font-medium flex gap-2 align-items-center">
+      <div class="text-lg font-medium flex flex-wrap gap-2 align-items-center">
         <span
           class="status-dot"
           [ngClass]="'status-dot-' + getUserStatus(item)"
@@ -191,7 +191,7 @@
           }
         </span>
 
-        <div class="flex gap-1">
+        <div class="flex flex-wrap gap-1">
           <p-chip
             [styleClass]="item.validated ? 'verified-chip' : 'nonverified-chip'"
             label="{{ item.validated ? 'Verificado' : 'Sin verificar' }}"

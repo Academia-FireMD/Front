@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   FormArray,
   FormBuilder,
@@ -29,6 +30,7 @@ import { ViewportService } from '../../services/viewport.service';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { EntidadTipo } from '../../shared/models/attachment.model';
 import {
+  EstadoPlanManualAlumno,
   PlanificacionMensual,
   PlantillaSemanal,
   SubBloque,
@@ -92,6 +94,16 @@ export class PlanificacionMensualEditComponent {
     oposiciones.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
   lastLoadedPlanification = signal(null as PlanificacionMensual | null);
+  dialogoPlanManualVisible = false;
+  accionPlanManual: 'ASIGNAR' | 'RETIRAR' = 'ASIGNAR';
+  pasoPlanManual: 'ALUMNO' | 'CONFIRMAR' = 'ALUMNO';
+  alumnoManualSeleccionado: number | null = null;
+  estadoPlanManual: EstadoPlanManualAlumno | null = null;
+  private cargaEstadoPlanManualId = 0;
+  motivoPlanManual = '';
+  cargandoPlanManual = false;
+  guardandoPlanManual = false;
+  errorPlanManual: string | null = null;
   viewportService = inject(ViewportService);
   activedRoute = inject(ActivatedRoute);
   planificacionesService = inject(PlanificacionesService);
@@ -775,6 +787,144 @@ export class PlanificacionMensualEditComponent {
     void this.router.navigate(['/app/planificacion/configuracion-alumno'], {
       queryParams: { gestionar: 'preferencias' },
     });
+  }
+
+  get esPlanAutomatico(): boolean {
+    const plan = this.lastLoadedPlanification();
+    return Boolean(
+      plan?.varianteOrigenId ||
+      plan?.varianteBorradorId ||
+      plan?.variantesAutoasignacion?.length,
+    );
+  }
+
+  abrirAsignacionManual(): void {
+    if (this.eventosModificados || this.formGroup.dirty) {
+      this.toast.warning('Guarda primero los cambios del borrador.');
+      return;
+    }
+    this.accionPlanManual = 'ASIGNAR';
+    this.pasoPlanManual = 'ALUMNO';
+    this.alumnoManualSeleccionado = null;
+    this.estadoPlanManual = null;
+    this.motivoPlanManual = '';
+    this.errorPlanManual = null;
+    this.dialogoPlanManualVisible = true;
+  }
+
+  async seleccionarAlumnoManual(ids: number[]): Promise<void> {
+    this.alumnoManualSeleccionado = ids[0] ?? null;
+    this.estadoPlanManual = null;
+    this.errorPlanManual = null;
+    if (!this.alumnoManualSeleccionado) return;
+    await this.cargarEstadoPlanManual(this.alumnoManualSeleccionado);
+  }
+
+  async abrirRetiradaManual(): Promise<void> {
+    const alumnoId = this.lastLoadedPlanification()?.excepcionManual?.alumnoId;
+    if (!alumnoId) return;
+    this.accionPlanManual = 'RETIRAR';
+    this.pasoPlanManual = 'CONFIRMAR';
+    this.alumnoManualSeleccionado = alumnoId;
+    this.motivoPlanManual = '';
+    this.errorPlanManual = null;
+    this.dialogoPlanManualVisible = true;
+    await this.cargarEstadoPlanManual(alumnoId);
+  }
+
+  private async cargarEstadoPlanManual(alumnoId: number): Promise<void> {
+    const peticionId = ++this.cargaEstadoPlanManualId;
+    this.cargandoPlanManual = true;
+    try {
+      const estado = await firstValueFrom(
+        this.planificacionesService.estadoPlanManualAlumno$(alumnoId),
+      );
+      if (
+        peticionId !== this.cargaEstadoPlanManualId ||
+        this.alumnoManualSeleccionado !== alumnoId ||
+        estado.alumno.id !== alumnoId
+      )
+        return;
+      this.estadoPlanManual = estado;
+      if (
+        this.accionPlanManual === 'RETIRAR' &&
+        !this.estadoPlanManual.automatica
+      ) {
+        this.errorPlanManual =
+          'Este alumno aún no tiene una planificación automática a la que volver. Configúrala antes de retirar el plan personal.';
+      }
+    } catch {
+      if (peticionId === this.cargaEstadoPlanManualId)
+        this.errorPlanManual = 'No se pudo comprobar el estado del alumno.';
+    } finally {
+      if (peticionId === this.cargaEstadoPlanManualId)
+        this.cargandoPlanManual = false;
+    }
+  }
+
+  async confirmarPlanManual(): Promise<void> {
+    const plan = this.lastLoadedPlanification();
+    const alumnoId = this.alumnoManualSeleccionado;
+    const motivo = this.motivoPlanManual.trim();
+    if (
+      !plan ||
+      !alumnoId ||
+      !this.estadoPlanManual ||
+      this.estadoPlanManual.alumno.id !== alumnoId ||
+      !motivo
+    ) {
+      this.errorPlanManual = 'Selecciona un alumno y escribe el motivo.';
+      return;
+    }
+    this.guardandoPlanManual = true;
+    this.errorPlanManual = null;
+    const configuracionEsperada = {
+      configuracionIdEsperada: this.estadoPlanManual.configuracion?.id ?? 0,
+      versionConfiguracionEsperada:
+        this.estadoPlanManual.configuracion?.version ?? 0,
+      planificacionAutomaticaEsperadaId:
+        this.estadoPlanManual.configuracion?.planificacionMensualId ?? 0,
+    };
+    try {
+      if (this.accionPlanManual === 'ASIGNAR') {
+        await firstValueFrom(
+          this.planificacionesService.publicarPlanManual$(plan.id, {
+            alumnoId,
+            motivo,
+            versionExcepcion: this.estadoPlanManual.manual?.version ?? 0,
+            fechaPlanEsperada: new Date(plan.updatedAt).toISOString(),
+            ...configuracionEsperada,
+          }),
+        );
+        this.toast.success('Plan personal publicado y asignado a un alumno.');
+      } else {
+        const version = this.estadoPlanManual.manual?.version;
+        if (!version) {
+          this.errorPlanManual = 'La excepción ya no está activa. Recarga.';
+          return;
+        }
+        await firstValueFrom(
+          this.planificacionesService.terminarPlanManual$(alumnoId, {
+            motivo,
+            versionExcepcion: version,
+            ...configuracionEsperada,
+          }),
+        );
+        this.toast.success('El alumno vuelve a su planificación automática.');
+      }
+      this.dialogoPlanManualVisible = false;
+      this.load();
+    } catch (error) {
+      this.errorPlanManual =
+        error instanceof HttpErrorResponse && error.status === 409
+          ? 'El plan o la asignación ha cambiado. Recarga y vuelve a revisar.'
+          : error instanceof HttpErrorResponse &&
+              typeof error.error?.message === 'string'
+            ? error.error.message
+            : 'No se pudo aplicar el cambio.';
+    } finally {
+      this.guardandoPlanManual = false;
+    }
   }
 
   ngOnInit(): void {

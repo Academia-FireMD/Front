@@ -42,6 +42,13 @@
   line-height: 1.4;
 }
 
+.planificacion-general-info {
+  padding: 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.5rem;
+  background: var(--surface-50);
+}
+
 .wizard-actions {
   display: flex;
   flex-wrap: wrap;

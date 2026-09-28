@@ -52,6 +52,33 @@
         }
       </div>
 
+      @if (modalidad === "COMUN") {
+        <div class="planificacion-general-info mb-3" aria-live="polite">
+          <p class="m-0 line-height-3">
+            La planificación General Comunidad Valenciana está diseñada para
+            trabajar de forma global los contenidos comunes a las distintas
+            oposiciones de bombero de la Comunidad Valenciana. Si estás
+            preparando una oposición concreta, te recomendamos seleccionar su
+            planificación específica, ya que estará adaptada a su temario,
+            estructura y necesidades particulares. Puedes elegir la
+            planificación General Comunidad Valenciana si prefieres una
+            preparación más amplia o si todavía no quieres centrarte
+            exclusivamente en una convocatoria concreta. Recuerda cambiar la
+            selección cuando quieras preparar una convocatoria concreta.
+          </p>
+          <div class="flex align-items-start gap-2 mt-3">
+            <p-checkbox
+              [binary]="true"
+              [(ngModel)]="planComunConfirmado"
+              inputId="confirmarPlanComun"
+            />
+            <label for="confirmarPlanComun" class="line-height-3">
+              Quiero continuar con el plan común de Comunidad Valenciana.
+            </label>
+          </div>
+        </div>
+      }
+
       @if (modalidad) {
         <app-planificacion-preferencias
           [valoresIniciales]="{

@@ -386,11 +386,14 @@ describe('LayoutComponent', () => {
       ).toBeUndefined();
     });
 
-    it('admin ve Autoasignación dentro de Planificación solo cuando el flag está ON', () => {
+    it('admin entra por Planificación mensual sin un menú técnico de Autoasignación', () => {
       (component as any).currentUserSignal.set(makeUser(Rol.ADMIN));
-      const link = findItemByLabel(component.items(), 'Autoasignación');
-      expect(link?.routerLink).toBe('/app/planificacion/admin-planificacion');
-      expect(link?.modulo).toBe(ModuloApp.PLANIFICACION_AUTOASIGNACION);
+      expect(
+        findItemByLabel(component.items(), 'Planificación mensual')?.routerLink,
+      ).toBe('/app/planificacion/planificacion-mensual');
+      expect(
+        findItemByLabel(component.items(), 'Autoasignación'),
+      ).toBeUndefined();
 
       appConfigService.setEstado({
         ...appConfigService.estadoModulos(),
@@ -399,6 +402,9 @@ describe('LayoutComponent', () => {
       expect(
         findItemByLabel(component.items(), 'Autoasignación'),
       ).toBeUndefined();
+      expect(
+        findItemByLabel(component.items(), 'Planificación mensual')?.routerLink,
+      ).toBe('/app/planificacion/planificacion-mensual');
     });
   });
 

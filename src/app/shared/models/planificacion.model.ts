@@ -75,6 +75,14 @@ export interface PlanificacionMensual {
   publicadaAt?: Date | string | null;
   planificacionAnteriorId?: number | null;
   varianteBorradorId?: number | null;
+  varianteOrigenId?: number | null;
+  variantesAutoasignacion?: Array<{ id: number; codigo: string }>;
+  excepcionManual?: {
+    alumnoId: number;
+    version: number;
+    motivo?: string;
+    alumno?: { nombre?: string; apellidos?: string; email: string };
+  } | null;
   planificacionAnterior?: {
     id: number;
     identificador: string;
@@ -108,4 +116,20 @@ export interface AsignacionAlumno {
   planificacionId: number;
   alumno: Usuario;
   planificacion: PlanificacionMensual;
+}
+
+export interface EstadoPlanManualAlumno {
+  alumno: { id: number; nombre?: string; apellidos?: string; email: string };
+  automatica: { id: number; identificador: string; estado: string } | null;
+  configuracion: {
+    id: number;
+    version: number;
+    planificacionMensualId: number | null;
+  } | null;
+  manual: {
+    planificacion: { id: number; identificador: string; estado: string };
+    motivo: string;
+    version: number;
+    fechaVigencia: string;
+  } | null;
 }
