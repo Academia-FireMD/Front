@@ -90,7 +90,13 @@ for (const viewport of [
       name: 'Buscar planificación',
     });
     await expect(buscador).toHaveValue('');
-    await expect(buscador).toHaveAttribute('autocomplete', 'new-password');
+    await expect(buscador).toHaveAttribute('readonly', '');
+    await buscador.focus();
+    await expect(buscador).not.toHaveAttribute('readonly');
+    await buscador.fill('Plan Madrid');
+    await expect(buscador).toHaveValue('Plan Madrid');
+    await buscador.fill('');
+    await expect(page).toHaveURL(/searchTerm=$/);
     const layout = await page
       .locator('.monthly-row')
       .first()
