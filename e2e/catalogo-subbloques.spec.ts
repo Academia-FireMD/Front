@@ -154,6 +154,9 @@ for (const viewport of [
     const dialogo = page.getByRole('dialog', {
       name: 'Importar catálogo',
     });
+    await expect(
+      dialogo.getByText('1. Selecciona el Excel del catálogo'),
+    ).toBeVisible();
     await dialogo.locator('input[type="file"]').setInputFiles({
       name: 'catalogo.xlsx',
       mimeType:
@@ -169,6 +172,9 @@ for (const viewport of [
     await expect(dialogo.getByRole('listitem').first()).toContainText(
       /L01.*Modificado.*explicación.*Antes: Explicación completa.*Después: Explicación nueva/,
     );
+    await page.screenshot({
+      path: testInfo.outputPath(`catalogo-importacion-${viewport.width}.png`),
+    });
     expect(aplicaciones()).toBe(0);
     await expect(
       dialogo.getByRole('button', { name: 'Confirmar importación' }),
@@ -249,7 +255,9 @@ test('catálogo: filtra y abre el editor Markdown compartido', async ({
   const dialogo = page.getByRole('dialog', { name: 'Editar L01' });
   await expect(dialogo).toBeVisible();
   await expect(dialogo.locator('.toastui-editor-defaultUI')).toHaveCount(2);
-  await expect(dialogo.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+  await expect(
+    dialogo.getByRole('button', { name: 'Revisar y guardar' }),
+  ).toBeEnabled();
   await page.screenshot({
     path: testInfo.outputPath('catalogo-editor-desktop.png'),
   });
