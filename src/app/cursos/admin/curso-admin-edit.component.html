@@ -202,6 +202,24 @@
                         automáticamente.
                       </small>
                     </div>
+                    <div class="field">
+                      <label for="ce-duracion-acceso"
+                        >Días de acceso por compra</label
+                      >
+                      <input
+                        id="ce-duracion-acceso"
+                        pInputText
+                        type="number"
+                        min="1"
+                        formControlName="duracionAccesoDias"
+                        class="w-full"
+                        placeholder="Sin caducidad"
+                      />
+                      <small class="text-color-secondary"
+                        >Vacío: acceso sin caducidad. Las compras nuevas usan
+                        este plazo.</small
+                      >
+                    </div>
                   }
 
                   @if (hintClaseGrabadaSinOposicion()) {

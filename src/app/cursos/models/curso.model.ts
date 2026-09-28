@@ -104,6 +104,7 @@ export interface Curso {
    * el cache de WooCommerceProductCache al hacer create/update.
    */
   wooProductId?: number | null;
+  duracionAccesoDias?: number | null;
   /**
    * Refactor 2026-06-16: reemplaza el antiguo `oposicion` (single). Oposiciones
    * a las que va dirigido el curso. Vacío/`[GENERAL]` = visible para todas.
@@ -182,6 +183,7 @@ export interface AccesoConCurso {
   id: number;
   cursoId: number;
   usuarioId: number;
+  expiraEn?: string | null;
   curso: CursoDetail;
   progreso?: ProgresoLeccion[];
   createdAt?: string;
@@ -347,6 +349,7 @@ export interface CursoCreatePayload {
   descripcion?: string;
   /** Backend deriva precio. NO mandar en payload. */
   wooProductId?: number | null;
+  duracionAccesoDias?: number | null;
   /** Refactor 2026-06-16: reemplaza `oposicion` (single). */
   relevancia?: Oposicion[];
   /** Curso gratuito: no requiere producto WC. */
@@ -361,6 +364,7 @@ export interface CursoUpdatePayload {
   titulo?: string;
   descripcion?: string;
   wooProductId?: number | null;
+  duracionAccesoDias?: number | null;
   /** Refactor 2026-06-16: reemplaza `oposicion` (single). */
   relevancia?: Oposicion[];
   /** Curso gratuito: no requiere producto WC. */

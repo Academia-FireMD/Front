@@ -55,6 +55,11 @@
         <div class="hero-body">
           <span class="hero-kicker">Continuar aprendiendo</span>
           <h2 class="hero-title">{{ h.acceso.curso.titulo }}</h2>
+          @if (h.acceso.expiraEn) {
+            <p class="acceso-expira">
+              Acceso hasta el {{ h.acceso.expiraEn | date: "dd/MM/yyyy" }}
+            </p>
+          }
           <div class="hero-progress">
             <app-progress-ring [value]="h.porcentaje" label="completado" />
           </div>
@@ -72,12 +77,28 @@
     <h2 class="seccion-titulo">{{ seccionTitulo() }}</h2>
     <div class="cursos-grid">
       @for (v of vistas(); track v.acceso.id) {
-        <app-curso-card
-          [curso]="v.acceso.curso"
-          [tieneAcceso]="true"
-          [progreso]="v.porcentaje"
-          (abrir)="continuar(v)"
-        ></app-curso-card>
+        <div class="acceso-card">
+          <app-curso-card
+            [curso]="v.acceso.curso"
+            [tieneAcceso]="true"
+            [progreso]="v.porcentaje"
+            (abrir)="continuar(v)"
+          ></app-curso-card>
+          @if (v.acceso.expiraEn) {
+            <p class="acceso-expira">
+              Acceso hasta el {{ v.acceso.expiraEn | date: "dd/MM/yyyy" }}
+            </p>
+            @if (v.acceso.curso.wooProductId) {
+              <a
+                class="acceso-ampliar"
+                [href]="
+                  tiendaUrl + '?add-to-cart=' + v.acceso.curso.wooProductId
+                "
+                >Ampliar acceso en la tienda</a
+              >
+            }
+          }
+        </div>
       }
     </div>
   }
