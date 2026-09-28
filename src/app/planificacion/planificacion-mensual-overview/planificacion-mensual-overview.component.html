@@ -13,9 +13,12 @@
     <p-iconField iconPosition="left">
       <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
       <input
-        type="text"
+        type="search"
         pInputText
         class="w-full"
+        name="buscar-planificacion-mensual"
+        autocomplete="off"
+        aria-label="Buscar planificación"
         placeholder="Buscar planificación"
         [value]="pagination().searchTerm"
         (input)="valueChanged($event)"
@@ -175,29 +178,24 @@
         >
         <p-button
           *ngIf="expectedRole == 'ADMIN'"
-          (click)="$event.stopPropagation(); crearCopiaManual(item.id)"
+          (click)="$event.stopPropagation()"
+          (onClick)="crearCopiaManual(item.id)"
           icon="pi pi-user-plus"
           pTooltip="Crear una copia personal independiente"
           ariaLabel="Crear una copia personal independiente"
         ></p-button>
         <p-button
           *ngIf="expectedRole == 'ADMIN'"
-          (click)="
-            $event.stopPropagation();
-            $event.preventDefault();
-            eliminar(item.id, $event)
-          "
+          (click)="$event.stopPropagation()"
+          (onClick)="eliminar(item.id, $event)"
           icon="pi pi-trash"
           pTooltip="Eliminar planificación"
           ariaLabel="Eliminar planificación"
           styleClass="p-button-danger"
         ></p-button>
         <p-button
-          (click)="
-            $event.stopPropagation();
-            $event.preventDefault();
-            navigateToDetailview(item.id)
-          "
+          (click)="$event.stopPropagation()"
+          (onClick)="navigateToDetailview(item.id)"
           icon="pi pi-pencil"
           pTooltip="Editar planificación"
           ariaLabel="Editar planificación"

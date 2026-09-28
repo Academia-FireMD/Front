@@ -520,6 +520,18 @@
   </div>
 }
 
+@if (expectedRole === "ADMIN" && getId() === "new") {
+  <div class="borrador-aviso" role="status">
+    <div>
+      <strong>NUEVO PLAN MANUAL · Aún no visible para ningún alumno</strong>
+      <p>
+        Crea y revisa el calendario. Después podrás asignarlo a un alumno
+        concreto sin cambiar los planes automáticos.
+      </p>
+    </div>
+  </div>
+}
+
 @if (
   expectedRole === "ADMIN" && lastLoadedPlanification()?.estado === "BORRADOR"
 ) {

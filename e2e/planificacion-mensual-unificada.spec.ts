@@ -86,6 +86,11 @@ for (const viewport of [
     await expect(page.getByText('Plan Madrid iniciación')).toBeVisible();
     await expect(page.getByText('Automática', { exact: true })).toBeVisible();
     await expect(page.getByText('Manual', { exact: true })).toBeVisible();
+    const buscador = page.getByRole('searchbox', {
+      name: 'Buscar planificación',
+    });
+    await expect(buscador).toHaveValue('');
+    await expect(buscador).toHaveAttribute('autocomplete', 'off');
     const layout = await page
       .locator('.monthly-row')
       .first()
@@ -108,8 +113,51 @@ for (const viewport of [
     );
     expect(overflow).toBe(false);
     await guardarCapturaQa(page, `planificacion-overview-${viewport.name}.png`);
+    await page.getByRole('button', { name: 'Crear manual' }).click();
+    await expect(page).toHaveURL(/\/planificacion-mensual\/new$/);
+    await expect(page.getByText(/NUEVO PLAN MANUAL/)).toBeVisible();
   });
 }
+
+test('la acción de copiar crea un plan personal y no abre la fila original', async ({
+  page,
+}) => {
+  await prepararAdmin(page);
+  let solicitudes = 0;
+  await page.route(
+    '**/planificaciones/planificacion-mensual/43/clonar-manual',
+    (route) => {
+      solicitudes += 1;
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          nuevaPlanificacion: {
+            ...planManual,
+            id: 44,
+            identificador: 'Plan Madrid iniciación-PERSONAL',
+          },
+        }),
+      });
+    },
+  );
+  await page.route('**/planificaciones/planificaciones-mensuales/44', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...planManual,
+        id: 44,
+        identificador: 'Plan Madrid iniciación-PERSONAL',
+      }),
+    }),
+  );
+  await page.goto('/app/planificacion/planificacion-mensual');
+  await page
+    .getByRole('button', { name: 'Crear una copia personal independiente' })
+    .last()
+    .click();
+  await expect(page).toHaveURL(/\/planificacion-mensual\/44$/);
+  expect(solicitudes).toBe(1);
+});
 
 for (const viewport of [
   { name: 'escritorio', width: 1440, height: 900 },
