@@ -13,6 +13,8 @@ import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { Observable, filter, firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AccesoConCurso } from '../cursos/models/curso.model';
+import { CursosAlumnoService } from '../cursos/services/cursos-alumno.service';
 import { ExamenesService } from '../examen/servicios/examen.service';
 import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
@@ -36,7 +38,7 @@ import {
   SuscripcionStatus,
   SuscripcionTipo,
 } from '../shared/models/subscription.model';
-import { Rol, Usuario } from '../shared/models/user.model';
+import { Consumible, Rol, Usuario } from '../shared/models/user.model';
 import {
   esAdminOSuperior,
   esSuperadmin,
@@ -89,6 +91,30 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private appConfigService = inject(AppConfigService);
   private madridTutoriasService = inject(MadridTutoriasService);
   private autoasignacionService = inject(AutoasignacionService);
+  private cursosAlumnoService = inject(CursosAlumnoService);
+
+  cursos: AccesoConCurso[] = [];
+  cursosCargando = true;
+  cursosError = false;
+  tipoAccesoSeleccionado: 'simulacros' | 'cursos' = 'cursos';
+
+  get simulacros(): Consumible[] {
+    return this.getConsumiblesActivos().filter(
+      (consumible) =>
+        consumible.tipo === 'SIMULACRO' || consumible.tipo === 'EXAMEN',
+    );
+  }
+
+  get tipoAccesoVisible(): 'simulacros' | 'cursos' {
+    if (this.tipoAccesoSeleccionado === 'cursos' && this.cursos.length > 0)
+      return 'cursos';
+    if (
+      this.tipoAccesoSeleccionado === 'simulacros' &&
+      this.simulacros.length > 0
+    )
+      return 'simulacros';
+    return this.cursos.length > 0 ? 'cursos' : 'simulacros';
+  }
 
   configuracionPlanificacion: ConfiguracionPlanificacion | null = null;
   configuracionPlanificacionCargando = true;
@@ -214,8 +240,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.user = cloneDeep(user);
         this.loadOnboardingData();
         this.loadMadridTutoriaBalance();
-        if (user.rol === Rol.ALUMNO)
+        if (user.rol === Rol.ALUMNO) {
+          this.cargarCursos();
           void this.cargarConfiguracionPlanificacion();
+        }
 
         // Verificar si es primer acceso y abrir modal automáticamente
         this.checkFirstTimeAccess();
@@ -249,6 +277,25 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
+  }
+
+  cargarCursos(): void {
+    if (!this.appConfigService.isModuloHabilitado(ModuloApp.CURSOS)) {
+      this.cursosCargando = false;
+      return;
+    }
+    this.cursosCargando = true;
+    this.cursosError = false;
+    this.cursosAlumnoService.listMisCursos().subscribe({
+      next: (cursos) => {
+        this.cursos = cursos;
+        this.cursosCargando = false;
+      },
+      error: () => {
+        this.cursosError = true;
+        this.cursosCargando = false;
+      },
+    });
   }
 
   private loadMadridTutoriaBalance(): void {
@@ -1212,7 +1259,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   /**
    * Obtiene consumibles activos (disponibles para usar)
    */
-  getConsumiblesActivos(): any[] {
+  getConsumiblesActivos(): Consumible[] {
     if (!this.user?.consumibles) return [];
 
     // Ordenar: ACTIVADO primero, luego USADO, luego EXPIRADO
@@ -1223,6 +1270,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const ordenB = orden[b.estado as keyof typeof orden] || 999;
       return ordenA - ordenB;
     });
+  }
+
+  verCurso(acceso: AccesoConCurso): void {
+    void this.router.navigate(['/app/cursos', acceso.curso.slug]);
   }
 
   /**

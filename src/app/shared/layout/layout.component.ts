@@ -613,35 +613,34 @@ export class LayoutComponent {
       });
     }
 
-    // Cursos — disponible para todos los alumnos con sub activa. Las
-    // rutas alumno (/app/cursos = "Mis cursos", /app/cursos/catalogo)
-    // existían pero no estaban en el menú; el alumno solo podía
-    // llegar por URL directa. ModuloGuard se encarga del gating por
-    // tenant.
-    if (hasValidSubscription) {
-      menu.push({
-        label: 'Cursos',
-        collapsed: true,
-        modulo: ModuloApp.CURSOS,
-        items: [
-          {
-            label: 'Mis cursos',
-            icon: 'pi pi-book',
-            routerLink: '/app/cursos',
-          },
-          {
-            label: 'Clases grabadas',
-            icon: 'pi pi-video',
-            routerLink: '/app/clases-grabadas',
-          },
-          {
-            label: 'Catálogo',
-            icon: 'pi pi-th-large',
-            routerLink: '/app/cursos/catalogo',
-          },
-        ],
-      });
-    }
+    // Los cursos comprados no requieren suscripción. Solo las clases grabadas
+    // siguen dependiendo de ella; ModuloGuard filtra el módulo por tenant.
+    menu.push({
+      label: 'Cursos',
+      collapsed: true,
+      modulo: ModuloApp.CURSOS,
+      items: [
+        {
+          label: 'Mis cursos',
+          icon: 'pi pi-book',
+          routerLink: '/app/cursos',
+        },
+        ...(hasValidSubscription
+          ? [
+              {
+                label: 'Clases grabadas',
+                icon: 'pi pi-video',
+                routerLink: '/app/clases-grabadas',
+              },
+            ]
+          : []),
+        {
+          label: 'Catálogo',
+          icon: 'pi pi-th-large',
+          routerLink: '/app/cursos/catalogo',
+        },
+      ],
+    });
 
     // Tienda de simulacros — disponible para todos los alumnos con sub activa.
     // El ModuloGuard se encarga del gating por tenant (módulo SIMULACROS).

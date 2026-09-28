@@ -686,193 +686,168 @@
             <i class="pi pi-spin pi-spinner mr-2"></i> Cargando saldo…
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Card de Consumibles (Simulacros) - SIEMPRE VISIBLE -->
-        <div class="subscription-card mt-4">
-          <div class="card-header">
-            <h2><i class="pi pi-ticket"></i> Mis Accesos</h2>
+    <div
+      class="subscription-card mt-4 accesos-card"
+      data-testid="profile-accesos-card"
+      *ngIf="!esAdminOSuperior"
+    >
+      <div class="card-header">
+        <h2><i class="pi pi-ticket"></i> Mis accesos</h2>
+      </div>
+      <div class="card-content">
+        <p
+          class="accesos-loading"
+          *ngIf="cursosCargando && simulacros.length === 0"
+        >
+          <i class="pi pi-spin pi-spinner"></i> Cargando accesos...
+        </p>
+
+        <ng-container *ngIf="!cursosCargando || simulacros.length > 0">
+          <div
+            class="accesos-tabs"
+            aria-label="Tipos de acceso"
+            *ngIf="simulacros.length > 0 && cursos.length > 0"
+          >
+            <button
+              type="button"
+              [attr.aria-pressed]="tipoAccesoVisible === 'simulacros'"
+              [class.active]="tipoAccesoVisible === 'simulacros'"
+              (click)="tipoAccesoSeleccionado = 'simulacros'"
+            >
+              <i class="pi pi-ticket"></i> Simulacros
+              <span class="accesos-count">{{ simulacros.length }}</span>
+            </button>
+            <button
+              type="button"
+              [attr.aria-pressed]="tipoAccesoVisible === 'cursos'"
+              [class.active]="tipoAccesoVisible === 'cursos'"
+              (click)="tipoAccesoSeleccionado = 'cursos'"
+            >
+              <i class="pi pi-book"></i> Cursos
+              <span class="accesos-count">{{ cursos.length }}</span>
+            </button>
           </div>
 
-          <div class="card-content">
-            <!-- Si NO hay consumibles - Mostrar placeholder -->
-            <div
-              class="no-subscription"
-              *ngIf="!user.consumibles || user.consumibles.length === 0"
-            >
-              <i class="pi pi-ticket"></i>
-              <h3>Sin accesos disponibles</h3>
-              <p>No tienes simulacros o accesos activos en este momento.</p>
-              <a
-                [href]="tiendaUrl + '?s=simulacro'"
-                target="_blank"
-                *ngIf="isLinkedToWordPress()"
+          <h3
+            class="accesos-single-heading"
+            *ngIf="simulacros.length > 0 && cursos.length === 0"
+          >
+            Simulacros
+          </h3>
+          <h3
+            class="accesos-single-heading"
+            *ngIf="cursos.length > 0 && simulacros.length === 0"
+          >
+            Cursos
+          </h3>
+
+          <div
+            class="accesos-grid"
+            *ngIf="tipoAccesoVisible === 'simulacros' && simulacros.length > 0"
+          >
+            <article class="acceso-tile" *ngFor="let consumible of simulacros">
+              <span class="acceso-tile-icon"><i class="pi pi-ticket"></i></span>
+              <div class="acceso-tile-main">
+                <h4>
+                  {{ consumible.examen?.titulo || "Simulacro sin vincular" }}
+                </h4>
+                <p class="acceso-tile-meta">
+                  <span *ngIf="consumible.estado === 'ACTIVADO'"
+                    >Disponible</span
+                  >
+                  <span *ngIf="consumible.estado === 'USADO'">Usado</span>
+                  <span *ngIf="consumible.estado === 'EXPIRADO'">Caducado</span>
+                  <span *ngIf="consumible.expiraEn">
+                    · Hasta el
+                    {{ consumible.expiraEn | date: "dd/MM/yyyy" }}</span
+                  >
+                </p>
+              </div>
+              <div
+                class="acceso-tile-action"
+                *ngIf="consumible.estado === 'ACTIVADO' && consumible.examen"
+              >
+                <app-async-button
+                  label="Usar"
+                  icon="pi pi-play"
+                  styleClass="p-button-sm"
+                  [action]="usarConsumible.bind(this, consumible)"
+                ></app-async-button>
+              </div>
+              <div
+                class="acceso-tile-action"
+                *ngIf="consumible.estado === 'USADO'"
               >
                 <p-button
-                  label="Ver simulacros disponibles"
-                  icon="pi pi-shopping-cart"
-                  styleClass="p-button-outlined mt-3"
+                  label="Ver resultados"
+                  styleClass="p-button-sm p-button-outlined"
+                  [disabled]="!puedeVerResultados(consumible)"
+                  [pTooltip]="getMensajeAccesoResultados(consumible)"
+                  (onClick)="verResultadosConsumible(consumible)"
                 ></p-button>
-              </a>
-            </div>
-
-            <!-- Si hay consumibles - Mostrar lista -->
-            <div
-              class="consumibles-list"
-              *ngIf="user.consumibles && user.consumibles.length > 0"
-            >
-              <div
-                *ngFor="let consumible of getConsumiblesActivos()"
-                class="consumible-item"
-                [ngClass]="{
-                  'consumible-activado': consumible.estado === 'ACTIVADO',
-                  'consumible-usado': consumible.estado === 'USADO',
-                  'consumible-expirado': consumible.estado === 'EXPIRADO',
-                }"
-              >
-                <!-- Header del consumible -->
-                <div class="consumible-header">
-                  <div class="consumible-icon">
-                    <i
-                      class="pi"
-                      [ngClass]="{
-                        'pi-ticket': consumible.estado === 'ACTIVADO',
-                        'pi-check-circle': consumible.estado === 'USADO',
-                        'pi-times-circle': consumible.estado === 'EXPIRADO',
-                      }"
-                    ></i>
-                  </div>
-                  <div class="consumible-info">
-                    <h4
-                      class="consumible-titulo"
-                      [pTooltip]="
-                        !consumible.examen
-                          ? 'Contacta con el administrador para vincular este simulacro'
-                          : ''
-                      "
-                      tooltipPosition="top"
-                    >
-                      {{
-                        consumible.examen?.titulo || "Simulacro sin vincular"
-                      }}
-                    </h4>
-                    <span
-                      class="consumible-badge"
-                      [ngClass]="{
-                        'badge-activado': consumible.estado === 'ACTIVADO',
-                        'badge-usado': consumible.estado === 'USADO',
-                        'badge-expirado': consumible.estado === 'EXPIRADO',
-                        'badge-sin-vincular': !consumible.examen,
-                      }"
-                    >
-                      {{
-                        !consumible.examen
-                          ? "Sin vincular"
-                          : consumible.estado === "ACTIVADO"
-                            ? "Disponible"
-                            : consumible.estado === "USADO"
-                              ? "Usado"
-                              : "Expirado"
-                      }}
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Info adicional -->
-                <div class="consumible-details">
-                  <div class="detail-row">
-                    <span class="detail-label">SKU:</span>
-                    <span class="detail-value">{{ consumible.sku }}</span>
-                  </div>
-
-                  <div
-                    class="detail-row"
-                    *ngIf="consumible.examen?.codigoAcceso"
-                  >
-                    <span class="detail-label">Código:</span>
-                    <span class="detail-value">{{
-                      consumible.examen.codigoAcceso
-                    }}</span>
-                  </div>
-
-                  <div class="detail-row">
-                    <span class="detail-label">Tipo:</span>
-                    <span class="detail-value">{{
-                      getTipoConsumibleLabel(consumible.tipo)
-                    }}</span>
-                  </div>
-
-                  <div
-                    class="detail-row"
-                    *ngIf="consumible.usadoEn && consumible.estado === 'USADO'"
-                  >
-                    <span class="detail-label">Usado el:</span>
-                    <span class="detail-value">{{
-                      consumible.usadoEn | date: "dd/MM/yyyy HH:mm"
-                    }}</span>
-                  </div>
-
-                  <div class="detail-row" *ngIf="consumible.expiraEn">
-                    <span class="detail-label">Expira el:</span>
-                    <span class="detail-value">{{
-                      consumible.expiraEn | date: "dd/MM/yyyy"
-                    }}</span>
-                  </div>
-                </div>
-
-                <!-- Acción -->
-                <div
-                  class="consumible-action"
-                  *ngIf="consumible.estado === 'ACTIVADO' && consumible.examen"
-                >
-                  <div class="flex gap-2">
-                    <!-- Botón para usar el consumible directamente -->
-                    <app-async-button
-                      label="Usar"
-                      icon="pi pi-play"
-                      styleClass="p-button-sm flex-1"
-                      [action]="usarConsumible.bind(this, consumible)"
-                    ></app-async-button>
-                  </div>
-                </div>
-
-                <!-- Acción para consumibles sin vincular -->
-                <div
-                  class="consumible-action"
-                  *ngIf="consumible.estado === 'ACTIVADO' && !consumible.examen"
-                >
-                  <div class="flex gap-2">
-                    <p-button
-                      label="Sin vincular"
-                      icon="pi pi-link"
-                      styleClass="p-button-sm p-button-outlined p-button-secondary flex-1"
-                      [disabled]="true"
-                      pTooltip="Este simulacro aún no ha sido vinculado. Espera a que el administrador lo vincule o contacta con soporte."
-                      tooltipPosition="top"
-                    ></p-button>
-                  </div>
-                </div>
-
-                <!-- Acción para consumibles usados -->
-                <div
-                  class="consumible-action"
-                  *ngIf="consumible.estado === 'USADO'"
-                >
-                  <div class="flex gap-2">
-                    <p-button
-                      label="Ver resultados"
-                      icon="pi pi-chart-line"
-                      styleClass="p-button-sm flex-1"
-                      [disabled]="!puedeVerResultados(consumible)"
-                      [pTooltip]="getMensajeAccesoResultados(consumible)"
-                      tooltipPosition="top"
-                      (onClick)="verResultadosConsumible(consumible)"
-                    ></p-button>
-                  </div>
-                </div>
               </div>
-            </div>
+              <span
+                class="acceso-tile-note"
+                *ngIf="consumible.estado === 'ACTIVADO' && !consumible.examen"
+              >
+                Pendiente de vincular
+              </span>
+            </article>
           </div>
-        </div>
+
+          <div
+            class="accesos-grid"
+            *ngIf="tipoAccesoVisible === 'cursos' && cursos.length > 0"
+          >
+            <article class="acceso-tile" *ngFor="let acceso of cursos">
+              <img
+                *ngIf="acceso.curso.thumbnailUrl; else cursoIcono"
+                class="acceso-tile-cover"
+                [src]="acceso.curso.thumbnailUrl"
+                [alt]="acceso.curso.titulo"
+              />
+              <ng-template #cursoIcono>
+                <span class="acceso-tile-icon"><i class="pi pi-book"></i></span>
+              </ng-template>
+              <div class="acceso-tile-main">
+                <h4>{{ acceso.curso.titulo }}</h4>
+                <p class="acceso-tile-meta">
+                  <span *ngIf="acceso.expiraEn"
+                    >Acceso hasta el
+                    {{ acceso.expiraEn | date: "dd/MM/yyyy" }}</span
+                  >
+                  <span *ngIf="!acceso.expiraEn">Acceso disponible</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                class="acceso-view-button"
+                (click)="verCurso(acceso)"
+              >
+                Ver curso <i class="pi pi-arrow-right"></i>
+              </button>
+            </article>
+          </div>
+
+          <div
+            class="accesos-empty"
+            *ngIf="
+              !cursosError && simulacros.length === 0 && cursos.length === 0
+            "
+          >
+            <p>Aún no tienes acceso a simulacros ni cursos.</p>
+            <a [href]="tiendaUrl" target="_blank" rel="noopener noreferrer"
+              >Explorar la tienda <i class="pi pi-arrow-up-right"></i
+            ></a>
+          </div>
+          <div class="accesos-error" *ngIf="cursosError">
+            <span>No se pudieron cargar tus cursos.</span>
+            <button type="button" (click)="cargarCursos()">Reintentar</button>
+          </div>
+        </ng-container>
       </div>
     </div>
   </div>
