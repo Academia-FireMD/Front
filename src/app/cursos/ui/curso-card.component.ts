@@ -16,7 +16,7 @@ import { ProgressRingComponent } from './progress-ring.component';
  * Card de curso reutilizable (catálogo, mis cursos, "continuar"). Presentacional:
  * el caller decide qué pasa al abrir/comprar. CTA contextual:
  *  - curso gratuito sin acceso → "Acceder gratis"
- *  - de pago sin acceso → "Comprar (1 clic)"
+ *  - de pago sin acceso → "Comprar curso"
  *  - con acceso y progreso > 0 → "Continuar"
  *  - con acceso sin progreso → "Empezar"
  */
