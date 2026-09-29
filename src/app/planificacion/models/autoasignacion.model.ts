@@ -207,6 +207,14 @@ export interface SemanaImportacionPlantilla {
   estado?: 'creada' | 'actualizada' | 'omitida' | 'error' | 'sobrescritura';
 }
 
+export interface BloqueIndependienteImportacion {
+  hoja: string;
+  semana: number;
+  dia: string;
+  filaExcel: number;
+  tema: string;
+}
+
 export interface HojaImportacionPlantilla {
   hoja: string;
   variante?: VarianteConfiguracion | null;
@@ -214,6 +222,7 @@ export interface HojaImportacionPlantilla {
   totalBloques: number;
   totalEntrenamientos: number;
   semanas: SemanaImportacionPlantilla[];
+  independientes?: BloqueIndependienteImportacion[];
   errores: IncidenciaImportacionPlantilla[];
   warnings: Array<
     Pick<IncidenciaImportacionPlantilla, 'hoja' | 'semana' | 'mensaje'>
@@ -224,8 +233,11 @@ export interface PreviewImportacionPlantillas {
   fileName: string;
   fileHash: string;
   puedeAplicar: boolean;
+  mensaje?: string;
   yaAplicado: boolean;
   requiereConfirmacionSobrescritura: boolean;
+  requiereConfirmacionIndependientes?: boolean;
+  independientes?: BloqueIndependienteImportacion[];
   sobrescrituras: string[];
   totales: {
     hojas: number;
@@ -233,6 +245,7 @@ export interface PreviewImportacionPlantillas {
     bloques: number;
     entrenamientos: number;
     errores: number;
+    independientes?: number;
   };
   hojas: HojaImportacionPlantilla[];
 }
@@ -286,6 +299,7 @@ export interface PreviewCargaSemanas {
   puedeAplicar: boolean;
   requiereEleccion?: boolean;
   requiereConfirmacion?: boolean;
+  independientes?: BloqueIndependienteImportacion[];
   previewHash: string | null;
   plantillasActualizadas?: string[];
   variantes: VarianteCargaSemanas[];

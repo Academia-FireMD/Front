@@ -696,6 +696,58 @@ describe('PlanificacionAdminComponent', () => {
     expect(component.previewImportacion()?.yaAplicado).toBe(true);
   });
 
+  it('muestra subbloques independientes y no guarda hasta confirmarlos', async () => {
+    const file = new File(['xlsx'], 'semanas.xlsx');
+    const variante = {
+      codigo: 'PCMI4-6H',
+      oposicion: Oposicion.MADRID,
+      nivel: NivelOposicion.INICIACION,
+      franja: TipoDePlanificacionDeseada.FRANJA_CUATRO_A_SEIS_HORAS,
+      destino: { tipo: 'CREAR' as const },
+      candidatos: [],
+      planificacionId: 17,
+      primeraSemana: '2026-10-05',
+      semanas: [],
+    };
+    const preview = {
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      requiereConfirmacion: true,
+      independientes: [
+        {
+          hoja: 'CMI4-6H',
+          semana: 40,
+          dia: 'Lunes',
+          filaExcel: 7,
+          tema: 'Tráfico',
+        },
+      ],
+      variantes: [variante],
+    };
+    (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(of(preview));
+    (service.applyCargaSemanas$ as jest.Mock).mockReturnValue(of(preview));
+    component.archivoImportacion.set(file);
+    await component.previsualizarCargaSemanas();
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(texto).toContain('Tráfico');
+    expect(texto).toContain('Fila 7');
+    expect(texto).toContain('sin vínculo al catálogo');
+    await component.guardarCargaSemanas();
+    expect(service.applyCargaSemanas$).not.toHaveBeenCalled();
+    component.confirmarSobrescritura.set(true);
+    await component.guardarCargaSemanas();
+    expect(service.applyCargaSemanas$).toHaveBeenCalledWith(
+      file,
+      {},
+      'a'.repeat(64),
+      true,
+      expect.any(String),
+      'CONTINUAR',
+    );
+  });
+
   it('previsualiza el Excel completo y abre el borrador tras una única confirmación', async () => {
     const file = new File(['xlsx'], 'plan.xlsx');
     const variante = {

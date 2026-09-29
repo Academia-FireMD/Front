@@ -132,6 +132,69 @@ for (const viewport of [
   });
 }
 
+for (const viewport of [
+  { name: 'escritorio', width: 1280, height: 800 },
+  { name: 'móvil 375 px', width: 375, height: 667 },
+]) {
+  test(`texto libre se confirma como independiente en ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
+    const aplicarLlamadas = await prepararAdmin(page);
+    await page.route('**/carga-borrador/preview', (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          puedeAplicar: true,
+          previewHash: 'a'.repeat(64),
+          requiereConfirmacion: true,
+          independientes: [
+            {
+              hoja: 'GI6-8',
+              semana: 7,
+              dia: 'Lunes',
+              filaExcel: 7,
+              tema: 'Tráfico',
+            },
+          ],
+          variantes: [madrid],
+        }),
+      }),
+    );
+    await subirYPrevisualizar(page);
+    const dialogo = page.getByRole('dialog', { name: 'Importar semanas' });
+    await expect(dialogo.getByText('Tráfico')).toBeVisible();
+    await expect(dialogo.getByText(/sin vínculo al catálogo/)).toBeVisible();
+    await expect(
+      dialogo.getByRole('button', { name: 'Guardar semanas en borrador' }),
+    ).toBeDisabled();
+    expect(aplicarLlamadas()).toBe(0);
+    await dialogo.getByText('Tráfico').scrollIntoViewIfNeeded();
+    await dialogo.screenshot({
+      path: testInfo.outputPath(
+        `subbloque-independiente-${viewport.width}.png`,
+      ),
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
+    await dialogo.locator('label[for="confirmar-cambios-carga"]').click();
+    await expect(
+      dialogo.getByRole('button', { name: 'Guardar semanas en borrador' }),
+    ).toBeEnabled();
+    await dialogo
+      .getByRole('button', { name: 'Guardar semanas en borrador' })
+      .click();
+    await expect.poll(aplicarLlamadas).toBe(1);
+  });
+}
+
 test('un Excel con varias oposiciones muestra un enlace a cada borrador', async ({
   page,
 }) => {

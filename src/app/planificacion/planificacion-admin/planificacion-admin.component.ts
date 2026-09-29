@@ -844,7 +844,7 @@ export class PlanificacionAdminComponent
       return;
     if (preview.requiereConfirmacion && !this.confirmarSobrescritura()) {
       this.toast.error(
-        'Confirma las actualizaciones o retiradas antes de guardar.',
+        'Revisa y confirma los cambios indicados antes de guardar.',
       );
       return;
     }
@@ -906,7 +906,9 @@ export class PlanificacionAdminComponent
           'Previsualización validada; aún no se ha escrito nada',
         );
       } else {
-        this.toast.error('El Excel contiene errores. No se puede aplicar');
+        this.toast.error(
+          preview.mensaje ?? 'El Excel contiene errores. No se puede aplicar',
+        );
       }
     } catch (error) {
       this.toast.error(
@@ -928,6 +930,8 @@ export class PlanificacionAdminComponent
       !this.previsualizandoImportacion() &&
       !this.aplicandoImportacion() &&
       (!preview.requiereConfirmacionSobrescritura ||
+        this.confirmarSobrescritura()) &&
+      (!preview.requiereConfirmacionIndependientes ||
         this.confirmarSobrescritura())
     );
   }
@@ -1085,6 +1089,7 @@ export class PlanificacionAdminComponent
         ...preview,
         yaAplicado: true,
         requiereConfirmacionSobrescritura: false,
+        requiereConfirmacionIndependientes: false,
       });
       this.resultadoImportacion.set(resultado);
       this.codigosUltimaImportacion.set(

@@ -355,6 +355,7 @@ describe('AutoasignacionService', () => {
     );
     expect(req.request.body.get('previewHash')).toBe('a'.repeat(64));
     expect(req.request.body.get('confirmarSustituciones')).toBe('true');
+    expect(req.request.body.get('confirmarIndependientes')).toBe('true');
     expect(req.request.body.get('idempotencyKey')).toBe('qa-retry-1');
     expect(req.request.body.get('modoCarga')).toBe('CONTINUAR');
     req.flush({
@@ -384,6 +385,7 @@ describe('AutoasignacionService', () => {
       `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/apply`,
     );
     expect(req.request.body.get('modoCarga')).toBe('NUEVA');
+    expect(req.request.body.get('confirmarIndependientes')).toBe('false');
     req.flush({
       puedeAplicar: true,
       previewHash: 'a'.repeat(64),

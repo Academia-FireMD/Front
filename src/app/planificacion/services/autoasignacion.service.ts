@@ -83,6 +83,7 @@ export class AutoasignacionService extends ApiBaseService {
     body.append('modoCarga', modoCarga);
     body.append('previewHash', previewHash);
     body.append('confirmarSustituciones', String(confirmarSustituciones));
+    body.append('confirmarIndependientes', String(confirmarSustituciones));
     body.append('idempotencyKey', idempotencyKey);
     return this.http.post<PreviewCargaSemanas>(
       environment.apiUrl +

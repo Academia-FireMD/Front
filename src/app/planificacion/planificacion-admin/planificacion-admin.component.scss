@@ -463,6 +463,22 @@ p-iconField {
 .carga-directa__semanas span {
   display: block;
 }
+.carga-directa__independientes {
+  max-height: 12rem;
+  overflow-y: auto;
+  padding-left: 1.25rem;
+}
+
+.import-panel .overwrite-warning.carga-directa__confirmacion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  gap: 0.75rem;
+}
+.carga-directa__independientes li {
+  overflow-wrap: anywhere;
+  margin-block: 0.35rem;
+}
 .carga-directa__resultado {
   display: flex;
   flex-wrap: wrap;

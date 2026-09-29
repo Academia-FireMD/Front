@@ -477,16 +477,31 @@
         }
       </div>
       @if (preview.requiereConfirmacion) {
-        <div class="overwrite-warning">
-          <strong
-            >Hay actividades que se actualizarán o retirarán. Revisa el detalle
-            antes de confirmar.</strong
-          >
+        <div class="overwrite-warning carga-directa__confirmacion">
+          <strong>Revisa estos cambios antes de guardar.</strong>
           @if (preview.plantillasActualizadas?.length) {
             <p>
               Plantillas existentes que cambiarán:
               {{ preview.plantillasActualizadas?.join(", ") }}
             </p>
+          }
+          @if (preview.independientes?.length) {
+            <p>
+              Estos subbloques se guardarán sin vínculo al catálogo. No se
+              creará ninguna ficha nueva:
+            </p>
+            <ul class="carga-directa__independientes">
+              @for (bloque of preview.independientes ?? []; track $index) {
+                <li>
+                  {{ bloque.hoja }} · Semana {{ bloque.semana }} ·
+                  {{ bloque.dia }} · Fila {{ bloque.filaExcel }} ·
+                  <strong>{{ bloque.tema }}</strong>
+                </li>
+              }
+            </ul>
+          }
+          @if (!preview.independientes?.length) {
+            <p>Hay actividades que se actualizarán o retirarán.</p>
           }
           <div class="flex align-items-center gap-2">
             <p-inputSwitch
@@ -494,7 +509,9 @@
               [ngModel]="confirmarSobrescritura()"
               (ngModelChange)="confirmarSobrescritura.set($event)"
             />
-            <label for="confirmar-cambios-carga">Confirmo estos cambios</label>
+            <label for="confirmar-cambios-carga"
+              >He revisado y confirmo estos cambios</label
+            >
           </div>
         </div>
       }
