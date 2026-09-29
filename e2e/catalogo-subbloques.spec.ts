@@ -13,13 +13,21 @@ const fila = {
   activa: true,
 };
 
-async function prepararPagina(page: Page, filas = [fila]) {
+async function prepararPagina(
+  page: Page,
+  filas = [fila],
+  trabajos: Array<{
+    trabajo: string;
+    descripcion: string;
+    version: number;
+  }> = [],
+) {
   let aplicaciones = 0;
   await page.route('**/planificaciones/catalogo-contenido', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ filas, trabajos: [] }),
+      body: JSON.stringify({ filas, trabajos }),
     }),
   );
   await page.route('**/catalogo-contenido/importar/preview', (route) =>
@@ -72,6 +80,95 @@ async function prepararPagina(page: Page, filas = [fila]) {
     0,
   );
   return () => aplicaciones;
+}
+
+for (const viewport of [
+  { name: 'escritorio', width: 1280, height: 800 },
+  { name: 'móvil', width: 375, height: 667 },
+]) {
+  test(`catálogo: indicaciones y composición visibles en ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
+    await page.route('**/catalogo-contenido/componer', (route) =>
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          codigo: 'L01',
+          nombre: 'Temario',
+          color: '#b8f6fb',
+          comentarios: '**Leer** el tema y después repasar.',
+        }),
+      }),
+    );
+    await prepararPagina(
+      page,
+      [fila],
+      [
+        { trabajo: 'ESTUDIO', descripcion: '**Leer** el tema.', version: 1 },
+        { trabajo: 'R1', descripcion: 'Repasar con tarjetas.', version: 1 },
+      ],
+    );
+
+    await page
+      .getByRole('button', { name: 'Ver indicaciones de estudio' })
+      .click();
+    const indicaciones = page.getByRole('dialog', {
+      name: 'Indicaciones de estudio',
+    });
+    await expect(indicaciones.getByText('Repasar con tarjetas.')).toBeVisible();
+    await indicaciones
+      .getByRole('button', { name: 'Editar indicación R1' })
+      .click();
+    await expect(
+      indicaciones.locator('.toastui-editor-defaultUI'),
+    ).toBeVisible();
+    await expect(
+      indicaciones
+        .locator(
+          '[contenteditable="true"][aria-label="Texto de la indicación de estudio"]',
+        )
+        .first(),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        indicaciones
+          .locator('.p-dialog-content')
+          .evaluate((element) => element.scrollTop),
+      )
+      .toBe(0);
+    await expect(
+      indicaciones.getByRole('button', { name: 'Confirmar guardado' }),
+    ).toBeDisabled();
+    await page.screenshot({
+      path: testInfo.outputPath(`indicaciones-${viewport.width}.png`),
+    });
+    await indicaciones
+      .getByRole('button', { name: 'Volver sin guardar' })
+      .click();
+    await indicaciones.getByRole('button', { name: 'Cerrar' }).click();
+
+    await page.getByText('L01 · Temario').click();
+    const editor = page.getByRole('dialog', { name: 'Editar L01' });
+    await expect(
+      editor.getByText('Vista de una nueva actividad'),
+    ).toBeVisible();
+    await expect(
+      editor.getByText('Leer el tema y después repasar.'),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`vista-compuesta-${viewport.width}.png`),
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+  });
 }
 
 test('catálogo: buscador flexible y paginador visible con muchas filas en escritorio', async ({

@@ -47,6 +47,7 @@ export class SubBloqueMarkdownFieldComponent implements OnDestroy {
     destroy(): void;
   } | null = null;
   private host: ElementRef<HTMLElement> | null = null;
+  private labelObserver: MutationObserver | null = null;
   private syncing = false;
   private currentValue = '';
 
@@ -62,6 +63,7 @@ export class SubBloqueMarkdownFieldComponent implements OnDestroy {
     return this.currentValue;
   }
   @Input() readOnly = false;
+  @Input() ariaLabel = '';
   @Output() valueChange = new EventEmitter<string>();
 
   @ViewChild('editorHost') set editorHost(
@@ -89,10 +91,26 @@ export class SubBloqueMarkdownFieldComponent implements OnDestroy {
           },
         },
       });
+      if (this.ariaLabel) {
+        this.labelObserver = new MutationObserver(() => this.etiquetarEditor());
+        this.labelObserver.observe(host.nativeElement, {
+          childList: true,
+          subtree: true,
+        });
+        this.etiquetarEditor();
+      }
     }
   }
 
+  private etiquetarEditor(): void {
+    this.host?.nativeElement
+      .querySelectorAll('[contenteditable="true"]')
+      .forEach((element) => element.setAttribute('aria-label', this.ariaLabel));
+  }
+
   private destroyEditor(): void {
+    this.labelObserver?.disconnect();
+    this.labelObserver = null;
     this.editor?.destroy();
     this.editor = null;
   }

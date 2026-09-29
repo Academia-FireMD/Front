@@ -2,6 +2,7 @@
   [items]="catalogo().filas"
   (editRequested)="abrirEdicion($event)"
   (importRequested)="abrirImportacion()"
+  (instructionsRequested)="abrirIndicaciones()"
   (newRequested)="abrirNuevo()"
 ></app-catalogo-subbloques-list>
 
@@ -17,8 +18,128 @@
   (revisarCatalogo)="revisarEdicion()"
   (aplicarCatalogo)="aplicar()"
 >
+  @if (!esNuevo) {
+    <section class="vista-compuesta" aria-live="polite">
+      <h3>Vista de una nueva actividad</h3>
+      <p class="aviso-menor">
+        Combina la ficha guardada con una indicación opcional. Los cambios que
+        estés editando aparecerán aquí después de guardarlos.
+      </p>
+      <label for="tipo-vista-catalogo">Indicación de estudio</label>
+      <p-dropdown
+        inputId="tipo-vista-catalogo"
+        [(ngModel)]="vistaTipo"
+        [options]="opcionesVista"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        styleClass="w-full"
+        (onChange)="cargarVistaCompuesta()"
+      ></p-dropdown>
+      @if (vistaCargando) {
+        <p>Preparando vista previa…</p>
+      } @else if (vistaError) {
+        <p class="aviso-menor">
+          Esta ficha no está disponible para nuevas actividades.
+        </p>
+      } @else if (vistaCompuesta) {
+        <div class="vista-compuesta-resultado">
+          <strong>{{ vistaCompuesta.nombre }}</strong>
+          <app-markdown-content
+            [content]="vistaCompuesta.comentarios"
+          ></app-markdown-content>
+        </div>
+      }
+    </section>
+  }
   <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
 </app-editar-sub-bloque-dialog>
+
+<p-dialog
+  header="Indicaciones de estudio"
+  [(visible)]="dialogoIndicaciones"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!guardando()"
+  [closeOnEscape]="!guardando()"
+  [style]="{ width: 'min(94vw, 920px)', maxHeight: '94vh' }"
+  [contentStyle]="{ maxHeight: 'calc(94vh - 10rem)', overflow: 'auto' }"
+  (onHide)="cancelarEdicionIndicacion()"
+>
+  <div #indicacionesContenido>
+    <p class="indicaciones-intro">
+      ESTUDIO y R1–R5 son instrucciones reutilizables del catálogo, no
+      subbloques independientes. Se añaden a una actividad nueva al elegirlas.
+      Editarlas no cambia las copias que ya están en Bloques o calendarios.
+    </p>
+    @if (indicacionEditando; as tipo) {
+      <div class="indicacion-editor">
+        <h3>Editar {{ tipo }}</h3>
+        <label id="indicacion-editor-etiqueta"
+          >Texto de la indicación · Markdown</label
+        >
+        <app-sub-bloque-markdown-field
+          [value]="textoIndicacion"
+          [readOnly]="guardando()"
+          ariaLabel="Texto de la indicación de estudio"
+          (valueChange)="cambiarTextoIndicacion($event)"
+        ></app-sub-bloque-markdown-field>
+        <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
+      </div>
+    } @else {
+      <div class="indicaciones-lista">
+        @for (indicacion of indicaciones; track indicacion.trabajo) {
+          <section class="indicacion-card">
+            <div class="indicacion-cabecera">
+              <h3>{{ indicacion.trabajo }}</h3>
+              <p-button
+                label="Editar"
+                icon="pi pi-pencil"
+                [text]="true"
+                [ariaLabel]="'Editar indicación ' + indicacion.trabajo"
+                (click)="editarIndicacion(indicacion)"
+              ></p-button>
+            </div>
+            <app-markdown-content
+              [content]="indicacion.descripcion"
+              emptyText="Sin texto"
+            ></app-markdown-content>
+          </section>
+        }
+      </div>
+    }
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="dialogo-acciones">
+      @if (indicacionEditando) {
+        <p-button
+          label="Volver sin guardar"
+          [text]="true"
+          [disabled]="guardando()"
+          (click)="cancelarEdicionIndicacion()"
+        ></p-button>
+        <p-button
+          label="Revisar cambios"
+          [outlined]="true"
+          [loading]="cargando()"
+          (click)="revisarIndicacion()"
+        ></p-button>
+        <p-button
+          label="Confirmar guardado"
+          [disabled]="!puedeAplicar"
+          [loading]="guardando()"
+          (click)="aplicar()"
+        ></p-button>
+      } @else {
+        <p-button
+          label="Cerrar"
+          [text]="true"
+          (click)="dialogoIndicaciones = false"
+        ></p-button>
+      }
+    </div>
+  </ng-template>
+</p-dialog>
 
 <p-dialog
   header="Importar catálogo"

@@ -70,6 +70,16 @@ import { CatalogoContenidoCompleto } from '../models/catalogo-contenido.model';
       <div right-actions *ngIf="mode === 'overview'" class="catalogo-acciones">
         <p-button
           [label]="
+            viewportService.screenWidth === 'xs' ? undefined : 'Indicaciones'
+          "
+          ariaLabel="Ver indicaciones de estudio"
+          icon="pi pi-book"
+          [outlined]="true"
+          styleClass="catalogo-accion"
+          (click)="instructionsRequested.emit()"
+        ></p-button>
+        <p-button
+          [label]="
             viewportService.screenWidth === 'xs'
               ? undefined
               : 'Importar catálogo'
@@ -196,6 +206,7 @@ export class CatalogoSubbloquesListComponent extends SharedGridComponent<Catalog
   @Output() selectedIdsChange = new EventEmitter<(string | number)[]>();
   @Output() editRequested = new EventEmitter<CatalogoContenidoCompleto>();
   @Output() importRequested = new EventEmitter<void>();
+  @Output() instructionsRequested = new EventEmitter<void>();
   @Output() newRequested = new EventEmitter<void>();
 
   readonly getItemId = (item: CatalogoContenidoCompleto) => item.id;

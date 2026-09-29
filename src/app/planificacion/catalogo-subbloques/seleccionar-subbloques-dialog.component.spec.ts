@@ -18,7 +18,7 @@ describe('Selector de subbloques', () => {
     listarCatalogoContenido: jest.fn(),
     componerContenidoCatalogo: jest.fn(),
   };
-  const toast = { error: jest.fn() };
+  const toast = { error: jest.fn(), warning: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -53,6 +53,7 @@ describe('Selector de subbloques', () => {
     expect(component.filas.map((fila) => fila.id)).toEqual([1, 2]);
     component.seleccion = [1, 2];
     component.continuar();
+    await component.actualizarVistas();
     expect(component.paso).toBe(2);
     component.duraciones[1] = 45;
     component.duraciones[2] = 90;
@@ -78,6 +79,7 @@ describe('Selector de subbloques', () => {
     await Promise.resolve();
     component.seleccion = [1];
     component.continuar();
+    await component.actualizarVistas();
     component.duraciones[1] = 0;
     const emit = jest.spyOn(component.selected, 'emit');
     await component.anadir();
@@ -91,6 +93,7 @@ describe('Selector de subbloques', () => {
     await Promise.resolve();
     component.seleccion = [1, 2];
     component.continuar();
+    await component.actualizarVistas();
     service.componerContenidoCatalogo.mockImplementation((codigo: string) =>
       codigo === 'T02'
         ? throwError(() => new Error('inactivo'))
@@ -101,5 +104,57 @@ describe('Selector de subbloques', () => {
     expect(emit).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
     expect(component.visible).toBe(true);
+  });
+
+  it('muestra el texto completo de la indicación y compone la copia con su código', async () => {
+    service.listarCatalogoContenido.mockReturnValueOnce(
+      of({
+        filas,
+        trabajos: [
+          {
+            trabajo: 'R1',
+            descripcion: '**Repaso**\n\n- Leer\n- Practicar',
+            version: 1,
+          },
+        ],
+      }),
+    );
+    component.visible = true;
+    await Promise.resolve();
+    component.seleccion = [1];
+    component.continuar();
+    await component.actualizarVistas();
+    component.tipos[1] = 'R1';
+    await component.actualizarVistas();
+    expect(component.vistas[1].comentarios).toBe('**Texto**');
+    expect(component.opcionesTrabajo[1].label).toContain('R1 · **Repaso**');
+    await component.anadir();
+    expect(service.componerContenidoCatalogo).toHaveBeenCalledWith('T01', 'R1');
+  });
+
+  it('bloquea la copia si el contenido cambia después de la vista previa y exige revisarlo', async () => {
+    component.visible = true;
+    await Promise.resolve();
+    component.seleccion = [1];
+    component.continuar();
+    await component.actualizarVistas();
+    service.componerContenidoCatalogo.mockReturnValue(
+      of({
+        codigo: 'T01',
+        nombre: 'Tema uno actualizado',
+        comentarios: '**Nuevo texto**',
+        color: '#aabbcc',
+      }),
+    );
+    const emit = jest.spyOn(component.selected, 'emit');
+    await component.anadir();
+    expect(emit).not.toHaveBeenCalled();
+    expect(component.contenidoActualizado).toBe(true);
+    expect(component.vistas[1].comentarios).toBe('**Nuevo texto**');
+    expect(toast.warning).toHaveBeenCalled();
+    await component.anadir();
+    expect(emit).toHaveBeenCalledWith([
+      expect.objectContaining({ comentarios: '**Nuevo texto**' }),
+    ]);
   });
 });
