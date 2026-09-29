@@ -77,7 +77,7 @@ for (const viewport of [
     await page.goto('/app/planificacion/planificacion-mensual');
 
     await expect(
-      page.getByRole('button', { name: /Crear manual/ }),
+      page.getByRole('button', { name: 'Crear plan personal' }),
     ).toBeVisible();
     await expect(
       page.getByRole('button', { name: /Importar semanas/ }),
@@ -85,7 +85,7 @@ for (const viewport of [
     await expect(page.getByText('Plan personal QA')).toBeVisible();
     await expect(page.getByText('Plan Madrid iniciación')).toBeVisible();
     await expect(page.getByText('Automática', { exact: true })).toBeVisible();
-    await expect(page.getByText('Manual', { exact: true })).toBeVisible();
+    await expect(page.getByText('Personal', { exact: true })).toBeVisible();
     const buscador = page.getByRole('searchbox', {
       name: 'Buscar planificación',
     });
@@ -119,9 +119,66 @@ for (const viewport of [
     );
     expect(overflow).toBe(false);
     await guardarCapturaQa(page, `planificacion-overview-${viewport.name}.png`);
-    await page.getByRole('button', { name: 'Crear manual' }).click();
+    await page.getByRole('button', { name: 'Crear plan personal' }).click();
     await expect(page).toHaveURL(/\/planificacion-mensual\/new$/);
-    await expect(page.getByText(/NUEVO PLAN MANUAL/)).toBeVisible();
+    await expect(page.getByText(/NUEVO PLAN PERSONAL/)).toBeVisible();
+  });
+}
+
+for (const viewport of [
+  { name: 'escritorio', width: 1440, height: 900 },
+  { name: 'móvil', width: 375, height: 667 },
+]) {
+  test(`crear plan personal abre la elección de alumno en ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await prepararAdmin(page);
+    const creado = { ...planManual, id: 45, identificador: 'Plan QA nuevo' };
+    let guardados = 0;
+    await page.route('**/planificaciones/planificacion-mensual', (route) => {
+      guardados++;
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(creado),
+      });
+    });
+    await page.route(
+      '**/planificaciones/planificaciones-mensuales/45',
+      (route) =>
+        route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify(creado),
+        }),
+    );
+    await page.route('**/user/all', (route) =>
+      route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [],
+          pagination: { skip: 0, take: 10, count: 0 },
+        }),
+      }),
+    );
+    await page.goto('/app/planificacion/planificacion-mensual/new');
+    await page.getByLabel('Identificador *').fill('Plan QA nuevo');
+    await page.getByLabel('Descripción *').fill('Calendario individual');
+    await page.getByRole('button', { name: 'Guardar y elegir alumno' }).click();
+    await expect(page).toHaveURL(/planificacion-mensual\/45$/);
+    await expect(
+      page.getByRole('dialog', { name: 'Asignar plan personal' }),
+    ).toBeVisible();
+    await expect(page.getByText('Por defecto', { exact: true })).toHaveCount(0);
+    expect(guardados).toBe(1);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+    await page.waitForTimeout(300);
+    await page.screenshot({
+      path: testInfo.outputPath(`plan-personal-nuevo-${viewport.width}.png`),
+    });
   });
 }
 

@@ -77,7 +77,7 @@ async function prepararAdmin(page: Page, variantes = [madrid]) {
     userFixture: userAdminFixture,
     modulos: { PLANIFICACION_AUTOASIGNACION: true },
   });
-  await page.goto('/app/planificacion/admin-planificacion');
+  await page.goto('/app/planificacion/planificacion-mensual');
   await page.getByRole('button', { name: 'Importar semanas' }).click();
   await expect(
     page.getByRole('dialog', { name: 'Importar semanas' }),
@@ -95,6 +95,10 @@ async function subirYPrevisualizar(page: Page) {
       buffer: Buffer.from('excel-fixture'),
     });
   await page.getByRole('button', { name: 'Previsualizar cambios' }).click();
+  await page
+    .getByText(/Ver cambios de 1 semana/)
+    .first()
+    .click();
   await expect(page.getByText('Semana 37').first()).toBeVisible();
   await expect(page.getByText(/los alumnos no verán/)).toBeVisible();
 }
@@ -213,7 +217,7 @@ test('un Excel con varias oposiciones muestra un enlace a cada borrador', async 
   await expect(
     page.getByRole('button', { name: /Abrir calendario/ }),
   ).toHaveCount(2);
-  await expect(page).toHaveURL(/admin-planificacion/);
+  await expect(page).toHaveURL(/admin-planificacion\?importar=1/);
 });
 
 test('el asistente se puede cerrar sin guardar', async ({ page }) => {

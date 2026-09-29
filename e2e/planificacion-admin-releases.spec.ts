@@ -273,23 +273,20 @@ test('acceso al plan común: controles claros y rechazo seguro en móvil', async
   ).toBeVisible();
   await expect(page.getByRole('tab')).toHaveCount(0);
   await expect(
-    page.getByRole('button', { name: 'Importar semanas' }),
+    page.getByRole('heading', { name: 'Configuración avanzada de planes automáticos' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Volver a planificación mensual' }),
   ).toBeVisible();
   await expect(page.getByText(/GENERAL-AGOSTO v1/)).toBeVisible();
   await page.setViewportSize({ width: 375, height: 667 });
   await page.screenshot({
     path: testInfo.outputPath('planes-perfil-mobile.png'),
   });
-  const importar = await page
-    .getByRole('button', { name: 'Importar semanas' })
-    .boundingBox();
   const nueva = await page
     .getByRole('button', { name: 'Nueva variante' })
     .boundingBox();
-  expect(
-    Math.abs((importar?.y ?? 0) - (nueva?.y ?? 0)),
-    JSON.stringify({ importar, nueva }),
-  ).toBeLessThan(5);
+  expect(nueva).not.toBeNull();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,

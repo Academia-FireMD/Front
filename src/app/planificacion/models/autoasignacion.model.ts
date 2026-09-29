@@ -274,7 +274,12 @@ export interface VarianteCargaSemanas {
   franja?: TipoDePlanificacionDeseada;
   publicadaId?: number | null;
   publicada?: { identificador: string; version: number } | null;
-  candidatos?: Array<{ id: number; identificador: string }>;
+  candidatos?: Array<{
+    id: number;
+    identificador: string;
+    actualizadoEn?: string;
+    actividades?: number;
+  }>;
   destino: DestinoCargaSemanas | null;
   planificacionId?: number;
   primeraSemana?: string;

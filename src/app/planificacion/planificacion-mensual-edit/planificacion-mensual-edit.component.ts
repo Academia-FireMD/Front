@@ -933,7 +933,7 @@ export class PlanificacionMensualEditComponent {
     );
   }
 
-  private load(fechaFoco?: string) {
+  private async load(fechaFoco?: string): Promise<void> {
     this.eventosModificados = false;
     const itemId = this.getId();
     if (itemId === 'new') {
@@ -958,78 +958,84 @@ export class PlanificacionMensualEditComponent {
         this.relevancia.push(new FormControl(oposicion));
       }
     } else {
-      firstValueFrom(
-        this.planificacionesService.getPlanificacionMensualById$(itemId).pipe(
-          tap((entry) => {
-            this.lastLoadedPlanification.set(entry);
-            const subBloques = entry.subBloques;
+      try {
+        await firstValueFrom(
+          this.planificacionesService.getPlanificacionMensualById$(itemId).pipe(
+            tap((entry) => {
+              if (!entry) return;
+              this.lastLoadedPlanification.set(entry);
+              const subBloques = entry.subBloques;
 
-            // Convertir los subbloques a eventos
-            this.events = this.eventsService.fromSubbloquesToEvents(subBloques);
-            this.centrarCalendario(entry, this.events, fechaFoco);
+              // Convertir los subbloques a eventos
+              this.events =
+                this.eventsService.fromSubbloquesToEvents(subBloques);
+              this.centrarCalendario(entry, this.events, fechaFoco);
 
-            // Para alumnos, cargar también los eventos personalizados
-            if (this.expectedRole === 'ALUMNO') {
-              this.loadEventosPersonalizados(Number(itemId));
-              this.cargarResumenFisica(this.viewDate);
-            }
+              // Para alumnos, cargar también los eventos personalizados
+              if (this.expectedRole === 'ALUMNO') {
+                this.loadEventosPersonalizados(Number(itemId));
+                this.cargarResumenFisica(this.viewDate);
+              }
 
-            // Configurar eventos para alumnos
-            if (this.expectedRole === 'ALUMNO') {
-              this.events.forEach((event) => {
-                // Permitir arrastre para alumnos
-                event.draggable = true;
-                // Pero no permitir redimensionar
-                event.resizable = {
-                  beforeStart: false,
-                  afterEnd: false,
-                };
+              // Configurar eventos para alumnos
+              if (this.expectedRole === 'ALUMNO') {
+                this.events.forEach((event) => {
+                  // Permitir arrastre para alumnos
+                  event.draggable = true;
+                  // Pero no permitir redimensionar
+                  event.resizable = {
+                    beforeStart: false,
+                    afterEnd: false,
+                  };
 
-                // Aplicar posiciones personalizadas si existen
-                if (event.meta?.subBloque?.posicionPersonalizada) {
-                  const posicion = new Date(
-                    event.meta.subBloque.posicionPersonalizada,
-                  );
-                  // Mantener la duración original
-                  const duracion = event.end
-                    ? event.end.getTime() - event.start.getTime()
-                    : 0;
-                  // Establecer la nueva posición
-                  event.start = posicion;
-                  event.end = new Date(posicion.getTime() + duracion);
-                }
-              });
+                  // Aplicar posiciones personalizadas si existen
+                  if (event.meta?.subBloque?.posicionPersonalizada) {
+                    const posicion = new Date(
+                      event.meta.subBloque.posicionPersonalizada,
+                    );
+                    // Mantener la duración original
+                    const duracion = event.end
+                      ? event.end.getTime() - event.start.getTime()
+                      : 0;
+                    // Establecer la nueva posición
+                    event.start = posicion;
+                    event.end = new Date(posicion.getTime() + duracion);
+                  }
+                });
 
-              this.userService.getCurrentUser$().subscribe((user: any) => {
-                // Fase 1 autoasignación: el alumno solo ve la ventana de
-                // 2 semanas atrás + el futuro (el historial se conserva en
-                // backend, la UI no lo muestra). Antes se anclaba a la fecha
-                // de alta (validatedAt/createdAt), lo que podía mostrar todo
-                // el histórico.
-                this.startDate = getVentanaDosSemanasAtras();
-                this.endDate = getNextWeekIfFriday(new Date());
-              });
-            }
+                this.userService.getCurrentUser$().subscribe((user: any) => {
+                  // Fase 1 autoasignación: el alumno solo ve la ventana de
+                  // 2 semanas atrás + el futuro (el historial se conserva en
+                  // backend, la UI no lo muestra). Antes se anclaba a la fecha
+                  // de alta (validatedAt/createdAt), lo que podía mostrar todo
+                  // el histórico.
+                  this.startDate = getVentanaDosSemanasAtras();
+                  this.endDate = getNextWeekIfFriday(new Date());
+                });
+              }
 
-            this.relevancia.clear();
-            entry.relevancia.forEach((e) =>
-              this.relevancia.push(new FormControl(e)),
-            );
+              this.relevancia.clear();
+              entry.relevancia.forEach((e) =>
+                this.relevancia.push(new FormControl(e)),
+              );
 
-            this.formGroup.patchValue(entry);
-            this.formGroup.markAsPristine();
-            this.actualizarCodigosHojaCompatibles();
-            if (
-              this.activedRoute.snapshot.queryParamMap.get('abrirVolcado') ===
-                '1' &&
-              !this.volcadoAbiertoDesdeImportacion
-            ) {
-              this.volcadoAbiertoDesdeImportacion = true;
-              this.abrirDialogoVolcar();
-            }
-          }),
-        ),
-      );
+              this.formGroup.patchValue(entry);
+              this.formGroup.markAsPristine();
+              this.actualizarCodigosHojaCompatibles();
+              if (
+                this.activedRoute.snapshot.queryParamMap.get('abrirVolcado') ===
+                  '1' &&
+                !this.volcadoAbiertoDesdeImportacion
+              ) {
+                this.volcadoAbiertoDesdeImportacion = true;
+                this.abrirDialogoVolcar();
+              }
+            }),
+          ),
+        );
+      } catch {
+        this.toast.error('No se pudo cargar la planificación.');
+      }
     }
   }
 
@@ -1099,7 +1105,7 @@ export class PlanificacionMensualEditComponent {
       });
   }
 
-  public async guardarCambios() {
+  public async guardarCambios(abrirAsignacion = false): Promise<void> {
     if (
       this.esFlujoImportacion &&
       this.getId() === 'new' &&
@@ -1120,7 +1126,7 @@ export class PlanificacionMensualEditComponent {
         relevancia:
           (this.formGroup?.value?.relevancia as Array<Oposicion>) ?? [],
         esPorDefecto:
-          this.esFlujoImportacion && this.getId() === 'new'
+          this.getId() === 'new'
             ? false
             : (this.formGroup.value.esPorDefecto ?? false),
         tipoDePlanificacion:
@@ -1141,7 +1147,7 @@ export class PlanificacionMensualEditComponent {
           : 'Planificación mensual actualizada con éxito',
       );
 
-      await this.router.navigate(
+      const navegacionCorrecta = await this.router.navigate(
         ['/app/planificacion/planificacion-mensual/' + res.id],
         {
           queryParams: flujoImportacion
@@ -1156,11 +1162,22 @@ export class PlanificacionMensualEditComponent {
             : undefined,
         },
       );
-      if (flujoImportacion) {
-        this.volcadoAbiertoDesdeImportacion = false;
-        this.load();
+      if (navegacionCorrecta === false) return;
+      if (flujoImportacion) this.volcadoAbiertoDesdeImportacion = false;
+      await this.load();
+      if (
+        abrirAsignacion &&
+        this.lastLoadedPlanification()?.id === res.id &&
+        this.lastLoadedPlanification()?.estado === 'BORRADOR' &&
+        !this.esPlanAutomatico
+      ) {
+        this.abrirAsignacionManual();
       }
     }
+  }
+
+  public async guardarYSeleccionarAlumno(): Promise<void> {
+    await this.guardarCambios(true);
   }
 
   get esFlujoImportacion(): boolean {

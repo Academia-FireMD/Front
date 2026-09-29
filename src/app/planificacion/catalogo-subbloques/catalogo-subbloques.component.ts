@@ -14,7 +14,6 @@ import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
-import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { PlanificacionesService } from '../../services/planificaciones.service';
@@ -29,7 +28,6 @@ import {
   CatalogoLista,
   CatalogoPreview,
   CatalogoTrabajo,
-  ComponerContenidoResponse,
   TipoTrabajoCatalogo,
 } from '../models/catalogo-contenido.model';
 
@@ -42,7 +40,6 @@ import {
     ButtonModule,
     CheckboxModule,
     DialogModule,
-    DropdownModule,
     InputTextModule,
     TagModule,
     ExcelFilePickerComponent,
@@ -76,11 +73,6 @@ export class CatalogoSubbloquesComponent implements OnInit {
   dialogoIndicaciones = false;
   indicacionEditando: TipoTrabajoCatalogo | null = null;
   textoIndicacion = '';
-  vistaTipo: TipoTrabajoCatalogo | null = null;
-  vistaCompuesta: ComponerContenidoResponse | null = null;
-  vistaCargando = false;
-  vistaError = false;
-  private vistaPeticion = 0;
   private revisionIndicacion = 0;
   esNuevo = false;
   fila: CatalogoFilaEditable = this.filaVacia();
@@ -131,7 +123,6 @@ export class CatalogoSubbloquesComponent implements OnInit {
     this.fila = this.filaVacia();
     this.resetPreview();
     this.dialogoEdicion = true;
-    this.vistaCompuesta = null;
   }
 
   abrirEdicion(fila: CatalogoContenidoCompleto) {
@@ -145,41 +136,6 @@ export class CatalogoSubbloquesComponent implements OnInit {
     };
     this.resetPreview();
     this.dialogoEdicion = true;
-    this.vistaTipo = null;
-    void this.cargarVistaCompuesta();
-  }
-
-  get opcionesVista() {
-    return [
-      { label: 'Sin indicaciones adicionales', value: null },
-      ...this.catalogo().trabajos.map((item) => ({
-        label: item.trabajo,
-        value: item.trabajo,
-      })),
-    ];
-  }
-
-  async cargarVistaCompuesta(): Promise<void> {
-    if (this.esNuevo || !this.dialogoEdicion) return;
-    const peticion = ++this.vistaPeticion;
-    this.vistaCargando = true;
-    this.vistaError = false;
-    this.vistaCompuesta = null;
-    try {
-      const vista = await firstValueFrom(
-        this.servicio.componerContenidoCatalogo(
-          this.fila.codigo,
-          this.vistaTipo ?? undefined,
-        ),
-      );
-      if (peticion === this.vistaPeticion && this.dialogoEdicion)
-        this.vistaCompuesta = vista;
-    } catch {
-      if (peticion === this.vistaPeticion && this.dialogoEdicion)
-        this.vistaError = true;
-    } finally {
-      if (peticion === this.vistaPeticion) this.vistaCargando = false;
-    }
   }
 
   abrirIndicaciones(): void {
@@ -247,6 +203,12 @@ export class CatalogoSubbloquesComponent implements OnInit {
     }
   }
 
+  async guardarIndicacion(): Promise<void> {
+    await this.revisarIndicacion();
+    if (this.puedeAplicar) await this.aplicar();
+    else this.mostrarResultadoSinAplicar();
+  }
+
   abrirImportacion() {
     this.archivo = null;
     this.resetPreview();
@@ -296,6 +258,19 @@ export class CatalogoSubbloquesComponent implements OnInit {
     } finally {
       this.cargando.set(false);
     }
+  }
+
+  async guardarEdicion(): Promise<void> {
+    await this.revisarEdicion();
+    if (this.puedeAplicar) await this.aplicar();
+    else this.mostrarResultadoSinAplicar();
+  }
+
+  private mostrarResultadoSinAplicar(): void {
+    if (!this.preview) return;
+    const error = this.preview.errores?.[0];
+    if (error) this.toast.error(error.mensaje);
+    else this.toast.info('No hay cambios que guardar.');
   }
 
   get puedeAplicar(): boolean {
@@ -393,8 +368,8 @@ export class CatalogoSubbloquesComponent implements OnInit {
         this.resetPreview();
         this.toast.warning(
           this.dialogoIndicaciones
-            ? 'El catálogo ha cambiado. Conservamos tu texto: revisa las diferencias de nuevo antes de guardar.'
-            : 'El catálogo ha cambiado. Revisa de nuevo antes de guardar.',
+            ? 'El catálogo cambió mientras editabas. Conservamos tu texto; compruébalo y vuelve a guardar.'
+            : 'El catálogo cambió mientras editabas. Comprueba la ficha y vuelve a guardar.',
         );
         await this.cargar();
       } else {

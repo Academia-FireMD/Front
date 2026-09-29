@@ -257,19 +257,19 @@ describe('CatalogoSubbloquesComponent', () => {
     expect(servicio.listarCatalogoContenido).toHaveBeenCalledTimes(2);
   });
 
-  it('muestra la composición guardada al elegir una indicación en la ficha', async () => {
+  it('guarda la ficha en un paso sin mostrar la composición con indicaciones', async () => {
     const fixture = TestBed.createComponent(CatalogoSubbloquesComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     const component = fixture.componentInstance;
     component.abrirEdicion(lista.filas[0]);
-    component.vistaTipo = 'R1';
-    await component.cargarVistaCompuesta();
-    expect(servicio.componerContenidoCatalogo).toHaveBeenCalledWith(
-      'L01',
-      'R1',
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Vista de una nueva actividad',
     );
-    expect(component.vistaCompuesta?.comentarios).toBe('Leer el tema');
+    await component.guardarEdicion();
+    expect(servicio.previsualizarCambioCatalogo).toHaveBeenCalledTimes(1);
+    expect(servicio.guardarCambioCatalogo).toHaveBeenCalledTimes(1);
   });
 
   it('revisa y guarda una indicación global sin editar la ficha del subbloque', async () => {
@@ -293,13 +293,11 @@ describe('CatalogoSubbloquesComponent', () => {
         ],
       }),
     );
-    await component.revisarIndicacion();
+    await component.guardarIndicacion();
     expect(servicio.previsualizarCambioCatalogo).toHaveBeenCalledWith(
       undefined,
       { R1: '**Nuevo repaso**' },
     );
-    expect(component.puedeAplicar).toBe(true);
-    await component.aplicar();
     expect(servicio.guardarCambioCatalogo).toHaveBeenCalledWith(
       preview.previewHash,
       true,

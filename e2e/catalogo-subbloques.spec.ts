@@ -142,8 +142,8 @@ for (const viewport of [
       )
       .toBe(0);
     await expect(
-      indicaciones.getByRole('button', { name: 'Confirmar guardado' }),
-    ).toBeDisabled();
+      indicaciones.getByRole('button', { name: 'Guardar', exact: true }),
+    ).toBeEnabled();
     await page.screenshot({
       path: testInfo.outputPath(`indicaciones-${viewport.width}.png`),
     });
@@ -154,12 +154,7 @@ for (const viewport of [
 
     await page.getByText('L01 · Temario').click();
     const editor = page.getByRole('dialog', { name: 'Editar L01' });
-    await expect(
-      editor.getByText('Vista de una nueva actividad'),
-    ).toBeVisible();
-    await expect(
-      editor.getByText('Leer el tema y después repasar.'),
-    ).toBeVisible();
+    await expect(editor.getByText(/actividades futuras/)).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath(`vista-compuesta-${viewport.width}.png`),
     });
@@ -352,9 +347,7 @@ test('catálogo: filtra y abre el editor Markdown compartido', async ({
   const dialogo = page.getByRole('dialog', { name: 'Editar L01' });
   await expect(dialogo).toBeVisible();
   await expect(dialogo.locator('.toastui-editor-defaultUI')).toHaveCount(2);
-  await expect(
-    dialogo.getByRole('button', { name: 'Revisar y guardar' }),
-  ).toBeEnabled();
+  await expect(dialogo.getByRole('button', { name: 'Guardar' })).toBeEnabled();
   await page.screenshot({
     path: testInfo.outputPath('catalogo-editor-desktop.png'),
   });

@@ -6,7 +6,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { FilterConfig } from '../../shared/generic-list/generic-list.component';
@@ -32,6 +32,13 @@ export class PlanificacionMensualOverviewComponent extends SharedGridComponent<P
   public uploadingFile = false;
   public searchReadOnly = true;
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
+  public readonly opcionesAvanzadas: MenuItem[] = [
+    {
+      label: 'Configuración avanzada de planes automáticos',
+      icon: 'pi pi-cog',
+      command: () => this.abrirPerfiles(),
+    },
+  ];
 
   // Configuración de filtros para el GenericListComponent
   public filters: FilterConfig[] = [

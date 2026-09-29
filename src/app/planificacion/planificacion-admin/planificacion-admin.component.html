@@ -1,18 +1,33 @@
 <p-confirmDialog />
+<div class="configuracion-avanzada-cabecera">
+  <div>
+    <h1>Configuración avanzada de planes automáticos</h1>
+    <p>
+      Estos ajustes determinan qué plan publicado puede elegir cada alumno. No
+      necesitas cambiarlos para importar semanas.
+    </p>
+  </div>
+  <p-button
+    label="Volver a planificación mensual"
+    icon="pi pi-arrow-left"
+    [outlined]="true"
+    (onClick)="volverAPlanes()"
+  />
+</div>
 <section class="plan-comun" aria-labelledby="plan-comun-titulo">
   <div>
     <h2 id="plan-comun-titulo">Acceso al plan común valenciano</h2>
     <p>
-      Permite elegir el plan común además del específico. No modifica las
-      suscripciones.
+      El plan común no es una suscripción. Estos permisos permiten ofrecerlo
+      además del plan específico a alumnos de Valencia o Alicante.
     </p>
   </div>
   <div class="plan-comun__opciones" aria-live="polite">
     @for (acceso of accesosPlanComun; track acceso.oposicion) {
       <div class="plan-comun__opcion">
-        <label [for]="'plan-comun-' + acceso.oposicion">{{
-          acceso.label
-        }}</label>
+        <label [for]="'plan-comun-' + acceso.oposicion">
+          Ofrecer también el plan común a alumnos suscritos a {{ acceso.label }}
+        </label>
         <p-inputSwitch
           [inputId]="'plan-comun-' + acceso.oposicion"
           [ngModel]="planComunActivo(acceso.oposicion)"
@@ -53,14 +68,6 @@
       </p-iconField>
     </div>
     <div right-actions>
-      <p-button
-        label="Importar semanas"
-        icon="pi pi-upload"
-        ariaLabel="Importar semanas"
-        [outlined]="true"
-        styleClass="autoasignacion-action"
-        (click)="abrirImportacionSemanas()"
-      />
       <p-button
         label="Nueva variante"
         icon="pi pi-plus"
@@ -277,16 +284,14 @@
 <p-dialog
   header="Importar semanas"
   [visible]="dialogoImportacionVisible()"
-  (visibleChange)="
-    !aplicandoImportacion() && dialogoImportacionVisible.set($event)
-  "
+  (visibleChange)="cambiarVisibilidadImportacion($event)"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
   [closable]="!aplicandoImportacion()"
   [closeOnEscape]="!aplicandoImportacion()"
-  [style]="{ width: '100vw', height: '100vh', maxHeight: '100vh', margin: '0' }"
-  [contentStyle]="{ height: 'calc(100vh - 5rem)', overflow: 'auto' }"
+  [style]="{ width: 'min(94vw, 64rem)', maxHeight: '90dvh' }"
+  [contentStyle]="{ maxHeight: 'calc(90dvh - 8rem)', overflow: 'auto' }"
   styleClass="asistente-semanas"
   appendTo="body"
 >
@@ -320,26 +325,6 @@
         (onClick)="previsualizarCargaSemanas()"
       />
     </div>
-    <div class="flex align-items-start gap-3 mt-3 mb-3">
-      <p-inputSwitch
-        inputId="nueva-planificacion-excel"
-        [ngModel]="modoCarga() === 'NUEVA'"
-        (ngModelChange)="cambiarModoCarga($event)"
-        [disabled]="previsualizandoImportacion() || aplicandoImportacion()"
-      />
-      <div>
-        <label
-          for="nueva-planificacion-excel"
-          class="font-semibold cursor-pointer"
-          >Crear borradores nuevos desde este Excel</label
-        >
-        <p class="m-0 text-sm text-color-secondary">
-          Conserva intactos los calendarios actuales. Para añadir semanas a un
-          borrador existente, deja esta opción desactivada.
-        </p>
-      </div>
-    </div>
-
     @if (errorCarga(); as mensaje) {
       <p-message
         severity="error"
@@ -386,7 +371,7 @@
       @if (preview.requiereEleccion) {
         <p-message
           severity="warn"
-          text="Hay varios borradores compatibles. Elige el destino de cada variante y vuelve a previsualizar."
+          text="Hay varios borradores anteriores para un perfil. Elige cuál conservar como borrador de trabajo; los demás quedarán en el historial. Después revisa el Excel de nuevo."
           styleClass="w-full"
         />
       }
@@ -409,69 +394,61 @@
                   : "ninguna"
               }}
             </p>
-            <label [for]="'destino-' + variante.codigo">Guardar en</label>
-            <p-dropdown
-              [inputId]="'destino-' + variante.codigo"
-              [options]="opcionesDestinoCarga(variante)"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="valorDestinoCarga(variante)"
-              (onChange)="cambiarDestinoCarga(variante, $event.value)"
-              styleClass="w-full"
-            />
-            @if (valorDestinoCarga(variante) === "CREAR") {
-              <label [for]="'nombre-' + variante.codigo" class="block mt-3"
-                >Nombre del borrador</label
+            @if (
+              preview.requiereEleccion && (variante.candidatos?.length ?? 0) > 1
+            ) {
+              <label [for]="'destino-' + variante.codigo"
+                >¿Qué borrador conservamos?</label
               >
-              <input
-                pInputText
-                [id]="'nombre-' + variante.codigo"
-                class="w-full"
-                [value]="
-                  destinosCarga()[variante.codigo]?.tipo === 'CREAR'
-                    ? $any(destinosCarga()[variante.codigo]).identificador
-                    : 'Importación ' + variante.codigo
-                "
-                (input)="
-                  cambiarNombreBorradorCarga(
-                    variante.codigo,
-                    $any($event.target).value
-                  )
-                "
+              <p-dropdown
+                [inputId]="'destino-' + variante.codigo"
+                [options]="opcionesDestinoCarga(variante)"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="valorDestinoCarga(variante)"
+                (onChange)="cambiarDestinoCarga(variante, $event.value)"
+                placeholder="Selecciona el borrador vigente"
+                styleClass="w-full"
               />
             }
             @if (variante.semanas?.length) {
-              <ul class="carga-directa__semanas">
-                @for (
-                  semana of variante.semanas;
-                  track semana.hoja + semana.lunes
-                ) {
-                  <li>
-                    <strong
-                      >Semana {{ semana.numero }} ·
-                      {{ formatearFechaIso(semana.lunes) }}</strong
-                    >
-                    <span
-                      >{{ semana.creados }} creados ·
-                      {{ semana.actualizados }} actualizados ·
-                      {{ semana.eliminados }} retirados ·
-                      {{ semana.omitidos }} sin cambios</span
-                    >
-                    @if (semana.actualizados || semana.eliminados) {
-                      <ul>
-                        @for (bloque of semana.bloques; track $index) {
-                          @if (
-                            bloque.estado === "actualizado" ||
-                            bloque.estado === "eliminado"
-                          ) {
-                            <li>{{ bloque.nombre }} · {{ bloque.estado }}</li>
+              <details class="carga-directa__detalle">
+                <summary>
+                  Ver cambios de {{ variante.semanas?.length }}
+                  {{ variante.semanas?.length === 1 ? "semana" : "semanas" }}
+                </summary>
+                <ul class="carga-directa__semanas">
+                  @for (
+                    semana of variante.semanas;
+                    track semana.hoja + semana.lunes
+                  ) {
+                    <li>
+                      <strong
+                        >Semana {{ semana.numero }} ·
+                        {{ formatearFechaIso(semana.lunes) }}</strong
+                      >
+                      <span
+                        >{{ semana.creados }} creados ·
+                        {{ semana.actualizados }} actualizados ·
+                        {{ semana.eliminados }} retirados ·
+                        {{ semana.omitidos }} sin cambios</span
+                      >
+                      @if (semana.actualizados || semana.eliminados) {
+                        <ul>
+                          @for (bloque of semana.bloques; track $index) {
+                            @if (
+                              bloque.estado === "actualizado" ||
+                              bloque.estado === "eliminado"
+                            ) {
+                              <li>{{ bloque.nombre }} · {{ bloque.estado }}</li>
+                            }
                           }
-                        }
-                      </ul>
-                    }
-                  </li>
-                }
-              </ul>
+                        </ul>
+                      }
+                    </li>
+                  }
+                </ul>
+              </details>
             }
           </article>
         }

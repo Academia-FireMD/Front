@@ -11,48 +11,10 @@
   [(isDialogVisible)]="dialogoEdicion"
   [catalogoFila]="fila"
   [catalogoNuevo]="esNuevo"
-  [catalogoPuedeAplicar]="puedeAplicar"
-  [catalogoCargando]="cargando()"
-  [catalogoGuardando]="guardando()"
+  [catalogoGuardando]="cargando() || guardando()"
   (catalogoChanged)="resetPreview()"
-  (revisarCatalogo)="revisarEdicion()"
-  (aplicarCatalogo)="aplicar()"
+  (aplicarCatalogo)="guardarEdicion()"
 >
-  @if (!esNuevo) {
-    <section class="vista-compuesta" aria-live="polite">
-      <h3>Vista de una nueva actividad</h3>
-      <p class="aviso-menor">
-        Combina la ficha guardada con una indicación opcional. Los cambios que
-        estés editando aparecerán aquí después de guardarlos.
-      </p>
-      <label for="tipo-vista-catalogo">Indicación de estudio</label>
-      <p-dropdown
-        inputId="tipo-vista-catalogo"
-        [(ngModel)]="vistaTipo"
-        [options]="opcionesVista"
-        optionLabel="label"
-        optionValue="value"
-        appendTo="body"
-        styleClass="w-full"
-        (onChange)="cargarVistaCompuesta()"
-      ></p-dropdown>
-      @if (vistaCargando) {
-        <p>Preparando vista previa…</p>
-      } @else if (vistaError) {
-        <p class="aviso-menor">
-          Esta ficha no está disponible para nuevas actividades.
-        </p>
-      } @else if (vistaCompuesta) {
-        <div class="vista-compuesta-resultado">
-          <strong>{{ vistaCompuesta.nombre }}</strong>
-          <app-markdown-content
-            [content]="vistaCompuesta.comentarios"
-          ></app-markdown-content>
-        </div>
-      }
-    </section>
-  }
-  <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
 </app-editar-sub-bloque-dialog>
 
 <p-dialog
@@ -84,7 +46,10 @@
           ariaLabel="Texto de la indicación de estudio"
           (valueChange)="cambiarTextoIndicacion($event)"
         ></app-sub-bloque-markdown-field>
-        <ng-container *ngTemplateOutlet="resumenPreview"></ng-container>
+        <p class="aviso-menor">
+          Los cambios se usarán en actividades futuras; las ya creadas no
+          cambian.
+        </p>
       </div>
     } @else {
       <div class="indicaciones-lista">
@@ -119,16 +84,10 @@
           (click)="cancelarEdicionIndicacion()"
         ></p-button>
         <p-button
-          label="Revisar cambios"
-          [outlined]="true"
-          [loading]="cargando()"
-          (click)="revisarIndicacion()"
-        ></p-button>
-        <p-button
-          label="Confirmar guardado"
-          [disabled]="!puedeAplicar"
-          [loading]="guardando()"
-          (click)="aplicar()"
+          label="Guardar"
+          [disabled]="cargando() || guardando()"
+          [loading]="cargando() || guardando()"
+          (click)="guardarIndicacion()"
         ></p-button>
       } @else {
         <p-button

@@ -16,6 +16,7 @@ import { ContextMenuModule } from 'primeng/contextmenu';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { MenuModule } from 'primeng/menu';
 import { PaginatorModule } from 'primeng/paginator';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TableModule } from 'primeng/table';
@@ -75,6 +76,7 @@ registerLocaleData(localeEs);
     ProgressBarModule,
     ContextMenuModule,
     MessageModule,
+    MenuModule,
     AsyncButtonComponent,
     GenericListComponent,
     MarkdownContentComponent,

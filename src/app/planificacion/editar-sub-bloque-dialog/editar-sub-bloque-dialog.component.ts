@@ -32,11 +32,8 @@ export class EditarSubBloqueDialogComponent {
   @Input() modo: 'uso' | 'catalogo' = 'uso';
   @Input() catalogoFila: CatalogoFilaEditable | null = null;
   @Input() catalogoNuevo = false;
-  @Input() catalogoPuedeAplicar = false;
-  @Input() catalogoCargando = false;
   @Input() catalogoGuardando = false;
   @Output() catalogoChanged = new EventEmitter<void>();
-  @Output() revisarCatalogo = new EventEmitter<void>();
   @Output() aplicarCatalogo = new EventEmitter<void>();
 
   private currentData: any;

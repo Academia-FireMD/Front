@@ -811,22 +811,17 @@ describe('PlanificacionAdminComponent', () => {
     );
   });
 
-  it('permite elegir nuevas planificaciones antes de previsualizar y descarta un hash anterior', async () => {
+  it('resuelve el destino normal sin preguntar al administrador', async () => {
     const file = new File(['xlsx'], 'sergio.xlsx');
     component.archivoImportacion.set(file);
-    component.previewCarga.set({
-      puedeAplicar: true,
-      previewHash: 'a'.repeat(64),
-      variantes: [],
-    });
-    component.cambiarModoCarga(true);
-    expect(component.modoCarga()).toBe('NUEVA');
-    expect(component.previewCarga()).toBeNull();
+    (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(
+      of({ puedeAplicar: true, previewHash: 'a'.repeat(64), variantes: [] }),
+    );
     await component.previsualizarCargaSemanas();
     expect(service.previewCargaSemanas$).toHaveBeenCalledWith(
       file,
       {},
-      'NUEVA',
+      'CONTINUAR',
     );
   });
 

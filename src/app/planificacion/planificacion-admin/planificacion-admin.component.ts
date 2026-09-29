@@ -225,7 +225,6 @@ export class PlanificacionAdminComponent
   errorCarga = signal<string | null>(null);
   resultadoCarga = signal<PreviewCargaSemanas | null>(null);
   destinosCarga = signal<Record<string, DestinoCargaSemanas>>({});
-  modoCarga = signal<'CONTINUAR' | 'NUEVA'>('CONTINUAR');
   idempotencyKeyCarga: string | null = null;
   previewImportacion = signal<PreviewImportacionPlantillas | null>(null);
   previsualizandoImportacion = signal(false);
@@ -435,6 +434,17 @@ export class PlanificacionAdminComponent
 
   abrirImportacionSemanas(): void {
     this.dialogoImportacionVisible.set(true);
+  }
+
+  volverAPlanes(): void {
+    void this.router.navigate(['/app/planificacion/planificacion-mensual']);
+  }
+
+  cambiarVisibilidadImportacion(visible: boolean): void {
+    if (this.aplicandoImportacion()) return;
+    this.dialogoImportacionVisible.set(visible);
+    if (!visible && this.route.snapshot.queryParamMap.get('importar') === '1')
+      this.volverAPlanes();
   }
 
   editarVariante(v: VarianteAdmin): void {
@@ -731,29 +741,13 @@ export class PlanificacionAdminComponent
     this.archivoImportacion.set(file);
   }
 
-  cambiarModoCarga(nueva: boolean): void {
-    this.modoCarga.set(nueva ? 'NUEVA' : 'CONTINUAR');
-    this.destinosCarga.set({});
-    this.previewCarga.set(null);
-    this.previewImportacion.set(null);
-    this.errorCarga.set(null);
-    this.confirmarSobrescritura.set(false);
-    this.idempotencyKeyCarga = null;
-  }
-
   opcionesDestinoCarga(
     variante: VarianteCargaSemanas,
   ): Array<{ label: string; value: string }> {
-    return [
-      ...(variante.candidatos ?? []).map((c) => ({
-        label: `Usar borrador: ${c.identificador}`,
-        value: `EXISTENTE:${c.id}`,
-      })),
-      ...(variante.publicadaId
-        ? [{ label: 'Crear copia de la versión publicada', value: 'COPIAR' }]
-        : []),
-      { label: 'Crear borrador nuevo', value: 'CREAR' },
-    ];
+    return (variante.candidatos ?? []).map((c) => ({
+      label: `${c.identificador} · ${c.actividades ?? 0} actividades${c.actualizadoEn ? ' · ' + new Intl.DateTimeFormat('es-ES', { dateStyle: 'short' }).format(new Date(c.actualizadoEn)) : ''}`,
+      value: `EXISTENTE:${c.id}`,
+    }));
   }
 
   valorDestinoCarga(variante: VarianteCargaSemanas): string | null {
@@ -765,25 +759,14 @@ export class PlanificacionAdminComponent
   }
 
   cambiarDestinoCarga(variante: VarianteCargaSemanas, valor: string): void {
-    const destino: DestinoCargaSemanas = valor.startsWith('EXISTENTE:')
-      ? { tipo: 'EXISTENTE', planificacionId: Number(valor.slice(10)) }
-      : valor === 'COPIAR'
-        ? { tipo: 'COPIAR' }
-        : { tipo: 'CREAR', identificador: `Importación ${variante.codigo}` };
+    if (!valor.startsWith('EXISTENTE:')) return;
+    const destino: DestinoCargaSemanas = {
+      tipo: 'EXISTENTE',
+      planificacionId: Number(valor.slice(10)),
+    };
     this.destinosCarga.update((actual) => ({
       ...actual,
       [variante.codigo]: destino,
-    }));
-    this.previewCarga.update((previo) =>
-      previo ? { ...previo, puedeAplicar: false, previewHash: null } : null,
-    );
-    this.idempotencyKeyCarga = null;
-  }
-
-  cambiarNombreBorradorCarga(codigo: string, identificador: string): void {
-    this.destinosCarga.update((actual) => ({
-      ...actual,
-      [codigo]: { tipo: 'CREAR', identificador },
     }));
     this.previewCarga.update((previo) =>
       previo ? { ...previo, puedeAplicar: false, previewHash: null } : null,
@@ -804,7 +787,7 @@ export class PlanificacionAdminComponent
         this.autoasignacionService.previewCargaSemanas$(
           file,
           this.destinosCarga(),
-          this.modoCarga(),
+          'CONTINUAR',
         ),
       );
       this.previewCarga.set(preview);
@@ -857,7 +840,7 @@ export class PlanificacionAdminComponent
           preview.previewHash,
           this.confirmarSobrescritura(),
           this.idempotencyKeyCarga,
-          this.modoCarga(),
+          'CONTINUAR',
         ),
       );
       this.resultadoCarga.set(resultado);

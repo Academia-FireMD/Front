@@ -523,10 +523,10 @@
 @if (expectedRole === "ADMIN" && getId() === "new") {
   <div class="borrador-aviso" role="status">
     <div>
-      <strong>NUEVO PLAN MANUAL · Aún no visible para ningún alumno</strong>
+      <strong>NUEVO PLAN PERSONAL · Aún no visible para ningún alumno</strong>
       <p>
-        Crea y revisa el calendario. Después podrás asignarlo a un alumno
-        concreto sin cambiar los planes automáticos.
+        Crea el calendario y pulsa «Guardar y elegir alumno». Si cancelas la
+        elección, el plan quedará guardado sin asignar.
       </p>
     </div>
   </div>
@@ -553,8 +553,7 @@
         </p>
       } @else {
         <p>
-          Plan manual. Guárdalo y revísalo antes de asignarlo a un alumno
-          concreto.
+          Plan personal sin asignar. Puedes revisarlo o asignarlo a un alumno.
         </p>
       }
     </div>
@@ -577,7 +576,6 @@
       <p-button
         label="Asignar a un alumno"
         icon="pi pi-user-plus"
-        [outlined]="true"
         (onClick)="abrirAsignacionManual()"
       />
     }
@@ -734,15 +732,6 @@
                   (updateSelection)="updateOposicionSelection($event)"
                 ></app-oposicion-picker>
               </div>
-              @if (!(esFlujoImportacion && getId() === "new")) {
-                <div class="por-defecto gap-2">
-                  <label for="switch1">Por defecto</label>
-                  <p-inputSwitch
-                    [formControl]="esPorDefecto"
-                    inputId="switch1"
-                  />
-                </div>
-              }
               @if (getId() !== "new") {
                 <app-attachments-manager
                   [entidadTipo]="entidadTipoPlanificacion"
@@ -765,20 +754,33 @@
                 (onClick)="volverAImportacion()"
               />
             }
-            <app-async-button
-              [disabled]="
-                formGroup.invalid ||
-                (esFlujoImportacion &&
-                  getId() === 'new' &&
-                  !borradorImportacionCompatible)
-              "
-              [action]="guardarCambios.bind(this)"
-              [label]="
-                esFlujoImportacion && getId() === 'new'
-                  ? 'Guardar borrador y previsualizar'
-                  : 'Guardar cambios'
-              "
-            ></app-async-button>
+            @if (!esFlujoImportacion && getId() === "new") {
+              <app-async-button
+                [disabled]="formGroup.invalid"
+                [action]="guardarCambios.bind(this)"
+                label="Guardar sin asignar"
+              ></app-async-button>
+              <app-async-button
+                [disabled]="formGroup.invalid"
+                [action]="guardarYSeleccionarAlumno.bind(this)"
+                label="Guardar y elegir alumno"
+              ></app-async-button>
+            } @else {
+              <app-async-button
+                [disabled]="
+                  formGroup.invalid ||
+                  (esFlujoImportacion &&
+                    getId() === 'new' &&
+                    !borradorImportacionCompatible)
+                "
+                [action]="guardarCambios.bind(this)"
+                [label]="
+                  esFlujoImportacion && getId() === 'new'
+                    ? 'Guardar borrador y previsualizar'
+                    : 'Guardar cambios'
+                "
+              ></app-async-button>
+            }
           </div>
         }
         @if (expectedRole == "ALUMNO" && getId() !== "new") {

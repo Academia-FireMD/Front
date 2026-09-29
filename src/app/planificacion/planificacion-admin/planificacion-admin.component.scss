@@ -435,8 +435,8 @@ p-iconField {
 
 .carga-directa__variantes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
   margin-block: 1rem;
 }
 
@@ -462,6 +462,13 @@ p-iconField {
 }
 .carga-directa__semanas span {
   display: block;
+}
+.carga-directa__detalle summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--primary-color);
 }
 .carga-directa__independientes {
   max-height: 12rem;
@@ -498,4 +505,22 @@ p-iconField {
     width: 100%;
     justify-content: center;
   }
+}
+.configuracion-avanzada-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.configuracion-avanzada-cabecera h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.3rem;
+}
+
+.configuracion-avanzada-cabecera p {
+  margin: 0;
+  color: var(--text-color-secondary);
 }

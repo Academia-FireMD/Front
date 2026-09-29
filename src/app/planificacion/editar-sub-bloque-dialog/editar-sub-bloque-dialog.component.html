@@ -25,6 +25,7 @@
           [(ngModel)]="fila.codigo"
           (ngModelChange)="catalogoChanged.emit()"
           [readonly]="!catalogoNuevo"
+          [disabled]="catalogoGuardando"
           maxlength="24"
         />
         @if (!catalogoNuevo) {
@@ -39,11 +40,13 @@
           pInputText
           [(ngModel)]="fila.nombreCorto"
           (ngModelChange)="catalogoChanged.emit()"
+          [readonly]="catalogoGuardando"
           maxlength="160"
         />
         <label>Explicación · Markdown</label>
         <app-sub-bloque-markdown-field
           [value]="fila.nombreDescriptivo"
+          [readOnly]="catalogoGuardando"
           (valueChange)="
             fila.nombreDescriptivo = $event; catalogoChanged.emit()
           "
@@ -51,6 +54,7 @@
         <label>Puntos importantes · Markdown</label>
         <app-sub-bloque-markdown-field
           [value]="fila.puntosImportantes"
+          [readOnly]="catalogoGuardando"
           (valueChange)="
             fila.puntosImportantes = $event; catalogoChanged.emit()
           "
@@ -62,14 +66,14 @@
             pInputText
             [(ngModel)]="fila.color"
             (ngModelChange)="catalogoChanged.emit()"
+            [readonly]="catalogoGuardando"
             maxlength="7"
           />
           <span [style.backgroundColor]="fila.color" aria-hidden="true"></span>
         </div>
         <p class="catalogo-editor-warning">
-          Este cambio afecta solo a esta ficha. Los Bloques y calendarios que ya
-          copiaron su contenido no cambiarán. Antes de confirmarlo verás las
-          diferencias para evitar guardar sobre una edición más reciente.
+          Los cambios se usarán en actividades futuras; las ya creadas en
+          Bloques y calendarios no cambian.
         </p>
         <ng-content></ng-content>
       </div>
@@ -81,18 +85,11 @@
         (click)="cancelarEdicion()"
       ></p-button>
       <p-button
-        label="Revisar y guardar"
-        [outlined]="true"
-        [loading]="catalogoCargando"
-        (click)="revisarCatalogo.emit()"
+        label="Guardar"
+        [loading]="catalogoGuardando"
+        [disabled]="catalogoGuardando"
+        (click)="aplicarCatalogo.emit()"
       ></p-button>
-      @if (catalogoPuedeAplicar) {
-        <p-button
-          label="Confirmar guardado"
-          [loading]="catalogoGuardando"
-          (click)="aplicarCatalogo.emit()"
-        ></p-button>
-      }
     </p-footer>
   } @else {
     <form [formGroup]="formGroup">

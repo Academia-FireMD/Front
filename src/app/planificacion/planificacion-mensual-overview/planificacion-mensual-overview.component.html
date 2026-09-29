@@ -40,11 +40,13 @@
       <p-button
         *ngIf="expectedRole == 'ADMIN'"
         label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Crear manual'
+          viewportService.screenWidth == 'xs'
+            ? undefined
+            : 'Crear plan personal'
         }}"
-        ariaLabel="Crear manual"
+        ariaLabel="Crear plan personal"
         icon="pi pi-plus"
-        pTooltip="Crear planificación personal"
+        pTooltip="Crear plan personal para un alumno"
         (click)="navigateToDetailview('new')"
       ></p-button>
       <p-button
@@ -60,12 +62,18 @@
       ></p-button>
       <p-button
         *ngIf="expectedRole == 'ADMIN'"
-        icon="pi pi-cog"
+        icon="pi pi-ellipsis-v"
         [text]="true"
-        pTooltip="Configurar perfiles automáticos"
-        ariaLabel="Configurar perfiles automáticos"
-        (click)="abrirPerfiles()"
+        pTooltip="Más opciones"
+        ariaLabel="Más opciones de planificación"
+        (onClick)="opcionesPlanes.toggle($event)"
       ></p-button>
+      <p-menu
+        #opcionesPlanes
+        [popup]="true"
+        [model]="opcionesAvanzadas"
+        appendTo="body"
+      />
     </div>
   </div>
 
@@ -103,7 +111,7 @@
         <div class="flex flex-wrap gap-1 align-items-center monthly-row__chips">
           <p-chip
             *ngIf="expectedRole === 'ADMIN'"
-            [label]="esAutomatica(item) ? 'Automática' : 'Manual'"
+            [label]="esAutomatica(item) ? 'Automática' : 'Personal'"
             [pTooltip]="
               esAutomatica(item)
                 ? 'Se publica por perfil'
