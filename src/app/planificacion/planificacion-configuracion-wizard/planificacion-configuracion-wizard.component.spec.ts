@@ -168,7 +168,12 @@ describe('PlanificacionConfiguracionWizardComponent', () => {
 
   it('muestra la explicación del plan común antes de elegirlo', () => {
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(texto).toContain('contenidos compartidos por Valencia y Alicante');
+    expect(texto).toContain(
+      'contenidos comunes de las diferentes oposiciones a los servicios de bomberos de la Comunidad Valenciana',
+    );
+    expect(texto).toContain(
+      'Podrás cambiar este plan por el específico cuando lo desees.',
+    );
   });
 
   it('Madrid no muestra la modalidad común si el backend no la autoriza', () => {

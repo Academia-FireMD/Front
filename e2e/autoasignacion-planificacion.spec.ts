@@ -283,6 +283,12 @@ test('la elección específico/común se adapta a escritorio y móvil sin desbor
   });
   await expect(especifico).toBeVisible();
   await expect(comun).toBeVisible();
+  await expect(comun).toContainText(
+    'Trabaja los contenidos comunes de las diferentes oposiciones a los servicios de bomberos de la Comunidad Valenciana.',
+  );
+  await expect(comun).toContainText(
+    'Podrás cambiar este plan por el específico cuando lo desees.',
+  );
   const desktopEspecifico = await especifico.boundingBox();
   const desktopComun = await comun.boundingBox();
   expect(desktopEspecifico).not.toBeNull();
