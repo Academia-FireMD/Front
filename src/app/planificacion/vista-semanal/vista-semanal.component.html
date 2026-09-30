@@ -252,10 +252,10 @@
         "
         (click)="
           $event.stopPropagation();
-          role == 'ALUMNO' &&
-          esEventoFisicaVinculado(weekEvent.event) &&
-          tieneFisica(weekEvent.event.start)
-            ? abrirFisica(weekEvent.event.start, $event)
+          role == 'ALUMNO' && esEventoFisicaVinculado(weekEvent.event)
+            ? tieneFisica(weekEvent.event.start)
+              ? abrirFisica(weekEvent.event.start, $event)
+              : false
             : role == 'ALUMNO' || mode == 'edit'
               ? onEventClicked(weekEvent.event)
               : false
@@ -304,7 +304,10 @@
                 <!-- Sub-bloque vinculado a física (rediseño bridge 2026-07-22):
                      indicador limpio — icono de enlace externo a la derecha. -->
                 <i
-                  *ngIf="esEventoFisicaVinculado(weekEvent?.event)"
+                  *ngIf="
+                    esEventoFisicaVinculado(weekEvent?.event) &&
+                    tieneFisica(weekEvent?.event?.start)
+                  "
                   class="pi pi-external-link text-primary fisica-vinculada-link"
                   pTooltip="Entrenamiento físico vinculado — click para ir al detalle"
                   data-testid="fisica-vinculada-icono"
@@ -337,17 +340,12 @@
                   "
                 ></i>
 
-                <!-- Checkbox unificado para ambos tipos de eventos. En un
-                     sub-bloque vinculado a física CON entrenamiento ese día se
-                     oculta: el "hecho" se deriva de las disciplinas (una sola
-                     fuente de verdad), no se marca a mano. -->
+                <!-- Un marcador físico pendiente no se marca como estudio:
+                     solo la disciplina física real puede completarlo. -->
                 <p-checkbox
                   *ngIf="
                     role == 'ALUMNO' &&
-                    !(
-                      esEventoFisicaVinculado(weekEvent?.event) &&
-                      tieneFisica(weekEvent?.event?.start)
-                    )
+                    !esEventoFisicaVinculado(weekEvent?.event)
                   "
                   [ngModel]="weekEvent?.event?.meta?.subBloque?.realizado"
                   binary="true"
@@ -375,6 +373,18 @@
                   {{ progresoFisicaDia(weekEvent?.event?.start).hechas }}/{{
                     progresoFisicaDia(weekEvent?.event?.start).total
                   }}
+                </span>
+                <span
+                  *ngIf="
+                    role == 'ALUMNO' &&
+                    esEventoFisicaVinculado(weekEvent?.event) &&
+                    !tieneFisica(weekEvent?.event?.start)
+                  "
+                  class="fisica-vinculada-estado"
+                  aria-label="Entrenamiento físico pendiente de preparar"
+                  data-testid="fisica-pendiente-estado"
+                >
+                  Pendiente de entrenamiento
                 </span>
               </div>
             </div>

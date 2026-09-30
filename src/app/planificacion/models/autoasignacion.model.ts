@@ -301,6 +301,7 @@ export interface VarianteCargaSemanas {
 }
 
 export interface PreviewCargaSemanas {
+  cargaId?: number;
   puedeAplicar: boolean;
   requiereEleccion?: boolean;
   requiereConfirmacion?: boolean;
@@ -309,4 +310,19 @@ export interface PreviewCargaSemanas {
   plantillasActualizadas?: string[];
   variantes: VarianteCargaSemanas[];
   mensaje?: string;
+}
+
+export interface CargaSemanasPendiente {
+  id: number;
+  fileName: string;
+  createdAt: string;
+  preview: PreviewCargaSemanas;
+  variantes: Array<{ codigo: string; planificacionMensualId: number | null }>;
+}
+
+export interface ResultadoPublicacionSemanas {
+  cargaId: number;
+  estado: 'PUBLICADA';
+  variantes: Array<{ codigo: string; planificacionId: number }>;
+  mensaje: string;
 }

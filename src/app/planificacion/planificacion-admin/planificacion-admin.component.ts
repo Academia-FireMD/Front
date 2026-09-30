@@ -44,8 +44,7 @@ import type { PlanificacionMensual } from '../../shared/models/planificacion.mod
 import {
   PreviewImportacionPlantillas,
   PreviewCargaSemanas,
-  DestinoCargaSemanas,
-  VarianteCargaSemanas,
+  CargaSemanasPendiente,
   ReglaOposicionAdmin,
   ResultadoImportacionPlantillas,
   SemanaImportacionPlantilla,
@@ -224,7 +223,8 @@ export class PlanificacionAdminComponent
   previewCarga = signal<PreviewCargaSemanas | null>(null);
   errorCarga = signal<string | null>(null);
   resultadoCarga = signal<PreviewCargaSemanas | null>(null);
-  destinosCarga = signal<Record<string, DestinoCargaSemanas>>({});
+  cargasPendientes = signal<CargaSemanasPendiente[]>([]);
+  publicandoCarga = signal<number | null>(null);
   idempotencyKeyCarga: string | null = null;
   previewImportacion = signal<PreviewImportacionPlantillas | null>(null);
   previsualizandoImportacion = signal(false);
@@ -318,6 +318,7 @@ export class PlanificacionAdminComponent
     });
     this.actualizarCodigoCanonico();
     this.cargarTodo();
+    void this.cargarCargasPendientes();
   }
 
   async cargarTodo(): Promise<void> {
@@ -434,6 +435,86 @@ export class PlanificacionAdminComponent
 
   abrirImportacionSemanas(): void {
     this.dialogoImportacionVisible.set(true);
+    void this.cargarCargasPendientes();
+  }
+
+  async cargarCargasPendientes(): Promise<void> {
+    try {
+      this.cargasPendientes.set(
+        await firstValueFrom(
+          this.autoasignacionService.listarCargasPendientes$(),
+        ),
+      );
+    } catch {
+      this.errorCarga.set('No se pudieron consultar los cambios pendientes.');
+    }
+  }
+
+  confirmarPublicacionCarga(id: number): void {
+    this.confirmationService.confirm({
+      header: 'Publicar semanas',
+      message:
+        'Los cambios de este Excel pasarán a las planificaciones actuales y los verán los alumnos. ¿Publicar ahora?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Publicar cambios',
+      rejectLabel: 'Volver',
+      accept: () => void this.publicarCarga(id),
+    });
+  }
+
+  async publicarCarga(id: number): Promise<void> {
+    if (this.publicandoCarga() !== null) return;
+    this.publicandoCarga.set(id);
+    try {
+      const resultado = await firstValueFrom(
+        this.autoasignacionService.publicarCargaSemanas$(id),
+      );
+      this.toast.success(resultado.mensaje);
+      this.resultadoCarga.set(null);
+      await Promise.all([this.cargarCargasPendientes(), this.cargarTodo()]);
+    } catch (error) {
+      this.errorCarga.set(
+        this.mensajeErrorImportacion(
+          error,
+          'No se pudieron publicar las semanas.',
+        ),
+      );
+    } finally {
+      this.publicandoCarga.set(null);
+    }
+  }
+
+  confirmarDescarteCarga(id: number): void {
+    this.confirmationService.confirm({
+      header: 'Descartar cambios pendientes',
+      message:
+        'Se descartará este Excel pendiente. Las planificaciones publicadas no cambiarán.',
+      acceptLabel: 'Descartar',
+      rejectLabel: 'Volver',
+      accept: () => void this.descartarCarga(id),
+    });
+  }
+
+  async descartarCarga(id: number): Promise<void> {
+    if (this.publicandoCarga() !== null) return;
+    this.publicandoCarga.set(id);
+    try {
+      await firstValueFrom(
+        this.autoasignacionService.descartarCargaSemanas$(id),
+      );
+      this.resultadoCarga.set(null);
+      this.toast.success('Cambios pendientes descartados.');
+      await this.cargarCargasPendientes();
+    } catch (error) {
+      this.errorCarga.set(
+        this.mensajeErrorImportacion(
+          error,
+          'No se pudieron descartar los cambios.',
+        ),
+      );
+    } finally {
+      this.publicandoCarga.set(null);
+    }
   }
 
   volverAPlanes(): void {
@@ -458,13 +539,20 @@ export class PlanificacionAdminComponent
         v.planificacionMensualId ?? v.planificacionMensual?.id ?? null,
       activa: v.activa,
     });
-    // La identidad de una variante se usa para resolver configuraciones e
-    // historial. Solo el estado y el mapping canónico son editables después
-    // de crearla.
+    // Una planificación publicada es la identidad estable del perfil. No se
+    // sustituye por otra copia al importar nuevas semanas.
     this.varianteForm.controls.codigo.disable({ emitEvent: false });
     this.varianteForm.controls.oposicion.disable({ emitEvent: false });
     this.varianteForm.controls.nivel.disable({ emitEvent: false });
     this.varianteForm.controls.franja.disable({ emitEvent: false });
+    if (this.tienePlanPublicado(v))
+      this.varianteForm.controls.planificacionMensualId.disable({
+        emitEvent: false,
+      });
+    else
+      this.varianteForm.controls.planificacionMensualId.enable({
+        emitEvent: false,
+      });
     this.dialogoVarianteVisible.set(true);
   }
 
@@ -503,6 +591,9 @@ export class PlanificacionAdminComponent
     this.varianteForm.controls.oposicion.enable({ emitEvent: false });
     this.varianteForm.controls.nivel.enable({ emitEvent: false });
     this.varianteForm.controls.franja.enable({ emitEvent: false });
+    this.varianteForm.controls.planificacionMensualId.enable({
+      emitEvent: false,
+    });
     this.varianteForm.reset({
       id: null,
       codigo: '',
@@ -721,7 +812,6 @@ export class PlanificacionAdminComponent
     this.previewCarga.set(null);
     this.errorCarga.set(null);
     this.resultadoCarga.set(null);
-    this.destinosCarga.set({});
     this.idempotencyKeyCarga = null;
     this.confirmarSobrescritura.set(false);
     this.resultadoImportacion.set(null);
@@ -741,39 +831,6 @@ export class PlanificacionAdminComponent
     this.archivoImportacion.set(file);
   }
 
-  opcionesDestinoCarga(
-    variante: VarianteCargaSemanas,
-  ): Array<{ label: string; value: string }> {
-    return (variante.candidatos ?? []).map((c) => ({
-      label: `${c.identificador} · ${c.actividades ?? 0} actividades${c.actualizadoEn ? ' · ' + new Intl.DateTimeFormat('es-ES', { dateStyle: 'short' }).format(new Date(c.actualizadoEn)) : ''}`,
-      value: `EXISTENTE:${c.id}`,
-    }));
-  }
-
-  valorDestinoCarga(variante: VarianteCargaSemanas): string | null {
-    const destino = this.destinosCarga()[variante.codigo] ?? variante.destino;
-    if (!destino) return null;
-    return destino.tipo === 'EXISTENTE'
-      ? `EXISTENTE:${destino.planificacionId}`
-      : destino.tipo;
-  }
-
-  cambiarDestinoCarga(variante: VarianteCargaSemanas, valor: string): void {
-    if (!valor.startsWith('EXISTENTE:')) return;
-    const destino: DestinoCargaSemanas = {
-      tipo: 'EXISTENTE',
-      planificacionId: Number(valor.slice(10)),
-    };
-    this.destinosCarga.update((actual) => ({
-      ...actual,
-      [variante.codigo]: destino,
-    }));
-    this.previewCarga.update((previo) =>
-      previo ? { ...previo, puedeAplicar: false, previewHash: null } : null,
-    );
-    this.idempotencyKeyCarga = null;
-  }
-
   async previsualizarCargaSemanas(): Promise<void> {
     const file = this.archivoImportacion();
     if (!file) return;
@@ -784,11 +841,7 @@ export class PlanificacionAdminComponent
     this.confirmarSobrescritura.set(false);
     try {
       const preview = await firstValueFrom(
-        this.autoasignacionService.previewCargaSemanas$(
-          file,
-          this.destinosCarga(),
-          'CONTINUAR',
-        ),
+        this.autoasignacionService.previewCargaSemanas$(file),
       );
       this.previewCarga.set(preview);
       this.idempotencyKeyCarga = preview.puedeAplicar
@@ -836,18 +889,17 @@ export class PlanificacionAdminComponent
       const resultado = await firstValueFrom(
         this.autoasignacionService.applyCargaSemanas$(
           file,
-          this.destinosCarga(),
           preview.previewHash,
           this.confirmarSobrescritura(),
           this.idempotencyKeyCarga,
-          'CONTINUAR',
         ),
       );
       this.resultadoCarga.set(resultado);
       this.previewCarga.set(null);
-      this.toast.success('Semanas guardadas en borrador; no se han publicado.');
-      if (resultado.variantes.length === 1)
-        this.abrirCalendarioCarga(resultado.variantes[0]);
+      this.toast.success(
+        'Semanas preparadas. Los alumnos no ven cambios hasta que las publiques.',
+      );
+      await this.cargarCargasPendientes();
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 409) {
         this.previewCarga.set(null);
@@ -859,14 +911,6 @@ export class PlanificacionAdminComponent
     } finally {
       this.aplicandoImportacion.set(false);
     }
-  }
-
-  abrirCalendarioCarga(variante: VarianteCargaSemanas): void {
-    if (!variante.planificacionId) return;
-    void this.router.navigate(
-      ['/app/planificacion/planificacion-mensual', variante.planificacionId],
-      { queryParams: { fechaFoco: variante.primeraSemana } },
-    );
   }
 
   async previsualizarImportacion(): Promise<void> {

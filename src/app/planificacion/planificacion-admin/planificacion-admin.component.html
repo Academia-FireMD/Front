@@ -232,6 +232,7 @@
       <p-dropdown
         [options]="planificacionOptions"
         formControlName="planificacionMensualId"
+        [disabled]="varianteForm.controls.planificacionMensualId.disabled"
         optionLabel="label"
         optionValue="value"
         inputId="variante-release"
@@ -239,6 +240,12 @@
         placeholder="Sin planificación asignada"
         styleClass="w-full"
       ></p-dropdown>
+      @if (varianteForm.controls.planificacionMensualId.disabled) {
+        <small class="text-500"
+          >Este plan permanece vinculado al perfil. Importa semanas para
+          actualizarlo sin crear otra copia.</small
+        >
+      }
       @if (esPlanSeleccionadoBorrador) {
         <p-message
           severity="info"
@@ -295,21 +302,57 @@
   styleClass="asistente-semanas"
   appendTo="body"
 >
-  <section
-    class="import-panel carga-directa"
-    aria-label="Cargar semanas en borrador"
-  >
+  <section class="import-panel carga-directa" aria-label="Importar semanas">
     <div class="import-panel__header">
       <div>
         <h3>Selecciona y revisa el Excel</h3>
         <p>
-          Revisa los cambios por oposición y semana antes de guardarlos.
-          <strong>Solo se guardan en borrador:</strong> los alumnos no verán
-          nada hasta publicar y asignar. Las semanas vacías o ausentes no
-          modifican el calendario.
+          Revisa las semanas del archivo y guárdalas como cambios pendientes.
+          Después podrás publicarlas sobre las planificaciones actuales. Las
+          semanas vacías o ausentes no modifican el calendario.
         </p>
       </div>
     </div>
+    @if (cargasPendientes().length) {
+      <section
+        class="carga-directa__resultado"
+        aria-label="Cambios pendientes"
+        aria-live="polite"
+      >
+        <h4>Cambios pendientes de publicación</h4>
+        @for (carga of cargasPendientes(); track carga.id) {
+          <article class="carga-directa__variante">
+            <strong>{{ carga.fileName }}</strong>
+            <p>
+              {{ carga.variantes.length }}
+              {{ carga.variantes.length === 1 ? "perfil" : "perfiles" }} ·
+              {{ carga.preview.variantes.length }}
+              {{
+                carga.preview.variantes.length === 1
+                  ? "planificación"
+                  : "planificaciones"
+              }}
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <p-button
+                label="Publicar cambios"
+                icon="pi pi-check"
+                [loading]="publicandoCarga() === carga.id"
+                [disabled]="publicandoCarga() !== null"
+                (onClick)="confirmarPublicacionCarga(carga.id)"
+              />
+              <p-button
+                label="Descartar"
+                icon="pi pi-times"
+                [outlined]="true"
+                [disabled]="publicandoCarga() !== null"
+                (onClick)="confirmarDescarteCarga(carga.id)"
+              />
+            </div>
+          </article>
+        }
+      </section>
+    }
     <div class="import-actions">
       <app-excel-file-picker
         [file]="archivoImportacion()"
@@ -365,16 +408,9 @@
     @if (previewCarga(); as preview) {
       <p-message
         severity="info"
-        text="Previsualización: todavía no se ha guardado nada. Revisa las semanas y el destino antes de confirmar."
+        text="Previsualización: todavía no se ha guardado nada. Estas semanas se añadirán al plan actual de cada perfil, sin crear copias ni tocar las semanas ausentes."
         styleClass="w-full"
       />
-      @if (preview.requiereEleccion) {
-        <p-message
-          severity="warn"
-          text="Hay varios borradores anteriores para un perfil. Elige cuál conservar como borrador de trabajo; los demás quedarán en el historial. Después revisa el Excel de nuevo."
-          styleClass="w-full"
-        />
-      }
       <div class="carga-directa__variantes" aria-live="polite">
         @for (variante of preview.variantes; track variante.codigo) {
           <article class="carga-directa__variante">
@@ -384,7 +420,7 @@
               {{ getFranjaPlanificacionLabel(variante.franja) }}
             </h4>
             <p class="text-color-secondary">
-              Versión publicada vigente:
+              Planificación actual:
               {{
                 variante.publicada
                   ? variante.publicada.identificador +
@@ -394,23 +430,6 @@
                   : "ninguna"
               }}
             </p>
-            @if (
-              preview.requiereEleccion && (variante.candidatos?.length ?? 0) > 1
-            ) {
-              <label [for]="'destino-' + variante.codigo"
-                >¿Qué borrador conservamos?</label
-              >
-              <p-dropdown
-                [inputId]="'destino-' + variante.codigo"
-                [options]="opcionesDestinoCarga(variante)"
-                optionLabel="label"
-                optionValue="value"
-                [ngModel]="valorDestinoCarga(variante)"
-                (onChange)="cambiarDestinoCarga(variante, $event.value)"
-                placeholder="Selecciona el borrador vigente"
-                styleClass="w-full"
-              />
-            }
             @if (variante.semanas?.length) {
               <details class="carga-directa__detalle">
                 <summary>
@@ -455,7 +474,7 @@
       </div>
       @if (preview.requiereConfirmacion) {
         <div class="overwrite-warning carga-directa__confirmacion">
-          <strong>Revisa estos cambios antes de guardar.</strong>
+          <strong>Revisa estos cambios antes de prepararlos.</strong>
           @if (preview.plantillasActualizadas?.length) {
             <p>
               Plantillas existentes que cambiarán:
@@ -494,7 +513,7 @@
       }
       <div class="import-apply">
         <p-button
-          label="Guardar semanas en borrador"
+          label="Guardar cambios pendientes"
           icon="pi pi-save"
           [loading]="aplicandoImportacion()"
           [disabled]="
@@ -505,20 +524,25 @@
           (onClick)="guardarCargaSemanas()"
         />
         <small
-          >Publicar y asignar es una acción posterior. Esta carga no cambia el
-          calendario del alumno.</small
+          >Guardar no cambia el calendario del alumno. El botón «Publicar
+          cambios» de arriba es el paso que lo actualiza.</small
         >
       </div>
     }
     @if (resultadoCarga(); as resultado) {
       <div class="carga-directa__resultado" aria-live="polite">
-        <h4>Semanas guardadas en borrador</h4>
-        @for (variante of resultado.variantes; track variante.codigo) {
+        <h4>Excel preparado</h4>
+        <p>
+          Los alumnos aún no ven estos cambios. Publícalos cuando hayas
+          terminado de revisarlos.
+        </p>
+        @if (resultado.cargaId) {
           <p-button
-            [label]="'Abrir calendario · ' + labelOposicion(variante.oposicion)"
-            icon="pi pi-calendar"
-            [outlined]="true"
-            (onClick)="abrirCalendarioCarga(variante)"
+            label="Publicar cambios ahora"
+            icon="pi pi-check"
+            [loading]="publicandoCarga() === resultado.cargaId"
+            [disabled]="publicandoCarga() !== null"
+            (onClick)="confirmarPublicacionCarga(resultado.cargaId)"
           />
         }
       </div>

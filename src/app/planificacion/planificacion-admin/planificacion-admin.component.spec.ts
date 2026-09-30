@@ -80,6 +80,9 @@ describe('PlanificacionAdminComponent', () => {
       ),
       previewCargaSemanas$: jest.fn(),
       applyCargaSemanas$: jest.fn(),
+      listarCargasPendientes$: jest.fn(() => of([])),
+      publicarCargaSemanas$: jest.fn(),
+      descartarCargaSemanas$: jest.fn(),
     };
     confirmation = new ConfirmationService();
     router = { navigate: jest.fn() };
@@ -740,15 +743,13 @@ describe('PlanificacionAdminComponent', () => {
     await component.guardarCargaSemanas();
     expect(service.applyCargaSemanas$).toHaveBeenCalledWith(
       file,
-      {},
       'a'.repeat(64),
       true,
       expect.any(String),
-      'CONTINUAR',
     );
   });
 
-  it('previsualiza el Excel completo y abre el borrador tras una única confirmación', async () => {
+  it('prepara el Excel sin navegar ni cambiar el calendario antes de publicar', async () => {
     const file = new File(['xlsx'], 'plan.xlsx');
     const variante = {
       codigo: 'PCMI4-6H',
@@ -798,31 +799,93 @@ describe('PlanificacionAdminComponent', () => {
       'Previsualización: todavía no se ha guardado nada',
     );
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Guardar semanas en borrador',
+      'Guardar cambios pendientes',
     );
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Semana 40',
     );
     await component.guardarCargaSemanas();
     expect(service.applyCargaSemanas$).toHaveBeenCalledTimes(1);
-    expect(router.navigate).toHaveBeenCalledWith(
-      ['/app/planificacion/planificacion-mensual', 17],
-      { queryParams: { fechaFoco: '2026-10-05' } },
-    );
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('resuelve el destino normal sin preguntar al administrador', async () => {
+  it('muestra una carga pendiente y exige confirmación antes de publicarla', async () => {
+    component.abrirImportacionSemanas();
+    component.cargasPendientes.set([
+      {
+        id: 3,
+        fileName: 'semanas-parciales.xlsx',
+        createdAt: '2026-09-30T12:00:00Z',
+        preview: {
+          puedeAplicar: true,
+          previewHash: 'a'.repeat(64),
+          variantes: [{ codigo: 'GI6-8' }],
+        },
+        variantes: [{ codigo: 'GI6-8', planificacionMensualId: 207 }],
+      } as any,
+    ]);
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(
+      of({
+        cargaId: 3,
+        estado: 'PUBLICADA',
+        variantes: [{ codigo: 'GI6-8', planificacionId: 207 }],
+        mensaje: 'Publicada',
+      }),
+    );
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'semanas-parciales.xlsx',
+    );
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Publicar cambios',
+    );
+    component.confirmarPublicacionCarga(3);
+    expect(service.publicarCargaSemanas$).not.toHaveBeenCalled();
+    const confirmacion = (confirmation.confirm as jest.Mock).mock.calls.at(
+      -1,
+    )?.[0];
+    confirmacion.accept();
+    await Promise.resolve();
+    expect(service.publicarCargaSemanas$).toHaveBeenCalledWith(3);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('mantiene visible el pendiente si la publicación responde 409', async () => {
+    component.cargasPendientes.set([
+      {
+        id: 5,
+        fileName: 'parcial.xlsx',
+        createdAt: '',
+        preview: {
+          puedeAplicar: true,
+          previewHash: 'a'.repeat(64),
+          variantes: [],
+        },
+        variantes: [],
+      },
+    ]);
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { message: 'El plan cambió; previsualiza de nuevo.' },
+          }),
+      ),
+    );
+    await component.publicarCarga(5);
+    expect(component.cargasPendientes()).toHaveLength(1);
+    expect(component.errorCarga()).toContain('El plan cambió');
+  });
+
+  it('previsualiza sin pedir destinos al administrador', async () => {
     const file = new File(['xlsx'], 'sergio.xlsx');
     component.archivoImportacion.set(file);
     (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(
       of({ puedeAplicar: true, previewHash: 'a'.repeat(64), variantes: [] }),
     );
     await component.previsualizarCargaSemanas();
-    expect(service.previewCargaSemanas$).toHaveBeenCalledWith(
-      file,
-      {},
-      'CONTINUAR',
-    );
+    expect(service.previewCargaSemanas$).toHaveBeenCalledWith(file);
   });
 
   it('explica el Excel sin semanas con contenido junto a la previsualización', () => {

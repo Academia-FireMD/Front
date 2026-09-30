@@ -52,12 +52,14 @@
       <p-button
         *ngIf="expectedRole == 'ADMIN'"
         label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Importar semanas'
+          viewportService.screenWidth == 'xs'
+            ? undefined
+            : 'Semanas: importar o publicar'
         }}"
-        ariaLabel="Importar semanas"
+        ariaLabel="Importar o publicar semanas"
         icon="pi pi-upload"
         [outlined]="true"
-        pTooltip="Importar las semanas del Excel a borradores automáticos"
+        pTooltip="Revisar, preparar o publicar semanas de planes automáticos"
         (click)="abrirImportacion()"
       ></p-button>
       <p-button

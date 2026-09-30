@@ -480,8 +480,8 @@ export class VistaSemanalComponent {
   /**
    * Progreso de física del día {hechas, total} según las disciplinas del
    * resumen (realizado por disciplina). `total = 0` cuando el día no tiene
-   * entrenamiento en el módulo de física — el bloque vinculado se comporta
-   * entonces como un sub-bloque normal (fallback).
+   * entrenamiento en el módulo de física — el marcador queda pendiente,
+   * sin permitir marcarlo como estudio completado.
    */
   progresoFisicaDia(dia: Date): { hechas: number; total: number } {
     const disciplinas = this.disciplinasFisica(dia);

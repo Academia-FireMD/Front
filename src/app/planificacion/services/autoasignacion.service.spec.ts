@@ -328,19 +328,17 @@ describe('AutoasignacionService', () => {
     req.flush({});
   });
 
-  it('envía Excel, destinos, hash e idempotencia al endpoint de carga conjunta', () => {
+  it('prepara Excel, hash e idempotencia sin elegir copias ni destinos', () => {
     const file = new File(['excel'], 'semanas.xlsx');
-    const destinos = { PGCVI68H: { tipo: 'COPIAR' as const } };
-    service.previewCargaSemanas$(file, destinos).subscribe();
+    service.previewCargaSemanas$(file).subscribe();
     let req = httpMock.expectOne(
-      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/preview`,
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/pendiente/preview`,
     );
     expect(req.request.body.get('file')).toMatchObject({
       name: file.name,
       size: file.size,
     });
-    expect(JSON.parse(req.request.body.get('destinos'))).toEqual(destinos);
-    expect(req.request.body.get('modoCarga')).toBe('CONTINUAR');
+    expect(req.request.body.get('destinos')).toBeNull();
     req.flush({
       puedeAplicar: true,
       previewHash: 'a'.repeat(64),
@@ -348,16 +346,16 @@ describe('AutoasignacionService', () => {
     });
 
     service
-      .applyCargaSemanas$(file, destinos, 'a'.repeat(64), true, 'qa-retry-1')
+      .applyCargaSemanas$(file, 'a'.repeat(64), true, 'qa-retry-1')
       .subscribe();
     req = httpMock.expectOne(
-      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/apply`,
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/pendiente/preparar`,
     );
     expect(req.request.body.get('previewHash')).toBe('a'.repeat(64));
     expect(req.request.body.get('confirmarSustituciones')).toBe('true');
     expect(req.request.body.get('confirmarIndependientes')).toBe('true');
     expect(req.request.body.get('idempotencyKey')).toBe('qa-retry-1');
-    expect(req.request.body.get('modoCarga')).toBe('CONTINUAR');
+    expect(req.request.body.get('modoCarga')).toBeNull();
     req.flush({
       puedeAplicar: true,
       previewHash: 'a'.repeat(64),
@@ -365,32 +363,32 @@ describe('AutoasignacionService', () => {
     });
   });
 
-  it('envía el modo de crear planificaciones nuevas en preview y apply', () => {
-    const file = new File(['excel'], 'sergio.xlsx');
-    service.previewCargaSemanas$(file, {}, 'NUEVA').subscribe();
+  it('permite listar, publicar y descartar una carga pendiente', () => {
+    service.listarCargasPendientes$().subscribe();
     let req = httpMock.expectOne(
-      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/preview`,
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/pendiente`,
     );
-    expect(req.request.body.get('modoCarga')).toBe('NUEVA');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+
+    service.publicarCargaSemanas$(5).subscribe();
+    req = httpMock.expectOne(
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/pendiente/5/publicar`,
+    );
+    expect(req.request.method).toBe('POST');
     req.flush({
-      puedeAplicar: true,
-      previewHash: 'a'.repeat(64),
+      cargaId: 5,
+      estado: 'PUBLICADA',
       variantes: [],
+      mensaje: 'Publicada',
     });
 
-    service
-      .applyCargaSemanas$(file, {}, 'a'.repeat(64), false, 'qa-nueva', 'NUEVA')
-      .subscribe();
+    service.descartarCargaSemanas$(6).subscribe();
     req = httpMock.expectOne(
-      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/carga-borrador/apply`,
+      `${environment.apiUrl}/planificaciones/admin/importaciones/plantillas/pendiente/6/descartar`,
     );
-    expect(req.request.body.get('modoCarga')).toBe('NUEVA');
-    expect(req.request.body.get('confirmarIndependientes')).toBe('false');
-    req.flush({
-      puedeAplicar: true,
-      previewHash: 'a'.repeat(64),
-      variantes: [],
-    });
+    expect(req.request.method).toBe('POST');
+    req.flush({});
   });
 
   it('GET /admin/sin-coincidencia devuelve la lista', () => {

@@ -13,7 +13,8 @@ import type {
   GuardarConfiguracionDTO,
   PreviewImportacionPlantillas,
   PreviewCargaSemanas,
-  DestinoCargaSemanas,
+  CargaSemanasPendiente,
+  ResultadoPublicacionSemanas,
   RecomendacionNivel,
   ReglaOposicionAdmin,
   ReconciliacionPlanificaciones,
@@ -52,18 +53,12 @@ export class AutoasignacionService extends ApiBaseService {
     return this.get('/configuracion') as Observable<ConfiguracionPlanificacion>;
   }
 
-  public previewCargaSemanas$(
-    file: File,
-    destinos: Record<string, DestinoCargaSemanas>,
-    modoCarga: 'CONTINUAR' | 'NUEVA' = 'CONTINUAR',
-  ): Observable<PreviewCargaSemanas> {
+  public previewCargaSemanas$(file: File): Observable<PreviewCargaSemanas> {
     const body = new FormData();
     body.append('file', file, file.name);
-    body.append('destinos', JSON.stringify(destinos));
-    body.append('modoCarga', modoCarga);
     return this.http.post<PreviewCargaSemanas>(
       environment.apiUrl +
-        '/planificaciones/admin/importaciones/plantillas/carga-borrador/preview',
+        '/planificaciones/admin/importaciones/plantillas/pendiente/preview',
       body,
       { withCredentials: true },
     );
@@ -71,24 +66,48 @@ export class AutoasignacionService extends ApiBaseService {
 
   public applyCargaSemanas$(
     file: File,
-    destinos: Record<string, DestinoCargaSemanas>,
     previewHash: string,
     confirmarSustituciones: boolean,
     idempotencyKey: string,
-    modoCarga: 'CONTINUAR' | 'NUEVA' = 'CONTINUAR',
   ): Observable<PreviewCargaSemanas> {
     const body = new FormData();
     body.append('file', file, file.name);
-    body.append('destinos', JSON.stringify(destinos));
-    body.append('modoCarga', modoCarga);
     body.append('previewHash', previewHash);
     body.append('confirmarSustituciones', String(confirmarSustituciones));
     body.append('confirmarIndependientes', String(confirmarSustituciones));
     body.append('idempotencyKey', idempotencyKey);
     return this.http.post<PreviewCargaSemanas>(
       environment.apiUrl +
-        '/planificaciones/admin/importaciones/plantillas/carga-borrador/apply',
+        '/planificaciones/admin/importaciones/plantillas/pendiente/preparar',
       body,
+      { withCredentials: true },
+    );
+  }
+
+  public listarCargasPendientes$(): Observable<CargaSemanasPendiente[]> {
+    return this.http.get<CargaSemanasPendiente[]>(
+      environment.apiUrl +
+        '/planificaciones/admin/importaciones/plantillas/pendiente',
+      { withCredentials: true },
+    );
+  }
+
+  public publicarCargaSemanas$(
+    id: number,
+  ): Observable<ResultadoPublicacionSemanas> {
+    return this.http.post<ResultadoPublicacionSemanas>(
+      environment.apiUrl +
+        `/planificaciones/admin/importaciones/plantillas/pendiente/${id}/publicar`,
+      {},
+      { withCredentials: true },
+    );
+  }
+
+  public descartarCargaSemanas$(id: number): Observable<void> {
+    return this.http.post<void>(
+      environment.apiUrl +
+        `/planificaciones/admin/importaciones/plantillas/pendiente/${id}/descartar`,
+      {},
       { withCredentials: true },
     );
   }
