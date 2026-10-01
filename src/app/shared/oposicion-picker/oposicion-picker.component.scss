@@ -30,7 +30,10 @@
   background: var(--surface-100);
   border: 1px solid var(--surface-border);
   cursor: default;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
   width: 34px;
   height: 34px;
 
@@ -60,17 +63,49 @@
   border-radius: 4px;
 }
 
-// Árbol del dropdown en dos niveles bajo el comodín GENERAL:
-//   nivel 0 (raíz "Todas las oposiciones") · nivel 1 (comunidades: Madrid, CV) ·
-//   nivel 2 (provincias: Valencia, Alicante, indentadas bajo su comunidad).
-// La indentación + guías en árbol dejan clara la jerarquía.
+:host ::ng-deep .oposicion-field-dropdown.p-dropdown {
+  min-height: 44px;
+  width: 100%;
+}
+
+:host ::ng-deep .oposicion-field-dropdown .p-dropdown-label {
+  align-items: center;
+  display: flex;
+}
+
+// Jerarquía del catálogo: GENERAL, Madrid y Comunidad Valenciana son opciones
+// principales. Solo Valencia y Alicante se indentan bajo su agrupación.
 .oposicion-item {
   width: 100%;
   position: relative;
 
-  // Raíz: el comodín "Todas las oposiciones" se destaca como padre de todos.
+  &__copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    small {
+      color: var(--text-color-secondary);
+      font-weight: 400;
+      line-height: 1.25;
+      white-space: normal;
+    }
+  }
+
+  &--disabled {
+    opacity: 0.72;
+  }
+
+  // Las opciones principales comparten alineación; GENERAL no es su padre.
   &--raiz {
+    font-weight: 500;
+  }
+
+  &--wildcard {
+    border-bottom: 1px solid var(--surface-border);
     font-weight: 700;
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.65rem;
   }
 
   // Grupo-comunidad (Comunidad Valenciana) en negrita también.
@@ -78,7 +113,7 @@
     font-weight: 600;
   }
 
-  // Nivel 1 (comunidades) — indentado un escalón con guía.
+  // Miembros de Comunidad Valenciana, indentados un único escalón.
   &--n1 {
     padding-left: 1.35rem;
 
@@ -101,28 +136,46 @@
       background: var(--surface-400, #9ca3af);
     }
   }
+}
 
-  // Nivel 2 (provincias) — indentado dos escalones bajo su comunidad.
-  &--n2 {
-    padding-left: 2.6rem;
+.oposicion-field {
+  align-items: center;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  color: var(--text-color);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0.75rem;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  width: 100%;
 
-    &::before {
-      content: "";
-      position: absolute;
-      left: 1.75rem;
-      top: 50%;
-      width: 0.55rem;
-      height: 1px;
-      background: var(--surface-400, #9ca3af);
-    }
-    &::after {
-      content: "";
-      position: absolute;
-      left: 1.75rem;
-      top: -0.5rem;
-      bottom: 50%;
-      width: 1px;
-      background: var(--surface-400, #9ca3af);
-    }
+  &:focus-visible {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-100);
+    outline: none;
   }
+
+  &:disabled {
+    background: var(--surface-100);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  &--invalid {
+    border-color: var(--red-500);
+  }
+
+  &--placeholder {
+    color: var(--text-color-secondary);
+  }
+}
+
+:host ::ng-deep .oposicion-picker-overlay {
+  max-width: calc(100vw - 1rem);
 }

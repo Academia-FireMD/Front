@@ -23,7 +23,7 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
-import { oposiciones, paises, provinciasEspanolas } from '../../utils/consts';
+import { paises, provinciasEspanolas } from '../../utils/consts';
 import {
   duracionesDisponibles,
   nivelesDisponibles,
@@ -31,6 +31,10 @@ import {
 } from '../models/pregunta.model';
 import { Oposicion } from '../models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../models/user.model';
+import {
+  PlanificacionPreferenciasComponent,
+  PreferenciasPlanificacion,
+} from '../planificacion-preferencias/planificacion-preferencias.component';
 
 export interface OnboardingData {
   // Datos personales
@@ -108,6 +112,7 @@ export interface OnboardingData {
     InputTextareaModule,
     ChipsModule,
     BadgeModule,
+    PlanificacionPreferenciasComponent,
   ],
   templateUrl: './onboarding-form.component.html',
   styleUrls: ['./onboarding-form.component.scss'],
@@ -131,28 +136,51 @@ export class OnboardingFormComponent implements OnInit, OnChanges {
 
   duraciones = duracionesDisponibles;
 
-  oposicionesDisponibles = [
-    {
-      label: oposiciones[Oposicion.VALENCIA_AYUNTAMIENTO].name,
-      value: Oposicion.VALENCIA_AYUNTAMIENTO,
-    },
-    {
-      label: oposiciones[Oposicion.ALICANTE_CPBA].name,
-      value: Oposicion.ALICANTE_CPBA,
-    },
-    { label: oposiciones[Oposicion.MADRID].name, value: Oposicion.MADRID },
-  ];
-
   niveles = nivelesDisponibles;
 
   ngOnInit() {
     this.initializeForm();
+    this.actualizarValoresInicialesPreferencias();
   }
 
   ngOnChanges() {
     if (this.initialData) {
       this.initializeForm();
+      this.actualizarValoresInicialesPreferencias();
     }
+  }
+
+  /** Valores iniciales para el subcomponente compartido de preferencias.
+   * Campo estable (no getter): un getter devuelve un objeto nuevo en cada
+   * ciclo de CD y re-dispara ngOnChanges del subcomponente en bucle. */
+  valoresInicialesPreferencias: PreferenciasPlanificacion = {
+    oposicion: [],
+    nivel: null,
+    franja: null,
+  };
+
+  private actualizarValoresInicialesPreferencias(): void {
+    this.valoresInicialesPreferencias = {
+      oposicion: this.initialData?.tipoOposicion ?? [],
+      nivel: this.initialData?.nivelOposicion ?? null,
+      franja: this.initialData?.tipoDePlanificacionDuracionDeseada ?? null,
+    };
+  }
+
+  /** Sincroniza los cambios del subcomponente con el formGroup del onboarding
+   * (payload intacto: `tipoOposicion`, `nivelOposicion`,
+   * `tipoDePlanificacionDuracionDeseada`). */
+  onPreferenciasChange(prefs: PreferenciasPlanificacion): void {
+    this.formGroup?.patchValue({
+      tipoOposicion: Array.isArray(prefs.oposicion)
+        ? prefs.oposicion
+        : prefs.oposicion
+          ? [prefs.oposicion]
+          : [],
+      nivelOposicion: (prefs.nivel as NivelOposicion) ?? null,
+      tipoDePlanificacionDuracionDeseada:
+        (prefs.franja as TipoDePlanificacionDeseada) ?? null,
+    });
   }
 
   private initializeForm() {

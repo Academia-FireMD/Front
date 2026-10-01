@@ -323,6 +323,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         [SuscripcionTipo.BASIC]: 'Básica',
         [SuscripcionTipo.ADVANCED]: 'Avanzada',
         [SuscripcionTipo.PREMIUM]: 'Premium',
+        [SuscripcionTipo.NORMAL]: 'Normal (anterior)',
+        [SuscripcionTipo.PRO]: 'Pro (anterior)',
       }[suscripcion.tipo] || suscripcion.tipo;
 
     const oposicionLabel =
@@ -342,6 +344,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       [SuscripcionTipo.PREMIUM]: 3,
       [SuscripcionTipo.ADVANCED]: 2,
       [SuscripcionTipo.BASIC]: 1,
+      [SuscripcionTipo.PRO]: 0,
+      [SuscripcionTipo.NORMAL]: 0,
     };
 
     return activeSubs.reduce(

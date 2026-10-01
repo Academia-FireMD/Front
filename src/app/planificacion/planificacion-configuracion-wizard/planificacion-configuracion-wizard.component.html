@@ -1,0 +1,315 @@
+<p-stepper
+  [activeStep]="activeStep()"
+  (activeStepChange)="activeStep.set($event)"
+>
+  <!-- Paso 1: Preferencias -->
+  <p-stepperPanel header="Preferencias">
+    <ng-template pTemplate="content" let-nextCallback="nextCallback">
+      <h3 class="mt-0 mb-2">Tu planificación</h3>
+      <p class="text-600 mb-3">
+        Elige el plan que quieres seguir. Después indicaremos tus horas de
+        estudio.
+      </p>
+
+      <div
+        class="modalidad-grid"
+        role="group"
+        aria-label="Tipo de planificación"
+      >
+        <button
+          type="button"
+          class="modalidad-card"
+          [class.modalidad-card--selected]="modalidad === 'ESPECIFICA'"
+          [attr.aria-pressed]="modalidad === 'ESPECIFICA'"
+          [disabled]="!planEspecificoDisponible"
+          (click)="seleccionarModalidad('ESPECIFICA')"
+        >
+          <strong>Plan específico</strong>
+          <span>Adaptado al temario de la oposición que preparas.</span>
+          @if (!planEspecificoDisponible) {
+            <small>{{ motivoPlanEspecificoNoDisponible }}</small>
+          }
+        </button>
+        @if (hayPlanComun) {
+          <button
+            type="button"
+            class="modalidad-card"
+            [class.modalidad-card--selected]="modalidad === 'COMUN'"
+            [attr.aria-pressed]="modalidad === 'COMUN'"
+            [disabled]="!planComunDisponible"
+            (click)="seleccionarModalidad('COMUN')"
+          >
+            <strong>Plan común de Comunidad Valenciana</strong>
+            <span
+              >Trabaja los contenidos comunes de las diferentes oposiciones a
+              los servicios de bomberos de la Comunidad Valenciana. Podrás
+              cambiar este plan por el específico cuando lo desees.</span
+            >
+            @if (!planComunDisponible) {
+              <small>{{ motivoPlanComunNoDisponible }}</small>
+            }
+          </button>
+        }
+      </div>
+
+      @if (modalidad === "COMUN") {
+        <div class="planificacion-general-info mb-3" aria-live="polite">
+          <p class="m-0 line-height-3">
+            La planificación General Comunidad Valenciana está diseñada para
+            trabajar de forma global los contenidos comunes a las distintas
+            oposiciones de bombero de la Comunidad Valenciana. Si estás
+            preparando una oposición concreta, te recomendamos seleccionar su
+            planificación específica, ya que estará adaptada a su temario,
+            estructura y necesidades particulares. Puedes elegir la
+            planificación General Comunidad Valenciana si prefieres una
+            preparación más amplia o si todavía no quieres centrarte
+            exclusivamente en una convocatoria concreta. Recuerda cambiar la
+            selección cuando quieras preparar una convocatoria concreta.
+          </p>
+          <div class="flex align-items-start gap-2 mt-3">
+            <p-checkbox
+              [binary]="true"
+              [(ngModel)]="planComunConfirmado"
+              inputId="confirmarPlanComun"
+            />
+            <label for="confirmarPlanComun" class="line-height-3">
+              Quiero continuar con el plan común de Comunidad Valenciana.
+            </label>
+          </div>
+        </div>
+      }
+
+      @if (modalidad) {
+        <app-planificacion-preferencias
+          [valoresIniciales]="{
+            oposicion: preferencias.oposicion,
+            nivel: preferencias.nivel,
+            franja: preferencias.franja,
+          }"
+          [oposicionesPermitidas]="oposicionesPermitidas"
+          [opcionesOposicion]="
+            modalidad === 'COMUN' ? opcionesOposicion : opcionesEspecificas
+          "
+          [nivelesPermitidos]="nivelesPermitidos"
+          [franjasPermitidas]="franjasPermitidas"
+          [multiple]="false"
+          oposicionContext="planificacion"
+          [mostrarAyudaSuscripciones]="modalidad === 'ESPECIFICA'"
+          [mostrarOposicion]="modalidad === 'ESPECIFICA'"
+          [mostrarNivel]="false"
+          formIdPrefix="wizardPreferencias"
+          (cambios)="onPreferenciasChange($event)"
+        ></app-planificacion-preferencias>
+      }
+
+      <div class="wizard-actions wizard-actions--between fab-safe-area pt-4">
+        <p-button
+          label="Cancelar"
+          icon="pi pi-times"
+          styleClass="p-button-text"
+          (click)="cancelar()"
+        ></p-button>
+        <p-button
+          label="Continuar"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          [disabled]="!puedeContinuarPasoPreferencias"
+          (click)="irAPasoNivel(); nextCallback.emit()"
+        ></p-button>
+      </div>
+    </ng-template>
+  </p-stepperPanel>
+
+  <!-- Paso 2: Nivel -->
+  <p-stepperPanel header="Nivel">
+    <ng-template
+      pTemplate="content"
+      let-prevCallback="prevCallback"
+      let-nextCallback="nextCallback"
+    >
+      <h3 class="mt-0 mb-2">Nivel de estudio</h3>
+      @if (elegirCuestionario()) {
+        <app-cuestionario-nivel
+          (evaluacionAceptada)="aceptarEvaluacion($event)"
+          (cancelado)="cancelarCuestionario()"
+        />
+      } @else {
+        <div class="flex flex-column gap-3">
+          <div>
+            <label class="block mb-2 font-medium" for="wizardNivel"
+              >Nivel *</label
+            >
+            <p-dropdown
+              [options]="opcionesNivel"
+              [(ngModel)]="preferencias.nivel"
+              (ngModelChange)="seleccionarNivel($event)"
+              placeholder="Selecciona nivel"
+              class="w-full"
+              inputId="wizardNivel"
+              [style]="{ width: '100%' }"
+              optionLabel="label"
+              optionValue="value"
+            />
+            <p-button
+              type="button"
+              styleClass="wizard-test-button mt-3"
+              [outlined]="true"
+              icon="pi pi-check-square"
+              [label]="
+                tieneNivelPrecargado
+                  ? 'Repetir test de nivel'
+                  : 'Hacer test de nivel'
+              "
+              (onClick)="iniciarCuestionario()"
+            />
+            @if (avisoNivelTest) {
+              <div role="status" aria-live="polite" class="mt-3">
+                <p-message
+                  severity="warn"
+                  [text]="avisoNivelTest"
+                  styleClass="w-full"
+                />
+              </div>
+            }
+          </div>
+
+          <div class="wizard-actions wizard-actions--between fab-safe-area">
+            <p-button
+              label="Cancelar"
+              icon="pi pi-times"
+              styleClass="p-button-text"
+              (click)="cancelar()"
+            />
+            <div class="wizard-actions__navigation">
+              <p-button
+                label="Volver"
+                icon="pi pi-arrow-left"
+                styleClass="p-button-text"
+                (click)="prevCallback.emit()"
+              />
+              <p-button
+                label="Continuar"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                [disabled]="!puedeGuardarConfiguracion"
+                (click)="irAPasoConfirmacion(); nextCallback.emit()"
+              />
+            </div>
+          </div>
+        </div>
+      }
+    </ng-template>
+  </p-stepperPanel>
+
+  <!-- Paso 3: Confirmación -->
+  <p-stepperPanel header="Confirmar">
+    <ng-template pTemplate="content" let-prevCallback="prevCallback">
+      <h3 class="mt-0 mb-2">Confirma tu planificación</h3>
+
+      <div class="grid mb-3">
+        @if (configuracionAnterior; as anterior) {
+          <div class="col-12 md:col-6">
+            <div class="h-full p-3 border-1 border-round surface-100">
+              <h4 class="mt-0 mb-3">Configuración actual</h4>
+              <div class="flex justify-content-between gap-3 mb-2">
+                <span class="text-600">Plan de estudio</span>
+                <strong class="text-right">{{
+                  getPlanificacionOposicionLabel(anterior.oposicion)
+                }}</strong>
+              </div>
+              <div class="flex justify-content-between gap-3 mb-2">
+                <span class="text-600">Nivel</span>
+                <strong>{{ getNivelLabel(anterior.nivel) }}</strong>
+              </div>
+              <div class="flex justify-content-between gap-3">
+                <span class="text-600">Horas disponibles para el estudio</span>
+                <strong>{{ getFranjaLabel(anterior.franja) }}</strong>
+              </div>
+            </div>
+          </div>
+        }
+
+        <div [class]="configuracionAnterior ? 'col-12 md:col-6' : 'col-12'">
+          <div class="h-full p-3 border-1 border-round surface-100">
+            <h4 class="mt-0 mb-3">Nueva configuración</h4>
+            <div class="flex justify-content-between gap-3 mb-2">
+              <span class="text-600">Plan de estudio</span>
+              <strong class="text-right">{{
+                getPlanificacionOposicionLabel(preferencias.oposicion)
+              }}</strong>
+            </div>
+            <div class="flex justify-content-between gap-3 mb-2">
+              <span class="text-600">Nivel</span>
+              <strong>{{ getNivelLabel(preferencias.nivel) }}</strong>
+            </div>
+            <div class="flex justify-content-between gap-3">
+              <span class="text-600">Horas disponibles para el estudio</span>
+              <strong>{{ getFranjaLabel(preferencias.franja) }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      @if (requiereReemplazo) {
+        <div class="p-3 border-1 border-round surface-100 mb-3">
+          <p class="mt-0 mb-2 font-medium">
+            Ya tienes una planificación en curso.
+          </p>
+          <p class="text-600 mt-0">
+            Si confirmas, verás el plan elegido arriba. Tu progreso anterior se conserva.
+          </p>
+          <div class="flex align-items-start gap-2">
+            <p-checkbox
+              [binary]="true"
+              [(ngModel)]="confirmarReemplazo"
+              inputId="confirmarReemplazoPlan"
+            />
+            <label for="confirmarReemplazoPlan">
+              Sí, quiero sustituir mi planificación visible por esta.
+            </label>
+          </div>
+        </div>
+      } @else if (hayConfiguracionAnterior) {
+        <p-message
+          severity="info"
+          text="Tu historial y progreso se conservan; la nueva planificación se aplica desde hoy."
+          styleClass="w-full mb-3"
+        ></p-message>
+      }
+
+      @if (errorGuardado) {
+        <div role="alert" aria-live="assertive">
+          <p-message
+            severity="warn"
+            [text]="errorGuardado"
+            styleClass="w-full mb-3"
+          ></p-message>
+        </div>
+      }
+
+      <div class="wizard-actions wizard-actions--between fab-safe-area">
+        <p-button
+          label="Cancelar"
+          icon="pi pi-times"
+          styleClass="p-button-text"
+          (click)="cancelar()"
+        />
+        <div class="wizard-actions__navigation">
+          <p-button
+            label="Volver"
+            icon="pi pi-arrow-left"
+            styleClass="p-button-text"
+            (click)="prevCallback.emit()"
+          ></p-button>
+          <p-button
+            label="Confirmar planificación"
+            icon="pi pi-check"
+            [loading]="guardando()"
+            [disabled]="!puedeConfirmar"
+            (click)="guardarConfiguracion()"
+          ></p-button>
+        </div>
+      </div>
+    </ng-template>
+  </p-stepperPanel>
+</p-stepper>

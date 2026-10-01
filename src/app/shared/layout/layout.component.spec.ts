@@ -253,7 +253,7 @@ describe('LayoutComponent', () => {
 
   // -------- Grupo Planificación (feedback Sergio 2026-07-24) --------
   describe('grupo Planificación (feedback Sergio 2026-07-24)', () => {
-    it('ADVANCED: grupo "Planificación" con hijos estudio (ruta mensual) y pruebas físicas', () => {
+    it('ADVANCED: grupo "Planificación" abre el asistente y conserva pruebas físicas', () => {
       (component as any).currentUserSignal.set(
         makeAlumnoConSub(SuscripcionTipo.ADVANCED),
       );
@@ -267,7 +267,7 @@ describe('LayoutComponent', () => {
         'Planificación pruebas físicas',
       ]);
       expect((grupo!.items as AppMenuItem[])[0].routerLink).toBe(
-        '/app/planificacion/planificacion-mensual-alumno',
+        '/app/planificacion/configuracion-alumno',
       );
       expect((grupo!.items as AppMenuItem[])[1].routerLink).toBe(
         '/app/planificacion-fisica',
@@ -288,6 +288,14 @@ describe('LayoutComponent', () => {
       // El 403 de tier lo resuelve la vista (píldora de upsell).
       expect(hijos[1].routerLink).toBe('/app/planificacion-fisica');
     });
+
+    it.each([SuscripcionTipo.NORMAL, SuscripcionTipo.PRO])(
+      '%s: mantiene acceso al asistente de planificación', (tipo) => {
+        (component as any).currentUserSignal.set(makeAlumnoConSub(tipo));
+        expect(findItemByLabel(component.items(), 'Planificación de estudio')?.routerLink)
+          .toBe('/app/planificacion/configuracion-alumno');
+      },
+    );
 
     it('sin suscripción vigente: el grupo no aparece', () => {
       (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO)); // suscripciones: []

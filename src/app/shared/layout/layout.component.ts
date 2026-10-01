@@ -52,6 +52,8 @@ function getHighestSubscriptionTier(
     [SuscripcionTipo.PREMIUM]: 3,
     [SuscripcionTipo.ADVANCED]: 2,
     [SuscripcionTipo.BASIC]: 1,
+    [SuscripcionTipo.PRO]: 0,
+    [SuscripcionTipo.NORMAL]: 0,
   };
 
   return activeSubs.reduce(
@@ -437,6 +439,11 @@ export class LayoutComponent {
     const isAdvanced = highestTier === SuscripcionTipo.ADVANCED;
     const isPremium = highestTier === SuscripcionTipo.PREMIUM;
     const hasValidSubscription = isBasic || isAdvanced || isPremium;
+    const hasPlanningAccess = user?.suscripciones?.some((subscription) =>
+      isSubscriptionAccessible(subscription.status) &&
+      [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM,
+        SuscripcionTipo.NORMAL, SuscripcionTipo.PRO].includes(subscription.tipo),
+    ) ?? false;
 
     const menu: AppMenuItem[] = [];
 
@@ -505,13 +512,13 @@ export class LayoutComponent {
     // píldora de upsell). Cada hijo lleva su propio `modulo`: si el tenant
     // apaga ambos, filterByModulo poda el grupo vacío. Feedback Sergio
     // 2026-07-24.
-    if (hasValidSubscription) {
+    if (hasPlanningAccess || hasValidSubscription) {
       const hijoEstudio: AppMenuItem =
-        isAdvanced || isPremium
+        hasPlanningAccess
           ? {
               label: 'Planificación de estudio',
               icon: 'pi pi-calendar-plus',
-              routerLink: '/app/planificacion/planificacion-mensual-alumno',
+              routerLink: '/app/planificacion/configuracion-alumno',
               modulo: ModuloApp.PLANIFICACION,
             }
           : {

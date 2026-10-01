@@ -19,7 +19,7 @@ describe('OposicionPickerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [OposicionPickerComponent],
+      imports: [OposicionPickerComponent],
       providers: [...COMMON_TEST_PROVIDERS],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -108,21 +108,19 @@ describe('OposicionPickerComponent', () => {
 
   it('(e bis) con la agrupadora activa, el dropdown marca el padre Y sus dos hijas', () => {
     load([VAL, ALI]);
-    const codes = (
-      component.listboxValue as PickerOption[]
-    ).map((o) => o.code);
+    const codes = (component.listboxValue as PickerOption[]).map((o) => o.code);
     expect(codes).toContain(GRUPO_COMUNIDAD_VALENCIANA.code);
     expect(codes).toContain(VAL);
     expect(codes).toContain(ALI);
   });
 
-  it('(e ter) el árbol tiene niveles: GENERAL raíz (0), Madrid/CV comunidad (1), Valencia/Alicante provincia (2)', () => {
+  it('(e ter) GENERAL, Madrid y CV son opciones principales; solo Valencia/Alicante cuelgan de CV', () => {
     load([]);
     expect(indOption(GEN).nivel).toBe(0);
-    expect(indOption(MAD).nivel).toBe(1);
-    expect(grupoOption().nivel).toBe(1);
-    expect(indOption(VAL).nivel).toBe(2);
-    expect(indOption(ALI).nivel).toBe(2);
+    expect(indOption(MAD).nivel).toBe(0);
+    expect(grupoOption().nivel).toBe(0);
+    expect(indOption(VAL).nivel).toBe(1);
+    expect(indOption(ALI).nivel).toBe(1);
   });
 
   it('(e quater) Madrid se muestra como comunidad ("Comunidad de Madrid") y GENERAL como raíz', () => {
@@ -213,5 +211,137 @@ describe('OposicionPickerComponent', () => {
     component.onSelectionChange(indOption(MAD));
     expect(emit).toHaveBeenLastCalledWith([MAD]);
     expect(component.grupoActivo).toBe(false);
+  });
+
+  it('usa el dropdown estándar de PrimeNG en presentación field simple', () => {
+    component.multiple = false;
+    component.presentation = 'field';
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('p-dropdown')).toBeTruthy();
+    expect(element.querySelector('button.oposicion-field')).toBeNull();
+  });
+
+  it('aplica las etiquetas de planificación sin cambiar los valores emitidos', () => {
+    component.multiple = false;
+    component.context = 'planificacion';
+    load([
+      Oposicion.GENERAL,
+      Oposicion.ALICANTE_CPBA,
+      Oposicion.VALENCIA_AYUNTAMIENTO,
+      Oposicion.MADRID,
+    ]);
+
+    expect(component.listboxOptions.map((option) => option.label)).toEqual([
+      'Plan común de Comunidad Valenciana',
+      'Ayuntamiento de Valencia',
+      'Consorcio de Alicante',
+      'Comunidad de Madrid',
+    ]);
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    component.onSelectionChange(component.listboxOptions[2]);
+    expect(emit).toHaveBeenLastCalledWith([Oposicion.ALICANTE_CPBA]);
+  });
+
+  it('no convierte GENERAL en padre visual de Madrid en catálogo', () => {
+    component.context = 'catalogo';
+    component.multiple = true;
+    load([]);
+
+    expect(indOption(GEN)).toMatchObject({
+      label: 'Todas las oposiciones',
+      nivel: 0,
+      tipo: 'WILDCARD',
+    });
+    expect(indOption(MAD)).toMatchObject({
+      label: 'Comunidad de Madrid',
+      nivel: 0,
+      tipo: 'OPOSICION',
+    });
+  });
+
+  it('GENERAL solo es exclusivo en catálogo, no por usar selección múltiple', () => {
+    component.context = 'planificacion';
+    component.multiple = true;
+    load([]);
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    const general = indOption(GEN);
+    const madrid = indOption(MAD);
+
+    component.onSelectionChange([general, madrid]);
+
+    expect(emit).toHaveBeenLastCalledWith([GEN, MAD]);
+  });
+
+  it('no permite seleccionar una oposición deshabilitada y conserva el motivo', () => {
+    component.multiple = false;
+    component.opciones = [
+      {
+        value: MAD,
+        disabled: true,
+        disabledReason: 'Pendiente de publicación',
+      },
+      { value: VAL },
+    ];
+    component.ngOnChanges({
+      opciones: new SimpleChange(undefined, component.opciones, true),
+    });
+
+    const madrid = indOption(MAD);
+    expect(madrid.disabled).toBe(true);
+    expect(madrid.disabledReason).toBe('Pendiente de publicación');
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+    component.onSelectionChange(madrid);
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('no reintroduce el enum cuando el consumidor declara cero opciones', () => {
+    component.multiple = false;
+    component.opciones = [];
+    component.ngOnChanges({
+      opciones: new SimpleChange(undefined, component.opciones, true),
+    });
+
+    expect(component.listboxOptions).toEqual([]);
+  });
+
+  it('la agrupadora solo selecciona miembros habilitados', () => {
+    component.opciones = [
+      { value: VAL },
+      { value: ALI, disabled: true, disabledReason: 'Sin planificación' },
+    ];
+    component.ngOnChanges({
+      opciones: new SimpleChange(undefined, component.opciones, true),
+    });
+    const emit = jest.spyOn(component.updateSelection, 'emit');
+
+    component.onSelectionChange([grupoOption()]);
+
+    expect(emit).toHaveBeenLastCalledWith([VAL]);
+  });
+
+  it('expone escalar por ControlValueAccessor en modo simple', () => {
+    component.multiple = false;
+    load([]);
+    const onChange = jest.fn();
+    const onTouched = jest.fn();
+    component.registerOnChange(onChange);
+    component.registerOnTouched(onTouched);
+
+    component.onSelectionChange(indOption(MAD));
+
+    expect(onChange).toHaveBeenCalledWith(MAD);
+    expect(onTouched).toHaveBeenCalled();
+  });
+
+  it('cierra el overlay al elegir una opción en modo simple', () => {
+    component.multiple = false;
+    load([]);
+    const overlay = { hide: jest.fn() };
+
+    component.onSelectionChange(indOption(MAD), overlay as never);
+
+    expect(overlay.hide).toHaveBeenCalledTimes(1);
   });
 });
