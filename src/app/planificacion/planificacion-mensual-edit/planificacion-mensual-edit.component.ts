@@ -194,6 +194,8 @@ export class PlanificacionMensualEditComponent {
   }
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   public getEventsForDay = this.eventsService.getEventsForDay;
+  public getDayProgress = (events: CalendarEvent[], date: Date) =>
+    this.eventsService.getDayProgress(events, date);
   public getProgressBarColor = this.eventsService.getProgressBarColor;
   public getCompletedSubBlocksForDay =
     this.eventsService.getCompletedSubBlocksForDay;
@@ -298,6 +300,36 @@ export class PlanificacionMensualEditComponent {
   public onEventsChange(events: CalendarEvent[]): void {
     this.events = events;
     this.eventosModificados = true;
+  }
+
+  public onPersistedEventsChange(events: CalendarEvent[]): void {
+    this.events = events;
+  }
+
+  private visibleMonthCache?: {
+    source: CalendarEvent[];
+    month: number;
+    events: CalendarEvent[];
+  };
+
+  get visibleMonthEvents(): CalendarEvent[] {
+    const year = this.viewDate.getFullYear();
+    const month = this.viewDate.getMonth();
+    const key = year * 12 + month;
+    if (
+      this.visibleMonthCache?.source === this.events &&
+      this.visibleMonthCache.month === key
+    )
+      return this.visibleMonthCache.events;
+    const start = new Date(year, month, -6);
+    const end = new Date(year, month + 1, 8);
+    const events = this.eventsService.getEventsForRange(
+      this.events,
+      start,
+      end,
+    );
+    this.visibleMonthCache = { source: this.events, month: key, events };
+    return events;
   }
 
   public confirmarConversionBloquesFisica(): void {

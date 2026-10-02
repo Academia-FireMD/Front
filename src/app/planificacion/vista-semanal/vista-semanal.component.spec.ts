@@ -1,7 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subject, throwError } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
+import { PlanificacionesService } from '../../services/planificaciones.service';
+import { EventsService } from '../services/events.service';
 
 import { VistaSemanalComponent } from './vista-semanal.component';
 import { COLORES_TIPO_SUBBLOQUE } from '../sub-bloque-colores';
@@ -10,11 +14,17 @@ describe('VistaSemanalComponent', () => {
   let component: VistaSemanalComponent;
   let fixture: ComponentFixture<VistaSemanalComponent>;
   let router: Router;
+  let progressService: { actualizarProgresoSubBloque$: jest.Mock };
 
   beforeEach(async () => {
+    progressService = { actualizarProgresoSubBloque$: jest.fn() };
     await TestBed.configureTestingModule({
       declarations: [VistaSemanalComponent],
-      providers: [...COMMON_TEST_PROVIDERS],
+      providers: [
+        ...COMMON_TEST_PROVIDERS,
+        { provide: EventsService, useClass: EventsService },
+        { provide: PlanificacionesService, useValue: progressService },
+      ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
@@ -25,6 +35,24 @@ describe('VistaSemanalComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('muestra un evento nuevo aunque ya se hubiera calculado la semana visible', () => {
+    const fecha = new Date(2026, 9, 2, 10);
+    component.viewDate = fecha;
+    component.events = [];
+    expect(component.visibleCalendarEvents).toHaveLength(0);
+    component.selectedEvent = { start: fecha, title: 'Nuevo', meta: {} } as any;
+
+    component.saveEvent({
+      nombre: 'Nuevo',
+      color: '#b82025',
+      duracion: 60,
+    } as any);
+
+    expect(
+      component.visibleCalendarEvents.map((evento) => evento.title),
+    ).toEqual(['Nuevo']);
   });
 
   it('copia subbloques en el calendario manual sin guardarlos antes de confirmar el padre', () => {
@@ -292,7 +320,7 @@ describe('VistaSemanalComponent', () => {
       );
     });
 
-    it('el progreso del día deriva el "hecho" del vinculado de física, no del flag manual', () => {
+    it('el progreso del calendario usa la marca propia, aunque exista física vinculada', () => {
       const normalHecho = eventoTemario(dia, { realizado: true });
       const vinculado = eventoTemario(dia, { vinculado: true }); // 1/2 hechas en física
       component.events = [normalHecho, vinculado];
@@ -305,8 +333,16 @@ describe('VistaSemanalComponent', () => {
         50,
       );
 
-      // Con las 2 disciplinas hechas, el vinculado cuenta como completado.
+      // Completar el módulo físico no marca la tarjeta del calendario.
       component.resumenFisica[0].disciplinas[1].realizado = true;
+      expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
+        1,
+      );
+      expect(component.getProgressPercentageForDay(component.events, dia)).toBe(
+        50,
+      );
+
+      vinculado.meta.subBloque.realizado = true;
       expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
         2,
       );
@@ -318,9 +354,10 @@ describe('VistaSemanalComponent', () => {
       );
     });
 
-    it('un vinculado en un día SIN física no cuenta como hecho aunque su flag manual sea false', () => {
+    it('un entrenamiento sin plan físico se puede completar en el calendario', () => {
       const vinculado = eventoTemario(new Date(2026, 6, 16), {
         vinculado: true,
+        realizado: true,
       });
       component.events = [vinculado];
       expect(
@@ -328,7 +365,41 @@ describe('VistaSemanalComponent', () => {
           component.events,
           new Date(2026, 6, 16),
         ),
-      ).toBe(0);
+      ).toBe(1);
+    });
+
+    it('el doble clic no duplica la petición y la UI responde antes de la red', () => {
+      component.role = 'ALUMNO';
+      const event = eventoTemario(dia, { vinculado: true });
+      const respuesta = new Subject<unknown>();
+      progressService.actualizarProgresoSubBloque$.mockReturnValue(respuesta);
+
+      component.updateEventProgress(event);
+      component.updateEventProgress(event);
+
+      expect(event.meta.subBloque.realizado).toBe(true);
+      expect(component.isProgressSaving(event)).toBe(true);
+      expect(
+        progressService.actualizarProgresoSubBloque$,
+      ).toHaveBeenCalledTimes(1);
+      respuesta.next({});
+      respuesta.complete();
+      expect(component.isProgressSaving(event)).toBe(false);
+    });
+
+    it('si falla el guardado, restaura la casilla y el progreso', () => {
+      component.role = 'ALUMNO';
+      const event = eventoTemario(dia, { vinculado: true });
+      progressService.actualizarProgresoSubBloque$.mockReturnValue(
+        throwError(() => new Error('sin red')),
+      );
+      const toast = TestBed.inject(ToastrService);
+
+      component.updateEventProgress(event);
+
+      expect(event.meta.subBloque.realizado).toBe(false);
+      expect(component.isProgressSaving(event)).toBe(false);
+      expect(toast.error).toHaveBeenCalled();
     });
   });
 });

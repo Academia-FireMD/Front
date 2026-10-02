@@ -889,18 +889,18 @@
             <small>{{ etiquetaFisica(day.date) }}</small>
           </button>
 
-          <!-- Progreso Diario -->
+          <!-- Una sola lectura del progreso por celda; física se muestra aparte. -->
+          @let dayProgress = getDayProgress(visibleMonthEvents, day.date);
           <div *ngIf="events.length > 0" class="progress-container">
             <div class="progress-bar-background">
               <div
                 class="progress-bar"
-                [style.width.%]="getProgressPercentageForDay(events, day.date)"
-                [style.background-color]="getProgressBarColor(events, day.date)"
+                [style.width.%]="dayProgress.percentage"
+                [style.background-color]="dayProgress.color"
               ></div>
             </div>
             <small>
-              {{ getCompletedSubBlocksForDay(events, day.date) }} de
-              {{ getEventsForDay(events, day.date).length }}
+              {{ dayProgress.completed }} de {{ dayProgress.total }}
               completados
             </small>
           </div>
@@ -911,7 +911,9 @@
           <!-- Bloques de colores para los eventos -->
           <div class="event-blocks">
             <div
-              *ngFor="let event of uniqueEventsForDay(events, day.date)"
+              *ngFor="
+                let event of uniqueEventsForDay(visibleMonthEvents, day.date)
+              "
               class="event-block"
               [style.background-color]="event.color?.primary"
               [pTooltip]="event.title"
@@ -927,6 +929,7 @@
           [mode]="expectedRole == 'ADMIN' ? 'edit' : 'picker'"
           [events]="events"
           (eventsChange)="onEventsChange($event)"
+          (persistedEventsChange)="onPersistedEventsChange($event)"
           [viewDate]="viewDate"
           [resumenFisica]="resumenFisica()"
           [originPlanificacionId]="lastLoadedPlanification()?.id"
@@ -935,7 +938,7 @@
       } @else {
         <mwl-calendar-month-view
           [viewDate]="viewDate"
-          [events]="events"
+          [events]="visibleMonthEvents"
           [weekStartsOn]="1"
           (dayClicked)="onDayClicked($event)"
           [cellTemplate]="customCellTemplate"

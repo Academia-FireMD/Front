@@ -111,14 +111,12 @@ export class EventsService {
   }
 
   public calculateMinDate(events: CalendarEvent[]) {
-    events = cloneDeep(events);
     return events.reduce((earliest, event) => {
       return event.start < earliest ? event.start : earliest;
     }, events[0]?.start || new Date());
   }
 
-  public getEventsForDay(events: CalendarEvent[], date: Date): any[] {
-    events = cloneDeep(events);
+  public getEventsForDay(events: CalendarEvent[], date: Date): CalendarEvent[] {
     return events.filter((event) => {
       const eventDate = new Date(event.start);
       return (
@@ -129,35 +127,67 @@ export class EventsService {
     });
   }
 
-  getProgressBarColor(events: CalendarEvent[], date: Date): string {
-    events = cloneDeep(events);
-    const percentage = this.getProgressPercentageForDay(events, date);
+  /** Mantiene el plan completo para guardar, pero limita lo que procesa angular-calendar. */
+  public getEventsForRange(
+    events: CalendarEvent[],
+    start: Date,
+    endExclusive: Date,
+  ): CalendarEvent[] {
+    return events.filter(
+      (event) =>
+        event.start < endExclusive &&
+        (event.end ? event.end > start : event.start >= start),
+    );
+  }
 
-    if (percentage === 100) {
-      return '#28a745'; // Verde (completado)
-    } else if (percentage >= 50) {
-      return '#ffc107'; // Amarillo (intermedio)
-    } else {
-      return '#dc3545'; // Rojo (bajo progreso)
+  /** Lectura pura: no clonar todos los eventos por cada celda del calendario. */
+  getDayProgress(
+    events: CalendarEvent[],
+    date: Date,
+  ): {
+    total: number;
+    completed: number;
+    percentage: number;
+    color: string;
+  } {
+    let total = 0;
+    let completed = 0;
+    for (const event of events) {
+      const start = event.start;
+      if (
+        start.getFullYear() !== date.getFullYear() ||
+        start.getMonth() !== date.getMonth() ||
+        start.getDate() !== date.getDate()
+      )
+        continue;
+      total++;
+      if (event.meta?.subBloque?.realizado) completed++;
     }
+    const percentage = total
+      ? Number(((completed / total) * 100).toFixed(2))
+      : 0;
+    return {
+      total,
+      completed,
+      percentage,
+      color:
+        percentage === 100
+          ? '#28a745'
+          : percentage >= 50
+            ? '#ffc107'
+            : '#dc3545',
+    };
+  }
+
+  getProgressBarColor(events: CalendarEvent[], date: Date): string {
+    return this.getDayProgress(events, date).color;
   }
 
   getCompletedSubBlocksForDay(events: CalendarEvent[], date: Date): number {
-    events = cloneDeep(events);
-    const eventsForDay = this.getEventsForDay(events, date);
-    return eventsForDay.filter((event) => event.meta?.subBloque?.realizado)
-      .length;
+    return this.getDayProgress(events, date).completed;
   }
 
   getProgressPercentageForDay(events: CalendarEvent[], date: Date): number {
-    events = cloneDeep(events);
-    const eventsForDay = this.getEventsForDay(events, date);
-    const completed = this.getCompletedSubBlocksForDay(events, date);
-    return Number(
-      (eventsForDay.length > 0
-        ? (completed / eventsForDay.length) * 100
-        : 0
-      ).toFixed(2),
-    );
+    return this.getDayProgress(events, date).percentage;
   }
 }

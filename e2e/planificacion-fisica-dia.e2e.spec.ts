@@ -489,7 +489,10 @@ test('el bridge del temario conserva planificacionId, bloqueId y origen hasta el
   await expect(bridge).toContainText('Cuerda exacta');
   expect(planificacionConsultada).toBe(String(PLAN_TEMARIO));
 
-  await bridge.click();
+  // La tarjeta abre sus detalles; la física se consulta mediante su enlace explícito.
+  await bridge
+    .getByRole('button', { name: 'Ver plan físico de este día' })
+    .click();
   await expect(page).toHaveURL(
     new RegExp(
       `planificacion-fisica/dia/${fecha}\\?bloqueId=${BLOQUE_EXACTO}&originPlanificacionId=${PLAN_TEMARIO}`,
