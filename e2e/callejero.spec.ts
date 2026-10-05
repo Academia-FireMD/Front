@@ -867,6 +867,42 @@ test.describe('Módulo Callejero (alumno)', () => {
     }
   });
 
+  test('con clave, el mudo de Valencia cae a PNOA sin error y con tilematrix entero', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    const erroresPagina: string[] = [];
+    page.on('pageerror', (err) => erroresPagina.push(err.message));
+    await servirMapasConfig(page, 'CLAVE_E2E');
+    await instalarTeselas(
+      page,
+      new Set(['basemaps.cartocdn.com']),
+      solicitudes,
+    );
+
+    const frame = await irACallejero(page);
+    await frame.locator('.chip[data-base="mudo"]').click();
+
+    // CARTO (primario mudo) cae por completo → respaldo PNOA visible.
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(() => peticionesA(solicitudes, 'ign.es').length, { timeout: 15_000 })
+      .toBeGreaterThan(0);
+
+    // Regresión compartida: PNOA nunca se pide con un zoom fraccional; un
+    // `redraw` a mitad de animación generaba `tilematrix` inválido y falsos
+    // errores que agotaban la recuperación.
+    for (const request of peticionesA(solicitudes, 'ign.es')) {
+      const tilematrix = new URL(request.url()).searchParams.get('tilematrix');
+      expect(tilematrix).not.toBeNull();
+      expect(Number.isInteger(Number(tilematrix))).toBe(true);
+    }
+    await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0);
+    expect(erroresPagina).toEqual([]);
+  });
+
   test('sin clave el mudo usa PNOA y nunca CARTO ni Esri Light Gray', async ({
     page,
   }) => {

@@ -240,6 +240,60 @@
   }
 
   /**
+   * Redibuja la capa al zoom ACTUAL redondeado.
+   *
+   * `L.GridLayer.redraw()` deriva `_tileZoom` de `map.getZoom()` SIN redondear.
+   * Durante un `flyTo`/animación `getZoom()` es fraccional; las plantillas de URL
+   * que interpolan `{z}` (p. ej. `tilematrix` de PNOA) reciben un valor como
+   * 8.99999998, el servidor responde con algo que no es imagen y el navegador lo
+   * bloquea (ORB) → tileerror falsos que agotan la recuperación. Replicamos
+   * `redraw()` redondeando el zoom, igual que hace Leaflet en `zoomend`
+   * (`_setView` usa `Math.round`). Así nunca se piden teselas del respaldo con un
+   * zoom inválido. Si la API interna no estuviera disponible, cae a `redraw()`.
+   */
+  function redibujar(capa) {
+    var map = capa && capa._map;
+    if (
+      map &&
+      typeof map.getCenter === 'function' &&
+      typeof map.getZoom === 'function' &&
+      typeof capa._removeAllTiles === 'function' &&
+      typeof capa._setView === 'function'
+    ) {
+      capa._removeAllTiles();
+      capa._setView(map.getCenter(), map.getZoom());
+      return;
+    }
+    capa.redraw();
+  }
+
+  /**
+   * ¿El evento de tesela pertenece a una tesela que la capa aún conserva?
+   *
+   * Tras cambiar de proveedor (`setUrl`/`redraw`) las teselas retiradas pueden
+   * emitir `tileerror` tardío (Leaflet dispara el evento antes de comprobar que
+   * la tesela sigue en `_tiles`); contarlas como fallos del respaldo, o dejar que
+   * un `tileload` tardío reinicie el contador, corrompe la recuperación. Los
+   * eventos sin objeto `tile` (pruebas) mantienen la semántica previa.
+   */
+  function teselaVigente(capa, event) {
+    var tile = event && event.tile;
+    if (!tile) return true;
+    var tiles = capa && capa._tiles;
+    if (!tiles) return true;
+    for (var k in tiles) {
+      if (
+        Object.prototype.hasOwnProperty.call(tiles, k) &&
+        tiles[k] &&
+        tiles[k].el === tile
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Opciones a aplicar al cambiar al respaldo.
    *
    * Conserva el rango de VISTA de la capa original (minZoom/maxZoom): el
@@ -357,14 +411,14 @@
     function aplicarPrimario() {
       // Restablece EXACTAMENTE las opciones y la URL originales.
       aplicarOpciones(capa, primario.opts);
-      if (primario.url && primario.url !== capa._url) capa.setUrl(primario.url);
-      else capa.redraw();
+      if (primario.url && primario.url !== capa._url) capa.setUrl(primario.url, true);
+      redibujar(capa);
     }
     function aplicarRespaldo() {
       if (!respaldo) return;
       aplicarOpciones(capa, opcionesRespaldo(primario, respaldo));
-      if (respaldo.url && respaldo.url !== capa._url) capa.setUrl(respaldo.url);
-      else capa.redraw();
+      if (respaldo.url && respaldo.url !== capa._url) capa.setUrl(respaldo.url, true);
+      redibujar(capa);
     }
 
     function notificar() {
@@ -392,16 +446,18 @@
       actualizarUI();
       notificar();
     }
-    function onError() {
+    function onError(event) {
       if (destruido || !activo || fase === 'fallo') return;
+      if (!teselaVigente(capa, event)) return;
       fallos += 1;
       if (fallos < maxFallos) return;
       fallos = 0;
       if (fase === 'primario' && respaldo) irARespaldo();
       else irAFallo();
     }
-    function onLoad() {
+    function onLoad(event) {
       if (destruido) return;
+      if (!teselaVigente(capa, event)) return;
       fallos = 0;
     }
     function establecerActivo(valor) {
