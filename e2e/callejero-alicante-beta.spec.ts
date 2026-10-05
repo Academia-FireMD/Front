@@ -17,6 +17,8 @@ import {
   type Page,
   type Request,
 } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { loginAsRoleMock } from './helpers/auth.helper';
 import userAlumnoFixture from './fixtures/user-alumno.json';
 
@@ -41,10 +43,155 @@ const EXTERNAL_HOSTS = [
   'openstreetmap.de',
   'arcgisonline.com',
   'ign.es',
+  'idee.es',
+  'basemaps.cartocdn.com',
   'nominatim.openstreetmap.org',
   'router.project-osrm.org',
   'overpass-api.de',
 ];
+
+const MAPAS_CONFIG_SRC = readFileSync(
+  resolve(__dirname, '../public/callejero-embed/mapas-config.js'),
+  'utf8',
+);
+function mapasConfigConClave(clave: string): string {
+  return MAPAS_CONFIG_SRC.replace("cartoKey: ''", `cartoKey: '${clave}'`);
+}
+async function servirMapasConfigAlicante(
+  page: Page,
+  clave: string | null,
+): Promise<void> {
+  await page.route('**/mapas-config.js', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: clave ? mapasConfigConClave(clave) : MAPAS_CONFIG_SRC,
+    }),
+  );
+}
+
+function esTileExterna(hostname: string): boolean {
+  const hosts = [
+    'tile.opentopomap.org',
+    'arcgisonline.com',
+    'ign.es',
+    'idee.es',
+    'basemaps.cartocdn.com',
+  ];
+  return hosts.some((h) => hostname === h || hostname.endsWith(`.${h}`));
+}
+
+/** Intercepta teselas: falla los hosts indicados, sirve píxel al resto. */
+async function instalarTeselasAlicante(
+  page: Page,
+  hostsEnFallo: Set<string>,
+  solicitudes: Request[],
+): Promise<void> {
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    if (['localhost', '127.0.0.1'].includes(url.hostname)) {
+      await route.fallback();
+      return;
+    }
+    if (!esTileExterna(url.hostname)) {
+      await route.fallback();
+      return;
+    }
+    solicitudes.push(route.request());
+    const enFallo = [...hostsEnFallo].some(
+      (h) => url.hostname === h || url.hostname.endsWith(`.${h}`),
+    );
+    if (enFallo) {
+      await route.abort('failed');
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      headers: {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-store',
+      },
+      body: PIXEL_PNG,
+    });
+  });
+}
+
+function peticionesAlHost(
+  solicitudes: Request[],
+  host: string,
+): Request[] {
+  return solicitudes.filter(
+    (r) =>
+      new URL(r.url()).hostname === host ||
+      new URL(r.url()).hostname.endsWith(`.${host}`),
+  );
+}
+
+function peticionesConPath(
+  solicitudes: Request[],
+  fragmento: string,
+): Request[] {
+  return solicitudes.filter((r) => r.url().includes(fragmento));
+}
+
+function zoomDeAlicante(request: Request): number {
+  const raw = request.url();
+  const tilematrix = new URL(raw).searchParams.get('tilematrix');
+  if (tilematrix) return Number(tilematrix);
+  const zParam = raw.match(/[?&]z=(\d+)(?:&|$)/);
+  if (zParam) return Number(zParam[1]);
+  const match = new URL(raw).pathname.match(/\/(\d+)\/\d+\/\d+(?:\.\w+)?$/);
+  return match ? Number(match[1]) : Number.NaN;
+}
+
+/** Selecciona una capa base en el control de capas de Leaflet (Alicante).
+ *  Usa el input real vía JS: el toggle queda tapado por la lista expandida. */
+async function seleccionarBaseAlicante(
+  frame: FrameLocator,
+  etiqueta: string,
+): Promise<void> {
+  const ok = await frame.locator('html').evaluate((_el, texto) => {
+    const labels = Array.from(
+      document.querySelectorAll<HTMLLabelElement>(
+        '.leaflet-control-layers-base label',
+      ),
+    );
+    const objetivo = labels.find((l) =>
+      (l.textContent || '').includes(texto),
+    );
+    const input = objetivo?.querySelector('input');
+    if (!input) return false;
+    input.click();
+    return true;
+  }, etiqueta);
+  if (!ok) throw new Error(`No se encontró la capa base "${etiqueta}"`);
+}
+
+/** Marca "Mapa mudo durante el examen" (QZ.mute) antes de arrancar el examen. */
+async function activarMudoExamen(frame: FrameLocator): Promise<void> {
+  await frame.locator('#qzMute').evaluate((el) => {
+    const input = el as HTMLInputElement;
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
+/** Pulsa zoom-in hasta llegar al zoom máximo del mapa (el botón se deshabilita). */
+async function subirZoomAlMaximo(
+  frame: FrameLocator,
+  page: Page,
+): Promise<void> {
+  const zoomIn = frame.locator('.leaflet-control-zoom-in');
+  for (let i = 0; i < 25; i += 1) {
+    const deshabilitado = await zoomIn.evaluate((el) =>
+      el.classList.contains('leaflet-disabled'),
+    );
+    if (deshabilitado) break;
+    await zoomIn.click();
+    await page.waitForTimeout(300);
+  }
+}
 
 function usuarioCon(
   oposiciones: Oposicion[],
@@ -441,5 +588,366 @@ test.describe('Callejero Alicante — beta autónoma', () => {
       .evaluate((element) => element.innerHTML);
     expect(html).not.toContain('tf-callejero-auth');
     expect(html).not.toContain('apiBase');
+  });
+});
+
+test.describe('Callejero Alicante — recuperación cartográfica', () => {
+  test.beforeEach(async ({ page }) => {
+    await instalarSondaAuth(page);
+    await login(page, ['ALICANTE_CPBA']);
+  });
+
+  test('con clave: el fondo Esri cae a CARTO con clave y el fallo total ofrece Reintentar', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    const enFallo = new Set<string>(['arcgisonline.com']);
+    await servirMapasConfigAlicante(page, 'CLAVE_ALC');
+    await instalarTeselasAlicante(page, enFallo, solicitudes);
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+
+    // Fondo claro Esri (por defecto) falla → respaldo CARTO light_nolabels.
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(
+        () =>
+          peticionesAlHost(solicitudes, 'basemaps.cartocdn.com').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+    const carto = peticionesAlHost(solicitudes, 'basemaps.cartocdn.com');
+    expect(new URL(carto[0].url()).searchParams.get('key')).toBe('CLAVE_ALC');
+    expect(carto[0].headers()['authorization']).toBeUndefined();
+
+    // El respaldo también falla → "No se puede cargar el mapa" + Reintentar.
+    enFallo.add('basemaps.cartocdn.com');
+    await frame.locator('.leaflet-control-zoom-in').click();
+    await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar'),
+    ).toBeVisible();
+
+    // Reintento explícito con proveedores restablecidos.
+    const antes = peticionesAlHost(solicitudes, 'arcgisonline.com').length;
+    enFallo.clear();
+    await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
+    await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect
+      .poll(
+        () => peticionesAlHost(solicitudes, 'arcgisonline.com').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(antes);
+  });
+
+  test('una tesela fallida aislada no dispara el respaldo', async ({ page }) => {
+    const solicitudes: Request[] = [];
+    let fallosRestantes = 1;
+    await servirMapasConfigAlicante(page, 'CLAVE_ALC');
+    await page.route('**/*', async (route) => {
+      const url = new URL(route.request().url());
+      if (['localhost', '127.0.0.1'].includes(url.hostname)) {
+        await route.fallback();
+        return;
+      }
+      if (!url.hostname.endsWith('arcgisonline.com')) {
+        await route.fallback();
+        return;
+      }
+      solicitudes.push(route.request());
+      if (fallosRestantes > 0) {
+        fallosRestantes -= 1;
+        await route.abort('failed');
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        headers: {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-store',
+      },
+        body: PIXEL_PNG,
+      });
+    });
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    await page.waitForTimeout(2_000);
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toHaveCount(0);
+    expect(peticionesAlHost(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(
+      0,
+    );
+  });
+
+  test('sin clave no se solicita CARTO y el fallo del fondo pide Reintentar', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    await servirMapasConfigAlicante(page, null);
+    await instalarTeselasAlicante(
+      page,
+      new Set(['arcgisonline.com']),
+      solicitudes,
+    );
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    expect(peticionesAlHost(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(
+      0,
+    );
+  });
+
+  test('el examen en mudo con clave usa CARTO light_nolabels y no Esri Light Gray', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    await servirMapasConfigAlicante(page, 'CLAVE_ALC');
+    await instalarTeselasAlicante(page, new Set(), solicitudes);
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    await expect
+      .poll(
+        () => peticionesConPath(solicitudes, 'World_Light_Gray_Base').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+    const lgAntes = peticionesConPath(
+      solicitudes,
+      'World_Light_Gray_Base',
+    ).length;
+
+    await frame.locator('#tab2Qz').click();
+    await activarMudoExamen(frame);
+    await frame.locator('#qzBtnStart').click();
+    await expect(frame.locator('#qzpop')).toHaveClass(/show/, {
+      timeout: 15_000,
+    });
+
+    await expect
+      .poll(
+        () => peticionesAlHost(solicitudes, 'basemaps.cartocdn.com').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+    const carto = peticionesAlHost(solicitudes, 'basemaps.cartocdn.com');
+    expect(carto[0].url()).toContain('light_nolabels');
+    expect(new URL(carto[0].url()).searchParams.get('key')).toBe('CLAVE_ALC');
+    // Tras arrancar el examen, Esri Light Gray deja de pedir teselas nuevas.
+    await expect
+      .poll(async () => {
+        const antes = peticionesConPath(
+          solicitudes,
+          'World_Light_Gray_Base',
+        ).length;
+        await page.waitForTimeout(400);
+        return (
+          peticionesConPath(solicitudes, 'World_Light_Gray_Base').length - antes
+        );
+      }, { timeout: 10_000 })
+      .toBe(0);
+    expect(lgAntes).toBeGreaterThan(0);
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toHaveCount(0);
+  });
+
+  test('el examen en mudo sin clave usa PNOA y nunca CARTO ni Esri Light Gray', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    await servirMapasConfigAlicante(page, null);
+    await instalarTeselasAlicante(page, new Set(), solicitudes);
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    await expect
+      .poll(
+        () => peticionesConPath(solicitudes, 'World_Light_Gray_Base').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+    await frame.locator('#tab2Qz').click();
+    await activarMudoExamen(frame);
+    await frame.locator('#qzBtnStart').click();
+    await expect(frame.locator('#qzpop')).toHaveClass(/show/, {
+      timeout: 15_000,
+    });
+
+    await expect
+      .poll(() => peticionesAlHost(solicitudes, 'ign.es').length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+    expect(peticionesAlHost(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(
+      0,
+    );
+    // Tras arrancar el examen, Esri Light Gray deja de pedir teselas nuevas.
+    await expect
+      .poll(async () => {
+        const antes = peticionesConPath(
+          solicitudes,
+          'World_Light_Gray_Base',
+        ).length;
+        await page.waitForTimeout(400);
+        return (
+          peticionesConPath(solicitudes, 'World_Light_Gray_Base').length - antes
+        );
+      }, { timeout: 10_000 })
+      .toBe(0);
+  });
+
+  test('"Mapa mudo · claro" sin clave usa PNOA y nunca Esri Light Gray ni CARTO', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    await servirMapasConfigAlicante(page, null);
+    await instalarTeselasAlicante(page, new Set(), solicitudes);
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    // La etiqueta ya no atribuye el fondo mudo a Esri.
+    await expect(
+      frame.locator('label', { hasText: 'Mapa mudo · claro (Esri)' }),
+    ).toHaveCount(0);
+    await expect
+      .poll(
+        () => peticionesConPath(solicitudes, 'World_Light_Gray_Base').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+    const lgAntes = peticionesConPath(
+      solicitudes,
+      'World_Light_Gray_Base',
+    ).length;
+
+    await seleccionarBaseAlicante(frame, 'Mapa mudo · claro');
+    await expect
+      .poll(() => peticionesAlHost(solicitudes, 'ign.es').length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+    expect(peticionesAlHost(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(
+      0,
+    );
+    await page.waitForTimeout(700);
+    expect(
+      peticionesConPath(solicitudes, 'World_Light_Gray_Base').length,
+    ).toBe(lgAntes);
+  });
+
+  test('Esri Topo a zoom 19: el respaldo OpenTopo limita el nativo a 17 y Reintentar restaura', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    let fallarTopo = false;
+    let fallarTodo = false;
+    const erroresPagina: string[] = [];
+    page.on('pageerror', (err) => erroresPagina.push(err.message));
+    await servirMapasConfigAlicante(page, null);
+    await page.route('**/*', async (route) => {
+      const host = new URL(route.request().url()).hostname;
+      if (['localhost', '127.0.0.1'].includes(host)) {
+        await route.fallback();
+        return;
+      }
+      const esEsri = host.endsWith('arcgisonline.com');
+      const esOpenTopo = host.endsWith('opentopomap.org');
+      if (!esEsri && !esOpenTopo) {
+        await route.fallback();
+        return;
+      }
+      solicitudes.push(route.request());
+      if ((esEsri && fallarTopo) || ((esEsri || esOpenTopo) && fallarTodo)) {
+        await route.abort('failed');
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        headers: {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-store',
+      },
+        body: PIXEL_PNG,
+      });
+    });
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    await seleccionarBaseAlicante(frame, 'Relieve (Esri Topo)');
+    await subirZoomAlMaximo(frame, page);
+    await expect
+      .poll(
+        () =>
+          Math.max(
+            0,
+            ...peticionesConPath(solicitudes, 'World_Topo_Map').map(
+              zoomDeAlicante,
+            ),
+          ),
+        { timeout: 15_000 },
+      )
+      .toBe(19);
+
+    // Esri Topo empieza a fallar → respaldo OpenTopoMap (nativo 17).
+    fallarTopo = true;
+    await frame.locator('.leaflet-control-zoom-out').click();
+    await frame.locator('.leaflet-control-zoom-in').click();
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(
+        () => peticionesAlHost(solicitudes, 'tile.opentopomap.org').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+    const zoomsOtm = peticionesAlHost(
+      solicitudes,
+      'tile.opentopomap.org',
+    ).map(zoomDeAlicante);
+    expect(Math.max(...zoomsOtm)).toBeLessThanOrEqual(17);
+    expect(zoomsOtm).not.toContain(19);
+
+    // Fallo total primario+respaldo → Reintentar restaura Esri Topo a zoom 19.
+    fallarTodo = true;
+    for (let i = 0; i < 5; i += 1) {
+      await frame.locator('.leaflet-control-zoom-out').click();
+      await page.waitForTimeout(300);
+    }
+    await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    fallarTopo = false;
+    fallarTodo = false;
+    await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
+    await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await subirZoomAlMaximo(frame, page);
+    await expect
+      .poll(
+        () =>
+          Math.max(
+            0,
+            ...peticionesConPath(solicitudes, 'World_Topo_Map').map(
+              zoomDeAlicante,
+            ),
+          ),
+        { timeout: 15_000 },
+      )
+      .toBe(19);
+    expect(erroresPagina).toEqual([]);
   });
 });

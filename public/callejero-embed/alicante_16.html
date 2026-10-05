@@ -1043,6 +1043,7 @@ body.qz-on .leaflet-popup-pane{display:none}
 .leaflet-tooltip.qz-tt-muni{background:rgba(79,140,247,.85);border-color:#4f8cf7;color:#fff;font-weight:600}
 
 </style>
+<script src="mapas-config.js"></script>
 </head>
 <body>
 <div id="app">
@@ -1120,9 +1121,59 @@ const baseClaro = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/servi
 const baseOrto = L.tileLayer('https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&tilematrix={z}&tilerow={y}&tilecol={x}',{
   ...TILE_PERF,maxZoom:19, attribution:'PNOA &copy; Instituto Geogr&aacute;fico Nacional'});
 const baseMudoRelieve = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxNativeZoom:13,maxZoom:19,attribution:'Esri'});
-const baseMudoClaro0 = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxNativeZoom:16,maxZoom:19,attribution:'Esri, HERE, Garmin'});
+/* Mapa mudo · claro: CARTO light_nolabels con clave o PNOA del IGN si no la hay.
+   Nunca Esri Light Gray (sus teselas llevan topónimos). */
+const MUDO_CLARO0 = defMudoClaroAlicante();
+const baseMudoClaro0 = L.tileLayer(MUDO_CLARO0.primario.url,{...TILE_PERF,...MUDO_CLARO0.primario.opts,maxZoom:19});
 const basePredeterminada = baseClaro;
-L.control.layers({"Fondo claro (Esri)":baseClaro,"Callejero (Esri)":baseCallesEsri,"Relieve (OpenTopoMap)":baseRelieve,"Relieve (Esri Topo)":baseEsriTopo,"Satélite (Esri)":baseSat,"Ortofoto PNOA (IGN)":baseOrto,"Mapa mudo · relieve (Esri)":baseMudoRelieve,"Mapa mudo · claro (Esri)":baseMudoClaro0},{},{collapsed:true,position:'topright'}).addTo(mapa);
+L.control.layers({"Fondo claro (Esri)":baseClaro,"Callejero (Esri)":baseCallesEsri,"Relieve (OpenTopoMap)":baseRelieve,"Relieve (Esri Topo)":baseEsriTopo,"Satélite (Esri)":baseSat,"Ortofoto PNOA (IGN)":baseOrto,"Mapa mudo · relieve (Esri)":baseMudoRelieve,"Mapa mudo · claro":baseMudoClaro0},{},{collapsed:true,position:'topright'}).addTo(mapa);
+
+/* ── Recuperación ante fallos de las capas base ───────────────────────────
+   Cada base tiene un respaldo (sin descargar sus imágenes hasta que falle).
+   Tres tileerror consecutivos (reseteados por tileload) disparan una única
+   transición; si el respaldo también falla se muestra "No se puede cargar el
+   mapa" + Reintentar. La identidad de la capa se conserva para no romper
+   baseActual()/qzMapMode ni la selección del alumno. */
+const RECS_BASE = new Map();
+function proveedor(nombre, extra){
+  const t = window.TFMapas && window.TFMapas.proveedores;
+  if(!t) return null;
+  const p = t();
+  return p[nombre] ? p[nombre](extra) : null;
+}
+/* Fondo mudo claro: CARTO light_nolabels si hay clave; si no, PNOA (fotografía
+   del IGN sin rótulos cartográficos). Respaldo PNOA cuando el primario es CARTO.
+   Usa baseOrto como red de seguridad si TFMapas no estuviera disponible. */
+function defMudoClaroAlicante(){
+  const carto = proveedor('cartoLightSinEtiquetas');
+  const pnoa = proveedor('pnoa') || { url: baseOrto._url, opts: {...baseOrto.options} };
+  return carto ? { primario: carto, respaldo: pnoa }
+               : { primario: pnoa, respaldo: null };
+}
+function registrarRecuperacion(layer, respaldo){
+  if(!(window.TFMapas && window.TFMapas.crearRecuperable)) return null;
+  const rec = window.TFMapas.crearRecuperable(L, layer, {
+    respaldo: respaldo || null,
+    maxFallos: 3,
+    contenedor: mapa.getContainer(),
+    textoAviso: 'Mostrando capa de respaldo',
+    activo: mapa.hasLayer(layer)
+  });
+  RECS_BASE.set(layer, rec);
+  return rec;
+}
+function activarRecuperacion(layer){
+  RECS_BASE.forEach((rec, l) => { if(rec) rec.establecerActivo(l === layer); });
+}
+registrarRecuperacion(baseClaro, proveedor('cartoLightSinEtiquetas'));
+registrarRecuperacion(baseMudoClaro0, MUDO_CLARO0.respaldo);
+registrarRecuperacion(baseCallesEsri, proveedor('cartoVoyager') || proveedor('ignBaseTodo'));
+registrarRecuperacion(baseRelieve, proveedor('esriTopo'));
+registrarRecuperacion(baseEsriTopo, proveedor('openTopoMap'));
+registrarRecuperacion(baseMudoRelieve, proveedor('ignRelieve'));
+registrarRecuperacion(baseSat, proveedor('pnoa'));
+registrarRecuperacion(baseOrto, proveedor('esriSatelite'));
+mapa.on('baselayerchange', e => activarRecuperacion(e.layer));
 
 /* ══ ESTADO ══ */
 let modo = 'comarcas';                 // 'comarcas' | 'zonas'
@@ -2790,12 +2841,14 @@ function genFor(it, prefer){
 /* ── mapa: mostrar / revelar ──────────────────────────────────── */
 const qzLayer=L.layerGroup().addTo(mapa);
 let qzBaseAntes=null;
-const baseMudoClaro = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{...TILE_PERF,maxNativeZoom:16,maxZoom:19,attribution:'Esri, HERE, Garmin'});
+const MUDO_CLARO_QZ = defMudoClaroAlicante();
+const baseMudoClaro = L.tileLayer(MUDO_CLARO_QZ.primario.url,{...TILE_PERF,...MUDO_CLARO_QZ.primario.opts,maxZoom:19});
+registrarRecuperacion(baseMudoClaro, MUDO_CLARO_QZ.respaldo);
 function baseActual(){ let b=null; mapa.eachLayer(l=>{ if(l instanceof L.TileLayer && l!==baseMudoClaro) b=l; }); return b; }
 function qzMapMode(on){
   document.body.classList.toggle('qz-on',on);
   if(on){
-    if(QZ.mute){ qzBaseAntes=baseActual(); if(qzBaseAntes) mapa.removeLayer(qzBaseAntes); baseMudoClaro.addTo(mapa); }
+    if(QZ.mute){ qzBaseAntes=baseActual(); if(qzBaseAntes) mapa.removeLayer(qzBaseAntes); baseMudoClaro.addTo(mapa); activarRecuperacion(baseMudoClaro); }
     indice.forEach(it=>{ it.capaC.setStyle({fillOpacity:0,color:'#555',weight:1,opacity:.8}); if(it.capaZ) it.capaZ.setStyle({fillOpacity:0,color:'#555',weight:1,opacity:.8}); });
     rec2Pop.classList.remove('show'); rec2Capa.clearLayers(); mapa.closePopup();
     QZ.layersAntes=Object.keys(atlLayer).filter(c=>mapa.hasLayer(atlLayer[c])); QZ.layersAntes.forEach(c=>atlShow(c,false));
@@ -2807,7 +2860,9 @@ function qzMapMode(on){
     if(QZ.etqAntes){ capaEtiquetas.addTo(mapa); QZ.etqAntes=false; }
     if(mapa.hasLayer(baseMudoClaro)){
       mapa.removeLayer(baseMudoClaro);
-      (qzBaseAntes||basePredeterminada).addTo(mapa);
+      const baseVuelta = qzBaseAntes||basePredeterminada;
+      baseVuelta.addTo(mapa);
+      activarRecuperacion(baseVuelta);
     }
     indice.forEach(it=>{ it.capaC.setStyle(estiloComarca(it.capaC.feature)); if(it.capaZ) it.capaZ.setStyle(estiloZona(it.capaZ.feature)); });
     qzLayer.clearLayers(); document.getElementById('mapa').classList.remove('qz-click');

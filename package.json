@@ -4,8 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
-    "build:staging": "ng build --configuration staging",
+    "build": "ng build && node scripts/escribir-mapa-key.mjs",
+    "build:staging": "ng build --configuration staging && node scripts/escribir-mapa-key.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:ci": "ng test --ci --coverage",
