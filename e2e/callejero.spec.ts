@@ -32,7 +32,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createContext, runInContext } from 'node:vm';
-import { loginAsAlumnoMock, loginAsRoleMock } from './helpers/auth.helper';
+import { loginAsRoleMock } from './helpers/auth.helper';
 import callejero from './fixtures/callejero-valencia.json';
 import userAlumnoFixture from './fixtures/user-alumno.json';
 
@@ -495,7 +495,11 @@ test.describe('Módulo Callejero (alumno)', () => {
       await route.continue();
     });
     await setupShellStubs(page);
-    await loginAsAlumnoMock(page);
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      email: 'alumno@test.com',
+      userFixture: userAlumnoValenciaFixture,
+    });
     await setupAppConfigStubs(page);
     await setupCallejeroInterceptors(page, currentState);
   });
