@@ -1091,7 +1091,7 @@ test.describe('Módulo Callejero (alumno)', () => {
     await loginAsRoleMock(page, {
       rol: 'ALUMNO',
       email: 'otro-alumno@example.invalid',
-      userFixture: userAlumnoFixture,
+      userFixture: userAlumnoValenciaFixture,
     });
 
     frame = await irACallejero(page);
