@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="mapas-config.js"></script>
 <style>
 :root{
   --ink:#15120E; --bg:#EEEDEA; --panel:#FFFFFF;
@@ -744,13 +745,41 @@ function zonaEn(lat,lng){
 /* ---------- MAPA ---------- */
 const map = L.map('map',{zoomControl:false}).setView([39.4665,-0.3700],13);
 L.control.zoom({position:'bottomright'}).addTo(map);
-const BASES = {
-  calles: L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{subdomains:['mt0','mt1','mt2','mt3'],maxZoom:21,attribution:'Google'}),
-  mudo:   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap, © CARTO'}),
-  sat:    L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{subdomains:['mt0','mt1','mt2','mt3'],maxZoom:21,attribution:'Google'})
-};
-let baseAct='calles'; BASES.calles.addTo(map);
-function setBase(b){ if(b===baseAct)return; map.removeLayer(BASES[baseAct]); BASES[b].addTo(map); baseAct=b;
+/* Bases: URLs/recuperación delegadas en la utilidad compartida TFMapas.
+   Google se conserva para calles y satélite; la base mudo usa CARTO sin
+   etiquetas solo si hay clave y, si no, PNOA del IGN (fotografía sin rótulos
+   cartográficos). Se conserva maxZoom 20 del mudo y maxNativeZoom 19 de PNOA. */
+const BASES = {};
+const RECS = {};
+function defsBases(){
+  const prov = (window.TFMapas && window.TFMapas.proveedores) ? window.TFMapas.proveedores() : null;
+  const p = (n, extra) => (prov && prov[n]) ? prov[n](extra) : null;
+  return {
+    calles: () => {
+      const primario = p('googleCalles');
+      return { primario: primario, respaldo: p('cartoVoyager') || p('ignBaseTodo') };
+    },
+    mudo: () => {
+      const pnoa = p('pnoa', { maxZoom: 20, maxNativeZoom: 19 });
+      const carto = p('cartoVoyagerSinEtiquetas');
+      return carto ? { primario: carto, respaldo: pnoa }
+                   : { primario: pnoa, respaldo: null };
+    },
+    sat: () => ({ primario: p('googleSatelite'), respaldo: p('esriSatelite') || p('pnoa') })
+  };
+}
+(function iniciarBases(){
+  const defs = defsBases();
+  Object.keys(defs).forEach(b => {
+    const d = defs[b]();
+    BASES[b] = L.tileLayer(d.primario.url, d.primario.opts);
+    RECS[b] = (window.TFMapas && window.TFMapas.crearRecuperable)
+      ? window.TFMapas.crearRecuperable(L, BASES[b], { respaldo: d.respaldo, maxFallos: 3, contenedor: map.getContainer(), textoAviso: 'Mostrando capa de respaldo', activo: false })
+      : null;
+  });
+})();
+let baseAct='calles'; BASES.calles.addTo(map); if(RECS.calles)RECS.calles.establecerActivo(true);
+function setBase(b){ if(b===baseAct)return; map.removeLayer(BASES[baseAct]); if(RECS[baseAct])RECS[baseAct].establecerActivo(false); BASES[b].addTo(map); if(RECS[b])RECS[b].establecerActivo(true); baseAct=b;
   document.querySelectorAll('.chip[data-base]').forEach(x=>x.classList.toggle('act',x.dataset.base===b)); }
 document.querySelectorAll('.chip[data-base]').forEach(x=>x.onclick=()=>setBase(x.dataset.base));
 

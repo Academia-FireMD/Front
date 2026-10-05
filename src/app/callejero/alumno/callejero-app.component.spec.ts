@@ -987,4 +987,107 @@ describe('CallejeroAppComponent', () => {
       expect(tipos).not.toContain('modificada');
     });
   });
+
+  describe('recuperación de capa base (TFMapas)', () => {
+    let crearRecuperable: jest.Mock;
+
+    function definicion(url: string): TfMapaDefinicion {
+      return { url, opts: { attribution: 'stub' } };
+    }
+
+    function instalarTFMapas(conCarto: boolean): void {
+      crearRecuperable = jest.fn().mockImplementation(() => ({
+        fase: () => 'primario',
+        reintentar: jest.fn(),
+        establecerActivo: jest.fn(),
+        destruir: jest.fn(),
+        avisoElemento: null,
+        errorElemento: null,
+      }));
+      window.TFMapas = {
+        config: { cartoKey: conCarto ? 'CLAVE' : '' },
+        tieneCarto: () => conCarto,
+        claveCarto: () => (conCarto ? 'CLAVE' : ''),
+        proveedores: () => ({
+          googleCalles: () =>
+            definicion('https://google.test/calles/{z}/{x}/{y}'),
+          googleSatelite: () =>
+            definicion('https://google.test/sat/{z}/{x}/{y}'),
+          cartoVoyager: () =>
+            conCarto
+              ? definicion('https://carto.test/voyager/{z}/{x}/{y}')
+              : null,
+          cartoVoyagerSinEtiquetas: () =>
+            conCarto
+              ? definicion('https://carto.test/voyager_nolabels/{z}/{x}/{y}')
+              : null,
+          cartoLightSinEtiquetas: () =>
+            conCarto
+              ? definicion('https://carto.test/light_nolabels/{z}/{x}/{y}')
+              : null,
+          esriClaro: () => definicion('https://esri.test/claro/{z}/{x}/{y}'),
+          ignBaseTodo: () => definicion('https://ign.test/base/{z}/{x}/{y}'),
+          esriSatelite: () => definicion('https://esri.test/sat/{z}/{x}/{y}'),
+          pnoa: () => definicion('https://ign.test/pnoa/{z}/{x}/{y}'),
+        }),
+        crearRecuperable:
+          crearRecuperable as unknown as TfMapas['crearRecuperable'],
+      };
+    }
+
+    function aplicarBase(key: string): void {
+      (
+        component as unknown as { aplicarBase(b: string): void }
+      ).aplicarBase(key);
+    }
+
+    function recrear(): void {
+      fixture.destroy();
+      fixture = TestBed.createComponent(CallejeroAppComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    }
+
+    afterEach(() => {
+      delete window.TFMapas;
+    });
+
+    it('registra la recuperación de la base inicial (mapa asignado antes)', () => {
+      instalarTFMapas(true);
+      recrear();
+      expect(crearRecuperable).toHaveBeenCalled();
+      const opciones = crearRecuperable.mock.calls[0][2] as TfMapasOpciones;
+      // calles con clave: respaldo CARTO Voyager.
+      expect(opciones.respaldo?.url).toContain('voyager');
+    });
+
+    it('mudo sin clave: primario PNOA y sin respaldo (nunca nombres)', () => {
+      instalarTFMapas(false);
+      recrear();
+      crearRecuperable.mockClear();
+
+      aplicarBase('mudo');
+
+      expect(crearRecuperable).toHaveBeenCalledTimes(1);
+      const capa = crearRecuperable.mock.calls[0][1] as L.TileLayer;
+      const opciones = crearRecuperable.mock.calls[0][2] as TfMapasOpciones;
+      expect((capa as unknown as { _url: string })._url).toContain('pnoa');
+      expect(opciones.respaldo).toBeNull();
+    });
+
+    it('mudo con clave: primario CARTO sin etiquetas y respaldo PNOA', () => {
+      instalarTFMapas(true);
+      recrear();
+      crearRecuperable.mockClear();
+
+      aplicarBase('mudo');
+
+      const capa = crearRecuperable.mock.calls[0][1] as L.TileLayer;
+      const opciones = crearRecuperable.mock.calls[0][2] as TfMapasOpciones;
+      expect((capa as unknown as { _url: string })._url).toContain(
+        'voyager_nolabels',
+      );
+      expect(opciones.respaldo?.url).toContain('pnoa');
+    });
+  });
 });

@@ -21,9 +21,126 @@ import {
   type Page,
   type Request,
 } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { createContext, runInContext } from 'node:vm';
 import { loginAsRoleMock } from './helpers/auth.helper';
 import callejero from './fixtures/callejero-valencia.json';
 import userAlumnoFixture from './fixtures/user-alumno.json';
+
+const PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEAQH/XPWsWQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/** Stub versionado (sin clave). En los tests se inyecta una clave ficticia. */
+const MAPAS_CONFIG_SRC = readFileSync(
+  resolve(__dirname, '../public/callejero-embed/mapas-config.js'),
+  'utf8',
+);
+function mapasConfigConClave(clave: string): string {
+  return MAPAS_CONFIG_SRC.replace("cartoKey: ''", `cartoKey: '${clave}'`);
+}
+async function servirMapasConfig(page: Page, clave: string | null): Promise<void> {
+  await page.route('**/mapas-config.js', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: clave ? mapasConfigConClave(clave) : MAPAS_CONFIG_SRC,
+    }),
+  );
+}
+
+/** Intercepta teselas externas: falla los hosts indicados, sirve píxel al resto. */
+async function instalarTeselas(
+  page: Page,
+  hostsEnFallo: Set<string>,
+  solicitudes: Request[],
+): Promise<void> {
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    if (['localhost', '127.0.0.1'].includes(url.hostname)) {
+      await route.fallback();
+      return;
+    }
+    const tileHosts = [
+      'google.com',
+      'basemaps.cartocdn.com',
+      'arcgisonline.com',
+      'ign.es',
+      'idee.es',
+      'opentopomap.org',
+    ];
+    if (!tileHosts.some((h) => url.hostname === h || url.hostname.endsWith(`.${h}`))) {
+      await route.fallback();
+      return;
+    }
+    solicitudes.push(route.request());
+    const enFallo = [...hostsEnFallo].some(
+      (h) => url.hostname === h || url.hostname.endsWith(`.${h}`),
+    );
+    if (enFallo) {
+      await route.abort('failed');
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      headers: {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-store',
+      },
+      body: PIXEL_PNG,
+    });
+  });
+}
+
+function hostnameDe(request: Request): string {
+  return new URL(request.url()).hostname;
+}
+function peticionesA(solicitudes: Request[], host: string): Request[] {
+  return solicitudes.filter(
+    (r) => r.url().length > 0 && (hostnameDe(r) === host || hostnameDe(r).endsWith(`.${host}`)),
+  );
+}
+
+/**
+ * Nivel de zoom (tilematrix) pedido por una tesela, admitiendo los esquemas de
+ * Google (?z=), IGN/IDEE (?tilematrix=) y basemaps/Esri/OpenTopo (/…/z/…).
+ */
+function zoomDe(request: Request): number {
+  const raw = request.url();
+  const tilematrix = new URL(raw).searchParams.get('tilematrix');
+  if (tilematrix) return Number(tilematrix);
+  const zParam = raw.match(/[?&]z=(\d+)(?:&|$)/);
+  if (zParam) return Number(zParam[1]);
+  const match = new URL(raw).pathname.match(/\/(\d+)\/\d+\/\d+(?:\.\w+)?$/);
+  return match ? Number(match[1]) : Number.NaN;
+}
+
+/** Pulsa zoom-in hasta el máximo del mapa (el botón se deshabilita al llegar). */
+async function subirZoomAlMaximo(
+  frame: FrameLocator,
+  page: Page,
+): Promise<void> {
+  const zoomIn = frame.locator('.leaflet-control-zoom-in');
+  for (let i = 0; i < 25; i += 1) {
+    const deshabilitado = await zoomIn.evaluate((el) =>
+      el.classList.contains('leaflet-disabled'),
+    );
+    if (deshabilitado) break;
+    await zoomIn.click();
+    await page.waitForTimeout(300);
+  }
+}
 
 const userAlumnoValenciaFixture = {
   ...userAlumnoFixture,
@@ -715,5 +832,464 @@ test.describe('Módulo Callejero (alumno)', () => {
     await expect(frame.locator('#callejeroEstado')).not.toContainText(
       'calles cargadas',
     );
+  });
+
+  test('CARTO usa la clave configurada y no hace peticiones anónimas', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    await servirMapasConfig(page, 'CLAVE_E2E');
+    await instalarTeselas(page, new Set(), solicitudes);
+
+    const frame = await irACallejero(page);
+    const conClave = await frame
+      .locator('html')
+      .evaluate(
+        () =>
+          Boolean(
+            (window as unknown as { TFMapas?: { tieneCarto(): boolean } })
+              .TFMapas?.tieneCarto(),
+          ),
+      );
+    expect(conClave).toBe(true);
+
+    await frame.locator('.chip[data-base="mudo"]').click();
+    await expect
+      .poll(() => peticionesA(solicitudes, 'basemaps.cartocdn.com').length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+
+    const carto = peticionesA(solicitudes, 'basemaps.cartocdn.com');
+    for (const request of carto) {
+      expect(new URL(request.url()).searchParams.get('key')).toBe('CLAVE_E2E');
+      expect(request.headers()['authorization']).toBeUndefined();
+    }
+  });
+
+  test('sin clave el mudo usa PNOA y nunca CARTO ni Esri Light Gray', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    await servirMapasConfig(page, null);
+    await instalarTeselas(page, new Set(), solicitudes);
+
+    const frame = await irACallejero(page);
+    const cartoNulo = await frame.locator('html').evaluate(() => {
+      const tf = (window as unknown as { TFMapas?: { proveedores(): Record<string, () => unknown> } })
+        .TFMapas;
+      return tf ? tf.proveedores()['cartoVoyagerSinEtiquetas']() : 'sin-utilidad';
+    });
+    expect(cartoNulo).toBeNull();
+
+    await frame.locator('.chip[data-base="mudo"]').click();
+    await expect
+      .poll(
+        () => peticionesA(solicitudes, 'ign.es').length > 0,
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+    expect(peticionesA(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(0);
+    // Nunca Esri Light Gray (sus teselas llevan topónimos).
+    expect(peticionesA(solicitudes, 'arcgisonline.com')).toHaveLength(0);
+  });
+
+  test('tres fallos activan el respaldo; fallo total muestra Reintentar y el reintento recupera', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    const enFallo = new Set<string>(['google.com']);
+    await servirMapasConfig(page, 'CLAVE_E2E');
+    await instalarTeselas(page, enFallo, solicitudes);
+
+    const frame = await irACallejero(page);
+    // Google (calles) falla → transición única al respaldo CARTO con clave.
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(() => peticionesA(solicitudes, 'basemaps.cartocdn.com').length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+    const carto = peticionesA(solicitudes, 'basemaps.cartocdn.com');
+    expect(new URL(carto[0].url()).searchParams.get('key')).toBe('CLAVE_E2E');
+
+    // El respaldo también falla → aviso de fallo con Reintentar (sin bucle).
+    enFallo.add('basemaps.cartocdn.com');
+    await frame.locator('.leaflet-control-zoom-in').click();
+    await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar'),
+    ).toBeVisible();
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toHaveCount(0);
+
+    // Reintento explícito: se restablece el proveedor primario.
+    const antes = peticionesA(solicitudes, 'google.com').length;
+    enFallo.clear();
+    await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
+    await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect
+      .poll(() => peticionesA(solicitudes, 'google.com').length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(antes);
+  });
+
+  test('una tesela fallida aislada no dispara la transición al respaldo', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    let fallosRestantes = 1;
+    await servirMapasConfig(page, 'CLAVE_E2E');
+    await page.route('**/*', async (route) => {
+      const url = new URL(route.request().url());
+      if (['localhost', '127.0.0.1'].includes(url.hostname)) {
+        await route.fallback();
+        return;
+      }
+      if (!url.hostname.endsWith('google.com')) {
+        await route.fallback();
+        return;
+      }
+      solicitudes.push(route.request());
+      if (fallosRestantes > 0) {
+        fallosRestantes -= 1;
+        await route.abort('failed');
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        headers: {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-store',
+      },
+        body: PIXEL_PNG,
+      });
+    });
+
+    const frame = await irACallejero(page);
+    await page.waitForTimeout(2_000);
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toHaveCount(0);
+    expect(peticionesA(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(0);
+  });
+
+  test('sin clave, el fallo de calles cae a IGNBaseTodo y nunca a CARTO', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    const erroresPagina: string[] = [];
+    page.on('pageerror', (err) => erroresPagina.push(err.message));
+    await servirMapasConfig(page, null);
+    await instalarTeselas(page, new Set(['google.com']), solicitudes);
+
+    const frame = await irACallejero(page);
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(() => peticionesA(solicitudes, 'ign.es').length, { timeout: 15_000 })
+      .toBeGreaterThan(0);
+    expect(peticionesA(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(0);
+    // La transición no debe romper Leaflet (p. ej. subdomains undefined).
+    expect(erroresPagina).toEqual([]);
+  });
+
+  test('Google a zoom 21: el respaldo conserva la vista y limita el zoom nativo; Reintentar restaura la URL original', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    let fallarGoogle = false;
+    let fallarTodo = false;
+    const erroresPagina: string[] = [];
+    page.on('pageerror', (err) => erroresPagina.push(err.message));
+    await servirMapasConfig(page, 'CLAVE_E2E');
+    await page.route('**/*', async (route) => {
+      const host = new URL(route.request().url()).hostname;
+      if (['localhost', '127.0.0.1'].includes(host)) {
+        await route.fallback();
+        return;
+      }
+      const esGoogle = host.endsWith('google.com');
+      const esCarto = host.endsWith('basemaps.cartocdn.com');
+      if (!esGoogle && !esCarto) {
+        await route.fallback();
+        return;
+      }
+      solicitudes.push(route.request());
+      if ((esGoogle && fallarGoogle) || ((esGoogle || esCarto) && fallarTodo)) {
+        await route.abort('failed');
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        headers: {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-store',
+      },
+        body: PIXEL_PNG,
+      });
+    });
+
+    const frame = await irACallejero(page);
+    // Con Google el zoom de vista llega a 21 (Google admite 21).
+    await subirZoomAlMaximo(frame, page);
+    await expect
+      .poll(
+        () =>
+          Math.max(0, ...peticionesA(solicitudes, 'google.com').map(zoomDe)),
+        { timeout: 15_000 },
+      )
+      .toBe(21);
+
+    // Google empieza a fallar → respaldo CARTO Voyager (con clave).
+    fallarGoogle = true;
+    await frame.locator('.leaflet-control-zoom-out').click();
+    await frame.locator('.leaflet-control-zoom-in').click();
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(
+        () => peticionesA(solicitudes, 'basemaps.cartocdn.com').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+
+    // La vista sigue en 21, pero las teselas se piden al nativo <= 20 (CARTO 20).
+    const zoomsCarto = peticionesA(solicitudes, 'basemaps.cartocdn.com').map(
+      zoomDe,
+    );
+    expect(Math.max(...zoomsCarto)).toBeLessThanOrEqual(20);
+    expect(zoomsCarto).not.toContain(21);
+    await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0);
+    await expect(
+      frame.locator('img.leaflet-tile-loaded').first(),
+    ).toBeVisible();
+
+    // Fallo total primario+respaldo → Reintentar restaura URL/opciones (Google z21).
+    fallarTodo = true;
+    // Varios niveles de zoom fuerzan nuevas teselas nativas en cada paso.
+    for (let i = 0; i < 5; i += 1) {
+      await frame.locator('.leaflet-control-zoom-out').click();
+      await page.waitForTimeout(300);
+    }
+    await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    fallarGoogle = false;
+    fallarTodo = false;
+    await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
+    await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    // URL original restaurada: de nuevo admite subir hasta el zoom 21.
+    await subirZoomAlMaximo(frame, page);
+    await expect
+      .poll(
+        () =>
+          Math.max(0, ...peticionesA(solicitudes, 'google.com').map(zoomDe)),
+        { timeout: 15_000 },
+      )
+      .toBe(21);
+    expect(erroresPagina).toEqual([]);
+  });
+});
+
+/**
+ * El script de build (scripts/escribir-mapa-key.mjs) es el único punto que
+ * inyecta la clave en la copia GENERADA. Estas pruebas lo ejecutan contra una
+ * copia temporal (nunca contra public/) y evalúan el TFMapas resultante.
+ */
+test.describe('Configuración de mapas (build)', () => {
+  const RAIZ = resolve(__dirname, '..');
+  const STUB = resolve(RAIZ, 'public/callejero-embed/mapas-config.js');
+  const SCRIPT = resolve(RAIZ, 'scripts/escribir-mapa-key.mjs');
+  const RUTA_RELATIVA = 'dist/front/browser/callejero-embed/mapas-config.js';
+
+  interface TfMapasEvaluado {
+    config: { cartoKey: string };
+    tieneCarto(): boolean;
+  }
+
+  function prepararCopia(): string {
+    const base = mkdtempSync(join(tmpdir(), 'tf-mapas-'));
+    mkdirSync(join(base, 'dist/front/browser/callejero-embed'), {
+      recursive: true,
+    });
+    copyFileSync(STUB, join(base, RUTA_RELATIVA));
+    return base;
+  }
+
+  function evaluar(archivo: string): TfMapasEvaluado {
+    const contexto = createContext({});
+    runInContext(readFileSync(archivo, 'utf8'), contexto);
+    return (contexto as { TFMapas: TfMapasEvaluado }).TFMapas;
+  }
+
+  test('inyecta la clave en la copia generada y deja intacto el stub', () => {
+    const base = prepararCopia();
+    try {
+      execFileSync(process.execPath, [SCRIPT], {
+        cwd: base,
+        env: { ...process.env, CALLEJERO_CARTO_API_KEY: 'CLAVE_FICTICIA_E2E' },
+        stdio: 'pipe',
+      });
+      const api = evaluar(join(base, RUTA_RELATIVA));
+      expect(api.config.cartoKey).toBe('CLAVE_FICTICIA_E2E');
+      expect(api.tieneCarto()).toBe(true);
+      // El stub versionado sigue SIN clave real.
+      expect(readFileSync(STUB, 'utf8')).toContain("cartoKey: ''");
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  test('sin CALLEJERO_CARTO_API_KEY conserva el stub vacío (respaldos)', () => {
+    const base = prepararCopia();
+    try {
+      const env = { ...process.env };
+      delete env.CALLEJERO_CARTO_API_KEY;
+      execFileSync(process.execPath, [SCRIPT], { cwd: base, env, stdio: 'pipe' });
+      const api = evaluar(join(base, RUTA_RELATIVA));
+      expect(api.config.cartoKey).toBe('');
+      expect(api.tieneCarto()).toBe(false);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  interface TfMapasUtil {
+    crearRecuperable(
+      L: unknown,
+      capa: CapaFalsa,
+      opciones: {
+        respaldo?: { url: string; opts: Record<string, unknown> } | null;
+        maxFallos?: number;
+      },
+    ): {
+      fase(): string;
+      reintentar(): void;
+    };
+  }
+
+  interface CapaFalsa {
+    _url: string;
+    options: Record<string, unknown>;
+    _map: null;
+    _handlers: Array<[string, () => void]>;
+    on(ev: string, fn: () => void): CapaFalsa;
+    off(ev: string, fn: () => void): CapaFalsa;
+    setUrl(url: string): CapaFalsa;
+    redraw(): CapaFalsa;
+  }
+
+  function crearCapaFalsa(
+    url: string,
+    options: Record<string, unknown>,
+  ): CapaFalsa {
+    const capa: CapaFalsa = {
+      _url: url,
+      options: { ...options },
+      _map: null,
+      _handlers: [],
+      on(ev, fn) {
+        capa._handlers.push([ev, fn]);
+        return capa;
+      },
+      off(ev, fn) {
+        capa._handlers = capa._handlers.filter(
+          ([e, f]) => e !== ev || f !== fn,
+        );
+        return capa;
+      },
+      setUrl(u) {
+        capa._url = u;
+        return capa;
+      },
+      redraw() {
+        return capa;
+      },
+    };
+    return capa;
+  }
+
+  function cargarTfMapas(): TfMapasUtil {
+    const contexto = createContext({});
+    runInContext(MAPAS_CONFIG_SRC, contexto);
+    return (contexto as unknown as { TFMapas: TfMapasUtil }).TFMapas;
+  }
+
+  function emitir(capa: CapaFalsa, evento: string, veces: number): void {
+    for (let i = 0; i < veces; i += 1) {
+      for (const [e, f] of [...capa._handlers]) {
+        if (e === evento) f();
+      }
+    }
+  }
+
+  test('el respaldo conserva maxZoom de vista y fija el maxNativeZoom del proveedor', () => {
+    const tf = cargarTfMapas();
+    const capa = crearCapaFalsa('GOOGLE', {
+      maxZoom: 21,
+      subdomains: ['mt0', 'mt1'],
+      attribution: 'G',
+    });
+    const ctrl = tf.crearRecuperable({}, capa, {
+      respaldo: {
+        url: 'CARTO',
+        opts: { maxZoom: 20, subdomains: 'abcd', attribution: 'C' },
+      },
+    });
+
+    emitir(capa, 'tileerror', 3);
+    expect(ctrl.fase()).toBe('respaldo');
+    expect(capa._url).toBe('CARTO');
+    // La vista original (21) se conserva; el nativo pasa a 20 (inferido del respaldo).
+    expect(capa.options['maxZoom']).toBe(21);
+    expect(capa.options['maxNativeZoom']).toBe(20);
+    expect(capa.options['subdomains']).toBe('abcd');
+
+    ctrl.reintentar();
+    expect(ctrl.fase()).toBe('primario');
+    expect(capa._url).toBe('GOOGLE');
+    expect(capa.options['maxZoom']).toBe(21);
+    expect(capa.options['maxNativeZoom']).toBeUndefined();
+    expect(capa.options['subdomains']).toEqual(['mt0', 'mt1']);
+    expect(capa.options['attribution']).toBe('G');
+  });
+
+  test('de Esri Topo (19) a OpenTopo (17): se limpia el maxNativeZoom previo y se infiere el del respaldo', () => {
+    const tf = cargarTfMapas();
+    const capa = crearCapaFalsa('ESRI_TOPO', {
+      maxZoom: 19,
+      maxNativeZoom: 16,
+      attribution: 'E',
+    });
+    const ctrl = tf.crearRecuperable({}, capa, {
+      respaldo: { url: 'OPENTOPO', opts: { maxZoom: 17, attribution: 'OTM' } },
+    });
+
+    emitir(capa, 'tileerror', 3);
+    expect(capa._url).toBe('OPENTOPO');
+    expect(capa.options['maxZoom']).toBe(19);
+    expect(capa.options['maxNativeZoom']).toBe(17);
+    // El respaldo NO declara subdomains: Leaflet siempre llama a _getSubdomain,
+    // así que debe quedar un valor válido (por defecto 'abc'), no undefined.
+    expect(capa.options['subdomains']).toBe('abc');
+    expect(capa.options['tms']).toBe(false);
+    expect(capa.options['zoomOffset']).toBe(0);
+    expect(capa.options['zoomReverse']).toBe(false);
+
+    ctrl.reintentar();
+    expect(capa._url).toBe('ESRI_TOPO');
+    expect(capa.options['maxZoom']).toBe(19);
+    expect(capa.options['maxNativeZoom']).toBe(16);
   });
 });

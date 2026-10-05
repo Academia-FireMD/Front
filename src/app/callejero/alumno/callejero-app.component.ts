@@ -101,29 +101,44 @@ function flameIcon(px: number): L.DivIcon {
 }
 
 const ATTRIB = '© OpenStreetMap · © CARTO · Esri';
-// TODO ToS: Google tiles sin key (zona gris); migrar a Esri/key oficial antes de prod
-const GOOGLE_OPTS: L.TileLayerOptions = {
-  subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] as unknown as string,
-  maxZoom: 20,
-  attribution: '© Google',
-};
-const BASE_URLS: Record<string, { url: string; opts: L.TileLayerOptions }> = {
-  calles: {
-    url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-    opts: GOOGLE_OPTS,
-  },
-  mudo: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
-    opts: { subdomains: 'abcd', maxZoom: 20, attribution: ATTRIB },
-  },
-  satelite: {
-    url: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-    opts: GOOGLE_OPTS,
-  },
-};
+
+type BaseKey = 'calles' | 'mudo' | 'satelite';
+
+/**
+ * Configuración de capas base. Las URLs, el sufijo `?key=` de CARTO y la
+ * recuperación ante fallos viven en la utilidad compartida TFMapas
+ * (public/callejero-embed/mapas-config.js), cargada globalmente por index.html.
+ * Aquí solo se compone la base primaria y su respaldo.
+ */
+function proveedorBase(key: BaseKey): TfMapaDefinicion {
+  const tf = typeof window !== 'undefined' ? window.TFMapas : undefined;
+  if (!tf) return { url: '', opts: { attribution: ATTRIB } };
+  const p = tf.proveedores();
+  if (key === 'calles') return p['googleCalles']()!;
+  if (key === 'satelite') return p['googleSatelite']()!;
+  // Mudo: CARTO sin etiquetas si hay clave; si no, PNOA (fotografía del IGN,
+  // sin rótulos cartográficos). Se conserva maxZoom 20 del mudo y se declara
+  // maxNativeZoom 19 para PNOA.
+  return (
+    p['cartoVoyagerSinEtiquetas']() ??
+    p['pnoa']({ maxZoom: 20, maxNativeZoom: 19 })!
+  );
+}
+
+function respaldoBase(key: BaseKey): TfMapaDefinicion | null {
+  const tf = typeof window !== 'undefined' ? window.TFMapas : undefined;
+  if (!tf) return null;
+  const p = tf.proveedores();
+  if (key === 'calles') return p['cartoVoyager']() ?? p['ignBaseTodo']();
+  if (key === 'satelite') return p['esriSatelite']() ?? p['pnoa']();
+  // Mudo: solo hay respaldo si el primario es CARTO (con clave); si el primario
+  // ya es PNOA, no se salta a otra capa (nunca a una con nombres).
+  return p['cartoVoyagerSinEtiquetas']()
+    ? p['pnoa']({ maxZoom: 20, maxNativeZoom: 19 })
+    : null;
+}
 
 type TabKey = 'mapa' | 'estudio' | 'examen' | 'recorridos';
-type BaseKey = 'calles' | 'mudo' | 'satelite';
 type TipoReto = 'localiza' | 'zona' | 'coopera' | 'calleRapida' | 'modificada';
 
 interface Reto {
@@ -414,6 +429,8 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   // ---- Leaflet ----
   private map?: L.Map;
   private baseLayer?: L.TileLayer;
+  /** Controladores de recuperación de la capa base activa (se destruyen al cambiar). */
+  private recuperaciones: TfMapasRecuperable[] = [];
   private capaZonas?: L.LayerGroup;
   private capaEst?: L.LayerGroup;
   private capasCat: Partial<Record<PoiCategoria, L.LayerGroup>> = {};
@@ -451,6 +468,7 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.limpiarRecuperaciones();
     try {
       this.map?.remove();
     } catch {
@@ -465,8 +483,12 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
       center: [39.4665, -0.37],
       zoom: 13,
     });
+    // Asignar el mapa ANTES de registrar la recuperación: activarRecuperacion
+    // usa this.map como guardia y como contenedor del aviso/error.
+    this.map = map;
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     this.baseLayer = this.tileLayer('calles').addTo(map);
+    this.activarRecuperacion('calles', this.baseLayer);
     this.capaZonas = L.layerGroup().addTo(map);
     this.capaEst = L.layerGroup().addTo(map);
     this.capaExamen = L.layerGroup().addTo(map);
@@ -475,27 +497,36 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     // Capa de puntos de calles ciudad (off por defecto, se activa por toggle)
     this.capaCallesCiudad = L.layerGroup();
     map.on('click', (e: L.LeafletMouseEvent) => this.onMapClick(e));
-    this.map = map;
   }
 
-  private tileLayer(key: 'calles' | 'mudo' | 'satelite'): L.TileLayer {
-    const b = BASE_URLS[key];
-    const layer = L.tileLayer(b.url, b.opts);
-    // TODO ToS: Google tiles sin key (zona gris); migrar a Esri/key oficial antes de prod
-    if (key === 'calles') {
-      layer.on('tileerror', () => {
-        layer.setUrl(
-          'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        );
-      });
-    } else if (key === 'satelite') {
-      layer.on('tileerror', () => {
-        layer.setUrl(
-          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        );
-      });
+  private tileLayer(key: BaseKey): L.TileLayer {
+    const b = proveedorBase(key);
+    return L.tileLayer(b.url, b.opts);
+  }
+
+  /** Registra la recuperación de una base recién añadida al mapa. */
+  private activarRecuperacion(key: BaseKey, layer: L.TileLayer): void {
+    const tf = typeof window !== 'undefined' ? window.TFMapas : undefined;
+    if (!tf || !this.map || !layer) return;
+    const ctrl = tf.crearRecuperable(L, layer, {
+      respaldo: respaldoBase(key),
+      maxFallos: 3,
+      contenedor: this.map.getContainer(),
+      textoAviso: 'Capa de respaldo',
+    });
+    if (ctrl) this.recuperaciones.push(ctrl);
+  }
+
+  /** Destruye los controladores de recuperación de bases ya retiradas. */
+  private limpiarRecuperaciones(): void {
+    for (const ctrl of this.recuperaciones) {
+      try {
+        ctrl.destruir();
+      } catch {
+        /* jsdom */
+      }
     }
-    return layer;
+    this.recuperaciones = [];
   }
 
   /** Ejecuta una operación Leaflet ignorando errores de jsdom (tests). */
@@ -729,9 +760,11 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
   }
   private aplicarBase(b: BaseKey): void {
     if (!this.map) return;
+    this.limpiarRecuperaciones();
     this.baseLayer?.remove();
     this.baseLayer = this.tileLayer(b).addTo(this.map);
     this.baseLayer.bringToBack();
+    this.activarRecuperacion(b, this.baseLayer);
   }
 
   // ============ Capas ============
@@ -1126,9 +1159,11 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.safe(() => this.ocultarCapas());
     this.safe(() => {
       if (this.cfgMudo() && this.map) {
+        this.limpiarRecuperaciones();
         this.baseLayer?.remove();
         this.baseLayer = this.tileLayer('mudo').addTo(this.map);
         this.baseLayer.bringToBack();
+        this.activarRecuperacion('mudo', this.baseLayer);
       }
     });
     if (window.innerWidth <= 820) this.sidebarAbierto.set(false);
@@ -1487,9 +1522,11 @@ export class CallejeroAppComponent implements AfterViewInit, OnDestroy {
     this.puntos.set(0);
     this.ocultarCapas();
     if (this.cfgMudo() && this.map) {
+      this.limpiarRecuperaciones();
       this.baseLayer?.remove();
       this.baseLayer = this.tileLayer('mudo').addTo(this.map);
       this.baseLayer.bringToBack();
+      this.activarRecuperacion('mudo', this.baseLayer);
     }
     this.pregunta();
   }
