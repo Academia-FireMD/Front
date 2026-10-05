@@ -156,4 +156,208 @@ describe('CallejeroAppComponent — bases nativas con TFMapas', () => {
   });
 });
 
+/**
+ * Regresión de la recuperación REAL de TFMapas (sin mocks): carga
+ * public/callejero-embed/mapas-config.js en un contexto aislado y ejercita
+ * `crearRecuperable` con una capa falsa que imita a `L.TileLayer`.
+ *
+ * Cubre el fallo de la regresión CARTO→PNOA del examen mudo de Alicante:
+ *  - los `tileerror` tardíos de teselas retiradas no deben contarse como fallos
+ *    del respaldo;
+ *  - un `tileload` tardío de una tesela retirada no debe reiniciar esos fallos;
+ *  - el cambio de proveedor debe redibujar con `_setView` (zoom redondeado), no
+ *    con `redraw` (que captura el zoom fraccional de un `flyTo` y genera URLs
+ *    inválidas).
+ */
+interface CapaRecuperable {
+  _url: string;
+  options: Record<string, unknown>;
+  _tiles: Record<string, { el: object }>;
+  _map: {
+    getZoom(): number;
+    getCenter(): object;
+    getContainer(): null;
+    attributionControl?: unknown;
+  };
+  _handlers: Array<[string, (event?: unknown) => void]>;
+  on(evento: string, fn: (event?: unknown) => void): CapaRecuperable;
+  off(evento: string, fn: (event?: unknown) => void): CapaRecuperable;
+  setUrl(url: string, noRedraw?: boolean): CapaRecuperable;
+  redraw(): CapaRecuperable;
+  _removeAllTiles(): void;
+  _setView(center: object, zoom: number): void;
+}
+
+type FnRecuperable = (
+  L: unknown,
+  capa: CapaRecuperable,
+  opciones: {
+    respaldo?: { url: string; opts: Record<string, unknown> } | null;
+    maxFallos?: number;
+  },
+) => { fase(): string; reintentar(): void };
+
+function cargarTfMapasReal(): { crearRecuperable: FnRecuperable } {
+  // La utilidad es UMD y en Node expone `module.exports`; se carga el fichero
+  // REAL (no una copia) para probar la recuperación sin mocks.
+  return jest.requireActual<{ crearRecuperable: FnRecuperable }>(
+    '../../../../public/callejero-embed/mapas-config.js',
+  );
+}
+
+function capaRecuperable(zoom = 12): CapaRecuperable {
+  const capa: CapaRecuperable = {
+    _url: 'PRIMARIO',
+    options: { maxZoom: 20, subdomains: 'abc', attribution: 'P' },
+    _tiles: {},
+    _map: {
+      getZoom: () => zoom,
+      getCenter: () => ({ lat: 0, lng: 0 }),
+      getContainer: () => null,
+    },
+    _handlers: [],
+    on(evento, fn) {
+      capa._handlers.push([evento, fn]);
+      return capa;
+    },
+    off(evento, fn) {
+      capa._handlers = capa._handlers.filter(
+        ([e, f]) => e !== evento || f !== fn,
+      );
+      return capa;
+    },
+    setUrl(url) {
+      capa._url = url;
+      return capa;
+    },
+    redraw() {
+      return capa;
+    },
+    _removeAllTiles() {
+      // Como L.GridLayer: al cambiar de proveedor se retiran todas las teselas.
+      capa._tiles = {};
+    },
+    _setView() {
+      /* la capa real redondea el zoom aquí; el espía registra la llamada */
+    },
+  };
+  return capa;
+}
+
+/** Añade una tesela "activa" a la capa y devuelve su elemento `img`. */
+function teselaActiva(capa: CapaRecuperable, clave: string): object {
+  const el = {};
+  capa._tiles[clave] = { el };
+  return el;
+}
+
+function emitirTesela(
+  capa: CapaRecuperable,
+  evento: 'tileerror' | 'tileload',
+  tile?: object,
+  coords?: object,
+): void {
+  for (const [e, f] of [...capa._handlers]) {
+    if (e === evento) f({ tile, coords });
+  }
+}
+
+describe('TFMapas — recuperación ante teselas retiradas y zoom fraccional', () => {
+  it('los errores tardíos de teselas primarias retiradas no cuentan como fallos del respaldo', () => {
+    const { crearRecuperable } = cargarTfMapasReal();
+    const capa = capaRecuperable();
+    const ctrl = crearRecuperable({}, capa, {
+      respaldo: { url: 'RESPALDO', opts: { maxZoom: 19 } },
+    });
+
+    // Tres errores de teselas ACTIVAS del primario disparan la transición.
+    const e1 = teselaActiva(capa, '1:1:12');
+    const e2 = teselaActiva(capa, '2:1:12');
+    const e3 = teselaActiva(capa, '3:1:12');
+    emitirTesela(capa, 'tileerror', e1);
+    emitirTesela(capa, 'tileerror', e2);
+    emitirTesela(capa, 'tileerror', e3);
+    expect(ctrl.fase()).toBe('respaldo');
+    // `_removeAllTiles` vació las teselas primarias (retiradas).
+    expect(Object.keys(capa._tiles)).toHaveLength(0);
+
+    // Varios errores tardíos de esas teselas retiradas NO deben agotar el
+    // respaldo: antes de la corrección se contaban como 3 fallos → 'fallo'.
+    for (let i = 0; i < 6; i += 1) emitirTesela(capa, 'tileerror', e1);
+    emitirTesela(capa, 'tileerror', e2);
+    emitirTesela(capa, 'tileerror', e3);
+    expect(ctrl.fase()).toBe('respaldo');
+  });
+
+  it('un tileload tardío de una tesela retirada no reinicia los fallos del respaldo', () => {
+    const { crearRecuperable } = cargarTfMapasReal();
+    const capa = capaRecuperable();
+    const ctrl = crearRecuperable({}, capa, {
+      respaldo: { url: 'RESPALDO', opts: { maxZoom: 19 } },
+    });
+
+    const primarias = ['1:1:12', '2:1:12', '3:1:12'].map((k) => {
+      const el = {};
+      capa._tiles[k] = { el };
+      return el;
+    });
+    primarias.forEach((el) => emitirTesela(capa, 'tileerror', el));
+    expect(ctrl.fase()).toBe('respaldo');
+
+    // Dos fallos REALES del respaldo (teselas activas de la nueva capa).
+    const r1 = teselaActiva(capa, '1:1:12');
+    const r2 = teselaActiva(capa, '2:1:12');
+    emitirTesela(capa, 'tileerror', r1);
+    emitirTesela(capa, 'tileerror', r2);
+
+    // Un load tardío de una tesela primaria retirada no debe poner a cero el
+    // contador; si lo hiciera, el tercer fallo real quedaría en 1 y no habría 'fallo'.
+    emitirTesela(capa, 'tileload', primarias[0]);
+
+    const r3 = teselaActiva(capa, '3:1:12');
+    emitirTesela(capa, 'tileerror', r3);
+    expect(ctrl.fase()).toBe('fallo');
+  });
+
+  it('al cambiar de proveedor redibuja con _setView (zoom redondeado) y no con redraw', () => {
+    const { crearRecuperable } = cargarTfMapasReal();
+    const capa = capaRecuperable(8.99999998);
+    const redrawEspia = jest.spyOn(capa, 'redraw');
+    const setViewEspia = jest.spyOn(capa, '_setView');
+    const ctrl = crearRecuperable({}, capa, {
+      respaldo: { url: 'RESPALDO', opts: { maxZoom: 19 } },
+    });
+
+    ['1:1:9', '2:1:9', '3:1:9'].forEach((k) => {
+      emitirTesela(capa, 'tileerror', teselaActiva(capa, k));
+    });
+
+    expect(ctrl.fase()).toBe('respaldo');
+    expect(setViewEspia).toHaveBeenCalled();
+    // `redraw()` capturaría el zoom fraccional 8.99999998 y generaría URLs con
+    // tilematrix inválido (el fallo real de PNOA); no debe usarse.
+    expect(redrawEspia).not.toHaveBeenCalled();
+    expect(capa._url).toBe('RESPALDO');
+  });
+
+  it('los eventos sin objeto tile conservan la semántica previa', () => {
+    const { crearRecuperable } = cargarTfMapasReal();
+    const capa = capaRecuperable();
+    const ctrl = crearRecuperable({}, capa, {
+      respaldo: { url: 'RESPALDO', opts: { maxZoom: 19 } },
+    });
+
+    emitirTesela(capa, 'tileerror');
+    emitirTesela(capa, 'tileerror');
+    expect(ctrl.fase()).toBe('primario');
+    emitirTesela(capa, 'tileerror');
+    expect(ctrl.fase()).toBe('respaldo');
+    // Y sin objeto tile, los fallos del respaldo también cuentan.
+    emitirTesela(capa, 'tileerror');
+    emitirTesela(capa, 'tileerror');
+    emitirTesela(capa, 'tileerror');
+    expect(ctrl.fase()).toBe('fallo');
+  });
+});
+
 export {};

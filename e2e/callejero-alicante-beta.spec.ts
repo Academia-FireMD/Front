@@ -950,4 +950,160 @@ test.describe('Callejero Alicante — recuperación cartográfica', () => {
       .toBe(19);
     expect(erroresPagina).toEqual([]);
   });
+
+  test('el examen mudo con CARTO caído recupera en PNOA y muestra el aviso sin error', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    const erroresPagina: string[] = [];
+    page.on('pageerror', (err) => erroresPagina.push(err.message));
+    await servirMapasConfigAlicante(page, 'CLAVE_ALC');
+    await instalarTeselasAlicante(
+      page,
+      new Set(['basemaps.cartocdn.com']),
+      solicitudes,
+    );
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    await frame.locator('#tab2Qz').click();
+    await activarMudoExamen(frame);
+    await frame.locator('#qzBtnStart').click();
+    await expect(frame.locator('#qzpop')).toHaveClass(/show/, {
+      timeout: 15_000,
+    });
+
+    // El primario mudo (CARTO light_nolabels) cae por completo → respaldo PNOA.
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toContainText(
+      'respaldo',
+    );
+    await expect
+      .poll(() => peticionesAlHost(solicitudes, 'ign.es').length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+
+    // Regresión: PNOA se pide SIEMPRE con un `tilematrix` entero. El `flyTo` del
+    // examen hace que `map.getZoom()` sea fraccional; un `redraw` sin redondear
+    // pedía `tilematrix=8.9999…`, el servidor respondía con algo no-imagen y el
+    // navegador lo bloqueaba (ORB) → 25 falsos tileerror agotaban el respaldo.
+    const ign = peticionesAlHost(solicitudes, 'ign.es');
+    for (const request of ign) {
+      const tilematrix = new URL(request.url()).searchParams.get('tilematrix');
+      expect(tilematrix).not.toBeNull();
+      expect(Number.isInteger(Number(tilematrix))).toBe(true);
+    }
+
+    // Se ve PNOA completo y NO aparece el cuadro de error.
+    await expect
+      .poll(
+        () =>
+          frame
+            .locator('#mapa img.leaflet-tile-loaded')
+            .evaluateAll(
+              (images) =>
+                images.filter((img) => {
+                  try {
+                    return new URL(img.src).hostname.endsWith('ign.es');
+                  } catch {
+                    return false;
+                  }
+                }).length,
+            ),
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+    await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0);
+    expect(erroresPagina).toEqual([]);
+  });
+
+  test('tras recuperar en PNOA, el fallo del respaldo ofrece Reintentar y restaura CARTO', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    let fallarCarto = true;
+    let fallarPnoa = false;
+    await servirMapasConfigAlicante(page, 'CLAVE_ALC');
+    await page.route('**/*', async (route) => {
+      const url = new URL(route.request().url());
+      if (['localhost', '127.0.0.1'].includes(url.hostname)) {
+        await route.fallback();
+        return;
+      }
+      const esCarto =
+        url.hostname === 'basemaps.cartocdn.com' ||
+        url.hostname.endsWith('.basemaps.cartocdn.com');
+      const esIgn =
+        url.hostname === 'www.ign.es' || url.hostname.endsWith('.ign.es');
+      if (!esCarto && !esIgn) {
+        await route.fallback();
+        return;
+      }
+      solicitudes.push(route.request());
+      if ((esCarto && fallarCarto) || (esIgn && fallarPnoa)) {
+        await route.abort('failed');
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        headers: {
+          'access-control-allow-origin': '*',
+          'cache-control': 'no-store',
+        },
+        body: PIXEL_PNG,
+      });
+    });
+
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    await frame.locator('#tab2Qz').click();
+    await activarMudoExamen(frame);
+    await frame.locator('#qzBtnStart').click();
+    await expect(frame.locator('#qzpop')).toHaveClass(/show/, {
+      timeout: 15_000,
+    });
+
+    // Primero CARTO cae → respaldo PNOA operativo con aviso.
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(() => peticionesAlHost(solicitudes, 'www.ign.es').length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+
+    // Ahora el respaldo PNOA también falla: tres fallos reales → Reintentar.
+    fallarPnoa = true;
+    for (let i = 0; i < 5; i += 1) {
+      await frame.locator('.leaflet-control-zoom-out').click();
+      await page.waitForTimeout(250);
+    }
+    await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toHaveCount(0);
+    await expect(
+      frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar'),
+    ).toBeVisible();
+
+    // Reintentar restaura el primario CARTO (ya operativo) y oculta el error.
+    const antes = peticionesAlHost(solicitudes, 'basemaps.cartocdn.com').length;
+    fallarCarto = false;
+    fallarPnoa = false;
+    await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
+    await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect
+      .poll(
+        () => peticionesAlHost(solicitudes, 'basemaps.cartocdn.com').length,
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(antes);
+  });
 });
