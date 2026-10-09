@@ -80,7 +80,7 @@ for (const viewport of [
       page.getByRole('button', { name: 'Crear plan personal' }),
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: /Importar semanas/ }),
+      page.getByRole('button', { name: /Importar o publicar semanas/ }),
     ).toBeVisible();
     await expect(page.getByText('Plan personal QA')).toBeVisible();
     await expect(page.getByText('Plan Madrid iniciación')).toBeVisible();

@@ -17,6 +17,8 @@ const variante = {
     ano: 2026,
     estado: 'PUBLICADA',
     version: 1,
+    tipoDePlanificacion: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    relevancia: ['GENERAL'],
   },
 };
 
@@ -51,12 +53,19 @@ const reglas = [
 async function mockDatosAdmin(
   page: Page,
   reglasRespuesta: typeof reglas = [],
+  sinPlanPublicado = false,
 ): Promise<void> {
+  const varianteMostrada = sinPlanPublicado
+    ? { ...variante, planificacionMensualId: null, planificacionMensual: null }
+    : variante;
+  const borradorMostrado = sinPlanPublicado
+    ? { ...borrador, planificacionAnteriorId: null }
+    : borrador;
   await page.route('**/planificaciones/admin/variantes', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify([variante]),
+      body: JSON.stringify([varianteMostrada]),
     }),
   );
   await page.route('**/planificaciones/admin/reglas', (route) =>
@@ -74,18 +83,18 @@ async function mockDatosAdmin(
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        data: [variante.planificacionMensual, borrador],
+        data: [variante.planificacionMensual, borradorMostrado],
         pagination: { skip: 0, take: 9999, count: 2 },
       }),
     }),
   );
 }
 
-test('admin publica y asigna una release mediante la acción explícita', async ({
+test('admin publica y asigna la primera release mediante la acción explícita', async ({
   page,
 }, testInfo) => {
   let payloadPublicacion: unknown = null;
-  await mockDatosAdmin(page);
+  await mockDatosAdmin(page, [], true);
   await page.route('**/planificaciones/admin/variantes/7/publicar', (route) => {
     payloadPublicacion = route.request().postDataJSON();
     return route.fulfill({
@@ -172,6 +181,53 @@ test('admin publica y asigna una release mediante la acción explícita', async 
   await expect(
     page.getByText('Planificación publicada y asignada'),
   ).toBeVisible();
+});
+
+test('editar una variante publicada conserva el plan asignado y no publica una copia', async ({
+  page,
+}) => {
+  await mockDatosAdmin(page);
+  let guardado: unknown = null;
+  let publicaciones = 0;
+  await page.route('**/planificaciones/admin/variantes/7', (route) => {
+    guardado = route.request().postDataJSON();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(variante),
+    });
+  });
+  await page.route('**/planificaciones/admin/variantes/7/publicar', (route) => {
+    publicaciones++;
+    return route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify(variante),
+    });
+  });
+  await loginAsRoleMock(page, {
+    rol: 'ADMIN',
+    email: 'admin@test.com',
+    userFixture: userAdminFixture,
+    modulos: { PLANIFICACION_AUTOASIGNACION: true },
+  });
+  await page.goto('/app/planificacion/admin-planificacion');
+  await page
+    .getByRole('button', { name: 'Editar variante GA4-6', exact: true })
+    .click();
+  const dialogo = page.getByRole('dialog', { name: 'Editar variante' });
+  await expect(dialogo.getByRole('combobox').last()).toBeDisabled();
+  await expect(
+    dialogo.getByText(/Este plan permanece vinculado al perfil/),
+  ).toBeVisible();
+  await expect(
+    dialogo.getByRole('button', { name: 'Publicar y asignar' }),
+  ).toHaveCount(0);
+  await dialogo.getByRole('button', { name: /Guardar$/ }).click();
+  await expect
+    .poll(() => guardado)
+    .toEqual({ activa: true, planificacionMensualId: 17 });
+  expect(publicaciones).toBe(0);
 });
 
 test('la rejilla y el alta de variantes caben en móvil', async ({
@@ -273,7 +329,9 @@ test('acceso al plan común: controles claros y rechazo seguro en móvil', async
   ).toBeVisible();
   await expect(page.getByRole('tab')).toHaveCount(0);
   await expect(
-    page.getByRole('heading', { name: 'Configuración avanzada de planes automáticos' }),
+    page.getByRole('heading', {
+      name: 'Configuración avanzada de planes automáticos',
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Volver a planificación mensual' }),
