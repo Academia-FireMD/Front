@@ -305,7 +305,7 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     ).toBeTruthy();
   });
 
-  it('ACTIVA vuelve al resumen cuando se cancela la edición', async () => {
+  it('ACTIVA vuelve al calendario sin guardar cuando se cancela la edición', async () => {
     await montar({
       ...estadoRequiereConfiguracion,
       estado: 'ACTIVA',
@@ -336,15 +336,17 @@ describe('PlanificacionAlumnoComponent — render por estado', () => {
     fixture.componentInstance.abrirWizardEnNivel = true;
     fixture.detectChanges();
 
+    router.navigate.mockClear();
     fixture.componentInstance.cancelarEdicion();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.editando).toBe(false);
     expect(fixture.componentInstance.preferenciasWizard).toBeNull();
     expect(fixture.componentInstance.abrirWizardEnNivel).toBe(false);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Tu planificación está activa',
-    );
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/app/planificacion/planificacion-mensual-alumno',
+      77,
+    ]);
   });
 
   it('PENDIENTE_PUBLICACION informa al alumno sin pedir repetir preferencias', async () => {

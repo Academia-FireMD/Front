@@ -377,6 +377,16 @@ export class PlanificacionAlumnoComponent implements OnInit {
     this.preferenciasWizard = null;
     this.nivelBorrador = null;
     this.abrirWizardEnNivel = false;
+    if (
+      this.planificacionMensualId &&
+      (this.configuracion?.estado === 'ACTIVA' ||
+        !!this.configuracion?.planificacionManual)
+    ) {
+      void this.router.navigate([
+        '/app/planificacion/planificacion-mensual-alumno',
+        this.planificacionMensualId,
+      ]);
+    }
   }
 
   cancelarConfiguracionInicial(): void {
