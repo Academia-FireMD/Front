@@ -548,6 +548,12 @@ export class PlanificacionMensualEditComponent {
     return this.activedRoute.snapshot.paramMap.get('id') as number | 'new';
   }
 
+  abrirCambioPlanificacion(): void {
+    void this.router.navigate(['/app/planificacion/configuracion-alumno'], {
+      queryParams: { modo: 'cambiar' },
+    });
+  }
+
   ngOnInit(): void {
     this.load();
   }

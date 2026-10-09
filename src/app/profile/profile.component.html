@@ -153,6 +153,16 @@
                 class="planification-section mt-4"
                 *ngIf="user.rol === 'ALUMNO'"
               >
+                <p class="text-color-secondary">
+                  Consulta tu calendario activo o gestiona tus preferencias de
+                  estudio desde tu planificación.
+                </p>
+                <p-button
+                  label="Gestionar mi planificación"
+                  icon="pi pi-calendar"
+                  styleClass="p-button-outlined"
+                  (click)="gestionarPlanificacion()"
+                ></p-button>
                 <div
                   class="assigned-planifications flex justify-content-between align-items-center"
                 >

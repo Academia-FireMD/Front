@@ -6,7 +6,7 @@ import {
   inject,
   OnInit,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
@@ -41,7 +41,10 @@ import {
   template: `
     <div class="planificacion-alumno-shell">
       @if (cargando) {
-        <div class="flex flex-column align-items-center gap-3 py-6" role="status">
+        <div
+          class="flex flex-column align-items-center gap-3 py-6"
+          role="status"
+        >
           <p-progressSpinner styleClass="w-3rem h-3rem" />
           <span>Cargando tu planificación…</span>
         </div>
@@ -49,7 +52,12 @@ import {
         <div role="alert" aria-live="assertive">
           <p-message severity="warn" [text]="error" />
         </div>
-        <button pButton label="Reintentar" (click)="cargar()" class="mt-3"></button>
+        <button
+          pButton
+          label="Reintentar"
+          (click)="cargar()"
+          class="mt-3"
+        ></button>
       } @else if (configuracion?.estado === 'BLOQUEADA') {
         <app-planificacion-bloqueada />
       } @else if (editando) {
@@ -57,7 +65,7 @@ import {
           [configuracion]="configuracion"
           [modoEdicion]="!!configuracion?.planActual"
           (configurada)="onConfigurada($event)"
-          (cancelado)="editando = false"
+          (cancelado)="onCancelado()"
         />
       } @else {
         <div class="planificacion-resumen">
@@ -73,12 +81,15 @@ import {
               pButton
               label="Ver mi calendario"
               icon="pi pi-calendar"
-              [routerLink]="['/app/planificacion/planificacion-mensual-alumno', plan.id]"
+              [routerLink]="[
+                '/app/planificacion/planificacion-mensual-alumno',
+                plan.id,
+              ]"
             ></a>
           } @else if ((configuracion?.planesPrevios?.length ?? 0) > 1) {
             <p class="text-600">
-              Tienes planificaciones anteriores. Elige una nueva para ver un único
-              calendario activo; tu progreso se conservará.
+              Tienes planificaciones anteriores. Elige una nueva para ver un
+              único calendario activo; tu progreso se conservará.
             </p>
             <a
               pButton
@@ -98,7 +109,11 @@ import {
           }
           <button
             pButton
-            [label]="configuracion?.planActual ? 'Cambiar mi planificación' : 'Solicitar planificación'"
+            [label]="
+              configuracion?.planActual
+                ? 'Cambiar mi planificación'
+                : 'Solicitar planificación'
+            "
             icon="pi pi-pencil"
             severity="secondary"
             (click)="editando = true"
@@ -107,33 +122,43 @@ import {
       }
     </div>
   `,
-  styles: [`
-    .planificacion-alumno-shell {
-      max-width: 78rem;
-      margin-inline: auto;
-      padding: clamp(1rem, 3vw, 2rem);
-    }
-    .planificacion-resumen {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
-    }
-    .planificacion-resumen p { margin: 0; }
-    @media (max-width: 480px) {
-      .planificacion-resumen { align-items: stretch; }
-      :host ::ng-deep .planificacion-resumen .p-button {
-        justify-content: center;
-        min-height: 44px;
-        width: 100%;
+  styles: [
+    `
+      .planificacion-alumno-shell {
+        max-width: 78rem;
+        margin-inline: auto;
+        padding: clamp(1rem, 3vw, 2rem);
       }
-    }
-  `],
+      .planificacion-resumen {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      .planificacion-resumen p {
+        margin: 0;
+      }
+      @media (max-width: 480px) {
+        .planificacion-resumen {
+          align-items: stretch;
+        }
+        :host ::ng-deep .planificacion-resumen .p-button {
+          justify-content: center;
+          min-height: 44px;
+          width: 100%;
+        }
+      }
+    `,
+  ],
 })
 export class PlanificacionAlumnoComponent implements OnInit {
   private readonly autoasignacionService = inject(AutoasignacionService);
   private readonly toast = inject(ToastrService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private modoCambioExplicito =
+    this.activatedRoute.snapshot.queryParamMap.get('modo') === 'cambiar';
 
   readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
   readonly getNivelOposicionLabel = getNivelOposicionLabel;
@@ -155,8 +180,20 @@ export class PlanificacionAlumnoComponent implements OnInit {
       this.configuracion = await firstValueFrom(
         this.autoasignacionService.getConfiguracion$(),
       );
-      this.editando = !this.configuracion.planActual &&
-        !(this.configuracion.planesPrevios?.length);
+      const planActivo =
+        this.configuracion.estado === 'ACTIVA' &&
+        this.configuracion.planActual?.id;
+      if (planActivo && !this.modoCambioExplicito) {
+        await this.router.navigate(
+          ['/app/planificacion/planificacion-mensual-alumno', planActivo],
+          { replaceUrl: true },
+        );
+        return;
+      }
+      this.editando =
+        this.modoCambioExplicito ||
+        (!this.configuracion.planActual &&
+          !this.configuracion.planesPrevios?.length);
     } catch {
       this.error = 'No se pudo comprobar tu planificación. Inténtalo de nuevo.';
     } finally {
@@ -167,11 +204,30 @@ export class PlanificacionAlumnoComponent implements OnInit {
 
   onConfigurada(resultado: ResultadoConfiguracion): void {
     this.editando = false;
+    this.modoCambioExplicito = false;
     if (resultado === 'EXITO') {
       this.toast.success('Tu planificación está lista');
     } else {
-      this.toast.warning('El estado cambió; revisa de nuevo antes de confirmar');
+      this.toast.warning(
+        'El estado cambió; revisa de nuevo antes de confirmar',
+      );
     }
     void this.cargar();
+  }
+
+  onCancelado(): void {
+    this.editando = false;
+    if (
+      this.modoCambioExplicito &&
+      this.configuracion?.estado === 'ACTIVA' &&
+      this.configuracion.planActual?.id
+    ) {
+      const planId = this.configuracion.planActual.id;
+      this.modoCambioExplicito = false;
+      void this.router.navigate(
+        ['/app/planificacion/planificacion-mensual-alumno', planId],
+        { replaceUrl: true },
+      );
+    }
   }
 }

@@ -269,7 +269,7 @@
         >
           <div class="event-content">
             <div class="event-header">
-              <div class="d-flex align-items-center gap-1">
+              <div class="event-title d-flex align-items-center gap-1">
                 <!-- Iconos para eventos personalizados -->
                 <i
                   *ngIf="weekEvent?.event?.meta?.esPersonalizado"
@@ -293,14 +293,6 @@
                 <strong class="descripcion text-sm">{{
                   weekEvent?.event?.title || "Sin nombre"
                 }}</strong>
-                <!-- Sub-bloque vinculado a física (rediseño bridge 2026-07-22):
-                     indicador limpio — icono de enlace externo a la derecha. -->
-                <i
-                  *ngIf="esEventoFisicaVinculado(weekEvent?.event)"
-                  class="pi pi-external-link text-primary fisica-vinculada-link"
-                  pTooltip="Entrenamiento físico vinculado — click para ir al detalle"
-                  data-testid="fisica-vinculada-icono"
-                ></i>
               </div>
               <div class="event-actions">
                 <!-- Ícono de comentario para eventos no personalizados -->
@@ -329,24 +321,35 @@
                   "
                 ></i>
 
-                <!-- Checkbox unificado para ambos tipos de eventos. En un
-                     sub-bloque vinculado a física CON entrenamiento ese día se
-                     oculta: el "hecho" se deriva de las disciplinas (una sola
-                     fuente de verdad), no se marca a mano. -->
-                <p-checkbox
-                  *ngIf="
-                    role == 'ALUMNO' &&
-                    !(
-                      esEventoFisicaVinculado(weekEvent?.event) &&
-                      tieneFisica(weekEvent?.event?.start)
-                    )
+                <!-- La marca del calendario es independiente del resumen físico. -->
+                <button
+                  *ngIf="role == 'ALUMNO'"
+                  type="button"
+                  class="completion-toggle"
+                  role="checkbox"
+                  [attr.aria-checked]="
+                    !!weekEvent?.event?.meta?.subBloque?.realizado
                   "
-                  [ngModel]="weekEvent?.event?.meta?.subBloque?.realizado"
-                  binary="true"
-                  (click)="$event.preventDefault(); $event.stopPropagation()"
-                  (onChange)="updateEventProgress(weekEvent?.event)"
-                  styleClass="complete-checkbox"
-                ></p-checkbox>
+                  [attr.aria-label]="
+                    (weekEvent?.event?.meta?.subBloque?.realizado
+                      ? 'Marcar pendiente: '
+                      : 'Marcar realizada: ') +
+                    (weekEvent?.event?.title || 'actividad')
+                  "
+                  [disabled]="isProgressSaving(weekEvent?.event)"
+                  (click)="
+                    $event.stopPropagation();
+                    updateEventProgress(weekEvent?.event)
+                  "
+                  data-testid="completion-toggle"
+                >
+                  <span class="completion-toggle__box" aria-hidden="true">
+                    <i
+                      *ngIf="weekEvent?.event?.meta?.subBloque?.realizado"
+                      class="pi pi-check"
+                    ></i>
+                  </span>
+                </button>
                 <!-- Estado derivado de física para el bloque vinculado -->
                 <span
                   *ngIf="
@@ -355,21 +358,29 @@
                     tieneFisica(weekEvent?.event?.start)
                   "
                   class="fisica-vinculada-estado"
-                  [class.fisica-vinculada-estado--hecho]="
-                    fisicaVinculadaRealizada(weekEvent?.event?.start)
-                  "
                   data-testid="fisica-vinculada-estado"
                 >
-                  <i
-                    *ngIf="fisicaVinculadaRealizada(weekEvent?.event?.start)"
-                    class="pi pi-check"
-                  ></i>
+                  Plan físico:
                   {{ progresoFisicaDia(weekEvent?.event?.start).hechas }}/{{
                     progresoFisicaDia(weekEvent?.event?.start).total
                   }}
                 </span>
               </div>
             </div>
+            <button
+              *ngIf="
+                role == 'ALUMNO' &&
+                esEventoFisicaVinculado(weekEvent?.event) &&
+                tieneFisica(weekEvent?.event?.start)
+              "
+              type="button"
+              class="fisica-vinculada-link"
+              (click)="abrirFisica(weekEvent?.event?.start, $event)"
+              aria-label="Ver plan físico de este día"
+            >
+              Ver plan físico
+              <i class="pi pi-external-link" aria-hidden="true"></i>
+            </button>
             <!-- Disciplinas del día en vivo (módulo de física) para el
                  sub-bloque vinculado -->
             <div
@@ -394,12 +405,10 @@
                 >{{ d.nombre }}
               </span>
             </div>
-            <span class="event-comments descripcion w-full">
-              {{
-                weekEvent?.event?.meta?.subBloque?.comentarios ||
-                  "Sin comentarios"
-              }}
-            </span>
+            <markdown
+              class="event-comments descripcion w-full"
+              [data]="weekEvent?.event?.meta?.subBloque?.comentarios"
+            ></markdown>
           </div>
         </div>
       </div>

@@ -181,6 +181,14 @@
       </div>
 
       <p-button
+        *ngIf="expectedRole == 'ALUMNO'"
+        label="Cambiar mi planificación"
+        icon="pi pi-sync"
+        [outlined]="true"
+        (onClick)="abrirCambioPlanificacion()"
+      ></p-button>
+
+      <p-button
         icon="pi pi-calendar-plus"
         [link]="true"
         pTooltip="Descargar calendario"

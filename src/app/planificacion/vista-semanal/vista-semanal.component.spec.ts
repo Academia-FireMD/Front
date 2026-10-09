@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 
 import { VistaSemanalComponent } from './vista-semanal.component';
@@ -231,25 +232,26 @@ describe('VistaSemanalComponent', () => {
       expect(component.diaTieneBloqueFisicaVinculado(dia)).toBe(false);
     });
 
-    it('progresoFisicaDia cuenta las disciplinas hechas del resumen; fisicaVinculadaRealizada exige TODAS', () => {
+    it('progresoFisicaDia resume las disciplinas físicas para información', () => {
       expect(component.progresoFisicaDia(dia)).toEqual({ hechas: 1, total: 2 });
-      expect(component.fisicaVinculadaRealizada(dia)).toBe(false);
 
       component.resumenFisica[0].disciplinas[1].realizado = true;
-      expect(component.fisicaVinculadaRealizada(dia)).toBe(true);
-
-      // Día sin física: nunca "hecho" (fallback a comportamiento normal).
-      expect(component.fisicaVinculadaRealizada(new Date(2026, 6, 16))).toBe(
-        false,
-      );
+      expect(component.progresoFisicaDia(dia)).toEqual({ hechas: 2, total: 2 });
+      expect(component.progresoFisicaDia(new Date(2026, 6, 16))).toEqual({
+        hechas: 0,
+        total: 0,
+      });
     });
 
-    it('el progreso del día deriva el "hecho" del vinculado de física, no del flag manual', () => {
+    it('la barra del calendario cuenta la marca propia incluso en entrenamiento vinculado', () => {
       const normalHecho = eventoTemario(dia, { realizado: true });
-      const vinculado = eventoTemario(dia, { vinculado: true }); // 1/2 hechas en física
-      component.events = [normalHecho, vinculado];
+      const vinculadoPendiente = eventoTemario(dia, { vinculado: true });
+      component.events = [normalHecho, vinculadoPendiente];
 
-      // 1 (normal hecho) + 0 (vinculado NO completado en física) = 1 de 2
+      // El progreso de las disciplinas es informativo y no sustituye la casilla.
+      component.resumenFisica[0].disciplinas.forEach((disciplina) => {
+        disciplina.realizado = true;
+      });
       expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
         1,
       );
@@ -257,8 +259,7 @@ describe('VistaSemanalComponent', () => {
         50,
       );
 
-      // Con las 2 disciplinas hechas, el vinculado cuenta como completado.
-      component.resumenFisica[0].disciplinas[1].realizado = true;
+      vinculadoPendiente.meta.subBloque.realizado = true;
       expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
         2,
       );
@@ -270,9 +271,10 @@ describe('VistaSemanalComponent', () => {
       );
     });
 
-    it('un vinculado en un día SIN física no cuenta como hecho aunque su flag manual sea false', () => {
+    it('un vinculado conserva su marca del calendario aunque no haya resumen físico', () => {
       const vinculado = eventoTemario(new Date(2026, 6, 16), {
         vinculado: true,
+        realizado: true,
       });
       component.events = [vinculado];
       expect(
@@ -280,7 +282,32 @@ describe('VistaSemanalComponent', () => {
           component.events,
           new Date(2026, 6, 16),
         ),
-      ).toBe(0);
+      ).toBe(1);
+    });
+
+    it('actualiza de forma optimista y no duplica POSTs mientras guarda; revierte al fallar', () => {
+      const vinculado = eventoTemario(dia, { vinculado: true });
+      component.events = [vinculado];
+      const peticion = new Subject<void>();
+      const guardar = jest.fn(() => peticion.asObservable());
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+
+      component.updateEventProgress(vinculado);
+      component.updateEventProgress(vinculado);
+
+      expect(vinculado.meta.subBloque.realizado).toBe(true);
+      expect(guardar).toHaveBeenCalledTimes(1);
+      expect(guardar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subBloqueId: 900,
+          realizado: true,
+        }),
+      );
+
+      peticion.error(new Error('offline'));
+      expect(vinculado.meta.subBloque.realizado).toBe(false);
     });
   });
 });

@@ -78,6 +78,15 @@ describe('PlanificacionMensualEditComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('abre la gestión explícita de planificación sin visitar otra pantalla intermedia', () => {
+    component.abrirCambioPlanificacion();
+
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/app/planificacion/configuracion-alumno'],
+      { queryParams: { modo: 'cambiar' } },
+    );
+  });
+
   describe('aplicar plantilla semanal', () => {
     const lunesActual = new Date(2026, 7, 3, 9, 0);
 

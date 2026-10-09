@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../testing';
 import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
+import { UserService } from '../services/user.service';
 import { EstadoModulos } from '../shared/models/app-config.model';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
 
@@ -40,6 +41,10 @@ describe('ProfileComponent', () => {
   let component: ProfileComponent;
   let fixture: ComponentFixture<ProfileComponent>;
   let mockAuthService: { getWpSsoUrl$: jest.Mock };
+  let mockUserService: {
+    getAllTutores$: jest.Mock;
+    updateOnboardingData$: jest.Mock;
+  };
   let appConfigService: ReturnType<typeof makeMockAppConfigService>;
 
   beforeEach(async () => {
@@ -50,6 +55,10 @@ describe('ProfileComponent', () => {
         }),
       ),
     };
+    mockUserService = {
+      getAllTutores$: jest.fn().mockReturnValue(of([])),
+      updateOnboardingData$: jest.fn().mockReturnValue(of({})),
+    };
     appConfigService = makeMockAppConfigService(true);
 
     await TestBed.configureTestingModule({
@@ -58,6 +67,7 @@ describe('ProfileComponent', () => {
         ...COMMON_TEST_PROVIDERS,
         // Override AuthService con mock que tiene getWpSsoUrl$
         { provide: AuthService, useValue: mockAuthService },
+        { provide: UserService, useValue: mockUserService },
         { provide: AppConfigService, useValue: appConfigService },
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -71,22 +81,40 @@ describe('ProfileComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('getOnboardingCompletionPercentage con tipoOposicion array', () => {
-    it('no cuenta un array vacío como campo relleno', () => {
+  describe('getOnboardingCompletionPercentage', () => {
+    it('no exige las preferencias del gestor de planificación para completar el perfil', () => {
       component.onboardingData = {
         tipoOposicion: [],
         nivelOposicion: 'INICIACION',
+        tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS',
       } as any;
-      expect(component.getOnboardingCompletionPercentage()).toBe(50);
+      expect(component.getOnboardingCompletionPercentage()).toBe(0);
     });
+  });
 
-    it('cuenta un array con oposiciones como campo relleno', () => {
-      component.onboardingData = {
-        tipoOposicion: ['MADRID'],
-        nivelOposicion: 'INICIACION',
-      } as any;
-      expect(component.getOnboardingCompletionPercentage()).toBe(100);
+  it('al guardar la ficha personal omite y conserva las preferencias de planificación existentes', async () => {
+    const preferencias = {
+      tipoOposicion: ['MADRID'],
+      nivelOposicion: 'AVANZADO',
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS',
+    };
+    component.onboardingData = { ...preferencias } as any;
+
+    await component.onOnboardingUpdated({ dni: '12345678A' });
+
+    expect(mockUserService.updateOnboardingData$).toHaveBeenCalledWith({
+      dni: '12345678A',
     });
+    expect(component.onboardingData).toMatchObject(preferencias);
+    expect(component.onboardingData).toHaveProperty('dni', '12345678A');
+  });
+
+  it('ofrece desde el perfil acceso al gestor de planificación', () => {
+    component.gestionarPlanificacion();
+
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([
+      '/app/planificacion/configuracion-alumno',
+    ]);
   });
 
   it('menú de suscripción (WP-linked) incluye "Cambiar tarjeta de pago"', () => {

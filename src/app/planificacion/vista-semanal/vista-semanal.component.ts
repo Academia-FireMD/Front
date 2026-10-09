@@ -49,6 +49,7 @@ export class VistaSemanalComponent {
   @Input() role: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
 
   refresh = new Subject<void>();
+  private readonly pendingProgressIds = new Set<string>();
 
   // Propiedad para gestionar el estado del diálogo
   displayDialog = false;
@@ -245,8 +246,7 @@ export class VistaSemanalComponent {
     });
   }
 
-  /** Mismo semáforo que EventsService pero sobre el porcentaje local (que
-   * deriva el "hecho" de los bloques vinculados a física). */
+  /** Progreso de calendario independiente del progreso de las disciplinas físicas. */
   public getProgressBarColor = (
     events: CalendarEvent[],
     date: Date,
@@ -257,21 +257,13 @@ export class VistaSemanalComponent {
     return '#dc3545';
   };
 
-  /**
-   * Sub-bloques completados del día. Igual que
-   * `EventsService.getCompletedSubBlocksForDay` salvo por los sub-bloques
-   * vinculados a física: su "hecho" NO vive en `subBloque.realizado` (no se
-   * marca a mano) sino que se deriva de las disciplinas del día en el módulo
-   * de física — una sola fuente de verdad (rediseño bridge 2026-07-22).
-   */
+  /** Cuenta las marcas propias de cada evento del calendario. */
   public getCompletedSubBlocksForDay = (
     events: CalendarEvent[],
     date: Date,
   ): number =>
-    this.getEventsForDay(events, date).filter((event) =>
-      this.esEventoFisicaVinculado(event)
-        ? this.fisicaVinculadaRealizada(event.start)
-        : event.meta?.subBloque?.realizado,
+    this.getEventsForDay(events, date).filter(
+      (event) => event.meta?.subBloque?.realizado,
     ).length;
 
   public getProgressPercentageForDay = (
@@ -465,25 +457,13 @@ export class VistaSemanalComponent {
     );
   }
 
-  /**
-   * Progreso de física del día {hechas, total} según las disciplinas del
-   * resumen (realizado por disciplina). `total = 0` cuando el día no tiene
-   * entrenamiento en el módulo de física — el bloque vinculado se comporta
-   * entonces como un sub-bloque normal (fallback).
-   */
+  /** Resumen informativo de las disciplinas físicas; no determina la marca del calendario. */
   progresoFisicaDia(dia: Date): { hechas: number; total: number } {
     const disciplinas = this.disciplinasFisica(dia);
     return {
       hechas: disciplinas.filter((d) => d.realizado).length,
       total: disciplinas.length,
     };
-  }
-
-  /** El bloque vinculado cuenta como hecho cuando TODAS las disciplinas del
-   * día están hechas en física — una sola fuente de verdad, sin doble check. */
-  fisicaVinculadaRealizada(dia: Date): boolean {
-    const { hechas, total } = this.progresoFisicaDia(dia);
-    return total > 0 && hechas === total;
   }
 
   onEventClicked(event: CalendarEvent): void {
@@ -896,76 +876,57 @@ export class VistaSemanalComponent {
       });
   }
 
-  // Función unificada para actualizar realizado en cualquier tipo de evento
-  updateEventProgress(event: CalendarEvent, realizado?: boolean): void {
-    // Si no se proporciona valor, toggled el valor actual
-    const nuevoEstado =
-      realizado !== undefined ? realizado : !event.meta?.subBloque?.realizado;
+  private progressKey(event: CalendarEvent): string {
+    return `${event.meta?.esPersonalizado ? 'personal' : 'subbloque'}:${event.meta?.subBloque?.id}`;
+  }
 
-    // Verificar si tenemos ID
+  isProgressSaving(event: CalendarEvent): boolean {
+    return this.pendingProgressIds.has(this.progressKey(event));
+  }
+
+  // La marca del calendario es independiente del progreso del módulo físico.
+  updateEventProgress(event: CalendarEvent, realizado?: boolean): void {
     if (!event?.meta?.subBloque?.id) {
-      console.error('No se puede actualizar: falta el ID del evento');
+      this.toast.error('No se puede marcar esta actividad.');
       return;
     }
 
-    // Verificar si es un evento personalizado
-    const esPersonalizado = event.meta?.esPersonalizado || false;
+    const key = this.progressKey(event);
+    if (this.pendingProgressIds.has(key)) return;
 
-    if (esPersonalizado) {
-      // Crear un objeto DTO simplificado
-      const dto = {
-        id: event.meta.subBloque.id,
-        planificacionId: Number(this.activatedRoute.snapshot.params['id']),
-        realizado: nuevoEstado,
-      };
+    const anterior = !!event.meta.subBloque.realizado;
+    const nuevoEstado = realizado ?? !anterior;
+    if (nuevoEstado === anterior) return;
 
-      this.planificacionesService
-        .actualizarEventoPersonalizadoRealizado$(
-          dto.id,
-          dto.planificacionId,
-          dto.realizado,
+    event.meta.subBloque.realizado = nuevoEstado;
+    this.refresh.next();
+    if (this.role !== 'ALUMNO') return;
+
+    this.pendingProgressIds.add(key);
+    const planificacionId = Number(this.activatedRoute.snapshot.params['id']);
+    const peticion = event.meta.esPersonalizado
+      ? this.planificacionesService.actualizarEventoPersonalizadoRealizado$(
+          event.meta.subBloque.id,
+          planificacionId,
+          nuevoEstado,
         )
-        .subscribe({
-          next: () => {
-            // Actualizar localmente
-            event.meta.subBloque.realizado = nuevoEstado;
-            this.refresh.next();
-            this.toast.success(
-              `Evento marcado como ${nuevoEstado ? 'realizado' : 'pendiente'}`,
-            );
-          },
-          error: (err) => {
-            console.error('Error al actualizar el evento:', err);
-          },
+      : this.planificacionesService.actualizarProgresoSubBloque$({
+          subBloqueId: event.meta.subBloque.id,
+          planificacionId,
+          realizado: nuevoEstado,
         });
-    } else {
-      // Es un subbloque normal
-      if (this.role === 'ALUMNO') {
-        this.planificacionesService
-          .actualizarProgresoSubBloque$({
-            subBloqueId: event.meta.subBloque.id,
-            planificacionId: Number(this.activatedRoute.snapshot.params['id']),
-            realizado: nuevoEstado,
-          })
-          .subscribe({
-            next: () => {
-              event.meta.subBloque.realizado = nuevoEstado;
-              this.refresh.next();
-            },
-            error: (err) => {
-              event.meta.subBloque.realizado = !nuevoEstado;
-              this.refresh.next();
-              this.toast.error(
-                'Error al actualizar el progreso. Inténtalo de nuevo.',
-              );
-              console.error('Error actualizar progreso:', err);
-            },
-          });
-      } else {
-        // Para el modo ADMIN
-        event.meta.subBloque.realizado = nuevoEstado;
+
+    peticion.subscribe({
+      next: () => {
+        this.pendingProgressIds.delete(key);
         this.refresh.next();
-      }
-    }
+      },
+      error: () => {
+        event.meta.subBloque.realizado = anterior;
+        this.pendingProgressIds.delete(key);
+        this.refresh.next();
+        this.toast.error('No se pudo guardar el marcaje. Inténtalo de nuevo.');
+      },
+    });
   }
 }

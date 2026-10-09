@@ -108,7 +108,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return this.cursos.length > 0 ? 'cursos' : 'simulacros';
   }
 
-
   madridTutoriaBalance: MadridTutoriaBalance | null = null;
   madridTutoriaBalanceLoading = false;
 
@@ -365,6 +364,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
+  gestionarPlanificacion(): void {
+    void this.router.navigate(['/app/planificacion/configuracion-alumno']);
+  }
+
   private getPrimarySuscripcion() {
     if (!this.user?.suscripciones?.length) return null;
     return (
@@ -464,7 +467,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.toastService.success('Información actualizada correctamente');
       this.showOnboardingModal = false;
 
-      this.onboardingData = { ...data };
+      // El formulario ya no edita las preferencias del gestor. Conservamos el
+      // snapshot local legacy, y el payload parcial no envía esos campos.
+      this.onboardingData = { ...this.onboardingData, ...data };
 
       // Recargar usuario
       this.store.dispatch(UserActions.loadUser());
@@ -484,7 +489,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   getOnboardingCompletionPercentage(): number {
     const data = this.onboardingData;
-    const fields = Object.values(data);
+    const camposPreferenciasPlanificacion = new Set([
+      'tipoOposicion',
+      'nivelOposicion',
+      'tipoDePlanificacionDuracionDeseada',
+    ]);
+    const fields = Object.entries(data)
+      .filter(([field]) => !camposPreferenciasPlanificacion.has(field))
+      .map(([, value]) => value);
+    if (fields.length === 0) return 0;
     const filledFields = fields.filter(
       (value) =>
         value !== null &&

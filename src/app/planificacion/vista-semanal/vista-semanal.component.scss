@@ -49,7 +49,8 @@
   cursor: pointer;
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .checked-event {
@@ -58,9 +59,7 @@
 
 .event-content {
   width: 100%;
-  div {
-    width: 100%;
-  }
+  min-width: 0;
 }
 
 .event-content strong {
@@ -70,23 +69,77 @@
 .event-comments {
   font-size: 0.9em;
   opacity: 0.8;
+  max-height: 3em;
+  overflow: hidden;
 }
 
 .event-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px;
 }
 
 .event-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  justify-content: end;
+  gap: 2px;
+  justify-content: flex-end;
+  flex: none;
 }
 
-.complete-checkbox {
-  transform: scale(0.8); /* Reduce el tamaño del checkbox */
+.event-title {
+  min-width: 0;
+  flex-wrap: wrap;
+
+  strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+}
+
+.completion-toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--primary-color);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+}
+
+.completion-toggle__box {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.completion-toggle[aria-checked="true"] .completion-toggle__box {
+  background: var(--primary-color);
+  color: #fff;
 }
 
 .custom-header {
@@ -178,20 +231,30 @@
   color: #555;
 }
 
-.fisica-vinculada-estado--hecho {
-  color: #28a745;
-}
-
 /* Fase 5 polish bridge: indicador sutil de bloque externo/vinculado — borde
    fino con opacidad, sin badge textual denso. */
 .evento-fisica-vinculada {
   border-left: 2px solid rgba(var(--primary-color-rgb, 63, 81, 181), 0.5) !important;
 }
 
-/* Icono de enlace externo del bloque físico: gap a la derecha del título. */
+/* Enlace explícito al plan físico para el día del evento vinculado. */
 .fisica-vinculada-link {
   margin-left: 4px;
   font-size: 0.8rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary-color);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+  }
 }
 
 small {
