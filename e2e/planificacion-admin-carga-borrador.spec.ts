@@ -44,7 +44,7 @@ async function prepararAdmin(page: Page, variantes = [madrid]) {
       }),
     }),
   );
-  await page.route('**/carga-borrador/preview', (route) =>
+  await page.route('**/importaciones/plantillas/pendiente/preview', (route) =>
     route.fulfill({
       status: 201,
       contentType: 'application/json',
@@ -57,20 +57,54 @@ async function prepararAdmin(page: Page, variantes = [madrid]) {
     }),
   );
   let applyCalls = 0;
-  await page.route('**/carga-borrador/apply', (route) => {
-    applyCalls++;
-    return route.fulfill({
-      status: 201,
+  let publishCalls = 0;
+  await page.route('**/importaciones/plantillas/pendiente', (route) =>
+    route.fulfill({
+      status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        variantes: variantes.map((variante, index) => ({
-          ...variante,
-          planificacionId: 42 + index,
-          primeraSemana: '2026-09-07',
-        })),
-      }),
-    });
-  });
+      body: JSON.stringify(
+        applyCalls
+          ? [
+              {
+                id: 9,
+                fileName: 'semanas-qa.xlsx',
+                variantes,
+                preview: { variantes },
+              },
+            ]
+          : [],
+      ),
+    }),
+  );
+  await page.route(
+    '**/importaciones/plantillas/pendiente/*/publicar',
+    (route) => {
+      publishCalls++;
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: '{}',
+      });
+    },
+  );
+  await page.route(
+    '**/importaciones/plantillas/pendiente/preparar',
+    (route) => {
+      applyCalls++;
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          cargaId: 9,
+          variantes: variantes.map((variante, index) => ({
+            ...variante,
+            planificacionId: 42 + index,
+            primeraSemana: '2026-09-07',
+          })),
+        }),
+      });
+    },
+  );
   await loginAsRoleMock(page, {
     rol: 'ADMIN',
     email: 'admin@test.com',
@@ -78,11 +112,13 @@ async function prepararAdmin(page: Page, variantes = [madrid]) {
     modulos: { PLANIFICACION_AUTOASIGNACION: true },
   });
   await page.goto('/app/planificacion/planificacion-mensual');
-  await page.getByRole('button', { name: 'Importar semanas' }).click();
+  await page
+    .getByRole('button', { name: 'Importar o publicar semanas' })
+    .click();
   await expect(
     page.getByRole('dialog', { name: 'Importar semanas' }),
   ).toBeVisible();
-  return () => applyCalls;
+  return { preparaciones: () => applyCalls, publicaciones: () => publishCalls };
 }
 
 async function subirYPrevisualizar(page: Page) {
@@ -100,39 +136,42 @@ async function subirYPrevisualizar(page: Page) {
     .first()
     .click();
   await expect(page.getByText('Semana 37').first()).toBeVisible();
-  await expect(page.getByText(/los alumnos no verán/)).toBeVisible();
+  await expect(page.getByText(/todavía no se ha guardado nada/)).toBeVisible();
 }
 
 for (const viewport of [
   { name: 'escritorio', width: 1280, height: 800 },
   { name: 'móvil 375 px', width: 375, height: 667 },
 ]) {
-  test(`Excel a calendario de borrador en ${viewport.name}`, async ({
+  test(`Excel se guarda pendiente de publicación en ${viewport.name}`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({
       width: viewport.width,
       height: viewport.height,
     });
-    const aplicarLlamadas = await prepararAdmin(page);
+    const api = await prepararAdmin(page);
     await subirYPrevisualizar(page);
     const dialogo = page.getByRole('dialog', { name: 'Importar semanas' });
     await expect(dialogo).toBeVisible();
     await dialogo.screenshot({
       path: testInfo.outputPath(`importar-semanas-${viewport.width}.png`),
     });
-    expect(aplicarLlamadas()).toBe(0);
+    expect(api.preparaciones()).toBe(0);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,
     );
     expect(overflow).toBe(false);
     await page
-      .getByRole('button', { name: 'Guardar semanas en borrador' })
+      .getByRole('button', { name: 'Guardar cambios pendientes' })
       .click();
-    await expect.poll(aplicarLlamadas).toBe(1);
-    await expect(page).toHaveURL(
-      /planificacion-mensual\/42\?fechaFoco=2026-09-07/,
-    );
+    await expect.poll(api.preparaciones).toBe(1);
+    await expect(page).toHaveURL(/admin-planificacion\?importar=1/);
+    await expect(dialogo.getByText('Excel preparado')).toBeVisible();
+    await expect(
+      dialogo.getByRole('button', { name: 'Publicar cambios ahora' }),
+    ).toBeVisible();
+    expect(api.publicaciones()).toBe(0);
   });
 }
 
@@ -147,8 +186,8 @@ for (const viewport of [
       width: viewport.width,
       height: viewport.height,
     });
-    const aplicarLlamadas = await prepararAdmin(page);
-    await page.route('**/carga-borrador/preview', (route) =>
+    const api = await prepararAdmin(page);
+    await page.route('**/importaciones/plantillas/pendiente/preview', (route) =>
       route.fulfill({
         status: 201,
         contentType: 'application/json',
@@ -174,9 +213,9 @@ for (const viewport of [
     await expect(dialogo.getByText('Tráfico')).toBeVisible();
     await expect(dialogo.getByText(/sin vínculo al catálogo/)).toBeVisible();
     await expect(
-      dialogo.getByRole('button', { name: 'Guardar semanas en borrador' }),
+      dialogo.getByRole('button', { name: 'Guardar cambios pendientes' }),
     ).toBeDisabled();
-    expect(aplicarLlamadas()).toBe(0);
+    expect(api.preparaciones()).toBe(0);
     await dialogo.getByText('Tráfico').scrollIntoViewIfNeeded();
     await dialogo.screenshot({
       path: testInfo.outputPath(
@@ -190,16 +229,17 @@ for (const viewport of [
     ).toBe(false);
     await dialogo.locator('label[for="confirmar-cambios-carga"]').click();
     await expect(
-      dialogo.getByRole('button', { name: 'Guardar semanas en borrador' }),
+      dialogo.getByRole('button', { name: 'Guardar cambios pendientes' }),
     ).toBeEnabled();
     await dialogo
-      .getByRole('button', { name: 'Guardar semanas en borrador' })
+      .getByRole('button', { name: 'Guardar cambios pendientes' })
       .click();
-    await expect.poll(aplicarLlamadas).toBe(1);
+    await expect.poll(api.preparaciones).toBe(1);
+    expect(api.publicaciones()).toBe(0);
   });
 }
 
-test('un Excel con varias oposiciones muestra un enlace a cada borrador', async ({
+test('un Excel con varias oposiciones conserva todos los perfiles pendientes sin publicar', async ({
   page,
 }) => {
   const general = {
@@ -208,20 +248,24 @@ test('un Excel con varias oposiciones muestra un enlace a cada borrador', async 
     oposicion: 'GENERAL',
     destino: { tipo: 'CREAR', identificador: 'Importación PGCVI6-8H' },
   };
-  const aplicarLlamadas = await prepararAdmin(page, [madrid, general]);
+  const api = await prepararAdmin(page, [madrid, general]);
   await subirYPrevisualizar(page);
   await page
-    .getByRole('button', { name: 'Guardar semanas en borrador' })
+    .getByRole('button', { name: 'Guardar cambios pendientes' })
     .click();
-  await expect.poll(aplicarLlamadas).toBe(1);
+  await expect.poll(api.preparaciones).toBe(1);
+  const pendientes = page.getByRole('region', { name: 'Cambios pendientes' });
+  await expect(pendientes).toContainText('2 perfiles');
+  await expect(pendientes).toContainText('semanas-qa.xlsx');
   await expect(
-    page.getByRole('button', { name: /Abrir calendario/ }),
-  ).toHaveCount(2);
+    pendientes.getByRole('button', { name: /Publicar cambios$/ }),
+  ).toBeVisible();
+  expect(api.publicaciones()).toBe(0);
   await expect(page).toHaveURL(/admin-planificacion\?importar=1/);
 });
 
 test('el asistente se puede cerrar sin guardar', async ({ page }) => {
-  const aplicarLlamadas = await prepararAdmin(page);
+  const api = await prepararAdmin(page);
   await expect(
     page.getByRole('dialog', { name: 'Importar semanas' }),
   ).toBeVisible();
@@ -229,7 +273,8 @@ test('el asistente se puede cerrar sin guardar', async ({ page }) => {
   await expect(
     page.getByRole('dialog', { name: 'Importar semanas' }),
   ).toBeHidden();
-  expect(aplicarLlamadas()).toBe(0);
+  expect(api.preparaciones()).toBe(0);
+  expect(api.publicaciones()).toBe(0);
 });
 
 test('el asistente permanece abierto mientras guarda semanas', async ({
@@ -241,18 +286,23 @@ test('el asistente permanece abierto mientras guarda semanas', async ({
   const aplicacionPendiente = new Promise<void>((resolve) => {
     liberarAplicacion = resolve;
   });
-  await page.route('**/carga-borrador/apply', async (route) => {
-    await aplicacionPendiente;
-    await route.fulfill({
-      status: 201,
-      contentType: 'application/json',
-      body: JSON.stringify({ variantes: [] }),
-    });
-  });
+  await page.route(
+    '**/importaciones/plantillas/pendiente/preparar',
+    async (route) => {
+      await aplicacionPendiente;
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ variantes: [] }),
+      });
+    },
+  );
   const dialogo = page.getByRole('dialog', { name: 'Importar semanas' });
-  const solicitud = page.waitForRequest('**/carga-borrador/apply');
+  const solicitud = page.waitForRequest(
+    '**/importaciones/plantillas/pendiente/preparar',
+  );
   await dialogo
-    .getByRole('button', { name: 'Guardar semanas en borrador' })
+    .getByRole('button', { name: 'Guardar cambios pendientes' })
     .click();
   await solicitud;
   try {
