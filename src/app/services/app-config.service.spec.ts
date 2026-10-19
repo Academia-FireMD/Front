@@ -34,6 +34,7 @@ const sampleModulos: EstadoModulos = {
   [ModuloApp.CALLEJERO]: true,
   [ModuloApp.PLANIFICACION_FISICA]: true,
   [ModuloApp.PLANIFICACION_AUTOASIGNACION]: false,
+  [ModuloApp.SIMULADOR_NOTA]: false,
 };
 
 function mockAuth(rol: string | null) {
@@ -149,6 +150,10 @@ describe('AppConfigService', () => {
       service.isModuloHabilitado(ModuloApp.PLANIFICACION_AUTOASIGNACION),
     ).toBe(false);
     expect(service.isModuloHabilitado(ModuloApp.HORARIOS)).toBe(true);
+  });
+
+  it('SIMULADOR_NOTA ausente falla cerrado hasta que el tenant lo habilita', () => {
+    expect(service.isModuloHabilitado('SIMULADOR_NOTA' as ModuloApp)).toBe(false);
   });
 
   it('updateConfig 409 dispara reload y devuelve STALE_CONFIG', async () => {

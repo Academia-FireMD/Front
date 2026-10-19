@@ -9,7 +9,7 @@ import { LayoutComponent } from './shared/layout/layout.component';
 import { ModuloApp } from './shared/models/modulo-app.enum';
 import { SuscripcionTipo } from './shared/models/subscription.model';
 
-const routes: Routes = [
+export const routes: Routes = [
   {
     path: 'auth',
     loadChildren: () =>
@@ -157,6 +157,19 @@ const routes: Routes = [
           modulo: ModuloApp.CALLEJERO,
           expectedRole: 'ALUMNO',
           title: 'Callejero',
+        },
+      },
+      {
+        path: 'simulador-nota',
+        loadChildren: () =>
+          import('./simulador-nota/simulador-nota.module').then(
+            (m) => m.SimuladorNotaModule,
+          ),
+        canActivate: [roleGuard, moduloGuard],
+        data: {
+          expectedRole: 'ALUMNO',
+          modulo: ModuloApp.SIMULADOR_NOTA,
+          title: 'Simulador de nota',
         },
       },
       {

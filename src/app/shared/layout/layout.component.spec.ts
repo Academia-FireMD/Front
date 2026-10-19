@@ -240,6 +240,28 @@ describe('LayoutComponent', () => {
     expect(findItemByLabel(component.items(), 'Mis marcas')).toBeUndefined();
   });
 
+  it('ALUMNO sin suscripción ve Simulador de nota cuando el módulo está activo', () => {
+    appConfigService.setEstado({
+      ...appConfigService.estadoModulos(),
+      [ModuloApp.SIMULADOR_NOTA]: true,
+    });
+    (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO));
+
+    const item = findItemByLabel(component.items(), 'Simulador de nota');
+    expect(item?.routerLink).toBe('/app/simulador-nota');
+    expect(item?.modulo).toBe(ModuloApp.SIMULADOR_NOTA);
+  });
+
+  it('oculta Simulador de nota cuando el módulo del tenant está apagado', () => {
+    appConfigService.setEstado({
+      ...appConfigService.estadoModulos(),
+      [ModuloApp.SIMULADOR_NOTA]: false,
+    });
+    (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO));
+
+    expect(findItemByLabel(component.items(), 'Simulador de nota')).toBeUndefined();
+  });
+
   it('ALUMNO sin suscripción puede encontrar sus cursos comprados y el catálogo', () => {
     (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO));
 

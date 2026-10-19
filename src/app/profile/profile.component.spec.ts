@@ -469,4 +469,43 @@ describe('ProfileComponent', () => {
       ]);
     });
   });
+
+  describe('tarjeta Simulador de nota', () => {
+    it('se muestra a ALUMNO sin suscripción cuando el módulo está activo', () => {
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.SIMULADOR_NOTA]: true,
+      });
+      component.user = { rol: 'ALUMNO', suscripciones: [] } as any;
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector(
+        '[data-testid="profile-simulador-nota-card"]',
+      );
+      expect(card).toBeTruthy();
+    });
+
+    it('navega a la ruta privada del simulador', () => {
+      component.irASimuladorNota();
+
+      expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([
+        '/app/simulador-nota',
+      ]);
+    });
+
+    it('se oculta cuando el módulo está apagado', () => {
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.SIMULADOR_NOTA]: false,
+      });
+      component.user = { rol: 'ALUMNO', suscripciones: [] } as any;
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-testid="profile-simulador-nota-card"]',
+        ),
+      ).toBeNull();
+    });
+  });
 });

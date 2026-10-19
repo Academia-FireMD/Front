@@ -140,6 +140,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
       ] === true,
   );
 
+  /** El Simulador de nota es opcional por tenant y falla cerrado si falta el flag. */
+  simuladorNotaHabilitado = computed(
+    () =>
+      this.appConfigService.estadoModulos()[ModuloApp.SIMULADOR_NOTA] === true,
+  );
+
   oposiciones = oposiciones;
 
   // URLs de WordPress desde environment
@@ -1350,6 +1356,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
    */
   irAMarcas(): void {
     this.router.navigate(['/app/planificacion-fisica', 'marcas']);
+  }
+
+  irASimuladorNota(): void {
+    void this.router.navigate(['/app/simulador-nota']);
   }
 
   /**
