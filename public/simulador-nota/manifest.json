@@ -1,0 +1,68 @@
+{
+  "version": "tf-simulador-nota-v1-2026-10-19",
+  "sourceId": "A321",
+  "dataset": "ayto2024",
+  "publishedThrough": "2026-10-15",
+  "verifiedOn": "2026-10-19",
+  "originalDatasetSha256": "ead2642f357ae19519da6174afb8550daac6a6eb49dd02d99ffca161ee6fd003",
+  "audit": {
+    "candidateNames": 615,
+    "officialTestRows": 615,
+    "matchedTestRows": 615,
+    "physicalRows": {
+      "natacion": { "published": 448, "matched": 448 },
+      "velocidad": { "published": 434, "matched": 434 },
+      "cuerda": { "published": 391, "matched": 391 },
+      "torre": { "published": 389, "matched": 389 },
+      "r3000": { "published": 326, "matched": 326 }
+    },
+    "pressOmittedAfterNoApto": 29,
+    "pressOmissionNote": "Se conserva la omisión intencionada de la fuente original para aspirantes no aptos en velocidad.",
+    "provisionalData": "El ranking de València 2024 es provisional hasta la publicación del listado final y del supuesto práctico.",
+    "estimatedData": "Las medias de físicas convalidadas marcadas con * proceden del listado de la academia y no son calificaciones oficiales del OTS."
+  },
+  "sources": [
+    {
+      "id": "test",
+      "description": "Anuncio de calificaciones del primer ejercicio de la convocatoria de 122 plazas de bombero/a de València.",
+      "url": "https://www.valencia.es/documents/20142/594727/convocatoria%20122%20plazas%20de%20bombero-a.%20anuncio%20calificaciones%201er%20ejercicio..pdf/2aa0458d-c160-3b6c-8b35-469e96bcd2cc",
+      "sha256": "893ff8b661dcbb183bc260aaf7e191b5b6ba01271a3f55094d761076313315c5"
+    },
+    {
+      "id": "natacion",
+      "description": "Anuncio de resultados de natación.",
+      "url": "https://www.valencia.es/documents/20142/594727/anuncio%20resultado%20pruebas%20de%20nataci%C3%B3n.pdf/f3e858de-784c-6459-ce50-8d647dbefc78",
+      "sha256": "282ee6fbafa398a475bab44cce29104cd42de40656bf4b9a2cfd25cb39d2406c"
+    },
+    {
+      "id": "velocidad_press",
+      "description": "Anuncio de notas de velocidad y press de banca.",
+      "url": "https://www.valencia.es/documents/20142/594727/anuncio%20notas%20velocidad%20y%20pres%20banca.pdf/5e4cfa37-c6a5-5bed-3f79-d92812d7251b",
+      "sha256": "e587ad8ceba4262553e23b4801cc78b4d1f7c2fdf600f47097e98018750fb2f6"
+    },
+    {
+      "id": "cuerda",
+      "description": "Anuncio de notas de la prueba de cuerda.",
+      "url": "https://www.valencia.es/documents/20142/594727/anuncio%20notas%20prueba%20cuerda.pdf/24f8941a-ccc2-2b03-65ec-ffb7de7e1359",
+      "sha256": "22aced557f123e374351231e197e4b89f40742d3b53fe5292f617fece3b9efc6"
+    },
+    {
+      "id": "torre",
+      "description": "Anuncio de notas de la prueba de torre.",
+      "url": "https://www.valencia.es/documents/20142/594727/anuncio%20notas%20torre.pdf/3a300cc5-22c6-3a2e-4e6d-75d2d721eb4d",
+      "sha256": "fb15ae12cf69c9041fa902096fd670cda0f2e074830c039c7d4ea58ef8eb739f"
+    },
+    {
+      "id": "r3000",
+      "description": "Anuncio de calificaciones de la prueba de resistencia de 3.000 m.",
+      "url": "https://www.valencia.es/documents/20142/594727/anuncio%20calificaciones%20prueba%20resistencia%203000%20mts.pdf/a988b87b-54a6-a9a1-a48f-5140fdc2f623",
+      "sha256": "ecfb646b63fe25109fd15576dd05f7a88d48b31e5946ef5b45dcaf732097f78e"
+    },
+    {
+      "id": "convalidados",
+      "description": "Anuncio de relación de aspirantes con pruebas físicas convalidadas; cualquier media procedente de un listado de academia se muestra como estimación pendiente de calificación oficial del OTS.",
+      "url": "https://www.valencia.es/documents/20142/594727/anuncio%20relacion%20aspirantes%20pruebas%20convalidadas.pdf/ea86a409-f36c-cf92-69ad-481b7b8f6762",
+      "sha256": "f86ab2b45a27f81a2d3ab683890e1133f2bb37927a19b8aadbaf1471a57b3c75"
+    }
+  ]
+}

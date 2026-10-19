@@ -228,6 +228,28 @@
             ></p-button>
           </div>
         </div>
+
+        <div
+          class="profile-card mt-4"
+          *ngIf="user.rol === Rol.ALUMNO && simuladorNotaHabilitado()"
+          data-testid="profile-simulador-nota-card"
+        >
+          <div class="card-header">
+            <h2><i class="pi pi-chart-bar"></i> Simulador de nota</h2>
+          </div>
+          <div class="card-content">
+            <p class="text-color-secondary mb-3">
+              Calcula tu nota estimada y compárala con convocatorias publicadas.
+            </p>
+            <p-button
+              label="Abrir simulador"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              data-testid="profile-simulador-nota-link"
+              (click)="irASimuladorNota()"
+            ></p-button>
+          </div>
+        </div>
       </div>
       <!-- Información de suscripciones y consumibles (lado derecho).
            Solo para ALUMNO: ADMIN/SUPERADMIN no tienen suscripción propia

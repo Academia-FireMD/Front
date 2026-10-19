@@ -33,6 +33,7 @@ const sampleModulos: EstadoModulos = {
   [ModuloApp.FACTURACION]: true,
   [ModuloApp.CALLEJERO]: true,
   [ModuloApp.PLANIFICACION_FISICA]: true,
+  [ModuloApp.SIMULADOR_NOTA]: false,
 };
 
 function mockAuth(rol: string | null) {
@@ -136,6 +137,9 @@ describe('AppConfigService', () => {
     jest.useRealTimers();
   });
 
+  it('SIMULADOR_NOTA ausente falla cerrado hasta que el tenant lo habilita', () => {
+    expect(service.isModuloHabilitado('SIMULADOR_NOTA' as ModuloApp)).toBe(false);
+  });
   it('updateConfig 409 dispara reload y devuelve STALE_CONFIG', async () => {
     // initial load
     const init = service.load();

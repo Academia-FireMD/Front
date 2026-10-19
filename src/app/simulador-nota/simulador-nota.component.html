@@ -1,0 +1,104 @@
+<main class="simulador-nota-page" aria-labelledby="simulador-nota-heading">
+  <header class="simulador-nota-header">
+    <div>
+      <p class="eyebrow">Herramienta privada</p>
+      <h1 id="simulador-nota-heading">Simulador de nota</h1>
+      <p class="description">
+        El estado actual se sincroniza con tu cuenta; las simulaciones guardadas
+        se añaden solo cuando las guardas expresamente. Es independiente de tus
+        marcas y entrenamientos, y puedes borrar todo desde «Reiniciar todo».
+        La búsqueda nominal del listado público de 2024 se procesa en el
+        navegador; si cargas una ficha y guardas la simulación, el nombre y los
+        datos seleccionados se asocian a tu cuenta. La información médica y
+        psicotécnica solo permanece durante esta sesión.
+        <a
+          href="https://tecnikafire.com/politica-de-privacidad/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Política de privacidad
+        </a>
+      </p>
+    </div>
+  </header>
+
+  <p class="status" role="status" aria-live="polite" *ngIf="statusMessage">
+    {{ statusMessage }}
+  </p>
+
+  <section class="notice" *ngIf="loading" aria-live="polite">
+    Cargando tu estado privado…
+  </section>
+
+  <section class="notice notice--error" *ngIf="loadError">
+    <p>No hemos podido cargar tus datos. No se ha creado ni guardado un estado vacío.</p>
+    <button type="button" class="action" (click)="reintentarCarga()">
+      Reintentar carga
+    </button>
+  </section>
+
+  <section class="notice notice--conflict" *ngIf="hasConflict" aria-live="assertive">
+    <p *ngIf="pendingDelete">
+      Hay una versión remota más reciente. No se ha borrado ningún dato; confirma
+      el borrado remoto si quieres continuar.
+    </p>
+    <p *ngIf="!pendingDelete">
+      Hay una versión remota más reciente. Tu borrador sigue visible y no se ha
+      sobrescrito.
+    </p>
+    <div class="actions">
+      <button type="button" class="action" (click)="recargarEstadoRemoto()">
+        Recargar remoto y descartar mi borrador
+      </button>
+      <button
+        *ngIf="hasPendingDraft"
+        type="button"
+        class="action action--secondary"
+        (click)="guardarBorradorSobreRemoto()"
+      >
+        Guardar mi borrador sobre el remoto
+      </button>
+      <button
+        *ngIf="pendingDelete"
+        type="button"
+        class="action action--secondary"
+        (click)="confirmarBorradoRemoto()"
+      >
+        Confirmar borrado remoto
+      </button>
+    </div>
+  </section>
+
+  <section
+    class="notice notice--error"
+    *ngIf="!loading && !loadError && hasPendingDraft && !hasConflict && !saving"
+  >
+    <p>Hay un borrador de esta sesión pendiente de guardar.</p>
+    <button type="button" class="action" (click)="reintentarGuardado()">
+      Reintentar guardado
+    </button>
+  </section>
+
+  <section
+    class="notice notice--error"
+    *ngIf="!loading && !loadError && pendingDelete && !hasConflict && !saving"
+    aria-live="assertive"
+  >
+    <p>No se ha podido confirmar el borrado. Puedes reintentar; cualquier conflicto requerirá revisar la versión remota antes de volver a borrar.</p>
+    <button type="button" class="action" (click)="reintentarGuardado()">
+      Reintentar borrado
+    </button>
+  </section>
+
+  <iframe
+    #simulatorFrame
+    *ngIf="canShowIframe"
+    class="simulador-nota-frame"
+    [src]="iframeUrl"
+    title="Simulador privado de nota de oposición"
+    (load)="onIframeLoad()"
+    [attr.inert]="loadingRemote ? '' : null"
+    [attr.aria-disabled]="loadingRemote"
+    referrerpolicy="same-origin"
+  ></iframe>
+</main>

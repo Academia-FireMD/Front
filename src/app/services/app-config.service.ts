@@ -31,7 +31,8 @@ const REQUEST_TIMEOUT_MS = 3000;
 /** Construye un mapa todos-true / todos-false (helper interno fail-safe). */
 function buildModulosMap(value: boolean): EstadoModulos {
   return Object.values(ModuloApp).reduce((acc, key) => {
-    acc[key] = value;
+    // Módulo nuevo: cerrado hasta que el tenant confirme explícitamente su alta.
+    acc[key] = value && key !== ModuloApp.SIMULADOR_NOTA;
     return acc;
   }, {} as EstadoModulos);
 }
@@ -367,7 +368,9 @@ export class AppConfigService {
    */
   isModuloHabilitado(modulo: ModuloApp): boolean {
     const map = this._estadoModulos();
-    if (!(modulo in map)) return true;
+    if (!(modulo in map)) {
+      return modulo === ModuloApp.SIMULADOR_NOTA ? false : true;
+    }
     return map[modulo] === true;
   }
 
