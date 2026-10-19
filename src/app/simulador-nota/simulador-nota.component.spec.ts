@@ -36,9 +36,11 @@ describe('SimuladorNotaComponent', () => {
   beforeEach(async () => {
     user$ = new BehaviorSubject<{ id: number } | null>({ id: 17 });
     service = {
-      cargar: jest.fn().mockReturnValue(
-        of({ revision: 4, estado: null, actualizadoEn: null }),
-      ),
+      cargar: jest
+        .fn()
+        .mockReturnValue(
+          of({ revision: 4, estado: null, actualizadoEn: null }),
+        ),
       guardar: jest.fn(),
       borrar: jest.fn(),
     };
@@ -89,7 +91,8 @@ describe('SimuladorNotaComponent', () => {
   });
 
   it('ignora cambios del iframe antes de completar la hidratación', () => {
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+    const iframe: HTMLIFrameElement =
+      fixture.nativeElement.querySelector('iframe');
     component.onWindowMessage({
       origin: window.location.origin,
       source: iframe.contentWindow,
@@ -123,7 +126,8 @@ describe('SimuladorNotaComponent', () => {
 
   it('serializa el guardado con la revisión cargada y no persiste antes del debounce', async () => {
     jest.useFakeTimers();
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+    const iframe: HTMLIFrameElement =
+      fixture.nativeElement.querySelector('iframe');
     component.onIframeLoad();
     component.onWindowMessage({
       origin: window.location.origin,
@@ -156,7 +160,8 @@ describe('SimuladorNotaComponent', () => {
 
   it('un 409 conserva el borrador y bloquea sobrescrituras automáticas', async () => {
     jest.useFakeTimers();
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+    const iframe: HTMLIFrameElement =
+      fixture.nativeElement.querySelector('iframe');
     component.onIframeLoad();
     component.onWindowMessage({
       origin: window.location.origin,
@@ -184,7 +189,8 @@ describe('SimuladorNotaComponent', () => {
 
   it('guarda la última edición hecha durante el conflicto al confirmar sobrescritura', async () => {
     jest.useFakeTimers();
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+    const iframe: HTMLIFrameElement =
+      fixture.nativeElement.querySelector('iframe');
     component.onIframeLoad();
     component.onWindowMessage({
       origin: window.location.origin,
@@ -244,7 +250,8 @@ describe('SimuladorNotaComponent', () => {
 
   it('conserva un borrado recibido durante el conflicto y solo lo aplica al confirmarlo', async () => {
     jest.useFakeTimers();
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+    const iframe: HTMLIFrameElement =
+      fixture.nativeElement.querySelector('iframe');
     component.onIframeLoad();
     component.onWindowMessage({
       origin: window.location.origin,
@@ -279,8 +286,12 @@ describe('SimuladorNotaComponent', () => {
     expect(service.borrar).not.toHaveBeenCalled();
     expect(
       Array.from(
-        fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-      ).some((button) => button.textContent?.includes('Confirmar borrado remoto')),
+        fixture.nativeElement.querySelectorAll(
+          'button',
+        ) as NodeListOf<HTMLButtonElement>,
+      ).some((button) =>
+        button.textContent?.includes('Confirmar borrado remoto'),
+      ),
     ).toBe(true);
 
     service.cargar.mockReturnValueOnce(
@@ -298,7 +309,8 @@ describe('SimuladorNotaComponent', () => {
 
   it('no pierde una edición en vuelo mientras consulta la revisión para resolver el conflicto', async () => {
     jest.useFakeTimers();
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+    const iframe: HTMLIFrameElement =
+      fixture.nativeElement.querySelector('iframe');
     component.onIframeLoad();
     component.onWindowMessage({
       origin: window.location.origin,
@@ -360,7 +372,8 @@ describe('SimuladorNotaComponent', () => {
   });
 
   it('el mensaje delete usa DELETE CAS y nunca un PUT vacío', async () => {
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+    const iframe: HTMLIFrameElement =
+      fixture.nativeElement.querySelector('iframe');
     component.onIframeLoad();
     component.onWindowMessage({
       origin: window.location.origin,
@@ -385,7 +398,8 @@ describe('SimuladorNotaComponent', () => {
   });
 
   it('muestra una acción de reintento cuando falla DELETE', async () => {
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+    const iframe: HTMLIFrameElement =
+      fixture.nativeElement.querySelector('iframe');
     component.onIframeLoad();
     component.onWindowMessage({
       origin: window.location.origin,
@@ -410,7 +424,9 @@ describe('SimuladorNotaComponent', () => {
       fixture.nativeElement.querySelectorAll(
         'button',
       ) as NodeListOf<HTMLButtonElement>,
-    ).find((button) => (button.textContent ?? '').includes('Reintentar borrado'));
+    ).find((button) =>
+      (button.textContent ?? '').includes('Reintentar borrado'),
+    );
     expect(retry).toBeTruthy();
 
     service.borrar.mockReturnValue(
@@ -424,53 +440,58 @@ describe('SimuladorNotaComponent', () => {
     expect(component.pendingDelete).toBe(false);
   });
 
-  it('no hidrata el estado vacío sobre cambios recibidos mientras DELETE está en vuelo', async () => {
-    jest.useFakeTimers();
-    const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
-    const postMessage = jest.spyOn(iframe.contentWindow!, 'postMessage');
-    component.onIframeLoad();
-    component.onWindowMessage({
-      origin: window.location.origin,
-      source: iframe.contentWindow,
-      data: { channel: SIMULADOR_NOTA_CHANNEL, type: 'ready' },
-    } as MessageEvent);
+  it.each([0, 500])(
+    'conserva y guarda una sola vez los cambios durante DELETE tras %i ms',
+    async (delay) => {
+      jest.useFakeTimers();
+      const iframe: HTMLIFrameElement =
+        fixture.nativeElement.querySelector('iframe');
+      const postMessage = jest.spyOn(iframe.contentWindow!, 'postMessage');
+      component.onIframeLoad();
+      component.onWindowMessage({
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { channel: SIMULADOR_NOTA_CHANNEL, type: 'ready' },
+      } as MessageEvent);
 
-    const deletion = new Subject<{
-      revision: number;
-      estado: null;
-      actualizadoEn: null;
-    }>();
-    service.borrar.mockReturnValue(deletion);
-    component.onWindowMessage({
-      origin: window.location.origin,
-      source: iframe.contentWindow,
-      data: { channel: SIMULADOR_NOTA_CHANNEL, type: 'delete' },
-    } as MessageEvent);
-    await Promise.resolve();
+      const deletion = new Subject<{
+        revision: number;
+        estado: null;
+        actualizadoEn: null;
+      }>();
+      service.borrar.mockReturnValue(deletion);
+      component.onWindowMessage({
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { channel: SIMULADOR_NOTA_CHANNEL, type: 'delete' },
+      } as MessageEvent);
+      await Promise.resolve();
 
-    const newerDraft = makeValidSnapshot();
-    newerDraft.actual = makeValidWireState('cv', 'consorcio');
-    service.guardar.mockReturnValue(
-      of({ revision: 6, estado: newerDraft, actualizadoEn: null }),
-    );
-    component.onWindowMessage({
-      origin: window.location.origin,
-      source: iframe.contentWindow,
-      data: {
-        channel: SIMULADOR_NOTA_CHANNEL,
-        type: 'change',
-        estado: newerDraft,
-      },
-    } as MessageEvent);
-    deletion.next({ revision: 5, estado: null, actualizadoEn: null });
-    deletion.complete();
-    await Promise.resolve();
-    await Promise.resolve();
-    fixture.detectChanges();
+      const newerDraft = makeValidSnapshot();
+      newerDraft.actual = makeValidWireState('cv', 'consorcio');
+      service.guardar.mockReturnValue(
+        of({ revision: 6, estado: newerDraft, actualizadoEn: null }),
+      );
+      component.onWindowMessage({
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: {
+          channel: SIMULADOR_NOTA_CHANNEL,
+          type: 'change',
+          estado: newerDraft,
+        },
+      } as MessageEvent);
+      jest.advanceTimersByTime(delay);
+      deletion.next({ revision: 5, estado: null, actualizadoEn: null });
+      deletion.complete();
+      await jest.runAllTimersAsync();
+      fixture.detectChanges();
 
-    expect(postMessage).toHaveBeenCalledTimes(1);
-    expect(component.pendingDelete).toBe(false);
-    expect(service.guardar).toHaveBeenCalledWith(5, newerDraft);
-    expect(component.statusMessage).toContain('cambios posteriores');
-  });
+      expect(postMessage).toHaveBeenCalledTimes(1);
+      expect(component.pendingDelete).toBe(false);
+      expect(service.guardar).toHaveBeenCalledTimes(1);
+      expect(service.guardar).toHaveBeenCalledWith(5, newerDraft);
+      expect(component.statusMessage).toBe('Cambios privados guardados.');
+    },
+  );
 });
