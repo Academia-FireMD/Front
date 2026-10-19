@@ -66,6 +66,7 @@ export class SimuladorNotaComponent implements OnInit, OnDestroy {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private sessionVersion = 0;
   private writeQueue: Promise<void> = Promise.resolve();
+  private scheduledSnapshots = new Set<SimuladorNotaSnapshot>();
 
   get hasPendingDraft(): boolean {
     return this.pendingDraft !== null;
@@ -84,9 +85,7 @@ export class SimuladorNotaComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.store
       .select(selectCurrentUser)
-      .pipe(
-        takeUntil(this.destroyed$),
-      )
+      .pipe(takeUntil(this.destroyed$))
       .subscribe((user) => this.startSession(user?.id ?? null));
   }
 
@@ -296,6 +295,7 @@ export class SimuladorNotaComponent implements OnInit, OnDestroy {
     const version = this.sessionVersion;
     this.clearSaveTimer();
     this.writeQueue = Promise.resolve();
+    this.scheduledSnapshots = new Set<SimuladorNotaSnapshot>();
 
     this.activeUserId = userId;
     this.sessionRevision = 0;
@@ -419,9 +419,16 @@ export class SimuladorNotaComponent implements OnInit, OnDestroy {
   ): void {
     const snapshot = explicitDraft ?? this.pendingDraft;
     if (!snapshot || version !== this.sessionVersion) return;
-    this.writeQueue = this.writeQueue.then(() =>
-      this.persistSnapshot(version, snapshot),
-    );
+    const scheduledSnapshots = this.scheduledSnapshots;
+    if (scheduledSnapshots.has(snapshot)) return;
+    scheduledSnapshots.add(snapshot);
+    this.writeQueue = this.writeQueue.then(async () => {
+      try {
+        await this.persistSnapshot(version, snapshot);
+      } finally {
+        scheduledSnapshots.delete(snapshot);
+      }
+    });
   }
 
   private async persistSnapshot(
