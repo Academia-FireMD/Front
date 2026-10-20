@@ -43,23 +43,25 @@ test('el generador conserva completa y parseable la fuente canónica real', () =
     new URL('../public/simulador-nota/index.html', import.meta.url),
   );
   const source = readFileSync(sourcePath, 'utf8');
-  const communityImages = {
-    VALENCIA: readFileSync(new URL('../public/comunidades/VALENCIA.png', import.meta.url)),
-    MADRID: readFileSync(new URL('../public/comunidades/MADRID.png', import.meta.url)),
+  const oppositionImages = {
+    ALICANTE: readFileSync(new URL('../public/oposiciones/alicante.png', import.meta.url)),
+    VALENCIA: readFileSync(new URL('../public/oposiciones/valencia.png', import.meta.url)),
+    MADRID: readFileSync(new URL('../public/oposiciones/madrid.png', import.meta.url)),
   };
-  const block = buildWordPressBlock(source, { communityImages });
+  const block = buildWordPressBlock(source, { oppositionImages });
   const scripts = [...block.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)];
 
   assert.equal(scripts.length, 2);
+  assert.ok(block.includes(`data:image/png;base64,${oppositionImages.ALICANTE.toString('base64')}`));
   assert.ok(
-    block.includes(`data:image/png;base64,${communityImages.VALENCIA.toString('base64')}`),
+    block.includes(`data:image/png;base64,${oppositionImages.VALENCIA.toString('base64')}`),
     'el bloque debe incrustar la imagen valenciana original',
   );
   assert.ok(
-    block.includes(`data:image/png;base64,${communityImages.MADRID.toString('base64')}`),
+    block.includes(`data:image/png;base64,${oppositionImages.MADRID.toString('base64')}`),
     'el bloque debe incrustar la imagen madrileña original',
   );
-  assert.doesNotMatch(block, /\.\.\/comunidades\/(?:VALENCIA|MADRID)\.png/);
+  assert.doesNotMatch(block, /\.\.\/oposiciones\/(?:alicante|valencia|madrid)\.png/);
   for (const script of scripts) {
     assert.doesNotThrow(() => new Function(script[1]));
   }
