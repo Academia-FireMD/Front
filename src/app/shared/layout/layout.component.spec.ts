@@ -286,6 +286,21 @@ describe('LayoutComponent', () => {
     expect(findItemByLabel(menu, 'Clases grabadas')).toBeUndefined();
   });
 
+  it.each([false, true])(
+    'Cursos empieza desplegado para alumnos con suscripción=%s y permite plegarlo',
+    (conSuscripcion) => {
+      (component as any).currentUserSignal.set(
+        conSuscripcion ? makeAlumnoConSub() : makeUser(Rol.ALUMNO),
+      );
+      const cursos = component.items().find((item) => item.label === 'Cursos')!;
+      const misCursos = cursos.items!.find((item) => item.label === 'Mis cursos')!;
+
+      expect(component.isParentCollapsed(misCursos)).toBe(false);
+      component.toggleCollapse(cursos);
+      expect(component.isParentCollapsed(misCursos)).toBe(true);
+    },
+  );
+
   // -------- Grupo Planificación (feedback Sergio 2026-07-24) --------
   describe('grupo Planificación (feedback Sergio 2026-07-24)', () => {
     it('ADVANCED: grupo "Planificación" abre el asistente y conserva pruebas físicas', () => {

@@ -600,7 +600,7 @@ export class LayoutComponent {
     // siguen dependiendo de ella; ModuloGuard filtra el módulo por tenant.
     menu.push({
       label: 'Cursos',
-      collapsed: true,
+      collapsed: false,
       modulo: ModuloApp.CURSOS,
       items: [
         {
