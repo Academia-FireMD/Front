@@ -37,7 +37,7 @@ function loadOriginalEngine(source) {
 }
 
 describe('fuente canónica del simulador de nota', () => {
-  it('muestra la imagen de comunidad correcta en cada opción y en la cabecera', () => {
+  it('muestra la imagen de oposición correcta en cada opción y en la cabecera', () => {
     const choices = [...template.matchAll(
       /<button type="button" class="choice" data-amb="([^"]+)" data-tipo="([^"]*)" aria-pressed="false">([\s\S]*?)<\/button>/g,
     )];
@@ -48,22 +48,22 @@ describe('fuente canónica del simulador de nota', () => {
       [['cv', 'consorcio'], ['cv', 'ayuntamiento'], ['madrid', '']],
     );
     for (const [index, image] of [
-      '../comunidades/VALENCIA.png',
-      '../comunidades/VALENCIA.png',
-      '../comunidades/MADRID.png',
+      '../oposiciones/alicante.png',
+      '../oposiciones/valencia.png',
+      '../oposiciones/madrid.png',
     ].entries()) {
       assert.match(
         choices[index][3],
-        new RegExp(`<img class="community-image" src="${image.replaceAll('.', '\\.')}" alt="" aria-hidden="true">`),
+        new RegExp(`<img class="opposition-image" src="${image.replaceAll('.', '\\.')}" alt="" aria-hidden="true">`),
       );
     }
     assert.match(
       template,
-      /<img class="hdr__amb-community" data-el="amb-img" src="\.\.\/comunidades\/VALENCIA\.png" alt="" aria-hidden="true">/,
+      /<img class="hdr__amb-opposition" data-el="amb-img" src="\.\.\/oposiciones\/alicante\.png" alt="" aria-hidden="true">/,
     );
     assert.match(
       html,
-      /\$\('amb-img'\)\.src = S\.ambito === 'madrid' \? '\.\.\/comunidades\/MADRID\.png' : '\.\.\/comunidades\/VALENCIA\.png'/,
+      /\$\('amb-img'\)\.src = S\.ambito === 'madrid' \? '\.\.\/oposiciones\/madrid\.png' : S\.tipo === 'ayuntamiento' \? '\.\.\/oposiciones\/valencia\.png' : '\.\.\/oposiciones\/alicante\.png'/,
     );
   });
 

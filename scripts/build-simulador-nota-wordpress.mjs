@@ -6,9 +6,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = resolve(ROOT, 'public/simulador-nota/index.html');
 const DEFAULT_OUTPUT = resolve(ROOT, 'dist/simulador-nota-wordpress.html');
-const COMMUNITY_IMAGE_PATHS = {
-  '../comunidades/VALENCIA.png': 'VALENCIA',
-  '../comunidades/MADRID.png': 'MADRID',
+const OPPOSITION_IMAGE_PATHS = {
+  '../oposiciones/alicante.png': 'ALICANTE',
+  '../oposiciones/valencia.png': 'VALENCIA',
+  '../oposiciones/madrid.png': 'MADRID',
 };
 
 function safeJson(value) {
@@ -69,9 +70,9 @@ export function buildWordPressBlock(source, options = {}) {
     generatedConfig +
     block.slice(configClose + '</script>'.length);
 
-  for (const [path, name] of Object.entries(COMMUNITY_IMAGE_PATHS)) {
+  for (const [path, name] of Object.entries(OPPOSITION_IMAGE_PATHS)) {
     if (!block.includes(path)) continue;
-    const image = options.communityImages?.[name];
+    const image = options.oppositionImages?.[name];
     if (!Buffer.isBuffer(image)) {
       throw new Error(`Falta la imagen PNG canónica de ${name} para el bloque WordPress.`);
     }
@@ -129,11 +130,12 @@ async function main() {
   }
 
   const source = await readFile(SOURCE, 'utf8');
-  const communityImages = {
-    VALENCIA: await readFile(resolve(ROOT, 'public/comunidades/VALENCIA.png')),
-    MADRID: await readFile(resolve(ROOT, 'public/comunidades/MADRID.png')),
+  const oppositionImages = {
+    ALICANTE: await readFile(resolve(ROOT, 'public/oposiciones/alicante.png')),
+    VALENCIA: await readFile(resolve(ROOT, 'public/oposiciones/valencia.png')),
+    MADRID: await readFile(resolve(ROOT, 'public/oposiciones/madrid.png')),
   };
-  const result = buildWordPressBlock(source, { ...options, communityImages });
+  const result = buildWordPressBlock(source, { ...options, oppositionImages });
   if (options.output === '-') {
     process.stdout.write(result);
     return;
