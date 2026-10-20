@@ -240,14 +240,22 @@ describe('LayoutComponent', () => {
     expect(findItemByLabel(component.items(), 'Mis marcas')).toBeUndefined();
   });
 
-  it('ALUMNO sin suscripción ve Simulador de nota cuando el módulo está activo', () => {
+  it('ALUMNO sin suscripción ve Simulador de nota dentro de Perfil cuando el módulo está activo', () => {
     appConfigService.setEstado({
       ...appConfigService.estadoModulos(),
       [ModuloApp.SIMULADOR_NOTA]: true,
     });
     (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO));
 
-    const item = findItemByLabel(component.items(), 'Simulador de nota');
+    const menu = component.items();
+    const perfil = menu.find((item) => item.label === 'Perfil');
+    expect(perfil?.items?.map((item) => item.label)).toEqual([
+      'Mi Perfil',
+      'Simulador de nota',
+      'Desconectarse',
+    ]);
+    expect(menu.some((item) => item.label === 'Simulador de nota')).toBe(false);
+    const item = findItemByLabel(perfil?.items ?? [], 'Simulador de nota');
     expect(item?.routerLink).toBe('/app/simulador-nota');
     expect(item?.modulo).toBe(ModuloApp.SIMULADOR_NOTA);
   });
@@ -260,6 +268,11 @@ describe('LayoutComponent', () => {
     (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO));
 
     expect(findItemByLabel(component.items(), 'Simulador de nota')).toBeUndefined();
+    expect(
+      component.items().find((item) => item.label === 'Perfil')?.items?.map(
+        (item) => item.label,
+      ),
+    ).toEqual(['Mi Perfil', 'Desconectarse']);
   });
 
   it('ALUMNO sin suscripción puede encontrar sus cursos comprados y el catálogo', () => {

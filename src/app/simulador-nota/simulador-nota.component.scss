@@ -5,9 +5,6 @@
 }
 
 .simulador-nota-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   margin-bottom: 1rem;
 }
 
@@ -26,7 +23,6 @@ h1 {
 }
 
 .description {
-  max-width: 75ch;
   margin: 0.4rem 0 0;
   color: var(--text-color-secondary, #625d5a);
   line-height: 1.5;
