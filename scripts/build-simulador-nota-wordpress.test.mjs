@@ -43,10 +43,23 @@ test('el generador conserva completa y parseable la fuente canónica real', () =
     new URL('../public/simulador-nota/index.html', import.meta.url),
   );
   const source = readFileSync(sourcePath, 'utf8');
-  const block = buildWordPressBlock(source, {});
+  const communityImages = {
+    VALENCIA: readFileSync(new URL('../public/comunidades/VALENCIA.png', import.meta.url)),
+    MADRID: readFileSync(new URL('../public/comunidades/MADRID.png', import.meta.url)),
+  };
+  const block = buildWordPressBlock(source, { communityImages });
   const scripts = [...block.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)];
 
   assert.equal(scripts.length, 2);
+  assert.ok(
+    block.includes(`data:image/png;base64,${communityImages.VALENCIA.toString('base64')}`),
+    'el bloque debe incrustar la imagen valenciana original',
+  );
+  assert.ok(
+    block.includes(`data:image/png;base64,${communityImages.MADRID.toString('base64')}`),
+    'el bloque debe incrustar la imagen madrileña original',
+  );
+  assert.doesNotMatch(block, /\.\.\/comunidades\/(?:VALENCIA|MADRID)\.png/);
   for (const script of scripts) {
     assert.doesNotThrow(() => new Function(script[1]));
   }

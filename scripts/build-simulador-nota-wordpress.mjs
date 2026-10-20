@@ -6,6 +6,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = resolve(ROOT, 'public/simulador-nota/index.html');
 const DEFAULT_OUTPUT = resolve(ROOT, 'dist/simulador-nota-wordpress.html');
+const COMMUNITY_IMAGE_PATHS = {
+  '../comunidades/VALENCIA.png': 'VALENCIA',
+  '../comunidades/MADRID.png': 'MADRID',
+};
 
 function safeJson(value) {
   return JSON.stringify(value)
@@ -65,6 +69,15 @@ export function buildWordPressBlock(source, options = {}) {
     generatedConfig +
     block.slice(configClose + '</script>'.length);
 
+  for (const [path, name] of Object.entries(COMMUNITY_IMAGE_PATHS)) {
+    if (!block.includes(path)) continue;
+    const image = options.communityImages?.[name];
+    if (!Buffer.isBuffer(image)) {
+      throw new Error(`Falta la imagen PNG canónica de ${name} para el bloque WordPress.`);
+    }
+    block = block.replaceAll(path, `data:image/png;base64,${image.toString('base64')}`);
+  }
+
   return block.trim() + '\n';
 }
 
@@ -116,7 +129,11 @@ async function main() {
   }
 
   const source = await readFile(SOURCE, 'utf8');
-  const result = buildWordPressBlock(source, options);
+  const communityImages = {
+    VALENCIA: await readFile(resolve(ROOT, 'public/comunidades/VALENCIA.png')),
+    MADRID: await readFile(resolve(ROOT, 'public/comunidades/MADRID.png')),
+  };
+  const result = buildWordPressBlock(source, { ...options, communityImages });
   if (options.output === '-') {
     process.stdout.write(result);
     return;

@@ -8,6 +8,9 @@ const sourcePath = fileURLToPath(
   new URL('../public/simulador-nota/index.html', import.meta.url),
 );
 const html = readFileSync(sourcePath, 'utf8');
+const templateMatch = html.match(/var TKF_PLANTILLA = ("(?:\\.|[^"\\])*");/);
+assert.ok(templateMatch, 'la fuente canónica debe declarar su plantilla identificable');
+const template = JSON.parse(templateMatch[1]);
 const manifest = JSON.parse(
   readFileSync(new URL('../public/simulador-nota/manifest.json', import.meta.url), 'utf8'),
 );
@@ -34,6 +37,36 @@ function loadOriginalEngine(source) {
 }
 
 describe('fuente canónica del simulador de nota', () => {
+  it('muestra la imagen de comunidad correcta en cada opción y en la cabecera', () => {
+    const choices = [...template.matchAll(
+      /<button type="button" class="choice" data-amb="([^"]+)" data-tipo="([^"]*)" aria-pressed="false">([\s\S]*?)<\/button>/g,
+    )];
+
+    assert.equal(choices.length, 3);
+    assert.deepEqual(
+      choices.map(([, ambito, tipo]) => [ambito, tipo]),
+      [['cv', 'consorcio'], ['cv', 'ayuntamiento'], ['madrid', '']],
+    );
+    for (const [index, image] of [
+      '../comunidades/VALENCIA.png',
+      '../comunidades/VALENCIA.png',
+      '../comunidades/MADRID.png',
+    ].entries()) {
+      assert.match(
+        choices[index][3],
+        new RegExp(`<img class="community-image" src="${image.replaceAll('.', '\\.')}" alt="" aria-hidden="true">`),
+      );
+    }
+    assert.match(
+      template,
+      /<img class="hdr__amb-community" data-el="amb-img" src="\.\.\/comunidades\/VALENCIA\.png" alt="" aria-hidden="true">/,
+    );
+    assert.match(
+      html,
+      /\$\('amb-img'\)\.src = S\.ambito === 'madrid' \? '\.\.\/comunidades\/MADRID\.png' : '\.\.\/comunidades\/VALENCIA\.png'/,
+    );
+  });
+
   it('mantiene paridad de puntuación CV/Madrid y posición histórica original', () => {
     const { TKFCore: core, TKFConv: convFactory, TKF_DATOS: data } =
       loadOriginalEngine(html);
