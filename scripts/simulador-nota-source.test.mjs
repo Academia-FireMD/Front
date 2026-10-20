@@ -47,19 +47,28 @@ describe('fuente canónica del simulador de nota', () => {
       choices.map(([, ambito, tipo]) => [ambito, tipo]),
       [['cv', 'consorcio'], ['cv', 'ayuntamiento'], ['madrid', '']],
     );
-    for (const [index, image] of [
-      '../oposiciones/alicante.png',
-      '../oposiciones/valencia.png',
-      '../oposiciones/madrid.png',
-    ].entries()) {
-      assert.match(
-        choices[index][3],
-        new RegExp(`<img class="opposition-image" src="${image.replaceAll('.', '\\.')}" alt="" aria-hidden="true">`),
-      );
+    const expectedImages = [
+      ['../oposiciones/alicante.png', '../oposiciones/cpbv.png'],
+      ['../oposiciones/valencia.png'],
+      ['../oposiciones/madrid.png'],
+    ];
+    for (const [index, images] of expectedImages.entries()) {
+      const actual = [...choices[index][3].matchAll(
+        /<img class="opposition-image" src="([^"]+)" alt="" aria-hidden="true">/g,
+      )].map(([, src]) => src);
+      assert.deepEqual(actual, images);
     }
     assert.match(
       template,
       /<img class="hdr__amb-opposition" data-el="amb-img" src="\.\.\/oposiciones\/alicante\.png" alt="" aria-hidden="true">/,
+    );
+    assert.match(
+      template,
+      /<img class="hdr__amb-opposition" data-el="amb-img-cpbv" src="\.\.\/oposiciones\/cpbv\.png" alt="" aria-hidden="true" hidden>/,
+    );
+    assert.match(
+      html,
+      /\$\('amb-img-cpbv'\)\.hidden = S\.ambito !== 'cv' \|\| S\.tipo !== 'consorcio'/,
     );
     assert.match(
       html,
