@@ -45,6 +45,7 @@ test('el generador conserva completa y parseable la fuente canónica real', () =
   const source = readFileSync(sourcePath, 'utf8');
   const oppositionImages = {
     ALICANTE: readFileSync(new URL('../public/oposiciones/alicante.png', import.meta.url)),
+    CPBV: readFileSync(new URL('../public/oposiciones/cpbv.png', import.meta.url)),
     VALENCIA: readFileSync(new URL('../public/oposiciones/valencia.png', import.meta.url)),
     MADRID: readFileSync(new URL('../public/oposiciones/madrid.png', import.meta.url)),
   };
@@ -53,6 +54,7 @@ test('el generador conserva completa y parseable la fuente canónica real', () =
 
   assert.equal(scripts.length, 2);
   assert.ok(block.includes(`data:image/png;base64,${oppositionImages.ALICANTE.toString('base64')}`));
+  assert.ok(block.includes(`data:image/png;base64,${oppositionImages.CPBV.toString('base64')}`));
   assert.ok(
     block.includes(`data:image/png;base64,${oppositionImages.VALENCIA.toString('base64')}`),
     'el bloque debe incrustar la imagen valenciana original',
@@ -61,7 +63,7 @@ test('el generador conserva completa y parseable la fuente canónica real', () =
     block.includes(`data:image/png;base64,${oppositionImages.MADRID.toString('base64')}`),
     'el bloque debe incrustar la imagen madrileña original',
   );
-  assert.doesNotMatch(block, /\.\.\/oposiciones\/(?:alicante|valencia|madrid)\.png/);
+  assert.doesNotMatch(block, /\.\.\/oposiciones\/(?:alicante|cpbv|valencia|madrid)\.png/);
   for (const script of scripts) {
     assert.doesNotThrow(() => new Function(script[1]));
   }

@@ -8,6 +8,7 @@ const SOURCE = resolve(ROOT, 'public/simulador-nota/index.html');
 const DEFAULT_OUTPUT = resolve(ROOT, 'dist/simulador-nota-wordpress.html');
 const OPPOSITION_IMAGE_PATHS = {
   '../oposiciones/alicante.png': 'ALICANTE',
+  '../oposiciones/cpbv.png': 'CPBV',
   '../oposiciones/valencia.png': 'VALENCIA',
   '../oposiciones/madrid.png': 'MADRID',
 };
@@ -132,6 +133,7 @@ async function main() {
   const source = await readFile(SOURCE, 'utf8');
   const oppositionImages = {
     ALICANTE: await readFile(resolve(ROOT, 'public/oposiciones/alicante.png')),
+    CPBV: await readFile(resolve(ROOT, 'public/oposiciones/cpbv.png')),
     VALENCIA: await readFile(resolve(ROOT, 'public/oposiciones/valencia.png')),
     MADRID: await readFile(resolve(ROOT, 'public/oposiciones/madrid.png')),
   };
