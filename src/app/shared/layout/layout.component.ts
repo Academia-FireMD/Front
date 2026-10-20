@@ -677,14 +677,6 @@ export class LayoutComponent {
       });
     }
 
-    // El simulador de nota no requiere suscripción; solo depende del flag del tenant.
-    menu.push({
-      label: 'Simulador de nota',
-      icon: 'pi pi-chart-bar',
-      routerLink: '/app/simulador-nota',
-      modulo: ModuloApp.SIMULADOR_NOTA,
-    });
-
     // Menú de perfil siempre disponible
     menu.push({
       label: 'Perfil',
@@ -693,6 +685,13 @@ export class LayoutComponent {
           label: 'Mi Perfil',
           icon: 'pi pi-user',
           routerLink: '/app/profile',
+        },
+        // No requiere suscripción; solo depende del flag del tenant.
+        {
+          label: 'Simulador de nota',
+          icon: 'pi pi-chart-bar',
+          routerLink: '/app/simulador-nota',
+          modulo: ModuloApp.SIMULADOR_NOTA,
         },
         {
           label: 'Desconectarse',
