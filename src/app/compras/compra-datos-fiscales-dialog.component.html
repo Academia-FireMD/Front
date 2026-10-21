@@ -1,0 +1,84 @@
+<form
+  [formGroup]="formulario"
+  (ngSubmit)="guardar()"
+  class="fiscal-form"
+  novalidate
+>
+  <p class="fiscal-intro">
+    Para continuar necesitamos completar o corregir únicamente los datos
+    indicados. Guardarlos no realiza el pago; después tendrás que volver a
+    confirmar la compra.
+  </p>
+
+  <p class="fiscal-identity-hint">
+    La titularidad puede ser una persona (nombre y apellidos) o una empresa.
+  </p>
+
+  <div class="fiscal-fields">
+    <div class="fiscal-field" *ngFor="let campo of campos; let primero = first">
+      <label [for]="'fiscal-' + campo.campo">
+        {{ campo.etiqueta }}
+        <span
+          class="required"
+          *ngIf="
+            campo.obligatorio ||
+            (campo.campo === 'provincia' && esProvinciaObligatoria())
+          "
+          aria-hidden="true"
+          >*</span
+        >
+      </label>
+      <input
+        pInputText
+        [id]="'fiscal-' + campo.campo"
+        [formControlName]="campo.campo"
+        [attr.autofocus]="primero ? '' : null"
+        [attr.aria-invalid]="campoTieneError(campo.campo)"
+        [attr.aria-describedby]="
+          'fiscal-help-' + campo.campo + ' fiscal-error-' + campo.campo
+        "
+        [attr.autocomplete]="campo.campo === 'pais' ? 'country' : 'off'"
+      />
+      <small
+        class="field-reason"
+        [id]="'fiscal-help-' + campo.campo"
+        *ngIf="motivoCampo(campo.campo) || campo.campo === 'pais'"
+      >
+        {{ motivoCampo(campo.campo) }}
+        <ng-container *ngIf="campo.campo === 'pais'">
+          Introduce el código ISO de dos letras (por ejemplo, España: ES).
+        </ng-container>
+      </small>
+      <small
+        class="field-error"
+        role="alert"
+        [id]="'fiscal-error-' + campo.campo"
+        *ngIf="campoTieneError(campo.campo)"
+      >
+        {{ errorCampo(campo.campo) }}
+      </small>
+    </div>
+  </div>
+
+  <p class="form-error" role="alert" *ngIf="errorGuardado">
+    {{ errorGuardado }}
+  </p>
+
+  <div class="fiscal-actions">
+    <button
+      pButton
+      type="button"
+      label="Cancelar"
+      class="p-button-text"
+      [disabled]="guardando"
+      (click)="cancelar()"
+    ></button>
+    <button
+      pButton
+      type="submit"
+      label="Guardar datos"
+      [loading]="guardando"
+      [disabled]="guardando"
+    ></button>
+  </div>
+</form>

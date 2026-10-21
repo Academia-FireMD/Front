@@ -1,8 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { CompraFiscalService } from '../../compras/compra-fiscal.service';
+import { importeConfirmadoEnCentimos } from '../../compras/importe-confirmado.util';
 import { ApiBaseService } from '../../services/api-base.service';
 import {
   PaginatedResult,
@@ -11,14 +13,26 @@ import {
 import { Pregunta } from '../../shared/models/pregunta.model';
 import {
   ComprarSimulacroCofResponse,
+  ComprarSimulacroCofDto,
   Examen,
   SimulacroTienda,
 } from '../models/examen.model';
+
+export interface OpcionesCompraSimulacro {
+  /** Reintento enviado previamente: dejar que Server resuelva antes de pedir ficha. */
+  omitirLecturaFiscalInicial?: boolean;
+  /** Se ejecuta inmediatamente antes de crear/enviar el POST. */
+  antesDeEnviar?: () => void;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class ExamenesService extends ApiBaseService {
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private compraFiscal: CompraFiscalService,
+  ) {
     super(http);
     this.controllerPrefix = '/examenes';
   }
@@ -312,10 +326,35 @@ export class ExamenesService extends ApiBaseService {
   public comprarSimulacroCof$(
     examenId: number,
     idempotencyKey: string,
+    importeConfirmado: number,
+    opciones: OpcionesCompraSimulacro = {},
   ): Observable<ComprarSimulacroCofResponse> {
-    return this.post(`/comprar-simulacro-cof/${examenId}`, {
+    const importe = importeConfirmadoEnCentimos(importeConfirmado);
+    if (
+      importe === null ||
+      !/^simulacro_v2_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        idempotencyKey,
+      )
+    ) {
+      return throwError(
+        () => new Error('El intento de compra del simulacro no es válido.'),
+      );
+    }
+    const dto: ComprarSimulacroCofDto = {
       idempotencyKey,
-    }) as Observable<ComprarSimulacroCofResponse>;
+      importeConfirmado: importe,
+    };
+    const comprar = () => {
+      opciones.antesDeEnviar?.();
+      return this.http.post<ComprarSimulacroCofResponse>(
+        `${environment.apiUrl}/examenes/comprar-simulacro-cof/${examenId}`,
+        dto,
+        { withCredentials: true },
+      );
+    };
+    return this.compraFiscal.ejecutarConDatosFiscales(comprar, undefined, {
+      omitirLecturaInicial: opciones.omitirLecturaFiscalInicial,
+    });
   }
 
   /**

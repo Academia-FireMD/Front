@@ -6,14 +6,19 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../../environments/environment';
+import { CompraFiscalService } from '../../compras/compra-fiscal.service';
 import { ComprarCursoCofResponse } from '../models/curso.model';
 import { CursosAlumnoService } from './cursos-alumno.service';
 
 describe('CursosAlumnoService.comprarCursoCof', () => {
   let service: CursosAlumnoService;
   let httpMock: HttpTestingController;
+  let compraFiscal: { ejecutarConDatosFiscales: jest.Mock };
 
   beforeEach(() => {
+    compraFiscal = {
+      ejecutarConDatosFiscales: jest.fn((compra: () => unknown) => compra()),
+    };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -22,6 +27,7 @@ describe('CursosAlumnoService.comprarCursoCof', () => {
           provide: ToastrService,
           useValue: { error: jest.fn(), success: jest.fn() },
         },
+        { provide: CompraFiscalService, useValue: compraFiscal },
         CursosAlumnoService,
       ],
     });
@@ -38,16 +44,18 @@ describe('CursosAlumnoService.comprarCursoCof', () => {
       mensaje: 'OK',
     };
     let received: ComprarCursoCofResponse | undefined;
-    service.comprarCursoCof(42).subscribe((r) => (received = r));
+    service.comprarCursoCof(42, 17.45).subscribe((r) => (received = r));
 
     const req = httpMock.expectOne(
       `${environment.apiUrl}/cursos/42/comprar-cof`,
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.withCredentials).toBe(true);
+    expect(req.request.body).toEqual({ importeConfirmado: 17.45 });
     req.flush(res);
 
     expect(received).toEqual(res);
+    expect(compraFiscal.ejecutarConDatosFiscales).toHaveBeenCalledTimes(1);
   });
 
   it('propaga requiereCheckout sin disparar el toast genérico', () => {
@@ -59,7 +67,7 @@ describe('CursosAlumnoService.comprarCursoCof', () => {
       mensaje: 'Sin COF',
     };
     let received: ComprarCursoCofResponse | undefined;
-    service.comprarCursoCof(7).subscribe((r) => (received = r));
+    service.comprarCursoCof(7, 17.45).subscribe((r) => (received = r));
 
     httpMock.expectOne(`${environment.apiUrl}/cursos/7/comprar-cof`).flush(res);
 

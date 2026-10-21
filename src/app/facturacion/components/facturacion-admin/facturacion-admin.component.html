@@ -114,6 +114,13 @@
         tooltipPosition="top"
         >{{ item.concepto }}</span
       >
+      <span
+        class="descripcion fiscal-review-reasons"
+        *ngIf="motivosRevisionFiscalTexto(item) as motivos"
+        role="status"
+      >
+        Revisión fiscal: {{ motivos }}
+      </span>
     </div>
 
     <div class="right-side col-3 flex align-items-center justify-content-end">
@@ -236,8 +243,11 @@
     <div class="form-section">
       <h4>Datos del cliente</h4>
       <div class="field">
-        <label>Nombre / Razón social <span class="required">*</span></label>
+        <label for="manualNombre"
+          >Nombre / Razón social <span class="required">*</span></label
+        >
         <input
+          id="manualNombre"
           pInputText
           [(ngModel)]="formManual.clienteNombre"
           placeholder="Nombre completo o empresa"
@@ -245,8 +255,11 @@
       </div>
       <div class="field-row">
         <div class="field">
-          <label>NIF / CIF <span class="required">*</span></label>
+          <label for="manualNif"
+            >NIF / CIF <span class="required">*</span></label
+          >
           <input
+            id="manualNif"
             pInputText
             [(ngModel)]="formManual.clienteNif"
             placeholder="12345678Z"
@@ -263,8 +276,11 @@
         </div>
       </div>
       <div class="field">
-        <label>Dirección</label>
+        <label for="manualDireccion"
+          >Dirección <span class="required">*</span></label
+        >
         <input
+          id="manualDireccion"
           pInputText
           [(ngModel)]="formManual.clienteDireccion"
           placeholder="Calle, número..."
@@ -272,35 +288,45 @@
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Población</label>
+          <label for="manualPoblacion"
+            >Población <span class="required">*</span></label
+          >
           <input
+            id="manualPoblacion"
             pInputText
             [(ngModel)]="formManual.clientePoblacion"
             placeholder="Ciudad"
           />
         </div>
         <div class="field">
-          <label>Provincia <span class="required">*</span></label>
+          <label for="manualProvincia"
+            >Provincia <span class="required">*</span></label
+          >
           <input
+            id="manualProvincia"
             pInputText
             [(ngModel)]="formManual.clienteProvincia"
             placeholder="Valencia"
           />
         </div>
         <div class="field">
-          <label>Código Postal</label>
+          <label for="manualCodigoPostal"
+            >Código Postal <span class="required">*</span></label
+          >
           <input
+            id="manualCodigoPostal"
             pInputText
             [(ngModel)]="formManual.clienteCodigoPostal"
             placeholder="46000"
           />
         </div>
         <div class="field">
-          <label>País</label>
+          <label for="manualPais">País <span class="required">*</span></label>
           <input
+            id="manualPais"
             pInputText
             [(ngModel)]="formManual.clientePais"
-            placeholder="ES"
+            placeholder="Código ISO, p. ej. ES"
             maxlength="2"
           />
         </div>
@@ -526,7 +552,7 @@
 
     <div class="formgrid grid">
       <div class="field col-12 md:col-8">
-        <label for="cfNombre">Nombre</label>
+        <label for="cfNombre">Titular / Razón social *</label>
         <input
           id="cfNombre"
           type="text"
@@ -536,12 +562,57 @@
         />
       </div>
       <div class="field col-12 md:col-4">
-        <label for="cfProvincia">Provincia</label>
+        <label for="cfProvincia">Provincia *</label>
         <input
           id="cfProvincia"
           type="text"
           pInputText
           [(ngModel)]="formCompletarFiscal.clienteProvincia"
+          class="w-full"
+        />
+      </div>
+    </div>
+
+    <div class="formgrid grid">
+      <div class="field col-12">
+        <label for="cfDireccion">Dirección *</label>
+        <input
+          id="cfDireccion"
+          type="text"
+          pInputText
+          [(ngModel)]="formCompletarFiscal.clienteDireccion"
+          class="w-full"
+        />
+      </div>
+      <div class="field col-12 md:col-6">
+        <label for="cfPoblacion">Población *</label>
+        <input
+          id="cfPoblacion"
+          type="text"
+          pInputText
+          [(ngModel)]="formCompletarFiscal.clientePoblacion"
+          class="w-full"
+        />
+      </div>
+      <div class="field col-12 md:col-3">
+        <label for="cfCodigoPostal">Código postal *</label>
+        <input
+          id="cfCodigoPostal"
+          type="text"
+          pInputText
+          [(ngModel)]="formCompletarFiscal.clienteCodigoPostal"
+          class="w-full"
+        />
+      </div>
+      <div class="field col-12 md:col-3">
+        <label for="cfPais">País *</label>
+        <input
+          id="cfPais"
+          type="text"
+          pInputText
+          [(ngModel)]="formCompletarFiscal.clientePais"
+          placeholder="Código ISO, p. ej. ES"
+          maxlength="2"
           class="w-full"
         />
       </div>

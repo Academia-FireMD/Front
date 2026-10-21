@@ -361,7 +361,11 @@
       class="compra-precio"
       data-testid="simulacro-precio"
     >
-      {{ lastLoadedExamen()?.precioSimulacro | number: "1.2-2" }} €
+      {{
+        compraIntento()?.importeConfirmado ??
+          lastLoadedExamen()?.precioSimulacro | number: "1.2-2"
+      }}
+      €
     </div>
 
     <div class="compra-actions">

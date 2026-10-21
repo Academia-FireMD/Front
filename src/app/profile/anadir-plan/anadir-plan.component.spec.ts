@@ -103,7 +103,10 @@ describe('AnadirPlanComponent', () => {
     component.tierSeleccionado = PLAN_BASIC;
     component.activarPlan();
 
-    expect(svc.anadirPlan).toHaveBeenCalledWith(PLAN_BASIC.sku);
+    expect(svc.anadirPlan).toHaveBeenCalledWith(
+      PLAN_BASIC.sku,
+      PLAN_BASIC.precio,
+    );
     expect(planAnadidoSpy).toHaveBeenCalled();
     expect(cerrarSpy).toHaveBeenCalled();
     expect(component.requiereCheckout()).toBe(false);

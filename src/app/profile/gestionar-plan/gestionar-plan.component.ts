@@ -8,10 +8,12 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { environment } from '../../../environments/environment';
+import { importeConfirmadoEnCentimos } from '../../compras/importe-confirmado.util';
 import {
   AnadirPlanResponse,
   PlanDisponible,
@@ -280,67 +282,86 @@ export class GestionarPlanComponent implements OnInit {
       : periodo;
   }
 
+  /** Precio mostrado y confirmado por el alumno para este plan. */
+  precioVisiblePlan(plan: PlanDisponible | null | undefined): number | null {
+    if (!plan) return null;
+    if (plan.precioOferta && plan.precioOferta !== plan.precioRegular) {
+      return plan.precioOferta;
+    }
+    return plan.precio;
+  }
+
   // ── Modo `anadir` ───────────────────────────────────────────────
 
   /** Texto del botón principal de alta con el precio del plan elegido. */
   labelBotonActivar(): string {
-    const precio = this.planSeleccionado?.precio;
-    if (precio == null) return 'Activar plan';
-    return `Activar plan (${precio.toFixed(2).replace('.', ',')} €)`;
+    const importe = importeConfirmadoEnCentimos(
+      this.precioVisiblePlan(this.planSeleccionado),
+    );
+    if (importe === null) return 'Activar plan';
+    return `Activar plan (${importe.toFixed(2).replace('.', ',')} €)`;
   }
 
   puedeActivar(): boolean {
-    return !!this.planSeleccionado?.sku && !this.procesando();
+    return (
+      !!this.planSeleccionado?.sku &&
+      importeConfirmadoEnCentimos(
+        this.precioVisiblePlan(this.planSeleccionado),
+      ) !== null &&
+      !this.procesando()
+    );
   }
 
   activarPlan(): void {
     const plan = this.planSeleccionado;
-    if (!plan?.sku) return;
+    const importe = importeConfirmadoEnCentimos(this.precioVisiblePlan(plan));
+    if (!plan?.sku || importe === null) return;
 
     this.procesando.set(true);
     this.requiereCheckout.set(false);
 
-    this.suscripcionService.anadirPlan(plan.sku).subscribe({
-      next: (res: AnadirPlanResponse) => {
-        this.procesando.set(false);
-        if (res.requiereCheckout) {
-          // Alumno sin COF usable → panel explicativo + botón a la tienda.
-          this.requiereCheckout.set(true);
-          return;
-        }
-        if (res.success) {
+    this.suscripcionService
+      .anadirPlan(plan.sku, importe)
+      .pipe(finalize(() => this.procesando.set(false)))
+      .subscribe({
+        next: (res: AnadirPlanResponse) => {
+          if (res.requiereCheckout) {
+            // Alumno sin COF usable → panel explicativo + botón a la tienda.
+            this.requiereCheckout.set(true);
+            return;
+          }
+          if (res.success) {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Plan activado',
+              detail: res.mensaje || 'Tu nuevo plan ya está activo.',
+              life: 6000,
+            });
+            this.realizado.emit();
+            this.cerrar.emit();
+            return;
+          }
+          // success === false sin requiereCheckout: tratar como error de negocio.
           this.messageService.add({
-            severity: 'success',
-            summary: 'Plan activado',
-            detail: res.mensaje || 'Tu nuevo plan ya está activo.',
+            severity: 'error',
+            summary: 'No se pudo activar el plan',
+            detail: res.mensaje || 'Inténtalo de nuevo en unos segundos.',
             life: 6000,
           });
-          this.realizado.emit();
-          this.cerrar.emit();
-          return;
-        }
-        // success === false sin requiereCheckout: tratar como error de negocio.
-        this.messageService.add({
-          severity: 'error',
-          summary: 'No se pudo activar el plan',
-          detail: res.mensaje || 'Inténtalo de nuevo en unos segundos.',
-          life: 6000,
-        });
-      },
-      error: (e) => {
-        this.procesando.set(false);
-        const detalle =
-          e.error?.descripcion ||
-          e.error?.message ||
-          'No se pudo activar el plan.';
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error al activar el plan',
-          detail: detalle,
-          life: 6000,
-        });
-      },
-    });
+        },
+        error: (e) => {
+          const detalle =
+            e.error?.descripcion ||
+            e.error?.message ||
+            'No se pudo activar el plan.';
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error al activar el plan',
+            detail: detalle,
+            life: 6000,
+          });
+        },
+      });
   }
 
   /** Abre el checkout de WC pre-cargado con el plan elegido (fallback sin COF). */
@@ -393,8 +414,9 @@ export class GestionarPlanComponent implements OnInit {
   /** Diferencia de precio entre el plan elegido y el actual (para el resumen). */
   get diferenciaPrecio(): number | null {
     const precioActual = this.suscripcion?.monthlyPrice ?? null;
-    if (!this.planSeleccionado?.precio || precioActual == null) return null;
-    return this.planSeleccionado.precio - precioActual;
+    const precioNuevo = this.precioVisiblePlan(this.planSeleccionado);
+    if (!precioNuevo || precioActual == null) return null;
+    return precioNuevo - precioActual;
   }
 
   /**
@@ -404,7 +426,7 @@ export class GestionarPlanComponent implements OnInit {
    */
   puedeConfirmar(): boolean {
     const p = this.preview();
-    if (!p) return false;
+    if (!p || this.cargandoPreview()) return false;
     const bloqueado = p.avisos?.some(
       (a) =>
         a.codigo === 'COOLDOWN' ||
@@ -414,11 +436,16 @@ export class GestionarPlanComponent implements OnInit {
         a.codigo === 'OPOSICION_DUPLICADA',
     );
     if (bloqueado) return false;
-    if (p.switchType === 'UPGRADE') {
+    if (p.switchType === 'UPGRADE' && !p.costeCalculable) return false;
+    if (p.requiereCobro) {
       // No dejar confirmar un upgrade cuyo coste no se pudo calcular (precio
       // destino o fechas de ciclo no disponibles): requiereCobro:false NO es "gratis".
-      if (!p.costeCalculable) return false;
-      if (p.requiereCobro && !p.metodoPago.usable) return false;
+      if (
+        !p.costeCalculable ||
+        importeConfirmadoEnCentimos(p.prorrateo?.importe) === null ||
+        !p.metodoPago.usable
+      )
+        return false;
     }
     return true;
   }
@@ -427,11 +454,13 @@ export class GestionarPlanComponent implements OnInit {
   labelBotonConfirmar(): string {
     const p = this.preview();
     if (!p) return 'Confirmar';
-    if (p.credito && p.credito > 0) return 'Cambiar (sin coste ahora)';
-    if (p.switchType === 'UPGRADE' && p.requiereCobro && p.prorrateo) {
-      return `Pagar ${p.prorrateo.importe
-        .toFixed(2)
-        .replace('.', ',')} € y cambiar`;
+    if (p.credito && p.credito > 0 && !p.requiereCobro)
+      return 'Cambiar (sin coste ahora)';
+    const importe = p.requiereCobro
+      ? importeConfirmadoEnCentimos(p.prorrateo?.importe)
+      : null;
+    if (importe !== null) {
+      return `Pagar ${importe.toFixed(2).replace('.', ',')} € y cambiar`;
     }
     if (p.modo === 'PROGRAMADO') return 'Programar cambio';
     return 'Cambiar';
@@ -439,14 +468,24 @@ export class GestionarPlanComponent implements OnInit {
 
   /** Ejecuta el cambio de plan. Mismo flujo de toast/éxito que CambioSuscripcionComponent. */
   confirmarCambio(): void {
-    if (!this.planSeleccionado?.sku || !this.suscripcion) return;
+    if (
+      !this.planSeleccionado?.sku ||
+      !this.suscripcion ||
+      !this.puedeConfirmar()
+    )
+      return;
     this.procesando.set(true);
 
     this.suscripcionService
-      .cambiarSuscripcion(this.suscripcion.id, this.planSeleccionado.sku)
+      .cambiarSuscripcion(
+        this.suscripcion.id,
+        this.planSeleccionado.sku,
+        undefined,
+        this.preview() ?? undefined,
+      )
+      .pipe(finalize(() => this.procesando.set(false)))
       .subscribe({
         next: (res) => {
-          this.procesando.set(false);
           const summary =
             res.modo === 'INMEDIATO'
               ? 'Tu plan ya está activo'
@@ -467,7 +506,10 @@ export class GestionarPlanComponent implements OnInit {
           }, 2000);
         },
         error: (e) => {
-          this.procesando.set(false);
+          if (e?.error?.codigo === 'PRECIO_CAMBIADO') {
+            this.recargarPreviewTrasPrecioCambiado(this.planSeleccionado!);
+            return;
+          }
           const detalle =
             e.error?.descripcion ||
             e.error?.message ||
@@ -480,6 +522,18 @@ export class GestionarPlanComponent implements OnInit {
           });
         },
       });
+  }
+
+  private recargarPreviewTrasPrecioCambiado(plan: PlanDisponible): void {
+    this.preview.set(null);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Precio actualizado',
+      detail:
+        'El importe ha cambiado. Revisa el nuevo precio y vuelve a confirmar.',
+      life: 8000,
+    });
+    this.cargarPreview(plan);
   }
 
   cancelar(): void {

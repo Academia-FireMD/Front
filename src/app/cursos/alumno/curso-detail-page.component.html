@@ -86,7 +86,7 @@
             icon="pi pi-bolt"
             class="hero-cta"
             [loading]="comprando()"
-            [disabled]="!cursoData()!.curso.wooProductId || comprando()"
+            [disabled]="!puedeComprar() || comprando()"
             (click)="comprar()"
             data-testid="curso-detail-comprar-btn"
           ></button>

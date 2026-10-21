@@ -11,8 +11,10 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { importeConfirmadoEnCentimos } from '../../compras/importe-confirmado.util';
 import { environment } from '../../../environments/environment';
 import {
   ComprarCursoCofResponse,
@@ -176,20 +178,29 @@ export class CursoDetailPageComponent implements OnInit {
     if (this.isPreview() || this.comprando()) return;
     const data = this.cursoData();
     const cursoId = data?.curso.id;
-    if (!cursoId || !data?.curso.wooProductId) return;
+    const importe = importeConfirmadoEnCentimos(data?.curso.precio);
+    if (!cursoId || !data?.curso.wooProductId || importe === null) return;
 
     this.comprando.set(true);
-    this.service.comprarCursoCof(cursoId).subscribe({
-      next: (res: ComprarCursoCofResponse) => {
-        this.comprando.set(false);
-        this.manejarRespuesta(res);
-      },
-      error: () => {
-        // Fallo HTTP no clasificado (red/500). Reintentable: re-habilita.
-        this.comprando.set(false);
-        this.toast.error('No se pudo procesar, inténtalo de nuevo.');
-      },
-    });
+    this.service
+      .comprarCursoCof(cursoId, importe)
+      .pipe(finalize(() => this.comprando.set(false)))
+      .subscribe({
+        next: (res: ComprarCursoCofResponse) => {
+          this.manejarRespuesta(res);
+        },
+        error: () => {
+          // Fallo HTTP no clasificado (red/500). Reintentable: re-habilita.
+          this.toast.error('No se pudo procesar, inténtalo de nuevo.');
+        },
+      });
+  }
+
+  puedeComprar(): boolean {
+    const curso = this.cursoData()?.curso;
+    return Boolean(
+      curso?.wooProductId && importeConfirmadoEnCentimos(curso.precio) !== null,
+    );
   }
 
   private manejarRespuesta(res: ComprarCursoCofResponse): void {

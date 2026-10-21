@@ -138,11 +138,11 @@
       <div class="confirm-icon"><i class="pi pi-shopping-cart"></i></div>
       <h3>{{ s.titulo }}</h3>
       <p>
-        Se cobrará a tu tarjeta guardada y tendrás acceso al instante. Un
-        simulacro se puede comprar varias veces.
+        Se cobrará a tu tarjeta guardada el importe confirmado y tendrás acceso
+        al instante. Un simulacro se puede comprar varias veces.
       </p>
       <div class="confirm-precio" data-testid="tienda-confirm-precio">
-        {{ s.precio | number: "1.2-2" }} €
+        {{ compraIntento()?.importeConfirmado ?? s.precio | number: "1.2-2" }} €
       </div>
     </div>
   }

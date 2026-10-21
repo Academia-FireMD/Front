@@ -342,7 +342,7 @@
               de nuevo en unos minutos o contacta con soporte.
             </div>
           </div>
-        } @else if (p.credito && p.credito > 0) {
+        } @else if (p.credito && p.credito > 0 && !p.requiereCobro) {
           <div class="important-note cobro">
             <i class="pi pi-wallet"></i>
             <div class="note-content">
@@ -356,9 +356,7 @@
               }
             </div>
           </div>
-        } @else if (
-          p.switchType === "UPGRADE" && p.requiereCobro && p.prorrateo
-        ) {
+        } @else if (p.requiereCobro && p.prorrateo) {
           <div class="important-note cobro">
             <i class="pi pi-credit-card"></i>
             <div class="note-content">
@@ -390,6 +388,14 @@
               </div>
             </div>
           }
+        } @else if (p.requiereCobro) {
+          <div class="important-note error">
+            <i class="pi pi-exclamation-triangle"></i>
+            <div class="note-content">
+              No pudimos confirmar el importe de este cambio. Vuelve a
+              calcularlo antes de continuar.
+            </div>
+          </div>
         } @else if (p.modo === "PROGRAMADO") {
           <div class="important-note">
             <i class="pi pi-calendar-plus"></i>
@@ -509,6 +515,11 @@
                 <strong> {{ p.metodoPago.tarjetaMasked }}</strong>
               }
               y tu plan se activa al instante.
+            </p>
+          } @else if (p.requiereCobro) {
+            <p class="conf-fecha">
+              No se pudo confirmar el importe. Vuelve a calcularlo antes de
+              continuar.
             </p>
           } @else {
             <p class="conf-fecha">

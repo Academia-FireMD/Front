@@ -8,6 +8,11 @@ export type FacturaEstado =
   | 'ERROR';
 export type OrigenAnulacion = 'LOCAL' | 'CONTASIMPLE';
 
+export interface MotivoRevisionFiscal {
+  codigo: string;
+  campos?: string[];
+}
+
 export interface Factura {
   id: number;
   contasimpleId?: string;
@@ -40,6 +45,7 @@ export interface Factura {
   origenAnulacion?: OrigenAnulacion;
   fechaAnulacion?: string;
   requiereRevisionFiscal: boolean;
+  motivosRevisionFiscal?: MotivoRevisionFiscal[];
   createdAt: string;
   updatedAt: string;
 }
@@ -56,11 +62,11 @@ export interface CrearFacturaManualDto {
   clienteNombre: string;
   clienteEmail?: string;
   clienteNif: string;
-  clienteDireccion?: string;
-  clientePoblacion?: string;
+  clienteDireccion: string;
+  clientePoblacion: string;
   clienteProvincia: string;
-  clienteCodigoPostal?: string;
-  clientePais?: string;
+  clienteCodigoPostal: string;
+  clientePais: string;
   concepto: string;
   baseImponible: number;
   tipoIva?: number;

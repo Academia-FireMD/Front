@@ -22,6 +22,7 @@ describe('CatalogoPageComponent (compra COF 1-clic)', () => {
     id: 7,
     titulo: 'Curso Online',
     slug: 'curso-online',
+    precio: 17.45,
     estado: 'PUBLICADO',
     wooProductId: 4321,
   };
@@ -69,7 +70,10 @@ describe('CatalogoPageComponent (compra COF 1-clic)', () => {
 
     component.comprar(CURSO);
 
-    expect(serviceMock.comprarCursoCof).toHaveBeenCalledWith(CURSO.id);
+    expect(serviceMock.comprarCursoCof).toHaveBeenCalledWith(
+      CURSO.id,
+      CURSO.precio,
+    );
     expect(component.yaComprado(CURSO)).toBe(true);
     expect(component.comprandoId()).toBeNull();
     expect(toast.success).toHaveBeenCalled();

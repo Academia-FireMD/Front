@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 
 import { GestionarPlanComponent } from './gestionar-plan.component';
@@ -51,6 +51,18 @@ const PLAN_ADVANCED_ANUAL: PlanDisponible = {
   precioOferta: null,
   tipo: 'ADVANCED',
   billingPeriod: 'year',
+  billingInterval: 1,
+};
+
+const PLAN_OFERTA_MENSUAL: PlanDisponible = {
+  id: 'offer-m',
+  nombre: 'Valencia Básico (oferta mensual)',
+  sku: 'VALENCIA-BASIC-OFFER-MONTHLY',
+  precio: 49.99,
+  precioRegular: 49.99,
+  precioOferta: 39.99,
+  tipo: 'BASIC',
+  billingPeriod: 'month',
   billingInterval: 1,
 };
 
@@ -235,9 +247,33 @@ describe('GestionarPlanComponent', () => {
 
     component.activarPlan();
 
-    expect(svc.anadirPlan).toHaveBeenCalledWith(PLAN_BASIC_MENSUAL.sku);
+    expect(svc.anadirPlan).toHaveBeenCalledWith(
+      PLAN_BASIC_MENSUAL.sku,
+      PLAN_BASIC_MENSUAL.precio,
+    );
     expect(realizado).toHaveBeenCalled();
     expect(cerrar).toHaveBeenCalled();
+  });
+
+  it('modo anadir: resumen, botón y compra confirman el precioOferta mostrado', () => {
+    svc.obtenerPlanesDisponibles.mockReturnValue(of([PLAN_OFERTA_MENSUAL]));
+    createAnadir();
+    component.seleccionarOposicion(Oposicion.VALENCIA_AYUNTAMIENTO);
+    fixture.detectChanges();
+    component.seleccionarPlan(PLAN_OFERTA_MENSUAL);
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('.precio-oferta').textContent,
+    ).toContain('39.99');
+    expect(
+      fixture.nativeElement.querySelector('.plan-resumen-precio').textContent,
+    ).toContain('39.99');
+    expect(component.labelBotonActivar()).toContain('39,99');
+
+    component.activarPlan();
+
+    expect(svc.anadirPlan).toHaveBeenCalledWith(PLAN_OFERTA_MENSUAL.sku, 39.99);
   });
 
   // ── Modo anadir: requiereCheckout abre panel "sin tarjeta" ───────
@@ -301,7 +337,32 @@ describe('GestionarPlanComponent', () => {
     expect(svc.cambiarSuscripcion).toHaveBeenCalledWith(
       SUSCRIPCION_VALENCIA.id,
       PLAN_ADVANCED_MENSUAL.sku,
+      undefined,
+      UPGRADE_PREVIEW,
     );
+  });
+
+  it('modo cambiar: PRECIO_CAMBIADO recarga el preview y deja una nueva confirmación manual', () => {
+    const previewActualizado: PreviewCambioResponse = {
+      ...UPGRADE_PREVIEW,
+      prorrateo: { importe: 19.75, diasRestantes: 15, diasCiclo: 30 },
+    };
+    svc.previewCambioSuscripcion
+      .mockReturnValueOnce(of(UPGRADE_PREVIEW))
+      .mockReturnValueOnce(of(previewActualizado));
+    svc.cambiarSuscripcion.mockReturnValue(
+      throwError(() => ({ error: { codigo: 'PRECIO_CAMBIADO' } })) as any,
+    );
+    createCambiar();
+    component.seleccionarPlan(PLAN_ADVANCED_MENSUAL);
+
+    component.confirmarCambio();
+
+    expect(svc.cambiarSuscripcion).toHaveBeenCalledTimes(1);
+    expect(svc.previewCambioSuscripcion).toHaveBeenCalledTimes(2);
+    expect(component.preview()?.prorrateo?.importe).toBe(19.75);
+    expect(component.labelBotonConfirmar()).toContain('19,75');
+    expect(component.puedeConfirmar()).toBe(true);
   });
 
   // ── Anti-race: un preview que llega tarde NO pisa la selección vigente ──

@@ -32,6 +32,7 @@ import { MarkdownModule } from 'ngx-markdown';
 import { NgxSpinnerModule } from 'ngx-spinner';
 import { ToastrModule } from 'ngx-toastr';
 import { ConfirmationService, PrimeNGConfig } from 'primeng/api';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -177,6 +178,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
     SharedModule,
     PanelMenuModule,
     ConfirmDialogModule,
+    DynamicDialogModule,
     MarkdownModule.forRoot(),
     BrowserAnimationsModule, // required animations module
     ToastrModule.forRoot({ positionClass: 'toast-top-center' }), // ToastrModule added
@@ -204,6 +206,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
   providers: [
     provideHttpClient(withInterceptorsFromDi()),
     ConfirmationService,
+    DialogService,
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,

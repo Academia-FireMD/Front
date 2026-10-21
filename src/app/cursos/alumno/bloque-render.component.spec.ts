@@ -5,6 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DomSanitizer, ɵDomSanitizerImpl } from '@angular/platform-browser';
 import { provideMarkdown } from 'ngx-markdown';
 import { COMMON_TEST_PROVIDERS } from '../../testing/common-providers';
+import { CompraFiscalService } from '../../compras/compra-fiscal.service';
 import { Bloque } from '../models/curso.model';
 import { BloqueRenderComponent } from './bloque-render.component';
 import { BloqueTestInlineComponent } from './bloque-test-inline.component';
@@ -31,6 +32,12 @@ describe('BloqueRenderComponent', () => {
       imports: [BloqueRenderComponent],
       providers: [
         ...COMMON_TEST_PROVIDERS,
+        {
+          provide: CompraFiscalService,
+          useValue: {
+            ejecutarConDatosFiscales: (compra: () => unknown) => compra(),
+          },
+        },
         provideHttpClient(),
         provideHttpClientTesting(),
         provideMarkdown(),

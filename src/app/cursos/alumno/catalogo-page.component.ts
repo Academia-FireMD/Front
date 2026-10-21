@@ -7,8 +7,10 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { importeConfirmadoEnCentimos } from '../../compras/importe-confirmado.util';
 import { environment } from '../../../environments/environment';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { ComprarCursoCofResponse, CursoPublico } from '../models/curso.model';
@@ -79,20 +81,23 @@ export class CatalogoPageComponent implements OnInit {
 
   /** Compra en 1 clic contra el COF. Estado de carga mientras el backend cobra. */
   comprar(curso: CursoPublico): void {
-    if (!curso.wooProductId || this.comprandoId() !== null) return;
+    const importe = importeConfirmadoEnCentimos(curso.precio);
+    if (!curso.wooProductId || importe === null || this.comprandoId() !== null)
+      return;
     this.comprandoId.set(curso.id);
 
-    this.service.comprarCursoCof(curso.id).subscribe({
-      next: (res: ComprarCursoCofResponse) => {
-        this.comprandoId.set(null);
-        this.manejarRespuesta(curso, res);
-      },
-      error: () => {
-        // Fallo HTTP no clasificado (red/500). Reintentable: re-habilita.
-        this.comprandoId.set(null);
-        this.toast.error('No se pudo procesar, inténtalo de nuevo.');
-      },
-    });
+    this.service
+      .comprarCursoCof(curso.id, importe)
+      .pipe(finalize(() => this.comprandoId.set(null)))
+      .subscribe({
+        next: (res: ComprarCursoCofResponse) => {
+          this.manejarRespuesta(curso, res);
+        },
+        error: () => {
+          // Fallo HTTP no clasificado (red/500). Reintentable: re-habilita.
+          this.toast.error('No se pudo procesar, inténtalo de nuevo.');
+        },
+      });
   }
 
   private manejarRespuesta(

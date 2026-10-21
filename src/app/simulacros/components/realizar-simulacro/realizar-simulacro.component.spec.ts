@@ -4,6 +4,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { COMMON_TEST_PROVIDERS } from '../../../testing';
+import { SimulacroCompraIntentoService } from '../../../compras/simulacro-compra-intento.service';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
 import {
   ComprarSimulacroCofResponse,
@@ -31,8 +32,15 @@ function buildExamenServiceMock() {
       (
         _examenId: number,
         _idempotencyKey: string,
-      ): Observable<ComprarSimulacroCofResponse> =>
-        of({ success: true, consumibleId: 1, mensaje: 'ok' }),
+        _importeConfirmado: number,
+        opciones?: {
+          omitirLecturaFiscalInicial?: boolean;
+          antesDeEnviar?: () => void;
+        },
+      ): Observable<ComprarSimulacroCofResponse> => {
+        opciones?.antesDeEnviar?.();
+        return of({ success: true, consumibleId: 1, mensaje: 'ok' });
+      },
     ),
     verificarCodigoAcceso$: jest.fn(() => of(true)),
     startSimulacro$: jest.fn(() => of({ id: 99 })),
@@ -71,6 +79,7 @@ describe('RealizarSimulacroComponent', () => {
       providers: [
         ...COMMON_TEST_PROVIDERS,
         { provide: ExamenesService, useValue: examenService },
+        SimulacroCompraIntentoService,
         { provide: ToastrService, useValue: toastr },
         {
           provide: ConfirmationService,
@@ -83,9 +92,11 @@ describe('RealizarSimulacroComponent', () => {
     fixture = TestBed.createComponent(RealizarSimulacroComponent);
     component = fixture.componentInstance;
     component.lastLoadedExamen.set({ ...SIMULACRO_COMPRABLE });
+    component.currentUser.set({ id: 7 } as any);
   }
 
   beforeEach(() => {
+    localStorage.clear();
     jest.clearAllMocks();
     TestBed.resetTestingModule();
     setup();
@@ -104,6 +115,9 @@ describe('RealizarSimulacroComponent', () => {
       await (component as any).verificarYProcederConSimulacro();
 
       expect(component.compraDialogVisible).toBe(true);
+      expect(component.compraIntento()?.idempotencyKey).toMatch(
+        /^simulacro_v2_/,
+      );
       expect(toastr.error).not.toHaveBeenCalled();
     });
 
@@ -128,8 +142,11 @@ describe('RealizarSimulacroComponent', () => {
       component.comprarSimulacro();
 
       expect(examenService.comprarSimulacroCof$).toHaveBeenCalledTimes(1);
-      const [examenId, key] = examenService.comprarSimulacroCof$.mock.calls[0];
+      const [examenId, key, importe] =
+        examenService.comprarSimulacroCof$.mock.calls[0];
       expect(examenId).toBe(50);
+      expect(importe).toBe(SIMULACRO_COMPRABLE.precioSimulacro);
+      expect(key).toMatch(/^simulacro_v2_/);
       expect(typeof key).toBe('string');
       expect((key as string).length).toBeGreaterThan(0);
       // Tras una respuesta síncrona (of), el spinner queda re-habilitado.
@@ -216,8 +233,15 @@ describe('RealizarSimulacroComponent', () => {
       );
       await (component as any).verificarYProcederConSimulacro();
 
-      examenService.comprarSimulacroCof$.mockReturnValue(
-        of({ success: false, error: 'ERROR_TEMPORAL', mensaje: 'Verificando' }),
+      examenService.comprarSimulacroCof$.mockImplementation(
+        (_id, _key, _importe, opciones) => {
+          opciones?.antesDeEnviar?.();
+          return of({
+            success: false,
+            error: 'ERROR_TEMPORAL',
+            mensaje: 'Verificando',
+          });
+        },
       );
       component.comprarSimulacro(); // intento
       component.comprarSimulacro(); // retry del MISMO intento
@@ -225,6 +249,41 @@ describe('RealizarSimulacroComponent', () => {
       const k1 = examenService.comprarSimulacroCof$.mock.calls[0][1];
       const k2 = examenService.comprarSimulacroCof$.mock.calls[1][1];
       expect(k1).toBe(k2);
+      expect(examenService.comprarSimulacroCof$.mock.calls[1][3]).toEqual(
+        expect.objectContaining({ omitirLecturaFiscalInicial: true }),
+      );
+    });
+
+    it('recupera de otra instancia el intento enviado por la tienda con su importe aceptado', () => {
+      const intentoTienda = new SimulacroCompraIntentoService().obtenerOCrear(
+        7,
+        50,
+        9.95,
+      );
+      new SimulacroCompraIntentoService().marcarEnviado(intentoTienda);
+      component.lastLoadedExamen.set({
+        ...SIMULACRO_COMPRABLE,
+        precioSimulacro: 12.5,
+      } as Examen);
+      examenService.comprarSimulacroCof$.mockImplementation(
+        (_id, _key, _importe, opciones) => {
+          opciones?.antesDeEnviar?.();
+          return of({
+            success: false,
+            error: 'ERROR_TEMPORAL',
+            mensaje: 'Verificando',
+          });
+        },
+      );
+
+      component.comprarSimulacro();
+
+      const [examenId, key, importe, opciones] =
+        examenService.comprarSimulacroCof$.mock.calls[0];
+      expect(examenId).toBe(50);
+      expect(key).toBe(intentoTienda.idempotencyKey);
+      expect(importe).toBe(9.95);
+      expect(opciones?.omitirLecturaFiscalInicial).toBe(true);
     });
 
     it('una compra NUEVA (tras éxito) usa una idempotencyKey distinta', () => {

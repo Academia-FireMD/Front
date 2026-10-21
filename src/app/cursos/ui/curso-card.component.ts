@@ -11,6 +11,7 @@ import { Oposicion } from '../../shared/models/subscription.model';
 import { colapsarOposiciones } from '../../utils/consts';
 import { Curso } from '../models/curso.model';
 import { ProgressRingComponent } from './progress-ring.component';
+import { importeConfirmadoEnCentimos } from '../../compras/importe-confirmado.util';
 
 /**
  * Card de curso reutilizable (catálogo, mis cursos, "continuar"). Presentacional:
@@ -39,6 +40,13 @@ export class CursoCardComponent {
   comprar = output<void>();
 
   readonly esGratuito = computed(() => this.curso().esGratuito === true);
+
+  readonly compraDisponible = computed(() => {
+    const curso = this.curso();
+    return Boolean(
+      curso.wooProductId && importeConfirmadoEnCentimos(curso.precio) !== null,
+    );
+  });
 
   readonly cta = computed<
     'comprar' | 'acceder-gratis' | 'continuar' | 'empezar'

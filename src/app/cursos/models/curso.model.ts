@@ -303,6 +303,11 @@ export type ComprarCursoCofError =
   | 'ERROR_TEMPORAL'
   | 'YA_TIENES';
 
+/** Body del intento de compra COF; el importe es el precio aceptado en Front. */
+export interface ComprarCursoCofDto {
+  importeConfirmado: number;
+}
+
 /**
  * Respuesta de `POST /cursos/:id/comprar-cof`. Discriminada por `success`:
  *  - `{ success: true }`: comprado, el alumno ya tiene acceso (grant in-app).
