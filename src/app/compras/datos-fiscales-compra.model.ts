@@ -32,6 +32,8 @@ export interface EstadoDatosFiscalesCompra {
   conflictos: CampoFiscalCompra[];
   completo: boolean;
   version: string;
+  /** La sincronización de la ficha todavía está en curso en el servidor. */
+  fiscalSyncPending?: boolean;
   /** Cuenta local sin cliente Woo vinculado: completar la compra en el checkout. */
   requiereCheckout?: boolean;
 }

@@ -76,7 +76,11 @@ export class CompraFiscalService {
           if (!this.estadoValido(estado)) {
             throw new Error('El servidor devolvió una ficha fiscal no válida.');
           }
-          if (!estado.completo && !this.camposPendientes(estado).length) {
+          if (
+            !estado.completo &&
+            !estado.fiscalSyncPending &&
+            !this.camposPendientes(estado).length
+          ) {
             throw new Error(
               'No se pudieron identificar los datos fiscales que requieren corrección.',
             );
@@ -151,6 +155,7 @@ export class CompraFiscalService {
         suscripcionId,
         guardar: (datos: Partial<DatosFiscalesCompra>) =>
           this.guardarDatosFiscales(datos, estado.version, suscripcionId),
+        comprobar: () => this.obtenerDatosFiscales(suscripcionId),
       },
     });
 
@@ -202,6 +207,8 @@ export class CompraFiscalService {
       Array.isArray(estado.invalidos) &&
       Array.isArray(estado.conflictos) &&
       typeof estado.completo === 'boolean' &&
+      (estado.fiscalSyncPending === undefined ||
+        typeof estado.fiscalSyncPending === 'boolean') &&
       (estado.requiereCheckout === undefined ||
         typeof estado.requiereCheckout === 'boolean') &&
       typeof estado.version === 'string',

@@ -34,6 +34,7 @@ interface DialogData {
   guardar: (
     datos: Partial<DatosFiscalesCompra>,
   ) => import('rxjs').Observable<EstadoDatosFiscalesCompra>;
+  comprobar: () => import('rxjs').Observable<EstadoDatosFiscalesCompra>;
 }
 
 @Component({
@@ -60,6 +61,8 @@ export class CompraDatosFiscalesDialogComponent {
   readonly formulario = this.crearFormulario();
   readonly campos: CampoVisible[] = [];
   guardando = false;
+  comprobando = false;
+  recuperacionNecesaria = false;
   enviado = false;
   errorGuardado = '';
   private provinciaDinamica = false;
@@ -78,6 +81,8 @@ export class CompraDatosFiscalesDialogComponent {
   }
 
   guardar(): void {
+    if (this.guardando || this.recuperacionNecesaria) return;
+
     this.enviado = true;
     this.errorGuardado = '';
     this.formulario.markAllAsTouched();
@@ -105,7 +110,38 @@ export class CompraDatosFiscalesDialogComponent {
           this.ref.close({ guardado: true });
         },
         error: (error: unknown) => {
-          this.errorGuardado = this.mensajeError(error);
+          this.recuperacionNecesaria = true;
+          this.errorGuardado = `${this.mensajeError(error)} Comprueba el estado antes de volver a intentarlo.`;
+        },
+      });
+  }
+
+  comprobarGuardado(): void {
+    if (!this.recuperacionNecesaria || this.comprobando) return;
+
+    this.comprobando = true;
+    this.config.data
+      .comprobar()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => (this.comprobando = false)),
+      )
+      .subscribe({
+        next: (estado: EstadoDatosFiscalesCompra) => {
+          if (estado.fiscalSyncPending) {
+            this.errorGuardado =
+              'La sincronización fiscal sigue en curso. No se han reenviado los datos; comprueba de nuevo más tarde.';
+            return;
+          }
+          if (estado.completo) {
+            this.ref.close({ guardado: true });
+            return;
+          }
+          this.errorGuardado =
+            'No se ha confirmado el guardado: la ficha fiscal sigue incompleta. Conservamos los datos introducidos; cierra el diálogo y vuelve a iniciar la compra para actualizarla. No se ha reenviado el guardado ni iniciado el pago.';
+        },
+        error: (error: unknown) => {
+          this.errorGuardado = `No se pudo comprobar el guardado. Conservamos los datos; vuelve a comprobarlo más tarde o cierra el diálogo y reinicia la compra para actualizar la ficha. ${this.mensajeError(error)}`;
         },
       });
   }
@@ -294,13 +330,17 @@ export class CompraDatosFiscalesDialogComponent {
   private mensajeError(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       const body = error.error as {
+        codigo?: unknown;
         mensaje?: unknown;
         message?: unknown;
       } | null;
+      if (body?.codigo === 'SINCRONIZACION_FISCAL_EN_CURSO') {
+        return 'La sincronización fiscal sigue en curso. No vuelvas a guardar mientras termina.';
+      }
       if (typeof body?.mensaje === 'string') return body.mensaje;
       if (typeof body?.message === 'string') return body.message;
     }
     if (error instanceof Error && error.message) return error.message;
-    return 'No se pudieron guardar los datos fiscales. Inténtalo de nuevo.';
+    return 'No se pudo confirmar si los datos fiscales se guardaron.';
   }
 }
