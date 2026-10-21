@@ -232,6 +232,105 @@ describe('CompraFiscalService', () => {
     expect(compra).not.toHaveBeenCalled();
   });
 
+  it('recupera un PUT perdido con solo GET y requiere otra confirmación para comprar', () => {
+    const compra = jest.fn(() => of({ success: true }));
+    service.ejecutarConDatosFiscales(compra, 31).subscribe();
+    httpMock
+      .expectOne(
+        `${environment.apiUrl}/compras/datos-fiscales?suscripcionId=31`,
+      )
+      .flush(estado({ completo: false, faltantes: ['direccion'] }));
+
+    const datosDialogo = dialogService.open.mock.calls[0][1].data;
+    const erroresGuardado: unknown[] = [];
+    datosDialogo.guardar({ direccion: 'Calle Uno 1' }).subscribe({
+      error: (error: unknown) => erroresGuardado.push(error),
+    });
+    const put = httpMock.expectOne(
+      `${environment.apiUrl}/compras/datos-fiscales`,
+    );
+    expect(put.request.method).toBe('PUT');
+    put.flush(
+      { mensaje: 'respuesta perdida' },
+      { status: 499, statusText: 'Client Closed Request' },
+    );
+    expect(erroresGuardado).toHaveLength(1);
+
+    let estadoRecuperado: EstadoDatosFiscalesCompra | undefined;
+    datosDialogo.comprobar().subscribe((value: EstadoDatosFiscalesCompra) => {
+      estadoRecuperado = value;
+    });
+    const comprobar = httpMock.expectOne(
+      `${environment.apiUrl}/compras/datos-fiscales?suscripcionId=31`,
+    );
+    expect(comprobar.request.method).toBe('GET');
+    comprobar.flush(estado({ completo: true }));
+
+    expect(estadoRecuperado?.completo).toBe(true);
+    expect(compra).not.toHaveBeenCalled();
+    httpMock.expectNone((request) => request.method === 'PUT');
+
+    dialogClose$.next({ guardado: true });
+    dialogClose$.complete();
+    expect(compra).not.toHaveBeenCalled();
+
+    service.ejecutarConDatosFiscales(compra, 31).subscribe();
+    const confirmacion = httpMock.expectOne(
+      `${environment.apiUrl}/compras/datos-fiscales?suscripcionId=31`,
+    );
+    expect(confirmacion.request.method).toBe('GET');
+    confirmacion.flush(estado({ completo: true }));
+    expect(compra).toHaveBeenCalledTimes(1);
+  });
+
+  it('una verificación pendiente, incompleta o fallida no escribe ni inicia la compra', () => {
+    const compra = jest.fn(() => of({ success: true }));
+    service.ejecutarConDatosFiscales(compra, 31).subscribe();
+    httpMock
+      .expectOne(
+        `${environment.apiUrl}/compras/datos-fiscales?suscripcionId=31`,
+      )
+      .flush(estado({ completo: false, faltantes: ['direccion'] }));
+    const comprobar = dialogService.open.mock.calls[0][1].data.comprobar;
+
+    const erroresPendientes: unknown[] = [];
+    comprobar().subscribe({
+      error: (error: unknown) => erroresPendientes.push(error),
+    });
+    const pendiente = httpMock.expectOne(
+      `${environment.apiUrl}/compras/datos-fiscales?suscripcionId=31`,
+    );
+    expect(pendiente.request.method).toBe('GET');
+    pendiente.flush({
+      ...estado({ completo: false, faltantes: [] }),
+      fiscalSyncPending: true,
+    });
+    expect(erroresPendientes).toHaveLength(0);
+    expect(compra).not.toHaveBeenCalled();
+
+    comprobar().subscribe();
+    const incompleta = httpMock.expectOne(
+      `${environment.apiUrl}/compras/datos-fiscales?suscripcionId=31`,
+    );
+    expect(incompleta.request.method).toBe('GET');
+    incompleta.flush(estado({ completo: false, faltantes: ['direccion'] }));
+    expect(compra).not.toHaveBeenCalled();
+
+    const errores: unknown[] = [];
+    comprobar().subscribe({ error: (error: unknown) => errores.push(error) });
+    const fallida = httpMock.expectOne(
+      `${environment.apiUrl}/compras/datos-fiscales?suscripcionId=31`,
+    );
+    expect(fallida.request.method).toBe('GET');
+    fallida.flush(
+      { mensaje: 'Lectura temporalmente no disponible' },
+      { status: 503, statusText: 'Unavailable' },
+    );
+    expect(errores).toHaveLength(1);
+    expect(compra).not.toHaveBeenCalled();
+    httpMock.expectNone((request) => request.method === 'PUT');
+  });
+
   it('reconoce la precondición autoritativa recibida en un body success:false', () => {
     const compra = jest.fn(() =>
       of({

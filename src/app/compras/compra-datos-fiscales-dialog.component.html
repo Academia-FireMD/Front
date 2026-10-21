@@ -70,15 +70,24 @@
       type="button"
       label="Cancelar"
       class="p-button-text"
-      [disabled]="guardando"
+      [disabled]="guardando || comprobando"
       (click)="cancelar()"
+    ></button>
+    <button
+      pButton
+      type="button"
+      label="Comprobar guardado"
+      [loading]="comprobando"
+      [disabled]="guardando || comprobando"
+      *ngIf="recuperacionNecesaria"
+      (click)="comprobarGuardado()"
     ></button>
     <button
       pButton
       type="submit"
       label="Guardar datos"
       [loading]="guardando"
-      [disabled]="guardando"
+      [disabled]="guardando || comprobando || recuperacionNecesaria"
     ></button>
   </div>
 </form>
