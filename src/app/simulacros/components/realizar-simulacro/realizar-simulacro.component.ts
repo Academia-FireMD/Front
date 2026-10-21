@@ -4,8 +4,12 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom, Subscription, tap } from 'rxjs';
+import { finalize, firstValueFrom, Subscription, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import {
+  SimulacroCompraIntento,
+  SimulacroCompraIntentoService,
+} from '../../../compras/simulacro-compra-intento.service';
 import {
   ComprarSimulacroCofResponse,
   Examen,
@@ -36,6 +40,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
   toastr = inject(ToastrService);
   authService = inject(AuthService);
   fb = inject(FormBuilder);
+  private readonly intentoService = inject(SimulacroCompraIntentoService);
 
   lastLoadedExamen = signal<Examen | null>(null);
   public statusLoad: 'non_loaded' | 'not_found' | 'loaded' = 'non_loaded';
@@ -59,15 +64,8 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
   public checkoutMensaje: string = '';
   public checkoutEsRechazo: boolean = false;
   public checkoutWooProductId: string | null = null;
-  /**
-   * Clave de idempotencia del INTENTO de compra en curso. Se genera UNA vez al
-   * abrir la oferta y se REUTILIZA en cada reintento del mismo intento, de modo
-   * que un retry de un cobro ambiguo (ERROR_TEMPORAL) deduplique en el servidor
-   * y NO doble-cobre. Se limpia en estados terminales (éxito/rechazo/checkout)
-   * para que una compra NUEVA (un simulacro es comprable varias veces) use una
-   * clave nueva.
-   */
-  private compraIdempotencyKey: string = '';
+  /** Intento durable compartido con la tienda para este usuario y simulacro. */
+  public compraIntento = signal<SimulacroCompraIntento | null>(null);
 
   // Usuario actual
   public currentUser = signal<Usuario | null>(null);
@@ -156,12 +154,12 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
         // Sin acceso: si el simulacro está vinculado a un producto WC, ofrecer la
         // compra in-app (1-clic COF). Si no, no es comprable → mensaje informativo.
         if (this.lastLoadedExamen()?.woocommerceProductId) {
-          // Nueva oferta = nuevo intento de compra → clave de idempotencia fresca.
-          this.compraIdempotencyKey = this.generarIdempotencyKey();
-          this.compraDialogVisible = true;
+          if (this.prepararIntentoCompra()) {
+            this.compraDialogVisible = true;
+          }
         } else {
           this.toastr.error(
-            'No tienes acceso a este simulacro y no está disponible para compra.',
+            'No tienes acceso a este simulacro y no está disponible para compra con un precio válido.',
             'Sin acceso',
           );
         }
@@ -185,36 +183,53 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
 
   /**
    * Compra el simulacro en 1 clic contra el COF del alumno (tarjeta guardada).
-   * Usa la `compraIdempotencyKey` del INTENTO en curso (fijada al abrir la oferta
-   * y reutilizada en cada reintento): un retry de la MISMA compra deduplica en la
-   * ruta de cobro y no doble-cobra; un intento NUEVO (tras un estado terminal)
-   * usa otra clave = compra nueva (un simulacro es comprable varias veces).
+   * Reutiliza la clave y precio durables para la pareja usuario/simulacro. Los
+   * intentos enviados sobreviven reintentos, navegación y recarga.
    * Money-critical: el backend no concede el consumible salvo cobro confirmado.
    */
   public comprarSimulacro(): void {
     if (this.comprandoSimulacro()) return;
-    const examenId = this.lastLoadedExamen()?.id;
-    if (!examenId) return;
+    const examen = this.lastLoadedExamen();
+    const examenId = examen?.id;
+    const usuarioId = this.currentUser()?.id;
+    if (!examenId || !usuarioId) return;
 
-    // Reutiliza la clave del intento en curso (la fija la oferta al abrirse). El
-    // `||` es una red por si se llama sin pasar por la oferta: un retry del MISMO
-    // intento debe llevar la MISMA clave para deduplicar y no doble-cobrar.
-    if (!this.compraIdempotencyKey) {
-      this.compraIdempotencyKey = this.generarIdempotencyKey();
+    let intento: SimulacroCompraIntento;
+    try {
+      intento = this.intentoService.obtenerOCrear(
+        usuarioId,
+        examenId,
+        examen?.precioSimulacro,
+      );
+      this.compraIntento.set(intento);
+    } catch (error) {
+      this.toastr.error(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo recuperar el intento de compra.',
+        'Compra no iniciada',
+      );
+      return;
     }
-    const idempotencyKey = this.compraIdempotencyKey;
 
     this.comprandoSimulacro.set(true);
     this.examenService
-      .comprarSimulacroCof$(examenId, idempotencyKey)
+      .comprarSimulacroCof$(
+        examenId,
+        intento.idempotencyKey,
+        intento.importeConfirmado,
+        {
+          omitirLecturaFiscalInicial: intento.enviado,
+          antesDeEnviar: () => this.intentoService.marcarEnviado(intento),
+        },
+      )
+      .pipe(finalize(() => this.comprandoSimulacro.set(false)))
       .subscribe({
         next: (res) => {
-          this.comprandoSimulacro.set(false);
-          this.manejarRespuestaCompra(res);
+          this.manejarRespuestaCompra(intento, res);
         },
         error: () => {
           // Fallo HTTP no clasificado (red/500). Reintentable: re-habilita el botón.
-          this.comprandoSimulacro.set(false);
           this.toastr.error(
             'No se pudo procesar la compra, inténtalo de nuevo.',
             'Error',
@@ -223,10 +238,12 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       });
   }
 
-  private manejarRespuestaCompra(res: ComprarSimulacroCofResponse): void {
+  private manejarRespuestaCompra(
+    intento: SimulacroCompraIntento,
+    res: ComprarSimulacroCofResponse,
+  ): void {
     if (res.success) {
-      // Intento terminado con éxito → la próxima compra usará una clave nueva.
-      this.compraIdempotencyKey = '';
+      this.finalizarIntentoCompra(intento);
       this.compraDialogVisible = false;
       this.toastr.success(
         res.mensaje || 'Compra realizada. Ya tienes acceso.',
@@ -238,17 +255,15 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
       return;
     }
     if ('requiereCheckout' in res) {
-      // Sin COF usable (o precio cambiado) → empujar a la tienda, sin cobro.
-      // Sale del flujo COF → cierra el intento (clave nueva la próxima vez).
-      this.compraIdempotencyKey = '';
+      // Respuesta neutral: el servidor certifica que no se inició una captura.
+      this.finalizarIntentoCompra(intento);
       this.abrirCheckout(res.wooProductId, res.mensaje, false);
       return;
     }
     switch (res.error) {
       case 'PAGO_RECHAZADO':
-        // Decline: NO re-ofrecer 1-clic; a la tienda con otra tarjeta. Intento
-        // terminado (la tarjeta no sirve) → clave nueva la próxima vez.
-        this.compraIdempotencyKey = '';
+        // Decline certificado: el siguiente intento puede usar otra clave.
+        this.finalizarIntentoCompra(intento);
         this.abrirCheckout(
           res.wooProductId ??
             this.lastLoadedExamen()?.woocommerceProductId ??
@@ -259,8 +274,7 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
         );
         return;
       case 'ERROR_TEMPORAL':
-        // Técnico/ambiguo: reintentable. NO se limpia la clave: un retry debe
-        // llevar la MISMA clave para deduplicar el cobro ambiguo y no doblar.
+        // Ambiguo: conservar key e importe para resolver el mismo intento.
         this.toastr.warning(
           res.mensaje ||
             'Estamos verificando tu pago. Si se completó, tendrás acceso en unos minutos.',
@@ -270,12 +284,49 @@ export class RealizarSimulacroComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Genera una clave de idempotencia única (UUID si está disponible). */
-  private generarIdempotencyKey(): string {
-    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-      return crypto.randomUUID();
+  private prepararIntentoCompra(): boolean {
+    const examen = this.lastLoadedExamen();
+    const usuarioId = this.currentUser()?.id;
+    if (!examen?.id || !usuarioId) {
+      this.toastr.error(
+        'No se pudo identificar al alumno o simulacro para la compra.',
+        'Compra no iniciada',
+      );
+      return false;
     }
-    return `sim_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    try {
+      this.compraIntento.set(
+        this.intentoService.obtenerOCrear(
+          usuarioId,
+          examen.id,
+          examen.precioSimulacro,
+        ),
+      );
+      return true;
+    } catch (error) {
+      this.toastr.error(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo recuperar el intento de compra.',
+        'Compra no iniciada',
+      );
+      return false;
+    }
+  }
+
+  private finalizarIntentoCompra(intento: SimulacroCompraIntento): void {
+    try {
+      this.intentoService.finalizar(intento);
+      if (this.compraIntento()?.idempotencyKey === intento.idempotencyKey) {
+        this.compraIntento.set(null);
+      }
+    } catch {
+      // Conservarlo permite que el servidor devuelva el replay sin nuevo cobro.
+      this.toastr.warning(
+        'La compra se confirmó, pero no se pudo cerrar el intento local. No inicies otra compra.',
+        'Compra confirmada',
+      );
+    }
   }
 
   private abrirCheckout(

@@ -217,6 +217,22 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       this.toast.warning('El NIF no tiene un formato válido (DNI, NIE o CIF)');
       return;
     }
+    if (!this.formManual.clienteDireccion?.trim()) {
+      this.toast.warning('La dirección del cliente es obligatoria');
+      return;
+    }
+    if (!this.formManual.clientePoblacion?.trim()) {
+      this.toast.warning('La población del cliente es obligatoria');
+      return;
+    }
+    if (!this.formManual.clienteCodigoPostal?.trim()) {
+      this.toast.warning('El código postal del cliente es obligatorio');
+      return;
+    }
+    if (!this.formManual.clientePais?.trim()) {
+      this.toast.warning('El país del cliente es obligatorio');
+      return;
+    }
     if (!this.formManual.clienteProvincia?.trim()) {
       this.toast.warning('La provincia es obligatoria');
       return;
@@ -426,13 +442,13 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
     event.stopPropagation();
     this.facturaParaCompletar.set(factura);
     this.formCompletarFiscal = {
-      clienteNif: '',
+      clienteNif: factura.clienteNif ?? '',
       clienteNombre: factura.clienteNombre ?? '',
       clienteDireccion: factura.clienteDireccion ?? '',
       clientePoblacion: factura.clientePoblacion ?? '',
       clienteProvincia: factura.clienteProvincia ?? '',
       clienteCodigoPostal: factura.clienteCodigoPostal ?? '',
-      clientePais: factura.clientePais ?? 'ES',
+      clientePais: factura.clientePais ?? '',
     };
     this.mostrarDialogCompletarFiscal.set(true);
   }
@@ -440,21 +456,43 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   async guardarCompletarFiscal() {
     const factura = this.facturaParaCompletar();
     if (!factura) return;
-    if (!this.formCompletarFiscal.clienteNif?.trim()) {
+    const ficha = this.fichaFiscalResultante(factura);
+    if (!ficha.clienteNif) {
       this.toast.warning('El NIF es obligatorio');
       return;
     }
-    if (!looksLikeSpanishNif(this.formCompletarFiscal.clienteNif)) {
+    if (!looksLikeSpanishNif(ficha.clienteNif)) {
       this.toast.warning('El NIF no tiene un formato válido');
+      return;
+    }
+    if (!ficha.clienteNombre) {
+      this.toast.warning('El titular o razón social es obligatorio');
+      return;
+    }
+    if (!ficha.clienteDireccion) {
+      this.toast.warning('La dirección del cliente es obligatoria');
+      return;
+    }
+    if (!ficha.clientePoblacion) {
+      this.toast.warning('La población del cliente es obligatoria');
+      return;
+    }
+    if (!ficha.clienteCodigoPostal) {
+      this.toast.warning('El código postal del cliente es obligatorio');
+      return;
+    }
+    if (!ficha.clientePais) {
+      this.toast.warning('El país del cliente es obligatorio');
+      return;
+    }
+    if (!ficha.clienteProvincia) {
+      this.toast.warning('La provincia es obligatoria');
       return;
     }
     this.guardandoCompletarFiscal.set(true);
     try {
       await firstValueFrom(
-        this.facturacionService.completarFiscal$(
-          factura.id,
-          this.formCompletarFiscal,
-        ),
+        this.facturacionService.completarFiscal$(factura.id, ficha),
       );
       this.toast.success('Factura completada y emitida en Contasimple');
       this.mostrarDialogCompletarFiscal.set(false);
@@ -496,6 +534,18 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
     return factura.estado;
   }
 
+  motivosRevisionFiscalTexto(factura: Factura): string {
+    return (
+      factura.motivosRevisionFiscal
+        ?.map((motivo) =>
+          motivo.campos?.length
+            ? `${motivo.codigo}: ${motivo.campos.join(', ')}`
+            : motivo.codigo,
+        )
+        .join(' · ') ?? ''
+    );
+  }
+
   calcularTotal(base: number, iva: number): number {
     return base + base * (iva / 100);
   }
@@ -525,7 +575,39 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
       clientePoblacion: '',
       clienteProvincia: '',
       clienteCodigoPostal: '',
-      clientePais: 'ES',
+      clientePais: '',
+    };
+  }
+
+  private fichaFiscalResultante(factura: Factura): CompletarFiscalDto {
+    const usar = (valor: string | undefined, historico: string | undefined) =>
+      valor?.trim() || historico?.trim() || '';
+    return {
+      clienteNif: usar(this.formCompletarFiscal.clienteNif, factura.clienteNif),
+      clienteNombre: usar(
+        this.formCompletarFiscal.clienteNombre,
+        factura.clienteNombre,
+      ),
+      clienteDireccion: usar(
+        this.formCompletarFiscal.clienteDireccion,
+        factura.clienteDireccion,
+      ),
+      clientePoblacion: usar(
+        this.formCompletarFiscal.clientePoblacion,
+        factura.clientePoblacion,
+      ),
+      clienteProvincia: usar(
+        this.formCompletarFiscal.clienteProvincia,
+        factura.clienteProvincia,
+      ),
+      clienteCodigoPostal: usar(
+        this.formCompletarFiscal.clienteCodigoPostal,
+        factura.clienteCodigoPostal,
+      ),
+      clientePais: usar(
+        this.formCompletarFiscal.clientePais,
+        factura.clientePais,
+      ),
     };
   }
 }

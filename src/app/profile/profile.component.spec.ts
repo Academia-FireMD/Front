@@ -7,6 +7,7 @@ import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
 import { EstadoModulos } from '../shared/models/app-config.model';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
+import { CompraFiscalService } from '../compras/compra-fiscal.service';
 
 import { ProfileComponent } from './profile.component';
 
@@ -56,6 +57,12 @@ describe('ProfileComponent', () => {
       declarations: [ProfileComponent],
       providers: [
         ...COMMON_TEST_PROVIDERS,
+        {
+          provide: CompraFiscalService,
+          useValue: {
+            ejecutarConDatosFiscales: (compra: () => unknown) => compra(),
+          },
+        },
         // Override AuthService con mock que tiene getWpSsoUrl$
         { provide: AuthService, useValue: mockAuthService },
         { provide: AppConfigService, useValue: appConfigService },

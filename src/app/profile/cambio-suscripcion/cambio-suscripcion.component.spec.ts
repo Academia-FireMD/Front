@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 
 import { CambioSuscripcionComponent } from './cambio-suscripcion.component';
@@ -144,5 +144,28 @@ describe('CambioSuscripcionComponent', () => {
     });
     expect(component.labelBotonConfirmar()).toContain('Pagar');
     expect(component.labelBotonConfirmar()).toContain('12,50');
+  });
+
+  it('PRECIO_CAMBIADO recarga el preview y no repite el cambio automáticamente', () => {
+    const previewActualizado: PreviewCambioResponse = {
+      ...UPGRADE_PREVIEW,
+      prorrateo: { importe: 19.75, diasRestantes: 15, diasCiclo: 30 },
+    };
+    previewSvc.previewCambioSuscripcion
+      .mockReturnValueOnce(of(UPGRADE_PREVIEW))
+      .mockReturnValueOnce(of(previewActualizado));
+    previewSvc.cambiarSuscripcion.mockReturnValue(
+      throwError(() => ({ error: { codigo: 'PRECIO_CAMBIADO' } })) as any,
+    );
+
+    component.seleccionarPlan(PLAN_ADVANCED);
+    component.mostrarConfirmacion.set(true);
+    component.confirmarCambio();
+
+    expect(previewSvc.cambiarSuscripcion).toHaveBeenCalledTimes(1);
+    expect(previewSvc.previewCambioSuscripcion).toHaveBeenCalledTimes(2);
+    expect(component.preview()?.prorrateo?.importe).toBe(19.75);
+    expect(component.labelBotonConfirmar()).toContain('19,75');
+    expect(component.mostrarConfirmacion()).toBe(true);
   });
 });

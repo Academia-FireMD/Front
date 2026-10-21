@@ -3,6 +3,8 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { AuthService } from '../../services/auth.service';
+import { SimulacroCompraIntentoService } from '../../compras/simulacro-compra-intento.service';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 import { ExamenesService } from '../../examen/servicios/examen.service';
 import {
@@ -30,8 +32,18 @@ function buildExamenServiceMock() {
         of([{ ...COMPRABLE }, { ...INCLUIDO }]),
     ),
     comprarSimulacroCof$: jest.fn(
-      (_id: number, _key: string): Observable<ComprarSimulacroCofResponse> =>
-        of({ success: true, consumibleId: 1, mensaje: 'ok' }),
+      (
+        _id: number,
+        _key: string,
+        _importeConfirmado: number,
+        opciones?: {
+          omitirLecturaFiscalInicial?: boolean;
+          antesDeEnviar?: () => void;
+        },
+      ): Observable<ComprarSimulacroCofResponse> => {
+        opciones?.antesDeEnviar?.();
+        return of({ success: true, consumibleId: 1, mensaje: 'ok' });
+      },
     ),
   };
 }
@@ -63,6 +75,11 @@ describe('TiendaSimulacrosComponent', () => {
       providers: [
         ...COMMON_TEST_PROVIDERS,
         { provide: ExamenesService, useValue: examenService },
+        {
+          provide: AuthService,
+          useValue: { getCurrentUser: () => ({ id: 7 }) },
+        },
+        SimulacroCompraIntentoService,
         { provide: ToastrService, useValue: toastr },
         { provide: Router, useValue: router },
       ],
@@ -77,6 +94,7 @@ describe('TiendaSimulacrosComponent', () => {
   }
 
   beforeEach(() => {
+    localStorage.clear();
     jest.clearAllMocks();
     TestBed.resetTestingModule();
     setup();
@@ -102,6 +120,9 @@ describe('TiendaSimulacrosComponent', () => {
       component.abrirCompra(COMPRABLE);
       expect(component.confirmVisible()).toBe(true);
       expect(component.seleccionado()?.id).toBe(50);
+      expect(component.compraIntento()?.idempotencyKey).toMatch(
+        /^simulacro_v2_/,
+      );
     });
 
     it('INCLUIDO/COMPRADO → no abre confirmación (no comprable)', () => {
@@ -127,10 +148,12 @@ describe('TiendaSimulacrosComponent', () => {
 
     it('cobra con el examenId y una idempotencyKey no vacía', () => {
       component.confirmarCompra();
-      const [id, key] = examenService.comprarSimulacroCof$.mock.calls[0];
+      const [id, key, importe] =
+        examenService.comprarSimulacroCof$.mock.calls[0];
       expect(id).toBe(50);
       expect(typeof key).toBe('string');
       expect((key as string).length).toBeGreaterThan(0);
+      expect(importe).toBe(COMPRABLE.precio);
     });
 
     it('requiereCheckout → abre el diálogo de tienda (sin rechazo)', () => {
@@ -163,8 +186,15 @@ describe('TiendaSimulacrosComponent', () => {
     });
 
     it('ERROR_TEMPORAL → warning, NO abre tienda y un retry reusa la misma key', () => {
-      examenService.comprarSimulacroCof$.mockReturnValue(
-        of({ success: false, error: 'ERROR_TEMPORAL', mensaje: 'verificando' }),
+      examenService.comprarSimulacroCof$.mockImplementation(
+        (_id, _key, _importe, opciones) => {
+          opciones?.antesDeEnviar?.();
+          return of({
+            success: false,
+            error: 'ERROR_TEMPORAL',
+            mensaje: 'verificando',
+          });
+        },
       );
       component.confirmarCompra(); // intento
       component.confirmarCompra(); // retry del mismo intento
@@ -173,6 +203,31 @@ describe('TiendaSimulacrosComponent', () => {
       const k1 = examenService.comprarSimulacroCof$.mock.calls[0][1];
       const k2 = examenService.comprarSimulacroCof$.mock.calls[1][1];
       expect(k1).toBe(k2);
+    });
+
+    it('al cerrar y reabrir un intento ambiguo conserva la key y el importe', () => {
+      examenService.comprarSimulacroCof$.mockImplementation(
+        (_id, _key, _importe, opciones) => {
+          opciones?.antesDeEnviar?.();
+          return of({
+            success: false,
+            error: 'ERROR_TEMPORAL',
+            mensaje: 'verificando',
+          });
+        },
+      );
+      component.confirmarCompra();
+      const primerIntento = examenService.comprarSimulacroCof$.mock.calls[0];
+      component.confirmVisible.set(false);
+      component.abrirCompra({ ...COMPRABLE, precio: 12.5 });
+
+      expect(component.compraIntento()?.importeConfirmado).toBe(9.9);
+      component.confirmarCompra();
+
+      const reintento = examenService.comprarSimulacroCof$.mock.calls[1];
+      expect(reintento[1]).toBe(primerIntento[1]);
+      expect(reintento[2]).toBe(9.9);
+      expect(reintento[3]?.omitirLecturaFiscalInicial).toBe(true);
     });
 
     it('error HTTP no clasificado → toast de error y botón re-habilitado', () => {

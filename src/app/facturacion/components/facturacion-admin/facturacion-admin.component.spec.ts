@@ -14,6 +14,7 @@ const mockFacturacionService = {
     }),
   ),
   crearManual$: jest.fn(() => of({ id: 1 })),
+  completarFiscal$: jest.fn(() => of({ id: 1 })),
   crearRectificativa$: jest.fn(() => of({ id: 2, tipo: 'RECTIFICATIVA' })),
   crearDevolucion$: jest.fn(() =>
     of({
@@ -280,12 +281,12 @@ describe('FacturacionAdminComponent', () => {
   it('guardarFacturaManual acepta baseImponible 0', async () => {
     component.formManual = {
       clienteNombre: 'Cliente Test',
-      // clienteNif + clienteProvincia are required by the validation added
-      // after this test was first written (2026-04 facturacion overhaul);
-      // without them the toast 'El NIF del cliente es obligatorio' fires
-      // and the crearManual$ call is short-circuited.
       clienteNif: '12345678Z',
+      clienteDireccion: 'Calle Test 1',
+      clientePoblacion: 'Valencia',
       clienteProvincia: 'Valencia',
+      clienteCodigoPostal: '46000',
+      clientePais: 'ES',
       concepto: 'Servicio gratuito',
       baseImponible: 0,
       tipoIva: 21,
@@ -300,6 +301,81 @@ describe('FacturacionAdminComponent', () => {
 
     expect(warnSpy).not.toHaveBeenCalled();
     expect(mockFacturacionService.crearManual$).toHaveBeenCalled();
+  });
+
+  it('crear factura manual valida toda la ficha fiscal antes de llamar al servicio', async () => {
+    component.formManual = {
+      clienteNombre: 'Cliente Test',
+      clienteNif: '12345678Z',
+      clienteDireccion: '',
+      clientePoblacion: 'Valencia',
+      clienteProvincia: 'Valencia',
+      clienteCodigoPostal: '46000',
+      clientePais: 'ES',
+      concepto: 'Servicio',
+      baseImponible: 20,
+    };
+    const warnSpy = jest.spyOn(component.toast, 'warning');
+
+    await component.guardarFacturaManual();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'La dirección del cliente es obligatoria',
+    );
+    expect(mockFacturacionService.crearManual$).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['clienteNombre', '', 'El titular o razón social es obligatorio'],
+    ['clienteDireccion', '', 'La dirección del cliente es obligatoria'],
+    ['clientePoblacion', '', 'La población del cliente es obligatoria'],
+    ['clienteCodigoPostal', '', 'El código postal del cliente es obligatorio'],
+    ['clientePais', '', 'El país del cliente es obligatorio'],
+    ['clienteProvincia', '', 'La provincia es obligatoria'],
+  ])(
+    'completar factura rechaza una ficha resultante sin %s',
+    async (campo, valor, aviso) => {
+      const historico = {
+        id: 41,
+        clienteNif: '12345678Z',
+        clienteNombre: 'Ana García',
+        clienteDireccion: 'Calle Uno 1',
+        clientePoblacion: 'Valencia',
+        clienteProvincia: 'Valencia',
+        clienteCodigoPostal: '46001',
+        clientePais: 'ES',
+      } as any;
+      component.facturaParaCompletar.set(historico);
+      component.formCompletarFiscal = {
+        clienteNif: '12345678Z',
+        clienteNombre: 'Ana García',
+        clienteDireccion: 'Calle Uno 1',
+        clientePoblacion: 'Valencia',
+        clienteProvincia: 'Valencia',
+        clienteCodigoPostal: '46001',
+        clientePais: 'ES',
+        [campo]: valor,
+      };
+      if (campo === 'clienteNombre') historico.clienteNombre = '';
+      else historico[campo] = '';
+      const warnSpy = jest.spyOn(component.toast, 'warning');
+
+      await component.guardarCompletarFiscal();
+
+      expect(warnSpy).toHaveBeenCalledWith(aviso);
+      expect(mockFacturacionService.completarFiscal$).not.toHaveBeenCalled();
+    },
+  );
+
+  it('formatea varios motivos de revisión fiscal con sus campos', () => {
+    expect(
+      component.motivosRevisionFiscalTexto({
+        motivosRevisionFiscal: [
+          { codigo: 'IDENTIDAD', campos: ['clienteNif'] },
+          { codigo: 'DIRECCION', campos: ['clienteDireccion', 'clientePais'] },
+        ],
+      } as any),
+    ).toBe('IDENTIDAD: clienteNif · DIRECCION: clienteDireccion, clientePais');
   });
 
   it('guardarFacturaManual muestra warning si falta nombre', async () => {

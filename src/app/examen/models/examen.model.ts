@@ -98,3 +98,9 @@ export type ComprarSimulacroCofResponse =
       wooProductId?: string;
       mensaje: string;
     };
+
+/** Body de la compra COF del simulacro según el precio visible al alumno. */
+export interface ComprarSimulacroCofDto {
+  idempotencyKey: string;
+  importeConfirmado: number;
+}

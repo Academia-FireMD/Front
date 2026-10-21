@@ -1,6 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { CompraFiscalService } from '../compras/compra-fiscal.service';
+import { importeConfirmadoEnCentimos } from '../compras/importe-confirmado.util';
 import { ApiBaseService } from './api-base.service';
 
 export enum MotivoBaja {
@@ -37,6 +40,13 @@ export interface CambiarPlanDto {
   suscripcionId: number;
   nuevoSku: string;
   comentario?: string;
+  importeConfirmado?: number;
+}
+
+/** DTO del alta con COF; el precio se revalida frente al producto autoritativo. */
+export interface AnadirPlanDto {
+  nuevoSku: string;
+  importeConfirmado: number;
 }
 
 /** Tipo de cambio calculado por el backend según diferencia de precio/plan. */
@@ -151,7 +161,10 @@ export interface DetalleSuscripcion {
   providedIn: 'root',
 })
 export class SuscripcionManagementService extends ApiBaseService {
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private compraFiscal: CompraFiscalService,
+  ) {
     super(http);
     this.controllerPrefix = '/suscripcion-management';
   }
@@ -182,12 +195,39 @@ export class SuscripcionManagementService extends ApiBaseService {
     suscripcionId: number,
     nuevoSku: string,
     comentario?: string,
+    preview?: Pick<
+      PreviewCambioResponse,
+      'requiereCobro' | 'costeCalculable' | 'prorrateo'
+    >,
   ): Observable<CambioSuscripcionResponse> {
-    const dto: CambiarPlanDto = { suscripcionId, nuevoSku, comentario };
-    return this.post(
-      '/cambiar-plan',
-      dto,
-    ) as Observable<CambioSuscripcionResponse>;
+    if (!preview?.costeCalculable) {
+      return throwError(
+        () => new Error('No se puede cambiar el plan sin un coste calculable.'),
+      );
+    }
+    const importe = preview.requiereCobro
+      ? importeConfirmadoEnCentimos(preview.prorrateo?.importe)
+      : null;
+    if (preview.requiereCobro && importe === null) {
+      return throwError(
+        () => new Error('El importe confirmado del cambio no es válido.'),
+      );
+    }
+    const dto: CambiarPlanDto = {
+      suscripcionId,
+      nuevoSku,
+      comentario,
+      ...(importe !== null ? { importeConfirmado: importe } : {}),
+    };
+    const cambiar = () =>
+      this.http.post<CambioSuscripcionResponse>(
+        `${environment.apiUrl}${this.controllerPrefix}/cambiar-plan`,
+        dto,
+        { withCredentials: true },
+      );
+    return preview.requiereCobro
+      ? this.compraFiscal.ejecutarConDatosFiscales(cambiar, suscripcionId)
+      : cambiar();
   }
 
   /** Preview read-only del cambio: importe de prorrateo, tipo, método de pago. */
@@ -205,11 +245,18 @@ export class SuscripcionManagementService extends ApiBaseService {
    * @deprecated Usar `cambiarSuscripcion`. Se mantiene como alias para no romper
    * llamadas existentes; ahora devuelve la respuesta tipada completa.
    */
-  cambiarPlan(dto: CambiarPlanDto): Observable<CambioSuscripcionResponse> {
+  cambiarPlan(
+    dto: CambiarPlanDto,
+    preview?: Pick<
+      PreviewCambioResponse,
+      'requiereCobro' | 'costeCalculable' | 'prorrateo'
+    >,
+  ): Observable<CambioSuscripcionResponse> {
     return this.cambiarSuscripcion(
       dto.suscripcionId,
       dto.nuevoSku,
       dto.comentario,
+      preview,
     );
   }
 
@@ -252,10 +299,29 @@ export class SuscripcionManagementService extends ApiBaseService {
    * con su tarjeta guardada (COF Redsys) en 1 clic. Si el alumno no tiene COF usable,
    * el backend responde `{ requiereCheckout: true }` y el front lo lleva al checkout de WC.
    */
-  anadirPlan(nuevoSku: string): Observable<AnadirPlanResponse> {
-    return this.post('/anadir-plan', {
-      nuevoSku,
-    }) as Observable<AnadirPlanResponse>;
+  anadirPlan(
+    nuevoSku: string,
+    importeConfirmado: number,
+  ): Observable<AnadirPlanResponse> {
+    const importe = importeConfirmadoEnCentimos(importeConfirmado);
+    if (importe === null) {
+      return throwError(
+        () => new Error('El precio visible del plan no es válido.'),
+      );
+    }
+    const dto: AnadirPlanDto = { nuevoSku, importeConfirmado: importe };
+    // La reserva de Server permite recuperar el alta pagada antes de comprobar
+    // la ficha actual; las compras nuevas conservan la precondición fiscal.
+    return this.compraFiscal.ejecutarConDatosFiscales(
+      () =>
+        this.http.post<AnadirPlanResponse>(
+          `${environment.apiUrl}${this.controllerPrefix}/anadir-plan`,
+          dto,
+          { withCredentials: true },
+        ),
+      undefined,
+      { omitirLecturaInicial: true },
+    );
   }
 
   obtenerDetalleSuscripcion(

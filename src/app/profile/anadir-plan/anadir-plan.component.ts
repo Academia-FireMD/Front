@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DropdownModule } from 'primeng/dropdown';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { environment } from '../../../environments/environment';
+import { importeConfirmadoEnCentimos } from '../../compras/importe-confirmado.util';
 import {
   AnadirPlanResponse,
   PlanDisponible,
@@ -138,63 +140,69 @@ export class AnadirPlanComponent {
 
   /** Texto del botón principal con el precio del tier elegido. */
   labelBotonActivar(): string {
-    const precio = this.tierSeleccionado?.precio;
-    if (precio == null) return 'Activar plan';
-    return `Activar plan (${precio.toFixed(2).replace('.', ',')} €)`;
+    const importe = importeConfirmadoEnCentimos(this.tierSeleccionado?.precio);
+    if (importe === null) return 'Activar plan';
+    return `Activar plan (${importe.toFixed(2).replace('.', ',')} €)`;
   }
 
   puedeActivar(): boolean {
-    return !!this.tierSeleccionado?.sku && !this.procesando();
+    return (
+      !!this.tierSeleccionado?.sku &&
+      importeConfirmadoEnCentimos(this.tierSeleccionado.precio) !== null &&
+      !this.procesando()
+    );
   }
 
   activarPlan(): void {
     const plan = this.tierSeleccionado;
-    if (!plan?.sku) return;
+    const importe = importeConfirmadoEnCentimos(plan?.precio);
+    if (!plan?.sku || importe === null) return;
 
     this.procesando.set(true);
     this.requiereCheckout.set(false);
 
-    this.suscripcionService.anadirPlan(plan.sku).subscribe({
-      next: (res: AnadirPlanResponse) => {
-        this.procesando.set(false);
-        if (res.requiereCheckout) {
-          // Alumno sin COF usable → panel explicativo + botón a la tienda.
-          this.requiereCheckout.set(true);
-          return;
-        }
-        if (res.success) {
+    this.suscripcionService
+      .anadirPlan(plan.sku, importe)
+      .pipe(finalize(() => this.procesando.set(false)))
+      .subscribe({
+        next: (res: AnadirPlanResponse) => {
+          if (res.requiereCheckout) {
+            // Alumno sin COF usable → panel explicativo + botón a la tienda.
+            this.requiereCheckout.set(true);
+            return;
+          }
+          if (res.success) {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Plan activado',
+              detail: res.mensaje || 'Tu nuevo plan ya está activo.',
+              life: 6000,
+            });
+            this.planAnadido.emit();
+            this.cerrar.emit();
+            return;
+          }
+          // success === false sin requiereCheckout: tratar como error de negocio.
           this.messageService.add({
-            severity: 'success',
-            summary: 'Plan activado',
-            detail: res.mensaje || 'Tu nuevo plan ya está activo.',
+            severity: 'error',
+            summary: 'No se pudo activar el plan',
+            detail: res.mensaje || 'Inténtalo de nuevo en unos segundos.',
             life: 6000,
           });
-          this.planAnadido.emit();
-          this.cerrar.emit();
-          return;
-        }
-        // success === false sin requiereCheckout: tratar como error de negocio.
-        this.messageService.add({
-          severity: 'error',
-          summary: 'No se pudo activar el plan',
-          detail: res.mensaje || 'Inténtalo de nuevo en unos segundos.',
-          life: 6000,
-        });
-      },
-      error: (e) => {
-        this.procesando.set(false);
-        const detalle =
-          e.error?.descripcion ||
-          e.error?.message ||
-          'No se pudo activar el plan.';
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error al activar el plan',
-          detail: detalle,
-          life: 6000,
-        });
-      },
-    });
+        },
+        error: (e) => {
+          const detalle =
+            e.error?.descripcion ||
+            e.error?.message ||
+            'No se pudo activar el plan.';
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error al activar el plan',
+            detail: detalle,
+            life: 6000,
+          });
+        },
+      });
   }
 
   /** Abre el checkout de WC pre-cargado con el plan elegido (fallback sin COF). */

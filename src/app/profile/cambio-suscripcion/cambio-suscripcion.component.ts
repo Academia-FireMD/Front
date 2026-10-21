@@ -9,10 +9,12 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
+import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { importeConfirmadoEnCentimos } from '../../compras/importe-confirmado.util';
 import {
   DetalleSuscripcion,
   PlanDisponible,
@@ -178,19 +180,21 @@ export class CambioSuscripcionComponent implements OnInit {
   }
 
   confirmarCambio(): void {
-    if (!this.planSeleccionado?.sku) return;
+    const plan = this.planSeleccionado;
+    if (!plan?.sku || !this.puedeConfirmar()) return;
     this.procesando.set(true);
     this.mostrarConfirmacion.set(false);
 
     this.suscripcionService
       .cambiarSuscripcion(
         this.suscripcionId,
-        this.planSeleccionado.sku,
+        plan.sku,
         this.comentario || undefined,
+        this.preview() ?? undefined,
       )
+      .pipe(finalize(() => this.procesando.set(false)))
       .subscribe({
         next: (res) => {
-          this.procesando.set(false);
           const summary =
             res.modo === 'INMEDIATO'
               ? 'Tu plan ya está activo'
@@ -211,7 +215,10 @@ export class CambioSuscripcionComponent implements OnInit {
           }, 2000);
         },
         error: (e) => {
-          this.procesando.set(false);
+          if (e?.error?.codigo === 'PRECIO_CAMBIADO') {
+            this.recargarPreviewTrasPrecioCambiado(plan);
+            return;
+          }
           const detalle =
             e.error?.descripcion ||
             e.error?.message ||
@@ -220,6 +227,38 @@ export class CambioSuscripcionComponent implements OnInit {
             severity: 'error',
             summary: 'Error al cambiar plan',
             detail: detalle,
+            life: 6000,
+          });
+        },
+      });
+  }
+
+  private recargarPreviewTrasPrecioCambiado(plan: PlanDisponible): void {
+    if (!plan.sku) return;
+    this.preview.set(null);
+    this.cargandoPreview.set(true);
+    this.suscripcionService
+      .previewCambioSuscripcion(this.suscripcionId, plan.sku)
+      .subscribe({
+        next: (preview) => {
+          if (this.planSeleccionado?.sku !== plan.sku) return;
+          this.preview.set(preview);
+          this.cargandoPreview.set(false);
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Precio actualizado',
+            detail:
+              'El importe ha cambiado. Revisa el nuevo precio y vuelve a confirmar.',
+            life: 8000,
+          });
+          this.mostrarConfirmacion.set(true);
+        },
+        error: () => {
+          this.cargandoPreview.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'No se pudo actualizar el precio',
+            detail: 'Vuelve a seleccionar el plan para calcular el coste.',
             life: 6000,
           });
         },
@@ -311,7 +350,7 @@ export class CambioSuscripcionComponent implements OnInit {
 
   puedeConfirmar(): boolean {
     const p = this.preview();
-    if (!p) return false;
+    if (!p || this.cargandoPreview()) return false;
     const bloqueado = p.avisos?.some(
       (a) =>
         a.codigo === 'COOLDOWN' ||
@@ -320,11 +359,16 @@ export class CambioSuscripcionComponent implements OnInit {
         a.codigo === 'CAMBIO_NO_DISPONIBLE',
     );
     if (bloqueado) return false;
-    if (p.switchType === 'UPGRADE') {
+    if (p.switchType === 'UPGRADE' && !p.costeCalculable) return false;
+    if (p.requiereCobro) {
       // No dejar confirmar un upgrade cuyo coste no se pudo calcular (precio
       // destino o fechas de ciclo no disponibles): requiereCobro:false NO es "gratis".
-      if (!p.costeCalculable) return false;
-      if (p.requiereCobro && !p.metodoPago.usable) return false;
+      if (
+        !p.costeCalculable ||
+        importeConfirmadoEnCentimos(p.prorrateo?.importe) === null ||
+        !p.metodoPago.usable
+      )
+        return false;
     }
     return true;
   }
@@ -332,11 +376,13 @@ export class CambioSuscripcionComponent implements OnInit {
   labelBotonConfirmar(): string {
     const p = this.preview();
     if (!p) return 'Confirmar';
-    if (p.credito && p.credito > 0) return 'Cambiar (sin coste ahora)';
-    if (p.switchType === 'UPGRADE' && p.requiereCobro && p.prorrateo) {
-      return `Pagar ${p.prorrateo.importe
-        .toFixed(2)
-        .replace('.', ',')} € y cambiar`;
+    if (p.credito && p.credito > 0 && !p.requiereCobro)
+      return 'Cambiar (sin coste ahora)';
+    const importe = p.requiereCobro
+      ? importeConfirmadoEnCentimos(p.prorrateo?.importe)
+      : null;
+    if (importe !== null) {
+      return `Pagar ${importe.toFixed(2).replace('.', ',')} € y cambiar`;
     }
     if (p.modo === 'PROGRAMADO') return 'Programar cambio';
     return 'Cambiar';

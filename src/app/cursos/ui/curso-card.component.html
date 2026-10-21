@@ -56,7 +56,7 @@
       class="cta"
       [class.cta-secondary]="cta() !== 'comprar'"
       [loading]="comprando()"
-      [disabled]="cta() === 'comprar' && (!curso().wooProductId || comprando())"
+      [disabled]="cta() === 'comprar' && (!compraDisponible() || comprando())"
       (click)="onCta($event)"
     >
       @switch (cta()) {

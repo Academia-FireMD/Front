@@ -1,10 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, Observable } from 'rxjs';
+import { catchError, Observable, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { CompraFiscalService } from '../../compras/compra-fiscal.service';
+import { importeConfirmadoEnCentimos } from '../../compras/importe-confirmado.util';
 import { ApiBaseService } from '../../services/api-base.service';
 import {
   AccesoConCurso,
+  ComprarCursoCofDto,
   ComprarCursoCofResponse,
   CursoPublico,
   CursoSlugResponse,
@@ -14,7 +17,10 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class CursosAlumnoService extends ApiBaseService {
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private compraFiscal: CompraFiscalService,
+  ) {
     super(http);
     this.controllerPrefix = '/cursos';
   }
@@ -60,12 +66,29 @@ export class CursosAlumnoService extends ApiBaseService {
    * `ApiBaseService`; la UX de error (decline vs técnico vs requiereCheckout) la
    * decide el componente según el `ComprarCursoCofResponse`. Espeja `anadirPlan`.
    */
-  comprarCursoCof(cursoId: number): Observable<ComprarCursoCofResponse> {
-    return this.post(
-      `/${cursoId}/comprar-cof`,
-      {},
-      true,
-    ) as Observable<ComprarCursoCofResponse>;
+  comprarCursoCof(
+    cursoId: number,
+    importeConfirmado: number,
+  ): Observable<ComprarCursoCofResponse> {
+    const importe = importeConfirmadoEnCentimos(importeConfirmado);
+    if (importe === null) {
+      return throwError(
+        () => new Error('El precio visible del curso no es válido.'),
+      );
+    }
+    const dto: ComprarCursoCofDto = { importeConfirmado: importe };
+    // Server resuelve primero la reserva previa y exige ficha antes de un cargo
+    // nuevo. Un GET fiscal previo podría bloquear el acceso de un pago ya hecho.
+    return this.compraFiscal.ejecutarConDatosFiscales(
+      () =>
+        this.http.post<ComprarCursoCofResponse>(
+          `${environment.apiUrl}/cursos/${cursoId}/comprar-cof`,
+          dto,
+          { withCredentials: true },
+        ),
+      undefined,
+      { omitirLecturaInicial: true },
+    );
   }
 
   /**

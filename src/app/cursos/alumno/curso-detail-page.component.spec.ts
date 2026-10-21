@@ -86,6 +86,7 @@ describe('CursoDetailPageComponent (compra COF 1-clic)', () => {
       id: 7,
       titulo: 'Curso Online',
       slug: 'curso-online',
+      precio: 17.45,
       estado: 'PUBLICADO',
       wooProductId: 4321,
       secciones: [],
@@ -138,7 +139,7 @@ describe('CursoDetailPageComponent (compra COF 1-clic)', () => {
 
     component.comprar();
 
-    expect(serviceMock.comprarCursoCof).toHaveBeenCalledWith(7);
+    expect(serviceMock.comprarCursoCof).toHaveBeenCalledWith(7, 17.45);
     expect(component.cursoData()?.tieneAcceso).toBe(true);
     expect(component.comprando()).toBe(false);
     expect(toast.success).toHaveBeenCalled();

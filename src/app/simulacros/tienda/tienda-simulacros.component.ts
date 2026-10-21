@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
@@ -8,10 +9,15 @@ import { DialogModule } from 'primeng/dialog';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { environment } from '../../../environments/environment';
 import {
+  SimulacroCompraIntento,
+  SimulacroCompraIntentoService,
+} from '../../compras/simulacro-compra-intento.service';
+import {
   ComprarSimulacroCofResponse,
   SimulacroTienda,
 } from '../../examen/models/examen.model';
 import { ExamenesService } from '../../examen/servicios/examen.service';
+import { AuthService } from '../../services/auth.service';
 
 /**
  * Tienda de simulacros: catálogo de simulacros comprables por el alumno, con
@@ -35,6 +41,8 @@ import { ExamenesService } from '../../examen/servicios/examen.service';
 })
 export class TiendaSimulacrosComponent implements OnInit {
   private readonly examenService = inject(ExamenesService);
+  private readonly authService = inject(AuthService);
+  private readonly intentoService = inject(SimulacroCompraIntentoService);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
@@ -47,15 +55,10 @@ export class TiendaSimulacrosComponent implements OnInit {
   confirmVisible = signal(false);
   /** Simulacro objetivo de la compra en curso. */
   seleccionado = signal<SimulacroTienda | null>(null);
+  /** Intento durable (usuario+simulacro), compartido con la landing. */
+  compraIntento = signal<SimulacroCompraIntento | null>(null);
   /** true mientras el backend cobra el COF (~2,5-5s). */
   comprando = signal(false);
-  /**
-   * Clave de idempotencia del intento en curso: se genera al abrir la
-   * confirmación y se reutiliza en reintentos (ERROR_TEMPORAL) para deduplicar y
-   * no doble-cobrar; se limpia en estados terminales.
-   */
-  private idempotencyKey = '';
-
   // ── Fallback "completa en la tienda" ──────────────────────────────────────
   checkoutVisible = signal(false);
   checkoutMensaje = signal('');
@@ -83,29 +86,59 @@ export class TiendaSimulacrosComponent implements OnInit {
 
   /** Abre la confirmación de compra (solo para simulacros COMPRABLE). */
   abrirCompra(s: SimulacroTienda): void {
-    if (s.estado !== 'COMPRABLE' || this.comprando()) return;
-    this.seleccionado.set(s);
-    this.idempotencyKey = this.generarIdempotencyKey();
-    this.confirmVisible.set(true);
+    const usuarioId = this.authService.getCurrentUser()?.id;
+    if (s.estado !== 'COMPRABLE' || !usuarioId || this.comprando()) return;
+    try {
+      this.compraIntento.set(
+        this.intentoService.obtenerOCrear(usuarioId, s.id, s.precio),
+      );
+      this.seleccionado.set(s);
+      this.confirmVisible.set(true);
+    } catch (error) {
+      this.toastr.error(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo recuperar el intento de compra.',
+        'Compra no iniciada',
+      );
+    }
   }
 
   /** Confirma la compra: cobra el COF del alumno (tarjeta guardada). */
   confirmarCompra(): void {
     const s = this.seleccionado();
-    if (!s || this.comprando()) return;
-    if (!this.idempotencyKey) {
-      this.idempotencyKey = this.generarIdempotencyKey();
+    const usuarioId = this.authService.getCurrentUser()?.id;
+    if (!s || !usuarioId || this.comprando()) return;
+    let intento: SimulacroCompraIntento;
+    try {
+      intento = this.intentoService.obtenerOCrear(usuarioId, s.id, s.precio);
+      this.compraIntento.set(intento);
+    } catch (error) {
+      this.toastr.error(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo recuperar el intento de compra.',
+        'Compra no iniciada',
+      );
+      return;
     }
     this.comprando.set(true);
     this.examenService
-      .comprarSimulacroCof$(s.id, this.idempotencyKey)
+      .comprarSimulacroCof$(
+        s.id,
+        intento.idempotencyKey,
+        intento.importeConfirmado,
+        {
+          omitirLecturaFiscalInicial: intento.enviado,
+          antesDeEnviar: () => this.intentoService.marcarEnviado(intento),
+        },
+      )
+      .pipe(finalize(() => this.comprando.set(false)))
       .subscribe({
         next: (res) => {
-          this.comprando.set(false);
-          this.manejarRespuesta(s, res);
+          this.manejarRespuesta(s, intento, res);
         },
         error: () => {
-          this.comprando.set(false);
           this.toastr.error(
             'No se pudo procesar la compra, inténtalo de nuevo.',
             'Error',
@@ -116,10 +149,11 @@ export class TiendaSimulacrosComponent implements OnInit {
 
   private manejarRespuesta(
     s: SimulacroTienda,
+    intento: SimulacroCompraIntento,
     res: ComprarSimulacroCofResponse,
   ): void {
     if (res.success) {
-      this.idempotencyKey = '';
+      this.finalizarIntento(intento);
       this.confirmVisible.set(false);
       this.marcarComprado(s.id);
       this.toastr.success(
@@ -129,13 +163,14 @@ export class TiendaSimulacrosComponent implements OnInit {
       return;
     }
     if ('requiereCheckout' in res) {
-      this.idempotencyKey = '';
+      // Esta respuesta neutral confirma que no se inició una captura.
+      this.finalizarIntento(intento);
       this.abrirCheckout(res.wooProductId, res.mensaje, false);
       return;
     }
     switch (res.error) {
       case 'PAGO_RECHAZADO':
-        this.idempotencyKey = '';
+        this.finalizarIntento(intento);
         this.abrirCheckout(
           res.wooProductId ?? s.woocommerceProductId,
           res.mensaje ||
@@ -144,13 +179,28 @@ export class TiendaSimulacrosComponent implements OnInit {
         );
         return;
       case 'ERROR_TEMPORAL':
-        // Reintentable: NO se limpia la clave (un retry debe deduplicar).
+        // Ambiguo/reintentable: el intento durable conserva key e importe.
         this.toastr.warning(
           res.mensaje ||
             'Estamos verificando tu pago. Si se completó, tendrás acceso en unos minutos.',
           'Pago en verificación',
         );
         return;
+    }
+  }
+
+  private finalizarIntento(intento: SimulacroCompraIntento): void {
+    try {
+      this.intentoService.finalizar(intento);
+      if (this.compraIntento()?.idempotencyKey === intento.idempotencyKey) {
+        this.compraIntento.set(null);
+      }
+    } catch {
+      // Dejar la key durable; un retry seguro recibirá el replay del Server.
+      this.toastr.warning(
+        'La compra se confirmó, pero no se pudo cerrar el intento local. No inicies otra compra.',
+        'Compra confirmada',
+      );
     }
   }
 
@@ -184,12 +234,5 @@ export class TiendaSimulacrosComponent implements OnInit {
   /** Navega a la landing del simulacro para realizarlo. */
   realizar(s: SimulacroTienda): void {
     this.router.navigate(['/simulacros/realizar-simulacro', s.id]);
-  }
-
-  private generarIdempotencyKey(): string {
-    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-      return crypto.randomUUID();
-    }
-    return `sim_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   }
 }
