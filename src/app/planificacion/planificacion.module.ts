@@ -20,6 +20,7 @@ import { MessageModule } from 'primeng/message';
 import { PaginatorModule } from 'primeng/paginator';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TableModule } from 'primeng/table';
+import { TooltipModule } from 'primeng/tooltip';
 import { AsyncButtonComponent } from '../shared/components/async-button/async-button.component';
 import { GenericListComponent } from '../shared/generic-list/generic-list.component';
 import { SharedModule } from '../shared/shared.module';
@@ -28,6 +29,7 @@ import { BloquesEditComponent } from './bloques-edit/bloques-edit.component';
 import { BloquesOverviewComponent } from './bloques-overview/bloques-overview.component';
 import { CalendarHeaderComponent } from './calendar-header/calendar-header.component';
 import { EditarSubBloqueDialogComponent } from './editar-sub-bloque-dialog/editar-sub-bloque-dialog.component';
+import { EventOverflowContentComponent } from './vista-semanal/event-overflow-content.component';
 import { PlanificacionAlumnoComponent } from './planificacion-alumno/planificacion-alumno.component';
 import { PlanificacionBloqueadaComponent } from './planificacion-bloqueada/planificacion-bloqueada.component';
 import { PlanificacionComentariosOverviewComponent } from './planificacion-comentarios-overview/planificacion-comentarios-overview.component';
@@ -48,6 +50,7 @@ registerLocaleData(localeEs);
     PlanificacionMensualOverviewComponent,
     PlanificacionMensualEditComponent,
     EditarSubBloqueDialogComponent,
+    EventOverflowContentComponent,
     VistaSemanalComponent,
     CalendarHeaderComponent,
     PlanificacionComentariosOverviewComponent,
@@ -69,6 +72,7 @@ registerLocaleData(localeEs);
     InputTextModule,
     FormsModule,
     ProgressBarModule,
+    TooltipModule,
     ContextMenuModule,
     MessageModule,
     AsyncButtonComponent,
