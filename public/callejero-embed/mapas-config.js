@@ -79,6 +79,10 @@
     maxZoom: 17,
     attribution: '© OpenStreetMap, SRTM | © OpenTopoMap (CC-BY-SA)',
   };
+  var OSM_STANDARD_OPTS = {
+    maxZoom: 19,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  };
 
   /* ── Clave CARTO ──────────────────────────────────────────────────────── */
   function claveCarto() {
@@ -205,6 +209,13 @@
         return def(
           'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
           copiar(OPEN_TOPO_OPTS, extra),
+        );
+      },
+      // Teselas estándar de OSM: siempre con atribución y Referer de origen.
+      osmStandard: function (extra) {
+        return def(
+          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          copiar(OSM_STANDARD_OPTS, extra),
         );
       },
     };

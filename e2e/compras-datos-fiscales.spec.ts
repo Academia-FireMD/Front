@@ -1,8 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { loginAsAlumnoMock } from './helpers/auth.helper';
 
-const baseURL = `http://127.0.0.1:${Number(process.env.PLAYWRIGHT_COMPRAS_PORT ?? '4297')}`;
-
 const DATOS_COMPLETOS = {
   nombre: 'Ana',
   apellidos: 'García',
@@ -53,7 +51,12 @@ test.describe('Compra COF con ficha fiscal común', () => {
   let solicitudesApiSinMock: string[];
   let externosBloqueados: string[];
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    const baseURL = testInfo.project.use.baseURL;
+    if (typeof baseURL !== 'string') {
+      throw new Error('Playwright debe configurar baseURL para este spec');
+    }
+    const origenApp = new URL(baseURL).origin;
     fiscalActual = estadoFiscal();
     lecturasFiscales = 0;
     escriturasFiscales = [];
@@ -66,7 +69,7 @@ test.describe('Compra COF con ficha fiscal común', () => {
     // prioridad, y toda salida no mockeada se aborta antes de la red real.
     await page.route('**/*', async (route) => {
       const url = new URL(route.request().url());
-      if (url.origin === baseURL) {
+      if (url.origin === origenApp) {
         await route.continue();
         return;
       }
