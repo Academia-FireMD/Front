@@ -59,7 +59,7 @@ describe('CallejeroEmbedComponent', () => {
     const sanitizer = TestBed.inject(DomSanitizer);
     const url = sanitizer.sanitize(4, component.src);
     expect(component).toBeTruthy();
-    expect(url).toContain('/callejero-embed/valencia_27.html');
+    expect(url).toBe('/callejero-embed/valencia_27.html?v=32');
     const iframe: HTMLIFrameElement | null =
       fixture.nativeElement.querySelector(
         '[data-testid=callejero-embed-iframe]',

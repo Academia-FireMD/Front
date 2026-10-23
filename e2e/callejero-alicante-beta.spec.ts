@@ -388,7 +388,7 @@ test.describe('Callejero Alicante — acceso por oposición', () => {
     await expect(page).toHaveURL(/\/app\/callejero\/valencia$/);
     await expect(
       page.locator('[data-testid="callejero-embed-iframe"]'),
-    ).toHaveAttribute('src', '/callejero-embed/valencia_27.html');
+    ).toHaveAttribute('src', '/callejero-embed/valencia_27.html?v=32');
     await expect(
       page.locator('[data-testid="callejero-alicante-iframe"]'),
     ).toHaveCount(0);

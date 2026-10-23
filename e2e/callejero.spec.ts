@@ -72,7 +72,7 @@ async function instalarTeselas(
       return;
     }
     const tileHosts = [
-      'google.com',
+      'tile.openstreetmap.org',
       'basemaps.cartocdn.com',
       'arcgisonline.com',
       'ign.es',
@@ -113,8 +113,8 @@ function peticionesA(solicitudes: Request[], host: string): Request[] {
 }
 
 /**
- * Nivel de zoom (tilematrix) pedido por una tesela, admitiendo los esquemas de
- * Google (?z=), IGN/IDEE (?tilematrix=) y basemaps/Esri/OpenTopo (/…/z/…).
+ * Nivel de zoom (tilematrix) pedido por una tesela, admitiendo OSM/Esri/OpenTopo
+ * (/…/z/…) e IGN/IDEE (?tilematrix=).
  */
 function zoomDe(request: Request): number {
   const raw = request.url();
@@ -189,6 +189,9 @@ interface CallejeroState {
   geocodeApiCalls: number;
   geocodeQueries: string[];
   routeApiCalls: number;
+  routeQueries: string[];
+  routeApiUnavailable: boolean;
+  routePayload: unknown | null;
   valenciaAutorizada: boolean;
 }
 
@@ -201,6 +204,9 @@ function freshState(): CallejeroState {
     geocodeApiCalls: 0,
     geocodeQueries: [],
     routeApiCalls: 0,
+    routeQueries: [],
+    routeApiUnavailable: false,
+    routePayload: null,
     valenciaAutorizada: true,
   };
 }
@@ -440,19 +446,34 @@ async function setupCallejeroInterceptors(
   await page.route(/\/callejero\/recorrido-libre\?/, (route) => {
     if (!isXhr(route.request())) return route.continue();
     state.routeApiCalls += 1;
+    const url = new URL(route.request().url());
+    state.routeQueries.push(url.searchParams.get('q') ?? '');
+    if (state.routeApiUnavailable) {
+      return route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'ROUTE_UNAVAILABLE' }),
+      });
+    }
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        polyline: [
-          [39.45, -0.35],
-          [39.46, -0.36],
-        ],
-        calles: ['Avenida API', 'Calle API Real'],
-        km: 2.1,
-        minutos: 6,
-        estacion: { nombre: 'Parc API', lat: 39.44, lng: -0.34 },
-      }),
+      body: JSON.stringify(
+        state.routePayload ?? {
+          direccionResuelta: url.searchParams.get('q') ?? 'Calle API Real',
+          lat: 39.45,
+          lng: -0.35,
+          parqueNombre: 'Parc API',
+          calles: ['Carrer de la Reina', 'Carrer de Xàtiva'],
+          estacion: { nombre: 'Parc API', lat: 39.44, lng: -0.34 },
+          polyline: [
+            [39.45, -0.35],
+            [39.46, -0.36],
+          ],
+          km: 2.1,
+          minutos: 6,
+        },
+      ),
     });
   });
 }
@@ -472,12 +493,115 @@ async function irACallejero(page: Page): Promise<FrameLocator> {
   return frame;
 }
 
+interface PreguntaExamen {
+  tipo: string;
+  poi: {
+    n: string;
+    c: string;
+    lat: number;
+    lng: number;
+  } | null;
+  zona: { Parque: string; Coopera: string } | null;
+  mod: { nuevo: string; antiguo: string } | null;
+  direccion: string | null;
+}
+
+async function planExamen(frame: FrameLocator): Promise<PreguntaExamen[]> {
+  return frame.locator('html').evaluate(() =>
+    eval(
+      `EX.qs.map(q=>({tipo:q.tipo,poi:q.poi?{n:q.poi.n,c:q.poi.c,lat:q.poi.lat,lng:q.poi.lng}:null,zona:q.zona?{Parque:q.zona.Parque,Coopera:q.zona.Coopera}:null,mod:q.mod?{nuevo:q.mod.nuevo,antiguo:q.mod.antiguo}:null,direccion:q._dir||null}))`,
+    ),
+  ) as Promise<PreguntaExamen[]>;
+}
+
+async function preguntaActual(frame: FrameLocator): Promise<PreguntaExamen> {
+  return frame.locator('html').evaluate(() =>
+    eval(
+      `(()=>{const q=EX.qs[EX.i];return {tipo:q.tipo,poi:q.poi?{n:q.poi.n,c:q.poi.c,lat:q.poi.lat,lng:q.poi.lng}:null,zona:q.zona?{Parque:q.zona.Parque,Coopera:q.zona.Coopera}:null,mod:q.mod?{nuevo:q.mod.nuevo,antiguo:q.mod.antiguo}:null,direccion:q._dir||null};})()`,
+    ),
+  ) as Promise<PreguntaExamen>;
+}
+
+async function elegirOpcion(
+  frame: FrameLocator,
+  selector: string,
+  valor: string,
+  correcta: boolean,
+): Promise<void> {
+  const opciones = frame.locator(selector);
+  const indice = await opciones.evaluateAll(
+    (elements, target) =>
+      elements.findIndex((element) => {
+        const button = element as HTMLButtonElement;
+        const actual = button.dataset['v'] ?? button.textContent?.trim() ?? '';
+        return target.correcta ? actual === target.valor : actual !== target.valor;
+      }),
+    { valor, correcta },
+  );
+  if (indice < 0) throw new Error(`No se encontró opción para ${selector}: ${valor}`);
+  await opciones.nth(indice).click();
+}
+
+async function responderPregunta(frame: FrameLocator, correcta: boolean): Promise<void> {
+  const pregunta = await preguntaActual(frame);
+  if (pregunta.tipo === 'localiza') {
+    if (!pregunta.poi) throw new Error('La pregunta de localización no tiene POI');
+    const punto = await frame.locator('#map').evaluate(
+      (element, target) => {
+        const mapa = eval('map') as {
+          setView: (center: [number, number], zoom: number, options: object) => void;
+          latLngToContainerPoint: (latlng: [number, number]) => { x: number; y: number };
+        };
+        mapa.setView([target.poi.lat, target.poi.lng], target.correcta ? 15 : 12.5, {
+          animate: false,
+        });
+        const lat = target.correcta ? target.poi.lat : target.poi.lat + 0.02;
+        const lng = target.correcta ? target.poi.lng : target.poi.lng + 0.02;
+        const point = mapa.latLngToContainerPoint([lat, lng]);
+        const rect = element.getBoundingClientRect();
+        return {
+          x: Math.max(4, Math.min(rect.width - 4, point.x)),
+          y: Math.max(4, Math.min(rect.height - 4, point.y)),
+        };
+      },
+      { poi: pregunta.poi, correcta },
+    );
+    await frame.locator('#map').click({ position: punto });
+  } else if (pregunta.tipo === 'calleRapida') {
+    if (!pregunta.zona) throw new Error('La pregunta rápida no tiene zona');
+    await elegirOpcion(frame, '#crParque button', pregunta.zona.Parque, correcta);
+    await elegirOpcion(frame, '#crCoopera button', pregunta.zona.Coopera, correcta);
+    await frame.locator('#crComprobar').click();
+  } else {
+    const valor =
+      pregunta.tipo === 'zona'
+        ? pregunta.zona?.Parque
+        : pregunta.tipo === 'coopera'
+          ? pregunta.zona?.Coopera
+          : pregunta.tipo === 'modificada' && pregunta.mod
+            ? pregunta.direccion === 'antes'
+              ? pregunta.mod.antiguo
+              : pregunta.mod.nuevo
+            : null;
+    if (!valor) throw new Error(`No hay respuesta para el tipo ${pregunta.tipo}`);
+    await elegirOpcion(frame, '#qopts > button', valor, correcta);
+  }
+  await expect(frame.locator('#qfb')).toHaveClass(/show/);
+  if (!correcta && pregunta.poi && pregunta.tipo !== 'calleRapida') {
+    await expect(frame.locator('#card')).toHaveClass(/show/, { timeout: 2_000 });
+    await frame.locator('#cardCerrar').click();
+  }
+}
+
 test.describe('Módulo Callejero (alumno)', () => {
   const forbiddenExternalDomains = [
+    'overpass.private.coffee',
     'overpass-api.de',
     'overpass.kumi.systems',
+    'maps.mail.ru',
     'nominatim.openstreetmap.org',
     'router.project-osrm.org',
+    'openstreetmap.fr',
   ];
   let currentState: CallejeroState;
   let blockedExternalUrls: string[];
@@ -515,6 +639,26 @@ test.describe('Módulo Callejero (alumno)', () => {
     // Atribución obligatoria del mapa.
     await expect(frame.locator('#attrib')).toContainText('OpenStreetMap');
     await expect(frame.locator('#tabRecorridos')).toBeVisible();
+  });
+
+  test('las calles usa teselas OSM estándar, atribución y Referer del embed', async ({
+    page,
+  }) => {
+    const solicitudes: Request[] = [];
+    await instalarTeselas(page, new Set(), solicitudes);
+
+    const frame = await irACallejero(page);
+    await expect(frame.locator('#attrib')).toContainText('OpenStreetMap');
+    await expect
+      .poll(
+        () => peticionesA(solicitudes, 'tile.openstreetmap.org').length,
+        { timeout: 12_000 },
+      )
+      .toBeGreaterThan(0);
+
+    const osm = peticionesA(solicitudes, 'tile.openstreetmap.org');
+    expect(new URL(osm[0].url()).pathname).toMatch(/^\/\d+\/\d+\/\d+\.png$/);
+    expect(osm[0].headers()['referer']).toContain('localhost');
   });
 
   test('navega a la pestaña Recorridos y muestra el buscador + dificultad', async ({
@@ -606,9 +750,437 @@ test.describe('Módulo Callejero (alumno)', () => {
     );
   });
 
+  test('el dataset bilingüe v32 trae 3162 viales y las búsquedas locales ignoran acentos y alias', async ({
+    page,
+  }) => {
+    const frame = await irACallejero(page);
+    await expect(frame.locator('#callejeroEstado')).toContainText(
+      '3.162 calles · OpenStreetMap · incluido en la app (2026-10-21)',
+      { timeout: 12_000 },
+    );
+    expect(currentState.callesApiCalls).toBe(0);
+
+    await frame.locator('#tabEstudio').click();
+    const buscar = frame.locator('#buscar');
+    for (const [consulta, resultado] of [
+      ['jativa', 'Xàtiva'],
+      ['paz', 'Pau'],
+      ['9 de octubre', "Nou d'Octubre"],
+      ['economista gay', 'Just Ramírez'],
+    ]) {
+      await buscar.fill(consulta);
+      await expect(frame.locator('#listas')).toContainText(resultado);
+    }
+  });
+
+  test('no expone el dataset v32 cuando Valencia no autoriza la sesión', async ({
+    page,
+  }) => {
+    currentState.valenciaAutorizada = false;
+    const frame = await irACallejero(page);
+
+    await expect
+      .poll(() => currentState.ciudadesApiCalls, { timeout: 8_000 })
+      .toBeGreaterThan(0);
+    await expect(frame.locator('#callejeroEstado')).not.toContainText(
+      '3.162 calles',
+    );
+    expect(currentState.callesApiCalls).toBe(0);
+  });
+
+  test('el Centre Històric no aparece en capas, listas, parques ni preguntas', async ({
+    page,
+  }) => {
+    const frame = await irACallejero(page);
+    await frame.locator('#tabEstudio').click();
+    await expect(frame.locator('#listas')).toContainText('Parques de bomberos (5)');
+    await frame.locator('#buscar').fill('Centre Històric');
+    await expect(frame.locator('#listas')).not.toContainText('Centre Històric');
+
+    await frame.locator('#tabMapa').click();
+    await expect(
+      frame.locator('#tgl_bomberos').locator('xpath=..').locator('.num'),
+    ).toHaveText('5');
+    const markers = await frame.locator('html').evaluate(() =>
+      eval(
+        `({fire:capas.bomberos.getLayers().length,stations:capaEst.getLayers().length,zones:PARQUES.slice(),questionFire:POIS.filter(p=>p.c==='bomberos').map(p=>p.n)})`,
+      ),
+    );
+    expect(markers).toEqual({
+      fire: 5,
+      stations: 5,
+      zones: expect.arrayContaining(['Campanar', 'Norte', 'Oeste', 'Sur', 'Saler']),
+      questionFire: expect.arrayContaining([
+        'Parque Central de Bomberos (Av. de la Plata)',
+        'Parque de Bomberos Campanar',
+        'Parque de Bomberos Norte (Benimaclet)',
+        'Parque de Bomberos Oeste (L’Olivereta)',
+        'Parque de Bomberos de la Devesa (El Saler)',
+      ]),
+    });
+    expect(markers.zones).toHaveLength(5);
+    expect(markers.questionFire).toHaveLength(5);
+    expect(JSON.stringify(markers)).not.toMatch(/centre hist[oò]ric|centro hist[oó]rico/i);
+
+    await frame.locator('#tabExamen').click();
+    await expect(frame.locator('#zonaExam .zona-chip')).toHaveCount(5);
+    await frame.locator('#cfgN').selectOption({ label: '40' });
+    await frame.locator('#btnEmpezar').click();
+    const preguntasBomberos = await frame.locator('html').evaluate(() =>
+      eval(
+        `EX.qs.filter(q=>q.poi&&q.poi.c==='bomberos').map(q=>q.poi.n)`,
+      ),
+    );
+    expect(preguntasBomberos.join(' ')).not.toMatch(/centre hist[oò]ric|centro hist[oó]rico/i);
+  });
+
+  test('sanea historial legado sin perder hospitales, calles ni modificaciones válidas', async ({
+    page,
+  }) => {
+    const history = String.raw`{"asked":{"p|Hospital Clínico Universitario":4,"m|Pl. de la Llotgeta":2,"v|Carrer de la Pau|39.4700,-0.3700":3,"p|Parque de Bomberos Centre Històric":7,"v|dato inválido":"3","constructor":99,"__proto__":{"polluted":true}},"fallos":{"p|Hospital Clínico Universitario":{"n":2,"t":1700000000000,"q":{"poi":{"n":"Hospital Clínico Universitario","c":"hospital","lat":39.478678,"lng":-0.36129,"_m":{"leaflet":true},"_ix":{"bad":true},"datoPrivado":"quitar"},"zona":{"Parque":"Norte","Coopera":"Nord","AreaName":"Norte","nombre":"Zona Norte","polys":[[[39,-0.3],[40,-0.3],[40,-0.4]]]},"tipo":"localiza","extra":"quitar"}},"m|Pl. de la Llotgeta":{"n":1,"t":1700000000001,"q":{"mod":{"nuevo":"Pl. de la Llotgeta","antiguo":"Pl. dels Màrtirs"},"tipo":"modificada","extra":"quitar"}},"p|Hospital Casa de Salud (La Salud)":{"n":1,"t":1700000000003,"q":{"poi":{"n":"Hospital Casa de Salud (La Salud)","c":"hospital","lat":39.48,"lng":-0.36},"zona":{"Parque":"Norte"},"tipo":"coopera"}},"p|Parque de Bomberos Centre Històric":{"n":1,"t":1700000000002,"q":{"poi":{"n":"Parque de Bomberos Centre Històric","c":"bomberos","lat":39.477007,"lng":-0.380257},"tipo":"localiza"}},"basura":{"n":"x","q":null}}}`;
+    await page.addInitScript((serialized) => {
+      if (location.pathname.endsWith('/valencia_27.html')) {
+        localStorage.setItem('tf_hist_v1', serialized);
+      }
+    }, history);
+
+    const frame = await irACallejero(page);
+    await frame.locator('#tabExamen').click();
+    await expect(frame.locator('#btnRepasarFallos')).toHaveText('Repasar fallos (2)');
+
+    const saved = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('tf_hist_v1') ?? 'null'),
+    );
+    expect(Object.keys(saved.asked).sort()).toEqual(
+      [
+        'm|Pl. de la Llotgeta',
+        'p|Hospital Clínico Universitario',
+        'v|Carrer de la Pau|39.4700,-0.3700',
+      ].sort(),
+    );
+    expect(Object.keys(saved.fallos).sort()).toEqual(
+      ['m|Pl. de la Llotgeta', 'p|Hospital Clínico Universitario'].sort(),
+    );
+    expect(Object.keys(saved.fallos['p|Hospital Clínico Universitario'].q).sort()).toEqual(
+      ['poi', 'tipo', 'zona'],
+    );
+    expect(Object.keys(saved.fallos['p|Hospital Clínico Universitario'].q.poi).sort()).toEqual(
+      ['c', 'lat', 'lng', 'n'],
+    );
+    expect(Object.keys(saved.fallos['p|Hospital Clínico Universitario'].q.zona).sort()).toEqual(
+      ['AreaName', 'Coopera', 'Parque', 'nombre'],
+    );
+    expect(
+      await frame.locator('html').evaluate(() =>
+        eval(`({polluted:Object.prototype.polluted,nonOperational:Object.keys(HIST.fallos).some(k=>/centre hist[oò]ric|centro hist[oó]rico/i.test(k))})`),
+      ),
+    ).toEqual({ polluted: undefined, nonOperational: false });
+  });
+
+  test('el repaso de historial legado muestra el resumen como texto y no ejecuta HTML', async ({
+    page,
+  }) => {
+    const ataque = '<img src=x onerror="window.__histXss=1">';
+    const nombrePoi = 'Hospital de prueba del historial';
+    const historial = JSON.stringify({
+      asked: {},
+      fallos: {
+        [`p|${nombrePoi}`]: {
+          n: 1,
+          t: 1_700_000_000_000,
+          q: {
+            poi: {
+              n: nombrePoi,
+              c: 'hospital',
+              lat: 39.478678,
+              lng: -0.36129,
+            },
+            zona: {
+              Parque: ataque,
+              Coopera: 'Nord',
+              AreaName: 'Norte',
+              nombre: 'Zona Norte',
+            },
+            tipo: 'zona',
+          },
+        },
+      },
+    });
+    await page.addInitScript((serialized) => {
+      if (!location.pathname.endsWith('/valencia_27.html')) return;
+      (window as typeof window & { __histXss?: number }).__histXss = 0;
+      localStorage.setItem('tf_hist_v1', serialized);
+    }, historial);
+
+    const frame = await irACallejero(page);
+    await frame.locator('#tabExamen').click();
+    await expect(frame.locator('#btnRepasarFallos')).toHaveText(
+      'Repasar fallos (1)',
+    );
+    await frame.locator('#btnRepasarFallos').click();
+    await expect(frame.locator('#qNum')).toContainText('/ 1');
+    expect((await preguntaActual(frame)).zona?.Parque).toBe(ataque);
+
+    await responderPregunta(frame, false);
+    const feedback = await frame.locator('#qfb').evaluate((element) => ({
+      text: element.textContent ?? '',
+      elementosAtacantes: element.querySelectorAll('img,svg,iframe').length,
+      ejecucion: (window as typeof window & { __histXss?: number }).__histXss ?? 0,
+    }));
+    expect(feedback.text).toContain(ataque);
+    expect(feedback.elementosAtacantes).toBe(0);
+    expect(feedback.ejecucion).toBe(0);
+    await frame.locator('#btnSig').click();
+    await expect(frame.locator('#velo')).toHaveClass(/show/);
+    await expect(frame.locator('#resSub')).toContainText('repaso de fallos');
+
+    const resumen = await frame.locator('#resTabla').evaluate((element) => ({
+      text: element.textContent ?? '',
+      elementosAtacantes: element.querySelectorAll('img,svg,iframe').length,
+      ejecucion: (window as typeof window & { __histXss?: number }).__histXss ?? 0,
+    }));
+    expect(resumen).toMatchObject({ elementosAtacantes: 0, ejecucion: 0 });
+    expect(resumen.text).toContain(ataque);
+  });
+
+  test('el repaso de historial muestra como texto los nombres de POI en tooltips', async ({
+    page,
+  }) => {
+    const ataque = '<img src=x onerror="window.__histPoiXss=1">';
+    const nombrePoi = `Hospital del historial ${ataque}`;
+    const historial = JSON.stringify({
+      asked: {},
+      fallos: {
+        [`p|${nombrePoi}`]: {
+          n: 1,
+          t: 1_700_000_000_000,
+          q: {
+            poi: {
+              n: nombrePoi,
+              c: 'hospital',
+              lat: 39.478678,
+              lng: -0.36129,
+            },
+            zona: {
+              Parque: 'Norte',
+              Coopera: 'Nord',
+              AreaName: 'Norte',
+              nombre: 'Zona Norte',
+            },
+            tipo: 'zona',
+          },
+        },
+      },
+    });
+    await page.addInitScript((serialized) => {
+      if (!location.pathname.endsWith('/valencia_27.html')) return;
+      (window as typeof window & { __histPoiXss?: number }).__histPoiXss = 0;
+      localStorage.setItem('tf_hist_v1', serialized);
+    }, historial);
+
+    const frame = await irACallejero(page);
+    await frame.locator('#tabExamen').click();
+    await frame.locator('#btnRepasarFallos').click();
+    await responderPregunta(frame, false);
+
+    const tooltipState = await frame.locator('#map').evaluate((element) => ({
+      tooltipText: Array.from(element.querySelectorAll('.leaflet-tooltip'))
+        .map((tooltip) => tooltip.textContent ?? '')
+        .join(' '),
+      elementosAtacantes: element.querySelectorAll('img[onerror]').length,
+      ejecucion: (window as typeof window & { __histPoiXss?: number })
+        .__histPoiXss ?? 0,
+    }));
+    expect(tooltipState.tooltipText).toContain(ataque);
+    expect(tooltipState.elementosAtacantes).toBe(0);
+    expect(tooltipState.ejecucion).toBe(0);
+
+    await frame.locator('#btnSig').click();
+    await expect(frame.locator('#velo')).toHaveClass(/show/);
+    const nombreEnResumen = await frame
+      .locator('#resTabla')
+      .textContent();
+    expect(nombreEnResumen).toContain(nombrePoi);
+  });
+
+  test('repasa cuarenta preguntas legítimas del historial y conserva el progreso', async ({
+    page,
+  }) => {
+    const fallos = Object.fromEntries(
+      Array.from({ length: 40 }, (_, index) => {
+        const nombre = `Hospital historial ${String(index + 1).padStart(2, '0')}`;
+        return [
+          `p|${nombre}`,
+          {
+            n: 1,
+            t: 1_700_000_000_000 + index,
+            q: {
+              poi: {
+                n: nombre,
+                c: 'hospital',
+                lat: 39.478678,
+                lng: -0.36129,
+              },
+              zona: {
+                Parque: 'Norte',
+                Coopera: 'Nord',
+                AreaName: 'Norte',
+                nombre: 'Zona Norte',
+              },
+              tipo: index % 2 === 0 ? 'zona' : 'coopera',
+            },
+          },
+        ];
+      }),
+    );
+    await page.addInitScript((serialized) => {
+      if (location.pathname.endsWith('/valencia_27.html')) {
+        localStorage.setItem('tf_hist_v1', serialized);
+      }
+    }, JSON.stringify({ asked: {}, fallos }));
+
+    const frame = await irACallejero(page);
+    await frame.locator('#tabExamen').click();
+    await expect(frame.locator('#btnRepasarFallos')).toHaveText(
+      'Repasar fallos (40)',
+    );
+    await frame.locator('#btnRepasarFallos').click();
+    await expect(frame.locator('#qNum')).toContainText('/ 40');
+
+    for (let index = 0; index < 40; index += 1) {
+      await responderPregunta(frame, true);
+      if (index < 39) await frame.locator('#btnSig').click();
+    }
+    await frame.locator('#btnSig').click();
+    await expect(frame.locator('#velo')).toHaveClass(/show/);
+    await expect(frame.locator('#resSub')).toContainText(
+      '40 preguntas · tolerancia',
+    );
+    await expect(frame.locator('#resSub')).toContainText('repaso de fallos');
+    await expect(frame.locator('#resAcierto')).toHaveText('40/40');
+    await expect(frame.locator('#resTabla tr')).toHaveCount(40);
+
+    const remainingFailures = await page.evaluate(() => {
+      const historial = JSON.parse(localStorage.getItem('tf_hist_v1') ?? 'null') as {
+        fallos?: Record<string, unknown>;
+      } | null;
+      return Object.keys(historial?.fallos ?? {}).length;
+    });
+    expect(remainingFailures).toBe(0);
+  });
+
+  test('fallar bomberos y hospitales persiste en examen mixto y repasar un solo fallo lo elimina', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    let frame = await irACallejero(page);
+    await frame.locator('#tabExamen').click();
+    await frame.locator('#cfgN').selectOption({ label: '40' });
+
+    let plan: PreguntaExamen[] = [];
+    for (let intento = 0; intento < 8; intento += 1) {
+      await frame.locator('#btnEmpezar').click();
+      await expect(frame.locator('#qNum')).toContainText('/ 40');
+      plan = await planExamen(frame);
+      const categorias = new Set(
+        plan.filter((q) => q.poi).map((q) => q.poi!.c),
+      );
+      if (categorias.has('bomberos') && categorias.has('hospital')) break;
+      await frame.locator('#btnAbandonar').click();
+    }
+    const categorias = new Set(plan.filter((q) => q.poi).map((q) => q.poi!.c));
+    expect(categorias.has('bomberos')).toBe(true);
+    expect(categorias.has('hospital')).toBe(true);
+
+    const fallados = new Set<string>();
+    for (let i = 0; i < 40; i += 1) {
+      const pregunta = await preguntaActual(frame);
+      const fallar =
+        !!pregunta.poi &&
+        ['bomberos', 'hospital'].includes(pregunta.poi.c) &&
+        !fallados.has(pregunta.poi.c);
+      await responderPregunta(frame, !fallar);
+      if (fallar) fallados.add(pregunta.poi!.c);
+      if (i < 39) await frame.locator('#btnSig').click();
+    }
+    await frame.locator('#btnSig').click();
+    expect([...fallados].sort()).toEqual(['bomberos', 'hospital']);
+    await expect(frame.locator('#velo')).toHaveClass(/show/);
+
+    type HistorialFallosPersistidos = {
+      fallos: Record<string, { q: { poi: { c: string } } }>;
+    };
+    const historyWithTwoFailures = (await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('tf_hist_v1') ?? 'null'),
+    )) as HistorialFallosPersistidos;
+    const failureKeys = Object.keys(historyWithTwoFailures.fallos).sort();
+    expect(failureKeys).toHaveLength(2);
+    const failedCategories = Object.values(historyWithTwoFailures.fallos).map(
+      (entry) => entry.q.poi.c,
+    );
+    expect(failedCategories).toEqual(
+      expect.arrayContaining(['hospital', 'bomberos']),
+    );
+    expect(JSON.stringify(historyWithTwoFailures)).not.toMatch(/"_(m|ix)"|"polys"/);
+
+    await frame.locator('#btnCerrarRes').click();
+    await page.reload();
+    frame = await irACallejero(page);
+    await frame.locator('#tabExamen').click();
+    await expect(frame.locator('#btnRepasarFallos')).toHaveText('Repasar fallos (2)');
+    await frame.locator('#btnRepasarFallos').click();
+    await expect(frame.locator('#qNum')).toContainText('/ 2');
+    await responderPregunta(frame, true);
+    await frame.locator('#btnAbandonar').click();
+    await frame.locator('#btnCerrarRes').click();
+    await expect(frame.locator('#btnRepasarFallos')).toHaveText('Repasar fallos (1)');
+
+    const historyWithOneFailure = (await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('tf_hist_v1') ?? 'null'),
+    )) as HistorialFallosPersistidos;
+    expect(Object.keys(historyWithOneFailure.fallos)).toHaveLength(1);
+    expect(Object.values(historyWithOneFailure.fallos)[0].q.poi.c).not.toBe(
+      (await preguntaActual(frame)).poi?.c,
+    );
+  });
+
+  test('JSON de historial corrupto y almacenamiento bloqueado no impiden abrir el examen', async ({
+    page,
+  }) => {
+    const errores: string[] = [];
+    page.on('pageerror', (error) => errores.push(error.message));
+    await page.addInitScript(() => {
+      if (!location.pathname.endsWith('/valencia_27.html')) return;
+      try {
+        localStorage.setItem('tf_hist_v1', '{no es json');
+      } catch (_) {}
+      const getItem = Storage.prototype.getItem;
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.getItem = function (key) {
+        if (key === 'tf_hist_v1') throw new DOMException('blocked', 'SecurityError');
+        return getItem.call(this, key);
+      };
+      Storage.prototype.setItem = function (key, value) {
+        if (key === 'tf_hist_v1') throw new DOMException('quota', 'QuotaExceededError');
+        return setItem.call(this, key, value);
+      };
+    });
+
+    const frame = await irACallejero(page);
+    await expect(frame.locator('#callejeroEstado')).toContainText('3.162');
+    await frame.locator('#tabExamen').click();
+    await frame.locator('#cfgN').selectOption({ label: '5' });
+    await frame.locator('#btnEmpezar').click();
+    await expect(frame.locator('#qNum')).toContainText('/ 5');
+    expect(errores).toEqual([]);
+  });
+
   test('una búsqueda A tardía no pisa el recorrido B que terminó antes', async ({
     page,
   }) => {
+    const consultaA = 'CalleForáneaPuestoA937461';
+    const consultaB = 'CalleForáneaPuestoB937461';
+    const consultasGeocodeadas: string[] = [];
     let releaseA!: () => void;
     let markAStarted!: () => void;
     const aStarted = new Promise<void>((resolve) => {
@@ -620,7 +1192,8 @@ test.describe('Módulo Callejero (alumno)', () => {
 
     await page.route(/\/callejero\/geocode\/buscar\?/, async (route) => {
       const query = new URL(route.request().url()).searchParams.get('q');
-      if (query === 'A') {
+      if (query === consultaA) {
+        consultasGeocodeadas.push(query);
         markAStarted();
         await aRelease;
         try {
@@ -636,7 +1209,8 @@ test.describe('Módulo Callejero (alumno)', () => {
         }
         return;
       }
-      if (query === 'B') {
+      if (query === consultaB) {
+        consultasGeocodeadas.push(query);
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -652,35 +1226,36 @@ test.describe('Módulo Callejero (alumno)', () => {
     const frame = await irACallejero(page);
     await frame.locator('#tabRecorridos').click();
     const input = frame.locator('#recTexto');
-    await input.fill('A');
+    await input.fill(consultaA);
     const firstSearch = frame.locator('#recBtnTrazar').click();
     await aStarted;
 
-    await input.fill('B');
+    await input.fill(consultaB);
     await frame.locator('#recBtnTrazar').click();
     await expect(frame.locator('#rpBody')).toContainText('Destino B', {
       timeout: 12_000,
     });
-    await expect(frame.locator('#rpBody')).toContainText('Avenida API');
+    await expect(frame.locator('#rpBody')).toContainText('Destino B');
 
     releaseA();
     await firstSearch;
     await expect(frame.locator('#rpTit')).toContainText('Destino B');
     await expect(frame.locator('#rpBody')).not.toContainText('Destino A');
+    expect(consultasGeocodeadas).toEqual([consultaA, consultaB]);
     expect(
       await frame.locator('#map .leaflet-overlay-pane path').count(),
     ).toBeGreaterThan(0);
   });
 
-  test('usa Valencia por slug, muestra la ruta de la API y reutiliza cache de sesión', async ({
+  test('usa Valencia por slug, muestra recorrido canónico de la API y no persiste el dataset', async ({
     page,
   }) => {
     let frame = await irACallejero(page);
-    await expect(frame.locator('#callejeroEstado')).toContainText('1', {
+    await expect(frame.locator('#callejeroEstado')).toContainText('3.162', {
       timeout: 12_000,
     });
-    expect(currentState.callesApiCalls).toBe(1);
-    expect(currentState.ciudadesApiCalls).toBe(1);
+    expect(currentState.callesApiCalls).toBe(0);
+    expect(currentState.ciudadesApiCalls).toBeGreaterThan(0);
 
     await frame.locator('#tabRecorridos').click();
     await frame.locator('#recTexto').fill('Calle API Real');
@@ -688,34 +1263,30 @@ test.describe('Módulo Callejero (alumno)', () => {
     await expect(frame.locator('#rpBody')).toContainText('Parc API', {
       timeout: 12_000,
     });
-    await expect(frame.locator('#rpBody')).toContainText('Avenida API');
+    await expect(frame.locator('#rpBody')).toContainText('Calle API Real');
+    await expect(frame.locator('#rpBody')).toContainText('Carrer de Xàtiva');
     await expect(frame.locator('#rpBody')).toContainText('2.1 km');
     expect(currentState.routeApiCalls).toBe(1);
+    expect(currentState.routeQueries).toEqual(['Calle API Real']);
 
-    const cacheKeysBeforeReload = await page.evaluate(() =>
-      Object.keys(sessionStorage).filter((key) =>
-        key.startsWith('tf_viales_v6'),
-      ),
-    );
-    expect(cacheKeysBeforeReload).toContain('tf_viales_v6:valencia');
     expect(
       await page.evaluate(() =>
         Object.keys(localStorage).filter((key) =>
-          /tf_viales_v5|tf_geo_|tf_salida/.test(key),
+          /tf_viales_|tf_geo_|tf_salida/.test(key),
         ),
       ),
     ).toEqual([]);
 
     await page.reload();
     frame = await irACallejero(page);
-    await expect(frame.locator('#callejeroEstado')).toContainText('1', {
+    await expect(frame.locator('#callejeroEstado')).toContainText('3.162', {
       timeout: 8_000,
     });
-    expect(currentState.ciudadesApiCalls).toBe(2);
-    expect(currentState.callesApiCalls).toBe(1);
+    expect(currentState.ciudadesApiCalls).toBeGreaterThan(1);
+    expect(currentState.callesApiCalls).toBe(0);
     expect(
       await page.evaluate(() =>
-        Object.keys(sessionStorage).some((key) => key.includes('tf_viales_v5')),
+        Object.keys(sessionStorage).some((key) => key.startsWith('tf_viales_')),
       ),
     ).toBe(false);
   });
@@ -991,9 +1562,29 @@ test.describe('Módulo Callejero (alumno)', () => {
   test('coalesce consumidores concurrentes de la carga inicial del callejero', async ({
     page,
   }) => {
+    await page.addInitScript(() => {
+      const originalFetch = window.fetch.bind(window);
+      const scope = globalThis as typeof globalThis & {
+        __tfCityFetchCount?: number;
+      };
+      scope.__tfCityFetchCount = 0;
+      window.fetch = (input, init) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof Request
+              ? input.url
+              : input.href;
+        if (/\/callejero\/ciudades(?:[/?#]|$)/.test(url)) {
+          scope.__tfCityFetchCount = (scope.__tfCityFetchCount ?? 0) + 1;
+        }
+        return originalFetch(input, init);
+      };
+    });
     let releaseFirstCity!: () => void;
     let markFirstCityStarted!: () => void;
     let firstCitySeen = false;
+    let cityRequestsObserved = 0;
     const firstCityStarted = new Promise<void>((resolve) => {
       markFirstCityStarted = resolve;
     });
@@ -1005,6 +1596,7 @@ test.describe('Módulo Callejero (alumno)', () => {
     // en cargarViales() mientras resolverCiudad() sigue pendiente.
     await page.route('**/callejero/ciudades', async (route) => {
       if (!isXhr(route.request())) return route.fallback();
+      cityRequestsObserved += 1;
       if (!firstCitySeen) {
         firstCitySeen = true;
         markFirstCityStarted();
@@ -1054,55 +1646,258 @@ test.describe('Módulo Callejero (alumno)', () => {
           { timeout: 3_000 },
         )
         .toBe(true);
+      await expect
+        .poll(
+          () =>
+            embed.evaluate(
+              () =>
+                (
+                  globalThis as typeof globalThis & {
+                    __tfCityFetchCount?: number;
+                  }
+                ).__tfCityFetchCount ?? 0,
+            ),
+          { timeout: 3_000 },
+        )
+        .toBe(1);
+      expect(cityRequestsObserved).toBe(1);
       releaseFirstCity();
       await concurrentLoads;
 
-      await expect(frame.locator('#callejeroEstado')).toContainText('1', {
+      await expect(frame.locator('#callejeroEstado')).toContainText('3.162', {
         timeout: 12_000,
       });
-      expect(currentState.ciudadesApiCalls).toBe(1);
-      expect(currentState.callesApiCalls).toBe(1);
+      expect(cityRequestsObserved).toBeGreaterThan(0);
+      expect(currentState.callesApiCalls).toBe(0);
     } finally {
       releaseFirstCity();
     }
   });
 
-  test('no reutiliza el cache de otra cuenta si Valencia está denegada', async ({
+  test('vuelve a autorizar Valencia antes de reutilizar el callejero en memoria', async ({
     page,
   }) => {
-    let frame = await irACallejero(page);
-    await expect(frame.locator('#callejeroEstado')).toContainText('1', {
+    const frame = await irACallejero(page);
+    await expect(frame.locator('#callejeroEstado')).toContainText('3.162', {
       timeout: 12_000,
     });
-    expect(currentState.callesApiCalls).toBe(1);
-
-    const cache = await page.evaluate(() =>
-      sessionStorage.getItem('tf_viales_v6:valencia'),
-    );
-    expect(cache).toBeTruthy();
-
-    // Simula logout y login con otra cuenta conservando únicamente el catálogo
-    // que la cuenta anterior dejó en sessionStorage.
+    const ciudadesAntes = currentState.ciudadesApiCalls;
     currentState.valenciaAutorizada = false;
-    await page.evaluate((cached) => {
-      sessionStorage.clear();
-      if (cached) sessionStorage.setItem('tf_viales_v6:valencia', cached);
-    }, cache);
-    await loginAsRoleMock(page, {
-      rol: 'ALUMNO',
-      email: 'otro-alumno@example.invalid',
-      userFixture: userAlumnoValenciaFixture,
+    const embed = page
+      .frames()
+      .find(
+        (candidate) =>
+          candidate !== page.mainFrame() &&
+          candidate.url().includes('callejero-embed/valencia_27.html'),
+      );
+    if (!embed) throw new Error('No se encontró el frame del callejero');
+    const resultado = await embed.evaluate(async () => {
+      const scope = globalThis as typeof globalThis & {
+        cargarViales?: () => Promise<unknown>;
+      };
+      try {
+        await scope.cargarViales?.();
+        return 'resuelto';
+      } catch (_) {
+        return 'denegado';
+      }
     });
 
-    frame = await irACallejero(page);
-    await expect
-      .poll(() => currentState.ciudadesApiCalls, { timeout: 8_000 })
-      .toBe(2);
-    expect(currentState.callesApiCalls).toBe(1);
-    await expect(frame.locator('#listas')).not.toContainText('Calle API Real');
-    await expect(frame.locator('#callejeroEstado')).not.toContainText(
-      'calles cargadas',
+    expect(resultado).toBe('denegado');
+    expect(currentState.ciudadesApiCalls).toBeGreaterThan(ciudadesAntes);
+    expect(currentState.callesApiCalls).toBe(0);
+  });
+
+  test('no dibuja una ruta recta ficticia si el servicio de recorridos falla', async ({
+    page,
+  }) => {
+    currentState.routeApiUnavailable = true;
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    const pathsAntes = await frame.locator('#map .leaflet-overlay-pane path').count();
+    await frame.locator('#recTexto').fill('Calle API Real');
+    await frame.locator('#recBtnTrazar').click();
+
+    await expect(frame.locator('#rpBody')).toContainText('No se pudo calcular', {
+      timeout: 12_000,
+    });
+    await expect(frame.locator('#rpBody')).not.toContainText('línea recta');
+    expect(await frame.locator('#map .leaflet-overlay-pane path').count()).toBe(
+      pathsAntes,
     );
+    expect(currentState.routeApiCalls).toBe(1);
+    currentState.routeApiUnavailable = false;
+    await frame.locator('#rpReintentar').click();
+    await expect(frame.locator('#rpBody')).toContainText('recorrido verificado', {
+      timeout: 12_000,
+    });
+    expect(currentState.routeApiCalls).toBe(2);
+  });
+
+  test('rechaza recorrido sin calles completas y permite reintentar sin dibujar', async ({
+    page,
+  }) => {
+    currentState.routePayload = {
+      direccionResuelta: 'Calle API Real, 1',
+      lat: 39.45,
+      lng: -0.35,
+      parqueNombre: 'Parc API',
+      estacion: { nombre: 'Parc API', lat: 39.44, lng: -0.34 },
+      polyline: [
+        [39.45, -0.35],
+        [39.46, -0.36],
+      ],
+      km: 2.1,
+      minutos: 6,
+    };
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    const pathsAntes = await frame.locator('#map .leaflet-overlay-pane path').count();
+    await frame.locator('#recTexto').fill('Calle API Real');
+    await frame.locator('#recBtnTrazar').click();
+
+    await expect(frame.locator('#rpBody')).toContainText('No se pudo calcular', {
+      timeout: 12_000,
+    });
+    await expect(frame.locator('#rpReintentar')).toBeVisible();
+    expect(await frame.locator('#map .leaflet-overlay-pane path').count()).toBe(
+      pathsAntes,
+    );
+    expect(currentState.routeApiCalls).toBe(1);
+  });
+
+  test('acepta recorrido sin viales cuando calles es un array vacío y estacion es null', async ({
+    page,
+  }) => {
+    currentState.routePayload = {
+      direccionResuelta: 'Calle API Real, 1',
+      lat: 39.45,
+      lng: -0.35,
+      parqueNombre: null,
+      calles: [],
+      estacion: null,
+      polyline: [
+        [39.45, -0.35],
+        [39.46, -0.36],
+      ],
+      km: 2.1,
+      minutos: 6,
+    };
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    await frame.locator('#recTexto').fill('Calle API Real');
+    await frame.locator('#recBtnTrazar').click();
+
+    await expect(frame.locator('#rpBody')).toContainText(
+      '0 viales · recorrido verificado',
+      { timeout: 12_000 },
+    );
+    expect(currentState.routeApiCalls).toBe(1);
+  });
+
+  test('acepta viales vacíos y nombres de más de 200 caracteres', async ({
+    page,
+  }) => {
+    currentState.routePayload = {
+      direccionResuelta: 'Calle API Real, 1',
+      lat: 39.45,
+      lng: -0.35,
+      parqueNombre: '',
+      calles: ['', 'C'.repeat(201)],
+      estacion: { nombre: 'Parc API', lat: 39.44, lng: -0.34 },
+      polyline: [
+        [39.45, -0.35],
+        [39.46, -0.36],
+      ],
+      km: 2.1,
+      minutos: 6,
+    };
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    await frame.locator('#recTexto').fill('Calle API Real');
+    await frame.locator('#recBtnTrazar').click();
+
+    await expect(frame.locator('#rpBody')).toContainText(
+      '2 viales · recorrido verificado',
+      { timeout: 12_000 },
+    );
+    expect(currentState.routeApiCalls).toBe(1);
+  });
+
+  test('rechaza recorrido si estacion falta o no es null ni un objeto válido', async ({
+    page,
+  }) => {
+    const frame = await irACallejero(page);
+    await frame.locator('#tabRecorridos').click();
+    await frame.locator('#recTexto').fill('Calle API Real');
+
+    const rutaSinEstacion = {
+      direccionResuelta: 'Calle API Real, 1',
+      lat: 39.45,
+      lng: -0.35,
+      parqueNombre: 'Parc API',
+      calles: ['Carrer de Xàtiva'],
+      polyline: [
+        [39.45, -0.35],
+        [39.46, -0.36],
+      ],
+      km: 2.1,
+      minutos: 6,
+    };
+    currentState.routePayload = rutaSinEstacion;
+    await frame.locator('#recBtnTrazar').click();
+    await expect(frame.locator('#rpBody')).toContainText('No se pudo calcular', {
+      timeout: 12_000,
+    });
+    await expect(frame.locator('#rpReintentar')).toBeVisible();
+
+    currentState.routePayload = { ...rutaSinEstacion, estacion: false };
+    await frame.locator('#rpReintentar').click();
+    await expect(frame.locator('#rpBody')).toContainText('No se pudo calcular', {
+      timeout: 12_000,
+    });
+    await expect(frame.locator('#rpReintentar')).toBeVisible();
+    expect(currentState.routeApiCalls).toBe(2);
+  });
+
+  test('el contenido malicioso de la ruta se muestra como texto, no como HTML ejecutable', async ({
+    page,
+  }) => {
+    currentState.routePayload = {
+      direccionResuelta: '<img src=x onerror="window.__routeXss=1">',
+      lat: 39.45,
+      lng: -0.35,
+      parqueNombre: 'Parc API',
+      calles: ['<script>window.__routeXss=2</script>'],
+      estacion: { nombre: 'Parc API', lat: 39.44, lng: -0.34 },
+      polyline: [
+        [39.45, -0.35],
+        [39.46, -0.36],
+      ],
+      km: 2.1,
+      minutos: 6,
+    };
+    const frame = await irACallejero(page);
+    await frame.locator('html').evaluate(() => {
+      (window as typeof window & { __routeXss?: number }).__routeXss = 0;
+    });
+    await frame.locator('#tabRecorridos').click();
+    await frame.locator('#recTexto').fill('Calle API Real');
+    await frame.locator('#recBtnTrazar').click();
+
+    await expect(frame.locator('#rpBody')).toContainText('recorrido verificado', {
+      timeout: 12_000,
+    });
+    await expect(frame.locator('#rpBody')).toContainText(
+      '<script>window.__routeXss=2</script>',
+    );
+    await expect(frame.locator('#rpBody script')).toHaveCount(0);
+    await expect(frame.locator('#rpTit img, #rpTit script')).toHaveCount(0);
+    expect(
+      await frame.locator('html').evaluate(
+        () => (window as typeof window & { __routeXss?: number }).__routeXss,
+      ),
+    ).toBe(0);
   });
 
   test('CARTO usa la clave configurada y no hace peticiones anónimas', async ({
@@ -1201,29 +1996,28 @@ test.describe('Módulo Callejero (alumno)', () => {
     expect(peticionesA(solicitudes, 'arcgisonline.com')).toHaveLength(0);
   });
 
-  test('tres fallos activan el respaldo; fallo total muestra Reintentar y el reintento recupera', async ({
+  test('OSM estándar cae a IGNBaseTodo; fallo total muestra Reintentar y recupera OSM', async ({
     page,
   }) => {
     const solicitudes: Request[] = [];
-    const enFallo = new Set<string>(['google.com']);
+    const enFallo = new Set<string>(['tile.openstreetmap.org']);
     await servirMapasConfig(page, 'CLAVE_E2E');
     await instalarTeselas(page, enFallo, solicitudes);
 
     const frame = await irACallejero(page);
-    // Google (calles) falla → transición única al respaldo CARTO con clave.
+    // OSM estándar falla → transición única al respaldo IGNBaseTodo.
     await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
       timeout: 15_000,
     });
     await expect
-      .poll(() => peticionesA(solicitudes, 'basemaps.cartocdn.com').length, {
+      .poll(() => peticionesA(solicitudes, 'ign.es').length, {
         timeout: 15_000,
       })
       .toBeGreaterThan(0);
-    const carto = peticionesA(solicitudes, 'basemaps.cartocdn.com');
-    expect(new URL(carto[0].url()).searchParams.get('key')).toBe('CLAVE_E2E');
+    expect(peticionesA(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(0);
 
     // El respaldo también falla → aviso de fallo con Reintentar (sin bucle).
-    enFallo.add('basemaps.cartocdn.com');
+    enFallo.add('ign.es');
     await frame.locator('.leaflet-control-zoom-in').click();
     await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
       timeout: 15_000,
@@ -1234,14 +2028,14 @@ test.describe('Módulo Callejero (alumno)', () => {
     await expect(frame.locator('.tf-mapa-aviso:visible')).toHaveCount(0);
 
     // Reintento explícito: se restablece el proveedor primario.
-    const antes = peticionesA(solicitudes, 'google.com').length;
+    const antes = peticionesA(solicitudes, 'tile.openstreetmap.org').length;
     enFallo.clear();
     await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
     await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
       timeout: 15_000,
     });
     await expect
-      .poll(() => peticionesA(solicitudes, 'google.com').length, {
+      .poll(() => peticionesA(solicitudes, 'tile.openstreetmap.org').length, {
         timeout: 15_000,
       })
       .toBeGreaterThan(antes);
@@ -1259,7 +2053,7 @@ test.describe('Módulo Callejero (alumno)', () => {
         await route.fallback();
         return;
       }
-      if (!url.hostname.endsWith('google.com')) {
+      if (url.hostname !== 'tile.openstreetmap.org') {
         await route.fallback();
         return;
       }
@@ -1293,7 +2087,7 @@ test.describe('Módulo Callejero (alumno)', () => {
     const erroresPagina: string[] = [];
     page.on('pageerror', (err) => erroresPagina.push(err.message));
     await servirMapasConfig(page, null);
-    await instalarTeselas(page, new Set(['google.com']), solicitudes);
+    await instalarTeselas(page, new Set(['tile.openstreetmap.org']), solicitudes);
 
     const frame = await irACallejero(page);
     await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
@@ -1307,11 +2101,11 @@ test.describe('Módulo Callejero (alumno)', () => {
     expect(erroresPagina).toEqual([]);
   });
 
-  test('Google a zoom 21: el respaldo conserva la vista y limita el zoom nativo; Reintentar restaura la URL original', async ({
+  test('OSM conserva el zoom al caer a IGN y Reintentar restaura las teselas estándar', async ({
     page,
   }) => {
     const solicitudes: Request[] = [];
-    let fallarGoogle = false;
+    let fallarOsm = false;
     let fallarTodo = false;
     const erroresPagina: string[] = [];
     page.on('pageerror', (err) => erroresPagina.push(err.message));
@@ -1322,14 +2116,14 @@ test.describe('Módulo Callejero (alumno)', () => {
         await route.fallback();
         return;
       }
-      const esGoogle = host.endsWith('google.com');
-      const esCarto = host.endsWith('basemaps.cartocdn.com');
-      if (!esGoogle && !esCarto) {
+      const esOsm = host === 'tile.openstreetmap.org';
+      const esIgn = host.endsWith('ign.es');
+      if (!esOsm && !esIgn) {
         await route.fallback();
         return;
       }
       solicitudes.push(route.request());
-      if ((esGoogle && fallarGoogle) || ((esGoogle || esCarto) && fallarTodo)) {
+      if ((esOsm && fallarOsm) || ((esOsm || esIgn) && fallarTodo)) {
         await route.abort('failed');
         return;
       }
@@ -1345,18 +2139,18 @@ test.describe('Módulo Callejero (alumno)', () => {
     });
 
     const frame = await irACallejero(page);
-    // Con Google el zoom de vista llega a 21 (Google admite 21).
+    // OSM estándar admite hasta el zoom 19 configurado.
     await subirZoomAlMaximo(frame, page);
     await expect
       .poll(
         () =>
-          Math.max(0, ...peticionesA(solicitudes, 'google.com').map(zoomDe)),
+          Math.max(0, ...peticionesA(solicitudes, 'tile.openstreetmap.org').map(zoomDe)),
         { timeout: 15_000 },
       )
-      .toBe(21);
+      .toBe(19);
 
-    // Google empieza a fallar → respaldo CARTO Voyager (con clave).
-    fallarGoogle = true;
+    // OSM falla → respaldo IGNBaseTodo.
+    fallarOsm = true;
     await frame.locator('.leaflet-control-zoom-out').click();
     await frame.locator('.leaflet-control-zoom-in').click();
     await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
@@ -1364,23 +2158,22 @@ test.describe('Módulo Callejero (alumno)', () => {
     });
     await expect
       .poll(
-        () => peticionesA(solicitudes, 'basemaps.cartocdn.com').length,
+        () => peticionesA(solicitudes, 'ign.es').length,
         { timeout: 15_000 },
       )
       .toBeGreaterThan(0);
 
-    // La vista sigue en 21, pero las teselas se piden al nativo <= 20 (CARTO 20).
-    const zoomsCarto = peticionesA(solicitudes, 'basemaps.cartocdn.com').map(
+    // Las teselas IGN conservan matrices enteras y no superan su zoom nativo.
+    const zoomsIgn = peticionesA(solicitudes, 'ign.es').map(
       zoomDe,
     );
-    expect(Math.max(...zoomsCarto)).toBeLessThanOrEqual(20);
-    expect(zoomsCarto).not.toContain(21);
+    expect(Math.max(...zoomsIgn)).toBeLessThanOrEqual(19);
     await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0);
     await expect(
       frame.locator('img.leaflet-tile-loaded').first(),
     ).toBeVisible();
 
-    // Fallo total primario+respaldo → Reintentar restaura URL/opciones (Google z21).
+    // Fallo total primario+respaldo → Reintentar restaura OSM estándar.
     fallarTodo = true;
     // Varios niveles de zoom fuerzan nuevas teselas nativas en cada paso.
     for (let i = 0; i < 5; i += 1) {
@@ -1390,21 +2183,21 @@ test.describe('Módulo Callejero (alumno)', () => {
     await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
       timeout: 15_000,
     });
-    fallarGoogle = false;
+    fallarOsm = false;
     fallarTodo = false;
     await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
     await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
       timeout: 15_000,
     });
-    // URL original restaurada: de nuevo admite subir hasta el zoom 21.
+    // El proveedor OSM queda restaurado después del reintento.
     await subirZoomAlMaximo(frame, page);
     await expect
       .poll(
         () =>
-          Math.max(0, ...peticionesA(solicitudes, 'google.com').map(zoomDe)),
+          Math.max(0, ...peticionesA(solicitudes, 'tile.openstreetmap.org').map(zoomDe)),
         { timeout: 15_000 },
       )
-      .toBe(21);
+      .toBe(19);
     expect(erroresPagina).toEqual([]);
   });
 });
@@ -1532,6 +2325,20 @@ test.describe('Configuración de mapas (build)', () => {
     runInContext(MAPAS_CONFIG_SRC, contexto);
     return (contexto as unknown as { TFMapas: TfMapasUtil }).TFMapas;
   }
+
+  test('provee teselas OSM estándar de Valencia con atribución visible', () => {
+    const tf = cargarTfMapas() as TfMapasUtil & {
+      proveedores(): Record<
+        string,
+        () => { url: string; opts: Record<string, unknown> } | null
+      >;
+    };
+    const calles = tf.proveedores()['osmStandard']();
+
+    expect(calles).not.toBeNull();
+    expect(calles!.url).toBe('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+    expect(calles!.opts['attribution']).toContain('OpenStreetMap');
+  });
 
   function emitir(capa: CapaFalsa, evento: string, veces: number): void {
     for (let i = 0; i < veces; i += 1) {

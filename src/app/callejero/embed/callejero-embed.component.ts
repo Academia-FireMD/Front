@@ -37,13 +37,13 @@ function esMensajeAuthRequest(value: unknown): value is AuthRequestMessage {
 }
 
 /**
- * Callejero (embed v27) — incrusta el HTML autónomo de Raúl tal cual en un
+ * Callejero (embed v32) — incrusta el HTML autónomo de Raúl tal cual en un
  * iframe, para paridad visual 1:1 exacta con lo que él mantiene.
  *
  * El fichero vive como estático en `public/callejero-embed/valencia_27.html`
  * (Netlify lo sirve directo, antes del catch-all `/* -> index.html`). Es
- * self-contained (Leaflet por CDN + datos embebidos); las calles, búsquedas y
- * recorridos se resuelven exclusivamente mediante la API propia.
+ * self-contained (Leaflet por CDN + dataset embebido, tras autorizar Valencia);
+ * las búsquedas de calles son locales y los recorridos usan la API propia.
  *
  * Auth: el HTML estático no puede leer sessionStorage del SPA. El componente
  * padre escucha `tf-callejero-auth-request` por postMessage same-origin y
@@ -72,7 +72,7 @@ export class CallejeroEmbedComponent {
 
   /** Ruta al estático servido por Netlify (fuera del router SPA). */
   readonly src: SafeResourceUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
-    '/callejero-embed/valencia_27.html',
+    '/callejero-embed/valencia_27.html?v=32',
   );
 
   /** Responde únicamente a una petición ya autenticada del iframe. */
