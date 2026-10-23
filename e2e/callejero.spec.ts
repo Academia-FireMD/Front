@@ -1291,26 +1291,33 @@ test.describe('Módulo Callejero (alumno)', () => {
     ).toBe(false);
   });
 
-  test('la capa de calles modificadas reutiliza cache válida y completa solo faltantes', async ({
+  test('la capa de calles modificadas usa la cache válida y geocodifica solo el vial no local restante', async ({
     page,
   }) => {
+    const calleCacheKey = JSON.stringify([
+      'Pl. de Francisco Javier Goerlich Lleó',
+      'Pl. de Federico Mayo',
+      'pl',
+    ]);
+    const calleSinCacheKey = JSON.stringify([
+      "Pl. de l'Equip Crònica",
+      'Pl. de Francisco Bosch i Ariño',
+      'pl',
+    ]);
     await page.addInitScript(() => {
-      const key = JSON.stringify(['Del Oeste', 'Barón de Cárcer', 'av']);
-      const secondKey = JSON.stringify([
-        'Manuela Solís Claràs',
-        'Amado Granell',
-        '',
-      ]);
       localStorage.setItem(
         'tf_mod_v1:valencia',
         JSON.stringify({
           version: 1,
           entries: {
-            [key]: { nombre: 'Avenida del Oeste', lat: 39.4705, lng: -0.3795 },
-            [secondKey]: {
-              nombre: 'Manuela Solís Claràs',
-              lat: 39.465,
-              lng: -0.37,
+            [JSON.stringify([
+              'Pl. de Francisco Javier Goerlich Lleó',
+              'Pl. de Federico Mayo',
+              'pl',
+            ])]: {
+              nombre: 'Plaça de Francisco Javier Goerlich Lleó',
+              lat: 39.4705,
+              lng: -0.3795,
             },
           },
         }),
@@ -1318,27 +1325,54 @@ test.describe('Módulo Callejero (alumno)', () => {
     });
 
     const frame = await irACallejero(page);
+    const embed = page
+      .frames()
+      .find(
+        (candidate) =>
+          candidate !== page.mainFrame() &&
+          candidate.url().includes('callejero-embed/valencia_27.html'),
+      );
+    if (!embed) throw new Error('No se encontró el frame del callejero');
+
     await frame.locator('#tglMod').check();
     await expect
       .poll(
-        () =>
-          page.evaluate(() => {
-            const raw = localStorage.getItem('tf_mod_v1:valencia');
-            if (!raw) return 0;
-            const parsed = JSON.parse(raw) as { entries?: object };
-            return parsed.entries ? Object.keys(parsed.entries).length : 0;
-          }),
+        () => embed.evaluate(() => eval('modListo')),
         { timeout: 20_000 },
       )
-      .toBe(52);
+      .toBe(true);
 
-    expect(currentState.geocodeApiCalls).toBe(50);
+    expect(
+      await embed.evaluate(() =>
+        eval(
+          `({marcadores:capaMod.getLayers().length,completo:modListo})`,
+        ),
+      ),
+    ).toEqual({ marcadores: 52, completo: true });
+    expect(currentState.geocodeApiCalls).toBe(1);
+    expect(currentState.geocodeQueries).toEqual([
+      "Plaça de l'Equip Crònica, València, España",
+    ]);
     expect(currentState.geocodeQueries).not.toContain(
       "Avinguda de l'Oest, València, España",
     );
     expect(currentState.geocodeQueries).not.toContain(
       'Manuela Solís Claràs, València, España',
     );
+
+    const cache = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('tf_mod_v1:valencia') ?? 'null') as {
+        entries: Record<string, { nombre: string; lat: number; lng: number }>;
+      },
+    );
+    expect(Object.keys(cache.entries).sort()).toEqual(
+      [calleCacheKey, calleSinCacheKey].sort(),
+    );
+    expect(cache.entries[calleSinCacheKey]).toEqual({
+      nombre: 'Calle API Real',
+      lat: 39.45,
+      lng: -0.35,
+    });
   });
 
   test('comparte la cache de modificadas entre localizaMod y la capa', async ({
@@ -1365,15 +1399,56 @@ test.describe('Módulo Callejero (alumno)', () => {
       if (typeof scope.localizaMod !== 'function') {
         throw new Error('No se encontró localizaMod en el embed');
       }
-      await scope.localizaMod('Del Oeste', 'Barón de Cárcer', 'av');
-      localStorage.removeItem('tf_mod_v1:valencia');
+      await scope.localizaMod(
+        'Pl. de Francisco Javier Goerlich Lleó',
+        'Pl. de Federico Mayo',
+        'pl',
+      );
     });
     expect(currentState.geocodeApiCalls).toBe(1);
+    expect(currentState.geocodeQueries).toEqual([
+      'Plaça de Francisco Javier Goerlich Lleó, València, España',
+    ]);
 
     await frame.locator('#tglMod').check();
     await expect
       .poll(() => currentState.geocodeApiCalls, { timeout: 20_000 })
-      .toBe(52);
+      .toBe(2);
+    await expect
+      .poll(() => embed.evaluate(() => eval('modListo')), { timeout: 20_000 })
+      .toBe(true);
+
+    expect(currentState.geocodeQueries).toEqual([
+      'Plaça de Francisco Javier Goerlich Lleó, València, España',
+      "Plaça de l'Equip Crònica, València, España",
+    ]);
+    expect(
+      await embed.evaluate(() =>
+        eval(
+          `({marcadores:capaMod.getLayers().length,completo:modListo})`,
+        ),
+      ),
+    ).toEqual({ marcadores: 52, completo: true });
+
+    const cache = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('tf_mod_v1:valencia') ?? 'null') as {
+        entries: Record<string, { nombre: string; lat: number; lng: number }>;
+      },
+    );
+    expect(Object.keys(cache.entries).sort()).toEqual(
+      [
+        JSON.stringify([
+          'Pl. de Francisco Javier Goerlich Lleó',
+          'Pl. de Federico Mayo',
+          'pl',
+        ]),
+        JSON.stringify([
+          "Pl. de l'Equip Crònica",
+          'Pl. de Francisco Bosch i Ariño',
+          'pl',
+        ]),
+      ].sort(),
+    );
   });
 
   test('apagar calles modificadas aborta el geocode activo y no continúa la cola', async ({
@@ -1442,7 +1517,12 @@ test.describe('Módulo Callejero (alumno)', () => {
     page,
   }) => {
     await page.addInitScript(() => {
-      const key = JSON.stringify(['Del Oeste', 'Barón de Cárcer', 'av']);
+      const key = JSON.stringify([
+        'Pl. de Francisco Javier Goerlich Lleó',
+        'Pl. de Federico Mayo',
+        'pl',
+      ]);
+      (window as typeof window & { __tfXss?: number }).__tfXss = 0;
       localStorage.setItem(
         'tf_mod_v1:valencia',
         JSON.stringify({
@@ -1467,71 +1547,121 @@ test.describe('Módulo Callejero (alumno)', () => {
           candidate.url().includes('callejero-embed/valencia_27.html'),
       );
     if (!embed) throw new Error('No se encontró el frame del callejero');
-    const clasificaciones = await embed.evaluate(() => {
+    expect(
+      await embed.evaluate(() =>
+        localStorage.getItem('tf_mod_v1:valencia'),
+      ),
+    ).toBeNull();
+
+    const clasificaciones = await embed.evaluate(async () => {
+      type Vial = { nombre: string; tipo: 'av' | 'principal' | 'otra' };
       const scope = globalThis as typeof globalThis & {
-        clasificaVia?: (name: string, hw: string) => string;
+        cargarViales?: () => Promise<{ n: string; t: Vial['tipo'] }[]>;
       };
-      if (typeof scope.clasificaVia !== 'function') {
-        throw new Error('clasificaVia no está expuesta en el embed');
+      if (typeof scope.cargarViales !== 'function') {
+        throw new Error('No se encontró cargarViales en el embed');
       }
+      const viales = await scope.cargarViales();
+      const tipos: Record<Vial['tipo'], number> = {
+        av: 0,
+        principal: 0,
+        otra: 0,
+      };
+      for (const vial of viales) tipos[vial.t] += 1;
       return {
-        primary: scope.clasificaVia('Ronda Norte', 'PRIMARY'),
-        secondary: scope.clasificaVia('Ronda Sur', 'secondary'),
-        tertiary: scope.clasificaVia('Ronda Este', 'TeRtIaRy'),
-        avenidaPorTipo: scope.clasificaVia('Gran vía', 'AVENIDA'),
-        avenidaPorNombre: scope.clasificaVia(
-          'Avenida del Puerto',
-          'residential',
-        ),
-        calleGenerica: scope.clasificaVia('Calle Colón', 'CALLE'),
-        plazaGenerica: scope.clasificaVia('Plaza del Ayuntamiento', 'PLAZA'),
+        total: viales.length,
+        tipos,
+        ejemplos: [
+          {
+            nombre: "Avinguda de l'Oest",
+            tipo: viales.find((vial) => vial.n === "Avinguda de l'Oest")?.t,
+          },
+          {
+            nombre: 'Carrer de Colón',
+            tipo: viales.find((vial) => vial.n === 'Carrer de Colón')?.t,
+          },
+          {
+            nombre: 'Carrer de Manuela Solís Claràs',
+            tipo: viales.find(
+              (vial) => vial.n === 'Carrer de Manuela Solís Claràs',
+            )?.t,
+          },
+        ],
       };
     });
     expect(clasificaciones).toEqual({
-      primary: 'principal',
-      secondary: 'principal',
-      tertiary: 'principal',
-      avenidaPorTipo: 'av',
-      avenidaPorNombre: 'av',
-      calleGenerica: 'otra',
-      plazaGenerica: 'otra',
+      total: 3162,
+      tipos: { av: 111, principal: 220, otra: 2831 },
+      ejemplos: [
+        { nombre: "Avinguda de l'Oest", tipo: 'av' },
+        { nombre: 'Carrer de Colón', tipo: 'principal' },
+        { nombre: 'Carrer de Manuela Solís Claràs', tipo: 'otra' },
+      ],
     });
 
-    await frame.locator('#tglMod').check();
-    await expect
-      .poll(() => currentState.geocodeApiCalls, { timeout: 20_000 })
-      .toBe(52);
-    expect(currentState.geocodeQueries[0]).toBe(
-      "Avinguda de l'Oest, València, España",
-    );
+    await embed.evaluate(async () => {
+      const scope = globalThis as typeof globalThis & {
+        localizaMod?: (
+          nuevo: string,
+          antiguo: string,
+          tipo?: string,
+        ) => Promise<void>;
+      };
+      if (typeof scope.localizaMod !== 'function') {
+        throw new Error('No se encontró localizaMod en el embed');
+      }
+      await scope.localizaMod(
+        'Pl. de Francisco Javier Goerlich Lleó',
+        'Pl. de Federico Mayo',
+        'pl',
+      );
+    });
+    expect(currentState.geocodeApiCalls).toBe(1);
+    expect(currentState.geocodeQueries).toEqual([
+      'Plaça de Francisco Javier Goerlich Lleó, València, España',
+    ]);
+    expect(
+      await embed.evaluate(() =>
+        Boolean((window as typeof window & { __tfXss?: number }).__tfXss),
+      ),
+    ).toBe(false);
+    expect(await frame.locator('#map img[onerror]').count()).toBe(0);
   });
 
   test('los tooltips de viales tratan nombres externos como texto', async ({
     page,
   }) => {
     const xssPayload = '<img src=x onerror="window.__tfXss=1">';
-    await page.route(/\/callejero\/ciudades\/1\/calles$/, async (route) => {
-      if (!isXhr(route.request())) return route.fallback();
-      currentState.callesApiCalls += 1;
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          calles: [
-            {
-              id: 9001,
-              nombre: xssPayload,
-              tipoVia: 'primary',
-              lat: 39.45,
-              lng: -0.35,
-              longitudM: 500,
-              parquesCobertura: [],
-              bb: [39.4, -0.4, 39.5, -0.3],
-            },
-          ],
-        }),
-      });
+    await page.addInitScript(() => {
+      (window as typeof window & { __tfXss?: number }).__tfXss = 0;
     });
+    await page.route(
+      /\/callejero-embed\/valencia_27\.html(?:\?|$)/,
+      async (route) => {
+        const response = await route.fetch();
+        const html = await response.text();
+        const dataScript = html.match(
+          /(<script type="application\/json" id="viales-data">)([\s\S]*?)(<\/script>)/,
+        );
+        if (!dataScript) throw new Error('No se encontró el dataset v32');
+
+        const data = JSON.parse(dataScript[2]) as {
+          rows: (string | number | string[] | undefined)[][];
+        };
+        const row = data.rows.find(
+          (candidate) =>
+            candidate[0] === 'Carrer de Colón' && candidate[3] === 'p',
+        );
+        if (!row) throw new Error('No se encontró el vial principal de fixture');
+        row[0] = xssPayload;
+
+        const body = html.replace(
+          dataScript[0],
+          `${dataScript[1]}${JSON.stringify(data)}${dataScript[3]}`,
+        );
+        await route.fulfill({ response, body });
+      },
+    );
 
     const frame = await irACallejero(page);
     const embed = page
@@ -1542,12 +1672,60 @@ test.describe('Módulo Callejero (alumno)', () => {
           candidate.url().includes('callejero-embed/valencia_27.html'),
       );
     if (!embed) throw new Error('No se encontró el frame del callejero');
+
+    await expect(frame.locator('#callejeroEstado')).toContainText('3.162', {
+      timeout: 12_000,
+    });
     await frame.locator('#tglCalles').check();
     await expect(
       frame.locator('#tglCalles').locator('xpath=..').locator('.num'),
-    ).toHaveText('1');
-    const marker = frame.locator('#map .leaflet-overlay-pane path').last();
-    await marker.hover({ force: true });
+    ).toHaveText('220');
+    await expect
+      .poll(() => embed.evaluate(() => eval('capaCalles.getLayers().length')))
+      .toBe(220);
+
+    const target = await embed.evaluate(async (maliciousName) => {
+      type Marker = {
+        getTooltip: () => { getContent: () => string | HTMLElement } | null;
+        getLatLng: () => { lat: number; lng: number };
+      };
+      const scope = globalThis as typeof globalThis & {
+        cargarViales?: () => Promise<{
+          n: string;
+          t: string;
+          lat: number;
+          lng: number;
+        }[]>;
+      };
+      if (typeof scope.cargarViales !== 'function') {
+        throw new Error('No se encontró cargarViales en el embed');
+      }
+      const viales = await scope.cargarViales();
+      const vial = viales.find(
+        (candidate) => candidate.n === maliciousName && candidate.t === 'principal',
+      );
+      if (!vial) throw new Error('No se encontró el vial malicioso en el dataset');
+
+      const mapa = eval('map') as {
+        setView: (center: [number, number], zoom: number, options: object) => void;
+        latLngToContainerPoint: (latlng: [number, number]) => {
+          x: number;
+          y: number;
+        };
+      };
+      mapa.setView([vial.lat, vial.lng], 16, { animate: false });
+      const marcador = (eval('capaCalles.getLayers()') as Marker[]).find(
+        (candidate) => {
+          const content = candidate.getTooltip()?.getContent();
+          return content instanceof HTMLElement && content.textContent === maliciousName;
+        },
+      );
+      if (!marcador) throw new Error('No se encontró el marcador con tooltip');
+      const location = marcador.getLatLng();
+      return mapa.latLngToContainerPoint([location.lat, location.lng]);
+    }, xssPayload);
+
+    await frame.locator('#map').hover({ position: target, force: true });
     const tooltip = frame.locator('.leaflet-tooltip').last();
     await expect(tooltip).toBeVisible();
     expect(await tooltip.textContent()).toContain(xssPayload);
