@@ -257,6 +257,48 @@ async function seleccionarBaseAlicante(
   if (!ok) throw new Error(`No se encontró la capa base "${etiqueta}"`);
 }
 
+/**
+ * Espera a que el mapa de Alicante haya terminado su inicialización real.
+ *
+ * El `fitBounds` inicial se ejecuta después de crear las capas y anima la
+ * vista: las primeras teselas llegan enseguida y la vista final pide otra fila
+ * ~200 ms después. Capturar el contador antes de que el mapa esté asentado
+ * atribuía esas peticiones iniciales al cambio de capa. Se espera a que no
+ * haya animación de zoom ni teselas pendientes y a que el contador de
+ * peticiones deje de crecer.
+ */
+async function esperarMapaAlicanteAsentado(
+  frame: FrameLocator,
+  page: Page,
+  solicitudes: Request[],
+): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        frame
+          .locator('#mapa')
+          .evaluate(
+            (mapa) =>
+              !mapa.querySelector('.leaflet-map-pane.leaflet-zoom-anim') &&
+              mapa.querySelectorAll(
+                'img.leaflet-tile:not(.leaflet-tile-loaded)',
+              ).length === 0,
+          ),
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+  await expect
+    .poll(
+      async () => {
+        const antes = solicitudes.length;
+        await page.waitForTimeout(300);
+        return solicitudes.length - antes;
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(0);
+}
+
 /** Marca "Mapa mudo durante el examen" (QZ.mute) antes de arrancar el examen. */
 async function activarMudoExamen(frame: FrameLocator): Promise<void> {
   await frame.locator('#qzMute').evaluate((el) => {
@@ -1050,6 +1092,7 @@ test.describe('Callejero Alicante — recuperación cartográfica', () => {
         { timeout: 15_000 },
       )
       .toBeGreaterThan(0);
+    await esperarMapaAlicanteAsentado(frame, page, solicitudes);
     const lgAntes = peticionesConPath(
       solicitudes,
       'World_Light_Gray_Base',
@@ -1064,7 +1107,20 @@ test.describe('Callejero Alicante — recuperación cartográfica', () => {
     expect(peticionesAlHost(solicitudes, 'basemaps.cartocdn.com')).toHaveLength(
       0,
     );
-    await page.waitForTimeout(700);
+    await esperarMapaAlicanteAsentado(frame, page, solicitudes);
+    expect(
+      peticionesConPath(solicitudes, 'World_Light_Gray_Base').length,
+    ).toBe(lgAntes);
+
+    // La transición es efectiva: un zoom controlado pide PNOA y no reabre Esri.
+    const pnoaAntes = peticionesAlHost(solicitudes, 'ign.es').length;
+    await frame.locator('.leaflet-control-zoom-in').click();
+    await expect
+      .poll(() => peticionesAlHost(solicitudes, 'ign.es').length, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(pnoaAntes);
+    await esperarMapaAlicanteAsentado(frame, page, solicitudes);
     expect(
       peticionesConPath(solicitudes, 'World_Light_Gray_Base').length,
     ).toBe(lgAntes);
