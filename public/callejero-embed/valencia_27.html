@@ -330,7 +330,7 @@ select{border:1.5px solid var(--linea);border-radius:8px;padding:7px 9px;font-si
           <label class="tgl"><input type="checkbox" id="cfgSoloZonas"><span class="lbl">Solo preguntas de parque y coopera <span class="num">(tipo test, sin localizar en el mapa)</span></span></label>
         </div>
         <button class="btn rojo" id="btnEmpezar">Empezar examen</button>
-        <p class="nota">La dificultad decide qué se pregunta. Las calles se preguntan en orden aleatorio <b>sin repetirse</b> hasta que hayan salido las demás (las avenidas, calles principales y calles largas pueden repetirse antes). Este progreso se guarda en tu navegador.</p>
+        <p class="nota">La dificultad decide qué se pregunta. Las calles se preguntan en orden aleatorio <b>sin repetirse</b> hasta que hayan salido las demás (las avenidas, calles principales y calles largas pueden repetirse antes).</p>
         <div class="sec" id="secFallos" style="margin-top:16px">
           <h3>Repasar fallos</h3>
           <p class="nota" id="fallosTxt" style="margin:0 0 8px">No tienes fallos pendientes.</p>
@@ -1511,13 +1511,73 @@ function leerHistorial(){
   try{
     const raw=localStorage.getItem(HIST_KEY);
     if(!raw)return historialVacio();
-    const limpio=normalizaHistorial(JSON.parse(raw));
-    try{localStorage.setItem(HIST_KEY,JSON.stringify(limpio));}catch(_){}
-    return limpio;
+    return normalizaHistorial(JSON.parse(raw));
   }catch(_){ return historialVacio(); }
 }
-let HIST=leerHistorial();
-function histSave(){ try{ localStorage.setItem(HIST_KEY,JSON.stringify(HIST)); }catch(_){} }
+let TF_HISTORIAL_LEGADO=tfEnIframeInicial()?leerHistorial():null;
+let HIST=tfEnIframeInicial()?historialVacio():leerHistorial();
+const TF_PROGRESO_BUILD='32';
+let TF_PROGRESO_CONTEXTO=null, TF_PROGRESO_CARGA=null, TF_PROGRESO_RESET=null;
+let TF_PROGRESO_LISTO=!window.parent||window.parent===window;
+let TF_PROGRESO_TEXTO=TF_PROGRESO_LISTO?'Progreso guardado en este navegador.':'Cargando progreso de tu cuenta…';
+function tfObjetoPlano(v){ if(!v||typeof v!=='object'||Array.isArray(v))return false; const p=Object.getPrototypeOf(v); return p===Object.prototype||p===null; }
+function tfClavesExactas(v,claves){ if(!tfObjetoPlano(v))return false; const a=Object.keys(v).sort(),b=claves.slice().sort(); return a.length===b.length&&a.every((k,i)=>k===b[i]); }
+function tfId(){ return window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():'tf-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2); }
+function tfEnIframe(){ try{return !!(window.parent&&window.parent!==window);}catch(_){return false;} }
+function tfEnIframeInicial(){ try{return !!(window.parent&&window.parent!==window);}catch(_){return false;} }
+function tfPost(msg){ if(!tfEnIframe()||!TF_PROGRESO_CONTEXTO)return; try{window.parent.postMessage(Object.assign({app:'tf-atlas',version:2,build:TF_PROGRESO_BUILD,modalidad:'valencia',contexto:TF_PROGRESO_CONTEXTO},msg),location.origin);}catch(_){} }
+function tfActividad(activa){ if(TF_PROGRESO_LISTO&&TF_PROGRESO_CONTEXTO)tfPost({type:'tf-atlas:actividad',requestId:tfId(),examenActivo:!!activa}); }
+function tfEstadoStorage(){ try{ localStorage.getItem(HIST_KEY); return true; }catch(_){ return false; } }
+function tfPintarListo(){ const b=$('#btnEmpezar'); if(b)b.disabled=!TF_PROGRESO_LISTO; const r=$('#btnRepasarFallos'); if(r)r.disabled=!TF_PROGRESO_LISTO||!Object.keys(HIST.fallos).length; }
+function tfIniciar(data){
+  if(EX.on)fin();
+  TF_PROGRESO_CONTEXTO=data.contexto; TF_PROGRESO_LISTO=false; TF_PROGRESO_TEXTO='Cargando progreso de tu cuenta…';
+  TF_PROGRESO_CARGA=tfId(); TF_PROGRESO_RESET=null; tfPintarListo();
+  const legado=TF_HISTORIAL_LEGADO?{asked:Object.assign({},TF_HISTORIAL_LEGADO.asked),fallos:Object.assign({},TF_HISTORIAL_LEGADO.fallos)}:null;
+  HIST=historialVacio(); pintaFallos();
+  tfPost({type:'tf-atlas:cargar',requestId:TF_PROGRESO_CARGA,legado,almacenamientoDisponible:tfEstadoStorage(),examenActivo:false});
+}
+function tfRecibir(event){
+  if(!tfEnIframe()||event.origin!==location.origin||event.source!==window.parent||!tfObjetoPlano(event.data))return;
+  const d=event.data;
+  if(d.app!=='tf-atlas'||d.version!==2||d.modalidad!=='valencia'||d.build!==TF_PROGRESO_BUILD||typeof d.contexto!=='string'||!d.contexto||d.contexto.length>128)return;
+  if(d.type==='tf-atlas:iniciar'){
+    if(!tfClavesExactas(d,['app','version','build','type','modalidad','contexto']))return;
+    tfIniciar(d); return;
+  }
+  if(d.contexto!==TF_PROGRESO_CONTEXTO)return;
+  if(d.type==='tf-atlas:bloquear'){
+    if(!tfClavesExactas(d,['app','version','build','type','modalidad','contexto']))return;
+    if(EX.on)fin(); TF_PROGRESO_LISTO=false; TF_PROGRESO_CARGA=null; TF_PROGRESO_RESET=null;
+    TF_PROGRESO_TEXTO='Esperando una cuenta autenticada.'; HIST=historialVacio(); tfPintarListo(); pintaFallos(); return;
+  }
+  if(d.type==='tf-atlas:progreso'){
+    if(!tfClavesExactas(d,['app','version','build','type','modalidad','contexto','requestId','data','guardado','revision','origen'])||d.requestId!==TF_PROGRESO_CARGA||typeof d.guardado!=='boolean'||!Number.isInteger(d.revision)||d.revision<0||typeof d.origen!=='string')return;
+    if(EX.on)return;
+    HIST=normalizaHistorial(d.data); histSave(false); TF_PROGRESO_LISTO=true;
+    /* El legado solo se ofrece durante la primera asociación de esta página. */
+    TF_HISTORIAL_LEGADO=null;
+    TF_PROGRESO_TEXTO=d.guardado?'Guardado en tu cuenta.':'Progreso preparado para esta cuenta.';
+    tfPintarListo(); pintaFallos(); return;
+  }
+  if(d.type==='tf-atlas:sincronizacion'){
+    if(!tfClavesExactas(d,['app','version','build','type','modalidad','contexto','estado','texto'])||!['cargando','listo','guardando','guardado','pendiente','error'].includes(d.estado)||typeof d.texto!=='string'||d.texto.length>240)return;
+    TF_PROGRESO_TEXTO=d.texto; return;
+  }
+  if(d.type==='tf-atlas:reset-confirmado'){
+    if(!tfClavesExactas(d,['app','version','build','type','modalidad','contexto','requestId','data'])||d.requestId!==TF_PROGRESO_RESET||EX.on)return;
+    HIST=normalizaHistorial(d.data); histSave(false); TF_PROGRESO_RESET=null; TF_PROGRESO_TEXTO='Progreso reiniciado y guardado en tu cuenta.'; pintaFallos();
+  }
+}
+window.addEventListener('message',tfRecibir);
+function tfEventoInicial(){ tfPintarListo(); if(!tfEnIframe())TF_PROGRESO_LISTO=true; }
+tfEventoInicial();
+  function histSave(sincronizar=true){
+    if(!tfEnIframe())try{ localStorage.setItem(HIST_KEY,JSON.stringify(HIST)); }catch(_){}
+    if(sincronizar&&TF_PROGRESO_LISTO&&TF_PROGRESO_CONTEXTO){
+      tfPost({type:'tf-atlas:progreso',requestId:tfId(),data:{asked:Object.assign({},HIST.asked),fallos:Object.assign({},HIST.fallos)},examenActivo:!!EX.on});
+    }
+  }
 function keyDeQ(q){
   if(q&&q.mod&&typeof q.mod.nuevo==='string') return 'm|'+q.mod.nuevo;
   const p=q.poi||{}; if(!p.n) return null;
@@ -1549,10 +1609,11 @@ function pintaFallos(){
   const keys=Object.keys(HIST.fallos), n=keys.length;
   const t=$('#fallosTxt'), b=$('#btnRepasarFallos'); if(!t||!b)return;
   t.innerHTML = n? `Tienes <b>${n}</b> pregunta${n===1?'':'s'} fallada${n===1?'':'s'} pendiente${n===1?'':'s'} de repaso (de todos tus exámenes). Una calle sale de la lista cuando la aciertas.` : 'No tienes fallos pendientes. Los fallos de tus exámenes se irán acumulando aquí.';
-  b.disabled=!n; b.textContent = n? `Repasar fallos (${n})` : 'Repasar fallos';
+  b.disabled=!n||!TF_PROGRESO_LISTO; b.textContent = n? `Repasar fallos (${n})` : 'Repasar fallos';
   const h=$('#histTxt'); if(h){ const na=Object.keys(HIST.asked).filter(k=>k.startsWith('v|')).length; const tot=(VIALES&&VIALES.length)||0; h.textContent = tot? `Calles ya preguntadas: ${na.toLocaleString('es-ES')} de ${tot.toLocaleString('es-ES')}` : ''; }
 }
 $('#btnRepasarFallos').onclick=()=>{
+  if(!TF_PROGRESO_LISTO)return;
   const items=Object.values(HIST.fallos).map(f=>f.q).filter(q=>q&&(q.poi||q.mod));
   if(!items.length)return;
   if(items.some(q=>q.tipo==='calleRapida'||q.tipo==='localiza') && !hayZonas()){ /* nada */ }
@@ -1560,7 +1621,8 @@ $('#btnRepasarFallos').onclick=()=>{
 };
 $('#btnHistReset').onclick=()=>{
   if(!confirm('¿Reiniciar tu progreso? Se borra el recuento de calles preguntadas y la lista de fallos. Las calles volverán a salir desde cero.'))return;
-  HIST=historialVacio(); try{ localStorage.removeItem(HIST_KEY); }catch(_){} pintaFallos();
+  HIST=historialVacio(); if(!tfEnIframe())try{ localStorage.removeItem(HIST_KEY); }catch(_){} pintaFallos();
+  if(TF_PROGRESO_LISTO&&TF_PROGRESO_CONTEXTO){ TF_PROGRESO_RESET=tfId(); tfPost({type:'tf-atlas:borrado',requestId:TF_PROGRESO_RESET,examenActivo:false}); }
 };
 function mismaZona(z,zSel){ return z&&zSel&&z.Parque===zSel.Parque&&z.Coopera===zSel.Coopera; }
 function construirExamen(dif,n,conZonas,vs){
@@ -1608,7 +1670,7 @@ function construirExamen(dif,n,conZonas,vs){
   const sync=()=>{ if(so.checked){ cz.checked=true; cz.disabled=true; const l=cz.closest('.tgl'); if(l)l.style.opacity=.5; } else { cz.disabled=false; const l=cz.closest('.tgl'); if(l)l.style.opacity=''; } };
   so.addEventListener('change',sync); sync();
 })();
-$('#btnEmpezar').onclick=async ()=>{  const dif=EX_DIF, btn=$('#btnEmpezar'), txt0=btn.textContent;
+$('#btnEmpezar').onclick=async ()=>{  if(!TF_PROGRESO_LISTO)return; const dif=EX_DIF, btn=$('#btnEmpezar'), txt0=btn.textContent;
   btn.disabled=true; btn.textContent='Cargando callejero…';
   let vs=null; try{ vs=await cargarViales(); }catch(_){}
   btn.disabled=false; btn.textContent=txt0;
@@ -1618,7 +1680,9 @@ $('#btnEmpezar').onclick=async ()=>{  const dif=EX_DIF, btn=$('#btnEmpezar'), tx
   EX.qs=qs; empezar();
 };
 function empezar(){
+  if(!TF_PROGRESO_LISTO)return;
   EX.on=true; EX.i=0; EX.aciertos=0; EX.racha=0; EX.puntos=0;
+  tfActividad(true);
   EX.qs.forEach(q=>{ delete q._vista; delete q.ok; delete q.detalle; });
   EX.tol=parseInt($('#cfgTol').value);
   $('#examCfg').style.display='none'; $('#examLive').style.display='block';
@@ -1795,7 +1859,7 @@ $('#btnSig').onclick=()=>{
 $('#btnAbandonar').onclick=()=>{ EX.qs=EX.qs.slice(0,EX.i+(EX.espera?0:1)); fin(); };
 $('#qMin').onclick=()=>{ const on=$('#qbar').classList.toggle('min'); $('#qMin').textContent=on?'▴':'▾'; };
 function fin(){
-  EX.on=false; EX.espera=false; $('#map').style.cursor='';
+  EX.on=false; EX.espera=false; tfActividad(false); $('#map').style.cursor='';
   $('#qbar').classList.remove('show'); EX.capa.clearLayers();
   /* restaurar capas y base */
   setBase(EX.baseAntes);

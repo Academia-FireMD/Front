@@ -1,4 +1,17 @@
 <div class="cj-embed">
+  <div class="cj-embed__sync">
+    <p role="status" aria-live="polite" aria-atomic="true">
+      {{ estadoProgreso.texto }}
+    </p>
+    <button
+      type="button"
+      data-testid="callejero-progreso-reintentar"
+      [hidden]="!puedeReintentar"
+      (click)="reintentarProgreso()"
+    >
+      Reintentar sincronización
+    </button>
+  </div>
   <iframe
     #callejeroFrame
     class="cj-embed__frame"

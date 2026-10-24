@@ -192,6 +192,7 @@ interface CallejeroState {
   routeApiUnavailable: boolean;
   routePayload: unknown | null;
   valenciaAutorizada: boolean;
+  escriturasProgresoEmbed: { method: string; body: unknown }[];
 }
 
 function freshState(): CallejeroState {
@@ -206,7 +207,21 @@ function freshState(): CallejeroState {
     routeApiUnavailable: false,
     routePayload: null,
     valenciaAutorizada: true,
+    escriturasProgresoEmbed: [],
   };
+}
+
+function estadoValenciaEscrito(
+  state: CallejeroState,
+): Record<string, unknown> | null {
+  const escritura = [...state.escriturasProgresoEmbed]
+    .reverse()
+    .find(({ method }) => method === 'PUT' || method === 'POST');
+  if (!escritura?.body || typeof escritura.body !== 'object') return null;
+  const estado = (escritura.body as { estado?: unknown }).estado;
+  return estado && typeof estado === 'object' && !Array.isArray(estado)
+    ? (estado as Record<string, unknown>)
+    : null;
 }
 
 const isXhr = (req: Request) => {
@@ -263,6 +278,67 @@ async function setupCallejeroInterceptors(
   page: Page,
   state: CallejeroState,
 ): Promise<void> {
+  let progresoRemoto: Record<string, unknown> | null = null;
+  let revisionProgreso = 0;
+  await page.route('**/callejero/mi-progreso/valencia**', async (route) => {
+    const method = route.request().method();
+    const url = new URL(route.request().url());
+    if (method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          modalidad: 'valencia',
+          versionFormato: 1,
+          revision: revisionProgreso,
+          estado: progresoRemoto,
+          actualizadoEn: revisionProgreso ? '2026-10-24T09:00:00.000Z' : null,
+        }),
+      });
+      return;
+    }
+    if (method === 'PUT' || method === 'POST') {
+      const body = route.request().postDataJSON() as {
+        estado?: Record<string, unknown>;
+      };
+      state.escriturasProgresoEmbed.push({ method, body });
+      progresoRemoto = body.estado ?? null;
+      revisionProgreso += 1;
+      const importada = url.pathname.endsWith('/importar');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          modalidad: 'valencia',
+          versionFormato: 1,
+          revision: revisionProgreso,
+          estado: progresoRemoto,
+          actualizadoEn: '2026-10-24T09:00:01.000Z',
+          ...(importada ? { importado: true } : {}),
+        }),
+      });
+      return;
+    }
+    if (method === 'DELETE') {
+      state.escriturasProgresoEmbed.push({ method, body: null });
+      progresoRemoto = null;
+      revisionProgreso += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          modalidad: 'valencia',
+          versionFormato: 1,
+          revision: revisionProgreso,
+          estado: null,
+          actualizadoEn: '2026-10-24T09:00:02.000Z',
+        }),
+      });
+      return;
+    }
+    await route.fallback();
+  });
+
   // GET /callejero/ciudades
   await page.route('**/callejero/ciudades', (route) => {
     if (!isXhr(route.request())) return route.continue();
@@ -831,7 +907,7 @@ test.describe('Módulo Callejero (alumno)', () => {
     expect(preguntasBomberos.join(' ')).not.toMatch(/centre hist[oò]ric|centro hist[oó]rico/i);
   });
 
-  test('sanea historial legado sin perder hospitales, calles ni modificaciones válidas', async ({
+  test('sanea el legado al migrarlo sin modificar la copia de solo lectura', async ({
     page,
   }) => {
     const history = String.raw`{"asked":{"p|Hospital Clínico Universitario":4,"m|Pl. de la Llotgeta":2,"v|Carrer de la Pau|39.4700,-0.3700":3,"p|Parque de Bomberos Centre Històric":7,"v|dato inválido":"3","constructor":99,"__proto__":{"polluted":true}},"fallos":{"p|Hospital Clínico Universitario":{"n":2,"t":1700000000000,"q":{"poi":{"n":"Hospital Clínico Universitario","c":"hospital","lat":39.478678,"lng":-0.36129,"_m":{"leaflet":true},"_ix":{"bad":true},"datoPrivado":"quitar"},"zona":{"Parque":"Norte","Coopera":"Nord","AreaName":"Norte","nombre":"Zona Norte","polys":[[[39,-0.3],[40,-0.3],[40,-0.4]]]},"tipo":"localiza","extra":"quitar"}},"m|Pl. de la Llotgeta":{"n":1,"t":1700000000001,"q":{"mod":{"nuevo":"Pl. de la Llotgeta","antiguo":"Pl. dels Màrtirs"},"tipo":"modificada","extra":"quitar"}},"p|Hospital Casa de Salud (La Salud)":{"n":1,"t":1700000000003,"q":{"poi":{"n":"Hospital Casa de Salud (La Salud)","c":"hospital","lat":39.48,"lng":-0.36},"zona":{"Parque":"Norte"},"tipo":"coopera"}},"p|Parque de Bomberos Centre Històric":{"n":1,"t":1700000000002,"q":{"poi":{"n":"Parque de Bomberos Centre Històric","c":"bomberos","lat":39.477007,"lng":-0.380257},"tipo":"localiza"}},"basura":{"n":"x","q":null}}}`;
@@ -842,12 +918,14 @@ test.describe('Módulo Callejero (alumno)', () => {
     }, history);
 
     const frame = await irACallejero(page);
+    await expect(page.getByRole('status')).toContainText('Guardado en tu cuenta.');
+    await expect(frame.locator('#btnEmpezar + .nota')).not.toContainText(
+      'se guarda en tu navegador',
+    );
     await frame.locator('#tabExamen').click();
     await expect(frame.locator('#btnRepasarFallos')).toHaveText('Repasar fallos (2)');
 
-    const saved = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('tf_hist_v1') ?? 'null'),
-    );
+    const saved = await frame.locator('html').evaluate(() => eval('HIST'));
     expect(Object.keys(saved.asked).sort()).toEqual(
       [
         'm|Pl. de la Llotgeta',
@@ -872,6 +950,19 @@ test.describe('Módulo Callejero (alumno)', () => {
         eval(`({polluted:Object.prototype.polluted,nonOperational:Object.keys(HIST.fallos).some(k=>/centre hist[oò]ric|centro hist[oó]rico/i.test(k))})`),
       ),
     ).toEqual({ polluted: undefined, nonOperational: false });
+    expect(
+      await page.evaluate(() => localStorage.getItem('tf_hist_v1')),
+    ).toBe(history);
+    expect(currentState.escriturasProgresoEmbed[0]).toMatchObject({
+      method: 'POST',
+      body: {
+        versionFormato: 1,
+        estado: {
+          asked: expect.any(Object),
+          fallos: expect.any(Object),
+        },
+      },
+    });
   });
 
   test('el repaso de historial legado muestra el resumen como texto y no ejecuta HTML', async ({
@@ -1030,11 +1121,12 @@ test.describe('Módulo Callejero (alumno)', () => {
         ];
       }),
     );
+    const historialLegado = JSON.stringify({ asked: {}, fallos });
     await page.addInitScript((serialized) => {
       if (location.pathname.endsWith('/valencia_27.html')) {
         localStorage.setItem('tf_hist_v1', serialized);
       }
-    }, JSON.stringify({ asked: {}, fallos }));
+    }, historialLegado);
 
     const frame = await irACallejero(page);
     await frame.locator('#tabExamen').click();
@@ -1057,19 +1149,35 @@ test.describe('Módulo Callejero (alumno)', () => {
     await expect(frame.locator('#resAcierto')).toHaveText('40/40');
     await expect(frame.locator('#resTabla tr')).toHaveCount(40);
 
-    const remainingFailures = await page.evaluate(() => {
-      const historial = JSON.parse(localStorage.getItem('tf_hist_v1') ?? 'null') as {
-        fallos?: Record<string, unknown>;
-      } | null;
-      return Object.keys(historial?.fallos ?? {}).length;
-    });
-    expect(remainingFailures).toBe(0);
+    await expect
+      .poll(() => {
+        const estado = estadoValenciaEscrito(currentState);
+        return Object.keys(
+          (estado?.['fallos'] as Record<string, unknown>) ?? {},
+        ).length;
+      })
+      .toBe(0);
+    const estadoRemoto = estadoValenciaEscrito(currentState);
+    expect(
+      Object.keys((estadoRemoto?.['asked'] as Record<string, unknown>) ?? {}),
+    ).toHaveLength(40);
+    expect(await page.evaluate(() => localStorage.getItem('tf_hist_v1'))).toBe(
+      historialLegado,
+    );
   });
 
   test('fallar bomberos y hospitales persiste en examen mixto y repasar un solo fallo lo elimina', async ({
     page,
   }) => {
     test.setTimeout(90_000);
+    await page.addInitScript(() => {
+      if (!location.pathname.endsWith('/valencia_27.html')) return;
+      let seed = 0x1a2b3c4d;
+      Math.random = () => {
+        seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
+        return seed / 0x1_0000_0000;
+      };
+    });
     let frame = await irACallejero(page);
     await frame.locator('#tabExamen').click();
     await frame.locator('#cfgN').selectOption({ label: '40' });
@@ -1105,11 +1213,20 @@ test.describe('Módulo Callejero (alumno)', () => {
     await expect(frame.locator('#velo')).toHaveClass(/show/);
 
     type HistorialFallosPersistidos = {
+      asked: Record<string, number>;
       fallos: Record<string, { q: { poi: { c: string } } }>;
     };
-    const historyWithTwoFailures = (await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('tf_hist_v1') ?? 'null'),
-    )) as HistorialFallosPersistidos;
+    await expect
+      .poll(() => {
+        const estado = estadoValenciaEscrito(currentState);
+        return Object.keys(
+          (estado?.['fallos'] as Record<string, unknown>) ?? {},
+        ).length;
+      })
+      .toBe(2);
+    const historyWithTwoFailures = estadoValenciaEscrito(
+      currentState,
+    )! as HistorialFallosPersistidos;
     const failureKeys = Object.keys(historyWithTwoFailures.fallos).sort();
     expect(failureKeys).toHaveLength(2);
     const failedCategories = Object.values(historyWithTwoFailures.fallos).map(
@@ -1119,6 +1236,7 @@ test.describe('Módulo Callejero (alumno)', () => {
       expect.arrayContaining(['hospital', 'bomberos']),
     );
     expect(JSON.stringify(historyWithTwoFailures)).not.toMatch(/"_(m|ix)"|"polys"/);
+    expect(await page.evaluate(() => localStorage.getItem('tf_hist_v1'))).toBeNull();
 
     await frame.locator('#btnCerrarRes').click();
     await page.reload();
@@ -1132,13 +1250,22 @@ test.describe('Módulo Callejero (alumno)', () => {
     await frame.locator('#btnCerrarRes').click();
     await expect(frame.locator('#btnRepasarFallos')).toHaveText('Repasar fallos (1)');
 
-    const historyWithOneFailure = (await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('tf_hist_v1') ?? 'null'),
-    )) as HistorialFallosPersistidos;
+    await expect
+      .poll(() => {
+        const estado = estadoValenciaEscrito(currentState);
+        return Object.keys(
+          (estado?.['fallos'] as Record<string, unknown>) ?? {},
+        ).length;
+      })
+      .toBe(1);
+    const historyWithOneFailure = estadoValenciaEscrito(
+      currentState,
+    )! as HistorialFallosPersistidos;
     expect(Object.keys(historyWithOneFailure.fallos)).toHaveLength(1);
     expect(Object.values(historyWithOneFailure.fallos)[0].q.poi.c).not.toBe(
       (await preguntaActual(frame)).poi?.c,
     );
+    expect(await page.evaluate(() => localStorage.getItem('tf_hist_v1'))).toBeNull();
   });
 
   test('JSON de historial corrupto y almacenamiento bloqueado no impiden abrir el examen', async ({

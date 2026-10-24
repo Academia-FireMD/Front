@@ -1,7 +1,10 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
+  OnDestroy,
+  AfterViewInit,
   HostListener,
   ViewChild,
   inject,
@@ -10,6 +13,14 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { take } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
+import {
+  CallejeroProgresoAdapterService,
+  ControlProgresoEmbed,
+} from '../services/callejero-progreso-adapter.service';
+import {
+  EstadoProgresoSync,
+  ProgresoSyncMensaje,
+} from '../services/callejero-progreso.service';
 
 const AUTH_REQUEST_TYPE = 'tf-callejero-auth-request';
 const AUTH_RESPONSE_TYPE = 'tf-callejero-auth';
@@ -63,17 +74,53 @@ function esMensajeAuthRequest(value: unknown): value is AuthRequestMessage {
   templateUrl: './callejero-embed.component.html',
   styleUrl: './callejero-embed.component.scss',
 })
-export class CallejeroEmbedComponent {
+export class CallejeroEmbedComponent implements AfterViewInit, OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly auth = inject(AuthService);
+  private readonly progreso = inject(CallejeroProgresoAdapterService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  private controlProgreso: ControlProgresoEmbed | null = null;
   /** Referencia al iframe para validar `event.source` en postMessage. */
   @ViewChild('callejeroFrame', { static: true })
   iframeRef!: ElementRef<HTMLIFrameElement>;
 
   /** Ruta al estático servido por Netlify (fuera del router SPA). */
   readonly src: SafeResourceUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
-    '/callejero-embed/valencia_27.html?v=32',
+    '/callejero-embed/valencia_27.html?v=32&progreso=1',
   );
+
+  estadoProgreso: ProgresoSyncMensaje = {
+    estado: 'cargando',
+    texto: 'Cargando progreso de tu cuenta…',
+  };
+
+  get puedeReintentar(): boolean {
+    return (
+      this.estadoProgreso.estado === 'error' ||
+      this.estadoProgreso.estado === 'pendiente'
+    );
+  }
+
+  ngAfterViewInit(): void {
+    this.controlProgreso = this.progreso.connect(
+      this.iframeRef.nativeElement,
+      'valencia',
+      (estado) => this.publicarEstadoProgreso(estado),
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.controlProgreso?.destruir();
+  }
+
+  reintentarProgreso(): void {
+    this.controlProgreso?.reintentar();
+  }
+
+  private publicarEstadoProgreso(estado: ProgresoSyncMensaje): void {
+    this.estadoProgreso = estado;
+    this.changeDetector.markForCheck();
+  }
 
   /** Responde únicamente a una petición ya autenticada del iframe. */
   private responderAuth(request: AuthRequestMessage): void {
