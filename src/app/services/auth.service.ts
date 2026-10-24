@@ -3,7 +3,9 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import {
   BehaviorSubject,
+  distinctUntilChanged,
   Observable,
+  map,
   of,
   switchMap,
   tap,
@@ -20,6 +22,11 @@ import * as UserActions from '../store/user/user.actions';
 import { ApiBaseService } from './api-base.service';
 import { UserService } from './user.service';
 
+export interface CurrentAuthIdentity {
+  sub: unknown;
+  isImpersonating: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -28,6 +35,24 @@ export class AuthService extends ApiBaseService {
   private currentDecodedUserSubject = new BehaviorSubject<any | null>(null);
   private _userService!: UserService;
   private refreshInFlight$: Observable<any> | null = null;
+
+  /** Claims mínimos de identidad, síncronos y de solo lectura para cambios de cuenta. */
+  public readonly currentIdentity$: Observable<CurrentAuthIdentity | null> =
+    this.currentDecodedUserSubject.asObservable().pipe(
+      map((claims) =>
+        claims && typeof claims === 'object'
+          ? {
+              sub: claims.sub,
+              isImpersonating: claims.isImpersonating === true,
+            }
+          : null,
+      ),
+      distinctUntilChanged(
+        (previous, current) =>
+          previous?.sub === current?.sub &&
+          previous?.isImpersonating === current?.isImpersonating,
+      ),
+    );
 
   public currentUser$ = this.currentDecodedUserSubject.pipe(
     switchMap((user) => {

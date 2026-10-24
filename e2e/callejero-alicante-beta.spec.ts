@@ -70,6 +70,95 @@ async function servirMapasConfigAlicante(
   );
 }
 
+async function instalarMockProgresoAlicante(
+  page: Page,
+  escrituras: { method: string; body: unknown }[] = [],
+  estadoInicial?: Record<string, unknown>,
+): Promise<void> {
+  let estado: Record<string, unknown> = estadoInicial ?? {
+    v: 2,
+    t: 0,
+    cats: {},
+    hist: [],
+    best: 0,
+    streak: 0,
+    items: {},
+    fallos: {},
+    superados: {},
+    ciclo: {},
+  };
+  let revision = 1;
+  await page.route('**/callejero/mi-progreso/alicante**', async (route) => {
+    const method = route.request().method();
+    const url = new URL(route.request().url());
+    if (method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          modalidad: 'alicante',
+          versionFormato: 2,
+          revision,
+          estado,
+          actualizadoEn: '2026-10-24T09:00:00.000Z',
+        }),
+      });
+      return;
+    }
+    if (method === 'PUT' || method === 'POST') {
+      const body = route.request().postDataJSON() as {
+        estado?: Record<string, unknown>;
+      };
+      escrituras.push({ method, body });
+      estado = body.estado ?? estado;
+      revision += 1;
+      const importada = url.pathname.endsWith('/importar');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          modalidad: 'alicante',
+          versionFormato: 2,
+          revision,
+          estado,
+          actualizadoEn: '2026-10-24T09:00:01.000Z',
+          ...(importada ? { importado: true } : {}),
+        }),
+      });
+      return;
+    }
+    if (method === 'DELETE') {
+      escrituras.push({ method, body: null });
+      estado = {
+        v: 2,
+        t: 0,
+        cats: {},
+        hist: [],
+        best: 0,
+        streak: 0,
+        items: {},
+        fallos: {},
+        superados: {},
+        ciclo: {},
+      };
+      revision += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          modalidad: 'alicante',
+          versionFormato: 2,
+          revision,
+          estado: null,
+          actualizadoEn: '2026-10-24T09:00:02.000Z',
+        }),
+      });
+      return;
+    }
+    await route.fallback();
+  });
+}
+
 function esTileExterna(hostname: string): boolean {
   const hosts = [
     'tile.opentopomap.org',
@@ -358,7 +447,7 @@ async function iframeAlicante(page: Page): Promise<FrameLocator> {
   await expect(iframe).toBeVisible({ timeout: 15_000 });
   await expect(iframe).toHaveAttribute(
     'src',
-    '/callejero-embed/alicante_16.html',
+    '/callejero-embed/alicante_16.html?v=17&progreso=1',
   );
   const frame = await iframe.contentFrame();
   if (!frame) throw new Error('No se pudo resolver el iframe Alicante');
@@ -369,6 +458,7 @@ async function iframeAlicante(page: Page): Promise<FrameLocator> {
 test.describe('Callejero Alicante — acceso por oposición', () => {
   test.beforeEach(async ({ page }) => {
     await instalarSondaAuth(page);
+    await instalarMockProgresoAlicante(page);
   });
 
   test('un alumno CPBA entra directamente en Alicante', async ({ page }) => {
@@ -388,7 +478,10 @@ test.describe('Callejero Alicante — acceso por oposición', () => {
     await expect(page).toHaveURL(/\/app\/callejero\/valencia$/);
     await expect(
       page.locator('[data-testid="callejero-embed-iframe"]'),
-    ).toHaveAttribute('src', '/callejero-embed/valencia_27.html?v=32');
+    ).toHaveAttribute(
+      'src',
+      '/callejero-embed/valencia_27.html?v=32&progreso=1',
+    );
     await expect(
       page.locator('[data-testid="callejero-alicante-iframe"]'),
     ).toHaveCount(0);
@@ -443,12 +536,15 @@ test.describe('Callejero Alicante — acceso por oposición', () => {
 test.describe('Callejero Alicante — beta autónoma', () => {
   let solicitudesExternas: Request[];
   let hostsNoPermitidos: string[];
+  let escriturasProgreso: { method: string; body: unknown }[];
 
   test.beforeEach(async ({ page }) => {
     solicitudesExternas = [];
     hostsNoPermitidos = [];
+    escriturasProgreso = [];
     await instalarSondaAuth(page);
     await instalarRedDeterminista(page, solicitudesExternas, hostsNoPermitidos);
+    await instalarMockProgresoAlicante(page, escriturasProgreso);
     await login(page, ['ALICANTE_CPBA']);
   });
 
@@ -501,9 +597,28 @@ test.describe('Callejero Alicante — beta autónoma', () => {
     ).toBe(true);
   });
 
-  test('el examen registra progreso solo en localStorage', async ({ page }) => {
+  test('el examen guarda progreso en la API y anuncia el ack remoto', async ({ page }) => {
+    const legadoOriginal = JSON.stringify({
+      v: 2,
+      t: 1_761_300_000_000,
+      cats: { muni: { ok: 1, tot: 2 } },
+      hist: [],
+      best: 50,
+      streak: 1,
+      items: {},
+      fallos: {},
+      superados: {},
+      ciclo: {},
+    });
+    await page.addInitScript((legacy) => {
+      localStorage.setItem('tf_atlas_qz', legacy);
+    }, legadoOriginal);
     await page.goto('/app/callejero/alicante');
     const frame = await iframeAlicante(page);
+    await expect(page.getByRole('status')).toContainText('Guardado en tu cuenta.');
+    await expect(frame.locator('#beta-aviso')).not.toContainText(
+      'solo en este navegador',
+    );
 
     await frame.locator('#tab2Qz').click();
     await frame.locator('#qzBtnStart').click();
@@ -532,6 +647,111 @@ test.describe('Callejero Alicante — beta autónoma', () => {
       .evaluate(() => localStorage.getItem('tf_atlas_qz'));
     expect(progreso).toBeTruthy();
     expect(JSON.parse(progreso ?? '{}')).toHaveProperty('cats');
+    expect(
+      await frame.locator('html').evaluate(() =>
+        localStorage.getItem('tf_atlas_qz'),
+      ),
+    ).toBe(legadoOriginal);
+    await expect
+      .poll(() => escriturasProgreso.some((request) => request.method === 'PUT'))
+      .toBe(true);
+    const guardado = escriturasProgreso.find((request) => request.method === 'PUT');
+    expect(guardado?.body).toMatchObject({
+      versionFormato: 2,
+      estado: { cats: expect.any(Object), hist: expect.any(Array) },
+    });
+    await expect(page.getByRole('status')).toContainText('Guardado en tu cuenta.');
+  });
+
+  test('renderiza el progreso remoto hostil como texto y no ejecuta markup', async ({
+    page,
+  }) => {
+    const ataque = '<img data-progress-xss src=x onerror="window.__progressXss=1">';
+    const progresoHostil = {
+      v: 2,
+      t: 0,
+      cats: {},
+      hist: [{ d: ataque, lv: 'medio', pct: 75, ok: 3, tot: 4 }],
+      best: 0,
+      streak: 0,
+      items: {},
+      fallos: {
+        'muni:Agost|mun': {
+          id: 'muni:Agost',
+          t: 'mun',
+          c: 'muni',
+          n: ataque,
+          p: ataque,
+          r: ataque,
+          ok: 0,
+          ko: 1,
+          f: 100,
+          u: 0,
+        },
+      },
+      superados: {},
+      ciclo: {},
+    };
+    await page.unroute('**/callejero/mi-progreso/alicante**');
+    await instalarMockProgresoAlicante(page, escriturasProgreso, progresoHostil);
+    await page.goto('/app/callejero/alicante');
+    const frame = await iframeAlicante(page);
+    const stats = frame.locator('#qzStats');
+
+    await expect(page.getByRole('status')).toContainText('Guardado en tu cuenta.');
+    await expect(frame.locator('#qzSyncStatus')).toContainText('Guardado en tu cuenta.');
+    await expect(stats).toContainText(ataque);
+    await expect(stats.locator('[data-progress-xss]')).toHaveCount(0);
+    await expect
+      .poll(() =>
+        frame
+          .locator('html')
+          .evaluate(
+            () =>
+              (window as Window & { __progressXss?: number }).__progressXss ??
+              null,
+          ),
+      )
+      .toBeNull();
+    await expect(stats.locator('.qz-fallo .nm')).toHaveAttribute('title', ataque);
+    await expect(stats).toContainText('Últimos exámenes');
+    await expect(stats.locator('.qz-hist')).toContainText(
+      `${ataque} · Medio · 75% (3/4)`,
+    );
+  });
+
+  test('standalone conserva y no ejecuta un progreso local con cats anidado corrupto', async ({
+    page,
+  }) => {
+    const progresoCorrupto = JSON.stringify({
+      v: 2,
+      t: 0,
+      cats: { muni: null },
+      hist: [],
+      best: 0,
+      streak: 0,
+      items: {},
+      fallos: {},
+      superados: {},
+      ciclo: {},
+    });
+    const erroresPagina: string[] = [];
+    page.on('pageerror', (error) => erroresPagina.push(error.message));
+    await page.addInitScript((estado) => {
+      localStorage.setItem('tf_atlas_qz', estado);
+    }, progresoCorrupto);
+
+    await page.goto('/callejero-embed/alicante_16.html?v=17');
+
+    await expect(page.locator('#qzBtnStart')).toBeDisabled();
+    await expect(page.locator('#qzSyncStatus')).toContainText(
+      'formato inválido',
+    );
+    expect(
+      await page.evaluate(() => localStorage.getItem('tf_atlas_qz')),
+    ).toBe(progresoCorrupto);
+    expect(erroresPagina).toEqual([]);
+    await expect(page.locator('[data-progress-xss]')).toHaveCount(0);
   });
 
   test('escapa nombres y vías devueltos por proveedores externos', async ({
@@ -592,8 +812,12 @@ test.describe('Callejero Alicante — beta autónoma', () => {
 });
 
 test.describe('Callejero Alicante — recuperación cartográfica', () => {
+  let escriturasProgreso: { method: string; body: unknown }[];
+
   test.beforeEach(async ({ page }) => {
+    escriturasProgreso = [];
     await instalarSondaAuth(page);
+    await instalarMockProgresoAlicante(page, escriturasProgreso);
     await login(page, ['ALICANTE_CPBA']);
   });
 

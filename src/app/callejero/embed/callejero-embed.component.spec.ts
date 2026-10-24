@@ -3,6 +3,8 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
+import { CallejeroProgresoAdapterService } from '../services/callejero-progreso-adapter.service';
+import { ProgresoSyncMensaje } from '../services/callejero-progreso.service';
 import { CallejeroEmbedComponent } from './callejero-embed.component';
 
 describe('CallejeroEmbedComponent', () => {
@@ -14,6 +16,8 @@ describe('CallejeroEmbedComponent', () => {
   };
   let postMessageSpy: jest.Mock;
   let mockContentWindow: Window;
+  let conectarProgreso: jest.Mock;
+  let controlProgreso: { reintentar: jest.Mock; destruir: jest.Mock };
 
   beforeEach(async () => {
     postMessageSpy = jest.fn();
@@ -27,10 +31,18 @@ describe('CallejeroEmbedComponent', () => {
         .fn()
         .mockReturnValue(of({ access_token: 'fresh-token' })),
     };
+    controlProgreso = { reintentar: jest.fn(), destruir: jest.fn() };
+    conectarProgreso = jest.fn().mockReturnValue(controlProgreso);
 
     await TestBed.configureTestingModule({
       imports: [CallejeroEmbedComponent],
-      providers: [{ provide: AuthService, useValue: mockAuthService }],
+      providers: [
+        { provide: AuthService, useValue: mockAuthService },
+        {
+          provide: CallejeroProgresoAdapterService,
+          useValue: { connect: conectarProgreso },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CallejeroEmbedComponent);
@@ -59,7 +71,7 @@ describe('CallejeroEmbedComponent', () => {
     const sanitizer = TestBed.inject(DomSanitizer);
     const url = sanitizer.sanitize(4, component.src);
     expect(component).toBeTruthy();
-    expect(url).toBe('/callejero-embed/valencia_27.html?v=32');
+    expect(url).toBe('/callejero-embed/valencia_27.html?v=32&progreso=1');
     const iframe: HTMLIFrameElement | null =
       fixture.nativeElement.querySelector(
         '[data-testid=callejero-embed-iframe]',
@@ -70,6 +82,35 @@ describe('CallejeroEmbedComponent', () => {
 
   it('no envía credenciales espontáneamente al cargar el componente', () => {
     expect(postMessageSpy).not.toHaveBeenCalled();
+  });
+
+  it('conecta progreso Valencia y expone un estado accesible con reintento', () => {
+    expect(conectarProgreso).toHaveBeenCalledWith(
+      component.iframeRef.nativeElement,
+      'valencia',
+      expect.any(Function),
+    );
+
+    const publicar = conectarProgreso.mock.calls[0][2] as (
+      estado: ProgresoSyncMensaje,
+    ) => void;
+    publicar({ estado: 'pendiente', texto: 'Sin conexión; queda pendiente.' });
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[role="status"]')?.textContent,
+    ).toContain('Sin conexión; queda pendiente.');
+    const retry = fixture.nativeElement.querySelector(
+      '[data-testid="callejero-progreso-reintentar"]',
+    ) as HTMLButtonElement;
+    expect(retry.hidden).toBe(false);
+    retry.click();
+    expect(controlProgreso.reintentar).toHaveBeenCalledTimes(1);
+  });
+
+  it('destruye el bridge y sus listeners al destruir el wrapper', () => {
+    fixture.destroy();
+    expect(controlProgreso.destruir).toHaveBeenCalledTimes(1);
   });
 
   it('responde non-force con requestId, token y apiBase del build', () => {
