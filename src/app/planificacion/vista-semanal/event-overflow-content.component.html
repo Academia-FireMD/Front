@@ -1,6 +1,9 @@
 <ng-template #overflowTooltip>
   <div class="calendar-event-overflow-tooltip">
     <strong>{{ displayedTitle }}</strong>
+    <p *ngIf="contextText?.trim()" class="event-context-text">
+      {{ contextText }}
+    </p>
     <markdown *ngIf="description?.trim()" [data]="description"></markdown>
   </div>
 </ng-template>
@@ -9,6 +12,7 @@
   #surface
   class="event-overflow-surface"
   [class.description-overflow]="descriptionIsTruncated"
+  [class.description-hidden]="descriptionHidden"
   [pTooltip]="hasOverflow ? overflowTooltip : ''"
   tooltipStyleClass="event-overflow-tooltip-container"
   tooltipEvent="both"
@@ -21,14 +25,8 @@
   [attr.tabindex]="hasOverflow ? 0 : null"
   [attr.aria-label]="hasOverflow ? tooltipAccessibleText : null"
   [attr.data-overflow]="hasOverflow ? 'true' : 'false'"
+  [attr.data-compact]="isCompact ? 'true' : 'false'"
   data-testid="event-overflow-surface"
 >
   <ng-content></ng-content>
-  <span
-    *ngIf="descriptionIsTruncated"
-    class="event-overflow-indicator"
-    aria-hidden="true"
-    data-testid="event-overflow-indicator"
-    >…</span
-  >
 </div>

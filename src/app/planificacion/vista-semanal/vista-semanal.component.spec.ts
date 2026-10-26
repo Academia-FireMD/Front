@@ -99,6 +99,26 @@ describe('VistaSemanalComponent', () => {
       expect(component.etiquetaFisica(new Date(2026, 6, 16))).toBe('');
     });
 
+    it('contextoFisicaDia incluye el resumen y el estado de cada disciplina', () => {
+      expect(component.contextoFisicaDia(dia)).toBe(
+        'Plan físico: 0/2. Cuerda 2 (pendiente), Carrera 2 (pendiente)',
+      );
+
+      component.resumenFisica = [
+        {
+          ...component.resumenFisica[0],
+          disciplinas: component.resumenFisica[0].disciplinas.map(
+            (disciplina, index) =>
+              index === 0 ? { ...disciplina, realizado: true } : disciplina,
+          ),
+        },
+      ];
+      expect(component.contextoFisicaDia(dia)).toBe(
+        'Plan físico: 1/2. Cuerda 2 (realizada), Carrera 2 (pendiente)',
+      );
+      expect(component.contextoFisicaDia(new Date(2026, 6, 16))).toBe('');
+    });
+
     it('resumenFisica vacío (bloque BASIC/sin plan) no rompe nada: tieneFisica siempre false', () => {
       component.resumenFisica = [];
       expect(component.tieneFisica(dia)).toBe(false);
@@ -235,7 +255,16 @@ describe('VistaSemanalComponent', () => {
     it('progresoFisicaDia resume las disciplinas físicas para información', () => {
       expect(component.progresoFisicaDia(dia)).toEqual({ hechas: 1, total: 2 });
 
-      component.resumenFisica[0].disciplinas[1].realizado = true;
+      const actualizado = [
+        {
+          ...component.resumenFisica[0],
+          disciplinas: component.resumenFisica[0].disciplinas.map(
+            (disciplina, index) =>
+              index === 1 ? { ...disciplina, realizado: true } : disciplina,
+          ),
+        },
+      ];
+      component.resumenFisica = actualizado;
       expect(component.progresoFisicaDia(dia)).toEqual({ hechas: 2, total: 2 });
       expect(component.progresoFisicaDia(new Date(2026, 6, 16))).toEqual({
         hechas: 0,
@@ -260,6 +289,7 @@ describe('VistaSemanalComponent', () => {
       );
 
       vinculadoPendiente.meta.subBloque.realizado = true;
+      component.events = [...component.events];
       expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
         2,
       );
@@ -308,6 +338,140 @@ describe('VistaSemanalComponent', () => {
 
       peticion.error(new Error('offline'));
       expect(vinculado.meta.subBloque.realizado).toBe(false);
+    });
+  });
+
+  describe('índices por día y su invalidación', () => {
+    const dia = new Date(2026, 6, 15);
+    const diaSiguiente = new Date(2026, 6, 16);
+
+    const crearEvento = (
+      id: number,
+      fecha: Date,
+      { realizado = false, esPersonalizado = false } = {},
+    ): any => ({
+      title: `Evento ${id}`,
+      start: fecha,
+      end: new Date(fecha.getTime() + 60 * 60000),
+      color: { primary: '#fff', secondary: '#fff' },
+      meta: {
+        esPersonalizado,
+        subBloque: {
+          id,
+          realizado,
+          esPersonalizado,
+          esEntrenamientoFisico: false,
+        },
+      },
+    });
+
+    it('resuelve el día por índice y lo invalida al mover el evento', () => {
+      const evento = crearEvento(1, new Date(2026, 6, 15, 9, 0));
+      component.events = [evento];
+
+      expect(component.getEventsForDay(component.events, dia)).toEqual([
+        evento,
+      ]);
+      expect(component.getEventsForDay(component.events, diaSiguiente)).toEqual(
+        [],
+      );
+
+      component.eventDropped({
+        event: evento,
+        newStart: new Date(2026, 6, 16, 9, 0),
+        newEnd: new Date(2026, 6, 16, 10, 0),
+        allDay: false,
+      } as any);
+
+      expect(component.getEventsForDay(component.events, dia)).toEqual([]);
+      expect(component.getEventsForDay(component.events, diaSiguiente)).toEqual(
+        [evento],
+      );
+    });
+
+    it('refleja la marca optimista en el progreso del día y revierte al fallar', () => {
+      const primero = crearEvento(1, new Date(2026, 6, 15, 9, 0));
+      const segundo = crearEvento(2, new Date(2026, 6, 15, 10, 0));
+      component.events = [primero, segundo];
+      const peticion = new Subject<void>();
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: jest.fn(() => peticion.asObservable()),
+      } as any;
+
+      component.updateEventProgress(primero);
+
+      expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
+        1,
+      );
+      expect(component.getProgressPercentageForDay(component.events, dia)).toBe(
+        50,
+      );
+      expect(component.getProgressBarColor(component.events, dia)).toBe(
+        '#ffc107',
+      );
+
+      peticion.error(new Error('offline'));
+
+      expect(primero.meta.subBloque.realizado).toBe(false);
+      expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
+        0,
+      );
+      expect(component.getProgressPercentageForDay(component.events, dia)).toBe(
+        0,
+      );
+      expect(component.getProgressBarColor(component.events, dia)).toBe(
+        '#dc3545',
+      );
+    });
+
+    it('recalcula los totales de física al recibir un nuevo resumen, sin recorrer el array en cada binding', () => {
+      component.resumenFisica = [
+        {
+          fecha: '2026-07-15',
+          bloqueId: 33,
+          disciplinas: [
+            {
+              nombre: 'Cuerda',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: false,
+            },
+            {
+              nombre: 'Carrera',
+              grupo: 'CARRERA',
+              color: '#fdeaa8',
+              realizado: false,
+            },
+          ],
+        },
+      ];
+
+      expect(component.tieneFisica(dia)).toBe(true);
+      expect(component.etiquetaFisica(dia)).toBe('Cuerda, Carrera');
+      expect(component.progresoFisicaDia(dia)).toEqual({
+        hechas: 0,
+        total: 2,
+      });
+
+      component.resumenFisica = [
+        {
+          fecha: '2026-07-15',
+          bloqueId: 33,
+          disciplinas: [
+            {
+              nombre: 'Cuerda',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: true,
+            },
+          ],
+        },
+      ];
+
+      expect(component.progresoFisicaDia(dia)).toEqual({
+        hechas: 1,
+        total: 1,
+      });
     });
   });
 });

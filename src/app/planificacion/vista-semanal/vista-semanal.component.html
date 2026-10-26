@@ -256,9 +256,19 @@
         <app-event-overflow-content
           [eventTitle]="weekEvent?.event?.title || 'Sin nombre'"
           [description]="weekEvent?.event?.meta?.subBloque?.comentarios"
+          [contextText]="
+            role == 'ALUMNO' &&
+            esEventoFisicaVinculado(weekEvent?.event) &&
+            tieneFisica(weekEvent?.event?.start)
+              ? contextoFisicaDia(weekEvent?.event?.start)
+              : null
+          "
         >
           <div
             class="custom-event-template"
+            [class.event-card--completed]="
+              !!weekEvent?.event?.meta?.subBloque?.realizado
+            "
             [ngClass]="{
               'evento-fisica-vinculada': esEventoFisicaVinculado(
                 weekEvent?.event
@@ -272,162 +282,191 @@
             }"
           >
             <div class="event-content">
-              <div class="event-header">
+              <div class="event-text">
+                <div class="event-header">
+                  <div
+                    class="event-title d-flex gap-1"
+                    [class.event-title--fisica]="
+                      role == 'ALUMNO' &&
+                      esEventoFisicaVinculado(weekEvent?.event) &&
+                      tieneFisica(weekEvent?.event?.start)
+                    "
+                  >
+                    <div
+                      class="event-title__line d-flex align-items-center gap-1"
+                    >
+                      <!-- Iconos para eventos personalizados -->
+                      <i
+                        *ngIf="weekEvent?.event?.meta?.esPersonalizado"
+                        class="pi pi-user text-orange-500"
+                        style="font-size: 0.8rem"
+                        pTooltip="Evento personal"
+                      ></i>
+                      <!-- Iconos existentes -->
+                      <i
+                        *ngIf="weekEvent?.event?.meta?.subBloque?.importante"
+                        class="pi pi-star-fill text-yellow-500"
+                        style="font-size: 0.8rem"
+                        pTooltip="Importante"
+                      ></i>
+                      <i
+                        *ngIf="weekEvent?.event?.meta?.subBloque?.tiempoAviso"
+                        class="pi pi-bell text-orange-500"
+                        style="font-size: 0.8rem"
+                        pTooltip="Aviso anticipado"
+                      ></i>
+                      <strong class="descripcion text-sm">{{
+                        weekEvent?.event?.title || "Sin nombre"
+                      }}</strong>
+                    </div>
+                    <!-- El resumen físico pertenece a la cabecera, bajo el título. -->
+                    <span
+                      *ngIf="
+                        role == 'ALUMNO' &&
+                        esEventoFisicaVinculado(weekEvent?.event) &&
+                        tieneFisica(weekEvent?.event?.start)
+                      "
+                      class="fisica-vinculada-info fisica-vinculada-estado"
+                      data-testid="fisica-vinculada-estado"
+                    >
+                      Plan físico:
+                      {{ progresoFisicaDia(weekEvent?.event?.start).hechas }}/{{
+                        progresoFisicaDia(weekEvent?.event?.start).total
+                      }}
+                    </span>
+                  </div>
+                </div>
+                <!-- Disciplinas del día en vivo (módulo de física) para el
+                   sub-bloque vinculado -->
                 <div
-                  class="event-title d-flex gap-1"
-                  [class.event-title--fisica]="
+                  class="fisica-vinculada-disciplinas"
+                  *ngIf="
                     role == 'ALUMNO' &&
                     esEventoFisicaVinculado(weekEvent?.event) &&
                     tieneFisica(weekEvent?.event?.start)
                   "
+                  data-testid="fisica-vinculada-disciplinas"
                 >
-                  <div
-                    class="event-title__line d-flex align-items-center gap-1"
-                  >
-                    <!-- Iconos para eventos personalizados -->
-                    <i
-                      *ngIf="weekEvent?.event?.meta?.esPersonalizado"
-                      class="pi pi-user text-orange-500"
-                      style="font-size: 0.8rem"
-                      pTooltip="Evento personal"
-                    ></i>
-                    <!-- Iconos existentes -->
-                    <i
-                      *ngIf="weekEvent?.event?.meta?.subBloque?.importante"
-                      class="pi pi-star-fill text-yellow-500"
-                      style="font-size: 0.8rem"
-                      pTooltip="Importante"
-                    ></i>
-                    <i
-                      *ngIf="weekEvent?.event?.meta?.subBloque?.tiempoAviso"
-                      class="pi pi-bell text-orange-500"
-                      style="font-size: 0.8rem"
-                      pTooltip="Aviso anticipado"
-                    ></i>
-                    <strong class="descripcion text-sm">{{
-                      weekEvent?.event?.title || "Sin nombre"
-                    }}</strong>
-                  </div>
-                  <!-- El resumen físico pertenece a la cabecera, bajo el título. -->
                   <span
-                    *ngIf="
-                      role == 'ALUMNO' &&
-                      esEventoFisicaVinculado(weekEvent?.event) &&
-                      tieneFisica(weekEvent?.event?.start)
-                    "
-                    class="fisica-vinculada-info fisica-vinculada-estado"
-                    data-testid="fisica-vinculada-estado"
+                    *ngFor="let d of disciplinasFisica(weekEvent?.event?.start)"
+                    class="fisica-vinculada-chip"
+                    [class.fisica-vinculada-chip--hecho]="d.realizado"
+                    [attr.data-testid]="'fisica-vinculada-chip-' + d.nombre"
                   >
-                    Plan físico:
-                    {{ progresoFisicaDia(weekEvent?.event?.start).hechas }}/{{
-                      progresoFisicaDia(weekEvent?.event?.start).total
-                    }}
+                    <span
+                      class="fisica-vinculada-dot"
+                      [style.background-color]="d.color"
+                    ></span
+                    >{{ d.nombre }}
                   </span>
                 </div>
-                <div class="event-actions">
-                  <!-- La navegación física queda en la fila de acciones, visible al recortar. -->
-                  <button
-                    *ngIf="
-                      role == 'ALUMNO' &&
-                      esEventoFisicaVinculado(weekEvent?.event) &&
-                      tieneFisica(weekEvent?.event?.start)
-                    "
-                    type="button"
-                    class="fisica-vinculada-link"
-                    (click)="abrirFisica(weekEvent?.event?.start, $event)"
-                    aria-label="Ver plan físico de este día"
-                    data-testid="fisica-vinculada-icono"
-                  >
-                    <i class="pi pi-external-link" aria-hidden="true"></i>
-                  </button>
-                  <!-- Ícono de comentario para eventos no personalizados -->
+                <markdown
+                  class="event-comments descripcion w-full"
+                  [data]="weekEvent?.event?.meta?.subBloque?.comentarios"
+                ></markdown>
+                <span
+                  class="event-overflow-indicator"
+                  aria-hidden="true"
+                  data-testid="event-overflow-indicator"
+                  >…</span
+                >
+              </div>
+              <div class="event-actions">
+                <!-- La navegación física queda en la columna de acciones, visible al recortar. -->
+                <button
+                  *ngIf="
+                    role == 'ALUMNO' &&
+                    esEventoFisicaVinculado(weekEvent?.event) &&
+                    tieneFisica(weekEvent?.event?.start)
+                  "
+                  type="button"
+                  class="fisica-vinculada-link"
+                  (click)="abrirFisica(weekEvent?.event?.start, $event)"
+                  aria-label="Ver plan físico de este día"
+                  data-testid="fisica-vinculada-icono"
+                >
+                  <i class="pi pi-external-link" aria-hidden="true"></i>
+                </button>
+                <!-- Comentario para eventos no personalizados -->
+                <button
+                  *ngIf="!weekEvent?.event?.meta?.esPersonalizado"
+                  type="button"
+                  class="event-icon-button comment-icon"
+                  data-testid="event-comment-button"
+                  (click)="
+                    openCommentDialog(weekEvent?.event?.meta?.subBloque, $event)
+                  "
+                  [attr.aria-label]="
+                    (weekEvent?.event?.meta?.subBloque?.comentariosAlumno
+                      ? 'Editar comentario de '
+                      : 'Añadir comentario a ') +
+                    (weekEvent?.event?.title || 'actividad')
+                  "
+                >
                   <i
-                    *ngIf="!weekEvent?.event?.meta?.esPersonalizado"
                     class="{{
                       !!weekEvent?.event?.meta?.subBloque?.comentariosAlumno
                         ? 'fa-solid'
                         : 'fa-regular'
-                    }} fa-comment comment-icon text-primary"
-                    (click)="
-                      openCommentDialog(
-                        weekEvent?.event?.meta?.subBloque,
-                        $event
-                      )
-                    "
+                    }} fa-comment text-primary"
+                    aria-hidden="true"
                   ></i>
+                </button>
 
-                  <!-- Ícono de borrar (adaptado para ambos tipos) -->
+                <!-- Borrado (adaptado para ambos tipos) -->
+                <button
+                  *ngIf="
+                    role == 'ADMIN' || weekEvent?.event?.meta?.esPersonalizado
+                  "
+                  type="button"
+                  class="event-icon-button event-delete-button"
+                  (click)="
+                    weekEvent?.event?.meta?.esPersonalizado
+                      ? deleteEventoPersonalizado(weekEvent?.event, $event)
+                      : deleteEvent(weekEvent?.event, $event)
+                  "
+                  [attr.aria-label]="
+                    'Eliminar evento: ' +
+                    (weekEvent?.event?.title || 'actividad')
+                  "
+                  data-testid="event-delete-button"
+                >
                   <i
                     class="fa-solid fa-trash-can text-primary"
-                    (click)="
-                      weekEvent?.event?.meta?.esPersonalizado
-                        ? deleteEventoPersonalizado(weekEvent?.event, $event)
-                        : deleteEvent(weekEvent?.event, $event)
-                    "
-                    *ngIf="
-                      role == 'ADMIN' || weekEvent?.event?.meta?.esPersonalizado
-                    "
+                    aria-hidden="true"
                   ></i>
+                </button>
 
-                  <!-- La marca del calendario es independiente del resumen físico. -->
-                  <button
-                    *ngIf="role == 'ALUMNO'"
-                    type="button"
-                    class="completion-toggle"
-                    role="checkbox"
-                    [attr.aria-checked]="
-                      !!weekEvent?.event?.meta?.subBloque?.realizado
-                    "
-                    [attr.aria-label]="
-                      (weekEvent?.event?.meta?.subBloque?.realizado
-                        ? 'Marcar pendiente: '
-                        : 'Marcar realizada: ') +
-                      (weekEvent?.event?.title || 'actividad')
-                    "
-                    [disabled]="isProgressSaving(weekEvent?.event)"
-                    (click)="
-                      $event.stopPropagation();
-                      updateEventProgress(weekEvent?.event)
-                    "
-                    data-testid="completion-toggle"
-                  >
-                    <span class="completion-toggle__box" aria-hidden="true">
-                      <i
-                        *ngIf="weekEvent?.event?.meta?.subBloque?.realizado"
-                        class="pi pi-check"
-                      ></i>
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <!-- Disciplinas del día en vivo (módulo de física) para el
-                 sub-bloque vinculado -->
-              <div
-                class="fisica-vinculada-disciplinas"
-                *ngIf="
-                  role == 'ALUMNO' &&
-                  esEventoFisicaVinculado(weekEvent?.event) &&
-                  tieneFisica(weekEvent?.event?.start)
-                "
-                data-testid="fisica-vinculada-disciplinas"
-              >
-                <span
-                  *ngFor="let d of disciplinasFisica(weekEvent?.event?.start)"
-                  class="fisica-vinculada-chip"
-                  [class.fisica-vinculada-chip--hecho]="d.realizado"
-                  [attr.data-testid]="'fisica-vinculada-chip-' + d.nombre"
+                <!-- La marca del calendario es independiente del resumen físico. -->
+                <button
+                  *ngIf="role == 'ALUMNO'"
+                  type="button"
+                  class="completion-toggle"
+                  role="checkbox"
+                  [attr.aria-checked]="
+                    !!weekEvent?.event?.meta?.subBloque?.realizado
+                  "
+                  [attr.aria-label]="
+                    (weekEvent?.event?.meta?.subBloque?.realizado
+                      ? 'Marcar pendiente: '
+                      : 'Marcar realizada: ') +
+                    (weekEvent?.event?.title || 'actividad')
+                  "
+                  [disabled]="isProgressSaving(weekEvent?.event)"
+                  (click)="
+                    $event.stopPropagation();
+                    updateEventProgress(weekEvent?.event)
+                  "
+                  data-testid="completion-toggle"
                 >
-                  <span
-                    class="fisica-vinculada-dot"
-                    [style.background-color]="d.color"
-                  ></span
-                  >{{ d.nombre }}
-                </span>
+                  <span class="completion-toggle__box" aria-hidden="true">
+                    <i
+                      *ngIf="weekEvent?.event?.meta?.subBloque?.realizado"
+                      class="pi pi-check"
+                    ></i>
+                  </span>
+                </button>
               </div>
-              <markdown
-                class="event-comments descripcion w-full"
-                [data]="weekEvent?.event?.meta?.subBloque?.comentarios"
-              ></markdown>
             </div>
           </div>
         </app-event-overflow-content>

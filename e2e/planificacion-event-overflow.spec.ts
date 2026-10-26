@@ -70,6 +70,52 @@ function bloquesSinteticos() {
       realizado: false,
       comentariosAlumno: '',
     },
+    {
+      id: 9105,
+      planificacionId: PLAN_ID,
+      nombre: 'Fisico corto 15',
+      esEntrenamientoFisico: true,
+      horaInicio: new Date(hoy.getTime() - 60 * 60_000).toISOString(),
+      duracion: 15,
+      color: '#34d399',
+      comentarios: '',
+      realizado: false,
+      comentariosAlumno: '',
+    },
+    {
+      id: 9106,
+      planificacionId: PLAN_ID,
+      nombre: 'Fisico 60',
+      esEntrenamientoFisico: true,
+      horaInicio: new Date(hoy.getTime() + 2 * 60 * 60_000).toISOString(),
+      duracion: 60,
+      color: '#34d399',
+      comentarios: '',
+      realizado: false,
+      comentariosAlumno: '',
+    },
+    {
+      id: 9107,
+      planificacionId: PLAN_ID,
+      nombre: 'Quince A',
+      horaInicio: new Date(hoy.getTime() - 3 * 60 * 60_000).toISOString(),
+      duracion: 15,
+      color: '#f59e0b',
+      comentarios: '',
+      realizado: false,
+      comentariosAlumno: '',
+    },
+    {
+      id: 9108,
+      planificacionId: PLAN_ID,
+      nombre: 'Quince B',
+      horaInicio: new Date(hoy.getTime() - 2.75 * 60 * 60_000).toISOString(),
+      duracion: 15,
+      color: '#34d399',
+      comentarios: '',
+      realizado: false,
+      comentariosAlumno: '',
+    },
   ];
 }
 
@@ -118,9 +164,27 @@ async function prepararCalendario(page: Page) {
           bloqueId: 77,
           disciplinas: [
             {
-              nombre: 'Carrera',
+              nombre: 'Carrera de fondo',
               grupo: 'CARRERA',
               color: '#123456',
+              realizado: true,
+            },
+            {
+              nombre: 'Cuerda doble',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: false,
+            },
+            {
+              nombre: 'Natación técnica',
+              grupo: 'NATACION',
+              color: '#60a5fa',
+              realizado: true,
+            },
+            {
+              nombre: 'Circuito de fuerza',
+              grupo: 'FUERZA',
+              color: '#f59e0b',
               realizado: false,
             },
           ],
@@ -442,7 +506,7 @@ test('mantiene el acceso al plan físico dentro de un evento de una hora', async
   const title = vinculado.locator('.event-title strong');
   const status = vinculado.getByTestId('fisica-vinculada-estado');
   await expect(title).toBeVisible();
-  await expect(status).toContainText('Plan físico: 0/1');
+  await expect(status).toContainText('Plan físico: 2/4');
   const titleBounds = await title.boundingBox();
   const statusBounds = await status.boundingBox();
   expect(titleBounds).not.toBeNull();
@@ -460,5 +524,346 @@ test('mantiene el acceso al plan físico dentro de un evento de una hora', async
     tarjeta!.y + tarjeta!.height,
   );
   expect(api.cambiosProgreso).toEqual([]);
+  expect(api.peticionesSinInterceptar).toEqual([]);
+});
+
+test('conserva el contexto físico completo en compacto y cuando la tarjeta lo recorta', async ({
+  page,
+}) => {
+  const api = await prepararCalendario(page);
+
+  const compacto = evento(page, 'Fisico corto 15');
+  const compactoSuperficie = compacto.locator(
+    '[data-testid="event-overflow-surface"]',
+  );
+  await compacto.scrollIntoViewIfNeeded();
+  await expect(compactoSuperficie).toHaveAttribute('data-compact', 'true');
+  await expect(compactoSuperficie).toHaveAttribute('data-overflow', 'true');
+  // En compacto el resumen y los chips están ocultos por CSS...
+  await expect(compacto.getByTestId('fisica-vinculada-estado')).toBeHidden();
+  await expect(
+    compacto.getByTestId('fisica-vinculada-disciplinas'),
+  ).toBeHidden();
+  // ...pero el texto accesible conserva todo el contexto.
+  await expect(compactoSuperficie).toHaveAttribute(
+    'aria-label',
+    /Plan físico: 2\/4/,
+  );
+  await expect(compactoSuperficie).toHaveAttribute(
+    'aria-label',
+    /Carrera de fondo \(realizada\)/,
+  );
+  await expect(compactoSuperficie).toHaveAttribute(
+    'aria-label',
+    /Cuerda doble \(pendiente\)/,
+  );
+
+  await hoverSinTooltipPrevio(page, compactoSuperficie);
+  const tooltip = page.locator('.p-tooltip');
+  await expect(tooltip).toBeVisible();
+  const contexto = tooltip.locator('.event-context-text');
+  await expect(contexto).toContainText('Plan físico: 2/4');
+  for (const disciplina of [
+    'Carrera de fondo (realizada)',
+    'Cuerda doble (pendiente)',
+    'Natación técnica (realizada)',
+    'Circuito de fuerza (pendiente)',
+  ]) {
+    await expect(contexto).toContainText(disciplina);
+  }
+  await expect(tooltip).toHaveCSS('opacity', '1');
+  await capturarEvidencia(page, 'correction-contexto-fisico-compacto.png');
+  await page.keyboard.press('Escape');
+  await expect(tooltip).toBeHidden();
+
+  await moverPunteroAZonaNeutra(page);
+  await compactoSuperficie.focus();
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip.locator('.event-context-text')).toContainText(
+    'Plan físico: 2/4',
+  );
+  await page.keyboard.press('Escape');
+  await expect(tooltip).toBeHidden();
+
+  const normal = evento(page, 'Fisico 60');
+  const normalSuperficie = normal.locator(
+    '[data-testid="event-overflow-surface"]',
+  );
+  await normal.scrollIntoViewIfNeeded();
+  await expect(normalSuperficie).toHaveAttribute('data-compact', 'false');
+  // Sin comentarios y con el título corto: el recorte lo provoca el contexto.
+  await expect(normalSuperficie).toHaveAttribute('data-overflow', 'true');
+  await expect(normal.getByTestId('fisica-vinculada-estado')).toBeVisible();
+  await expect(normal.getByTestId('fisica-vinculada-estado')).toContainText(
+    'Plan físico: 2/4',
+  );
+  await hoverSinTooltipPrevio(page, normalSuperficie);
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip.locator('.event-context-text')).toContainText(
+    'Circuito de fuerza (pendiente)',
+  );
+  await expect(tooltip).toHaveCSS('opacity', '1');
+  await capturarEvidencia(page, 'correction-contexto-fisico-normal.png');
+  await page.keyboard.press('Escape');
+
+  // Con altura suficiente todo el contexto visible cabe: no hay tooltip.
+  const alto = 200;
+  await normalSuperficie.evaluate((element, nextHeight) => {
+    const container = element.closest(
+      '.cal-event-container',
+    ) as HTMLElement | null;
+    if (!container) throw new Error('No se encontró el contenedor del evento');
+    container.style.height = `${nextHeight}px`;
+  }, alto);
+  await expect
+    .poll(async () => (await normalSuperficie.boundingBox())?.height)
+    .toBeGreaterThan(alto - 20);
+  await expect(normalSuperficie).toHaveAttribute('data-overflow', 'false');
+  await moverPunteroAZonaNeutra(page);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
+  expect(api.peticionesSinInterceptar).toEqual([]);
+});
+
+test('refresca el contexto físico cuando cambia el resumen del día', async ({
+  page,
+}) => {
+  const api = await prepararCalendario(page);
+  const compacto = evento(page, 'Fisico corto 15');
+  const superficie = compacto.locator('[data-testid="event-overflow-surface"]');
+  await expect(superficie).toHaveAttribute('aria-label', /Plan físico: 2\/4/);
+
+  await page.evaluate(() => {
+    interface DisciplinaResumen {
+      nombre: string;
+      grupo: string;
+      color: string;
+      realizado: boolean;
+    }
+    interface ResumenFisico {
+      fecha: string;
+      bloqueId: number;
+      disciplinas: DisciplinaResumen[];
+    }
+    interface SignalResumenFisico {
+      (): ResumenFisico[];
+      set(value: ResumenFisico[]): void;
+    }
+    interface AngularDebug {
+      getComponent(
+        element: Element | null,
+      ): { resumenFisica: SignalResumenFisico } | null;
+      applyChanges(component: unknown): void;
+    }
+    const angular = (window as unknown as { ng?: AngularDebug }).ng;
+    const planificacion = angular?.getComponent(
+      document.querySelector('app-planificacion-mensual-edit'),
+    );
+    if (!angular || !planificacion) {
+      throw new Error('No se encontró el componente de planificación');
+    }
+    const fecha = planificacion.resumenFisica()[0]?.fecha;
+    if (!fecha) throw new Error('No hay resumen físico cargado');
+    planificacion.resumenFisica.set([
+      {
+        fecha,
+        bloqueId: 77,
+        disciplinas: [
+          {
+            nombre: 'Carrera de fondo',
+            grupo: 'CARRERA',
+            color: '#123456',
+            realizado: true,
+          },
+          {
+            nombre: 'Cuerda doble',
+            grupo: 'CUERDA',
+            color: '#9fe2d0',
+            realizado: true,
+          },
+        ],
+      },
+    ]);
+    angular.applyChanges(planificacion);
+  });
+
+  await expect(superficie).toHaveAttribute('aria-label', /Plan físico: 2\/2/);
+  await expect(superficie).toHaveAttribute(
+    'aria-label',
+    /Cuerda doble \(realizada\)/,
+  );
+  await hoverSinTooltipPrevio(page, superficie);
+  const tooltip = page.locator('.p-tooltip');
+  await expect(tooltip).toBeVisible();
+  const contexto = tooltip.locator('.event-context-text');
+  await expect(contexto).toContainText('Plan físico: 2/2');
+  await expect(contexto).toContainText('Carrera de fondo (realizada)');
+  await expect(contexto).toContainText('Cuerda doble (realizada)');
+  await expect(contexto).not.toContainText('Natación técnica');
+  expect(api.peticionesSinInterceptar).toEqual([]);
+});
+
+interface Rectangulo {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+function seSolapan(a: Rectangulo, b: Rectangulo): boolean {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+async function comprobarControlHastaBordes(
+  control: Locator,
+  minimo: number,
+): Promise<Rectangulo> {
+  const caja = await control.boundingBox();
+  expect(caja).not.toBeNull();
+  expect(caja!.width).toBeGreaterThanOrEqual(minimo - 0.1);
+  expect(caja!.height).toBeGreaterThanOrEqual(minimo - 0.1);
+  const aciertos = await control.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const puntos: Array<[number, number]> = [
+      [rect.x + rect.width / 2, rect.y + rect.height / 2],
+      [rect.x + 2, rect.y + 2],
+      [rect.right - 2, rect.y + 2],
+      [rect.x + 2, rect.bottom - 2],
+      [rect.right - 2, rect.bottom - 2],
+    ];
+    return puntos.map(([x, y]) => {
+      const objetivo = document.elementFromPoint(x, y);
+      return !!objetivo && (objetivo === element || element.contains(objetivo));
+    });
+  });
+  expect(aciertos.every(Boolean)).toBe(true);
+  return caja!;
+}
+
+async function estadoPersistidoDeEventos(page: Page, ids: number[]) {
+  return page.evaluate((eventIds) => {
+    interface EventoConMeta {
+      title?: string;
+      start: Date | string;
+      end?: Date | string | null;
+      meta?: { subBloque?: { id?: number; duracion?: number } };
+    }
+    const angular = (
+      window as unknown as {
+        ng?: {
+          getComponent: (
+            el: Element | null,
+          ) => { events?: EventoConMeta[] } | null;
+        };
+      }
+    ).ng;
+    const componente = angular?.getComponent(
+      document.querySelector('app-vista-semanal'),
+    );
+    return (componente?.events ?? [])
+      .filter((calendarEvent) =>
+        eventIds.includes(calendarEvent.meta?.subBloque?.id ?? -1),
+      )
+      .map((calendarEvent) => ({
+        id: calendarEvent.meta?.subBloque?.id,
+        title: calendarEvent.title,
+        start: new Date(calendarEvent.start).toISOString(),
+        end: calendarEvent.end
+          ? new Date(calendarEvent.end).toISOString()
+          : null,
+        duracion: calendarEvent.meta?.subBloque?.duracion,
+      }))
+      .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+  }, ids);
+}
+
+test('dos eventos consecutivos de 15 min no se cubren ni alteran sus horas', async ({
+  page,
+}) => {
+  const api = await prepararCalendario(page);
+  const quinceA = evento(page, 'Quince A');
+  const quinceB = evento(page, 'Quince B');
+  await quinceA.scrollIntoViewIfNeeded();
+  await expect(quinceA.locator('.event-title strong')).toBeVisible();
+  await expect(quinceB.locator('.event-title strong')).toBeVisible();
+
+  const tarjetaA = await quinceA
+    .locator('.custom-event-template')
+    .boundingBox();
+  const tarjetaB = await quinceB
+    .locator('.custom-event-template')
+    .boundingBox();
+  expect(tarjetaA).not.toBeNull();
+  expect(tarjetaB).not.toBeNull();
+  expect(seSolapan(tarjetaA!, tarjetaB!)).toBe(false);
+  // La cuadrícula conserva la escala: 15 min siguen siendo 15px de separación.
+  expect(tarjetaB!.y - tarjetaA!.y).toBeCloseTo(15, 0);
+
+  const controlesA: Rectangulo[] = [];
+  const controlesB: Rectangulo[] = [];
+  for (const [tarjeta, controles, prefijo] of [
+    [quinceA, controlesA, 'A'],
+    [quinceB, controlesB, 'B'],
+  ] as const) {
+    const cajaTarjeta = await tarjeta
+      .locator('.custom-event-template')
+      .boundingBox();
+    expect(cajaTarjeta).not.toBeNull();
+    for (const testId of ['completion-toggle', 'event-comment-button']) {
+      const caja = await comprobarControlHastaBordes(
+        tarjeta.getByTestId(testId),
+        24,
+      );
+      expect(caja.x).toBeGreaterThanOrEqual(cajaTarjeta!.x - 0.5);
+      expect(caja.y).toBeGreaterThanOrEqual(cajaTarjeta!.y - 0.5);
+      expect(caja.x + caja.width).toBeLessThanOrEqual(
+        cajaTarjeta!.x + cajaTarjeta!.width + 0.5,
+      );
+      expect(caja.y + caja.height).toBeLessThanOrEqual(
+        cajaTarjeta!.y + cajaTarjeta!.height + 0.5,
+      );
+      if (prefijo === 'A') controlesA.push(caja);
+      else controlesB.push(caja);
+    }
+  }
+  for (const controlA of controlesA) {
+    for (const controlB of controlesB) {
+      expect(seSolapan(controlA, controlB)).toBe(false);
+    }
+  }
+
+  const antes = await estadoPersistidoDeEventos(page, [9107, 9108]);
+  expect(antes).toHaveLength(2);
+  expect(
+    antes.map((calendarEvent) => ({
+      id: calendarEvent.id,
+      duracion: calendarEvent.duracion,
+    })),
+  ).toEqual([
+    { id: 9107, duracion: 15 },
+    { id: 9108, duracion: 15 },
+  ]);
+
+  await quinceA.getByTestId('completion-toggle').click();
+  await expect(quinceA.getByTestId('completion-toggle')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await quinceB.getByTestId('completion-toggle').click();
+  await expect(quinceB.getByTestId('completion-toggle')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+
+  expect(api.cambiosProgreso).toEqual([
+    { subBloqueId: 9107, planificacionId: PLAN_ID, realizado: true },
+    { subBloqueId: 9108, planificacionId: PLAN_ID, realizado: true },
+  ]);
+  const despues = await estadoPersistidoDeEventos(page, [9107, 9108]);
+  expect(despues).toEqual(antes);
   expect(api.peticionesSinInterceptar).toEqual([]);
 });

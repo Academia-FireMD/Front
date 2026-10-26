@@ -204,6 +204,11 @@ for (const viewport of [
     await expect(casilla).toHaveAttribute('aria-checked', 'false');
     await expect(casilla).toBeEnabled();
     expect(api.guardados()).toHaveLength(1);
+    await expect(
+      page
+        .locator('.toast-error, [class*="ngx-toastr"][class*="error"]')
+        .first(),
+    ).toContainText('No se pudo guardar el marcaje');
     await expect(page).toHaveURL(
       new RegExp(`/planificacion-mensual-alumno/${PLAN_ID}$`),
     );

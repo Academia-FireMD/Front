@@ -41,7 +41,8 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  padding: 0;
+  /* Aísla las tarjetas consecutivas: 2px arriba + 2px abajo = 4px reales. */
+  padding: 2px 0;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -66,8 +67,14 @@
   min-height: 0;
   box-sizing: border-box;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   overflow: hidden;
+}
+
+/* El estado marcado no debe cambiar dimensiones: anillo interior. */
+.event-card--completed {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
 }
 
 .checked-event {
@@ -75,10 +82,29 @@
 }
 
 .event-content {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  column-gap: 4px;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
+  /* El estilo global `.descripcion` añade margin-top 0.25rem al hacer
+     @extend de `.event-content`; dentro de la tarjeta lo anulamos para que
+     el contenido no se desplace fuera de los límites pintados. */
+  margin-top: 0;
+  overflow: hidden;
+  white-space: normal;
+}
+
+/* Columna de texto independiente: las acciones nunca le roban anchura ni
+   altura, así que un control de 44px no aplasta la descripción. */
+.event-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -91,6 +117,7 @@
 .event-comments {
   position: relative;
   flex: 1 1 0;
+  margin-top: 0;
   min-width: 0;
   min-height: 0;
   max-height: none;
@@ -103,21 +130,52 @@
   opacity: 0.8;
 }
 
+/* Indicador dentro de la columna de texto: nunca invade las acciones. */
+.event-overflow-indicator {
+  display: none;
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  padding: 0 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--text-color, #222);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+app-event-overflow-content.event-overflow-content--description-truncated
+  .event-overflow-indicator {
+  display: block;
+}
+
+app-event-overflow-content.event-overflow-content--compact
+  .event-overflow-indicator {
+  padding: 0 1px;
+  font-size: 10px;
+  line-height: 10px;
+}
+
 .event-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 4px;
+  display: block;
   flex: none;
   min-width: 0;
+  overflow: hidden;
 }
 
 .event-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  /* Sin separación interna: en una tarjeta compartida (50% del día) los tres
+     controles de 44px deben caber completos; los propios botones ya separan
+     visualmente sus iconos. */
+  gap: 0;
   justify-content: flex-end;
   flex: none;
+  align-self: start;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .event-title {
@@ -129,6 +187,7 @@
   strong {
     display: -webkit-box;
     flex: 1 1 auto;
+    margin-top: 0;
     min-width: 0;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -148,11 +207,27 @@
 .event-title--fisica {
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
+  gap: 1px;
 }
 
 .evento-fisica-vinculada .event-title strong {
   -webkit-line-clamp: 1;
+}
+
+.evento-fisica-vinculada .fisica-vinculada-info {
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.evento-fisica-vinculada .fisica-vinculada-disciplinas {
+  margin-top: 2px;
+  gap: 2px;
+}
+
+.evento-fisica-vinculada .fisica-vinculada-chip {
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 1.1;
 }
 
 .fisica-vinculada-info {
@@ -166,6 +241,20 @@
 
 :host ::ng-deep .event-comments p {
   margin: 0 0 0.35em;
+}
+
+:host ::ng-deep .event-comments ul,
+:host ::ng-deep .event-comments ol {
+  margin: 0 0 0.35em;
+  padding-left: 1.2em;
+}
+
+:host ::ng-deep .event-comments li {
+  margin: 0;
+}
+
+:host ::ng-deep .event-comments > :last-child {
+  margin-bottom: 0;
 }
 
 :host ::ng-deep .event-comments * {
@@ -189,6 +278,9 @@
   flex: none;
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -221,6 +313,64 @@
 .completion-toggle[aria-checked="true"] .completion-toggle__box {
   background: var(--primary-color);
   color: #fff;
+}
+
+/* Acciones secundarias: icono real en un botón para que sean accesibles y
+   operables con teclado sin cambiar el aspecto compacto del calendario. */
+.event-icon-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+}
+
+/* Densidad real de la tarjeta: <56px disponibles = compacta. El componente
+   de overflow mide su superficie y publica la clase en su host. */
+app-event-overflow-content.event-overflow-content--compact {
+  .custom-event-template {
+    padding: 1px 6px;
+  }
+
+  .event-title strong {
+    -webkit-line-clamp: 1;
+  }
+
+  /* En 24px de alto útil el resumen y los chips no caben completos; el
+     enlace al plan físico y la marca siguen disponibles en la columna. */
+  .fisica-vinculada-info,
+  .fisica-vinculada-disciplinas {
+    display: none;
+  }
+
+  .completion-toggle,
+  .fisica-vinculada-link,
+  .event-icon-button {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  .completion-toggle__box {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
 }
 
 .custom-header {
@@ -337,6 +487,7 @@
 
   &:focus-visible {
     outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
   }
 }
 

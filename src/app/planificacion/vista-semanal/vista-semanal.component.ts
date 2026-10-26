@@ -35,6 +35,22 @@ import {
 import { EventsService } from '../services/events.service';
 import { colors } from './calendar-colors';
 import { COLORES_TIPO_SUBBLOQUE } from '../sub-bloque-colores';
+
+interface ProgresoDiaIndex {
+  completados: number;
+  porcentaje: number;
+  color: string;
+}
+
+interface FisicaDiaIndex {
+  resumen: ResumenDiaFisica;
+  hechas: number;
+  total: number;
+  etiqueta: string;
+  /** Contexto completo en texto plano para tarjetas recortadas (tooltip). */
+  contexto: string;
+}
+
 @Component({
   selector: 'app-vista-semanal',
   templateUrl: './vista-semanal.component.html',
@@ -62,16 +78,22 @@ export class VistaSemanalComponent {
   public isDialogVisible: boolean = false;
   public seleccionandoBloquesAsignables = false;
   @Input() public set events(data: CalendarEvent[]) {
-    data.forEach((e) => {
+    const eventos = data ?? [];
+    eventos.forEach((e) => {
       if (this.mode == 'edit') e.draggable = true;
     });
-    this._events = data;
+    this._events = eventos;
+    this.rebuildEventIndexes();
   }
   public get events() {
     return this._events;
   }
 
   private _events: CalendarEvent[] = [];
+  /** Índice O(1) por fecha local: la plantilla consulta cada día muchas veces. */
+  private readonly eventosPorDia = new Map<string, CalendarEvent[]>();
+  private readonly progresoPorDia = new Map<string, ProgresoDiaIndex>();
+  private readonly fisicaPorDia = new Map<string, FisicaDiaIndex>();
   @Output() eventsChange = new EventEmitter<CalendarEvent[]>();
   @Output() saveChanges = new EventEmitter<void>();
 
@@ -85,6 +107,9 @@ export class VistaSemanalComponent {
       console.warn('Invalid viewDate provided, using current date');
       this._viewDate = new Date();
     }
+    // La semana visible también invalida los índices: cualquier caché de
+    // presentación ligada a la vista debe recalcularse al navegar.
+    this.rebuildEventIndexes();
   }
 
   get viewDate(): Date {
@@ -104,7 +129,15 @@ export class VistaSemanalComponent {
    * bloque activo, o fallo al cargar el bridge) simplemente no se pinta
    * nada, el resto del calendario sigue funcionando igual.
    */
-  @Input() resumenFisica: ResumenDiaFisica[] = [];
+  private _resumenFisica: ResumenDiaFisica[] = [];
+  @Input() set resumenFisica(value: ResumenDiaFisica[] | null | undefined) {
+    this._resumenFisica = value ?? [];
+    this.rebuildFisicaIndex();
+  }
+
+  get resumenFisica(): ResumenDiaFisica[] {
+    return this._resumenFisica;
+  }
   /** Plan de temario que originó el bridge, para recuperar una URL física obsoleta. */
   @Input() originPlanificacionId: number | undefined;
   private onTimeClickedDate!: Date;
@@ -234,16 +267,18 @@ export class VistaSemanalComponent {
   }
   /** Filtra eventos por día. Implementado localmente (no delegado en el
    * servicio) para evitar problemas de `this` en tests con mocks y para que
-   * el componente sea autónomo en esta operación pura. */
+   * el componente sea autónomo en esta operación pura.
+   *
+   * Para el array propio del componente la consulta es O(1) sobre el índice
+   * por fecha; se conserva el filtrado para arrays externos (tests/otros
+   * consumidores) sin cambiar el contrato público. */
   public getEventsForDay(events: CalendarEvent[], date: Date): CalendarEvent[] {
-    return events.filter((event) => {
-      const eventDate = new Date(event.start);
-      return (
-        eventDate.getFullYear() === date.getFullYear() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getDate() === date.getDate()
-      );
-    });
+    const clave = this.claveFecha(date);
+    if (!clave) return [];
+    if (events === this._events) {
+      return this.eventosPorDia.get(clave) ?? [];
+    }
+    return events.filter((event) => this.claveFecha(event.start) === clave);
   }
 
   /** Progreso de calendario independiente del progreso de las disciplinas físicas. */
@@ -251,6 +286,11 @@ export class VistaSemanalComponent {
     events: CalendarEvent[],
     date: Date,
   ): string => {
+    const clave = this.claveFecha(date);
+    if (!clave) return '#dc3545';
+    if (events === this._events) {
+      return this.progresoPorDia.get(clave)?.color ?? '#dc3545';
+    }
     const percentage = this.getProgressPercentageForDay(events, date);
     if (percentage === 100) return '#28a745';
     if (percentage >= 50) return '#ffc107';
@@ -261,15 +301,26 @@ export class VistaSemanalComponent {
   public getCompletedSubBlocksForDay = (
     events: CalendarEvent[],
     date: Date,
-  ): number =>
-    this.getEventsForDay(events, date).filter(
+  ): number => {
+    const clave = this.claveFecha(date);
+    if (!clave) return 0;
+    if (events === this._events) {
+      return this.progresoPorDia.get(clave)?.completados ?? 0;
+    }
+    return this.getEventsForDay(events, date).filter(
       (event) => event.meta?.subBloque?.realizado,
     ).length;
+  };
 
   public getProgressPercentageForDay = (
     events: CalendarEvent[],
     date: Date,
   ): number => {
+    const clave = this.claveFecha(date);
+    if (!clave) return 0;
+    if (events === this._events) {
+      return this.progresoPorDia.get(clave)?.porcentaje ?? 0;
+    }
     const eventsForDay = this.getEventsForDay(events, date);
     const completed = this.getCompletedSubBlocksForDay(events, date);
     return Number(
@@ -279,6 +330,92 @@ export class VistaSemanalComponent {
       ).toFixed(2),
     );
   };
+
+  /** Clave de día local reutilizada por todos los índices. */
+  private claveFecha(value: Date | string | null | undefined): string | null {
+    if (value === null || value === undefined) return null;
+    const fecha = value instanceof Date ? value : new Date(value);
+    if (isNaN(fecha.getTime())) return null;
+    return formatFechaISO(fecha);
+  }
+
+  /** Reconstruye los índices de eventos y progreso tras un cambio de datos. */
+  private rebuildEventIndexes(): void {
+    this.eventosPorDia.clear();
+    this.progresoPorDia.clear();
+    for (const event of this._events ?? []) {
+      const clave = this.claveFecha(event?.start);
+      if (!clave) continue;
+      const eventosDelDia = this.eventosPorDia.get(clave);
+      if (eventosDelDia) {
+        eventosDelDia.push(event);
+      } else {
+        this.eventosPorDia.set(clave, [event]);
+      }
+    }
+    for (const [clave, eventosDelDia] of this.eventosPorDia) {
+      this.progresoPorDia.set(clave, this.calcularProgresoDia(eventosDelDia));
+    }
+  }
+
+  private calcularProgresoDia(
+    eventosDelDia: CalendarEvent[],
+  ): ProgresoDiaIndex {
+    const completados = eventosDelDia.filter(
+      (event) => event.meta?.subBloque?.realizado,
+    ).length;
+    const porcentaje = Number(
+      (eventosDelDia.length > 0
+        ? (completados / eventosDelDia.length) * 100
+        : 0
+      ).toFixed(2),
+    );
+    const color =
+      porcentaje === 100 ? '#28a745' : porcentaje >= 50 ? '#ffc107' : '#dc3545';
+    return { completados, porcentaje, color };
+  }
+
+  /** Invalida solo el día afectado por una marca/desmarca optimista. */
+  private recalcularProgresoDia(fecha: Date | string): void {
+    const clave = this.claveFecha(fecha);
+    if (!clave) return;
+    const eventosDelDia = this.eventosPorDia.get(clave) ?? [];
+    if (eventosDelDia.length === 0) {
+      this.progresoPorDia.delete(clave);
+      return;
+    }
+    this.progresoPorDia.set(clave, this.calcularProgresoDia(eventosDelDia));
+  }
+
+  /** Reconstruye el índice de resúmenes físicos al cambiar el input. */
+  private rebuildFisicaIndex(): void {
+    this.fisicaPorDia.clear();
+    for (const dia of this._resumenFisica ?? []) {
+      if (!dia?.fecha) continue;
+      const disciplinas = dia.disciplinas ?? [];
+      const hechas = disciplinas.filter(
+        (disciplina) => disciplina.realizado,
+      ).length;
+      const total = disciplinas.length;
+      this.fisicaPorDia.set(dia.fecha, {
+        resumen: dia,
+        hechas,
+        total,
+        etiqueta: disciplinas.map((disciplina) => disciplina.nombre).join(', '),
+        contexto:
+          total > 0
+            ? `Plan físico: ${hechas}/${total}. ${disciplinas
+                .map(
+                  (disciplina) =>
+                    `${disciplina.nombre} (${
+                      disciplina.realizado ? 'realizada' : 'pendiente'
+                    })`,
+                )
+                .join(', ')}`
+            : '',
+      });
+    }
+  }
   isCloneDialogVisible: boolean = false;
   selectedDayForCloning: Date | null = null;
   targetDayForCloning: number | null = null;
@@ -391,19 +528,24 @@ export class VistaSemanalComponent {
 
   /** Resumen de física del día, o `undefined` si no hay entrenamiento ese día. */
   private resumenFisicaDelDia(dia: Date): ResumenDiaFisica | undefined {
-    const fecha = formatFechaISO(dia);
-    return this.resumenFisica.find((d) => d.fecha === fecha);
+    return this.fisicaPorDia.get(formatFechaISO(dia))?.resumen;
   }
 
   tieneFisica(dia: Date): boolean {
-    const resumen = this.resumenFisicaDelDia(dia);
-    return !!resumen && resumen.disciplinas.length > 0;
+    return (this.fisicaPorDia.get(formatFechaISO(dia))?.total ?? 0) > 0;
   }
 
   etiquetaFisica(dia: Date): string {
-    const resumen = this.resumenFisicaDelDia(dia);
-    if (!resumen) return '';
-    return resumen.disciplinas.map((d) => d.nombre).join(', ');
+    return this.fisicaPorDia.get(formatFechaISO(dia))?.etiqueta ?? '';
+  }
+
+  /**
+   * Contexto físico completo del día (resumen y estado de cada disciplina)
+   * para conservarlo en el tooltip de las tarjetas que lo recortan. Índice
+   * O(1): el texto se construye una vez al recibir `resumenFisica`.
+   */
+  contextoFisicaDia(dia: Date): string {
+    return this.fisicaPorDia.get(formatFechaISO(dia))?.contexto ?? '';
   }
 
   /**
@@ -459,10 +601,10 @@ export class VistaSemanalComponent {
 
   /** Resumen informativo de las disciplinas físicas; no determina la marca del calendario. */
   progresoFisicaDia(dia: Date): { hechas: number; total: number } {
-    const disciplinas = this.disciplinasFisica(dia);
+    const indice = this.fisicaPorDia.get(formatFechaISO(dia));
     return {
-      hechas: disciplinas.filter((d) => d.realizado).length,
-      total: disciplinas.length,
+      hechas: indice?.hechas ?? 0,
+      total: indice?.total ?? 0,
     };
   }
 
@@ -530,6 +672,7 @@ export class VistaSemanalComponent {
           }
         }
       }
+      this.rebuildEventIndexes();
       this.refresh.next();
       this.eventsChange.emit(this.events);
       this.displayDialog = false;
@@ -899,6 +1042,7 @@ export class VistaSemanalComponent {
     if (nuevoEstado === anterior) return;
 
     event.meta.subBloque.realizado = nuevoEstado;
+    this.recalcularProgresoDia(event.start);
     this.refresh.next();
     if (this.role !== 'ALUMNO') return;
 
@@ -919,11 +1063,13 @@ export class VistaSemanalComponent {
     peticion.subscribe({
       next: () => {
         this.pendingProgressIds.delete(key);
+        this.recalcularProgresoDia(event.start);
         this.refresh.next();
       },
       error: () => {
         event.meta.subBloque.realizado = anterior;
         this.pendingProgressIds.delete(key);
+        this.recalcularProgresoDia(event.start);
         this.refresh.next();
         this.toast.error('No se pudo guardar el marcaje. Inténtalo de nuevo.');
       },
