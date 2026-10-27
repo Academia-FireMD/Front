@@ -149,12 +149,10 @@ for (const viewport of [
       viewport.height,
     );
 
+    await expect(tarjeta.getByTestId('fisica-vinculada-estado')).toHaveCount(0);
     await expect(
-      tarjeta.getByRole('button', { name: 'Ver plan físico de este día' }),
-    ).toBeVisible();
-    await expect(tarjeta.getByTestId('fisica-vinculada-estado')).toContainText(
-      'Plan físico: 0/1',
-    );
+      tarjeta.getByRole('button', { name: 'Ver plan físico' }),
+    ).toHaveCount(0);
     await casilla.click();
     await expect(casilla).toHaveAttribute('aria-checked', 'true');
     await expect.poll(() => api.guardados().length).toBe(1);

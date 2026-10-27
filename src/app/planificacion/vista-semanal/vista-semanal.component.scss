@@ -36,6 +36,11 @@
       display: none;
     }
   }
+  /* La línea de hora actual es informativa: no debe robar el hit de la
+     casilla superior izquierda cuando coincide con el borde de la tarjeta. */
+  .cal-current-time-marker {
+    pointer-events: none;
+  }
 }
 .wrapper {
   height: 100%;
@@ -77,16 +82,11 @@
   outline-offset: -2px;
 }
 
-.checked-event {
-  border: 3px solid var(--primary-color);
-}
-
 .event-content {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: minmax(0, 1fr);
-  align-items: stretch;
-  column-gap: 4px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 4px;
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -97,6 +97,7 @@
   margin-top: 0;
   overflow: hidden;
   white-space: normal;
+  text-wrap: wrap;
 }
 
 /* Columna de texto independiente: las acciones nunca le roban anchura ni
@@ -104,7 +105,9 @@
 .event-text {
   position: relative;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  align-self: stretch;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -116,11 +119,12 @@
 
 .event-comments {
   position: relative;
-  flex: 1 1 0;
+  flex: 0 0 1.2em;
   margin-top: 0;
   min-width: 0;
   min-height: 0;
-  max-height: none;
+  height: 1.2em;
+  max-height: 1.2em;
   overflow: hidden;
   overflow-wrap: anywhere;
   white-space: normal;
@@ -137,12 +141,14 @@
   z-index: 2;
   right: 0;
   bottom: 0;
-  padding: 0 2px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--text-color, #222);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(44, 44, 44, 0.65);
   font-weight: 700;
+  line-height: 10px;
   pointer-events: none;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.65);
 }
 
 app-event-overflow-content.event-overflow-content--description-truncated
@@ -157,86 +163,24 @@ app-event-overflow-content.event-overflow-content--compact
   line-height: 10px;
 }
 
-.event-header {
-  display: block;
-  flex: none;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.event-actions {
-  display: flex;
-  align-items: center;
-  /* Sin separación interna: en una tarjeta compartida (50% del día) los tres
-     controles de 44px deben caber completos; los propios botones ya separan
-     visualmente sus iconos. */
-  gap: 0;
-  justify-content: flex-end;
-  flex: none;
-  align-self: start;
-  min-width: 0;
-  max-width: 100%;
-}
-
 .event-title {
   min-width: 0;
-  flex-wrap: nowrap;
+  flex: none;
   overflow: hidden;
-  align-items: center;
 
   strong {
     display: -webkit-box;
     flex: 1 1 auto;
     margin-top: 0;
     min-width: 0;
+    padding-top: 0;
     overflow: hidden;
     overflow-wrap: anywhere;
     white-space: normal;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     line-height: 1.2;
   }
-}
-
-.event-title__line {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.event-title--fisica {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1px;
-}
-
-.evento-fisica-vinculada .event-title strong {
-  -webkit-line-clamp: 1;
-}
-
-.evento-fisica-vinculada .fisica-vinculada-info {
-  font-size: 10px;
-  line-height: 1.1;
-}
-
-.evento-fisica-vinculada .fisica-vinculada-disciplinas {
-  margin-top: 2px;
-  gap: 2px;
-}
-
-.evento-fisica-vinculada .fisica-vinculada-chip {
-  padding: 0 4px;
-  font-size: 10px;
-  line-height: 1.1;
-}
-
-.fisica-vinculada-info {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  font-size: 11px;
-  line-height: 1.2;
 }
 
 :host ::ng-deep .event-comments p {
@@ -273,8 +217,9 @@ app-event-overflow-content.event-overflow-content--compact
 }
 
 .completion-toggle {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   flex: none;
   width: 44px;
   height: 44px;
@@ -285,7 +230,7 @@ app-event-overflow-content.event-overflow-content--compact
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--primary-color);
+  color: var(--text-color);
   cursor: pointer;
 
   &:focus-visible {
@@ -299,44 +244,26 @@ app-event-overflow-content.event-overflow-content--compact
   }
 }
 
+/* La cajita visible (18px) se alinea con la primera línea del título; el
+   botón mantiene 44/24px de área táctil sin desplazarla verticalmente. */
 .completion-toggle__box {
   display: grid;
   place-items: center;
-  width: 21px;
-  height: 21px;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 0;
   border: 2px solid currentColor;
   border-radius: 4px;
   background: #fff;
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .completion-toggle[aria-checked="true"] .completion-toggle__box {
+  border-color: var(--primary-color);
   background: var(--primary-color);
   color: #fff;
-}
-
-/* Acciones secundarias: icono real en un botón para que sean accesibles y
-   operables con teclado sin cambiar el aspecto compacto del calendario. */
-.event-icon-button {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  box-sizing: border-box;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: -2px;
-  }
 }
 
 /* Densidad real de la tarjeta: <56px disponibles = compacta. El componente
@@ -346,20 +273,17 @@ app-event-overflow-content.event-overflow-content--compact {
     padding: 1px 6px;
   }
 
-  .event-title strong {
-    -webkit-line-clamp: 1;
+  /* En 24px de alto útil no cabe ni una línea de preview: se oculta sin
+     dejar una segunda línea recortada. El tooltip conserva el texto completo. */
+  .event-comments {
+    flex-basis: 0;
+    height: 0;
+    max-height: 0;
+    min-height: 0;
+    margin: 0;
   }
 
-  /* En 24px de alto útil el resumen y los chips no caben completos; el
-     enlace al plan físico y la marca siguen disponibles en la columna. */
-  .fisica-vinculada-info,
-  .fisica-vinculada-disciplinas {
-    display: none;
-  }
-
-  .completion-toggle,
-  .fisica-vinculada-link,
-  .event-icon-button {
+  .completion-toggle {
     width: 24px;
     height: 24px;
     min-width: 24px;
@@ -369,7 +293,7 @@ app-event-overflow-content.event-overflow-content--compact {
   .completion-toggle__box {
     width: 18px;
     height: 18px;
-    font-size: 10px;
+    font-size: 9px;
   }
 }
 
@@ -418,77 +342,10 @@ app-event-overflow-content.event-overflow-content--compact {
   vertical-align: baseline;
 }
 
-/* Sub-bloque vinculado a física (rediseño bridge 2026-07-22): disciplinas
-   del día en vivo dentro del evento del temario. */
-.fisica-vinculada-disciplinas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.fisica-vinculada-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 1px 5px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  color: var(--text-color-secondary);
-}
-
-.fisica-vinculada-chip--hecho {
-  opacity: 0.75;
-  text-decoration: line-through;
-}
-
-.fisica-vinculada-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.25);
-}
-
-.fisica-vinculada-estado {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #555;
-}
-
 /* Fase 5 polish bridge: indicador sutil de bloque externo/vinculado — borde
    fino con opacidad, sin badge textual denso. */
 .evento-fisica-vinculada {
   border-left: 2px solid rgba(var(--primary-color-rgb, 63, 81, 181), 0.5) !important;
-}
-
-/* Enlace explícito al plan físico para el día del evento vinculado. */
-.fisica-vinculada-link {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  box-sizing: border-box;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--primary-color);
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: -2px;
-  }
 }
 
 small {
@@ -511,4 +368,302 @@ small {
 .progress-bar {
   height: 100%;
   transition: width 0.3s ease;
+}
+
+/* ── Bottom sheet de detalle del evento ───────────────────────────────── */
+:host ::ng-deep .event-sheet-dialog {
+  width: min(760px, calc(100vw - 2rem));
+  max-width: 760px;
+  max-height: 85dvh;
+  margin: 0 !important;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.18);
+
+  .p-dialog-header {
+    padding: 1rem 1.25rem 0.5rem;
+  }
+
+  .p-dialog-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color-secondary);
+  }
+
+  .p-dialog-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0.25rem 1.25rem 0;
+    overscroll-behavior: contain;
+  }
+
+  .p-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--surface-d);
+    background: var(--surface-0);
+  }
+
+  .p-dialog-footer .p-button {
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0;
+  }
+
+  .p-button:disabled {
+    opacity: 0.55;
+  }
+}
+
+.event-sheet {
+  padding-bottom: 0.25rem;
+}
+
+.event-sheet__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-color);
+  overflow-wrap: anywhere;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.event-sheet__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+}
+
+.event-sheet__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.55rem;
+  border: 1px solid var(--surface-d);
+  border-radius: 999px;
+  background: var(--surface-50);
+  color: var(--text-color-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.event-sheet__chip--done {
+  border-color: #a5d6a7;
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.event-sheet__when {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+}
+
+.event-sheet__section {
+  margin-top: 1.05rem;
+
+  h3 {
+    margin: 0 0 0.45rem;
+    color: var(--text-color-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+}
+
+.event-sheet__markdown {
+  display: block;
+  color: var(--text-color);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+:host ::ng-deep .event-sheet__markdown {
+  p,
+  ul,
+  ol {
+    margin: 0 0 0.6rem;
+  }
+
+  ul,
+  ol {
+    padding-left: 1.25rem;
+  }
+
+  li {
+    margin: 0.15rem 0;
+  }
+
+  a {
+    color: var(--primary-color);
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+  }
+
+  code,
+  pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+.event-sheet__fisica-resumen {
+  margin: 0 0 0.5rem;
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+}
+
+.event-sheet__disciplinas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--surface-d);
+    border-radius: 8px;
+    background: var(--surface-50);
+  }
+}
+
+.event-sheet__dot {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 50%;
+}
+
+.event-sheet__disciplina-nombre {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.event-sheet__disciplina--hecha {
+  opacity: 0.75;
+  text-decoration: line-through;
+}
+
+.event-sheet__disciplina-estado {
+  flex: none;
+  color: var(--text-color-secondary);
+  font-size: 0.72rem;
+}
+
+.event-sheet__comment {
+  label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--text-color-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+  }
+}
+
+.event-sheet__comment-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.event-sheet__feedback {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+}
+
+.event-sheet__feedback--error {
+  color: #b3261e;
+}
+
+.event-sheet__ok {
+  color: #2e7d32;
+  font-size: 0.8rem;
+}
+
+.event-sheet__confirm {
+  margin: 1rem 0 0.25rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  background: #fff8e1;
+  color: #5c4a12;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.event-sheet__confirm-text {
+  margin-right: auto;
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 960px) {
+  :host ::ng-deep .event-sheet-dialog {
+    width: 100vw;
+    max-width: 100vw;
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+@media (max-width: 640px) {
+  :host ::ng-deep .event-sheet-dialog {
+    .p-dialog-header {
+      padding: 0.85rem 0.9rem 0.45rem;
+    }
+
+    .p-dialog-content {
+      padding: 0.2rem 0.9rem 0;
+    }
+
+    .p-dialog-footer {
+      padding: 0.65rem 0.9rem calc(0.65rem + env(safe-area-inset-bottom));
+    }
+
+    .p-dialog-footer .p-button {
+      flex: 1 1 calc(50% - 0.5rem);
+      justify-content: center;
+    }
+  }
+
+  .event-sheet__title {
+    font-size: 1.2rem;
+  }
 }

@@ -307,6 +307,17 @@ async function abrirCalendario(
   await expect(page.locator('.event-title strong').first()).toBeVisible();
 }
 
+async function moverPunteroAZonaNeutra(page: Page): Promise<void> {
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error('El viewport de Playwright no está definido');
+  await page.mouse.move(viewport.width - 16, 2);
+  // hideOnEscape cierra cualquier tooltip que siguiera visible por un hover
+  // previo; después el puntero queda en una zona sin activadores.
+  await page.keyboard.press('Escape');
+  await page.mouse.move(viewport.width - 16, 2);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
+}
+
 function tarjeta(page: Page, titulo: string): Locator {
   return page
     .locator('.wrapper')
@@ -360,12 +371,39 @@ async function comprobarControlDentro(
   return { cajaCard, cajaControl };
 }
 
-async function comprobarSeparacionAcciones(
+async function comprobarCasillaSuperiorIzquierda(
+  page: Page,
   tarjetaEvento: Locator,
-): Promise<void> {
-  const texto = await cajaDe(tarjetaEvento.locator('.event-text'));
-  const acciones = await cajaDe(tarjetaEvento.locator('.event-actions'));
-  expect(texto.x + texto.width).toBeLessThanOrEqual(acciones.x + 1);
+  minimo: number,
+) {
+  const { cajaCard } = await comprobarControlDentro(
+    page,
+    tarjetaEvento,
+    'completion-toggle',
+    minimo,
+  );
+  const cajaVisible = await cajaDe(tarjetaEvento.getByTestId('completion-box'));
+  const cajaTitulo = await cajaDe(tarjetaEvento.locator('.event-title strong'));
+  expect(cajaVisible.width).toBeCloseTo(18, 0);
+  expect(cajaVisible.height).toBeCloseTo(18, 0);
+  expect(cajaVisible.x).toBeGreaterThanOrEqual(cajaCard.x);
+  expect(cajaVisible.y).toBeGreaterThanOrEqual(cajaCard.y);
+  expect(cajaVisible.x - cajaCard.x).toBeLessThanOrEqual(20);
+  expect(Math.abs(cajaVisible.y - cajaTitulo.y)).toBeLessThanOrEqual(1.5);
+  expect(cajaVisible.x + cajaVisible.width).toBeLessThan(cajaTitulo.x);
+  return { cajaCard, cajaVisible, cajaTitulo };
+}
+
+/** La nueva tarjeta no tiene barra de acciones a la derecha. */
+async function comprobarSinAccionesEnTarjeta(tarjetaEvento: Locator) {
+  await expect(tarjetaEvento.locator('.event-actions')).toHaveCount(0);
+  for (const testId of [
+    'event-comment-button',
+    'event-delete-button',
+    'fisica-vinculada-icono',
+  ]) {
+    await expect(tarjetaEvento.getByTestId(testId)).toHaveCount(0);
+  }
 }
 
 async function capturar(page: Page, testInfo: TestInfo, nombre: string) {
@@ -382,6 +420,7 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
 }, testInfo) => {
   const api = await prepararCalendario(page);
   await abrirCalendario(page, 1440, 900);
+  await moverPunteroAZonaNeutra(page);
 
   const compactoA = tarjeta(page, 'Compacto A');
   const compactoB = tarjeta(page, TITULO_LARGO_COMPACTO);
@@ -404,22 +443,22 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   expect(separacion).toBeGreaterThan(3.5);
   expect(separacion).toBeLessThan(4.5);
 
-  const compactoControl = await comprobarControlDentro(
+  const compactoControl = await comprobarCasillaSuperiorIzquierda(
     page,
     compactoA,
-    'completion-toggle',
     24,
   );
-  await comprobarControlDentro(page, compactoB, 'completion-toggle', 24);
-  await comprobarControlDentro(page, corto15, 'completion-toggle', 24);
-  await comprobarControlDentro(page, compactoSinDesc, 'completion-toggle', 24);
-  await comprobarControlDentro(page, compactoA, 'event-comment-button', 24);
-  await comprobarControlDentro(page, compactoB, 'event-comment-button', 24);
-  await comprobarControlDentro(page, corto15, 'event-comment-button', 24);
-  await comprobarSeparacionAcciones(compactoA);
-  await comprobarSeparacionAcciones(compactoB);
-  await comprobarSeparacionAcciones(corto15);
-  await comprobarSeparacionAcciones(compactoSinDesc);
+  await comprobarCasillaSuperiorIzquierda(page, compactoB, 24);
+  await comprobarCasillaSuperiorIzquierda(page, corto15, 24);
+  await comprobarCasillaSuperiorIzquierda(page, compactoSinDesc, 24);
+  for (const tarjetaEvento of [
+    compactoA,
+    compactoB,
+    corto15,
+    compactoSinDesc,
+  ]) {
+    await comprobarSinAccionesEnTarjeta(tarjetaEvento);
+  }
 
   const superficieCompactoB = compactoB.locator(
     '[data-testid="event-overflow-surface"]',
@@ -461,9 +500,8 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   const normal = tarjeta(page, 'Normal 60');
   const cajaNormal = await cajaDe(normal.locator('.custom-event-template'));
   expect(cajaNormal.height).toBeCloseTo(56, 0);
-  await comprobarControlDentro(page, normal, 'completion-toggle', 44);
-  await comprobarControlDentro(page, normal, 'event-comment-button', 44);
-  await comprobarSeparacionAcciones(normal);
+  await comprobarCasillaSuperiorIzquierda(page, normal, 44);
+  await comprobarSinAccionesEnTarjeta(normal);
 
   const solapadoA = tarjeta(page, 'Solapado A');
   const solapadoB = tarjeta(page, 'Solapado B');
@@ -477,15 +515,13 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   expect(cajaSolapadoA.x + cajaSolapadoA.width).toBeLessThanOrEqual(
     cajaSolapadoB.x + 1,
   );
-  await comprobarControlDentro(page, solapadoA, 'completion-toggle', 44);
-  await comprobarControlDentro(page, solapadoB, 'completion-toggle', 44);
-  await comprobarControlDentro(page, solapadoA, 'event-comment-button', 44);
-  await comprobarControlDentro(page, solapadoB, 'event-comment-button', 44);
-  await comprobarSeparacionAcciones(solapadoA);
-  await comprobarSeparacionAcciones(solapadoB);
+  await comprobarCasillaSuperiorIzquierda(page, solapadoA, 44);
+  await comprobarCasillaSuperiorIzquierda(page, solapadoB, 44);
+  await comprobarSinAccionesEnTarjeta(solapadoA);
+  await comprobarSinAccionesEnTarjeta(solapadoB);
 
   const largoNormal = tarjeta(page, TITULO_LARGO_NORMAL);
-  await comprobarControlDentro(page, largoNormal, 'completion-toggle', 44);
+  await comprobarCasillaSuperiorIzquierda(page, largoNormal, 44);
   const metricaTituloNormal = await largoNormal
     .locator('.event-title strong')
     .evaluate((element) => ({
@@ -493,18 +529,32 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
       lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
       clamp: getComputedStyle(element).webkitLineClamp,
     }));
-  expect(metricaTituloNormal.clamp).toBe('2');
+  expect(metricaTituloNormal.clamp).toBe('1');
   expect(metricaTituloNormal.height).toBeLessThanOrEqual(
-    metricaTituloNormal.lineHeight * 2 + 2,
+    metricaTituloNormal.lineHeight + 2,
+  );
+  const metricaPreviewNormal = await largoNormal
+    .locator('.event-comments')
+    .evaluate((element) => ({
+      height: element.getBoundingClientRect().height,
+      lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+      scrollHeight: element.scrollHeight,
+    }));
+  expect(metricaPreviewNormal.height).toBeGreaterThan(0);
+  expect(metricaPreviewNormal.height).toBeLessThanOrEqual(
+    metricaPreviewNormal.lineHeight + 1.5,
+  );
+  expect(metricaPreviewNormal.scrollHeight).toBeGreaterThan(
+    metricaPreviewNormal.height,
   );
 
   const alto = tarjeta(page, 'Alto 120');
   const cajaAlto = await cajaDe(alto.locator('.custom-event-template'));
   expect(cajaAlto.height).toBeCloseTo(116, 0);
-  await comprobarControlDentro(page, alto, 'completion-toggle', 44);
-  await comprobarControlDentro(page, alto, 'event-comment-button', 44);
+  await comprobarCasillaSuperiorIzquierda(page, alto, 44);
+  await comprobarSinAccionesEnTarjeta(alto);
   const superficieAlto = alto.locator('[data-testid="event-overflow-surface"]');
-  await expect(superficieAlto).toHaveAttribute('data-overflow', 'false');
+  await expect(superficieAlto).toHaveAttribute('data-overflow', 'true');
   const descripcionAlto = alto.locator('.event-comments');
   await expect(descripcionAlto.locator('strong')).toHaveText('Todo cabe.');
   await expect(descripcionAlto.locator('ul li')).toHaveCount(2);
@@ -517,18 +567,14 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   await expect(
     fisico.locator('[data-testid="event-overflow-surface"]'),
   ).toHaveAttribute('data-compact', 'true');
-  await comprobarControlDentro(page, fisico, 'fisica-vinculada-icono', 24);
-  await comprobarControlDentro(page, fisico, 'completion-toggle', 24);
-  await comprobarControlDentro(page, fisico, 'event-comment-button', 24);
-  await comprobarSeparacionAcciones(fisico);
-  await expect(
-    fisico.getByRole('button', { name: 'Ver plan físico de este día' }),
-  ).toBeVisible();
+  await comprobarCasillaSuperiorIzquierda(page, fisico, 24);
+  await comprobarSinAccionesEnTarjeta(fisico);
+  await expect(fisico.getByTestId('fisica-vinculada-estado')).toHaveCount(0);
 
   const personal = tarjeta(page, 'Personal 45');
-  await comprobarControlDentro(page, personal, 'completion-toggle', 24);
-  await comprobarControlDentro(page, personal, 'event-delete-button', 24);
-  await comprobarSeparacionAcciones(personal);
+  await personal.scrollIntoViewIfNeeded();
+  await comprobarCasillaSuperiorIzquierda(page, personal, 24);
+  await comprobarSinAccionesEnTarjeta(personal);
 
   const antesMarca = await cajaDe(compactoA.locator('.custom-event-template'));
   const casilla = compactoA.getByTestId('completion-toggle');
@@ -544,6 +590,7 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   await expect(compactoA.locator('.custom-event-template')).toHaveClass(
     /event-card--completed/,
   );
+  await expect(page.getByTestId('event-sheet-content')).toBeHidden();
   await expect.poll(() => api.cambiosProgreso.length).toBe(1);
   const despuesMarca = await cajaDe(
     compactoA.locator('.custom-event-template'),
@@ -560,33 +607,39 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   await expect(page).toHaveURL(
     new RegExp(`/planificacion-mensual-alumno/${PLAN_ID}$`),
   );
-  expect(compactoControl.cajaControl.width).toBeGreaterThanOrEqual(24);
+  expect(compactoControl.cajaVisible.width).toBeGreaterThanOrEqual(18);
   expect(api.peticionesSinInterceptar).toEqual([]);
 
   await capturar(page, testInfo, 'presentacion-desktop');
 });
 
-test('el detalle existente conserva el markdown y el tooltip solo aparece al recortar', async ({
+test('el detalle existente conserva el markdown y el tooltip aparece al recortar la preview', async ({
   page,
 }) => {
   const api = await prepararCalendario(page);
   await abrirCalendario(page, 1440, 900);
+  await moverPunteroAZonaNeutra(page);
 
   const alto = tarjeta(page, 'Alto 120');
   await alto.scrollIntoViewIfNeeded();
   await page.mouse.move(1400, 4);
   await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
-  await alto.locator('.event-title strong').hover();
-  await page.waitForTimeout(250);
-  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
   await expect(
     alto.locator('[data-testid="event-overflow-surface"]'),
-  ).toHaveAttribute('data-overflow', 'false');
+  ).toHaveAttribute('data-overflow', 'true');
+  await alto.locator('.event-title strong').hover();
+  const tooltipAlto = page.locator('.p-tooltip:visible');
+  await expect(tooltipAlto).toBeVisible();
+  await expect(tooltipAlto).toContainText('Todo cabe.');
+  await expect(tooltipAlto.locator('ul li')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(tooltipAlto).toBeHidden();
 
   await alto.locator('.event-title strong').click();
-  const dialogo = page.locator('.p-dialog:visible').last();
+  const dialogo = page.getByTestId('event-sheet-content');
   await expect(dialogo).toBeVisible();
-  const detalle = dialogo.locator('markdown');
+  await expect(dialogo.getByTestId('event-sheet-title')).toHaveText('Alto 120');
+  const detalle = dialogo.getByTestId('event-sheet-instructions');
   await expect(detalle.locator('strong')).toHaveText('Todo cabe.');
   await expect(detalle.locator('ul li')).toHaveCount(2);
   await expect(detalle.locator('a')).toHaveAttribute(
@@ -674,9 +727,10 @@ test('un evento personal actualiza su propia API y la barra diaria', async ({
 
 test('el escritorio de 1280 mantiene la densidad y los controles contenidos', async ({
   page,
-}) => {
+}, testInfo) => {
   const api = await prepararCalendario(page);
   await abrirCalendario(page, 1280, 800);
+  await moverPunteroAZonaNeutra(page);
 
   const compacto = tarjeta(page, 'Compacto A');
   const normal = tarjeta(page, 'Normal 60');
@@ -687,15 +741,19 @@ test('el escritorio de 1280 mantiene la densidad y los controles contenidos', as
   expect(cajaCompacta.height).toBeCloseTo(26, 0);
   expect(cajaNormal.height).toBeCloseTo(56, 0);
   expect(cajaAlta.height).toBeCloseTo(116, 0);
-  await comprobarControlDentro(page, compacto, 'completion-toggle', 24);
-  await comprobarControlDentro(page, normal, 'completion-toggle', 44);
-  await comprobarControlDentro(page, alto, 'completion-toggle', 44);
-  await comprobarControlDentro(page, compacto, 'event-comment-button', 24);
-  await comprobarControlDentro(page, normal, 'event-comment-button', 44);
-  await comprobarControlDentro(page, alto, 'event-comment-button', 44);
-  await comprobarSeparacionAcciones(compacto);
-  await comprobarSeparacionAcciones(normal);
-  await comprobarSeparacionAcciones(alto);
+  await comprobarCasillaSuperiorIzquierda(page, compacto, 24);
+  await comprobarCasillaSuperiorIzquierda(page, normal, 44);
+  await comprobarCasillaSuperiorIzquierda(page, alto, 44);
+  await comprobarSinAccionesEnTarjeta(compacto);
+  await comprobarSinAccionesEnTarjeta(normal);
+  await comprobarSinAccionesEnTarjeta(alto);
+  await normal.locator('.event-text').click();
+  const panel = page.locator('.event-sheet-dialog');
+  await expect(panel).toBeVisible();
+  await expect(panel).not.toHaveClass(/ng-animating/);
+  await capturar(page, testInfo, 'presentacion-1280');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('event-sheet-content')).toBeHidden();
   expect(api.peticionesSinInterceptar).toEqual([]);
 });
 
@@ -704,6 +762,7 @@ test('el calendario móvil mantiene los controles dentro de las tarjetas', async
 }, testInfo) => {
   const api = await prepararCalendario(page);
   await abrirCalendario(page, 390, 844);
+  await moverPunteroAZonaNeutra(page);
 
   const compacto = tarjeta(page, 'Compacto A');
   const corto15 = tarjeta(page, 'Corto 15');
@@ -716,16 +775,16 @@ test('el calendario móvil mantiene los controles dentro de las tarjetas', async
     [normal, 44],
     [alto, 44],
   ] as const) {
+    await evento.scrollIntoViewIfNeeded();
     const caja = await cajaDe(evento.locator('.custom-event-template'));
     expect(caja.x).toBeGreaterThanOrEqual(0);
     expect(caja.x + caja.width).toBeLessThanOrEqual(391);
-    await comprobarControlDentro(page, evento, 'completion-toggle', minimo);
-    await comprobarControlDentro(page, evento, 'event-comment-button', minimo);
-    await comprobarSeparacionAcciones(evento);
+    await comprobarCasillaSuperiorIzquierda(page, evento, minimo);
+    await comprobarSinAccionesEnTarjeta(evento);
   }
-  await comprobarControlDentro(page, personal, 'completion-toggle', 24);
-  await comprobarControlDentro(page, personal, 'event-delete-button', 24);
-  await comprobarSeparacionAcciones(personal);
+  await personal.scrollIntoViewIfNeeded();
+  await comprobarCasillaSuperiorIzquierda(page, personal, 24);
+  await comprobarSinAccionesEnTarjeta(personal);
 
   // En móvil la tarjeta física compacta oculta resumen/chips, pero el
   // contexto completo sigue disponible en la etiqueta accesible y el tooltip.
@@ -742,8 +801,10 @@ test('el calendario móvil mantiene los controles dentro de las tarjetas', async
     'aria-label',
     /Carrera \(pendiente\)/,
   );
-  await expect(fisico.getByTestId('fisica-vinculada-estado')).toBeHidden();
-  await expect(fisico.getByTestId('fisica-vinculada-disciplinas')).toBeHidden();
+  await expect(fisico.getByTestId('fisica-vinculada-estado')).toHaveCount(0);
+  await expect(fisico.getByTestId('fisica-vinculada-disciplinas')).toHaveCount(
+    0,
+  );
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(391);
@@ -754,33 +815,29 @@ test('el calendario móvil mantiene los controles dentro de las tarjetas', async
   expect(api.peticionesSinInterceptar).toEqual([]);
 });
 
-test('el modo administrador conserva la acción de borrado dentro de la tarjeta', async ({
+test('el modo administrador mueve las acciones de la tarjeta al panel de detalle', async ({
   page,
 }) => {
   await prepararCalendario(page, 'ADMIN');
   await abrirCalendario(page, 1440, 900, 'ADMIN');
+  await moverPunteroAZonaNeutra(page);
 
   const compacto = tarjeta(page, 'Compacto A');
   await expect(
     compacto.locator('[data-testid="event-overflow-surface"]'),
   ).toHaveAttribute('data-compact', 'true');
   await expect(compacto.getByTestId('completion-toggle')).toHaveCount(0);
-  const borrar = compacto.locator('.event-delete-button');
-  await expect(borrar).toBeVisible();
-  const { cajaCard, cajaControl } = await comprobarControlDentro(
-    page,
-    compacto,
-    'event-delete-button',
-    24,
-  );
-  expect(cajaControl.y + cajaControl.height).toBeLessThanOrEqual(
-    cajaCard.y + cajaCard.height,
-  );
-  await comprobarControlDentro(page, compacto, 'event-comment-button', 24);
-  await comprobarSeparacionAcciones(compacto);
+  await comprobarSinAccionesEnTarjeta(compacto);
 
-  const normal = tarjeta(page, 'Normal 60');
-  await comprobarControlDentro(page, normal, 'event-delete-button', 44);
-  await comprobarControlDentro(page, normal, 'event-comment-button', 44);
-  await comprobarSeparacionAcciones(normal);
+  await compacto.locator('.event-text').click();
+  const sheet = page.getByTestId('event-sheet-content');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId('event-sheet-title')).toHaveText('Compacto A');
+  await expect(page.getByTestId('event-sheet-edit')).toBeVisible();
+  await expect(page.getByTestId('event-sheet-delete')).toBeVisible();
+  await expect(sheet.getByTestId('event-sheet-comment-section')).toHaveCount(0);
+  await expect(page.getByTestId('event-sheet-toggle')).toHaveCount(0);
+
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
 });

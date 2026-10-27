@@ -1,6 +1,7 @@
 import {
   Component,
   computed,
+  ElementRef,
   EventEmitter,
   inject,
   Input,
@@ -60,18 +61,43 @@ export class VistaSemanalComponent {
   planificacionesService = inject(PlanificacionesService);
   eventsService = inject(EventsService);
   public searchTerm = signal('');
-  isCommentDialogVisible: boolean = false;
-  selectedSubBloque!: SubBloque;
   @Input() role: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
 
   refresh = new Subject<void>();
   private readonly pendingProgressIds = new Set<string>();
-
-  // Propiedad para gestionar el estado del diálogo
-  displayDialog = false;
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
 
   // Propiedad para almacenar el evento seleccionado
   selectedEvent: CalendarEvent | null = null;
+
+  /* ── Panel inferior de detalle del evento ──────────────────────────────
+   * Una única vía de apertura para tarjetas normales, físicas y personales.
+   * La tarjeta no navega ni abre editores: sólo muestra el resumen. */
+  isEventSheetVisible = false;
+  eventoSheet: CalendarEvent | null = null;
+  comentarioBorrador = '';
+  isConfirmandoBorrado = false;
+
+  private sheetTriggerElement: HTMLElement | null = null;
+  private pendingEditorEvent: CalendarEvent | null = null;
+  private readonly comentariosPendientes = new Set<number>();
+  private readonly borradoresComentario = new Map<number, string>();
+  private readonly erroresComentario = new Map<number, string>();
+  private readonly eliminacionesPendientes = new Set<string>();
+  private comentarioFeedbackId: number | null = null;
+
+  /** Guard de gesto: el click posterior a un drag/scroll no abre el panel. */
+  private readonly umbralGestoPx = 6;
+  private gesturePointerId: number | null = null;
+  private gestureStartX = 0;
+  private gestureStartY = 0;
+  private gestureMoved = false;
+  private gestureCancelled = false;
+  private suppressNextClick = false;
+
+  /** Bloqueo del scroll del contenedor del calendario mientras el panel está abierto. */
+  private scrollLockElement: HTMLElement | null = null;
+  private scrollLockPreviousOverflow = '';
   public editSubBloqueData!: SubBloque;
   activeDayIsOpen = false;
   view = CalendarView.Month;
@@ -84,6 +110,7 @@ export class VistaSemanalComponent {
     });
     this._events = eventos;
     this.rebuildEventIndexes();
+    this.sincronizarEventoSheet();
   }
   public get events() {
     return this._events;
@@ -609,6 +636,385 @@ export class VistaSemanalComponent {
   }
 
   onEventClicked(event: CalendarEvent): void {
+    this.abrirEventSheet(event);
+  }
+
+  /** Modos en los que una tarjeta puede abrir el panel de detalle. */
+  puedeAbrirEventSheet(): boolean {
+    return this.role === 'ALUMNO' || this.mode === 'edit';
+  }
+
+  /** Abre el bottomsheet sin entrar en edición ni navegar. */
+  abrirEventSheet(event: CalendarEvent, sourceEvent?: Event): void {
+    if (!event || !this.puedeAbrirEventSheet()) return;
+
+    this.selectedEvent = event;
+    this.eventoSheet = event;
+    this.isConfirmandoBorrado = false;
+    this.comentarioFeedbackId = null;
+
+    const id = this.idSubBloque(event);
+    this.comentarioBorrador =
+      id !== null
+        ? (this.borradoresComentario.get(id) ??
+          event.meta?.subBloque?.comentariosAlumno ??
+          '')
+        : '';
+
+    this.sheetTriggerElement =
+      sourceEvent?.currentTarget instanceof HTMLElement
+        ? sourceEvent.currentTarget
+        : null;
+    this.isEventSheetVisible = true;
+    this.bloquearScrollFondo();
+  }
+
+  cerrarEventSheet(): void {
+    this.isEventSheetVisible = false;
+  }
+
+  /** Punto único de restauración al cerrar: foco, borradores y editor pendiente. */
+  onEventSheetHide(): void {
+    this.eventoSheet = null;
+    this.isConfirmandoBorrado = false;
+    this.liberarScrollFondo();
+
+    const editorPendiente = this.pendingEditorEvent;
+    this.pendingEditorEvent = null;
+    if (editorPendiente) {
+      this.abrirEditorEvento(editorPendiente);
+      return;
+    }
+
+    const trigger = this.sheetTriggerElement;
+    this.sheetTriggerElement = null;
+    if (trigger?.isConnected) trigger.focus();
+  }
+
+  /* ── Guard de gesto de la tarjeta ──────────────────────────────────────
+   * angular-calendar escucha el click y no distingue un drag. Guardamos el
+   * pointerdown primario y sólo abrimos el panel cuando el gesto termina sin
+   * superar el umbral ni cancelarse. El click sintético posterior a un drop
+   * queda suprimido una vez; el siguiente pointerdown lo reactiva. */
+  onCardPointerDown(event: PointerEvent): void {
+    this.suppressNextClick = false;
+    this.gestureMoved = false;
+    this.gestureCancelled = false;
+    if (event.button !== 0) {
+      this.gesturePointerId = null;
+      return;
+    }
+    this.gesturePointerId = event.pointerId;
+    this.gestureStartX = event.clientX;
+    this.gestureStartY = event.clientY;
+  }
+
+  onCardPointerMove(event: PointerEvent): void {
+    if (
+      this.gesturePointerId === null ||
+      event.pointerId !== this.gesturePointerId
+    ) {
+      return;
+    }
+    const dx = event.clientX - this.gestureStartX;
+    const dy = event.clientY - this.gestureStartY;
+    if (dx * dx + dy * dy > this.umbralGestoPx * this.umbralGestoPx) {
+      this.gestureMoved = true;
+    }
+  }
+
+  onCardPointerUp(event: PointerEvent): void {
+    if (event.pointerId === this.gesturePointerId) {
+      this.gesturePointerId = null;
+    }
+  }
+
+  onCardPointerCancel(event: PointerEvent): void {
+    if (event.pointerId === this.gesturePointerId) {
+      this.gestureCancelled = true;
+      this.gesturePointerId = null;
+    }
+  }
+
+  onCardClick(event: MouseEvent, calendarEvent: CalendarEvent): void {
+    const gestoInvalidado =
+      this.gestureMoved || this.gestureCancelled || this.suppressNextClick;
+    this.resetGesto();
+
+    if (
+      gestoInvalidado ||
+      !this.puedeAbrirEventSheet() ||
+      this.esObjetivoInteractivo(event.target)
+    ) {
+      return;
+    }
+
+    this.abrirEventSheet(calendarEvent, event);
+  }
+
+  onCardKeydown(event: KeyboardEvent, calendarEvent: CalendarEvent): void {
+    if (event.repeat || !this.puedeAbrirEventSheet()) return;
+    if (
+      event.key !== 'Enter' &&
+      event.key !== ' ' &&
+      event.key !== 'Spacebar'
+    ) {
+      return;
+    }
+    if (
+      event.target instanceof Element &&
+      event.target !== event.currentTarget &&
+      event.target.closest(
+        'a, button, input, textarea, select, [contenteditable="true"]',
+      )
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.suppressNextClick = false;
+    this.abrirEventSheet(calendarEvent, event);
+  }
+
+  private resetGesto(): void {
+    this.gesturePointerId = null;
+    this.gestureMoved = false;
+    this.gestureCancelled = false;
+    this.suppressNextClick = false;
+  }
+
+  private esObjetivoInteractivo(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) return false;
+    return !!target.closest(
+      'a, button, input, textarea, select, label, [role="checkbox"], [contenteditable="true"]',
+    );
+  }
+
+  /* ── Contenido y permisos del panel ──────────────────────────────────── */
+  tipoEventoSheet(event: CalendarEvent | null): string {
+    if (!event) return '';
+    if (event.meta?.esPersonalizado) return 'Evento personal';
+    if (event.meta?.subBloque?.esEntrenamientoFisico) {
+      return 'Entrenamiento físico';
+    }
+    return 'Tarea del plan';
+  }
+
+  descripcionEventoSheet(event: CalendarEvent | null): string {
+    return event?.meta?.subBloque?.comentarios ?? '';
+  }
+
+  finEventoSheet(event: CalendarEvent | null): Date | null {
+    if (!event) return null;
+    if (event.end) return event.end;
+    const duracion = this.duracionEventoMinutos(event);
+    return new Date(event.start.getTime() + duracion * 60000);
+  }
+
+  duracionEventoMinutos(event: CalendarEvent | null): number {
+    const duracion = Number(event?.meta?.subBloque?.duracion);
+    if (Number.isFinite(duracion) && duracion > 0) return duracion;
+    if (event?.start && event?.end) {
+      return Math.round((event.end.getTime() - event.start.getTime()) / 60000);
+    }
+    return 0;
+  }
+
+  puedeVerFisicaSheet(): boolean {
+    return (
+      this.role === 'ALUMNO' &&
+      !!this.eventoSheet &&
+      this.esEventoFisicaVinculado(this.eventoSheet) &&
+      this.tieneFisica(this.eventoSheet.start)
+    );
+  }
+
+  puedeComentarEventoSheet(): boolean {
+    return (
+      this.role === 'ALUMNO' &&
+      !!this.eventoSheet &&
+      !this.eventoSheet.meta?.esPersonalizado &&
+      this.idSubBloque(this.eventoSheet) !== null
+    );
+  }
+
+  puedeEditarEventoSheet(): boolean {
+    return (
+      !!this.eventoSheet &&
+      (this.role === 'ADMIN' || !!this.eventoSheet.meta?.esPersonalizado)
+    );
+  }
+
+  puedeEliminarEventoSheet(): boolean {
+    return (
+      !!this.eventoSheet &&
+      (this.role === 'ADMIN' || !!this.eventoSheet.meta?.esPersonalizado)
+    );
+  }
+
+  puedeMarcarEventoSheet(): boolean {
+    return this.role === 'ALUMNO' && !!this.eventoSheet;
+  }
+
+  /* ── Comentario del alumno ───────────────────────────────────────────── */
+  get comentarioGuardando(): boolean {
+    const id = this.idSubBloque(this.eventoSheet);
+    return id !== null && this.comentariosPendientes.has(id);
+  }
+
+  get comentarioCambiado(): boolean {
+    const id = this.idSubBloque(this.eventoSheet);
+    if (id === null || !this.eventoSheet) return false;
+    return (
+      this.comentarioBorrador !==
+      (this.eventoSheet.meta?.subBloque?.comentariosAlumno ?? '')
+    );
+  }
+
+  get comentarioError(): string {
+    const id = this.idSubBloque(this.eventoSheet);
+    return id !== null ? (this.erroresComentario.get(id) ?? '') : '';
+  }
+
+  get comentarioFeedback(): boolean {
+    const id = this.idSubBloque(this.eventoSheet);
+    return id !== null && this.comentarioFeedbackId === id;
+  }
+
+  onComentarioInput(): void {
+    this.comentarioFeedbackId = null;
+    const id = this.idSubBloque(this.eventoSheet);
+    // Borrador local por evento: no toca el contenido persistido ni el backend.
+    // Se conserva al cerrar para no perder lo escrito en A o en B.
+    if (id !== null) {
+      this.borradoresComentario.set(id, this.comentarioBorrador);
+    }
+  }
+
+  /**
+   * Guarda el borrador del evento abierto. La petición captura id, texto y
+   * evento al arrancar: cerrar el panel o abrir otro mientras está pendiente
+   * no redirige la respuesta al evento visible.
+   */
+  guardarComentarioSheet(): void {
+    const evento = this.eventoSheet;
+    const id = this.idSubBloque(evento);
+    if (
+      !evento ||
+      id === null ||
+      evento.meta?.esPersonalizado ||
+      this.role !== 'ALUMNO' ||
+      this.comentariosPendientes.has(id)
+    ) {
+      return;
+    }
+
+    const texto = this.comentarioBorrador;
+    this.comentariosPendientes.add(id);
+    this.borradoresComentario.set(id, texto);
+    this.erroresComentario.delete(id);
+    this.comentarioFeedbackId = null;
+
+    this.planificacionesService
+      .actualizarProgresoSubBloque$({
+        subBloqueId: id,
+        planificacionId: Number(this.activatedRoute.snapshot.params['id']),
+        comentariosAlumno: texto,
+      })
+      .subscribe({
+        next: () => {
+          this.comentariosPendientes.delete(id);
+          const capturado = this.events.find(
+            (calendarEvent) =>
+              !calendarEvent.meta?.esPersonalizado &&
+              this.idSubBloque(calendarEvent) === id,
+          );
+          if (capturado) {
+            capturado.meta.subBloque.comentariosAlumno = texto;
+          }
+          if (this.borradoresComentario.get(id) === texto) {
+            this.borradoresComentario.delete(id);
+          }
+          // El ACK de un comentario de fondo no debe sustituir el feedback
+          // del panel visible si ya se abrió otro evento.
+          if (this.idSubBloque(this.eventoSheet) === id) {
+            this.comentarioFeedbackId = id;
+          }
+          this.refresh.next();
+        },
+        error: () => {
+          this.comentariosPendientes.delete(id);
+          this.erroresComentario.set(
+            id,
+            'No se pudo guardar el comentario. Revisa tu conexión e inténtalo de nuevo.',
+          );
+          this.refresh.next();
+        },
+      });
+  }
+
+  /* ── Acciones del panel ──────────────────────────────────────────────── */
+  editarEventoDesdeSheet(): void {
+    const evento = this.eventoSheet;
+    if (!evento || !this.puedeEditarEventoSheet()) return;
+    this.pendingEditorEvent = evento;
+    this.isEventSheetVisible = false;
+  }
+
+  verPlanFisicoDesdeSheet(event: Event): void {
+    const evento = this.eventoSheet;
+    if (!evento || !this.puedeVerFisicaSheet()) return;
+    this.sheetTriggerElement = null;
+    this.isEventSheetVisible = false;
+    this.abrirFisica(evento.start, event);
+  }
+
+  solicitarBorradoEventoSheet(): void {
+    if (!this.puedeEliminarEventoSheet() || this.eliminandoEvento) return;
+    this.isConfirmandoBorrado = true;
+  }
+
+  /** Pending DELETE por identidad (tipo + id), no un bloqueo global. */
+  get eliminandoEvento(): boolean {
+    const clave = this.claveEvento(this.eventoSheet);
+    return clave !== null && this.eliminacionesPendientes.has(clave);
+  }
+
+  cancelarBorradoEventoSheet(): void {
+    this.isConfirmandoBorrado = false;
+  }
+
+  confirmarBorradoEventoSheet(): void {
+    const evento = this.eventoSheet;
+    if (!evento || !this.puedeEliminarEventoSheet() || this.eliminandoEvento) {
+      return;
+    }
+
+    if (evento.meta?.esPersonalizado) {
+      const clave = this.claveEvento(evento);
+      if (clave === null || this.eliminacionesPendientes.has(clave)) return;
+      this.eliminacionesPendientes.add(clave);
+      this.deleteEventoPersonalizado(evento, undefined, {
+        onSuccess: () => {
+          this.eliminacionesPendientes.delete(clave);
+          // Sólo cierra si el panel visible sigue siendo el evento confirmado.
+          if (this.claveEvento(this.eventoSheet) === clave) {
+            this.cerrarEventSheet();
+          }
+        },
+        onError: () => {
+          this.eliminacionesPendientes.delete(clave);
+        },
+      });
+      return;
+    }
+
+    this.deleteEvent(evento);
+    this.cerrarEventSheet();
+  }
+
+  private abrirEditorEvento(event: CalendarEvent): void {
     this.selectedEvent = event;
 
     if (event.meta?.esPersonalizado) {
@@ -632,6 +1038,50 @@ export class VistaSemanalComponent {
       };
       this.isDialogVisible = true;
     }
+  }
+
+  private idSubBloque(event: CalendarEvent | null | undefined): number | null {
+    const id = event?.meta?.subBloque?.id;
+    if (id === null || id === undefined) return null;
+    const numerico = Number(id);
+    return Number.isFinite(numerico) ? numerico : null;
+  }
+
+  private claveEvento(event: CalendarEvent | null | undefined): string | null {
+    const id = this.idSubBloque(event);
+    if (id === null) return null;
+    return `${event?.meta?.esPersonalizado ? 'personal' : 'subbloque'}:${id}`;
+  }
+
+  private sincronizarEventoSheet(): void {
+    const id = this.idSubBloque(this.eventoSheet);
+    if (id === null || !this.eventoSheet) return;
+    const personal = !!this.eventoSheet.meta?.esPersonalizado;
+    const actualizado = this._events.find(
+      (event) =>
+        this.idSubBloque(event) === id &&
+        !!event.meta?.esPersonalizado === personal,
+    );
+    if (actualizado) this.eventoSheet = actualizado;
+  }
+
+  private bloquearScrollFondo(): void {
+    if (this.scrollLockElement) return;
+    const host = this.elementRef?.nativeElement;
+    const contenedor = host?.closest?.(
+      '.weekly-calendar',
+    ) as HTMLElement | null;
+    if (!contenedor) return;
+    this.scrollLockElement = contenedor;
+    this.scrollLockPreviousOverflow = contenedor.style.overflow;
+    contenedor.style.overflow = 'hidden';
+  }
+
+  private liberarScrollFondo(): void {
+    if (!this.scrollLockElement) return;
+    this.scrollLockElement.style.overflow = this.scrollLockPreviousOverflow;
+    this.scrollLockElement = null;
+    this.scrollLockPreviousOverflow = '';
   }
 
   saveEvent(subbloque: SubBloque): void {
@@ -675,7 +1125,6 @@ export class VistaSemanalComponent {
       this.rebuildEventIndexes();
       this.refresh.next();
       this.eventsChange.emit(this.events);
-      this.displayDialog = false;
       //Como el alumno no tiene botón de guardar... se autoguarda al añadir
       if (this.role == 'ALUMNO') this.saveChanges.emit();
     }
@@ -734,6 +1183,9 @@ export class VistaSemanalComponent {
     { event, newStart, newEnd, allDay }: CalendarEventTimesChangedEvent,
     autoSave = false,
   ): void {
+    // Un drag/resize real no es un click de apertura. El click sintético que
+    // pueda llegar al soltar se consume una vez; el siguiente gesto lo limpia.
+    this.suppressNextClick = true;
     if (event instanceof MouseEvent) {
       event.preventDefault();
       event.stopPropagation();
@@ -809,10 +1261,6 @@ export class VistaSemanalComponent {
     }
   }
 
-  cancelEdit(): void {
-    this.displayDialog = false;
-  }
-
   ngAfterViewInit(): void {
     // if (
     //   document.getElementsByClassName('cal-time') !== undefined &&
@@ -824,62 +1272,15 @@ export class VistaSemanalComponent {
     // }
   }
 
-  openCommentDialog(subBloque: any, event: Event): void {
-    event.stopPropagation(); // Evita que el clic abra otros elementos
-    this.selectedSubBloque = { ...subBloque }; // Clona el sub-bloque para edición
-    this.isCommentDialogVisible = true;
-  }
-
-  public deleteEvent(calendarEvent: CalendarEvent, event: Event) {
-    event.stopPropagation();
+  public deleteEvent(calendarEvent: CalendarEvent, event?: Event) {
+    event?.stopPropagation();
+    const id = this.idSubBloque(calendarEvent);
+    if (id !== null) {
+      this.borradoresComentario.delete(id);
+      this.erroresComentario.delete(id);
+    }
     this.events = this.events.filter((event) => event != calendarEvent);
     this.eventsChange.emit(this.events);
-  }
-
-  async saveComment(): Promise<void> {
-    const event = this.events.find(
-      (event) =>
-        event?.meta?.subBloque?.id ===
-        (this.selectedSubBloque as SubBloque)?.id,
-    );
-
-    const subBloque = event?.meta.subBloque;
-
-    if (!subBloque || !subBloque.id) {
-      this.toast.error('No se pudo guardar el comentario');
-      this.isCommentDialogVisible = false;
-      return;
-    }
-
-    if (this.role === 'ALUMNO') {
-      // Para alumnos, usar el nuevo servicio
-      this.planificacionesService
-        .actualizarProgresoSubBloque$({
-          subBloqueId: subBloque.id,
-          planificacionId: Number(this.activatedRoute.snapshot.params['id']),
-          comentariosAlumno: this.selectedSubBloque.comentariosAlumno,
-        })
-        .subscribe({
-          next: () => {
-            // Actualizar localmente
-            subBloque.comentariosAlumno =
-              this.selectedSubBloque.comentariosAlumno;
-            this.isCommentDialogVisible = false;
-            this.refresh.next();
-            this.toast.success('Comentario guardado correctamente');
-          },
-          error: (err) => {
-            console.error('Error al guardar comentario:', err);
-            this.isCommentDialogVisible = false;
-          },
-        });
-    } else {
-      // Para admin, comportamiento previo
-      subBloque.comentariosAlumno = this.selectedSubBloque.comentariosAlumno;
-      this.isCommentDialogVisible = false;
-      this.refresh.next();
-      this.eventsChange.emit(this.events);
-    }
   }
 
   onTimeClicked({ date, sourceEvent }: any, cm: ContextMenu): void {
@@ -991,32 +1392,40 @@ export class VistaSemanalComponent {
   }
 
   // Eliminar evento personalizado
-  deleteEventoPersonalizado(event: CalendarEvent, domEvent: Event): void {
-    domEvent.stopPropagation();
+  deleteEventoPersonalizado(
+    event: CalendarEvent,
+    domEvent?: Event,
+    callbacks?: { onSuccess?: () => void; onError?: () => void },
+  ): void {
+    domEvent?.stopPropagation();
 
     if (!event.meta?.subBloque?.id || !event.meta?.esPersonalizado) {
       this.toast.error('No se puede eliminar este evento');
+      callbacks?.onError?.();
       return;
     }
 
-    this.planificacionesService
-      .eliminarEventoPersonalizado$(event.meta.subBloque.id)
-      .subscribe({
-        next: () => {
-          this.events = this.events.filter(
-            (e) =>
-              !(
-                e.meta?.esPersonalizado &&
-                e.meta?.subBloque?.id === event.meta?.subBloque?.id
-              ),
-          );
-          this.refresh.next();
-          this.toast.success('Evento personal eliminado correctamente');
-        },
-        error: (err) => {
-          console.error('Error:', err);
-        },
-      });
+    const id = event.meta.subBloque.id;
+    this.planificacionesService.eliminarEventoPersonalizado$(id).subscribe({
+      next: () => {
+        const idNumerico = Number(id);
+        if (Number.isFinite(idNumerico)) {
+          this.borradoresComentario.delete(idNumerico);
+          this.erroresComentario.delete(idNumerico);
+        }
+        this.events = this.events.filter(
+          (e) => !(e.meta?.esPersonalizado && e.meta?.subBloque?.id === id),
+        );
+        this.refresh.next();
+        this.toast.success('Evento personal eliminado correctamente');
+        callbacks?.onSuccess?.();
+      },
+      error: (err) => {
+        console.error('Error:', err);
+        this.toast.error('No se pudo eliminar el evento personal');
+        callbacks?.onError?.();
+      },
+    });
   }
 
   private progressKey(event: CalendarEvent): string {

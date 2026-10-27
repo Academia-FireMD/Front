@@ -474,4 +474,350 @@ describe('VistaSemanalComponent', () => {
       });
     });
   });
+
+  describe('panel inferior de detalle del evento', () => {
+    const dia = new Date(2026, 6, 15, 9, 0);
+    const crearEvento = (
+      id: number,
+      {
+        personal = false,
+        titulo = `Evento ${id}`,
+        comentario = '',
+        comentariosAlumno = '',
+        vinculado = false,
+        realizado = false,
+      } = {},
+    ): any => ({
+      title: titulo,
+      start: dia,
+      end: new Date(dia.getTime() + 60 * 60000),
+      color: { primary: '#f59e0b', secondary: '#f59e0b' },
+      draggable: true,
+      meta: {
+        esPersonalizado: personal,
+        subBloque: {
+          id,
+          nombre: titulo,
+          duracion: 60,
+          comentarios: comentario,
+          comentariosAlumno,
+          esPersonalizado: personal,
+          esEntrenamientoFisico: vinculado,
+          realizado,
+        },
+      },
+    });
+
+    const pointer = (props: Record<string, unknown>) =>
+      ({ button: 0, pointerId: 1, clientX: 0, clientY: 0, ...props }) as any;
+
+    it('abre el panel sin iniciar la edición y devuelve el foco al activador', () => {
+      const evento = crearEvento(1);
+      const trigger = document.createElement('button');
+      document.body.appendChild(trigger);
+
+      component.abrirEventSheet(evento, {
+        currentTarget: trigger,
+      } as unknown as Event);
+
+      expect(component.isEventSheetVisible).toBe(true);
+      expect(component.eventoSheet).toBe(evento);
+      expect(component.isDialogVisible).toBe(false);
+      expect(component.isEventoPersonalizadoDialogVisible).toBe(false);
+      expect(component.comentarioBorrador).toBe('');
+
+      component.cerrarEventSheet();
+      component.onEventSheetHide();
+
+      expect(component.isEventSheetVisible).toBe(false);
+      expect(document.activeElement).toBe(trigger);
+      trigger.remove();
+    });
+
+    it('no abre el panel en un modo de sólo presentación', () => {
+      component.role = 'ADMIN';
+      component.mode = 'picker';
+      const evento = crearEvento(7);
+
+      component.onEventClicked(evento);
+
+      expect(component.isEventSheetVisible).toBe(false);
+      expect(component.eventoSheet).toBeNull();
+    });
+
+    it('el guard de gesto ignora el clic de un drag y abre en el gesto siguiente', () => {
+      const evento = crearEvento(2);
+      const click = { target: null } as unknown as MouseEvent;
+
+      component.onCardPointerDown(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardPointerMove(pointer({ clientX: 30, clientY: 10 }));
+      component.onCardPointerUp(pointer({ clientX: 30, clientY: 10 }));
+      component.onCardClick(click, evento);
+      expect(component.isEventSheetVisible).toBe(false);
+
+      component.onCardPointerDown(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardPointerUp(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardClick(click, evento);
+      expect(component.isEventSheetVisible).toBe(true);
+    });
+
+    it('un gesto cancelado no abre el panel con el click de cierre de la tarjeta', () => {
+      const evento = crearEvento(4);
+      const click = { target: null } as unknown as MouseEvent;
+
+      component.onCardPointerDown(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardPointerMove(pointer({ clientX: 40, clientY: 10 }));
+      component.onCardPointerCancel(pointer({ clientX: 40, clientY: 10 }));
+      component.onCardClick(click, evento);
+      expect(component.isEventSheetVisible).toBe(false);
+
+      component.onCardPointerDown(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardPointerUp(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardClick(click, evento);
+      expect(component.isEventSheetVisible).toBe(true);
+    });
+
+    it('un drag real consume el click de soltado una sola vez', () => {
+      component.role = 'ADMIN';
+      const evento = crearEvento(3);
+
+      component.eventDropped({
+        event: evento,
+        newStart: new Date(2026, 6, 15, 10, 0),
+        newEnd: new Date(2026, 6, 15, 11, 0),
+        allDay: false,
+      } as any);
+
+      component.onCardClick({ target: null } as unknown as MouseEvent, evento);
+      expect(component.isEventSheetVisible).toBe(false);
+
+      component.onCardPointerDown(pointer({}));
+      component.onCardPointerUp(pointer({}));
+      component.onCardClick({ target: null } as unknown as MouseEvent, evento);
+      expect(component.isEventSheetVisible).toBe(true);
+    });
+
+    it('guarda el comentario capturado sin contaminar otro evento abierto mientras está pendiente', () => {
+      component.role = 'ALUMNO';
+      const eventoA = crearEvento(11, { comentariosAlumno: 'previo A' });
+      const eventoB = crearEvento(12);
+      component.events = [eventoA, eventoB];
+
+      const peticionA = new Subject<void>();
+      const peticionB = new Subject<void>();
+      const guardar = jest.fn(({ subBloqueId }: { subBloqueId: number }) =>
+        subBloqueId === 11
+          ? peticionA.asObservable()
+          : peticionB.asObservable(),
+      );
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+
+      component.onEventClicked(eventoA);
+      expect(component.comentarioBorrador).toBe('previo A');
+      component.comentarioBorrador = 'Comentario A';
+      component.guardarComentarioSheet();
+      component.guardarComentarioSheet();
+      expect(guardar).toHaveBeenCalledTimes(1);
+      expect(eventoA.meta.subBloque.comentariosAlumno).toBe('previo A');
+
+      component.cerrarEventSheet();
+      component.onEventSheetHide();
+      component.onEventClicked(eventoB);
+      expect(component.comentarioBorrador).toBe('');
+      component.comentarioBorrador = 'Comentario B';
+      component.guardarComentarioSheet();
+      expect(guardar).toHaveBeenCalledTimes(2);
+
+      peticionA.next();
+      expect(eventoA.meta.subBloque.comentariosAlumno).toBe('Comentario A');
+      expect(eventoB.meta.subBloque.comentariosAlumno).toBe('');
+      expect(component.comentarioBorrador).toBe('Comentario B');
+
+      peticionB.next();
+      expect(eventoB.meta.subBloque.comentariosAlumno).toBe('Comentario B');
+      expect(component.comentarioFeedback).toBe(true);
+    });
+
+    it('un ACK tardío de A no sobrescribe el feedback ya mostrado para B', () => {
+      component.role = 'ALUMNO';
+      const eventoA = crearEvento(13);
+      const eventoB = crearEvento(14);
+      component.events = [eventoA, eventoB];
+
+      const peticionA = new Subject<void>();
+      const peticionB = new Subject<void>();
+      const guardar = jest.fn(({ subBloqueId }: { subBloqueId: number }) =>
+        subBloqueId === 13
+          ? peticionA.asObservable()
+          : peticionB.asObservable(),
+      );
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+
+      component.onEventClicked(eventoA);
+      component.comentarioBorrador = 'Comentario A';
+      component.guardarComentarioSheet();
+      component.onEventClicked(eventoB);
+      component.comentarioBorrador = 'Comentario B';
+      component.guardarComentarioSheet();
+
+      peticionB.next();
+      expect(component.comentarioFeedback).toBe(true);
+      expect(component.comentarioBorrador).toBe('Comentario B');
+
+      peticionA.next();
+      expect(component.comentarioFeedback).toBe(true);
+      expect(component.comentarioBorrador).toBe('Comentario B');
+      expect(eventoA.meta.subBloque.comentariosAlumno).toBe('Comentario A');
+    });
+
+    it('conserva el borrador local de B tras error de A y no lo resucita en A', () => {
+      component.role = 'ALUMNO';
+      const eventoA = crearEvento(15, { comentariosAlumno: 'previo A' });
+      const eventoB = crearEvento(16, { comentariosAlumno: 'previo B' });
+      component.events = [eventoA, eventoB];
+      const errorA = new Subject<void>();
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: jest.fn(() => errorA.asObservable()),
+      } as any;
+
+      component.onEventClicked(eventoA);
+      component.comentarioBorrador = 'borrador A fallido';
+      component.guardarComentarioSheet();
+      errorA.error(new Error('offline'));
+
+      component.onEventClicked(eventoB);
+      component.comentarioBorrador = 'borrador B';
+      component.onComentarioInput();
+      component.cerrarEventSheet();
+      component.onEventSheetHide();
+      component.onEventClicked(eventoB);
+      expect(component.comentarioBorrador).toBe('borrador B');
+      expect(component.comentarioError).toBe('');
+
+      component.onEventClicked(eventoA);
+      expect(component.comentarioBorrador).toBe('borrador A fallido');
+      expect(component.comentarioError).toMatch(/No se pudo guardar/);
+      expect(component.comentarioBorrador).not.toBe('borrador B');
+    });
+
+    it('aísla el DELETE personal pendiente por identidad y no cierra otro panel', () => {
+      component.role = 'ALUMNO';
+      const personal = crearEvento(51, { personal: true });
+      const otra = crearEvento(52);
+      component.events = [personal, otra];
+      const peticion = new Subject<void>();
+      const eliminar = jest.fn(() => peticion.asObservable());
+      component.planificacionesService = {
+        eliminarEventoPersonalizado$: eliminar,
+      } as any;
+
+      component.onEventClicked(personal);
+      component.confirmarBorradoEventoSheet();
+      expect(eliminar).toHaveBeenCalledTimes(1);
+      expect(component.eliminandoEvento).toBe(true);
+
+      component.cerrarEventSheet();
+      component.onEventSheetHide();
+      component.onEventClicked(personal);
+      expect(component.eliminandoEvento).toBe(true);
+      component.confirmarBorradoEventoSheet();
+      expect(eliminar).toHaveBeenCalledTimes(1);
+
+      component.cerrarEventSheet();
+      component.onEventSheetHide();
+      component.onEventClicked(otra);
+      expect(component.isEventSheetVisible).toBe(true);
+      peticion.next();
+      expect(component.isEventSheetVisible).toBe(true);
+      expect(component.eventoSheet).toBe(otra);
+      expect(component.events.includes(personal)).toBe(false);
+    });
+
+    it('conserva el borrador al fallar y permite reintentar sin doble guardado', () => {
+      component.role = 'ALUMNO';
+      const evento = crearEvento(21, { comentariosAlumno: 'anterior' });
+      component.events = [evento];
+
+      const primerError = new Subject<void>();
+      const reintento = new Subject<void>();
+      const guardar = jest
+        .fn()
+        .mockReturnValueOnce(primerError.asObservable())
+        .mockReturnValueOnce(reintento.asObservable());
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+
+      component.onEventClicked(evento);
+      component.comentarioBorrador = 'nuevo comentario';
+      component.guardarComentarioSheet();
+      component.guardarComentarioSheet();
+      expect(guardar).toHaveBeenCalledTimes(1);
+
+      primerError.error(new Error('offline'));
+      expect(component.comentarioBorrador).toBe('nuevo comentario');
+      expect(component.comentarioGuardando).toBe(false);
+      expect(component.comentarioError).toMatch(/No se pudo guardar/);
+      expect(evento.meta.subBloque.comentariosAlumno).toBe('anterior');
+
+      component.guardarComentarioSheet();
+      expect(guardar).toHaveBeenCalledTimes(2);
+      reintento.next();
+      expect(evento.meta.subBloque.comentariosAlumno).toBe('nuevo comentario');
+      expect(component.comentarioError).toBe('');
+    });
+
+    it('respeta permisos por rol y tipo de evento', () => {
+      component.role = 'ALUMNO';
+      const asignado = crearEvento(31);
+      component.onEventClicked(asignado);
+      expect(component.puedeComentarEventoSheet()).toBe(true);
+      expect(component.puedeEditarEventoSheet()).toBe(false);
+      expect(component.puedeEliminarEventoSheet()).toBe(false);
+      expect(component.puedeMarcarEventoSheet()).toBe(true);
+
+      const personal = crearEvento(32, { personal: true });
+      component.onEventClicked(personal);
+      expect(component.puedeComentarEventoSheet()).toBe(false);
+      expect(component.puedeEditarEventoSheet()).toBe(true);
+      expect(component.puedeEliminarEventoSheet()).toBe(true);
+
+      component.role = 'ADMIN';
+      component.onEventClicked(asignado);
+      expect(component.puedeComentarEventoSheet()).toBe(false);
+      expect(component.puedeEditarEventoSheet()).toBe(true);
+      expect(component.puedeEliminarEventoSheet()).toBe(true);
+      expect(component.puedeMarcarEventoSheet()).toBe(false);
+    });
+
+    it('sólo ofrece el plan físico al evento vinculado con resumen del día', () => {
+      component.role = 'ALUMNO';
+      component.resumenFisica = [
+        {
+          fecha: '2026-07-15',
+          bloqueId: 33,
+          disciplinas: [
+            {
+              nombre: 'Cuerda',
+              grupo: 'CUERDA',
+              color: '#9fe2d0',
+              realizado: false,
+            },
+          ],
+        },
+      ];
+      const vinculado = crearEvento(41, { vinculado: true });
+      const normal = crearEvento(42);
+
+      component.onEventClicked(vinculado);
+      expect(component.puedeVerFisicaSheet()).toBe(true);
+
+      component.onEventClicked(normal);
+      expect(component.puedeVerFisicaSheet()).toBe(false);
+    });
+  });
 });

@@ -486,10 +486,22 @@ test('el bridge del temario conserva planificacionId, bloqueId y origen hasta el
   );
   const bridge = page.getByTestId('temario-fisica-bridge');
   await expect(bridge).toBeVisible();
-  await expect(bridge).toContainText('Cuerda exacta');
   expect(planificacionConsultada).toBe(String(PLAN_TEMARIO));
 
-  await bridge.click();
+  await bridge.locator('.event-text').click();
+  const sheet = page.locator('.event-sheet-dialog');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId('event-sheet-title')).toContainText(
+    'ENTRENAMIENTO FÍSICO',
+  );
+  await expect(sheet.getByTestId('event-sheet-fisica')).toContainText(
+    'Cuerda exacta',
+  );
+  await expect(
+    sheet.getByRole('button', { name: 'Ver plan físico' }),
+  ).toBeVisible();
+
+  await sheet.getByRole('button', { name: 'Ver plan físico' }).click();
   await expect(page).toHaveURL(
     new RegExp(
       `planificacion-fisica/dia/${fecha}\\?bloqueId=${BLOQUE_EXACTO}&originPlanificacionId=${PLAN_TEMARIO}`,
