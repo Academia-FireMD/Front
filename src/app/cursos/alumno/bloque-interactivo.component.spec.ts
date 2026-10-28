@@ -93,6 +93,7 @@ describe('BloqueInteractivoComponent', () => {
       leccionId: 77,
       bloqueId: 501,
       aplicacionCodigo: 'HIDRAULICA',
+      inmersivo: false,
     });
     expect(
       fixture.nativeElement.querySelector(

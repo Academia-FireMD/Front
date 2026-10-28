@@ -69,7 +69,8 @@
           <button
             pButton
             class="hero-cta"
-            [disabled]="isPreview() || !continuarLeccion()"
+            [disabled]="isPreview() || !destinoCta().disponible"
+            [title]="destinoCta().motivo ?? ''"
             (click)="empezar()"
           >
             <i class="pi pi-play"></i><span>{{ ctaLabel() }}</span>

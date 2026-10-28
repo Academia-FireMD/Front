@@ -50,6 +50,9 @@
       <app-bloque-interactivo
         [bloque]="bloque()"
         [preview]="preview()"
+        [inmersivo]="inmersivo()"
+        [solicitudReintento]="solicitudReintento()"
+        (syncCambio)="syncInteractivo.emit($event)"
       ></app-bloque-interactivo>
     }
   }

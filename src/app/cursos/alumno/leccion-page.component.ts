@@ -14,7 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import {
   APLICACION_CODIGO_HIDRAULICA,
   Bloque,
@@ -24,6 +24,11 @@ import {
   ProgresoLeccion,
 } from '../models/curso.model';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
+import { HidraulicaSyncEstado } from '../services/hidraulica-interactivo.service';
+import { AuthService } from '../../services/auth.service';
+import { AplicacionWorkspaceComponent } from './aplicacion-workspace.component';
+import { AulaInmersivaService } from '../ui/aula-inmersiva.service';
+import { esLeccionAplicacionValida } from '../ui/curso-cta.util';
 import { CurriculumSidebarComponent } from '../ui/curriculum-sidebar.component';
 import { LeccionShellComponent } from '../ui/leccion-shell.component';
 import { estaCompletada, leccionesPlanas } from '../ui/progreso.util';
@@ -75,6 +80,7 @@ export function filtrarBloquesRenderizables(
     ButtonModule,
     LeccionShellComponent,
     CurriculumSidebarComponent,
+    AplicacionWorkspaceComponent,
     BloqueRenderComponent,
     LeccionVideoComponent,
     LeccionTextoComponent,
@@ -91,6 +97,8 @@ export class LeccionPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastrService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly inmersiva = inject(AulaInmersivaService);
+  private readonly auth = inject(AuthService);
 
   readonly previewData = input<LeccionResponse | null>(null);
   readonly previewMode = input<boolean>(false);
@@ -102,7 +110,18 @@ export class LeccionPageComponent implements OnInit {
   error = signal(false);
   marcando = signal(false);
 
+  /** Estado de sync que pinta la cabecera nativa del workspace inmersivo. */
+  readonly syncEstado = signal<HidraulicaSyncEstado>('loading');
+  readonly syncTexto = signal('Cargando aplicación…');
+  readonly puedeReintentar = signal(false);
+  /** Contador para reintentar el bloque sin recrear iframe/contexto. */
+  readonly reintentoApp = signal(0);
+
   private loadedSlug: string | null = null;
+  /** Única carga vigente: se cancela/ignora al cambiar de ruta o destruir. */
+  private cargaSub: Subscription | null = null;
+  private cargaGeneracion = 0;
+  private destruido = false;
 
   readonly isPreview = computed(
     () => this.previewMode() && this.previewData() !== null,
@@ -135,6 +154,28 @@ export class LeccionPageComponent implements OnInit {
     () => this.leccionData()?.playbackUrls ?? {},
   );
 
+  /** Curso en presentación APLICACION (default ESTANDAR si el campo falta). */
+  readonly esModoAplicacion = computed(
+    () => this.cursoData()?.curso.modoPresentacion === 'APLICACION',
+  );
+  readonly leccionEntradaId = computed(
+    () => this.cursoData()?.curso.leccionAplicacionId ?? null,
+  );
+  /**
+   * Layout inmersivo SOLO si el curso es APLICACION, la lección activa es
+   * exactamente su entrada y su pila real es una única aplicación aprobada.
+   * Cualquier otra lección (intro/estándar/mixta) conserva el aula nativa.
+   */
+  readonly esAplicacionInmersiva = computed(() => {
+    if (this.isPreview() || this.loading() || this.error()) return false;
+    if (!this.esModoAplicacion()) return false;
+    const entrada = this.leccionEntradaId();
+    const activa = this.leccionActivaId();
+    if (entrada == null || activa == null || entrada !== activa) return false;
+    const leccion = this.leccionData()?.leccion;
+    return leccion != null && esLeccionAplicacionValida(leccion);
+  });
+
   /**
    * Lección sin contenido: ni bloques ni campos legacy. Pasa con lecciones
    * recién creadas como contenedor (consolidación) a las que el admin aún no
@@ -162,6 +203,22 @@ export class LeccionPageComponent implements OnInit {
       },
       { allowSignalWrites: true },
     );
+
+    // El layout inmersivo es temporal y reactivo al estado real del aula:
+    // loading/error/otra lección/destrucción lo liberan inmediatamente.
+    effect(
+      () => {
+        if (this.esAplicacionInmersiva()) this.inmersiva.activar();
+        else this.inmersiva.desactivar();
+      },
+      { allowSignalWrites: true },
+    );
+    this.destroyRef.onDestroy(() => this.inmersiva.desactivar());
+    this.auth.currentIdentity$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((identidad) => {
+        if (!identidad) this.inmersiva.desactivar();
+      });
   }
 
   get slug(): string {
@@ -180,44 +237,85 @@ export class LeccionPageComponent implements OnInit {
         const slug = params.get('slug') ?? '';
         const idParam = params.get('id');
         const id = idParam ? parseInt(idParam, 10) : NaN;
+
+        // Cancelar/ignorar SIEMPRE la carga anterior, también con params
+        // inválidos: una respuesta vieja no puede pisar la ruta vigente.
+        this.cancelarCarga();
+        this.error.set(false);
+        this.loading.set(true);
+
         if (isNaN(id) || !slug) {
-          this.error.set(true);
+          this.limpiarContenido();
           this.loading.set(false);
+          this.error.set(true);
           return;
         }
         this.cargar(slug, id);
       });
+
+    this.destroyRef.onDestroy(() => {
+      this.destruido = true;
+      this.cancelarCarga();
+    });
   }
 
   private cargar(slug: string, id: number): void {
     this.loading.set(true);
     this.error.set(false);
+    const generacion = this.cargaGeneracion;
 
     // El árbol del curso solo se recarga si cambia el slug.
     if (this.loadedSlug === slug && this.cursoData()) {
-      this.service.getLeccion(id).subscribe({
+      this.cargaSub = this.service.getLeccion(id).subscribe({
         next: (lec) => {
+          if (!this.esCargaVigente(generacion)) return;
           this.leccionData.set(lec);
           this.loading.set(false);
         },
-        error: () => this.fallo(),
+        error: () => {
+          if (!this.esCargaVigente(generacion)) return;
+          this.fallo();
+        },
       });
       return;
     }
 
-    forkJoin({
+    this.cargaSub = forkJoin({
       curso: this.service.getCurso(slug),
       leccion: this.service.getLeccion(id),
     }).subscribe({
       next: ({ curso, leccion }) => {
+        if (!this.esCargaVigente(generacion)) return;
         this.loadedSlug = slug;
         this.cursoData.set(curso);
         this.progreso.set(curso.progreso ?? []);
         this.leccionData.set(leccion);
         this.loading.set(false);
       },
-      error: () => this.fallo(),
+      error: () => {
+        if (!this.esCargaVigente(generacion)) return;
+        this.fallo();
+      },
     });
+  }
+
+  /** Invalida y cancela la carga en vuelo antes de cada emisión de paramMap. */
+  private cancelarCarga(): void {
+    this.cargaGeneracion += 1;
+    this.cargaSub?.unsubscribe();
+    this.cargaSub = null;
+    this.loading.set(false);
+  }
+
+  private esCargaVigente(generacion: number): boolean {
+    return !this.destruido && generacion === this.cargaGeneracion;
+  }
+
+  private limpiarContenido(): void {
+    this.loadedSlug = null;
+    this.cursoData.set(null);
+    this.leccionData.set(null);
+    this.progreso.set([]);
   }
 
   private fallo(): void {
@@ -227,6 +325,25 @@ export class LeccionPageComponent implements OnInit {
 
   irALeccion(leccion: Leccion): void {
     this.router.navigate(['/app/cursos', this.slug, 'leccion', leccion.id]);
+  }
+
+  /** Cabecera inmersiva: refleja el estado real del puente (loading/saving/...). */
+  onSyncAplicacion(evento: {
+    estado: HidraulicaSyncEstado;
+    texto: string;
+    puedeReintentar: boolean;
+  }): void {
+    this.syncEstado.set(evento.estado);
+    this.syncTexto.set(evento.texto);
+    this.puedeReintentar.set(evento.puedeReintentar);
+  }
+
+  reintentarAplicacion(): void {
+    this.reintentoApp.update((n) => n + 1);
+  }
+
+  onSeleccionarAplicacion(leccion: Leccion): void {
+    this.irALeccion(leccion);
   }
 
   volver(): void {

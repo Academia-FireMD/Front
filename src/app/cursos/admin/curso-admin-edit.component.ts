@@ -23,6 +23,7 @@ import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DividerModule } from 'primeng/divider';
+import { DropdownModule } from 'primeng/dropdown';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputTextModule } from 'primeng/inputtext';
@@ -47,10 +48,12 @@ import {
   Leccion,
   LeccionCreatePayload,
   LeccionUpdatePayload,
+  ModoPresentacion,
   Seccion,
   WooCommerceProductSummary,
 } from '../models/curso.model';
 import { CursosAdminService } from '../services/cursos-admin.service';
+import { esLeccionAplicacionValida } from '../ui/curso-cta.util';
 import { ImageUploadComponent } from './image-upload.component';
 import { LeccionBloquesDialogComponent } from './leccion-bloques-dialog.component';
 import {
@@ -104,6 +107,7 @@ type TagSeverity =
     TooltipModule,
     DividerModule,
     ConfirmDialogModule,
+    DropdownModule,
     AsyncButtonComponent,
     WooCommerceProductPickerComponent,
     SeccionFormDialogComponent,
@@ -202,6 +206,15 @@ export class CursoAdminEditComponent implements OnInit {
      * esta fecha NO la ven). Vacío = sellado automático al publicar.
      */
     fechaPublicacion: [null as Date | null],
+    /**
+     * Presentación del curso (2026-10-28): ESTANDAR (aula nativa) o APLICACION
+     * (lección de entrada interactiva). El selector de entrada depende de las
+     * lecciones YA guardadas y elegibles.
+     */
+    modoPresentacion: this.fb.control<ModoPresentacion>('ESTANDAR', {
+      nonNullable: true,
+    }),
+    leccionAplicacionId: [null as number | null],
     thumbnailUrl: [''],
     duracionEstimadaMinutos: [null as number | null],
   });
@@ -287,6 +300,128 @@ export class CursoAdminEditComponent implements OnInit {
     () => this.esClaseGrabadaSig() && this.relevancia().length === 0,
   );
 
+  /** Opciones de presentación (2026-10-28). */
+  readonly modoPresentacionOptions: {
+    label: string;
+    value: ModoPresentacion;
+  }[] = [
+    { label: 'Curso (aula nativa)', value: 'ESTANDAR' },
+    { label: 'Aplicación interactiva', value: 'APLICACION' },
+  ];
+
+  private readonly modoPresentacionValue = toSignal(
+    this.metadataForm.controls.modoPresentacion.valueChanges,
+    { initialValue: this.metadataForm.controls.modoPresentacion.value },
+  );
+  private readonly leccionAplicacionValue = toSignal(
+    this.metadataForm.controls.leccionAplicacionId.valueChanges,
+    { initialValue: this.metadataForm.controls.leccionAplicacionId.value },
+  );
+
+  readonly esModoAplicacion = computed(
+    () => this.modoPresentacionValue() === 'APLICACION',
+  );
+
+  /**
+   * Lecciones YA guardadas del curso que pueden ser entrada APLICACION: existen
+   * en el árbol y toda su pila son bloques INTERACTIVO del mismo registro fijo.
+   * Las lecciones recién creadas sin id no aparecen hasta guardar/recargar.
+   */
+  readonly leccionesElegibles = computed<{ label: string; value: number }[]>(
+    () => {
+      const curso = this.curso();
+      if (!curso?.secciones?.length) return [];
+      const opciones: { label: string; value: number }[] = [];
+      for (const seccion of curso.secciones) {
+        for (const leccion of seccion.lecciones ?? []) {
+          if (
+            Number.isSafeInteger(leccion.id) &&
+            leccion.id > 0 &&
+            esLeccionAplicacionValida(leccion)
+          ) {
+            opciones.push({
+              label: `${seccion.titulo} · ${leccion.titulo}`,
+              value: leccion.id,
+            });
+          }
+        }
+      }
+      return opciones;
+    },
+  );
+
+  readonly entradaSeleccionadaValida = computed(() => {
+    const id = this.leccionAplicacionValue();
+    return id != null && this.leccionesElegibles().some((o) => o.value === id);
+  });
+
+  /**
+   * Reactividad del formulario (incluido `dirty`): `events` emite también
+   * PristineChangeEvent, así un cambio solo de título re-evalúa la guarda.
+   */
+  private readonly formRevision = toSignal(this.metadataForm.events, {
+    initialValue: null,
+  });
+
+  readonly formularioPendiente = computed(() => {
+    this.formRevision();
+    return (
+      this.metadataForm.dirty ||
+      this.metadataForm.pending ||
+      this.metadataForm.invalid
+    );
+  });
+
+  /**
+   * Publicar exige metadatos PERSISTIDOS y limpios. Un formulario sucio no se
+   * publica implícitamente: el admin debe pulsar "Guardar cambios" primero.
+   * Los borradores APLICACION pueden guardarse incompletos.
+   */
+  readonly puedePublicar = computed(() => {
+    if (this.esNuevo() || this.saving()) return false;
+    if (this.formularioPendiente()) return false;
+    return !this.esModoAplicacion() || this.entradaSeleccionadaValida();
+  });
+
+  /** Mensaje exacto del bloqueo de publicación (dirty tiene prioridad). */
+  readonly motivoPublicacionBloqueada = computed(() => {
+    if (this.saving()) return 'Guardando cambios…';
+    if (this.formularioPendiente()) {
+      return 'Guarda los cambios antes de publicar.';
+    }
+    if (this.esModoAplicacion() && !this.entradaSeleccionadaValida()) {
+      return 'Selecciona una lección de aplicación válida antes de publicar.';
+    }
+    return '';
+  });
+
+  readonly hintEntradaAplicacion = computed(() => {
+    if (this.esNuevo()) {
+      return 'Guarda el curso, crea una lección con solo bloques INTERACTIVO de Hidráulica y vuelve a editarlo para elegir la entrada.';
+    }
+    if (!this.leccionesElegibles().length) {
+      return 'No hay lecciones elegibles: crea una lección guardada cuyos bloques sean todos INTERACTIVO de Hidráulica (sin texto, vídeo u otros tipos).';
+    }
+    return 'El botón principal del curso abrirá directamente esta lección como aplicación. Si la vacías en APLICACION, el curso no se podrá publicar.';
+  });
+
+  /** Cambiar de modo limpia SOLO una entrada incompatible (ESTANDAR no admite). */
+  onModoPresentacionChange(modo: ModoPresentacion): void {
+    if (modo === 'ESTANDAR') {
+      this.metadataForm.controls.leccionAplicacionId.setValue(null);
+      this.metadataForm.markAsDirty();
+      return;
+    }
+    const actual = this.metadataForm.controls.leccionAplicacionId.value;
+    if (
+      actual != null &&
+      !this.leccionesElegibles().some((o) => o.value === actual)
+    ) {
+      this.metadataForm.controls.leccionAplicacionId.setValue(null);
+      this.metadataForm.markAsDirty();
+    }
+  }
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'nuevo') {
@@ -316,9 +451,18 @@ export class CursoAdminEditComponent implements OnInit {
         fechaPublicacion: data.fechaPublicacion
           ? new Date(data.fechaPublicacion)
           : null,
+        modoPresentacion:
+          data.modoPresentacion === 'APLICACION' ? 'APLICACION' : 'ESTANDAR',
+        leccionAplicacionId:
+          data.modoPresentacion === 'APLICACION'
+            ? (data.leccionAplicacionId ?? null)
+            : null,
         thumbnailUrl: data.thumbnailUrl ?? '',
         duracionEstimadaMinutos: data.duracionEstimadaMinutos ?? null,
       });
+      // El formulario recién hidratado refleja lo persistido: no hay cambios
+      // pendientes que bloquearían Publicar.
+      this.metadataForm.markAsPristine();
     } catch {
       // handleError shows toast
     } finally {
@@ -424,12 +568,20 @@ export class CursoAdminEditComponent implements OnInit {
             : {}),
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
+          modoPresentacion: raw.modoPresentacion,
+          leccionAplicacionId:
+            raw.modoPresentacion === 'APLICACION'
+              ? (raw.leccionAplicacionId ?? null)
+              : null,
           updatedAt: c.updatedAt,
         };
         const updated = await firstValueFrom(
           this.cursosAdminService.update(id, payload),
         );
         this.curso.update((prev) => (prev ? { ...prev, ...updated } : prev));
+        // La publicación exige metadatos persistidos: lo guardado deja de
+        // considerarse cambio pendiente.
+        this.metadataForm.markAsPristine();
         this.toast.success('Metadatos guardados correctamente');
       } else {
         const esGratuito = !!raw.esGratuito;
@@ -444,6 +596,8 @@ export class CursoAdminEditComponent implements OnInit {
           relevancia: this.relevancia(),
           esGratuito,
           esClaseGrabada,
+          modoPresentacion: raw.modoPresentacion,
+          leccionAplicacionId: null,
           thumbnailUrl: raw.thumbnailUrl ?? undefined,
           duracionEstimadaMinutos: raw.duracionEstimadaMinutos ?? undefined,
         };
@@ -475,6 +629,13 @@ export class CursoAdminEditComponent implements OnInit {
   publicar = async (): Promise<void> => {
     const id = this.cursoId();
     if (!id) return;
+    if (!this.puedePublicar()) {
+      this.toast.error(
+        this.motivoPublicacionBloqueada() ||
+          'Guarda los cambios antes de publicar.',
+      );
+      return;
+    }
     const updated = await firstValueFrom(this.cursosAdminService.publicar(id));
     this.curso.update((prev) =>
       prev ? { ...prev, estado: updated.estado } : prev,
@@ -582,6 +743,16 @@ export class CursoAdminEditComponent implements OnInit {
           secciones: prev.secciones.filter((s) => s.id !== seccion.id),
         };
       });
+      if (
+        this.metadataForm.controls.leccionAplicacionId.value != null &&
+        !this.leccionesElegibles().some(
+          (o) =>
+            o.value === this.metadataForm.controls.leccionAplicacionId.value,
+        )
+      ) {
+        this.metadataForm.controls.leccionAplicacionId.setValue(null);
+        this.metadataForm.markAsDirty();
+      }
       this.toast.success('Sección eliminada');
     } catch {
       // handleError shows toast
@@ -735,6 +906,10 @@ export class CursoAdminEditComponent implements OnInit {
           })),
         };
       });
+      if (this.metadataForm.controls.leccionAplicacionId.value === leccion.id) {
+        this.metadataForm.controls.leccionAplicacionId.setValue(null);
+        this.metadataForm.markAsDirty();
+      }
       this.toast.success('Lección eliminada');
     } catch {
       // handleError shows toast

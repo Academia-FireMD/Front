@@ -29,7 +29,9 @@
           [tieneAcceso]="yaComprado(curso)"
           [comprando]="comprandoId() === curso.id"
           (comprar)="comprar(curso)"
+          (abrirCurso)="verCurso(curso)"
           (abrir)="verCurso(curso)"
+          (abrirAplicacion)="abrirAplicacionCurso(curso, $event)"
         ></app-curso-card>
       }
     </div>

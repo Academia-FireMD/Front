@@ -174,6 +174,261 @@ describe('CursoAdminEditComponent', () => {
     );
   });
 
+  // ---- Presentación APLICACION (2026-10-28) ----
+
+  const cursoConLecciones = (): CursoDetail =>
+    buildCursoFixture({
+      secciones: [
+        {
+          id: 10,
+          cursoId: 1,
+          titulo: 'Aplicación',
+          orden: 0,
+          lecciones: [
+            {
+              id: 95,
+              seccionId: 10,
+              titulo: 'Práctica',
+              orden: 0,
+              tipo: 'TEXTO',
+              bloques: [
+                {
+                  id: 102,
+                  leccionId: 95,
+                  orden: 0,
+                  tipo: 'INTERACTIVO',
+                  aplicacionCodigo: 'HIDRAULICA',
+                },
+              ],
+            },
+            {
+              id: 96,
+              seccionId: 10,
+              titulo: 'Mixta',
+              orden: 1,
+              tipo: 'TEXTO',
+              bloques: [
+                {
+                  id: 103,
+                  leccionId: 96,
+                  orden: 0,
+                  tipo: 'TEXTO',
+                  contenidoMarkdown: 'no elegible',
+                },
+                {
+                  id: 104,
+                  leccionId: 96,
+                  orden: 1,
+                  tipo: 'INTERACTIVO',
+                  aplicacionCodigo: 'HIDRAULICA',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+  it('leccionesElegibles solo incluye lecciones guardadas con pila INTERACTIVO homogénea', () => {
+    component.curso.set(cursoConLecciones());
+    expect(component.leccionesElegibles()).toEqual([
+      { label: 'Aplicación · Práctica', value: 95 },
+    ]);
+  });
+
+  it('cambiar a ESTANDAR limpia la entrada; APLICACION conserva la elegible', () => {
+    component.curso.set(cursoConLecciones());
+    component.metadataForm.patchValue({
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: 95,
+    });
+    component.onModoPresentacionChange('APLICACION');
+    expect(component.metadataForm.controls.leccionAplicacionId.value).toBe(95);
+    component.onModoPresentacionChange('ESTANDAR');
+    expect(
+      component.metadataForm.controls.leccionAplicacionId.value,
+    ).toBeNull();
+  });
+
+  it('APLICACION sin entrada no puede publicar (borrador sí guarda incompleto)', async () => {
+    component.cursoId.set(1);
+    component.curso.set(cursoConLecciones());
+    component.metadataForm.patchValue({
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: null,
+      titulo: 'Curso X',
+      slug: 'curso-x',
+    });
+    expect(component.puedePublicar()).toBe(false);
+    serviceMock.update!.mockReturnValue(
+      of(
+        buildCursoFixture({
+          modoPresentacion: 'APLICACION',
+          leccionAplicacionId: null,
+        }),
+      ),
+    );
+    await component.saveMetadata();
+    expect(serviceMock.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        modoPresentacion: 'APLICACION',
+        leccionAplicacionId: null,
+      }),
+    );
+    expect(component.puedePublicar()).toBe(false);
+    expect(component.motivoPublicacionBloqueada()).toContain(
+      'Selecciona una lección de aplicación válida',
+    );
+  });
+
+  it('APLICACION con entrada elegible NO publica antes de guardar; tras guardar limpio sí', async () => {
+    component.cursoId.set(1);
+    component.curso.set(cursoConLecciones());
+    component.metadataForm.patchValue({
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: 95,
+      titulo: 'Curso X',
+      slug: 'curso-x',
+    });
+    component.metadataForm.markAsDirty();
+    expect(component.puedePublicar()).toBe(false);
+    expect(component.motivoPublicacionBloqueada()).toContain(
+      'Guarda los cambios antes de publicar',
+    );
+    serviceMock.update!.mockReturnValue(
+      of({
+        id: 1,
+        titulo: 'Curso X',
+        slug: 'curso-x',
+        estado: 'BORRADOR',
+        updatedAt: '2026-05-25T13:00:00.000Z',
+        modoPresentacion: 'APLICACION',
+        leccionAplicacionId: 95,
+      }),
+    );
+    await component.saveMetadata();
+    expect(serviceMock.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        modoPresentacion: 'APLICACION',
+        leccionAplicacionId: 95,
+        updatedAt: '2026-05-25T12:00:00.000Z',
+      }),
+    );
+    expect(component.metadataForm.dirty).toBe(false);
+    expect(component.puedePublicar()).toBe(true);
+    await component.publicar();
+    expect(serviceMock.publicar).toHaveBeenCalledWith(1);
+  });
+
+  it('persistedESTANDAR + local APLICACION/entrada: Publicar bloqueado y no llama al backend', async () => {
+    component.cursoId.set(1);
+    component.curso.set(cursoConLecciones());
+    component.metadataForm.patchValue({
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: 95,
+      titulo: 'Curso X',
+      slug: 'curso-x',
+    });
+    component.metadataForm.markAsDirty();
+    expect(component.curso()!.modoPresentacion).toBeUndefined();
+    expect(component.puedePublicar()).toBe(false);
+    expect(component.motivoPublicacionBloqueada()).toBe(
+      'Guarda los cambios antes de publicar.',
+    );
+    await component.publicar();
+    expect(serviceMock.publicar).not.toHaveBeenCalled();
+  });
+
+  it('persistedAPLICACION sin entrada + entrada local elegible: bloqueado hasta guardar', async () => {
+    component.cursoId.set(1);
+    component.curso.set(
+      buildCursoFixture({
+        modoPresentacion: 'APLICACION',
+        leccionAplicacionId: null,
+        secciones: cursoConLecciones().secciones,
+      }),
+    );
+    component.metadataForm.patchValue({
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: 95,
+      titulo: 'Curso X',
+      slug: 'curso-x',
+    });
+    component.metadataForm.markAsDirty();
+    expect(component.puedePublicar()).toBe(false);
+    expect(component.motivoPublicacionBloqueada()).toBe(
+      'Guarda los cambios antes de publicar.',
+    );
+    await component.publicar();
+    expect(serviceMock.publicar).not.toHaveBeenCalled();
+  });
+
+  it('dirty solo por título: guarda reactiva impide publicar', async () => {
+    component.cursoId.set(1);
+    component.curso.set(buildCursoFixture());
+    component.metadataForm.patchValue({
+      titulo: 'Título cambiado',
+      slug: 'curso-x',
+    });
+    component.metadataForm.markAsDirty();
+    expect(component.puedePublicar()).toBe(false);
+    expect(component.motivoPublicacionBloqueada()).toBe(
+      'Guarda los cambios antes de publicar.',
+    );
+    await component.publicar();
+    expect(serviceMock.publicar).not.toHaveBeenCalled();
+  });
+
+  it('guardado fallido conserva dirty y no permite publicar', async () => {
+    component.cursoId.set(1);
+    component.curso.set(buildCursoFixture());
+    component.metadataForm.patchValue({
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: 95,
+      titulo: 'Curso X',
+      slug: 'curso-x',
+    });
+    component.metadataForm.markAsDirty();
+    serviceMock.update!.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({ status: 500, error: { message: 'boom' } }),
+      ),
+    );
+    await component.saveMetadata();
+    expect(component.metadataForm.dirty).toBe(true);
+    expect(component.puedePublicar()).toBe(false);
+    await component.publicar();
+    expect(serviceMock.publicar).not.toHaveBeenCalled();
+  });
+
+  it('ESTANDAR envía entrada null explícita y queda publicable tras guardar', async () => {
+    component.cursoId.set(1);
+    component.curso.set(
+      buildCursoFixture({
+        modoPresentacion: 'APLICACION',
+        leccionAplicacionId: 95,
+      }),
+    );
+    component.metadataForm.patchValue({
+      modoPresentacion: 'ESTANDAR',
+      leccionAplicacionId: null,
+      titulo: 'Curso X',
+      slug: 'curso-x',
+    });
+    serviceMock.update!.mockReturnValue(of(buildCursoFixture()));
+    await component.saveMetadata();
+    expect(serviceMock.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        modoPresentacion: 'ESTANDAR',
+        leccionAplicacionId: null,
+      }),
+    );
+  });
+
   it('PUT 409 (stale) recarga curso + toast warning', async () => {
     component.cursoId.set(1);
     component.curso.set(buildCursoFixture());
@@ -384,6 +639,8 @@ describe('CursoAdminEditComponent', () => {
   it('publicar/archivar/despublicar disparan los métodos del service', async () => {
     component.cursoId.set(1);
     component.curso.set(buildCursoFixture({ id: 1, titulo: 'X', slug: 'x' }));
+    component.metadataForm.patchValue({ titulo: 'Curso X', slug: 'x' });
+    component.metadataForm.markAsPristine();
     await component.publicar();
     expect(serviceMock.publicar).toHaveBeenCalledWith(1);
     await component.archivar();

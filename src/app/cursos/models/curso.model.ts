@@ -4,6 +4,14 @@ import { Oposicion } from '../../shared/models/subscription.model';
 export type EstadoCurso = 'BORRADOR' | 'PUBLICADO' | 'ARCHIVADO';
 
 /**
+ * Presentación del curso (2026-10-28). Ortogonal al acceso: ESTANDAR mantiene el
+ * aula nativa (intro + lecciones) y APLICACION abre la lección configurada como
+ * aplicación interactiva inmersiva. Default ESTANDAR cuando el backend no envía
+ * el campo (clientes antiguos).
+ */
+export type ModoPresentacion = 'ESTANDAR' | 'APLICACION';
+
+/**
  * Refactor 2026-05-25: enum exportado para que tipemos
  * LeccionFormResult.tipo con `TipoLeccion` (en vez de `as never`).
  */
@@ -144,6 +152,14 @@ export interface Curso {
    * decide qué alumnos la ven (`fechaPublicacion >= fechaCorte(alumno)`).
    */
   fechaPublicacion?: string | null;
+  /** Presentación del curso (2026-10-28): ESTANDAR (default) | APLICACION. */
+  modoPresentacion?: ModoPresentacion;
+  /**
+   * Lección de entrada de la aplicación interactiva. Solo tiene sentido con
+   * `modoPresentacion=APLICACION`; null en ESTANDAR (o en un borrador APLICACION
+   * todavía sin configurar).
+   */
+  leccionAplicacionId?: number | null;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   estado: EstadoCurso;
@@ -401,6 +417,9 @@ export interface CursoCreatePayload {
   esGratuito?: boolean;
   /** Clase grabada: acceso por oposición, sin venta (no se manda wooProductId). */
   esClaseGrabada?: boolean;
+  /** Presentación APLICACION (2026-10-28). Las lecciones aún no existen al crear. */
+  modoPresentacion?: ModoPresentacion;
+  leccionAplicacionId?: number | null;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
 }
@@ -421,6 +440,9 @@ export interface CursoUpdatePayload {
    * automático al publicar); ausente = no tocarla.
    */
   fechaPublicacion?: string | null;
+  /** Presentación (2026-10-28). Explicit null en ESTANDAR limpia la entrada. */
+  modoPresentacion?: ModoPresentacion;
+  leccionAplicacionId?: number | null;
   thumbnailUrl?: string;
   duracionEstimadaMinutos?: number;
   /**

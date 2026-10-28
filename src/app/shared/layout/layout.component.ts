@@ -9,6 +9,7 @@ import { AppConfigService } from '../../services/app-config.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
+import { AulaInmersivaService } from '../../cursos/ui/aula-inmersiva.service';
 import { selectCurrentUser } from '../../store/user/user.selectors';
 import { EstadoModulos } from '../models/app-config.model';
 import { ModuloApp } from '../models/modulo-app.enum';
@@ -79,6 +80,7 @@ export class LayoutComponent {
   userService = inject(UserService);
   toast = inject(ToastrService);
   store = inject(Store);
+  aulaInmersiva = inject(AulaInmersivaService);
 
   readonly fallbackLogo = FALLBACK_LOGO;
   /** Snapshot del usuario actual para el computed `items` (D11). */
