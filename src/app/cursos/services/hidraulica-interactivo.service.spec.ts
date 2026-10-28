@@ -544,4 +544,62 @@ describe('HidraulicaInteractivoService (puente)', () => {
     });
     expect(alturas).toEqual([1234, 30000]);
   });
+
+  it('inmersivo: ignora height/scrollTop, conserva el scroll interno y envía presentación', () => {
+    control = adapter.connect(
+      iframe,
+      {
+        ...CONTEXTO,
+        inmersivo: true,
+        presentacion: {
+          modo: 'INTEGRADA',
+          tema: { primario: '#bb292a', fuente: 'system-ui' },
+        },
+      },
+      callbacks,
+    );
+    ready();
+    const init = ultimoInit();
+    expect(init['presentacion']).toEqual({
+      modo: 'INTEGRADA',
+      tema: { primario: '#bb292a', fuente: 'system-ui' },
+    });
+
+    emitirMensaje({
+      tf: HIDRAULICA_BRIDGE_TAG,
+      v: HIDRAULICA_BRIDGE_VERSION,
+      type: 'height',
+      height: 4321,
+    });
+    emitirMensaje({
+      tf: HIDRAULICA_BRIDGE_TAG,
+      v: HIDRAULICA_BRIDGE_VERSION,
+      type: 'scrollTop',
+      contextId: init['contextId'],
+    });
+
+    expect(alturas).toEqual([]);
+    expect(iframe.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('estándar: conserva height/scrollTop y no envía presentación', () => {
+    conectar();
+    ready();
+    const init = ultimoInit();
+    expect(init).not.toHaveProperty('presentacion');
+    emitirMensaje({
+      tf: HIDRAULICA_BRIDGE_TAG,
+      v: HIDRAULICA_BRIDGE_VERSION,
+      type: 'height',
+      height: 4321,
+    });
+    emitirMensaje({
+      tf: HIDRAULICA_BRIDGE_TAG,
+      v: HIDRAULICA_BRIDGE_VERSION,
+      type: 'scrollTop',
+      contextId: init['contextId'],
+    });
+    expect(alturas).toEqual([4321]);
+    expect(iframe.scrollIntoView).toHaveBeenCalledTimes(1);
+  });
 });

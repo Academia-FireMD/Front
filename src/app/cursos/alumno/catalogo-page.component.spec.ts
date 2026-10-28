@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { of, Subject, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -58,6 +59,34 @@ describe('CatalogoPageComponent (compra COF 1-clic)', () => {
   it('carga el catálogo en ngOnInit', () => {
     expect(component.cursos()).toEqual([CURSO]);
     expect(component.loading()).toBe(false);
+  });
+
+  it('catálogo escalar APLICACION con acceso: CTA navega a la entrada configurada', () => {
+    const router = TestBed.inject(Router);
+    component.cursos.set([
+      {
+        ...CURSO,
+        modoPresentacion: 'APLICACION',
+        leccionAplicacionId: 95,
+        tieneAcceso: true,
+      },
+    ]);
+    fixture.detectChanges();
+
+    const cta = Array.from(
+      (
+        fixture.nativeElement as HTMLElement
+      ).querySelectorAll<HTMLButtonElement>('.cta'),
+    ).find((button) => button.textContent?.includes('Abrir aplicación'));
+    expect(cta).toBeDefined();
+    cta!.click();
+
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/app/cursos',
+      CURSO.slug,
+      'leccion',
+      95,
+    ]);
   });
 
   it('success → marca comprado (botón pasa a "Ver curso") + toast éxito', () => {

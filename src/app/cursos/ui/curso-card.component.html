@@ -1,7 +1,7 @@
 <article
   class="curso-card"
-  (click)="abrir.emit()"
-  (keydown.enter)="abrir.emit()"
+  (click)="abrirCurso.emit()"
+  (keydown.enter)="abrirCurso.emit()"
   tabindex="0"
   role="button"
   [attr.aria-label]="curso().titulo"
@@ -50,29 +50,42 @@
       }
     </div>
 
-    <button
-      pButton
-      type="button"
-      class="cta"
-      [class.cta-secondary]="cta() !== 'comprar'"
-      [loading]="comprando()"
-      [disabled]="cta() === 'comprar' && (!compraDisponible() || comprando())"
-      (click)="onCta($event)"
-    >
-      @switch (cta()) {
-        @case ("comprar") {
-          <i class="pi pi-bolt"></i><span>Comprar curso</span>
+    <span class="cta-wrap" (click)="$event.stopPropagation()">
+      <button
+        pButton
+        type="button"
+        class="cta"
+        [class.cta-secondary]="cta() !== 'comprar'"
+        [loading]="comprando()"
+        [disabled]="cta() === 'comprar' && (!compraDisponible() || comprando())"
+        [class.p-disabled]="cta() === 'aplicacion-no-disponible'"
+        [attr.aria-disabled]="ctaDeshabilitada()"
+        [title]="ctaTitulo() ?? ''"
+        (click)="onCta($event)"
+        (keydown.enter)="$event.stopPropagation()"
+      >
+        @switch (cta()) {
+          @case ("comprar") {
+            <i class="pi pi-bolt"></i><span>Comprar curso</span>
+          }
+          @case ("acceder-gratis") {
+            <i class="pi pi-unlock"></i><span>Acceder gratis</span>
+          }
+          @case ("continuar") {
+            <i class="pi pi-play"></i><span>Continuar</span>
+          }
+          @case ("aplicacion") {
+            <i class="pi pi-play-circle"></i><span>Abrir aplicación</span>
+          }
+          @case ("aplicacion-no-disponible") {
+            <i class="pi pi-exclamation-circle"></i
+            ><span>Aplicación no disponible</span>
+          }
+          @default {
+            <i class="pi pi-arrow-right"></i><span>Empezar</span>
+          }
         }
-        @case ("acceder-gratis") {
-          <i class="pi pi-unlock"></i><span>Acceder gratis</span>
-        }
-        @case ("continuar") {
-          <i class="pi pi-play"></i><span>Continuar</span>
-        }
-        @default {
-          <i class="pi pi-arrow-right"></i><span>Empezar</span>
-        }
-      }
-    </button>
+      </button>
+    </span>
   </div>
 </article>

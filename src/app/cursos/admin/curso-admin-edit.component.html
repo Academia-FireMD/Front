@@ -35,7 +35,10 @@
                     label="Publicar"
                     icon="pi pi-send"
                     styleClass="p-button-success"
+                    [disabled]="!puedePublicar()"
+                    [tooltip]="motivoPublicacionBloqueada()"
                     [action]="publicar"
+                    data-testid="curso-edit-publicar"
                   ></app-async-button>
                 }
                 @if (c.estado === "PUBLICADO") {
@@ -148,6 +151,66 @@
                       class="w-full"
                     />
                   </div>
+
+                  <!-- Presentación (2026-10-28): modo + lección de entrada
+                       dependiente. La entrada exige una lección guardada con
+                       solo bloques INTERACTIVO del registro fijo. -->
+                  <div class="field">
+                    <label for="ce-modo-presentacion">Presentación</label>
+                    <p-dropdown
+                      inputId="ce-modo-presentacion"
+                      formControlName="modoPresentacion"
+                      [options]="modoPresentacionOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [styleClass]="'w-full'"
+                      (onChange)="onModoPresentacionChange($event.value)"
+                      data-testid="curso-edit-modo-presentacion"
+                    />
+                    <small class="text-color-secondary">
+                      Curso: aula nativa con introducción y lecciones.
+                      Aplicación: el botón principal abre la lección interactiva
+                      configurada.
+                    </small>
+                  </div>
+
+                  @if (esModoAplicacion()) {
+                    <div class="field field--full">
+                      <label for="ce-leccion-aplicacion"
+                        >Lección de entrada de la aplicación</label
+                      >
+                      <p-dropdown
+                        inputId="ce-leccion-aplicacion"
+                        formControlName="leccionAplicacionId"
+                        [options]="leccionesElegibles()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [showClear]="true"
+                        [disabled]="esNuevo() || !leccionesElegibles().length"
+                        placeholder="Selecciona una lección elegible"
+                        data-testid="curso-edit-leccion-aplicacion"
+                      />
+                      <small
+                        class="text-color-secondary"
+                        data-testid="curso-edit-leccion-aplicacion-hint"
+                        >{{ hintEntradaAplicacion() }}</small
+                      >
+                      @if (
+                        !esNuevo() &&
+                        leccionesElegibles().length > 0 &&
+                        !entradaSeleccionadaValida()
+                      ) {
+                        <small
+                          class="p-error"
+                          data-testid="curso-edit-leccion-aplicacion-error"
+                        >
+                          <i class="pi pi-exclamation-circle"></i>
+                          Sin una lección de entrada válida no se puede publicar
+                          (en BORRADOR sí puedes guardar incompleto).
+                        </small>
+                      }
+                    </div>
+                  }
 
                   <!-- Task C4 (feedback Raúl 2026-07-24): fecha de publicación
                        editable, solo en clases grabadas — decide qué alumnos

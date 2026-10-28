@@ -8,6 +8,7 @@ import {
   input,
   OnChanges,
   OnDestroy,
+  output,
   signal,
   SimpleChanges,
 } from '@angular/core';
@@ -22,6 +23,7 @@ import {
   HidraulicaInteractivoService,
   HidraulicaSyncEstado,
 } from '../services/hidraulica-interactivo.service';
+import { presentacionHidraulicaIntegrada } from '../ui/hidraulica-presentacion.util';
 
 /**
  * Bloque INTERACTIVO del aula (2026-10-28): aplicación autocontenida de
@@ -41,6 +43,9 @@ import {
   templateUrl: './bloque-interactivo.component.html',
   styleUrl: './bloque-interactivo.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.bloque-interactivo-host-inmersivo]': 'inmersivo()',
+  },
 })
 export class BloqueInteractivoComponent
   implements AfterViewInit, OnChanges, OnDestroy
@@ -48,6 +53,17 @@ export class BloqueInteractivoComponent
   bloque = input.required<Bloque>();
   /** En preview admin no se descarga el HTML ni se toca el progreso. */
   preview = input<boolean>(false);
+  /** Aula APLICACION a pantalla completa: el frame ocupa el viewport. */
+  inmersivo = input<boolean>(false);
+  /** El padre incrementa este contador para reintentar sin recrear el frame. */
+  solicitudReintento = input<number>(0);
+
+  /** Estado de sincronización para la cabecera nativa del aula inmersiva. */
+  readonly syncCambio = output<{
+    estado: HidraulicaSyncEstado;
+    texto: string;
+    puedeReintentar: boolean;
+  }>();
 
   private readonly cursoService = inject(CursosAlumnoService);
   private readonly puente = inject(HidraulicaInteractivoService);
@@ -78,6 +94,8 @@ export class BloqueInteractivoComponent
     if (!this.viewReady) return;
     if (changes['bloque'] || changes['preview']) {
       this.cargar();
+    } else if (changes['solicitudReintento'] && this.solicitudReintento() > 0) {
+      this.reintentar();
     }
   }
 
@@ -110,6 +128,7 @@ export class BloqueInteractivoComponent
     this.puedeReintentar.set(false);
     this.estado.set('loading');
     this.texto.set('Cargando aplicación…');
+    this.emitirSync();
 
     if (this.preview()) return;
 
@@ -122,6 +141,8 @@ export class BloqueInteractivoComponent
       this.falloHtml.set(true);
       this.estado.set('error');
       this.texto.set('Aplicación interactiva no disponible.');
+      this.puedeReintentar.set(true);
+      this.emitirSync();
       return;
     }
 
@@ -148,6 +169,8 @@ export class BloqueInteractivoComponent
             this.falloHtml.set(true);
             this.estado.set('error');
             this.texto.set('No se pudo preparar la aplicación interactiva.');
+            this.puedeReintentar.set(true);
+            this.emitirSync();
             return;
           }
           this.control = this.puente.connect(
@@ -156,6 +179,10 @@ export class BloqueInteractivoComponent
               leccionId: bloque.leccionId,
               bloqueId: bloque.id,
               aplicacionCodigo: aplicacionCodigo!,
+              inmersivo: this.inmersivo(),
+              ...(this.inmersivo()
+                ? { presentacion: presentacionHidraulicaIntegrada() }
+                : {}),
             },
             {
               publicarEstado: ({ estado, texto }) => {
@@ -163,10 +190,12 @@ export class BloqueInteractivoComponent
                 this.estado.set(estado);
                 this.texto.set(texto);
                 this.puedeReintentar.set(estado === 'error');
+                this.emitirSync();
                 this.cdr.markForCheck();
               },
               publicarAltura: (px) => {
                 if (id !== this.cargaId) return;
+                if (this.inmersivo()) return; // el frame llena el viewport
                 this.altura.set(px);
                 this.cdr.markForCheck();
               },
@@ -182,9 +211,19 @@ export class BloqueInteractivoComponent
             'No se pudo cargar la aplicación interactiva. Comprueba tu conexión e inténtalo de nuevo.',
           );
           this.puedeReintentar.set(true);
+          this.emitirSync();
           this.cdr.markForCheck();
         },
       });
+  }
+
+  /** Publica el estado de sync al aula inmersiva (la cabecera es del padre). */
+  private emitirSync(): void {
+    this.syncCambio.emit({
+      estado: this.estado(),
+      texto: this.texto(),
+      puedeReintentar: this.puedeReintentar(),
+    });
   }
 
   private revocarObjectUrl(): void {

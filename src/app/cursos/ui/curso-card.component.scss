@@ -143,11 +143,15 @@
   }
 }
 
+.cta-wrap {
+  display: block;
+  margin-top: 0.4rem;
+}
+
 .cta {
   width: 100%;
   justify-content: center;
   gap: 0.45rem;
-  margin-top: 0.4rem;
   background: var(--cursos-brand);
   border-color: var(--cursos-brand);
 

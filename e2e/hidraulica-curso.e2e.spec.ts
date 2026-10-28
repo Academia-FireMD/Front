@@ -22,7 +22,7 @@ import userAlumnoFixture from './fixtures/user-alumno.json';
 // local ni del repo Server. `HIDRAULICA_ASSET` queda solo como override local.
 const FIXTURE_PATH = join(__dirname, 'fixtures', 'hidraulica-r06.html.gz');
 const FIXTURE_SHA256 =
-  '03f2e8a9285e4d76ece4c68e2c170256d50d29aed1d15c2e36d13eaa8f48f7e8';
+  '2809c2599038e45c8b0e9e10af365ca25404efe100f76caa5798847a7aec7575';
 const fixtureHtml = gunzipSync(readFileSync(FIXTURE_PATH)).toString('utf8');
 const fixtureSha256 = createHash('sha256').update(fixtureHtml).digest('hex');
 const html = process.env['HIDRAULICA_ASSET']
@@ -32,6 +32,7 @@ const htmlSha256 = createHash('sha256').update(html).digest('hex');
 
 const CURSO_SLUG = 'hidraulica-bomberos';
 const LECCION_ID = 2002;
+const LECCION_INTRO_ID = 2001;
 const BLOQUE_ID = 501;
 const BASE =
   process.env['E2E_BASE_URL'] ||
@@ -56,10 +57,18 @@ const curso = {
       orden: 0,
       lecciones: [
         {
+          id: LECCION_INTRO_ID,
+          seccionId: 1,
+          titulo: 'Introducción',
+          orden: 0,
+          tipo: 'TEXTO',
+          contenidoMarkdown: 'Introducción nativa del curso.',
+        },
+        {
           id: LECCION_ID,
           seccionId: 1,
           titulo: 'Aplicación práctica de Hidráulica',
-          orden: 0,
+          orden: 1,
           tipo: 'TEXTO',
           bloques: [
             {
@@ -107,20 +116,26 @@ async function mockAlumno(
   page: Page,
   servidor: ServidorMock,
   bloques?: unknown[],
+  cursoExtra: Record<string, unknown> = {},
 ): Promise<void> {
   const isXhr = (req: import('@playwright/test').Request) => {
     const tipo = req.resourceType();
     return tipo === 'xhr' || tipo === 'fetch';
   };
+  const leccionAppBase = curso.secciones[0].lecciones.find(
+    (l) => l.id === LECCION_ID,
+  )!;
   const cursoMock = {
     ...curso,
+    ...cursoExtra,
     secciones: [
       {
         ...curso.secciones[0],
         lecciones: [
+          curso.secciones[0].lecciones.find((l) => l.id === LECCION_INTRO_ID)!,
           {
-            ...curso.secciones[0].lecciones[0],
-            bloques: bloques ?? curso.secciones[0].lecciones[0].bloques,
+            ...leccionAppBase,
+            bloques: bloques ?? leccionAppBase.bloques,
           },
         ],
       },
@@ -149,9 +164,44 @@ async function mockAlumno(
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ curso: cursoMock, tieneAcceso: true, progreso: [] }),
+      body: JSON.stringify({
+        curso: cursoMock,
+        tieneAcceso: true,
+        progreso: [],
+      }),
     });
   });
+
+  await page.route(
+    new RegExp(`/lecciones/${LECCION_INTRO_ID}(\\?.*)?$`),
+    (route) => {
+      if (!isXhr(route.request())) return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          leccion: cursoMock.secciones[0].lecciones.find(
+            (l) => l.id === LECCION_INTRO_ID,
+          ),
+          playbackUrls: {},
+        }),
+      });
+    },
+  );
+
+  await page.route(
+    new RegExp(`/lecciones/${LECCION_ID}/progreso(\\?.*)?$`),
+    (route) => {
+      if (!isXhr(route.request())) return route.continue();
+      if (route.request().method() !== 'POST') return route.continue();
+      servidor.progressCalls += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    },
+  );
 
   await page.route(new RegExp(`/lecciones/${LECCION_ID}(\\?.*)?$`), (route) => {
     if (!isXhr(route.request())) return route.continue();
@@ -160,7 +210,9 @@ async function mockAlumno(
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          leccion: cursoMock.secciones[0].lecciones[0],
+          leccion: cursoMock.secciones[0].lecciones.find(
+            (l) => l.id === LECCION_ID,
+          ),
           playbackUrls: {},
         }),
       });
@@ -184,7 +236,9 @@ async function mockAlumno(
       if (metodo === 'GET') {
         servidor.stateGets += 1;
         if (servidor.delayGetMs > 0) {
-          await new Promise((resolve) => setTimeout(resolve, servidor.delayGetMs));
+          await new Promise((resolve) =>
+            setTimeout(resolve, servidor.delayGetMs),
+          );
         }
         return route.fulfill({
           status: 200,
@@ -232,11 +286,14 @@ async function abrirLeccion(
   page: Page,
   servidor: ServidorMock,
   bloques?: unknown[],
+  cursoExtra: Record<string, unknown> = {},
 ): Promise<ReturnType<Page['frameLocator']>> {
-  await mockAlumno(page, servidor, bloques);
+  await mockAlumno(page, servidor, bloques, cursoExtra);
   await page.goto(`/app/cursos/${CURSO_SLUG}/leccion/${LECCION_ID}`);
   const frame = page.frameLocator('[data-testid="hidraulica-iframe"]');
-  await expect(frame.locator('#view-inicio h1')).toBeVisible({ timeout: 20_000 });
+  await expect(frame.locator('#view-inicio h1')).toBeVisible({
+    timeout: 20_000,
+  });
   return frame;
 }
 
@@ -247,12 +304,24 @@ async function esperarGuardado(page: Page): Promise<void> {
   );
 }
 
-async function practicar(page: Page, frame: ReturnType<Page['frameLocator']>, bloque: string): Promise<void> {
+async function practicar(
+  page: Page,
+  frame: ReturnType<Page['frameLocator']>,
+  bloque: string,
+): Promise<void> {
   await frame.getByRole('button', { name: 'Practicar', exact: true }).click();
-  await frame.locator('.chips .chip', { hasText: 'Todos' }).first().click();
-  await frame
-    .getByRole('button', { name: new RegExp('^' + bloque + '\\s') })
-    .click();
+  const chips = frame.locator('#view-practicar .chips .chip');
+  const todos = chips.filter({ hasText: 'Todos' }).first();
+  if ((await todos.getAttribute('aria-pressed')) !== 'true')
+    await todos.click();
+  const total = await chips.count();
+  for (let i = 1; i < total; i++) {
+    const chip = chips.nth(i);
+    const etiqueta = (await chip.locator('.n').textContent())?.trim() ?? '';
+    const esObjetivo = etiqueta === bloque;
+    const activo = (await chip.getAttribute('aria-pressed')) === 'true';
+    if (esObjetivo !== activo) await chip.click();
+  }
   await frame.getByRole('button', { name: 'Empezar', exact: true }).click();
 }
 
@@ -271,14 +340,19 @@ test.describe('Hidráulica · aula nativa', () => {
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(String(error)));
 
-    await loginAsRoleMock(page, { rol: 'ALUMNO', userFixture: userAlumnoFixture });
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: userAlumnoFixture,
+    });
     const frame = await abrirLeccion(page, servidor);
     await expect(page.getByTestId('hidraulica-sync-estado')).toBeVisible();
 
     // El iframe no usa la clave anónima del standalone.
     const frameInterno = page.frames().find((f) => f.url().startsWith('blob:'));
     expect(frameInterno).toBeTruthy();
-    const claves = await frameInterno!.evaluate(() => Object.keys(localStorage));
+    const claves = await frameInterno!.evaluate(() =>
+      Object.keys(localStorage),
+    );
     expect(claves).not.toContain('tf_hidraulica_v1');
 
     // Práctica numérica: bloque 10 solo tiene problemas numéricos.
@@ -291,7 +365,9 @@ test.describe('Hidráulica · aula nativa', () => {
     await esperarGuardado(page);
 
     // Práctica test: bloque 1 solo tiene problemas tipo test.
-    await frame.getByRole('button', { name: 'Inicio', exact: true }).click();
+    await frame
+      .getByRole('button', { name: 'Mi progreso', exact: true })
+      .click();
     await practicar(page, frame, 'B1');
     await frame.locator('.card .opts .opt').first().click();
     await expect
@@ -369,9 +445,9 @@ test.describe('Hidráulica · aula nativa', () => {
       1,
     );
     await expect(page.locator('app-bloque-render')).toHaveCount(2);
-    await expect(
-      page.locator('app-bloque-render').nth(1),
-    ).toContainText('Texto intermedio entre aplicaciones');
+    await expect(page.locator('app-bloque-render').nth(1)).toContainText(
+      'Texto intermedio entre aplicaciones',
+    );
     expect(servidor.applicationGets).toBe(1);
     expect(servidor.stateGets).toBe(1);
 
@@ -393,7 +469,9 @@ test.describe('Hidráulica · aula nativa', () => {
     await expect(frame.locator('#view-clase .lead')).not.toContainText(
       'Sin servidor ni cuentas',
     );
-    await frame.getByRole('button', { name: 'Inicio', exact: true }).click();
+    await frame
+      .getByRole('button', { name: 'Mi progreso', exact: true })
+      .click();
 
     await practicar(page, frame, 'B10');
     await frame.locator('.card input[id^="num-"]').first().fill('1');
@@ -414,7 +492,10 @@ test.describe('Hidráulica · aula nativa', () => {
     const servidor = crearServidor();
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(String(error)));
-    await loginAsRoleMock(page, { rol: 'ALUMNO', userFixture: userAlumnoFixture });
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: userAlumnoFixture,
+    });
     const frame = await abrirLeccion(page, servidor);
 
     servidor.offline = true;
@@ -443,7 +524,10 @@ test.describe('Hidráulica · aula nativa', () => {
     const servidor = crearServidor();
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(String(error)));
-    await loginAsRoleMock(page, { rol: 'ALUMNO', userFixture: userAlumnoFixture });
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: userAlumnoFixture,
+    });
     const frame = await abrirLeccion(page, servidor);
 
     // Código TFS-J con dos preguntas conocidas: TF-01 (numérica) y CAT-15 (test).
@@ -463,9 +547,7 @@ test.describe('Hidráulica · aula nativa', () => {
         .replace(/=+$/, '');
 
     await frame.getByRole('button', { name: 'Clase', exact: true }).click();
-    await frame
-      .locator('textarea[aria-label="Código de sesión"]')
-      .fill(code);
+    await frame.locator('textarea[aria-label="Código de sesión"]').fill(code);
     await frame
       .getByRole('button', { name: 'Empezar la sesión', exact: true })
       .click();
@@ -476,7 +558,10 @@ test.describe('Hidráulica · aula nativa', () => {
     await frame.getByRole('button', { name: 'Siguiente', exact: true }).click();
     // Pregunta 2: test.
     await frame.locator('.card .opts .opt').first().click();
-    await frame.getByRole('button', { name: 'Entregar', exact: true }).first().click();
+    await frame
+      .getByRole('button', { name: 'Entregar', exact: true })
+      .first()
+      .click();
 
     await expect(frame.getByText('NOTA DEL SIMULACRO')).toBeVisible({
       timeout: 10_000,
@@ -499,15 +584,20 @@ test.describe('Hidráulica · aula nativa', () => {
     const servidor = crearServidor();
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(String(error)));
-    await loginAsRoleMock(page, { rol: 'ALUMNO', userFixture: userAlumnoFixture });
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: userAlumnoFixture,
+    });
     const frame = await abrirLeccion(page, servidor);
-    const frameInterno = page.frames().find((f) => f.url().startsWith('blob:'))!;
+    const frameInterno = page
+      .frames()
+      .find((f) => f.url().startsWith('blob:'))!;
 
     await frame.getByRole('button', { name: 'Clase', exact: true }).click();
+    await frame.locator('#alumno').fill('<img src=x onerror="window.__xss=1">');
     await frame
-      .locator('#alumno')
-      .fill('<img src=x onerror="window.__xss=1">');
-    await frame.getByRole('button', { name: 'Generar código', exact: true }).click();
+      .getByRole('button', { name: 'Generar código', exact: true })
+      .click();
     const codigoLocator = frame.locator(
       'textarea[aria-label="Código de progreso"]',
     );
@@ -521,22 +611,32 @@ test.describe('Hidráulica · aula nativa', () => {
       })
       .toBe(code);
 
-    await frame.getByRole('button', { name: 'Soy profesor', exact: true }).click();
+    await frame
+      .getByRole('button', { name: 'Soy profesor', exact: true })
+      .click();
     await frame
       .locator('textarea[aria-label="Códigos de progreso"]')
       .fill(code);
-    await frame.getByRole('button', { name: 'Leer códigos', exact: true }).click();
+    await frame
+      .getByRole('button', { name: 'Leer códigos', exact: true })
+      .click();
     await expect(frame.locator('.t tbody tr').first()).toBeVisible({
       timeout: 5_000,
     });
-    expect(await frameInterno.evaluate(() => (window as any).__xss)).toBeUndefined();
+    expect(
+      await frameInterno.evaluate(() => (window as any).__xss),
+    ).toBeUndefined();
     expect(await frame.locator('.t img').count()).toBe(0);
 
     // Código TFS con q no-array: error controlado, sin crash.
     await frame
       .locator('textarea[aria-label="Códigos de progreso"]')
-      .fill('TFS-J' + Buffer.from('{"v":1,"q":"<b>x</b>"}').toString('base64url'));
-    await frame.getByRole('button', { name: 'Leer códigos', exact: true }).click();
+      .fill(
+        'TFS-J' + Buffer.from('{"v":1,"q":"<b>x</b>"}').toString('base64url'),
+      );
+    await frame
+      .getByRole('button', { name: 'Leer códigos', exact: true })
+      .click();
     await expect(frame.locator('#view-clase')).toBeVisible();
     expect(pageErrors).toEqual([]);
   });
@@ -558,11 +658,11 @@ test.describe('Hidráulica · aula nativa', () => {
       page.locator('[data-testid="hidraulica-sync-estado"]'),
     ).toContainText(/Cargando/);
     await frame.getByRole('button', { name: 'Practicar', exact: true }).click();
-    await frame
-      .getByRole('button', { name: /^B10\s/ })
-      .click();
+    await frame.getByRole('button', { name: /^B10\s/ }).click();
     await frame.getByRole('button', { name: 'Empezar', exact: true }).click();
-    await expect(frame.getByText(/Espera a que se cargue tu progreso/)).toBeVisible();
+    await expect(
+      frame.getByText(/Espera a que se cargue tu progreso/),
+    ).toBeVisible();
     await expect(frame.locator('.card')).toHaveCount(0);
     await expect(
       page.locator('[data-testid="hidraulica-sync-estado"]'),
@@ -597,6 +697,223 @@ test.describe('Hidráulica · aula nativa', () => {
       .poll(() => servidor.putCalls.length, { timeout: 10_000 })
       .toBeGreaterThan(0);
     await esperarGuardado(page);
+    expect(pageErrors).toEqual([]);
+  });
+
+  // ---- Presentación APLICACION (2026-10-28) ----
+
+  const CURSO_APLICACION = {
+    modoPresentacion: 'APLICACION',
+    leccionAplicacionId: LECCION_ID,
+  };
+
+  test('catálogo escalar APLICACION: "Abrir aplicación" navega a la entrada sin jerarquía', async ({
+    page,
+  }) => {
+    const servidor = crearServidor();
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: userAlumnoFixture,
+    });
+    await mockAlumno(page, servidor, undefined, CURSO_APLICACION);
+    await page.route('**/cursos/catalogo', (route) => {
+      const tipo = route.request().resourceType();
+      if (tipo !== 'xhr' && tipo !== 'fetch') return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 900,
+            titulo: 'Hidráulica para Bomberos',
+            slug: CURSO_SLUG,
+            estado: 'PUBLICADO',
+            modoPresentacion: 'APLICACION',
+            leccionAplicacionId: LECCION_ID,
+            tieneAcceso: true,
+            wooProductId: null,
+            precio: null,
+          },
+        ]),
+      });
+    });
+
+    await page.goto('/app/cursos/catalogo');
+    const cta = page.getByRole('button', { name: 'Abrir aplicación' });
+    await expect(cta).toBeVisible();
+    await expect(cta).toBeEnabled();
+    await cta.click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`/app/cursos/${CURSO_SLUG}/leccion/${LECCION_ID}$`),
+    );
+    await expect(page.getByTestId('aplicacion-workspace')).toBeVisible();
+    expect(servidor.applicationGets).toBe(1);
+  });
+
+  test('CTA "Abrir aplicación" lanza la entrada en MisCursos y detalle; el cuerpo abre el detalle nativo', async ({
+    page,
+  }) => {
+    const servidor = crearServidor();
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: userAlumnoFixture,
+    });
+    await mockAlumno(page, servidor, undefined, CURSO_APLICACION);
+
+    await page.goto('/app/cursos');
+    const cta = page.getByRole('button', { name: 'Abrir aplicación' });
+    await expect(cta).toBeVisible();
+    await cta.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/app/cursos/${CURSO_SLUG}/leccion/${LECCION_ID}$`),
+    );
+    await expect(page.getByTestId('aplicacion-workspace')).toBeVisible();
+    expect(servidor.applicationGets).toBe(1);
+
+    // El cuerpo de la tarjeta sigue abriendo el detalle nativo del curso.
+    await page.goto('/app/cursos');
+    await page.locator('.curso-card .titulo').first().click();
+    await expect(page).toHaveURL(new RegExp(`/app/cursos/${CURSO_SLUG}$`));
+    const ctaDetalle = page.getByRole('button', { name: 'Abrir aplicación' });
+    await expect(ctaDetalle).toBeVisible();
+    await ctaDetalle.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/app/cursos/${CURSO_SLUG}/leccion/${LECCION_ID}$`),
+    );
+  });
+
+  test('APLICACION sin entrada válida: CTAs deshabilitados, sin fallback a la intro ni HTTP de app', async ({
+    page,
+  }) => {
+    const servidor = crearServidor();
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: userAlumnoFixture,
+    });
+    await mockAlumno(page, servidor, undefined, {
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: null,
+    });
+
+    await page.goto('/app/cursos');
+    const cta = page.getByRole('button', {
+      name: 'Aplicación no disponible',
+    });
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute('aria-disabled', 'true');
+    await cta.click({ force: true });
+    await expect(page).toHaveURL(/\/app\/cursos$/);
+    expect(servidor.applicationGets).toBe(0);
+    expect(servidor.stateGets).toBe(0);
+
+    await page.goto(`/app/cursos/${CURSO_SLUG}`);
+    const ctaDetalle = page.getByRole('button', {
+      name: 'Aplicación no disponible',
+    });
+    await expect(ctaDetalle).toBeVisible();
+    await expect(ctaDetalle).toBeDisabled();
+    await expect(page).toHaveURL(new RegExp(`/app/cursos/${CURSO_SLUG}$`));
+    expect(servidor.applicationGets).toBe(0);
+  });
+
+  test('APLICACION inmersiva: un iframe/contexto, cabecera nativa, drawer con foco y vuelta al aula estándar', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const servidor = crearServidor();
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(String(error)));
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: userAlumnoFixture,
+    });
+    await abrirLeccion(page, servidor, undefined, CURSO_APLICACION);
+    await expect(page.getByTestId('aplicacion-workspace')).toBeVisible();
+    await expect(page.locator('body')).toHaveClass(/aula-inmersiva-activa/);
+    await expect(page.locator('.lateral-bar')).toHaveCount(0);
+    await expect(page.getByTestId('aplicacion-volver')).toBeVisible();
+    await expect(page.getByTestId('aplicacion-lecciones')).toBeVisible();
+    await expect(page.getByTestId('hidraulica-sync-estado')).toContainText(
+      /progreso|cargando|guardado/i,
+      { timeout: 10_000 },
+    );
+    // Sin currículum permanente en el layout inmersivo.
+    await expect(
+      page.locator('app-aplicacion-workspace app-curriculum-sidebar'),
+    ).toHaveCount(0);
+
+    // Un único iframe que llena el viewport; el padre no scrollea.
+    await expect(page.getByTestId('hidraulica-iframe')).toHaveCount(1);
+    const caja = await page.getByTestId('hidraulica-iframe').boundingBox();
+    expect(caja).not.toBeNull();
+    expect(caja!.width).toBeLessThanOrEqual(390);
+    expect(caja!.width).toBeGreaterThan(380);
+    expect(caja!.height).toBeGreaterThan(650);
+    const scrollPadre = await page.evaluate(() => ({
+      y: window.scrollY,
+      alto: document.scrollingElement?.scrollHeight ?? 0,
+      viewport: window.innerHeight,
+      overflow: getComputedStyle(document.body).overflow,
+    }));
+    expect(scrollPadre.y).toBe(0);
+    expect(scrollPadre.overflow).toBe('hidden');
+    expect(scrollPadre.alto).toBeLessThanOrEqual(scrollPadre.viewport + 1);
+
+    // Contexto único: marcador en el frame sobrevive a drawer + resize.
+    const frameInterno = page
+      .frames()
+      .find((f) => f.url().startsWith('blob:'))!;
+    await frameInterno.evaluate(() => {
+      (window as unknown as { __persist: string }).__persist = 'keep';
+    });
+    await page.getByTestId('aplicacion-lecciones').click();
+    await expect(page.getByTestId('aplicacion-drawer')).toBeVisible();
+    await expect(page.getByTestId('aplicacion-drawer-cerrar')).toBeFocused();
+    // El diálogo modal contiene Tab/Shift+Tab: no se alcanza el fondo/iframe.
+    await page.keyboard.press('Shift+Tab');
+    await expect(
+      page.getByTestId('aplicacion-marcar-completada'),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByTestId('aplicacion-drawer-cerrar')).toBeFocused();
+    await expect(page.getByTestId('hidraulica-iframe')).toHaveCount(1);
+    expect(
+      await frameInterno.evaluate(
+        () => (window as unknown as { __persist?: string }).__persist,
+      ),
+    ).toBe('keep');
+
+    await page.setViewportSize({ width: 500, height: 900 });
+    expect(
+      await frameInterno.evaluate(
+        () => (window as unknown as { __persist?: string }).__persist,
+      ),
+    ).toBe('keep');
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('aplicacion-drawer')).toHaveCount(0);
+    await expect(page.getByTestId('aplicacion-lecciones')).toBeFocused();
+
+    // Marcar completada desde el drawer reutiliza el endpoint nativo.
+    await page.getByTestId('aplicacion-lecciones').click();
+    await page.getByTestId('aplicacion-marcar-completada').click();
+    await expect.poll(() => servidor.progressCalls).toBe(1);
+    await expect(
+      page.getByTestId('aplicacion-marcar-completada'),
+    ).toContainText('Completada');
+
+    // La intro nativa sigue accesible y recupera el layout estándar.
+    await page
+      .getByTestId('aplicacion-drawer')
+      .getByText('Introducción')
+      .click();
+    await expect(page).toHaveURL(
+      new RegExp(`/app/cursos/${CURSO_SLUG}/leccion/${LECCION_INTRO_ID}$`),
+    );
+    await expect(page.locator('app-aplicacion-workspace')).toHaveCount(0);
+    await expect(page.locator('app-leccion-shell')).toBeVisible();
+    await expect(page.locator('body')).not.toHaveClass(/aula-inmersiva-activa/);
+    await expect(page.getByTestId('hidraulica-iframe')).toHaveCount(0);
     expect(pageErrors).toEqual([]);
   });
 });

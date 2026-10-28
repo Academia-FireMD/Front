@@ -36,6 +36,29 @@ export interface HidraulicaContexto {
   leccionId: number;
   bloqueId: number;
   aplicacionCodigo: string;
+  /**
+   * Aula APLICACION a pantalla completa: el padre gestiona el tamaño del frame,
+   * así que se ignoran las peticiones `height`/`scrollTop` del hijo.
+   */
+  inmersivo?: boolean;
+  /**
+   * Tokens opcionales de presentación para el embed (bridge v1 backwards
+   * compatible). El HTML valida los valores antes de tocar CSS custom props.
+   */
+  presentacion?: HidraulicaPresentacion;
+}
+
+export interface HidraulicaPresentacionTema {
+  primario?: string;
+  texto?: string;
+  textoSecundario?: string;
+  borde?: string;
+  fuente?: string;
+}
+
+export interface HidraulicaPresentacion {
+  modo: 'INTEGRADA';
+  tema?: HidraulicaPresentacionTema;
 }
 
 export interface HidraulicaCallbacks {
@@ -357,12 +380,16 @@ export class HidraulicaInteractivoService {
       puedeEmpezar: boolean,
     ): void => {
       startAllowed = puedeEmpezar;
-      post('init', {
+      const datos: Record<string, unknown> = {
         requestId: nuevoId('init'),
         estado,
         revision: revisionInicial,
         startAllowed: puedeEmpezar,
-      });
+      };
+      if (contexto.presentacion) {
+        datos['presentacion'] = contexto.presentacion;
+      }
+      post('init', datos);
     };
 
     const programarReintento = (): void => {
@@ -631,6 +658,9 @@ export class HidraulicaInteractivoService {
         return;
       }
       if (tipo === 'height') {
+        // En el aula APLICACION el frame ocupa el viewport y solo scrollea el
+        // documento interno: las alturas del hijo no deben redimensionarlo.
+        if (contexto.inmersivo) return;
         const altura = data['height'];
         const contextoMensaje = data['contextId'];
         if (
@@ -644,6 +674,8 @@ export class HidraulicaInteractivoService {
         return;
       }
       if (tipo === 'scrollTop') {
+        // El hijo ya hace su propio scroll; en inmersivo el padre no scrollea.
+        if (contexto.inmersivo) return;
         if (data['contextId'] === contextId) {
           try {
             iframe.scrollIntoView({ block: 'start', inline: 'nearest' });

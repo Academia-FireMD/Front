@@ -50,7 +50,13 @@ interface MockBloque {
   id: number;
   leccionId: number;
   orden: number;
-  tipo: 'VIDEO' | 'TEXTO' | 'TEST' | 'CUESTIONARIO' | 'DOCUMENTO' | 'INTERACTIVO';
+  tipo:
+    | 'VIDEO'
+    | 'TEXTO'
+    | 'TEST'
+    | 'CUESTIONARIO'
+    | 'DOCUMENTO'
+    | 'INTERACTIVO';
   bunnyVideoId?: string | null;
   duracionSegundos?: number | null;
   contenidoMarkdown?: string | null;
@@ -864,6 +870,31 @@ test.describe('Cursos admin — flujo completo', () => {
     expect(state.detail.estado).toBe('PUBLICADO');
   });
 
+  test('9b) Publicar exige metadatos persistidos: dirty deshabilita y Guardar cambios lo limpia', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+
+    const publicarBtn = page.getByRole('button', { name: /Publicar/i });
+    await expect(publicarBtn).toBeEnabled();
+    await page.locator('#ce-titulo').fill('Curso QA Test sin guardar');
+    await expect(publicarBtn).toBeDisabled();
+    await publicarBtn.click({ force: true });
+    expect(state.publicarCalls).toBe(0);
+
+    await page.getByRole('button', { name: /Guardar cambios/i }).click();
+    await expect(
+      page.getByText(/Metadatos guardados correctamente/i),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(publicarBtn).toBeEnabled();
+    await publicarBtn.click();
+    await expect(page.getByRole('button', { name: /Archivar/i })).toBeVisible({
+      timeout: 5_000,
+    });
+    expect(state.publicarCalls).toBe(1);
+  });
+
   test('10) bunny upload — disponible en el bloque VIDEO + endpoint TUS reachable', async ({
     page,
   }) => {
@@ -1115,9 +1146,9 @@ test.describe('Cursos admin — flujo completo', () => {
     await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.locator('[data-testid="interactivo-editor"]')).toBeVisible(
-      { timeout: 5_000 },
-    );
+    await expect(
+      page.locator('[data-testid="interactivo-editor"]'),
+    ).toBeVisible({ timeout: 5_000 });
     // El registro fijo viene preseleccionado.
     await expect(
       page.locator('[data-testid="interactivo-editor"] .p-dropdown-label'),
@@ -1147,12 +1178,11 @@ test.describe('Cursos admin — flujo completo', () => {
       .first()
       .locator('button[title="Editar bloque"]')
       .click();
-    await expect(page.locator('[data-testid="interactivo-editor"]')).toBeVisible(
-      { timeout: 5_000 },
-    );
+    await expect(
+      page.locator('[data-testid="interactivo-editor"]'),
+    ).toBeVisible({ timeout: 5_000 });
     const updatePromise = page.waitForRequest(
-      (r) =>
-        /\/cursos\/bloques\/\d+$/.test(r.url()) && r.method() === 'PUT',
+      (r) => /\/cursos\/bloques\/\d+$/.test(r.url()) && r.method() === 'PUT',
     );
     await page.getByRole('button', { name: /Guardar bloque/i }).click();
     const updateBody = (await updatePromise).postDataJSON();

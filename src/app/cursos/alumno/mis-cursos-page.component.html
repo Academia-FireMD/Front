@@ -66,9 +66,12 @@
           <button
             pButton
             class="hero-cta"
+            [disabled]="!destinoHero()?.disponible"
+            [title]="destinoHero()?.motivo ?? ''"
             (click)="continuar(h); $event.stopPropagation()"
           >
-            <i class="pi pi-play"></i><span>Continuar</span>
+            <i class="pi pi-play"></i
+            ><span>{{ destinoHero()?.etiqueta ?? "Continuar" }}</span>
           </button>
         </div>
       </section>
@@ -82,7 +85,9 @@
             [curso]="v.acceso.curso"
             [tieneAcceso]="true"
             [progreso]="v.porcentaje"
+            (abrirCurso)="abrirCurso(v.acceso.curso.slug)"
             (abrir)="continuar(v)"
+            (abrirAplicacion)="abrirAplicacion(v, $event)"
           ></app-curso-card>
           @if (v.acceso.expiraEn) {
             <p class="acceso-expira">

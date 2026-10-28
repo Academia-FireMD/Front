@@ -1,4 +1,8 @@
-<div class="bloque-interactivo" data-testid="bloque-interactivo">
+<div
+  class="bloque-interactivo"
+  [class.bloque-interactivo--inmersivo]="inmersivo()"
+  data-testid="bloque-interactivo"
+>
   @if (preview()) {
     <div class="interactivo-preview" data-testid="interactivo-preview">
       <i class="pi pi-play-circle"></i>
@@ -12,34 +16,36 @@
       </div>
     </div>
   } @else {
-    <div
-      class="interactivo-sync"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-    >
-      <span
-        class="interactivo-sync__dot"
-        [attr.data-estado]="estado()"
-        aria-hidden="true"
-      ></span>
-      <span
-        class="interactivo-sync__texto"
-        data-testid="hidraulica-sync-estado"
-        >{{ texto() }}</span
+    @if (!inmersivo()) {
+      <div
+        class="interactivo-sync"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
       >
-      @if (puedeReintentar()) {
-        <button
-          pButton
-          type="button"
-          label="Reintentar"
-          icon="pi pi-refresh"
-          class="p-button-text p-button-sm interactivo-sync__retry"
-          (click)="reintentar()"
-          data-testid="hidraulica-reintentar"
-        ></button>
-      }
-    </div>
+        <span
+          class="interactivo-sync__dot"
+          [attr.data-estado]="estado()"
+          aria-hidden="true"
+        ></span>
+        <span
+          class="interactivo-sync__texto"
+          data-testid="hidraulica-sync-estado"
+          >{{ texto() }}</span
+        >
+        @if (puedeReintentar()) {
+          <button
+            pButton
+            type="button"
+            label="Reintentar"
+            icon="pi pi-refresh"
+            class="p-button-text p-button-sm interactivo-sync__retry"
+            (click)="reintentar()"
+            data-testid="hidraulica-reintentar"
+          ></button>
+        }
+      </div>
+    }
 
     @if (falloHtml() && !frameUrl()) {
       <div class="interactivo-error" data-testid="interactivo-error">
@@ -61,8 +67,9 @@
         <iframe
           #hidraulicaFrame
           class="interactivo-frame"
+          [class.interactivo-frame--inmersivo]="inmersivo()"
           [src]="frameSrc"
-          [style.height.px]="altura()"
+          [style.height.px]="inmersivo() ? null : altura()"
           title="Aplicación interactiva de Hidráulica"
           sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
           allow="clipboard-write; clipboard-read"

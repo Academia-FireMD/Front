@@ -13,7 +13,8 @@ import { AccesoConCurso } from '../models/curso.model';
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { CursoCardComponent } from '../ui/curso-card.component';
 import { ProgressRingComponent } from '../ui/progress-ring.component';
-import { calcularPorcentajeCurso, leccionContinuar } from '../ui/progreso.util';
+import { DestinoCtaCurso, resolverCtaCurso } from '../ui/curso-cta.util';
+import { calcularPorcentajeCurso } from '../ui/progreso.util';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -28,7 +29,6 @@ export type TipoMisCursos = 'cursos' | 'clases-grabadas';
 interface AccesoVista {
   acceso: AccesoConCurso;
   porcentaje: number;
-  continuarLeccionId: number | null;
   ultimaActividad: number; // epoch ms, 0 si nunca
 }
 
@@ -113,14 +113,12 @@ export class MisCursosPageComponent implements OnInit {
   private aVista(acceso: AccesoConCurso): AccesoVista {
     const curso = acceso.curso;
     const prog = acceso.progreso ?? [];
-    const continuar = leccionContinuar(curso, prog);
     const ultima = prog
       .map((p) => (p.ultimaVez ? +new Date(p.ultimaVez) : 0))
       .reduce((max, t) => Math.max(max, t), 0);
     return {
       acceso,
       porcentaje: calcularPorcentajeCurso(curso, prog),
-      continuarLeccionId: continuar?.id ?? null,
       ultimaActividad: ultima,
     };
   }
@@ -129,18 +127,34 @@ export class MisCursosPageComponent implements OnInit {
     this.router.navigate(['/app/cursos', slug]);
   }
 
+  /** Destino compartido con el detalle: APLICACION nunca cae a la intro. */
+  destinoDe(v: AccesoVista): DestinoCtaCurso {
+    return resolverCtaCurso(
+      v.acceso.curso,
+      v.acceso.progreso ?? [],
+      v.porcentaje,
+    );
+  }
+
+  destinoHero(): DestinoCtaCurso | null {
+    const h = this.hero();
+    return h ? this.destinoDe(h) : null;
+  }
+
   continuar(v: AccesoVista): void {
+    const destino = this.destinoDe(v);
+    if (!destino.disponible || destino.leccionId == null) return;
     const slug = v.acceso.curso.slug;
-    if (v.continuarLeccionId != null) {
-      this.router.navigate([
-        '/app/cursos',
-        slug,
-        'leccion',
-        v.continuarLeccionId,
-      ]);
-    } else {
-      this.abrirCurso(slug);
-    }
+    this.router.navigate(['/app/cursos', slug, 'leccion', destino.leccionId]);
+  }
+
+  abrirAplicacion(v: AccesoVista, leccionId: number): void {
+    this.router.navigate([
+      '/app/cursos',
+      v.acceso.curso.slug,
+      'leccion',
+      leccionId,
+    ]);
   }
 
   irACatalogo(): void {

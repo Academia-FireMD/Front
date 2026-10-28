@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CursoCardComponent } from './curso-card.component';
-import { Curso } from '../models/curso.model';
+import { Curso, CursoDetail } from '../models/curso.model';
 import { Oposicion } from '../../shared/models/subscription.model';
 
 const baseCurso: Curso = {
@@ -78,10 +78,7 @@ describe('CursoCardComponent', () => {
   it('Valencia + Alicante se colapsan en un solo badge "Comunidad Valenciana" (consistente con el picker)', () => {
     fixture.componentRef.setInput('curso', {
       ...baseCurso,
-      relevancia: [
-        Oposicion.VALENCIA_AYUNTAMIENTO,
-        Oposicion.ALICANTE_CPBA,
-      ],
+      relevancia: [Oposicion.VALENCIA_AYUNTAMIENTO, Oposicion.ALICANTE_CPBA],
     });
     fixture.componentRef.setInput('tieneAcceso', true);
     fixture.detectChanges();
@@ -129,5 +126,78 @@ describe('CursoCardComponent', () => {
     fixture.componentInstance.onCta(new Event('click'));
     expect(abrir).toHaveBeenCalledTimes(1);
     expect(comprar).not.toHaveBeenCalled();
+  });
+
+  it('APLICACION con entrada válida → "Abrir aplicación" emite la lección configurada', () => {
+    const cursoApp: CursoDetail = {
+      ...baseCurso,
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: 95,
+      secciones: [
+        {
+          id: 1,
+          cursoId: 1,
+          titulo: 'Sección',
+          orden: 0,
+          lecciones: [
+            {
+              id: 94,
+              seccionId: 1,
+              titulo: 'Intro',
+              orden: 0,
+              tipo: 'TEXTO',
+            },
+            {
+              id: 95,
+              seccionId: 1,
+              titulo: 'Aplicación',
+              orden: 1,
+              tipo: 'TEXTO',
+            },
+          ],
+        },
+      ],
+    };
+    fixture.componentRef.setInput('curso', cursoApp);
+    fixture.componentRef.setInput('tieneAcceso', true);
+    fixture.componentRef.setInput('progreso', 100);
+    fixture.detectChanges();
+    expect(text()).toContain('Abrir aplicación');
+    const abrirAplicacion = jest.fn();
+    const abrir = jest.fn();
+    fixture.componentInstance.abrirAplicacion.subscribe(abrirAplicacion);
+    fixture.componentInstance.abrir.subscribe(abrir);
+    fixture.componentInstance.onCta(new Event('click'));
+    expect(abrirAplicacion).toHaveBeenCalledWith(95);
+    expect(abrir).not.toHaveBeenCalled();
+  });
+
+  it('APLICACION sin entrada → CTA deshabilitado y sin fallback', () => {
+    const cursoApp: CursoDetail = {
+      ...baseCurso,
+      modoPresentacion: 'APLICACION',
+      leccionAplicacionId: null,
+      secciones: [],
+    };
+    fixture.componentRef.setInput('curso', cursoApp);
+    fixture.componentRef.setInput('tieneAcceso', true);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.cta()).toBe('aplicacion-no-disponible');
+    expect(fixture.componentInstance.ctaDeshabilitada()).toBe(true);
+    expect(text()).toContain('Aplicación no disponible');
+    const abrir = jest.fn();
+    fixture.componentInstance.abrir.subscribe(abrir);
+    fixture.componentInstance.onCta(new Event('click'));
+    expect(abrir).not.toHaveBeenCalled();
+  });
+
+  it('el cuerpo de la tarjeta emite abrirCurso (detalle nativo), no el CTA', () => {
+    fixture.componentRef.setInput('curso', baseCurso);
+    fixture.componentRef.setInput('tieneAcceso', true);
+    fixture.detectChanges();
+    const abrirCurso = jest.fn();
+    fixture.componentInstance.abrirCurso.subscribe(abrirCurso);
+    fixture.nativeElement.querySelector('.curso-card').click();
+    expect(abrirCurso).toHaveBeenCalledTimes(1);
   });
 });

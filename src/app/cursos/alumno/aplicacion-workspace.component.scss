@@ -1,0 +1,256 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: block;
+  height: 100dvh;
+  max-height: 100dvh;
+  background: #fff;
+  color: var(--cursos-text, #1f2429);
+  overflow: hidden;
+}
+
+.aw-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #fff;
+}
+
+.aw-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 56px;
+  padding: 0.4rem 0.85rem;
+  border-bottom: 1px solid var(--cursos-border, #d9dde2);
+  background: #fff;
+  flex-wrap: wrap;
+}
+
+.aw-volver,
+.aw-lecciones {
+  min-height: 44px;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.aw-titulos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.aw-curso {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--cursos-text-soft, #6b7280);
+  text-transform: uppercase;
+}
+
+.aw-leccion {
+  max-width: min(42vw, 34rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.aw-sync {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 0.86rem;
+  color: var(--cursos-text-soft, #6b7280);
+
+  &__dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--cursos-text-soft, #6b7280);
+    flex-shrink: 0;
+
+    &[data-estado="loading"],
+    &[data-estado="saving"] {
+      background: var(--cursos-brand, #bb292a);
+      animation: aw-pulse 1s ease-in-out infinite;
+    }
+
+    &[data-estado="saved"] {
+      background: var(--cursos-ok, #22c55e);
+    }
+
+    &[data-estado="pending"] {
+      background: #eab308;
+    }
+
+    &[data-estado="error"] {
+      background: #ef4444;
+    }
+  }
+
+  &__texto {
+    min-width: 0;
+    max-width: 34ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__retry {
+    flex-shrink: 0;
+    min-height: 40px;
+  }
+}
+
+.aw-lecciones {
+  margin-left: 0.25rem;
+}
+
+.aw-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.aw-app {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.aw-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.aw-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 420px);
+  background: #fff;
+  box-shadow: -12px 0 32px rgba(15, 23, 42, 0.18);
+
+  &__head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--cursos-border, #d9dde2);
+  }
+
+  &__title {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__kicker {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cursos-text-soft, #6b7280);
+  }
+
+  &__cerrar {
+    min-width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+
+  &__curriculum {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+  }
+
+  &__footer {
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--cursos-border, #d9dde2);
+    background: #fff;
+  }
+}
+
+.aw-completar {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  gap: 0.45rem;
+  background: var(--cursos-brand, #bb292a);
+  border-color: var(--cursos-brand, #bb292a);
+
+  &.is-done {
+    background: var(--cursos-ok, #22c55e);
+    border-color: var(--cursos-ok, #22c55e);
+  }
+}
+
+@keyframes aw-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 720px) {
+  .aw-header {
+    gap: 0.45rem;
+    padding-inline: 0.6rem;
+  }
+
+  .aw-curso {
+    display: none;
+  }
+
+  .aw-leccion {
+    max-width: 52vw;
+  }
+
+  .aw-sync {
+    order: 5;
+    width: 100%;
+    margin-left: 0;
+    padding-bottom: 0.2rem;
+  }
+
+  .aw-sync__texto {
+    max-width: none;
+    flex: 1;
+  }
+
+  .aw-lecciones {
+    margin-left: auto;
+  }
+
+  .aw-drawer {
+    width: min(100vw, 420px);
+  }
+}

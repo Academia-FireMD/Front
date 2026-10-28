@@ -1,0 +1,141 @@
+<div class="aw-shell">
+  <header
+    class="aw-header"
+    [attr.inert]="drawerAbierto() ? '' : null"
+    [attr.aria-hidden]="drawerAbierto() ? 'true' : null"
+  >
+    <button
+      pButton
+      type="button"
+      class="p-button-text p-button-sm aw-volver"
+      (click)="volver.emit()"
+      data-testid="aplicacion-volver"
+    >
+      <i class="pi pi-arrow-left"></i><span>Volver al curso</span>
+    </button>
+
+    <div class="aw-titulos">
+      <span class="aw-curso">{{ tituloCurso() }}</span>
+      <span class="aw-leccion">{{ tituloLeccion() }}</span>
+    </div>
+
+    <div
+      class="aw-sync"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      data-testid="aplicacion-sync"
+    >
+      <span
+        class="aw-sync__dot"
+        [attr.data-estado]="syncEstado()"
+        aria-hidden="true"
+      ></span>
+      <span class="aw-sync__texto" data-testid="hidraulica-sync-estado">{{
+        syncTexto()
+      }}</span>
+      @if (puedeReintentar()) {
+        <button
+          pButton
+          type="button"
+          label="Reintentar"
+          icon="pi pi-refresh"
+          class="p-button-text p-button-sm aw-sync__retry"
+          (click)="reintentar.emit()"
+          data-testid="hidraulica-reintentar"
+        ></button>
+      }
+    </div>
+
+    <button
+      #btnLecciones
+      pButton
+      type="button"
+      class="p-button-outlined p-button-sm aw-lecciones"
+      (click)="abrirDrawer()"
+      [attr.aria-expanded]="drawerAbierto()"
+      aria-controls="aplicacion-drawer"
+      data-testid="aplicacion-lecciones"
+    >
+      <i class="pi pi-list"></i><span>Lecciones</span>
+    </button>
+  </header>
+
+  <main
+    class="aw-body"
+    data-testid="aplicacion-workspace"
+    [attr.inert]="drawerAbierto() ? '' : null"
+    [attr.aria-hidden]="drawerAbierto() ? 'true' : null"
+  >
+    <div class="aw-app">
+      <ng-content></ng-content>
+    </div>
+  </main>
+
+  @if (drawerAbierto()) {
+    <div
+      class="aw-backdrop"
+      (click)="cerrarDrawer()"
+      aria-hidden="true"
+      data-testid="aplicacion-drawer-backdrop"
+    ></div>
+    <aside
+      id="aplicacion-drawer"
+      class="aw-drawer"
+      role="dialog"
+      aria-modal="true"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
+      [attr.aria-label]="'Lecciones de ' + tituloCurso()"
+      data-testid="aplicacion-drawer"
+    >
+      <header class="aw-drawer__head">
+        <div class="aw-drawer__title">
+          <span class="aw-drawer__kicker">Curso</span>
+          <strong>{{ tituloCurso() }}</strong>
+        </div>
+        <button
+          #btnCerrar
+          pButton
+          type="button"
+          class="p-button-text p-button-icon-only aw-drawer__cerrar"
+          aria-label="Cerrar lecciones"
+          (click)="cerrarDrawer()"
+          data-testid="aplicacion-drawer-cerrar"
+        >
+          <i class="pi pi-times"></i>
+        </button>
+      </header>
+
+      <div class="aw-drawer__curriculum">
+        <app-curriculum-sidebar
+          [secciones]="secciones()"
+          [progreso]="progreso()"
+          [leccionActivaId]="leccionActivaId()"
+          [interactivo]="true"
+          (seleccionar)="onSeleccionar($event)"
+        ></app-curriculum-sidebar>
+      </div>
+
+      <footer class="aw-drawer__footer">
+        <button
+          pButton
+          type="button"
+          class="aw-completar"
+          [class.is-done]="completada()"
+          [loading]="marcando()"
+          [disabled]="completada()"
+          (click)="onMarcarCompletada()"
+          data-testid="aplicacion-marcar-completada"
+        >
+          <i
+            class="pi"
+            [class.pi-check]="!completada()"
+            [class.pi-check-circle]="completada()"
+          ></i>
+          <span>{{ completada() ? "Completada" : "Marcar completada" }}</span>
+        </button>
+      </footer>
+    </aside>
+  }
+</div>

@@ -24,7 +24,8 @@ import {
 import { CursosAlumnoService } from '../services/cursos-alumno.service';
 import { CurriculumSidebarComponent } from '../ui/curriculum-sidebar.component';
 import { ProgressRingComponent } from '../ui/progress-ring.component';
-import { calcularPorcentajeCurso, leccionContinuar } from '../ui/progreso.util';
+import { DestinoCtaCurso, resolverCtaCurso } from '../ui/curso-cta.util';
+import { calcularPorcentajeCurso } from '../ui/progreso.util';
 
 /**
  * Refactor 2026-05-25 (T12 / D4): acepta input opcional `previewData` para
@@ -99,15 +100,21 @@ export class CursoDetailPageComponent implements OnInit {
     const curso = this.cursoData()?.curso;
     return curso ? calcularPorcentajeCurso(curso, this.progreso()) : 0;
   });
-  /** Lección para "Empezar"/"Continuar" (solo si tiene acceso). */
-  readonly continuarLeccion = computed(() => {
+  /** Lección/CTA compartido con MisCursos (misma regla de entrada APLICACION). */
+  readonly destinoCta = computed<DestinoCtaCurso>(() => {
     const curso = this.cursoData()?.curso;
-    return curso ? leccionContinuar(curso, this.progreso()) : null;
+    return curso
+      ? resolverCtaCurso(curso, this.progreso(), this.porcentaje())
+      : {
+          aplicacion: false,
+          etiqueta: 'Empezar',
+          leccionId: null,
+          disponible: false,
+          motivo: null,
+        };
   });
-  /** Etiqueta del CTA principal cuando tiene acceso. */
-  readonly ctaLabel = computed(() =>
-    this.porcentaje() > 0 ? 'Continuar' : 'Empezar',
-  );
+  /** Etiqueta del CTA principal (Abrir aplicación / Continuar / Empezar). */
+  readonly ctaLabel = computed(() => this.destinoCta().etiqueta);
 
   constructor() {
     // Si llega previewData en runtime (admin lo cambia con toggle), refleja
@@ -165,10 +172,12 @@ export class CursoDetailPageComponent implements OnInit {
     );
   }
 
-  /** CTA principal con acceso: abre la lección de "continuar" (o la primera). */
+  /** CTA principal con acceso: abre la lección configurada o la de continuar. */
   empezar(): void {
-    const leccion = this.continuarLeccion();
-    if (leccion) this.openLeccion(leccion);
+    const destino = this.destinoCta();
+    if (!destino.disponible || destino.leccionId == null) return;
+    const slug = this.route.snapshot.paramMap.get('slug') ?? '';
+    this.router.navigate(['/app/cursos', slug, 'leccion', destino.leccionId]);
   }
 
   // ── Compra 1-clic (COF) ──────────────────────────────────────────

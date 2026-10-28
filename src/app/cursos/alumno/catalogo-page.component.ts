@@ -79,6 +79,11 @@ export class CatalogoPageComponent implements OnInit {
     this.router.navigate(['/app/cursos', curso.slug]);
   }
 
+  /** CTA de aplicación desde catálogo (si el alumno ya tiene acceso). */
+  abrirAplicacionCurso(curso: CursoPublico, leccionId: number): void {
+    this.router.navigate(['/app/cursos', curso.slug, 'leccion', leccionId]);
+  }
+
   /** Compra en 1 clic contra el COF. Estado de carga mientras el backend cobra. */
   comprar(curso: CursoPublico): void {
     const importe = importeConfirmadoEnCentimos(curso.precio);

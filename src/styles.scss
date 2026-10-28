@@ -9,6 +9,21 @@
 @import "./app/cursos/ui/tokens";
 @import "./app/cursos/ui/prose";
 
+// Aula APLICACION inmersiva (temporal): el padre no scrollea; el único scroll
+// vertical vive dentro del iframe de la aplicación.
+body.aula-inmersiva-activa {
+  overflow: hidden;
+}
+
+body.aula-inmersiva-activa .lateral-bar,
+body.aula-inmersiva-activa .bar {
+  display: none !important;
+}
+
+body.aula-inmersiva-activa .layout-content {
+  width: 100% !important;
+}
+
 .truncate-flex-content {
   flex: 1 1 auto;
   min-width: 0;

@@ -1,5 +1,12 @@
-<div class="grid h-full" style="overflow: hidden">
-  <div class="bar w-full mb-2" *ngIf="viewportService.screenWidth === 'xs'">
+<div
+  class="grid h-full"
+  [class.layout-inmersivo]="aulaInmersiva.activa()"
+  style="overflow: hidden"
+>
+  <div
+    class="bar w-full mb-2"
+    *ngIf="!aulaInmersiva.activa() && viewportService.screenWidth === 'xs'"
+  >
     <button
       class="p-button p-button-text p-button-icon-only"
       (click)="toggleMenu()"
@@ -13,9 +20,12 @@
     [ngClass]="{
       'mobile-expanded': viewportService.screenWidth == 'xs' && isMenuVisible,
       'menu-collapsed': !isMenuExpanded && viewportService.screenWidth !== 'xs',
-      'menu-expanded': isMenuExpanded && viewportService.screenWidth !== 'xs'
+      'menu-expanded': isMenuExpanded && viewportService.screenWidth !== 'xs',
     }"
-    *ngIf="viewportService.screenWidth !== 'xs' || isMenuVisible"
+    *ngIf="
+      !aulaInmersiva.activa() &&
+      (viewportService.screenWidth !== 'xs' || isMenuVisible)
+    "
     (mouseenter)="onMenuHover(true)"
     (mouseleave)="onMenuHover(false)"
   >
@@ -44,7 +54,7 @@
             'impersonation-banner-collapsed':
               !isMenuExpanded && viewportService.screenWidth !== 'xs',
             'impersonation-banner-expanded':
-              isMenuExpanded || viewportService.screenWidth === 'xs'
+              isMenuExpanded || viewportService.screenWidth === 'xs',
           }"
         >
           <div class="flex align-items-center gap-2">
@@ -81,14 +91,14 @@
         >
           <div class="avatar-container mt-0">
             @if (!user.avatarUrl) {
-            <i class="pi pi-user"></i>
+              <i class="pi pi-user"></i>
             } @else {
-            <img
-              [src]="user.avatarUrl"
-              alt="Avatar"
-              class="avatar-preview"
-              style="max-width: 32px; max-height: 32px"
-            />
+              <img
+                [src]="user.avatarUrl"
+                alt="Avatar"
+                class="avatar-preview"
+                style="max-width: 32px; max-height: 32px"
+              />
             }
           </div>
 
@@ -113,8 +123,8 @@
             item.state?.locked
               ? openUpgradePage()
               : !!item.items && item.items.length > 0
-              ? toggleCollapse(item)
-              : navigateToPath(item.routerLink)
+                ? toggleCollapse(item)
+                : navigateToPath(item.routerLink)
           "
         >
           <span
@@ -192,10 +202,14 @@
 
   <div
     class="layout-content"
-    [style.width]="getResponsiveWidth(isMenuExpanded)"
+    [style.width]="
+      aulaInmersiva.activa() ? '100%' : getResponsiveWidth(isMenuExpanded)
+    "
   >
     <router-outlet></router-outlet>
   </div>
 </div>
 
-<app-ai-assistant-widget />
+@if (!aulaInmersiva.activa()) {
+  <app-ai-assistant-widget />
+}
