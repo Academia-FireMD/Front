@@ -323,6 +323,7 @@ describe('VistaSemanalComponent', () => {
       component.planificacionesService = {
         actualizarProgresoSubBloque$: guardar,
       } as any;
+      component.alternarModoProgreso();
 
       component.updateEventProgress(vinculado);
       component.updateEventProgress(vinculado);
@@ -338,6 +339,471 @@ describe('VistaSemanalComponent', () => {
 
       peticion.error(new Error('offline'));
       expect(vinculado.meta.subBloque.realizado).toBe(false);
+    });
+  });
+
+  describe('modo explícito «Marcar progreso»', () => {
+    const dia = new Date(2026, 6, 15, 9, 0);
+    const crearEvento = (
+      id: number,
+      {
+        realizado = false,
+        esPersonalizado = false,
+        draggable = true,
+        resizable = undefined as
+          | { beforeStart: boolean; afterEnd: boolean }
+          | undefined,
+      } = {},
+    ): any => ({
+      title: `Evento ${id}`,
+      start: dia,
+      end: new Date(dia.getTime() + 60 * 60000),
+      color: { primary: '#f59e0b', secondary: '#f59e0b' },
+      draggable,
+      resizable,
+      meta: {
+        esPersonalizado,
+        subBloque: {
+          id,
+          nombre: `Evento ${id}`,
+          duracion: 60,
+          realizado,
+          esPersonalizado,
+          esEntrenamientoFisico: false,
+        },
+      },
+    });
+    const pointer = (props: Record<string, unknown> = {}) =>
+      ({
+        button: 0,
+        pointerId: 1,
+        clientX: 0,
+        clientY: 0,
+        ...props,
+      }) as any;
+    const click = (props: Record<string, unknown> = {}) =>
+      ({
+        target: null,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+        ...props,
+      }) as any;
+
+    it('arranca en modo normal: el mutador directo no escribe ni cambia la marca', () => {
+      const evento = crearEvento(101);
+      component.events = [evento];
+      const guardar = jest.fn();
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+
+      expect(component.modoMarcadoProgreso).toBe(false);
+      expect(component.puedeMarcarProgreso()).toBe(true);
+
+      component.updateEventProgress(evento);
+
+      expect(guardar).not.toHaveBeenCalled();
+      expect(evento.meta.subBloque.realizado).toBe(false);
+      expect(component.isEventSheetVisible).toBe(false);
+    });
+
+    it('sólo el alumno puede entrar en el modo; el admin conserva su comportamiento', () => {
+      component.role = 'ADMIN';
+      const evento = crearEvento(102);
+      component.events = [evento];
+      const guardar = jest.fn();
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+
+      expect(component.puedeMarcarProgreso()).toBe(false);
+      component.alternarModoProgreso(click());
+      expect(component.modoMarcadoProgreso).toBe(false);
+
+      component.updateEventProgress(evento);
+      expect(guardar).not.toHaveBeenCalled();
+      expect(evento.meta.subBloque.realizado).toBe(false);
+    });
+
+    it('entrar y salir no guarda nada ni deja el mutador desbloqueado', () => {
+      component.events = [crearEvento(103)];
+      const guardar = jest.fn();
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+        actualizarEventoPersonalizadoRealizado$: guardar,
+      } as any;
+
+      component.alternarModoProgreso(click());
+      expect(component.modoMarcadoProgreso).toBe(true);
+      component.alternarModoProgreso(click());
+      expect(component.modoMarcadoProgreso).toBe(false);
+
+      expect(guardar).not.toHaveBeenCalled();
+    });
+
+    it('la tarjeta, la casilla y el teclado marcan una sola vez mientras el guardado está pendiente', () => {
+      const evento = crearEvento(104);
+      component.events = [evento];
+      const peticion = new Subject<void>();
+      const guardar = jest.fn(() => peticion.asObservable());
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+      component.alternarModoProgreso(click());
+
+      component.onCardClick(click(), evento);
+      expect(guardar).toHaveBeenCalledTimes(1);
+      expect(evento.meta.subBloque.realizado).toBe(true);
+
+      component.onCompletionClick(click(), evento);
+      expect(guardar).toHaveBeenCalledTimes(1);
+
+      const tarjeta = document.createElement('div');
+      tarjeta.tabIndex = 0;
+      document.body.appendChild(tarjeta);
+      tarjeta.focus();
+      const teclado = {
+        key: 'Enter',
+        repeat: false,
+        target: tarjeta,
+        currentTarget: tarjeta,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any;
+      component.onCardKeydown(teclado, evento);
+      expect(guardar).toHaveBeenCalledTimes(1);
+      expect(document.activeElement).toBe(tarjeta);
+
+      peticion.next();
+      peticion.complete();
+      expect(component.guardadosProgresoPendientes).toBe(false);
+      component.onCompletionClick(click(), evento);
+      expect(guardar).toHaveBeenCalledTimes(2);
+      expect(evento.meta.subBloque.realizado).toBe(false);
+      tarjeta.remove();
+    });
+
+    it('en modo marcar la tarjeta no abre el panel y la casilla no lo propaga al sheet', () => {
+      const evento = crearEvento(105);
+      component.events = [evento];
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: jest.fn(() =>
+          new Subject().asObservable(),
+        ),
+      } as any;
+      component.alternarModoProgreso(click());
+
+      const sourceEvent = click();
+      component.onCardClick(sourceEvent, evento);
+      expect(component.isEventSheetVisible).toBe(false);
+      expect(sourceEvent.preventDefault).toHaveBeenCalled();
+      expect(sourceEvent.stopPropagation).toHaveBeenCalled();
+
+      const casillaClick = click();
+      component.onCompletionClick(casillaClick, evento);
+      expect(casillaClick.stopPropagation).toHaveBeenCalled();
+      expect(component.isEventSheetVisible).toBe(false);
+    });
+
+    it('un gesto por encima del umbral, cancelado o con scroll no marca al soltar', () => {
+      const evento = crearEvento(106);
+      component.events = [evento];
+      const guardar = jest.fn(() => new Subject().asObservable());
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+      component.alternarModoProgreso(click());
+
+      component.onCardPointerDown(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardPointerMove(pointer({ clientX: 30, clientY: 10 }));
+      component.onCardPointerUp(pointer({ clientX: 30, clientY: 10 }));
+      component.onCardClick(click(), evento);
+
+      component.onCardPointerDown(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardPointerCancel(pointer({ clientX: 10, clientY: 10 }));
+      component.onCompletionClick(click(), evento);
+
+      component.onCardPointerDown(pointer({ clientX: 10, clientY: 10 }));
+      window.dispatchEvent(new Event('scroll'));
+      component.onCardPointerUp(pointer({ clientX: 10, clientY: 10 }));
+      component.onCardClick(click(), evento);
+
+      expect(guardar).not.toHaveBeenCalled();
+      expect(evento.meta.subBloque.realizado).toBe(false);
+    });
+
+    it('proyecta flags suspendidos sin mutar los eventos fuente', () => {
+      component.mode = 'picker';
+      const resizable = { beforeStart: true, afterEnd: true };
+      const evento = crearEvento(107, { draggable: true, resizable });
+      const noArrastrable = crearEvento(108, { draggable: false });
+      component.events = [evento, noArrastrable];
+
+      component.alternarModoProgreso(click());
+      const proyeccion = component.eventsParaCalendario;
+      expect(evento.draggable).toBe(true);
+      expect(evento.resizable).toBe(resizable);
+      expect(noArrastrable.draggable).toBe(false);
+      expect(
+        proyeccion.find((e) => e.meta.subBloque.id === 107)?.draggable,
+      ).toBe(false);
+      expect(
+        proyeccion.find((e) => e.meta.subBloque.id === 107)?.resizable,
+      ).toEqual({ beforeStart: false, afterEnd: false });
+      expect(
+        proyeccion.find((e) => e.meta.subBloque.id === 108)?.draggable,
+      ).toBe(false);
+      expect(proyeccion).not.toBe(component.events);
+
+      component.alternarModoProgreso(click());
+      expect(component.eventsParaCalendario).toBe(component.events);
+      expect(evento.draggable).toBe(true);
+      expect(evento.resizable).toBe(resizable);
+      expect(noArrastrable.draggable).toBe(false);
+    });
+
+    it('al refrescar el input usa los flags vigentes y no restaura los antiguos', () => {
+      component.mode = 'picker';
+      const original = { beforeStart: true, afterEnd: true };
+      component.events = [
+        crearEvento(109, { draggable: true, resizable: original }),
+      ];
+      component.alternarModoProgreso(click());
+
+      const refrescado = crearEvento(109, {
+        draggable: false,
+        resizable: { beforeStart: false, afterEnd: false },
+      });
+      const nuevo = crearEvento(110, { draggable: true });
+      component.events = [refrescado, nuevo];
+
+      expect(refrescado.draggable).toBe(false);
+      expect(nuevo.draggable).toBe(true);
+      const proyeccion = component.eventsParaCalendario;
+      expect(
+        proyeccion.find((e) => e.meta.subBloque.id === 109)?.draggable,
+      ).toBe(false);
+      expect(
+        proyeccion.find((e) => e.meta.subBloque.id === 110)?.draggable,
+      ).toBe(false);
+
+      component.alternarModoProgreso(click());
+      expect(component.eventsParaCalendario).toBe(component.events);
+      expect(refrescado.draggable).toBe(false);
+      expect(nuevo.draggable).toBe(true);
+    });
+
+    it('el ACK y el error actúan sobre la instancia actual del evento tras un refresco', () => {
+      const evento = crearEvento(111);
+      component.events = [evento];
+      const peticion = new Subject<void>();
+      const guardar = jest.fn(() => peticion.asObservable());
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+      component.alternarModoProgreso(click());
+      component.updateEventProgress(evento);
+
+      const actualizado = crearEvento(111);
+      component.events = [actualizado];
+      // El refresco recibe el estado optimista pendiente, no la marca vieja.
+      expect(actualizado.meta.subBloque.realizado).toBe(true);
+
+      peticion.next();
+      peticion.complete();
+      expect(actualizado.meta.subBloque.realizado).toBe(true);
+      expect(component.getCompletedSubBlocksForDay(component.events, dia)).toBe(
+        1,
+      );
+
+      const base = crearEvento(111);
+      component.events = [base];
+      const segunda = new Subject<void>();
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: jest.fn(() => segunda.asObservable()),
+      } as any;
+      component.onCardClick(click(), base);
+      const actualizado2 = crearEvento(111);
+      component.events = [actualizado2];
+      expect(actualizado2.meta.subBloque.realizado).toBe(true);
+
+      segunda.error(new Error('offline'));
+      expect(actualizado2.meta.subBloque.realizado).toBe(false);
+      expect(component.guardadosProgresoPendientes).toBe(false);
+    });
+
+    it('Terminar queda bloqueado mientras hay guardados y no duplica el envío', () => {
+      const evento = crearEvento(112);
+      component.events = [evento];
+      const peticion = new Subject<void>();
+      const guardar = jest.fn(() => peticion.asObservable());
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+      component.alternarModoProgreso(click());
+      component.onCardClick(click(), evento);
+      expect(component.guardadosProgresoPendientes).toBe(true);
+
+      const terminar = click();
+      component.alternarModoProgreso(terminar);
+      component.alternarModoProgreso(terminar);
+
+      expect(component.modoMarcadoProgreso).toBe(true);
+      expect(terminar.preventDefault).toHaveBeenCalledTimes(2);
+      expect(terminar.stopPropagation).toHaveBeenCalledTimes(2);
+      expect(guardar).toHaveBeenCalledTimes(1);
+
+      peticion.next();
+      peticion.complete();
+      expect(component.guardadosProgresoPendientes).toBe(false);
+      component.alternarModoProgreso(click());
+      expect(component.modoMarcadoProgreso).toBe(false);
+    });
+
+    it('un error revierte, permite reintentar y mantiene el modo hasta Terminar', () => {
+      const evento = crearEvento(113);
+      component.events = [evento];
+      const primerError = new Subject<void>();
+      const reintento = new Subject<void>();
+      const guardar = jest
+        .fn()
+        .mockReturnValueOnce(primerError.asObservable())
+        .mockReturnValueOnce(reintento.asObservable());
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+      component.alternarModoProgreso(click());
+      component.onCardClick(click(), evento);
+
+      primerError.error(new Error('offline'));
+
+      expect(component.modoMarcadoProgreso).toBe(true);
+      expect(evento.meta.subBloque.realizado).toBe(false);
+      expect(component.guardadosProgresoPendientes).toBe(false);
+
+      component.onCardClick(click(), evento);
+      expect(guardar).toHaveBeenCalledTimes(2);
+      reintento.next();
+      reintento.complete();
+      expect(evento.meta.subBloque.realizado).toBe(true);
+      component.alternarModoProgreso(click());
+      expect(component.modoMarcadoProgreso).toBe(false);
+    });
+
+    it('editar un evento sin id ya presente lo reemplaza y no lo duplica', () => {
+      component.mode = 'picker';
+      const evento = crearEvento(117);
+      evento.meta.subBloque.id = null;
+      evento.title = 'Evento nuevo sin guardar';
+      component.events = [evento];
+      component.selectedEvent = evento;
+      const emitir = jest.spyOn(component.eventsChange, 'emit');
+
+      component.saveEvent({
+        id: null,
+        horaInicio: dia,
+        nombre: 'Evento editado',
+        color: '#ffffff',
+        duracion: 90,
+        comentarios: 'Nota editada',
+        importante: false,
+        tiempoAviso: undefined,
+        esEntrenamientoFisico: false,
+      });
+
+      expect(component.events).toHaveLength(1);
+      expect(component.events[0].title).toBe('Evento editado');
+      expect(
+        component.events[0].end!.getTime() -
+          component.events[0].start.getTime(),
+      ).toBe(90 * 60000);
+      expect(emitir).toHaveBeenCalledTimes(1);
+      expect(emitir.mock.calls[0][0]).toHaveLength(1);
+    });
+
+    it('el editor personal omite realizado del payload y conserva el estado vivo', async () => {
+      const personal = crearEvento(116, {
+        realizado: true,
+        esPersonalizado: true,
+      });
+      component.events = [personal];
+      const actualizar = jest.fn((_dto: Record<string, unknown>) => ({
+        subscribe: ({ next }: any) => next({}),
+      }));
+      component.planificacionesService = {
+        actualizarEventoPersonalizado$: actualizar,
+      } as any;
+
+      await component.saveEventoPersonalizado({
+        id: 116,
+        nombre: 'Personal editado',
+        descripcion: 'Nota nueva',
+        horaInicio: dia,
+        duracion: 60,
+        color: '#4caf50',
+        importante: false,
+        tiempoAviso: null,
+        realizado: false,
+      });
+
+      expect(actualizar).toHaveBeenCalledTimes(1);
+      const dto = actualizar.mock.calls[0][0];
+      expect(dto).not.toHaveProperty('realizado');
+      expect(component.events[0].title).toBe('Personal editado');
+      expect(component.events[0].meta.subBloque.realizado).toBe(true);
+    });
+
+    it('guarda comentarios en normal sin tocar realizado ni requerir el modo', () => {
+      const evento = crearEvento(114, { realizado: true });
+      component.events = [evento];
+      const guardar = jest.fn(() => new Subject().asObservable());
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+
+      component.abrirEventSheet(evento);
+      component.comentarioBorrador = 'Comentario sin modo';
+      component.guardarComentarioSheet();
+
+      expect(guardar).toHaveBeenCalledWith({
+        subBloqueId: 114,
+        planificacionId: Number(
+          (component as any).activatedRoute.snapshot.params['id'],
+        ),
+        comentariosAlumno: 'Comentario sin modo',
+      });
+      expect(evento.meta.subBloque.realizado).toBe(true);
+      expect(component.modoMarcadoProgreso).toBe(false);
+    });
+
+    it('en modo normal el click y el teclado abren el panel sin escribir progreso', () => {
+      const evento = crearEvento(115);
+      component.events = [evento];
+      const guardar = jest.fn();
+      component.planificacionesService = {
+        actualizarProgresoSubBloque$: guardar,
+      } as any;
+
+      component.onCardClick(click(), evento);
+      expect(component.isEventSheetVisible).toBe(true);
+
+      component.cerrarEventSheet();
+      component.onEventSheetHide();
+      const tarjeta = document.createElement('div');
+      document.body.appendChild(tarjeta);
+      const teclado = {
+        key: ' ',
+        repeat: false,
+        target: tarjeta,
+        currentTarget: tarjeta,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any;
+      component.onCardKeydown(teclado, evento);
+
+      expect(component.isEventSheetVisible).toBe(true);
+      expect(guardar).not.toHaveBeenCalled();
+      tarjeta.remove();
     });
   });
 
@@ -397,6 +863,7 @@ describe('VistaSemanalComponent', () => {
       component.planificacionesService = {
         actualizarProgresoSubBloque$: jest.fn(() => peticion.asObservable()),
       } as any;
+      component.alternarModoProgreso();
 
       component.updateEventProgress(primero);
 
@@ -778,7 +1245,6 @@ describe('VistaSemanalComponent', () => {
       expect(component.puedeComentarEventoSheet()).toBe(true);
       expect(component.puedeEditarEventoSheet()).toBe(false);
       expect(component.puedeEliminarEventoSheet()).toBe(false);
-      expect(component.puedeMarcarEventoSheet()).toBe(true);
 
       const personal = crearEvento(32, { personal: true });
       component.onEventClicked(personal);
@@ -791,7 +1257,6 @@ describe('VistaSemanalComponent', () => {
       expect(component.puedeComentarEventoSheet()).toBe(false);
       expect(component.puedeEditarEventoSheet()).toBe(true);
       expect(component.puedeEliminarEventoSheet()).toBe(true);
-      expect(component.puedeMarcarEventoSheet()).toBe(false);
     });
 
     it('sólo ofrece el plan físico al evento vinculado con resumen del día', () => {

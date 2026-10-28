@@ -1,0 +1,33 @@
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.calendar-nav__buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex-wrap: nowrap;
+}
+
+:host ::ng-deep .calendar-nav__buttons .p-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+:host ::ng-deep .calendar-nav__buttons .p-button:not(.p-button-icon-only) {
+  width: auto;
+  padding: 0 0.6rem;
+}
+
+:host ::ng-deep .calendar-nav__buttons .p-button .p-button-icon {
+  font-size: 0.9rem;
+}

@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { loginAsRoleMock } from './helpers/auth.helper';
+import { entrarModoMarcado } from './helpers/progress-mode.helper';
 
 const PLAN_ID = 88002;
 const hoy = new Date();
@@ -318,7 +319,7 @@ async function hoverSinTooltipPrevio(
   });
 }
 
-test('recorta por el espacio real, ofrece tooltip accesible y no interfiere con acciones', async ({
+test('recorta por el espacio real sin tooltip automático y conserva el contenido en el panel', async ({
   page,
 }) => {
   const api = await prepararCalendario(page);
@@ -348,37 +349,35 @@ test('recorta por el espacio real, ofrece tooltip accesible y no interfiere con 
   await page.waitForTimeout(150);
   await capturarEvidencia(page, 'event-overflow-clipped.png');
 
+  // El calendario ya no abre tooltip al pasar el puntero: el resumen
+  // recortado sigue y el contenido íntegro se consulta en el panel.
   await hoverSinTooltipPrevio(page, cortoContenido);
-  const tooltip = page.locator('.p-tooltip');
-  await expect(tooltip).toBeVisible();
-  await expect(tooltip).toContainText('Evento corto');
-  await expect(tooltip).toContainText('FIN COMPLETO DE LA DESCRIPCIÓN');
-  await expect(
-    tooltip.locator('strong', { hasText: 'Markdown destacado' }),
-  ).toBeVisible();
-  await expect(tooltip.locator('a')).toHaveAttribute(
-    'href',
-    'https://example.test/',
+  await page.waitForTimeout(150);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
+  await expect(cortoContenido).toHaveAttribute(
+    'aria-label',
+    /FIN COMPLETO DE LA DESCRIPCIÓN/,
   );
-  const tooltipText = tooltip.locator('.calendar-event-overflow-tooltip');
-  const tooltipScrollRegion = tooltip.locator(':scope > .p-tooltip-text');
-  await tooltip.hover();
-  await expect(tooltip).toBeVisible();
-  await tooltipScrollRegion.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await expect(
-    tooltipText.getByText('FIN COMPLETO DE LA DESCRIPCIÓN'),
-  ).toBeInViewport();
-  await expect(tooltip).toHaveCSS('opacity', '1');
-  await capturarEvidencia(page, 'event-overflow-tooltip.png');
-  expect(api.peticionesSinInterceptar).toEqual([]);
+  await expect(cortoContenido).toHaveAttribute(
+    'aria-label',
+    /Markdown destacado/,
+  );
 
-  await moverPunteroAZonaNeutra(page);
-  await cortoContenido.focus();
-  await expect(tooltip).toBeVisible();
+  await corto.locator('.event-title strong').click();
+  const sheet = page.getByTestId('event-sheet-content');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId('event-sheet-instructions')).toContainText(
+    'FIN COMPLETO DE LA DESCRIPCIÓN',
+  );
+  await expect(
+    sheet.locator('strong', { hasText: 'Markdown destacado' }),
+  ).toBeVisible();
+  await expect(
+    sheet.locator('a', { hasText: 'un enlace' }),
+  ).toHaveAttribute('href', 'https://example.test/');
   await page.keyboard.press('Escape');
-  await expect(tooltip).toBeHidden();
+  await expect(sheet).toBeHidden();
+  expect(api.peticionesSinInterceptar).toEqual([]);
 
   const siguiente = evento(page, 'Evento siguiente');
   await expect(siguiente.locator('.event-title strong')).toBeVisible();
@@ -386,6 +385,7 @@ test('recorta por el espacio real, ofrece tooltip accesible y no interfiere con 
     'Contenido del siguiente evento.',
   );
 
+  await entrarModoMarcado(page);
   const casilla = corto.getByTestId('completion-toggle');
   await casilla.click();
   await expect(casilla).toHaveAttribute('aria-checked', 'true');
@@ -395,7 +395,7 @@ test('recorta por el espacio real, ofrece tooltip accesible y no interfiere con 
   await expect(page.getByTestId('event-sheet-content')).toBeHidden();
 });
 
-test('no muestra tooltip cuando la preview cabe en una línea y la altura no añade filas', async ({
+test('no activa tooltip automático y mantiene una sola línea cuando la preview cabe', async ({
   page,
 }) => {
   const api = await prepararCalendario(page);
@@ -465,9 +465,8 @@ test('recorta títulos largos y permite abrir el evento sin convertir el hover e
   await superficie.scrollIntoViewIfNeeded();
   await capturarEvidencia(page, 'event-overflow-long-title.png');
   await hoverSinTooltipPrevio(page, superficie);
-  const tooltip = page.locator('.p-tooltip');
-  await expect(tooltip).toBeVisible();
-  await expect(tooltip).toContainText(TITULO_LARGO);
+  await page.waitForTimeout(150);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
   await expect(page.getByTestId('event-sheet-content')).toBeHidden();
 
   const resizeEventWidth = (width: number) =>
@@ -487,13 +486,13 @@ test('recorta títulos largos y permite abrir el evento sin convertir el hover e
   await resizeEventWidth(160);
   await expect(superficie).toHaveAttribute('data-overflow', 'true');
   await hoverSinTooltipPrevio(page, superficie);
-  await expect(tooltip).toBeVisible();
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
 
   await resizeEventWidth(1000);
   await expect(superficie).toHaveAttribute('data-overflow', 'false');
   await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
 
-  await largo.click();
+  await largo.locator('.event-title strong').click();
   const sheet = page.getByTestId('event-sheet-content');
   await expect(sheet).toBeVisible();
   await expect(sheet.getByTestId('event-sheet-title')).toContainText(
@@ -509,7 +508,8 @@ test('el plan físico se consulta desde el panel de detalle del evento', async (
   const api = await prepararCalendario(page);
   const vinculado = evento(page, 'Evento siguiente');
   await vinculado.scrollIntoViewIfNeeded();
-  await expect(vinculado.getByTestId('completion-toggle')).toBeVisible();
+  await expect(page.getByTestId('marking-toggle')).toBeVisible();
+  await expect(vinculado.getByTestId('completion-toggle')).toHaveCount(0);
   await expect(vinculado.getByTestId('fisica-vinculada-icono')).toHaveCount(0);
 
   await expect(vinculado.locator('.event-title strong')).toBeVisible();
@@ -569,37 +569,43 @@ test('conserva el contexto físico completo en compacto y en el panel', async ({
     'aria-label',
     /Carrera de fondo \(realizada\)/,
   );
-  await expect(compactoSuperficie).toHaveAttribute(
-    'aria-label',
-    /Cuerda doble \(pendiente\)/,
-  );
-
-  await hoverSinTooltipPrevio(page, compactoSuperficie);
-  const tooltip = page.locator('.p-tooltip');
-  await expect(tooltip).toBeVisible();
-  const contexto = tooltip.locator('.event-context-text');
-  await expect(contexto).toContainText('Plan físico: 2/4');
   for (const disciplina of [
     'Carrera de fondo (realizada)',
     'Cuerda doble (pendiente)',
     'Natación técnica (realizada)',
     'Circuito de fuerza (pendiente)',
   ]) {
-    await expect(contexto).toContainText(disciplina);
+    await expect(compactoSuperficie).toHaveAttribute(
+      'aria-label',
+      new RegExp(disciplina.replace(/[()]/g, '\\$&')),
+    );
   }
-  await expect(tooltip).toHaveCSS('opacity', '1');
-  await capturarEvidencia(page, 'correction-contexto-fisico-compacto.png');
-  await page.keyboard.press('Escape');
-  await expect(tooltip).toBeHidden();
 
-  await moverPunteroAZonaNeutra(page);
-  await compactoSuperficie.focus();
-  await expect(tooltip).toBeVisible();
-  await expect(tooltip.locator('.event-context-text')).toContainText(
-    'Plan físico: 2/4',
-  );
+  await hoverSinTooltipPrevio(page, compactoSuperficie);
+  await page.waitForTimeout(150);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
+  await capturarEvidencia(page, 'correction-contexto-fisico-compacto.png');
+
+  // El panel del evento compacto conserva el contexto físico completo.
+  await compacto.locator('.event-title strong').click();
+  const sheetCompacto = page.getByTestId('event-sheet-content');
+  await expect(sheetCompacto).toBeVisible();
+  await expect(sheetCompacto.getByTestId('event-sheet-fisica')).toBeVisible();
+  for (const disciplina of [
+    'Carrera de fondo',
+    'Cuerda doble',
+    'Natación técnica',
+    'Circuito de fuerza',
+  ]) {
+    await expect(
+      sheetCompacto.getByTestId(`event-sheet-fisica-${disciplina}`),
+    ).toBeVisible();
+  }
+  await expect(
+    sheetCompacto.getByText('2 de 4 disciplinas realizadas'),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(tooltip).toBeHidden();
+  await expect(sheetCompacto).toBeHidden();
 
   const normal = evento(page, 'Fisico 60');
   const normalSuperficie = normal.locator(
@@ -609,7 +615,7 @@ test('conserva el contexto físico completo en compacto y en el panel', async ({
   await expect(normalSuperficie).toHaveAttribute('data-compact', 'false');
   await expect(normal.getByTestId('fisica-vinculada-estado')).toHaveCount(0);
 
-  await normal.locator('.event-text').click();
+  await normal.locator('.event-title strong').click();
   const sheet = page.getByTestId('event-sheet-content');
   await expect(sheet).toBeVisible();
   await expect(sheet.getByTestId('event-sheet-fisica')).toBeVisible();
@@ -697,14 +703,29 @@ test('refresca el contexto físico cuando cambia el resumen del día', async ({
     'aria-label',
     /Cuerda doble \(realizada\)/,
   );
+  await expect(superficie).not.toHaveAttribute(
+    'aria-label',
+    /Natación técnica/,
+  );
   await hoverSinTooltipPrevio(page, superficie);
-  const tooltip = page.locator('.p-tooltip');
-  await expect(tooltip).toBeVisible();
-  const contexto = tooltip.locator('.event-context-text');
-  await expect(contexto).toContainText('Plan físico: 2/2');
-  await expect(contexto).toContainText('Carrera de fondo (realizada)');
-  await expect(contexto).toContainText('Cuerda doble (realizada)');
-  await expect(contexto).not.toContainText('Natación técnica');
+  await page.waitForTimeout(150);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
+
+  await compacto.locator('.event-title strong').click();
+  const sheet = page.getByTestId('event-sheet-content');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText('2 de 2 disciplinas realizadas')).toBeVisible();
+  await expect(
+    sheet.getByTestId('event-sheet-fisica-Carrera de fondo'),
+  ).toContainText('Realizada');
+  await expect(
+    sheet.getByTestId('event-sheet-fisica-Cuerda doble'),
+  ).toContainText('Realizada');
+  await expect(
+    sheet.getByTestId('event-sheet-fisica-Natación técnica'),
+  ).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
   expect(api.peticionesSinInterceptar).toEqual([]);
 });
 
@@ -809,6 +830,7 @@ test('dos eventos consecutivos de 15 min no se cubren ni alteran sus horas', asy
   // La cuadrícula conserva la escala: 15 min siguen siendo 15px de separación.
   expect(tarjetaB!.y - tarjetaA!.y).toBeCloseTo(15, 0);
 
+  await entrarModoMarcado(page);
   const controlesA: Rectangulo[] = [];
   const controlesB: Rectangulo[] = [];
   for (const [tarjeta, controles, prefijo] of [

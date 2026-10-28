@@ -8,6 +8,10 @@ import {
   type TestInfo,
 } from '@playwright/test';
 import { loginAsAdminMock, loginAsRoleMock } from './helpers/auth.helper';
+import {
+  entrarModoMarcado,
+  salirModoMarcado,
+} from './helpers/progress-mode.helper';
 
 const PLAN_ID = 88101;
 const hoy = new Date();
@@ -471,7 +475,9 @@ test.describe('panel de evento del calendario', () => {
     await expect(evento.getByTestId('event-comment-button')).toHaveCount(0);
     await expect(evento.getByTestId('event-delete-button')).toHaveCount(0);
     await expect(evento.getByTestId('fisica-vinculada-icono')).toHaveCount(0);
+    await expect(evento.getByTestId('completion-toggle')).toHaveCount(0);
 
+    await entrarModoMarcado(page);
     const cajaTarjeta = await caja(evento.locator('.custom-event-template'));
     const cajaCasilla = await caja(evento.getByTestId('completion-toggle'));
     const cajaVisible = await caja(evento.getByTestId('completion-box'));
@@ -489,6 +495,7 @@ test.describe('panel de evento del calendario', () => {
     expect(Math.abs(cajaVisible!.y - cajaTitulo!.y)).toBeLessThanOrEqual(1.5);
     expect(cajaVisible!.x + cajaVisible!.width).toBeLessThan(cajaTitulo!.x);
 
+    await salirModoMarcado(page);
     const trigger = evento.locator('.event-text');
     await trigger.focus();
     await page.keyboard.press('Enter');
@@ -563,24 +570,42 @@ test.describe('panel de evento del calendario', () => {
     expect(api.peticionesSinInterceptar).toEqual([]);
   });
 
-  test('marcar y comentar desde el panel usan las APIs existentes y mantienen la tarjeta', async ({
+  test('el panel no completa tareas: marcar usa el modo y comentar conserva realizado', async ({
     page,
   }, testInfo) => {
     const api = await prepararCalendario(page);
     await abrirCalendario(page);
-    const { evento, panel } = await abrirPanel(page, TITULO_ASIGNADA);
+    const primero = await abrirPanel(page, TITULO_ASIGNADA);
 
-    const casilla = evento.getByTestId('completion-toggle');
-    await panel.getByTestId('event-sheet-toggle').click();
-    await expect(panel.getByTestId('event-sheet-status')).toHaveText(
-      'Realizada',
+    await expect(primero.panel.getByTestId('event-sheet-toggle')).toHaveCount(
+      0,
     );
+    await expect(primero.panel.getByTestId('event-sheet-status')).toHaveText(
+      'Pendiente',
+    );
+    await primero.panel.getByTestId('event-sheet-close').click();
+    await expect(page.getByTestId('event-sheet-content')).toBeHidden();
+
+    await entrarModoMarcado(page);
+    const evento = tarjeta(page, TITULO_ASIGNADA);
+    const casilla = evento.getByTestId('completion-toggle');
+    await casilla.click();
     await expect(casilla).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('event-sheet-content')).toBeHidden();
+    await expect.poll(() => api.progreso.length).toBe(1);
     expect(api.progreso).toContainEqual({
       subBloqueId: 7101,
       planificacionId: PLAN_ID,
       realizado: true,
     });
+    await expect(casilla).not.toHaveAttribute('aria-disabled', 'true');
+    await salirModoMarcado(page);
+
+    const { panel } = await abrirPanel(page, TITULO_ASIGNADA);
+    await expect(panel.getByTestId('event-sheet-status')).toHaveText(
+      'Realizada',
+    );
+    await expect(panel.getByTestId('event-sheet-toggle')).toHaveCount(0);
 
     api.retenerComentarios = true;
     const comentario = panel.getByTestId('event-sheet-comment');
@@ -595,6 +620,12 @@ test.describe('panel de evento del calendario', () => {
     expect(
       api.progreso.filter((body) => body['comentariosAlumno'] !== undefined),
     ).toHaveLength(1);
+    expect(
+      api.progreso.find((body) => body['comentariosAlumno'] !== undefined),
+    ).not.toHaveProperty('realizado');
+    await expect(panel.getByTestId('event-sheet-status')).toHaveText(
+      'Realizada',
+    );
 
     await api.liberarComentario(201);
     await expect(panel.getByTestId('event-sheet-comment-saved')).toBeVisible();
@@ -609,11 +640,12 @@ test.describe('panel de evento del calendario', () => {
     await capturar(page, testInfo, 'event-sheet-1440-comentario-guardado');
     await panel.getByTestId('event-sheet-close').click();
     await expect(page.getByTestId('event-sheet-content')).toBeHidden();
-    await abrirPanel(page, TITULO_ASIGNADA);
+    const reabierto = await abrirPanel(page, TITULO_ASIGNADA);
+    await expect(reabierto.panel.getByTestId('event-sheet-status')).toHaveText(
+      'Realizada',
+    );
     await expect(
-      page
-        .getByTestId('event-sheet-content')
-        .getByTestId('event-sheet-comment'),
+      reabierto.panel.getByTestId('event-sheet-comment'),
     ).toHaveValue('Comentario desde el panel');
     expect(api.peticionesSinInterceptar).toEqual([]);
   });
@@ -825,13 +857,14 @@ test.describe('panel de evento del calendario', () => {
     expect(api.peticionesSinInterceptar).toEqual([]);
   });
 
-  test('la casilla admite teclado y touch/pan sin abrir el panel', async ({
+  test('la casilla admite teclado y touch/pan sin abrir el panel ni marcar de más', async ({
     page,
   }, testInfo) => {
     const api = await prepararCalendario(page);
     await abrirCalendario(page, 'ALUMNO', { width: 390, height: 844 });
     const evento = tarjeta(page, TITULO_ASIGNADA);
     await evento.scrollIntoViewIfNeeded();
+    await entrarModoMarcado(page);
     const casilla = evento.getByTestId('completion-toggle');
 
     await casilla.focus();
@@ -844,12 +877,16 @@ test.describe('panel de evento del calendario', () => {
       planificacionId: PLAN_ID,
       realizado: true,
     });
+    await expect(casilla).not.toHaveAttribute('aria-disabled', 'true');
+    await salirModoMarcado(page);
 
-    const cajaEvento = await evento.boundingBox();
-    expect(cajaEvento).not.toBeNull();
+    // Se toca el título (zona neutra): la preview puede contener enlaces y un
+    // toque sobre ellos navega, que es el comportamiento normal del markdown.
+    const cajaTitulo = await evento.locator('.event-title strong').boundingBox();
+    expect(cajaTitulo).not.toBeNull();
     await page.touchscreen.tap(
-      cajaEvento!.x + cajaEvento!.width / 2,
-      cajaEvento!.y + 20,
+      cajaTitulo!.x + cajaTitulo!.width / 2,
+      cajaTitulo!.y + cajaTitulo!.height / 2,
     );
     const panel = page.locator('.event-sheet-dialog');
     await expect(panel).toBeVisible();
@@ -875,6 +912,28 @@ test.describe('panel de evento del calendario', () => {
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('event-sheet-content')).toBeHidden();
 
+    // La preview tampoco navega ni recibe foco por teclado: sus enlaces no son
+    // hit targets y el toque cae en la tarjeta, que abre el panel.
+    const enlacePreview = evento.locator('.event-comments a').first();
+    await expect(enlacePreview).toHaveCount(1);
+    await enlacePreview.evaluate((element) =>
+      (element as HTMLElement).focus(),
+    );
+    await expect(enlacePreview).not.toBeFocused();
+    const cajaPreview = await evento.locator('.event-comments').boundingBox();
+    expect(cajaPreview).not.toBeNull();
+    await page.touchscreen.tap(
+      cajaPreview!.x + cajaPreview!.width / 2,
+      cajaPreview!.y + cajaPreview!.height / 2,
+    );
+    await expect(panel).toBeVisible();
+    await expect(page).toHaveURL(
+      new RegExp(`/planificacion-mensual-alumno/${PLAN_ID}$`),
+    );
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('event-sheet-content')).toBeHidden();
+
+    await entrarModoMarcado(page);
     const cajaCasilla = await casilla.boundingBox();
     expect(cajaCasilla).not.toBeNull();
     await page.touchscreen.tap(
@@ -906,6 +965,7 @@ test.describe('panel de evento del calendario', () => {
     });
     await page.waitForTimeout(200);
     await expect(page.getByTestId('event-sheet-content')).toBeHidden();
+    expect(api.progreso).toHaveLength(2);
     expect(api.peticionesSinInterceptar).toEqual([]);
   });
 
@@ -1021,43 +1081,38 @@ test.describe('panel de evento del calendario', () => {
     expect(api.peticionesSinInterceptar.slice(ruidoInicial)).toEqual([]);
   });
 
-  test('los enlaces del tooltip no abren el panel ni inician un drag', async ({
+  test('el hover no abre tooltip ni panel y el enlace vive en el panel', async ({
     page,
   }) => {
     const api = await prepararCalendario(page);
     await abrirCalendario(page);
-    await page.route('https://example.test/**', (route) =>
-      route.fulfill({
-        contentType: 'text/html',
-        body: '<!doctype html><title>Enlace de apoyo</title>',
-      }),
-    );
 
     const evento = tarjeta(page, TITULO_ASIGNADA);
     await evento.scrollIntoViewIfNeeded();
     const superficie = evento.locator('[data-testid="event-overflow-surface"]');
-    await superficie.hover();
-    const tooltip = page.locator('.p-tooltip:visible');
-    await expect(tooltip).toBeVisible();
-    const enlace = tooltip.locator('a').first();
-    await expect(enlace).toBeVisible();
     const antes = await evento.boundingBox();
-
-    await enlace.evaluate((element) =>
-      element.setAttribute('target', '_blank'),
-    );
-    const popupPromise = page.context().waitForEvent('page');
-    await enlace.click();
-    const popup = await popupPromise;
-    await popup.waitForLoadState('domcontentloaded');
-    await popup.close();
+    await superficie.hover();
+    await page.waitForTimeout(150);
+    await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
     await expect(page.getByTestId('event-sheet-content')).toBeHidden();
+    const despuesHover = await evento.boundingBox();
+    expect(despuesHover).toEqual(antes);
+    await expect(page.locator('.cal-drag-active')).toHaveCount(0);
+
+    await evento.locator('.event-title strong').click();
+    const panel = page.locator('.event-sheet-dialog');
+    await expect(panel).toBeVisible();
+    const enlace = panel
+      .getByTestId('event-sheet-instructions')
+      .locator('a')
+      .first();
+    await expect(enlace).toBeVisible();
+    await expect(enlace).toHaveAttribute('href', 'https://example.test/apoyo');
     await expect(page).toHaveURL(
       new RegExp(`/planificacion-mensual-alumno/${PLAN_ID}$`),
     );
-    const despues = await evento.boundingBox();
-    expect(despues).toEqual(antes);
-    await expect(page.locator('.cal-drag-active')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('event-sheet-content')).toBeHidden();
     expect(api.peticionesSinInterceptar).toEqual([]);
   });
 });

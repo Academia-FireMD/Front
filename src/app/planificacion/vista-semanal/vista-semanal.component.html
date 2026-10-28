@@ -391,22 +391,6 @@
           data-testid="event-sheet-delete"
         ></button>
         <button
-          *ngIf="puedeMarcarEventoSheet()"
-          pButton
-          type="button"
-          [label]="
-            evento.meta?.subBloque?.realizado
-              ? 'Marcar pendiente'
-              : 'Marcar realizada'
-          "
-          [icon]="
-            evento.meta?.subBloque?.realizado ? 'pi pi-undo' : 'pi pi-check'
-          "
-          [disabled]="isProgressSaving(evento)"
-          (click)="updateEventProgress(evento)"
-          data-testid="event-sheet-toggle"
-        ></button>
-        <button
           pButton
           type="button"
           label="Cerrar"
@@ -443,7 +427,44 @@
   </ng-template>
 </p-dialog>
 
-<div class="row">
+<div class="calendar-progress-toolbar" *ngIf="puedeMarcarProgreso()">
+  <p
+    class="calendar-progress-status"
+    [class.calendar-progress-status--active]="modoMarcadoProgreso"
+    role="status"
+    data-testid="marking-status"
+  >
+    {{
+      guardadosProgresoPendientes
+        ? "Guardando progreso…"
+        : modoMarcadoProgreso
+          ? "Marcando progreso"
+          : "Progreso de la sesión"
+    }}
+  </p>
+  <button
+    type="button"
+    pButton
+    class="calendar-progress-toggle"
+    [class.calendar-progress-toggle--active]="modoMarcadoProgreso"
+    [attr.aria-pressed]="modoMarcadoProgreso"
+    [attr.aria-disabled]="modoMarcadoProgreso && guardadosProgresoPendientes"
+    [attr.aria-busy]="modoMarcadoProgreso && guardadosProgresoPendientes"
+    (click)="alternarModoProgreso($event)"
+    data-testid="marking-toggle"
+  >
+    <i
+      class="pi calendar-progress-toggle__icon"
+      [ngClass]="modoMarcadoProgreso ? 'pi-check' : 'pi-check-square'"
+      aria-hidden="true"
+    ></i>
+    <span class="calendar-progress-toggle__label">{{
+      modoMarcadoProgreso ? "Terminar" : "Marcar progreso"
+    }}</span>
+  </button>
+</div>
+
+<div class="row" [class.calendar--marking]="modoMarcadoProgreso">
   <!-- <p-accordion *ngIf="mode == 'edit'">
     <p-accordionTab header="Bloques asignables">
 
@@ -460,6 +481,8 @@
             ? 'temario-fisica-bridge'
             : null
         "
+        [attr.data-progress-key]="progressKey(weekEvent.event)"
+        [class.event-card--marking]="modoMarcadoProgreso"
         (pointerdown)="onCardPointerDown($event)"
         (pointermove)="onCardPointerMove($event)"
         (pointerup)="onCardPointerUp($event)"
@@ -468,6 +491,7 @@
         <app-event-overflow-content
           [eventTitle]="weekEvent?.event?.title || 'Sin nombre'"
           [description]="weekEvent?.event?.meta?.subBloque?.comentarios"
+          [tooltipEnabled]="false"
           [contextText]="
             role == 'ALUMNO' &&
             esEventoFisicaVinculado(weekEvent?.event) &&
@@ -492,12 +516,13 @@
                 ? '4px solid #ff9800'
                 : 'none',
             }"
+            (click)="onCardSurfaceClick($event, weekEvent.event)"
           >
             <div class="event-content">
               <!-- La casilla es independiente del texto: su gesto no abre el
                    panel ni inicia el drag de la tarjeta. -->
               <button
-                *ngIf="role === 'ALUMNO'"
+                *ngIf="role === 'ALUMNO' && modoMarcadoProgreso"
                 type="button"
                 class="completion-toggle"
                 role="checkbox"
@@ -510,14 +535,9 @@
                     : 'Marcar realizada: ') +
                   (weekEvent?.event?.title || 'actividad')
                 "
-                [disabled]="isProgressSaving(weekEvent?.event)"
-                (pointerdown)="$event.stopPropagation()"
-                (mousedown)="$event.stopPropagation()"
-                (touchstart)="$event.stopPropagation()"
-                (click)="
-                  $event.stopPropagation();
-                  updateEventProgress(weekEvent?.event)
-                "
+                [attr.aria-disabled]="isProgressSaving(weekEvent?.event)"
+                [attr.aria-busy]="isProgressSaving(weekEvent?.event)"
+                (click)="onCompletionClick($event, weekEvent.event)"
                 data-testid="completion-toggle"
               >
                 <span
@@ -534,13 +554,15 @@
 
               <div
                 class="event-text"
-                [attr.role]="puedeAbrirEventSheet() ? 'button' : null"
-                [attr.tabindex]="puedeAbrirEventSheet() ? 0 : null"
-                [attr.aria-label]="
-                  'Abrir detalles de ' +
-                  (weekEvent?.event?.title || 'actividad')
+                [attr.role]="puedeInteractuarTarjeta() ? 'button' : null"
+                [attr.tabindex]="puedeInteractuarTarjeta() ? 0 : null"
+                [attr.aria-label]="etiquetaTarjeta(weekEvent?.event)"
+                [attr.aria-pressed]="
+                  modoMarcadoProgreso
+                    ? !!weekEvent?.event?.meta?.subBloque?.realizado
+                    : null
                 "
-                (click)="onCardClick($event, weekEvent.event)"
+                (click)="onEventTextClick($event, weekEvent.event)"
                 (keydown)="onCardKeydown($event, weekEvent.event)"
               >
                 <div class="event-title">
@@ -549,10 +571,13 @@
                   }}</strong>
                 </div>
 
+                <!-- La preview no es un objetivo táctil/enlazable: los
+                     enlaces completos viven en el panel de detalle. -->
                 <markdown
                   *ngIf="weekEvent?.event?.meta?.subBloque?.comentarios?.trim()"
                   class="event-comments descripcion w-full"
                   [data]="weekEvent?.event?.meta?.subBloque?.comentarios"
+                  [attr.inert]="''"
                 ></markdown>
                 <span
                   class="event-overflow-indicator"
@@ -579,7 +604,7 @@
       [dayEndHour]="23"
       [hourSegments]="2"
       [locale]="'es'"
-      [events]="events"
+      [events]="eventsParaCalendario"
       [refresh]="refresh"
       [snapDraggedEvents]="true"
       [headerTemplate]="headerTemplate"
@@ -655,15 +680,6 @@
         [(ngModel)]="editEventoPersonalizadoData.color"
         [style]="{ width: '100%' }"
       ></p-colorPicker>
-    </div>
-
-    <div class="field-checkbox" *ngIf="editEventoPersonalizadoData.id">
-      <p-checkbox
-        [(ngModel)]="editEventoPersonalizadoData.realizado"
-        [binary]="true"
-        inputId="realizado"
-      ></p-checkbox>
-      <label for="realizado">Marcar como realizado</label>
     </div>
   </div>
 

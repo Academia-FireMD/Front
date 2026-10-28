@@ -5,6 +5,7 @@ import {
   EventEmitter,
   inject,
   Input,
+  OnDestroy,
   Output,
   signal,
 } from '@angular/core';
@@ -57,7 +58,7 @@ interface FisicaDiaIndex {
   templateUrl: './vista-semanal.component.html',
   styleUrl: './vista-semanal.component.scss',
 })
-export class VistaSemanalComponent {
+export class VistaSemanalComponent implements OnDestroy {
   planificacionesService = inject(PlanificacionesService);
   eventsService = inject(EventsService);
   public searchTerm = signal('');
@@ -65,7 +66,15 @@ export class VistaSemanalComponent {
 
   refresh = new Subject<void>();
   private readonly pendingProgressIds = new Set<string>();
+  /** Estado optimista por clave para reaplicarlo si el padre refresca eventos. */
+  private readonly pendingProgressEstados = new Map<
+    string,
+    { anterior: boolean; nuevo: boolean }
+  >();
   private readonly elementRef = inject(ElementRef<HTMLElement>);
+
+  /** Modo explícito: sólo mientras está activo se puede escribir progreso. */
+  modoMarcadoProgreso = false;
 
   // Propiedad para almacenar el evento seleccionado
   selectedEvent: CalendarEvent | null = null;
@@ -94,6 +103,12 @@ export class VistaSemanalComponent {
   private gestureMoved = false;
   private gestureCancelled = false;
   private suppressNextClick = false;
+  private escuchaScrollGestoActiva = false;
+  private readonly onScrollDuranteGesto = () => {
+    if (this.gesturePointerId !== null) {
+      this.gestureCancelled = true;
+    }
+  };
 
   /** Bloqueo del scroll del contenedor del calendario mientras el panel está abierto. */
   private scrollLockElement: HTMLElement | null = null;
@@ -109,6 +124,8 @@ export class VistaSemanalComponent {
       if (this.mode == 'edit') e.draggable = true;
     });
     this._events = eventos;
+    this.actualizarProyeccionCalendario();
+    this.reaplicarProgresoPendiente();
     this.rebuildEventIndexes();
     this.sincronizarEventoSheet();
   }
@@ -116,7 +133,16 @@ export class VistaSemanalComponent {
     return this._events;
   }
 
+  /**
+   * Copia de sólo lectura para angular-calendar. En modo de marcado suspende
+   * drag/resize en la proyección, sin tocar los flags reales del padre.
+   */
+  public get eventsParaCalendario(): CalendarEvent[] {
+    return this._eventosParaCalendario;
+  }
+
   private _events: CalendarEvent[] = [];
+  private _eventosParaCalendario: CalendarEvent[] = [];
   /** Índice O(1) por fecha local: la plantilla consulta cada día muchas veces. */
   private readonly eventosPorDia = new Map<string, CalendarEvent[]>();
   private readonly progresoPorDia = new Map<string, ProgresoDiaIndex>();
@@ -635,18 +661,122 @@ export class VistaSemanalComponent {
     };
   }
 
+  /* ── Modo explícito «Marcar progreso» ──────────────────────────────────
+   * El alumno entra y sale sin guardar: sólo los clics de marcado escriben.
+   * Un único guard (`updateEventProgress`) bloquea cualquier escritura fuera
+   * del modo, venga de tarjeta, casilla, teclado o una llamada tardía. */
+  get guardadosProgresoPendientes(): boolean {
+    return this.pendingProgressIds.size > 0;
+  }
+
+  puedeMarcarProgreso(): boolean {
+    return this.role === 'ALUMNO';
+  }
+
+  puedeInteractuarTarjeta(): boolean {
+    return this.puedeAbrirEventSheet() || this.modoMarcadoProgreso;
+  }
+
+  etiquetaTarjeta(event: CalendarEvent | null | undefined): string {
+    const titulo = event?.title || 'actividad';
+    if (this.modoMarcadoProgreso) {
+      return event?.meta?.subBloque?.realizado
+        ? `Marcar pendiente: ${titulo}`
+        : `Marcar realizada: ${titulo}`;
+    }
+    return `Abrir detalles de ${titulo}`;
+  }
+
+  alternarModoProgreso(event?: Event): void {
+    // El botón también puede recibir Enter/Espacio: nunca debe burbujear al
+    // calendario ni provocar un segundo envío.
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    if (this.modoMarcadoProgreso) {
+      if (this.guardadosProgresoPendientes) return;
+      const claveEnfocada = this.claveEnfocadaEnTarjeta();
+      this.modoMarcadoProgreso = false;
+      this.actualizarProyeccionCalendario();
+      this.refresh.next();
+      this.restaurarFocoTrasSalir(claveEnfocada);
+      return;
+    }
+
+    if (!this.puedeMarcarProgreso()) return;
+    this.modoMarcadoProgreso = true;
+    this.actualizarProyeccionCalendario();
+    this.refresh.next();
+  }
+
+  /**
+   * Clones superficiales sólo para la vista. Los eventos originales (y sus
+   * flags) quedan intactos; al refrescar el padre, la proyección se recalcula
+   * con los flags vigentes y nunca restaura valores antiguos por id.
+   */
+  private actualizarProyeccionCalendario(): void {
+    this._eventosParaCalendario = this.modoMarcadoProgreso
+      ? (this._events ?? []).map((evento) => ({
+          ...evento,
+          draggable: false,
+          resizable: { beforeStart: false, afterEnd: false },
+        }))
+      : this._events;
+  }
+
+  private reaplicarProgresoPendiente(): void {
+    for (const [clave, estado] of this.pendingProgressEstados) {
+      const actual = this.eventoActualPorClave(clave);
+      if (actual) actual.meta.subBloque.realizado = estado.nuevo;
+    }
+  }
+
+  private eventoActualPorClave(clave: string): CalendarEvent | null {
+    return (
+      (this._events ?? []).find(
+        (evento) => this.progressKey(evento) === clave,
+      ) ?? null
+    );
+  }
+
+  private claveEnfocadaEnTarjeta(): string | null {
+    const activo = document.activeElement;
+    if (!(activo instanceof HTMLElement)) return null;
+    const tarjeta = activo.closest('[data-progress-key]');
+    return tarjeta?.getAttribute('data-progress-key') || null;
+  }
+
+  /** Al desaparecer la casilla enfocada, el foco vuelve a la tarjeta. */
+  private restaurarFocoTrasSalir(clave: string | null): void {
+    if (!clave) return;
+    setTimeout(() => {
+      const selector = `[data-progress-key="${clave.replace(/"/g, '\\"')}"] .event-text`;
+      const destino = this.elementRef.nativeElement.querySelector(
+        selector,
+      ) as HTMLElement | null;
+      if (destino?.isConnected) destino.focus({ preventScroll: true });
+    }, 0);
+  }
+
+  ngOnDestroy(): void {
+    this.desactivarEscuchaScrollGesto();
+  }
+
   onEventClicked(event: CalendarEvent): void {
     this.abrirEventSheet(event);
   }
 
   /** Modos en los que una tarjeta puede abrir el panel de detalle. */
   puedeAbrirEventSheet(): boolean {
+    if (this.modoMarcadoProgreso) return false;
     return this.role === 'ALUMNO' || this.mode === 'edit';
   }
 
   /** Abre el bottomsheet sin entrar en edición ni navegar. */
   abrirEventSheet(event: CalendarEvent, sourceEvent?: Event): void {
-    if (!event || !this.puedeAbrirEventSheet()) return;
+    if (!event || !this.puedeAbrirEventSheet() || this.modoMarcadoProgreso) {
+      return;
+    }
 
     this.selectedEvent = event;
     this.eventoSheet = event;
@@ -661,10 +791,13 @@ export class VistaSemanalComponent {
           '')
         : '';
 
-    this.sheetTriggerElement =
+    const trigger =
       sourceEvent?.currentTarget instanceof HTMLElement
         ? sourceEvent.currentTarget
         : null;
+    this.sheetTriggerElement =
+      (trigger?.querySelector?.('.event-text') as HTMLElement | null) ||
+      trigger;
     this.isEventSheetVisible = true;
     this.bloquearScrollFondo();
   }
@@ -702,11 +835,13 @@ export class VistaSemanalComponent {
     this.gestureCancelled = false;
     if (event.button !== 0) {
       this.gesturePointerId = null;
+      this.desactivarEscuchaScrollGesto();
       return;
     }
     this.gesturePointerId = event.pointerId;
     this.gestureStartX = event.clientX;
     this.gestureStartY = event.clientY;
+    this.activarEscuchaScrollGesto();
   }
 
   onCardPointerMove(event: PointerEvent): void {
@@ -726,6 +861,7 @@ export class VistaSemanalComponent {
   onCardPointerUp(event: PointerEvent): void {
     if (event.pointerId === this.gesturePointerId) {
       this.gesturePointerId = null;
+      this.desactivarEscuchaScrollGesto();
     }
   }
 
@@ -733,16 +869,62 @@ export class VistaSemanalComponent {
     if (event.pointerId === this.gesturePointerId) {
       this.gestureCancelled = true;
       this.gesturePointerId = null;
+      this.desactivarEscuchaScrollGesto();
     }
   }
 
+  private activarEscuchaScrollGesto(): void {
+    if (this.escuchaScrollGestoActiva) return;
+    window.addEventListener('scroll', this.onScrollDuranteGesto, true);
+    this.escuchaScrollGestoActiva = true;
+  }
+
+  private desactivarEscuchaScrollGesto(): void {
+    if (!this.escuchaScrollGestoActiva) return;
+    window.removeEventListener('scroll', this.onScrollDuranteGesto, true);
+    this.escuchaScrollGestoActiva = false;
+  }
+
+  private gestoInvalidado(): boolean {
+    return this.gestureMoved || this.gestureCancelled || this.suppressNextClick;
+  }
+
+  /**
+   * Click directo sobre el texto de la tarjeta. Chrome puede ajustar el hit
+   * táctil hacia el título si sólo escucha el contenedor exterior; este
+   * listener mantiene una única activación y corta el burbujeo al outer.
+   */
+  onEventTextClick(event: MouseEvent, calendarEvent: CalendarEvent): void {
+    event.stopPropagation();
+    this.onCardClick(event, calendarEvent);
+  }
+
+  /** Fallback para zonas vacías de la tarjeta fuera de la columna de texto. */
+  onCardSurfaceClick(event: MouseEvent, calendarEvent: CalendarEvent): void {
+    if (
+      event.target instanceof Element &&
+      event.target.closest('.event-text')
+    ) {
+      return;
+    }
+    this.onCardClick(event, calendarEvent);
+  }
+
   onCardClick(event: MouseEvent, calendarEvent: CalendarEvent): void {
-    const gestoInvalidado =
-      this.gestureMoved || this.gestureCancelled || this.suppressNextClick;
+    const gestoInvalidado = this.gestoInvalidado();
     this.resetGesto();
 
+    if (gestoInvalidado) return;
+
+    if (this.modoMarcadoProgreso) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.esObjetivoInteractivo(event.target)) return;
+      this.updateEventProgress(calendarEvent);
+      return;
+    }
+
     if (
-      gestoInvalidado ||
       !this.puedeAbrirEventSheet() ||
       this.esObjetivoInteractivo(event.target)
     ) {
@@ -752,8 +934,18 @@ export class VistaSemanalComponent {
     this.abrirEventSheet(calendarEvent, event);
   }
 
+  /** La casilla comparte el guard de gesto para no marcar tras un scroll. */
+  onCompletionClick(event: MouseEvent, calendarEvent: CalendarEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const gestoInvalidado = this.gestoInvalidado();
+    this.resetGesto();
+    if (gestoInvalidado || !this.modoMarcadoProgreso) return;
+    this.updateEventProgress(calendarEvent);
+  }
+
   onCardKeydown(event: KeyboardEvent, calendarEvent: CalendarEvent): void {
-    if (event.repeat || !this.puedeAbrirEventSheet()) return;
+    if (event.repeat || !this.puedeInteractuarTarjeta()) return;
     if (
       event.key !== 'Enter' &&
       event.key !== ' ' &&
@@ -774,6 +966,10 @@ export class VistaSemanalComponent {
     event.preventDefault();
     event.stopPropagation();
     this.suppressNextClick = false;
+    if (this.modoMarcadoProgreso) {
+      this.updateEventProgress(calendarEvent);
+      return;
+    }
     this.abrirEventSheet(calendarEvent, event);
   }
 
@@ -782,6 +978,7 @@ export class VistaSemanalComponent {
     this.gestureMoved = false;
     this.gestureCancelled = false;
     this.suppressNextClick = false;
+    this.desactivarEscuchaScrollGesto();
   }
 
   private esObjetivoInteractivo(target: EventTarget | null): boolean {
@@ -851,10 +1048,6 @@ export class VistaSemanalComponent {
       !!this.eventoSheet &&
       (this.role === 'ADMIN' || !!this.eventoSheet.meta?.esPersonalizado)
     );
-  }
-
-  puedeMarcarEventoSheet(): boolean {
-    return this.role === 'ALUMNO' && !!this.eventoSheet;
   }
 
   /* ── Comentario del alumno ───────────────────────────────────────────── */
@@ -1086,43 +1279,53 @@ export class VistaSemanalComponent {
 
   saveEvent(subbloque: SubBloque): void {
     if (this.selectedEvent && subbloque) {
+      // El editor puede terminar después de un refresco de `events`: se
+      // resuelve la instancia actual por identidad y se conserva su `realizado`.
+      // Así un guardado de nombre/comentarios nunca resucita ni borra progreso.
+      const claveSeleccionada = this.claveEvento(this.selectedEvent);
+      let indice = claveSeleccionada
+        ? this._events.findIndex(
+            (evento) => this.claveEvento(evento) === claveSeleccionada,
+          )
+        : -1;
+      // Los eventos nuevos de admin tienen id null: se resuelven por la
+      // referencia del evento abierto para no duplicarlos al editar.
+      if (indice < 0) {
+        indice = this._events.indexOf(this.selectedEvent);
+      }
+      const eventoBase =
+        indice >= 0 ? this._events[indice] : this.selectedEvent;
       const updatedEvent = {
-        ...this.selectedEvent,
+        ...eventoBase,
         title: subbloque.nombre,
         color: {
           primary: subbloque.color,
           secondary: subbloque.color,
         },
         end: new Date(
-          new Date(this.selectedEvent.start).getTime() +
-            subbloque.duracion * 60000,
+          new Date(eventoBase.start).getTime() + subbloque.duracion * 60000,
         ),
         meta: {
-          ...this.selectedEvent.meta,
+          ...eventoBase.meta,
           subBloque: {
-            ...this.selectedEvent.meta?.subBloque,
+            ...eventoBase.meta?.subBloque,
             comentarios: subbloque.comentarios,
             color: subbloque.color,
             duracion: subbloque.duracion,
             importante: subbloque.importante,
             tiempoAviso: subbloque.tiempoAviso,
             esEntrenamientoFisico: subbloque.esEntrenamientoFisico ?? false,
+            realizado: eventoBase.meta?.subBloque?.realizado,
           },
         },
       };
-      const isNewlyAdded = !this.events.find((e) => e === this.selectedEvent);
-      if (isNewlyAdded) {
-        this.events.push(updatedEvent as CalendarEvent);
+      const eventosActualizados = [...this._events];
+      if (indice >= 0) {
+        eventosActualizados[indice] = cloneDeep(updatedEvent) as CalendarEvent;
       } else {
-        for (let i = 0; i < this.events.length; i++) {
-          const event = this.events[i];
-          if (event === this.selectedEvent) {
-            this.events[i] = cloneDeep(updatedEvent) as CalendarEvent;
-            this.events = [...this.events];
-          }
-        }
+        eventosActualizados.push(updatedEvent as CalendarEvent);
       }
-      this.rebuildEventIndexes();
+      this.events = eventosActualizados;
       this.refresh.next();
       this.eventsChange.emit(this.events);
       //Como el alumno no tiene botón de guardar... se autoguarda al añadir
@@ -1183,6 +1386,12 @@ export class VistaSemanalComponent {
     { event, newStart, newEnd, allDay }: CalendarEventTimesChangedEvent,
     autoSave = false,
   ): void {
+    // En modo de marcado ningún drop/resize debe mover ni escribir posición,
+    // aunque el calendario emita el evento pese a los flags suspendidos.
+    if (this.modoMarcadoProgreso) {
+      this.suppressNextClick = true;
+      return;
+    }
     // Un drag/resize real no es un click de apertura. El click sintético que
     // pueda llegar al soltar se consume una vez; el siguiente gesto lo limpia.
     this.suppressNextClick = true;
@@ -1299,6 +1508,20 @@ export class VistaSemanalComponent {
 
     // Determinar si es nuevo o existente
     const isNew = !evento.id;
+    // El editor no puede cambiar el progreso: se conserva el valor vivo del
+    // calendario aunque el diálogo se abriera antes de un refresco de datos.
+    const eventoActual = isNew
+      ? null
+      : this._events.find(
+          (calendarEvent) =>
+            calendarEvent.meta?.esPersonalizado &&
+            this.idSubBloque(calendarEvent) === Number(evento.id),
+        );
+    // El editor nunca envía `realizado`: esa columna no forma parte del DTO
+    // del alumno. Sólo se conserva para la representación local.
+    const realizadoLocal = eventoActual
+      ? !!eventoActual.meta?.subBloque?.realizado
+      : false;
 
     // Preparar para guardar en base de datos
     const dto = {
@@ -1311,7 +1534,6 @@ export class VistaSemanalComponent {
       color: evento.color,
       importante: evento.importante,
       tiempoAviso: evento.tiempoAviso,
-      realizado: evento.realizado,
     };
 
     // Llamada al servicio
@@ -1326,6 +1548,19 @@ export class VistaSemanalComponent {
           ...dto,
           id: isNew ? response.id : dto.id,
         };
+        const idFinal = Number(eventoData.id);
+        const vigente = Number.isFinite(idFinal)
+          ? this._events.find(
+              (calendarEvent) =>
+                calendarEvent.meta?.esPersonalizado &&
+                this.idSubBloque(calendarEvent) === idFinal,
+            )
+          : null;
+        const realizadoAck = vigente
+          ? !!vigente.meta?.subBloque?.realizado
+          : isNew
+            ? false
+            : realizadoLocal;
 
         // Crear el evento del calendario con estructura unificada
         const updatedEvent = {
@@ -1351,7 +1586,7 @@ export class VistaSemanalComponent {
               color: eventoData.color || '#4caf50',
               importante: eventoData.importante || false,
               tiempoAviso: eventoData.tiempoAviso,
-              realizado: eventoData.realizado || false,
+              realizado: realizadoAck,
               planificacionId: Number(
                 this.activatedRoute.snapshot.params['id'],
               ),
@@ -1360,22 +1595,21 @@ export class VistaSemanalComponent {
           },
         };
 
+        const eventosActualizados = [...this._events];
         if (isNew) {
-          this.events.push(updatedEvent as CalendarEvent);
+          eventosActualizados.push(updatedEvent as CalendarEvent);
         } else {
-          // Reemplazar el evento existente
-          for (let i = 0; i < this.events.length; i++) {
-            if (
-              this.events[i].meta?.esPersonalizado &&
-              this.events[i].meta?.subBloque?.id === eventoData.id
-            ) {
-              this.events[i] = updatedEvent as CalendarEvent;
-              break;
-            }
+          const indice = eventosActualizados.findIndex(
+            (calendarEvent) =>
+              calendarEvent.meta?.esPersonalizado &&
+              this.idSubBloque(calendarEvent) === idFinal,
+          );
+          if (indice >= 0) {
+            eventosActualizados[indice] = updatedEvent as CalendarEvent;
           }
         }
 
-        this.events = [...this.events];
+        this.events = eventosActualizados;
         this.refresh.next();
         this.isEventoPersonalizadoDialogVisible = false;
         this.toast.success(
@@ -1428,58 +1662,82 @@ export class VistaSemanalComponent {
     });
   }
 
-  private progressKey(event: CalendarEvent): string {
-    return `${event.meta?.esPersonalizado ? 'personal' : 'subbloque'}:${event.meta?.subBloque?.id}`;
+  /** Clave estable por identidad; vacía si el evento aún no tiene id. */
+  progressKey(event: CalendarEvent): string {
+    const id = this.idSubBloque(event);
+    if (id === null) return '';
+    return `${event?.meta?.esPersonalizado ? 'personal' : 'subbloque'}:${id}`;
   }
 
   isProgressSaving(event: CalendarEvent): boolean {
-    return this.pendingProgressIds.has(this.progressKey(event));
+    const key = this.progressKey(event);
+    return !!key && this.pendingProgressIds.has(key);
   }
 
+  /**
+   * Único mutador de progreso del calendario. Fuera del modo explícito no
+   * escribe ni cambia la marca; en modo, resuelve siempre la instancia viva
+   * del evento para que un refresco del padre no desvíe ACK/error.
+   */
   // La marca del calendario es independiente del progreso del módulo físico.
   updateEventProgress(event: CalendarEvent, realizado?: boolean): void {
-    if (!event?.meta?.subBloque?.id) {
-      this.toast.error('No se puede marcar esta actividad.');
+    if (
+      !this.modoMarcadoProgreso ||
+      this.role !== 'ALUMNO' ||
+      !this.puedeMarcarProgreso()
+    ) {
       return;
     }
 
     const key = this.progressKey(event);
+    if (!key) {
+      this.toast.error('No se puede marcar esta actividad.');
+      return;
+    }
     if (this.pendingProgressIds.has(key)) return;
 
-    const anterior = !!event.meta.subBloque.realizado;
+    const actual = this.eventoActualPorClave(key) ?? event;
+    const anterior = !!actual.meta.subBloque.realizado;
     const nuevoEstado = realizado ?? !anterior;
     if (nuevoEstado === anterior) return;
 
-    event.meta.subBloque.realizado = nuevoEstado;
-    this.recalcularProgresoDia(event.start);
-    this.refresh.next();
-    if (this.role !== 'ALUMNO') return;
-
+    actual.meta.subBloque.realizado = nuevoEstado;
     this.pendingProgressIds.add(key);
+    this.pendingProgressEstados.set(key, {
+      anterior,
+      nuevo: nuevoEstado,
+    });
+    this.recalcularProgresoDia(actual.start);
+    this.refresh.next();
+
     const planificacionId = Number(this.activatedRoute.snapshot.params['id']);
-    const peticion = event.meta.esPersonalizado
+    const peticion = actual.meta.esPersonalizado
       ? this.planificacionesService.actualizarEventoPersonalizadoRealizado$(
-          event.meta.subBloque.id,
+          actual.meta.subBloque.id,
           planificacionId,
           nuevoEstado,
         )
       : this.planificacionesService.actualizarProgresoSubBloque$({
-          subBloqueId: event.meta.subBloque.id,
+          subBloqueId: actual.meta.subBloque.id,
           planificacionId,
           realizado: nuevoEstado,
         });
 
+    const resolverEstado = (estado: boolean) => {
+      const vigente = this.eventoActualPorClave(key);
+      if (vigente) {
+        vigente.meta.subBloque.realizado = estado;
+        this.recalcularProgresoDia(vigente.start);
+      }
+      this.pendingProgressIds.delete(key);
+      this.pendingProgressEstados.delete(key);
+      this.refresh.next();
+    };
+
     peticion.subscribe({
-      next: () => {
-        this.pendingProgressIds.delete(key);
-        this.recalcularProgresoDia(event.start);
-        this.refresh.next();
-      },
+      next: () => resolverEstado(nuevoEstado),
       error: () => {
-        event.meta.subBloque.realizado = anterior;
-        this.pendingProgressIds.delete(key);
-        this.recalcularProgresoDia(event.start);
-        this.refresh.next();
+        resolverEstado(anterior);
         this.toast.error('No se pudo guardar el marcaje. Inténtalo de nuevo.');
       },
     });

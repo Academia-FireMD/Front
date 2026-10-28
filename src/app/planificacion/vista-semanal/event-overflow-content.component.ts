@@ -41,6 +41,12 @@ export class EventOverflowContentComponent
    * retrocompatible: sin valor, el componente se comporta como antes.
    */
   @Input() contextText: string | null | undefined;
+  /**
+   * El calendario puede desactivar el tooltip automático (tapaba casillas y
+   * gestos de drag). El recorte, el indicador y el texto accesible se
+   * conservan; el contenido completo sigue en el panel de detalle.
+   */
+  @Input() tooltipEnabled = true;
 
   @ViewChild('surface', { static: true })
   private surface!: ElementRef<HTMLElement>;
@@ -96,7 +102,9 @@ export class EventOverflowContentComponent
     const surface = this.surface.nativeElement;
 
     this.zone.runOutsideAngular(() => {
-      this.bindTooltipPointerTransfer();
+      if (this.tooltipEnabled) {
+        this.bindTooltipPointerTransfer();
+      }
       if (typeof ResizeObserver !== 'undefined') {
         this.resizeObserver = new ResizeObserver(() =>
           this.scheduleMeasurement(),

@@ -176,33 +176,39 @@
       </div>
     </div>
     <div class="col-12 calendar-info">
-      <div class="visualizando">
+      <div class="visualizando calendar-info__date">
         <span>{{ viewDate | calendarDate: view + "ViewTitle" : "es" }}</span>
       </div>
 
-      <p-button
-        *ngIf="expectedRole == 'ALUMNO'"
-        label="Cambiar mi planificación"
-        icon="pi pi-sync"
-        [outlined]="true"
-        (onClick)="abrirCambioPlanificacion()"
-      ></p-button>
+      <div class="calendar-info__actions">
+        <p-button
+          *ngIf="expectedRole == 'ALUMNO'"
+          label="Cambiar plan"
+          icon="pi pi-sync"
+          [text]="true"
+          styleClass="calendar-info__change-plan"
+          ariaLabel="Cambiar mi planificación"
+          (onClick)="abrirCambioPlanificacion()"
+        ></p-button>
 
-      <p-button
-        icon="pi pi-calendar-plus"
-        [link]="true"
-        pTooltip="Descargar calendario"
-        class="p-button-primary"
-        (click)="exportToGoogleCalendar()"
-      ></p-button>
+        <p-button
+          icon="pi pi-calendar-plus"
+          [link]="true"
+          pTooltip="Descargar calendario"
+          ariaLabel="Descargar calendario"
+          class="p-button-primary"
+          (click)="exportToGoogleCalendar()"
+        ></p-button>
 
-      <p-button
-        icon="pi pi-arrow-right-arrow-left"
-        [link]="true"
-        pTooltip="Cambiar vista entre semanal/mensual"
-        class="p-button-primary"
-        (click)="alternarVista()"
-      ></p-button>
+        <p-button
+          icon="pi pi-arrow-right-arrow-left"
+          [link]="true"
+          pTooltip="Cambiar vista entre semanal/mensual"
+          ariaLabel="Cambiar vista entre semanal/mensual"
+          class="p-button-primary"
+          (click)="alternarVista()"
+        ></p-button>
+      </div>
 
       <app-calendar-header
         [(view)]="view"
@@ -292,7 +298,7 @@
     <div class="col-12 pt-2" *ngIf="expectedRole == 'ALUMNO'">
       <p-message
         severity="info"
-        text="Puedes marcar tus tareas como completadas y agregar comentarios haciendo clic en cada evento."
+        text="Consulta y comenta pulsando una actividad; activa «Marcar progreso» para completarla."
         styleClass="w-full mb-2"
       ></p-message>
     </div>

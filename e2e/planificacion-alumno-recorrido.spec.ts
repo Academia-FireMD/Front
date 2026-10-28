@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginAsRoleMock } from './helpers/auth.helper';
+import { entrarModoMarcado } from './helpers/progress-mode.helper';
 
 const PLAN_ANTERIOR = {
   id: 199,
@@ -143,6 +144,7 @@ async function abrirWizardDesdeCalendario(page: Page, planId: number) {
     new RegExp(`/app/planificacion/planificacion-mensual-alumno/${planId}$`),
   );
   await expect(page.locator('app-vista-semanal')).toBeVisible();
+  await entrarModoMarcado(page);
   const progreso = page.getByTestId('completion-toggle');
   await expect(progreso).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('button', { name: 'Cambiar mi planificación' }).click();
@@ -165,6 +167,7 @@ test('plan activo abre el calendario; cancelar el cambio vuelve sin tocar progre
       `/app/planificacion/planificacion-mensual-alumno/${PLAN_ANTERIOR.id}$`,
     ),
   );
+  await entrarModoMarcado(page);
   await expect(page.getByTestId('completion-toggle')).toHaveAttribute(
     'aria-checked',
     'true',
@@ -197,6 +200,7 @@ test('confirmar cambio usa versión/hash actuales y conserva la marca del calend
       `/app/planificacion/planificacion-mensual-alumno/${PLAN_NUEVO.id}$`,
     ),
   );
+  await entrarModoMarcado(page);
   await expect(page.getByTestId('completion-toggle')).toHaveAttribute(
     'aria-checked',
     'true',

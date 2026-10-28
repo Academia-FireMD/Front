@@ -8,6 +8,10 @@ import {
   type TestInfo,
 } from '@playwright/test';
 import { loginAsAdminMock, loginAsRoleMock } from './helpers/auth.helper';
+import {
+  entrarModoMarcado,
+  salirModoMarcado,
+} from './helpers/progress-mode.helper';
 
 const PLAN_ID = 88003;
 const hoy = new Date();
@@ -337,7 +341,12 @@ async function comprobarControlDentro(
   testId: string,
   minimo: number,
 ) {
-  await tarjetaEvento.scrollIntoViewIfNeeded();
+  // La cabecera de días es sticky: centrar la tarjeta en una zona segura evita
+  // que su borde superior quede debajo de la cabecera al medir el hit.
+  await tarjetaEvento.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', inline: 'nearest' }),
+  );
+  await page.waitForTimeout(50);
   const card = tarjetaEvento.locator('.custom-event-template');
   const control = tarjetaEvento.getByTestId(testId);
   const cajaCard = await cajaDe(card);
@@ -442,6 +451,8 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   const separacion = cajaB.y - (cajaA.y + cajaA.height);
   expect(separacion).toBeGreaterThan(3.5);
   expect(separacion).toBeLessThan(4.5);
+
+  await entrarModoMarcado(page);
 
   const compactoControl = await comprobarCasillaSuperiorIzquierda(
     page,
@@ -576,9 +587,15 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   await comprobarCasillaSuperiorIzquierda(page, personal, 24);
   await comprobarSinAccionesEnTarjeta(personal);
 
+  await compactoA.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', inline: 'nearest' }),
+  );
+  await page.waitForTimeout(50);
   const antesMarca = await cajaDe(compactoA.locator('.custom-event-template'));
   const casilla = compactoA.getByTestId('completion-toggle');
-  await casilla.focus();
+  await casilla.evaluate((element) =>
+    (element as HTMLElement).focus({ preventScroll: true }),
+  );
   await expect(casilla).toBeFocused();
   const duranteFoco = await cajaDe(compactoA.locator('.custom-event-template'));
   expect(Math.abs(duranteFoco.x - antesMarca.x)).toBeLessThan(0.5);
@@ -613,7 +630,7 @@ test('densidad compacta/normal, marcas y markdown sin invadir acciones', async (
   await capturar(page, testInfo, 'presentacion-desktop');
 });
 
-test('el detalle existente conserva el markdown y el tooltip aparece al recortar la preview', async ({
+test('el detalle existente conserva el markdown y el panel sustituye al tooltip', async ({
   page,
 }) => {
   const api = await prepararCalendario(page);
@@ -628,12 +645,8 @@ test('el detalle existente conserva el markdown y el tooltip aparece al recortar
     alto.locator('[data-testid="event-overflow-surface"]'),
   ).toHaveAttribute('data-overflow', 'true');
   await alto.locator('.event-title strong').hover();
-  const tooltipAlto = page.locator('.p-tooltip:visible');
-  await expect(tooltipAlto).toBeVisible();
-  await expect(tooltipAlto).toContainText('Todo cabe.');
-  await expect(tooltipAlto.locator('ul li')).toHaveCount(2);
-  await page.keyboard.press('Escape');
-  await expect(tooltipAlto).toBeHidden();
+  await page.waitForTimeout(150);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
 
   await alto.locator('.event-title strong').click();
   const dialogo = page.getByTestId('event-sheet-content');
@@ -659,11 +672,12 @@ test('el detalle existente conserva el markdown y el tooltip aparece al recortar
   await page.mouse.move(1400, 4);
   await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
   await superficieSinDesc.hover();
-  const tooltipSinDesc = page.locator('.p-tooltip:visible');
-  await expect(tooltipSinDesc).toBeVisible();
-  await expect(tooltipSinDesc).toContainText(TITULO_LARGO_COMPACTO_SIN_DESC);
-  await page.keyboard.press('Escape');
-  await expect(tooltipSinDesc).toBeHidden();
+  await page.waitForTimeout(150);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
+  await expect(superficieSinDesc).toHaveAttribute(
+    'aria-label',
+    new RegExp(TITULO_LARGO_COMPACTO_SIN_DESC),
+  );
 
   const normalLargo = tarjeta(page, TITULO_LARGO_NORMAL);
   const superficie = normalLargo.locator(
@@ -674,25 +688,24 @@ test('el detalle existente conserva el markdown y el tooltip aparece al recortar
   await page.mouse.move(1400, 4);
   await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
   await superficie.hover();
-  const tooltip = page.locator('.p-tooltip:visible');
-  await expect(tooltip).toBeVisible();
-  await expect(tooltip).toContainText(TITULO_LARGO_NORMAL);
-  await expect(tooltip).toContainText('Párrafo final que se recorta');
+  await page.waitForTimeout(150);
+  await expect(page.locator('.p-tooltip:visible')).toHaveCount(0);
+
+  await normalLargo.locator('.event-title strong').click();
+  const dialogoLargo = page.getByTestId('event-sheet-content');
+  await expect(dialogoLargo).toBeVisible();
+  const detalleLargo = dialogoLargo.getByTestId('event-sheet-instructions');
+  await expect(detalleLargo).toContainText('Párrafo final que se recorta');
   await expect(
-    tooltip.locator('strong', { hasText: 'Negrita en tarjeta' }),
+    detalleLargo.locator('strong', { hasText: 'Negrita en tarjeta' }),
   ).toBeVisible();
-  await expect(tooltip.locator('ul li')).toHaveCount(2);
-  await expect(tooltip.locator('a')).toHaveAttribute(
+  await expect(detalleLargo.locator('ul li')).toHaveCount(2);
+  await expect(detalleLargo.locator('a')).toHaveAttribute(
     'href',
     'https://example.test/detalle',
   );
-
   await page.keyboard.press('Escape');
-  await expect(tooltip).toBeHidden();
-  await superficie.focus();
-  await expect(tooltip).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(tooltip).toBeHidden();
+  await expect(dialogoLargo).toBeHidden();
   expect(api.peticionesSinInterceptar).toEqual([]);
 });
 
@@ -704,6 +717,7 @@ test('un evento personal actualiza su propia API y la barra diaria', async ({
 
   const personal = tarjeta(page, 'Personal 45');
   await personal.scrollIntoViewIfNeeded();
+  await entrarModoMarcado(page);
   const casilla = personal.getByTestId('completion-toggle');
   await casilla.click();
   await expect(casilla).toHaveAttribute('aria-checked', 'true');
@@ -741,12 +755,14 @@ test('el escritorio de 1280 mantiene la densidad y los controles contenidos', as
   expect(cajaCompacta.height).toBeCloseTo(26, 0);
   expect(cajaNormal.height).toBeCloseTo(56, 0);
   expect(cajaAlta.height).toBeCloseTo(116, 0);
+  await entrarModoMarcado(page);
   await comprobarCasillaSuperiorIzquierda(page, compacto, 24);
   await comprobarCasillaSuperiorIzquierda(page, normal, 44);
   await comprobarCasillaSuperiorIzquierda(page, alto, 44);
   await comprobarSinAccionesEnTarjeta(compacto);
   await comprobarSinAccionesEnTarjeta(normal);
   await comprobarSinAccionesEnTarjeta(alto);
+  await salirModoMarcado(page);
   await normal.locator('.event-text').click();
   const panel = page.locator('.event-sheet-dialog');
   await expect(panel).toBeVisible();
@@ -769,6 +785,7 @@ test('el calendario móvil mantiene los controles dentro de las tarjetas', async
   const normal = tarjeta(page, 'Normal 60');
   const alto = tarjeta(page, 'Alto 120');
   const personal = tarjeta(page, 'Personal 45');
+  await entrarModoMarcado(page);
   for (const [evento, minimo] of [
     [compacto, 24],
     [corto15, 24],
@@ -787,7 +804,7 @@ test('el calendario móvil mantiene los controles dentro de las tarjetas', async
   await comprobarSinAccionesEnTarjeta(personal);
 
   // En móvil la tarjeta física compacta oculta resumen/chips, pero el
-  // contexto completo sigue disponible en la etiqueta accesible y el tooltip.
+  // contexto completo sigue disponible en la etiqueta accesible y el panel.
   const fisico = tarjeta(page, 'Fisico 30');
   const superficieFisica = fisico.locator(
     '[data-testid="event-overflow-surface"]',
@@ -826,6 +843,7 @@ test('el modo administrador mueve las acciones de la tarjeta al panel de detalle
   await expect(
     compacto.locator('[data-testid="event-overflow-surface"]'),
   ).toHaveAttribute('data-compact', 'true');
+  await expect(page.getByTestId('marking-toggle')).toHaveCount(0);
   await expect(compacto.getByTestId('completion-toggle')).toHaveCount(0);
   await comprobarSinAccionesEnTarjeta(compacto);
 
