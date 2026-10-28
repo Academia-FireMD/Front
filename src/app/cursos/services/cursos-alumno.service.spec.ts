@@ -89,3 +89,79 @@ describe('CursosAlumnoService.comprarCursoCof', () => {
     expect(received).toEqual([]);
   });
 });
+
+describe('CursosAlumnoService (bloque INTERACTIVO)', () => {
+  let service: CursosAlumnoService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ToastrService,
+          useValue: { error: jest.fn(), success: jest.fn() },
+        },
+        {
+          provide: CompraFiscalService,
+          useValue: {
+            ejecutarConDatosFiscales: (compra: () => unknown) => compra(),
+          },
+        },
+        CursosAlumnoService,
+      ],
+    });
+    service = TestBed.inject(CursosAlumnoService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('descarga el HTML protegido como Blob con credenciales', () => {
+    let recibido: Blob | undefined;
+    service
+      .descargarAplicacionInteractiva(501)
+      .subscribe((b) => (recibido = b));
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/cursos/bloques/501/aplicacion`,
+    );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.withCredentials).toBe(true);
+    expect(req.request.responseType).toBe('blob');
+    const blob = new Blob(['<html></html>'], { type: 'text/html' });
+    req.flush(blob);
+    expect(recibido).toBe(blob);
+  });
+
+  it('GET progreso interactivo devuelve el contrato {estado,revision}', () => {
+    let recibido: unknown;
+    service.getProgresoInteractivo(77).subscribe((r) => (recibido = r));
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/lecciones/77/progreso/interactivo`,
+    );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ estado: null, revision: 0 });
+    expect(recibido).toEqual({ estado: null, revision: 0 });
+  });
+
+  it('PUT envía body EXACTO {estado} y devuelve estado+revisión', () => {
+    const estado = { v: 1, hist: {} };
+    let recibido: unknown;
+    service
+      .guardarProgresoInteractivo(77, estado)
+      .subscribe((r) => (recibido = r));
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/lecciones/77/progreso/interactivo`,
+    );
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.withCredentials).toBe(true);
+    expect(req.request.body).toEqual({ estado });
+    req.flush({ estado, revision: 1 });
+    expect(recibido).toEqual({ estado, revision: 1 });
+  });
+});

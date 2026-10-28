@@ -50,13 +50,14 @@ interface MockBloque {
   id: number;
   leccionId: number;
   orden: number;
-  tipo: 'VIDEO' | 'TEXTO' | 'TEST' | 'CUESTIONARIO';
+  tipo: 'VIDEO' | 'TEXTO' | 'TEST' | 'CUESTIONARIO' | 'DOCUMENTO' | 'INTERACTIVO';
   bunnyVideoId?: string | null;
   duracionSegundos?: number | null;
   contenidoMarkdown?: string | null;
   temaId?: number | null;
   numPreguntas?: number | null;
   esDeRepaso?: boolean;
+  aplicacionCodigo?: string | null;
 }
 
 interface MockLeccion {
@@ -1100,5 +1101,129 @@ test.describe('Cursos admin — flujo completo', () => {
     await expect(page.locator('[data-testid="bloques-list"]')).toContainText(
       'Cuestionario',
     );
+  });
+
+  test('16) builder: crear, editar y eliminar un bloque INTERACTIVO conserva HIDRAULICA', async ({
+    page,
+  }) => {
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+    await page.locator('[data-testid="leccion-row-contenido"]').first().click();
+
+    await page.locator('[data-testid="paleta-chip-INTERACTIVO"]').click();
+    await expect(page.locator('[data-testid="bloque-form"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(page.locator('[data-testid="interactivo-editor"]')).toBeVisible(
+      { timeout: 5_000 },
+    );
+    // El registro fijo viene preseleccionado.
+    await expect(
+      page.locator('[data-testid="interactivo-editor"] .p-dropdown-label'),
+    ).toContainText('Hidráulica');
+
+    const createPromise = page.waitForRequest(
+      (r) =>
+        /\/cursos\/lecciones\/\d+\/bloques$/.test(r.url()) &&
+        r.method() === 'POST',
+    );
+    await page.getByRole('button', { name: /Añadir bloque/i }).click();
+    const createBody = (await createPromise).postDataJSON();
+    expect(createBody).toMatchObject({
+      tipo: 'INTERACTIVO',
+      aplicacionCodigo: 'HIDRAULICA',
+    });
+    await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(1, {
+      timeout: 5_000,
+    });
+    await expect(page.locator('[data-testid="bloques-list"]')).toContainText(
+      'Hidráulica · práctica interactiva',
+    );
+
+    // Editar conserva el código en el payload.
+    await page
+      .locator('[data-testid="bloque-row"]')
+      .first()
+      .locator('button[title="Editar bloque"]')
+      .click();
+    await expect(page.locator('[data-testid="interactivo-editor"]')).toBeVisible(
+      { timeout: 5_000 },
+    );
+    const updatePromise = page.waitForRequest(
+      (r) =>
+        /\/cursos\/bloques\/\d+$/.test(r.url()) && r.method() === 'PUT',
+    );
+    await page.getByRole('button', { name: /Guardar bloque/i }).click();
+    const updateBody = (await updatePromise).postDataJSON();
+    expect(updateBody.aplicacionCodigo).toBe('HIDRAULICA');
+
+    // Eliminar.
+    await page
+      .locator('[data-testid="bloque-row"]')
+      .first()
+      .locator('button.p-button-danger')
+      .click();
+    await expect(page.locator('[data-testid="bloques-empty"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    expect(state.deleteBloqueCalls).toBe(1);
+  });
+
+  test('17) builder: reordena INTERACTIVO junto a otro bloque del curso', async ({
+    page,
+  }) => {
+    const leccion = state.detail.secciones[0].lecciones[0];
+    leccion.bloques = [
+      {
+        id: 501,
+        leccionId: leccion.id,
+        orden: 0,
+        tipo: 'INTERACTIVO',
+        aplicacionCodigo: 'HIDRAULICA',
+      },
+      {
+        id: 502,
+        leccionId: leccion.id,
+        orden: 1,
+        tipo: 'TEXTO',
+        contenidoMarkdown: 'texto',
+      },
+    ];
+
+    await page.goto(`/app/cursos-admin/${state.detail.id}`);
+    await expect(page.locator('#ce-titulo')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Estructura/i }).click();
+    await page.locator('[data-testid="leccion-row-contenido"]').first().click();
+    await expect(page.locator('[data-testid="bloque-row"]')).toHaveCount(2, {
+      timeout: 5_000,
+    });
+
+    // Drag de la segunda fila (por su handle CDK) sobre la primera.
+    const filas = page.locator('[data-testid="bloque-row"]');
+    const handle = filas.nth(1).locator('.bloque-row__handle');
+    const destino = await filas.nth(0).boundingBox();
+    if (!destino) throw new Error('sin geometría para drag');
+    await handle.hover();
+    await page.mouse.down();
+    await page.waitForTimeout(150);
+    await page.mouse.move(destino.x + 40, destino.y + destino.height / 2, {
+      steps: 20,
+    });
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+
+    await expect
+      .poll(
+        () =>
+          page
+            .locator('[data-testid="bloque-row"]')
+            .first()
+            .locator('.bloque-row__body strong')
+            .textContent(),
+        { timeout: 5_000 },
+      )
+      .toBe('Texto');
+    expect(state.reorderBloquesCalls).toBe(1);
   });
 });

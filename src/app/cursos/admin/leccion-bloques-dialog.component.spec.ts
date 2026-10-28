@@ -74,6 +74,11 @@ describe('LeccionBloquesDialogComponent', () => {
   it('meta() devuelve label e icono por tipo', () => {
     expect(component.meta('VIDEO').label).toBe('Vídeo');
     expect(component.meta('TEST').icon).toContain('question-circle');
+    expect(component.meta('INTERACTIVO').label).toBe('Aplicación interactiva');
+  });
+
+  it('la paleta incluye INTERACTIVO', () => {
+    expect(component.paletaTipos).toContain('INTERACTIVO');
   });
 
   it('resumen() formatea cada tipo', () => {
@@ -105,6 +110,15 @@ describe('LeccionBloquesDialogComponent', () => {
         esDeRepaso: true,
       }),
     ).toBe('12 preguntas · repaso');
+    expect(
+      component.resumen({
+        id: 1,
+        leccionId: 1,
+        orden: 0,
+        tipo: 'INTERACTIVO',
+        aplicacionCodigo: 'HIDRAULICA',
+      }),
+    ).toBe('Hidráulica · práctica interactiva');
   });
 
   it('addTipo() pone modo form sin bloque en edición y preselecciona el tipo', () => {
@@ -178,6 +192,52 @@ describe('LeccionBloquesDialogComponent', () => {
     await component.onFormSaved({ tipo: 'TEXTO', contenidoMarkdown: 'x' });
     const payload = (service.createBloque as jest.Mock).mock.calls[0][1];
     expect(payload).not.toHaveProperty('orden');
+  });
+
+  it('onFormSaved (create INTERACTIVO) conserva aplicacionCodigo en el payload', async () => {
+    setLeccion(leccion([]));
+    (service.createBloque as jest.Mock).mockReturnValue(
+      of({
+        id: 12,
+        leccionId: 1,
+        orden: 0,
+        tipo: 'INTERACTIVO',
+        aplicacionCodigo: 'HIDRAULICA',
+      }),
+    );
+    component.addTipo('INTERACTIVO');
+    await component.onFormSaved({
+      tipo: 'INTERACTIVO',
+      aplicacionCodigo: 'HIDRAULICA',
+    });
+    expect(service.createBloque).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        tipo: 'INTERACTIVO',
+        aplicacionCodigo: 'HIDRAULICA',
+      }),
+    );
+  });
+
+  it('onFormSaved (edit INTERACTIVO) conserva aplicacionCodigo en el payload', async () => {
+    const b: Bloque = {
+      id: 5,
+      leccionId: 1,
+      orden: 0,
+      tipo: 'INTERACTIVO',
+      aplicacionCodigo: 'HIDRAULICA',
+    };
+    setLeccion(leccion([b]));
+    (service.updateBloque as jest.Mock).mockReturnValue(of({ ...b }));
+    component.openEdit(b);
+    await component.onFormSaved({
+      tipo: 'INTERACTIVO',
+      aplicacionCodigo: 'HIDRAULICA',
+    });
+    expect(service.updateBloque).toHaveBeenCalledWith(
+      5,
+      expect.objectContaining({ aplicacionCodigo: 'HIDRAULICA' }),
+    );
   });
 
   it('onFormSaved (edit) llama updateBloque y refleja el cambio', async () => {

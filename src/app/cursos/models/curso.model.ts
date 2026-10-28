@@ -13,13 +13,21 @@ export type TipoLeccion = 'VIDEO' | 'TEST' | 'FLASHCARDS' | 'TEXTO';
  * Lección por bloques (2026-06-11). Una lección es una pila de bloques
  * combinables. FLASHCARDS NO es un tipo de bloque (era para memorizar).
  * CUESTIONARIO (quiz inline propio) llega en Fase 2.
+ *
+ * INTERACTIVO (2026-10-28): aplicación web autocontenida servida por el
+ * backend como HTML protegido (`GET /cursos/bloques/:id/aplicacion`). Solo el
+ * registro fijo HIDRAULICA está permitido por contrato.
  */
 export type TipoBloque =
   | 'VIDEO'
   | 'TEXTO'
   | 'TEST'
   | 'CUESTIONARIO'
-  | 'DOCUMENTO';
+  | 'DOCUMENTO'
+  | 'INTERACTIVO';
+
+/** Único código admitido por el registro fijo del backend para INTERACTIVO. */
+export const APLICACION_CODIGO_HIDRAULICA = 'HIDRAULICA';
 
 /**
  * Pregunta de un bloque CUESTIONARIO. `respuestaCorrecta`/`explicacion` SOLO
@@ -56,6 +64,12 @@ export interface Bloque {
   documentoNombre?: string | null;
   documentoMime?: string | null;
   documentoTamanoBytes?: number | null;
+  /**
+   * Bloque INTERACTIVO (2026-10-28): código del registro fijo de aplicaciones
+   * del backend. Solo `HIDRAULICA` es válido; null/ausente en el resto de
+   * tipos. No es una URL ni una ruta suministrada por el cliente.
+   */
+  aplicacionCodigo?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -173,10 +187,32 @@ export interface ProgresoLeccion {
   porcentajeVisto: number;
   completada: boolean;
   /**
+   * Estado opaco de la aplicación interactiva (JSON `S` v1 de Hidráulica).
+   * Solo llega con la proyección explícita de la ruta interactiva; los GET de
+   * resumen (mis cursos / curso) NO lo incluyen.
+   */
+  estadoInteractivo?: Record<string, unknown> | null;
+  /** Revisión monotónica del estado interactivo (default 0). */
+  revisionInteractivo?: number;
+  /**
    * Timestamp de última actividad. El backend (Prisma) lo expone como
    * `ultimaVez` (no `updatedAt`); se usa para "continuar donde lo dejaste".
    */
   ultimaVez?: string;
+}
+
+/**
+ * Respuesta de `GET /lecciones/:id/progreso/interactivo`.
+ * `estado` es `null` si nunca se guardó (o solo existe fila escalar).
+ */
+export interface ProgresoInteractivoRespuesta {
+  estado: Record<string, unknown> | null;
+  revision: number;
+}
+
+/** Body EXACTO de `PUT /lecciones/:id/progreso/interactivo`. */
+export interface GuardarProgresoInteractivoPayload {
+  estado: Record<string, unknown>;
 }
 
 export interface AccesoConCurso {
@@ -241,6 +277,8 @@ export interface BloqueCreatePayload {
   documentoNombre?: string;
   documentoMime?: string;
   documentoTamanoBytes?: number;
+  /** Solo INTERACTIVO: `HIDRAULICA` (registro fijo del backend). */
+  aplicacionCodigo?: string;
 }
 
 export interface BloqueUpdatePayload {
@@ -258,6 +296,8 @@ export interface BloqueUpdatePayload {
   documentoNombre?: string;
   documentoMime?: string;
   documentoTamanoBytes?: number;
+  /** Solo INTERACTIVO: `HIDRAULICA` (registro fijo del backend). */
+  aplicacionCodigo?: string;
 }
 
 // ---- CUESTIONARIO: corrección cara-alumno ----

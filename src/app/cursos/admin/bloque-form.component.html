@@ -243,6 +243,26 @@
     </div>
   }
 
+  @if (tipoSeleccionado() === "INTERACTIVO") {
+    <div class="field" data-testid="interactivo-editor">
+      <label for="bf-aplicacion">Aplicación</label>
+      <p-dropdown
+        inputId="bf-aplicacion"
+        formControlName="aplicacionCodigo"
+        [options]="aplicacionOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Seleccionar aplicación"
+        class="w-full"
+        data-testid="bf-aplicacion"
+      />
+      <small class="bloque-form__hint">
+        Se muestra en el aula como aplicación interactiva protegida. El progreso
+        se guarda por cuenta y lección.
+      </small>
+    </div>
+  }
+
   <div class="bloque-form__actions">
     <p-button
       label="Cancelar"

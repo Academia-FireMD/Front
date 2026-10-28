@@ -1,0 +1,125 @@
+.bloque-interactivo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.interactivo-sync {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  background: var(--surface-card);
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+
+  &__dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--text-color-secondary);
+    flex-shrink: 0;
+
+    &[data-estado="saving"],
+    &[data-estado="loading"] {
+      background: var(--primary-color);
+      animation: interactivo-pulse 1s ease-in-out infinite;
+    }
+
+    &[data-estado="saved"] {
+      background: var(--green-500, #22c55e);
+    }
+
+    &[data-estado="pending"] {
+      background: var(--yellow-500, #eab308);
+    }
+
+    &[data-estado="error"] {
+      background: var(--red-500, #ef4444);
+    }
+  }
+
+  &__texto {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__retry {
+    flex-shrink: 0;
+  }
+}
+
+.interactivo-frame-wrap {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.interactivo-frame {
+  display: block;
+  width: 100%;
+  min-height: 420px;
+  border: 0;
+  background: #fff;
+}
+
+.interactivo-preview,
+.interactivo-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--surface-border);
+  border-radius: 12px;
+  background: var(--surface-card);
+
+  > i {
+    font-size: 1.6rem;
+    color: var(--primary-color);
+    flex-shrink: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.interactivo-preview__title {
+  font-weight: 600;
+}
+
+.interactivo-preview__hint {
+  margin-top: 0.25rem !important;
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+}
+
+.interactivo-error {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  > i {
+    color: var(--red-500, #ef4444);
+  }
+}
+
+@keyframes interactivo-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 640px) {
+  .interactivo-frame {
+    min-height: 480px;
+  }
+}

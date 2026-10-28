@@ -88,6 +88,7 @@ export class LeccionBloquesDialogComponent {
     TEST: { label: 'Test', icon: 'pi pi-question-circle' },
     CUESTIONARIO: { label: 'Cuestionario', icon: 'pi pi-list-check' },
     DOCUMENTO: { label: 'Documento', icon: 'pi pi-file' },
+    INTERACTIVO: { label: 'Aplicación interactiva', icon: 'pi pi-play-circle' },
   };
 
   /** Orden de los chips de la paleta (drag&drop para construir la lección). */
@@ -97,6 +98,7 @@ export class LeccionBloquesDialogComponent {
     'TEST',
     'CUESTIONARIO',
     'DOCUMENTO',
+    'INTERACTIVO',
   ];
 
   readonly leccionTitulo = computed(() => this.leccion()?.titulo ?? 'Lección');
@@ -141,6 +143,10 @@ export class LeccionBloquesDialogComponent {
       }
       case 'DOCUMENTO':
         return b.documentoNombre || 'Documento';
+      case 'INTERACTIVO':
+        return b.aplicacionCodigo === 'HIDRAULICA'
+          ? 'Hidráulica · práctica interactiva'
+          : b.aplicacionCodigo || 'Aplicación interactiva';
     }
   }
 
@@ -198,6 +204,7 @@ export class LeccionBloquesDialogComponent {
           documentoNombre: result.documentoNombre,
           documentoMime: result.documentoMime,
           documentoTamanoBytes: result.documentoTamanoBytes,
+          aplicacionCodigo: result.aplicacionCodigo,
         };
         const updated = await firstValueFrom(
           this.service.updateBloque(editando.id, payload),
@@ -221,6 +228,7 @@ export class LeccionBloquesDialogComponent {
           documentoNombre: result.documentoNombre,
           documentoMime: result.documentoMime,
           documentoTamanoBytes: result.documentoTamanoBytes,
+          aplicacionCodigo: result.aplicacionCodigo,
         };
         const created = await firstValueFrom(
           this.service.createBloque(leccionId, payload),

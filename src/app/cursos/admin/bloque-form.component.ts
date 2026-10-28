@@ -32,6 +32,7 @@ import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-e
 import { Oposicion } from '../../shared/models/subscription.model';
 import { SharedModule } from '../../shared/shared.module';
 import {
+  APLICACION_CODIGO_HIDRAULICA,
   Bloque,
   BloquePreguntaPayload,
   TipoBloque,
@@ -64,6 +65,8 @@ export interface BloqueFormResult {
   documentoNombre?: string;
   documentoMime?: string;
   documentoTamanoBytes?: number;
+  // Bloque INTERACTIVO (2026-10-28): código del registro fijo.
+  aplicacionCodigo?: string;
 }
 
 // Tipos del FormArray de preguntas del CUESTIONARIO.
@@ -127,6 +130,15 @@ export class BloqueFormComponent implements OnChanges {
     { label: 'Test', value: 'TEST' },
     { label: 'Cuestionario', value: 'CUESTIONARIO' },
     { label: 'Documento', value: 'DOCUMENTO' },
+    { label: 'Aplicación interactiva', value: 'INTERACTIVO' },
+  ];
+
+  /** Registro fijo del backend: por ahora solo la app de Hidráulica. */
+  readonly aplicacionOptions: { label: string; value: string }[] = [
+    {
+      label: 'Hidráulica para Bomberos',
+      value: APLICACION_CODIGO_HIDRAULICA,
+    },
   ];
 
   /** Estado de subida del documento (bloque DOCUMENTO). */
@@ -158,6 +170,8 @@ export class BloqueFormComponent implements OnChanges {
     documentoNombre: [null as string | null],
     documentoMime: [null as string | null],
     documentoTamanoBytes: [null as number | null],
+    // INTERACTIVO: código del registro fijo (solo HIDRAULICA).
+    aplicacionCodigo: [null as string | null],
   });
 
   /** `app-tema-select` consume un FormControl directo (lee .value/.setValue). */
@@ -303,6 +317,14 @@ export class BloqueFormComponent implements OnChanges {
         { emitEvent: false },
       );
     }
+    if (tipo !== 'INTERACTIVO') {
+      this.form.patchValue({ aplicacionCodigo: null }, { emitEvent: false });
+    } else if (!this.form.controls.aplicacionCodigo.value) {
+      this.form.patchValue(
+        { aplicacionCodigo: APLICACION_CODIGO_HIDRAULICA },
+        { emitEvent: false },
+      );
+    }
   }
 
   /** Reconstruye el FormArray de preguntas desde un bloque CUESTIONARIO. */
@@ -345,6 +367,7 @@ export class BloqueFormComponent implements OnChanges {
         documentoNombre: b.documentoNombre ?? null,
         documentoMime: b.documentoMime ?? null,
         documentoTamanoBytes: b.documentoTamanoBytes ?? null,
+        aplicacionCodigo: b.aplicacionCodigo ?? null,
       });
       this.tipoSeleccionado.set(b.tipo);
       this.applyValidatorsForTipo(b.tipo);
@@ -365,6 +388,8 @@ export class BloqueFormComponent implements OnChanges {
         documentoNombre: null,
         documentoMime: null,
         documentoTamanoBytes: null,
+        aplicacionCodigo:
+          tipoInicial === 'INTERACTIVO' ? APLICACION_CODIGO_HIDRAULICA : null,
       });
       this.tipoSeleccionado.set(tipoInicial);
       this.applyValidatorsForTipo(tipoInicial);
@@ -490,6 +515,13 @@ export class BloqueFormComponent implements OnChanges {
         result.documentoNombre = raw.documentoNombre ?? undefined;
         result.documentoMime = raw.documentoMime ?? undefined;
         result.documentoTamanoBytes = raw.documentoTamanoBytes ?? undefined;
+        break;
+      case 'INTERACTIVO':
+        if (raw.aplicacionCodigo !== APLICACION_CODIGO_HIDRAULICA) {
+          this.toast.warning('Selecciona la aplicación interactiva.');
+          return;
+        }
+        result.aplicacionCodigo = raw.aplicacionCodigo;
         break;
     }
     this.saved.emit(result);
