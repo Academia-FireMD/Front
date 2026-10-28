@@ -1,0 +1,75 @@
+<div class="bloque-interactivo" data-testid="bloque-interactivo">
+  @if (preview()) {
+    <div class="interactivo-preview" data-testid="interactivo-preview">
+      <i class="pi pi-play-circle"></i>
+      <div>
+        <p class="interactivo-preview__title">
+          Aplicación práctica de Hidráulica
+        </p>
+        <p class="interactivo-preview__hint">
+          Vista previa: no se carga el progreso real ni se guardan cambios.
+        </p>
+      </div>
+    </div>
+  } @else {
+    <div
+      class="interactivo-sync"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span
+        class="interactivo-sync__dot"
+        [attr.data-estado]="estado()"
+        aria-hidden="true"
+      ></span>
+      <span
+        class="interactivo-sync__texto"
+        data-testid="hidraulica-sync-estado"
+        >{{ texto() }}</span
+      >
+      @if (puedeReintentar()) {
+        <button
+          pButton
+          type="button"
+          label="Reintentar"
+          icon="pi pi-refresh"
+          class="p-button-text p-button-sm interactivo-sync__retry"
+          (click)="reintentar()"
+          data-testid="hidraulica-reintentar"
+        ></button>
+      }
+    </div>
+
+    @if (falloHtml() && !frameUrl()) {
+      <div class="interactivo-error" data-testid="interactivo-error">
+        <i class="pi pi-exclamation-triangle"></i>
+        <p>{{ texto() }}</p>
+        <button
+          pButton
+          type="button"
+          label="Reintentar"
+          icon="pi pi-refresh"
+          (click)="reintentar()"
+          data-testid="hidraulica-reintentar-html"
+        ></button>
+      </div>
+    }
+
+    @if (frameUrl(); as frameSrc) {
+      <div class="interactivo-frame-wrap">
+        <iframe
+          #hidraulicaFrame
+          class="interactivo-frame"
+          [src]="frameSrc"
+          [style.height.px]="altura()"
+          title="Aplicación interactiva de Hidráulica"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
+          allow="clipboard-write; clipboard-read"
+          referrerpolicy="no-referrer"
+          data-testid="hidraulica-iframe"
+        ></iframe>
+      </div>
+    }
+  }
+</div>

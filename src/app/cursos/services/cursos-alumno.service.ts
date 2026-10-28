@@ -11,7 +11,9 @@ import {
   ComprarCursoCofResponse,
   CursoPublico,
   CursoSlugResponse,
+  GuardarProgresoInteractivoPayload,
   LeccionResponse,
+  ProgresoInteractivoRespuesta,
   UpsertProgresoDto,
 } from '../models/curso.model';
 
@@ -115,5 +117,58 @@ export class CursosAlumnoService extends ApiBaseService {
         { withCredentials: true },
       )
       .pipe(catchError((err) => this.handleError(err))) as Observable<void>;
+  }
+
+  /**
+   * HTML protegido de un bloque INTERACTIVO (2026-10-28). El backend resuelve
+   * el registro fijo (HIDRAULICA) y valida acceso al curso; nunca se sirve una
+   * URL pública. El caller crea un objectURL y lo carga en un iframe.
+   */
+  descargarAplicacionInteractiva(bloqueId: number): Observable<Blob> {
+    return this.http
+      .get(`${environment.apiUrl}/cursos/bloques/${bloqueId}/aplicacion`, {
+        withCredentials: true,
+        responseType: 'blob',
+      })
+      .pipe(catchError((err) => this.handleError(err))) as Observable<Blob>;
+  }
+
+  /**
+   * Estado acumulado de la aplicación interactiva de la lección.
+   * `{ estado:null, revision:0 }` cuando el alumno aún no ha guardado nada.
+   * La propiedad SIEMPRE la decide la sesión en backend.
+   */
+  getProgresoInteractivo(
+    leccionId: number,
+  ): Observable<ProgresoInteractivoRespuesta> {
+    return this.http
+      .get<ProgresoInteractivoRespuesta>(
+        `${environment.apiUrl}/lecciones/${leccionId}/progreso/interactivo`,
+        { withCredentials: true },
+      )
+      .pipe(
+        catchError((err) => this.handleError(err)),
+      ) as Observable<ProgresoInteractivoRespuesta>;
+  }
+
+  /**
+   * Guarda el último snapshot completo. Body EXACTO `{ estado }`; el backend
+   * incrementa `revisionInteractivo` y devuelve el estado aceptado. Sin CAS:
+   * el último guardado aceptado gana.
+   */
+  guardarProgresoInteractivo(
+    leccionId: number,
+    estado: Record<string, unknown>,
+  ): Observable<ProgresoInteractivoRespuesta> {
+    const body: GuardarProgresoInteractivoPayload = { estado };
+    return this.http
+      .put<ProgresoInteractivoRespuesta>(
+        `${environment.apiUrl}/lecciones/${leccionId}/progreso/interactivo`,
+        body,
+        { withCredentials: true },
+      )
+      .pipe(
+        catchError((err) => this.handleError(err)),
+      ) as Observable<ProgresoInteractivoRespuesta>;
   }
 }

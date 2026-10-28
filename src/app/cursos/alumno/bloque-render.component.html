@@ -45,5 +45,12 @@
         [preview]="preview()"
       ></app-bloque-documento>
     }
+
+    @case ("INTERACTIVO") {
+      <app-bloque-interactivo
+        [bloque]="bloque()"
+        [preview]="preview()"
+      ></app-bloque-interactivo>
+    }
   }
 </div>

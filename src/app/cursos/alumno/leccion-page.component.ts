@@ -16,6 +16,8 @@ import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { forkJoin } from 'rxjs';
 import {
+  APLICACION_CODIGO_HIDRAULICA,
+  Bloque,
   CursoSlugResponse,
   Leccion,
   LeccionResponse,
@@ -30,6 +32,31 @@ import { LeccionFlashcardsComponent } from './leccion-flashcards.component';
 import { LeccionTestComponent } from './leccion-test.component';
 import { LeccionTextoComponent } from './leccion-texto.component';
 import { LeccionVideoComponent } from './leccion-video.component';
+
+/**
+ * Filtra la pila para que el aula tenga UN único contexto de aplicación
+ * interactiva por lección. El caso de dos bloques HIDRAULICA está permitido en
+ * admin/CRUD, pero dos iframes con la misma cuenta+lección competirían por el
+ * mismo estado (snapshots/GET null). Se conserva el primer bloque
+ * INTERACTIVO/HIDRAULICA y TODOS los demás bloques en su orden original.
+ */
+export function filtrarBloquesRenderizables(
+  bloques: readonly Bloque[],
+): Bloque[] {
+  let aplicacionVista = false;
+  const salida: Bloque[] = [];
+  for (const bloque of bloques) {
+    const esAplicacionHidraulica =
+      bloque.tipo === 'INTERACTIVO' &&
+      bloque.aplicacionCodigo === APLICACION_CODIGO_HIDRAULICA;
+    if (esAplicacionHidraulica) {
+      if (aplicacionVista) continue;
+      aplicacionVista = true;
+    }
+    salida.push(bloque);
+  }
+  return salida;
+}
 
 /**
  * Aula del alumno. Reescrita 2026-06-10: layout de 2 columnas (currículum +
@@ -96,6 +123,14 @@ export class LeccionPageComponent implements OnInit {
 
   /** Bloques de la lección (pila). Vacío → lección legacy (render por tipo). */
   readonly bloques = computed(() => this.leccionData()?.leccion.bloques ?? []);
+  /**
+   * Pila que realmente renderiza el aula. Solo se omite el segundo (y
+   * posteriores) INTERACTIVO/HIDRAULICA de la misma lección: un único iframe y
+   * un único progreso por aplicación. El resto conserva su orden.
+   */
+  readonly bloquesRenderizables = computed(() =>
+    filtrarBloquesRenderizables(this.bloques()),
+  );
   readonly playbackUrls = computed(
     () => this.leccionData()?.playbackUrls ?? {},
   );

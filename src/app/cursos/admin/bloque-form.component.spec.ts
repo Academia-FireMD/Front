@@ -43,6 +43,7 @@ describe('BloqueFormComponent', () => {
       'TEST',
       'CUESTIONARIO',
       'DOCUMENTO',
+      'INTERACTIVO',
     ]);
   });
 
@@ -329,6 +330,57 @@ describe('BloqueFormComponent', () => {
       expect(component.formatBytes(512)).toBe('512 B');
       expect(component.formatBytes(1536)).toBe('1.5 KB');
       expect(component.formatBytes(5 * 1024 * 1024)).toBe('5.0 MB');
+    });
+  });
+
+  describe('INTERACTIVO', () => {
+    it('al elegir INTERACTIVO selecciona HIDRAULICA por defecto', () => {
+      component.form.controls.tipo.setValue('INTERACTIVO');
+      expect(component.form.value.aplicacionCodigo).toBe('HIDRAULICA');
+      expect(component.aplicacionOptions).toEqual([
+        { label: 'Hidráulica para Bomberos', value: 'HIDRAULICA' },
+      ]);
+    });
+
+    it('save() emite el código fijo de la aplicación', () => {
+      component.form.controls.tipo.setValue('INTERACTIVO');
+      let received: BloqueFormResult | null = null;
+      component.saved.subscribe((r) => (received = r));
+      component.save();
+      expect(received).not.toBeNull();
+      expect(received!.tipo).toBe('INTERACTIVO');
+      expect(received!.aplicacionCodigo).toBe('HIDRAULICA');
+    });
+
+    it('save() sin código válido no emite y avisa', () => {
+      const toast = TestBed.inject(ToastrService);
+      component.form.controls.tipo.setValue('INTERACTIVO');
+      component.form.patchValue({ aplicacionCodigo: 'OTRA' });
+      const emit = jest.fn();
+      component.saved.subscribe(emit);
+      component.save();
+      expect(emit).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalled();
+    });
+
+    it('cambiar de INTERACTIVO a TEXTO limpia el código de aplicación', () => {
+      component.form.controls.tipo.setValue('INTERACTIVO');
+      expect(component.form.value.aplicacionCodigo).toBe('HIDRAULICA');
+      component.form.controls.tipo.setValue('TEXTO');
+      expect(component.form.value.aplicacionCodigo).toBeNull();
+    });
+
+    it('editar un bloque INTERACTIVO conserva su código', () => {
+      fixture.componentRef.setInput('bloque', {
+        id: 9,
+        leccionId: 1,
+        orden: 0,
+        tipo: 'INTERACTIVO',
+        aplicacionCodigo: 'HIDRAULICA',
+      } as Bloque);
+      component.ngOnChanges();
+      expect(component.form.value.tipo).toBe('INTERACTIVO');
+      expect(component.form.value.aplicacionCodigo).toBe('HIDRAULICA');
     });
   });
 });

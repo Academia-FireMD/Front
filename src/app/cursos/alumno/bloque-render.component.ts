@@ -9,6 +9,7 @@ import { BunnyPlayerComponent } from '../../shared/bunny-player/bunny-player.com
 import { Bloque } from '../models/curso.model';
 import { BloqueCuestionarioComponent } from './bloque-cuestionario.component';
 import { BloqueDocumentoComponent } from './bloque-documento.component';
+import { BloqueInteractivoComponent } from './bloque-interactivo.component';
 import { BloqueTestInlineComponent } from './bloque-test-inline.component';
 
 /**
@@ -20,6 +21,7 @@ import { BloqueTestInlineComponent } from './bloque-test-inline.component';
  *  - TEST   → motor de tests embebido in situ (app-bloque-test-inline).
  *  - CUESTIONARIO → quiz propio autocorregido (app-bloque-cuestionario).
  *  - DOCUMENTO → tarjeta de descarga protegida + visor PDF inline.
+ *  - INTERACTIVO → aplicación autocontenida (Hidráulica) en iframe Blob.
  */
 @Component({
   selector: 'app-bloque-render',
@@ -30,6 +32,7 @@ import { BloqueTestInlineComponent } from './bloque-test-inline.component';
     BloqueTestInlineComponent,
     BloqueCuestionarioComponent,
     BloqueDocumentoComponent,
+    BloqueInteractivoComponent,
   ],
   templateUrl: './bloque-render.component.html',
   styleUrl: './bloque-render.component.scss',

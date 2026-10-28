@@ -182,6 +182,10 @@
     --chip-color: #d97706;
     --chip-soft: #fbf0dd;
   }
+  &[data-tipo="INTERACTIVO"] {
+    --chip-color: #0891b2;
+    --chip-soft: #e0f5fa;
+  }
 }
 
 // El icono de la fila del bloque usa el color/fondo del tipo.

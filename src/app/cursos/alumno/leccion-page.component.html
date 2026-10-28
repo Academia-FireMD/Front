@@ -60,9 +60,9 @@
 </div>
 
 <ng-template #contenido>
-  @if (bloques().length > 0) {
-    <!-- Lección por bloques: pila de widgets. -->
-    @for (bloque of bloques(); track bloque.id) {
+  @if (bloquesRenderizables().length > 0) {
+    <!-- Lección por bloques: pila de widgets. Un solo INTERACTIVO/HIDRAULICA. -->
+    @for (bloque of bloquesRenderizables(); track bloque.id) {
       <app-bloque-render
         [bloque]="bloque"
         [playbackUrl]="playbackUrls()[bloque.id] ?? null"
