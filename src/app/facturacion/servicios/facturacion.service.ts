@@ -1,6 +1,10 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  HttpParams,
+} from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
@@ -9,6 +13,8 @@ import {
   PaginationFilter,
 } from '../../shared/models/pagination.model';
 import {
+  AplicarSincronizacionFiscalRequest,
+  AplicarSincronizacionFiscalResponse,
   CompletarFiscalDto,
   CrearFacturaManualDto,
   CrearRectificativaDto,
@@ -16,6 +22,9 @@ import {
   Factura,
   FacturasResponse,
   ReconciliacionResult,
+  ReprocesarFacturaFiscalResponse,
+  SincronizacionFiscalPreview,
+  SincronizacionFiscalPreviewRequest,
 } from '../models/factura.model';
 
 @Injectable({ providedIn: 'root' })
@@ -157,5 +166,76 @@ export class FacturacionService extends ApiBaseService {
 
   completarFiscal$(id: number, dto: CompletarFiscalDto): Observable<Factura> {
     return this.post(`/${id}/completar-fiscal`, dto) as Observable<Factura>;
+  }
+
+  /**
+   * Compara fichas y facturas sin escribir nada. El servidor resuelve el
+   * ámbito y devuelve un fingerprint (`version`) para confirmar después.
+   */
+  previsualizarSincronizacionFiscal$(
+    request: SincronizacionFiscalPreviewRequest = {},
+  ): Observable<SincronizacionFiscalPreview> {
+    const payload: SincronizacionFiscalPreviewRequest = {};
+    if (request.usuarioIds?.length) {
+      payload.usuarioIds = [...request.usuarioIds];
+    }
+    if (request.facturaIds?.length) {
+      payload.facturaIds = [...request.facturaIds];
+    }
+    return this.post(
+      '/sincronizacion-fiscal/preview',
+      payload,
+    ) as Observable<SincronizacionFiscalPreview>;
+  }
+
+  /**
+   * Encola la sincronización del ámbito exacto devuelto por la preview.
+   * Un 409 conserva el `HttpErrorResponse` para que la UI exija una nueva
+   * comparación sin reintentar a ciegas.
+   */
+  aplicarSincronizacionFiscal$(
+    request: AplicarSincronizacionFiscalRequest,
+  ): Observable<AplicarSincronizacionFiscalResponse> {
+    return this.postAccionFiscal$<AplicarSincronizacionFiscalResponse>(
+      '/sincronizacion-fiscal/aplicar',
+      {
+        version: request.version,
+        usuarioIds: [...request.usuarioIds],
+        facturaIds: [...request.facturaIds],
+        recuperarFacturas: request.recuperarFacturas,
+      },
+    );
+  }
+
+  /**
+   * Reintenta un único registro fiscal mediante la cola. Nunca emite de
+   * forma directa: el servidor decide si el registro sigue siendo elegible.
+   */
+  reprocesarFacturaFiscal$(
+    id: number,
+  ): Observable<ReprocesarFacturaFiscalResponse> {
+    return this.postAccionFiscal$<ReprocesarFacturaFiscalResponse>(
+      `/${id}/reprocesar`,
+      {},
+    );
+  }
+
+  private postAccionFiscal$<T>(endpoint: string, body: unknown): Observable<T> {
+    return this._http
+      .post<T>(
+        `${environment.apiUrl}${this.controllerPrefix}${endpoint}`,
+        body,
+        {
+          withCredentials: true,
+        },
+      )
+      .pipe(
+        catchError((response: HttpErrorResponse) => {
+          if (response.status === 409) {
+            return throwError(() => response);
+          }
+          return this.handleError(response) as Observable<never>;
+        }),
+      );
   }
 }

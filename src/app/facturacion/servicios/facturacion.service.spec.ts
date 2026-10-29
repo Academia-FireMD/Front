@@ -1,8 +1,16 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import {
+  HttpClientTestingModule,
+  HttpTestingController,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import { PaginationFilter } from '../../shared/models/pagination.model';
-import { Factura, FacturasResponse } from '../models/factura.model';
+import {
+  AplicarSincronizacionFiscalRequest,
+  Factura,
+  FacturasResponse,
+  SincronizacionFiscalPreview,
+} from '../models/factura.model';
 import { FacturacionService } from './facturacion.service';
 
 const BASE = `${environment.apiUrl}/admin/facturas`;
@@ -62,7 +70,11 @@ describe('FacturacionService', () => {
   // ─────────────────────────────────────────────────────────────
   describe('listar$', () => {
     it('convierte skip/take a pagina/porPagina correctamente', () => {
-      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 0,
+        take: 20,
+        searchTerm: '',
+      };
 
       service.listar$(pagination).subscribe();
 
@@ -73,7 +85,11 @@ describe('FacturacionService', () => {
     });
 
     it('calcula pagina correctamente con skip > 0', () => {
-      const pagination: PaginationFilter = { skip: 40, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 40,
+        take: 20,
+        searchTerm: '',
+      };
 
       service.listar$(pagination).subscribe();
 
@@ -83,7 +99,11 @@ describe('FacturacionService', () => {
     });
 
     it('mapea la respuesta al formato PaginatedResult<Factura>', () => {
-      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 0,
+        take: 20,
+        searchTerm: '',
+      };
       let result: any;
 
       service.listar$(pagination).subscribe((r) => (result = r));
@@ -103,7 +123,12 @@ describe('FacturacionService', () => {
         skip: 0,
         take: 10,
         searchTerm: '',
-        where: { tipo: 'NORMAL', estado: 'EMITIDA', desde: '2026-01-01', hasta: '2026-12-31' },
+        where: {
+          tipo: 'NORMAL',
+          estado: 'EMITIDA',
+          desde: '2026-01-01',
+          hasta: '2026-12-31',
+        },
       };
 
       service.listar$(pagination).subscribe();
@@ -117,7 +142,11 @@ describe('FacturacionService', () => {
     });
 
     it('no incluye filtros vacíos en los params', () => {
-      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 0,
+        take: 20,
+        searchTerm: '',
+      };
 
       service.listar$(pagination).subscribe();
 
@@ -191,7 +220,11 @@ describe('FacturacionService', () => {
   // ─────────────────────────────────────────────────────────────
   describe('crearManual$', () => {
     it('hace POST a /manual con el DTO', () => {
-      const dto = { clienteNombre: 'Test', concepto: 'Servicio', baseImponible: 100 } as any;
+      const dto = {
+        clienteNombre: 'Test',
+        concepto: 'Servicio',
+        baseImponible: 100,
+      } as any;
       let result: any;
 
       service.crearManual$(dto).subscribe((r) => (result = r));
@@ -243,12 +276,18 @@ describe('FacturacionService', () => {
   // ─────────────────────────────────────────────────────────────
   describe('misFacturas$', () => {
     it('hace GET a /mis-facturas y mapea la respuesta', () => {
-      const pagination: PaginationFilter = { skip: 0, take: 20, searchTerm: '' };
+      const pagination: PaginationFilter = {
+        skip: 0,
+        take: 20,
+        searchTerm: '',
+      };
       let result: any;
 
       service.misFacturas$(pagination).subscribe((r) => (result = r));
 
-      const req = httpMock.expectOne((r) => r.url.includes(`${BASE}/mis-facturas`));
+      const req = httpMock.expectOne((r) =>
+        r.url.includes(`${BASE}/mis-facturas`),
+      );
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('pagina')).toBe('1');
       expect(req.request.params.get('porPagina')).toBe('20');
@@ -259,9 +298,13 @@ describe('FacturacionService', () => {
     });
 
     it('pasa searchTerm como query param', () => {
-      service.misFacturas$({ skip: 0, take: 20, searchTerm: 'test' }).subscribe();
+      service
+        .misFacturas$({ skip: 0, take: 20, searchTerm: 'test' })
+        .subscribe();
 
-      const req = httpMock.expectOne((r) => r.url.includes(`${BASE}/mis-facturas`));
+      const req = httpMock.expectOne((r) =>
+        r.url.includes(`${BASE}/mis-facturas`),
+      );
       expect(req.request.params.get('searchTerm')).toBe('test');
       req.flush(apiResponse);
     });
@@ -278,6 +321,192 @@ describe('FacturacionService', () => {
       expect(req.request.method).toBe('GET');
       expect(req.request.responseType).toBe('blob');
       req.flush(new Blob(['%PDF']));
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // previsualizarSincronizacionFiscal$
+  // ─────────────────────────────────────────────────────────────
+  describe('previsualizarSincronizacionFiscal$', () => {
+    const previewMock: SincronizacionFiscalPreview = {
+      version: 'v1:scope',
+      usuarioIds: [10, 11],
+      facturaIds: [21],
+      automatismos: {
+        sincronizacionHabilitada: true,
+        recuperacionHabilitada: false,
+      },
+      clientes: [
+        {
+          usuarioId: 10,
+          wooCustomerId: 900,
+          estado: 'SINCRONIZABLE',
+          faltantes: ['nif', 'provincia'],
+          conflictos: [],
+          cambios: [
+            {
+              campo: 'nif',
+              origen: 'WOOCOMMERCE',
+              destino: 'CONTASIMPLE',
+              valorActual: null,
+              valorPropuesto: '12345678Z',
+            },
+          ],
+        },
+      ],
+      facturas: [
+        {
+          id: 21,
+          woocommerceOrderId: '5501',
+          total: 121,
+          estado: 'ELEGIBLE',
+          motivos: [],
+        },
+      ],
+      totales: {
+        clientes: 1,
+        facturasElegibles: 1,
+        importeElegible: 121,
+        revisionManual: 0,
+      },
+    };
+
+    it('hace POST a /sincronizacion-fiscal/preview y devuelve la respuesta tipada', () => {
+      let result: SincronizacionFiscalPreview | undefined;
+
+      service
+        .previsualizarSincronizacionFiscal$({ usuarioIds: [10, 11] })
+        .subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne(`${BASE}/sincronizacion-fiscal/preview`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ usuarioIds: [10, 11] });
+      req.flush(previewMock);
+
+      expect(result).toEqual(previewMock);
+      expect(result?.version).toBe('v1:scope');
+    });
+
+    it('envía un body vacío cuando no se limita el ámbito', () => {
+      service.previsualizarSincronizacionFiscal$().subscribe();
+
+      const req = httpMock.expectOne(`${BASE}/sincronizacion-fiscal/preview`);
+      expect(req.request.body).toEqual({});
+      req.flush(previewMock);
+    });
+
+    it('copia los ids en lugar de exponer el array del llamador', () => {
+      const usuarioIds = [10, 11];
+      service.previsualizarSincronizacionFiscal$({ usuarioIds }).subscribe();
+
+      usuarioIds.push(99);
+
+      const req = httpMock.expectOne(`${BASE}/sincronizacion-fiscal/preview`);
+      expect(req.request.body.usuarioIds).toEqual([10, 11]);
+      req.flush(previewMock);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // aplicarSincronizacionFiscal$
+  // ─────────────────────────────────────────────────────────────
+  describe('aplicarSincronizacionFiscal$', () => {
+    const applyRequest: AplicarSincronizacionFiscalRequest = {
+      version: 'v1:scope',
+      usuarioIds: [10, 11],
+      facturaIds: [21],
+      recuperarFacturas: true,
+    };
+
+    it('hace POST a /sincronizacion-fiscal/aplicar con el scope exacto', () => {
+      let result: any;
+
+      service
+        .aplicarSincronizacionFiscal$(applyRequest)
+        .subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne(`${BASE}/sincronizacion-fiscal/aplicar`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(applyRequest);
+      req.flush({
+        trabajosEncolados: 2,
+        ids: ['job-1', 'job-2'],
+        procesamientoPausado: false,
+      });
+
+      expect(result.trabajosEncolados).toBe(2);
+      expect(result.procesamientoPausado).toBe(false);
+    });
+
+    it('acepta 202 Accepted como trabajo encolado', () => {
+      let result: any;
+
+      service
+        .aplicarSincronizacionFiscal$(applyRequest)
+        .subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne(`${BASE}/sincronizacion-fiscal/aplicar`);
+      req.flush(
+        {
+          trabajosEncolados: 1,
+          ids: ['job-1'],
+          procesamientoPausado: true,
+        },
+        { status: 202, statusText: 'Accepted' },
+      );
+
+      expect(result.trabajosEncolados).toBe(1);
+      expect(result.procesamientoPausado).toBe(true);
+    });
+
+    it('conserva el HttpErrorResponse 409 para exigir una nueva preview', () => {
+      let error: any;
+
+      service
+        .aplicarSincronizacionFiscal$(applyRequest)
+        .subscribe({ error: (e) => (error = e) });
+
+      const req = httpMock.expectOne(`${BASE}/sincronizacion-fiscal/aplicar`);
+      req.flush(
+        { message: 'La comparación ha cambiado' },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+      expect(error.status).toBe(409);
+    });
+
+    it('no reintenta automáticamente tras un 409', () => {
+      service
+        .aplicarSincronizacionFiscal$(applyRequest)
+        .subscribe({ error: () => undefined });
+
+      const req = httpMock.expectOne(`${BASE}/sincronizacion-fiscal/aplicar`);
+      req.flush({}, { status: 409, statusText: 'Conflict' });
+
+      httpMock.expectNone(`${BASE}/sincronizacion-fiscal/aplicar`);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // reprocesarFacturaFiscal$
+  // ─────────────────────────────────────────────────────────────
+  describe('reprocesarFacturaFiscal$', () => {
+    it('hace POST a /:id/reprocesar', () => {
+      let result: any;
+
+      service.reprocesarFacturaFiscal$(33).subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne(`${BASE}/33/reprocesar`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush({
+        trabajosEncolados: 1,
+        ids: ['job-33'],
+        procesamientoPausado: true,
+      });
+
+      expect(result.trabajosEncolados).toBe(1);
+      expect(result.procesamientoPausado).toBe(true);
     });
   });
 });

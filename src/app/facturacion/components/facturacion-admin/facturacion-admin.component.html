@@ -21,6 +21,17 @@
 
   <div right-actions>
     <p-button
+      label="Revisar sincronización fiscal"
+      ariaLabel="Revisar sincronización fiscal"
+      icon="pi pi-clone"
+      severity="secondary"
+      [text]="true"
+      [loading]="cargandoPreviewSincronizacion()"
+      pTooltip="Comparar fichas y facturas con WooCommerce y ContaSimple sin cambiar nada"
+      tooltipPosition="bottom"
+      (click)="abrirDialogSincronizacionFiscal()"
+    ></p-button>
+    <p-button
       label="Sincronizar"
       icon="pi pi-refresh"
       severity="secondary"
@@ -92,10 +103,17 @@
             tooltipPosition="top"
           ></p-chip>
           <p-chip
-            *ngIf="item.requiereRevisionFiscal"
+            *ngIf="item.trabajoFiscal as trabajoFiscal"
+            [styleClass]="getEstadoTrabajoFiscalChipClass(trabajoFiscal.estado)"
+            [label]="getEstadoTrabajoFiscalLabel(trabajoFiscal.estado)"
+            [pTooltip]="trabajoFiscalTooltip(item)"
+            tooltipPosition="top"
+          ></p-chip>
+          <p-chip
+            *ngIf="mostrarChipRevisionFiscal(item)"
             styleClass="estado-pendiente-chip"
             label="Revisión fiscal"
-            pTooltip="Esta factura necesita completarse con un NIF válido antes de emitirse"
+            pTooltip="Hay datos fiscales o administrativos pendientes (NIF, provincia, ficha del cliente en ContaSimple u otros). Revisa la ficha antes de emitir."
             tooltipPosition="top"
           ></p-chip>
         </div>
@@ -120,6 +138,28 @@
         role="status"
       >
         Revisión fiscal: {{ motivos }}
+      </span>
+      <span
+        class="descripcion trabajo-fiscal-detalle"
+        *ngIf="item.trabajoFiscal as trabajoFiscal"
+        role="status"
+      >
+        <span *ngIf="trabajoFiscal.intentos > 0">
+          {{ trabajoFiscal.intentos }}
+          {{ trabajoFiscal.intentos === 1 ? "intento" : "intentos" }}
+        </span>
+        <span *ngIf="trabajoFiscal.proximoIntento">
+          · Próximo intento:
+          {{ trabajoFiscal.proximoIntento | date: "dd/MM/yyyy HH:mm" }}
+        </span>
+        <span
+          *ngIf="trabajoFiscal.ultimoError"
+          class="trabajo-fiscal-error"
+          [pTooltip]="trabajoFiscal.ultimoError"
+          tooltipPosition="top"
+        >
+          · {{ trabajoFiscal.ultimoError }}</span
+        >
       </span>
     </div>
 
@@ -167,12 +207,24 @@
             (click)="abrirDevolver(item, $event)"
           ></p-button>
           <p-button
+            *ngIf="puedeReprocesar(item)"
+            icon="pi pi-replay"
+            severity="info"
+            [text]="true"
+            size="small"
+            ariaLabel="Reintentar sincronización fiscal"
+            pTooltip="Reintentar sincronización fiscal"
+            [loading]="reprocesandoFacturaId() === item.id"
+            (click)="reprocesarFacturaFiscal(item, $event)"
+          ></p-button>
+          <p-button
             *ngIf="item.requiereRevisionFiscal"
             icon="pi pi-user-edit"
             severity="info"
             [text]="true"
             size="small"
-            pTooltip="Completar datos fiscales y emitir"
+            ariaLabel="Completar datos fiscales y emitir factura"
+            pTooltip="Completar datos fiscales y emitir factura"
             (click)="abrirDialogCompletarFiscal(item, $event)"
           ></p-button>
           <p-button
@@ -530,12 +582,18 @@
     *ngIf="facturaParaCompletar() as fact"
   >
     <p class="m-0 text-sm text-color-secondary">
-      Esta factura entró desde un pedido sin NIF válido. Completa los datos
-      fiscales del cliente para emitirla en Contasimple.
+      Esta factura necesita completar datos fiscales o administrativos antes de
+      emitirse. Puede deberse al NIF, la provincia, la ficha del cliente en
+      ContaSimple u otros datos de la ficha. Revisa los motivos indicados y
+      completa la ficha.
     </p>
     <p class="m-0 text-sm">
       Pedido: <strong>#{{ fact.woocommerceOrderId || "—" }}</strong> · Total:
       <strong>{{ fact.total | number: "1.2-2" }} €</strong>
+    </p>
+    <p class="m-0 text-sm">
+      Al confirmar, se completará la ficha y
+      <strong>se emitirá una factura real en ContaSimple</strong>.
     </p>
 
     <div class="field">
@@ -633,6 +691,369 @@
       severity="success"
       [loading]="guardandoCompletarFiscal()"
       (click)="guardarCompletarFiscal()"
+    ></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog: Revisar sincronización fiscal (solo lectura + acciones explícitas) -->
+<p-dialog
+  header="Revisar sincronización fiscal"
+  [visible]="mostrarDialogSincronizacionFiscal()"
+  (visibleChange)="onDialogSincronizacionVisibleChange($event)"
+  [modal]="true"
+  [style]="{ width: '900px', maxWidth: '95vw' }"
+  [dismissableMask]="aplicandoSincronizacion() === null"
+  [closeOnEscape]="aplicandoSincronizacion() === null"
+  [draggable]="false"
+>
+  <div class="sync-fiscal-dialog">
+    <p class="m-0 text-sm text-color-secondary">
+      Comparación de solo lectura. Revisa qué campos se completarán y qué
+      facturas se recuperarán antes de confirmar. Nada se modifica al abrir esta
+      ventana.
+    </p>
+
+    <div
+      *ngIf="cargandoPreviewSincronizacion()"
+      class="sync-loading"
+      role="status"
+    >
+      <p-progressSpinner
+        [style]="{ width: '36px', height: '36px' }"
+      ></p-progressSpinner>
+      <span>Comparando fichas y facturas…</span>
+    </div>
+
+    <div
+      *ngIf="errorPreviewSincronizacion() as errorPreview"
+      class="sync-alerta sync-alerta-error"
+      role="alert"
+    >
+      <span>{{ errorPreview }}</span>
+      <p-button
+        label="Reintentar"
+        ariaLabel="Reintentar"
+        icon="pi pi-refresh"
+        [text]="true"
+        size="small"
+        [disabled]="cargandoPreviewSincronizacion()"
+        (click)="cargarPreviewSincronizacionFiscal()"
+      ></p-button>
+    </div>
+
+    <ng-container
+      *ngIf="
+        !cargandoPreviewSincronizacion() && previewSincronizacion() as preview
+      "
+    >
+      <div
+        *ngIf="previewObsoleta()"
+        class="sync-alerta sync-alerta-warning"
+        role="alert"
+      >
+        La comparación ha cambiado desde que la revisaste. Actualiza la
+        comparación y confirma de nuevo.
+      </div>
+
+      <div
+        *ngIf="resultadoSincronizacion() as resultado"
+        class="sync-alerta"
+        [class.sync-alerta-info]="resultado.tono === 'info'"
+        [class.sync-alerta-warning]="resultado.tono === 'warning'"
+        role="status"
+      >
+        {{ resultado.mensaje }}
+      </div>
+
+      <div
+        *ngIf="errorOperacionSincronizacion() as errorOperacion"
+        class="sync-alerta sync-alerta-error"
+        role="alert"
+      >
+        {{ errorOperacion }}
+      </div>
+
+      <div
+        *ngIf="sincronizacionFiscalPausada() || recuperacionFiscalPausada()"
+        class="sync-automatismos"
+        role="status"
+      >
+        <div
+          *ngIf="sincronizacionFiscalPausada()"
+          class="sync-alerta sync-alerta-info"
+        >
+          Los automatismos de sincronización fiscal están pausados. Puedes
+          revisar y encolar el trabajo, pero no se ejecutará hasta que se
+          reactiven.
+        </div>
+        <div
+          *ngIf="recuperacionFiscalPausada()"
+          class="sync-alerta sync-alerta-info"
+        >
+          La recuperación automática de facturas está pausada. Las facturas
+          elegibles quedarán pendientes si las recuperas ahora.
+        </div>
+      </div>
+
+      <div
+        class="sync-resumen"
+        *ngIf="totalesSincronizacionFiscal() as totales"
+      >
+        <div class="sync-resumen-item">
+          <span class="sync-resumen-valor">{{ totales.clientes }}</span>
+          <span class="sync-resumen-etiqueta">fichas comparadas</span>
+        </div>
+        <div class="sync-resumen-item">
+          <span class="sync-resumen-valor">{{
+            totales.facturasElegibles
+          }}</span>
+          <span class="sync-resumen-etiqueta">facturas elegibles</span>
+        </div>
+        <div class="sync-resumen-item">
+          <span class="sync-resumen-valor"
+            >{{ totales.importeElegible | number: "1.2-2" }} €</span
+          >
+          <span class="sync-resumen-etiqueta">importe elegible</span>
+        </div>
+        <div class="sync-resumen-item">
+          <span class="sync-resumen-valor">{{ totales.revisionManual }}</span>
+          <span class="sync-resumen-etiqueta">revisión manual</span>
+        </div>
+      </div>
+
+      <div
+        class="sync-confirmacion"
+        *ngIf="
+          !previewObsoleta() &&
+          !previewAplicada() &&
+          totalesSincronizacionFiscal() as totales
+        "
+      >
+        <p class="m-0">
+          <strong>Sincronizar fichas</strong> completará solo los campos vacíos
+          de las fichas sincronizables. Los datos distintos no se sobrescriben:
+          quedan para revisión manual.
+        </p>
+        <p class="m-0">
+          <strong>Sincronizar y recuperar facturas</strong> encolará además
+          <strong>{{
+            textoFacturasElegibles(totales.facturasElegibles)
+          }}</strong>
+          por
+          <strong>{{ totales.importeElegible | number: "1.2-2" }} €</strong>.
+          Las facturas en revisión manual, fuera del período automático o no
+          facturables no se emitirán.
+        </p>
+      </div>
+
+      <section class="sync-seccion">
+        <h4>Fichas de clientes</h4>
+        <p class="sync-seccion-ayuda">
+          Solo se rellenan campos vacíos con datos verificados. Si hay datos
+          distintos, la ficha queda para revisión manual.
+        </p>
+        <p *ngIf="!preview.clientes?.length" class="sync-vacio">
+          No hay fichas que comparar.
+        </p>
+        <div class="sync-lista" *ngIf="preview.clientes?.length">
+          <article
+            class="sync-cliente"
+            *ngFor="let cliente of preview.clientes"
+          >
+            <div class="sync-cliente-cabecera">
+              <strong>Cliente #{{ cliente.usuarioId }}</strong>
+              <span
+                *ngIf="cliente.wooCustomerId"
+                class="text-sm text-color-secondary"
+              >
+                WooCommerce #{{ cliente.wooCustomerId }}
+              </span>
+              <p-chip
+                [styleClass]="
+                  getEstadoSincronizacionClienteChipClass(cliente.estado)
+                "
+                [label]="getEstadoSincronizacionClienteLabel(cliente.estado)"
+              ></p-chip>
+            </div>
+
+            <div
+              class="sync-cliente-faltantes"
+              *ngIf="cliente.faltantes?.length"
+            >
+              <span class="text-sm text-color-secondary">Campos vacíos:</span>
+              <p-chip
+                *ngFor="let falta of cliente.faltantes"
+                [label]="etiquetaCampoFiscal(falta)"
+                styleClass="sync-falta-chip"
+              ></p-chip>
+            </div>
+
+            <div
+              class="sync-cliente-conflictos"
+              *ngIf="cliente.conflictos?.length"
+              role="status"
+            >
+              <span class="text-sm">
+                No se completará automáticamente. Datos distintos en:
+              </span>
+              <p-chip
+                *ngFor="let conflicto of cliente.conflictos"
+                [label]="etiquetaCampoFiscal(conflicto)"
+                styleClass="sync-conflicto-chip"
+              ></p-chip>
+              <span class="text-sm">Requiere revisión manual.</span>
+            </div>
+
+            <div class="sync-cambios" *ngIf="cliente.cambios?.length">
+              <div class="sync-cambio" *ngFor="let cambio of cliente.cambios">
+                <span class="sync-cambio-campo">{{
+                  etiquetaCampoFiscal(cambio.campo)
+                }}</span>
+                <span class="sync-cambio-valores">
+                  <span class="text-color-secondary">{{
+                    valorActualCambioFiscal(cambio)
+                  }}</span>
+                  → <strong>{{ cambio.valorPropuesto }}</strong>
+                </span>
+                <span class="sync-cambio-origen">
+                  {{ etiquetaOrigenFiscal(cambio.origen) }} →
+                  {{ etiquetaOrigenFiscal(cambio.destino) }}
+                </span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="sync-seccion">
+        <h4>Facturas</h4>
+        <p class="sync-seccion-ayuda">
+          Solo se recuperan las facturas elegibles dentro del período
+          automático. Las excluidas se muestran con su motivo y no se emiten.
+        </p>
+        <p *ngIf="!preview.facturas?.length" class="sync-vacio">
+          No hay facturas pendientes en el ámbito revisado.
+        </p>
+        <div class="sync-lista" *ngIf="preview.facturas?.length">
+          <div class="sync-factura" *ngFor="let factura of preview.facturas">
+            <div class="sync-factura-cabecera">
+              <strong>
+                {{
+                  factura.woocommerceOrderId
+                    ? "Pedido #" + factura.woocommerceOrderId
+                    : "Factura #" + factura.id
+                }}
+              </strong>
+              <span class="text-sm text-color-secondary"
+                >Factura #{{ factura.id }}</span
+              >
+              <span class="sync-factura-importe"
+                >{{ factura.total | number: "1.2-2" }} €</span
+              >
+              <p-chip
+                [styleClass]="
+                  getEstadoSincronizacionFacturaChipClass(factura.estado)
+                "
+                [label]="getEstadoSincronizacionFacturaLabel(factura.estado)"
+              ></p-chip>
+            </div>
+            <span
+              class="sync-factura-motivos"
+              *ngIf="motivosFacturaSincronizacion(factura) as motivos"
+            >
+              {{ motivos }}
+            </span>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <ng-container *ngIf="previewSincronizacion()">
+      <ng-container *ngIf="previewObsoleta()">
+        <button
+          pButton
+          label="Cerrar"
+          class="p-button-text"
+          (click)="cerrarDialogSincronizacionFiscal()"
+        ></button>
+        <button
+          pButton
+          label="Actualizar comparación"
+          ariaLabel="Actualizar comparación"
+          icon="pi pi-refresh"
+          [loading]="cargandoPreviewSincronizacion()"
+          [disabled]="cargandoPreviewSincronizacion()"
+          (click)="cargarPreviewSincronizacionFiscal()"
+        ></button>
+      </ng-container>
+
+      <ng-container *ngIf="previewAplicada() && !previewObsoleta()">
+        <button
+          pButton
+          label="Cerrar"
+          class="p-button-text"
+          (click)="cerrarDialogSincronizacionFiscal()"
+        ></button>
+        <button
+          pButton
+          label="Revisar de nuevo"
+          ariaLabel="Revisar de nuevo"
+          icon="pi pi-refresh"
+          [loading]="cargandoPreviewSincronizacion()"
+          [disabled]="cargandoPreviewSincronizacion()"
+          (click)="cargarPreviewSincronizacionFiscal()"
+        ></button>
+      </ng-container>
+
+      <ng-container *ngIf="!previewObsoleta() && !previewAplicada()">
+        <button
+          pButton
+          label="Cancelar"
+          class="p-button-text"
+          [disabled]="aplicandoSincronizacion() !== null"
+          (click)="cerrarDialogSincronizacionFiscal()"
+        ></button>
+        <button
+          pButton
+          label="Sincronizar fichas"
+          ariaLabel="Sincronizar fichas"
+          icon="pi pi-users"
+          severity="secondary"
+          [outlined]="true"
+          [loading]="aplicandoSincronizacion() === 'fichas'"
+          [disabled]="!puedeSincronizarFichas()"
+          (click)="aplicarSincronizacionFiscal(false)"
+        ></button>
+        <button
+          pButton
+          [label]="
+            'Sincronizar y recuperar ' +
+            textoFacturasParaRecuperar(
+              totalesSincronizacionFiscal()?.facturasElegibles ?? 0
+            )
+          "
+          [ariaLabel]="
+            'Sincronizar y recuperar ' +
+            textoFacturasParaRecuperar(
+              totalesSincronizacionFiscal()?.facturasElegibles ?? 0
+            )
+          "
+          icon="pi pi-cloud-upload"
+          [loading]="aplicandoSincronizacion() === 'recuperar'"
+          [disabled]="!puedeRecuperarFacturas()"
+          (click)="aplicarSincronizacionFiscal(true)"
+        ></button>
+      </ng-container>
+    </ng-container>
+
+    <button
+      *ngIf="!previewSincronizacion()"
+      pButton
+      label="Cerrar"
+      class="p-button-text"
+      (click)="cerrarDialogSincronizacionFiscal()"
     ></button>
   </ng-template>
 </p-dialog>
