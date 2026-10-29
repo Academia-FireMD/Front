@@ -1,4 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectorRef,
   ChangeDetectionStrategy,
@@ -19,11 +20,18 @@ import { PrimengModule } from '../../../shared/primeng.module';
 import { SharedModule } from '../../../shared/shared.module';
 import { UserDashboardComponent } from '../../../test/components/user-dashboard/user-dashboard.component';
 import {
+  CambioFiscal,
   CrearFacturaManualDto,
   DevolucionOperacion,
+  EstadoSincronizacionCliente,
+  EstadoSincronizacionFactura,
+  EstadoTrabajoFiscal,
   Factura,
   FacturaEstado,
   FacturaTipo,
+  OrigenDatoFiscal,
+  SincronizacionFiscalPreview,
+  SincronizacionFiscalTotales,
 } from '../../models/factura.model';
 import { FacturacionService } from '../../servicios/facturacion.service';
 import { UserService } from '../../../services/user.service';
@@ -31,6 +39,70 @@ import { ConfigService } from '../../../services/config.service';
 import { Usuario } from '../../../shared/models/user.model';
 import { CompletarFiscalDto } from '../../models/factura.model';
 import { looksLikeSpanishNif } from '../../utils/nif.util';
+
+type AccionSincronizacionFiscal = 'fichas' | 'recuperar';
+
+interface ResultadoSincronizacionFiscal {
+  tono: 'info' | 'warning';
+  mensaje: string;
+}
+
+const ETIQUETAS_CAMPO_FISCAL: Record<string, string> = {
+  nif: 'NIF',
+  dni: 'NIF',
+  clienteNif: 'NIF',
+  nombre: 'Nombre',
+  clienteNombre: 'Nombre',
+  apellidos: 'Apellidos',
+  empresa: 'Empresa o razón social',
+  direccion: 'Dirección',
+  clienteDireccion: 'Dirección',
+  direccion2: 'Dirección (línea 2)',
+  poblacion: 'Población',
+  clientePoblacion: 'Población',
+  provincia: 'Provincia',
+  clienteProvincia: 'Provincia',
+  codigoPostal: 'Código postal',
+  clienteCodigoPostal: 'Código postal',
+  pais: 'País',
+  clientePais: 'País',
+  email: 'Email',
+  clienteEmail: 'Email',
+  telefono: 'Teléfono',
+};
+
+const ETIQUETAS_ESTADO_CLIENTE: Record<EstadoSincronizacionCliente, string> = {
+  SIN_CAMBIOS: 'Sin cambios',
+  SINCRONIZABLE: 'Se puede completar',
+  REVISION: 'Requiere revisión',
+  NO_DISPONIBLE: 'No disponible',
+};
+
+const ETIQUETAS_ESTADO_FACTURA_SYNC: Record<
+  EstadoSincronizacionFactura,
+  string
+> = {
+  ELEGIBLE: 'Elegible',
+  YA_EMITIDA: 'Ya emitida',
+  REVISION: 'Requiere revisión manual',
+  FUERA_PERIODO: 'Fuera del período automático',
+  NO_FACTURABLE: 'No facturable',
+  ESPERA_PROVEEDOR: 'En espera del proveedor',
+};
+
+const ETIQUETAS_ESTADO_TRABAJO_FISCAL: Record<EstadoTrabajoFiscal, string> = {
+  PENDIENTE: 'Pendiente de sincronización',
+  PROCESANDO: 'Sincronizando',
+  REINTENTO: 'Reintentando',
+  REVISION: 'Requiere revisión',
+  COMPLETADO: 'Sincronización completada',
+};
+
+const ETIQUETAS_ORIGEN_FISCAL: Record<OrigenDatoFiscal, string> = {
+  PLATAFORMA: 'Plataforma',
+  WOOCOMMERCE: 'WooCommerce',
+  CONTASIMPLE: 'ContaSimple',
+};
 
 @Component({
   selector: 'app-facturacion-admin',
@@ -128,6 +200,67 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
   guardandoCompletarFiscal = signal(false);
   facturaParaCompletar = signal<Factura | null>(null);
   formCompletarFiscal: CompletarFiscalDto = this.emptyCompletarFiscalForm();
+
+  mostrarDialogSincronizacionFiscal = signal(false);
+  cargandoPreviewSincronizacion = signal(false);
+  previewSincronizacion = signal<SincronizacionFiscalPreview | null>(null);
+  errorPreviewSincronizacion = signal<string | null>(null);
+  previewObsoleta = signal(false);
+  previewAplicada = signal(false);
+  aplicandoSincronizacion = signal<AccionSincronizacionFiscal | null>(null);
+  resultadoSincronizacion = signal<ResultadoSincronizacionFiscal | null>(null);
+  errorOperacionSincronizacion = signal<string | null>(null);
+  reprocesandoFacturaId = signal<number | null>(null);
+
+  readonly totalesSincronizacionFiscal =
+    computed<SincronizacionFiscalTotales | null>(() => {
+      const preview = this.previewSincronizacion();
+      if (!preview) return null;
+      const facturas = preview.facturas ?? [];
+      return {
+        clientes: preview.totales?.clientes ?? preview.clientes?.length ?? 0,
+        facturasElegibles:
+          preview.totales?.facturasElegibles ??
+          facturas.filter((factura) => factura.estado === 'ELEGIBLE').length,
+        importeElegible:
+          preview.totales?.importeElegible ??
+          facturas
+            .filter((factura) => factura.estado === 'ELEGIBLE')
+            .reduce((total, factura) => total + (factura.total ?? 0), 0),
+        revisionManual:
+          preview.totales?.revisionManual ??
+          facturas.filter((factura) => factura.estado === 'REVISION').length,
+      };
+    });
+
+  readonly sincronizacionFiscalPausada = computed(
+    () =>
+      this.previewSincronizacion()?.automatismos?.sincronizacionHabilitada ===
+      false,
+  );
+
+  readonly recuperacionFiscalPausada = computed(
+    () =>
+      this.previewSincronizacion()?.automatismos?.recuperacionHabilitada ===
+      false,
+  );
+
+  readonly puedeSincronizarFichas = computed(() => {
+    if (!this.previewListaParaAplicar()) return false;
+    const preview = this.previewSincronizacion();
+    if (!preview) return false;
+    const clientes = preview.clientes ?? [];
+    if (clientes.length > 0) {
+      return clientes.some((cliente) => cliente.estado === 'SINCRONIZABLE');
+    }
+    return (preview.totales?.clientes ?? 0) > 0;
+  });
+
+  readonly puedeRecuperarFacturas = computed(
+    () =>
+      this.previewListaParaAplicar() &&
+      (this.totalesSincronizacionFiscal()?.facturasElegibles ?? 0) > 0,
+  );
 
   constructor() {
     super(inject(Router), inject(ActivatedRoute), inject(ChangeDetectorRef));
@@ -438,6 +571,265 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
     }
   }
 
+  abrirDialogSincronizacionFiscal() {
+    this.previewSincronizacion.set(null);
+    this.errorPreviewSincronizacion.set(null);
+    this.previewObsoleta.set(false);
+    this.previewAplicada.set(false);
+    this.resultadoSincronizacion.set(null);
+    this.errorOperacionSincronizacion.set(null);
+    this.mostrarDialogSincronizacionFiscal.set(true);
+    void this.cargarPreviewSincronizacionFiscal();
+  }
+
+  async cargarPreviewSincronizacionFiscal() {
+    if (this.cargandoPreviewSincronizacion()) return;
+    this.cargandoPreviewSincronizacion.set(true);
+    this.errorPreviewSincronizacion.set(null);
+    this.errorOperacionSincronizacion.set(null);
+    this.resultadoSincronizacion.set(null);
+    this.previewObsoleta.set(false);
+    this.previewAplicada.set(false);
+    try {
+      const preview = await firstValueFrom(
+        this.facturacionService.previsualizarSincronizacionFiscal$(),
+      );
+      this.previewSincronizacion.set(preview);
+    } catch {
+      this.previewSincronizacion.set(null);
+      this.errorPreviewSincronizacion.set(
+        'No se pudo cargar la comparación fiscal. Vuelve a intentarlo.',
+      );
+    } finally {
+      this.cargandoPreviewSincronizacion.set(false);
+    }
+  }
+
+  async aplicarSincronizacionFiscal(recuperarFacturas: boolean) {
+    const preview = this.previewSincronizacion();
+    if (!preview || this.aplicandoSincronizacion()) return;
+    const puedeAplicar = recuperarFacturas
+      ? this.puedeRecuperarFacturas()
+      : this.puedeSincronizarFichas();
+    if (!puedeAplicar) return;
+
+    this.aplicandoSincronizacion.set(
+      recuperarFacturas ? 'recuperar' : 'fichas',
+    );
+    this.errorOperacionSincronizacion.set(null);
+    this.resultadoSincronizacion.set(null);
+    try {
+      const respuesta = await firstValueFrom(
+        this.facturacionService.aplicarSincronizacionFiscal$({
+          version: preview.version,
+          usuarioIds: [...preview.usuarioIds],
+          facturaIds: [...preview.facturaIds],
+          recuperarFacturas,
+        }),
+      );
+      this.previewAplicada.set(true);
+      const resultado = this.resultadoEncolado(
+        respuesta.trabajosEncolados,
+        respuesta.procesamientoPausado,
+      );
+      this.resultadoSincronizacion.set(resultado);
+      if (resultado.tono === 'warning') {
+        this.toast.warning(resultado.mensaje);
+      } else {
+        this.toast.info(resultado.mensaje);
+      }
+      this.refresh();
+    } catch (error) {
+      if (this.esConflictoDeVersion(error)) {
+        this.previewObsoleta.set(true);
+        const mensaje =
+          'La comparación ha cambiado desde que la revisaste. Actualiza la comparación y confirma de nuevo.';
+        this.errorOperacionSincronizacion.set(mensaje);
+        this.toast.warning(mensaje);
+      } else {
+        this.errorOperacionSincronizacion.set(
+          this.mensajeDeError(
+            error,
+            'No se pudo encolar la sincronización fiscal. Vuelve a intentarlo.',
+          ),
+        );
+      }
+    } finally {
+      this.aplicandoSincronizacion.set(null);
+    }
+  }
+
+  cerrarDialogSincronizacionFiscal() {
+    this.mostrarDialogSincronizacionFiscal.set(false);
+  }
+
+  onDialogSincronizacionVisibleChange(visible: boolean) {
+    this.mostrarDialogSincronizacionFiscal.set(visible);
+  }
+
+  async reprocesarFacturaFiscal(factura: Factura, event: Event) {
+    event.stopPropagation();
+    if (!this.puedeReprocesar(factura)) return;
+    if (this.reprocesandoFacturaId() !== null) return;
+
+    this.reprocesandoFacturaId.set(factura.id);
+    const referencia = factura.numero
+      ? `la factura nº ${factura.numero}`
+      : `la factura #${factura.id}`;
+    try {
+      const respuesta = await firstValueFrom(
+        this.facturacionService.reprocesarFacturaFiscal$(factura.id),
+      );
+      if (respuesta.trabajosEncolados <= 0) {
+        this.toast.info(`No se encoló ningún reintento para ${referencia}.`);
+      } else if (respuesta.procesamientoPausado) {
+        this.toast.warning(
+          `Se encoló el reintento de ${referencia}. Los automatismos están pausados; permanecerá pendiente hasta que se reactiven.`,
+        );
+      } else {
+        this.toast.info(
+          `Se encoló el reintento de ${referencia} para sincronización fiscal.`,
+        );
+      }
+      this.refresh();
+    } catch (error) {
+      if (this.esConflictoDeVersion(error)) {
+        this.toast.warning(
+          'El estado de la factura ha cambiado. Actualiza el listado antes de reintentar.',
+        );
+        this.refresh();
+      }
+    } finally {
+      this.reprocesandoFacturaId.set(null);
+    }
+  }
+
+  puedeReprocesar(factura: Factura): boolean {
+    // Solo una factura pendiente puede reintentarse. Cualquier otro estado
+    // (emitida, anulada, rectificativa, omitida de prueba, error o un estado
+    // desconocido que llegue del backend) es incierto y no se ofrece.
+    if (factura.tipo === 'RECTIFICATIVA') return false;
+    if (factura.estado !== 'PENDIENTE') return false;
+
+    const trabajo = factura.trabajoFiscal;
+    if (trabajo) {
+      return trabajo.estado === 'PENDIENTE' || trabajo.estado === 'REVISION';
+    }
+    // Backend antiguo sin extensión de trabajo fiscal: solo se ofrece el
+    // reintento cuando hay una revisión conocida.
+    return factura.requiereRevisionFiscal;
+  }
+
+  getEstadoTrabajoFiscalLabel(estado: EstadoTrabajoFiscal | undefined): string {
+    return estado ? (ETIQUETAS_ESTADO_TRABAJO_FISCAL[estado] ?? estado) : '';
+  }
+
+  getEstadoTrabajoFiscalChipClass(
+    estado: EstadoTrabajoFiscal | undefined,
+  ): string {
+    const map: Record<EstadoTrabajoFiscal, string> = {
+      PENDIENTE: 'trabajo-fiscal-pendiente-chip',
+      PROCESANDO: 'trabajo-fiscal-procesando-chip',
+      REINTENTO: 'trabajo-fiscal-reintento-chip',
+      REVISION: 'trabajo-fiscal-revision-chip',
+      COMPLETADO: 'trabajo-fiscal-completado-chip',
+    };
+    return estado ? (map[estado] ?? '') : '';
+  }
+
+  getEstadoSincronizacionClienteLabel(
+    estado: EstadoSincronizacionCliente,
+  ): string {
+    return ETIQUETAS_ESTADO_CLIENTE[estado] ?? estado;
+  }
+
+  getEstadoSincronizacionClienteChipClass(
+    estado: EstadoSincronizacionCliente,
+  ): string {
+    const map: Record<EstadoSincronizacionCliente, string> = {
+      SIN_CAMBIOS: 'sync-cliente-sin-cambios-chip',
+      SINCRONIZABLE: 'sync-cliente-sincronizable-chip',
+      REVISION: 'sync-cliente-revision-chip',
+      NO_DISPONIBLE: 'sync-cliente-no-disponible-chip',
+    };
+    return map[estado] ?? 'sync-cliente-sin-cambios-chip';
+  }
+
+  getEstadoSincronizacionFacturaLabel(
+    estado: EstadoSincronizacionFactura,
+  ): string {
+    return ETIQUETAS_ESTADO_FACTURA_SYNC[estado] ?? estado;
+  }
+
+  getEstadoSincronizacionFacturaChipClass(
+    estado: EstadoSincronizacionFactura,
+  ): string {
+    const map: Record<EstadoSincronizacionFactura, string> = {
+      ELEGIBLE: 'sync-factura-elegible-chip',
+      YA_EMITIDA: 'sync-factura-ya-emitida-chip',
+      REVISION: 'sync-factura-revision-chip',
+      FUERA_PERIODO: 'sync-factura-fuera-periodo-chip',
+      NO_FACTURABLE: 'sync-factura-no-facturable-chip',
+      ESPERA_PROVEEDOR: 'sync-factura-espera-chip',
+    };
+    return map[estado] ?? 'sync-factura-revision-chip';
+  }
+
+  etiquetaCampoFiscal(campo: string): string {
+    const etiqueta = ETIQUETAS_CAMPO_FISCAL[campo];
+    if (etiqueta) return etiqueta;
+    const humanizado = campo
+      .replace(/([a-záéíóú])([A-Z])/g, '$1 $2')
+      .replace(/_/g, ' ');
+    return humanizado.charAt(0).toUpperCase() + humanizado.slice(1);
+  }
+
+  etiquetaOrigenFiscal(origen: OrigenDatoFiscal): string {
+    return ETIQUETAS_ORIGEN_FISCAL[origen] ?? origen;
+  }
+
+  valorActualCambioFiscal(cambio: CambioFiscal): string {
+    return cambio.valorActual?.trim() || 'Vacío';
+  }
+
+  motivosFacturaSincronizacion(factura: { motivos?: string[] }): string {
+    return factura.motivos?.filter(Boolean).join(' · ') ?? '';
+  }
+
+  textoFacturasElegibles(cantidad: number): string {
+    return cantidad === 1
+      ? '1 factura elegible'
+      : `${cantidad} facturas elegibles`;
+  }
+
+  textoFacturasParaRecuperar(cantidad: number): string {
+    return cantidad === 1 ? '1 factura' : `${cantidad} facturas`;
+  }
+
+  mostrarChipRevisionFiscal(factura: Factura): boolean {
+    return (
+      factura.requiereRevisionFiscal &&
+      factura.trabajoFiscal?.estado !== 'REVISION'
+    );
+  }
+
+  trabajoFiscalTooltip(factura: Factura): string {
+    const trabajo = factura.trabajoFiscal;
+    if (!trabajo) return '';
+    const partes = [
+      `Trabajo fiscal: ${this.getEstadoTrabajoFiscalLabel(trabajo.estado)}`,
+    ];
+    if (trabajo.intentos > 0) {
+      partes.push(
+        `${trabajo.intentos} ${trabajo.intentos === 1 ? 'intento' : 'intentos'}`,
+      );
+    }
+    if (trabajo.ultimoError) {
+      partes.push(`Último error: ${trabajo.ultimoError}`);
+    }
+    return partes.join(' · ');
+  }
+
   abrirDialogCompletarFiscal(factura: Factura, event: Event) {
     event.stopPropagation();
     this.facturaParaCompletar.set(factura);
@@ -548,6 +940,52 @@ export class FacturacionAdminComponent extends GenericListComponent<Factura> {
 
   calcularTotal(base: number, iva: number): number {
     return base + base * (iva / 100);
+  }
+
+  private previewListaParaAplicar(): boolean {
+    return (
+      this.previewSincronizacion() !== null &&
+      !this.cargandoPreviewSincronizacion() &&
+      this.aplicandoSincronizacion() === null &&
+      !this.previewObsoleta() &&
+      !this.previewAplicada()
+    );
+  }
+
+  private resultadoEncolado(
+    trabajosEncolados: number,
+    procesamientoPausado: boolean,
+  ): ResultadoSincronizacionFiscal {
+    const trabajos = Math.max(0, trabajosEncolados);
+    if (trabajos === 0) {
+      return {
+        tono: 'info',
+        mensaje: 'No se encoló ningún trabajo de sincronización fiscal.',
+      };
+    }
+    const sustantivo = trabajos === 1 ? 'trabajo' : 'trabajos';
+    const verbo = trabajos === 1 ? 'encoló' : 'encolaron';
+    if (procesamientoPausado) {
+      return {
+        tono: 'warning',
+        mensaje: `Se ${verbo} ${trabajos} ${sustantivo} de sincronización fiscal. Los automatismos están pausados; el trabajo permanecerá pendiente hasta que se reactiven.`,
+      };
+    }
+    return {
+      tono: 'info',
+      mensaje: `Se ${verbo} ${trabajos} ${sustantivo} de sincronización fiscal para procesarse en segundo plano.`,
+    };
+  }
+
+  private esConflictoDeVersion(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && error.status === 409;
+  }
+
+  private mensajeDeError(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message?.trim()) {
+      return error.message.trim();
+    }
+    return fallback;
   }
 
   private emptyForm(): CrearFacturaManualDto {

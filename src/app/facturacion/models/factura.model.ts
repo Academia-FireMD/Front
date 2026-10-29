@@ -8,6 +8,20 @@ export type FacturaEstado =
   | 'ERROR';
 export type OrigenAnulacion = 'LOCAL' | 'CONTASIMPLE';
 
+export type EstadoTrabajoFiscal =
+  | 'PENDIENTE'
+  | 'PROCESANDO'
+  | 'REINTENTO'
+  | 'REVISION'
+  | 'COMPLETADO';
+
+export interface TrabajoFiscal {
+  estado: EstadoTrabajoFiscal;
+  intentos: number;
+  proximoIntento: string | null;
+  ultimoError: string | null;
+}
+
 export interface MotivoRevisionFiscal {
   codigo: string;
   campos?: string[];
@@ -46,6 +60,8 @@ export interface Factura {
   fechaAnulacion?: string;
   requiereRevisionFiscal: boolean;
   motivosRevisionFiscal?: MotivoRevisionFiscal[];
+  /** Extensión opcional del backend para el plan de sincronización fiscal. */
+  trabajoFiscal?: TrabajoFiscal;
   createdAt: string;
   updatedAt: string;
 }
@@ -142,3 +158,91 @@ export interface ListarFacturasParams {
   estado?: FacturaEstado;
   usuarioId?: number;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Sincronización fiscal WooCommerce ↔ ContaSimple
+// ─────────────────────────────────────────────────────────────
+
+export type EstadoSincronizacionCliente =
+  | 'SIN_CAMBIOS'
+  | 'SINCRONIZABLE'
+  | 'REVISION'
+  | 'NO_DISPONIBLE';
+
+export type EstadoSincronizacionFactura =
+  | 'ELEGIBLE'
+  | 'YA_EMITIDA'
+  | 'REVISION'
+  | 'FUERA_PERIODO'
+  | 'NO_FACTURABLE'
+  | 'ESPERA_PROVEEDOR';
+
+export type OrigenDatoFiscal = 'PLATAFORMA' | 'WOOCOMMERCE' | 'CONTASIMPLE';
+
+export interface CambioFiscal {
+  campo: string;
+  origen: OrigenDatoFiscal;
+  destino: OrigenDatoFiscal;
+  valorActual: string | null;
+  valorPropuesto: string;
+}
+
+export interface SincronizacionFiscalCliente {
+  usuarioId: number;
+  wooCustomerId: number | null;
+  estado: EstadoSincronizacionCliente;
+  faltantes: string[];
+  conflictos: string[];
+  cambios: CambioFiscal[];
+}
+
+export interface SincronizacionFiscalFactura {
+  id: number;
+  woocommerceOrderId: string | null;
+  total: number;
+  estado: EstadoSincronizacionFactura;
+  motivos: string[];
+}
+
+export interface SincronizacionFiscalTotales {
+  clientes: number;
+  facturasElegibles: number;
+  importeElegible: number;
+  revisionManual: number;
+}
+
+export interface SincronizacionFiscalAutomatismos {
+  sincronizacionHabilitada: boolean;
+  recuperacionHabilitada: boolean;
+}
+
+export interface SincronizacionFiscalPreviewRequest {
+  usuarioIds?: number[];
+  facturaIds?: number[];
+}
+
+export interface SincronizacionFiscalPreview {
+  version: string;
+  usuarioIds: number[];
+  facturaIds: number[];
+  automatismos: SincronizacionFiscalAutomatismos;
+  clientes: SincronizacionFiscalCliente[];
+  facturas: SincronizacionFiscalFactura[];
+  totales: SincronizacionFiscalTotales;
+}
+
+export interface AplicarSincronizacionFiscalRequest {
+  version: string;
+  usuarioIds: number[];
+  facturaIds: number[];
+  recuperarFacturas: boolean;
+}
+
+export interface EncoladoFiscalResponse {
+  trabajosEncolados: number;
+  ids: string[];
+  procesamientoPausado: boolean;
+}
+
+export type AplicarSincronizacionFiscalResponse = EncoladoFiscalResponse;
+export type ReprocesarFacturaFiscalResponse = EncoladoFiscalResponse;
