@@ -1,44 +1,142 @@
-<div class="grid" [formGroup]="formGroup">
-  <div class="col-12 content">
-    <div
-      class="col-12 header flex justify-content-start align-items-center pt-4 gap-3"
+<div class="plantilla-editor fab-safe-area" [formGroup]="formGroup">
+  <nav class="plantilla-migas" aria-label="Ruta de navegación">
+    <span class="plantilla-migas__seccion">Planificación</span>
+    <i
+      class="pi pi-angle-right plantilla-migas__separador"
+      aria-hidden="true"
+    ></i>
+    <a
+      class="plantilla-migas__enlace"
+      routerLink="/app/planificacion/plantillas-semanales"
     >
-      <div class="identificador">
-        @if (getId() !== 'new' && !lastLoaded?.identificador?.includes('CLON'))
-        { @if (viewportService.screenWidth != 'xs') { Identificador: }
-        <strong>{{ formGroup.value.identificador }}</strong>
-        }@else {
-        <p-floatLabel>
-          <input
-            type="text"
-            pInputText
-            class="w-full"
-            formControlName="identificador"
-          />
-          <label for="identificador">Identificador</label>
-        </p-floatLabel>
-        }
-      </div>
-      <div class="nombre" *ngIf="viewportService.screenWidth != 'xs'">
-        <p-floatLabel>
-          <input
-            type="text"
-            pInputText
-            class="w-full"
-            formControlName="descripcion"
-          />
-          <label for="descripcion">Descripción</label>
-        </p-floatLabel>
-      </div>
-      <app-async-button
-        [action]="guardarPlantilla.bind(this)"
-        label="Guardar cambios"
-      ></app-async-button>
+      <i
+        class="pi pi-arrow-left plantilla-migas__volver"
+        aria-hidden="true"
+      ></i>
+      Plantillas semanales
+    </a>
+  </nav>
+
+  <header class="plantilla-cabecera">
+    <h1 class="plantilla-cabecera__titulo">{{ titulo }}</h1>
+    <p class="plantilla-cabecera__subtitulo">{{ subtitulo }}</p>
+  </header>
+
+  <div class="plantilla-campos">
+    <div class="plantilla-campo">
+      <label class="plantilla-campo__etiqueta" for="plantilla-nombre">
+        Nombre de la plantilla
+        <span class="plantilla-campo__obligatorio" aria-hidden="true">*</span>
+      </label>
+      <input
+        id="plantilla-nombre"
+        type="text"
+        pInputText
+        class="plantilla-campo__control"
+        formControlName="identificador"
+        autocomplete="off"
+        placeholder="Ej. Repaso de hidráulica"
+        required
+        [attr.readonly]="esNuevaPlantilla ? null : ''"
+        [attr.aria-required]="true"
+        [attr.aria-invalid]="campoInvalido('identificador') ? 'true' : null"
+        [attr.aria-describedby]="
+          campoInvalido('identificador') ? 'plantilla-nombre-error' : null
+        "
+      />
+      @if (campoInvalido("identificador")) {
+        <small
+          id="plantilla-nombre-error"
+          class="plantilla-campo__error"
+          role="alert"
+        >
+          Escribe un nombre para la plantilla.
+        </small>
+      }
     </div>
+
+    <div class="plantilla-campo">
+      <label class="plantilla-campo__etiqueta" for="plantilla-descripcion">
+        Descripción
+        <span class="plantilla-campo__obligatorio" aria-hidden="true">*</span>
+      </label>
+      <input
+        id="plantilla-descripcion"
+        type="text"
+        pInputText
+        class="plantilla-campo__control"
+        formControlName="descripcion"
+        autocomplete="off"
+        placeholder="Objetivo de esta semana"
+        required
+        [attr.aria-required]="true"
+        [attr.aria-invalid]="campoInvalido('descripcion') ? 'true' : null"
+        [attr.aria-describedby]="
+          campoInvalido('descripcion') ? 'plantilla-descripcion-error' : null
+        "
+      />
+      @if (campoInvalido("descripcion")) {
+        <small
+          id="plantilla-descripcion-error"
+          class="plantilla-campo__error"
+          role="alert"
+        >
+          Escribe una descripción para la plantilla.
+        </small>
+      }
+    </div>
+  </div>
+
+  <section
+    class="plantilla-contenido"
+    aria-labelledby="plantilla-contenido-titulo"
+  >
+    <h2 class="plantilla-contenido__titulo" id="plantilla-contenido-titulo">
+      Contenido de la semana
+    </h2>
+
+    <div class="plantilla-contenido__acciones">
+      <button
+        type="button"
+        pButton
+        class="plantilla-contenido__agregar"
+        aria-haspopup="menu"
+        (click)="abrirMenuActividades(cmActividades, $event)"
+      >
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        <span>Añadir actividad</span>
+      </button>
+      <p class="plantilla-contenido__pista">
+        También puedes pulsar una hora del calendario.
+      </p>
+    </div>
+
+    <p-contextMenu
+      #cmActividades
+      [model]="menuActividades"
+      [global]="false"
+      [appendTo]="'body'"
+    ></p-contextMenu>
+
     <app-vista-semanal
+      class="plantilla-contenido__calendario"
       [(events)]="events"
       [role]="'ADMIN'"
       [viewDate]="viewDate"
     ></app-vista-semanal>
+  </section>
+
+  <div class="plantilla-acciones">
+    <p-button
+      label="Volver"
+      icon="pi pi-arrow-left"
+      styleClass="p-button-outlined plantilla-acciones__volver"
+      (onClick)="volver()"
+    ></p-button>
+    <app-async-button
+      [action]="guardarPlantilla.bind(this)"
+      label="Guardar plantilla"
+      [disabled]="formGroup.invalid || guardando"
+    ></app-async-button>
   </div>
 </div>
