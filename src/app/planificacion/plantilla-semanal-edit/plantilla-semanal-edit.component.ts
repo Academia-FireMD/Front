@@ -39,7 +39,7 @@ export class PlantillaSemanalEditComponent {
   public guardando = false;
   formGroup = this.fb.group({
     identificador: ['', Validators.required],
-    descripcion: ['', Validators.required],
+    descripcion: [''],
   });
 
   /** new y las copias generadas por clonación se presentan como plantilla nueva. */
@@ -90,8 +90,8 @@ export class PlantillaSemanalEditComponent {
     void this.router.navigate(['/app/planificacion/plantillas-semanales']);
   }
 
-  public campoInvalido(campo: 'identificador' | 'descripcion'): boolean {
-    const control = this.formGroup.controls[campo];
+  public nombreInvalido(): boolean {
+    const control = this.formGroup.controls.identificador;
     return (
       control.invalid &&
       (control.touched || control.dirty || this.formGroup.dirty)
@@ -172,7 +172,7 @@ export class PlantillaSemanalEditComponent {
   }
 
   private fechaActividadDesdeVista(vista: VistaSemanalComponent): Date {
-    const referencia = vista.viewDate;
+    const referencia = this.diaVisibleDeVista(vista);
     const base =
       referencia instanceof Date && !isNaN(referencia.getTime())
         ? referencia
@@ -186,6 +186,27 @@ export class PlantillaSemanalEditComponent {
       0,
       0,
     );
+  }
+
+  /**
+   * En móvil la tira de días puede mostrar un día distinto de la referencia
+   * semanal. A expone diaMovil como día realmente visible; se usa solo si
+   * existe y es válido, con viewDate como respaldo compatible.
+   */
+  private diaVisibleDeVista(vista: VistaSemanalComponent): Date {
+    const vistaMovil = vista as VistaSemanalComponent & {
+      esMovil?: () => boolean;
+      diaMovil?: Date | null;
+    };
+    const diaMovil = vistaMovil.diaMovil;
+    if (
+      vistaMovil.esMovil?.() === true &&
+      diaMovil instanceof Date &&
+      !isNaN(diaMovil.getTime())
+    ) {
+      return diaMovil;
+    }
+    return vista.viewDate;
   }
 
   /**

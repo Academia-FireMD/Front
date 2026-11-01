@@ -16,6 +16,12 @@
   min-width: 0;
   padding-top: 0.25rem;
   padding-inline: clamp(0.25rem, 1.5vw, 1rem);
+
+  /* En escritorio no hay caja propia: las secciones son hijas directas del
+     grid y la barra de acciones comparte fila con la cabecera. */
+  &__contenido {
+    display: contents;
+  }
 }
 
 .plantilla-migas {
@@ -176,17 +182,39 @@
 }
 
 @media (max-width: 768px) {
+  /* La altura la aporta .layout-content (height:100% y, en móvil, 100% - 45px
+     de la barra superior). El editor ocupa esa altura sin tocar el layout
+     global: contenido desplazable arriba y barra de acciones fuera del scroll. */
+  :host {
+    height: 100%;
+    min-height: 0;
+  }
+
   .plantilla-editor {
-    grid-template-areas:
-      "migas"
-      "cabecera"
-      "campos"
-      "contenido"
-      "acciones";
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.9rem;
-    padding-top: 0;
-    padding-inline: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    gap: 0;
+    padding: 0;
+
+    &__contenido {
+      display: grid;
+      grid-template-areas:
+        "migas"
+        "cabecera"
+        "campos"
+        "contenido";
+      grid-template-columns: minmax(0, 1fr);
+      align-content: start;
+      gap: 0.9rem;
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 0 0 0.9rem;
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+    }
   }
 
   .plantilla-migas {
@@ -219,16 +247,23 @@
     gap: 0.5rem;
   }
 
-  /* Barra final en flujo normal: nunca se superpone al calendario, a los
-     campos ni a la validación. */
+  /* Barra en flujo fuera de la zona desplazable: siempre accesible y sin
+     superponerse a campos, actividades ni validaciones. El hueco inferior
+     replica el patrón .fab-safe-area (5rem) para el launcher flotante del
+     asistente, que pertenece a otro componente y no se manipula desde aquí. */
   .plantilla-acciones {
+    --plantilla-reserva-asistente: 5rem;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: stretch;
+    flex: 0 0 auto;
     gap: 0.6rem;
-    margin-top: 0.4rem;
-    padding-top: 0.9rem;
+    padding: 0.75rem 0
+      calc(
+        var(--plantilla-reserva-asistente) + env(safe-area-inset-bottom, 0px)
+      );
     border-top: 1px solid var(--surface-border);
+    background: var(--surface-card);
 
     app-async-button {
       min-width: 0;

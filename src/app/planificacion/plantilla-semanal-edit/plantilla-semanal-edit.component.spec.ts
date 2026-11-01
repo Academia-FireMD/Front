@@ -93,6 +93,9 @@ describe('PlantillaSemanalEditComponent', () => {
     expect(
       el.querySelector('label[for="plantilla-descripcion"]')?.textContent,
     ).toContain('Descripción');
+    expect(
+      el.querySelector('label[for="plantilla-descripcion"]')?.textContent,
+    ).not.toContain('*');
 
     const nombre = el.querySelector<HTMLInputElement>('#plantilla-nombre');
     const descripcion = el.querySelector<HTMLInputElement>(
@@ -103,6 +106,8 @@ describe('PlantillaSemanalEditComponent', () => {
     expect(nombre?.readOnly).toBe(false);
     expect(descripcion?.readOnly).toBe(false);
     expect(descripcion?.disabled).toBe(false);
+    expect(descripcion?.required).toBe(false);
+    expect(descripcion?.getAttribute('aria-required')).toBeNull();
     expect(descripcion?.placeholder).toBe('Objetivo de esta semana');
     expect(el.textContent).toContain(
       'También puedes pulsar una hora del calendario.',
@@ -154,7 +159,7 @@ describe('PlantillaSemanalEditComponent', () => {
     ).toBe(false);
   });
 
-  it('no envía un formulario inválido y muestra validación accesible', async () => {
+  it('no envía un formulario sin nombre y muestra validación accesible', async () => {
     fixture.detectChanges();
 
     await component.guardarPlantilla();
@@ -166,28 +171,26 @@ describe('PlantillaSemanalEditComponent', () => {
     expect(component.formGroup.touched).toBe(true);
     const el: HTMLElement = fixture.nativeElement;
     const errores = el.querySelectorAll('[role="alert"]');
-    expect(errores).toHaveLength(2);
+    expect(errores).toHaveLength(1);
     expect(errores[0].textContent).toContain('Escribe un nombre');
-    expect(errores[1].textContent).toContain('Escribe una descripción');
     expect(
       el.querySelector('#plantilla-nombre')?.getAttribute('aria-invalid'),
     ).toBe('true');
     expect(
       el.querySelector('#plantilla-descripcion')?.getAttribute('aria-invalid'),
-    ).toBe('true');
+    ).toBeNull();
   });
 
-  it('deshabilita guardar mientras el formulario es inválido y lo habilita con datos', () => {
+  it('habilita guardar con el nombre aunque la descripción esté vacía', () => {
     fixture.detectChanges();
     const guardar = fixture.nativeElement.querySelector('app-async-button');
     expect(guardar.disabled).toBe(true);
 
-    component.formGroup.setValue({
-      identificador: 'Repaso de hidráulica',
-      descripcion: 'Objetivo de la semana',
-    });
+    component.formGroup.patchValue({ identificador: 'Repaso de hidráulica' });
     fixture.detectChanges();
 
+    expect(component.formGroup.get('descripcion')?.value).toBeFalsy();
+    expect(component.formGroup.valid).toBe(true);
     expect(guardar.disabled).toBe(false);
   });
 
@@ -224,13 +227,62 @@ describe('PlantillaSemanalEditComponent', () => {
     ]);
   });
 
-  it('una plantilla clonada guarda el nombre ajustado conservando sus actividades', async () => {
-    conRuta(8);
+  it('guarda una plantilla existente con descripción vacía sin perder actividades', async () => {
+    conRuta(7);
+    const sinDescripcion = plantilla({ descripcion: '' });
     planificacionesService.getPlantillaSemanalById.mockReturnValue(
-      of(plantilla({ id: 8, identificador: 'CLON Repaso de hidráulica' })),
+      of(sinDescripcion),
     );
     planificacionesService.createPlantillaSemanal$.mockReturnValue(
-      of(plantilla({ id: 8, identificador: 'Repaso semanal' })),
+      of(sinDescripcion),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const descripcion = el.querySelector<HTMLInputElement>(
+      '#plantilla-descripcion',
+    );
+    expect(descripcion?.value).toBe('');
+    expect(descripcion?.getAttribute('aria-invalid')).toBeNull();
+    expect(el.querySelectorAll('[role="alert"]')).toHaveLength(0);
+    expect(component.formGroup.valid).toBe(true);
+    const guardar = el.querySelector('app-async-button') as
+      | (HTMLElement & { disabled?: boolean })
+      | null;
+    expect(guardar).not.toBeNull();
+    expect(guardar!.disabled).toBe(false);
+
+    await component.guardarPlantilla();
+
+    expect(planificacionesService.createPlantillaSemanal$).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 7,
+        descripcion: '',
+        subBloques: [
+          expect.objectContaining({ nombre: 'Hidráulica y mecánica' }),
+        ],
+      }),
+    );
+  });
+
+  it('una plantilla clonada con descripción vacía guarda el nombre ajustado y sus actividades', async () => {
+    conRuta(8);
+    planificacionesService.getPlantillaSemanalById.mockReturnValue(
+      of(
+        plantilla({
+          id: 8,
+          identificador: 'CLON Repaso de hidráulica',
+          descripcion: '',
+        }),
+      ),
+    );
+    planificacionesService.createPlantillaSemanal$.mockReturnValue(
+      of(
+        plantilla({ id: 8, identificador: 'Repaso semanal', descripcion: '' }),
+      ),
     );
 
     fixture.detectChanges();
@@ -244,6 +296,7 @@ describe('PlantillaSemanalEditComponent', () => {
       expect.objectContaining({
         id: 8,
         identificador: 'Repaso semanal',
+        descripcion: '',
         subBloques: [
           expect.objectContaining({ nombre: 'Hidráulica y mecánica' }),
         ],
@@ -253,10 +306,7 @@ describe('PlantillaSemanalEditComponent', () => {
 
   it('evita el doble envío mientras hay un guardado en curso', async () => {
     fixture.detectChanges();
-    component.formGroup.setValue({
-      identificador: 'Repaso de hidráulica',
-      descripcion: 'Objetivo de la semana',
-    });
+    component.formGroup.patchValue({ identificador: 'Repaso de hidráulica' });
     const respuesta = new Subject<PlantillaSemanal>();
     planificacionesService.createPlantillaSemanal$.mockReturnValue(
       respuesta.asObservable(),
@@ -271,6 +321,9 @@ describe('PlantillaSemanalEditComponent', () => {
     expect(
       planificacionesService.createPlantillaSemanal$,
     ).toHaveBeenCalledTimes(1);
+    expect(planificacionesService.createPlantillaSemanal$).toHaveBeenCalledWith(
+      expect.objectContaining({ descripcion: '' }),
+    );
   });
 
   it('abre el menú existente del calendario con el día que muestra la vista', () => {
@@ -314,6 +367,81 @@ describe('PlantillaSemanalEditComponent', () => {
     expect(datos.sourceEvent.pageX).toBe(10);
     expect(datos.sourceEvent.pageY).toBe(40);
     expect(datos.sourceEvent.target).toBe(boton);
+  });
+
+  it('en móvil usa diaMovil para crear en el día realmente visible', () => {
+    fixture.detectChanges();
+    const onTimeClicked = jest.fn();
+    component.vistaSemanal = {
+      getMenuItems: () => [{ label: 'Añadir nuevo' }],
+      onTimeClicked,
+      viewDate: new Date(2026, 9, 26, 12, 0),
+      esMovil: () => true,
+      diaMovil: new Date(2026, 9, 31, 16, 45),
+    } as unknown as VistaSemanalComponent;
+
+    component.abrirMenuActividades(
+      { model: [] } as never,
+      {
+        currentTarget: document.createElement('button'),
+        target: document.createElement('button'),
+        stopPropagation: jest.fn(),
+        preventDefault: jest.fn(),
+      } as unknown as Event,
+    );
+
+    const [datos] = onTimeClicked.mock.calls[0];
+    expect(datos.date).toEqual(new Date(2026, 9, 31, 9, 0, 0, 0));
+  });
+
+  it('en escritorio mantiene viewDate aunque exista diaMovil', () => {
+    fixture.detectChanges();
+    const onTimeClicked = jest.fn();
+    component.vistaSemanal = {
+      getMenuItems: () => [{ label: 'Añadir nuevo' }],
+      onTimeClicked,
+      viewDate: new Date(2026, 9, 26, 12, 0),
+      esMovil: () => false,
+      diaMovil: new Date(2026, 9, 31, 16, 45),
+    } as unknown as VistaSemanalComponent;
+
+    component.abrirMenuActividades(
+      { model: [] } as never,
+      {
+        currentTarget: document.createElement('button'),
+        target: document.createElement('button'),
+        stopPropagation: jest.fn(),
+        preventDefault: jest.fn(),
+      } as unknown as Event,
+    );
+
+    const [datos] = onTimeClicked.mock.calls[0];
+    expect(datos.date).toEqual(new Date(2026, 9, 26, 9, 0, 0, 0));
+  });
+
+  it('si diaMovil no es válido cae en viewDate', () => {
+    fixture.detectChanges();
+    const onTimeClicked = jest.fn();
+    component.vistaSemanal = {
+      getMenuItems: () => [{ label: 'Añadir nuevo' }],
+      onTimeClicked,
+      viewDate: new Date(2026, 9, 26, 12, 0),
+      esMovil: () => true,
+      diaMovil: new Date(NaN),
+    } as unknown as VistaSemanalComponent;
+
+    component.abrirMenuActividades(
+      { model: [] } as never,
+      {
+        currentTarget: document.createElement('button'),
+        target: document.createElement('button'),
+        stopPropagation: jest.fn(),
+        preventDefault: jest.fn(),
+      } as unknown as Event,
+    );
+
+    const [datos] = onTimeClicked.mock.calls[0];
+    expect(datos.date).toEqual(new Date(2026, 9, 26, 9, 0, 0, 0));
   });
 
   it('usa una hora válida del día visible aunque la vista no exponga una fecha válida', () => {
