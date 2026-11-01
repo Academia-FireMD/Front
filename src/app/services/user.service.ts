@@ -1,10 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, finalize, shareReplay } from 'rxjs';
 import {
   PaginatedResult,
   PaginationFilter,
 } from '../shared/models/pagination.model';
+import {
+  CancelarMembresiaExternaPayload,
+  CancelarMembresiaExternaResultado,
+} from '../shared/models/subscription.model';
 import { Usuario } from '../shared/models/user.model';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { ApiBaseService } from './api-base.service';
@@ -13,6 +17,8 @@ import { ApiBaseService } from './api-base.service';
   providedIn: 'root',
 })
 export class UserService extends ApiBaseService {
+  private profileInFlight$: Observable<Usuario> | null = null;
+
   constructor(private http: HttpClient) {
     super(http);
     this.controllerPrefix = '/user';
@@ -23,10 +29,26 @@ export class UserService extends ApiBaseService {
   }
 
   /**
-   * Obtiene el perfil completo del usuario actual, incluyendo suscripción
+   * Obtiene el perfil completo del usuario actual, incluyendo suscripción.
+   *
+   * Single-flight: un refresh de AuthService puede disparar `loadUser` justo
+   * cuando el interceptor detecta un 403 de membresía y pide recargar el
+   * perfil. Ambas llamadas comparten la misma petición para no duplicar el
+   * reload ni pisarse con respuestas fuera de orden.
    */
   public getUserProfile$(): Observable<Usuario> {
-    return this.get('/profile') as Observable<Usuario>;
+    if (this.profileInFlight$) {
+      return this.profileInFlight$;
+    }
+
+    const request$ = (this.get('/profile') as Observable<Usuario>).pipe(
+      finalize(() => {
+        this.profileInFlight$ = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.profileInFlight$ = request$;
+    return request$;
   }
 
   public uploadAvatar$(formData: FormData): Observable<Usuario> {
@@ -82,10 +104,38 @@ export class UserService extends ApiBaseService {
   }
 
   /**
-   * Cancelar una suscripción específica por ID
+   * Cancelar una suscripción específica por ID.
+   *
+   * No es la baja total: solo afecta a ese plan. La baja de toda la membresía
+   * externa se hace con `cancelExternalMembership$`.
    */
   public cancelUserSubscription(subscriptionId: number) {
     return this.post('/cancel-subscription/' + subscriptionId, {});
+  }
+
+  /**
+   * Baja TOTAL de la membresía externa (solo ADMIN).
+   *
+   * Cancela de una sola vez todas las suscripciones vigentes EXTERNA de la
+   * cuenta. El backend rechaza con 409 GESTION_EXTERNA_REQUERIDA si la cuenta
+   * es de WordPress/mixta y conserva cursos independientes, progreso e
+   * histórico. Es idempotente.
+   *
+   * `ignoreError` evita el toast genérico: el diálogo traduce el 409 y los
+   * demás errores con copy preciso.
+   */
+  public cancelExternalMembership$(
+    userId: number,
+    motivo?: string,
+  ): Observable<CancelarMembresiaExternaResultado> {
+    const payload: CancelarMembresiaExternaPayload = motivo?.trim()
+      ? { motivo: motivo.trim() }
+      : {};
+    return this.post(
+      `/cancel-all-subscriptions/${userId}`,
+      payload,
+      true,
+    ) as Observable<CancelarMembresiaExternaResultado>;
   }
 
   /**

@@ -25,6 +25,8 @@ export interface Usuario {
   sub?: number;
   tipoDePlanificacionDuracionDeseada: TipoDePlanificacionDeseada;
   metodoCalificacion: MetodoCalificacion;
+  authSource?: AuthSource;
+  wordpressAutoLinkBlocked?: boolean;
   woocommerceCustomerId?: number;
   suscripciones?: Suscripcion[]; // Usuario puede tener múltiples suscripciones
   consumibles?: Consumible[];
@@ -99,6 +101,12 @@ export enum Rol {
   ADMIN = 'ADMIN',
   ALUMNO = 'ALUMNO',
   SUPERADMIN = 'SUPERADMIN',
+}
+
+/** Origen de autenticación. No confundir con `SuscripcionFuenteGestion`. */
+export enum AuthSource {
+  LOCAL = 'LOCAL',
+  WORDPRESS = 'WORDPRESS',
 }
 
 export const rolesPlataforma = [Rol.ADMIN, Rol.ALUMNO, Rol.SUPERADMIN];

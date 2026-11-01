@@ -5,6 +5,21 @@ import { isArray } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { catchError, Observable, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { REASON_SUSCRIPCION_REQUERIDA } from '../shared/models/subscription.model';
+
+/**
+ * Error HTTP normalizado por `ApiBaseService`.
+ *
+ * `handleError` conserva status/reason/body para que los componentes puedan
+ * distinguir contratos estables (p.ej. 409 GESTION_EXTERNA_REQUERIDA) sin
+ * inspeccionar el `Error` genérico. El interceptor sigue viendo el
+ * `HttpErrorResponse` original antes de esta transformación.
+ */
+export interface ApiRequestError extends Error {
+  status?: number;
+  reason?: string;
+  error?: unknown;
+}
 
 export class ApiBaseService {
   protected controllerPrefix = '';
@@ -103,17 +118,33 @@ export class ApiBaseService {
       }
     }
 
-    if (!ignoreError) {
+    const reason =
+      typeof response.error?.reason === 'string'
+        ? response.error.reason
+        : undefined;
+    const esDenegacionMembresia =
+      response.status === 403 && reason === REASON_SUSCRIPCION_REQUERIDA;
+
+    if (!ignoreError && !esDenegacionMembresia) {
       const toastMessage =
         response.status === 500
           ? 'Ocurrió un error interno. Vuelve a intentarlo en unos segundos.'
           : message || 'Ocurrió un error procesando la petición.';
       this.toast.error(toastMessage);
     }
-    if (response.status == 401 || response.status == 403) {
+
+    // Un 403 NO implica perder la sesión: puede ser una autorización de
+    // negocio (membresía/tier/módulo). El interceptor decide el caso concreto
+    // de SUSCRIPCION_REQUERIDA; el resto se propaga al componente. Solo un 401
+    // sin refresh válido devuelve al login.
+    if (response.status === 401) {
       this.router.navigate(['/auth']);
     }
 
-    return throwError(() => new Error(message));
+    const apiError = new Error(message) as ApiRequestError;
+    apiError.status = response.status;
+    apiError.reason = reason;
+    apiError.error = response.error;
+    return throwError(() => apiError);
   }
 }

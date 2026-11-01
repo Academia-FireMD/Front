@@ -30,10 +30,13 @@ import {
 } from '../../../shared/generic-list/generic-list.component';
 import { Label, UsuarioLabel } from '../../../shared/models/label.model';
 import {
+  CancelarMembresiaExternaResultado,
+  getSubscriptionStatusLabel,
   isSubscriptionAccessible,
   Oposicion,
   OPOSICION_LABELS,
   Suscripcion,
+  SuscripcionFuenteGestion,
   SuscripcionStatus,
   SuscripcionTipo,
 } from '../../../shared/models/subscription.model';
@@ -50,6 +53,16 @@ import {
   normalizarPreferenciasPlanificacion,
   obtenerOpcionesCascadaPlanificacion,
 } from '../../../planificacion/planificacion-opciones.util';
+import {
+  actualizarSeleccionTrasBajaExterna,
+  describirSuscripcionVigente,
+  mensajeConfirmacionCancelacionIndividual,
+  mensajeErrorBajaMembresiaExterna,
+  mensajeResultadoBajaMembresiaExterna,
+  puedeCancelarMembresiaExterna,
+  resumenBajaMembresiaExterna,
+  suscripcionesVigentes as obtenerSuscripcionesVigentes,
+} from '../../../shared/utils/membresia-externa.util';
 import { PrimengModule } from '../../../shared/primeng.module';
 import {
   esAdminOSuperior,
@@ -105,6 +118,14 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   availableSubscriptions: any[] = [];
   editDialogVisible = false;
   subscriptionDialogVisible = false;
+
+  // Baja TOTAL de membresía externa (no confundir con cancelar un plan).
+  externalCancellationDialogVisible = false;
+  procesandoBajaExterna = false;
+  motivoBajaExterna = '';
+  errorBajaExterna: string | null = null;
+  resultadoBajaExterna: CancelarMembresiaExternaResultado | null = null;
+
   selectedUser!: Usuario;
   selectedSubscriptionType = SuscripcionTipo.BASIC;
   selectedOposicion = Oposicion.VALENCIA_AYUNTAMIENTO;
@@ -377,6 +398,32 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
     );
   }
 
+  /** Suscripciones que la baja total externa cancelaría AHORA (con fecha). */
+  get suscripcionesVigentesSeleccionado(): Suscripcion[] {
+    return obtenerSuscripcionesVigentes(this.selectedUser);
+  }
+
+  /** La baja total solo aplica a cuentas exclusivamente externas. */
+  puedeDarDeBajaMembresiaExterna(user: Usuario | null | undefined): boolean {
+    return puedeCancelarMembresiaExterna(user);
+  }
+
+  get resumenBajaExternaSeleccionado(): string {
+    if (!this.selectedUser) return '';
+    return resumenBajaMembresiaExterna(
+      this.selectedUser,
+      this.suscripcionesVigentesSeleccionado,
+    );
+  }
+
+  describirSuscripcionVigente(suscripcion: Suscripcion): string {
+    return describirSuscripcionVigente(suscripcion);
+  }
+
+  estadoSuscripcionLabel(status: SuscripcionStatus | string): string {
+    return getSubscriptionStatusLabel(status);
+  }
+
   getUserStatus(user: Usuario): 'active' | 'partial' | 'inactive' {
     const hasActiveSub = user.suscripciones?.some((s) =>
       isSubscriptionAccessible(s.status),
@@ -396,19 +443,20 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   /**
-   * Verifica si el usuario tiene al menos una suscripción ACTIVA gestionada por
-   * WooCommerce (con `woocommerceSubscriptionId` real). NO basta con
-   * `woocommerceCustomerId`, porque casos como Luis Moltó tienen el customerId
-   * pero sus suscripciones activas son manuales (sin wooSubId) y se pueden
-   * gestionar localmente.
+   * Verifica si el usuario tiene alguna suscripción VIGENTE gestionada por
+   * WooCommerce. Se mira `fuenteGestion` y, como respaldo para respuestas
+   * antiguas, el ID real de WooCommerce. NO basta con `woocommerceCustomerId`:
+   * casos como Luis Moltó tienen customerId pero sus suscripciones vigentes son
+   * manuales/externas y se pueden gestionar localmente.
    *
-   * Refactor del antiguo `isWordPressUser` (Fase 1 plan 2026-05-11).
+   * Incluimos PENDING_CANCEL con fecha futura porque sigue dando acceso hasta
+   * que termina el ciclo; también bloquea la gestión local de esa cuenta.
    */
   hasWooManagedSubscriptions(user: Usuario): boolean {
-    return (
-      user?.suscripciones?.some(
-        (s) => s.status === 'ACTIVE' && !!s.woocommerceSubscriptionId,
-      ) ?? false
+    return obtenerSuscripcionesVigentes(user).some(
+      (s) =>
+        s.fuenteGestion === SuscripcionFuenteGestion.WOOCOMMERCE ||
+        !!s.woocommerceSubscriptionId,
     );
   }
 
@@ -551,10 +599,12 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
    */
   cancelSubscription(subscription: Suscripcion) {
     this.confirmationService.confirm({
-      message: `¿Cancelar la suscripción "${this.getSubscriptionLabel(subscription)}"? El usuario perderá el acceso pero el histórico se conserva.`,
-      header: 'Cancelar suscripción',
+      message: mensajeConfirmacionCancelacionIndividual(
+        this.getSubscriptionLabel(subscription),
+      ),
+      header: 'Cancelar solo este plan',
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí, cancelar',
+      acceptLabel: 'Sí, cancelar este plan',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-warning',
       accept: () => {
@@ -585,6 +635,113 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         });
       },
     });
+  }
+
+  /**
+   * Abre la confirmación de baja TOTAL de la membresía externa. No es un
+   * borrado de usuario ni una baja de WordPress: solo aparece para cuentas
+   * cuyas suscripciones vigentes son todas EXTERNA y no están vinculadas a WP.
+   */
+  abrirBajaMembresiaExterna(user: Usuario): void {
+    if (!this.puedeDarDeBajaMembresiaExterna(user)) {
+      this.toast.warning(
+        'Esta cuenta no tiene una membresía exclusivamente externa que se pueda dar de baja en bloque.',
+      );
+      return;
+    }
+    this.selectedUser = { ...user };
+    this.motivoBajaExterna = '';
+    this.errorBajaExterna = null;
+    this.resultadoBajaExterna = null;
+    this.procesandoBajaExterna = false;
+    // Evita dos modales PrimeNG apilados si venimos del diálogo de suscripción.
+    this.subscriptionDialogVisible = false;
+    this.externalCancellationDialogVisible = true;
+  }
+
+  cerrarBajaMembresiaExterna(): void {
+    if (this.procesandoBajaExterna) return;
+    this.externalCancellationDialogVisible = false;
+    this.motivoBajaExterna = '';
+    this.errorBajaExterna = null;
+    this.resultadoBajaExterna = null;
+  }
+
+  confirmarBajaMembresiaExterna(): void {
+    if (!this.selectedUser) return;
+    if (!this.puedeDarDeBajaMembresiaExterna(this.selectedUser)) {
+      this.errorBajaExterna =
+        'La cuenta cambió y ya no tiene una membresía exclusivamente externa. Cierra el diálogo y actualiza el listado.';
+      return;
+    }
+    if (this.procesandoBajaExterna) return;
+
+    const userId = this.selectedUser.id;
+    const email = this.selectedUser.email;
+    this.procesandoBajaExterna = true;
+    this.errorBajaExterna = null;
+    this.resultadoBajaExterna = null;
+
+    this.userService
+      .cancelExternalMembership$(userId, this.motivoBajaExterna)
+      .subscribe({
+        next: (resultado) => {
+          this.procesandoBajaExterna = false;
+          if (this.selectedUser?.id === userId) {
+            this.resultadoBajaExterna = resultado;
+          }
+          const mensaje = mensajeResultadoBajaMembresiaExterna(resultado);
+          if (mensaje.severity === 'success') {
+            this.toast.success(mensaje.message);
+          } else {
+            this.toast.info(mensaje.message);
+          }
+          void this.recargarTrasBajaExterna(userId, email, resultado);
+        },
+        error: (err) => {
+          this.procesandoBajaExterna = false;
+          const mensaje = mensajeErrorBajaMembresiaExterna(err);
+          if (this.selectedUser?.id === userId) {
+            this.errorBajaExterna = mensaje;
+          } else {
+            // La selección cambió mientras la petición estaba en vuelo; no
+            // contaminamos el diálogo nuevo, pero el admin debe saber el fallo.
+            this.toast.error(mensaje);
+          }
+        },
+      });
+  }
+
+  /**
+   * Relee el detalle del alumno desde el backend (fuente de verdad) y refresca
+   * el listado. Si la relectura falla, aplica localmente los IDs que el
+   * servidor confirmó como cancelados.
+   */
+  private async recargarTrasBajaExterna(
+    userId: number,
+    email: string,
+    resultado: CancelarMembresiaExternaResultado,
+  ): Promise<void> {
+    let recargado: Usuario | null = null;
+    try {
+      recargado = await firstValueFrom(this.userService.getByEmail$(email));
+    } catch {
+      recargado = null;
+    }
+
+    const actualizado = actualizarSeleccionTrasBajaExterna(
+      this.selectedUser,
+      userId,
+      recargado,
+      resultado,
+    );
+    // Si el admin ya abrió otro alumno, `actualizado` es esa misma selección:
+    // no la pisamos con la respuesta tardía del alumno anterior.
+    if (actualizado && actualizado !== this.selectedUser) {
+      this.selectedUser = actualizado;
+    }
+
+    this.refresh();
   }
 
   /**
@@ -858,6 +1015,16 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
         command: () => this.openLabelsDialog(user),
       },
     );
+
+    // Baja TOTAL de la membresía externa (no un plan). Solo para cuentas
+    // exclusivamente externas; WordPress y las cuentas mixtas no la ven.
+    if (this.puedeDarDeBajaMembresiaExterna(user)) {
+      items.push({
+        label: 'Dar de baja la membresía externa',
+        icon: 'pi pi-user-minus',
+        command: () => this.abrirBajaMembresiaExterna(user),
+      });
+    }
 
     // Fase 1 plan 2026-05-11: eliminados los ítems "Verificar/Dar de baja/Denegar".
     // El flujo de baja se hace ahora vía el botón "Suscripción" → Cancelar (Fase 2).
