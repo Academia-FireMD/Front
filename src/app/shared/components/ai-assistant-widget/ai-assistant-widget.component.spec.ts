@@ -17,6 +17,8 @@ describe('AiAssistantWidgetComponent', () => {
     document.body.classList.remove(AI_ASSISTANT_DOCK_CLASS);
     document.getElementById('ai-assistant-dock-style')?.remove();
     document.getElementById('ai-widget-btn')?.remove();
+    document.getElementById('ai-widget-panel')?.remove();
+    document.getElementById('ai-widget-backdrop')?.remove();
     delete (window as any).PaidioWidget;
     jest.useRealTimers();
   });
@@ -318,6 +320,64 @@ describe('AiAssistantWidgetComponent', () => {
       expect(cmp.paywallOpen()).toBe(false);
       expect(resultado).not.toHaveBeenCalled();
       document.removeEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
+    });
+
+    function crearNodosConIdsDelWidget() {
+      const boton = document.createElement('button');
+      boton.id = 'ai-widget-btn';
+      const panel = document.createElement('div');
+      panel.id = 'ai-widget-panel';
+      const backdrop = document.createElement('div');
+      backdrop.id = 'ai-widget-backdrop';
+      document.body.append(boton, panel, backdrop);
+      return { boton, panel, backdrop };
+    }
+
+    it('con lifecycle moderno no barre IDs de otro propietario tras el cleanup', async () => {
+      const cmp = setup();
+      httpGet.mockReturnValue(of({ token: 'jwt' }));
+      cmp.ngOnInit();
+      await Promise.resolve();
+      const script = document.querySelector(
+        'script[data-mode="floating"]',
+      ) as HTMLScriptElement;
+      script.setAttribute('data-paidio-lifecycle', '1');
+      const ajenos = crearNodosConIdsDelWidget();
+
+      cmp.ngOnDestroy();
+
+      expect(script.isConnected).toBe(false);
+      expect(ajenos.boton.isConnected).toBe(true);
+      expect(ajenos.panel.isConnected).toBe(true);
+      expect(ajenos.backdrop.isConnected).toBe(true);
+    });
+
+    it('sin script propio no borra nodos ajenos con los mismos IDs', async () => {
+      const cmp = setup();
+      httpGet.mockReturnValue(new Subject<{ token: string }>());
+      cmp.ngOnInit();
+      await Promise.resolve();
+      const ajenos = crearNodosConIdsDelWidget();
+
+      cmp.ngOnDestroy();
+
+      expect(ajenos.boton.isConnected).toBe(true);
+      expect(ajenos.panel.isConnected).toBe(true);
+      expect(ajenos.backdrop.isConnected).toBe(true);
+    });
+
+    it('conserva el fallback legacy por IDs para scripts sin lifecycle', async () => {
+      const cmp = setup();
+      httpGet.mockReturnValue(of({ token: 'jwt' }));
+      cmp.ngOnInit();
+      await Promise.resolve();
+      const nodosLegacy = crearNodosConIdsDelWidget();
+
+      cmp.ngOnDestroy();
+
+      expect(nodosLegacy.boton.isConnected).toBe(false);
+      expect(nodosLegacy.panel.isConnected).toBe(false);
+      expect(nodosLegacy.backdrop.isConnected).toBe(false);
     });
 
     it('oculta el lanzador flotante cuando la página lo ancla', async () => {

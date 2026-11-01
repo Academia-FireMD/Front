@@ -480,17 +480,28 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
     this.dockStyleElement = null;
 
     if (this.scriptElement) {
+      const scriptPropio = this.scriptElement;
+      const soportaLifecycle =
+        scriptPropio.getAttribute('data-paidio-lifecycle') === '1';
       // Contrato de ciclo de vida con el widget embebido: se marca el script
       // concreto y se le avisa antes de retirarlo para que cancele/limpie sus
       // propios nodos, estilos y API. No se borran globals ajenos.
-      this.scriptElement.setAttribute('data-paidio-destroyed', 'true');
-      this.scriptElement.dispatchEvent(new Event('paidio:destroy'));
-      this.scriptElement.remove();
+      scriptPropio.setAttribute('data-paidio-destroyed', 'true');
+      scriptPropio.dispatchEvent(new Event('paidio:destroy'));
+      scriptPropio.remove();
       this.scriptElement = null;
+
+      // Con lifecycle moderno el script limpia sus propias referencias; un
+      // barrido por IDs podría borrar nodos de otro propietario que reuse los
+      // mismos IDs. Sólo las versiones legacy sin protocolo conservan el
+      // fallback por IDs.
+      if (!soportaLifecycle) {
+        this.document.getElementById('ai-widget-btn')?.remove();
+        this.document.getElementById('ai-widget-panel')?.remove();
+        this.document.getElementById('ai-widget-backdrop')?.remove();
+      }
     }
-    // Fallback de limpieza para versiones legacy del script.
-    this.document.getElementById('ai-widget-btn')?.remove();
-    this.document.getElementById('ai-widget-panel')?.remove();
-    this.document.getElementById('ai-widget-backdrop')?.remove();
+    // Sin script propio no hubo nodos inyectados por este host: no se barre
+    // ningún ID ajeno.
   }
 }
