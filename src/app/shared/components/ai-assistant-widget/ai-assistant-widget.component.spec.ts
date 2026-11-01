@@ -17,6 +17,7 @@ describe('AiAssistantWidgetComponent', () => {
     document.body.classList.remove(AI_ASSISTANT_DOCK_CLASS);
     document.getElementById('ai-assistant-dock-style')?.remove();
     document.getElementById('ai-widget-btn')?.remove();
+    delete (window as any).PaidioWidget;
     jest.useRealTimers();
   });
 
@@ -167,6 +168,29 @@ describe('AiAssistantWidgetComponent', () => {
       expect(resultado).toHaveBeenCalledTimes(1);
       expect((resultado.mock.calls[0][0] as CustomEvent).detail).toEqual({
         abierto: false,
+      });
+      document.removeEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
+      cmp.ngOnDestroy();
+    });
+
+    it('prefiere la API pública PaidioWidget.open y conserva el click como fallback', async () => {
+      const cmp = setup();
+      httpGet.mockReturnValue(of({ token: 'jwt' }));
+      cmp.ngOnInit();
+      await Promise.resolve();
+      const open = jest.fn();
+      (window as any).PaidioWidget = { open };
+      const lanzador = crearLanzador();
+      const resultado = jest.fn();
+      document.addEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
+
+      cmp.solicitarApertura();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(lanzador.click).not.toHaveBeenCalled();
+      expect(resultado).toHaveBeenCalledTimes(1);
+      expect((resultado.mock.calls[0][0] as CustomEvent).detail).toEqual({
+        abierto: true,
       });
       document.removeEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
       cmp.ngOnDestroy();
