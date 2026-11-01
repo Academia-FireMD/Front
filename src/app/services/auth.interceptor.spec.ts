@@ -15,19 +15,29 @@ import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../environments/environment';
 import { AuthInterceptor } from './auth.interceptor';
 import { AuthService } from './auth.service';
+import { MembershipAccessService } from './membership-access.service';
 
 describe('AuthInterceptor', () => {
   let httpMock: HttpTestingController;
   let http: HttpClient;
+  let membershipAccess: {
+    debeGestionar: jest.Mock;
+    handleSuscripcionRequerida: jest.Mock;
+  };
 
   beforeEach(() => {
     sessionStorage.clear();
+    membershipAccess = {
+      debeGestionar: jest.fn(() => true),
+      handleSuscripcionRequerida: jest.fn(),
+    };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptorsFromDi()),
         provideHttpClientTesting(),
         provideMockStore(),
         AuthService,
+        { provide: MembershipAccessService, useValue: membershipAccess },
         { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         { provide: ToastrService, useValue: { error: jest.fn() } },
         { provide: Router, useValue: { navigate: jest.fn() } },
@@ -143,5 +153,72 @@ describe('AuthInterceptor', () => {
     expect(requestHeaders).toEqual(['']);
     expect(errors).toHaveLength(1);
     expect(httpMock.match(`${environment.apiUrl}/protected`)).toHaveLength(0);
+  });
+
+  it('delega el 403 SUSCRIPCION_REQUERIDA sin cerrar sesión ni refrescar token', () => {
+    sessionStorage.setItem('authToken', 'student-token');
+    sessionStorage.setItem('refreshToken', 'refresh-token');
+    const auth = TestBed.inject(AuthService);
+    const clearToken = jest.spyOn(auth, 'clearToken');
+    const errors: unknown[] = [];
+
+    http.get(`${environment.apiUrl}/planificacion-fisica/mi-plan`).subscribe({
+      error: (error) => errors.push(error),
+    });
+    httpMock
+      .expectOne(`${environment.apiUrl}/planificacion-fisica/mi-plan`)
+      .flush(
+        { reason: 'SUSCRIPCION_REQUERIDA', message: 'Membresía requerida' },
+        { status: 403, statusText: 'Forbidden' },
+      );
+
+    expect(membershipAccess.debeGestionar).toHaveBeenCalledTimes(1);
+    expect(membershipAccess.handleSuscripcionRequerida).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(clearToken).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem('authToken')).toBe('student-token');
+    expect(sessionStorage.getItem('refreshToken')).toBe('refresh-token');
+    expect(httpMock.match(`${environment.apiUrl}/auth/refresh`)).toHaveLength(
+      0,
+    );
+    expect(errors).toHaveLength(1);
+  });
+
+  it('no delega un 403 arbitrario que no es de membresía', () => {
+    sessionStorage.setItem('authToken', 'student-token');
+    membershipAccess.debeGestionar.mockReturnValue(false);
+    const errors: unknown[] = [];
+
+    http.get(`${environment.apiUrl}/planificacion-fisica/mi-plan`).subscribe({
+      error: (error) => errors.push(error),
+    });
+    httpMock
+      .expectOne(`${environment.apiUrl}/planificacion-fisica/mi-plan`)
+      .flush(
+        { reason: 'TIER_TOO_LOW', message: 'Plan insuficiente' },
+        { status: 403, statusText: 'Forbidden' },
+      );
+
+    expect(membershipAccess.handleSuscripcionRequerida).not.toHaveBeenCalled();
+    expect(errors).toHaveLength(1);
+  });
+
+  it('no gestiona el 403 del propio reload de perfil (anti-bucle)', () => {
+    sessionStorage.setItem('authToken', 'student-token');
+    const errors: unknown[] = [];
+
+    http.get(`${environment.apiUrl}/user/profile`).subscribe({
+      error: (error) => errors.push(error),
+    });
+    httpMock
+      .expectOne(`${environment.apiUrl}/user/profile`)
+      .flush(
+        { reason: 'SUSCRIPCION_REQUERIDA', message: 'Membresía requerida' },
+        { status: 403, statusText: 'Forbidden' },
+      );
+
+    expect(membershipAccess.handleSuscripcionRequerida).not.toHaveBeenCalled();
+    expect(errors).toHaveLength(1);
   });
 });

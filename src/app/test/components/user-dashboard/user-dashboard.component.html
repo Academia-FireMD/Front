@@ -768,10 +768,14 @@
                   class="text-xs px-2 py-1 border-round"
                   [ngClass]="{
                     'bg-green-100 text-green-700': sub.status === 'ACTIVE',
+                    'bg-yellow-100 text-yellow-800':
+                      sub.status === 'PENDING_CANCEL',
+                    'bg-blue-100 text-blue-800':
+                      sub.status === 'PENDING_PAYMENT',
                     'bg-red-100 text-red-700': sub.status === 'CANCELLED',
                   }"
                 >
-                  {{ sub.status === "ACTIVE" ? "Activa" : "Cancelada" }}
+                  {{ estadoSuscripcionLabel(sub.status) }}
                 </span>
               </div>
               <div class="flex align-items-center gap-1">
@@ -803,6 +807,34 @@
         </div>
       }
     </div>
+
+    @if (selectedUser && puedeDarDeBajaMembresiaExterna(selectedUser)) {
+      <div
+        class="baja-externa-card p-3 border-1 border-red-200 border-round surface-50"
+        data-testid="baja-externa-seccion"
+      >
+        <div class="flex align-items-start gap-2">
+          <i class="pi pi-exclamation-triangle text-red-500 mt-1"></i>
+          <div class="flex flex-column gap-1">
+            <strong class="text-red-700"
+              >Dar de baja la membresía externa</strong
+            >
+            <span class="text-sm text-700">
+              Cancela de una sola vez todas las suscripciones externas vigentes
+              de esta cuenta. Los cursos independientes o concedidos, el
+              progreso y el histórico se conservan.
+            </span>
+          </div>
+        </div>
+        <p-button
+          label="Dar de baja la membresía externa"
+          icon="pi pi-user-minus"
+          styleClass="p-button-danger p-button-outlined mt-3 w-full"
+          (onClick)="abrirBajaMembresiaExterna(selectedUser)"
+          data-testid="baja-externa-abrir"
+        />
+      </div>
+    }
 
     <p-divider />
 
@@ -883,6 +915,169 @@
         [text]="true"
       />
     </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Baja TOTAL de la membresía externa. Solo se abre para cuentas
+     exclusivamente externas (ni WordPress ni mixtas). -->
+<p-dialog
+  header="Dar de baja la membresía externa"
+  [(visible)]="externalCancellationDialogVisible"
+  [modal]="true"
+  [style]="{ width: '560px' }"
+  [breakpoints]="{ '768px': '92vw' }"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!procesandoBajaExterna"
+  [closeOnEscape]="!procesandoBajaExterna"
+  [dismissableMask]="false"
+  closeAriaLabel="Cerrar"
+  data-testid="baja-externa-dialog"
+>
+  @if (resultadoBajaExterna) {
+    <div
+      class="p-3 border-round"
+      [ngClass]="
+        resultadoBajaExterna.yaEstabaDeBaja ||
+        resultadoBajaExterna.totalCanceladas === 0
+          ? 'bg-blue-50 border-1 border-blue-200'
+          : 'bg-green-50 border-1 border-green-200'
+      "
+      data-testid="baja-externa-resultado"
+      role="status"
+      aria-live="polite"
+    >
+      @if (
+        resultadoBajaExterna.yaEstabaDeBaja ||
+        resultadoBajaExterna.totalCanceladas === 0
+      ) {
+        <strong class="block mb-2">La membresía ya estaba de baja</strong>
+        <p class="m-0 mb-2">
+          No se canceló ninguna suscripción adicional. No se ha modificado el
+          acceso de la cuenta.
+        </p>
+      } @else {
+        <strong class="block mb-2"> Membresía externa dada de baja </strong>
+        <p class="m-0 mb-2">
+          Se cancelaron
+          <strong>{{ resultadoBajaExterna.totalCanceladas }}</strong>
+          {{
+            resultadoBajaExterna.totalCanceladas === 1
+              ? "suscripción vigente"
+              : "suscripciones vigentes"
+          }}.
+        </p>
+      }
+      <p class="m-0">
+        <i class="pi pi-check-circle mr-1"></i>
+        Se conservaron
+        <strong>{{ resultadoBajaExterna.cursosConservados }}</strong>
+        curso{{
+          resultadoBajaExterna.cursosConservados === 1 ? "" : "s"
+        }}
+        independiente{{
+          resultadoBajaExterna.cursosConservados === 1 ? "" : "s"
+        }}
+        o concedido{{
+          resultadoBajaExterna.cursosConservados === 1 ? "" : "s"
+        }}, con su progreso e histórico.
+      </p>
+    </div>
+  } @else {
+    <div class="flex flex-column gap-3">
+      <p class="m-0">
+        {{ resumenBajaExternaSeleccionado }}
+      </p>
+
+      <div
+        class="p-3 surface-50 border-round"
+        aria-label="Suscripciones que se cancelarán"
+      >
+        <span class="block text-sm font-medium mb-2"
+          >Suscripciones afectadas:</span
+        >
+        <ul class="m-0 pl-3 flex flex-column gap-2">
+          @for (sub of suscripcionesVigentesSeleccionado; track sub.id) {
+            <li>
+              <strong>{{ getSubscriptionLabel(sub) }}</strong>
+              <span class="block text-sm text-600">
+                {{ describirSuscripcionVigente(sub) }}
+              </span>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <p class="m-0 text-sm">
+        <i class="pi pi-info-circle mr-1"></i>
+        Los cursos comprados o concedidos de forma independiente, su progreso y
+        el histórico se conservan. Esta acción no elimina al usuario ni bloquea
+        su cuenta.
+      </p>
+
+      <div class="flex flex-column gap-2">
+        <label for="baja-externa-motivo" class="font-medium"
+          >Motivo (opcional)</label
+        >
+        <textarea
+          id="baja-externa-motivo"
+          pInputTextarea
+          [(ngModel)]="motivoBajaExterna"
+          rows="3"
+          placeholder="Ej.: el alumno solicita la baja por teléfono"
+          [disabled]="procesandoBajaExterna"
+          data-testid="baja-externa-motivo"
+        ></textarea>
+        <small class="text-600">
+          Se guarda en la auditoría de la baja para trazabilidad.
+        </small>
+      </div>
+
+      @if (errorBajaExterna) {
+        <div
+          class="p-3 border-1 border-red-200 border-round bg-red-50 text-red-800"
+          role="alert"
+          data-testid="baja-externa-error"
+        >
+          <i class="pi pi-times-circle mr-1"></i>
+          {{ errorBajaExterna }}
+        </div>
+      }
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    @if (resultadoBajaExterna) {
+      <p-button
+        label="Cerrar"
+        icon="pi pi-check"
+        (onClick)="cerrarBajaMembresiaExterna()"
+        data-testid="baja-externa-cerrar"
+      />
+    } @else {
+      <div class="flex justify-content-end gap-2 flex-wrap">
+        <p-button
+          label="Cancelar"
+          icon="pi pi-times"
+          [text]="true"
+          [disabled]="procesandoBajaExterna"
+          (onClick)="cerrarBajaMembresiaExterna()"
+          data-testid="baja-externa-rechazar"
+        />
+        <p-button
+          label="Dar de baja la membresía externa"
+          icon="pi pi-user-minus"
+          styleClass="p-button-danger"
+          [loading]="procesandoBajaExterna"
+          [disabled]="
+            procesandoBajaExterna ||
+            suscripcionesVigentesSeleccionado.length === 0
+          "
+          (onClick)="confirmarBajaMembresiaExterna()"
+          data-testid="baja-externa-confirmar"
+        />
+      </div>
+    }
   </ng-template>
 </p-dialog>
 
