@@ -11,6 +11,7 @@ import {
   tap,
   throwError,
   catchError,
+  filter,
   finalize,
   shareReplay,
 } from 'rxjs';
@@ -20,6 +21,11 @@ import { decodeJwtPayload } from '../shared/utils/jwt.util';
 import { AppState } from '../store/app.state';
 import * as UserActions from '../store/user/user.actions';
 import { ApiBaseService } from './api-base.service';
+import {
+  AuthIdentity,
+  AuthSessionService,
+  AuthSessionSnapshot,
+} from './auth-session.service';
 import { UserService } from './user.service';
 
 export interface CurrentAuthIdentity {
@@ -34,7 +40,14 @@ export class AuthService extends ApiBaseService {
   // BehaviorSubject para mantener el estado del usuario actual
   private currentDecodedUserSubject = new BehaviorSubject<any | null>(null);
   private _userService!: UserService;
-  private refreshInFlight$: Observable<any> | null = null;
+  private refreshInFlight$: {
+    session: AuthSessionSnapshot;
+    observable: Observable<any>;
+  } | null = null;
+  /** Invalida respuestas de operaciones de autenticación anteriores. */
+  private authOperation = 0;
+
+  private readonly sessions = inject(AuthSessionService);
 
   /** Claims mínimos de identidad, síncronos y de solo lectura para cambios de cuenta. */
   public readonly currentIdentity$: Observable<CurrentAuthIdentity | null> =
@@ -56,23 +69,27 @@ export class AuthService extends ApiBaseService {
 
   public currentUser$ = this.currentDecodedUserSubject.pipe(
     switchMap((user) => {
+      const session = this.sessions.snapshot();
       if (user) {
         return this.getUserService()
           .getByEmail$(user.email)
           .pipe(
+            map((loaded) => ({ session, user: loaded })),
             catchError((error) => {
               console.error('Error loading user:', error);
               // Solo retornar null, NO limpiar tokens aquí
               // El interceptor ya maneja refresh de tokens
-              return of(null);
+              return of({ session, user: null });
             }),
           );
       }
-      return of(null);
+      return of({ session, user: null });
     }),
-    tap((user) => {
+    filter(({ session }) => this.sessions.isCurrent(session)),
+    tap(({ user }) => {
       this.lastUserLoaded = user;
     }),
+    map(({ user }) => user),
   );
 
   // Observable público que otros componentes pueden suscribirse
@@ -99,12 +116,76 @@ export class AuthService extends ApiBaseService {
   private initCurrentUser(): void {
     const decodedToken = this.decodeToken();
     if (decodedToken) {
+      this.sessions.start(this.identityFrom(decodedToken));
       this.currentDecodedUserSubject.next(decodedToken);
       // Solo cargar el perfil si el usuario tiene permisos
       if (decodedToken.rol !== 'SIN_APROBACION') {
         this.store.dispatch(UserActions.loadUser());
       }
     }
+  }
+
+  private identityFrom(decoded: any): AuthIdentity {
+    return {
+      sub: decoded?.sub,
+      isImpersonating: decoded?.isImpersonating === true,
+    };
+  }
+
+  /**
+   * Aplica claims ya autenticados. `newSession` debe ser true para login e
+   * impersonación (aunque repitan el mismo `sub`); false solo para una
+   * renovación de token dentro de la misma sesión.
+   */
+  private adoptDecodedUser(decoded: any, newSession: boolean): void {
+    const anterior = this.sessions.snapshot();
+    const actual = decoded
+      ? newSession
+        ? this.sessions.start(this.identityFrom(decoded))
+        : this.sessions.continueSession(this.identityFrom(decoded))
+      : anterior;
+
+    // Un cambio real de sesión no puede heredar el perfil de la anterior.
+    if (newSession || actual !== anterior) {
+      this.clearLoadedUserData();
+    }
+
+    this.currentDecodedUserSubject.next(decoded);
+
+    // Solo cargar el perfil si el usuario tiene permisos
+    if (decoded && decoded.rol !== 'SIN_APROBACION') {
+      this.store.dispatch(UserActions.loadUser());
+    }
+  }
+
+  private clearLoadedUserData(): void {
+    this.lastUserLoaded = null;
+    this.store.dispatch(UserActions.clearUser());
+  }
+
+  private beginAuthOperation(): number {
+    return ++this.authOperation;
+  }
+
+  private assertAuthOperation(operation: number): void {
+    if (operation !== this.authOperation) {
+      throw new Error('La operación de autenticación cambió');
+    }
+  }
+
+  /** Instantánea síncrona para que interceptor/servicios detecten respuestas viejas. */
+  public sessionSnapshot(): AuthSessionSnapshot {
+    if (!this.sessions.snapshot().authenticated) {
+      const decoded = this.decodeToken();
+      if (decoded && typeof decoded === 'object') {
+        this.sessions.start(this.identityFrom(decoded));
+      }
+    }
+    return this.sessions.snapshot();
+  }
+
+  public isSessionCurrent(session: AuthSessionSnapshot): boolean {
+    return this.sessions.isCurrent(session);
   }
 
   /**
@@ -129,27 +210,28 @@ export class AuthService extends ApiBaseService {
   }
 
   public login$(email: string, password: string): Observable<any> {
+    const operacion = this.beginAuthOperation();
     return this.post('/login', { email, password }).pipe(
       tap((tokens) => {
+        this.assertAuthOperation(operacion);
         if (tokens) {
           this.setToken(tokens.access_token);
           this.setRefreshToken(tokens.refresh_token);
 
           const decodedUser = this.decodeToken();
-          this.currentDecodedUserSubject.next(decodedUser);
-
-          // Solo cargar el perfil si el usuario tiene permisos
-          if (decodedUser && decodedUser.rol !== 'SIN_APROBACION') {
-            this.store.dispatch(UserActions.loadUser());
-          }
+          this.adoptDecodedUser(decodedUser, true);
         }
       }),
     );
   }
 
   public refreshToken$(): Observable<any> {
-    if (this.refreshInFlight$) {
-      return this.refreshInFlight$;
+    const sessionAlIniciar = this.sessionSnapshot();
+    if (
+      this.refreshInFlight$ &&
+      this.sessions.isCurrent(this.refreshInFlight$.session)
+    ) {
+      return this.refreshInFlight$.observable;
     }
 
     const refreshToken = this.getRefreshToken();
@@ -157,31 +239,40 @@ export class AuthService extends ApiBaseService {
       return throwError(() => new Error('No refresh token available'));
     }
 
+    const slot = {
+      session: sessionAlIniciar,
+      observable: null as unknown as Observable<any>,
+    };
+
     const refresh$ = this.post('/refresh', {
       refresh_token: refreshToken,
     }).pipe(
       tap((tokens) => {
+        // Si la sesión cambió mientras el refresh estaba en vuelo (logout,
+        // login de otra cuenta, impersonación), esta respuesta ya no puede
+        // escribir tokens, identidad ni perfil: restauraría al usuario viejo.
+        if (!this.sessions.isCurrent(sessionAlIniciar)) {
+          throw new Error('La sesión cambió durante la renovación del token');
+        }
         if (tokens && tokens.access_token) {
           this.setToken(tokens.access_token);
 
           const decodedUser = this.decodeToken();
-          this.currentDecodedUserSubject.next(decodedUser);
-
-          // Solo cargar el perfil si el usuario tiene permisos
-          if (decodedUser && decodedUser.rol !== 'SIN_APROBACION') {
-            this.store.dispatch(UserActions.loadUser());
-          }
+          this.adoptDecodedUser(decodedUser, false);
         }
       }),
-      // El slot se libera tanto en éxito como en error. `shareReplay` evita
-      // que dos 401 simultáneos disparen dos POST de refresh.
+      // El slot se libera tanto en éxito como en error, pero solo si sigue
+      // siendo el nuestro: una sesión nueva puede haber abierto otro refresh.
       finalize(() => {
-        this.refreshInFlight$ = null;
+        if (this.refreshInFlight$ === slot) {
+          this.refreshInFlight$ = null;
+        }
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
 
-    this.refreshInFlight$ = refresh$;
+    slot.observable = refresh$;
+    this.refreshInFlight$ = slot;
     return refresh$;
   }
 
@@ -189,13 +280,8 @@ export class AuthService extends ApiBaseService {
     // Implementar la llamada al backend para logout si es necesario
     return of(true).pipe(
       tap(() => {
-        // Limpiar tokens y usuario actual
+        // Limpiar tokens, identidad y store en un único punto
         this.clearToken();
-        this.currentDecodedUserSubject.next(null);
-        this.lastUserLoaded = null;
-
-        // Limpiar el store de NgRx
-        this.store.dispatch(UserActions.clearUser());
       }),
     );
   }
@@ -234,8 +320,12 @@ export class AuthService extends ApiBaseService {
     sessionStorage.removeItem(this.TOKEN_KEY);
     sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
 
-    // También limpiar el store de NgRx si se limpia el token
-    this.store.dispatch(UserActions.clearUser());
+    // Invalida logins/impersonaciones en vuelo y publica la identidad vacía
+    // para que ningún consumidor siga trabajando con el usuario anterior.
+    this.authOperation += 1;
+    this.sessions.invalidate();
+    this.currentDecodedUserSubject.next(null);
+    this.clearLoadedUserData();
   }
 
   requestPasswordReset(email: string): Observable<any> {
@@ -278,38 +368,40 @@ export class AuthService extends ApiBaseService {
 
   // Métodos para impersonación
   public impersonateUser$(userId: number): Observable<any> {
+    const operacion = this.beginAuthOperation();
+    const sessionAlIniciar = this.sessionSnapshot();
     return this.post(`/impersonate/${userId}`, {}).pipe(
       tap((tokens) => {
+        this.assertAuthOperation(operacion);
+        if (!this.sessions.isCurrent(sessionAlIniciar)) {
+          throw new Error('La sesión cambió durante la impersonación');
+        }
         if (tokens) {
           this.setToken(tokens.access_token);
           this.setRefreshToken(tokens.refresh_token);
 
           const decodedUser = this.decodeToken();
-          this.currentDecodedUserSubject.next(decodedUser);
-
-          // Solo cargar el perfil si el usuario tiene permisos
-          if (decodedUser && decodedUser.rol !== 'SIN_APROBACION') {
-            this.store.dispatch(UserActions.loadUser());
-          }
+          this.adoptDecodedUser(decodedUser, true);
         }
       }),
     );
   }
 
   public stopImpersonation$(): Observable<any> {
+    const operacion = this.beginAuthOperation();
+    const sessionAlIniciar = this.sessionSnapshot();
     return this.post('/stop-impersonation', {}).pipe(
       tap((tokens) => {
+        this.assertAuthOperation(operacion);
+        if (!this.sessions.isCurrent(sessionAlIniciar)) {
+          throw new Error('La sesión cambió al salir de la impersonación');
+        }
         if (tokens) {
           this.setToken(tokens.access_token);
           this.setRefreshToken(tokens.refresh_token);
 
           const decodedUser = this.decodeToken();
-          this.currentDecodedUserSubject.next(decodedUser);
-
-          // Solo cargar el perfil si el usuario tiene permisos (siempre true al salir de impersonación)
-          if (decodedUser && decodedUser.rol !== 'SIN_APROBACION') {
-            this.store.dispatch(UserActions.loadUser());
-          }
+          this.adoptDecodedUser(decodedUser, true);
         }
       }),
     );

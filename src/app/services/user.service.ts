@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, finalize, shareReplay } from 'rxjs';
 import {
   PaginatedResult,
@@ -12,12 +12,20 @@ import {
 import { Usuario } from '../shared/models/user.model';
 import { OnboardingData } from '../shared/onboarding-form/onboarding-form.component';
 import { ApiBaseService } from './api-base.service';
+import {
+  AuthSessionService,
+  AuthSessionSnapshot,
+} from './auth-session.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserService extends ApiBaseService {
-  private profileInFlight$: Observable<Usuario> | null = null;
+  private readonly sessions = inject(AuthSessionService);
+  private profileInFlight$: {
+    session: AuthSessionSnapshot;
+    observable: Observable<Usuario>;
+  } | null = null;
 
   constructor(private http: HttpClient) {
     super(http);
@@ -31,23 +39,36 @@ export class UserService extends ApiBaseService {
   /**
    * Obtiene el perfil completo del usuario actual, incluyendo suscripción.
    *
-   * Single-flight: un refresh de AuthService puede disparar `loadUser` justo
-   * cuando el interceptor detecta un 403 de membresía y pide recargar el
-   * perfil. Ambas llamadas comparten la misma petición para no duplicar el
-   * reload ni pisarse con respuestas fuera de orden.
+   * Single-flight acotado a la sesión: un refresh de AuthService puede disparar
+   * `loadUser` justo cuando el interceptor detecta un 403 de membresía y pide
+   * recargar el perfil. Ambas llamadas comparten la misma petición solo si
+   * pertenecen a la misma identidad/sesión. Al cambiar de cuenta, la petición
+   * de A nunca se reutiliza para B ni su finalización borra el slot de B.
    */
   public getUserProfile$(): Observable<Usuario> {
-    if (this.profileInFlight$) {
-      return this.profileInFlight$;
+    const session = this.sessions.snapshot();
+    if (
+      this.profileInFlight$ &&
+      this.sessions.isCurrent(this.profileInFlight$.session)
+    ) {
+      return this.profileInFlight$.observable;
     }
+
+    const slot = {
+      session,
+      observable: null as unknown as Observable<Usuario>,
+    };
 
     const request$ = (this.get('/profile') as Observable<Usuario>).pipe(
       finalize(() => {
-        this.profileInFlight$ = null;
+        if (this.profileInFlight$ === slot) {
+          this.profileInFlight$ = null;
+        }
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
-    this.profileInFlight$ = request$;
+    slot.observable = request$;
+    this.profileInFlight$ = slot;
     return request$;
   }
 
