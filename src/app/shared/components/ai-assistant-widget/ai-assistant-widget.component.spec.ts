@@ -196,6 +196,33 @@ describe('AiAssistantWidgetComponent', () => {
       cmp.ngOnDestroy();
     });
 
+    it('ignora la API pública obsoleta hasta que el lanzador actual está montado', async () => {
+      const cmp = setup();
+      httpGet.mockReturnValue(of({ token: 'jwt' }));
+      cmp.ngOnInit();
+      await Promise.resolve();
+      const open = jest.fn();
+      (window as any).PaidioWidget = { open };
+      const resultado = jest.fn();
+      document.addEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
+
+      cmp.solicitarApertura();
+      expect(open).not.toHaveBeenCalled();
+      expect(resultado).not.toHaveBeenCalled();
+
+      const lanzador = crearLanzador();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(lanzador.click).not.toHaveBeenCalled();
+      expect(resultado).toHaveBeenCalledTimes(1);
+      expect((resultado.mock.calls[0][0] as CustomEvent).detail).toEqual({
+        abierto: true,
+      });
+      document.removeEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
+      cmp.ngOnDestroy();
+    });
+
     it('abre el paywall si el 403 de tier llega después del clic y responde una sola vez', async () => {
       jest.useFakeTimers();
       const cmp = setup();

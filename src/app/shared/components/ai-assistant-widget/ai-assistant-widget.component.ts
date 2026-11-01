@@ -332,6 +332,12 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
   }
 
   private pulsarLanzador(): boolean {
+    // El launcher montado es la guardia de vida: `PaidioWidget` puede quedar
+    // obsoleto en window tras destruir una instancia. Sin el botón actual no
+    // se invoca nada y la apertura sigue esperando.
+    const lanzador = this.document.getElementById('ai-widget-btn');
+    if (!lanzador) return false;
+
     // El script real expone `window.PaidioWidget.open()` para hosts externos:
     // abrir por esa vía es idempotente y no cierra un panel ya abierto.
     const api = (
@@ -345,8 +351,6 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
     }
 
     // Fallback para versiones antiguas que sólo tienen el botón flotante.
-    const lanzador = this.document.getElementById('ai-widget-btn');
-    if (!lanzador) return false;
     (lanzador as HTMLElement).click();
     return true;
   }
