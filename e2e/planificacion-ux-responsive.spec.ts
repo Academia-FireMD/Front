@@ -186,6 +186,11 @@ test.describe('Planificación del alumno — UX responsive', () => {
     await expect(page.locator('.cal-day-columns .cal-day-column')).toHaveCount(
       7,
     );
+    await expect(
+      page.getByText(
+        'Abre cada actividad para consultar el detalle. Usa «Marcar progreso»',
+      ),
+    ).toBeVisible();
     const tarjeta = page
       .locator('.wrapper')
       .filter({ hasText: titulo })
@@ -345,6 +350,40 @@ test.describe('Planificación del alumno — UX responsive', () => {
           document.activeElement?.closest('app-calendar-header') !== null,
       ),
     ).toBe(true);
+  });
+
+  test('móvil vacío: sin instrucciones de marcaje y Ayuda dentro del viewport', async ({
+    page,
+  }) => {
+    await mockPlanificacion(page, {
+      subBloques: [],
+      personales: [],
+      fisica: [],
+    });
+    await abrirPlanificacion(page, 375, 812);
+
+    await expect(page.getByTestId('semana-vacia')).toBeVisible();
+    await expect(
+      page.getByText(
+        'Abre cada actividad para consultar el detalle. Usa «Marcar progreso»',
+      ),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText(
+        'Puedes consultar esta semana y las dos anteriores; desde el viernes',
+      ),
+    ).toHaveCount(0);
+
+    const ayuda = page.getByTestId('abrir-ayuda');
+    await expect(ayuda).toBeVisible();
+    await expect(ayuda).toBeInViewport({ ratio: 1 });
+    const cajaAyuda = await ayuda.boundingBox();
+    const cajaVacia = await page.getByTestId('semana-vacia').boundingBox();
+    expect(cajaAyuda).not.toBeNull();
+    expect(cajaVacia).not.toBeNull();
+    expect(cajaAyuda!.y).toBeGreaterThanOrEqual(
+      cajaVacia!.y + cajaVacia!.height - 1,
+    );
   });
 
   test('error real: nunca se presenta como semana vacía', async ({ page }) => {

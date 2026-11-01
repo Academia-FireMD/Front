@@ -1080,7 +1080,15 @@
         ></mwl-calendar-month-view>
       }
     </div>
-    <div class="col-12 pt-2" *ngIf="expectedRole == 'ALUMNO'">
+    <div
+      class="col-12 pt-2"
+      *ngIf="
+        expectedRole == 'ALUMNO' &&
+        !mostrarEstadoVacioSemana &&
+        !mostrarCargaSemana &&
+        !mostrarErrorCargaSemana
+      "
+    >
       <p-message
         severity="info"
         text="Abre cada actividad para consultar el detalle. Usa «Marcar progreso» para registrar tus avances."
