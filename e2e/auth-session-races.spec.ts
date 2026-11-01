@@ -194,7 +194,19 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
     let peticionesPerfil = 0;
     await page.route('**/user/profile', (route) => {
       peticionesPerfil += 1;
-      if (peticionesPerfil === 1) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(perfilA),
+      });
+    });
+    // El perfil carga primero (store/menú disponibles). Después, una petición
+    // auxiliar de la app recibe 401 y deja el refresh retenido: así el logout
+    // se ejerce desde el menú real con el usuario ya cargado.
+    let peticionesCursos = 0;
+    await page.route('**/cursos/mios', (route) => {
+      peticionesCursos += 1;
+      if (peticionesCursos === 1) {
         return route.fulfill({
           status: 401,
           contentType: 'application/json',
@@ -204,7 +216,7 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(perfilA),
+        body: '[]',
       });
     });
     await page.route('**/user/get-by-email', (route) =>
@@ -233,22 +245,21 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
     await page.locator('app-password-input input').fill('test1234');
     await page.locator('app-async-button button').first().click();
     await page.waitForURL('**/app/profile', { timeout: 15_000 });
+    await expect(page.locator('.user-info-text h3')).toHaveText(
+      'Ana Anterior',
+      { timeout: 10_000 },
+    );
+    await expect.poll(() => peticionesPerfil).toBeGreaterThanOrEqual(1);
     await expect.poll(() => peticionesRefresh).toBe(1);
 
-    // Logout real (AuthService.logout$) mientras el refresh de A sigue
-    // retenido. Se usa el componente de layout ya montado en vez de depender
-    // del menú responsive.
-    await page.evaluate(async () => {
-      const ng = (window as any).ng;
-      const layout = ng.getComponent(document.querySelector('app-layout'));
-      await new Promise<void>((resolve, reject) => {
-        layout.authService.logout$().subscribe({
-          next: () => resolve(),
-          error: (error: unknown) => reject(error),
-        });
-      });
-      await layout.router.navigate(['/auth/login']);
-    });
+    // Logout real desde el menú, con el perfil y el menú ya cargados, mientras
+    // el refresh de A sigue retenido.
+    await page.locator('.lateral-bar').hover();
+    const desconectarse = page.getByText('Desconectarse', { exact: true });
+    await expect(desconectarse).toBeVisible();
+    // El submenú ya está desplegado al expandir el menú; no hay que pulsar el
+    // encabezado "Perfil" (eso lo plegaría y desmontaría el enlace).
+    await desconectarse.click({ force: true });
     await page.waitForURL('**/auth/login', { timeout: 10_000 });
     expect(
       await page.evaluate(() => sessionStorage.getItem('authToken')),
