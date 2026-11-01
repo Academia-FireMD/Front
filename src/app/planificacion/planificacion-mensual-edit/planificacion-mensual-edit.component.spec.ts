@@ -1497,6 +1497,29 @@ describe('PlanificacionMensualEditComponent', () => {
       expect(html.querySelector('[data-testid="semana-vacia"]')).toBeNull();
     });
 
+    it('espera personales y física sin dejar un spinner infinito ante sus errores', () => {
+      component.expectedRole = 'ALUMNO';
+      component.view = CalendarView.Week;
+      component.viewDate = lunes;
+      component.planificacionCargada.set(true);
+      component.resumenFisicaCargado.set(true);
+      component.eventosPersonalesCargados.set(false);
+
+      expect(component.mostrarCargaSemana).toBe(true);
+
+      component.errorEventosPersonales.set(true);
+      component.eventosPersonalesCargados.set(true);
+      expect(component.mostrarCargaSemana).toBe(false);
+
+      component.resumenFisicaCargado.set(false);
+      component.errorResumenFisica.set(false);
+      expect(component.mostrarCargaSemana).toBe(true);
+
+      component.errorResumenFisica.set(true);
+      component.resumenFisicaCargado.set(true);
+      expect(component.mostrarCargaSemana).toBe(false);
+    });
+
     it('el CTA de otra semana activa la navegación existente sin asignar plan', () => {
       prepararSemanaCargada();
       fixture.detectChanges();

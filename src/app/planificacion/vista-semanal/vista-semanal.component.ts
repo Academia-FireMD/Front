@@ -340,6 +340,7 @@ export class VistaSemanalComponent implements OnDestroy {
     activo: boolean;
     hoy: boolean;
     tieneEventos: boolean;
+    tieneFisica: boolean;
     resumen: string;
   }> {
     const lunes = getStartOfWeek(this.viewDate);
@@ -348,6 +349,7 @@ export class VistaSemanalComponent implements OnDestroy {
       const fecha = new Date(lunes);
       fecha.setDate(lunes.getDate() + indice);
       const eventos = this.getEventsForDay(this.visibleCalendarEvents, fecha);
+      const tieneFisica = this.tieneFisica(fecha);
       const activo = this.esMismoDia(fecha, this._diaMovil);
       const etiqueta = new Intl.DateTimeFormat('es', {
         weekday: 'short',
@@ -359,9 +361,10 @@ export class VistaSemanalComponent implements OnDestroy {
         activo,
         hoy: this.esMismoDia(fecha, hoy),
         tieneEventos: eventos.length > 0,
+        tieneFisica,
         resumen: `${etiqueta} ${fecha.getDate()}: ${eventos.length} ${
           eventos.length === 1 ? 'actividad' : 'actividades'
-        }`,
+        }${tieneFisica ? ', con entrenamiento físico' : ''}`,
       };
     });
   }
@@ -789,6 +792,18 @@ export class VistaSemanalComponent implements OnDestroy {
   diaTieneBloqueFisicaVinculado(dia: Date): boolean {
     return this.getEventsForDay(this.events, dia).some((e) =>
       this.esEventoFisicaVinculado(e),
+    );
+  }
+
+  /**
+   * Acceso explícito al plan físico del día cuando el temario NO tiene ya un
+   * bloque vinculado (ese bloque es la indicación y evita duplicar el bridge).
+   */
+  accesoFisicaVisible(dia: Date): boolean {
+    return (
+      this.role === 'ALUMNO' &&
+      this.tieneFisica(dia) &&
+      !this.diaTieneBloqueFisicaVinculado(dia)
     );
   }
 

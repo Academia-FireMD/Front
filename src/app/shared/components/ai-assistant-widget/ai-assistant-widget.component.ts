@@ -422,8 +422,10 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
           { withCredentials: true },
         ),
       );
+      if (this.destroyed) return;
       this.injectWidgetScript(response.token);
     } catch (err: unknown) {
+      if (this.destroyed) return;
       const httpErr = err as HttpErrorResponse;
       const reason = httpErr?.error?.reason as
         | AiAssistantAccessReason
@@ -478,11 +480,17 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
     this.dockStyleElement = null;
 
     if (this.scriptElement) {
+      // Contrato de ciclo de vida con el widget embebido: se marca el script
+      // concreto y se le avisa antes de retirarlo para que cancele/limpie sus
+      // propios nodos, estilos y API. No se borran globals ajenos.
+      this.scriptElement.setAttribute('data-paidio-destroyed', 'true');
+      this.scriptElement.dispatchEvent(new Event('paidio:destroy'));
       this.scriptElement.remove();
       this.scriptElement = null;
     }
-    // Remove widget DOM elements injected by the script
+    // Fallback de limpieza para versiones legacy del script.
     this.document.getElementById('ai-widget-btn')?.remove();
     this.document.getElementById('ai-widget-panel')?.remove();
+    this.document.getElementById('ai-widget-backdrop')?.remove();
   }
 }

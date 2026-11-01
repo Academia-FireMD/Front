@@ -104,6 +104,40 @@ describe('AiAssistantWidgetComponent', () => {
     cmp.ngOnDestroy();
   });
 
+  it('no inyecta el script si el token llega después de destruir', async () => {
+    const cmp = setup();
+    const respuesta = new Subject<{ token: string }>();
+    httpGet.mockReturnValue(respuesta);
+
+    cmp.ngOnInit();
+    await Promise.resolve();
+    cmp.ngOnDestroy();
+    respuesta.next({ token: 'jwt' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.querySelector('script[data-mode="floating"]')).toBeNull();
+  });
+
+  it('marca y avisa al script concreto antes de retirarlo', async () => {
+    const cmp = setup();
+    httpGet.mockReturnValue(of({ token: 'jwt' }));
+    cmp.ngOnInit();
+    await Promise.resolve();
+    const script = document.querySelector(
+      'script[data-mode="floating"]',
+    ) as HTMLScriptElement;
+    expect(script).toBeTruthy();
+    const aviso = jest.fn();
+    script.addEventListener('paidio:destroy', aviso);
+
+    cmp.ngOnDestroy();
+
+    expect(script.getAttribute('data-paidio-destroyed')).toBe('true');
+    expect(aviso).toHaveBeenCalledTimes(1);
+    expect(script.isConnected).toBe(false);
+  });
+
   describe('integración visual de Ayuda', () => {
     function crearLanzador(): HTMLButtonElement {
       const boton = document.createElement('button');

@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import userAdminFixture from './fixtures/user-admin.json';
 import { loginAsRoleMock } from './helpers/auth.helper';
 
 const PLAN_ID = 4321;
@@ -25,6 +26,10 @@ function enSemana(dia: number, hora: number, minuto = 0): Date {
   fecha.setDate(lunes.getDate() + dia);
   fecha.setHours(hora, minuto, 0, 0);
   return fecha;
+}
+
+function fechaISO(fecha: Date): string {
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
 }
 
 function bloque(
@@ -383,6 +388,165 @@ test.describe('Planificación del alumno — UX responsive', () => {
     expect(cajaVacia).not.toBeNull();
     expect(cajaAyuda!.y).toBeGreaterThanOrEqual(
       cajaVacia!.y + cajaVacia!.height - 1,
+    );
+  });
+
+  test('física sin temario: acceso visible y navegación exacta', async ({
+    page,
+  }) => {
+    const diaFisica = enSemana(0, 9);
+    await mockPlanificacion(page, {
+      subBloques: [],
+      fisica: [
+        {
+          fecha: fechaISO(diaFisica),
+          bloqueId: 77,
+          disciplinas: [
+            {
+              nombre: 'Cuerda',
+              grupo: 'CUERDA',
+              color: '#123456',
+              realizado: false,
+            },
+          ],
+        },
+      ],
+    });
+    await abrirPlanificacion(page, 1440, 900);
+
+    await expect(page.getByTestId('semana-vacia')).toHaveCount(0);
+    const acceso = page.getByTestId('fisica-dia-acceso');
+    await expect(acceso).toBeVisible();
+    await acceso.click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`planificacion-fisica/dia/${fechaISO(diaFisica)}`),
+    );
+    const url = new URL(page.url());
+    expect(url.searchParams.get('bloqueId')).toBe('77');
+    expect(url.searchParams.get('originPlanificacionId')).toBe(String(PLAN_ID));
+  });
+
+  test('móvil: física de otro día se indica en la tira y navega al día exacto', async ({
+    page,
+  }) => {
+    const diaFisica = enSemana(2, 9);
+    await mockPlanificacion(page, {
+      subBloques: [],
+      fisica: [
+        {
+          fecha: fechaISO(diaFisica),
+          bloqueId: 78,
+          disciplinas: [
+            {
+              nombre: 'Carrera',
+              grupo: 'CARRERA',
+              color: '#123456',
+              realizado: false,
+            },
+          ],
+        },
+      ],
+    });
+    await abrirPlanificacion(page, 375, 812);
+
+    await expect(page.getByTestId('semana-vacia')).toHaveCount(0);
+    await expect(
+      page.locator('.movil-dia').nth(2).locator('.movil-dia__punto--fisica'),
+    ).toBeVisible();
+
+    await page.locator('.movil-dia').nth(1).click();
+    await expect(page.getByTestId('movil-fisica-acceso')).toHaveCount(0);
+
+    await page.locator('.movil-dia').nth(2).click();
+    const acceso = page.getByTestId('movil-fisica-acceso');
+    await expect(acceso).toBeVisible();
+    await acceso.click();
+    await expect(page).toHaveURL(
+      new RegExp(`planificacion-fisica/dia/${fechaISO(diaFisica)}`),
+    );
+  });
+
+  test('carga auxiliar diferida: el vacío espera a los eventos personales', async ({
+    page,
+  }) => {
+    await mockPlanificacion(page, { subBloques: [] });
+    let liberar!: () => void;
+    const espera = new Promise<void>((resolve) => {
+      liberar = resolve;
+    });
+    await page.route(
+      `**/planificaciones/eventos-personalizados/${PLAN_ID}`,
+      async (route) => {
+        await espera;
+        await route.fulfill({
+          contentType: 'application/json',
+          body: '[]',
+        });
+      },
+    );
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await loginAsRoleMock(page, {
+      rol: 'ALUMNO',
+      userFixture: alumnoPremium,
+      modulos: { PLANIFICACION_FISICA: true },
+    });
+    await page.goto(
+      `/app/planificacion/planificacion-mensual-alumno/${PLAN_ID}`,
+    );
+
+    await expect(page.getByTestId('semana-cargando')).toBeVisible();
+    await expect(page.getByTestId('semana-vacia')).toHaveCount(0);
+    liberar();
+    await expect(page.getByTestId('semana-vacia')).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
+  test('móvil admin: Clonar día conserva el contenido en el día destino', async ({
+    page,
+  }) => {
+    await mockPlanificacion(page, {
+      subBloques: [
+        bloque(701, 'Hidráulica', enSemana(0, 9), 60, '**Contenido original**'),
+      ],
+    });
+    await page.setViewportSize({ width: 375, height: 812 });
+    await loginAsRoleMock(page, {
+      rol: 'ADMIN',
+      userFixture: userAdminFixture,
+      modulos: { PLANIFICACION_FISICA: true },
+    });
+    await page.goto(`/app/planificacion/planificacion-mensual/${PLAN_ID}`);
+    await expect(page.getByTestId('vista-semanal-movil')).toBeVisible();
+
+    const clonar = page.getByTestId('clonar-dia-movil');
+    await expect(clonar).toBeVisible();
+    await clonar.click();
+
+    const dialogo = page
+      .locator('.p-dialog')
+      .filter({ hasText: 'Clonar eventos' });
+    await expect(dialogo).toBeVisible();
+    await dialogo.locator('p-dropdown').click();
+    await page
+      .locator('.p-dropdown-panel')
+      .last()
+      .locator('.p-dropdown-item')
+      .filter({ hasText: 'Martes' })
+      .click();
+    await dialogo.getByRole('button', { name: 'Clonar' }).click();
+    await expect(dialogo).toBeHidden();
+
+    await page.locator('.movil-dia').nth(1).click();
+    const tarjeta = page
+      .locator('.wrapper')
+      .filter({ hasText: 'Hidráulica' })
+      .first();
+    await expect(tarjeta).toBeVisible();
+    await tarjeta.locator('.event-text').click();
+    await expect(page.getByTestId('event-sheet-instructions')).toContainText(
+      'Contenido original',
     );
   });
 

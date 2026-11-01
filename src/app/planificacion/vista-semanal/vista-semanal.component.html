@@ -3,7 +3,8 @@
   [(visible)]="isCloneDialogVisible"
   [modal]="true"
   [closable]="true"
-  [style]="{ width: '400px' }"
+  [style]="{ width: 'min(400px, calc(100vw - 1rem))' }"
+  [breakpoints]="{ '575px': 'calc(100vw - 1rem)' }"
 >
   <div class="p-fluid">
     <div class="field">
@@ -170,12 +171,22 @@
           ></i>
         </div>
       </div>
-      <!-- Bridge temario↔física: indicación de entrenamiento físico del día.
-           OCULTO (Fase 5, decisión producto): el fallback del header se elimina
-           porque el bloque vinculado ya es la indicación; si el día no tiene
-           bloque vinculado, el alumno no ve nada en el temario (va al módulo
-           de física directamente). Los métodos tieneFisica/abrirFisica se
-           mantienen para el bloque vinculado y la vista mensual. -->
+      <!-- Física sin bloque vinculado: acceso explícito al módulo. Si ya hay
+           un evento de temario vinculado, ese bloque es la indicación y este
+           control se omite para no duplicar el bridge. -->
+      <button
+        *ngIf="accesoFisicaVisible(day.date)"
+        type="button"
+        class="fisica-dia-acceso"
+        data-testid="fisica-dia-acceso"
+        [attr.aria-label]="
+          'Ver entrenamiento físico del día: ' + etiquetaFisica(day.date)
+        "
+        (click)="abrirFisica(day.date, $event)"
+      >
+        <i class="pi pi-bolt" aria-hidden="true"></i>
+        <span>{{ etiquetaFisica(day.date) }}</span>
+      </button>
       <!-- Progreso debajo del día -->
       <div
         class="progress-container"
@@ -377,10 +388,16 @@
               <span class="movil-dia__nombre">{{ dia.etiqueta }}</span>
               <span class="movil-dia__numero">{{ dia.numero }}</span>
               <span
-                class="movil-dia__punto"
-                *ngIf="dia.tieneEventos"
+                class="movil-dia__puntos"
+                *ngIf="dia.tieneEventos || dia.tieneFisica"
                 aria-hidden="true"
-              ></span>
+              >
+                <span class="movil-dia__punto" *ngIf="dia.tieneEventos"></span>
+                <span
+                  class="movil-dia__punto movil-dia__punto--fisica"
+                  *ngIf="dia.tieneFisica"
+                ></span>
+              </span>
             </button>
           }
         </div>
@@ -403,6 +420,16 @@
             </small>
           </div>
           <button
+            *ngIf="role === 'ADMIN'"
+            type="button"
+            class="movil-dia-nav__btn movil-dia-nav__clone"
+            aria-label="Clonar día seleccionado"
+            data-testid="clonar-dia-movil"
+            (click)="openCloneDialog(diaMovil)"
+          >
+            <i class="pi pi-clone" aria-hidden="true"></i>
+          </button>
+          <button
             type="button"
             class="movil-dia-nav__btn"
             aria-label="Día siguiente"
@@ -412,6 +439,20 @@
             <i class="pi pi-angle-right" aria-hidden="true"></i>
           </button>
         </div>
+
+        <button
+          *ngIf="accesoFisicaVisible(diaMovil)"
+          type="button"
+          class="movil-fisica-acceso"
+          data-testid="movil-fisica-acceso"
+          [attr.aria-label]="
+            'Ver entrenamiento físico del día: ' + etiquetaFisica(diaMovil)
+          "
+          (click)="abrirFisica(diaMovil, $event)"
+        >
+          <i class="pi pi-bolt" aria-hidden="true"></i>
+          <span>Entrenamiento físico · {{ etiquetaFisica(diaMovil) }}</span>
+        </button>
 
         <mwl-calendar-week-view
           [daysInWeek]="1"

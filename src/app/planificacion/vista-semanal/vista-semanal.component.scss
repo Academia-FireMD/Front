@@ -365,12 +365,25 @@
     line-height: 1.1;
   }
 
+  &__puntos {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 4px;
+  }
+
   &__punto {
     width: 4px;
     height: 4px;
     border-radius: 50%;
     background: currentColor;
     opacity: 0.75;
+
+    &--fisica {
+      background: #d99000;
+      border: 1px solid rgba(0, 0, 0, 0.3);
+      opacity: 1;
+    }
   }
 }
 
@@ -410,6 +423,7 @@
 
   &__info {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     align-items: center;
     min-width: 0;
@@ -424,6 +438,67 @@
       color: var(--text-color-secondary);
       font-size: 0.75rem;
     }
+  }
+}
+
+.movil-fisica-acceso {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #e0a800;
+  border-radius: 8px;
+  background: #fff8e1;
+  color: #6b4a00;
+  font-size: 0.82rem;
+  font-weight: 600;
+  overflow: hidden;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+  }
+}
+
+/* Acceso a física del día cuando el temario no trae bloque vinculado. */
+.fisica-dia-acceso {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  min-height: 44px;
+  margin-top: 3px;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid #e0a800;
+  border-radius: 6px;
+  background: #fff8e1;
+  color: #6b4a00;
+  font-size: 0.72rem;
+  font-weight: 600;
+  overflow: hidden;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
   }
 }
 

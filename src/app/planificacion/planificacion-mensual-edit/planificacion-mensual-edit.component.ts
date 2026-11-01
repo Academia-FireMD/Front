@@ -444,12 +444,29 @@ export class PlanificacionMensualEditComponent implements OnDestroy {
   }
 
   get mostrarCargaSemana(): boolean {
-    return (
-      this.expectedRole === 'ALUMNO' &&
-      this.view === CalendarView.Week &&
-      !this.errorCargaPlanificacion() &&
-      (!this.planificacionCargada() || this.cargandoPlanificacion())
-    );
+    if (
+      this.expectedRole !== 'ALUMNO' ||
+      this.view !== CalendarView.Week ||
+      this.errorCargaPlanificacion()
+    ) {
+      return false;
+    }
+    if (this.cargandoPlanificacion() || !this.planificacionCargada()) {
+      return true;
+    }
+    // Las cargas auxiliares también forman parte del periodo visible. Un
+    // error concreto termina el spinner y deja su aviso, nunca gira sin fin.
+    if (!this.eventosPersonalesCargados() && !this.errorEventosPersonales()) {
+      return true;
+    }
+    if (
+      this.planificacionFisicaHabilitada() &&
+      !this.resumenFisicaCargado() &&
+      !this.errorResumenFisica()
+    ) {
+      return true;
+    }
+    return false;
   }
 
   get mostrarErrorCargaSemana(): boolean {
@@ -1269,6 +1286,9 @@ export class PlanificacionMensualEditComponent implements OnDestroy {
               this.events =
                 this.eventsService.fromSubbloquesToEvents(subBloques);
               this.centrarCalendario(entry, this.events, fechaFoco);
+              // El primer pintado móvil (alumno y admin) abre el día en el que
+              // el padre acaba de centrar el calendario, no el "hoy" previo.
+              this.diaInicialSemana = this.viewDate;
 
               // Para alumnos, cargar también los eventos personalizados
               if (this.expectedRole === 'ALUMNO') {

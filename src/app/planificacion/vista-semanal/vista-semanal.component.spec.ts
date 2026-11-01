@@ -547,6 +547,79 @@ describe('VistaSemanalComponent', () => {
       expect(component.puedeDiaSiguienteMovil).toBe(true);
     });
 
+    it('indica física en la tira y ofrece acceso sólo si no hay bloque vinculado', () => {
+      component.resumenFisica = [
+        {
+          fecha: '2026-09-07',
+          bloqueId: 9,
+          disciplinas: [
+            {
+              nombre: 'Cuerda',
+              grupo: 'CUERDA',
+              color: '#123456',
+              realizado: false,
+            },
+          ],
+        },
+      ];
+
+      const dias = component.semanaMovil();
+      expect(dias[0].tieneFisica).toBe(true);
+      expect(dias[0].resumen).toContain('entrenamiento físico');
+      expect(component.accesoFisicaVisible(component.diaMovil)).toBe(true);
+
+      component.events = [
+        {
+          title: 'Entrenamiento vinculado',
+          start: new Date(2026, 8, 7, 9),
+          end: new Date(2026, 8, 7, 10),
+          meta: {
+            subBloque: {
+              id: 70,
+              duracion: 60,
+              esEntrenamientoFisico: true,
+              realizado: false,
+            },
+          },
+        } as any,
+      ];
+      expect(component.accesoFisicaVisible(component.diaMovil)).toBe(false);
+    });
+
+    it('clona el día seleccionado conservando el contenido', async () => {
+      component.role = 'ADMIN';
+      const inicio = new Date(2026, 8, 7, 9);
+      component.viewDate = new Date(2026, 8, 7);
+      component.events = [
+        {
+          title: 'Hidráulica',
+          start: inicio,
+          end: new Date(2026, 8, 7, 10),
+          meta: {
+            esPersonalizado: false,
+            subBloque: {
+              id: 77,
+              comentarios: '**Contenido conservado**',
+              duracion: 60,
+              color: '#f59e0b',
+              realizado: false,
+            },
+          },
+        } as any,
+      ];
+      component.selectedDayForCloning = inicio;
+      component.targetDayForCloning = 1; // martes
+
+      await component.cloneEventsToTargetDay();
+
+      expect(component.events).toHaveLength(2);
+      const clon = component.events[1];
+      expect(clon.start.getDay()).toBe(2);
+      expect(clon.title).toBe('Hidráulica');
+      expect(clon.meta.subBloque.comentarios).toBe('**Contenido conservado**');
+      expect(clon.meta.subBloque.id).toBeUndefined();
+    });
+
     it('navega por días dentro de la semana sin salirse de ella', () => {
       expect(component.puedeDiaAnteriorMovil).toBe(false);
 
