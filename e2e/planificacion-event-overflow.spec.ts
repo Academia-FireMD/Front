@@ -62,9 +62,11 @@ function bloquesSinteticos() {
       id: 9104,
       planificacionId: PLAN_ID,
       nombre: TITULO_LARGO,
-      horaInicio: new Date(
-        hoy.getTime() + 24 * 60 * 60_000 + 8 * 60 * 60_000,
-      ).toISOString(),
+      // Mismo día a las 08:00: permanece en la semana visible cualquier día
+      // (incluido domingo) y dentro del rango horario del calendario. El
+      // antiguo "mañana a las 18:00" caía en la semana siguiente si hoy era
+      // domingo y quedaba fuera del rango 06:00-17:00.
+      horaInicio: new Date(hoy.getTime() - 2 * 60 * 60_000).toISOString(),
       duracion: 60,
       color: '#c084fc',
       comentarios: '',
