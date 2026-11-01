@@ -250,6 +250,7 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
   private aperturaTimer: ReturnType<typeof setTimeout> | null = null;
   private ayudaSolicitadaPendiente = false;
   private dockStyleElement: HTMLStyleElement | null = null;
+  private destroyed = false;
   private readonly onSolicitarApertura = () => this.solicitarApertura();
 
   /** Paywall activo (tier insuficiente). */
@@ -288,11 +289,13 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
    */
   solicitarApertura(): void {
     if (this.paywall()) {
+      this.limpiarAperturaPendiente();
       this.abrirPaywall();
       this.emitirResultadoApertura(true);
       return;
     }
     if (this.pulsarLanzador()) {
+      this.limpiarAperturaPendiente();
       this.emitirResultadoApertura(true);
       return;
     }
@@ -302,10 +305,30 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
     if (this.aperturaTimer) clearTimeout(this.aperturaTimer);
     this.aperturaTimer = setTimeout(() => {
       if (!this.ayudaSolicitadaPendiente) return;
-      this.ayudaSolicitadaPendiente = false;
-      this.limpiarObservadorLanzador();
+      this.limpiarAperturaPendiente();
       this.emitirResultadoApertura(false);
     }, 2000);
+  }
+
+  /**
+   * Resuelve la apertura pendiente cuando el 403 de tier llega después del
+   * clic: el paywall existente es la respuesta visual, así que se abre y se
+   * confirma una sola vez. Sin tocar auth, token ni entitlement.
+   */
+  private resolverAperturaPendienteConPaywall(): void {
+    if (this.destroyed || !this.ayudaSolicitadaPendiente) return;
+    this.limpiarAperturaPendiente();
+    this.abrirPaywall();
+    this.emitirResultadoApertura(true);
+  }
+
+  private limpiarAperturaPendiente(): void {
+    this.ayudaSolicitadaPendiente = false;
+    if (this.aperturaTimer) {
+      clearTimeout(this.aperturaTimer);
+      this.aperturaTimer = null;
+    }
+    this.limpiarObservadorLanzador();
   }
 
   private pulsarLanzador(): boolean {
@@ -323,12 +346,7 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
         return;
       }
       if (!this.pulsarLanzador()) return;
-      this.ayudaSolicitadaPendiente = false;
-      if (this.aperturaTimer) {
-        clearTimeout(this.aperturaTimer);
-        this.aperturaTimer = null;
-      }
-      this.limpiarObservadorLanzador();
+      this.limpiarAperturaPendiente();
       this.emitirResultadoApertura(true);
     });
     this.launcherObserver.observe(this.document.body, {
@@ -343,6 +361,7 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
   }
 
   private emitirResultadoApertura(abierto: boolean): void {
+    if (this.destroyed) return;
     this.document.dispatchEvent(
       new CustomEvent(AI_ASSISTANT_OPEN_RESULT_EVENT, {
         detail: { abierto },
@@ -397,6 +416,7 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
         const tier = httpErr?.error?.requiredTier as string | undefined;
         if (tier) this.requiredTier.set(tier);
         this.paywall.set(true);
+        this.resolverAperturaPendienteConPaywall();
         return;
       }
       if (httpErr?.status === 401 || httpErr?.status === 403) {
@@ -431,15 +451,12 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.document.removeEventListener(
       AI_ASSISTANT_OPEN_EVENT,
       this.onSolicitarApertura,
     );
-    if (this.aperturaTimer) {
-      clearTimeout(this.aperturaTimer);
-      this.aperturaTimer = null;
-    }
-    this.limpiarObservadorLanzador();
+    this.limpiarAperturaPendiente();
     this.dockStyleElement?.remove();
     this.dockStyleElement = null;
 

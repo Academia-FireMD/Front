@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
 import {
@@ -170,6 +170,69 @@ describe('AiAssistantWidgetComponent', () => {
       });
       document.removeEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
       cmp.ngOnDestroy();
+    });
+
+    it('abre el paywall si el 403 de tier llega después del clic y responde una sola vez', async () => {
+      jest.useFakeTimers();
+      const cmp = setup();
+      const respuesta = new Subject<{ token: string }>();
+      httpGet.mockReturnValue(respuesta);
+      cmp.ngOnInit();
+      await Promise.resolve();
+      const resultado = jest.fn();
+      document.addEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
+
+      cmp.solicitarApertura();
+      expect(cmp.paywallOpen()).toBe(false);
+
+      respuesta.error(
+        new HttpErrorResponse({
+          status: 403,
+          error: { reason: 'TIER_TOO_LOW', requiredTier: 'ADVANCED' },
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(cmp.paywall()).toBe(true);
+      expect(cmp.paywallOpen()).toBe(true);
+      expect(resultado).toHaveBeenCalledTimes(1);
+      expect((resultado.mock.calls[0][0] as CustomEvent).detail).toEqual({
+        abierto: true,
+      });
+
+      // El timer/observador pendiente quedó limpio: no hay un segundo
+      // resultado "no disponible" después de abrir el paywall.
+      jest.advanceTimersByTime(5_000);
+      expect(resultado).toHaveBeenCalledTimes(1);
+
+      document.removeEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
+      cmp.ngOnDestroy();
+    });
+
+    it('no emite ni abre si se destruye antes del 403 tardío', async () => {
+      const cmp = setup();
+      const respuesta = new Subject<{ token: string }>();
+      httpGet.mockReturnValue(respuesta);
+      cmp.ngOnInit();
+      await Promise.resolve();
+      const resultado = jest.fn();
+      document.addEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
+
+      cmp.solicitarApertura();
+      cmp.ngOnDestroy();
+      respuesta.error(
+        new HttpErrorResponse({
+          status: 403,
+          error: { reason: 'TIER_TOO_LOW', requiredTier: 'ADVANCED' },
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(cmp.paywallOpen()).toBe(false);
+      expect(resultado).not.toHaveBeenCalled();
+      document.removeEventListener(AI_ASSISTANT_OPEN_RESULT_EVENT, resultado);
     });
 
     it('oculta el lanzador flotante cuando la página lo ancla', async () => {
