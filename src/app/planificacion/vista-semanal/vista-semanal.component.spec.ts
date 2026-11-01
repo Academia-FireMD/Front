@@ -5,6 +5,7 @@ import { Subject, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 import { PlanificacionesService } from '../../services/planificaciones.service';
+import { ViewportService } from '../../services/viewport.service';
 import { EventsService } from '../services/events.service';
 
 import { VistaSemanalComponent } from './vista-semanal.component';
@@ -370,6 +371,7 @@ describe('VistaSemanalComponent', () => {
 
     it('el doble clic no duplica la petición y la UI responde antes de la red', () => {
       component.role = 'ALUMNO';
+      component.modoMarcadoProgreso = true;
       const event = eventoTemario(dia, { vinculado: true });
       const respuesta = new Subject<unknown>();
       progressService.actualizarProgresoSubBloque$.mockReturnValue(respuesta);
@@ -389,6 +391,7 @@ describe('VistaSemanalComponent', () => {
 
     it('si falla el guardado, restaura la casilla y el progreso', () => {
       component.role = 'ALUMNO';
+      component.modoMarcadoProgreso = true;
       const event = eventoTemario(dia, { vinculado: true });
       progressService.actualizarProgresoSubBloque$.mockReturnValue(
         throwError(() => new Error('sin red')),
@@ -400,6 +403,164 @@ describe('VistaSemanalComponent', () => {
       expect(event.meta.subBloque.realizado).toBe(false);
       expect(component.isProgressSaving(event)).toBe(false);
       expect(toast.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('consulta y marcaje explícito del progreso', () => {
+    const inicio = new Date(2026, 9, 26, 9, 0);
+    const crearEvento = (
+      duracion = 60,
+      extra: Record<string, unknown> = {},
+    ): any => ({
+      title: 'Actividad de prueba',
+      start: inicio,
+      end: new Date(inicio.getTime() + duracion * 60000),
+      meta: {
+        esPersonalizado: false,
+        subBloque: {
+          id: 501,
+          duracion,
+          realizado: false,
+          comentarios: '**Instrucciones completas**',
+          comentariosAlumno: 'Comentario previo',
+          ...extra,
+        },
+      },
+    });
+
+    it('abrir el detalle no escribe progreso ni comentarios', () => {
+      component.role = 'ALUMNO';
+      const evento = crearEvento();
+      component.events = [evento];
+
+      component.onEventClicked(evento);
+
+      expect(component.isEventSheetVisible).toBe(true);
+      expect(component.eventoSheet).toBe(evento);
+      expect(component.comentarioBorrador).toBe('Comentario previo');
+      expect(
+        progressService.actualizarProgresoSubBloque$,
+      ).not.toHaveBeenCalled();
+      expect(evento.meta.subBloque.realizado).toBe(false);
+    });
+
+    it('fuera del modo explícito, updateEventProgress no cambia ni escribe', () => {
+      component.role = 'ALUMNO';
+      const evento = crearEvento();
+      component.modoMarcadoProgreso = false;
+
+      component.updateEventProgress(evento);
+
+      expect(evento.meta.subBloque.realizado).toBe(false);
+      expect(
+        progressService.actualizarProgresoSubBloque$,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('entrar y salir del modo suspende sólo la proyección del calendario', () => {
+      component.role = 'ALUMNO';
+      const evento = crearEvento();
+      component.events = [evento];
+
+      component.alternarModoProgreso();
+
+      expect(component.modoMarcadoProgreso).toBe(true);
+      expect(component.eventsParaCalendario[0].draggable).toBe(false);
+      expect(component.events[0].draggable).toBe(true);
+
+      component.alternarModoProgreso();
+
+      expect(component.modoMarcadoProgreso).toBe(false);
+      expect(component.eventsParaCalendario[0]).toBe(component.events[0]);
+    });
+
+    it('sólo ofrece casilla propia en bloques con altura suficiente (60 min)', () => {
+      expect(component.puedeMostrarCasilla(crearEvento(15))).toBe(false);
+      expect(component.puedeMostrarCasilla(crearEvento(30))).toBe(false);
+      expect(component.puedeMostrarCasilla(crearEvento(60))).toBe(true);
+      expect(component.puedeMostrarCasilla(crearEvento(45))).toBe(false);
+    });
+
+    it('guarda el comentario sólo al pulsar Guardar y refleja el ACK', () => {
+      component.role = 'ALUMNO';
+      const evento = crearEvento();
+      component.events = [evento];
+      component.abrirEventSheet(evento);
+      const respuesta = new Subject<unknown>();
+      progressService.actualizarProgresoSubBloque$.mockReturnValue(respuesta);
+
+      component.comentarioBorrador = 'Comentario nuevo';
+      component.onComentarioInput();
+      expect(
+        progressService.actualizarProgresoSubBloque$,
+      ).not.toHaveBeenCalled();
+
+      component.guardarComentarioSheet();
+
+      expect(progressService.actualizarProgresoSubBloque$).toHaveBeenCalledWith(
+        expect.objectContaining({ comentariosAlumno: 'Comentario nuevo' }),
+      );
+      respuesta.next({});
+      expect(evento.meta.subBloque.comentariosAlumno).toBe('Comentario nuevo');
+      expect(component.comentarioFeedback).toBe(true);
+    });
+  });
+
+  describe('vista móvil de un día', () => {
+    // Semana pasada: el día inicial es el lunes, no "hoy".
+    const lunes = new Date(2026, 8, 7, 0, 0);
+
+    beforeEach(() => {
+      const viewport = TestBed.inject(ViewportService) as any;
+      viewport.screenWidth = 'xs';
+      viewport.isMobile.mockReturnValue(true);
+      component.viewDate = lunes;
+      component.role = 'ALUMNO';
+      component.events = [
+        {
+          title: 'Tarea del lunes',
+          start: new Date(2026, 8, 7, 9),
+          end: new Date(2026, 8, 7, 10),
+          meta: { subBloque: { id: 1, duracion: 60, realizado: false } },
+        },
+      ];
+    });
+
+    it('ofrece un selector de siete días y un único día activo', () => {
+      const dias = component.semanaMovil();
+
+      expect(component.esMovil()).toBe(true);
+      expect(dias).toHaveLength(7);
+      expect(dias.filter((dia) => dia.activo)).toHaveLength(1);
+      expect(dias[0].activo).toBe(true);
+      expect(component.eventosDiaMovil.map((evento) => evento.title)).toEqual([
+        'Tarea del lunes',
+      ]);
+    });
+
+    it('abre el día indicado al entrar desde la vista mensual', () => {
+      component.diaInicial = new Date(2026, 8, 9);
+
+      expect(component.diaMovil.getDate()).toBe(9);
+      expect(component.diaMovil.getMonth()).toBe(8);
+      expect(component.puedeDiaAnteriorMovil).toBe(true);
+      expect(component.puedeDiaSiguienteMovil).toBe(true);
+    });
+
+    it('navega por días dentro de la semana sin salirse de ella', () => {
+      expect(component.puedeDiaAnteriorMovil).toBe(false);
+
+      component.diaSiguienteMovil();
+      expect(component.diaMovil.getDate()).toBe(8);
+      expect(component.eventosDiaMovil).toHaveLength(0);
+
+      for (let i = 0; i < 10; i++) component.diaSiguienteMovil();
+      expect(component.diaMovil.getDate()).toBe(13);
+      expect(component.puedeDiaSiguienteMovil).toBe(false);
+
+      for (let i = 0; i < 10; i++) component.diaAnteriorMovil();
+      expect(component.diaMovil.getDate()).toBe(7);
+      expect(component.puedeDiaAnteriorMovil).toBe(false);
     });
   });
 });

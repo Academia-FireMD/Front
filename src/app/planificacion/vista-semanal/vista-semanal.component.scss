@@ -36,83 +36,242 @@
       display: none;
     }
   }
+  /* La línea de hora actual es informativa: no debe robar el hit de la
+     casilla cuando coincide con el borde de la tarjeta. */
+  .cal-current-time-marker {
+    pointer-events: none;
+  }
 }
+
+/* Barra propia del calendario para entrar/salir del modo de marcado. */
+.calendar-progress-toolbar {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.9rem;
+  width: 100%;
+  margin: 0 0 0.55rem;
+  padding: 0.2rem 0;
+  background: var(--surface-0, #fff);
+}
+
+.calendar-progress-status {
+  margin: 0;
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: right;
+
+  &--active {
+    color: var(--primary-color);
+    font-weight: 600;
+
+    &::before {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      margin-right: 6px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      content: "";
+      vertical-align: 2px;
+    }
+  }
+}
+
+.calendar-progress-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-width: 10.5rem;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  background: var(--primary-color);
+  color: var(--primary-color-text, #fff);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: var(--primary-color-text, #fff);
+    filter: brightness(0.92);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  &__icon {
+    font-size: 0.95rem;
+    line-height: 1;
+  }
+
+  &__label {
+    white-space: nowrap;
+  }
+
+  &--active {
+    border-color: var(--secondary-color);
+    background: var(--secondary-color);
+    color: var(--primary-color-text, #fff);
+
+    &:hover {
+      border-color: var(--secondary-color);
+      background: var(--secondary-color);
+      color: var(--primary-color-text, #fff);
+      filter: brightness(1.15);
+    }
+  }
+
+  &[aria-disabled="true"] {
+    cursor: wait;
+    opacity: 0.65;
+  }
+}
+
+.event-card--marking .custom-event-template {
+  cursor: pointer;
+}
+
 .wrapper {
   height: 100%;
-  padding: 0.3rem 0.1rem;
+  min-width: 0;
+  min-height: 0;
+  /* Aísla las tarjetas consecutivas: 2px arriba + 2px abajo. */
+  padding: 2px 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  container-type: size;
 }
+
 .custom-event-template {
-  padding: 8px;
+  padding: 6px;
   border-radius: 8px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s;
   cursor: pointer;
   height: 100%;
-  display: flex;
-  align-items: flex-start;
-  min-width: 0;
-}
-
-.checked-event {
-  border: 3px solid var(--primary-color);
-}
-
-.event-content {
   width: 100%;
   min-width: 0;
-}
-
-.event-content strong {
-  font-size: 1em;
-}
-
-.event-comments {
-  font-size: 0.9em;
-  opacity: 0.8;
-  max-height: 3em;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: stretch;
   overflow: hidden;
 }
 
-.event-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
+/* El estado marcado no debe cambiar dimensiones: anillo interior. */
+.event-card--completed {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.event-content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
   gap: 4px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  white-space: normal;
+  text-wrap: wrap;
+}
+
+.event-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .event-title {
   min-width: 0;
-  flex-wrap: wrap;
+  flex: none;
+  overflow: hidden;
 
   strong {
-    min-width: 0;
-    overflow-wrap: anywhere;
     display: -webkit-box;
+    margin: 0;
+    min-width: 0;
+    padding-top: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
-    overflow: hidden;
+    line-height: 1.15;
   }
 }
 
-.event-actions {
-  display: flex;
+/* Pista textual de que la tarjeta abre el detalle. No es un control: la
+   superficie completa de la tarjeta es el objetivo táctil. */
+.event-detail-hint {
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
-  justify-content: flex-end;
-  flex: none;
+  gap: 3px;
+  margin-top: 2px;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  .pi {
+    font-size: 0.72rem;
+  }
+}
+
+/* En franjas cortas el texto secundario no cabe: se oculta sin recortar el
+   título ni invadir la franja siguiente. El detalle sigue disponible al
+   abrir la tarjeta. */
+@container (max-height: 43px) {
+  .event-title strong {
+    -webkit-line-clamp: 1;
+  }
+
+  .event-detail-hint {
+    display: none;
+  }
 }
 
 .completion-toggle {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   flex: none;
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
   padding: 0;
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--primary-color);
+  color: var(--text-color);
   cursor: pointer;
 
   &:focus-visible {
@@ -120,106 +279,400 @@
     outline-offset: -2px;
   }
 
-  &:disabled {
+  &:disabled,
+  &[aria-disabled="true"] {
     cursor: wait;
     opacity: 0.65;
   }
 }
 
+/* La cajita visible (20px) se alinea con la primera línea del título; el
+   botón mantiene 44px de área táctil sin desplazarla. */
 .completion-toggle__box {
   display: grid;
   place-items: center;
-  width: 21px;
-  height: 21px;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 0;
   border: 2px solid currentColor;
   border-radius: 4px;
   background: #fff;
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .completion-toggle[aria-checked="true"] .completion-toggle__box {
+  border-color: var(--primary-color);
   background: var(--primary-color);
   color: #fff;
 }
 
-.custom-header {
+/* ── Vista móvil: un día legible ──────────────────────────────────────── */
+.vista-movil {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.movil-dias {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  margin-bottom: 0.4rem;
+}
+
+.movil-dia {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 5px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
-}
-
-.progress-container {
-  margin-top: 5px;
-}
-
-.fisica-bridge {
-  margin-top: 5px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 12px;
-  background-color: #fdeaa8;
-  color: #5c4a12;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 4px 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-100, #f4f4f4);
+  color: var(--text-color);
+  font: inherit;
   cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 
-  &:hover {
-    filter: brightness(0.95);
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+  }
+
+  &--hoy {
+    border-color: rgba(var(--primary-color-rgb, 187, 41, 42), 0.55);
+  }
+
+  &--activo {
+    background: var(--primary-color);
+    color: var(--primary-color-text, #fff);
+  }
+
+  &__nombre {
+    font-size: 0.68rem;
+    line-height: 1.1;
+    text-transform: capitalize;
+  }
+
+  &__numero {
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  &__punto {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.75;
   }
 }
 
-/* Punto de color por disciplina dentro del chip del bridge (mismo color que
-   el calendario de física). Borde sutil para que los colores claros (p.ej.
-   el blanco de DESCANSO) no se pierdan sobre el fondo amarillo del chip. */
-.fisica-bridge__dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  margin: 0 3px 0 2px;
-  vertical-align: baseline;
-}
-
-/* Sub-bloque vinculado a física (rediseño bridge 2026-07-22): disciplinas
-   del día en vivo dentro del evento del temario. */
-.fisica-vinculada-disciplinas {
+.movil-dia-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: var(--surface-50, #fafafa);
+
+  &__btn {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--surface-border, #ddd);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.35;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 1px;
+    }
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+
+    strong {
+      font-size: 0.95rem;
+      line-height: 1.25;
+      text-align: center;
+    }
+
+    small {
+      color: var(--text-color-secondary);
+      font-size: 0.75rem;
+    }
+  }
 }
 
-.fisica-vinculada-chip {
+:host ::ng-deep .vista-movil {
+  .cal-day-headers {
+    display: none;
+  }
+
+  .cal-day-column,
+  .cal-day-columns {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .cal-week-view {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cal-time {
+    visibility: visible;
+  }
+
+  .cal-hour-rows,
+  .cal-time-events {
+    min-width: 0;
+  }
+}
+
+/* ── Panel inferior de detalle ────────────────────────────────────────── */
+:host ::ng-deep .event-sheet-dialog {
+  width: min(56rem, calc(100vw - 2rem)) !important;
+  max-height: min(82dvh, 46rem);
+  border-radius: 14px 14px 0 0;
+  overflow: hidden;
+
+  .p-dialog-content {
+    max-height: calc(82dvh - 8rem);
+    overflow: auto;
+    padding: 1rem 1.25rem;
+  }
+
+  .p-dialog-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    border-top: 1px solid var(--surface-border, #e5e5e5);
+    padding: 0.75rem 1.25rem;
+  }
+
+  .p-dialog-footer .p-button {
+    min-height: 44px;
+  }
+}
+
+.event-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.event-sheet__title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.event-sheet__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.event-sheet__chip {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 1px 5px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--surface-border, #ddd);
+  border-radius: 999px;
+  background: var(--surface-50, #fafafa);
   color: var(--text-color-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+
+  &--done {
+    border-color: #28a745;
+    background: #eaf7ee;
+    color: #1a6f33;
+  }
 }
 
-.fisica-vinculada-chip--hecho {
-  opacity: 0.75;
-  text-decoration: line-through;
+.event-sheet__when {
+  color: var(--text-color-secondary);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
-.fisica-vinculada-dot {
+.event-sheet__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  h3 {
+    margin: 0;
+    color: var(--text-color-secondary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+}
+
+.event-sheet__markdown {
+  color: var(--text-color);
+  overflow-wrap: anywhere;
+
+  a {
+    overflow-wrap: anywhere;
+  }
+}
+
+.event-sheet__fisica-resumen {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.event-sheet__disciplinas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    font-size: 0.85rem;
+  }
+}
+
+.event-sheet__dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  flex: none;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.event-sheet__disciplina-nombre {
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  &--hecha {
+    opacity: 0.75;
+    text-decoration: line-through;
+  }
+}
+
+.event-sheet__disciplina-estado {
+  margin-left: auto;
+  color: var(--text-color-secondary);
+  font-size: 0.76rem;
+}
+
+.event-sheet__comment {
+  label {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 6rem;
+  }
+}
+
+.event-sheet__comment-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .p-button {
+    min-height: 44px;
+  }
+}
+
+.event-sheet__feedback {
+  margin: 0;
+  font-size: 0.82rem;
+
+  &--error {
+    color: #b42318;
+  }
+}
+
+.event-sheet__ok {
+  color: #1a6f33;
+}
+
+.event-sheet__confirm {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #f0b4ae;
+  border-radius: 8px;
+  background: #fdf2f1;
+  color: #8a1c12;
+  font-size: 0.85rem;
+}
+
+.event-sheet__confirm-text {
+  margin-right: auto;
+  color: var(--text-color-secondary);
+  font-size: 0.82rem;
+}
+
+small {
+  font-size: 12px;
+  color: #555;
+}
+
+/* Contenedor con fondo gris */
+.progress-bar-background {
+  background-color: #e0e0e0;
+  border-radius: 5px;
+  overflow: hidden;
+  height: 10px;
+  width: 100%;
+  margin-top: 5px;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  transition: width 0.3s ease;
 }
 
 .fisica-vinculada-estado {
@@ -231,57 +684,45 @@
   color: #555;
 }
 
-.fisica-vinculada-estado--hecho {
-  color: #28a745;
-}
-
-/* Fase 5 polish bridge: indicador sutil de bloque externo/vinculado — borde
-   fino con opacidad, sin badge textual denso. */
+/* Fase 5 polish bridge: borde fino con opacidad, sin badge textual denso. */
 .evento-fisica-vinculada {
   border-left: 2px solid rgba(var(--primary-color-rgb, 63, 81, 181), 0.5) !important;
 }
 
-/* Icono de enlace externo del bloque físico: gap a la derecha del título. */
-.fisica-vinculada-info {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  font-size: 11px;
-}
-
-.fisica-vinculada-link {
-  min-height: 44px;
-  padding: 0 4px;
-  border: 0;
-  background: transparent;
-  color: var(--primary-color);
-  text-decoration: underline;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
+@media (max-width: 640px) {
+  .calendar-progress-toolbar {
+    justify-content: space-between;
   }
-}
 
-small {
-  font-size: 12px;
-  color: #555;
-}
+  .calendar-progress-status {
+    text-align: left;
+  }
 
-/* Contenedor con fondo gris */
-.progress-bar-background {
-  background-color: #e0e0e0; /* Gris claro */
-  border-radius: 5px;
-  overflow: hidden;
-  height: 10px;
-  width: 100%;
-  margin-top: 5px;
-  position: relative;
-}
+  .calendar-progress-toggle {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
 
-/* Barra de progreso dinámica */
-.progress-bar {
-  height: 100%;
-  transition: width 0.3s ease;
+  :host ::ng-deep .event-sheet-dialog {
+    width: 100vw !important;
+    max-height: 88dvh;
+
+    .p-dialog-content {
+      max-height: calc(88dvh - 8.5rem);
+      padding: 0.85rem 0.9rem;
+    }
+
+    .p-dialog-footer {
+      justify-content: stretch;
+      padding: 0.6rem 0.75rem;
+
+      .p-button {
+        flex: 1 1 45%;
+      }
+    }
+  }
+
+  .event-sheet__title {
+    font-size: 1.1rem;
+  }
 }

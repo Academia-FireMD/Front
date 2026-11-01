@@ -19,6 +19,17 @@ import { AuthService } from '../../../services/auth.service';
 type AiAssistantAccessReason = 'NO_SUBSCRIPTION' | 'EXPIRED' | 'TIER_TOO_LOW';
 
 /**
+ * Contrato visual mínimo entre una página y el widget: la página pide abrir la
+ * Ayuda existente y puede anclar el lanzador flotante en su área reservada.
+ * No transporta identidad, tokens ni entitlement alguno.
+ */
+export const AI_ASSISTANT_OPEN_EVENT = 'tecnikafire:abrir-asistente';
+export const AI_ASSISTANT_OPEN_RESULT_EVENT =
+  'tecnikafire:abrir-asistente-resultado';
+export const AI_ASSISTANT_DOCK_CLASS = 'ai-assistant-anclado';
+const AI_ASSISTANT_DOCK_STYLE_ID = 'ai-assistant-dock-style';
+
+/**
  * Widget del Asistente de Estudio (Paidio embebido).
  *
  * Cuando el acceso se deniega por TIER insuficiente, en vez de ocultar el
@@ -235,6 +246,11 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
   private document = inject<Document>(DOCUMENT);
   private authService = inject(AuthService);
   private scriptElement: HTMLScriptElement | null = null;
+  private launcherObserver: MutationObserver | null = null;
+  private aperturaTimer: ReturnType<typeof setTimeout> | null = null;
+  private ayudaSolicitadaPendiente = false;
+  private dockStyleElement: HTMLStyleElement | null = null;
+  private readonly onSolicitarApertura = () => this.solicitarApertura();
 
   /** Paywall activo (tier insuficiente). */
   readonly paywall = signal(false);
@@ -256,7 +272,98 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.installDockStyle();
+    this.document.addEventListener(
+      AI_ASSISTANT_OPEN_EVENT,
+      this.onSolicitarApertura,
+    );
     this.loadWidget();
+  }
+
+  /**
+   * Abre la Ayuda existente sin fabricar un segundo asistente: pulsa el
+   * lanzador real del script. Si el script aún no ha terminado de cargar, la
+   * petición queda pendiente y se resuelve cuando el lanzador aparece. Si el
+   * acceso está en paywall, abre ese panel.
+   */
+  solicitarApertura(): void {
+    if (this.paywall()) {
+      this.abrirPaywall();
+      this.emitirResultadoApertura(true);
+      return;
+    }
+    if (this.pulsarLanzador()) {
+      this.emitirResultadoApertura(true);
+      return;
+    }
+
+    this.ayudaSolicitadaPendiente = true;
+    this.observarLanzador();
+    if (this.aperturaTimer) clearTimeout(this.aperturaTimer);
+    this.aperturaTimer = setTimeout(() => {
+      if (!this.ayudaSolicitadaPendiente) return;
+      this.ayudaSolicitadaPendiente = false;
+      this.limpiarObservadorLanzador();
+      this.emitirResultadoApertura(false);
+    }, 2000);
+  }
+
+  private pulsarLanzador(): boolean {
+    const lanzador = this.document.getElementById('ai-widget-btn');
+    if (!lanzador) return false;
+    (lanzador as HTMLElement).click();
+    return true;
+  }
+
+  private observarLanzador(): void {
+    if (this.launcherObserver || !this.document.body) return;
+    this.launcherObserver = new MutationObserver(() => {
+      if (!this.ayudaSolicitadaPendiente) {
+        this.limpiarObservadorLanzador();
+        return;
+      }
+      if (!this.pulsarLanzador()) return;
+      this.ayudaSolicitadaPendiente = false;
+      if (this.aperturaTimer) {
+        clearTimeout(this.aperturaTimer);
+        this.aperturaTimer = null;
+      }
+      this.limpiarObservadorLanzador();
+      this.emitirResultadoApertura(true);
+    });
+    this.launcherObserver.observe(this.document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private limpiarObservadorLanzador(): void {
+    this.launcherObserver?.disconnect();
+    this.launcherObserver = null;
+  }
+
+  private emitirResultadoApertura(abierto: boolean): void {
+    this.document.dispatchEvent(
+      new CustomEvent(AI_ASSISTANT_OPEN_RESULT_EVENT, {
+        detail: { abierto },
+      }),
+    );
+  }
+
+  /**
+   * Regla visual para que una página pueda sustituir el lanzador flotante por
+   * su botón de Ayuda reservado sin tocar el modo del script ni su auth.
+   */
+  private installDockStyle(): void {
+    if (this.document.getElementById(AI_ASSISTANT_DOCK_STYLE_ID)) return;
+    const style = this.document.createElement('style');
+    style.id = AI_ASSISTANT_DOCK_STYLE_ID;
+    style.textContent = `body.${AI_ASSISTANT_DOCK_CLASS} #ai-widget-btn,
+      body.${AI_ASSISTANT_DOCK_CLASS} .ai-pw-bubble {
+        display: none !important;
+      }`;
+    this.document.head.appendChild(style);
+    this.dockStyleElement = style;
   }
 
   private getEmbedToken(): string {
@@ -324,6 +431,18 @@ export class AiAssistantWidgetComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.document.removeEventListener(
+      AI_ASSISTANT_OPEN_EVENT,
+      this.onSolicitarApertura,
+    );
+    if (this.aperturaTimer) {
+      clearTimeout(this.aperturaTimer);
+      this.aperturaTimer = null;
+    }
+    this.limpiarObservadorLanzador();
+    this.dockStyleElement?.remove();
+    this.dockStyleElement = null;
+
     if (this.scriptElement) {
       this.scriptElement.remove();
       this.scriptElement = null;

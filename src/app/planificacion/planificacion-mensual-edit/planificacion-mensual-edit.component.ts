@@ -1,4 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+} from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   FormArray,
@@ -60,14 +68,31 @@ import {
   etiquetaVarianteImportada,
   identidadVarianteImportada,
 } from '../utils/variante-importada.util';
+import {
+  AI_ASSISTANT_DOCK_CLASS,
+  AI_ASSISTANT_OPEN_EVENT,
+  AI_ASSISTANT_OPEN_RESULT_EVENT,
+} from '../../shared/components/ai-assistant-widget/ai-assistant-widget.component';
 
 @Component({
   selector: 'app-planificacion-mensual-edit',
   templateUrl: './planificacion-mensual-edit.component.html',
   styleUrl: './planificacion-mensual-edit.component.scss',
 })
-export class PlanificacionMensualEditComponent {
+export class PlanificacionMensualEditComponent implements OnDestroy {
   fb = inject(FormBuilder);
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private readonly document = inject(DOCUMENT);
+  private ayudaAnclada = false;
+  private ayudaRespondida = false;
+  private ayudaFallbackTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly onAyudaResultado = (event: Event) => {
+    const detalle = (event as CustomEvent<{ abierto?: boolean }>).detail;
+    this.ayudaRespondida = true;
+    if (detalle?.abierto === false) {
+      this.toast.info('La Ayuda no está disponible en este momento.');
+    }
+  };
   formGroup = this.fb.group({
     identificador: ['', Validators.required],
     descripcion: ['', Validators.required],
@@ -94,6 +119,21 @@ export class PlanificacionMensualEditComponent {
     oposiciones.forEach((code) => this.relevancia.push(new FormControl(code)));
   }
   lastLoadedPlanification = signal(null as PlanificacionMensual | null);
+
+  /* ── Estado de carga de la semana visible ──────────────────────────────
+   * El estado vacío sólo puede aparecer cuando la planificación, los eventos
+   * personales y el resumen físico se han cargado correctamente. Nunca se
+   * deduce "sin actividades" de un error o de una petición en curso. */
+  cargandoPlanificacion = signal(false);
+  errorCargaPlanificacion = signal(false);
+  planificacionCargada = signal(false);
+  eventosPersonalesCargados = signal(false);
+  errorEventosPersonales = signal(false);
+  resumenFisicaCargado = signal(false);
+  errorResumenFisica = signal(false);
+  sugerenciaNavegacion = signal(false);
+  private cargaPersonalActual = 0;
+
   dialogoPlanManualVisible = false;
   accionPlanManual: 'ASIGNAR' | 'RETIRAR' = 'ASIGNAR';
   pasoPlanManual: 'ALUMNO' | 'CONFIRMAR' = 'ALUMNO';
@@ -116,6 +156,8 @@ export class PlanificacionMensualEditComponent {
   /** Indica si los eventos del calendario tienen cambios sin guardar. */
   eventosModificados = false;
   viewDate = new Date();
+  /** Día que abre la vista móvil al entrar desde el calendario mensual. */
+  diaInicialSemana: Date | null = null;
   view: CalendarView = CalendarView.Week;
   public calendarView = CalendarView;
   eventsService = inject(EventsService);
@@ -332,6 +374,217 @@ export class PlanificacionMensualEditComponent {
     return events;
   }
 
+  private visibleWeekCache?: {
+    source: CalendarEvent[];
+    start: number;
+    events: CalendarEvent[];
+  };
+
+  get visibleWeekEvents(): CalendarEvent[] {
+    const start = getStartOfWeek(this.viewDate);
+    const key = start.getTime();
+    if (
+      this.visibleWeekCache?.source === this.events &&
+      this.visibleWeekCache.start === key
+    ) {
+      return this.visibleWeekCache.events;
+    }
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    const events = this.eventsService.getEventsForRange(
+      this.events,
+      start,
+      end,
+    );
+    this.visibleWeekCache = { source: this.events, start: key, events };
+    return events;
+  }
+
+  /** Física del bridge cuenta como contenido del periodo visible. */
+  get semanaTieneFisica(): boolean {
+    const start = getStartOfWeek(this.viewDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return this.resumenFisica().some((dia) => {
+      if (!dia.disciplinas?.length) return false;
+      const fecha = this.fechaCivil(dia.fecha);
+      return !!fecha && fecha >= start && fecha < end;
+    });
+  }
+
+  get semanaVisibleTieneActividades(): boolean {
+    return this.visibleWeekEvents.length > 0 || this.semanaTieneFisica;
+  }
+
+  get planificacionListaParaSemana(): boolean {
+    if (this.cargandoPlanificacion() || this.errorCargaPlanificacion()) {
+      return false;
+    }
+    if (!this.planificacionCargada() || !this.eventosPersonalesCargados()) {
+      return false;
+    }
+    if (this.errorEventosPersonales()) return false;
+    if (
+      this.planificacionFisicaHabilitada() &&
+      (!this.resumenFisicaCargado() || this.errorResumenFisica())
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  get mostrarEstadoVacioSemana(): boolean {
+    return (
+      this.expectedRole === 'ALUMNO' &&
+      this.view === CalendarView.Week &&
+      this.getId() !== 'new' &&
+      this.planificacionListaParaSemana &&
+      !this.semanaVisibleTieneActividades
+    );
+  }
+
+  get mostrarCargaSemana(): boolean {
+    return (
+      this.expectedRole === 'ALUMNO' &&
+      this.view === CalendarView.Week &&
+      !this.errorCargaPlanificacion() &&
+      (!this.planificacionCargada() || this.cargandoPlanificacion())
+    );
+  }
+
+  get mostrarErrorCargaSemana(): boolean {
+    return (
+      this.expectedRole === 'ALUMNO' &&
+      this.view === CalendarView.Week &&
+      this.errorCargaPlanificacion()
+    );
+  }
+
+  get nombrePlanificacion(): string {
+    return this.lastLoadedPlanification()?.descripcion?.trim() ?? '';
+  }
+
+  /** Metadatos reales del plan; nunca inventa nivel u oposición ausentes. */
+  get metaPlanificacion(): string[] {
+    const plan = this.lastLoadedPlanification();
+    if (!plan) return [];
+    const partes: string[] = [];
+    if (plan.identificador) partes.push(plan.identificador);
+
+    const oposicion =
+      plan.varianteBorrador?.oposicion ?? plan.relevancia?.[0] ?? null;
+    const oposicionLabel = getPlanificacionOposicionLabel(oposicion);
+    if (oposicionLabel) partes.push(oposicionLabel);
+
+    const nivel = plan.varianteBorrador?.nivel;
+    if (nivel) {
+      partes.push(
+        nivel === 'AVANZADO'
+          ? 'Avanzado'
+          : nivel === 'INICIACION'
+            ? 'Iniciación'
+            : nivel,
+      );
+    }
+
+    const franja =
+      plan.varianteBorrador?.franja ?? plan.tipoDePlanificacion ?? null;
+    if (franja === 'FRANJA_SEIS_A_OCHO_HORAS') partes.push('6–8 h');
+    else if (franja === 'FRANJA_CUATRO_A_SEIS_HORAS') partes.push('4–6 h');
+
+    return partes.filter(Boolean);
+  }
+
+  /**
+   * PUBLICADA certifica que este plan está publicado, no que sea la
+   * configuración activa del alumno (podría ser histórico/LEGACY). El badge
+   * usa esa etiqueta literal; nunca afirma "activo".
+   */
+  get planPublicado(): boolean {
+    return (
+      this.planificacionCargada() &&
+      !this.errorCargaPlanificacion() &&
+      this.lastLoadedPlanification()?.estado === 'PUBLICADA'
+    );
+  }
+
+  /**
+   * Sin un dato explícito de plan activo == id actual no se puede afirmar que
+   * la planificación esté activa; sólo que se conserva.
+   */
+  get contextoPlanificacion(): string {
+    return 'Tu planificación se conserva. No necesitas volver a configurarla.';
+  }
+
+  /** CTA del estado vacío: enfoca la navegación semanal existente y respeta
+   * su ventana consultable (los botones deshabilitados no se fuerzan). */
+  elegirOtraSemana(): void {
+    const host = this.elementRef.nativeElement as HTMLElement;
+    const navegacion = host.querySelector(
+      '.calendar-info',
+    ) as HTMLElement | null;
+    navegacion?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+
+    const botones = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('app-calendar-header button'),
+    );
+    const siguiente = botones.find(
+      (boton) =>
+        boton.getAttribute('aria-label') === 'Semana siguiente' &&
+        !boton.disabled,
+    );
+    const anterior = botones.find(
+      (boton) =>
+        boton.getAttribute('aria-label') === 'Semana anterior' &&
+        !boton.disabled,
+    );
+    const hoy = botones.find((boton) =>
+      (boton.textContent ?? '').includes('Hoy'),
+    );
+    (siguiente ?? anterior ?? hoy ?? botones[0])?.focus({
+      preventScroll: true,
+    });
+
+    this.sugerenciaNavegacion.set(true);
+    setTimeout(() => this.sugerenciaNavegacion.set(false), 5000);
+  }
+
+  reintentarCarga(): void {
+    this.load(
+      this.activedRoute.snapshot.queryParamMap.get('fechaFoco') ?? undefined,
+    );
+  }
+
+  abrirAyuda(): void {
+    this.ayudaRespondida = false;
+    this.document.dispatchEvent(new CustomEvent(AI_ASSISTANT_OPEN_EVENT));
+    if (this.ayudaFallbackTimer) clearTimeout(this.ayudaFallbackTimer);
+    this.ayudaFallbackTimer = setTimeout(() => {
+      if (!this.ayudaRespondida) {
+        this.toast.info('La Ayuda no está disponible en este momento.');
+      }
+    }, 3500);
+  }
+
+  private configurarAyuda(): void {
+    if (this.expectedRole === 'ALUMNO' && this.getId() !== 'new') {
+      this.document.body.classList.add(AI_ASSISTANT_DOCK_CLASS);
+      this.ayudaAnclada = true;
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.document.removeEventListener(
+      AI_ASSISTANT_OPEN_RESULT_EVENT,
+      this.onAyudaResultado,
+    );
+    if (this.ayudaFallbackTimer) clearTimeout(this.ayudaFallbackTimer);
+    if (this.ayudaAnclada) {
+      this.document.body.classList.remove(AI_ASSISTANT_DOCK_CLASS);
+      this.ayudaAnclada = false;
+    }
+  }
+
   public confirmarConversionBloquesFisica(): void {
     if (!this.planificacionFisicaHabilitada()) {
       return;
@@ -398,6 +651,7 @@ export class PlanificacionMensualEditComponent {
         const [data, queryParams] = e;
         const { expectedRole } = data;
         this.expectedRole = expectedRole;
+        this.configurarAyuda();
         const codigos = queryParams['codigosHoja'];
         this.codigosHojaDisponibles = Array.from(
           new Set(
@@ -754,6 +1008,8 @@ export class PlanificacionMensualEditComponent {
 
   onDayClicked(data: any): void {
     const startOfWeek = getStartOfWeek(data.day.date);
+    // En móvil se abre exactamente el día pulsado; en escritorio la semana.
+    this.diaInicialSemana = data.day.date;
     this.viewDate = startOfWeek;
 
     this.view = CalendarView.Week;
@@ -960,6 +1216,10 @@ export class PlanificacionMensualEditComponent {
   }
 
   ngOnInit(): void {
+    this.document.addEventListener(
+      AI_ASSISTANT_OPEN_RESULT_EVENT,
+      this.onAyudaResultado,
+    );
     this.load(
       this.activedRoute.snapshot.queryParamMap.get('fechaFoco') ?? undefined,
     );
@@ -967,6 +1227,13 @@ export class PlanificacionMensualEditComponent {
 
   private async load(fechaFoco?: string): Promise<void> {
     this.eventosModificados = false;
+    this.cargandoPlanificacion.set(true);
+    this.errorCargaPlanificacion.set(false);
+    this.planificacionCargada.set(false);
+    this.eventosPersonalesCargados.set(false);
+    this.errorEventosPersonales.set(false);
+    this.resumenFisicaCargado.set(false);
+    this.errorResumenFisica.set(false);
     const itemId = this.getId();
     if (itemId === 'new') {
       this.lastLoadedPlanification.set(null);
@@ -994,7 +1261,7 @@ export class PlanificacionMensualEditComponent {
         await firstValueFrom(
           this.planificacionesService.getPlanificacionMensualById$(itemId).pipe(
             tap((entry) => {
-              if (!entry) return;
+              if (!entry) throw new Error('Planificación vacía');
               this.lastLoadedPlanification.set(entry);
               const subBloques = entry.subBloques;
 
@@ -1065,10 +1332,19 @@ export class PlanificacionMensualEditComponent {
             }),
           ),
         );
+        this.planificacionCargada.set(true);
       } catch {
+        this.errorCargaPlanificacion.set(true);
         this.toast.error('No se pudo cargar la planificación.');
       }
     }
+
+    if (itemId === 'new') {
+      this.planificacionCargada.set(true);
+      this.eventosPersonalesCargados.set(true);
+      this.resumenFisicaCargado.set(true);
+    }
+    this.cargandoPlanificacion.set(false);
   }
 
   /** El alumno entra en la semana actual; el admin puede revisar desde el primer contenido. */
@@ -1120,19 +1396,27 @@ export class PlanificacionMensualEditComponent {
   }
 
   private loadEventosPersonalizados(planificacionId: number) {
+    const carga = ++this.cargaPersonalActual;
+    this.eventosPersonalesCargados.set(false);
+    this.errorEventosPersonales.set(false);
     this.planificacionesService
       .getEventosPersonalizados$(planificacionId)
       .subscribe({
         next: (eventosPersonalizados) => {
+          if (carga !== this.cargaPersonalActual) return;
           // Agregar los eventos personalizados a la lista de eventos utilizando el servicio
           const nuevosEventos = this.eventsService.fromSubbloquesToEvents(
             [],
             eventosPersonalizados,
           );
           this.events = [...this.events, ...nuevosEventos];
+          this.eventosPersonalesCargados.set(true);
         },
         error: (err) => {
           console.error('Error al cargar eventos personalizados:', err);
+          if (carga !== this.cargaPersonalActual) return;
+          this.errorEventosPersonales.set(true);
+          this.eventosPersonalesCargados.set(true);
         },
       });
   }
@@ -1250,6 +1534,9 @@ export class PlanificacionMensualEditComponent {
    */
   public onViewDateChange(date: Date): void {
     this.viewDate = date;
+    // En móvil, navegar de semana conserva el día de la semana elegido; el
+    // "Hoy" del calendario selecciona el día actual.
+    this.diaInicialSemana = date;
     if (this.expectedRole === 'ALUMNO') {
       this.cargarResumenFisica(date);
     }
@@ -1280,14 +1567,18 @@ export class PlanificacionMensualEditComponent {
    */
   private cargarResumenFisica(fecha: Date = this.viewDate): void {
     const carga = ++this.cargaResumenFisicaActual;
+    this.resumenFisicaCargado.set(false);
+    this.errorResumenFisica.set(false);
     if (!this.planificacionFisicaHabilitada()) {
       this.resumenFisica.set([]);
+      this.resumenFisicaCargado.set(true);
       return;
     }
 
     const planificacionId = this.lastLoadedPlanification()?.id;
     if (!planificacionId) {
       this.resumenFisica.set([]);
+      this.resumenFisicaCargado.set(true);
       return;
     }
 
@@ -1301,12 +1592,16 @@ export class PlanificacionMensualEditComponent {
               'Bridge física: no se pudo cargar el resumen (el temario sigue intacto):',
               err,
             );
+            if (carga === this.cargaResumenFisicaActual) {
+              this.errorResumenFisica.set(true);
+            }
             return of([] as ResumenDiaFisica[]);
           }),
         )
         .subscribe((dias) => {
           if (carga === this.cargaResumenFisicaActual) {
             this.resumenFisica.set(dias ?? []);
+            this.resumenFisicaCargado.set(true);
           }
         });
     } catch (err) {
@@ -1314,7 +1609,11 @@ export class PlanificacionMensualEditComponent {
         'Bridge física: error inesperado calculando el rango:',
         err,
       );
-      this.resumenFisica.set([]);
+      if (carga === this.cargaResumenFisicaActual) {
+        this.resumenFisica.set([]);
+        this.errorResumenFisica.set(true);
+        this.resumenFisicaCargado.set(true);
+      }
     }
   }
 

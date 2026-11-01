@@ -12,7 +12,7 @@ for (const viewport of [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'movil', width: 375, height: 667 },
 ]) {
-  test(`alumno marca entrenamiento sin abrir física, ve Markdown y casilla accesible en ${viewport.name}`, async ({
+  test(`alumno consulta el detalle y marca entrenamiento sólo en modo explícito (${viewport.name})`, async ({
     page,
   }) => {
     await page.setViewportSize({
@@ -31,6 +31,7 @@ for (const viewport of [
             descripcion: 'Prueba de calendario',
             mes: hoy.getMonth() + 1,
             ano: hoy.getFullYear(),
+            estado: 'PUBLICADA',
             relevancia: [],
             esPorDefecto: false,
             tipoDePlanificacion: 'FRANJA_CUATRO_A_SEIS_HORAS',
@@ -73,6 +74,12 @@ for (const viewport of [
         ]),
       }),
     );
+    await page.route('**/adjuntos/**', (route) =>
+      route.fulfill({ contentType: 'application/json', body: '[]' }),
+    );
+    await page.route('**/planificaciones/configuracion', (route) =>
+      route.fulfill({ contentType: 'application/json', body: '{}' }),
+    );
     await page.route(
       '**/planificaciones/actualizar-progreso-subbloque',
       (route) => {
@@ -113,16 +120,34 @@ for (const viewport of [
         .getByRole('button', { name: 'Cambiar entre vista semanal y mensual' })
         .click();
     await expect(page.locator('app-vista-semanal')).toBeVisible();
+
     const tarjeta = page
       .locator('.wrapper')
       .filter({ hasText: tituloLargo })
       .first();
+    await expect(tarjeta).toBeVisible();
+
+    // Consulta: abrir el detalle no escribe ni cambia la marca.
+    await tarjeta.locator('.event-text').click();
+    const ficha = page.getByTestId('event-sheet-content');
+    await expect(ficha).toBeVisible();
+    await expect(page.getByTestId('event-sheet-title')).toContainText(
+      tituloLargo,
+    );
+    await expect(page.getByTestId('event-sheet-instructions')).toContainText(
+      'Indicaciones importantes',
+    );
+    expect(guardados).toBe(0);
+    await page.getByTestId('event-sheet-close').click();
+    await expect(ficha).toBeHidden();
+
+    // Sólo el modo explícito habilita la casilla y la escritura.
+    await expect(page.getByTestId('completion-toggle')).toHaveCount(0);
+    await page.getByTestId('marking-toggle').click();
+    await expect(page.getByTestId('marking-toggle')).toContainText('Terminar');
     const casilla = tarjeta.getByTestId('completion-toggle');
     await expect(casilla).toBeVisible();
     await expect(casilla).toHaveAttribute('aria-checked', 'false');
-    await expect(tarjeta.locator('.event-comments strong')).toContainText(
-      'Indicaciones importantes',
-    );
     await casilla.scrollIntoViewIfNeeded();
     const box = await casilla.boundingBox();
     expect(box).not.toBeNull();

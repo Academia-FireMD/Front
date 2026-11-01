@@ -200,50 +200,51 @@
   </div>
 </ng-template>
 
-<p-dialog
-  header="Añadir Comentario"
-  [(visible)]="isCommentDialogVisible"
-  [modal]="true"
-  [closable]="false"
-  [style]="{ width: '400px' }"
->
-  <div class="p-fluid" *ngIf="selectedSubBloque">
-    <div class="field">
-      <label for="comentariosAlumno">Comentario</label>
-      <textarea
-        id="comentariosAlumno"
-        rows="4"
-        pInputTextarea
-        [(ngModel)]="selectedSubBloque.comentariosAlumno"
-        class="p-inputtextarea"
-        placeholder="Escribe tu comentario aquí..."
-      ></textarea>
-    </div>
-  </div>
-  <p-footer>
-    <button
-      pButton
-      label="Cancelar"
-      class="p-button-text"
-      (click)="isCommentDialogVisible = false"
-    ></button>
-    <app-async-button
-      label="Guardar"
-      icon="pi pi-check"
-      styleClass="p-button-primary"
-      [action]="saveComment.bind(this)"
-    ></app-async-button>
-  </p-footer>
-</p-dialog>
+<div class="calendar-progress-toolbar" *ngIf="puedeMarcarProgreso()">
+  <p
+    class="calendar-progress-status"
+    [class.calendar-progress-status--active]="modoMarcadoProgreso"
+    role="status"
+    data-testid="marking-status"
+  >
+    {{
+      guardadosProgresoPendientes
+        ? "Guardando progreso…"
+        : modoMarcadoProgreso
+          ? "Marcando progreso"
+          : "Progreso de la sesión"
+    }}
+  </p>
+  <button
+    type="button"
+    pButton
+    class="calendar-progress-toggle"
+    [class.calendar-progress-toggle--active]="modoMarcadoProgreso"
+    [attr.aria-pressed]="modoMarcadoProgreso"
+    [attr.aria-disabled]="modoMarcadoProgreso && guardadosProgresoPendientes"
+    [attr.aria-busy]="modoMarcadoProgreso && guardadosProgresoPendientes"
+    (click)="alternarModoProgreso($event)"
+    data-testid="marking-toggle"
+  >
+    <i
+      class="pi calendar-progress-toggle__icon"
+      [ngClass]="modoMarcadoProgreso ? 'pi-check' : 'pi-check-square'"
+      aria-hidden="true"
+    ></i>
+    <span class="calendar-progress-toggle__label">{{
+      modoMarcadoProgreso ? "Terminar" : "Marcar progreso"
+    }}</span>
+  </button>
+</div>
 
-<div class="row">
+<div class="row" [class.calendar--marking]="modoMarcadoProgreso">
   <!-- <p-accordion *ngIf="mode == 'edit'">
     <p-accordionTab header="Bloques asignables">
 
     </p-accordionTab>
   </p-accordion> -->
 
-  <div class="col-md-9 calendar-table">
+  <div class="col-12 calendar-table">
     <ng-template #templatePlan let-weekEvent="weekEvent">
       <div
         class="wrapper"
@@ -253,15 +254,18 @@
             ? 'temario-fisica-bridge'
             : null
         "
-        (click)="
-          $event.stopPropagation();
-          role == 'ALUMNO' || mode == 'edit'
-            ? onEventClicked(weekEvent.event)
-            : false
-        "
+        [attr.data-progress-key]="progressKey(weekEvent.event)"
+        [class.event-card--marking]="modoMarcadoProgreso"
+        (pointerdown)="onCardPointerDown($event)"
+        (pointermove)="onCardPointerMove($event)"
+        (pointerup)="onCardPointerUp($event)"
+        (pointercancel)="onCardPointerCancel($event)"
       >
         <div
           class="custom-event-template"
+          [class.event-card--completed]="
+            !!weekEvent?.event?.meta?.subBloque?.realizado
+          "
           [ngClass]="{
             'evento-fisica-vinculada': esEventoFisicaVinculado(
               weekEvent?.event
@@ -273,144 +277,73 @@
               ? '4px solid #ff9800'
               : 'none',
           }"
+          (click)="onCardSurfaceClick($event, weekEvent.event)"
         >
           <div class="event-content">
-            <div class="event-header">
-              <div class="event-title d-flex align-items-center gap-1">
-                <!-- Iconos para eventos personalizados -->
+            <!-- La casilla es independiente del texto: su gesto no abre el
+                 panel. Sólo se pinta en bloques con altura suficiente. -->
+            <button
+              *ngIf="
+                role === 'ALUMNO' &&
+                modoMarcadoProgreso &&
+                puedeMostrarCasilla(weekEvent?.event)
+              "
+              type="button"
+              class="completion-toggle"
+              role="checkbox"
+              [attr.aria-checked]="
+                !!weekEvent?.event?.meta?.subBloque?.realizado
+              "
+              [attr.aria-label]="
+                (weekEvent?.event?.meta?.subBloque?.realizado
+                  ? 'Marcar pendiente: '
+                  : 'Marcar realizada: ') +
+                (weekEvent?.event?.title || 'actividad')
+              "
+              [attr.aria-disabled]="isProgressSaving(weekEvent?.event)"
+              [attr.aria-busy]="isProgressSaving(weekEvent?.event)"
+              (click)="onCompletionClick($event, weekEvent.event)"
+              data-testid="completion-toggle"
+            >
+              <span
+                class="completion-toggle__box"
+                aria-hidden="true"
+                data-testid="completion-box"
+              >
                 <i
-                  *ngIf="weekEvent?.event?.meta?.esPersonalizado"
-                  class="pi pi-user text-orange-500"
-                  style="font-size: 0.8rem"
-                  pTooltip="Evento personal"
+                  *ngIf="weekEvent?.event?.meta?.subBloque?.realizado"
+                  class="pi pi-check"
                 ></i>
-                <!-- Iconos existentes -->
-                <i
-                  *ngIf="weekEvent?.event?.meta?.subBloque?.importante"
-                  class="pi pi-star-fill text-yellow-500"
-                  style="font-size: 0.8rem"
-                  pTooltip="Importante"
-                ></i>
-                <i
-                  *ngIf="weekEvent?.event?.meta?.subBloque?.tiempoAviso"
-                  class="pi pi-bell text-orange-500"
-                  style="font-size: 0.8rem"
-                  pTooltip="Aviso anticipado"
-                ></i>
+              </span>
+            </button>
+
+            <div
+              class="event-text"
+              [attr.role]="puedeInteractuarTarjeta() ? 'button' : null"
+              [attr.tabindex]="puedeInteractuarTarjeta() ? 0 : null"
+              [attr.aria-label]="etiquetaTarjeta(weekEvent?.event)"
+              [attr.aria-pressed]="
+                modoMarcadoProgreso
+                  ? !!weekEvent?.event?.meta?.subBloque?.realizado
+                  : null
+              "
+              (click)="onEventTextClick($event, weekEvent.event)"
+              (keydown)="onCardKeydown($event, weekEvent.event)"
+            >
+              <div class="event-title">
                 <strong class="descripcion text-sm">{{
                   weekEvent?.event?.title || "Sin nombre"
                 }}</strong>
               </div>
-              <div class="event-actions">
-                <!-- Ícono de comentario para eventos no personalizados -->
-                <i
-                  *ngIf="!weekEvent?.event?.meta?.esPersonalizado"
-                  class="{{
-                    !!weekEvent?.event?.meta?.subBloque?.comentariosAlumno
-                      ? 'fa-solid'
-                      : 'fa-regular'
-                  }} fa-comment comment-icon text-primary"
-                  (click)="
-                    openCommentDialog(weekEvent?.event?.meta?.subBloque, $event)
-                  "
-                ></i>
-
-                <!-- Ícono de borrar (adaptado para ambos tipos) -->
-                <i
-                  class="fa-solid fa-trash-can text-primary"
-                  (click)="
-                    weekEvent?.event?.meta?.esPersonalizado
-                      ? deleteEventoPersonalizado(weekEvent?.event, $event)
-                      : deleteEvent(weekEvent?.event, $event)
-                  "
-                  *ngIf="
-                    role == 'ADMIN' || weekEvent?.event?.meta?.esPersonalizado
-                  "
-                ></i>
-
-                <button
-                  *ngIf="role == 'ALUMNO'"
-                  type="button"
-                  class="completion-toggle"
-                  role="checkbox"
-                  [attr.aria-checked]="
-                    !!weekEvent?.event?.meta?.subBloque?.realizado
-                  "
-                  [attr.aria-label]="
-                    (weekEvent?.event?.meta?.subBloque?.realizado
-                      ? 'Marcar pendiente: '
-                      : 'Marcar realizada: ') +
-                    (weekEvent?.event?.title || 'actividad')
-                  "
-                  [disabled]="isProgressSaving(weekEvent?.event)"
-                  (click)="
-                    $event.stopPropagation();
-                    updateEventProgress(weekEvent?.event)
-                  "
-                  data-testid="completion-toggle"
-                >
-                  <span class="completion-toggle__box" aria-hidden="true">
-                    <i
-                      *ngIf="weekEvent?.event?.meta?.subBloque?.realizado"
-                      class="pi pi-check"
-                    ></i>
-                  </span>
-                </button>
-              </div>
-            </div>
-            <div
-              class="fisica-vinculada-info"
-              *ngIf="
-                role == 'ALUMNO' &&
-                esEventoFisicaVinculado(weekEvent?.event) &&
-                tieneFisica(weekEvent?.event?.start)
-              "
-            >
-              <span data-testid="fisica-vinculada-estado"
-                >Plan físico:
-                {{ progresoFisicaDia(weekEvent?.event?.start).hechas }}/{{
-                  progresoFisicaDia(weekEvent?.event?.start).total
-                }}</span
-              >
-              <button
-                type="button"
-                class="fisica-vinculada-link"
-                (click)="abrirFisica(weekEvent?.event?.start, $event)"
-                data-testid="fisica-vinculada-icono"
-                aria-label="Ver plan físico de este día"
-              >
-                Ver plan físico
-                <i class="pi pi-external-link" aria-hidden="true"></i>
-              </button>
-            </div>
-            <!-- Disciplinas del día en vivo (módulo de física) para el
-                 sub-bloque vinculado -->
-            <div
-              class="fisica-vinculada-disciplinas"
-              *ngIf="
-                role == 'ALUMNO' &&
-                esEventoFisicaVinculado(weekEvent?.event) &&
-                tieneFisica(weekEvent?.event?.start)
-              "
-              data-testid="fisica-vinculada-disciplinas"
-            >
               <span
-                *ngFor="let d of disciplinasFisica(weekEvent?.event?.start)"
-                class="fisica-vinculada-chip"
-                [class.fisica-vinculada-chip--hecho]="d.realizado"
-                [attr.data-testid]="'fisica-vinculada-chip-' + d.nombre"
+                class="event-detail-hint"
+                *ngIf="!modoMarcadoProgreso"
+                aria-hidden="true"
               >
-                <span
-                  class="fisica-vinculada-dot"
-                  [style.background-color]="d.color"
-                ></span
-                >{{ d.nombre }}
+                <i class="pi pi-file-edit"></i>
+                Ver detalle
               </span>
             </div>
-            <app-markdown-content
-              class="event-comments descripcion w-full"
-              [content]="weekEvent?.event?.meta?.subBloque?.comentarios"
-            ></app-markdown-content>
           </div>
         </div>
       </div>
@@ -422,25 +355,351 @@
       [global]="false"
       [appendTo]="'body'"
     ></p-contextMenu>
-    <mwl-calendar-week-view
-      [viewDate]="viewDate"
-      [dayStartHour]="6"
-      [dayEndHour]="23"
-      [hourSegments]="2"
-      [locale]="'es'"
-      [events]="visibleCalendarEvents"
-      [refresh]="refresh"
-      [snapDraggedEvents]="true"
-      [headerTemplate]="headerTemplate"
-      [weekStartsOn]="1"
-      [eventTemplate]="templatePlan"
-      (hourSegmentClicked)="onTimeClicked($event, cm)"
-      (eventTimesChanged)="eventDropped($event, role == 'ALUMNO')"
-      (eventClicked)="mode === 'edit' && onEventClicked($event.event)"
-    >
-    </mwl-calendar-week-view>
+
+    @if (esMovil()) {
+      <div class="vista-movil" data-testid="vista-semanal-movil">
+        <div
+          class="movil-dias"
+          role="tablist"
+          aria-label="Días de la semana visible"
+        >
+          @for (dia of semanaMovil(); track dia.fecha.getTime()) {
+            <button
+              type="button"
+              role="tab"
+              class="movil-dia"
+              [class.movil-dia--activo]="dia.activo"
+              [class.movil-dia--hoy]="dia.hoy"
+              [attr.aria-selected]="dia.activo"
+              [attr.aria-label]="dia.resumen"
+              (click)="seleccionarDiaMovil(dia.fecha)"
+            >
+              <span class="movil-dia__nombre">{{ dia.etiqueta }}</span>
+              <span class="movil-dia__numero">{{ dia.numero }}</span>
+              <span
+                class="movil-dia__punto"
+                *ngIf="dia.tieneEventos"
+                aria-hidden="true"
+              ></span>
+            </button>
+          }
+        </div>
+
+        <div class="movil-dia-nav">
+          <button
+            type="button"
+            class="movil-dia-nav__btn"
+            aria-label="Día anterior"
+            [disabled]="!puedeDiaAnteriorMovil"
+            (click)="diaAnteriorMovil()"
+          >
+            <i class="pi pi-angle-left" aria-hidden="true"></i>
+          </button>
+          <div class="movil-dia-nav__info">
+            <strong>{{ etiquetaDiaMovil() }}</strong>
+            <small *ngIf="progresoDiaMovil.total > 0">
+              {{ progresoDiaMovil.completed }} de
+              {{ progresoDiaMovil.total }} completados
+            </small>
+          </div>
+          <button
+            type="button"
+            class="movil-dia-nav__btn"
+            aria-label="Día siguiente"
+            [disabled]="!puedeDiaSiguienteMovil"
+            (click)="diaSiguienteMovil()"
+          >
+            <i class="pi pi-angle-right" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <mwl-calendar-week-view
+          [daysInWeek]="1"
+          [viewDate]="diaMovil"
+          [dayStartHour]="6"
+          [dayEndHour]="23"
+          [hourSegments]="2"
+          [hourSegmentHeight]="30"
+          [locale]="'es'"
+          [events]="eventosDiaMovil"
+          [refresh]="refresh"
+          [snapDraggedEvents]="true"
+          [eventTemplate]="templatePlan"
+          (hourSegmentClicked)="onTimeClicked($event, cm)"
+          (eventTimesChanged)="eventDropped($event, role == 'ALUMNO')"
+        >
+        </mwl-calendar-week-view>
+      </div>
+    } @else {
+      <mwl-calendar-week-view
+        [viewDate]="viewDate"
+        [dayStartHour]="6"
+        [dayEndHour]="23"
+        [hourSegments]="2"
+        [hourSegmentHeight]="30"
+        [locale]="'es'"
+        [events]="eventsParaCalendario"
+        [refresh]="refresh"
+        [snapDraggedEvents]="true"
+        [headerTemplate]="headerTemplate"
+        [weekStartsOn]="1"
+        [eventTemplate]="templatePlan"
+        (hourSegmentClicked)="onTimeClicked($event, cm)"
+        (eventTimesChanged)="eventDropped($event, role == 'ALUMNO')"
+      >
+      </mwl-calendar-week-view>
+    }
   </div>
 </div>
+
+<p-dialog
+  data-testid="event-sheet"
+  header="Detalle del evento"
+  closeAriaLabel="Cerrar detalle del evento"
+  [(visible)]="isEventSheetVisible"
+  position="bottom"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [focusTrap]="true"
+  [closeOnEscape]="true"
+  [dismissableMask]="false"
+  styleClass="event-sheet-dialog"
+  (onHide)="onEventSheetHide()"
+>
+  <article
+    class="event-sheet"
+    *ngIf="eventoSheet as evento"
+    data-testid="event-sheet-content"
+  >
+    <h2 class="event-sheet__title" tabindex="0" data-testid="event-sheet-title">
+      {{ evento.title || "Sin nombre" }}
+    </h2>
+
+    <div class="event-sheet__meta">
+      <span
+        class="event-sheet__chip"
+        [class.event-sheet__chip--done]="!!evento.meta?.subBloque?.realizado"
+        data-testid="event-sheet-status"
+      >
+        {{ evento.meta?.subBloque?.realizado ? "Realizada" : "Pendiente" }}
+      </span>
+      <span class="event-sheet__chip" data-testid="event-sheet-type">
+        {{ tipoEventoSheet(evento) }}
+      </span>
+      <span
+        *ngIf="evento.meta?.subBloque?.importante"
+        class="event-sheet__chip"
+        data-testid="event-sheet-important"
+        >Importante</span
+      >
+      <span
+        *ngIf="evento.meta?.subBloque?.tiempoAviso"
+        class="event-sheet__chip"
+        data-testid="event-sheet-notice"
+        >Aviso {{ evento.meta?.subBloque?.tiempoAviso }} min</span
+      >
+      <span class="event-sheet__when" data-testid="event-sheet-when">
+        {{ evento.start | date: "fullDate" }} ·
+        {{ evento.start | date: "HH:mm" }}–{{
+          finEventoSheet(evento) | date: "HH:mm"
+        }}
+        · {{ duracionEventoMinutos(evento) }} min
+      </span>
+    </div>
+
+    <section
+      class="event-sheet__section"
+      *ngIf="descripcionEventoSheet(evento)?.trim()"
+    >
+      <h3>{{ evento.meta?.esPersonalizado ? "Nota" : "Instrucciones" }}</h3>
+      <app-markdown-content
+        class="event-sheet__markdown"
+        [content]="descripcionEventoSheet(evento)"
+        data-testid="event-sheet-instructions"
+      ></app-markdown-content>
+    </section>
+
+    <section
+      class="event-sheet__section event-sheet__fisica"
+      *ngIf="puedeVerFisicaSheet()"
+      data-testid="event-sheet-fisica"
+    >
+      <h3>Plan físico del día</h3>
+      <p class="event-sheet__fisica-resumen">
+        {{ progresoFisicaDia(evento.start).hechas }} de
+        {{ progresoFisicaDia(evento.start).total }} disciplinas realizadas
+      </p>
+      <ul class="event-sheet__disciplinas">
+        <li
+          *ngFor="let disciplina of disciplinasFisica(evento.start)"
+          [attr.data-testid]="'event-sheet-fisica-' + disciplina.nombre"
+        >
+          <span
+            class="event-sheet__dot"
+            [style.background-color]="disciplina.color"
+            aria-hidden="true"
+          ></span>
+          <span
+            class="event-sheet__disciplina-nombre"
+            [class.event-sheet__disciplina--hecha]="disciplina.realizado"
+            >{{ disciplina.nombre }}</span
+          >
+          <span class="event-sheet__disciplina-estado">{{
+            disciplina.realizado ? "Realizada" : "Pendiente"
+          }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section
+      class="event-sheet__section event-sheet__comment"
+      *ngIf="puedeComentarEventoSheet()"
+      data-testid="event-sheet-comment-section"
+    >
+      <label for="event-sheet-comment">Tu comentario</label>
+      <textarea
+        id="event-sheet-comment"
+        pInputTextarea
+        rows="4"
+        class="p-inputtextarea"
+        placeholder="Escribe tu comentario aquí..."
+        [(ngModel)]="comentarioBorrador"
+        (ngModelChange)="onComentarioInput()"
+        [disabled]="comentarioGuardando"
+        data-testid="event-sheet-comment"
+      ></textarea>
+      <p
+        *ngIf="comentarioError"
+        class="event-sheet__feedback event-sheet__feedback--error"
+        role="alert"
+        data-testid="event-sheet-comment-error"
+      >
+        {{ comentarioError }}
+      </p>
+      <div class="event-sheet__comment-actions">
+        <button
+          pButton
+          type="button"
+          [label]="comentarioGuardando ? 'Guardando…' : 'Guardar comentario'"
+          [disabled]="comentarioGuardando || !comentarioCambiado"
+          (click)="guardarComentarioSheet()"
+          data-testid="event-sheet-comment-save"
+        ></button>
+        <small
+          *ngIf="comentarioGuardando"
+          role="status"
+          data-testid="event-sheet-comment-saving"
+          >Guardando…</small
+        >
+        <small
+          *ngIf="comentarioFeedback"
+          role="status"
+          class="event-sheet__ok"
+          data-testid="event-sheet-comment-saved"
+          >Comentario guardado</small
+        >
+      </div>
+    </section>
+
+    <p
+      *ngIf="isConfirmandoBorrado"
+      class="event-sheet__confirm"
+      role="alert"
+      data-testid="event-sheet-delete-confirm"
+    >
+      ¿Eliminar «{{ evento.title || "este evento" }}»? Esta acción no se puede
+      deshacer.
+    </p>
+  </article>
+
+  <ng-template pTemplate="footer">
+    <ng-container *ngIf="eventoSheet as evento">
+      <ng-container *ngIf="!isConfirmandoBorrado; else confirmarBorrado">
+        <button
+          *ngIf="puedeVerFisicaSheet()"
+          pButton
+          type="button"
+          label="Ver plan físico"
+          icon="pi pi-external-link"
+          class="p-button-text"
+          (click)="verPlanFisicoDesdeSheet($event)"
+          data-testid="event-sheet-physical"
+        ></button>
+        <button
+          *ngIf="puedeMarcarEventoSheet()"
+          pButton
+          type="button"
+          [label]="
+            evento.meta?.subBloque?.realizado
+              ? 'Marcar como pendiente'
+              : 'Marcar como realizada'
+          "
+          [icon]="
+            evento.meta?.subBloque?.realizado ? 'pi pi-times' : 'pi pi-check'
+          "
+          class="p-button-text"
+          [disabled]="isProgressSaving(evento)"
+          (click)="marcarEventoDesdeSheet()"
+          data-testid="event-sheet-progress"
+        ></button>
+        <button
+          *ngIf="puedeEditarEventoSheet()"
+          pButton
+          type="button"
+          label="Editar"
+          icon="pi pi-pencil"
+          class="p-button-text"
+          (click)="editarEventoDesdeSheet()"
+          data-testid="event-sheet-edit"
+        ></button>
+        <button
+          *ngIf="puedeEliminarEventoSheet()"
+          pButton
+          type="button"
+          label="Eliminar"
+          icon="pi pi-trash"
+          class="p-button-text p-button-danger"
+          [disabled]="eliminandoEvento"
+          (click)="solicitarBorradoEventoSheet()"
+          data-testid="event-sheet-delete"
+        ></button>
+        <button
+          pButton
+          type="button"
+          label="Cerrar"
+          class="p-button-text"
+          (click)="cerrarEventSheet()"
+          data-testid="event-sheet-close"
+        ></button>
+      </ng-container>
+      <ng-template #confirmarBorrado>
+        <span class="event-sheet__confirm-text"
+          >Esta acción no se puede deshacer.</span
+        >
+        <button
+          pButton
+          type="button"
+          label="Cancelar"
+          class="p-button-text"
+          [disabled]="eliminandoEvento"
+          (click)="cancelarBorradoEventoSheet()"
+          data-testid="event-sheet-delete-cancel"
+        ></button>
+        <button
+          pButton
+          type="button"
+          label="Eliminar definitivamente"
+          icon="pi pi-trash"
+          class="p-button-danger"
+          [disabled]="eliminandoEvento"
+          (click)="confirmarBorradoEventoSheet()"
+          data-testid="event-sheet-delete-confirm-button"
+        ></button>
+      </ng-template>
+    </ng-container>
+  </ng-template>
+</p-dialog>
 
 <!-- Añadir diálogo para eventos personalizados -->
 <p-dialog

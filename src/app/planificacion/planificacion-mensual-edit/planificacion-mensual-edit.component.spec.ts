@@ -20,6 +20,7 @@ import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { EventsService } from '../services/events.service';
 import { Oposicion } from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
+import { formatFechaISO } from '../../utils/utils';
 
 import { PlanificacionMensualEditComponent } from './planificacion-mensual-edit.component';
 
@@ -1343,6 +1344,169 @@ describe('PlanificacionMensualEditComponent', () => {
 
       expect(publicar).not.toHaveBeenCalled();
       expect(component.errorPlanManual).toMatch(/Selecciona un alumno/);
+    });
+  });
+
+  describe('cabecera del alumno y estado vacío de la semana', () => {
+    const lunes = new Date(2026, 9, 26);
+
+    function prepararSemanaCargada(): void {
+      // El ngOnInit real no debe pisar el estado precargado del escenario.
+      jest.spyOn(component as any, 'load').mockResolvedValue(undefined);
+      component.expectedRole = 'ALUMNO';
+      component.view = CalendarView.Week;
+      component.viewDate = lunes;
+      component.planificacionCargada.set(true);
+      component.eventosPersonalesCargados.set(true);
+      component.resumenFisicaCargado.set(true);
+      component.lastLoadedPlanification.set({
+        id: 88,
+        identificador: 'PCAI6-8H',
+        descripcion: 'Plan CPBA',
+        estado: 'PUBLICADA',
+        relevancia: [Oposicion.ALICANTE_CPBA],
+        tipoDePlanificacion:
+          TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+        varianteBorrador: {
+          id: 3,
+          codigo: 'PCAI6-8H',
+          oposicion: Oposicion.ALICANTE_CPBA,
+          nivel: 'INICIACION',
+          franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+        },
+        subBloques: [],
+        asignacion: {},
+        createdAt: lunes,
+        updatedAt: lunes,
+        esPorDefecto: false,
+      } as any);
+    }
+
+    it('muestra la identidad humana y los metadatos reales del plan', () => {
+      prepararSemanaCargada();
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement as HTMLElement;
+      expect(
+        html.querySelector('[data-testid="cabecera-alumno"]'),
+      ).toBeTruthy();
+      expect(html.textContent).toContain('Mi planificación');
+      expect(
+        html.querySelector('[data-testid="plan-nombre"]')?.textContent,
+      ).toContain('Plan CPBA');
+      const meta = html.querySelector('[data-testid="plan-meta"]')?.textContent;
+      expect(meta).toContain('PCAI6-8H');
+      expect(meta).toContain('Consorcio de Alicante');
+      expect(meta).toContain('Iniciación');
+      expect(meta).toContain('6–8 h');
+      expect(html.querySelector('[data-testid="plan-estado"]')).toBeTruthy();
+    });
+
+    it('no inventa un estado activo si el plan no está publicado', () => {
+      prepararSemanaCargada();
+      component.lastLoadedPlanification.update((plan) => ({
+        ...(plan as any),
+        estado: 'BORRADOR',
+      }));
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement as HTMLElement;
+      expect(html.querySelector('[data-testid="plan-estado"]')).toBeNull();
+      expect(component.contextoPlanificacion).toContain(
+        'Tu planificación se conserva',
+      );
+    });
+
+    it('no muestra el vacío mientras carga ni cuando hay error', () => {
+      component.expectedRole = 'ALUMNO';
+      component.view = CalendarView.Week;
+      component.viewDate = lunes;
+      component.cargandoPlanificacion.set(true);
+      fixture.detectChanges();
+      let html = fixture.nativeElement as HTMLElement;
+      expect(
+        html.querySelector('[data-testid="semana-cargando"]'),
+      ).toBeTruthy();
+      expect(html.querySelector('[data-testid="semana-vacia"]')).toBeNull();
+
+      component.cargandoPlanificacion.set(false);
+      component.errorCargaPlanificacion.set(true);
+      fixture.detectChanges();
+      html = fixture.nativeElement as HTMLElement;
+      expect(html.querySelector('[data-testid="semana-error"]')).toBeTruthy();
+      expect(html.querySelector('[data-testid="semana-vacia"]')).toBeNull();
+    });
+
+    it('muestra el vacío sólo tras cargar y sin contenido en toda la semana', () => {
+      prepararSemanaCargada();
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement as HTMLElement;
+      expect(html.querySelector('[data-testid="semana-vacia"]')).toBeTruthy();
+      expect(html.textContent).toContain(
+        'Esta semana todavía no tiene actividades',
+      );
+      // PUBLICADA sólo justifica el badge "Plan publicado"; no permite
+      // afirmar que sea la configuración activa del alumno.
+      expect(html.textContent).toContain(
+        'Tu planificación se conserva. No necesitas volver a configurarla.',
+      );
+      expect(html.textContent).not.toContain('Tu planificación está activa');
+      expect(
+        html.querySelector('[data-testid="elegir-otra-semana"]'),
+      ).toBeTruthy();
+      expect(html.querySelector('app-vista-semanal')).toBeNull();
+    });
+
+    it('no muestra el vacío si hay un evento personal en otro día de la semana', () => {
+      prepararSemanaCargada();
+      component.events = [
+        {
+          title: 'Evento personal',
+          start: new Date(2026, 9, 29, 18),
+          end: new Date(2026, 9, 29, 19),
+          meta: { esPersonalizado: true, subBloque: { id: 9 } },
+        },
+      ];
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement as HTMLElement;
+      expect(html.querySelector('[data-testid="semana-vacia"]')).toBeNull();
+      expect(html.querySelector('app-vista-semanal')).toBeTruthy();
+    });
+
+    it('no muestra el vacío si la semana sólo tiene física relevante', () => {
+      prepararSemanaCargada();
+      component.resumenFisica.set([
+        {
+          fecha: formatFechaISO(lunes),
+          bloqueId: 12,
+          disciplinas: [
+            {
+              nombre: 'Carrera',
+              grupo: 'CARRERA',
+              color: '#123456',
+              realizado: false,
+            },
+          ],
+        },
+      ]);
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement as HTMLElement;
+      expect(html.querySelector('[data-testid="semana-vacia"]')).toBeNull();
+    });
+
+    it('el CTA de otra semana activa la navegación existente sin asignar plan', () => {
+      prepararSemanaCargada();
+      fixture.detectChanges();
+
+      component.elegirOtraSemana();
+
+      expect(component.sugerenciaNavegacion()).toBe(true);
+      expect(
+        component.planificacionesService.createPlanificacionMensual$,
+      ).not.toHaveBeenCalled();
     });
   });
 });
