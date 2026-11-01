@@ -7,7 +7,7 @@ import {
   HttpRequest,
 } from '@angular/common/http';
 import { Injectable, Injector } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
+import { EMPTY, Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import { MembershipAccessService } from './membership-access.service';
@@ -37,6 +37,12 @@ export class AuthInterceptor implements HttpInterceptor {
     req: HttpRequest<any>,
     next: HttpHandler,
   ): Observable<HttpEvent<any>> {
+    const authSvc = this.getAuthService();
+    // La petición pertenece a la sesión que existía al lanzarse. Si el usuario
+    // cierra sesión o cambia de cuenta mientras está en vuelo, su 401/403 no
+    // puede renovar tokens, limpiar la sesión nueva ni tratarla como propia.
+    const session = authSvc.sessionSnapshot();
+
     // Leer token directamente de sessionStorage para evitar dependencia circular
     const authToken = sessionStorage.getItem('authToken');
 
@@ -50,7 +56,12 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(clonedRequest).pipe(
       catchError((error: HttpErrorResponse) => {
-        const authSvc = this.getAuthService();
+        // Errores de una sesión ya cerrada/sustituida: se descartan sin toast,
+        // sin logout de la sesión actual y sin redirecciones cruzadas.
+        if (!authSvc.isSessionCurrent(session)) {
+          return EMPTY;
+        }
+
         if (
           error.status === 401 &&
           !this.isRefreshRequest(req) &&
@@ -64,6 +75,9 @@ export class AuthInterceptor implements HttpInterceptor {
           // conservar los tokens y los cursos permanentes).
           return authSvc.refreshToken$().pipe(
             catchError((refreshError: HttpErrorResponse) => {
+              if (!authSvc.isSessionCurrent(session)) {
+                return EMPTY;
+              }
               // Solo un rechazo de credenciales invalida la sesión. Un 5xx,
               // timeout o fallo de red al consultar la BD NO significa que el
               // refresh token sea inválido: conservamos los tokens y dejamos
@@ -79,6 +93,9 @@ export class AuthInterceptor implements HttpInterceptor {
             }),
             switchMap(
               (tokens: { access_token?: unknown } | null | undefined) => {
+                if (!authSvc.isSessionCurrent(session)) {
+                  return EMPTY;
+                }
                 // Solo reintenta con el access_token recién emitido; nunca con
                 // un token viejo que quedase en sessionStorage si la respuesta
                 // de refresh viene incompleta.
@@ -103,6 +120,9 @@ export class AuthInterceptor implements HttpInterceptor {
                 });
                 return next.handle(newRequest).pipe(
                   catchError((retryError: HttpErrorResponse) => {
+                    if (!authSvc.isSessionCurrent(session)) {
+                      return EMPTY;
+                    }
                     if (retryError.status === 401) {
                       // El refresh fue válido pero el reintento sigue sin
                       // autenticar: la sesión no sirve.

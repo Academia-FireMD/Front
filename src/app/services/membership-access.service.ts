@@ -18,6 +18,10 @@ import { REASON_SUSCRIPCION_REQUERIDA } from '../shared/models/subscription.mode
 import { Usuario } from '../shared/models/user.model';
 import { suscripcionesVigentes } from '../shared/utils/membresia-externa.util';
 import { AuthService } from './auth.service';
+import {
+  AuthSessionService,
+  AuthSessionSnapshot,
+} from './auth-session.service';
 import { UserService } from './user.service';
 
 /** Evita repetir carga/toast si llegan varios 403 en paralelo o en ráfaga. */
@@ -42,8 +46,13 @@ export class MembershipAccessService {
   private readonly store = inject<Store<AppState>>(Store);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastrService);
+  private readonly sessions = inject(AuthSessionService);
 
-  private reloadInFlight$: Observable<Usuario | null> | null = null;
+  private reloadInFlight: {
+    session: AuthSessionSnapshot;
+    observable: Observable<Usuario | null>;
+  } | null = null;
+  private cooldownSession: AuthSessionSnapshot | null = null;
   private lastHandledAt = 0;
   private lastToastAt = 0;
 
@@ -61,26 +70,51 @@ export class MembershipAccessService {
    */
   handleSuscripcionRequerida(): void {
     if (!this.esAlumnoAutenticado()) return;
-    if (this.reloadInFlight$) return;
+
+    const session = this.sessions.snapshot();
+    // El cooldown es de la sesión: un 403 de A no debe silenciar el primer
+    // 403 legítimo de B tras cambiar de cuenta.
+    if (this.cooldownSession !== session) {
+      this.cooldownSession = session;
+      this.lastHandledAt = 0;
+      this.lastToastAt = 0;
+    }
+
+    if (
+      this.reloadInFlight &&
+      this.sessions.isCurrent(this.reloadInFlight.session)
+    ) {
+      return;
+    }
 
     const ahora = Date.now();
     if (ahora - this.lastHandledAt < COOLDOWN_MS) return;
     this.lastHandledAt = ahora;
 
+    const slot = {
+      session,
+      observable: null as unknown as Observable<Usuario | null>,
+    };
     const reload$ = this.userService.getUserProfile$().pipe(
       tap((user) => {
+        if (!this.sessions.isCurrent(session)) return;
         this.authService.lastUserLoaded = user;
         this.store.dispatch(UserActions.loadUserSuccess({ user }));
       }),
       catchError(() => of(null)),
       finalize(() => {
-        this.reloadInFlight$ = null;
+        if (this.reloadInFlight === slot) {
+          this.reloadInFlight = null;
+        }
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
 
-    this.reloadInFlight$ = reload$;
-    reload$.pipe(take(1)).subscribe((user) => this.explicarYRedirigir(user));
+    slot.observable = reload$;
+    this.reloadInFlight = slot;
+    reload$
+      .pipe(take(1))
+      .subscribe((user) => this.explicarYRedirigir(user, session));
   }
 
   private esAlumnoAutenticado(): boolean {
@@ -88,7 +122,14 @@ export class MembershipAccessService {
     return claims?.rol === 'ALUMNO';
   }
 
-  private explicarYRedirigir(user: Usuario | null): void {
+  private explicarYRedirigir(
+    user: Usuario | null,
+    session: AuthSessionSnapshot,
+  ): void {
+    // La respuesta pertenece a una sesión anterior: no debe redirigir ni
+    // mostrar toasts como si fueran del usuario actual.
+    if (!this.sessions.isCurrent(session)) return;
+
     // Si el reload falló con 401, el refresh inválido ya limpió la sesión y
     // ApiBaseService habrá mandado al login. No la pisamos con /app/profile.
     if (!this.esAlumnoAutenticado()) return;

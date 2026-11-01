@@ -97,6 +97,190 @@ describe('AuthInterceptor — 401 → refresh → 403 de membresía', () => {
     TestBed.resetTestingModule();
   });
 
+  function iniciarSesion(email: string, sub: number): string {
+    const accessToken = token({
+      rol: Rol.ALUMNO,
+      email,
+      sub,
+      exp: 9_999_999_999,
+    });
+    auth.login$(email, 'synthetic-password').subscribe();
+    httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
+      access_token: accessToken,
+      refresh_token: `refresh-${sub}`,
+    });
+    return accessToken;
+  }
+
+  it('un fallo del refresh de A después de entrar B no cierra la sesión de B', () => {
+    sessionStorage.clear();
+    iniciarSesion('a@test.com', 1);
+    const errores: unknown[] = [];
+    let completada = false;
+
+    http.get(`${environment.apiUrl}/protected`).subscribe({
+      error: (error) => errores.push(error),
+      complete: () => (completada = true),
+    });
+    httpMock
+      .expectOne(`${environment.apiUrl}/protected`)
+      .flush(
+        { message: 'token expirado' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+    const refreshA = httpMock.expectOne(`${environment.apiUrl}/auth/refresh`);
+
+    auth.logout$().subscribe();
+    const tokenB = iniciarSesion('b@test.com', 2);
+
+    refreshA.flush(
+      { message: 'refresh inválido' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    expect(sessionStorage.getItem('authToken')).toBe(tokenB);
+    expect(sessionStorage.getItem('refreshToken')).toBe('refresh-2');
+    expect(errores).toHaveLength(0);
+    expect(completada).toBe(true);
+    expect(users.getUserProfile$).not.toHaveBeenCalled();
+  });
+
+  it('un refresh exitoso de A después de entrar B no sustituye los tokens de B', () => {
+    sessionStorage.clear();
+    iniciarSesion('a@test.com', 1);
+    const tokenA2 = token({
+      rol: Rol.ALUMNO,
+      email: 'a@test.com',
+      sub: 1,
+      exp: 9_999_999_999,
+    });
+    const errores: unknown[] = [];
+
+    http.get(`${environment.apiUrl}/protected`).subscribe({
+      error: (error) => errores.push(error),
+    });
+    httpMock
+      .expectOne(`${environment.apiUrl}/protected`)
+      .flush(
+        { message: 'token expirado' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+    const refreshA = httpMock.expectOne(`${environment.apiUrl}/auth/refresh`);
+
+    auth.logout$().subscribe();
+    const tokenB = iniciarSesion('b@test.com', 2);
+
+    refreshA.flush({ access_token: tokenA2 });
+
+    expect(sessionStorage.getItem('authToken')).toBe(tokenB);
+    expect(httpMock.match(`${environment.apiUrl}/protected`)).toHaveLength(0);
+    expect(errores).toHaveLength(0);
+  });
+
+  it('un 401 del reintento de A después de entrar B conserva la sesión de B', () => {
+    sessionStorage.clear();
+    iniciarSesion('a@test.com', 1);
+    const tokenA2 = token({
+      rol: Rol.ALUMNO,
+      email: 'a@test.com',
+      sub: 1,
+      exp: 9_999_999_999,
+    });
+    const errores: unknown[] = [];
+
+    http.get(`${environment.apiUrl}/protected`).subscribe({
+      error: (error) => errores.push(error),
+    });
+    httpMock
+      .expectOne(`${environment.apiUrl}/protected`)
+      .flush(
+        { message: 'token expirado' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+    httpMock
+      .expectOne(`${environment.apiUrl}/auth/refresh`)
+      .flush({ access_token: tokenA2 });
+    const reintentoA = httpMock.expectOne(`${environment.apiUrl}/protected`);
+
+    auth.logout$().subscribe();
+    const tokenB = iniciarSesion('b@test.com', 2);
+
+    reintentoA.flush(
+      { message: 'sigue expirado' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    expect(sessionStorage.getItem('authToken')).toBe(tokenB);
+    expect(sessionStorage.getItem('refreshToken')).toBe('refresh-2');
+    expect(errores).toHaveLength(0);
+    expect(users.getUserProfile$).not.toHaveBeenCalled();
+  });
+
+  it('un 403 de membresía de A tras entrar B no recarga ni redirige como B', () => {
+    sessionStorage.clear();
+    iniciarSesion('a@test.com', 1);
+    const errores: unknown[] = [];
+
+    http.get(`${environment.apiUrl}/planificacion-fisica/mi-plan`).subscribe({
+      error: (error) => errores.push(error),
+    });
+    const peticionA = httpMock.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/mi-plan`,
+    );
+
+    auth.logout$().subscribe();
+    iniciarSesion('b@test.com', 2);
+
+    peticionA.flush(
+      { reason: 'SUSCRIPCION_REQUERIDA', message: 'Membresía requerida' },
+      { status: 403, statusText: 'Forbidden' },
+    );
+
+    expect(users.getUserProfile$).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(toast.info).not.toHaveBeenCalled();
+    expect(errores).toHaveLength(0);
+  });
+
+  it('un 403 de membresía en el reintento de A tras entrar B no actúa sobre B', () => {
+    sessionStorage.clear();
+    iniciarSesion('a@test.com', 1);
+    const tokenA2 = token({
+      rol: Rol.ALUMNO,
+      email: 'a@test.com',
+      sub: 1,
+      exp: 9_999_999_999,
+    });
+
+    http.get(`${environment.apiUrl}/planificacion-fisica/mi-plan`).subscribe({
+      error: () => undefined,
+    });
+    httpMock
+      .expectOne(`${environment.apiUrl}/planificacion-fisica/mi-plan`)
+      .flush(
+        { message: 'token expirado' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+    httpMock
+      .expectOne(`${environment.apiUrl}/auth/refresh`)
+      .flush({ access_token: tokenA2 });
+    const reintentoA = httpMock.expectOne(
+      `${environment.apiUrl}/planificacion-fisica/mi-plan`,
+    );
+
+    auth.logout$().subscribe();
+    iniciarSesion('b@test.com', 2);
+
+    reintentoA.flush(
+      { reason: 'SUSCRIPCION_REQUERIDA', message: 'Membresía requerida' },
+      { status: 403, statusText: 'Forbidden' },
+    );
+
+    expect(users.getUserProfile$).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
   it('conserva tokens, recarga el perfil una vez y va a /app/profile', () => {
     const tokenRenovado = token({
       rol: Rol.ALUMNO,
