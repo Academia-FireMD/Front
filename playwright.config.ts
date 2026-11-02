@@ -12,7 +12,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 2 : 0,
-  workers: process.env['CI'] ? 1 : undefined,
+  workers: process.env['CI'] ? 1 : 2,
   reporter: process.env['CI'] ? 'dot' : 'html',
   timeout: 30_000,
   use: {
@@ -27,7 +27,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx ng serve --port ${E2E_PORT}`,
+    command: `npx ng serve --host 127.0.0.1 --port ${E2E_PORT}`,
     url: E2E_BASE_URL,
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,
