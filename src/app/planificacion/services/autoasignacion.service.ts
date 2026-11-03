@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
@@ -47,6 +47,23 @@ export class AutoasignacionService extends ApiBaseService {
   constructor(private http: HttpClient) {
     super(http);
     this.controllerPrefix = '/planificaciones';
+  }
+
+  /**
+   * Resumen de la última publicación de la sesión. Vive solo en memoria para
+   * que cerrar y reabrir el diálogo no borre el resultado; no se persiste.
+   */
+  private readonly resultadoPublicacionSesion =
+    signal<ResultadoPublicacionSemanas | null>(null);
+
+  getResultadoPublicacionSesion(): ResultadoPublicacionSemanas | null {
+    return this.resultadoPublicacionSesion();
+  }
+
+  guardarResultadoPublicacionSesion(
+    resultado: ResultadoPublicacionSemanas | null,
+  ): void {
+    this.resultadoPublicacionSesion.set(resultado);
   }
 
   public getConfiguracion$(): Observable<ConfiguracionPlanificacion> {

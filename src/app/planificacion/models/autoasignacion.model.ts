@@ -194,7 +194,16 @@ export interface IncidenciaImportacionPlantilla {
   semana?: number;
   dia?: string;
   filaExcel?: number;
+  /** Referencias A1 de las celdas implicadas, cuando el servidor las conoce. */
+  celdas?: string[];
   campo?: string;
+  mensaje: string;
+}
+
+/** Avisos no bloqueantes de una importación (metadatos copiados, etc.). */
+export interface AvisoImportacionSemanas {
+  hoja: string;
+  semana?: number;
   mensaje: string;
 }
 
@@ -224,9 +233,7 @@ export interface HojaImportacionPlantilla {
   semanas: SemanaImportacionPlantilla[];
   independientes?: BloqueIndependienteImportacion[];
   errores: IncidenciaImportacionPlantilla[];
-  warnings: Array<
-    Pick<IncidenciaImportacionPlantilla, 'hoja' | 'semana' | 'mensaje'>
-  >;
+  warnings: AvisoImportacionSemanas[];
 }
 
 export interface PreviewImportacionPlantillas {
@@ -267,6 +274,36 @@ export type DestinoCargaSemanas =
   | { tipo: 'COPIAR' }
   | { tipo: 'CREAR'; identificador: string; descripcion?: string };
 
+export type EstadoBloqueCambioSemana =
+  | 'creado'
+  | 'actualizado'
+  | 'omitido'
+  | 'eliminado';
+
+export interface BloqueCambioSemana {
+  nombre: string;
+  estado: EstadoBloqueCambioSemana;
+  horaInicio: string;
+  duracion: number;
+  importante?: boolean;
+  color?: string | null;
+}
+
+/**
+ * Semana de la preview de carga. El número de semana se llama `numero`;
+ * no confundir con `SemanaResultadoPublicacion`, que usa `semana`.
+ */
+export interface SemanaCambiosCarga {
+  hoja: string;
+  numero: number;
+  lunes: string;
+  creados: number;
+  actualizados: number;
+  omitidos: number;
+  eliminados: number;
+  bloques: BloqueCambioSemana[];
+}
+
 export interface VarianteCargaSemanas {
   codigo: string;
   oposicion?: Oposicion;
@@ -283,21 +320,7 @@ export interface VarianteCargaSemanas {
   destino: DestinoCargaSemanas | null;
   planificacionId?: number;
   primeraSemana?: string;
-  semanas?: Array<{
-    hoja: string;
-    numero: number;
-    lunes: string;
-    creados: number;
-    actualizados: number;
-    omitidos: number;
-    eliminados: number;
-    bloques: Array<{
-      nombre: string;
-      estado: 'creado' | 'actualizado' | 'omitido' | 'eliminado';
-      horaInicio: string;
-      duracion: number;
-    }>;
-  }>;
+  semanas?: SemanaCambiosCarga[];
 }
 
 export interface PreviewCargaSemanas {
@@ -309,6 +332,7 @@ export interface PreviewCargaSemanas {
   previewHash: string | null;
   plantillasActualizadas?: string[];
   variantes: VarianteCargaSemanas[];
+  warnings?: AvisoImportacionSemanas[];
   mensaje?: string;
 }
 
@@ -320,9 +344,24 @@ export interface CargaSemanasPendiente {
   variantes: Array<{ codigo: string; planificacionMensualId: number | null }>;
 }
 
+/** Semana ya publicada. La publicación usa `semana`, no `numero`. */
+export interface SemanaResultadoPublicacion {
+  codigo: string;
+  hoja: string;
+  semana: number;
+  lunes: string;
+  creados: number;
+  actualizados: number;
+  omitidos: number;
+  eliminados: number;
+  bloques: BloqueCambioSemana[];
+}
+
 export interface ResultadoPublicacionSemanas {
   cargaId: number;
   estado: 'PUBLICADA';
   variantes: Array<{ codigo: string; planificacionId: number }>;
+  semanas: SemanaResultadoPublicacion[];
+  warnings?: AvisoImportacionSemanas[];
   mensaje: string;
 }

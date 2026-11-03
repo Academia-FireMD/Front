@@ -26,6 +26,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
+import { getISOWeekYear } from 'date-fns';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 import {
   GenericListComponent,
@@ -45,9 +47,12 @@ import {
   PreviewImportacionPlantillas,
   PreviewCargaSemanas,
   CargaSemanasPendiente,
+  AvisoImportacionSemanas,
   ReglaOposicionAdmin,
   ResultadoImportacionPlantillas,
+  ResultadoPublicacionSemanas,
   SemanaImportacionPlantilla,
+  SemanaResultadoPublicacion,
   VarianteAdmin,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
@@ -78,6 +83,39 @@ const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
   sobrescritura: 'Sobrescrita',
 };
 
+interface SemanaCalendarioCarga {
+  numero: number;
+  lunes: string;
+}
+
+interface IntervaloSemanasIso {
+  inicio: SemanaCalendarioCarga;
+  fin: SemanaCalendarioCarga;
+}
+
+interface GrupoSemanasIso {
+  anioIso: number;
+  semanas: SemanaCalendarioCarga[];
+  intervalos: IntervaloSemanasIso[];
+}
+
+interface TotalesPublicacionPerfil {
+  creados: number;
+  actualizados: number;
+  omitidos: number;
+  eliminados: number;
+}
+
+interface PerfilPublicacionResumen {
+  codigo: string;
+  etiqueta: string;
+  planificacionId: number | null;
+  semanas: SemanaResultadoPublicacion[];
+  aniosIso: number[];
+  totales: TotalesPublicacionPerfil;
+  sinCambios: boolean;
+}
+
 @Component({
   selector: 'app-planificacion-admin',
   standalone: true,
@@ -96,6 +134,7 @@ const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
     MessageModule,
     ProgressSpinnerModule,
     TagModule,
+    RouterLink,
     GenericListComponent,
     OposicionPickerComponent,
     ExcelFilePickerComponent,
@@ -223,6 +262,9 @@ export class PlanificacionAdminComponent
   previewCarga = signal<PreviewCargaSemanas | null>(null);
   errorCarga = signal<string | null>(null);
   resultadoCarga = signal<PreviewCargaSemanas | null>(null);
+  readonly resultadoPublicacion = signal<ResultadoPublicacionSemanas | null>(
+    this.autoasignacionService.getResultadoPublicacionSesion?.() ?? null,
+  );
   cargasPendientes = signal<CargaSemanasPendiente[]>([]);
   publicandoCarga = signal<number | null>(null);
   idempotencyKeyCarga: string | null = null;
@@ -451,6 +493,7 @@ export class PlanificacionAdminComponent
   }
 
   confirmarPublicacionCarga(id: number): void {
+    if (this.publicandoCarga() !== null) return;
     this.confirmationService.confirm({
       header: 'Publicar semanas',
       message:
@@ -465,20 +508,50 @@ export class PlanificacionAdminComponent
   async publicarCarga(id: number): Promise<void> {
     if (this.publicandoCarga() !== null) return;
     this.publicandoCarga.set(id);
+    this.errorCarga.set(null);
     try {
       const resultado = await firstValueFrom(
         this.autoasignacionService.publicarCargaSemanas$(id),
       );
-      this.toast.success(resultado.mensaje);
+      // El resumen es el resultado de la sesión: debe sobrevivir al toast y a
+      // cualquier fallo posterior al refrescar las listas.
+      this.establecerResultadoPublicacion(resultado);
       this.resultadoCarga.set(null);
-      await Promise.all([this.cargarCargasPendientes(), this.cargarTodo()]);
+      this.previewImportacion.set(null);
+      this.toast.success(resultado.mensaje);
+      try {
+        await Promise.all([this.cargarCargasPendientes(), this.cargarTodo()]);
+      } catch {
+        this.errorCarga.set(
+          'Las semanas se publicaron, pero no se pudieron refrescar las listas. El resumen sigue disponible.',
+        );
+      }
     } catch (error) {
-      this.errorCarga.set(
-        this.mensajeErrorImportacion(
-          error,
-          'No se pudieron publicar las semanas.',
-        ),
-      );
+      const preview = this.previewImportacionDeError(error);
+      if (
+        error instanceof HttpErrorResponse &&
+        error.status === 422 &&
+        preview
+      ) {
+        // La revalidación al publicar puede descubrir errores que ya no están
+        // en el Excel preparado. Se descarta el estado obsoleto, pero se
+        // conserva el resumen de una publicación anterior si existía.
+        this.previewCarga.set(null);
+        this.resultadoCarga.set(null);
+        this.previewImportacion.set(preview);
+        this.confirmarSobrescritura.set(false);
+        this.idempotencyKeyCarga = null;
+        this.errorCarga.set(
+          'No se publicó nada: el Excel pendiente ya no supera la validación. Revisa los errores localizados, descarta esta carga, corrige el archivo y vuelve a subirlo.',
+        );
+      } else {
+        this.errorCarga.set(
+          this.mensajeErrorImportacion(
+            error,
+            'No se pudieron publicar las semanas.',
+          ),
+        );
+      }
     } finally {
       this.publicandoCarga.set(null);
     }
@@ -812,6 +885,7 @@ export class PlanificacionAdminComponent
     this.previewCarga.set(null);
     this.errorCarga.set(null);
     this.resultadoCarga.set(null);
+    this.establecerResultadoPublicacion(null);
     this.idempotencyKeyCarga = null;
     this.confirmarSobrescritura.set(false);
     this.resultadoImportacion.set(null);
@@ -836,9 +910,11 @@ export class PlanificacionAdminComponent
     if (!file) return;
     this.previsualizandoImportacion.set(true);
     this.resultadoCarga.set(null);
+    this.previewCarga.set(null);
     this.previewImportacion.set(null);
     this.errorCarga.set(null);
     this.confirmarSobrescritura.set(false);
+    this.idempotencyKeyCarga = null;
     try {
       const preview = await firstValueFrom(
         this.autoasignacionService.previewCargaSemanas$(file),
@@ -850,12 +926,12 @@ export class PlanificacionAdminComponent
         : null;
     } catch (error) {
       this.previewCarga.set(null);
-      if (error instanceof HttpErrorResponse && error.error?.preview) {
-        this.previewImportacion.set(
-          error.error.preview as PreviewImportacionPlantillas,
-        );
-      }
-      if (!this.previewImportacion()) {
+      this.idempotencyKeyCarga = null;
+      this.confirmarSobrescritura.set(false);
+      const preview = this.previewImportacionDeError(error);
+      if (preview) {
+        this.previewImportacion.set(preview);
+      } else {
         this.errorCarga.set(
           this.mensajeErrorImportacion(
             error,
@@ -868,7 +944,17 @@ export class PlanificacionAdminComponent
     }
   }
 
+  private previewImportacionDeError(
+    error: unknown,
+  ): PreviewImportacionPlantillas | null {
+    if (!(error instanceof HttpErrorResponse)) return null;
+    const preview = error.error?.preview;
+    if (!preview || typeof preview !== 'object') return null;
+    return preview as PreviewImportacionPlantillas;
+  }
+
   async guardarCargaSemanas(): Promise<void> {
+    if (this.aplicandoImportacion()) return;
     const file = this.archivoImportacion();
     const preview = this.previewCarga();
     if (
@@ -904,6 +990,15 @@ export class PlanificacionAdminComponent
       if (error instanceof HttpErrorResponse && error.status === 409) {
         this.previewCarga.set(null);
         this.confirmarSobrescritura.set(false);
+        this.idempotencyKeyCarga = null;
+      }
+      const preview = this.previewImportacionDeError(error);
+      if (preview) {
+        this.previewCarga.set(null);
+        this.resultadoCarga.set(null);
+        this.previewImportacion.set(preview);
+        this.confirmarSobrescritura.set(false);
+        this.idempotencyKeyCarga = null;
       }
       this.toast.error(
         this.mensajeErrorImportacion(error, 'No se pudo guardar el Excel.'),
@@ -988,6 +1083,166 @@ export class PlanificacionAdminComponent
   formatearFechaIso(fecha: string): string {
     const [year, month, day] = fecha.split('-');
     return year && month && day ? `${day}/${month}/${year}` : fecha;
+  }
+
+  contador(valor: number, singular: string, plural: string): string {
+    return `${valor} ${valor === 1 ? singular : plural}`;
+  }
+
+  /**
+   * Agrupa semanas por año ISO. Solo une semanas consecutivas dentro del
+   * mismo año: un cambio de año o un hueco abre un intervalo nuevo para no
+   * presentar como continuo un calendario que no lo es.
+   */
+  agruparSemanasPorAnioIso(
+    semanas: ReadonlyArray<SemanaCalendarioCarga> | null | undefined,
+  ): GrupoSemanasIso[] {
+    const ordenadas = [...(semanas ?? [])]
+      .filter(
+        (semana) =>
+          Number.isInteger(semana.numero) &&
+          this.fechaCivilDesdeIso(semana.lunes) !== null,
+      )
+      .sort((a, b) => a.lunes.localeCompare(b.lunes));
+    const grupos: GrupoSemanasIso[] = [];
+    const vistas = new Set<string>();
+
+    for (const semana of ordenadas) {
+      const clave = `${semana.lunes}#${semana.numero}`;
+      if (vistas.has(clave)) continue;
+      vistas.add(clave);
+      const fecha = this.fechaCivilDesdeIso(semana.lunes);
+      if (!fecha) continue;
+      const anioIso = getISOWeekYear(fecha);
+      let grupo = grupos.at(-1);
+      if (!grupo || grupo.anioIso !== anioIso) {
+        grupo = { anioIso, semanas: [], intervalos: [] };
+        grupos.push(grupo);
+      }
+      const anterior = grupo.semanas.at(-1);
+      const intervalo = grupo.intervalos.at(-1);
+      grupo.semanas.push(semana);
+      if (
+        anterior &&
+        intervalo &&
+        this.esSemanaSiguiente(anterior.lunes, semana.lunes)
+      ) {
+        intervalo.fin = semana;
+      } else {
+        grupo.intervalos.push({ inicio: semana, fin: semana });
+      }
+    }
+    return grupos;
+  }
+
+  etiquetaIntervaloSemana(intervalo: IntervaloSemanasIso): string {
+    const inicio = `Semana ${intervalo.inicio.numero} · ${this.formatearFechaIso(intervalo.inicio.lunes)}`;
+    if (intervalo.inicio.lunes === intervalo.fin.lunes) return inicio;
+    return `${inicio} – Semana ${intervalo.fin.numero} · ${this.formatearFechaIso(intervalo.fin.lunes)}`;
+  }
+
+  avisosPreviewImportacion(
+    preview: PreviewImportacionPlantillas,
+  ): AvisoImportacionSemanas[] {
+    return preview.hojas.flatMap((hoja) => hoja.warnings ?? []);
+  }
+
+  get perfilesPublicacion(): PerfilPublicacionResumen[] {
+    const resultado = this.resultadoPublicacion();
+    if (!resultado) return [];
+    const perfiles = new Map<string, PerfilPublicacionResumen>();
+
+    for (const semana of resultado.semanas ?? []) {
+      let perfil = perfiles.get(semana.codigo);
+      if (!perfil) {
+        perfil = {
+          codigo: semana.codigo,
+          etiqueta: this.etiquetaPerfilPublicado(semana.codigo, semana.hoja),
+          planificacionId:
+            resultado.variantes.find(
+              (variante) => variante.codigo === semana.codigo,
+            )?.planificacionId ?? null,
+          semanas: [],
+          aniosIso: [],
+          totales: {
+            creados: 0,
+            actualizados: 0,
+            omitidos: 0,
+            eliminados: 0,
+          },
+          sinCambios: false,
+        };
+        perfiles.set(semana.codigo, perfil);
+      }
+      perfil.semanas.push(semana);
+      perfil.totales.creados += semana.creados;
+      perfil.totales.actualizados += semana.actualizados;
+      perfil.totales.omitidos += semana.omitidos;
+      perfil.totales.eliminados += semana.eliminados;
+    }
+
+    for (const perfil of perfiles.values()) {
+      perfil.semanas.sort((a, b) => a.lunes.localeCompare(b.lunes));
+      perfil.aniosIso = this.agruparSemanasPorAnioIso(
+        perfil.semanas.map((semana) => ({
+          numero: semana.semana,
+          lunes: semana.lunes,
+        })),
+      ).map((grupo) => grupo.anioIso);
+      const cambios =
+        perfil.totales.creados +
+        perfil.totales.actualizados +
+        perfil.totales.eliminados;
+      perfil.sinCambios = cambios === 0;
+    }
+    return [...perfiles.values()];
+  }
+
+  descartarResumenPublicacion(): void {
+    this.establecerResultadoPublicacion(null);
+  }
+
+  private establecerResultadoPublicacion(
+    resultado: ResultadoPublicacionSemanas | null,
+  ): void {
+    this.resultadoPublicacion.set(resultado);
+    this.autoasignacionService.guardarResultadoPublicacionSesion?.(resultado);
+  }
+
+  private etiquetaPerfilPublicado(codigo: string, hoja: string): string {
+    const variante = this.variantes().find((item) => item.codigo === codigo);
+    if (variante) {
+      return [
+        this.labelOposicion(variante.oposicion),
+        this.getNivelOposicionLabel(variante.nivel),
+        this.getFranjaPlanificacionLabel(variante.franja),
+      ].join(' · ');
+    }
+    const etiqueta = etiquetaVarianteImportada(hoja);
+    return etiqueta === 'Variante sin identificar' ? codigo || hoja : etiqueta;
+  }
+
+  private esSemanaSiguiente(anterior: string, siguiente: string): boolean {
+    const fechaAnterior = this.fechaCivilDesdeIso(anterior);
+    const fechaSiguiente = this.fechaCivilDesdeIso(siguiente);
+    if (!fechaAnterior || !fechaSiguiente) return false;
+    return (
+      Math.round(
+        (fechaSiguiente.getTime() - fechaAnterior.getTime()) / 86_400_000,
+      ) === 7
+    );
+  }
+
+  /** Fecha civil local a partir de YYYY-MM-DD, sin reinterpretar UTC. */
+  private fechaCivilDesdeIso(fecha: string): Date | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha);
+    if (!match) return null;
+    const resultado = new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+    );
+    return Number.isNaN(resultado.getTime()) ? null : resultado;
   }
 
   get planificacionesBorradorOptions(): Array<{

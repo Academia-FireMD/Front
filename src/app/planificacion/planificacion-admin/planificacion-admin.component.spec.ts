@@ -4,8 +4,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
-import { firstValueFrom, of, throwError } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom, of, Subject, throwError } from 'rxjs';
+import {
+  ActivatedRoute,
+  DefaultUrlSerializer,
+  Router,
+  UrlTree,
+} from '@angular/router';
+import { LocationStrategy } from '@angular/common';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import { PlanificacionesService } from '../../services/planificaciones.service';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
@@ -13,10 +19,65 @@ import { Oposicion } from '../../shared/models/subscription.model';
 import { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
 import type { PlanificacionMensual } from '../../shared/models/planificacion.model';
 import { PlanificacionAdminComponent } from './planificacion-admin.component';
+import type {
+  PreviewCargaSemanas,
+  ResultadoPublicacionSemanas,
+  SemanaCambiosCarga,
+  VarianteCargaSemanas,
+} from '../models/autoasignacion.model';
 import {
   codigoPlantillaImportada,
   identidadVarianteImportada,
 } from '../utils/variante-importada.util';
+
+function varianteCarga(
+  semanas: SemanaCambiosCarga[],
+  overrides: Partial<VarianteCargaSemanas> = {},
+): VarianteCargaSemanas {
+  return {
+    codigo: 'PCMI6-8H',
+    oposicion: Oposicion.MADRID,
+    nivel: NivelOposicion.INICIACION,
+    franja: TipoDePlanificacionDeseada.FRANJA_SEIS_A_OCHO_HORAS,
+    destino: { tipo: 'EXISTENTE', planificacionId: 207 },
+    publicada: { identificador: 'MADRID-6-8', version: 4 },
+    semanas,
+    ...overrides,
+  };
+}
+
+function semanaCarga(
+  numero: number,
+  lunes: string,
+  overrides: Partial<SemanaCambiosCarga> = {},
+): SemanaCambiosCarga {
+  return {
+    hoja: 'CMI6-8',
+    numero,
+    lunes,
+    creados: 1,
+    actualizados: 0,
+    omitidos: 0,
+    eliminados: 0,
+    bloques: [],
+    ...overrides,
+  };
+}
+
+function resultadoPublicacion(
+  semanas: ResultadoPublicacionSemanas['semanas'],
+  overrides: Partial<ResultadoPublicacionSemanas> = {},
+): ResultadoPublicacionSemanas {
+  return {
+    cargaId: 3,
+    estado: 'PUBLICADA',
+    variantes: [{ codigo: 'PCMI6-8H', planificacionId: 207 }],
+    semanas,
+    mensaje:
+      'Semanas publicadas en las planificaciones existentes. Se conservaron sus identificadores y el progreso de los alumnos.',
+    ...overrides,
+  };
+}
 
 class ResizeObserverMock {
   observe(): void {}
@@ -29,7 +90,12 @@ describe('PlanificacionAdminComponent', () => {
   let fixture: ComponentFixture<PlanificacionAdminComponent>;
   let service: AutoasignacionService;
   let confirmation: ConfirmationService;
-  let router: { navigate: jest.Mock };
+  let router: {
+    navigate: jest.Mock;
+    events: ReturnType<typeof of>;
+    createUrlTree: jest.Mock;
+    serializeUrl: jest.Mock;
+  };
 
   beforeAll(() => {
     // PrimeNG Table/TabView requieren ResizeObserver en el entorno de test.
@@ -85,7 +151,31 @@ describe('PlanificacionAdminComponent', () => {
       descartarCargaSemanas$: jest.fn(),
     };
     confirmation = new ConfirmationService();
-    router = { navigate: jest.fn() };
+    const urlSerializer = new DefaultUrlSerializer();
+    router = {
+      navigate: jest.fn(),
+      events: of(),
+      createUrlTree: jest.fn(
+        (
+          commands: unknown[],
+          options: { queryParams?: Record<string, unknown> },
+        ) => {
+          const path = commands.join('/');
+          const query = options.queryParams
+            ? new URLSearchParams(
+                Object.entries(options.queryParams).map(([clave, valor]) => [
+                  clave,
+                  String(valor),
+                ]),
+              ).toString()
+            : '';
+          return urlSerializer.parse(
+            query ? `${path}?${query}` : path,
+          ) as UrlTree;
+        },
+      ),
+      serializeUrl: jest.fn((tree: UrlTree) => urlSerializer.serialize(tree)),
+    };
     const confirmOriginal = confirmation.confirm.bind(confirmation);
     jest.spyOn(confirmation, 'confirm').mockImplementation((config) => {
       confirmOriginal(config);
@@ -109,6 +199,20 @@ describe('PlanificacionAdminComponent', () => {
         },
         { provide: ConfirmationService, useValue: confirmation },
         { provide: Router, useValue: router },
+        {
+          provide: LocationStrategy,
+          useValue: {
+            path: () => '',
+            getBaseHref: () => '/',
+            prepareExternalUrl: (url: string) => url,
+            pushState: () => undefined,
+            replaceState: () => undefined,
+            forward: () => undefined,
+            back: () => undefined,
+            onPopState: () => undefined,
+            getState: () => null,
+          },
+        },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -878,6 +982,106 @@ describe('PlanificacionAdminComponent', () => {
     expect(component.errorCarga()).toContain('El plan cambió');
   });
 
+  it('conserva el detalle del 422 al publicar e invalida la carga preparada sin borrar el éxito anterior', async () => {
+    const resumenAnterior = resultadoPublicacion([
+      {
+        codigo: 'PCMI6-8H',
+        hoja: 'CMI6-8',
+        semana: 39,
+        lunes: '2026-09-28',
+        creados: 1,
+        actualizados: 0,
+        omitidos: 0,
+        eliminados: 0,
+        bloques: [],
+      },
+    ]);
+    const previewObsoleta: PreviewCargaSemanas = {
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [varianteCarga([semanaCarga(40, '2026-10-05')])],
+    };
+    component.resultadoPublicacion.set(resumenAnterior);
+    component.previewCarga.set(previewObsoleta);
+    component.resultadoCarga.set(previewObsoleta);
+    component.idempotencyKeyCarga = 'clave-anterior';
+    component.confirmarSobrescritura.set(true);
+    const previewError = {
+      fileName: 'semanas.xlsx',
+      fileHash: 'f'.repeat(64),
+      puedeAplicar: false,
+      yaAplicado: false,
+      requiereConfirmacionSobrescritura: false,
+      sobrescrituras: [],
+      totales: {
+        hojas: 1,
+        semanas: 0,
+        bloques: 0,
+        entrenamientos: 0,
+        errores: 1,
+      },
+      hojas: [
+        {
+          hoja: 'CMI6-8',
+          valida: false,
+          totalBloques: 0,
+          totalEntrenamientos: 0,
+          semanas: [],
+          errores: [
+            {
+              hoja: 'CMI6-8',
+              semana: 40,
+              filaExcel: 12,
+              celdas: ['A12', 'C12'],
+              campo: 'fecha',
+              mensaje: 'La fecha no es válida.',
+            },
+          ],
+          warnings: [],
+        },
+      ],
+    };
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 422,
+            error: {
+              code: 'CARGA_EXCEL_INVALIDO',
+              message: 'Corrige los errores localizados del Excel.',
+              preview: previewError,
+            },
+          }),
+      ),
+    );
+
+    await component.publicarCarga(5);
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    expect(component.previewImportacion()).toEqual(previewError);
+    expect(component.previewCarga()).toBeNull();
+    expect(component.resultadoCarga()).toBeNull();
+    expect(component.idempotencyKeyCarga).toBeNull();
+    expect(component.confirmarSobrescritura()).toBe(false);
+    expect(component.resultadoPublicacion()).toEqual(resumenAnterior);
+    expect(component.errorCarga()).toContain('No se publicó nada');
+    expect(component.errorCarga()).toContain('descarta esta carga');
+
+    const host = fixture.nativeElement as HTMLElement;
+    const texto = host.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(texto).toContain('CMI6-8');
+    expect(texto).toContain('Semana 40');
+    expect(texto).toContain('Fila 12');
+    expect(texto).toContain('A12, C12');
+    expect(texto).toContain('La fecha no es válida.');
+    expect(texto).toContain('Resumen de la publicación');
+    expect(texto).not.toContain('Excel preparado');
+    expect(texto).not.toContain(
+      'Previsualización: todavía no se ha guardado nada',
+    );
+  });
+
   it('previsualiza sin pedir destinos al administrador', async () => {
     const file = new File(['xlsx'], 'sergio.xlsx');
     component.archivoImportacion.set(file);
@@ -1231,5 +1435,548 @@ describe('PlanificacionAdminComponent', () => {
     expect(normalizar('CAI6-8')).toBe('CBAI6-8H');
     expect(normalizar('AVI4-6H')).toBe('AYVI4-6H');
     expect(normalizar('CMI6-8')).toBe('CMI6-8H');
+  });
+
+  it('agrupa por año ISO y no finge intervalos continuos entre años o huecos', () => {
+    const grupos = component.agruparSemanasPorAnioIso([
+      semanaCarga(3, '2027-01-18'),
+      semanaCarga(53, '2026-12-28'),
+      semanaCarga(1, '2027-01-04'),
+    ]);
+
+    expect(grupos.map((grupo) => grupo.anioIso)).toEqual([2026, 2027]);
+    expect(grupos[0].semanas.map((semana) => semana.numero)).toEqual([53]);
+    expect(grupos[1].semanas.map((semana) => semana.numero)).toEqual([1, 3]);
+    expect(grupos[1].intervalos).toHaveLength(2);
+    expect(
+      grupos[1].intervalos.map((intervalo) => intervalo.inicio.lunes),
+    ).toEqual(['2027-01-04', '2027-01-18']);
+  });
+
+  it('protege el guardado de cambios pendientes con doble clic', async () => {
+    const file = new File(['xlsx'], 'semanas.xlsx');
+    const preview = varianteCarga([semanaCarga(40, '2026-10-05')]);
+    (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(
+      of({
+        puedeAplicar: true,
+        previewHash: 'a'.repeat(64),
+        variantes: [preview],
+      }),
+    );
+    const aplicacion = new Subject<PreviewCargaSemanas>();
+    (service.applyCargaSemanas$ as jest.Mock).mockReturnValue(
+      aplicacion.asObservable(),
+    );
+    component.archivoImportacion.set(file);
+    await component.previsualizarCargaSemanas();
+
+    const primera = component.guardarCargaSemanas();
+    const segunda = component.guardarCargaSemanas();
+    expect(service.applyCargaSemanas$).toHaveBeenCalledTimes(1);
+    aplicacion.next({
+      cargaId: 9,
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [preview],
+    });
+    aplicacion.complete();
+    await Promise.all([primera, segunda]);
+    expect(component.resultadoCarga()?.cargaId).toBe(9);
+  });
+
+  it('deshabilita previsualizar mientras valida el archivo', () => {
+    component.archivoImportacion.set(new File(['xlsx'], 'semanas.xlsx'));
+    component.previsualizandoImportacion.set(true);
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    const boton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ).find((item) => item.textContent?.includes('Previsualizar cambios'));
+    expect(boton?.disabled).toBe(true);
+  });
+
+  it('muestra año ISO, semanas y fechas completas antes de desplegar actividades', () => {
+    const preview: PreviewCargaSemanas = {
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [
+        varianteCarga([
+          semanaCarga(53, '2026-12-28'),
+          semanaCarga(1, '2027-01-04'),
+          semanaCarga(3, '2027-01-18'),
+        ]),
+      ],
+    };
+    component.previewCarga.set(preview);
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    const texto =
+      (fixture.nativeElement as HTMLElement).textContent?.replace(
+        /\s+/g,
+        ' ',
+      ) ?? '';
+
+    expect(texto).toContain('Comunidad de Madrid · Iniciación · 6-8 horas');
+    expect(texto).toContain('Año ISO 2026');
+    expect(texto).toContain('Año ISO 2027');
+    expect(texto).toContain('3 semanas');
+    expect(texto).toContain('Semana 53 · 28/12/2026');
+    expect(texto).toContain('Semana 1 · 04/01/2027');
+    expect(texto).toContain('Semana 3 · 18/01/2027');
+    expect(texto).not.toContain('Semana 2 ·');
+    expect(texto).not.toContain('04/01/2027 – 18/01/2027');
+    const detalle = (fixture.nativeElement as HTMLElement).querySelector(
+      'details.carga-directa__detalle',
+    ) as HTMLDetailsElement | null;
+    expect(detalle?.open).toBe(false);
+  });
+
+  it('muestra avisos no bloqueantes sin interpretar su mensaje como HTML', () => {
+    component.previewCarga.set({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      warnings: [
+        {
+          hoja: 'CMI6-8',
+          semana: 40,
+          mensaje: 'Metadatos <strong>copiados</strong> de la pestaña.',
+        },
+      ],
+      variantes: [varianteCarga([semanaCarga(40, '2026-10-05')])],
+    });
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const aviso = host.querySelector('.carga-directa__aviso-mensaje');
+    expect(aviso?.textContent).toContain(
+      'Metadatos <strong>copiados</strong> de la pestaña.',
+    );
+    expect(aviso?.querySelector('strong')).toBeNull();
+    const guardar = Array.from(host.querySelectorAll('button')).find((boton) =>
+      boton.textContent?.includes('Guardar cambios pendientes'),
+    );
+    expect(guardar?.disabled).toBe(false);
+  });
+
+  it('no muestra la sección de avisos cuando la respuesta no trae warnings', () => {
+    component.previewCarga.set({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [varianteCarga([semanaCarga(40, '2026-10-05')])],
+    });
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '.carga-directa__avisos',
+      ),
+    ).toBeNull();
+  });
+
+  it('conserva celdas y avisos del 422 y descarta la preview válida anterior', async () => {
+    component.previewCarga.set({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [varianteCarga([semanaCarga(40, '2026-10-05')])],
+    });
+    component.resultadoCarga.set({
+      puedeAplicar: true,
+      previewHash: 'a'.repeat(64),
+      variantes: [varianteCarga([semanaCarga(40, '2026-10-05')])],
+    });
+    component.idempotencyKeyCarga = 'clave-anterior';
+    component.archivoImportacion.set(new File(['xlsx'], 'semanas.xlsx'));
+    (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 422,
+            error: {
+              code: 'CARGA_EXCEL_INVALIDO',
+              message: 'Corrige los errores localizados del Excel.',
+              preview: {
+                fileName: 'semanas.xlsx',
+                fileHash: 'f'.repeat(64),
+                puedeAplicar: false,
+                yaAplicado: false,
+                requiereConfirmacionSobrescritura: false,
+                sobrescrituras: [],
+                totales: {
+                  hojas: 1,
+                  semanas: 0,
+                  bloques: 0,
+                  entrenamientos: 0,
+                  errores: 1,
+                },
+                hojas: [
+                  {
+                    hoja: 'CMI6-8',
+                    valida: false,
+                    totalBloques: 0,
+                    totalEntrenamientos: 0,
+                    semanas: [],
+                    errores: [
+                      {
+                        hoja: 'CMI6-8',
+                        semana: 40,
+                        filaExcel: 12,
+                        celdas: ['A12', 'C12'],
+                        campo: 'fecha',
+                        mensaje: 'La fecha no es válida.',
+                      },
+                    ],
+                    warnings: [
+                      {
+                        hoja: 'CMI6-8',
+                        semana: 40,
+                        mensaje: 'Se copiaron metadatos de la pestaña.',
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          }),
+      ),
+    );
+
+    await component.previsualizarCargaSemanas();
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    expect(component.previewCarga()).toBeNull();
+    expect(component.resultadoCarga()).toBeNull();
+    expect(component.idempotencyKeyCarga).toBeNull();
+    const host = fixture.nativeElement as HTMLElement;
+    const texto = host.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(texto).toContain('A12, C12');
+    expect(texto).toContain('La fecha no es válida.');
+    expect(texto).toContain('Se copiaron metadatos de la pestaña.');
+    expect(
+      Array.from(host.querySelectorAll('button')).some((boton) =>
+        boton.textContent?.includes('Guardar cambios pendientes'),
+      ),
+    ).toBe(false);
+  });
+
+  it('sigue representando errores 422 antiguos sin celdas', async () => {
+    component.archivoImportacion.set(new File(['xlsx'], 'antiguo.xlsx'));
+    (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 422,
+            error: {
+              message: 'Corrige el Excel.',
+              preview: {
+                fileName: 'antiguo.xlsx',
+                fileHash: 'f'.repeat(64),
+                puedeAplicar: false,
+                yaAplicado: false,
+                requiereConfirmacionSobrescritura: false,
+                sobrescrituras: [],
+                totales: {
+                  hojas: 1,
+                  semanas: 0,
+                  bloques: 0,
+                  entrenamientos: 0,
+                  errores: 1,
+                },
+                hojas: [
+                  {
+                    hoja: 'CMI6-8',
+                    valida: false,
+                    totalBloques: 0,
+                    totalEntrenamientos: 0,
+                    semanas: [],
+                    errores: [
+                      {
+                        hoja: 'CMI6-8',
+                        semana: 40,
+                        filaExcel: 12,
+                        campo: 'fecha',
+                        mensaje: 'La fecha no es válida.',
+                      },
+                    ],
+                    warnings: [],
+                  },
+                ],
+              },
+            },
+          }),
+      ),
+    );
+
+    await component.previsualizarCargaSemanas();
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    const texto =
+      (fixture.nativeElement as HTMLElement).textContent?.replace(
+        /\s+/g,
+        ' ',
+      ) ?? '';
+    expect(texto).toContain('La fecha no es válida.');
+    expect(texto).not.toContain('Celdas A12');
+  });
+
+  it('muestra los avisos de la respuesta preparar sin descartar el resultado', async () => {
+    const file = new File(['xlsx'], 'semanas.xlsx');
+    const preview = varianteCarga([semanaCarga(40, '2026-10-05')]);
+    (service.previewCargaSemanas$ as jest.Mock).mockReturnValue(
+      of({
+        puedeAplicar: true,
+        previewHash: 'a'.repeat(64),
+        variantes: [preview],
+      }),
+    );
+    (service.applyCargaSemanas$ as jest.Mock).mockReturnValue(
+      of({
+        cargaId: 9,
+        puedeAplicar: true,
+        previewHash: 'a'.repeat(64),
+        variantes: [preview],
+        warnings: [
+          {
+            hoja: 'CMI6-8',
+            semana: 40,
+            mensaje: 'Metadatos copiados al preparar la carga.',
+          },
+        ],
+      }),
+    );
+    component.archivoImportacion.set(file);
+    await component.previsualizarCargaSemanas();
+    await component.guardarCargaSemanas();
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    expect(component.resultadoCarga()?.cargaId).toBe(9);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Metadatos copiados al preparar la carga.',
+    );
+  });
+
+  it('publica y conserva un resumen con contadores reales, años y enlaces canónicos', async () => {
+    const resultado = resultadoPublicacion(
+      [
+        {
+          codigo: 'PCMI6-8H',
+          hoja: 'CMI6-8',
+          semana: 40,
+          lunes: '2026-10-05',
+          creados: 0,
+          actualizados: 0,
+          omitidos: 100,
+          eliminados: 0,
+          bloques: [],
+        },
+        {
+          codigo: 'PCMI6-8H',
+          hoja: 'CMI6-8',
+          semana: 41,
+          lunes: '2026-10-12',
+          creados: 0,
+          actualizados: 0,
+          omitidos: 68,
+          eliminados: 0,
+          bloques: [],
+        },
+      ],
+      {
+        warnings: [
+          {
+            hoja: 'CMI6-8',
+            semana: 40,
+            mensaje: 'Se copiaron metadatos de la pestaña.',
+          },
+        ],
+      },
+    );
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(of(resultado));
+
+    await component.publicarCarga(3);
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const texto = host.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    expect(component.resultadoPublicacion()).toEqual(resultado);
+    expect(texto).toContain('Resumen de la publicación');
+    expect(texto).toContain('Comunidad de Madrid · Iniciación · 6-8 horas');
+    expect(texto).toContain('Año ISO 2026');
+    expect(texto).toContain('2 semanas');
+    expect(texto).toContain('Semana 40 · 05/10/2026');
+    expect(texto).toContain('Semana 41 · 12/10/2026');
+    expect(texto).toContain('0 añadidos');
+    expect(texto).toContain('168 sin cambios');
+    expect(texto).toContain('Sin cambios reales');
+    expect(texto).toContain('Se copiaron metadatos de la pestaña.');
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    const enlaces = Array.from(
+      host.querySelectorAll(
+        'a[href*="/app/planificacion/planificacion-mensual/207"]',
+      ),
+    );
+    expect(enlaces).toHaveLength(2);
+    expect(enlaces[0].getAttribute('href')).toContain('fechaFoco=2026-10-05');
+    expect(enlaces[1].getAttribute('href')).toContain('fechaFoco=2026-10-12');
+    expect(enlaces[0].textContent).toContain('Ver semana importada');
+  });
+
+  it('agrupa el resumen por perfil y separa los años ISO de cada uno', async () => {
+    const resultado = resultadoPublicacion(
+      [
+        {
+          codigo: 'PCMI6-8H',
+          hoja: 'CMI6-8',
+          semana: 53,
+          lunes: '2026-12-28',
+          creados: 1,
+          actualizados: 0,
+          omitidos: 0,
+          eliminados: 0,
+          bloques: [],
+        },
+        {
+          codigo: 'PCMI6-8H',
+          hoja: 'CMI6-8',
+          semana: 1,
+          lunes: '2027-01-04',
+          creados: 0,
+          actualizados: 1,
+          omitidos: 0,
+          eliminados: 0,
+          bloques: [],
+        },
+        {
+          codigo: 'PGI4-6H',
+          hoja: 'GI4-6',
+          semana: 2,
+          lunes: '2027-01-11',
+          creados: 0,
+          actualizados: 0,
+          omitidos: 0,
+          eliminados: 1,
+          bloques: [],
+        },
+      ],
+      {
+        variantes: [
+          { codigo: 'PCMI6-8H', planificacionId: 207 },
+          { codigo: 'PGI4-6H', planificacionId: 208 },
+        ],
+      },
+    );
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(of(resultado));
+
+    await component.publicarCarga(3);
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(
+      host.querySelectorAll('.carga-directa__perfil-publicado'),
+    ).toHaveLength(2);
+    const texto = host.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(texto).toContain('Años ISO 2026, 2027');
+    expect(texto).toContain('1 añadido');
+    expect(texto).toContain('1 actualizado');
+    expect(texto).toContain('1 retirado');
+    const enlaceOtroPerfil = host.querySelector(
+      'a[href*="/app/planificacion/planificacion-mensual/208"]',
+    );
+    expect(enlaceOtroPerfil?.getAttribute('href')).toContain(
+      'fechaFoco=2027-01-11',
+    );
+  });
+
+  it('mantiene el resumen al cerrar/reabrir y solo lo descarta por acción explícita o nuevo archivo', async () => {
+    const resultado = resultadoPublicacion([
+      {
+        codigo: 'PCMI6-8H',
+        hoja: 'CMI6-8',
+        semana: 40,
+        lunes: '2026-10-05',
+        creados: 1,
+        actualizados: 0,
+        omitidos: 0,
+        eliminados: 0,
+        bloques: [],
+      },
+    ]);
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(of(resultado));
+
+    await component.publicarCarga(3);
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Resumen de la publicación',
+    );
+
+    component.cambiarVisibilidadImportacion(false);
+    component.abrirImportacionSemanas();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Resumen de la publicación',
+    );
+
+    component.descartarResumenPublicacion();
+    fixture.detectChanges();
+    expect(component.resultadoPublicacion()).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Resumen de la publicación',
+    );
+
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(of(resultado));
+    await component.publicarCarga(3);
+    expect(component.resultadoPublicacion()).not.toBeNull();
+    component.seleccionarArchivoImportacion(
+      new File(['xlsx'], 'nuevo.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+    );
+    expect(component.resultadoPublicacion()).toBeNull();
+  });
+
+  it('protege la publicación con doble clic y conserva el resumen si falla el refresco', async () => {
+    const resultado = resultadoPublicacion([
+      {
+        codigo: 'PCMI6-8H',
+        hoja: 'CMI6-8',
+        semana: 40,
+        lunes: '2026-10-05',
+        creados: 1,
+        actualizados: 0,
+        omitidos: 0,
+        eliminados: 0,
+        bloques: [],
+      },
+    ]);
+    const publicacion = new Subject<ResultadoPublicacionSemanas>();
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(
+      publicacion.asObservable(),
+    );
+
+    const primera = component.publicarCarga(3);
+    const segunda = component.publicarCarga(3);
+    expect(service.publicarCargaSemanas$).toHaveBeenCalledTimes(1);
+    publicacion.next(resultado);
+    publicacion.complete();
+    await Promise.all([primera, segunda]);
+    expect(component.resultadoPublicacion()).toEqual(resultado);
+
+    (service.publicarCargaSemanas$ as jest.Mock).mockReturnValue(of(resultado));
+    (service.getVariantes$ as jest.Mock).mockReturnValue(
+      throwError(() => new Error('fallo de refresco')),
+    );
+    await component.publicarCarga(3);
+    expect(component.resultadoPublicacion()).toEqual(resultado);
   });
 });

@@ -9,7 +9,10 @@ import { environment } from '../../../environments/environment';
 import { NivelOposicion } from '../../shared/models/pregunta.model';
 import { Oposicion } from '../../shared/models/subscription.model';
 import type { TipoDePlanificacionDeseada } from '../../shared/models/user.model';
-import type { ConfiguracionPlanificacion } from '../models/autoasignacion.model';
+import type {
+  ConfiguracionPlanificacion,
+  ResultadoPublicacionSemanas,
+} from '../models/autoasignacion.model';
 import { AutoasignacionService } from './autoasignacion.service';
 
 describe('AutoasignacionService', () => {
@@ -360,6 +363,7 @@ describe('AutoasignacionService', () => {
       puedeAplicar: true,
       previewHash: 'a'.repeat(64),
       variantes: [],
+      warnings: [],
     });
   });
 
@@ -380,6 +384,8 @@ describe('AutoasignacionService', () => {
       cargaId: 5,
       estado: 'PUBLICADA',
       variantes: [],
+      semanas: [],
+      warnings: [],
       mensaje: 'Publicada',
     });
 
@@ -389,6 +395,22 @@ describe('AutoasignacionService', () => {
     );
     expect(req.request.method).toBe('POST');
     req.flush({});
+  });
+
+  it('conserva el resumen de publicación solo en memoria durante la sesión', () => {
+    const resultado: ResultadoPublicacionSemanas = {
+      cargaId: 5,
+      estado: 'PUBLICADA',
+      variantes: [{ codigo: 'PCMI6-8H', planificacionId: 207 }],
+      semanas: [],
+      mensaje: 'Publicada',
+    };
+
+    service.guardarResultadoPublicacionSesion(resultado);
+    expect(service.getResultadoPublicacionSesion()).toEqual(resultado);
+
+    service.guardarResultadoPublicacionSesion(null);
+    expect(service.getResultadoPublicacionSesion()).toBeNull();
   });
 
   it('GET /admin/sin-coincidencia devuelve la lista', () => {

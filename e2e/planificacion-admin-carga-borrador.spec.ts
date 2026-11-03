@@ -83,7 +83,30 @@ async function prepararAdmin(page: Page, variantes = [madrid]) {
       return route.fulfill({
         status: 201,
         contentType: 'application/json',
-        body: '{}',
+        body: JSON.stringify({
+          cargaId: 9,
+          estado: 'PUBLICADA',
+          variantes: variantes.map((variante, index) => ({
+            codigo: variante.codigo,
+            planificacionId: 42 + index,
+          })),
+          semanas: variantes.flatMap((variante) =>
+            variante.semanas.map((semana) => ({
+              codigo: variante.codigo,
+              hoja: semana.hoja,
+              semana: semana.numero,
+              lunes: semana.lunes,
+              creados: semana.creados,
+              actualizados: semana.actualizados,
+              omitidos: semana.omitidos,
+              eliminados: semana.eliminados,
+              bloques: semana.bloques,
+            })),
+          ),
+          warnings: [],
+          mensaje:
+            'Semanas publicadas en las planificaciones existentes. Se conservaron sus identificadores y el progreso de los alumnos.',
+        }),
       });
     },
   );
@@ -131,11 +154,9 @@ async function subirYPrevisualizar(page: Page) {
       buffer: Buffer.from('excel-fixture'),
     });
   await page.getByRole('button', { name: 'Previsualizar cambios' }).click();
-  await page
-    .getByText(/Ver cambios de 1 semana/)
-    .first()
-    .click();
+  await expect(page.getByText('Año ISO 2026').first()).toBeVisible();
   await expect(page.getByText('Semana 37').first()).toBeVisible();
+  await expect(page.getByText('07/09/2026').first()).toBeVisible();
   await expect(page.getByText(/todavía no se ha guardado nada/)).toBeVisible();
 }
 
@@ -314,3 +335,71 @@ test('el asistente permanece abierto mientras guarda semanas', async ({
     liberarAplicacion();
   }
 });
+
+async function prepararYPublicar(page: Page) {
+  await subirYPrevisualizar(page);
+  const dialogo = page.getByRole('dialog', { name: 'Importar semanas' });
+  await dialogo
+    .getByRole('button', { name: 'Guardar cambios pendientes' })
+    .click();
+  await expect(dialogo.getByText('Excel preparado')).toBeVisible();
+  await dialogo.getByRole('button', { name: 'Publicar cambios ahora' }).click();
+  const confirmacion = page.locator('.p-confirm-dialog');
+  await expect(confirmacion).toBeVisible();
+  await confirmacion.getByRole('button', { name: 'Publicar cambios' }).click();
+  await expect(dialogo.getByText('Resumen de la publicación')).toBeVisible();
+  return dialogo;
+}
+
+for (const viewport of [
+  { name: 'escritorio 1440', width: 1440, height: 900 },
+  { name: 'móvil 390', width: 390, height: 844 },
+]) {
+  test(`la publicación conserva el resumen y enlaza la semana exacta en ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
+    const api = await prepararAdmin(page);
+    const dialogo = await prepararYPublicar(page);
+
+    expect(api.publicaciones()).toBe(1);
+    await expect(page).toHaveURL(/admin-planificacion\?importar=1/);
+    await expect(dialogo).toContainText('Comunidad de Madrid');
+    await expect(dialogo).toContainText('Año ISO 2026');
+    await expect(dialogo).toContainText('Semana 37 · 07/09/2026');
+    await expect(dialogo).toContainText('2 añadidos');
+    await expect(dialogo).toContainText('0 sin cambios');
+    const enlace = dialogo.getByRole('link', {
+      name: 'Ver semana importada',
+    });
+    await expect(enlace).toHaveAttribute(
+      'href',
+      /\/app\/planificacion\/planificacion-mensual\/42\?fechaFoco=2026-09-07$/,
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
+    await dialogo.screenshot({
+      path: testInfo.outputPath(`publicacion-${viewport.width}.png`),
+    });
+
+    await dialogo.locator('.p-dialog-header-close').click();
+    await expect(page).toHaveURL(
+      /\/app\/planificacion\/planificacion-mensual$/,
+    );
+    await page
+      .getByRole('button', { name: 'Importar o publicar semanas' })
+      .click();
+    const dialogoReabierto = page.getByRole('dialog', {
+      name: 'Importar semanas',
+    });
+    await expect(dialogoReabierto).toContainText('Resumen de la publicación');
+    await expect(dialogoReabierto).toContainText('Semana 37 · 07/09/2026');
+    expect(api.publicaciones()).toBe(1);
+  });
+}
