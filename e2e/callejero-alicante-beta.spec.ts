@@ -25,6 +25,15 @@ import userAlumnoFixture from './fixtures/user-alumno.json';
 type Rol = 'ALUMNO' | 'ADMIN';
 type Oposicion = 'VALENCIA_AYUNTAMIENTO' | 'ALICANTE_CPBA';
 
+// Instancia de Leaflet creada por el HTML embebido del callejero. El salto de
+// zoom directo evita encadenar diez pulsaciones de UI (cada una con su
+// animación y su carga de teselas) dentro del presupuesto de 30 s del test.
+declare const mapa: {
+  getMaxZoom(): number;
+  getZoom(): number;
+  setZoom(zoom: number): void;
+};
+
 type AuthProbeWindow = Window & {
   __callejeroAuthMessages?: unknown[];
 };
@@ -308,20 +317,17 @@ async function activarMudoExamen(frame: FrameLocator): Promise<void> {
   });
 }
 
-/** Pulsa zoom-in hasta llegar al zoom máximo del mapa (el botón se deshabilita). */
-async function subirZoomAlMaximo(
-  frame: FrameLocator,
-  page: Page,
-): Promise<void> {
-  const zoomIn = frame.locator('.leaflet-control-zoom-in');
-  for (let i = 0; i < 25; i += 1) {
-    const deshabilitado = await zoomIn.evaluate((el) =>
-      el.classList.contains('leaflet-disabled'),
-    );
-    if (deshabilitado) break;
-    await zoomIn.click();
-    await page.waitForTimeout(300);
-  }
+/**
+ * Lleva el mapa al zoom máximo de la capa activa (19 con Esri Topo).
+ *
+ * Se usa la instancia de Leaflet del propio embed en lugar de pulsar zoom-in
+ * diez veces: cada pulsación arrastra animación, acción de Playwright y carga
+ * de teselas intermedias, y el test completo debe caber en 30 s.
+ */
+async function subirZoomAlMaximo(frame: FrameLocator): Promise<void> {
+  await frame.locator('#mapa').evaluate(() => {
+    mapa.setZoom(mapa.getMaxZoom());
+  });
 }
 
 function usuarioCon(
@@ -1163,10 +1169,12 @@ test.describe('Callejero Alicante — recuperación cartográfica', () => {
       });
     });
 
-    await page.goto('/app/callejero/alicante');
+    await page.goto('/app/callejero/alicante', {
+      waitUntil: 'domcontentloaded',
+    });
     const frame = await iframeAlicante(page);
     await seleccionarBaseAlicante(frame, 'Relieve (Esri Topo)');
-    await subirZoomAlMaximo(frame, page);
+    await subirZoomAlMaximo(frame);
     await expect
       .poll(
         () =>
@@ -1179,14 +1187,30 @@ test.describe('Callejero Alicante — recuperación cartográfica', () => {
         { timeout: 15_000 },
       )
       .toBe(19);
+    await esperarMapaAlicanteAsentado(frame, page, solicitudes);
 
-    // Esri Topo empieza a fallar → respaldo OpenTopoMap (nativo 17).
+    // Esri Topo empieza a fallar → el zoom-out fuerza teselas nuevas y entra
+    // el respaldo OpenTopoMap (nativo 17). Se espera al estado asentado antes
+    // de volver a subir para no encadenar zooms durante una animación.
     fallarTopo = true;
     await frame.locator('.leaflet-control-zoom-out').click();
-    await frame.locator('.leaflet-control-zoom-in').click();
+    await esperarMapaAlicanteAsentado(frame, page, solicitudes);
     await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible({
       timeout: 15_000,
     });
+
+    // El respaldo no recorta el zoom visual: con OpenTopo activo se vuelve a
+    // 19, aunque sus teselas nativas se limiten a 17.
+    await frame.locator('.leaflet-control-zoom-in').click();
+    await esperarMapaAlicanteAsentado(frame, page, solicitudes);
+    await expect
+      .poll(() => frame.locator('#mapa').evaluate(() => mapa.getZoom()))
+      .toBe(19);
+    await expect
+      .poll(() => frame.locator('#mapa').evaluate(() => mapa.getMaxZoom()))
+      .toBe(19);
+    await expect(frame.locator('.tf-mapa-aviso:visible')).toBeVisible();
+
     await expect
       .poll(
         () => peticionesAlHost(solicitudes, 'tile.opentopomap.org').length,
@@ -1201,29 +1225,32 @@ test.describe('Callejero Alicante — recuperación cartográfica', () => {
     expect(zoomsOtm).not.toContain(19);
 
     // Fallo total primario+respaldo → Reintentar restaura Esri Topo a zoom 19.
+    // Dos pasos: 19→18 reutiliza las teselas z17 ya cargadas y 18→17 pide las
+    // nuevas del nivel nativo, que al fallar agotan el respaldo.
     fallarTodo = true;
-    for (let i = 0; i < 5; i += 1) {
-      await frame.locator('.leaflet-control-zoom-out').click();
-      await page.waitForTimeout(300);
-    }
+    await frame.locator('.leaflet-control-zoom-out').click();
+    await esperarMapaAlicanteAsentado(frame, page, solicitudes);
+    await frame.locator('.leaflet-control-zoom-out').click();
     await expect(frame.locator('.tf-mapa-error:visible')).toBeVisible({
       timeout: 15_000,
     });
     fallarTopo = false;
     fallarTodo = false;
+    const antesDeReintentar = solicitudes.length;
     await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
     await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
       timeout: 15_000,
     });
-    await subirZoomAlMaximo(frame, page);
+    await subirZoomAlMaximo(frame);
     await expect
       .poll(
         () =>
           Math.max(
             0,
-            ...peticionesConPath(solicitudes, 'World_Topo_Map').map(
-              zoomDeAlicante,
-            ),
+            ...peticionesConPath(
+              solicitudes.slice(antesDeReintentar),
+              'World_Topo_Map',
+            ).map(zoomDeAlicante),
           ),
         { timeout: 15_000 },
       )
