@@ -295,8 +295,8 @@
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [closable]="!aplicandoImportacion()"
-  [closeOnEscape]="!aplicandoImportacion()"
+  [closable]="!importacionEnCurso()"
+  [closeOnEscape]="!importacionEnCurso()"
   [style]="{ width: 'min(94vw, 64rem)', maxHeight: '90dvh' }"
   [contentStyle]="{ maxHeight: 'calc(90dvh - 8rem)', overflow: 'auto' }"
   styleClass="asistente-semanas"
@@ -305,47 +305,59 @@
   <section class="import-panel carga-directa" aria-label="Importar semanas">
     <div class="import-panel__header">
       <div>
-        <h3>Selecciona y revisa el Excel</h3>
-        <p>
-          Revisa las semanas del archivo y guárdalas como cambios pendientes.
-          Después podrás publicarlas sobre las planificaciones actuales. Las
-          semanas vacías o ausentes no modifican el calendario.
-        </p>
+        <h3>Selecciona el Excel</h3>
+        <p>Revisa las fechas y pulsa «Importar semanas».</p>
       </div>
     </div>
-    @if (cargasPendientes().length) {
+
+    @if (pendientesImportacion().length) {
       <section
-        class="carga-directa__resultado"
-        aria-label="Cambios pendientes"
+        class="carga-directa__pendientes"
+        aria-label="Importaciones sin terminar"
         aria-live="polite"
       >
-        <h4>Cambios pendientes de publicación</h4>
-        @for (carga of cargasPendientes(); track carga.id) {
-          <article class="carga-directa__variante">
-            <strong>{{ carga.fileName }}</strong>
-            <p>
-              {{ carga.variantes.length }}
-              {{ carga.variantes.length === 1 ? "perfil" : "perfiles" }} ·
-              {{ carga.preview.variantes.length }}
-              {{
-                carga.preview.variantes.length === 1
-                  ? "planificación"
-                  : "planificaciones"
-              }}
-            </p>
+        @for (carga of pendientesImportacion(); track carga.id) {
+          <article class="carga-directa__pendiente">
+            <div class="carga-directa__pendiente-texto">
+              <strong>Importación sin terminar</strong>
+              <span>
+                {{ carga.fileName }}
+                @if (carga.perfil) {
+                  · {{ carga.perfil }}
+                }
+                @if (carga.fechas) {
+                  · {{ carga.fechas }}
+                }
+              </span>
+              @if (carga.noReintentable) {
+                <span class="text-color-secondary"
+                  >Descarta esta importación, corrige el Excel y vuelve a
+                  subirlo.</span
+                >
+              }
+            </div>
             <div class="flex flex-wrap gap-2">
-              <p-button
-                label="Publicar cambios"
-                icon="pi pi-check"
-                [loading]="publicandoCarga() === carga.id"
-                [disabled]="publicandoCarga() !== null"
-                (onClick)="confirmarPublicacionCarga(carga.id)"
-              />
+              @if (!carga.noReintentable) {
+                <p-button
+                  label="Continuar importación"
+                  icon="pi pi-play"
+                  [loading]="publicandoCarga() === carga.id"
+                  [disabled]="
+                    importacionEnCurso() || previsualizandoImportacion()
+                  "
+                  (onClick)="
+                    continuarCargaPendiente(
+                      carga.id,
+                      carga.requiereConfirmacion
+                    )
+                  "
+                />
+              }
               <p-button
                 label="Descartar"
                 icon="pi pi-times"
                 [outlined]="true"
-                [disabled]="publicandoCarga() !== null"
+                [disabled]="importacionEnCurso()"
                 (onClick)="confirmarDescarteCarga(carga.id)"
               />
             </div>
@@ -353,25 +365,24 @@
         }
       </section>
     }
+
     <div class="import-actions">
       <app-excel-file-picker
         [file]="archivoImportacion()"
         ariaLabel="Archivo Excel con semanas"
-        [disabled]="previsualizandoImportacion() || aplicandoImportacion()"
+        [disabled]="importacionEnCurso() || previsualizandoImportacion()"
         (fileSelected)="seleccionarArchivoImportacion($event)"
       />
-      <p-button
-        label="Previsualizar cambios"
-        icon="pi pi-eye"
-        [loading]="previsualizandoImportacion()"
-        [disabled]="
-          !archivoImportacion() ||
-          aplicandoImportacion() ||
-          previsualizandoImportacion()
-        "
-        (onClick)="previsualizarCargaSemanas()"
-      />
+      @if (previsualizandoImportacion()) {
+        <p-message
+          severity="info"
+          text="Revisando Excel…"
+          styleClass="w-full"
+          role="status"
+        />
+      }
     </div>
+
     @if (errorCarga(); as mensaje) {
       <p-message
         severity="error"
@@ -381,90 +392,26 @@
       />
     }
 
-    @if (previewImportacion(); as invalidacion) {
-      <div role="alert" class="overwrite-warning">
-        @if (
-          invalidacion.totales.bloques === 0 &&
-          invalidacion.totales.entrenamientos === 0 &&
-          invalidacion.totales.errores === 0
-        ) {
-          <strong
-            >El Excel no contiene semanas con actividades. Añade al menos una
-            actividad y vuelve a previsualizar. No se ha guardado nada.</strong
-          >
-        } @else {
-          <strong
-            >El Excel contiene errores; no se ha guardado ninguna hoja.</strong
-          >
-        }
-        @for (hoja of invalidacion.hojas; track hoja.hoja) {
-          @for (error of hoja.errores; track $index) {
-            <p>
-              {{ hoja.hoja }} · Semana {{ error.semana ?? "—" }} ·
-              {{ error.dia ?? "—" }} · Fila {{ error.filaExcel ?? "—" }}
-              @if (error.celdas?.length) {
-                · Celdas {{ error.celdas?.join(", ") }}
-              }
-              · {{ error.campo ?? "actividad" }}: {{ error.mensaje }}
-            </p>
-          }
-        }
-      </div>
-      @if (avisosPreviewImportacion(invalidacion).length) {
-        <section class="carga-directa__avisos" aria-label="Avisos del Excel">
-          <strong>Hay avisos que no bloquean la importación:</strong>
-          <ul>
-            @for (
-              aviso of avisosPreviewImportacion(invalidacion);
-              track $index
-            ) {
-              <li>
-                <span class="carga-directa__aviso-ubicacion"
-                  >{{ aviso.hoja }}
-                  @if (aviso.semana) {
-                    · Semana {{ aviso.semana }}
-                  }
-                  :</span
-                >
-                <span class="carga-directa__aviso-mensaje">{{
-                  aviso.mensaje
-                }}</span>
-              </li>
-            }
-          </ul>
-        </section>
-      }
+    @if (publicandoCarga() !== null) {
+      <p-message
+        severity="info"
+        text="Publicando semanas…"
+        styleClass="w-full"
+        role="status"
+      />
     }
 
     @if (previewCarga(); as preview) {
-      <p-message
-        severity="info"
-        text="Previsualización: todavía no se ha guardado nada. Estas semanas se añadirán al plan actual de cada perfil, sin crear copias ni tocar las semanas ausentes."
-        styleClass="w-full"
-      />
-      @if (preview.warnings?.length) {
-        <section
-          class="carga-directa__avisos"
-          aria-label="Avisos de la importación"
-        >
-          <strong>Avisos: no bloquean la importación</strong>
-          <ul>
-            @for (aviso of preview.warnings ?? []; track $index) {
-              <li>
-                <span class="carga-directa__aviso-ubicacion"
-                  >{{ aviso.hoja }}
-                  @if (aviso.semana) {
-                    · Semana {{ aviso.semana }}
-                  }
-                  :</span
-                >
-                <span class="carga-directa__aviso-mensaje">{{
-                  aviso.mensaje
-                }}</span>
-              </li>
-            }
-          </ul>
-        </section>
+      @if (!preview.puedeAplicar) {
+        <p-message
+          severity="error"
+          [text]="
+            preview.mensaje ??
+            'El Excel no se puede importar. No se ha guardado nada.'
+          "
+          styleClass="w-full"
+          role="alert"
+        />
       }
       <div class="carga-directa__variantes" aria-live="polite">
         @for (variante of preview.variantes; track variante.codigo) {
@@ -474,52 +421,36 @@
               {{ getNivelOposicionLabel(variante.nivel) }} ·
               {{ getFranjaPlanificacionLabel(variante.franja) }}
             </h4>
-            <p class="text-color-secondary">
-              Planificación actual:
-              {{
-                variante.publicada
-                  ? variante.publicada.identificador +
-                    " (v" +
-                    variante.publicada.version +
-                    ")"
-                  : "ninguna"
-              }}
+            <p class="carga-directa__destino">
+              <strong>Destino:</strong> {{ etiquetaDestinoCarga(variante) }}
             </p>
             @if (variante.semanas?.length) {
-              <div class="carga-directa__calendario">
-                <p class="carga-directa__calendario-total">
-                  <strong
-                    >{{ variante.semanas?.length }}
-                    {{
-                      variante.semanas?.length === 1 ? "semana" : "semanas"
-                    }}</strong
-                  >
-                </p>
-                <ul class="carga-directa__anios">
-                  @for (
-                    grupo of agruparSemanasPorAnioIso(variante.semanas);
-                    track grupo.anioIso
-                  ) {
-                    <li>
-                      <strong
-                        >Año ISO {{ grupo.anioIso }} ·
-                        {{ grupo.semanas.length }}
-                        {{
-                          grupo.semanas.length === 1 ? "semana" : "semanas"
-                        }}</strong
-                      >
-                      <ul class="carga-directa__intervalos">
-                        @for (
-                          intervalo of grupo.intervalos;
-                          track intervalo.inicio.lunes
-                        ) {
-                          <li>{{ etiquetaIntervaloSemana(intervalo) }}</li>
-                        }
-                      </ul>
-                    </li>
-                  }
-                </ul>
-              </div>
+              <p class="carga-directa__calendario-total">
+                <strong
+                  >{{ variante.semanas?.length }}
+                  {{
+                    variante.semanas?.length === 1 ? "semana" : "semanas"
+                  }}</strong
+                >
+              </p>
+              <ul class="carga-directa__anios">
+                @for (
+                  grupo of agruparSemanasPorAnioIso(variante.semanas);
+                  track grupo.anioIso
+                ) {
+                  <li>
+                    <strong>Año {{ grupo.anioIso }}</strong>
+                    <ul class="carga-directa__intervalos">
+                      @for (
+                        intervalo of grupo.intervalos;
+                        track intervalo.inicio.lunes
+                      ) {
+                        <li>{{ etiquetaIntervaloSemana(intervalo) }}</li>
+                      }
+                    </ul>
+                  </li>
+                }
+              </ul>
               <details class="carga-directa__detalle">
                 <summary>
                   Ver actividades de {{ variante.semanas?.length }}
@@ -561,9 +492,34 @@
           </article>
         }
       </div>
+
+      @if (avisosPreviewCarga().length) {
+        <details class="carga-directa__avisos" aria-label="Avisos del Excel">
+          <summary>
+            Avisos del Excel ({{ avisosPreviewCarga().length }})
+          </summary>
+          <ul>
+            @for (aviso of avisosPreviewCarga(); track $index) {
+              <li>
+                <span class="carga-directa__aviso-ubicacion"
+                  >{{ aviso.hoja }}
+                  @if (aviso.semana) {
+                    · Semana {{ aviso.semana }}
+                  }
+                  :</span
+                >
+                <span class="carga-directa__aviso-mensaje">{{
+                  aviso.mensaje
+                }}</span>
+              </li>
+            }
+          </ul>
+        </details>
+      }
+
       @if (preview.requiereConfirmacion) {
         <div class="overwrite-warning carga-directa__confirmacion">
-          <strong>Revisa estos cambios antes de prepararlos.</strong>
+          <strong>Revisa estos cambios antes de importar.</strong>
           @if (preview.plantillasActualizadas?.length) {
             <p>
               Plantillas existentes que cambiarán:
@@ -600,156 +556,157 @@
           </div>
         </div>
       }
+
       <div class="import-apply">
         <p-button
-          label="Guardar cambios pendientes"
-          icon="pi pi-save"
+          label="Importar semanas"
+          icon="pi pi-upload"
           [loading]="aplicandoImportacion()"
-          [disabled]="
-            !preview.puedeAplicar ||
-            !preview.previewHash ||
-            (preview.requiereConfirmacion && !confirmarSobrescritura())
-          "
-          (onClick)="guardarCargaSemanas()"
+          [disabled]="!puedeImportarSemanas()"
+          (onClick)="importarSemanas()"
         />
-        <small
-          >Guardar no cambia el calendario del alumno. El botón «Publicar
-          cambios» de arriba es el paso que lo actualiza.</small
-        >
       </div>
     }
-    @if (resultadoCarga(); as resultado) {
-      <div class="carga-directa__resultado" aria-live="polite">
-        <h4>Excel preparado</h4>
-        <p>
-          Los alumnos aún no ven estos cambios. Publícalos cuando hayas
-          terminado de revisarlos.
-        </p>
-        @if (resultado.cargaId) {
-          <p-button
-            label="Publicar cambios ahora"
-            icon="pi pi-check"
-            [loading]="publicandoCarga() === resultado.cargaId"
-            [disabled]="publicandoCarga() !== null"
-            (onClick)="confirmarPublicacionCarga(resultado.cargaId)"
-          />
-        }
-        @if (resultado.warnings?.length) {
-          <section
-            class="carga-directa__avisos"
-            aria-label="Avisos del Excel preparado"
+
+    @if (previewImportacion(); as invalidacion) {
+      <div role="alert" class="overwrite-warning carga-directa__errores">
+        @if (
+          invalidacion.totales.bloques === 0 &&
+          invalidacion.totales.entrenamientos === 0 &&
+          invalidacion.totales.errores === 0
+        ) {
+          <strong
+            >El Excel no contiene semanas con actividades. No se ha importado
+            nada.</strong
           >
-            <strong>Avisos: no bloquean la publicación</strong>
-            <ul>
-              @for (aviso of resultado.warnings ?? []; track $index) {
-                <li>
-                  <span class="carga-directa__aviso-ubicacion"
-                    >{{ aviso.hoja }}
-                    @if (aviso.semana) {
-                      · Semana {{ aviso.semana }}
-                    }
-                    :</span
-                  >
-                  <span class="carga-directa__aviso-mensaje">{{
-                    aviso.mensaje
-                  }}</span>
-                </li>
+        } @else {
+          <strong
+            >Corrige estos errores del Excel. No se ha importado nada.</strong
+          >
+        }
+        @for (hoja of invalidacion.hojas; track hoja.hoja) {
+          @for (error of hoja.errores; track $index) {
+            <p>
+              {{ hoja.hoja }} · Semana {{ error.semana ?? "—" }} ·
+              {{ error.dia ?? "—" }} · Fila {{ error.filaExcel ?? "—" }}
+              @if (error.celdas?.length) {
+                · Celdas {{ error.celdas?.join(", ") }}
               }
-            </ul>
-          </section>
+              · {{ error.campo ?? "actividad" }}: {{ error.mensaje }}
+            </p>
+          }
         }
       </div>
+      @if (avisosPreviewImportacion(invalidacion).length) {
+        <details class="carga-directa__avisos" aria-label="Avisos del Excel">
+          <summary>
+            Avisos del Excel ({{
+              avisosPreviewImportacion(invalidacion).length
+            }})
+          </summary>
+          <ul>
+            @for (
+              aviso of avisosPreviewImportacion(invalidacion);
+              track $index
+            ) {
+              <li>
+                <span class="carga-directa__aviso-ubicacion"
+                  >{{ aviso.hoja }}
+                  @if (aviso.semana) {
+                    · Semana {{ aviso.semana }}
+                  }
+                  :</span
+                >
+                <span class="carga-directa__aviso-mensaje">{{
+                  aviso.mensaje
+                }}</span>
+              </li>
+            }
+          </ul>
+        </details>
+      }
     }
+
     @if (resultadoPublicacion(); as resultado) {
       <section
         class="carga-directa__publicacion"
-        aria-labelledby="resumen-publicacion-titulo"
+        aria-labelledby="recibo-importacion-titulo"
         aria-live="polite"
       >
         <div class="carga-directa__publicacion-cabecera">
-          <div>
-            <h4 id="resumen-publicacion-titulo">Resumen de la publicación</h4>
-            <p>Las semanas ya están publicadas y visibles para los alumnos.</p>
-          </div>
-          <p-button
-            label="Descartar resumen"
-            icon="pi pi-times"
-            [outlined]="true"
-            (onClick)="descartarResumenPublicacion()"
-          />
+          <h4 id="recibo-importacion-titulo">Excel importado</h4>
         </div>
         @for (perfil of perfilesPublicacion; track perfil.codigo) {
           <article class="carga-directa__perfil-publicado">
             <h5>{{ perfil.etiqueta }}</h5>
-            <p class="carga-directa__publicacion-meta">
-              <strong
-                >{{ perfil.semanas.length }}
-                {{ perfil.semanas.length === 1 ? "semana" : "semanas" }}</strong
-              >
-              ·
-              @if (perfil.aniosIso.length === 1) {
-                Año ISO {{ perfil.aniosIso[0] }}
-              } @else if (perfil.aniosIso.length > 1) {
-                Años ISO {{ perfil.aniosIso.join(", ") }}
-              } @else {
-                Sin fechas ISO
+            @for (
+              grupo of agruparSemanasPublicadasPorAnioIso(perfil.semanas);
+              track grupo.anioIso
+            ) {
+              @if (grupo.anioIso) {
+                <p class="carga-directa__anio">
+                  <strong>Año {{ grupo.anioIso }}</strong>
+                </p>
               }
-            </p>
-            <p class="carga-directa__publicacion-contadores">
-              {{ contador(perfil.totales.creados, "añadido", "añadidos") }} ·
-              {{
-                contador(
-                  perfil.totales.actualizados,
-                  "actualizado",
-                  "actualizados"
-                )
-              }}
-              ·
-              {{
-                contador(perfil.totales.omitidos, "sin cambio", "sin cambios")
-              }}
-              ·
-              {{ contador(perfil.totales.eliminados, "retirado", "retirados") }}
-            </p>
-            @if (perfil.sinCambios) {
-              <p class="carga-directa__sin-cambios">
-                <strong>Sin cambios reales:</strong> las semanas ya coincidían
-                con el plan publicado; no se añadieron ni duplicaron
-                actividades.
-              </p>
-            }
-            <ul class="carga-directa__semanas-publicadas">
-              @for (
-                semana of perfil.semanas;
-                track semana.codigo + semana.hoja + semana.lunes
-              ) {
-                <li>
-                  <span
-                    >Semana {{ semana.semana }} ·
-                    {{ formatearFechaIso(semana.lunes) }}</span
-                  >
-                  @if (perfil.planificacionId !== null) {
-                    <a
-                      class="carga-directa__ver-semana"
-                      [routerLink]="[
-                        '/app/planificacion/planificacion-mensual',
-                        perfil.planificacionId,
-                      ]"
-                      [queryParams]="{ fechaFoco: semana.lunes }"
-                      >Ver semana importada</a
+              <ul class="carga-directa__semanas-publicadas">
+                @for (
+                  semana of grupo.semanas;
+                  track semana.codigo + semana.hoja + semana.lunes
+                ) {
+                  <li>
+                    <span
+                      >Semana {{ semana.semana }} ·
+                      {{ formatearFechaIso(semana.lunes) }}</span
                     >
-                  }
-                </li>
+                    @if (perfil.planificacionId !== null) {
+                      <a
+                        class="carga-directa__ver-semana"
+                        [routerLink]="[
+                          '/app/planificacion/planificacion-mensual',
+                          perfil.planificacionId,
+                        ]"
+                        [queryParams]="{ fechaFoco: semana.lunes }"
+                        >Ver semana importada</a
+                      >
+                    }
+                  </li>
+                }
+              </ul>
+            }
+            <details class="carga-directa__detalle">
+              <summary>Ver detalles</summary>
+              <p class="carga-directa__publicacion-contadores">
+                {{ contador(perfil.totales.creados, "añadido", "añadidos") }} ·
+                {{
+                  contador(
+                    perfil.totales.actualizados,
+                    "actualizado",
+                    "actualizados"
+                  )
+                }}
+                ·
+                {{
+                  contador(perfil.totales.omitidos, "sin cambio", "sin cambios")
+                }}
+                ·
+                {{
+                  contador(perfil.totales.eliminados, "retirado", "retirados")
+                }}
+              </p>
+              @if (perfil.sinCambios) {
+                <p class="carga-directa__sin-cambios">
+                  <strong>Sin cambios reales:</strong> las semanas ya coincidían
+                  con el plan publicado.
+                </p>
               }
-            </ul>
+            </details>
           </article>
         }
         @if (resultado.warnings?.length) {
-          <section
-            class="carga-directa__avisos"
-            aria-label="Avisos de la publicación"
-          >
-            <strong>Avisos de la publicación (no bloquean):</strong>
+          <details class="carga-directa__avisos" aria-label="Avisos del Excel">
+            <summary>
+              Avisos del Excel ({{ resultado.warnings?.length }})
+            </summary>
             <ul>
               @for (aviso of resultado.warnings ?? []; track $index) {
                 <li>
@@ -766,7 +723,7 @@
                 </li>
               }
             </ul>
-          </section>
+          </details>
         }
       </section>
     }

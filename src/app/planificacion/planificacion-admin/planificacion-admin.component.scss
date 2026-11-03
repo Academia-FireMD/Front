@@ -450,6 +450,51 @@ p-iconField {
 .carga-directa__variante h4 {
   margin: 0 0 0.5rem;
 }
+.carga-directa__destino {
+  margin: 0 0 0.6rem;
+  color: var(--text-color-secondary);
+  overflow-wrap: anywhere;
+}
+.carga-directa__destino strong {
+  color: var(--text-color);
+}
+.carga-directa__pendientes {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+.carga-directa__pendiente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px dashed var(--yellow-500);
+  border-radius: 0.75rem;
+  background: var(--yellow-50);
+  overflow-wrap: anywhere;
+}
+.carga-directa__pendiente-texto {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.carga-directa__pendiente-texto strong {
+  font-size: 0.95rem;
+}
+.carga-directa__pendiente-texto span {
+  color: var(--text-color-secondary);
+}
+.carga-directa__anio {
+  margin: 0.5rem 0 0;
+}
+.carga-directa__errores {
+  overflow-wrap: anywhere;
+}
+.carga-directa__errores p {
+  margin: 0.35rem 0;
+}
 .carga-directa__variante label {
   display: block;
   margin-bottom: 0.4rem;
@@ -482,9 +527,12 @@ p-iconField {
   color: var(--text-color);
   overflow-wrap: anywhere;
 }
-.carga-directa__avisos > strong {
-  display: block;
-  margin-bottom: 0.35rem;
+.carga-directa__avisos > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
 }
 .carga-directa__avisos ul {
   margin: 0;

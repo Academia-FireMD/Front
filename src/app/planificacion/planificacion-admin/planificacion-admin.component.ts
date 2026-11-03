@@ -54,6 +54,7 @@ import {
   SemanaImportacionPlantilla,
   SemanaResultadoPublicacion,
   VarianteAdmin,
+  VarianteCargaSemanas,
 } from '../models/autoasignacion.model';
 import { AutoasignacionService } from '../services/autoasignacion.service';
 import {
@@ -82,6 +83,9 @@ const ETIQUETAS_ESTADO_SEMANA_IMPORTACION: Record<
   error: 'Con error',
   sobrescritura: 'Sobrescrita',
 };
+
+const CARGAS_NO_REINTENTABLES_KEY =
+  'planificacion-admin:cargas-no-reintentables';
 
 interface SemanaCalendarioCarga {
   numero: number;
@@ -114,6 +118,21 @@ interface PerfilPublicacionResumen {
   aniosIso: number[];
   totales: TotalesPublicacionPerfil;
   sinCambios: boolean;
+}
+
+interface GrupoSemanasPublicadas {
+  anioIso: number;
+  semanas: SemanaResultadoPublicacion[];
+}
+
+interface ImportacionPendienteVisible {
+  id: number;
+  fileName: string;
+  perfiles: number;
+  requiereConfirmacion: boolean;
+  noReintentable: boolean;
+  perfil: string;
+  fechas: string;
 }
 
 @Component({
@@ -266,6 +285,14 @@ export class PlanificacionAdminComponent
     this.autoasignacionService.getResultadoPublicacionSesion?.() ?? null,
   );
   cargasPendientes = signal<CargaSemanasPendiente[]>([]);
+  /**
+   * IDs que el servidor rechazó al publicar con 409/422. No se reintentan:
+   * solo cabe descartarlos y corregir el Excel. Se conserva por sesión para
+   * sobrevivir a refrescos y a cerrar/reabrir el diálogo.
+   */
+  readonly cargasNoReintentables = signal<ReadonlySet<number>>(
+    this.leerCargasNoReintentables(),
+  );
   publicandoCarga = signal<number | null>(null);
   idempotencyKeyCarga: string | null = null;
   previewImportacion = signal<PreviewImportacionPlantillas | null>(null);
@@ -274,6 +301,68 @@ export class PlanificacionAdminComponent
   confirmarSobrescritura = signal(false);
   resultadoImportacion = signal<ResultadoImportacionPlantillas | null>(null);
   codigosUltimaImportacion = signal<string[]>([]);
+  /**
+   * Cadena de importación en curso. Bloquea doble clic, cambio de archivo y
+   * cierre desde que se prepara hasta que responde la publicación.
+   */
+  readonly importacionEnCurso = computed(
+    () => this.aplicandoImportacion() || this.publicandoCarga() !== null,
+  );
+  readonly avisosPreviewCarga = computed(
+    () => this.previewCarga()?.warnings ?? [],
+  );
+  readonly puedeImportarSemanas = computed(() => {
+    const preview = this.previewCarga();
+    return !!(
+      preview?.puedeAplicar &&
+      preview.previewHash &&
+      !this.previsualizandoImportacion() &&
+      !this.importacionEnCurso() &&
+      (!preview.requiereConfirmacion || this.confirmarSobrescritura())
+    );
+  });
+  /**
+   * Pendientes que se pueden continuar: la carga recién preparada (que aún
+   * vive en memoria) y las cargas antiguas del servidor. Se oculta la que se
+   * está publicando para no mostrar dos estados a la vez.
+   */
+  readonly pendientesImportacion = computed<ImportacionPendienteVisible[]>(
+    () => {
+      const actual = this.resultadoCarga();
+      const idActual = actual?.cargaId;
+      const enCurso = this.publicandoCarga();
+      const pendientes: ImportacionPendienteVisible[] = [];
+      // Mientras la cadena preparar/publicar está activa, el estado interno no
+      // se presenta como una importación pendiente más.
+      if (idActual && !this.aplicandoImportacion()) {
+        const variantes = actual?.variantes ?? [];
+        pendientes.push({
+          id: idActual,
+          fileName: this.archivoImportacion()?.name ?? 'Excel seleccionado',
+          perfiles: variantes.length,
+          // La confirmación ya se pidió antes de preparar esta carga.
+          requiereConfirmacion: false,
+          noReintentable: this.cargasNoReintentables().has(idActual),
+          perfil: this.resumenPerfilCarga(variantes),
+          fechas: this.resumenFechasCarga(variantes),
+        });
+      }
+      for (const carga of this.cargasPendientes()) {
+        if (carga.id === idActual) continue;
+        const variantes = carga.preview?.variantes ?? [];
+        pendientes.push({
+          id: carga.id,
+          fileName: carga.fileName,
+          perfiles: carga.variantes?.length ?? variantes.length,
+          requiereConfirmacion: !!carga.preview?.requiereConfirmacion,
+          noReintentable: this.cargasNoReintentables().has(carga.id),
+          perfil: this.resumenPerfilCarga(variantes),
+          fechas: this.resumenFechasCarga(variantes),
+        });
+      }
+      return pendientes.filter((pendiente) => pendiente.id !== enCurso);
+    },
+  );
   pasoImportacionActual = computed(() =>
     this.resultadoImportacion() || this.codigosUltimaImportacion().length
       ? 2
@@ -492,21 +581,39 @@ export class PlanificacionAdminComponent
     }
   }
 
-  confirmarPublicacionCarga(id: number): void {
-    if (this.publicandoCarga() !== null) return;
-    this.confirmationService.confirm({
-      header: 'Publicar semanas',
-      message:
-        'Los cambios de este Excel pasarán a las planificaciones actuales y los verán los alumnos. ¿Publicar ahora?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Publicar cambios',
-      rejectLabel: 'Volver',
-      accept: () => void this.publicarCarga(id),
-    });
+  continuarCargaPendiente(id: number, requiereConfirmacion = false): void {
+    if (
+      this.importacionEnCurso() ||
+      this.previsualizandoImportacion() ||
+      this.cargasNoReintentables().has(id)
+    )
+      return;
+    if (requiereConfirmacion) {
+      this.confirmationService.confirm({
+        header: 'Importar semanas',
+        message:
+          'Esta importación actualiza o retira actividades de semanas existentes. ¿Importar y publicar ahora?',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Importar semanas',
+        rejectLabel: 'Volver',
+        accept: () => void this.publicarCarga(id),
+      });
+      return;
+    }
+    void this.publicarCarga(id);
   }
 
   async publicarCarga(id: number): Promise<void> {
-    if (this.publicandoCarga() !== null) return;
+    if (this.publicandoCarga() !== null || this.cargasNoReintentables().has(id))
+      return;
+    await this.ejecutarPublicacion(id);
+  }
+
+  /**
+   * Publica una carga ya preparada. La autorización es el clic del
+   * administrador; aquí no se vuelve a preparar ni se crea otra carga.
+   */
+  private async ejecutarPublicacion(id: number): Promise<void> {
     this.publicandoCarga.set(id);
     this.errorCarga.set(null);
     try {
@@ -517,44 +624,94 @@ export class PlanificacionAdminComponent
       // cualquier fallo posterior al refrescar las listas.
       this.establecerResultadoPublicacion(resultado);
       this.resultadoCarga.set(null);
+      this.previewCarga.set(null);
       this.previewImportacion.set(null);
-      this.toast.success(resultado.mensaje);
-      try {
-        await Promise.all([this.cargarCargasPendientes(), this.cargarTodo()]);
-      } catch {
-        this.errorCarga.set(
-          'Las semanas se publicaron, pero no se pudieron refrescar las listas. El resumen sigue disponible.',
-        );
-      }
+      this.idempotencyKeyCarga = null;
+      this.confirmarSobrescritura.set(false);
+      this.archivoImportacion.set(null);
+      this.toast.success('Excel importado');
+      await this.refrescarTrasPublicacion();
     } catch (error) {
-      const preview = this.previewImportacionDeError(error);
-      if (
-        error instanceof HttpErrorResponse &&
-        error.status === 422 &&
-        preview
-      ) {
-        // La revalidación al publicar puede descubrir errores que ya no están
-        // en el Excel preparado. Se descarta el estado obsoleto, pero se
-        // conserva el resumen de una publicación anterior si existía.
-        this.previewCarga.set(null);
-        this.resultadoCarga.set(null);
-        this.previewImportacion.set(preview);
-        this.confirmarSobrescritura.set(false);
-        this.idempotencyKeyCarga = null;
-        this.errorCarga.set(
-          'No se publicó nada: el Excel pendiente ya no supera la validación. Revisa los errores localizados, descarta esta carga, corrige el archivo y vuelve a subirlo.',
-        );
-      } else {
-        this.errorCarga.set(
-          this.mensajeErrorImportacion(
-            error,
-            'No se pudieron publicar las semanas.',
-          ),
-        );
-      }
+      await this.manejarErrorPublicacion(error, id);
     } finally {
       this.publicandoCarga.set(null);
     }
+  }
+
+  private async manejarErrorPublicacion(
+    error: unknown,
+    id: number,
+  ): Promise<void> {
+    const status = error instanceof HttpErrorResponse ? error.status : null;
+    const terminal = status === 409 || status === 422;
+    const cargaPreparada = this.resultadoCarga();
+    const preparada =
+      cargaPreparada &&
+      (!cargaPreparada.cargaId || cargaPreparada.cargaId === id)
+        ? cargaPreparada
+        : null;
+    if (terminal) {
+      // 409/422 de publicación dejan la carga preparada inservible: no se
+      // puede reintentar el mismo ID, solo descartarlo y corregir el Excel.
+      this.marcarCargaNoReintentable(id);
+      if (preparada) this.resultadoCarga.set(null);
+    }
+    const preview = this.previewImportacionDeError(error);
+    if (status === 422 && preview) {
+      // La revalidación al publicar puede descubrir errores que ya no están
+      // en el Excel preparado. Se descarta el estado obsoleto, pero se
+      // conserva el resumen de una publicación anterior si existía.
+      this.previewCarga.set(null);
+      this.previewImportacion.set(preview);
+      this.confirmarSobrescritura.set(false);
+      this.idempotencyKeyCarga = null;
+      this.errorCarga.set(
+        'No se publicó nada: el Excel pendiente ya no supera la validación. Revisa los errores localizados, descarta esta carga, corrige el archivo y vuelve a subirlo.',
+      );
+    } else {
+      this.errorCarga.set(
+        this.mensajeErrorImportacion(
+          error,
+          'No se pudieron publicar las semanas.',
+        ),
+      );
+    }
+    if (terminal) {
+      await this.refrescarCargasPendientesSilencioso();
+      if (preparada?.cargaId) {
+        this.asegurarCargaPendienteVisible(id, preparada);
+      }
+    }
+  }
+
+  private asegurarCargaPendienteVisible(
+    id: number,
+    preparada: PreviewCargaSemanas | null,
+  ): void {
+    if (!preparada || this.cargasPendientes().some((carga) => carga.id === id))
+      return;
+    const fileName = this.archivoImportacion()?.name ?? 'Excel seleccionado';
+    this.cargasPendientes.update((cargas) => [
+      ...cargas,
+      {
+        id,
+        fileName,
+        createdAt: new Date().toISOString(),
+        preview: preparada,
+        variantes: (preparada.variantes ?? []).map((variante) => ({
+          codigo: variante.codigo,
+          planificacionMensualId:
+            variante.planificacionId ?? variante.publicadaId ?? null,
+        })),
+      },
+    ]);
+  }
+
+  private async refrescarTrasPublicacion(): Promise<void> {
+    await Promise.all([
+      this.refrescarCargasPendientesSilencioso(),
+      this.cargarTodo(),
+    ]);
   }
 
   confirmarDescarteCarga(id: number): void {
@@ -569,13 +726,17 @@ export class PlanificacionAdminComponent
   }
 
   async descartarCarga(id: number): Promise<void> {
-    if (this.publicandoCarga() !== null) return;
+    if (this.importacionEnCurso()) return;
     this.publicandoCarga.set(id);
     try {
       await firstValueFrom(
         this.autoasignacionService.descartarCargaSemanas$(id),
       );
-      this.resultadoCarga.set(null);
+      if (this.resultadoCarga()?.cargaId === id) this.resultadoCarga.set(null);
+      this.cargasPendientes.update((cargas) =>
+        cargas.filter((carga) => carga.id !== id),
+      );
+      this.desmarcarCargaNoReintentable(id);
       this.toast.success('Cambios pendientes descartados.');
       await this.cargarCargasPendientes();
     } catch (error) {
@@ -595,7 +756,7 @@ export class PlanificacionAdminComponent
   }
 
   cambiarVisibilidadImportacion(visible: boolean): void {
-    if (this.aplicandoImportacion()) return;
+    if (this.importacionEnCurso()) return;
     this.dialogoImportacionVisible.set(visible);
     if (!visible && this.route.snapshot.queryParamMap.get('importar') === '1')
       this.volverAPlanes();
@@ -875,7 +1036,10 @@ export class PlanificacionAdminComponent
     }
   }
 
-  seleccionarArchivoImportacion(selected: File | null | Event): void {
+  async seleccionarArchivoImportacion(
+    selected: File | null | Event,
+  ): Promise<void> {
+    if (this.importacionEnCurso() || this.previsualizandoImportacion()) return;
     const input =
       selected instanceof File || selected === null
         ? null
@@ -902,14 +1066,21 @@ export class PlanificacionAdminComponent
       this.toast.error('Selecciona un Excel .xlsx o .xls de hasta 10 MB');
       return;
     }
+    if (file.size === 0) {
+      this.archivoImportacion.set(null);
+      if (input) input.value = '';
+      this.toast.error('El archivo Excel está vacío. Selecciona otro archivo.');
+      return;
+    }
     this.archivoImportacion.set(file);
+    // La revisión arranca con la selección: es el único paso previo visible.
+    await this.previsualizarCargaSemanas();
   }
 
   async previsualizarCargaSemanas(): Promise<void> {
     const file = this.archivoImportacion();
-    if (!file) return;
+    if (!file || this.previsualizandoImportacion()) return;
     this.previsualizandoImportacion.set(true);
-    this.resultadoCarga.set(null);
     this.previewCarga.set(null);
     this.previewImportacion.set(null);
     this.errorCarga.set(null);
@@ -933,10 +1104,7 @@ export class PlanificacionAdminComponent
         this.previewImportacion.set(preview);
       } else {
         this.errorCarga.set(
-          this.mensajeErrorImportacion(
-            error,
-            'No se pudo previsualizar el Excel.',
-          ),
+          this.mensajeErrorImportacion(error, 'No se pudo revisar el Excel.'),
         );
       }
     } finally {
@@ -953,8 +1121,63 @@ export class PlanificacionAdminComponent
     return preview as PreviewImportacionPlantillas;
   }
 
-  async guardarCargaSemanas(): Promise<void> {
-    if (this.aplicandoImportacion()) return;
+  private leerCargasNoReintentables(): ReadonlySet<number> {
+    try {
+      if (typeof sessionStorage === 'undefined') return new Set();
+      const guardadas = sessionStorage.getItem(CARGAS_NO_REINTENTABLES_KEY);
+      if (!guardadas) return new Set();
+      const ids: unknown = JSON.parse(guardadas);
+      if (!Array.isArray(ids)) return new Set();
+      return new Set(
+        ids.filter(
+          (id): id is number => Number.isInteger(id) && Number(id) > 0,
+        ),
+      );
+    } catch {
+      return new Set();
+    }
+  }
+
+  private persistirCargasNoReintentables(ids: ReadonlySet<number>): void {
+    try {
+      if (typeof sessionStorage === 'undefined') return;
+      if (ids.size) {
+        sessionStorage.setItem(
+          CARGAS_NO_REINTENTABLES_KEY,
+          JSON.stringify([...ids]),
+        );
+      } else {
+        sessionStorage.removeItem(CARGAS_NO_REINTENTABLES_KEY);
+      }
+    } catch {
+      // El estado en memoria sigue protegiendo esta instancia.
+    }
+  }
+
+  private marcarCargaNoReintentable(id: number): void {
+    const actuales = this.cargasNoReintentables();
+    if (actuales.has(id)) return;
+    const siguientes = new Set(actuales);
+    siguientes.add(id);
+    this.cargasNoReintentables.set(siguientes);
+    this.persistirCargasNoReintentables(siguientes);
+  }
+
+  private desmarcarCargaNoReintentable(id: number): void {
+    const actuales = this.cargasNoReintentables();
+    if (!actuales.has(id)) return;
+    const siguientes = new Set(actuales);
+    siguientes.delete(id);
+    this.cargasNoReintentables.set(siguientes);
+    this.persistirCargasNoReintentables(siguientes);
+  }
+
+  /**
+   * Única acción del recorrido normal: prepara la carga y, solo si esa
+   * preparación termina bien, la publica. El clic es la autorización.
+   */
+  async importarSemanas(): Promise<void> {
+    if (this.importacionEnCurso() || this.previsualizandoImportacion()) return;
     const file = this.archivoImportacion();
     const preview = this.previewCarga();
     if (
@@ -962,49 +1185,82 @@ export class PlanificacionAdminComponent
       !preview?.puedeAplicar ||
       !preview.previewHash ||
       !this.idempotencyKeyCarga
-    )
+    ) {
+      this.toast.error('Selecciona un Excel válido antes de importar.');
       return;
+    }
     if (preview.requiereConfirmacion && !this.confirmarSobrescritura()) {
       this.toast.error(
-        'Revisa y confirma los cambios indicados antes de guardar.',
+        'Revisa y confirma los cambios indicados antes de importar.',
       );
       return;
     }
+    const idempotencyKey = this.idempotencyKeyCarga;
     this.aplicandoImportacion.set(true);
+    this.errorCarga.set(null);
     try {
-      const resultado = await firstValueFrom(
-        this.autoasignacionService.applyCargaSemanas$(
-          file,
-          preview.previewHash,
-          this.confirmarSobrescritura(),
-          this.idempotencyKeyCarga,
-        ),
-      );
+      let resultado: PreviewCargaSemanas;
+      try {
+        resultado = await firstValueFrom(
+          this.autoasignacionService.applyCargaSemanas$(
+            file,
+            preview.previewHash,
+            this.confirmarSobrescritura(),
+            idempotencyKey,
+          ),
+        );
+      } catch (error) {
+        this.manejarErrorPreparacion(error);
+        return;
+      }
+      if (!resultado?.cargaId) {
+        this.errorCarga.set(
+          'No se pudo preparar la importación. Vuelve a intentarlo.',
+        );
+        return;
+      }
+      // La preparación ya no necesita su clave: el reintento solo publica.
       this.resultadoCarga.set(resultado);
       this.previewCarga.set(null);
-      this.toast.success(
-        'Semanas preparadas. Los alumnos no ven cambios hasta que las publiques.',
-      );
-      await this.cargarCargasPendientes();
-    } catch (error) {
-      if (error instanceof HttpErrorResponse && error.status === 409) {
-        this.previewCarga.set(null);
-        this.confirmarSobrescritura.set(false);
-        this.idempotencyKeyCarga = null;
-      }
-      const preview = this.previewImportacionDeError(error);
-      if (preview) {
-        this.previewCarga.set(null);
-        this.resultadoCarga.set(null);
-        this.previewImportacion.set(preview);
-        this.confirmarSobrescritura.set(false);
-        this.idempotencyKeyCarga = null;
-      }
-      this.toast.error(
-        this.mensajeErrorImportacion(error, 'No se pudo guardar el Excel.'),
-      );
+      this.previewImportacion.set(null);
+      this.confirmarSobrescritura.set(false);
+      this.idempotencyKeyCarga = null;
+      await this.refrescarCargasPendientesSilencioso();
+      await this.ejecutarPublicacion(resultado.cargaId);
     } finally {
       this.aplicandoImportacion.set(false);
+    }
+  }
+
+  private manejarErrorPreparacion(error: unknown): void {
+    const preview = this.previewImportacionDeError(error);
+    if (
+      error instanceof HttpErrorResponse &&
+      (error.status === 409 || error.status === 422)
+    ) {
+      // El estado anterior ya no representa el Excel ni el plan actual.
+      this.previewCarga.set(null);
+      this.resultadoCarga.set(null);
+      this.previewImportacion.set(preview);
+      this.confirmarSobrescritura.set(false);
+      this.idempotencyKeyCarga = null;
+    }
+    if (!preview) {
+      this.errorCarga.set(
+        this.mensajeErrorImportacion(error, 'No se pudo importar el Excel.'),
+      );
+    }
+  }
+
+  private async refrescarCargasPendientesSilencioso(): Promise<void> {
+    try {
+      this.cargasPendientes.set(
+        await firstValueFrom(
+          this.autoasignacionService.listarCargasPendientes$(),
+        ),
+      );
+    } catch {
+      // El resultado preparado sigue disponible en memoria para reintentar.
     }
   }
 
@@ -1139,6 +1395,81 @@ export class PlanificacionAdminComponent
     const inicio = `Semana ${intervalo.inicio.numero} · ${this.formatearFechaIso(intervalo.inicio.lunes)}`;
     if (intervalo.inicio.lunes === intervalo.fin.lunes) return inicio;
     return `${inicio} – Semana ${intervalo.fin.numero} · ${this.formatearFechaIso(intervalo.fin.lunes)}`;
+  }
+
+  private resumenPerfilCarga(
+    variantes: ReadonlyArray<VarianteCargaSemanas> | undefined,
+  ): string {
+    const [primera, ...resto] = variantes ?? [];
+    if (!primera) return '';
+    const etiqueta = [
+      this.labelOposicion(primera.oposicion),
+      this.getNivelOposicionLabel(primera.nivel),
+      this.getFranjaPlanificacionLabel(primera.franja),
+    ]
+      .filter((parte) => parte && parte !== '—')
+      .join(' · ');
+    const base = etiqueta || primera.codigo;
+    return resto.length
+      ? `${base} · +${resto.length} ${resto.length === 1 ? 'perfil' : 'perfiles'}`
+      : base;
+  }
+
+  private resumenFechasCarga(
+    variantes: ReadonlyArray<VarianteCargaSemanas> | undefined,
+  ): string {
+    const fechas = (variantes ?? [])
+      .flatMap((variante) => variante.semanas ?? [])
+      .map((semana) => semana.lunes)
+      .filter((fecha) => this.fechaCivilDesdeIso(fecha) !== null)
+      .sort();
+    if (!fechas.length) return '';
+    const inicio = this.formatearFechaIso(fechas[0]);
+    const fin = this.formatearFechaIso(fechas[fechas.length - 1]);
+    return inicio === fin ? inicio : `${inicio} – ${fin}`;
+  }
+
+  etiquetaDestinoCarga(variante: VarianteCargaSemanas): string {
+    const destino = variante.destino;
+    if (destino?.tipo === 'CREAR') return destino.identificador;
+    if (destino?.tipo === 'COPIAR') return 'Copia del plan publicado';
+    const planificacionId =
+      destino?.tipo === 'EXISTENTE'
+        ? destino.planificacionId
+        : variante.planificacionId;
+    const plan = planificacionId
+      ? this.planificacionesMensuales().find(
+          (item) => item.id === planificacionId,
+        )
+      : null;
+    if (plan) return `${plan.identificador} v${plan.version ?? 1}`;
+    if (variante.publicada) {
+      return `${variante.publicada.identificador} v${variante.publicada.version}`;
+    }
+    return planificacionId
+      ? `Planificación ${planificacionId}`
+      : 'Plan publicado actual';
+  }
+
+  /**
+   * Agrupa las semanas publicadas por año ISO para que el recibo muestre
+   * todos los perfiles y años sin sumar contadores en primer plano.
+   */
+  agruparSemanasPublicadasPorAnioIso(
+    semanas: ReadonlyArray<SemanaResultadoPublicacion>,
+  ): GrupoSemanasPublicadas[] {
+    const grupos = new Map<number, SemanaResultadoPublicacion[]>();
+    for (const semana of [...semanas].sort((a, b) =>
+      a.lunes.localeCompare(b.lunes),
+    )) {
+      const fecha = this.fechaCivilDesdeIso(semana.lunes);
+      const anioIso = fecha ? getISOWeekYear(fecha) : 0;
+      grupos.set(anioIso, [...(grupos.get(anioIso) ?? []), semana]);
+    }
+    return [...grupos.entries()].map(([anioIso, semanasGrupo]) => ({
+      anioIso,
+      semanas: semanasGrupo,
+    }));
   }
 
   avisosPreviewImportacion(
