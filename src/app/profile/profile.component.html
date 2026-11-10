@@ -9,7 +9,11 @@
   <ng-container *ngIf="!(isLoading$ | async) && user">
     <header class="alumno-page-header">
       <div class="alumno-page-identity">
-        <app-avatar-upload [avatarUrl]="user.avatarUrl"></app-avatar-upload>
+        <app-avatar-upload
+          [avatarUrl]="user.avatarUrl"
+          variant="profile"
+          [initials]="initialesPerfil"
+        ></app-avatar-upload>
         <div>
           <div class="alumno-eyebrow">MI PERFIL</div>
           <h1>{{ user.nombre }} {{ user.apellidos }}</h1>
@@ -29,9 +33,16 @@
       </div>
     </header>
     <p class="alumno-intro">
-      Tus datos, tu preparación y tus accesos, en un mismo lugar.
+      {{
+        esAdminOSuperior
+          ? "Gestiona tus datos y la configuración de tu cuenta."
+          : "Tus datos, tu preparación y tus accesos, en un mismo lugar."
+      }}
     </p>
-    <div class="alumno-page-grid">
+    <div
+      class="alumno-page-grid"
+      [class.alumno-page-grid-admin]="esAdminOSuperior"
+    >
       <app-alumno-datos
         [usuario]="user"
         [perfil]="true"
@@ -60,18 +71,22 @@
             <i class="pi pi-link" aria-hidden="true"></i>Vincular con WordPress
           </button></ng-template
         >
-        <p *ngIf="mostrarBannerCancelacion" class="alumno-helper">
-          Las cancelaciones deben solicitarse con al menos 5 días de antelación
-          a la próxima renovación.<button
-            type="button"
-            class="alumno-link"
-            (click)="cerrarBannerCancelacion()"
-            aria-label="Ocultar recordatorio de cancelación"
-          >
-            <i class="pi pi-times" aria-hidden="true"></i>
-          </button>
-        </p>
       </app-alumno-suscripciones>
+      <p
+        *ngIf="!esAdminOSuperior && mostrarBannerCancelacion"
+        class="alumno-membership-note alumno-span-all"
+        role="note"
+      >
+        Las cancelaciones deben solicitarse con al menos 5 días de antelación a
+        la próxima renovación.<button
+          type="button"
+          class="alumno-link"
+          (click)="cerrarBannerCancelacion()"
+          aria-label="Ocultar recordatorio de cancelación"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      </p>
       <article *ngIf="!esAdminOSuperior" class="alumno-card">
         <div class="alumno-card-head">
           <div>

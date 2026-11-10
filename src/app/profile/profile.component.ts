@@ -72,6 +72,16 @@ import {
   ],
 })
 export class ProfileComponent implements OnInit, OnDestroy {
+  get initialesPerfil(): string {
+    return (
+      [this.user?.nombre, this.user?.apellidos]
+        .filter(Boolean)
+        .map((s) => s!.trim().charAt(0))
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'AL'
+    );
+  }
   private finGuardadoPerfil: Promise<boolean> | null = null;
   private resolverGuardadoPerfil: ((value: boolean) => void) | null = null;
   prepararSalida(): boolean | Promise<boolean> {

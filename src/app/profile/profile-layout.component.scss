@@ -1,6 +1,11 @@
+:host {
+  min-height: 100%;
+  background: var(--surface-ground, #f6f7fb);
+  color: var(--text-color, #2c2c2c);
+}
 .alumno-page {
-  max-width: 1280px;
-  padding: 28px 32px 44px;
+  max-width: 1360px;
+  padding: 28px 34px 44px;
   margin: 0 auto;
 }
 .alumno-page-header {
@@ -50,6 +55,9 @@
   gap: 24px;
   align-items: stretch;
 }
+.alumno-page-grid-admin {
+  grid-template-columns: minmax(0, 1fr);
+}
 .alumno-page-grid > app-alumno-datos,
 .alumno-page-grid > app-alumno-suscripciones,
 .alumno-page-grid > app-alumno-informacion {
@@ -63,14 +71,22 @@
   line-height: 1.6;
   margin: 0;
 }
-.alumno-helper {
-  font-size: 11px;
+.alumno-membership-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -10px 0;
+  padding: 0 16px;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
   color: var(--text-color-secondary);
-  line-height: 1.7;
-  margin: 12px 0 0;
+  background: var(--surface-card);
+  font-size: 12px;
+  line-height: 1.6;
 }
-.alumno-helper .alumno-link {
-  margin-left: 6px;
+.alumno-membership-note .alumno-link {
+  flex-shrink: 0;
 }
 .alumno-balance-grid {
   display: grid;

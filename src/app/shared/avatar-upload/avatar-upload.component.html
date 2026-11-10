@@ -1,15 +1,32 @@
-<div class="avatar-container" (click)="fileInput.click()">
-  @if (!avatarUrl) {
-  <i class="pi pi-camera"></i>
+<button
+  type="button"
+  class="avatar-container"
+  [class.avatar-profile]="variant === 'profile'"
+  [disabled]="uploading"
+  [attr.aria-busy]="uploading"
+  [attr.aria-label]="
+    uploading ? 'Subiendo foto de perfil' : 'Cambiar foto de perfil'
+  "
+  (click)="fileInput.click()"
+>
+  @if (avatarUrl) {
+    <img [src]="avatarUrl" alt="Foto de perfil" class="avatar-preview" />
+  } @else if (variant === "profile" && initials) {
+    <span class="avatar-initials" aria-hidden="true">{{ initials }}</span>
   } @else {
-  <img [src]="avatarUrl" alt="Avatar" class="avatar-preview" />
+    <i class="pi pi-camera" aria-hidden="true"></i>
   }
-
-  <input
-    #fileInput
-    type="file"
-    accept=".png, .jpg, .jpeg"
-    (change)="onFileSelected($event)"
-    hidden
-  />
-</div>
+  @if (variant === "profile") {
+    <span class="avatar-edit" aria-hidden="true"
+      ><i [class]="uploading ? 'pi pi-spin pi-spinner' : 'pi pi-camera'"></i
+    ></span>
+  }
+</button>
+<input
+  #fileInput
+  type="file"
+  accept=".png, .jpg, .jpeg"
+  (change)="onFileSelected($event)"
+  [disabled]="uploading"
+  hidden
+/>
