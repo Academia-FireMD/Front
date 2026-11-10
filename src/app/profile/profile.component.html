@@ -2,364 +2,1007 @@
   [style]="{ width: 'min(550px,94vw)' }"
   [baseZIndex]="10000"
 ></p-confirmDialog>
-<div class="alumno-page">
-  <div *ngIf="isLoading$ | async" class="alumno-state" role="status">
-    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>Cargando perfil…
+
+<div class="profile-container">
+  <!-- Spinner de carga -->
+  <div class="loading-container" *ngIf="isLoading$ | async">
+    <ngx-spinner type="ball-scale-multiple"></ngx-spinner>
+    <p>Cargando perfil...</p>
   </div>
-  <ng-container *ngIf="!(isLoading$ | async) && user">
-    <header class="alumno-page-header">
-      <div class="alumno-page-identity">
-        <app-avatar-upload
-          [avatarUrl]="user.avatarUrl"
-          variant="profile"
-          [initials]="initialesPerfil"
-        ></app-avatar-upload>
-        <div>
-          <div class="alumno-eyebrow">MI PERFIL</div>
-          <h1>{{ user.nombre }} {{ user.apellidos }}</h1>
-          <p>{{ user.email }}</p>
-        </div>
-      </div>
-      <div class="alumno-page-actions">
-        <span class="alumno-badge">{{ etiquetaRol }}</span
-        ><button
-          type="button"
-          class="alumno-btn"
-          (click)="mostrarDialogFacturas = true"
-          data-testid="profile-facturas"
-        >
-          <i class="pi pi-file" aria-hidden="true"></i>Mis facturas
-        </button>
-      </div>
-    </header>
-    <p class="alumno-intro">
-      {{
-        esAdminOSuperior
-          ? "Gestiona tus datos y la configuración de tu cuenta."
-          : "Tus datos, tu preparación y tus accesos, en un mismo lugar."
-      }}
-    </p>
-    <div
-      class="alumno-page-grid"
-      [class.alumno-page-grid-admin]="esAdminOSuperior"
-    >
-      <app-alumno-datos
-        [usuario]="user"
-        [perfil]="true"
-        (editar)="abrirEdicionPerfil()"
-      ></app-alumno-datos>
-      <app-alumno-suscripciones
-        *ngIf="!esAdminOSuperior"
-        [suscripciones]="suscripcionesVisibles"
-        [perfil]="true"
-        [acciones]="accionesPerfil"
+
+  <div class="profile-content" *ngIf="!(isLoading$ | async) && user">
+    <div class="grid">
+      <!-- Información del perfil (lado izquierdo) -->
+      <div
+        class="col-12"
+        [ngClass]="{
+          'lg:col-8': !esAdminOSuperior,
+          'lg:col-12': esAdminOSuperior,
+        }"
       >
-        <button
-          *ngIf="isLinkedToWordPress(); else vincular"
-          type="button"
-          class="alumno-link"
-          (click)="abrirAnadirPlanDialog()"
-        >
-          <i class="pi pi-plus" aria-hidden="true"></i>Añadir un plan
-        </button>
-        <ng-template #vincular
-          ><button
-            type="button"
-            class="alumno-link"
-            (click)="linkToWordPress()"
-          >
-            <i class="pi pi-link" aria-hidden="true"></i>Vincular con WordPress
-          </button></ng-template
-        >
-      </app-alumno-suscripciones>
-      <p
-        *ngIf="!esAdminOSuperior && mostrarBannerCancelacion"
-        class="alumno-membership-note alumno-span-all"
-        role="note"
-      >
-        Las cancelaciones deben solicitarse con al menos 5 días de antelación a
-        la próxima renovación.<button
-          type="button"
-          class="alumno-link"
-          (click)="cerrarBannerCancelacion()"
-          aria-label="Ocultar recordatorio de cancelación"
-        >
-          <i class="pi pi-times" aria-hidden="true"></i>
-        </button>
-      </p>
-      <article *ngIf="!esAdminOSuperior" class="alumno-card">
-        <div class="alumno-card-head">
-          <div>
-            <h2>Mi planificación</h2>
-            <p>Tu preparación organizada semana a semana.</p>
-          </div>
-          <button
-            type="button"
-            class="alumno-link"
-            (click)="gestionarPlanificacion()"
-          >
-            <i class="pi pi-cog" aria-hidden="true"></i>Preferencias
-          </button>
-        </div>
-        <div class="alumno-card-body">
-          <p *ngIf="errorPlanificacionesPerfil" role="alert">
-            {{ errorPlanificacionesPerfil }}
-          </p>
-          <div
-            class="alumno-notice"
-            *ngIf="
-              configuracionPlanificacion?.configuracionActiva
-                ?.variante as variante
-            "
-          >
-            <strong>Plan de estudio confirmado:</strong>
-            <p>
-              {{ getPlanificacionOposicionLabel(variante.oposicion) }} ·
-              {{ getNivelOposicionLabel(variante.nivel) }} ·
-              {{ getFranjaPlanificacionLabel(variante.franja) }}
-            </p>
-          </div>
-          <div *ngIf="cargandoPlanificacionesPerfil" role="status">
-            Cargando planificación…
-          </div>
-          <div
-            *ngFor="let asignacion of planificacionesPerfil"
-            class="alumno-assignment"
-          >
-            <h3>{{ asignacion.planificacion.identificador }}</h3>
-            <p class="alumno-copy">
-              {{ asignacion.planificacion.descripcion }}
-            </p>
+        <div class="profile-card" data-testid="profile-main-card">
+          <div class="card-header profile-main-header">
+            <h2>
+              <i aria-hidden="true" class="pi pi-user-edit"></i> Mi Perfil
+            </h2>
             <button
               type="button"
-              class="alumno-btn primary"
-              (click)="verPlanificacionPerfil(asignacion.planificacion.id)"
+              class="profile-invoices"
+              *ngIf="esAdminOSuperior"
+              (click)="mostrarDialogFacturas = true"
+              data-testid="profile-facturas"
             >
-              <i class="pi pi-eye" aria-hidden="true"></i>Ver mi planificación
+              <i class="pi pi-file" aria-hidden="true"></i>Mis facturas
             </button>
           </div>
-          <div
-            *ngIf="
-              !cargandoPlanificacionesPerfil &&
-              !errorPlanificacionesPerfil &&
-              !planificacionesPerfil.length
-            "
-            class="alumno-empty"
-          >
-            <i class="pi pi-calendar" aria-hidden="true"></i>
-            <h3>Sin planificación asignada</h3>
-            <p>Tu planificación aparecerá cuando esté disponible.</p>
-          </div>
-        </div>
-      </article>
-      <app-alumno-informacion
-        *ngIf="!esAdminOSuperior"
-        [usuario]="user"
-        [resumen]="true"
-        [completitud]="getOnboardingCompletionPercentage()"
-        (completar)="openOnboardingModal()"
-      ></app-alumno-informacion>
-      <app-alumno-accesos
-        *ngIf="!esAdminOSuperior"
-        class="alumno-span-all"
-        [perfil]="true"
-        [cursos]="cursos"
-        [consumibles]="simulacros"
-        [cargando]="cursosCargando"
-        [error]="cursosError"
-        [puedeVerResultados]="resultadosPerfil"
-        (abrirCurso)="verCurso($event)"
-        (tienda)="abrirTiendaWordPress()"
-        (usar)="usarConsumible($event)"
-        (resultados)="verResultadosConsumible($event)"
-        (reintentar)="cargarCursos()"
-      ></app-alumno-accesos>
-      <article
-        *ngIf="user.rol === Rol.ALUMNO && planificacionFisicaHabilitada()"
-        class="alumno-card"
-        data-testid="profile-marcas-card"
-      >
-        <div class="alumno-card-head">
-          <div>
-            <h2>Mis marcas</h2>
-            <p>Tu histórico de preparación física.</p>
-          </div>
-        </div>
-        <div class="alumno-card-body">
-          <p class="alumno-copy">
-            Consulta tus registros y anota los resultados de cada prueba.
-          </p>
-          <button
-            type="button"
-            class="alumno-btn full"
-            data-testid="profile-marcas-link"
-            (click)="irAMarcas()"
-          >
-            <i class="pi pi-chart-line" aria-hidden="true"></i>Ver mis marcas
-          </button>
-        </div>
-      </article>
-      <article
-        *ngIf="user.rol === Rol.ALUMNO && simuladorNotaHabilitado()"
-        class="alumno-card"
-        data-testid="profile-simulador-nota-card"
-      >
-        <div class="alumno-card-head">
-          <div>
-            <h2>Simulador de nota</h2>
-            <p>Estima tu resultado en las pruebas físicas.</p>
-          </div>
-        </div>
-        <div class="alumno-card-body">
-          <p class="alumno-copy">
-            Revisa tus objetivos y la estimación de nota de cada prueba.
-          </p>
-          <button
-            type="button"
-            class="alumno-btn full"
-            data-testid="profile-simulador-nota-link"
-            (click)="irASimuladorNota()"
-          >
-            <i class="pi pi-chart-bar" aria-hidden="true"></i>Abrir simulador
-          </button>
-        </div>
-      </article>
-      <article
-        *ngIf="madridTutoriaBalance || madridTutoriaBalanceLoading"
-        class="alumno-card alumno-span-all"
-        data-testid="madrid-tutoria-balance-card"
-      >
-        <div class="alumno-card-head">
-          <div>
-            <h2>Tutorías Madrid</h2>
-            <p>Tu saldo de sesiones y reservas.</p>
-          </div>
-        </div>
-        <div class="alumno-card-body">
-          <div *ngIf="madridTutoriaBalance as balance">
-            <div class="alumno-balance-grid">
-              <div>
-                <strong>{{ balance.disponibles }}</strong
-                ><span>Disponibles</span>
+
+          <div class="card-content">
+            <div class="user-info-header mb-4">
+              <div class="profile-avatar">
+                <app-avatar-upload
+                  [avatarUrl]="user.avatarUrl"
+                  variant="profile"
+                  [initials]="initialesPerfil"
+                ></app-avatar-upload>
               </div>
-              <div>
-                <strong>{{ balance.reservados }}</strong
-                ><span>Reservadas</span>
-              </div>
-              <div>
-                <strong>{{ balance.consumidos }}</strong
-                ><span>Consumidas</span>
+              <div class="user-info-text">
+                <h3>{{ user.nombre }} {{ user.apellidos }}</h3>
+                <span
+                  class="user-role"
+                  [ngClass]="{
+                    'admin-role': esAdminOSuperior,
+                    'superadmin-role': esSuperadmin,
+                  }"
+                >
+                  {{ etiquetaRol }}
+                </span>
               </div>
             </div>
-            <p class="alumno-copy">
+
+            <!-- Campos de formulario -->
+            <div class="form-group mb-3">
+              <label for="nombre">Nombre</label>
+              <input
+                type="text"
+                pInputText
+                id="nombre"
+                [(ngModel)]="user.nombre"
+                [disabled]="guardandoPerfil"
+                data-testid="profile-edit-nombre"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="apellidos">Apellidos</label>
+              <input
+                type="text"
+                pInputText
+                id="apellidos"
+                [(ngModel)]="user.apellidos"
+                [disabled]="guardandoPerfil"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="dni">DNI/NIE</label>
+              <input
+                type="text"
+                pInputText
+                id="dni"
+                [(ngModel)]="user.dni"
+                [disabled]="guardandoPerfil"
+                placeholder="Ej: 12345678Z"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="email">Email</label>
+              <input
+                type="text"
+                pInputText
+                id="email"
+                [value]="user.email"
+                disabled
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="tutores">Tutor asignado</label>
+              <p-dropdown
+                id="tutores"
+                styleClass="w-full"
+                [options]="(tutores$ | async) ?? []"
+                [(ngModel)]="user.tutorId"
+                [disabled]="guardandoPerfil"
+                optionLabel="email"
+                optionValue="id"
+                appendTo="body"
+                placeholder="Tutor (opcional)"
+              >
+                <ng-template let-item pTemplate="selectedItem">
+                  <div class="flex align-items-center gap-2">
+                    <div>
+                      {{
+                        item.nombre && item.apellidos
+                          ? item.nombre + " " + item.apellidos
+                          : item.email
+                      }}
+                    </div>
+                  </div>
+                </ng-template>
+                <ng-template let-item let-index pTemplate="item">
+                  <div class="flex align-items-center gap-2">
+                    <div>
+                      {{
+                        item.nombre && item.apellidos
+                          ? item.nombre + " " + item.apellidos
+                          : item.email
+                      }}
+                    </div>
+                  </div>
+                </ng-template>
+              </p-dropdown>
+            </div>
+
+            <div class="form-group mb-3">
+              <app-metodo-calificacion-picker
+                [(ngModel)]="user.metodoCalificacion"
+                [disabled]="guardandoPerfil"
+                [showClear]="false"
+                label="Método de calificación"
+                placeholder="Seleccione un método de calificación"
+              ></app-metodo-calificacion-picker>
+
+              <div class="form-group mb-3" *ngIf="esAdminOSuperior">
+                <label for="esTutor">Este usuario es tutor?</label>
+                <p-toggleButton
+                  id="esTutor"
+                  [(ngModel)]="user.esTutor"
+                  [disabled]="guardandoPerfil"
+                  onLabel="Sí"
+                  offLabel="No"
+                  styleClass="w-full"
+                ></p-toggleButton>
+              </div>
+
+              <div
+                class="planification-section mt-4"
+                *ngIf="user.rol === 'ALUMNO'"
+              >
+                <div class="no-planification-message">
+                  <h3>Mi planificación</h3>
+                  <p>
+                    <strong>Oposiciones contratadas:</strong>
+                    <ng-container
+                      *ngIf="oposicionesContratadas.length; else sinSuscripcion"
+                    >
+                      <span
+                        *ngFor="
+                          let oposicion of oposicionesContratadas;
+                          let ultimo = last
+                        "
+                      >
+                        {{ getPlanificacionOposicionLabel(oposicion)
+                        }}{{ ultimo ? "" : ", " }}
+                      </span>
+                    </ng-container>
+                    <ng-template #sinSuscripcion
+                      >Pendiente de suscripción vigente</ng-template
+                    >
+                  </p>
+                  <p
+                    *ngIf="
+                      configuracionPlanificacion?.configuracionActiva
+                        ?.variante as variante;
+                      else sinConfiguracion
+                    "
+                  >
+                    <strong>Plan de estudio confirmado:</strong>
+                    {{ getPlanificacionOposicionLabel(variante.oposicion) }} ·
+                    {{ getNivelOposicionLabel(variante.nivel) }} ·
+                    {{ getFranjaPlanificacionLabel(variante.franja) }}
+                  </p>
+                  <ng-template #sinConfiguracion>
+                    <p *ngIf="configuracionPlanificacionCargando">
+                      <strong>Configuración confirmada:</strong> cargando…
+                    </p>
+                    <p *ngIf="configuracionPlanificacionError" role="alert">
+                      No se pudo consultar tu planificación. Inténtalo más
+                      tarde.
+                    </p>
+                    <p
+                      *ngIf="
+                        !configuracionPlanificacionCargando &&
+                        !configuracionPlanificacionError
+                      "
+                    >
+                      <strong>Configuración confirmada:</strong> pendiente
+                    </p>
+                  </ng-template>
+                  <p *ngIf="cargandoPlanificacionesPerfil" role="status">
+                    Cargando planificaciones…
+                  </p>
+                  <p *ngIf="errorPlanificacionesPerfil" role="alert">
+                    {{ errorPlanificacionesPerfil }}
+                  </p>
+                  <div
+                    *ngFor="let asignacion of planificacionesPerfil"
+                    class="profile-assigned-plan"
+                  >
+                    <strong>{{
+                      asignacion.planificacion.identificador
+                    }}</strong>
+                    <p-button
+                      label="Ver mi planificación"
+                      icon="pi pi-eye"
+                      styleClass="p-button-text"
+                      (onClick)="
+                        verPlanificacionPerfil(asignacion.planificacion.id)
+                      "
+                      ariaLabel="Ver mi planificación"
+                    ></p-button>
+                  </div>
+                  <p-button
+                    styleClass="p-button-outlined"
+                    icon="pi pi-calendar-plus"
+                    label="Gestionar mi planificación"
+                    (onClick)="irAPlanificacion()"
+                    ariaLabel="Gestionar mi planificación"
+                  ></p-button>
+                </div>
+              </div>
+
+              <p
+                *ngIf="errorEdicionPerfil"
+                role="alert"
+                class="profile-save-error"
+              >
+                {{ errorEdicionPerfil }}
+              </p>
+              <!-- Botones de acción -->
+              <div class="action-buttons mt-4 flex justify-content-end">
+                <p-button
+                  label="Guardar cambios"
+                  icon="pi pi-save"
+                  [loading]="guardandoPerfil"
+                  [disabled]="guardandoPerfil"
+                  (onClick)="saveProfile()"
+                  data-testid="profile-save-datos"
+                  ariaLabel="Guardar cambios"
+                ></p-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mis marcas — entrada al histórico de marcas personales de física
+             (Fase 3: visibilidad, antes solo accesible desde el calendario de
+             física). Solo ALUMNO + módulo PLANIFICACION_FISICA activo; el tier
+             BASIC lo resuelve la propia vista con su píldora de upsell. -->
+        <div
+          class="profile-card mt-4"
+          *ngIf="user.rol === Rol.ALUMNO && planificacionFisicaHabilitada()"
+          data-testid="profile-marcas-card"
+        >
+          <div class="card-header">
+            <h2>
+              <i aria-hidden="true" class="pi pi-chart-line"></i> Mis marcas
+            </h2>
+          </div>
+
+          <div class="card-content">
+            <p class="text-color-secondary mb-3">
+              Consulta y registra tus marcas personales de las pruebas físicas.
+            </p>
+            <p-button
+              label="Ver mis marcas"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              data-testid="profile-marcas-link"
+              (click)="irAMarcas()"
+              ariaLabel="Ver mis marcas"
+            ></p-button>
+          </div>
+        </div>
+
+        <div
+          class="profile-card mt-4"
+          *ngIf="user.rol === Rol.ALUMNO && simuladorNotaHabilitado()"
+          data-testid="profile-simulador-nota-card"
+        >
+          <div class="card-header">
+            <h2>
+              <i aria-hidden="true" class="pi pi-chart-bar"></i> Simulador de
+              nota
+            </h2>
+          </div>
+          <div class="card-content">
+            <p class="text-color-secondary mb-3">
+              Calcula tu nota estimada y compárala con convocatorias publicadas.
+            </p>
+            <p-button
+              label="Abrir simulador"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              data-testid="profile-simulador-nota-link"
+              (click)="irASimuladorNota()"
+              ariaLabel="Abrir simulador"
+            ></p-button>
+          </div>
+        </div>
+      </div>
+      <!-- Información de suscripciones y consumibles (lado derecho).
+           Solo para ALUMNO: ADMIN/SUPERADMIN no tienen suscripción propia
+           relevante (antes el check `!== 'ADMIN'` se la mostraba a SUPERADMIN). -->
+      <div class="col-12 lg:col-4" *ngIf="!esAdminOSuperior">
+        <!-- Card de Suscripciones -->
+        <div class="subscription-card" data-testid="profile-subscriptions-card">
+          <div
+            class="card-header flex align-items-center justify-content-between"
+          >
+            <h2>
+              <i aria-hidden="true" class="pi pi-credit-card"></i> Mis
+              Suscripciones
+            </h2>
+            <button
+              type="button"
+              class="profile-invoices profile-invoices-icon"
+              aria-label="Mis facturas"
+              data-testid="profile-facturas"
+              (click)="mostrarDialogFacturas = true"
+            >
+              <i class="pi pi-file" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="card-content">
+            <!-- Si no hay suscripciones VIVAS (activas o con cancelación programada) -->
+            <div class="no-subscription" *ngIf="!suscripcionesVisibles.length">
+              <i aria-hidden="true" class="pi pi-info-circle"></i>
+              <h3>Sin suscripción activa</h3>
+              <p>No tienes ninguna suscripción activa en este momento.</p>
+              <a [href]="tiendaUrl" target="_blank" rel="noopener noreferrer">
+                <p-button
+                  label="Obtener plan"
+                  icon="pi pi-external-link"
+                  styleClass="p-button-outlined mt-3"
+                  ariaLabel="Obtener plan"
+                ></p-button>
+              </a>
+            </div>
+
+            <!-- Si hay suscripciones VIVAS. Las CANCELLED/EXPIRED se ocultan (solo se
+                 muestran ACTIVE y PENDING_CANCEL = cancelación programada). -->
+            <div
+              class="subscription-details"
+              *ngIf="suscripcionesVisibles.length"
+            >
+              <div
+                *ngFor="let suscripcion of suscripcionesVisibles"
+                class="subscription-card-item"
+                data-testid="profile-subscription"
+                [ngClass]="{
+                  'status-active':
+                    (suscripcion.status === 'ACTIVE' ||
+                      suscripcion.status === 'PENDING_CANCEL') &&
+                    !suscripcion.fechaFin,
+                  'status-pending':
+                    (suscripcion.status === 'ACTIVE' ||
+                      suscripcion.status === 'PENDING_CANCEL') &&
+                    suscripcion.fechaFin,
+                  'status-cancelled': suscripcion.status === 'CANCELLED',
+                }"
+              >
+                <!-- Header con logo y nombre -->
+                <div class="subscription-header">
+                  <img
+                    *ngIf="oposiciones[suscripcion.oposicion]?.image as image"
+                    [src]="image"
+                    [alt]="
+                      getPlanificacionOposicionLabel(suscripcion.oposicion)
+                    "
+                    class="subscription-logo"
+                  />
+                  <div class="subscription-title">
+                    <span class="oposicion-name">
+                      {{
+                        getPlanificacionOposicionLabel(suscripcion.oposicion)
+                      }}
+                    </span>
+                    <span
+                      class="plan-badge"
+                      [ngClass]="'plan-' + suscripcion.tipo.toLowerCase()"
+                    >
+                      {{ getPlanLabel(suscripcion.tipo) }}
+                    </span>
+                  </div>
+                  <!-- Menú de opciones -->
+                  <p-menu
+                    #subscriptionMenu
+                    [model]="getSubscriptionMenuItems(suscripcion)"
+                    [popup]="true"
+                    appendTo="body"
+                  />
+                  <button
+                    type="button"
+                    class="options-btn"
+                    [attr.aria-label]="
+                      'Opciones de ' +
+                      getPlanLabel(suscripcion.tipo) +
+                      ' · ' +
+                      getPlanificacionOposicionLabel(suscripcion.oposicion)
+                    "
+                    aria-haspopup="menu"
+                    (click)="subscriptionMenu.toggle($event)"
+                    pTooltip="Opciones"
+                    tooltipPosition="left"
+                  >
+                    <i aria-hidden="true" class="pi pi-ellipsis-v"></i>
+                  </button>
+                </div>
+
+                <!-- Info de la suscripción -->
+                <div class="subscription-info">
+                  <!-- Estado -->
+                  <div class="info-row">
+                    <span class="info-label">Estado</span>
+                    <span
+                      class="info-value"
+                      [ngClass]="{
+                        'text-green-600':
+                          (suscripcion.status === 'ACTIVE' ||
+                            suscripcion.status === 'PENDING_CANCEL') &&
+                          !suscripcion.fechaFin &&
+                          !suscripcion.cancelacionProgramada,
+                        'text-orange-600':
+                          (suscripcion.status === 'ACTIVE' ||
+                            suscripcion.status === 'PENDING_CANCEL') &&
+                          (suscripcion.fechaFin ||
+                            suscripcion.cancelacionProgramada),
+                        'text-red-500': suscripcion.status === 'CANCELLED',
+                      }"
+                    >
+                      @if (
+                        (suscripcion.status === "ACTIVE" ||
+                          suscripcion.status === "PENDING_CANCEL") &&
+                        suscripcion.cancelacionProgramada
+                      ) {
+                        <i
+                          aria-hidden="true"
+                          class="pi pi-calendar-times mr-1"
+                        ></i>
+                        Baja programada
+                      } @else if (
+                        (suscripcion.status === "ACTIVE" ||
+                          suscripcion.status === "PENDING_CANCEL") &&
+                        suscripcion.fechaFin
+                      ) {
+                        <i aria-hidden="true" class="pi pi-clock mr-1"></i> Baja
+                        pendiente
+                      } @else if (
+                        suscripcion.status === "ACTIVE" ||
+                        suscripcion.status === "PENDING_CANCEL"
+                      ) {
+                        <i
+                          aria-hidden="true"
+                          class="pi pi-check-circle mr-1"
+                        ></i>
+                        Activo
+                      } @else {
+                        <i
+                          aria-hidden="true"
+                          class="pi pi-times-circle mr-1"
+                        ></i>
+                        Cancelado
+                      }
+                    </span>
+                  </div>
+
+                  <!-- Fecha inicio -->
+                  <div class="info-row" *ngIf="suscripcion.fechaInicio">
+                    <span class="info-label">Desde</span>
+                    <span class="info-value">
+                      {{ suscripcion.fechaInicio | date: "d MMM yyyy" }}
+                    </span>
+                  </div>
+
+                  <!-- Fecha fin / renovación -->
+                  <div class="info-row" *ngIf="suscripcion.fechaFin">
+                    <span class="info-label">
+                      {{
+                        suscripcion.status === "CANCELLED"
+                          ? "Finalizó"
+                          : "Finaliza"
+                      }}
+                    </span>
+                    <span
+                      class="info-value"
+                      [ngClass]="{
+                        'text-orange-600':
+                          suscripcion.status === 'ACTIVE' ||
+                          suscripcion.status === 'PENDING_CANCEL',
+                        'text-red-500': suscripcion.status === 'CANCELLED',
+                      }"
+                    >
+                      {{ suscripcion.fechaFin | date: "d MMM yyyy" }}
+                    </span>
+                  </div>
+
+                  <!-- Cancelación programada -->
+                  <div
+                    class="info-row"
+                    *ngIf="suscripcion.cancelacionProgramada"
+                  >
+                    <span class="info-label">Se cancelará el</span>
+                    <span class="info-value text-orange-600 font-semibold">
+                      {{
+                        suscripcion.cancelacionProgramada | date: "d MMM yyyy"
+                      }}
+                    </span>
+                  </div>
+
+                  <!-- Precio -->
+                  <div class="info-row" *ngIf="suscripcion.monthlyPrice">
+                    <span class="info-label">Precio</span>
+                    <span class="info-value font-semibold">
+                      {{ suscripcion.monthlyPrice }}€/mes
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="subscription-actions mt-4">
+              <!-- Banner sin plan activo para usuarios WP -->
+              <div
+                class="no-plan-banner mb-3 p-3 border-round"
+                *ngIf="
+                  isLinkedToWordPress() && !hasActiveWooCommerceSubscription()
+                "
+              >
+                <div class="flex align-items-start gap-3">
+                  <i
+                    aria-hidden="true"
+                    class="pi pi-exclamation-triangle text-2xl"
+                  ></i>
+                  <div class="flex-1">
+                    <h4 class="m-0 mb-2">No tienes un plan activo</h4>
+                    <p class="m-0 mb-3 text-sm">
+                      Para acceder a todo el contenido, necesitas contratar un
+                      plan en nuestra tienda.
+                    </p>
+                    <p-button
+                      label="Ir a la tienda"
+                      icon="pi pi-external-link"
+                      styleClass="p-button-sm"
+                      (onClick)="abrirTiendaWordPress()"
+                      ariaLabel="Ir a la tienda"
+                    ></p-button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botones para usuarios WP con plan activo -->
+              <div
+                class="flex flex-column gap-2"
+                *ngIf="isLinkedToWordPress() && hasActiveSubscription()"
+              >
+                <p-button
+                  label="Añadir más planes"
+                  icon="pi pi-shopping-cart"
+                  styleClass="p-button-text w-full"
+                  (onClick)="abrirAnadirPlanDialog()"
+                  ariaLabel="Añadir más planes"
+                ></p-button>
+              </div>
+              <!-- Aviso informativo sobre cancelaciones -->
+              <div
+                class="info-banner p-2 border-round mb-3"
+                style="
+                  background: #f0f9ff;
+                  border: 1px solid #bae6fd;
+                  position: relative;
+                "
+                *ngIf="mostrarBannerCancelacion"
+                role="note"
+              >
+                <div class="flex align-items-start gap-2">
+                  <i
+                    aria-hidden="true"
+                    class="pi pi-info-circle text-blue-500"
+                    style="font-size: 0.9rem; margin-top: 2px"
+                  ></i>
+                  <small
+                    class="text-600 flex-1"
+                    style="font-size: 0.85rem; line-height: 1.4"
+                  >
+                    Recuerda: Las cancelaciones deben solicitarse con al menos 5
+                    días de antelación a tu próxima renovación.
+                  </small>
+                  <button
+                    type="button"
+                    class="p-button p-button-text p-button-rounded p-button-sm"
+                    (click)="cerrarBannerCancelacion()"
+                    aria-label="Ocultar recordatorio de cancelación"
+                    style="
+                      min-width: auto;
+                      padding: 0.25rem;
+                      margin-left: 0.5rem;
+                    "
+                    pTooltip="Cerrar"
+                    tooltipPosition="top"
+                  >
+                    <i
+                      aria-hidden="true"
+                      class="pi pi-times text-600"
+                      style="font-size: 0.85rem"
+                    ></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Botones para usuarios "en negro" -->
+              <div
+                class="flex flex-column gap-2"
+                *ngIf="!isLinkedToWordPress() && hasActiveSubscription()"
+              >
+                <p-button
+                  label="Vincular con WordPress"
+                  icon="pi pi-link"
+                  styleClass="p-button-outlined w-full"
+                  (onClick)="linkToWordPress()"
+                  pTooltip="Vincula tu cuenta para gestionar tus suscripciones desde WordPress"
+                  tooltipPosition="top"
+                  ariaLabel="Vincular con WordPress"
+                ></p-button>
+                <small class="text-500 text-center">
+                  Para añadir o cambiar planes, vincula tu cuenta con WordPress
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card de Información Personal / Onboarding -->
+        <div class="onboarding-card mt-4" *ngIf="user.rol === Rol.ALUMNO">
+          <div class="card-header">
+            <h2>
+              <i aria-hidden="true" class="pi pi-user-plus"></i> Información
+              Personal
+            </h2>
+          </div>
+
+          <div class="card-content">
+            <div class="onboarding-status mb-3">
+              <div class="completion-info">
+                <div
+                  class="flex justify-content-between align-items-center mb-2"
+                >
+                  <span class="completion-text"> Información completada: </span>
+                  <span class="completion-percentage font-semibold">
+                    {{ getOnboardingCompletionPercentage() }}%
+                  </span>
+                </div>
+                <div class="completion-bar">
+                  <div
+                    class="completion-fill"
+                    [style.width.%]="getOnboardingCompletionPercentage()"
+                    [ngClass]="{
+                      low: getOnboardingCompletionPercentage() < 30,
+                      medium:
+                        getOnboardingCompletionPercentage() >= 30 &&
+                        getOnboardingCompletionPercentage() < 70,
+                      high:
+                        getOnboardingCompletionPercentage() >= 70 &&
+                        getOnboardingCompletionPercentage() < 80,
+                      complete: getOnboardingCompletionPercentage() >= 80,
+                    }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="onboarding-help"
+              *ngIf="getOnboardingCompletionPercentage() < 100"
+            >
+              <div class="help-message">
+                <i aria-hidden="true" class="pi pi-info-circle mr-2"></i>
+                <span>
+                  Completar esta información nos ayuda a personalizar tu
+                  experiencia de aprendizaje
+                </span>
+              </div>
+            </div>
+
+            <div
+              class="completed-message"
+              *ngIf="getOnboardingCompletionPercentage() >= 80"
+            >
+              <i aria-hidden="true" class="pi pi-check-circle mr-2"></i>
+              <span *ngIf="getOnboardingCompletionPercentage() >= 100">
+                ¡Información completa! Gracias por ayudarnos a conocerte mejor.
+              </span>
+              <span
+                *ngIf="
+                  getOnboardingCompletionPercentage() >= 80 &&
+                  getOnboardingCompletionPercentage() < 100
+                "
+              >
+                ¡Lo tienes bastante bien! Aunque todavía puedes mejorar tu
+                perfil completando el
+                {{ 100 - getOnboardingCompletionPercentage() }}% restante.
+              </span>
+            </div>
+
+            <div class="onboarding-actions mt-4">
+              <p-button
+                label="Completar información"
+                icon="pi pi-pencil"
+                styleClass="p-button-outlined w-full"
+                (click)="openOnboardingModal()"
+                ariaLabel="Completar información"
+              ></p-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saldo de tutorías Madrid incluido en Tutor12 -->
+        <div
+          class="subscription-card mt-4"
+          *ngIf="madridTutoriaBalance || madridTutoriaBalanceLoading"
+          data-testid="madrid-tutoria-balance-card"
+        >
+          <div class="card-header">
+            <h2>
+              <i aria-hidden="true" class="pi pi-calendar-plus"></i> Tutorías
+              Madrid
+            </h2>
+          </div>
+          <div class="card-content" *ngIf="madridTutoriaBalance as balance">
+            <div class="grid text-center mb-3">
+              <div class="col-4">
+                <strong class="text-2xl">{{ balance.disponibles }}</strong>
+                <div class="text-sm text-color-secondary">Disponibles</div>
+              </div>
+              <div class="col-4">
+                <strong class="text-2xl">{{ balance.reservados }}</strong>
+                <div class="text-sm text-color-secondary">Reservadas</div>
+              </div>
+              <div class="col-4">
+                <strong class="text-2xl">{{ balance.consumidos }}</strong>
+                <div class="text-sm text-color-secondary">Consumidas</div>
+              </div>
+            </div>
+            <p class="text-color-secondary text-sm mb-2">
               Una tutoría no utilizada no se acumula al siguiente ciclo.
             </p>
             <div
+              class="text-sm border-top-1 surface-border pt-2"
               *ngFor="let credito of balance.historial | slice: 0 : 6"
-              class="alumno-balance-row"
             >
-              <span>Ciclo {{ credito.ciclo }}</span
-              ><span>{{
-                credito.estado === "DISPONIBLE"
-                  ? "Disponible"
-                  : credito.estado === "RESERVADO"
-                    ? "Reservada"
-                    : credito.estado === "CONSUMIDO"
-                      ? "Consumida"
-                      : "Expirada"
-              }}</span>
+              <div class="flex justify-content-between align-items-center py-1">
+                <span>Ciclo {{ credito.ciclo }}</span>
+                <span
+                  class="font-semibold"
+                  [ngClass]="{
+                    'text-green-600': credito.estado === 'DISPONIBLE',
+                    'text-orange-600': credito.estado === 'RESERVADO',
+                    'text-color-secondary':
+                      credito.estado === 'CONSUMIDO' ||
+                      credito.estado === 'EXPIRADO',
+                  }"
+                >
+                  {{
+                    credito.estado === "DISPONIBLE"
+                      ? "Disponible"
+                      : credito.estado === "RESERVADO"
+                        ? "Reservada"
+                        : credito.estado === "CONSUMIDO"
+                          ? "Consumida"
+                          : "Expirada"
+                  }}
+                </span>
+              </div>
             </div>
           </div>
           <div
+            class="card-content"
             *ngIf="madridTutoriaBalanceLoading && !madridTutoriaBalance"
-            role="status"
           >
-            Cargando tutorías…
+            <i aria-hidden="true" class="pi pi-spin pi-spinner mr-2"></i>
+            Cargando saldo…
           </div>
         </div>
-      </article>
+      </div>
     </div>
-    <div *ngIf="errors.length" class="alumno-notice" role="alert">
-      <p *ngFor="let error of errors">{{ error }}</p>
+
+    <div
+      class="subscription-card mt-4 accesos-card"
+      data-testid="profile-accesos-card"
+      *ngIf="!esAdminOSuperior"
+    >
+      <div class="card-header">
+        <h2><i aria-hidden="true" class="pi pi-ticket"></i> Mis accesos</h2>
+      </div>
+      <div class="card-content">
+        <p
+          class="accesos-loading"
+          *ngIf="cursosCargando && simulacros.length === 0"
+        >
+          <i aria-hidden="true" class="pi pi-spin pi-spinner"></i> Cargando
+          accesos...
+        </p>
+
+        <ng-container *ngIf="!cursosCargando || simulacros.length > 0">
+          <div
+            class="accesos-tabs"
+            aria-label="Tipos de acceso"
+            *ngIf="simulacros.length > 0 && cursos.length > 0"
+          >
+            <button
+              type="button"
+              [attr.aria-pressed]="tipoAccesoVisible === 'simulacros'"
+              [class.active]="tipoAccesoVisible === 'simulacros'"
+              (click)="tipoAccesoSeleccionado = 'simulacros'"
+            >
+              <i aria-hidden="true" class="pi pi-ticket"></i> Simulacros
+              <span class="accesos-count">{{ simulacros.length }}</span>
+            </button>
+            <button
+              type="button"
+              [attr.aria-pressed]="tipoAccesoVisible === 'cursos'"
+              [class.active]="tipoAccesoVisible === 'cursos'"
+              (click)="tipoAccesoSeleccionado = 'cursos'"
+            >
+              <i aria-hidden="true" class="pi pi-book"></i> Cursos
+              <span class="accesos-count">{{ cursos.length }}</span>
+            </button>
+          </div>
+
+          <h3
+            class="accesos-single-heading"
+            *ngIf="simulacros.length > 0 && cursos.length === 0"
+          >
+            Simulacros
+          </h3>
+          <h3
+            class="accesos-single-heading"
+            *ngIf="cursos.length > 0 && simulacros.length === 0"
+          >
+            Cursos
+          </h3>
+
+          <div
+            class="accesos-grid"
+            *ngIf="tipoAccesoVisible === 'simulacros' && simulacros.length > 0"
+          >
+            <article class="acceso-tile" *ngFor="let consumible of simulacros">
+              <span class="acceso-tile-icon"
+                ><i aria-hidden="true" class="pi pi-ticket"></i
+              ></span>
+              <div class="acceso-tile-main">
+                <h4>
+                  {{ consumible.examen?.titulo || "Simulacro sin vincular" }}
+                </h4>
+                <p class="acceso-tile-meta">
+                  <span *ngIf="consumible.estado === 'ACTIVADO'"
+                    >Disponible</span
+                  >
+                  <span *ngIf="consumible.estado === 'USADO'">Usado</span>
+                  <span *ngIf="consumible.estado === 'EXPIRADO'">Caducado</span>
+                  <span *ngIf="consumible.expiraEn">
+                    · Hasta el
+                    {{ consumible.expiraEn | date: "dd/MM/yyyy" }}</span
+                  >
+                </p>
+              </div>
+              <div
+                class="acceso-tile-action"
+                *ngIf="consumible.estado === 'ACTIVADO' && consumible.examen"
+              >
+                <app-async-button
+                  label="Usar"
+                  icon="pi pi-play"
+                  styleClass="p-button-sm"
+                  [action]="usarConsumible.bind(this, consumible)"
+                ></app-async-button>
+              </div>
+              <div
+                class="acceso-tile-action"
+                *ngIf="consumible.estado === 'USADO'"
+              >
+                <p-button
+                  label="Ver resultados"
+                  styleClass="p-button-sm p-button-outlined"
+                  [disabled]="!puedeVerResultados(consumible)"
+                  [pTooltip]="getMensajeAccesoResultados(consumible)"
+                  (onClick)="verResultadosConsumible(consumible)"
+                  ariaLabel="Ver resultados"
+                ></p-button>
+              </div>
+              <span
+                class="acceso-tile-note"
+                *ngIf="consumible.estado === 'ACTIVADO' && !consumible.examen"
+              >
+                Pendiente de vincular
+              </span>
+            </article>
+          </div>
+
+          <div
+            class="accesos-grid"
+            *ngIf="tipoAccesoVisible === 'cursos' && cursos.length > 0"
+          >
+            <article class="acceso-tile" *ngFor="let acceso of cursos">
+              <img
+                *ngIf="acceso.curso.thumbnailUrl; else cursoIcono"
+                class="acceso-tile-cover"
+                [src]="acceso.curso.thumbnailUrl"
+                [alt]="acceso.curso.titulo"
+              />
+              <ng-template #cursoIcono>
+                <span class="acceso-tile-icon"
+                  ><i aria-hidden="true" class="pi pi-book"></i
+                ></span>
+              </ng-template>
+              <div class="acceso-tile-main">
+                <h4>{{ acceso.curso.titulo }}</h4>
+                <p class="acceso-tile-meta">
+                  <span *ngIf="acceso.expiraEn"
+                    >Acceso hasta el
+                    {{ acceso.expiraEn | date: "dd/MM/yyyy" }}</span
+                  >
+                  <span *ngIf="!acceso.expiraEn">Acceso disponible</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                class="acceso-view-button"
+                (click)="verCurso(acceso)"
+              >
+                Ver curso <i aria-hidden="true" class="pi pi-arrow-right"></i>
+              </button>
+            </article>
+          </div>
+
+          <div
+            class="accesos-empty"
+            *ngIf="
+              !cursosError && simulacros.length === 0 && cursos.length === 0
+            "
+          >
+            <p>Aún no tienes acceso a simulacros ni cursos.</p>
+            <a [href]="tiendaUrl" target="_blank" rel="noopener noreferrer"
+              >Explorar la tienda
+              <i aria-hidden="true" class="pi pi-arrow-up-right"></i
+            ></a>
+          </div>
+          <div class="accesos-error" *ngIf="cursosError">
+            <span>No se pudieron cargar tus cursos.</span>
+            <button type="button" (click)="cargarCursos()">Reintentar</button>
+          </div>
+        </ng-container>
+      </div>
     </div>
-  </ng-container>
-</div>
-<p-dialog
-  header="Editar mis datos"
-  [(visible)]="mostrarEdicionPerfil"
-  [modal]="true"
-  [style]="{ width: 'min(560px,94vw)' }"
-  [draggable]="false"
-  [resizable]="false"
-  [closable]="!guardandoPerfil"
-  [closeOnEscape]="!guardandoPerfil"
->
-  <div *ngIf="perfilEdicion as draft" class="alumno-form-grid">
-    <label
-      >Nombre<input
-        pInputText
-        [(ngModel)]="draft.nombre"
-        name="perfil-nombre"
-        data-testid="profile-edit-nombre"
-        [disabled]="guardandoPerfil" /></label
-    ><label
-      >Apellidos<input
-        pInputText
-        [(ngModel)]="draft.apellidos"
-        name="perfil-apellidos"
-        [disabled]="guardandoPerfil" /></label
-    ><label
-      >DNI / NIE<input
-        pInputText
-        [(ngModel)]="draft.dni"
-        name="perfil-dni"
-        [disabled]="guardandoPerfil" /></label
-    ><label
-      >Tutor<p-dropdown
-        [options]="(tutores$ | async) || []"
-        [(ngModel)]="draft.tutorId"
-        optionLabel="email"
-        optionValue="id"
-        appendTo="body"
-        [showClear]="true"
-        placeholder="Sin tutor"
-        [disabled]="guardandoPerfil"
-      ></p-dropdown></label
-    ><app-metodo-calificacion-picker
-      [(value)]="draft.metodoCalificacion"
-      [showClear]="false"
-      label="Método de calificación"
-    ></app-metodo-calificacion-picker
-    ><label *ngIf="esAdminOSuperior"
-      >Es tutor<p-checkbox
-        [binary]="true"
-        [(ngModel)]="draft.esTutor"
-        [disabled]="guardandoPerfil"
-      ></p-checkbox
-    ></label>
   </div>
-  <p *ngIf="errorEdicionPerfil" role="alert" class="alumno-form-error">
-    {{ errorEdicionPerfil }}
-  </p>
-  <ng-template pTemplate="footer"
-    ><button
-      type="button"
-      class="alumno-btn"
-      (click)="mostrarEdicionPerfil = false"
-      [disabled]="guardandoPerfil"
-    >
-      Volver</button
-    ><button
-      type="button"
-      class="alumno-btn primary"
-      (click)="guardarEdicionPerfil()"
-      [disabled]="guardandoPerfil"
-      data-testid="profile-save-datos"
-    >
-      {{ guardandoPerfil ? "Guardando…" : "Guardar cambios" }}
-    </button></ng-template
-  >
-</p-dialog>
+
+  <!-- Mostrar errores -->
+  <div class="error-container" *ngIf="errors.length > 0">
+    <div class="error-card">
+      <div class="error-list">
+        <h3>Errores:</h3>
+        <ul>
+          <li *ngFor="let error of errors">{{ error }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Modal de onboarding -->
 <p-dialog
@@ -392,7 +1035,7 @@
     <div class="flex justify-content-end align-items-center">
       <div class="completion-hint" *ngIf="viewportService.isMobile()">
         <small class="text-500">
-          <i class="pi pi-info-circle mr-1"></i>
+          <i aria-hidden="true" class="pi pi-info-circle mr-1"></i>
           Esta información nos ayuda a personalizar tu experiencia de
           aprendizaje
         </small>
@@ -431,7 +1074,11 @@
       class="flex align-items-center justify-content-center border-circle bg-blue-100"
       style="width: 80px; height: 80px"
     >
-      <i class="pi pi-link text-blue-600" style="font-size: 2rem"></i>
+      <i
+        aria-hidden="true"
+        class="pi pi-link text-blue-600"
+        style="font-size: 2rem"
+      ></i>
     </div>
     <div class="text-center">
       <h3 class="text-900 font-semibold mt-0 mb-2">Gestión de suscripción</h3>
@@ -444,7 +1091,7 @@
     <div
       class="flex align-items-start gap-2 p-3 border-round bg-blue-50 border-1 border-blue-200 w-full"
     >
-      <i class="pi pi-info-circle text-blue-500 mt-1"></i>
+      <i aria-hidden="true" class="pi pi-info-circle text-blue-500 mt-1"></i>
       <span class="text-sm text-blue-700 line-height-3"
         >Al vincular tu cuenta podrás cambiar de plan y gestionar tu suscripción
         sin salir de la plataforma.</span
@@ -456,11 +1103,13 @@
         severity="secondary"
         [outlined]="true"
         (onClick)="cerrarDialogCambioSuscripcion()"
+        ariaLabel="Cancelar"
       />
       <p-button
         label="Vincular con WordPress"
         icon="pi pi-link"
         (onClick)="onSolicitarVinculacionDesdeDialog()"
+        ariaLabel="Vincular con WordPress"
       />
     </div>
   </div>
@@ -548,14 +1197,14 @@
     </p>
     <ol class="guia-pasos">
       <li>
-        <i class="pi pi-external-link"></i>
+        <i aria-hidden="true" class="pi pi-external-link"></i>
         <span
           >Pulsa <strong>Continuar</strong>: se abrirá tu cuenta en una pestaña
           nueva.</span
         >
       </li>
       <li>
-        <i class="pi pi-credit-card"></i>
+        <i aria-hidden="true" class="pi pi-credit-card"></i>
         <span
           >Entra en <strong>Métodos de pago</strong> (o abre tu suscripción) y
           pulsa <strong>Añadir método de pago</strong> /
@@ -563,7 +1212,7 @@
         >
       </li>
       <li>
-        <i class="pi pi-check-circle"></i>
+        <i aria-hidden="true" class="pi pi-check-circle"></i>
         <span
           >Introduce los datos de tu <strong>nueva tarjeta</strong> y guárdalos.
           Tu próxima renovación se cobrará con ella.</span
@@ -571,7 +1220,7 @@
       </li>
     </ol>
     <p class="guia-nota">
-      <i class="pi pi-info-circle"></i>
+      <i aria-hidden="true" class="pi pi-info-circle"></i>
       <span
         >Si no se abre la pestaña, revisa que tu navegador no esté bloqueando
         las ventanas emergentes y vuelve a intentarlo.</span
@@ -624,7 +1273,10 @@
   } @else {
     <div class="flex flex-column gap-3">
       <p class="text-lg">
-        <i class="pi pi-exclamation-triangle text-orange-500 mr-2"></i>
+        <i
+          aria-hidden="true"
+          class="pi pi-exclamation-triangle text-orange-500 mr-2"
+        ></i>
         ¿Estás seguro de que deseas dar de baja tu suscripción?
       </p>
 
@@ -678,12 +1330,14 @@
           (onClick)="showConfirmacionBaja = false"
           [text]="true"
           styleClass="p-button-text"
+          ariaLabel="Volver"
         />
         <p-button
           label="Confirmar Baja"
           icon="pi pi-check"
           (onClick)="confirmarBajaDesdePadre()"
           severity="danger"
+          ariaLabel="Confirmar Baja"
         />
       </div>
     }
@@ -702,7 +1356,10 @@
 >
   <div class="flex flex-column gap-3">
     <div class="flex align-items-center gap-2 mb-2">
-      <i class="pi pi-info-circle text-orange-500 text-3xl"></i>
+      <i
+        aria-hidden="true"
+        class="pi pi-info-circle text-orange-500 text-3xl"
+      ></i>
       <h3 class="m-0">No se puede procesar la solicitud</h3>
     </div>
 
@@ -772,12 +1429,14 @@
         (onClick)="cerrarFueraDePlazoBaja()"
         [outlined]="true"
         severity="secondary"
+        ariaLabel="Cancelar"
       />
       <p-button
         label="Programar cancelación"
         icon="pi pi-calendar-plus"
         (onClick)="confirmarCancelacionProgramada()"
         severity="warning"
+        ariaLabel="Programar cancelación"
       />
     </div>
   </ng-template>
@@ -797,6 +1456,7 @@
   <div class="flex flex-column gap-4">
     <div class="text-center mb-2">
       <i
+        aria-hidden="true"
         class="pi pi-shield"
         style="font-size: 3rem; color: var(--primary-color)"
       ></i>
@@ -841,6 +1501,7 @@
         (onClick)="confirmarVinculacionConPassword()"
         [loading]="procesandoVinculacion"
         severity="success"
+        ariaLabel="Verificar y vincular"
       />
     </div>
   </ng-template>

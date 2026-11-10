@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../testing';
 import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
@@ -9,7 +9,6 @@ import { EstadoModulos } from '../shared/models/app-config.model';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
 import { CompraFiscalService } from '../compras/compra-fiscal.service';
 
-import { AlumnoAccesosComponent } from '../shared/alumno-cards/alumno-accesos.component';
 import { ProfileComponent } from './profile.component';
 
 function makeMockAppConfigService(planificacionFisicaEnabled = true) {
@@ -56,7 +55,6 @@ describe('ProfileComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ProfileComponent],
-      imports: [AlumnoAccesosComponent],
       providers: [
         ...COMMON_TEST_PROVIDERS,
         {
@@ -74,6 +72,58 @@ describe('ProfileComponent', () => {
 
     fixture = TestBed.createComponent(ProfileComponent);
     component = fixture.componentInstance;
+  });
+
+  it('el formulario guarda una sola vez el snapshot del usuario y espera antes de salir', async () => {
+    const result = new Subject<any>();
+    const updateUser = jest.fn().mockReturnValue(result);
+    (component as any).userService = { updateUser };
+    component.user = {
+      id: 42,
+      rol: 'ALUMNO',
+      nombre: 'Lucía',
+      apellidos: 'Soler',
+      dni: '00000000T',
+      metodoCalificacion: 'A1_E1_3_B0',
+      esTutor: true,
+    } as any;
+    const pending = component.saveProfile();
+    const salida = component.prepararSalida();
+    await component.saveProfile();
+    component.user!.nombre = 'Edición posterior';
+    expect(updateUser).toHaveBeenCalledTimes(1);
+    expect(updateUser).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({ nombre: 'Lucía', dni: '00000000T' }),
+    );
+    expect(updateUser.mock.calls[0][1]).not.toHaveProperty('esTutor');
+    expect(salida).toBeInstanceOf(Promise);
+    result.next({});
+    await pending;
+    await expect(salida).resolves.toBe(true);
+    expect(component.guardandoPerfil).toBe(false);
+  });
+  it('un error de guardado conserva el formulario y permite reintentar', async () => {
+    const updateUser = jest
+      .fn()
+      .mockReturnValue(throwError(() => new Error('No se guardó')));
+    (component as any).userService = { updateUser };
+    component.user = {
+      id: 42,
+      rol: 'ADMIN',
+      nombre: 'Lucía',
+      apellidos: 'Soler',
+      esTutor: true,
+    } as any;
+    await component.saveProfile();
+    expect(component.errorEdicionPerfil).toBe('No se guardó');
+    expect(component.user!.nombre).toBe('Lucía');
+    expect(component.guardandoPerfil).toBe(false);
+    updateUser.mockReturnValue(of({}));
+    await component.saveProfile();
+    expect(updateUser).toHaveBeenCalledTimes(2);
+    expect(updateUser.mock.calls[1][1].esTutor).toBe(true);
+    expect(component.errorEdicionPerfil).toBe('');
   });
 
   it('should create', () => {
@@ -425,9 +475,9 @@ describe('ProfileComponent', () => {
       fixture.detectChanges();
 
       const card = fixture.nativeElement.querySelector(
-        '[data-testid="alumno-accesos"]',
+        '[data-testid="profile-accesos-card"]',
       );
-      expect(card.querySelector('.alumno-empty')).toBeTruthy();
+      expect(card.querySelector('.accesos-empty')).toBeTruthy();
       expect(card.querySelector('.accesos-tabs')).toBeFalsy();
       expect(card.textContent).toContain('Explorar la tienda');
     });
@@ -460,17 +510,32 @@ describe('ProfileComponent', () => {
       fixture.detectChanges();
 
       const card = fixture.nativeElement.querySelector(
-        '[data-testid="alumno-accesos"]',
+        '[data-testid="profile-accesos-card"]',
       );
-      expect(card.querySelectorAll('.alumno-product')).toHaveLength(2);
+      expect(card.querySelectorAll('.accesos-tabs button')).toHaveLength(2);
       expect(card.textContent).toContain('Opositor de Élite nivel 1');
-
+      expect(card.textContent).not.toContain('Simulacro de prueba');
+      (
+        Array.from(
+          card.querySelectorAll('.accesos-tabs button'),
+        ) as HTMLButtonElement[]
+      )
+        .find((b) => b.textContent?.includes('Simulacros'))!
+        .click();
+      fixture.detectChanges();
       expect(card.textContent).toContain('Simulacro de prueba');
-
-      expect(card.textContent).toContain('Opositor de Élite nivel 1');
-      expect(card.textContent).toContain('Hasta 7 Dec 2026');
+      expect(card.textContent).not.toContain('Opositor de Élite nivel 1');
+      (
+        Array.from(
+          card.querySelectorAll('.accesos-tabs button'),
+        ) as HTMLButtonElement[]
+      )
+        .find((b) => b.textContent?.includes('Cursos'))!
+        .click();
+      fixture.detectChanges();
+      expect(card.textContent).toContain('07/12/2026');
       (Array.from(card.querySelectorAll('button')) as HTMLButtonElement[])
-        .find((b) => b.textContent?.includes('Continuar curso'))!
+        .find((b) => b.textContent?.includes('Ver curso'))!
         .click();
       expect(router.navigate).toHaveBeenCalledWith([
         '/app/cursos',

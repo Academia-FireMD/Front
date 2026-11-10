@@ -67,7 +67,6 @@ import {
   styleUrls: [
     './profile.component.scss',
     './profile-onboarding.component.scss',
-    '../shared/alumno-cards/alumno-cards.scss',
     './profile-layout.component.scss',
   ],
 })
@@ -437,42 +436,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async saveProfile(): Promise<void> {
-    if (!this.user) return;
-
-    this.isSaving = true;
-
-    // Dispatch action para actualizar usuario en el store
-    this.store.dispatch(
-      UserActions.updateUser({
-        userId: this.user.id,
-        userData: {
-          nombre: this.user.nombre,
-          apellidos: this.user.apellidos,
-          dni: this.user.dni,
-          tutorId: this.user.tutorId,
-          tipoDePlanificacionDuracionDeseada:
-            this.user.tipoDePlanificacionDuracionDeseada,
-          metodoCalificacion: this.user.metodoCalificacion,
-          esTutor: this.user.esTutor,
-        },
-      }),
-    );
-
-    // Escuchar el resultado de la actualización
-    this.isLoading$.subscribe((loading) => {
-      if (!loading && this.isSaving) {
-        this.isSaving = false;
-        this.toastService.success('Perfil actualizado correctamente');
-      }
-    });
-
-    this.error$.subscribe((error) => {
-      if (error && this.isSaving) {
-        this.isSaving = false;
-        this.errors.push('Error al guardar el perfil: ' + error);
-        this.toastService.error('Error al guardar el perfil');
-      }
-    });
+    if (!this.user || this.guardandoPerfil) return;
+    this.perfilEdicion = cloneDeep(this.user);
+    await this.guardarEdicionPerfil();
   }
 
   private getPrimarySuscripcion() {

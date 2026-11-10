@@ -1,6 +1,6 @@
 import { expect, test, Page } from '@playwright/test';
 import admin from './fixtures/user-admin.json';
-import { loginAsAdminMock, loginAsAlumnoMock } from './helpers/auth.helper';
+import { loginAsRoleMock, loginAsAlumnoMock } from './helpers/auth.helper';
 const user = (id = 140) => ({
   id,
   email: `alumno${id}@example.test`,
@@ -16,6 +16,8 @@ const user = (id = 140) => ({
       id: 11,
       usuarioId: id,
       tipo: 'ADVANCED',
+      fechaInicio: '2026-10-01T12:00:00Z',
+      monthlyPrice: 69.9,
       oposicion: 'ALICANTE_CPBA',
       status: 'ACTIVE',
       fuenteGestion: 'EXTERNA',
@@ -88,8 +90,12 @@ const woo = {
     },
   ],
 };
-async function setup(page: Page) {
-  await loginAsAdminMock(page, admin);
+async function setup(page: Page, autoasignacion = true) {
+  await loginAsRoleMock(page, {
+    rol: 'ADMIN',
+    userFixture: admin,
+    modulos: { PLANIFICACION_AUTOASIGNACION: autoasignacion },
+  });
   await page.route('**/user/admin/*', async (r) => {
     const path = new URL(r.request().url()).pathname;
     if (/\/user\/admin\/\d+$/.test(path))
@@ -422,7 +428,186 @@ test('Perfil mantiene acceso a facturas y autoasignación real en el estado vac�
     page.getByRole('dialog', { name: /Mis facturas/i }),
   ).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Preferencias' }).click();
+  await page
+    .getByRole('button', { name: 'Gestionar mi planificación' })
+    .click();
   await expect(page).toHaveURL(/configuracion-alumno/);
   expect(asignaciones).toBe(0);
+});
+
+test('administración recupera logos, fechas y eliminación de un registro externo con confirmación', async ({
+  page,
+}) => {
+  await setup(page);
+  let writes = 0;
+  await page.route('**/user/subscription/140/11', (r) => {
+    writes++;
+    expect(r.request().method()).toBe('DELETE');
+    return r.fulfill({ json: {} });
+  });
+  await page.goto('/app/test/user/140?tab=access');
+  const card = page.getByTestId('alumno-suscripciones');
+  await expect(card.locator('.alumno-plan-logo')).toHaveAttribute(
+    'src',
+    'oposiciones/alicante.png',
+  );
+  await expect
+    .poll(() =>
+      card
+        .locator('.alumno-plan-logo')
+        .evaluate((e: HTMLImageElement) => e.naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  await expect(card).toContainText('Desde 1 oct 2026');
+  await card
+    .getByRole('button', { name: 'Eliminar registro', exact: true })
+    .click();
+  await expect(page.getByRole('dialog')).toContainText('permanentemente');
+  expect(writes).toBe(0);
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Volver', exact: true })
+    .click();
+  expect(writes).toBe(0);
+  await card
+    .getByRole('button', { name: 'Eliminar registro', exact: true })
+    .click();
+  await page.getByTestId('admin-confirm-action').click();
+  await expect(page.getByTestId('admin-operation-result')).toContainText(
+    'eliminado',
+  );
+  expect(writes).toBe(1);
+});
+
+test('la ficha Woo no muestra eliminación local de su plan', async ({
+  page,
+}) => {
+  await setup(page);
+  const data = ficha();
+  data.gestion = {
+    ...data.gestion,
+    tipo: 'WOOCOMMERCE',
+    capacidades: {
+      ...data.gestion.capacidades,
+      suscripcionesExternas: [],
+      puedeDarBajaExterna: false,
+    },
+  } as any;
+  await page.route('**/user/admin/140', (r) => r.fulfill({ json: data }));
+  await page.goto('/app/test/user/140?tab=access');
+  await expect(
+    page
+      .getByTestId('alumno-suscripciones')
+      .getByRole('button', { name: 'Eliminar registro', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Ver WooCommerce', exact: true }),
+  ).toBeVisible();
+});
+
+test('la ficha recupera recomendar nivel sobre el alumno seleccionado', async ({
+  page,
+}) => {
+  await setup(page);
+  const writes: any[] = [];
+  await page.route('**/planificaciones/tutor/140/recomendar', (r) => {
+    writes.push(r.request().postDataJSON());
+    return r.fulfill({ json: { ok: true } });
+  });
+  await page.goto('/app/test/user/140?tab=planning');
+  await page
+    .getByRole('button', { name: 'Recomendar nivel', exact: true })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByLabel('Nivel recomendado')
+    .selectOption('AVANZADO');
+  await page.getByTestId('admin-confirm-action').click();
+  await expect(page.getByTestId('admin-operation-result')).toContainText(
+    'Nivel recomendado',
+  );
+  expect(writes).toEqual([{ nivel: 'AVANZADO' }]);
+});
+
+test('cambiar planificación conserva configuración/version y exige combinación publicada y motivo', async ({
+  page,
+}) => {
+  await setup(page);
+  const writes: any[] = [];
+  const variante = {
+    id: 50,
+    oposicion: 'ALICANTE_CPBA',
+    nivel: 'INICIACION',
+    franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+  };
+  await page.route('**/planificaciones/admin/alumnos/140/configuracion', (r) =>
+    r.fulfill({
+      json: {
+        usuarioId: 140,
+        configuracion: { version: 7, variante },
+        preferencias: variante,
+        opcionesPermitidas: [
+          {
+            ...variante,
+            planificacionMensual: { id: 55, identificador: 'Plan publicado' },
+          },
+        ],
+      },
+    }),
+  );
+  await page.route('**/planificaciones/tutor/140/forzar', (r) => {
+    writes.push(r.request().postDataJSON());
+    return r.fulfill({ json: {} });
+  });
+  await page.goto('/app/test/user/140?tab=planning');
+  await page
+    .getByRole('button', { name: 'Cambiar planificación', exact: true })
+    .click();
+  await expect(
+    page.getByRole('dialog').locator('app-planificacion-preferencias'),
+  ).toBeVisible();
+  await expect(page.getByTestId('admin-confirm-action')).toBeDisabled();
+  await page
+    .getByRole('dialog')
+    .getByLabel('Motivo *')
+    .fill('Ajuste solicitado por el alumno');
+  await expect(page.getByTestId('admin-confirm-action')).toBeEnabled();
+  await page.getByTestId('admin-confirm-action').click();
+  await expect(page.getByTestId('admin-operation-result')).toContainText(
+    'Planificación cambiada',
+  );
+  expect(writes).toEqual([
+    {
+      oposicion: 'ALICANTE_CPBA',
+      nivel: 'INICIACION',
+      franja: 'FRANJA_CUATRO_A_SEIS_HORAS',
+      motivo: 'Ajuste solicitado por el alumno',
+      version: 7,
+    },
+  ]);
+});
+
+test('autoasignación desactivada oculta las acciones y no consulta su configuración', async ({
+  page,
+}) => {
+  await setup(page, false);
+  let reads = 0;
+  await page.route('**/planificaciones/admin/alumnos/*/configuracion', (r) => {
+    reads++;
+    return r.fulfill({ json: {} });
+  });
+  await page.goto('/app/test/user/140?tab=planning');
+  await expect(
+    page.getByRole('heading', {
+      name: 'Planificaciones asignadas',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Recomendar nivel', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Cambiar planificación', exact: true }),
+  ).toHaveCount(0);
+  expect(reads).toBe(0);
 });

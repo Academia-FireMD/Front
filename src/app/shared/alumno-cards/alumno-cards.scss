@@ -1,3 +1,4 @@
+@import "../styles/plan-badge";
 :host {
   display: block;
   min-width: 0;
@@ -339,4 +340,27 @@
   .alumno-link {
     font-size: 11px;
   }
+}
+
+.alumno-plan-identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.alumno-plan-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.alumno-plan-identity .alumno-plan-name {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alumno-plan-identity .plan-badge {
+  width: fit-content;
+}
+.alumno-plan-delete {
+  color: #b42318;
 }

@@ -52,8 +52,21 @@ import {
   OPOSICION_LABELS,
 } from '../../../shared/models/subscription.model';
 import { Usuario } from '../../../shared/models/user.model';
+import { NivelOposicion } from '../../../shared/models/pregunta.model';
 import { esSuscripcionVigente } from '../../../shared/utils/membresia-externa.util';
 import { PrimengModule } from '../../../shared/primeng.module';
+
+import { AutoasignacionService } from '../../../planificacion/services/autoasignacion.service';
+import { PlanificacionPreferenciasComponent } from '../../../shared/planificacion-preferencias/planificacion-preferencias.component';
+import {
+  AlumnoPlanificacionTutor,
+  PreferenciasPrecargadas,
+} from '../../../planificacion/models/autoasignacion.model';
+import {
+  esCombinacionPublicada,
+  normalizarPreferenciasPlanificacion,
+  obtenerOpcionesCascadaPlanificacion,
+} from '../../../planificacion/planificacion-opciones.util';
 
 type SeccionAlumno = 'info' | 'access' | 'woo' | 'planning' | 'activity';
 type DialogoAlumno = {
@@ -62,6 +75,9 @@ type DialogoAlumno = {
     | 'etiquetas'
     | 'baja'
     | 'plan'
+    | 'eliminarPlan'
+    | 'recomendarNivel'
+    | 'cambiarPlanificacion'
     | 'eliminar'
     | 'desvincular'
     | 'alta'
@@ -89,6 +105,7 @@ type EtiquetaBorrador = {
     CommonModule,
     FormsModule,
     PrimengModule,
+    PlanificacionPreferenciasComponent,
     AlumnoInformacionComponent,
     AlumnoSuscripcionesComponent,
     AlumnoAccesosComponent,
@@ -107,6 +124,7 @@ export class AlumnoDetailviewComponent {
   private readonly users = inject(UserService);
   private readonly auth = inject(AuthService);
   private readonly labelsApi = inject(LabelsService);
+  private readonly autoasignacion = inject(AutoasignacionService);
   private readonly planesApi = inject(PlanificacionesService);
   private readonly fisica = inject(PlanificacionFisicaService);
   private readonly appConfig = inject(AppConfigService);
@@ -124,6 +142,11 @@ export class AlumnoDetailviewComponent {
     { id: 'planning', label: 'Planificaciones y marcas', icon: 'calendar' },
     { id: 'activity', label: 'Actividad', icon: 'history' },
   ];
+  readonly autoasignacionHabilitada = computed(
+    () =>
+      this.appConfig.estadoModulos()[ModuloApp.PLANIFICACION_AUTOASIGNACION] ===
+      true,
+  );
   readonly fisicaHabilitada = computed(
     () =>
       this.appConfig.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !== false,
@@ -136,6 +159,80 @@ export class AlumnoDetailviewComponent {
   errorDialogo = '';
   ocupado = false;
   dialogo: DialogoAlumno | null = null;
+  nivelRecomendado = NivelOposicion.INICIACION;
+  configuracionTutor: AlumnoPlanificacionTutor | null = null;
+  preferenciasTutor: PreferenciasPrecargadas = {
+    oposicion: null,
+    nivel: null,
+    franja: null,
+  };
+  cargandoConfiguracionTutor = false;
+  readonly nivelesTutor = [
+    { label: 'Iniciación', value: NivelOposicion.INICIACION },
+    { label: 'Avanzado', value: NivelOposicion.AVANZADO },
+  ];
+  get opcionesTutor() {
+    return obtenerOpcionesCascadaPlanificacion(
+      this.configuracionTutor?.opcionesPermitidas || [],
+      this.preferenciasTutor,
+    );
+  }
+  get puedeCambiarPlanificacion() {
+    return (
+      !this.cargandoConfiguracionTutor &&
+      esCombinacionPublicada(this.opcionesTutor.seleccionada) &&
+      !!this.motivo.trim()
+    );
+  }
+  cambiarPreferenciasTutor(p: {
+    oposicion: Oposicion | Oposicion[] | null;
+    nivel: string | null;
+    franja: string | null;
+  }) {
+    if (this.ocupado) return;
+    this.preferenciasTutor = normalizarPreferenciasPlanificacion(
+      this.configuracionTutor?.opcionesPermitidas || [],
+      {
+        oposicion: Array.isArray(p.oposicion)
+          ? (p.oposicion[0] ?? null)
+          : p.oposicion,
+        nivel: p.nivel as PreferenciasPrecargadas['nivel'],
+        franja: p.franja as PreferenciasPrecargadas['franja'],
+      },
+    );
+  }
+  abrirRecomendarNivel() {
+    if (this.ocupado || !this.ficha || !this.autoasignacionHabilitada()) return;
+    this.nivelRecomendado = NivelOposicion.INICIACION;
+    this.abrir('recomendarNivel');
+  }
+  async abrirCambiarPlanificacion() {
+    if (this.ocupado || !this.ficha || !this.autoasignacionHabilitada()) return;
+    this.configuracionTutor = null;
+    this.preferenciasTutor = { oposicion: null, nivel: null, franja: null };
+    this.motivo = '';
+    this.abrir('cambiarPlanificacion');
+    const d = this.dialogo;
+    if (!d) return;
+    this.cargandoConfiguracionTutor = true;
+    try {
+      const configuracion = await firstValueFrom(
+        this.autoasignacion.getAdminAlumnoConfiguracion$(d.usuarioId),
+      );
+      if (this.dialogo !== d) return;
+      this.configuracionTutor = configuracion;
+      this.preferenciasTutor = normalizarPreferenciasPlanificacion(
+        configuracion.opcionesPermitidas,
+        configuracion.configuracion?.variante ?? configuracion.preferencias,
+      );
+    } catch {
+      if (this.dialogo === d)
+        this.errorDialogo =
+          'No se pudo cargar la configuración de planificación del alumno.';
+    } finally {
+      if (this.dialogo === d) this.cargandoConfiguracionTutor = false;
+    }
+  }
   motivo = '';
   emailConfirmacion = '';
   edicion = { nombre: '', apellidos: '', esTutor: false, fechaGrabadas: '' };
@@ -282,6 +379,9 @@ export class AlumnoDetailviewComponent {
           etiquetas: 'Etiquetas del alumno',
           baja: 'Dar de baja la membresía externa',
           plan: 'Cancelar solo este plan',
+          eliminarPlan: 'Eliminar registro de plan externo',
+          recomendarNivel: 'Recomendar nivel',
+          cambiarPlanificacion: 'Cambiar planificación',
           eliminar: 'Eliminar definitivamente al alumno',
           desvincular: 'Desvincular planificación',
           alta: 'Añadir plan externo',
@@ -295,6 +395,12 @@ export class AlumnoDetailviewComponent {
     return (
       !this.ocupado &&
       !!this.dialogo &&
+      (!['recomendarNivel', 'cambiarPlanificacion'].includes(
+        this.dialogo.tipo,
+      ) ||
+        this.autoasignacionHabilitada()) &&
+      (this.dialogo.tipo !== 'cambiarPlanificacion' ||
+        this.puedeCambiarPlanificacion) &&
       (this.dialogo.tipo !== 'reintentarWoo' || this.confirmaCobro) &&
       (this.dialogo.tipo !== 'alta' ||
         (!!this.nuevaOposicion && !!this.nuevoTipo)) &&
@@ -395,6 +501,14 @@ export class AlumnoDetailviewComponent {
       )
     )
       this.abrir('plan', { suscripcion });
+  }
+  abrirEliminarPlan(suscripcion: Suscripcion) {
+    if (
+      this.ficha?.gestion.capacidades.suscripcionesExternas.includes(
+        suscripcion.id,
+      )
+    )
+      this.abrir('eliminarPlan', { suscripcion });
   }
   planLabel(s: Suscripcion) {
     return `${getPlanLabel(s.tipo)} · ${(OPOSICION_LABELS as Record<string, string>)[s.oposicion] || s.oposicion}`;
@@ -572,6 +686,45 @@ export class AlumnoDetailviewComponent {
             this.users.cancelExternalMembership$(d.usuarioId, this.motivo),
           ),
         'Membresía externa dada de baja.',
+      );
+    else if (d.tipo === 'recomendarNivel')
+      await this.ejecutar(
+        () =>
+          firstValueFrom(
+            this.autoasignacion.recomendarNivelTutor$(
+              d.usuarioId,
+              this.nivelRecomendado,
+            ),
+          ),
+        'Nivel recomendado correctamente.',
+      );
+    else if (
+      d.tipo === 'cambiarPlanificacion' &&
+      this.puedeCambiarPlanificacion
+    ) {
+      const preferencias = { ...this.preferenciasTutor };
+      const motivo = this.motivo.trim();
+      const version = this.configuracionTutor?.configuracion?.version ?? 0;
+      await this.ejecutar(
+        () =>
+          firstValueFrom(
+            this.autoasignacion.forzarConfiguracionTutor$(d.usuarioId, {
+              oposicion: preferencias.oposicion as Oposicion,
+              nivel: preferencias.nivel!,
+              franja: preferencias.franja!,
+              motivo,
+              version,
+            }),
+          ),
+        'Planificación cambiada correctamente.',
+      );
+    } else if (d.tipo === 'eliminarPlan' && d.suscripcion)
+      await this.ejecutar(
+        () =>
+          firstValueFrom(
+            this.users.deleteUserSubscription(d.usuarioId, d.suscripcion!.id),
+          ),
+        'Registro del plan externo eliminado.',
       );
     else if (d.tipo === 'plan' && d.suscripcion)
       await this.ejecutar(

@@ -486,3 +486,17 @@
 .ficha-helper {
   overflow-wrap: anywhere;
 }
+
+.ficha-planning-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.ficha-planning-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}

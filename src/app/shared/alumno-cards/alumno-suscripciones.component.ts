@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
+import { oposiciones } from '../../utils/consts';
 import { GestionAlumno } from '../models/alumno-admin.model';
 import {
   getPlanLabel,
@@ -41,8 +42,21 @@ import {
       class="alumno-plan-row"
     >
       <div class="alumno-plan-main">
-        <div class="alumno-plan-name">
-          {{ planLabel(s.tipo) }} · {{ oposicionLabel(s.oposicion) }}
+        <div class="alumno-plan-identity">
+          <img
+            *ngIf="catalogo[s.oposicion]?.image as image"
+            [src]="image"
+            [alt]="oposicionLabel(s.oposicion)"
+            class="alumno-plan-logo"
+          />
+          <div class="alumno-plan-name">
+            {{ oposicionLabel(s.oposicion) }}
+            <span
+              class="plan-badge"
+              [ngClass]="'plan-' + s.tipo.toLowerCase()"
+              >{{ planLabel(s.tipo) }}</span
+            >
+          </div>
         </div>
         <div class="alumno-plan-meta">
           <span
@@ -61,14 +75,23 @@ import {
             >{{ s.monthlyPrice | currency: 'EUR' : 'symbol' : '1.2-2' }} /
             mes</span
           >
+          <span *ngIf="s.fechaInicio"
+            >Desde {{ s.fechaInicio | date: 'd MMM yyyy' }}</span
+          >
         </div>
       </div>
       <div class="alumno-plan-side">
         <span
           class="alumno-badge"
-          [class.green]="vigente(s)"
-          [class.amber]="!vigente(s)"
-          >{{ estadoLabel(s.status) }}</span
+          [class.green]="vigente(s) && !s.cancelacionProgramada && !s.fechaFin"
+          [class.amber]="!vigente(s) || s.cancelacionProgramada || s.fechaFin"
+          >{{
+            s.cancelacionProgramada
+              ? 'Baja programada'
+              : vigente(s) && s.fechaFin
+                ? 'Baja pendiente'
+                : estadoLabel(s.status)
+          }}</span
         ><ng-container *ngIf="perfil; else adminActions"
           ><p-menu
             #menu
@@ -105,6 +128,15 @@ import {
             [attr.data-testid]="'cancel-plan-' + s.id"
           >
             Cancelar este plan</button
+          ><button
+            *ngIf="esExterna(s)"
+            type="button"
+            class="alumno-link alumno-plan-delete"
+            [disabled]="ocupado"
+            (click)="eliminarPlan.emit(s)"
+            [attr.data-testid]="'delete-plan-' + s.id"
+          >
+            Eliminar registro</button
           ><ng-template #wooAction
             ><button
               type="button"
@@ -130,6 +162,8 @@ export class AlumnoSuscripcionesComponent {
   @Output() editarPlan = new EventEmitter<Suscripcion>();
   @Output() cancelar = new EventEmitter<Suscripcion>();
   @Output() gestionarWoo = new EventEmitter<Suscripcion>();
+  @Output() eliminarPlan = new EventEmitter<Suscripcion>();
+  readonly catalogo = oposiciones;
   readonly planLabel = getPlanLabel;
   readonly estadoLabel = getSubscriptionStatusLabel;
   oposicionLabel(value: string) {

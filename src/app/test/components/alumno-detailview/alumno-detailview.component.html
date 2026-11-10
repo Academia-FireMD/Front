@@ -208,6 +208,7 @@
               [ocupado]="ocupado"
               (cancelar)="abrirCancelarPlan($event)"
               (editarPlan)="abrirEditarPlan($event)"
+              (eliminarPlan)="abrirEliminarPlan($event)"
               (gestionarWoo)="verWoo()"
             ></app-alumno-suscripciones
             ><app-alumno-accesos
@@ -433,7 +434,24 @@
         </article>
       </ng-container>
       <ng-container *ngIf="seccion === 'planning'"
-        ><div *ngIf="cargandoPlanes" class="ficha-state" role="status">
+        ><div class="ficha-planning-actions" *ngIf="autoasignacionHabilitada()">
+          <button
+            type="button"
+            class="alumno-btn"
+            [disabled]="ocupado"
+            (click)="abrirRecomendarNivel()"
+          >
+            Recomendar nivel</button
+          ><button
+            type="button"
+            class="alumno-btn"
+            [disabled]="ocupado"
+            (click)="abrirCambiarPlanificacion()"
+          >
+            Cambiar planificación
+          </button>
+        </div>
+        <div *ngIf="cargandoPlanes" class="ficha-state" role="status">
           Cargando planificación…
         </div>
         <p *ngIf="errorMarcas" role="alert">{{ errorMarcas }}</p>
@@ -614,6 +632,67 @@
 >
   <ng-container *ngIf="dialogo as d"
     ><p class="ficha-dialog-description">{{ d.nombre }} · {{ d.email }}</p>
+    <ng-container *ngIf="d.tipo === 'recomendarNivel'"
+      ><label class="ficha-field"
+        >Nivel recomendado<select
+          [(ngModel)]="nivelRecomendado"
+          [disabled]="ocupado"
+        >
+          <option *ngFor="let nivel of nivelesTutor" [value]="nivel.value">
+            {{ nivel.label }}
+          </option>
+        </select></label
+      ></ng-container
+    >
+    <ng-container *ngIf="d.tipo === 'cambiarPlanificacion'">
+      <p *ngIf="cargandoConfiguracionTutor" role="status">
+        Cargando configuración de planificación…
+      </p>
+      <fieldset
+        [disabled]="ocupado"
+        [attr.inert]="ocupado ? '' : null"
+        class="ficha-planning-fields"
+      >
+        <app-planificacion-preferencias
+          *ngIf="configuracionTutor && !cargandoConfiguracionTutor"
+          [valoresIniciales]="preferenciasTutor"
+          oposicionContext="planificacion"
+          [oposicionesPermitidas]="opcionesTutor.oposiciones"
+          [nivelesPermitidos]="opcionesTutor.niveles"
+          [franjasPermitidas]="opcionesTutor.franjas"
+          formIdPrefix="fichaTutorForzar"
+          (cambios)="cambiarPreferenciasTutor($event)"
+        ></app-planificacion-preferencias>
+      </fieldset>
+      <p
+        *ngIf="
+          opcionesTutor.seleccionada &&
+          !opcionesTutor.seleccionada.planificacionMensual
+        "
+        class="ficha-notice"
+      >
+        Esta combinación todavía no tiene una planificación mensual publicada.
+      </p>
+      <label class="ficha-field"
+        >Motivo *<textarea
+          [(ngModel)]="motivo"
+          [disabled]="ocupado"
+          rows="3"
+          placeholder="Indica el motivo del cambio"
+        ></textarea>
+      </label>
+    </ng-container>
+    <ng-container *ngIf="d.tipo === 'eliminarPlan' && d.suscripcion"
+      ><p>
+        Vas a eliminar permanentemente el registro local de
+        <strong>{{ planLabel(d.suscripcion) }}</strong
+        >.
+      </p>
+      <p>
+        La cuenta y los cursos independientes se conservarán. Para retirar el
+        acceso conservando el registro del plan, utiliza Cancelar este plan.
+      </p></ng-container
+    >
     <ng-container *ngIf="d.tipo === 'alta'"
       ><p>
         El plan se gestionará de forma externa, sin iniciar cobros en
