@@ -1,0 +1,169 @@
+.alumno-page {
+  max-width: 1280px;
+  padding: 28px 32px 44px;
+  margin: 0 auto;
+}
+.alumno-page-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.alumno-page-identity {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  min-width: 0;
+}
+.alumno-page-identity > div {
+  min-width: 0;
+}
+.alumno-page-header h1 {
+  font-size: 26px;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+  overflow-wrap: anywhere;
+  margin: 5px 0;
+}
+.alumno-page-header p {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.alumno-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-color-secondary);
+}
+.alumno-intro {
+  font-size: 14px;
+  color: var(--text-color-secondary);
+  margin: 0 0 28px;
+}
+.alumno-page-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+.alumno-page-grid > app-alumno-datos,
+.alumno-page-grid > app-alumno-suscripciones,
+.alumno-page-grid > app-alumno-informacion {
+  height: 100%;
+}
+.alumno-span-all {
+  grid-column: 1/-1;
+}
+.alumno-assignment h3 {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+.alumno-helper {
+  font-size: 11px;
+  color: var(--text-color-secondary);
+  line-height: 1.7;
+  margin: 12px 0 0;
+}
+.alumno-helper .alumno-link {
+  margin-left: 6px;
+}
+.alumno-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  text-align: center;
+}
+.alumno-balance-grid strong {
+  font-size: 28px;
+  display: block;
+}
+.alumno-balance-grid span {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+}
+.alumno-balance-row {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  border-top: 1px solid var(--surface-border);
+  padding: 12px 0;
+  font-size: 12px;
+}
+.alumno-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+}
+.alumno-notice {
+  background: #fff7e5;
+  border: 1px solid #f2ddb2;
+  border-radius: 8px;
+  padding: 18px;
+  margin-top: 24px;
+  font-size: 13px;
+  color: #87590f;
+}
+.alumno-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
+}
+.alumno-form-grid label {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.alumno-form-grid input {
+  width: 100%;
+  min-height: 44px;
+}
+.alumno-form-error {
+  font-size: 13px;
+  color: #b42318;
+  margin-top: 16px;
+}
+@media (max-width: 800px) {
+  .alumno-page {
+    padding: 24px;
+  }
+  .alumno-page-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+@media (max-width: 520px) {
+  .alumno-page {
+    padding: 20px 16px 32px;
+  }
+  .alumno-page-header h1 {
+    font-size: 22px;
+  }
+  .alumno-page-identity {
+    gap: 12px;
+  }
+  .alumno-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .alumno-intro {
+    font-size: 13px;
+  }
+  .alumno-page-header {
+    align-items: flex-start;
+  }
+}
+
+.alumno-page-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}

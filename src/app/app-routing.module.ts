@@ -1,3 +1,4 @@
+import { alumnoNavigationGuard } from './guards/alumno-navigation.guard';
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from './guards/auth/role.guard';
@@ -29,6 +30,8 @@ export const routes: Routes = [
       {
         path: 'profile',
         component: ProfileComponent,
+        canDeactivate: [alumnoNavigationGuard],
+        runGuardsAndResolvers: 'always',
       },
       {
         path: 'superadmin',

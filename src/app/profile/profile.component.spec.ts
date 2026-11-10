@@ -9,6 +9,7 @@ import { EstadoModulos } from '../shared/models/app-config.model';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
 import { CompraFiscalService } from '../compras/compra-fiscal.service';
 
+import { AlumnoAccesosComponent } from '../shared/alumno-cards/alumno-accesos.component';
 import { ProfileComponent } from './profile.component';
 
 function makeMockAppConfigService(planificacionFisicaEnabled = true) {
@@ -55,6 +56,7 @@ describe('ProfileComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ProfileComponent],
+      imports: [AlumnoAccesosComponent],
       providers: [
         ...COMMON_TEST_PROVIDERS,
         {
@@ -423,9 +425,9 @@ describe('ProfileComponent', () => {
       fixture.detectChanges();
 
       const card = fixture.nativeElement.querySelector(
-        '[data-testid="profile-accesos-card"]',
+        '[data-testid="alumno-accesos"]',
       );
-      expect(card.querySelector('.accesos-empty')).toBeTruthy();
+      expect(card.querySelector('.alumno-empty')).toBeTruthy();
       expect(card.querySelector('.accesos-tabs')).toBeFalsy();
       expect(card.textContent).toContain('Explorar la tienda');
     });
@@ -458,18 +460,18 @@ describe('ProfileComponent', () => {
       fixture.detectChanges();
 
       const card = fixture.nativeElement.querySelector(
-        '[data-testid="profile-accesos-card"]',
+        '[data-testid="alumno-accesos"]',
       );
-      expect(card.querySelectorAll('.accesos-tabs button')).toHaveLength(2);
+      expect(card.querySelectorAll('.alumno-product')).toHaveLength(2);
       expect(card.textContent).toContain('Opositor de Élite nivel 1');
-      card.querySelectorAll('.accesos-tabs button')[0].click();
-      fixture.detectChanges();
+
       expect(card.textContent).toContain('Simulacro de prueba');
-      card.querySelectorAll('.accesos-tabs button')[1].click();
-      fixture.detectChanges();
+
       expect(card.textContent).toContain('Opositor de Élite nivel 1');
-      expect(card.textContent).toContain('07/12/2026');
-      card.querySelector('.acceso-view-button').click();
+      expect(card.textContent).toContain('Hasta 7 Dec 2026');
+      (Array.from(card.querySelectorAll('button')) as HTMLButtonElement[])
+        .find((b) => b.textContent?.includes('Continuar curso'))!
+        .click();
       expect(router.navigate).toHaveBeenCalledWith([
         '/app/cursos',
         'opositor-de-elite-nivel-1',

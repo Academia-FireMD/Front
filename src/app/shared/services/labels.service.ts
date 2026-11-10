@@ -5,12 +5,26 @@ import { environment } from '../../../environments/environment';
 import { CreateLabelDto, Label, UsuarioLabel } from '../models/label.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LabelsService {
   private apiUrl = `${environment.apiUrl}/labels`;
 
   constructor(private http: HttpClient) {}
+
+  aplicarCambiosUsuario(
+    userId: number,
+    cambios: {
+      asignarIds: string[];
+      retirarIds: string[];
+      crear: CreateLabelDto[];
+    },
+  ): Observable<UsuarioLabel[]> {
+    return this.http.patch<UsuarioLabel[]>(
+      `${this.apiUrl}/users/${userId}/labels`,
+      cambios,
+    );
+  }
 
   createLabel(dto: CreateLabelDto): Observable<Label> {
     return this.http.post<Label>(this.apiUrl, dto);
@@ -25,20 +39,37 @@ export class LabelsService {
   }
 
   // Usuario - Label assignments
-  assignLabelToUser(userId: number, labelId: string): Observable<UsuarioLabel[]> {
-    return this.http.post<UsuarioLabel[]>(`${this.apiUrl}/users/${userId}/labels`, { labelId });
+  assignLabelToUser(
+    userId: number,
+    labelId: string,
+  ): Observable<UsuarioLabel[]> {
+    return this.http.post<UsuarioLabel[]>(
+      `${this.apiUrl}/users/${userId}/labels`,
+      { labelId },
+    );
   }
 
-  assignLabelByKeyValue(userId: number, key: string, value?: string): Observable<UsuarioLabel[]> {
-    return this.http.post<UsuarioLabel[]>(`${this.apiUrl}/users/${userId}/labels/keyvalue`, { key, value });
+  assignLabelByKeyValue(
+    userId: number,
+    key: string,
+    value?: string,
+  ): Observable<UsuarioLabel[]> {
+    return this.http.post<UsuarioLabel[]>(
+      `${this.apiUrl}/users/${userId}/labels/keyvalue`,
+      { key, value },
+    );
   }
 
-  removeLabelFromUser(userId: number, labelId: string): Observable<{ message: string }> {
-    return this.http.delete<{ message: string }>(`${this.apiUrl}/users/${userId}/labels/${labelId}`);
+  removeLabelFromUser(
+    userId: number,
+    labelId: string,
+  ): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(
+      `${this.apiUrl}/users/${userId}/labels/${labelId}`,
+    );
   }
 
   getUserLabels(userId: number): Observable<UsuarioLabel[]> {
     return this.http.get<UsuarioLabel[]>(`${this.apiUrl}/users/${userId}`);
   }
 }
-

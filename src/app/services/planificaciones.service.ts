@@ -408,4 +408,13 @@ export class PlanificacionesService extends ApiBaseService {
       { withCredentials: true },
     );
   }
+  public desvincularPlanificacionMensualAdmin$(
+    planificacionId: number,
+    alumnoId: number,
+  ): Observable<any> {
+    return this.post(
+      `/desvincular-planificacion-mensual-admin/${planificacionId}/${alumnoId}`,
+      null,
+    );
+  }
 }

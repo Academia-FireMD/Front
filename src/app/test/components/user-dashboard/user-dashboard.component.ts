@@ -316,7 +316,10 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   public onItemClick(item: Usuario) {
-    this.editarUsuario(item);
+    if (this.mode === 'selection') return;
+    void this.router.navigate(['/app/test/user', item.id], {
+      queryParams: this.route.snapshot.queryParams,
+    });
   }
 
   public getUserId = (user: Usuario): number => user.id;

@@ -67,9 +67,91 @@ import {
   styleUrls: [
     './profile.component.scss',
     './profile-onboarding.component.scss',
+    '../shared/alumno-cards/alumno-cards.scss',
+    './profile-layout.component.scss',
   ],
 })
 export class ProfileComponent implements OnInit, OnDestroy {
+  private finGuardadoPerfil: Promise<boolean> | null = null;
+  private resolverGuardadoPerfil: ((value: boolean) => void) | null = null;
+  prepararSalida(): boolean | Promise<boolean> {
+    if (this.guardandoPerfil) return this.finGuardadoPerfil || true;
+    this.mostrarEdicionPerfil = false;
+    this.perfilEdicion = null;
+    this.showOnboardingModal = false;
+    return true;
+  }
+  mostrarEdicionPerfil = false;
+  perfilEdicion: Usuario | null = null;
+  guardandoPerfil = false;
+  errorEdicionPerfil = '';
+  planificacionesPerfil: {
+    planificacion: { id: number; identificador: string; descripcion?: string };
+  }[] = [];
+  cargandoPlanificacionesPerfil = false;
+  errorPlanificacionesPerfil = '';
+  readonly accionesPerfil = (s: Suscripcion) =>
+    this.getSubscriptionMenuItems(s);
+  readonly resultadosPerfil = (c: Consumible) => this.puedeVerResultados(c);
+
+  abrirEdicionPerfil(): void {
+    if (!this.user) return;
+    this.perfilEdicion = cloneDeep(this.user);
+    this.errorEdicionPerfil = '';
+    this.mostrarEdicionPerfil = true;
+  }
+  async guardarEdicionPerfil(): Promise<void> {
+    if (!this.perfilEdicion || this.guardandoPerfil) return;
+    const draft = this.perfilEdicion;
+    this.guardandoPerfil = true;
+    this.finGuardadoPerfil = new Promise(
+      (resolve) => (this.resolverGuardadoPerfil = resolve),
+    );
+    this.errorEdicionPerfil = '';
+    try {
+      const cambios: Partial<Usuario> = {
+        nombre: draft.nombre,
+        apellidos: draft.apellidos,
+        dni: draft.dni,
+        tutorId: draft.tutorId,
+        tipoDePlanificacionDuracionDeseada:
+          draft.tipoDePlanificacionDuracionDeseada,
+        metodoCalificacion: draft.metodoCalificacion,
+      };
+      if (this.esAdminOSuperior) cambios.esTutor = draft.esTutor;
+      await firstValueFrom(this.userService.updateUser(draft.id, cambios));
+      this.store.dispatch(UserActions.loadUser());
+      this.mostrarEdicionPerfil = false;
+      this.perfilEdicion = null;
+      this.toastService.success('Perfil actualizado correctamente');
+    } catch (error: any) {
+      this.errorEdicionPerfil =
+        error?.message || 'No se han podido guardar tus datos.';
+    } finally {
+      this.guardandoPerfil = false;
+      this.resolverGuardadoPerfil?.(true);
+      this.resolverGuardadoPerfil = null;
+      this.finGuardadoPerfil = null;
+    }
+  }
+  async cargarPlanificacionesPerfil(id: number): Promise<void> {
+    this.cargandoPlanificacionesPerfil = true;
+    this.errorPlanificacionesPerfil = '';
+    try {
+      this.planificacionesPerfil = await firstValueFrom(
+        this.userService.getMyPlanifications$(),
+      );
+    } catch {
+      this.errorPlanificacionesPerfil =
+        'No se han podido cargar tus planificaciones.';
+    } finally {
+      this.cargandoPlanificacionesPerfil = false;
+    }
+  }
+  verPlanificacionPerfil(id: number): void {
+    void this.router.navigate(['/app/planificacion/planificacion-mensual', id]);
+  }
+
   readonly getPlanLabel = getPlanLabel;
   readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
   readonly getFranjaPlanificacionLabel = getFranjaPlanificacionLabel;
@@ -249,6 +331,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         if (user.rol === Rol.ALUMNO) {
           this.cargarCursos();
           void this.cargarConfiguracionPlanificacion();
+          void this.cargarPlanificacionesPerfil(user.id);
         }
 
         // Verificar si es primer acceso y abrir modal automáticamente
@@ -493,6 +576,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
+  gestionarPlanificacion() {
+    this.irAPlanificacion();
+  }
   irAPlanificacion(): void {
     void this.router.navigate(['/app/planificacion/configuracion-alumno']);
   }

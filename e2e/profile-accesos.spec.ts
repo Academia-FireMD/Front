@@ -97,33 +97,37 @@ test('el alumno sin suscripción ve sus accesos compactos en escritorio y móvil
   await page.waitForURL('**/app/**');
   await page.goto('/app/profile');
 
-  const card = page.getByTestId('profile-accesos-card');
+  const card = page.getByTestId('alumno-accesos');
   await expect(card).toBeVisible();
   await expect(card.getByText('Opositor de Élite nivel 1')).toBeVisible();
-  await expect(card.getByRole('button', { name: /Ver curso/ })).toBeVisible();
+  await expect(
+    card.getByRole('button', { name: /Continuar curso/ }),
+  ).toBeVisible();
   const screenshots = process.env['PROFILE_QA_SCREENSHOT_DIR'];
   if (screenshots)
     await card.screenshot({
       path: join(screenshots, 'mis-accesos-desktop.png'),
     });
 
-  await card.getByRole('button', { name: /Simulacros/ }).click();
   await expect(card.getByText('Simulacro de acceso')).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Usar' })).toBeVisible();
+  await expect(
+    card.getByRole('button', { name: 'Realizar simulacro' }),
+  ).toBeVisible();
   if (screenshots)
     await card.screenshot({
       path: join(screenshots, 'mis-accesos-simulacros.png'),
     });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await card.getByRole('button', { name: /Cursos/ }).click();
-  await expect(card.getByRole('button', { name: /Ver curso/ })).toBeVisible();
+  await expect(
+    card.getByRole('button', { name: /Continuar curso/ }),
+  ).toBeVisible();
   if (screenshots)
     await card.screenshot({
       path: join(screenshots, 'mis-accesos-mobile.png'),
     });
 
-  await card.getByRole('button', { name: /Ver curso/ }).click();
+  await card.getByRole('button', { name: /Continuar curso/ }).click();
   await page.waitForURL('**/app/cursos/opositor-de-elite-nivel-1');
 
   const sinAccesos = { ...usuario, consumibles: [] };
@@ -135,7 +139,7 @@ test('el alumno sin suscripción ve sus accesos compactos en escritorio y móvil
   );
   await page.route('**/cursos/mios', (route) => route.fulfill(json([])));
   await page.goto('/app/profile');
-  await expect(card.getByText('Aún no tienes acceso')).toBeVisible();
+  await expect(card.getByText('Sin productos independientes')).toBeVisible();
   await expect(card.locator('.accesos-tabs')).toHaveCount(0);
   if (screenshots)
     await card.screenshot({

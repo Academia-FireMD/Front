@@ -1,3 +1,7 @@
+import { AlumnoDatosComponent } from './shared/alumno-cards/alumno-datos.component';
+import { AlumnoSuscripcionesComponent } from './shared/alumno-cards/alumno-suscripciones.component';
+import { AlumnoAccesosComponent } from './shared/alumno-cards/alumno-accesos.component';
+import { AlumnoInformacionComponent } from './shared/alumno-cards/alumno-informacion.component';
 import {
   APP_INITIALIZER,
   Injectable,
@@ -171,6 +175,10 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
   ],
   imports: [
     BrowserModule,
+    AlumnoDatosComponent,
+    AlumnoSuscripcionesComponent,
+    AlumnoAccesosComponent,
+    AlumnoInformacionComponent,
     AppRoutingModule,
     ButtonModule,
     CardModule,
