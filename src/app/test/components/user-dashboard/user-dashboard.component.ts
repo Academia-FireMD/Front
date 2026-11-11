@@ -962,7 +962,12 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       const marcas = await firstValueFrom(
         this.planificacionFisicaService.marcasDeAlumno(userId),
       );
-      this.userMarcas.set(userId, marcas);
+      this.userMarcas.set(
+        userId,
+        [...marcas].sort(
+          (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+        ),
+      );
     } catch (error) {
       this.marcasErrors.add(userId);
       console.error('Error loading user marcas:', error);

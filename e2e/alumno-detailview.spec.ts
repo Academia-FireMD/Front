@@ -727,8 +727,9 @@ for (const tipo of [
     await setup(page);
     const data = ficha();
     data.gestion.tipo = tipo as any;
-    data.gestion.capacidades.puedeGestionarWoo =
-      tipo === 'WOOCOMMERCE' || tipo === 'MIXTA';
+    // Un cliente o historial antiguo puede conservar esta capacidad incluso
+    // cuando la gestión está verificada como externa o sigue pendiente.
+    data.gestion.capacidades.puedeGestionarWoo = true;
     data.gestion.motivo =
       tipo === 'POR_VERIFICAR' ? 'Origen pendiente de verificar' : null;
     await page.route('**/user/admin/140', (r) => r.fulfill({ json: data }));
@@ -894,4 +895,90 @@ test('resumen permite reintentar una lectura fallida sin abrir la ficha', async 
   await expect(panel).toContainText('Plan recuperado');
   expect(reads).toBe(2);
   await expect(page).toHaveURL(/\/test\/user$/);
+});
+
+test('resumen reintenta marcas y muestra las tres más recientes entre pruebas', async ({
+  page,
+}) => {
+  await setup(page);
+  let reads = 0;
+  const marcas = [
+    {
+      id: 1,
+      pruebaFisicaId: 1,
+      pruebaNombre: 'Carrera antigua',
+      fecha: '2026-01-03',
+      valor: 100,
+      unidad: 's',
+    },
+    {
+      id: 2,
+      pruebaFisicaId: 1,
+      pruebaNombre: 'Carrera anterior',
+      fecha: '2026-01-02',
+      valor: 101,
+      unidad: 's',
+    },
+    {
+      id: 3,
+      pruebaFisicaId: 1,
+      pruebaNombre: 'Carrera inicial',
+      fecha: '2026-01-01',
+      valor: 102,
+      unidad: 's',
+    },
+    {
+      id: 4,
+      pruebaFisicaId: 2,
+      pruebaNombre: 'Press reciente',
+      fecha: '2026-11-11',
+      valor: 20,
+      unidad: 'kg',
+    },
+    {
+      id: 5,
+      pruebaFisicaId: 3,
+      pruebaNombre: 'Natación reciente',
+      fecha: '2026-11-10',
+      valor: 30,
+      unidad: 's',
+    },
+  ];
+  await page.route('**/planificacion-fisica/marcas/alumno/140', (r) => {
+    reads++;
+    return r.fulfill(
+      reads === 1 ? { status: 503, json: { message: 'QA' } } : { json: marcas },
+    );
+  });
+  await page.goto('/app/test/user');
+  await page.getByTestId('user-expand').first().click();
+  const panel = page.getByTestId('user-quickview-140');
+  await panel
+    .getByRole('button', { name: 'Reintentar marcas', exact: true })
+    .click();
+  const section = panel
+    .locator('div')
+    .filter({
+      has: page.getByRole('heading', {
+        name: 'Marcas físicas recientes',
+        exact: true,
+      }),
+    })
+    .last();
+  await expect(section.locator('.quickview-plan span')).toHaveText([
+    'Press reciente',
+    'Natación reciente',
+    'Carrera antigua',
+  ]);
+  await expect(section).not.toContainText('Carrera anterior');
+  await expect(section).not.toContainText('Carrera inicial');
+  await expect(page).toHaveURL(/\/test\/user$/);
+  await page.getByTestId('user-expand').first().click();
+  await page.getByTestId('user-expand').first().click();
+  await expect(section.locator('.quickview-plan span')).toHaveText([
+    'Press reciente',
+    'Natación reciente',
+    'Carrera antigua',
+  ]);
+  expect(reads).toBe(2);
 });

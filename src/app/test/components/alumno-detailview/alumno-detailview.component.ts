@@ -151,10 +151,7 @@ export class AlumnoDetailviewComponent {
   get puedeVerWoo(): boolean {
     const gestion = this.ficha?.gestion;
     return (
-      !!gestion &&
-      (gestion.tipo === 'WOOCOMMERCE' ||
-        gestion.tipo === 'MIXTA' ||
-        gestion.capacidades.puedeGestionarWoo)
+      !!gestion && (gestion.tipo === 'WOOCOMMERCE' || gestion.tipo === 'MIXTA')
     );
   }
   get secciones() {
