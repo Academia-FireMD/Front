@@ -130,6 +130,21 @@ describe('ProfileComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('descarta el borrador del diálogo sin modificar los datos del perfil', () => {
+    component.user = {
+      id: 42,
+      rol: 'ALUMNO',
+      nombre: 'Lucía',
+      apellidos: 'Soler',
+    } as any;
+    component.abrirEdicionPerfil();
+    component.perfilEdicion!.nombre = 'Cambio sin guardar';
+    component.cerrarEdicionPerfil();
+    expect(component.user!.nombre).toBe('Lucía');
+    expect(component.perfilEdicion).toBeNull();
+    expect(component.mostrarEdicionPerfil).toBe(false);
+  });
+
   it('no vuelve a abrir automáticamente la ficha incompleta tras descartarla', () => {
     component.user = { id: 98765, rol: 'ALUMNO' } as any;
     localStorage.setItem('onboarding_shown_98765', 'true');

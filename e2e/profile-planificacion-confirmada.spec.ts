@@ -3,7 +3,9 @@ import userAlumnoFixture from './fixtures/user-alumno.json';
 import { loginAsRoleMock } from './helpers/auth.helper';
 
 for (const oposiciones of [['MADRID'], ['MADRID', 'ALICANTE_CPBA']]) {
-  test(`ficha separa ${oposiciones.length} suscripción(es) de la planificación confirmada`, async ({ page }) => {
+  test(`ficha separa ${oposiciones.length} suscripción(es) de la planificación confirmada`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     const user = {
       ...userAlumnoFixture,
@@ -38,7 +40,7 @@ for (const oposiciones of [['MADRID'], ['MADRID', 'ALICANTE_CPBA']]) {
     });
     await page.goto('/app/profile');
     await expect(page.getByText('Oposiciones contratadas:')).toBeVisible();
-    const resumen = page.locator('.planification-section');
+    const resumen = page.getByTestId('profile-planning-card');
     await expect(resumen).toContainText('Comunidad de Madrid');
     await expect(resumen).toContainText('Iniciación');
     await expect(resumen).toContainText('6-8 horas');
@@ -46,7 +48,13 @@ for (const oposiciones of [['MADRID'], ['MADRID', 'ALICANTE_CPBA']]) {
       await expect(resumen).toContainText('Consorcio de Alicante');
     }
     await expect(resumen).not.toContainText('Ayuntamiento de Valencia');
-    await expect(resumen.getByRole('button', { name: 'Gestionar mi planificación' })).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+    await expect(
+      resumen.getByRole('button', { name: 'Gestionar mi planificación' }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
   });
 }

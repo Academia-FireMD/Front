@@ -1,3 +1,4 @@
+import { OposicionIdentidadComponent } from '../../../shared/alumno-cards/oposicion-identidad.component';
 import { CommonModule } from '@angular/common';
 import {
   Component,
@@ -106,6 +107,7 @@ type EtiquetaBorrador = {
     FormsModule,
     PrimengModule,
     PlanificacionPreferenciasComponent,
+    OposicionIdentidadComponent,
     AlumnoInformacionComponent,
     AlumnoSuscripcionesComponent,
     AlumnoAccesosComponent,
@@ -248,6 +250,7 @@ export class AlumnoDetailviewComponent {
       identificador: string;
       descripcion?: string;
       subBloques?: unknown[];
+      relevancia?: Oposicion[];
     };
   }[] = [];
   marcas: MarcaPersonal[] = [];

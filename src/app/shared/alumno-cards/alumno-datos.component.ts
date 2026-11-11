@@ -1,3 +1,4 @@
+import { ButtonModule } from 'primeng/button';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { UsuarioVistaAlumno } from '../models/alumno-admin.model';
@@ -5,7 +6,7 @@ import { etiquetaRol } from '../utils/rol.utils';
 @Component({
   selector: 'app-alumno-datos',
   standalone: true,
-  imports: [CommonModule],
+  imports: [ButtonModule, CommonModule],
   styleUrls: ['./alumno-cards.scss'],
   template: ` <article class="alumno-card" data-testid="alumno-datos">
     <div class="alumno-card-head">
@@ -20,8 +21,9 @@ import { etiquetaRol } from '../utils/rol.utils';
         </p>
       </div>
       <button
+        pButton
         type="button"
-        class="alumno-link"
+        class="alumno-link p-button-text"
         (click)="editar.emit()"
         data-testid="edit-alumno-datos"
       >

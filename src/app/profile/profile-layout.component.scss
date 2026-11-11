@@ -1,95 +1,234 @@
-// Keep the familiar profile form and subscription column inside the native shell.
+@import "../shared/alumno-cards/alumno-cards";
+
 :host {
   display: block;
   min-height: 100%;
-  background: var(--surface-ground);
   color: var(--text-color);
+  background: var(--surface-ground);
 }
-.profile-main-header {
+.profile-container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 32px;
+}
+.profile-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 24px;
 }
-.profile-invoices {
-  display: inline-flex;
+.profile-identity {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid #ffffff80;
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
+  gap: 16px;
+  min-width: 0;
 }
-.profile-invoices:focus-visible {
-  outline: 3px solid white;
-  outline-offset: 3px;
+.profile-identity > div {
+  min-width: 0;
 }
-.profile-avatar {
+.profile-identity app-avatar-upload {
   flex-shrink: 0;
 }
-.user-info-header .profile-avatar {
-  padding: 0;
-  border: 0;
-  background: none;
+.profile-heading h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
-.profile-save-error {
-  color: #b42318;
+.profile-heading p {
+  margin: 6px 0 0;
+  color: var(--text-color-secondary);
+  overflow-wrap: anywhere;
+}
+.profile-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  margin-bottom: 8px;
+}
+.profile-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.profile-intro {
+  color: var(--text-color-secondary);
+  margin: 0 0 28px;
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+.profile-grid > * {
+  min-width: 0;
+}
+.profile-grid-admin {
+  grid-template-columns: minmax(0, 1fr);
+}
+.profile-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  background: var(--surface-card);
+  box-shadow: 0 1px 3px #00000014;
+  overflow: hidden;
+}
+.profile-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--surface-border);
+}
+.profile-panel-head h2 {
+  font-size: 18px;
+  margin: 0;
+  line-height: 1.4;
+}
+.profile-panel-head p {
   font-size: 14px;
+  color: var(--text-color-secondary);
+  margin: 4px 0 0;
+}
+.profile-panel-body {
+  padding: 24px;
+  flex: 1;
+}
+.profile-panel-body > p:first-child {
+  margin-top: 0;
+}
+.profile-wide,
+.profile-accesses {
+  grid-column: 1/-1;
+}
+.profile-planning p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-color-secondary);
 }
 .profile-assigned-plan {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+.profile-assigned-plan:last-of-type {
+  margin-bottom: 16px;
+}
+.profile-assigned-plan h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.profile-assigned-plan app-oposicion-identidad {
+  width: 100%;
+}
+.profile-subscription-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.profile-save-error {
+  color: var(--red-700, #b42318);
+}
+.profile-edit-form .form-group {
+  margin-bottom: 20px;
+}
+.profile-edit-form label {
+  display: block;
+  margin-bottom: 8px;
+}
+.profile-badges .alumno-badge {
+  white-space: normal;
+}
+.alumno-card-tools {
+  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
-.subscription-card-item .options-btn {
-  min-width: 44px;
-  min-height: 44px;
+.profile-accesses .accesos-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.profile-accesses .accesos-tabs button.active {
+  box-shadow: inset 0 -2px var(--primary-color);
+}
+.profile-accesses .acceso-tile-action {
+  margin-top: auto;
+}
+.profile-accesses .acceso-view-button {
+  align-self: flex-start;
+}
+.profile-accesses .acceso-tile-main {
+  min-width: 0;
+}
+.profile-accesses .accesos-error {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 1050px) {
+  .profile-heading {
+    flex-wrap: wrap;
+  }
+  .profile-badges {
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 800px) {
+  .profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .profile-container {
+    padding: 24px 16px;
+  }
 }
 @media (max-width: 520px) {
   .profile-container {
-    padding: 16px 8px;
+    padding: 20px 8px;
   }
-  .profile-main-header h2 {
-    font-size: 20px;
+  .profile-heading {
+    gap: 16px;
   }
-  .card-content {
+  .profile-heading h1 {
+    font-size: 24px;
+  }
+  .profile-panel-head,
+  .profile-panel-body {
     padding: 18px 16px;
   }
-  .user-info-text h3 {
-    overflow-wrap: anywhere;
+  .profile-panel-head {
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .profile-assigned-plan {
-    align-items: flex-start;
-  }
-  .action-buttons {
-    justify-content: stretch !important;
+  .profile-intro {
+    font-size: 14px;
+    margin-bottom: 20px;
   }
 }
 
-.subscription-card
-  .subscription-details
-  .subscription-card-item
-  .subscription-header
-  .subscription-title
-  .oposicion-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
+.profile-grid > div {
+  display: flex;
+  flex-direction: column;
 }
-.profile-card input[pInputText] {
-  min-height: 44px;
-}
-
-.profile-invoices-icon {
-  min-width: 44px;
-  flex-shrink: 0;
-  padding: 8px;
+.profile-grid > div > app-alumno-datos,
+.profile-grid > div > app-alumno-suscripciones {
+  flex: 1;
+  height: 100%;
 }

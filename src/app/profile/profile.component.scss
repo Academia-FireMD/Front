@@ -508,7 +508,7 @@
   border-radius: 0.65rem;
   background: var(--surface-ground);
 
-  button {
+  button:not(.p-button) {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -621,7 +621,7 @@
   text-align: right;
 }
 
-.acceso-view-button {
+.acceso-view-button:not(.p-button) {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -694,7 +694,7 @@
 
   .acceso-tile-action,
   .acceso-tile-note,
-  .acceso-view-button {
+  .acceso-view-button:not(.p-button) {
     grid-column: 2;
     justify-self: start;
   }

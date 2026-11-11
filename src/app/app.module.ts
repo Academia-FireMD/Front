@@ -1,3 +1,4 @@
+import { OposicionIdentidadComponent } from './shared/alumno-cards/oposicion-identidad.component';
 import { AlumnoDatosComponent } from './shared/alumno-cards/alumno-datos.component';
 import { AlumnoSuscripcionesComponent } from './shared/alumno-cards/alumno-suscripciones.component';
 import { AlumnoAccesosComponent } from './shared/alumno-cards/alumno-accesos.component';
@@ -175,6 +176,7 @@ class CustomDateFormatter extends CalendarNativeDateFormatter {
   ],
   imports: [
     BrowserModule,
+    OposicionIdentidadComponent,
     AlumnoDatosComponent,
     AlumnoSuscripcionesComponent,
     AlumnoAccesosComponent,

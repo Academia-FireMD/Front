@@ -40,10 +40,10 @@
   flex: 0 0 53px;
   display: grid;
   place-items: center;
-  border: 1px solid #ffe1d1;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 20%, white);
   border-radius: 12px;
-  background: #fff0e8;
-  color: #b95228;
+  background: color-mix(in srgb, var(--primary-color) 8%, white);
+  color: var(--primary-color);
   font-size: 20px;
   font-weight: 600;
   object-fit: cover;
@@ -99,7 +99,7 @@
   padding: 0 2px 14px;
   min-height: 46px;
   font: inherit;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 600;
   border-bottom: 3px solid transparent;
   display: flex;
@@ -127,17 +127,7 @@
   width: 100%;
   margin-top: 7px;
 }
-.ficha-page select,
-.ficha-field select {
-  border: 1px solid var(--surface-border);
-  border-radius: 6px;
-  background: var(--surface-card);
-  color: var(--text-color);
-  min-height: 46px;
-  padding: 10px;
-  font: inherit;
-  font-size: 13px;
-}
+
 .ficha-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -498,5 +488,17 @@
   border: 0;
   margin: 0;
   padding: 0;
+  min-width: 0;
+}
+
+.ficha-page .p-button {
+  max-width: 100%;
+  white-space: normal;
+}
+.ficha-tabs {
+  flex-wrap: wrap;
+}
+.ficha-field,
+.ficha-form-grid > * {
   min-width: 0;
 }

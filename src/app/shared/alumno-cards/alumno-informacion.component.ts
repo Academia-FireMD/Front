@@ -1,3 +1,4 @@
+import { ButtonModule } from 'primeng/button';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { UsuarioVistaAlumno } from '../models/alumno-admin.model';
@@ -10,7 +11,7 @@ type CampoAlumno = {
 @Component({
   selector: 'app-alumno-informacion',
   standalone: true,
-  imports: [CommonModule, AlumnoDatosComponent],
+  imports: [ButtonModule, CommonModule, AlumnoDatosComponent],
   styleUrls: ['./alumno-cards.scss'],
   template: ` <article *ngIf="resumen; else completa" class="alumno-card">
       <div class="alumno-card-head">
@@ -46,8 +47,9 @@ type CampoAlumno = {
           el seguimiento.
         </p>
         <button
+          pButton
           type="button"
-          class="alumno-btn full"
+          class="alumno-btn full p-button-outlined"
           (click)="completar.emit()"
         >
           <i class="pi pi-pencil" aria-hidden="true"></i>Completar información

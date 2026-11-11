@@ -2,11 +2,11 @@
 :host {
   display: block;
   min-width: 0;
-  --alumno-accent: var(--primary-700, #c54d24);
+  --alumno-accent: var(--primary-color);
 }
 .alumno-card {
   border: 1px solid var(--surface-border, #e5e8ee);
-  border-radius: 10px;
+  border-radius: var(--border-radius);
   background: var(--surface-card, #fff);
   height: 100%;
   overflow: hidden;
@@ -50,61 +50,14 @@
   border-top: 1px solid var(--surface-border);
   margin-top: auto;
 }
-.alumno-btn {
-  border: 1px solid var(--surface-border, #d8dde6);
-  background: var(--surface-card, #fff);
-  color: var(--text-color, #465165);
-  border-radius: 6px;
-  padding: 10px 14px;
-  min-height: 44px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.alumno-btn,
+.alumno-link {
+  max-width: 100%;
   gap: 8px;
-  cursor: pointer;
-  text-decoration: none;
-}
-.alumno-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.alumno-btn.primary {
-  background: var(--alumno-accent);
-  border-color: var(--alumno-accent);
-  color: #fff;
-}
-.alumno-btn.danger {
-  border-color: #e8bbb6;
-  color: #b42318;
+  white-space: normal;
 }
 .alumno-btn.full {
   width: 100%;
-}
-.alumno-link {
-  background: transparent;
-  border: 0;
-  color: var(--alumno-accent);
-  font: inherit;
-  font-size: 12px;
-  padding: 0 3px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  cursor: pointer;
-}
-.alumno-link:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.alumno-btn:focus-visible,
-.alumno-link:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--primary-color) 40%, transparent);
-  outline-offset: 3px;
 }
 .alumno-info-fields {
   display: grid;
@@ -149,8 +102,8 @@
   color: #315fa0;
 }
 .alumno-badge.brand {
-  background: #fff0e8;
-  color: #a14420;
+  background: color-mix(in srgb, var(--primary-color) 8%, white);
+  color: var(--primary-color);
 }
 .alumno-plan-row {
   display: flex;
@@ -249,8 +202,8 @@
   width: 38px;
   height: 38px;
   border-radius: 8px;
-  background: #fff0e8;
-  color: #b95228;
+  background: color-mix(in srgb, var(--primary-color) 8%, white);
+  color: var(--primary-color);
   font-size: 18px;
 }
 .alumno-progress {
@@ -337,9 +290,6 @@
   .alumno-info-fields dd {
     font-size: 14px;
   }
-  .alumno-link {
-    font-size: 11px;
-  }
 }
 
 .alumno-plan-identity {
@@ -361,6 +311,34 @@
 .alumno-plan-identity .plan-badge {
   width: fit-content;
 }
-.alumno-plan-delete {
-  color: #b42318;
+
+.alumno-card {
+  color: var(--text-color);
+}
+.alumno-card-head p {
+  font-size: 14px;
+}
+.alumno-card-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.alumno-plan-name {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alumno-plan-name .plan-badge {
+  width: fit-content;
+}
+.alumno-plan-main {
+  flex: 1;
+}
+.alumno-plan-side {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.alumno-info-fields dd {
+  font-size: 16px;
 }

@@ -95,7 +95,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
   guardandoPerfil = false;
   errorEdicionPerfil = '';
   planificacionesPerfil: {
-    planificacion: { id: number; identificador: string; descripcion?: string };
+    planificacion: {
+      id: number;
+      identificador: string;
+      descripcion?: string;
+      relevancia?: Oposicion[];
+    };
   }[] = [];
   cargandoPlanificacionesPerfil = false;
   errorPlanificacionesPerfil = '';
@@ -108,6 +113,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.perfilEdicion = cloneDeep(this.user);
     this.errorEdicionPerfil = '';
     this.mostrarEdicionPerfil = true;
+  }
+  cerrarEdicionPerfil(): void {
+    if (this.guardandoPerfil) return;
+    this.mostrarEdicionPerfil = false;
+    this.perfilEdicion = null;
+    this.errorEdicionPerfil = '';
   }
   async guardarEdicionPerfil(): Promise<void> {
     if (!this.perfilEdicion || this.guardandoPerfil) return;
@@ -397,6 +408,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   private loadMadridTutoriaBalance(): void {
+    if (this.user?.rol !== Rol.ALUMNO) return;
     const tieneMadrid = this.user?.suscripciones?.some(
       (suscripcion) =>
         suscripcion.oposicion === Oposicion.MADRID &&

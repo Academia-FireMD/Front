@@ -1,3 +1,4 @@
+import { ButtonModule } from 'primeng/button';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { AccesoConCurso } from '../../cursos/models/curso.model';
@@ -5,7 +6,7 @@ import { Consumible } from '../models/user.model';
 @Component({
   selector: 'app-alumno-accesos',
   standalone: true,
-  imports: [CommonModule],
+  imports: [ButtonModule, CommonModule],
   styleUrls: ['./alumno-cards.scss'],
   template: ` <article class="alumno-card" data-testid="alumno-accesos">
     <div class="alumno-card-head">
@@ -20,7 +21,12 @@ import { Consumible } from '../models/user.model';
       </div>
       <div *ngIf="error" class="alumno-empty" role="alert">
         <h3>No se han podido cargar los cursos</h3>
-        <button type="button" class="alumno-btn" (click)="reintentar.emit()">
+        <button
+          pButton
+          type="button"
+          class="alumno-btn p-button-outlined"
+          (click)="reintentar.emit()"
+        >
           Volver a cargar
         </button>
       </div>
@@ -56,9 +62,10 @@ import { Consumible } from '../models/user.model';
             <span [style.width.%]="progreso(acceso)"></span>
           </div>
           <button
+            pButton
             *ngIf="perfil"
             type="button"
-            class="alumno-btn full"
+            class="alumno-btn full p-button-outlined"
             (click)="abrirCurso.emit(acceso)"
           >
             Continuar curso<i class="pi pi-arrow-right" aria-hidden="true"></i>
@@ -86,16 +93,18 @@ import { Consumible } from '../models/user.model';
             Caduca el {{ c.expiraEn | date: 'dd/MM/yyyy' }}
           </p>
           <button
+            pButton
             *ngIf="perfil && c.estado === 'ACTIVADO' && c.examen"
             type="button"
-            class="alumno-btn full"
+            class="alumno-btn full p-button-outlined"
             (click)="usar.emit(c)"
           >
             Realizar simulacro</button
           ><button
+            pButton
             *ngIf="perfil && c.estado === 'USADO'"
             type="button"
-            class="alumno-btn full"
+            class="alumno-btn full p-button-outlined"
             [disabled]="!puedeVerResultados(c)"
             (click)="resultados.emit(c)"
           >
@@ -114,9 +123,10 @@ import { Consumible } from '../models/user.model';
         <h3>Sin productos independientes</h3>
         <p>Los cursos y simulacros disponibles aparecerán aquí.</p>
         <button
+          pButton
           *ngIf="perfil"
           type="button"
-          class="alumno-btn full"
+          class="alumno-btn full p-button-outlined"
           (click)="tienda.emit()"
         >
           Explorar la tienda

@@ -96,6 +96,17 @@ async function setup(page: Page, autoasignacion = true) {
     userFixture: admin,
     modulos: { PLANIFICACION_AUTOASIGNACION: autoasignacion },
   });
+  await page.route('**/api/app-config', (r) =>
+    r.fulfill({
+      json: {
+        appName: 'TecnikaFire',
+        logoUrl: null,
+        primaryColor: '#bb292a',
+        secondaryColor: '#2c2c2c',
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+  );
   await page.route('**/user/admin/*', async (r) => {
     const path = new URL(r.request().url()).pathname;
     if (/\/user\/admin\/\d+$/.test(path))
@@ -171,6 +182,10 @@ for (const width of [390, 768, 1120, 1440])
     await expect(
       page.getByText('Membresía de la academia', { exact: true }),
     ).toBeVisible();
+    const baja = page.getByTestId('admin-baja-externa');
+    await expect(baja).toHaveClass(/p-button p-component/);
+    await expect(baja).toHaveCSS('font-size', '16px');
+    await expect(baja).toHaveCSS('padding', '8px 16px');
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -447,14 +462,14 @@ test('administración recupera logos, fechas y eliminación de un registro exter
   });
   await page.goto('/app/test/user/140?tab=access');
   const card = page.getByTestId('alumno-suscripciones');
-  await expect(card.locator('.alumno-plan-logo')).toHaveAttribute(
+  await expect(card.locator('app-oposicion-identidad img')).toHaveAttribute(
     'src',
     'oposiciones/alicante.png',
   );
   await expect
     .poll(() =>
       card
-        .locator('.alumno-plan-logo')
+        .locator('app-oposicion-identidad img')
         .evaluate((e: HTMLImageElement) => e.naturalWidth),
     )
     .toBeGreaterThan(0);
@@ -610,4 +625,50 @@ test('autoasignación desactivada oculta las acciones y no consulta su configura
     page.getByRole('button', { name: 'Cambiar planificación', exact: true }),
   ).toHaveCount(0);
   expect(reads).toBe(0);
+});
+
+test('el escudo de planificación corresponde al plan y no a la suscripción del alumno', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.route('**/user/planifications/*', (r) =>
+    r.fulfill({
+      json: [
+        {
+          planificacion: {
+            id: 55,
+            identificador: 'Plan Madrid',
+            relevancia: ['MADRID'],
+            subBloques: [],
+          },
+        },
+      ],
+    }),
+  );
+  await page.goto('/app/test/user/140?tab=planning');
+  const plan = page.locator('.ficha-assignment');
+  await expect(plan.locator('app-oposicion-identidad img')).toHaveAttribute(
+    'src',
+    'oposiciones/madrid.png',
+  );
+  await page.route('**/user/planifications/*', (r) =>
+    r.fulfill({
+      json: [
+        {
+          planificacion: {
+            id: 55,
+            identificador: 'Plan sin relevancia',
+            subBloques: [],
+          },
+        },
+      ],
+    }),
+  );
+  await page.reload();
+  await expect(plan).toContainText('Plan sin relevancia');
+  await expect(plan.locator('img')).toHaveCount(0);
+  await expect(plan.locator('.pi-calendar')).toBeVisible();
+  await expect(
+    plan.getByRole('button', { name: 'Ver planificación', exact: true }),
+  ).toBeVisible();
 });
