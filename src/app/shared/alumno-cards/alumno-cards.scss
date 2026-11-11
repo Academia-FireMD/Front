@@ -16,6 +16,8 @@
   min-width: 0;
 }
 .alumno-card-head {
+  background: var(--primary-color);
+  color: var(--p-primary-contrast-color, var(--primary-color-text));
   padding: 22px 24px;
   min-height: 91px;
   display: flex;
@@ -28,6 +30,7 @@
   min-width: 0;
 }
 .alumno-card-head h2 {
+  color: inherit;
   font-size: 18px;
   font-weight: 600;
   margin: 0;
@@ -36,7 +39,7 @@
 }
 .alumno-card-head p {
   font-size: 12px;
-  color: var(--text-color-secondary, #667085);
+  color: inherit;
   line-height: 1.6;
   margin: 4px 0 0;
   overflow-wrap: anywhere;
@@ -341,4 +344,16 @@
 }
 .alumno-info-fields dd {
   font-size: 16px;
+}
+
+.alumno-card-head .p-button {
+  color: inherit;
+}
+.alumno-card-head .p-button:not(:disabled):hover {
+  color: inherit;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.alumno-card-head .p-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }

@@ -81,6 +81,8 @@
   overflow: hidden;
 }
 .profile-panel-head {
+  background: var(--primary-color);
+  color: var(--p-primary-contrast-color, var(--primary-color-text));
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -89,13 +91,14 @@
   border-bottom: 1px solid var(--surface-border);
 }
 .profile-panel-head h2 {
+  color: inherit;
   font-size: 18px;
   margin: 0;
   line-height: 1.4;
 }
 .profile-panel-head p {
   font-size: 14px;
-  color: var(--text-color-secondary);
+  color: inherit;
   margin: 4px 0 0;
 }
 .profile-panel-body {
@@ -231,4 +234,16 @@
 .profile-grid > div > app-alumno-suscripciones {
   flex: 1;
   height: 100%;
+}
+
+[suscripciones-cabecera].p-button {
+  color: var(--p-primary-contrast-color, var(--primary-color-text));
+}
+[suscripciones-cabecera].p-button:not(:disabled):hover {
+  color: var(--p-primary-contrast-color, var(--primary-color-text));
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+[suscripciones-cabecera].p-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }

@@ -113,7 +113,11 @@ for (const width of [1440, 768, 390])
     });
     await expect(nativeButton).toHaveClass(/p-button/);
     await expect(nativeButton).toHaveCSS('font-size', '16px');
-    await expect(nativeButton).toHaveCSS('color', 'rgb(187, 41, 42)');
+    await expect(nativeButton).toHaveCSS('color', 'rgb(255, 255, 255)');
+    await expect(form.locator('.alumno-card-head')).toHaveCSS(
+      'background-color',
+      'rgb(187, 41, 42)',
+    );
     await expect(
       page.getByRole('button', { name: 'Vincular con WordPress', exact: true }),
     ).toBeVisible();
@@ -313,7 +317,10 @@ test('cancelar edición descarta borrador y el tema admite otro primario', async
   await page.reload();
   await expect(
     page.getByRole('button', { name: 'Editar', exact: true }),
-  ).toHaveCSS('color', 'rgb(18, 52, 86)');
+  ).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(
+    page.getByTestId('profile-main-card').locator('.alumno-card-head'),
+  ).toHaveCSS('background-color', 'rgb(18, 52, 86)');
 });
 test('un escudo de planificación que falla conserva nombre y acceso', async ({
   page,
@@ -329,4 +336,38 @@ test('un escudo de planificación que falla conserva nombre y acceso', async ({
   await expect(
     plan.getByRole('button', { name: 'Ver mi planificación', exact: true }),
   ).toBeVisible();
+});
+
+test('cabeceras mantienen contraste con un primario claro', async ({
+  page,
+}, info) => {
+  await openProfile(page);
+  await page.route('**/api/app-config', (r) =>
+    r.fulfill({
+      json: {
+        appName: 'Academia QA',
+        primaryColor: '#ffd54f',
+        secondaryColor: '#2c2c2c',
+        logoUrl: null,
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+  );
+  await page.reload();
+  const header = page
+    .getByTestId('profile-main-card')
+    .locator('.alumno-card-head');
+  await expect(header).toHaveCSS('background-color', 'rgb(255, 213, 79)');
+  await expect(header.getByRole('heading')).toHaveCSS('color', 'rgb(0, 0, 0)');
+  await expect(
+    header.getByRole('button', { name: 'Editar', exact: true }),
+  ).toHaveCSS('color', 'rgb(0, 0, 0)');
+  await expect(page.getByTestId('profile-facturas')).toHaveCSS(
+    'color',
+    'rgb(0, 0, 0)',
+  );
+  await page.screenshot({
+    path: info.outputPath('perfil-tema-claro.png'),
+    fullPage: true,
+  });
 });
