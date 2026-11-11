@@ -179,8 +179,10 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   expandedUserIds = new Set<number>();
   userPlanifications = new Map<number, any[]>();
   loadingPlanifications = new Set<number>();
+  planificationsErrors = new Set<number>();
   userMarcas = new Map<number, MarcaPersonal[]>();
   loadingMarcas = new Set<number>();
+  marcasErrors = new Set<number>();
 
   // Configuración de filtros para el GenericListComponent
   public filters = computed(() => {
@@ -936,6 +938,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   async loadUserPlanifications(userId: number) {
+    if (this.loadingPlanifications.has(userId)) return;
+    this.planificationsErrors.delete(userId);
     this.loadingPlanifications.add(userId);
     try {
       const planifications = await firstValueFrom(
@@ -943,6 +947,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       );
       this.userPlanifications.set(userId, planifications);
     } catch (error) {
+      this.planificationsErrors.add(userId);
       console.error('Error loading user planifications:', error);
     } finally {
       this.loadingPlanifications.delete(userId);
@@ -950,6 +955,8 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   async loadUserMarcas(userId: number) {
+    if (this.loadingMarcas.has(userId)) return;
+    this.marcasErrors.delete(userId);
     this.loadingMarcas.add(userId);
     try {
       const marcas = await firstValueFrom(
@@ -957,6 +964,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
       );
       this.userMarcas.set(userId, marcas);
     } catch (error) {
+      this.marcasErrors.add(userId);
       console.error('Error loading user marcas:', error);
     } finally {
       this.loadingMarcas.delete(userId);

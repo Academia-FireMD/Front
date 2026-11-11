@@ -503,3 +503,16 @@
 .ficha-form-grid > * {
   min-width: 0;
 }
+
+.ficha-assignment-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.ficha-assignment-head app-oposicion-identidad {
+  flex: 1;
+  min-width: 0;
+}
+.ficha-assignment-head > button {
+  flex-shrink: 0;
+}

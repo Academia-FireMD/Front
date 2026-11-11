@@ -137,13 +137,42 @@ export class AlumnoDetailviewComponent {
   private finOperacion: Promise<boolean> | null = null;
   private resolverOperacion: ((ok: boolean) => void) | null = null;
   @ViewChild('tituloFicha') titulo?: ElementRef<HTMLElement>;
-  readonly secciones: { id: SeccionAlumno; label: string; icon: string }[] = [
+  private readonly seccionesBase: {
+    id: SeccionAlumno;
+    label: string;
+    icon: string;
+  }[] = [
     { id: 'info', label: 'Información personal', icon: 'user' },
     { id: 'access', label: 'Acceso y suscripciones', icon: 'id-card' },
     { id: 'woo', label: 'WooCommerce', icon: 'credit-card' },
     { id: 'planning', label: 'Planificaciones y marcas', icon: 'calendar' },
     { id: 'activity', label: 'Actividad', icon: 'history' },
   ];
+  get puedeVerWoo(): boolean {
+    const gestion = this.ficha?.gestion;
+    return (
+      !!gestion &&
+      (gestion.tipo === 'WOOCOMMERCE' ||
+        gestion.tipo === 'MIXTA' ||
+        gestion.capacidades.puedeGestionarWoo)
+    );
+  }
+  get secciones() {
+    return this.seccionesBase.filter(
+      (s) => s.id !== 'woo' || !this.ficha || this.puedeVerWoo,
+    );
+  }
+  private normalizarSeccion(): void {
+    if (this.ficha && !this.secciones.some((s) => s.id === this.seccion)) {
+      this.seccion = 'access';
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { tab: 'access' },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+  }
   readonly autoasignacionHabilitada = computed(
     () =>
       this.appConfig.estadoModulos()[ModuloApp.PLANIFICACION_AUTOASIGNACION] ===
@@ -286,7 +315,10 @@ export class AlumnoDetailviewComponent {
         this.seccion = this.secciones.some((s) => s.id === tab)
           ? (tab as SeccionAlumno)
           : 'access';
-        if (this.ficha) this.cargarSeccion();
+        if (this.ficha) {
+          this.normalizarSeccion();
+          this.cargarSeccion();
+        }
       });
     this.route.paramMap
       .pipe(
@@ -339,6 +371,7 @@ export class AlumnoDetailviewComponent {
         if (!ficha) return;
         this.error = '';
         this.ficha = ficha;
+        this.normalizarSeccion();
         this.cargarSeccion();
       });
   }
@@ -412,7 +445,7 @@ export class AlumnoDetailviewComponent {
     );
   }
   cambiarSeccion(seccion: SeccionAlumno) {
-    if (this.ocupado) return;
+    if (this.ocupado || !this.secciones.some((s) => s.id === seccion)) return;
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: seccion },
@@ -828,7 +861,7 @@ export class AlumnoDetailviewComponent {
     }
   }
   async cargarWoo() {
-    if (this.cargandoWoo) return;
+    if (this.cargandoWoo || !this.puedeVerWoo) return;
     const id = this.id,
       version = this.versionRuta;
     this.cargandoWoo = true;

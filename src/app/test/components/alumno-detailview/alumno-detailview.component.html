@@ -501,30 +501,40 @@
             </p>
             <div class="alumno-card-body">
               <div *ngFor="let a of planificaciones" class="ficha-assignment">
-                <app-oposicion-identidad
-                  [oposiciones]="a.planificacion.relevancia"
-                >
-                  <h3>{{ a.planificacion.identificador }}</h3>
-                  <p>{{ a.planificacion.descripcion }}</p>
-                </app-oposicion-identidad>
-                <span class="alumno-badge"
-                  >{{ a.planificacion.subBloques?.length || 0 }} bloques</span
-                >
-                <div class="ficha-button-row">
+                <div class="ficha-assignment-head">
+                  <app-oposicion-identidad
+                    [oposiciones]="a.planificacion.relevancia"
+                  >
+                    <h3>{{ a.planificacion.identificador }}</h3>
+                    <p>{{ a.planificacion.descripcion }}</p>
+                    <span class="alumno-badge"
+                      >{{
+                        a.planificacion.subBloques?.length || 0
+                      }}
+                      bloques</span
+                    >
+                  </app-oposicion-identidad>
                   <button
                     pButton
                     type="button"
-                    class="alumno-btn p-button-outlined"
+                    class="p-button-text p-button-rounded"
+                    icon="pi pi-eye"
+                    [attr.aria-label]="
+                      'Ver planificación ' + a.planificacion.identificador
+                    "
+                    pTooltip="Ver planificación"
                     (click)="verPlanificacion(a.planificacion.id)"
-                  >
-                    <i class="pi pi-eye" aria-hidden="true"></i>Ver
-                    planificación</button
-                  ><button
+                  ></button>
+                </div>
+                <div
+                  class="ficha-button-row"
+                  *ngIf="data.accionesPlanificacion?.puedeDesvincular"
+                >
+                  <button
                     pButton
                     type="button"
                     class="alumno-link p-button-text"
                     (click)="desvincular(a.planificacion.id)"
-                    *ngIf="data.accionesPlanificacion?.puedeDesvincular"
                     [disabled]="ocupado"
                   >
                     Desvincular

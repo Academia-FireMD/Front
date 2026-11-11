@@ -132,3 +132,54 @@
     white-space: nowrap !important;
   }
 }
+
+.user-quickview {
+  border-top: 1px solid var(--surface-border);
+  padding: 16px 0 0;
+  margin-top: 12px;
+  cursor: default;
+}
+.quickview-data,
+.quickview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+.quickview-data dt {
+  color: var(--text-color-secondary);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.quickview-data dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.quickview-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 16px;
+}
+.quickview-grid h3 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+.quickview-grid p {
+  color: var(--text-color-secondary);
+}
+.quickview-plan {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.quickview-plan span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .quickview-data,
+  .quickview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -36,7 +36,7 @@ const ficha = (id = 140) => ({
   gestion: {
     tipo: 'EXTERNA',
     comprobadaEn: new Date().toISOString(),
-    motivo: null,
+    motivo: null as string | null,
     capacidades: {
       puedeDarBajaExterna: true,
       puedeEliminar: true,
@@ -201,7 +201,7 @@ test('el listado abre la ficha y conserva filtros al volver', async ({
 }) => {
   await setup(page);
   await page.goto('/app/test/user?page=3&search=Diego');
-  await page.getByRole('button', { name: 'Ver ficha' }).first().click();
+  await page.locator('app-user-dashboard .identifier').first().click();
   await expect(page).toHaveURL(/\/user\/140\?/);
   await expect(page).toHaveURL(/search=Diego/);
   await page.getByRole('button', { name: 'Usuarios', exact: true }).click();
@@ -325,6 +325,10 @@ test('Woo es lazy y un timeout no repite el cobro al verificar', async ({
   page,
 }) => {
   await setup(page);
+  const detalleWoo = ficha();
+  detalleWoo.gestion.tipo = 'MIXTA' as any;
+  detalleWoo.gestion.capacidades.puedeGestionarWoo = true;
+  await page.route('**/user/admin/140', (r) => r.fulfill({ json: detalleWoo }));
   let reads = 0,
     writes = 0,
     queries = 0;
@@ -669,7 +673,7 @@ test('el escudo de planificación corresponde al plan y no a la suscripción del
   await expect(plan.locator('img')).toHaveCount(0);
   await expect(plan.locator('.pi-calendar')).toBeVisible();
   await expect(
-    plan.getByRole('button', { name: 'Ver planificación', exact: true }),
+    plan.getByRole('button', { name: /^Ver planificación/ }),
   ).toBeVisible();
 });
 
@@ -709,4 +713,185 @@ test('nombre del lateral legible y pestañas con subrayado recto', async ({
   await expect(
     page.getByRole('tab', { name: 'Información personal', exact: true }),
   ).toHaveCSS('border-radius', '0px');
+});
+
+for (const tipo of [
+  'EXTERNA',
+  'WOOCOMMERCE',
+  'MIXTA',
+  'POR_VERIFICAR',
+] as const)
+  test(`WooCommerce corresponde a gestión ${tipo} y normaliza acceso directo`, async ({
+    page,
+  }) => {
+    await setup(page);
+    const data = ficha();
+    data.gestion.tipo = tipo as any;
+    data.gestion.capacidades.puedeGestionarWoo =
+      tipo === 'WOOCOMMERCE' || tipo === 'MIXTA';
+    data.gestion.motivo =
+      tipo === 'POR_VERIFICAR' ? 'Origen pendiente de verificar' : null;
+    await page.route('**/user/admin/140', (r) => r.fulfill({ json: data }));
+    let reads = 0;
+    await page.route('**/user/admin/140/woocommerce', (r) => {
+      reads++;
+      return r.fulfill({ json: woo });
+    });
+    await page.goto('/app/test/user/140?tab=woo&page=3&search=Diego');
+    if (tipo === 'EXTERNA' || tipo === 'POR_VERIFICAR') {
+      await expect(
+        page.getByRole('tab', { name: 'WooCommerce', exact: true }),
+      ).toHaveCount(0);
+      await expect(page).toHaveURL(/tab=access/);
+      await expect(page).toHaveURL(/search=Diego/);
+      expect(reads).toBe(0);
+      if (tipo === 'POR_VERIFICAR')
+        await expect(
+          page.getByText('Origen pendiente de verificar'),
+        ).toBeVisible();
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(
+        page.getByTestId('ficha-mobile-section').locator('option[value="woo"]'),
+      ).toHaveCount(0);
+    } else {
+      await expect(
+        page.getByRole('tab', { name: 'WooCommerce', exact: true }),
+      ).toBeVisible();
+      await expect.poll(() => reads).toBe(1);
+    }
+  });
+
+for (const width of [1440, 390])
+  test(`resumen expandible conserva fila, caché y ficha a ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 940 });
+    await setup(page);
+    let reads = 0;
+    await page.route('**/user/planifications/140', (r) => {
+      reads++;
+      return r.fulfill({
+        json: [
+          {
+            planificacion: {
+              id: 55,
+              identificador: 'Plan de Diego',
+              descripcion: 'Teoría',
+            },
+          },
+        ],
+      });
+    });
+    await page.goto('/app/test/user?page=3&search=Diego');
+    await expect(
+      page.getByRole('button', { name: 'Ver ficha', exact: true }),
+    ).toHaveCount(0);
+    const expand = page.getByTestId('user-expand').first();
+    await expand.click();
+    const panel = page.getByTestId('user-quickview-140');
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText('Plan de Diego');
+    await expect(panel).toContainText('alumno140@example.test');
+    await expect(panel.getByRole('alert')).toContainText(
+      'No se pudieron cargar las marcas',
+    );
+    await expect(page).toHaveURL(/\/test\/user\?/);
+    await panel.getByText('Ficha personal', { exact: true }).click();
+    await expect(page).toHaveURL(/\/test\/user\?/);
+    await expand.click();
+    await expect(panel).toHaveCount(0);
+    await expand.click();
+    await expect(panel).toBeVisible();
+    expect(reads).toBe(1);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`alumnos-resumen-${width}.png`),
+      fullPage: true,
+    });
+    await page.locator('app-user-dashboard .identifier').first().click();
+    await expect(page).toHaveURL(/\/user\/140\?/);
+    await expect(page).toHaveURL(/search=Diego/);
+  });
+
+test('abrir planificación queda alineado con su identidad', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.goto('/app/test/user/140?tab=planning');
+  const row = page.locator('.ficha-assignment').first();
+  const name = row.getByRole('heading', { name: 'Plan de Diego', exact: true });
+  const button = row.getByRole('button', {
+    name: 'Ver planificación Plan de Diego',
+    exact: true,
+  });
+  await expect(button).toBeVisible();
+  const a = await name.boundingBox(),
+    b = await button.boundingBox();
+  expect(Math.abs(a!.y - b!.y)).toBeLessThan(20);
+  expect(b!.x).toBeGreaterThan(a!.x);
+});
+
+test('selección de alumno en factura conserva checkbox y oculta expansión', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.route('**/admin/facturas**', (r) =>
+    r.fulfill({
+      json: {
+        facturas: [],
+        total: 0,
+        pagina: 1,
+        porPagina: 10,
+        totalPaginas: 0,
+      },
+    }),
+  );
+  await page.goto('/app/facturacion');
+  await page.getByRole('button', { name: /Nueva factura/ }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('user-expand')).toHaveCount(0);
+  const checkbox = dialog.getByRole('checkbox').first();
+  await dialog.locator('.p-checkbox-box').first().click();
+  await expect(checkbox).toBeChecked();
+  await expect(
+    dialog.getByRole('button', { name: /Confirmar selección/ }),
+  ).toBeEnabled();
+  await expect(dialog.locator('.user-quickview')).toHaveCount(0);
+  await expect(page).toHaveURL(/\/app\/facturacion/);
+});
+
+test('resumen permite reintentar una lectura fallida sin abrir la ficha', async ({
+  page,
+}) => {
+  await setup(page);
+  let reads = 0;
+  await page.route('**/user/planifications/140', (r) => {
+    reads++;
+    return r.fulfill(
+      reads === 1
+        ? { status: 503, json: { message: 'QA' } }
+        : {
+            json: [
+              { planificacion: { id: 55, identificador: 'Plan recuperado' } },
+            ],
+          },
+    );
+  });
+  await page.goto('/app/test/user');
+  await page.getByTestId('user-expand').first().click();
+  const panel = page.getByTestId('user-quickview-140');
+  await expect(
+    panel.getByRole('button', { name: 'Reintentar planificaciones' }),
+  ).toBeVisible();
+  await panel
+    .getByRole('button', { name: 'Reintentar planificaciones' })
+    .click();
+  await expect(panel).toContainText('Plan recuperado');
+  expect(reads).toBe(2);
+  await expect(page).toHaveURL(/\/test\/user$/);
 });

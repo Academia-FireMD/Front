@@ -117,6 +117,7 @@
 </p-dialog>
 
 <app-generic-list
+  [autoItemHeight]="mode === 'overview'"
   [fetchItems$]="fetchItems$"
   [itemTemplate]="userItemTemplate"
   [filters]="filters()"
@@ -274,13 +275,120 @@
       class="right-side col-3 flex align-items-center justify-content-end"
     >
       <button
+        *ngIf="viewerEsAdminOSuperior"
+        pButton
         type="button"
-        class="p-button p-button-outlined p-button-sm"
-        (click)="$event.stopPropagation(); onItemClick(item)"
-        data-testid="user-open-detail"
-      >
-        Ver ficha<i class="pi pi-arrow-right ml-2" aria-hidden="true"></i>
-      </button>
+        class="p-button-text p-button-rounded"
+        [icon]="
+          isUserExpanded(item.id) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'
+        "
+        (click)="toggleUserExpansion(item.id, $event)"
+        [attr.aria-label]="
+          (isUserExpanded(item.id)
+            ? 'Ocultar resumen de '
+            : 'Mostrar resumen de ') + item.email
+        "
+        [attr.aria-expanded]="isUserExpanded(item.id)"
+        [attr.aria-controls]="'alumno-resumen-' + item.id"
+        data-testid="user-expand"
+      ></button>
     </div>
   </div>
+  <section
+    *ngIf="
+      mode === 'overview' && viewerEsAdminOSuperior && isUserExpanded(item.id)
+    "
+    class="user-quickview"
+    [id]="'alumno-resumen-' + item.id"
+    [attr.aria-label]="'Resumen de ' + item.email"
+    [attr.data-testid]="'user-quickview-' + item.id"
+    data-prevent-item-click
+  >
+    <dl class="quickview-data">
+      <div>
+        <dt>Email</dt>
+        <dd>{{ item.email }}</dd>
+      </div>
+      <div>
+        <dt>DNI / NIE</dt>
+        <dd>{{ item.dni || "No proporcionado" }}</dd>
+      </div>
+      <div>
+        <dt>Ficha personal</dt>
+        <dd>{{ getOnboardingCompletionPercentage(item) }} % completada</dd>
+      </div>
+    </dl>
+    <div class="quickview-grid">
+      <div>
+        <h3>Planificaciones</h3>
+        <p *ngIf="isLoadingPlanifications(item.id)" role="status">
+          Cargando planificaciones…
+        </p>
+        <div *ngIf="planificationsErrors.has(item.id)" role="alert">
+          No se pudieron cargar las planificaciones.
+          <button
+            pButton
+            type="button"
+            class="p-button-text"
+            (click)="loadUserPlanifications(item.id)"
+          >
+            Reintentar planificaciones
+          </button>
+        </div>
+        <ng-container
+          *ngIf="
+            !isLoadingPlanifications(item.id) &&
+            !planificationsErrors.has(item.id)
+          "
+        >
+          <p *ngIf="!getUserPlanifications(item.id).length">
+            Sin planificación asignada.
+          </p>
+          <div
+            class="quickview-plan"
+            *ngFor="let asignacion of getUserPlanifications(item.id)"
+          >
+            <span>{{ asignacion.planificacion.identificador }}</span>
+            <button
+              pButton
+              type="button"
+              class="p-button-text p-button-rounded"
+              icon="pi pi-eye"
+              [attr.aria-label]="
+                'Ver planificación ' + asignacion.planificacion.identificador
+              "
+              (click)="verPlanificacion(asignacion.planificacion.id)"
+            ></button>
+          </div>
+        </ng-container>
+      </div>
+      <div *ngIf="planificacionFisicaHabilitada()">
+        <h3>Marcas físicas recientes</h3>
+        <p *ngIf="isLoadingMarcas(item.id)" role="status">Cargando marcas…</p>
+        <div *ngIf="marcasErrors.has(item.id)" role="alert">
+          No se pudieron cargar las marcas.
+          <button
+            pButton
+            type="button"
+            class="p-button-text"
+            (click)="loadUserMarcas(item.id)"
+          >
+            Reintentar marcas
+          </button>
+        </div>
+        <ng-container
+          *ngIf="!isLoadingMarcas(item.id) && !marcasErrors.has(item.id)"
+        >
+          <p *ngIf="!getUserMarcas(item.id).length">Sin marcas registradas.</p>
+          <div
+            class="quickview-plan"
+            *ngFor="let marca of getUserMarcas(item.id) | slice: 0 : 3"
+          >
+            <span>{{ marca.pruebaNombre }}</span
+            ><strong>{{ marca.valor }} {{ marca.unidad }}</strong>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </section>
 </ng-template>
