@@ -100,6 +100,12 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   labelsService = inject(LabelsService);
   planificacionFisicaService = inject(PlanificacionFisicaService);
   appConfigService = inject(AppConfigService);
+  autoasignacionHabilitada = computed(
+    () =>
+      this.appConfigService.estadoModulos()[
+        ModuloApp.PLANIFICACION_AUTOASIGNACION
+      ] === true,
+  );
 
   /** Bridge física: el tab de marcas personales y su carga lazy solo están
    * disponibles cuando el módulo PLANIFICACION_FISICA está habilitado. */

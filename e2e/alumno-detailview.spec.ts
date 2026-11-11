@@ -806,12 +806,21 @@ for (const width of [1440, 390])
     const panel = page.getByTestId('user-quickview-140');
     await expect(panel).toBeVisible();
     await expect(panel).toContainText('Plan de Diego');
-    await expect(panel).toContainText('alumno140@example.test');
+    await expect(
+      panel.getByRole('tab', { name: /Información Personal$/ }),
+    ).toBeVisible();
+    await panel.getByRole('tab', { name: /Marcas físicas$/ }).click();
     await expect(panel.getByRole('alert')).toContainText(
       'No se pudieron cargar las marcas',
     );
     await expect(page).toHaveURL(/\/test\/user\?/);
-    await panel.getByText('Ficha personal', { exact: true }).click();
+    await panel.getByRole('tab', { name: /Información Personal$/ }).click();
+    await panel.getByRole('tab', { name: /Datos Personales$/ }).click();
+    await expect(panel).toContainText('DNI:');
+    for (const tab of ['Formación', 'Objetivos', 'Academia', 'Comentarios'])
+      await expect(
+        panel.getByRole('tab', { name: new RegExp(tab + '$') }),
+      ).toBeVisible();
     await expect(page).toHaveURL(/\/test\/user\?/);
     await expand.click();
     await expect(panel).toHaveCount(0);
@@ -911,7 +920,7 @@ test('resumen permite reintentar una lectura fallida sin abrir la ficha', async 
   await expect(page).toHaveURL(/\/test\/user$/);
 });
 
-test('resumen reintenta marcas y muestra las tres más recientes entre pruebas', async ({
+test('resumen original reintenta marcas y conserva el historial completo', async ({
   page,
 }) => {
   await setup(page);
@@ -967,33 +976,19 @@ test('resumen reintenta marcas y muestra las tres más recientes entre pruebas',
   await page.goto('/app/test/user');
   await page.getByTestId('user-expand').first().click();
   const panel = page.getByTestId('user-quickview-140');
+  await panel.getByRole('tab', { name: /Marcas físicas$/ }).click();
   await panel
     .getByRole('button', { name: 'Reintentar marcas', exact: true })
     .click();
-  const section = panel
-    .locator('div')
-    .filter({
-      has: page.getByRole('heading', {
-        name: 'Marcas físicas recientes',
-        exact: true,
-      }),
-    })
-    .last();
-  await expect(section.locator('.quickview-plan span')).toHaveText([
-    'Press reciente',
-    'Natación reciente',
-    'Carrera antigua',
-  ]);
-  await expect(section).not.toContainText('Carrera anterior');
-  await expect(section).not.toContainText('Carrera inicial');
+  const section = panel.locator('.marcas-content');
+  await expect(section.locator('.marca-card')).toHaveCount(5);
+  await expect(section).toContainText('Press reciente');
+  await expect(section).toContainText('Carrera inicial');
   await expect(page).toHaveURL(/\/test\/user$/);
   await page.getByTestId('user-expand').first().click();
   await page.getByTestId('user-expand').first().click();
-  await expect(section.locator('.quickview-plan span')).toHaveText([
-    'Press reciente',
-    'Natación reciente',
-    'Carrera antigua',
-  ]);
+  await panel.getByRole('tab', { name: /Marcas físicas$/ }).click();
+  await expect(section.locator('.marca-card')).toHaveCount(5);
   expect(reads).toBe(2);
 });
 
