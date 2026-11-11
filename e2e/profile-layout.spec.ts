@@ -107,6 +107,23 @@ for (const width of [1440, 768, 390])
     await expect(
       page.getByTestId('profile-planning-card').locator('img'),
     ).toHaveAttribute('src', 'oposiciones/madrid.png');
+    const assigned = page.locator('.profile-assigned-plan').first();
+    const viewPlan = assigned.getByRole('button', {
+      name: 'Ver mi planificación',
+      exact: true,
+    });
+    const planName = assigned.getByRole('heading', {
+      name: 'Plan de estudio Madrid',
+      exact: true,
+    });
+    await expect(viewPlan).toBeVisible();
+    const viewBox = await viewPlan.boundingBox(),
+      planBox = await planName.boundingBox();
+    expect(Math.abs(viewBox!.y - planBox!.y)).toBeLessThan(20);
+    expect(viewBox!.x).toBeGreaterThan(planBox!.x);
+    await expect(
+      subs.getByRole('button', { name: /Acciones del plan/ }),
+    ).toHaveCount(2);
     const nativeButton = form.getByRole('button', {
       name: 'Editar',
       exact: true,
@@ -241,7 +258,10 @@ test('WooCommerce conserva cambiar oposición, plan, tarjeta y baja en su menú'
 }) => {
   await openProfile(page, 'ALUMNO', true);
   await page
-    .getByRole('button', { name: 'Gestionar plan Premium', exact: true })
+    .getByRole('button', {
+      name: 'Acciones del plan Valencia Ayuntamiento · Premium',
+      exact: true,
+    })
     .click();
   for (const label of [
     'Cambiar oposición',

@@ -525,20 +525,31 @@
                     pTooltip="Ver planificación"
                     (click)="verPlanificacion(a.planificacion.id)"
                   ></button>
-                </div>
-                <div
-                  class="ficha-button-row"
-                  *ngIf="data.accionesPlanificacion?.puedeDesvincular"
-                >
-                  <button
-                    pButton
-                    type="button"
-                    class="alumno-link p-button-text"
-                    (click)="desvincular(a.planificacion.id)"
-                    [disabled]="ocupado"
+                  <ng-container
+                    *ngIf="data.accionesPlanificacion?.puedeDesvincular"
                   >
-                    Desvincular
-                  </button>
+                    <p-menu
+                      #planMenu
+                      [popup]="true"
+                      [model]="menuPlanificacion(a.planificacion.id)"
+                      appendTo="body"
+                    ></p-menu>
+                    <button
+                      pButton
+                      type="button"
+                      class="p-button-text p-button-rounded p-button-icon-only"
+                      icon="pi pi-ellipsis-v"
+                      [attr.aria-label]="
+                        'Acciones de planificación ' +
+                        a.planificacion.identificador
+                      "
+                      aria-haspopup="menu"
+                      [attr.aria-controls]="planMenu.id"
+                      [attr.aria-expanded]="planMenu.visible || false"
+                      [disabled]="ocupado"
+                      (click)="planMenu.toggle($event)"
+                    ></button>
+                  </ng-container>
                 </div>
               </div>
               <div *ngIf="!planificaciones.length" class="alumno-empty">

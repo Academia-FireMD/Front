@@ -478,8 +478,9 @@ test('administración recupera logos, fechas y eliminación de un registro exter
     )
     .toBeGreaterThan(0);
   await expect(card).toContainText('Desde 1 oct 2026');
-  await card
-    .getByRole('button', { name: 'Eliminar registro', exact: true })
+  await card.getByRole('button', { name: /Acciones del plan/ }).click();
+  await page
+    .getByRole('menuitem', { name: 'Eliminar registro', exact: true })
     .click();
   await expect(page.getByRole('dialog')).toContainText('permanentemente');
   expect(writes).toBe(0);
@@ -487,9 +488,11 @@ test('administración recupera logos, fechas y eliminación de un registro exter
     .getByRole('dialog')
     .getByRole('button', { name: 'Volver', exact: true })
     .click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(writes).toBe(0);
-  await card
-    .getByRole('button', { name: 'Eliminar registro', exact: true })
+  await card.getByRole('button', { name: /Acciones del plan/ }).click();
+  await page
+    .getByRole('menuitem', { name: 'Eliminar registro', exact: true })
     .click();
   await page.getByTestId('admin-confirm-action').click();
   await expect(page.getByTestId('admin-operation-result')).toContainText(
@@ -519,9 +522,20 @@ test('la ficha Woo no muestra eliminación local de su plan', async ({
       .getByTestId('alumno-suscripciones')
       .getByRole('button', { name: 'Eliminar registro', exact: true }),
   ).toHaveCount(0);
+  await page
+    .getByTestId('alumno-suscripciones')
+    .getByRole('button', { name: /Acciones del plan/ })
+    .click();
   await expect(
-    page.getByRole('button', { name: 'Ver WooCommerce', exact: true }),
-  ).toBeVisible();
+    page.getByRole('menuitem', { name: 'Eliminar registro', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('menuitem', { name: 'Editar plan', exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole('menuitem', { name: 'Ver WooCommerce', exact: true })
+    .click();
+  await expect(page).toHaveURL(/tab=woo/);
 });
 
 test('la ficha recupera recomendar nivel sobre el alumno seleccionado', async ({
@@ -981,4 +995,164 @@ test('resumen reintenta marcas y muestra las tres más recientes entre pruebas',
     'Carrera antigua',
   ]);
   expect(reads).toBe(2);
+});
+
+for (const width of [1440, 390])
+  test(`menús compactos de suscripción conservan alumno, plan y teclado a ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 940 });
+    await setup(page);
+    const data = ficha();
+    data.usuario.suscripciones.push({
+      ...data.usuario.suscripciones[0],
+      id: 12,
+      oposicion: 'MADRID',
+    });
+    data.gestion.capacidades.suscripcionesExternas = [11, 12];
+    await page.route('**/user/admin/140', (r) => r.fulfill({ json: data }));
+    let writes = 0;
+    await page.route('**/user/subscription/**', (r) => {
+      writes++;
+      return r.fulfill({ json: {} });
+    });
+    await page.goto('/app/test/user/140?tab=access');
+    const card = page.getByTestId('alumno-suscripciones');
+    const triggers = card.getByRole('button', { name: /Acciones del plan/ });
+    await expect(triggers).toHaveCount(2);
+    await expect(
+      card.getByRole('button', { name: 'Editar plan', exact: true }),
+    ).toHaveCount(0);
+    for (const trigger of await triggers.all()) {
+      await expect(trigger.locator('.pi-ellipsis-v')).toBeVisible();
+      const box = await trigger.boundingBox();
+      expect(box!.width).toBeGreaterThanOrEqual(36);
+      expect(box!.height).toBeGreaterThanOrEqual(36);
+    }
+    await card.screenshot({
+      path: info.outputPath(`suscripciones-compactas-${width}.png`),
+    });
+    const madrid = card.getByRole('button', {
+      name: 'Acciones del plan Madrid · Avanzado',
+      exact: true,
+    });
+    await madrid.focus();
+    await page.keyboard.press('Enter');
+    const menuId = await madrid.getAttribute('aria-controls');
+    const menu = page.locator(`[id="${menuId}"]`).getByRole('menu');
+    await expect(menu).toBeVisible();
+    await expect(madrid).toHaveAttribute('aria-expanded', 'true');
+    await expect(menu.getByRole('menuitem')).toHaveText([
+      'Editar plan',
+      'Cancelar este plan',
+      'Eliminar registro',
+    ]);
+    const box = await menu.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: info.outputPath(`menu-suscripcion-${width}.png`),
+      fullPage: true,
+    });
+    await page.keyboard.press('Escape');
+    await expect(menu).not.toBeVisible();
+    await expect(madrid).toBeFocused();
+    await expect(madrid).toHaveAttribute('aria-expanded', 'false');
+    await madrid.click();
+    await page
+      .getByRole('heading', { name: 'Suscripciones del alumno', exact: true })
+      .click();
+    await expect(menu).not.toBeVisible();
+    await madrid.click();
+    await page
+      .getByRole('menuitem', { name: 'Editar plan', exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole('dialog')
+        .getByRole('combobox', { name: 'Oposición', exact: true }),
+    ).toHaveValue('MADRID');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await madrid.click();
+    await page
+      .getByRole('menuitem', { name: 'Cancelar este plan', exact: true })
+      .click();
+    await expect(page.getByRole('dialog')).toContainText('Madrid');
+    await expect(page.getByRole('dialog')).not.toContainText('CPBA Alicante');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(writes).toBe(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
+test('menú conserva cancelación deshabilitada para un plan inactivo', async ({
+  page,
+}) => {
+  await setup(page);
+  const data = ficha();
+  data.usuario.suscripciones[0].status = 'CANCELLED';
+  await page.route('**/user/admin/140', (r) => r.fulfill({ json: data }));
+  await page.goto('/app/test/user/140?tab=access');
+  await page
+    .getByTestId('alumno-suscripciones')
+    .getByRole('button', { name: /Acciones del plan/ })
+    .click();
+  await expect(
+    page.getByRole('menuitem', { name: 'Cancelar este plan', exact: true }),
+  ).toHaveAttribute('aria-disabled', 'true');
+  await expect(
+    page.getByRole('menuitem', { name: 'Editar plan', exact: true }),
+  ).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(
+    page.getByRole('menuitem', { name: 'Eliminar registro', exact: true }),
+  ).not.toHaveAttribute('aria-disabled', 'true');
+});
+
+test('desvincular planificación pasa al menú conservando confirmación y permiso', async ({
+  page,
+}) => {
+  await setup(page);
+  let puedeDesvincular = true;
+  await page.route('**/user/admin/140', (r) =>
+    r.fulfill({
+      json: {
+        ...ficha(),
+        accionesPlanificacion: { puedeDesvincular },
+      },
+    }),
+  );
+  await page.goto('/app/test/user/140?tab=planning');
+  const row = page.locator('.ficha-assignment').first();
+  await expect(
+    row.getByRole('button', { name: 'Desvincular', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    row.getByRole('button', {
+      name: 'Ver planificación Plan de Diego',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await row
+    .getByRole('button', {
+      name: 'Acciones de planificación Plan de Diego',
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole('menuitem', { name: 'Desvincular', exact: true })
+    .click();
+  await expect(page.getByRole('dialog')).toContainText(
+    'La planificación compartida y sus otros alumnos se conservan.',
+  );
+  await page.keyboard.press('Escape');
+  puedeDesvincular = false;
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: /Acciones de planificación/ }),
+  ).toHaveCount(0);
 });

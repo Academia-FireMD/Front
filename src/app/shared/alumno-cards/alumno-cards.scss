@@ -235,17 +235,6 @@
   color: var(--text-color-secondary);
   margin: 18px 0;
 }
-@media (max-width: 1050px) {
-  .alumno-plan-row {
-    flex-direction: column;
-  }
-  .alumno-plan-side {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-  }
-}
 @media (max-width: 800px) {
   .alumno-info-grid {
     grid-template-columns: minmax(0, 1fr);

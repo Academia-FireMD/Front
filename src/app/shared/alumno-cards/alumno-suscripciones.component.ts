@@ -105,67 +105,32 @@ import {
                 ? 'Baja pendiente'
                 : estadoLabel(s.status)
           }}</span
-        ><ng-container *ngIf="perfil; else adminActions"
-          ><p-menu
+        >
+        <ng-container *ngIf="!perfil || acciones(s).length">
+          <p-menu
             #menu
             [popup]="true"
-            [model]="acciones(s)"
+            [model]="perfil ? acciones(s) : accionesAdmin(s)"
             appendTo="body"
-          ></p-menu
-          ><button
+          ></p-menu>
+          <button
             pButton
             type="button"
-            class="alumno-link p-button-text"
+            class="p-button-text p-button-rounded p-button-icon-only"
+            icon="pi pi-ellipsis-v"
             (click)="menu.toggle($event)"
-            [attr.aria-label]="'Gestionar plan ' + planLabel(s.tipo)"
+            [disabled]="ocupado"
+            [attr.aria-label]="
+              'Acciones del plan ' +
+              oposicionLabel(s.oposicion) +
+              ' · ' +
+              planLabel(s.tipo)
+            "
             aria-haspopup="menu"
-          >
-            Gestionar plan<i
-              class="pi pi-angle-right"
-              aria-hidden="true"
-            ></i></button></ng-container
-        ><ng-template #adminActions
-          ><button
-            pButton
-            type="button"
-            class="alumno-link p-button-text"
-            *ngIf="gestion?.tipo === 'EXTERNA' && esExterna(s)"
-            (click)="editarPlan.emit(s)"
-            [disabled]="ocupado"
-          >
-            Editar plan</button
-          ><button
-            pButton
-            *ngIf="esExterna(s); else wooAction"
-            type="button"
-            class="alumno-link p-button-text"
-            [disabled]="ocupado || !vigente(s)"
-            (click)="cancelar.emit(s)"
-            [attr.data-testid]="'cancel-plan-' + s.id"
-          >
-            Cancelar este plan</button
-          ><button
-            pButton
-            *ngIf="esExterna(s)"
-            type="button"
-            class="alumno-link alumno-plan-delete p-button-text p-button-danger"
-            [disabled]="ocupado"
-            (click)="eliminarPlan.emit(s)"
-            [attr.data-testid]="'delete-plan-' + s.id"
-          >
-            Eliminar registro</button
-          ><ng-template #wooAction
-            ><button
-              pButton
-              type="button"
-              class="alumno-link p-button-text"
-              (click)="gestionarWoo.emit(s)"
-            >
-              Ver WooCommerce<i
-                class="pi pi-arrow-right"
-                aria-hidden="true"
-              ></i></button></ng-template
-        ></ng-template>
+            [attr.aria-expanded]="menu.visible || false"
+            [attr.aria-controls]="menu.id"
+          ></button>
+        </ng-container>
       </div>
     </div>
     <div class="alumno-card-foot" *ngIf="perfil">
@@ -199,6 +164,51 @@ export class AlumnoSuscripcionesComponent {
       ['ACTIVE', 'PENDING_CANCEL'].includes(s.status) &&
       (!s.fechaFin || new Date(s.fechaFin).getTime() > Date.now())
     );
+  }
+  accionesAdmin(s: Suscripcion): MenuItem[] {
+    if (!this.esExterna(s)) {
+      return [
+        {
+          label: 'Ver WooCommerce',
+          icon: 'pi pi-external-link',
+          disabled: this.ocupado,
+          command: () => {
+            if (!this.ocupado) this.gestionarWoo.emit(s);
+          },
+        },
+      ];
+    }
+    const items: MenuItem[] = [];
+    if (this.gestion?.tipo === 'EXTERNA') {
+      items.push({
+        label: 'Editar plan',
+        icon: 'pi pi-pencil',
+        disabled: this.ocupado,
+        command: () => {
+          if (!this.ocupado) this.editarPlan.emit(s);
+        },
+      });
+    }
+    items.push(
+      {
+        label: 'Cancelar este plan',
+        icon: 'pi pi-ban',
+        disabled: this.ocupado || !this.vigente(s),
+        command: () => {
+          if (!this.ocupado && this.vigente(s)) this.cancelar.emit(s);
+        },
+      },
+      { separator: true },
+      {
+        label: 'Eliminar registro',
+        icon: 'pi pi-trash',
+        disabled: this.ocupado,
+        command: () => {
+          if (!this.ocupado) this.eliminarPlan.emit(s);
+        },
+      },
+    );
+    return items;
   }
   trackId(_: number, s: Suscripcion) {
     return s.id;

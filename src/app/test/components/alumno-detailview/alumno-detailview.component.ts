@@ -56,6 +56,7 @@ import { Usuario } from '../../../shared/models/user.model';
 import { NivelOposicion } from '../../../shared/models/pregunta.model';
 import { esSuscripcionVigente } from '../../../shared/utils/membresia-externa.util';
 import { PrimengModule } from '../../../shared/primeng.module';
+import { MenuItem } from 'primeng/api';
 
 import { AutoasignacionService } from '../../../planificacion/services/autoasignacion.service';
 import { PlanificacionPreferenciasComponent } from '../../../shared/planificacion-preferencias/planificacion-preferencias.component';
@@ -834,6 +835,19 @@ export class AlumnoDetailviewComponent {
   }
   desvincular(id: number) {
     this.abrir('desvincular', { planificacionId: id });
+  }
+  menuPlanificacion(id: number): MenuItem[] {
+    return [
+      {
+        label: 'Desvincular',
+        icon: 'pi pi-unlink',
+        disabled: this.ocupado,
+        command: () => {
+          if (this.ficha?.accionesPlanificacion?.puedeDesvincular)
+            this.desvincular(id);
+        },
+      },
+    ];
   }
   async cargarActividad(page = 1) {
     const id = this.id;
