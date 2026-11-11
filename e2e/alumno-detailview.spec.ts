@@ -672,3 +672,41 @@ test('el escudo de planificación corresponde al plan y no a la suscripción del
     plan.getByRole('button', { name: 'Ver planificación', exact: true }),
   ).toBeVisible();
 });
+
+for (const closeWith of ['X', 'Escape'] as const)
+  test(`cerrar edición con ${closeWith} descarta el borrador sin guardar`, async ({
+    page,
+  }) => {
+    await setup(page);
+    let writes = 0;
+    await page.route('**/user/update/140', (r) => {
+      writes++;
+      return r.fulfill({ json: user() });
+    });
+    await page.goto('/app/test/user/140');
+    await page.getByTestId('admin-edit-alumno').click();
+    const dialog = page.getByRole('dialog');
+    await page.getByTestId('admin-edit-nombre').fill('Sin guardar');
+    if (closeWith === 'X')
+      await dialog.locator('.p-dialog-header-close').click();
+    else await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    expect(writes).toBe(0);
+    await page.getByTestId('admin-edit-alumno').click();
+    await expect(page.getByTestId('admin-edit-nombre')).toHaveValue('Diego');
+  });
+
+test('nombre del lateral legible y pestañas con subrayado recto', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.goto('/app/test/user/140');
+  await page.locator('.lateral-bar').hover();
+  const name = page.locator('.perfil-nombre');
+  await expect(name).toBeVisible();
+  await expect(name).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(name).toHaveCSS('font-size', '16px');
+  await expect(
+    page.getByRole('tab', { name: 'Información personal', exact: true }),
+  ).toHaveCSS('border-radius', '0px');
+});

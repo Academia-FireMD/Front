@@ -654,7 +654,7 @@
 <p-dialog
   [header]="dialogoTitulo"
   [visible]="!!dialogo"
-  (onHide)="cerrarDialogo()"
+  (visibleChange)="!$event && cerrarDialogo()"
   [modal]="true"
   [style]="{ width: 'min(560px,94vw)' }"
   [draggable]="false"
