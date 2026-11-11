@@ -18,10 +18,10 @@
 .alumno-card-head {
   background: var(--primary-color);
   color: var(--p-primary-contrast-color, var(--primary-color-text));
-  padding: 22px 24px;
-  min-height: 91px;
+  padding: 9px 20px;
+  min-height: 56px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 14px;
   border-bottom: 1px solid var(--surface-border, #e5e8ee);
@@ -36,13 +36,6 @@
   margin: 0;
   line-height: 1.45;
   letter-spacing: -0.15px;
-}
-.alumno-card-head p {
-  font-size: 12px;
-  color: inherit;
-  line-height: 1.6;
-  margin: 4px 0 0;
-  overflow-wrap: anywhere;
 }
 .alumno-card-body {
   padding: 24px;
@@ -258,12 +251,8 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
-  .alumno-card-head {
-    min-height: 0;
-  }
 }
 @media (max-width: 520px) {
-  .alumno-card-head,
   .alumno-card-body {
     padding: 18px 16px;
   }
@@ -271,6 +260,7 @@
     font-size: 16px;
   }
   .alumno-card-head {
+    padding: 9px 16px;
     gap: 8px;
   }
   .alumno-card-foot {
@@ -318,9 +308,6 @@
 .alumno-card {
   color: var(--text-color);
 }
-.alumno-card-head p {
-  font-size: 14px;
-}
 .alumno-card-tools {
   display: flex;
   align-items: center;
@@ -356,4 +343,20 @@
 .alumno-card-head .p-button:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
+}
+
+.alumno-card-intro {
+  margin: 0;
+  padding: 16px 24px 0;
+  color: var(--text-color-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.alumno-card-intro + .alumno-card-body {
+  padding-top: 16px;
+}
+@media (max-width: 520px) {
+  .alumno-card-intro {
+    padding: 14px 16px 0;
+  }
 }

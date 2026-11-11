@@ -12,13 +12,6 @@ import { etiquetaRol } from '../utils/rol.utils';
     <div class="alumno-card-head">
       <div>
         <h2>{{ perfil ? 'Mis datos' : 'Información principal' }}</h2>
-        <p>
-          {{
-            perfil
-              ? 'Mantén tu información al día.'
-              : 'Identidad y configuración de la cuenta.'
-          }}
-        </p>
       </div>
       <button
         pButton
@@ -30,6 +23,13 @@ import { etiquetaRol } from '../utils/rol.utils';
         <i class="pi pi-pencil" aria-hidden="true"></i>Editar
       </button>
     </div>
+    <p class="alumno-card-intro">
+      {{
+        perfil
+          ? 'Mantén tu información al día.'
+          : 'Identidad y configuración de la cuenta.'
+      }}
+    </p>
     <div class="alumno-card-body">
       <dl class="alumno-info-fields">
         <div>

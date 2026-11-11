@@ -84,10 +84,11 @@
   background: var(--primary-color);
   color: var(--p-primary-contrast-color, var(--primary-color-text));
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 24px;
+  min-height: 56px;
+  padding: 9px 20px;
   border-bottom: 1px solid var(--surface-border);
 }
 .profile-panel-head h2 {
@@ -95,11 +96,6 @@
   font-size: 18px;
   margin: 0;
   line-height: 1.4;
-}
-.profile-panel-head p {
-  font-size: 14px;
-  color: inherit;
-  margin: 4px 0 0;
 }
 .profile-panel-body {
   padding: 24px;
@@ -212,11 +208,11 @@
   .profile-heading h1 {
     font-size: 24px;
   }
-  .profile-panel-head,
   .profile-panel-body {
     padding: 18px 16px;
   }
   .profile-panel-head {
+    padding: 9px 16px;
     flex-wrap: wrap;
     gap: 8px;
   }
@@ -246,4 +242,20 @@
 [suscripciones-cabecera].p-button:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
+}
+
+.profile-panel-intro {
+  margin: 0;
+  padding: 16px 24px 0;
+  color: var(--text-color-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.profile-panel-intro + .profile-panel-body {
+  padding-top: 16px;
+}
+@media (max-width: 520px) {
+  .profile-panel-intro {
+    padding: 14px 16px 0;
+  }
 }

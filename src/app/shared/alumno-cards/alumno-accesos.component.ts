@@ -12,9 +12,9 @@ import { Consumible } from '../models/user.model';
     <div class="alumno-card-head">
       <div>
         <h2>{{ perfil ? 'Mis accesos' : 'Productos independientes' }}</h2>
-        <p>Cursos y simulacros con su propio acceso.</p>
       </div>
     </div>
+    <p class="alumno-card-intro">Cursos y simulacros con su propio acceso.</p>
     <div class="alumno-card-body">
       <div *ngIf="cargando" class="alumno-empty" role="status">
         Cargando accesos…

@@ -26,13 +26,6 @@ import {
     <div class="alumno-card-head">
       <div>
         <h2>{{ perfil ? 'Mis suscripciones' : 'Suscripciones del alumno' }}</h2>
-        <p>
-          {{
-            perfil
-              ? 'Tus planes y su estado de acceso.'
-              : 'Cada plan se gestiona desde su origen.'
-          }}
-        </p>
       </div>
       <div class="alumno-card-tools">
         <ng-content select="[suscripciones-cabecera]"></ng-content
@@ -42,6 +35,13 @@ import {
         >
       </div>
     </div>
+    <p class="alumno-card-intro">
+      {{
+        perfil
+          ? 'Tus planes y su estado de acceso.'
+          : 'Cada plan se gestiona desde su origen.'
+      }}
+    </p>
     <div *ngIf="!suscripciones.length" class="alumno-card-body alumno-empty">
       <i class="pi pi-credit-card" aria-hidden="true"></i>
       <h3>Sin suscripción activa</h3>

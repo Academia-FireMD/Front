@@ -17,9 +17,9 @@ type CampoAlumno = {
       <div class="alumno-card-head">
         <div>
           <h2>Información personal</h2>
-          <p>Ayúdanos a adaptar tu preparación.</p>
         </div>
       </div>
+      <p class="alumno-card-intro">Ayúdanos a adaptar tu preparación.</p>
       <div class="alumno-card-body">
         <div class="alumno-completion">
           <strong>{{ porcentaje }} % completado</strong
@@ -66,9 +66,9 @@ type CampoAlumno = {
           <div class="alumno-card-head">
             <div>
               <h2>{{ grupo.titulo }}</h2>
-              <p>{{ grupo.descripcion }}</p>
             </div>
           </div>
+          <p class="alumno-card-intro">{{ grupo.descripcion }}</p>
           <div class="alumno-card-body">
             <dl class="alumno-info-fields">
               <div *ngFor="let campo of grupo.campos">

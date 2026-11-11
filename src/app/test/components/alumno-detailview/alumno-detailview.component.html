@@ -232,9 +232,11 @@
               <div class="alumno-card-head">
                 <div>
                   <h2>Gestión de la membresía</h2>
-                  <p>La baja total solo afecta a cuentas externas.</p>
                 </div>
               </div>
+              <p class="alumno-card-intro">
+                La baja total solo afecta a cuentas externas.
+              </p>
               <div class="alumno-card-body">
                 <p class="alumno-copy">
                   Retira el acceso de todos los planes externos. Los cursos
@@ -272,10 +274,12 @@
               <div class="alumno-card-head">
                 <div>
                   <h2>Eliminar cuenta</h2>
-                  <p>Acción definitiva, distinta de dar de baja.</p>
                 </div>
                 <i class="pi pi-trash" aria-hidden="true"></i>
               </div>
+              <p class="alumno-card-intro">
+                Acción definitiva, distinta de dar de baja.
+              </p>
               <div class="alumno-card-body">
                 <p class="alumno-copy">
                   Elimina al alumno y sus datos propios, incluidos accesos,
@@ -375,10 +379,10 @@
           <div class="alumno-card-head">
             <div>
               <h2>Suscripción #{{ sub.id }}</h2>
-              <p>{{ sub.metodo }}</p>
             </div>
             <span class="alumno-badge">{{ estadoWoo(sub.status) }}</span>
           </div>
+          <p class="alumno-card-intro">{{ sub.metodo }}</p>
           <div class="alumno-card-body">
             <div class="ficha-form-grid">
               <div>
@@ -490,9 +494,11 @@
             <div class="alumno-card-head">
               <div>
                 <h2>Planificaciones asignadas</h2>
-                <p>Asignaciones y seguimiento del alumno.</p>
               </div>
             </div>
+            <p class="alumno-card-intro">
+              Asignaciones y seguimiento del alumno.
+            </p>
             <div class="alumno-card-body">
               <div *ngFor="let a of planificaciones" class="ficha-assignment">
                 <app-oposicion-identidad
@@ -536,9 +542,11 @@
             <div class="alumno-card-head">
               <div>
                 <h2>Marcas físicas</h2>
-                <p>Últimos registros de preparación física.</p>
               </div>
             </div>
+            <p class="alumno-card-intro">
+              Últimos registros de preparación física.
+            </p>
             <div class="alumno-card-body">
               <div *ngFor="let marca of marcas" class="ficha-marca">
                 <div>
@@ -561,9 +569,11 @@
           <div class="alumno-card-head">
             <div>
               <h2>Actividad administrativa</h2>
-              <p>Operaciones sobre la cuenta y su resultado.</p>
             </div>
           </div>
+          <p class="alumno-card-intro">
+            Operaciones sobre la cuenta y su resultado.
+          </p>
           <div class="alumno-card-body">
             <div *ngIf="cargandoActividad" role="status">
               Cargando actividad…

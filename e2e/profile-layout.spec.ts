@@ -113,6 +113,11 @@ for (const width of [1440, 768, 390])
     });
     await expect(nativeButton).toHaveClass(/p-button/);
     await expect(nativeButton).toHaveCSS('font-size', '16px');
+    await expect(form.locator('.alumno-card-head')).toHaveCSS('height', '56px');
+    await expect(form.locator('.alumno-card-head p')).toHaveCount(0);
+    await expect(form.locator('.alumno-card-intro')).toContainText(
+      'Mantén tu información al día.',
+    );
     await expect(nativeButton).toHaveCSS('color', 'rgb(255, 255, 255)');
     await expect(form.locator('.alumno-card-head')).toHaveCSS(
       'background-color',
