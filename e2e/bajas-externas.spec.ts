@@ -122,6 +122,38 @@ async function stubsAdminDashboard(
       }),
     }),
   );
+  await page.route('**/user/admin/*', (route) => {
+    const id = Number(new URL(route.request().url()).pathname.split('/').pop());
+    const usuario = (usuarios() as Array<typeof usuarioExterno>).find(
+      (u) => u.id === id,
+    );
+    if (!usuario) return route.fulfill({ status: 404, json: {} });
+    const mixta = usuario.id === 141;
+    return route.fulfill({
+      json: {
+        usuario,
+        cursos: [],
+        gestion: {
+          tipo: mixta ? 'MIXTA' : 'EXTERNA',
+          comprobadaEn: new Date().toISOString(),
+          motivo: null,
+          capacidades: {
+            puedeDarBajaExterna: !mixta,
+            puedeEliminar: !mixta,
+            puedeGestionarWoo: mixta,
+            suscripcionesExternas: mixta ? [712] : [701, 702, 703],
+          },
+        },
+        resumenEliminacion: {
+          suscripciones: usuario.suscripciones.length,
+          cursos: 0,
+          progresos: 0,
+          consumibles: 0,
+          invitaciones: 0,
+        },
+      },
+    });
+  });
   await page.route('**/user/obtain-avaliable-subscriptions', (route) =>
     route.fulfill({
       status: 200,
@@ -139,9 +171,13 @@ async function stubsAdminDashboard(
 }
 
 async function abrirAccionDeFila(page: Page, nombre: string): Promise<void> {
+  if (/\/app\/test\/user\/\d+/.test(new URL(page.url()).pathname)) {
+    await page.getByRole('button', { name: 'Usuarios', exact: true }).click();
+  }
   const row = page.locator('.item-container').filter({ hasText: nombre });
   await expect(row).toBeVisible({ timeout: 15_000 });
-  await row.locator('[data-testid="user-actions-btn"]').click();
+  await row.locator('.identifier').click();
+  await expect(page.getByTestId('alumno-suscripciones')).toBeVisible();
 }
 
 async function abrirBajaDesdeDialogo(
@@ -149,13 +185,9 @@ async function abrirBajaDesdeDialogo(
   nombre: string,
 ): Promise<void> {
   await abrirAccionDeFila(page, nombre);
-  await page.getByText('Suscripción', { exact: true }).first().click();
-  await expect(page.getByTestId('baja-externa-seccion')).toBeVisible();
-  await page.getByTestId('baja-externa-abrir').click();
+  await page.getByTestId('admin-baja-externa').click();
   await expect(
-    page.getByRole('dialog', {
-      name: 'Dar de baja la membresía externa',
-    }),
+    page.getByRole('dialog', { name: 'Dar de baja la membresía externa' }),
   ).toBeVisible();
 }
 
@@ -208,7 +240,10 @@ test.describe('Admin — baja total de membresía externa', () => {
     await page.goto('/app/test/user-dashboard');
     await abrirAccionDeFila(page, 'Lucía');
     await expect(
-      page.getByText('Dar de baja la membresía externa', { exact: true }),
+      page.getByRole('button', {
+        name: 'Dar de baja la membresía externa',
+        exact: true,
+      }),
     ).toBeVisible();
     await page.keyboard.press('Escape');
 
@@ -233,18 +268,18 @@ test.describe('Admin — baja total de membresía externa', () => {
     );
 
     await page
-      .getByTestId('baja-externa-motivo')
+      .getByRole('dialog')
+      .getByLabel('Motivo (opcional)')
       .fill('Solicitud telefónica del alumno');
-    await page.getByTestId('baja-externa-confirmar').click();
+    await page.getByTestId('admin-confirm-action').click();
 
-    const resultado = page.getByTestId('baja-externa-resultado');
+    const resultado = page.getByTestId('admin-operation-result');
     await expect(resultado).toContainText('Membresía externa dada de baja');
-    await expect(resultado).toContainText('Se cancelaron 2 suscripciones');
+    await expect(resultado).toContainText('2 suscripciones canceladas');
     await expect(resultado).toContainText('Se conservaron 3 cursos');
     await expect.poll(() => llamadasCancelacion, { timeout: 5_000 }).toBe(1);
     expect(payload).toEqual({ motivo: 'Solicitud telefónica del alumno' });
 
-    await page.getByTestId('baja-externa-cerrar').click();
     await expect(
       page.getByRole('dialog', {
         name: 'Dar de baja la membresía externa',
@@ -265,16 +300,22 @@ test.describe('Admin — baja total de membresía externa', () => {
     await abrirAccionDeFila(page, 'Marta');
 
     await expect(
-      page.getByText('Dar de baja la membresía externa', { exact: true }),
+      page.getByRole('button', {
+        name: 'Dar de baja la membresía externa',
+        exact: true,
+      }),
     ).toHaveCount(0);
     await expect(
-      page.getByText('Suscripción (WP)', { exact: true }),
+      page.getByRole('tab', { name: 'WooCommerce', exact: true }),
     ).toBeVisible();
     await page.keyboard.press('Escape');
 
     await abrirAccionDeFila(page, 'Lucía');
     await expect(
-      page.getByText('Dar de baja la membresía externa', { exact: true }),
+      page.getByRole('button', {
+        name: 'Dar de baja la membresía externa',
+        exact: true,
+      }),
     ).toBeVisible();
   });
 
@@ -309,12 +350,14 @@ test.describe('Admin — baja total de membresía externa', () => {
 
     await page.goto('/app/test/user-dashboard');
     await abrirBajaDesdeDialogo(page, 'Lucía');
-    await page.getByTestId('baja-externa-confirmar').click();
+    await page.getByTestId('admin-confirm-action').click();
 
-    const resultado = page.getByTestId('baja-externa-resultado');
-    await expect(resultado).toContainText('La membresía ya estaba de baja');
+    const resultado = page.getByTestId('admin-operation-result');
+    await expect(resultado).toContainText(
+      'La membresía externa ya estaba de baja',
+    );
     await expect(resultado).toContainText('Se conservaron 2 cursos');
-    await expect(page.getByTestId('baja-externa-error')).toHaveCount(0);
+    await expect(page.locator('.ficha-form-error')).toHaveCount(0);
   });
 
   test('409 GESTION_EXTERNA_REQUERIDA: no muestra éxito y explica que no se modificó nada', async ({
@@ -335,12 +378,12 @@ test.describe('Admin — baja total de membresía externa', () => {
 
     await page.goto('/app/test/user-dashboard');
     await abrirBajaDesdeDialogo(page, 'Lucía');
-    await page.getByTestId('baja-externa-confirmar').click();
+    await page.getByTestId('admin-confirm-action').click();
 
-    const error = page.getByTestId('baja-externa-error');
+    const error = page.locator('.ficha-form-error');
     await expect(error).toContainText('exclusivamente externa');
     await expect(error).toContainText('No se ha modificado nada');
-    await expect(page.getByTestId('baja-externa-resultado')).toHaveCount(0);
+    await expect(page.getByTestId('admin-operation-result')).toHaveCount(0);
   });
 
   test('la cancelación individual avisa de que solo afecta a ese plan', async ({
@@ -351,10 +394,17 @@ test.describe('Admin — baja total de membresía externa', () => {
 
     await page.goto('/app/test/user-dashboard');
     await abrirAccionDeFila(page, 'Lucía');
-    await page.getByText('Suscripción', { exact: true }).first().click();
-    await page.locator('[data-testid="cancel-sub-btn"]').first().click();
+    await page
+      .getByRole('button', { name: /Acciones del plan/ })
+      .first()
+      .click();
+    await page
+      .getByRole('menuitem', { name: 'Cancelar este plan', exact: true })
+      .click();
 
-    const confirmacion = page.locator('.p-confirm-dialog');
+    const confirmacion = page.getByRole('dialog', {
+      name: 'Cancelar solo este plan',
+    });
     await expect(confirmacion).toContainText('solo el plan');
     await expect(confirmacion).toContainText('las demás suscripciones');
     await expect(confirmacion).not.toContainText('perderá el acceso');

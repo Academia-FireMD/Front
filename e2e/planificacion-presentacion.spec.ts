@@ -246,6 +246,9 @@ async function prepararCalendario(
       }),
     }),
   );
+  await page.route('**/user/me/planificaciones', route =>
+    route.fulfill({ json: [] }),
+  );
   await page.route('**/cursos/mios', (route) =>
     route.fulfill({ contentType: 'application/json', body: '[]' }),
   );

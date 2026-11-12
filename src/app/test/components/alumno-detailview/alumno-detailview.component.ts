@@ -53,7 +53,13 @@ import {
   OPOSICION_LABELS,
 } from '../../../shared/models/subscription.model';
 import { Usuario } from '../../../shared/models/user.model';
-import { esSuscripcionVigente } from '../../../shared/utils/membresia-externa.util';
+import {
+  esSuscripcionVigente,
+  describirSuscripcionVigente,
+  mensajeConfirmacionCancelacionIndividual,
+  mensajeResultadoBajaMembresiaExterna,
+  mensajeErrorBajaMembresiaExterna,
+} from '../../../shared/utils/membresia-externa.util';
 import { PrimengModule } from '../../../shared/primeng.module';
 import { MenuItem } from 'primeng/api';
 
@@ -440,6 +446,9 @@ export class AlumnoDetailviewComponent {
     )
       this.abrir('eliminarPlan', { suscripcion });
   }
+  readonly describirSuscripcionVigente = describirSuscripcionVigente;
+  readonly mensajeCancelacionIndividual =
+    mensajeConfirmacionCancelacionIndividual;
   planLabel(s: Suscripcion) {
     return `${getPlanLabel(s.tipo)} · ${(OPOSICION_LABELS as Record<string, string>)[s.oposicion] || s.oposicion}`;
   }
@@ -524,7 +533,13 @@ export class AlumnoDetailviewComponent {
   quitarEtiqueta(clientId: string) {
     this.etiquetas = this.etiquetas.filter((l) => l.clientId !== clientId);
   }
-  private async ejecutar(fn: () => Promise<unknown>, mensaje: string) {
+  private async ejecutar<T>(
+    fn: () => Promise<T>,
+    mensaje:
+      | string
+      | ((resultado: T) => { message: string; severity: 'success' | 'info' }),
+    errorMensaje?: (error: any) => string,
+  ) {
     if (this.ocupado) return;
     this.ocupado = true;
     this.errorDialogo = '';
@@ -532,10 +547,14 @@ export class AlumnoDetailviewComponent {
       (resolve) => (this.resolverOperacion = resolve),
     );
     try {
-      await fn();
-      this.resultadoOperacion = mensaje;
+      const resultado = await fn();
+      const aviso =
+        typeof mensaje === 'function'
+          ? mensaje(resultado)
+          : { message: mensaje, severity: 'success' as const };
+      this.resultadoOperacion = aviso.message;
       this.dialogo = null;
-      this.toast.success(mensaje);
+      this.toast[aviso.severity](aviso.message);
       this.actividad = null;
       this.recargar.next();
       requestAnimationFrame(() =>
@@ -544,8 +563,9 @@ export class AlumnoDetailviewComponent {
           ?.focus(),
       );
     } catch (error: any) {
-      this.errorDialogo =
-        error?.message || 'No se ha podido completar la operación.';
+      this.errorDialogo = errorMensaje
+        ? errorMensaje(error)
+        : error?.message || 'No se ha podido completar la operación.';
     } finally {
       this.ocupado = false;
       this.resolverOperacion?.(true);
@@ -615,7 +635,8 @@ export class AlumnoDetailviewComponent {
           firstValueFrom(
             this.users.cancelExternalMembership$(d.usuarioId, this.motivo),
           ),
-        'Membresía externa dada de baja.',
+        mensajeResultadoBajaMembresiaExterna,
+        mensajeErrorBajaMembresiaExterna,
       );
     else if (d.tipo === 'eliminarPlan' && d.suscripcion)
       await this.ejecutar(

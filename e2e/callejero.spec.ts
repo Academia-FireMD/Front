@@ -566,6 +566,10 @@ async function irACallejero(page: Page): Promise<FrameLocator> {
     timeout: 15_000,
   });
   await expect(frame.locator('#map')).toBeVisible();
+  // El HTML estático es visible antes de que termine el bootstrap del embed.
+  await expect.poll(() => frame.locator('html').evaluate(() =>
+    typeof (globalThis as typeof globalThis & { localizaMod?: unknown }).localizaMod,
+  )).toBe('function');
   return frame;
 }
 

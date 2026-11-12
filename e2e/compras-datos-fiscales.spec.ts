@@ -100,6 +100,7 @@ test.describe('Compra COF con ficha fiscal común', () => {
       ]),
     );
     await page.route('**/cursos/mios', (route) => json(route, []));
+    await page.route('**/user/me/planificaciones', (route) => json(route, []));
     await page.route('**/planificaciones/configuracion', (route) =>
       json(route, null),
     );

@@ -52,6 +52,32 @@ const diegoMock = {
 
 test.describe('Admin — cancelar suscripción manual', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/user/admin/140', (route) =>
+      route.fulfill({
+        json: {
+          usuario: diegoMock,
+          cursos: [],
+          gestion: {
+            tipo: 'EXTERNA',
+            comprobadaEn: new Date().toISOString(),
+            motivo: null,
+            capacidades: {
+              puedeDarBajaExterna: true,
+              puedeEliminar: true,
+              puedeGestionarWoo: false,
+              suscripcionesExternas: [5001],
+            },
+          },
+          resumenEliminacion: {
+            suscripciones: 1,
+            cursos: 0,
+            progresos: 0,
+            consumibles: 0,
+            invitaciones: 0,
+          },
+        },
+      }),
+    );
     await page.route('**/user/all', (route) =>
       route.fulfill({
         status: 200,
@@ -92,30 +118,27 @@ test.describe('Admin — cancelar suscripción manual', () => {
       timeout: 15_000,
     });
 
-    // Abrir el menú de acciones del usuario (botón ellipsis con test-id estable).
     await page
-      .locator('[data-testid="user-actions-btn"]')
-      .first()
-      .click({ timeout: 5_000 });
-
-    // Click el ítem "Suscripción" del menú PrimeNG (p-menu render a body).
-    await page
-      .locator('.p-menuitem-text')
-      .filter({ hasText: /^Suscripción$/ })
-      .first()
+      .locator('.item-container')
+      .filter({ hasText: 'Diego' })
+      .locator('.identifier')
       .click();
-
-    // Click botón "Cancelar suscripción" (icon ban) dentro del diálogo.
+    const card = page.getByTestId('alumno-suscripciones');
+    await expect(card).toBeVisible();
+    await card.getByRole('button', { name: /Acciones del plan/ }).click();
     await page
-      .locator('[data-testid="cancel-sub-btn"]')
-      .first()
-      .click({ timeout: 5_000 });
-
-    // p-confirmDialog → click "Sí, cancelar"
-    await page
-      .locator('button.p-confirm-dialog-accept, button:has-text("Sí, cancelar")')
-      .first()
+      .getByRole('menuitem', { name: 'Cancelar este plan', exact: true })
       .click();
+    const confirmacion = page.getByRole('dialog', {
+      name: 'Cancelar solo este plan',
+    });
+    await expect(confirmacion).toContainText('Valencia Ayuntamiento');
+    await expect(confirmacion).toContainText('las demás suscripciones');
+    expect(cancelCalled).toBe(false);
+    await page.getByTestId('admin-confirm-action').click();
+    await expect(page.getByTestId('admin-operation-result')).toContainText(
+      'cancelado',
+    );
 
     // Esperar el toast / verificar endpoint
     await expect.poll(() => cancelCalled, { timeout: 10_000 }).toBe(true);

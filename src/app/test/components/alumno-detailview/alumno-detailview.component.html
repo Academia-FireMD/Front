@@ -250,6 +250,7 @@
                   [disabled]="
                     ocupado || !data.gestion.capacidades.puedeDarBajaExterna
                   "
+                  *ngIf="data.gestion.capacidades.puedeDarBajaExterna"
                   data-testid="admin-baja-externa"
                 >
                   Dar de baja la membresía externa
@@ -885,13 +886,19 @@
       </button></ng-container
     >
     <ng-container *ngIf="d.tipo === 'baja'"
-      ><p>Se retirará el acceso de todos sus planes externos:</p>
+      ><p>
+        Se cancelarán {{ planesVigentes.length }} suscripciones vigentes de la
+        membresía externa:
+      </p>
       <ul>
-        <li *ngFor="let s of planesVigentes">{{ planLabel(s) }}</li>
+        <li *ngFor="let s of planesVigentes">
+          {{ describirSuscripcionVigente(s) }}
+        </li>
       </ul>
       <div class="ficha-notice">
-        Los cursos independientes, consumibles y progreso se conservan. La
-        cuenta no se elimina.
+        Los cursos comprados o concedidos de forma independiente, consumibles y
+        progreso se conservan. Esta acción no elimina al usuario ni bloquea su
+        cuenta.
       </div>
       <label class="ficha-field"
         >Motivo (opcional)<textarea
@@ -903,7 +910,7 @@
         ></textarea></label
     ></ng-container>
     <ng-container *ngIf="d.tipo === 'plan' && d.suscripcion"
-      ><p>Se cancelará {{ planLabel(d.suscripcion) }}.</p>
+      ><p>{{ mensajeCancelacionIndividual(planLabel(d.suscripcion)) }}</p>
       <div class="ficha-notice">
         Los demás planes y los productos independientes se conservan. No se da
         de baja toda la membresía.

@@ -494,6 +494,12 @@ async function iframeAlicante(page: Page): Promise<FrameLocator> {
   const frame = await iframe.contentFrame();
   if (!frame) throw new Error('No se pudo resolver el iframe Alicante');
   await expect(frame.locator('#app')).toBeVisible({ timeout: 15_000 });
+  // #app es HTML estático; el puente público aparece al finalizar el bootstrap.
+  await expect.poll(() => frame.locator('html').evaluate(() =>
+    typeof (globalThis as typeof globalThis & {
+      TFAtlas?: { progreso?: { cargado?: unknown } };
+    }).TFAtlas?.progreso?.cargado,
+  ), { timeout: 15_000 }).toBe('function');
   return frame;
 }
 
@@ -1246,6 +1252,9 @@ test.describe('Callejero Alicante — recuperación cartográfica', () => {
 
     await page.goto('/app/callejero/alicante');
     const frame = await iframeAlicante(page);
+    // El iframe puede pintar #app antes de instalar los handlers y cargar el
+    // progreso. Esperar su control habilitado evita perder el clic inicial.
+    await expect(frame.locator('#qzBtnStart')).toBeEnabled();
     await frame.locator('#tab2Qz').click();
     await activarMudoExamen(frame);
     await frame.locator('#qzBtnStart').click();

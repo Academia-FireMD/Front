@@ -224,6 +224,13 @@ async function mockCalendario(page: Page, options: MockOptions = {}) {
     route.fulfill({ contentType: 'application/json', body: '[]' }),
   );
 
+  await page.route('**/planificaciones/configuracion', route =>
+    route.fulfill({ json: { configuracionActiva: null } }),
+  );
+  await page.route('**/user/me/planificaciones', route =>
+    route.fulfill({ json: [] }),
+  );
+
   await loginAsRoleMock(page, {
     rol: 'ALUMNO',
     email: 'alumno@test.com',

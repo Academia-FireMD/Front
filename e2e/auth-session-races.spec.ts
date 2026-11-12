@@ -135,7 +135,7 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
 
     // B debe haber abierto su propia petición, no reutilizado la de A.
     await expect.poll(() => peticionesPerfil).toBeGreaterThanOrEqual(2);
-    await expect(page.locator('.user-info-text h3')).toHaveText('Bea Actual', {
+    await expect(page.locator('app-profile h1')).toHaveText('Bea Actual', {
       timeout: 10_000,
     });
 
@@ -144,7 +144,7 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
     // La respuesta tardía de A no puede repintar el perfil ni restaurar sus
     // tokens: la sesión y el store siguen siendo de B.
     await page.waitForTimeout(500);
-    await expect(page.locator('.user-info-text h3')).toHaveText('Bea Actual');
+    await expect(page.locator('app-profile h1')).toHaveText('Bea Actual');
 
     const subActual = await page.evaluate(() => {
       const token = sessionStorage.getItem('authToken');
@@ -245,7 +245,7 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
     await page.locator('app-password-input input').fill('test1234');
     await page.locator('app-async-button button').first().click();
     await page.waitForURL('**/app/profile', { timeout: 15_000 });
-    await expect(page.locator('.user-info-text h3')).toHaveText(
+    await expect(page.locator('app-profile h1')).toHaveText(
       'Ana Anterior',
       { timeout: 10_000 },
     );
