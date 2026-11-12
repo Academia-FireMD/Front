@@ -181,6 +181,10 @@ export class UserService extends ApiBaseService {
     >;
   }
 
+  public getMyPlanifications$(): Observable<any[]> {
+    return this.get('/me/planificaciones') as Observable<any[]>;
+  }
+
   public getUserPlanifications$(userId: number) {
     return this.get(`/planifications/${userId}`) as Observable<any[]>;
   }

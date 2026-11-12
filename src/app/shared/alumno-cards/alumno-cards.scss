@@ -1,0 +1,351 @@
+@import "../styles/plan-badge";
+:host {
+  display: block;
+  min-width: 0;
+  --alumno-accent: var(--primary-color);
+}
+.alumno-card {
+  border: 1px solid var(--surface-border, #e5e8ee);
+  border-radius: var(--border-radius);
+  background: var(--surface-card, #fff);
+  height: 100%;
+  overflow: hidden;
+  box-shadow: 0 2px 6px #17203304;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.alumno-card-head {
+  background: var(--primary-color);
+  color: var(--p-primary-contrast-color, var(--primary-color-text));
+  padding: 9px 20px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--surface-border, #e5e8ee);
+}
+.alumno-card-head > div {
+  min-width: 0;
+}
+.alumno-card-head h2 {
+  color: inherit;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.45;
+  letter-spacing: -0.15px;
+}
+.alumno-card-body {
+  padding: 24px;
+  flex: 1;
+}
+.alumno-card-foot {
+  padding: 16px 24px;
+  border-top: 1px solid var(--surface-border);
+  margin-top: auto;
+}
+.alumno-btn,
+.alumno-link {
+  max-width: 100%;
+  gap: 8px;
+  white-space: normal;
+}
+.alumno-btn.full {
+  width: 100%;
+}
+.alumno-info-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 24px;
+  margin: 0;
+}
+.alumno-info-fields dt {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  margin-bottom: 6px;
+}
+.alumno-info-fields dd {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.alumno-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  border-radius: 5px;
+  background: var(--surface-100, #f0f2f5);
+  color: var(--text-color-secondary, #596273);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  padding: 4px 8px;
+}
+.alumno-badge.green {
+  background: #edf8f1;
+  color: #16734b;
+}
+.alumno-badge.amber {
+  background: #fff7e5;
+  color: #925b0c;
+}
+.alumno-badge.blue {
+  background: #eef4ff;
+  color: #315fa0;
+}
+.alumno-badge.brand {
+  background: color-mix(in srgb, var(--primary-color) 8%, white);
+  color: var(--primary-color);
+}
+.alumno-plan-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--surface-border);
+}
+.alumno-plan-row:last-child {
+  border: 0;
+}
+.alumno-plan-main {
+  min-width: 0;
+}
+.alumno-plan-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.alumno-plan-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  margin-top: 8px;
+}
+.alumno-plan-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.alumno-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-color-secondary);
+}
+.alumno-empty > i {
+  font-size: 25px;
+  margin-bottom: 12px;
+}
+.alumno-empty h3 {
+  font-size: 15px;
+  color: var(--text-color);
+  margin: 4px 0;
+}
+.alumno-empty p {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 7px 0;
+}
+.alumno-info-grid,
+.alumno-products {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.alumno-product {
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.alumno-product h3 {
+  font-size: 14px;
+  margin: 0;
+}
+.alumno-product p {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+.alumno-product:only-child {
+  grid-column: 1/-1;
+}
+.alumno-product .alumno-btn {
+  margin-top: auto;
+}
+.alumno-product-title {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.alumno-product-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary-color) 8%, white);
+  color: var(--primary-color);
+  font-size: 18px;
+}
+.alumno-progress {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--surface-200, #edf0f4);
+  overflow: hidden;
+}
+.alumno-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--alumno-accent);
+}
+.alumno-progress-label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-color-secondary);
+  font-size: 12px;
+}
+.alumno-completion {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.alumno-completion strong {
+  font-size: 17px;
+}
+.alumno-copy {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-color-secondary);
+  margin: 18px 0;
+}
+@media (max-width: 800px) {
+  .alumno-info-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+@media (max-width: 520px) {
+  .alumno-card-body {
+    padding: 18px 16px;
+  }
+  .alumno-card-head h2 {
+    font-size: 16px;
+  }
+  .alumno-card-head {
+    padding: 9px 16px;
+    gap: 8px;
+  }
+  .alumno-card-foot {
+    padding: 14px 16px;
+  }
+  .alumno-info-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .alumno-plan-row {
+    padding: 18px 16px;
+  }
+  .alumno-products {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .alumno-product {
+    padding: 16px;
+  }
+  .alumno-info-fields dd {
+    font-size: 14px;
+  }
+}
+
+.alumno-plan-identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.alumno-plan-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.alumno-plan-identity .alumno-plan-name {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alumno-plan-identity .plan-badge {
+  width: fit-content;
+}
+
+.alumno-card {
+  color: var(--text-color);
+}
+.alumno-card-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.alumno-plan-name {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alumno-plan-name .plan-badge {
+  width: fit-content;
+}
+.alumno-plan-main {
+  flex: 1;
+}
+.alumno-plan-side {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.alumno-info-fields dd {
+  font-size: 16px;
+}
+
+.alumno-card-head .p-button {
+  color: inherit;
+}
+.alumno-card-head .p-button:not(:disabled):hover {
+  color: inherit;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.alumno-card-head .p-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.alumno-card-intro {
+  margin: 0;
+  padding: 16px 24px 0;
+  color: var(--text-color-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.alumno-card-intro + .alumno-card-body {
+  padding-top: 16px;
+}
+@media (max-width: 520px) {
+  .alumno-card-intro {
+    padding: 14px 16px 0;
+  }
+}

@@ -16,7 +16,7 @@ type Rol = 'ALUMNO' | 'ADMIN' | 'SUPERADMIN';
  */
 export async function loginAsRoleMock(
   page: Page,
-  opts: { rol: Rol; email?: string; userFixture?: unknown } = { rol: 'ALUMNO' }
+  opts: { rol: Rol; email?: string; userFixture?: unknown; modulos?: Record<string, boolean> } = { rol: 'ALUMNO' }
 ): Promise<void> {
   const email = opts.email ?? `${opts.rol.toLowerCase()}@test.com`;
   const userFixture = opts.userFixture ?? userAlumnoFixture;
@@ -85,6 +85,9 @@ export async function loginAsRoleMock(
         FLASHCARDS: true,
         FACTURACION: true,
         CALLEJERO: true,
+        PLANIFICACION_FISICA: true,
+        SIMULADOR_NOTA: true,
+        ...opts.modulos,
       }),
     })
   );

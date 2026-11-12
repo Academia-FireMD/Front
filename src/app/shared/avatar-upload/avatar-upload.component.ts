@@ -12,9 +12,11 @@ export class AvatarUploadComponent {
   uploadedFiles: File[] = [];
   uploading = false;
   @Input() avatarUrl!: string;
+  @Input() variant: 'default' | 'profile' = 'default';
+  @Input() initials = '';
   constructor(
     private avatarService: UserService,
-    private toast: ToastrService
+    private toast: ToastrService,
   ) {}
 
   async onFileSelected(event: Event) {
@@ -32,7 +34,7 @@ export class AvatarUploadComponent {
 
     try {
       const res = await firstValueFrom(
-        this.avatarService.uploadAvatar$(formData)
+        this.avatarService.uploadAvatar$(formData),
       );
       this.toast.success('Avatar reemplazado!');
       this.avatarUrl = res.avatarUrl;

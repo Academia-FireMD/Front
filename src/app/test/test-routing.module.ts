@@ -1,3 +1,4 @@
+import { alumnoNavigationGuard } from '../guards/alumno-navigation.guard';
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
@@ -44,6 +45,18 @@ const routes: Routes = [
     canActivate: [roleGuard],
     title: 'Usuarios',
     data: { expectedRole: 'ADMIN', title: 'Usuarios' },
+  },
+  {
+    path: 'user/:id',
+    loadComponent: () =>
+      import('./components/alumno-detailview/alumno-detailview.component').then(
+        (m) => m.AlumnoDetailviewComponent,
+      ),
+    canActivate: [roleGuard],
+    canDeactivate: [alumnoNavigationGuard],
+    runGuardsAndResolvers: 'always',
+    title: 'Ficha del alumno',
+    data: { expectedRole: 'ADMIN', title: 'Ficha del alumno' },
   },
   {
     path: 'tema',

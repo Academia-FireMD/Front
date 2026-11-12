@@ -18,7 +18,6 @@ import { CursosAlumnoService } from '../cursos/services/cursos-alumno.service';
 import { ExamenesService } from '../examen/servicios/examen.service';
 import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
-import { PlanificacionesService } from '../services/planificaciones.service';
 import {
   MotivoBaja,
   SuscripcionManagementService,
@@ -30,9 +29,9 @@ import {
 } from '../services/madrid-tutorias.service';
 import { ViewportService } from '../services/viewport.service';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
-import { duracionesDisponibles } from '../shared/models/pregunta.model';
 import {
   getPlanLabel,
+  getPlanificacionOposicionLabel,
   isSubscriptionAccessible,
   Oposicion,
   Suscripcion,
@@ -55,6 +54,12 @@ import {
 } from '../store/user/user.selectors';
 import { oposiciones } from '../utils/consts';
 import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.component';
+import { AutoasignacionService } from '../planificacion/services/autoasignacion.service';
+import { ConfiguracionPlanificacion } from '../planificacion/models/autoasignacion.model';
+import {
+  getFranjaPlanificacionLabel,
+  getNivelOposicionLabel,
+} from '../shared/utils/planificacion-labels.util';
 
 @Component({
   selector: 'app-profile',
@@ -62,10 +67,115 @@ import { BajaSuscripcionComponent } from './baja-suscripcion/baja-suscripcion.co
   styleUrls: [
     './profile.component.scss',
     './profile-onboarding.component.scss',
+    './profile-layout.component.scss',
   ],
 })
 export class ProfileComponent implements OnInit, OnDestroy {
+  get initialesPerfil(): string {
+    return (
+      [this.user?.nombre, this.user?.apellidos]
+        .filter(Boolean)
+        .map((s) => s!.trim().charAt(0))
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'AL'
+    );
+  }
+  private finGuardadoPerfil: Promise<boolean> | null = null;
+  private resolverGuardadoPerfil: ((value: boolean) => void) | null = null;
+  prepararSalida(): boolean | Promise<boolean> {
+    if (this.guardandoPerfil) return this.finGuardadoPerfil || true;
+    this.mostrarEdicionPerfil = false;
+    this.perfilEdicion = null;
+    this.showOnboardingModal = false;
+    return true;
+  }
+  mostrarEdicionPerfil = false;
+  perfilEdicion: Usuario | null = null;
+  guardandoPerfil = false;
+  errorEdicionPerfil = '';
+  planificacionesPerfil: {
+    planificacion: {
+      id: number;
+      identificador: string;
+      descripcion?: string;
+      relevancia?: Oposicion[];
+    };
+  }[] = [];
+  cargandoPlanificacionesPerfil = false;
+  errorPlanificacionesPerfil = '';
+  readonly accionesPerfil = (s: Suscripcion) =>
+    this.getSubscriptionMenuItems(s);
+  readonly resultadosPerfil = (c: Consumible) => this.puedeVerResultados(c);
+
+  abrirEdicionPerfil(): void {
+    if (!this.user) return;
+    this.perfilEdicion = cloneDeep(this.user);
+    this.errorEdicionPerfil = '';
+    this.mostrarEdicionPerfil = true;
+  }
+  cerrarEdicionPerfil(): void {
+    if (this.guardandoPerfil) return;
+    this.mostrarEdicionPerfil = false;
+    this.perfilEdicion = null;
+    this.errorEdicionPerfil = '';
+  }
+  async guardarEdicionPerfil(): Promise<void> {
+    if (!this.perfilEdicion || this.guardandoPerfil) return;
+    const draft = this.perfilEdicion;
+    this.guardandoPerfil = true;
+    this.finGuardadoPerfil = new Promise(
+      (resolve) => (this.resolverGuardadoPerfil = resolve),
+    );
+    this.errorEdicionPerfil = '';
+    try {
+      const cambios: Partial<Usuario> = {
+        nombre: draft.nombre,
+        apellidos: draft.apellidos,
+        dni: draft.dni,
+        tutorId: draft.tutorId,
+        tipoDePlanificacionDuracionDeseada:
+          draft.tipoDePlanificacionDuracionDeseada,
+        metodoCalificacion: draft.metodoCalificacion,
+      };
+      if (this.esAdminOSuperior) cambios.esTutor = draft.esTutor;
+      await firstValueFrom(this.userService.updateUser(draft.id, cambios));
+      this.store.dispatch(UserActions.loadUser());
+      this.mostrarEdicionPerfil = false;
+      this.perfilEdicion = null;
+      this.toastService.success('Perfil actualizado correctamente');
+    } catch (error: any) {
+      this.errorEdicionPerfil =
+        error?.message || 'No se han podido guardar tus datos.';
+    } finally {
+      this.guardandoPerfil = false;
+      this.resolverGuardadoPerfil?.(true);
+      this.resolverGuardadoPerfil = null;
+      this.finGuardadoPerfil = null;
+    }
+  }
+  async cargarPlanificacionesPerfil(id: number): Promise<void> {
+    this.cargandoPlanificacionesPerfil = true;
+    this.errorPlanificacionesPerfil = '';
+    try {
+      this.planificacionesPerfil = await firstValueFrom(
+        this.userService.getMyPlanifications$(),
+      );
+    } catch {
+      this.errorPlanificacionesPerfil =
+        'No se han podido cargar tus planificaciones.';
+    } finally {
+      this.cargandoPlanificacionesPerfil = false;
+    }
+  }
+  verPlanificacionPerfil(id: number): void {
+    void this.router.navigate(['/app/planificacion/planificacion-mensual', id]);
+  }
+
   readonly getPlanLabel = getPlanLabel;
+  readonly getPlanificacionOposicionLabel = getPlanificacionOposicionLabel;
+  readonly getFranjaPlanificacionLabel = getFranjaPlanificacionLabel;
+  readonly getNivelOposicionLabel = getNivelOposicionLabel;
 
   @ViewChild(BajaSuscripcionComponent)
   bajaSuscripcionComponent?: BajaSuscripcionComponent;
@@ -73,7 +183,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Servicios
   private userService = inject(UserService);
   private authService = inject(AuthService);
-  private planificacionService = inject(PlanificacionesService);
   private toastService = inject(ToastrService);
   private store = inject(Store<AppState>);
   private suscripcionManagementService = inject(SuscripcionManagementService);
@@ -83,6 +192,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private examenesService = inject(ExamenesService);
   private appConfigService = inject(AppConfigService);
   private madridTutoriasService = inject(MadridTutoriasService);
+  private autoasignacionService = inject(AutoasignacionService);
   private cursosAlumnoService = inject(CursosAlumnoService);
 
   cursos: AccesoConCurso[] = [];
@@ -108,6 +218,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return this.cursos.length > 0 ? 'cursos' : 'simulacros';
   }
 
+  configuracionPlanificacion: ConfiguracionPlanificacion | null = null;
+  configuracionPlanificacionCargando = true;
+  configuracionPlanificacionError = false;
+
   madridTutoriaBalance: MadridTutoriaBalance | null = null;
   madridTutoriaBalanceLoading = false;
 
@@ -120,11 +234,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
       false,
   );
 
+  /** Fuera de las rutas gateadas el acceso al test debe ser fail-closed. */
+  planificacionHabilitada = computed(
+    () =>
+      this.appConfigService.estadoModulos()[ModuloApp.PLANIFICACION] === true,
+  );
+
   /** El Simulador de nota es opcional por tenant y falla cerrado si falta el flag. */
   simuladorNotaHabilitado = computed(
     () =>
       this.appConfigService.estadoModulos()[ModuloApp.SIMULADOR_NOTA] === true,
   );
+
   oposiciones = oposiciones;
 
   // URLs de WordPress desde environment
@@ -141,9 +262,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isSaving = false;
   errors: string[] = [];
   tutores$: Observable<Usuario[]> = this.userService.getAllTutores$();
-  duracionesDisponibles = duracionesDisponibles;
-  countPlanificacionesAsignadas$ =
-    this.planificacionService.getInfoPlanificacionesAsignadas();
 
   // Control del onboarding
   showOnboardingModal = false;
@@ -230,6 +348,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.loadMadridTutoriaBalance();
         if (user.rol === Rol.ALUMNO) {
           this.cargarCursos();
+          void this.cargarConfiguracionPlanificacion();
+          void this.cargarPlanificacionesPerfil(user.id);
         }
 
         // Verificar si es primer acceso y abrir modal automáticamente
@@ -286,6 +406,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   private loadMadridTutoriaBalance(): void {
+    if (this.user?.rol !== Rol.ALUMNO) return;
     const tieneMadrid = this.user?.suscripciones?.some(
       (suscripcion) =>
         suscripcion.oposicion === Oposicion.MADRID &&
@@ -308,69 +429,26 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   }
 
-  async saveProfile(): Promise<void> {
-    if (!this.user) return;
-
-    this.isSaving = true;
-
-    // Dispatch action para actualizar usuario en el store
-    this.store.dispatch(
-      UserActions.updateUser({
-        userId: this.user.id,
-        userData: {
-          nombre: this.user.nombre,
-          apellidos: this.user.apellidos,
-          dni: this.user.dni,
-          tutorId: this.user.tutorId,
-          tipoDePlanificacionDuracionDeseada:
-            this.user.tipoDePlanificacionDuracionDeseada,
-          metodoCalificacion: this.user.metodoCalificacion,
-          esTutor: this.user.esTutor,
-        },
-      }),
-    );
-
-    // Escuchar el resultado de la actualización
-    this.isLoading$.subscribe((loading) => {
-      if (!loading && this.isSaving) {
-        this.isSaving = false;
-        this.toastService.success('Perfil actualizado correctamente');
-      }
-    });
-
-    this.error$.subscribe((error) => {
-      if (error && this.isSaving) {
-        this.isSaving = false;
-        this.errors.push('Error al guardar el perfil: ' + error);
-        this.toastService.error('Error al guardar el perfil');
-      }
-    });
-  }
-
-  async autoAssignPlanificacion(): Promise<void> {
-    if (!this.user) return;
-
+  private async cargarConfiguracionPlanificacion(): Promise<void> {
+    this.configuracionPlanificacionCargando = true;
+    this.configuracionPlanificacionError = false;
     try {
-      await firstValueFrom(
-        this.planificacionService.autoAssignPlanificacionMensual(
-          this.user.tipoDePlanificacionDuracionDeseada,
-        ),
+      this.configuracionPlanificacion = await firstValueFrom(
+        this.autoasignacionService.getConfiguracion$(),
       );
-      this.toastService.success(
-        'Planificación por defecto asignada automáticamente',
-      );
-
-      // Recargar planificaciones asignadas
-      this.countPlanificacionesAsignadas$ =
-        this.planificacionService.getInfoPlanificacionesAsignadas();
-    } catch (error: any) {
-      this.errors.push('Error al asignar planificación: ' + error.message);
-      this.toastService.error('Error al asignar planificación');
+    } catch {
+      // La ficha personal sigue disponible si el módulo está deshabilitado.
+      this.configuracionPlanificacion = null;
+      this.configuracionPlanificacionError = true;
+    } finally {
+      this.configuracionPlanificacionCargando = false;
     }
   }
 
-  gestionarPlanificacion(): void {
-    void this.router.navigate(['/app/planificacion/configuracion-alumno']);
+  async saveProfile(): Promise<void> {
+    if (!this.user || this.guardandoPerfil) return;
+    this.perfilEdicion = cloneDeep(this.user);
+    await this.guardarEdicionPerfil();
   }
 
   private getPrimarySuscripcion() {
@@ -455,10 +533,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
       diasSemanaDisponibles: this.user.diasSemanaDisponibles,
       otraInformacionLaboral: this.user.otraInformacionLaboral,
       comentariosAdicionales: this.user.comentariosAdicionales,
-      tipoOposicion: this.user.tipoOposicion,
-      nivelOposicion: this.user.nivelOposicion,
-      tipoDePlanificacionDuracionDeseada:
-        this.user.tipoDePlanificacionDuracionDeseada,
     };
   }
 
@@ -467,14 +541,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async onOnboardingUpdated(data: OnboardingData) {
+    const datosPersistibles = { ...data };
+    delete datosPersistibles.tipoOposicion;
+    delete datosPersistibles.nivelOposicion;
+    delete datosPersistibles.tipoDePlanificacionDuracionDeseada;
     try {
-      await firstValueFrom(this.userService.updateOnboardingData$(data));
+      await firstValueFrom(
+        this.userService.updateOnboardingData$(datosPersistibles),
+      );
       this.toastService.success('Información actualizada correctamente');
       this.showOnboardingModal = false;
 
-      // El formulario ya no edita las preferencias del gestor. Conservamos el
-      // snapshot local legacy, y el payload parcial no envía esos campos.
-      this.onboardingData = { ...this.onboardingData, ...data };
+      this.onboardingData = { ...data };
 
       // Recargar usuario
       this.store.dispatch(UserActions.loadUser());
@@ -482,6 +560,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
       console.error('Error al actualizar onboarding:', error);
       this.toastService.error('Error al actualizar la información');
     }
+  }
+
+  gestionarPlanificacion() {
+    this.irAPlanificacion();
+  }
+  irAPlanificacion(): void {
+    void this.router.navigate(['/app/planificacion/configuracion-alumno']);
   }
 
   isOnboardingComplete(): boolean {
@@ -494,15 +579,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   getOnboardingCompletionPercentage(): number {
     const data = this.onboardingData;
-    const camposPreferenciasPlanificacion = new Set([
-      'tipoOposicion',
-      'nivelOposicion',
-      'tipoDePlanificacionDuracionDeseada',
-    ]);
     const fields = Object.entries(data)
-      .filter(([field]) => !camposPreferenciasPlanificacion.has(field))
+      .filter(
+        ([key]) =>
+          ![
+            'tipoOposicion',
+            'nivelOposicion',
+            'tipoDePlanificacionDuracionDeseada',
+          ].includes(key),
+      )
       .map(([, value]) => value);
-    if (fields.length === 0) return 0;
+    if (!fields.length) return 0;
     const filledFields = fields.filter(
       (value) =>
         value !== null &&
@@ -536,12 +623,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const hasSeenOnboarding = localStorage.getItem(storageKey);
     const onboardingComplete = this.isOnboardingComplete();
 
-    // Mostrar modal si:
-    // 1. Nunca ha visto el onboarding Y no está completo
-    // 2. O si el onboarding está muy incompleto (< 20%) incluso si ya lo vio
-    const completionPercentage = this.getOnboardingCompletionPercentage();
-    const shouldShowModal =
-      (!hasSeenOnboarding && !onboardingComplete) || completionPercentage < 20;
+    // La ficha incompleta sigue visible en Perfil, pero el diálogo no debe
+    // interrumpir cada visita después de que el alumno lo haya cerrado.
+    const shouldShowModal = !hasSeenOnboarding && !onboardingComplete;
 
     if (shouldShowModal) {
       setTimeout(() => {
@@ -1172,9 +1256,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
   /** Oposiciones en las que el alumno ya tiene una suscripción activa (ACTIVE/PENDING_CANCEL). */
   get oposicionesContratadas(): Oposicion[] {
     const subs = this.user?.suscripciones ?? [];
-    return subs
-      .filter((s) => isSubscriptionAccessible(s.status))
-      .map((s) => s.oposicion);
+    return [
+      ...new Set(
+        subs
+          .filter(
+            (s) =>
+              isSubscriptionAccessible(s.status) &&
+              s.oposicion !== Oposicion.GENERAL &&
+              (!s.fechaFin || new Date(s.fechaFin).getTime() > Date.now()),
+          )
+          .map((s) => s.oposicion),
+      ),
+    ];
   }
 
   /**
@@ -1183,8 +1276,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
    * se ocultan porque ya no dan acceso y solo ensucian la vista.
    */
   get suscripcionesVisibles(): Suscripcion[] {
-    return (this.user?.suscripciones ?? []).filter((s) =>
-      isSubscriptionAccessible(s.status),
+    return (this.user?.suscripciones ?? []).filter(
+      (s) =>
+        isSubscriptionAccessible(s.status) && s.oposicion !== Oposicion.GENERAL,
     );
   }
 
@@ -1204,8 +1298,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Genera el tooltip con info de la suscripción
   getSubscriptionTooltip(suscripcion: Suscripcion): string {
-    const nombre =
-      oposiciones[suscripcion.oposicion]?.name || suscripcion.oposicion;
+    const nombre = getPlanificacionOposicionLabel(suscripcion.oposicion);
     const plan =
       suscripcion.tipo === 'BASIC'
         ? 'Básico'

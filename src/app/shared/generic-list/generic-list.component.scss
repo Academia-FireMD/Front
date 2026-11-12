@@ -22,7 +22,7 @@
 .filter-button-wrapper {
   position: relative;
   display: inline-block;
-  
+
   .filter-count-badge {
     position: absolute !important;
     top: -4px !important;
@@ -204,4 +204,9 @@
       }
     }
   }
+}
+
+.list-generic .item-container.auto-item-height {
+  max-height: none;
+  overflow: visible;
 }

@@ -57,6 +57,10 @@ for (const viewport of [
     const ficha = page.getByRole('dialog', {
       name: 'Completar ficha personal',
     });
+    if (!(await ficha.isVisible()))
+      await page
+        .getByRole('button', { name: 'Completar información', exact: true })
+        .click();
     await expect(ficha).toBeVisible();
     await expect(ficha.locator('app-planificacion-preferencias')).toHaveCount(
       0,
@@ -90,7 +94,7 @@ for (const viewport of [
 
     await page.reload();
     await expect(
-      page.getByRole('heading', { name: /Mi Perfil/ }),
+      page.getByRole('heading', { name: 'Test Alumno', exact: true }),
     ).toBeVisible();
     expect(ultimoPerfil).toMatchObject({
       tipoOposicion: ['MADRID'],

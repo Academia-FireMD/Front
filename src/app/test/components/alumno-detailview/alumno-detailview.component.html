@@ -1,0 +1,993 @@
+<div class="ficha-page">
+  <nav class="ficha-breadcrumb" aria-label="Ruta">
+    <button
+      pButton
+      type="button"
+      class="alumno-link p-button-text"
+      (click)="volver()"
+      [disabled]="ocupado"
+    >
+      Usuarios</button
+    ><i class="pi pi-angle-right" aria-hidden="true"></i
+    ><span>Ficha del alumno</span>
+  </nav>
+  <div *ngIf="cargando" class="ficha-state" role="status">
+    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>Cargando ficha…
+  </div>
+  <div *ngIf="error && !cargando" class="ficha-state" role="alert">
+    <h1>{{ error }}</h1>
+    <button
+      pButton
+      type="button"
+      class="alumno-btn p-button-outlined"
+      (click)="actualizar()"
+    >
+      Volver a cargar
+    </button>
+  </div>
+  <ng-container *ngIf="ficha as data">
+    <header class="ficha-header">
+      <div class="ficha-identity">
+        <img
+          *ngIf="data.usuario.avatarUrl; else inicial"
+          class="ficha-avatar"
+          [src]="data.usuario.avatarUrl"
+          alt=""
+        /><ng-template #inicial
+          ><div class="ficha-avatar" aria-hidden="true">
+            {{ iniciales }}
+          </div></ng-template
+        >
+        <div>
+          <div class="ficha-eyebrow">FICHA DEL ALUMNO</div>
+          <h1 #tituloFicha tabindex="-1">{{ nombre }}</h1>
+          <p>{{ data.usuario.email }}</p>
+        </div>
+      </div>
+      <div class="ficha-header-actions">
+        <button
+          pButton
+          type="button"
+          class="alumno-btn p-button-outlined"
+          (click)="abrirEditar()"
+          [disabled]="ocupado"
+          data-testid="admin-edit-alumno"
+        >
+          <i class="pi pi-pencil" aria-hidden="true"></i>Editar alumno</button
+        ><button
+          pButton
+          type="button"
+          class="alumno-btn p-button-outlined"
+          (click)="entrarComoAlumno()"
+          [disabled]="ocupado"
+          data-testid="admin-impersonate-alumno"
+        >
+          <i class="pi pi-sign-in" aria-hidden="true"></i>Entrar como alumno
+        </button>
+      </div>
+    </header>
+    <div class="ficha-context">
+      <div class="ficha-badges">
+        <span class="alumno-badge">{{
+          data.usuario.rol === "ALUMNO"
+            ? "Alumno"
+            : data.usuario.rol === "ADMIN"
+              ? "Administrador"
+              : "Superadministrador"
+        }}</span
+        ><span
+          class="alumno-badge"
+          [class.brand]="data.gestion.tipo === 'EXTERNA'"
+          [class.blue]="data.gestion.tipo !== 'EXTERNA'"
+          >{{ gestionLabel }}</span
+        ><span
+          class="alumno-badge"
+          [class.green]="planesVigentes.length > 0"
+          [class.amber]="!planesVigentes.length"
+          >{{
+            planesVigentes.length
+              ? "Membresía con acceso"
+              : "Sin acceso de membresía"
+          }}</span
+        >
+      </div>
+      <div class="ficha-badges">
+        <span *ngFor="let l of data.usuario.labels" class="alumno-badge"
+          >{{ l.label.key
+          }}{{ l.label.value ? ": " + l.label.value : "" }}</span
+        ><button
+          pButton
+          type="button"
+          class="alumno-link p-button-text"
+          (click)="abrirEtiquetas()"
+          [disabled]="ocupado"
+          data-testid="admin-etiquetas"
+        >
+          <i class="pi pi-tags" aria-hidden="true"></i>Gestionar etiquetas
+        </button>
+      </div>
+    </div>
+    <label class="ficha-mobile-nav" for="ficha-seccion"
+      >Sección de la ficha<select
+        pInputText
+        id="ficha-seccion"
+        [ngModel]="seccion"
+        (ngModelChange)="cambiarSeccion($event)"
+        [disabled]="ocupado"
+        data-testid="ficha-mobile-section"
+      >
+        <option *ngFor="let s of secciones" [value]="s.id">
+          {{ s.label }}
+        </option>
+      </select></label
+    >
+    <div class="ficha-tabs" role="tablist" aria-label="Secciones de la ficha">
+      <button
+        *ngFor="let s of secciones; let index = index"
+        type="button"
+        role="tab"
+        [id]="'ficha-tab-' + s.id"
+        [attr.aria-controls]="'ficha-panel-' + s.id"
+        [attr.aria-selected]="seccion === s.id"
+        [attr.tabindex]="seccion === s.id ? 0 : -1"
+        [disabled]="ocupado"
+        (click)="cambiarSeccion(s.id)"
+        (keydown)="tecladoPestanas($event, index)"
+        [attr.data-testid]="'ficha-tab-' + s.id"
+      >
+        <i [class]="'pi pi-' + s.icon" aria-hidden="true"></i>{{ s.label }}
+      </button>
+    </div>
+    <section
+      role="tabpanel"
+      [id]="'ficha-panel-' + seccion"
+      [attr.aria-labelledby]="'ficha-tab-' + seccion"
+    >
+      <div
+        *ngIf="resultadoOperacion"
+        class="ficha-notice"
+        role="status"
+        aria-live="polite"
+        tabindex="-1"
+        data-testid="admin-operation-result"
+      >
+        {{ resultadoOperacion }}
+      </div>
+      <app-alumno-informacion
+        *ngIf="seccion === 'info'"
+        [usuario]="data.usuario"
+        (editarDatos)="abrirEditar()"
+      ></app-alumno-informacion>
+      <ng-container *ngIf="seccion === 'access'">
+        <div class="ficha-summary">
+          <article>
+            <span>Membresía de la academia</span
+            ><strong
+              >{{ planesVigentes.length }}
+              {{
+                planesVigentes.length === 1
+                  ? "plan con acceso"
+                  : "planes con acceso"
+              }}</strong
+            >
+            <p>Según los planes vigentes del alumno.</p>
+          </article>
+          <article>
+            <span>Cursos independientes</span
+            ><strong
+              >{{ data.cursos.length }}
+              {{
+                data.cursos.length === 1
+                  ? "curso disponible"
+                  : "cursos disponibles"
+              }}</strong
+            >
+            <p>Conservan su acceso propio.</p>
+          </article>
+          <article>
+            <span>Consumibles</span
+            ><strong
+              >{{ data.usuario.consumibles?.length || 0 }}
+              {{
+                data.usuario.consumibles?.length === 1
+                  ? "producto"
+                  : "productos"
+              }}</strong
+            >
+            <p>Disponibles, usados y caducados.</p>
+          </article>
+        </div>
+        <div *ngIf="data.gestion.motivo" class="ficha-notice" role="status">
+          <i class="pi pi-info-circle" aria-hidden="true"></i
+          ><span>{{ data.gestion.motivo }}</span
+          ><button
+            pButton
+            *ngIf="data.gestion.tipo === 'POR_VERIFICAR'"
+            type="button"
+            class="alumno-btn p-button-outlined"
+            (click)="actualizar()"
+            [disabled]="cargando"
+          >
+            Volver a comprobar
+          </button>
+        </div>
+        <div class="ficha-access-grid">
+          <div class="ficha-column">
+            <app-alumno-suscripciones
+              [suscripciones]="data.usuario.suscripciones || []"
+              [gestion]="data.gestion"
+              [ocupado]="ocupado"
+              (cancelar)="abrirCancelarPlan($event)"
+              (editarPlan)="abrirEditarPlan($event)"
+              (eliminarPlan)="abrirEliminarPlan($event)"
+              (gestionarWoo)="verWoo()"
+            ></app-alumno-suscripciones
+            ><app-alumno-accesos
+              [cursos]="data.cursos"
+              [consumibles]="data.usuario.consumibles || []"
+            ></app-alumno-accesos>
+          </div>
+          <div class="ficha-column">
+            <article class="alumno-card">
+              <div class="alumno-card-head">
+                <div>
+                  <h2>Gestión de la membresía</h2>
+                </div>
+              </div>
+              <p class="alumno-card-intro">
+                La baja total solo afecta a cuentas externas.
+              </p>
+              <div class="alumno-card-body">
+                <p class="alumno-copy">
+                  Retira el acceso de todos los planes externos. Los cursos
+                  independientes, consumibles y progreso se conservan.
+                </p>
+                <button
+                  pButton
+                  type="button"
+                  class="alumno-btn full p-button-outlined p-button-danger"
+                  (click)="abrirBaja()"
+                  [disabled]="
+                    ocupado || !data.gestion.capacidades.puedeDarBajaExterna
+                  "
+                  data-testid="admin-baja-externa"
+                >
+                  Dar de baja la membresía externa
+                </button>
+                <p
+                  *ngIf="
+                    data.gestion.tipo === 'EXTERNA' && !planesVigentes.length
+                  "
+                  class="ficha-helper"
+                >
+                  La membresía ya está de baja.
+                </p>
+                <p *ngIf="data.gestion.tipo !== 'EXTERNA'" class="ficha-helper">
+                  Cada plan debe gestionarse desde su origen.
+                </p>
+              </div>
+            </article>
+            <article
+              *ngIf="data.gestion.capacidades.puedeEliminar"
+              class="alumno-card ficha-danger-zone"
+            >
+              <div class="alumno-card-head">
+                <div>
+                  <h2>Eliminar cuenta</h2>
+                </div>
+                <i class="pi pi-trash" aria-hidden="true"></i>
+              </div>
+              <p class="alumno-card-intro">
+                Acción definitiva, distinta de dar de baja.
+              </p>
+              <div class="alumno-card-body">
+                <p class="alumno-copy">
+                  Elimina al alumno y sus datos propios, incluidos accesos,
+                  consumibles y progreso. Se conservan las facturas emitidas y
+                  los datos compartidos de terceros.
+                </p>
+                <button
+                  pButton
+                  type="button"
+                  class="alumno-btn full p-button-outlined p-button-danger"
+                  (click)="abrirEliminar()"
+                  [disabled]="ocupado"
+                  data-testid="admin-eliminar-alumno"
+                >
+                  Eliminar definitivamente
+                </button>
+              </div>
+            </article>
+            <p
+              *ngIf="!data.gestion.capacidades.puedeEliminar"
+              class="ficha-helper"
+            >
+              El borrado definitivo está limitado a alumnos externos
+              confirmados.
+            </p>
+          </div>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="seccion === 'woo'">
+        <div class="ficha-summary">
+          <article>
+            <span>WooCommerce</span
+            ><strong>Suscripciones y renovaciones</strong>
+            <p>
+              El estado remoto y el acceso de la academia se muestran por
+              separado.
+            </p>
+          </article>
+          <article>
+            <span>Última consulta</span
+            ><strong>{{
+              woo
+                ? (woo.consultadoEn | date: "dd/MM/yy HH:mm")
+                : "Sin consultar"
+            }}</strong
+            ><button
+              pButton
+              type="button"
+              class="alumno-btn p-button-outlined"
+              (click)="cargarWoo()"
+              [disabled]="cargandoWoo || ocupado"
+            >
+              Actualizar WooCommerce
+            </button>
+          </article>
+        </div>
+        <p *ngIf="cargandoWoo" role="status">Consultando WooCommerce…</p>
+        <p *ngIf="errorWoo" role="alert" class="ficha-notice ficha-warning">
+          {{ errorWoo }}
+        </p>
+        <article class="alumno-card" *ngFor="let op of operaciones">
+          <div class="alumno-card-body">
+            <span class="alumno-badge">{{ estadoWoo(op.estado) }}</span>
+            <h3>
+              {{
+                op.tipo === "CANCELAR_WOO"
+                  ? "Cancelación de suscripción"
+                  : "Reintento de renovación"
+              }}
+            </h3>
+            <p>{{ op.mensaje }}</p>
+            <p class="ficha-helper">Referencia: {{ op.id }}</p>
+            <p *ngIf="op.sincronizacionPendiente">
+              WooCommerce ha confirmado la operación. La sincronización del
+              acceso está pendiente.
+            </p>
+            <button
+              pButton
+              type="button"
+              class="alumno-btn p-button-outlined"
+              (click)="consultarOperacion(op)"
+              [disabled]="ocupado"
+              *ngIf="
+                op.estado === 'INCIERTA' ||
+                op.estado === 'EN_CURSO' ||
+                op.sincronizacionPendiente
+              "
+            >
+              Verificar resultado
+            </button>
+          </div>
+        </article>
+        <p *ngIf="woo && !woo.suscripciones.length">
+          Este cliente no tiene suscripciones en WooCommerce.
+        </p>
+        <article class="alumno-card" *ngFor="let sub of woo?.suscripciones">
+          <div class="alumno-card-head">
+            <div>
+              <h2>Suscripción #{{ sub.id }}</h2>
+            </div>
+            <span class="alumno-badge">{{ estadoWoo(sub.status) }}</span>
+          </div>
+          <p class="alumno-card-intro">{{ sub.metodo }}</p>
+          <div class="alumno-card-body">
+            <div class="ficha-form-grid">
+              <div>
+                <strong>Estado en WooCommerce</strong>
+                <p>{{ estadoWoo(sub.status) }}</p>
+                <p>
+                  Siguiente pago:
+                  {{
+                    sub.fechaSiguientePago
+                      ? (sub.fechaSiguientePago + "Z" | date: "dd/MM/yy HH:mm")
+                      : "Sin fecha"
+                  }}
+                </p>
+              </div>
+              <div>
+                <strong>Acceso en la academia</strong>
+                <p *ngFor="let local of sub.locales">
+                  {{ planNombre(local.tipo) }} · {{ local.oposicion }} ·
+                  {{ local.status }}
+                </p>
+                <p *ngIf="!sub.locales.length">Sin plan local asociado.</p>
+              </div>
+            </div>
+            <p *ngIf="sub.discrepancia" class="ficha-notice ficha-warning">
+              Los estados de WooCommerce y la academia no coinciden. Actualiza
+              para comprobar la sincronización.
+            </p>
+            <button
+              pButton
+              type="button"
+              class="alumno-btn p-button-outlined p-button-danger"
+              *ngIf="sub.puedeCancelarAhora || sub.puedeCancelarFinPeriodo"
+              (click)="cancelarWoo(sub)"
+              [disabled]="ocupado || operacionPendiente(sub.id)"
+            >
+              Cancelar suscripción
+            </button>
+            <h3>Últimas renovaciones</h3>
+            <p *ngIf="!sub.renovaciones.length">
+              Sin renovaciones en los pedidos consultados.
+            </p>
+            <div
+              class="ficha-renovacion"
+              *ngFor="let order of sub.renovaciones"
+            >
+              <div>
+                <strong
+                  >Pedido #{{ order.id }} · {{ importeWoo(order) }}</strong
+                >
+                <p>
+                  {{ estadoWoo(order.status) }} ·
+                  {{ order.tarjeta || "Medio guardado sin verificar" }}
+                </p>
+                <p *ngIf="order.motivo" class="ficha-helper">
+                  {{ order.motivo }}
+                </p>
+              </div>
+              <button
+                pButton
+                type="button"
+                class="alumno-btn p-button-outlined"
+                *ngIf="order.puedeReintentar"
+                (click)="reintentarWoo(sub, order)"
+                [disabled]="ocupado || operacionPendiente(sub.id)"
+              >
+                Reintentar cobro
+              </button>
+            </div>
+          </div>
+        </article>
+      </ng-container>
+      <ng-container *ngIf="seccion === 'planning'">
+        <div *ngIf="cargandoPlanes" class="ficha-state" role="status">
+          Cargando planificación…
+        </div>
+        <p *ngIf="errorMarcas" role="alert">{{ errorMarcas }}</p>
+        <div *ngIf="errorPlanes" class="ficha-notice" role="alert">
+          {{ errorPlanes
+          }}<button
+            pButton
+            type="button"
+            class="alumno-btn p-button-outlined"
+            (click)="cargarPlanes()"
+          >
+            Volver a cargar
+          </button>
+        </div>
+        <div class="ficha-planning-grid" *ngIf="!cargandoPlanes">
+          <article class="alumno-card">
+            <div class="alumno-card-head">
+              <div>
+                <h2>Planificaciones asignadas</h2>
+              </div>
+            </div>
+            <p class="alumno-card-intro">
+              Asignaciones y seguimiento del alumno.
+            </p>
+            <div class="alumno-card-body">
+              <div *ngFor="let a of planificaciones" class="ficha-assignment">
+                <div class="ficha-assignment-head">
+                  <app-oposicion-identidad
+                    [oposiciones]="a.planificacion.relevancia"
+                  >
+                    <h3>{{ a.planificacion.identificador }}</h3>
+                    <p>{{ a.planificacion.descripcion }}</p>
+                    <span class="alumno-badge"
+                      >{{
+                        a.planificacion.subBloques?.length || 0
+                      }}
+                      bloques</span
+                    >
+                  </app-oposicion-identidad>
+                  <button
+                    pButton
+                    type="button"
+                    class="p-button-text p-button-rounded"
+                    icon="pi pi-eye"
+                    [attr.aria-label]="
+                      'Ver planificación ' + a.planificacion.identificador
+                    "
+                    pTooltip="Ver planificación"
+                    (click)="verPlanificacion(a.planificacion.id)"
+                  ></button>
+                  <ng-container
+                    *ngIf="data.accionesPlanificacion?.puedeDesvincular"
+                  >
+                    <p-menu
+                      #planMenu
+                      [popup]="true"
+                      [model]="menuPlanificacion(a.planificacion.id)"
+                      appendTo="body"
+                    ></p-menu>
+                    <button
+                      pButton
+                      type="button"
+                      class="p-button-text p-button-rounded p-button-icon-only"
+                      icon="pi pi-ellipsis-v"
+                      [attr.aria-label]="
+                        'Acciones de planificación ' +
+                        a.planificacion.identificador
+                      "
+                      aria-haspopup="menu"
+                      [attr.aria-controls]="planMenu.id"
+                      [attr.aria-expanded]="planMenu.visible || false"
+                      [disabled]="ocupado"
+                      (click)="planMenu.toggle($event)"
+                    ></button>
+                  </ng-container>
+                </div>
+              </div>
+              <div *ngIf="!planificaciones.length" class="alumno-empty">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                <h3>Sin planificación asignada</h3>
+                <p>Las asignaciones de este alumno aparecerán aquí.</p>
+              </div>
+            </div>
+          </article>
+          <article *ngIf="fisicaHabilitada()" class="alumno-card">
+            <div class="alumno-card-head">
+              <div>
+                <h2>Marcas físicas</h2>
+              </div>
+            </div>
+            <p class="alumno-card-intro">
+              Últimos registros de preparación física.
+            </p>
+            <div class="alumno-card-body">
+              <div *ngFor="let marca of marcas" class="ficha-marca">
+                <div>
+                  <strong>{{ marca.pruebaNombre }}</strong
+                  ><span>{{ marca.fecha | date: "d MMM yyyy" }}</span>
+                  <p *ngIf="marca.notas">{{ marca.notas }}</p>
+                </div>
+                <b>{{ marca.valor }} {{ marca.unidad }}</b>
+              </div>
+              <div *ngIf="!marcas.length" class="alumno-empty">
+                <i class="pi pi-chart-line" aria-hidden="true"></i>
+                <h3>Sin marcas registradas</h3>
+              </div>
+            </div>
+          </article>
+        </div></ng-container
+      >
+      <ng-container *ngIf="seccion === 'activity'"
+        ><article class="alumno-card">
+          <div class="alumno-card-head">
+            <div>
+              <h2>Actividad administrativa</h2>
+            </div>
+          </div>
+          <p class="alumno-card-intro">
+            Operaciones sobre la cuenta y su resultado.
+          </p>
+          <div class="alumno-card-body">
+            <div *ngIf="cargandoActividad" role="status">
+              Cargando actividad…
+            </div>
+            <div *ngIf="errorActividad" role="alert">
+              {{ errorActividad
+              }}<button
+                pButton
+                type="button"
+                class="alumno-btn p-button-outlined"
+                (click)="cargarActividad()"
+              >
+                Volver a cargar
+              </button>
+            </div>
+            <div *ngFor="let entry of actividad?.items" class="ficha-activity">
+              <i class="pi pi-history" aria-hidden="true"></i>
+              <div>
+                <strong>{{ tituloActividad(entry.tipo) }}</strong>
+                <p>{{ entry.descripcion }}</p>
+                <span
+                  >{{
+                    entry.actorId
+                      ? "Administrador #" + entry.actorId
+                      : "Sistema"
+                  }}
+                  ·
+                  {{
+                    entry.estado === "INCIERTA"
+                      ? "Pendiente de comprobar"
+                      : entry.estado === "EN_CURSO"
+                        ? "En curso"
+                        : entry.estado === "RECHAZADA"
+                          ? "Rechazada"
+                          : "Completada"
+                  }}</span
+                >
+              </div>
+              <time>{{ entry.createdAt | date: "d MMM, HH:mm" }}</time>
+            </div>
+            <div
+              *ngIf="
+                !cargandoActividad &&
+                !errorActividad &&
+                !actividad?.items?.length
+              "
+              class="alumno-empty"
+            >
+              <h3>Sin actividad registrada</h3>
+              <p>Las operaciones administrativas aparecerán aquí.</p>
+            </div>
+            <div
+              *ngIf="actividad && actividad.total > actividad.take"
+              class="ficha-pagination"
+              id="actividad-paginacion"
+              tabindex="-1"
+              role="status"
+              aria-live="polite"
+            >
+              <button
+                pButton
+                type="button"
+                class="alumno-btn p-button-outlined"
+                [disabled]="cargandoActividad || actividad.page === 1"
+                (click)="cargarActividad(actividad.page - 1)"
+              >
+                Anterior</button
+              ><span role="status">Página {{ actividad.page }}</span
+              ><button
+                pButton
+                type="button"
+                class="alumno-btn p-button-outlined"
+                [disabled]="
+                  cargandoActividad ||
+                  actividad.page * actividad.take >= actividad.total
+                "
+                (click)="cargarActividad(actividad.page + 1)"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </article></ng-container
+      >
+    </section>
+  </ng-container>
+</div>
+<p-dialog
+  [header]="dialogoTitulo"
+  [visible]="!!dialogo"
+  (visibleChange)="!$event && cerrarDialogo()"
+  [modal]="true"
+  [style]="{ width: 'min(560px,94vw)' }"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!ocupado"
+  [closeOnEscape]="!ocupado"
+  [attr.aria-busy]="ocupado"
+>
+  <ng-container *ngIf="dialogo as d"
+    ><p class="ficha-dialog-description">{{ d.nombre }} · {{ d.email }}</p>
+    <ng-container *ngIf="d.tipo === 'eliminarPlan' && d.suscripcion"
+      ><p>
+        Vas a eliminar permanentemente el registro local de
+        <strong>{{ planLabel(d.suscripcion) }}</strong
+        >.
+      </p>
+      <p>
+        La cuenta y los cursos independientes se conservarán. Para retirar el
+        acceso conservando el registro del plan, utiliza Cancelar este plan.
+      </p></ng-container
+    >
+    <ng-container *ngIf="d.tipo === 'alta'"
+      ><p>
+        El plan se gestionará de forma externa, sin iniciar cobros en
+        WooCommerce.
+      </p>
+      <label class="ficha-field"
+        >Oposición<select
+          pInputText
+          [(ngModel)]="nuevaOposicion"
+          (ngModelChange)="nuevoTipo = ''"
+          [disabled]="ocupado"
+        >
+          <option value="">Selecciona una oposición</option>
+          <option
+            *ngFor="let op of oposiciones"
+            [value]="op[0]"
+            [disabled]="
+              oposicionYaActiva(op[0]) && d.suscripcion?.oposicion !== op[0]
+            "
+          >
+            {{ op[1]
+            }}{{ oposicionYaActiva(op[0]) ? " · Ya tiene acceso" : "" }}
+          </option>
+        </select></label
+      ><label class="ficha-field"
+        >Plan<select
+          pInputText
+          [(ngModel)]="nuevoTipo"
+          [disabled]="ocupado || !nuevaOposicion"
+        >
+          <option value="">Selecciona un plan</option>
+          <option *ngFor="let tipo of tiposPlan" [value]="tipo">
+            {{ planNombre(tipo) }}
+          </option>
+        </select></label
+      >
+      <p *ngIf="!nuevaOposicion" class="ficha-helper">
+        Elige primero una oposición para seleccionar su plan.
+      </p></ng-container
+    >
+    <ng-container *ngIf="d.tipo === 'cancelarWoo' && d.wooSub"
+      ><p>Suscripción #{{ d.wooSub.id }} en WooCommerce.</p>
+      <label class="ficha-field"
+        >Cuándo cancelar<select
+          pInputText
+          [(ngModel)]="modoCancelacion"
+          [disabled]="ocupado"
+        >
+          <option value="FIN_PERIODO" *ngIf="d.wooSub.puedeCancelarFinPeriodo">
+            Al finalizar el periodo pagado
+          </option>
+          <option value="AHORA" *ngIf="d.wooSub.puedeCancelarAhora">
+            Ahora
+          </option>
+        </select></label
+      >
+      <p class="ficha-notice">
+        {{
+          modoCancelacion === "AHORA"
+            ? "Se retirará el acceso de esta suscripción al confirmar la cancelación."
+            : "El acceso se conserva hasta terminar el periodo pagado."
+        }}
+        No se emite ningún reembolso.
+      </p>
+      <label class="ficha-field"
+        >Motivo (opcional)<textarea
+          pInputTextarea
+          [(ngModel)]="motivo"
+          maxlength="500"
+          [disabled]="ocupado"
+        ></textarea></label
+    ></ng-container>
+    <ng-container *ngIf="d.tipo === 'reintentarWoo' && d.renovacion"
+      ><p>
+        Se intentará cobrar la renovación existente. No se crea otro pedido.
+      </p>
+      <dl class="alumno-info-fields">
+        <div>
+          <dt>Pedido</dt>
+          <dd>#{{ d.renovacion.id }}</dd>
+        </div>
+        <div>
+          <dt>Suscripción</dt>
+          <dd>#{{ d.wooSub?.id }}</dd>
+        </div>
+        <div>
+          <dt>Importe</dt>
+          <dd>{{ importeWoo(d.renovacion) }}</dd>
+        </div>
+        <div>
+          <dt>Medio guardado</dt>
+          <dd>{{ d.renovacion.tarjeta }}</dd>
+        </div>
+      </dl>
+      <label class="ficha-field ficha-check"
+        ><input
+          type="checkbox"
+          [(ngModel)]="confirmaCobro"
+          [disabled]="ocupado"
+        />Confirmo el cobro de {{ importeWoo(d.renovacion) }} a
+        {{ d.nombre }}.</label
+      ></ng-container
+    >
+    <div *ngIf="d.tipo === 'editar'" class="ficha-form-grid">
+      <label
+        >Nombre<input
+          pInputText
+          [(ngModel)]="edicion.nombre"
+          [disabled]="ocupado"
+          data-testid="admin-edit-nombre" /></label
+      ><label
+        >Apellidos<input
+          pInputText
+          [(ngModel)]="edicion.apellidos"
+          [disabled]="ocupado"
+          data-testid="admin-edit-apellidos" /></label
+      ><label
+        >Es tutor<p-checkbox
+          [binary]="true"
+          [(ngModel)]="edicion.esTutor"
+          [disabled]="ocupado"
+        ></p-checkbox></label
+      ><label
+        >Acceso a clases grabadas desde<input
+          type="date"
+          pInputText
+          [(ngModel)]="edicion.fechaGrabadas"
+          [disabled]="ocupado"
+      /></label>
+      <p class="ficha-helper">
+        Fecha vacía: se aplica el acceso de su suscripción.
+      </p>
+    </div>
+    <ng-container *ngIf="d.tipo === 'etiquetas'"
+      ><div class="ficha-draft-labels">
+        <span *ngFor="let l of etiquetas" class="alumno-badge"
+          >{{ l.key }}{{ l.value ? ": " + l.value : ""
+          }}<button
+            pButton
+            type="button"
+            class="alumno-link p-button-text"
+            (click)="quitarEtiqueta(l.clientId)"
+            [disabled]="ocupado"
+            [attr.aria-label]="'Quitar etiqueta ' + l.key"
+          >
+            <i class="pi pi-times" aria-hidden="true"></i></button
+        ></span>
+        <p *ngIf="!etiquetas.length">Sin etiquetas asignadas.</p>
+      </div>
+      <label class="ficha-field"
+        >Asignar etiqueta existente<select
+          pInputText
+          [(ngModel)]="etiquetaSeleccionada"
+          [disabled]="ocupado"
+        >
+          <option value="">Selecciona una etiqueta</option>
+          <option *ngFor="let l of etiquetasDisponibles" [value]="l.id">
+            {{ l.key }}{{ l.value ? ": " + l.value : "" }}
+          </option>
+        </select></label
+      ><button
+        pButton
+        type="button"
+        class="alumno-btn p-button-outlined"
+        (click)="agregarEtiqueta()"
+        [disabled]="ocupado || !etiquetaSeleccionada"
+      >
+        Añadir
+      </button>
+      <div class="ficha-form-grid">
+        <label
+          >Clave<input
+            pInputText
+            [(ngModel)]="nuevaClave"
+            maxlength="100"
+            [disabled]="ocupado"
+            data-testid="admin-label-key" /></label
+        ><label
+          >Valor<input
+            pInputText
+            [(ngModel)]="nuevoValor"
+            maxlength="200"
+            [disabled]="ocupado"
+            data-testid="admin-label-value"
+        /></label>
+      </div>
+      <button
+        pButton
+        type="button"
+        class="alumno-btn p-button-outlined"
+        (click)="crearEtiqueta()"
+        [disabled]="ocupado || !nuevaClave.trim()"
+      >
+        Añadir etiqueta
+      </button></ng-container
+    >
+    <ng-container *ngIf="d.tipo === 'baja'"
+      ><p>Se retirará el acceso de todos sus planes externos:</p>
+      <ul>
+        <li *ngFor="let s of planesVigentes">{{ planLabel(s) }}</li>
+      </ul>
+      <div class="ficha-notice">
+        Los cursos independientes, consumibles y progreso se conservan. La
+        cuenta no se elimina.
+      </div>
+      <label class="ficha-field"
+        >Motivo (opcional)<textarea
+          pInputTextarea
+          [(ngModel)]="motivo"
+          rows="3"
+          maxlength="500"
+          [disabled]="ocupado"
+        ></textarea></label
+    ></ng-container>
+    <ng-container *ngIf="d.tipo === 'plan' && d.suscripcion"
+      ><p>Se cancelará {{ planLabel(d.suscripcion) }}.</p>
+      <div class="ficha-notice">
+        Los demás planes y los productos independientes se conservan. No se da
+        de baja toda la membresía.
+      </div></ng-container
+    >
+    <ng-container *ngIf="d.tipo === 'eliminar'"
+      ><div class="ficha-notice ficha-warning">
+        Esta acción no se puede deshacer.
+      </div>
+      <p>Se eliminarán la cuenta y sus datos propios:</p>
+      <ul>
+        <li>
+          {{ ficha?.resumenEliminacion?.suscripciones }} planes y su acceso.
+        </li>
+        <li>
+          {{ ficha?.resumenEliminacion?.cursos }} cursos y
+          {{ ficha?.resumenEliminacion?.progresos }} registros de progreso.
+        </li>
+        <li>
+          {{ ficha?.resumenEliminacion?.consumibles }} consumibles y
+          {{ ficha?.resumenEliminacion?.invitaciones }} invitaciones.
+        </li>
+      </ul>
+      <p>
+        Las facturas emitidas y los datos compartidos de terceros se conservan.
+      </p>
+      <label class="ficha-field"
+        >Escribe {{ d.email }} para confirmar<input
+          type="email"
+          pInputText
+          [(ngModel)]="emailConfirmacion"
+          autocomplete="off"
+          spellcheck="false"
+          [disabled]="ocupado"
+          data-testid="admin-delete-email" /></label
+    ></ng-container>
+    <ng-container *ngIf="d.tipo === 'desvincular'"
+      ><p>Se retirará la asignación y el progreso asociado de este alumno.</p>
+      <div class="ficha-notice">
+        La planificación compartida y sus otros alumnos se conservan.
+      </div></ng-container
+    >
+  </ng-container>
+  <p *ngIf="errorDialogo" role="alert" class="ficha-form-error">
+    {{ errorDialogo }}
+  </p>
+  <ng-template pTemplate="footer"
+    ><button
+      pButton
+      type="button"
+      class="alumno-btn p-button-outlined"
+      (click)="cerrarDialogo()"
+      [disabled]="ocupado"
+    >
+      Volver</button
+    ><button
+      pButton
+      type="button"
+      class="alumno-btn"
+      [class.p-button-danger]="
+        [
+          'baja',
+          'plan',
+          'eliminarPlan',
+          'eliminar',
+          'desvincular',
+          'cancelarWoo',
+        ].includes(dialogo?.tipo || '')
+      "
+      (click)="confirmar()"
+      [disabled]="!puedeConfirmar"
+      data-testid="admin-confirm-action"
+    >
+      {{
+        ocupado
+          ? "Procesando…"
+          : dialogo?.tipo === "editar"
+            ? "Guardar cambios"
+            : dialogo?.tipo === "etiquetas"
+              ? "Guardar etiquetas"
+              : dialogo?.tipo === "eliminar"
+                ? "Eliminar definitivamente"
+                : "Confirmar"
+      }}
+    </button></ng-template
+  >
+</p-dialog>

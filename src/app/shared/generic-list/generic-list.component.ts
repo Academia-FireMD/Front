@@ -114,6 +114,7 @@ export type GenericListMode = 'overview' | 'selection';
                 [ngClass]="{
                   pointer: mode === 'overview',
                   'selection-mode': mode === 'selection',
+                  'auto-item-height': autoItemHeight,
                 }"
                 *ngFor="let item of data"
                 (click)="handleItemClick(item, $event)"
@@ -306,6 +307,7 @@ export class GenericListComponent<T>
   extends SharedGridComponent<T>
   implements OnInit, OnDestroy
 {
+  @Input() autoItemHeight = false;
   @Input() itemTemplate!: TemplateRef<any>;
   @Input() showPagination: boolean = true;
   @Input() filters?: FilterConfig[];

@@ -1,11 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../testing';
 import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
-import { UserService } from '../services/user.service';
 import { EstadoModulos } from '../shared/models/app-config.model';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
 import { CompraFiscalService } from '../compras/compra-fiscal.service';
@@ -42,10 +41,6 @@ describe('ProfileComponent', () => {
   let component: ProfileComponent;
   let fixture: ComponentFixture<ProfileComponent>;
   let mockAuthService: { getWpSsoUrl$: jest.Mock };
-  let mockUserService: {
-    getAllTutores$: jest.Mock;
-    updateOnboardingData$: jest.Mock;
-  };
   let appConfigService: ReturnType<typeof makeMockAppConfigService>;
 
   beforeEach(async () => {
@@ -55,10 +50,6 @@ describe('ProfileComponent', () => {
           url: 'https://staging2.tecnikafire.com/wp-json/tecnika/v1/sso?token=tok.en.sig',
         }),
       ),
-    };
-    mockUserService = {
-      getAllTutores$: jest.fn().mockReturnValue(of([])),
-      updateOnboardingData$: jest.fn().mockReturnValue(of({})),
     };
     appConfigService = makeMockAppConfigService(true);
 
@@ -74,7 +65,6 @@ describe('ProfileComponent', () => {
         },
         // Override AuthService con mock que tiene getWpSsoUrl$
         { provide: AuthService, useValue: mockAuthService },
-        { provide: UserService, useValue: mockUserService },
         { provide: AppConfigService, useValue: appConfigService },
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -84,44 +74,162 @@ describe('ProfileComponent', () => {
     component = fixture.componentInstance;
   });
 
+  it('el formulario guarda una sola vez el snapshot del usuario y espera antes de salir', async () => {
+    const result = new Subject<any>();
+    const updateUser = jest.fn().mockReturnValue(result);
+    (component as any).userService = { updateUser };
+    component.user = {
+      id: 42,
+      rol: 'ALUMNO',
+      nombre: 'Lucía',
+      apellidos: 'Soler',
+      dni: '00000000T',
+      metodoCalificacion: 'A1_E1_3_B0',
+      esTutor: true,
+    } as any;
+    const pending = component.saveProfile();
+    const salida = component.prepararSalida();
+    await component.saveProfile();
+    component.user!.nombre = 'Edición posterior';
+    expect(updateUser).toHaveBeenCalledTimes(1);
+    expect(updateUser).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({ nombre: 'Lucía', dni: '00000000T' }),
+    );
+    expect(updateUser.mock.calls[0][1]).not.toHaveProperty('esTutor');
+    expect(salida).toBeInstanceOf(Promise);
+    result.next({});
+    await pending;
+    await expect(salida).resolves.toBe(true);
+    expect(component.guardandoPerfil).toBe(false);
+  });
+  it('un error de guardado conserva el formulario y permite reintentar', async () => {
+    const updateUser = jest
+      .fn()
+      .mockReturnValue(throwError(() => new Error('No se guardó')));
+    (component as any).userService = { updateUser };
+    component.user = {
+      id: 42,
+      rol: 'ADMIN',
+      nombre: 'Lucía',
+      apellidos: 'Soler',
+      esTutor: true,
+    } as any;
+    await component.saveProfile();
+    expect(component.errorEdicionPerfil).toBe('No se guardó');
+    expect(component.user!.nombre).toBe('Lucía');
+    expect(component.guardandoPerfil).toBe(false);
+    updateUser.mockReturnValue(of({}));
+    await component.saveProfile();
+    expect(updateUser).toHaveBeenCalledTimes(2);
+    expect(updateUser.mock.calls[1][1].esTutor).toBe(true);
+    expect(component.errorEdicionPerfil).toBe('');
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('getOnboardingCompletionPercentage', () => {
-    it('no exige las preferencias del gestor de planificación para completar el perfil', () => {
+  it('descarta el borrador del diálogo sin modificar los datos del perfil', () => {
+    component.user = {
+      id: 42,
+      rol: 'ALUMNO',
+      nombre: 'Lucía',
+      apellidos: 'Soler',
+    } as any;
+    component.abrirEdicionPerfil();
+    component.perfilEdicion!.nombre = 'Cambio sin guardar';
+    component.cerrarEdicionPerfil();
+    expect(component.user!.nombre).toBe('Lucía');
+    expect(component.perfilEdicion).toBeNull();
+    expect(component.mostrarEdicionPerfil).toBe(false);
+  });
+
+  it('no vuelve a abrir automáticamente la ficha incompleta tras descartarla', () => {
+    component.user = { id: 98765, rol: 'ALUMNO' } as any;
+    localStorage.setItem('onboarding_shown_98765', 'true');
+    jest.spyOn(component, 'isOnboardingComplete').mockReturnValue(false);
+
+    try {
+      (component as any).checkFirstTimeAccess();
+      expect(component.showOnboardingModal).toBe(false);
+    } finally {
+      localStorage.removeItem('onboarding_shown_98765');
+    }
+  });
+
+  it('lleva la gestión de planificación al shell/wizard, sin autoasignador legacy', () => {
+    const router = TestBed.inject(Router);
+
+    component.irAPlanificacion();
+
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/app/planificacion/configuracion-alumno',
+    ]);
+  });
+
+  it('expone el test de perfil solo con PLANIFICACION activo', () => {
+    expect(component.planificacionHabilitada()).toBe(true);
+    appConfigService.setEstado({
+      ...appConfigService.estadoModulos(),
+      [ModuloApp.PLANIFICACION]: false,
+    });
+    expect(component.planificacionHabilitada()).toBe(false);
+  });
+
+  it('la ficha no persiste ni reinterpreta preferencias de planificación legadas', async () => {
+    const router = TestBed.inject(Router);
+    (router.navigate as jest.Mock).mockClear();
+    const updateOnboardingData$ = jest.fn().mockReturnValue(of(null));
+    (component as any).userService = { updateOnboardingData$ };
+    component.user = {
+      tipoOposicion: ['MADRID'],
+      nivelOposicion: 'INICIACION',
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_CUATRO_A_SEIS_HORAS',
+    } as any;
+
+    await component.onOnboardingUpdated({
+      tipoOposicion: ['VALENCIA_AYUNTAMIENTO'] as any,
+      nivelOposicion: 'AVANZADO' as any,
+      tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS' as any,
+    });
+
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(updateOnboardingData$).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        tipoOposicion: expect.anything(),
+        nivelOposicion: expect.anything(),
+        tipoDePlanificacionDuracionDeseada: expect.anything(),
+      }),
+    );
+  });
+
+  it('un fallo al consultar la configuración no se presenta como pendiente', async () => {
+    (component as any).autoasignacionService = {
+      getConfiguracion$: () => throwError(() => new Error('sin conexión')),
+    };
+    await (component as any).cargarConfiguracionPlanificacion();
+    expect(component.configuracionPlanificacion).toBeNull();
+    expect(component.configuracionPlanificacionCargando).toBe(false);
+    expect(component.configuracionPlanificacionError).toBe(true);
+  });
+
+  describe('progreso de ficha sin campos legados de planificación', () => {
+    it('no cuenta una oposición antigua vacía', () => {
       component.onboardingData = {
         tipoOposicion: [],
         nivelOposicion: 'INICIACION',
-        tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS',
       } as any;
       expect(component.getOnboardingCompletionPercentage()).toBe(0);
     });
-  });
 
-  it('al guardar la ficha personal omite y conserva las preferencias de planificación existentes', async () => {
-    const preferencias = {
-      tipoOposicion: ['MADRID'],
-      nivelOposicion: 'AVANZADO',
-      tipoDePlanificacionDuracionDeseada: 'FRANJA_SEIS_A_OCHO_HORAS',
-    };
-    component.onboardingData = { ...preferencias } as any;
-
-    await component.onOnboardingUpdated({ dni: '12345678A' });
-
-    expect(mockUserService.updateOnboardingData$).toHaveBeenCalledWith({
-      dni: '12345678A',
+    it('tampoco cuenta una oposición antigua rellenada', () => {
+      component.onboardingData = {
+        tipoOposicion: ['MADRID'],
+        nivelOposicion: 'INICIACION',
+      } as any;
+      expect(component.getOnboardingCompletionPercentage()).toBe(0);
     });
-    expect(component.onboardingData).toMatchObject(preferencias);
-    expect(component.onboardingData).toHaveProperty('dni', '12345678A');
-  });
-
-  it('ofrece desde el perfil acceso al gestor de planificación', () => {
-    component.gestionarPlanificacion();
-
-    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([
-      '/app/planificacion/configuracion-alumno',
-    ]);
   });
 
   it('menú de suscripción (WP-linked) incluye "Cambiar tarjeta de pago"', () => {
@@ -421,14 +529,29 @@ describe('ProfileComponent', () => {
       );
       expect(card.querySelectorAll('.accesos-tabs button')).toHaveLength(2);
       expect(card.textContent).toContain('Opositor de Élite nivel 1');
-      card.querySelectorAll('.accesos-tabs button')[0].click();
+      expect(card.textContent).not.toContain('Simulacro de prueba');
+      (
+        Array.from(
+          card.querySelectorAll('.accesos-tabs button'),
+        ) as HTMLButtonElement[]
+      )
+        .find((b) => b.textContent?.includes('Simulacros'))!
+        .click();
       fixture.detectChanges();
       expect(card.textContent).toContain('Simulacro de prueba');
-      card.querySelectorAll('.accesos-tabs button')[1].click();
+      expect(card.textContent).not.toContain('Opositor de Élite nivel 1');
+      (
+        Array.from(
+          card.querySelectorAll('.accesos-tabs button'),
+        ) as HTMLButtonElement[]
+      )
+        .find((b) => b.textContent?.includes('Cursos'))!
+        .click();
       fixture.detectChanges();
-      expect(card.textContent).toContain('Opositor de Élite nivel 1');
       expect(card.textContent).toContain('07/12/2026');
-      card.querySelector('.acceso-view-button').click();
+      (Array.from(card.querySelectorAll('button')) as HTMLButtonElement[])
+        .find((b) => b.textContent?.includes('Ver curso'))!
+        .click();
       expect(router.navigate).toHaveBeenCalledWith([
         '/app/cursos',
         'opositor-de-elite-nivel-1',

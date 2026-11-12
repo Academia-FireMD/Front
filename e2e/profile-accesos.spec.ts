@@ -109,20 +109,20 @@ test('el alumno sin suscripción ve sus accesos compactos en escritorio y móvil
 
   await card.getByRole('button', { name: /Simulacros/ }).click();
   await expect(card.getByText('Simulacro de acceso')).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Usar' })).toBeVisible();
+  await expect(card.getByRole('button', { name: /Usar/ })).toBeVisible();
   if (screenshots)
     await card.screenshot({
       path: join(screenshots, 'mis-accesos-simulacros.png'),
     });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await card.getByRole('button', { name: /Cursos/ }).click();
-  await expect(card.getByRole('button', { name: /Ver curso/ })).toBeVisible();
+  await expect(card.getByRole('button', { name: /Usar/ })).toBeVisible();
   if (screenshots)
     await card.screenshot({
       path: join(screenshots, 'mis-accesos-mobile.png'),
     });
 
+  await card.getByRole('button', { name: /Cursos/ }).click();
   await card.getByRole('button', { name: /Ver curso/ }).click();
   await page.waitForURL('**/app/cursos/opositor-de-elite-nivel-1');
 
@@ -135,7 +135,9 @@ test('el alumno sin suscripción ve sus accesos compactos en escritorio y móvil
   );
   await page.route('**/cursos/mios', (route) => route.fulfill(json([])));
   await page.goto('/app/profile');
-  await expect(card.getByText('Aún no tienes acceso')).toBeVisible();
+  await expect(
+    card.getByText('Aún no tienes acceso a simulacros ni cursos.'),
+  ).toBeVisible();
   await expect(card.locator('.accesos-tabs')).toHaveCount(0);
   if (screenshots)
     await card.screenshot({

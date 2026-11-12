@@ -1,0 +1,264 @@
+@import "../shared/alumno-cards/alumno-cards";
+
+:host {
+  display: block;
+  min-height: 100%;
+  color: var(--text-color);
+  background: var(--surface-ground);
+}
+.profile-container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 32px;
+}
+.profile-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.profile-identity > div {
+  min-width: 0;
+}
+.profile-identity app-avatar-upload {
+  flex-shrink: 0;
+}
+.profile-heading h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.profile-heading p {
+  margin: 6px 0 0;
+  color: var(--text-color-secondary);
+  overflow-wrap: anywhere;
+}
+.profile-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  margin-bottom: 8px;
+}
+.profile-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.profile-intro {
+  color: var(--text-color-secondary);
+  margin: 0 0 28px;
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+.profile-grid > * {
+  min-width: 0;
+}
+.profile-grid-admin {
+  grid-template-columns: minmax(0, 1fr);
+}
+.profile-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  background: var(--surface-card);
+  box-shadow: 0 1px 3px #00000014;
+  overflow: hidden;
+}
+.profile-panel-head {
+  background: var(--primary-color);
+  color: var(--p-primary-contrast-color, var(--primary-color-text));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--surface-border);
+}
+.profile-panel-head h2 {
+  color: inherit;
+  font-size: 18px;
+  margin: 0;
+  line-height: 1.4;
+}
+.profile-panel-body {
+  padding: 24px;
+  flex: 1;
+}
+.profile-panel-body > p:first-child {
+  margin-top: 0;
+}
+.profile-wide,
+.profile-accesses {
+  grid-column: 1/-1;
+}
+.profile-planning p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-color-secondary);
+}
+.profile-assigned-plan {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+.profile-assigned-plan:last-of-type {
+  margin-bottom: 16px;
+}
+.profile-assigned-plan h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.profile-assigned-plan app-oposicion-identidad {
+  flex: 1;
+  min-width: 0;
+}
+.profile-assigned-plan > p-button {
+  flex-shrink: 0;
+}
+.profile-subscription-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.profile-save-error {
+  color: var(--red-700, #b42318);
+}
+.profile-edit-form .form-group {
+  margin-bottom: 20px;
+}
+.profile-edit-form label {
+  display: block;
+  margin-bottom: 8px;
+}
+.profile-badges .alumno-badge {
+  white-space: normal;
+}
+.alumno-card-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.profile-accesses .accesos-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.profile-accesses .accesos-tabs button.active {
+  box-shadow: inset 0 -2px var(--primary-color);
+}
+.profile-accesses .acceso-tile-action {
+  margin-top: auto;
+}
+.profile-accesses .acceso-view-button {
+  align-self: flex-start;
+}
+.profile-accesses .acceso-tile-main {
+  min-width: 0;
+}
+.profile-accesses .accesos-error {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 1050px) {
+  .profile-heading {
+    flex-wrap: wrap;
+  }
+  .profile-badges {
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 800px) {
+  .profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .profile-container {
+    padding: 24px 16px;
+  }
+}
+@media (max-width: 520px) {
+  .profile-container {
+    padding: 20px 8px;
+  }
+  .profile-heading {
+    gap: 16px;
+  }
+  .profile-heading h1 {
+    font-size: 24px;
+  }
+  .profile-panel-body {
+    padding: 18px 16px;
+  }
+  .profile-panel-head {
+    padding: 9px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .profile-intro {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+}
+
+.profile-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+.profile-grid > div > app-alumno-datos,
+.profile-grid > div > app-alumno-suscripciones {
+  flex: 1;
+  height: 100%;
+}
+
+[suscripciones-cabecera].p-button {
+  color: var(--p-primary-contrast-color, var(--primary-color-text));
+}
+[suscripciones-cabecera].p-button:not(:disabled):hover {
+  color: var(--p-primary-contrast-color, var(--primary-color-text));
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+[suscripciones-cabecera].p-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.profile-panel-intro {
+  margin: 0;
+  padding: 16px 24px 0;
+  color: var(--text-color-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.profile-panel-intro + .profile-panel-body {
+  padding-top: 16px;
+}
+@media (max-width: 520px) {
+  .profile-panel-intro {
+    padding: 14px 16px 0;
+  }
+}
