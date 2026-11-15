@@ -186,11 +186,12 @@ test('administrador conserva formulario completo, tutor y selector de foto con t
   ).toBeVisible();
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.p-dialog-mask')).toHaveCount(0);
   const avatar = page.getByRole('button', { name: 'Cambiar foto de perfil' });
   await avatar.focus();
   await expect(avatar).toBeFocused();
   const choose = page.waitForEvent('filechooser');
-  await page.keyboard.press('Enter');
+  await avatar.press('Enter');
   expect((await choose).isMultiple()).toBe(false);
 });
 for (const rol of ['ALUMNO', 'ADMIN', 'SUPERADMIN'] as const)

@@ -1254,6 +1254,7 @@ test.describe('Cursos admin — flujo completo', () => {
         { timeout: 5_000 },
       )
       .toBe('Texto');
-    expect(state.reorderBloquesCalls).toBe(1);
+    // El orden local se actualiza antes de que termine la petición persistente.
+    await expect.poll(() => state.reorderBloquesCalls).toBe(1);
   });
 });
