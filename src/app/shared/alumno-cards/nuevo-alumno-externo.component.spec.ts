@@ -86,4 +86,51 @@ describe('Alta externa: recuperación tras recarga', () => {
     expect(c.incierta).toBe(false);
     expect(JSON.stringify(sessionStorage)).not.toContain('privado');
   });
+  it.each(['timeout', 'respuesta pendiente'])(
+    '%s: comprobar PENDIENTE, cerrar y recargar conserva la misma alta para recuperar el aviso',
+    async (respuesta) => {
+      api.accionManual
+        .mockReturnValueOnce(
+          respuesta === 'timeout'
+            ? throwError(() => ({ status: 0 }))
+            : of({ usuarioId: 7, operacionId: 'op', avisoEstado: 'PENDIENTE' }),
+        )
+        .mockReturnValueOnce(
+          of({
+            usuarioId: 7,
+            operacionId: 'op',
+            avisoEstado: 'ACEPTADO_POR_PROVEEDOR',
+          }),
+        );
+      const inicial = crear();
+      inicial.abrir();
+      inicial.nombre = 'Nombre';
+      inicial.apellidos = 'Apellido';
+      inicial.email = 'alumno@example.test';
+      inicial.notificar = true;
+      await inicial.guardar();
+      const original = api.accionManual.mock.calls[0];
+      api.consultarAlta.mockReturnValue(
+        of({ id: 'op', usuarioId: 7, avisoEstado: 'PENDIENTE' }),
+      );
+      await inicial.comprobar();
+      expect(inicial.incierta).toBe(true);
+      inicial.visible = false;
+      inicial.abrir();
+      expect(inicial.resultado?.usuarioId).toBe(7);
+      const recargada = crear();
+      recargada.abrir();
+      expect(recargada.incierta).toBe(true);
+      await recargada.comprobar();
+      expect(recargada.incierta).toBe(true);
+      recargada.email = 'distinto@example.test';
+      await recargada.guardar();
+      expect(api.accionManual.mock.calls[1]).toEqual(original);
+      expect(recargada.incierta).toBe(false);
+      expect(JSON.stringify(sessionStorage)).not.toContain(
+        'alumno@example.test',
+      );
+      expect(JSON.stringify(sessionStorage)).not.toContain('enlaceAcceso');
+    },
+  );
 });

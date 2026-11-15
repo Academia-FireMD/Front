@@ -108,4 +108,58 @@ describe('Gestión externa: recupera intenciones sin duplicar concesiones', () =
     expect(api.accionManual.mock.calls[1]).toEqual(original);
     expect(recargada.pendientes).toEqual([]);
   });
+  it.each(['timeout', 'respuesta pendiente'])(
+    '%s: consultar PENDIENTE y recargar conserva el replay que recupera el aviso',
+    async (respuesta) => {
+      api.accionManual
+        .mockReturnValueOnce(
+          respuesta === 'timeout'
+            ? throwError(() => ({ status: 0 }))
+            : of({ usuarioId: 7, operacionId: 'op', avisoEstado: 'PENDIENTE' }),
+        )
+        .mockReturnValueOnce(
+          of({
+            usuarioId: 7,
+            operacionId: 'op',
+            avisoEstado: 'ACEPTADO_POR_PROVEEDOR',
+          }),
+        );
+      c.abrir('CreditoAlta');
+      c.notificar = true;
+      await c.guardar();
+      const original = api.accionManual.mock.calls[0];
+      api.operacion.mockReturnValue(
+        of({ id: 'op', usuarioId: 7, avisoEstado: 'PENDIENTE' }),
+      );
+      await c.consultar(original[3]);
+      // También la consulta desde la tarjeta de resultado conserva la clave original.
+      await c.consultar('op');
+      expect(c.pendientes).toEqual([original[3]]);
+      const recargada = TestBed.runInInjectionContext(
+        () => new GestionExternaComponent(),
+      );
+      recargada.alumnoId = 7;
+      recargada.ngOnChanges();
+      recargada.reintentarPendiente(original[3]);
+      expect(recargada.puedeGuardar).toBe(true);
+      recargada.notificar = false;
+      await recargada.guardar();
+      expect(api.accionManual.mock.calls[1]).toEqual(original);
+      expect(recargada.pendientes).toEqual([]);
+      expect(recargada.solicitudesPendientes).toEqual({});
+    },
+  );
+  it('consultar un aviso ya enviado retira también la intención original conservada', async () => {
+    api.accionManual.mockReturnValue(
+      of({ usuarioId: 7, operacionId: 'op', avisoEstado: 'PENDIENTE' }),
+    );
+    c.abrir('CreditoAlta');
+    await c.guardar();
+    api.operacion.mockReturnValue(
+      of({ id: 'op', usuarioId: 7, avisoEstado: 'ACEPTADO_POR_PROVEEDOR' }),
+    );
+    await c.consultar('op');
+    expect(c.pendientes).toEqual([]);
+    expect(c.solicitudesPendientes).toEqual({});
+  });
 });

@@ -117,6 +117,7 @@ export class GestionExternaComponent implements OnChanges {
       tipo: TipoDialogo;
       titulo: string;
       solicitud: NonNullable<DialogoGestion['solicitud']>;
+      operacionId?: string;
     }
   > = {};
   readonly aviso = etiquetaAviso;
@@ -164,6 +165,32 @@ export class GestionExternaComponent implements OnChanges {
         JSON.stringify(this.solicitudesPendientes),
       );
     else sessionStorage.removeItem(this.storageKey + '-solicitudes');
+  }
+  private registrarEstadoPendiente(
+    key: string,
+    operacionId: string,
+    estado: ResultadoManual['avisoEstado'],
+  ) {
+    const original = this.solicitudesPendientes[key]
+      ? key
+      : Object.keys(this.solicitudesPendientes).find(
+          (clave) =>
+            this.solicitudesPendientes[clave].operacionId === operacionId,
+        );
+    if (estado === 'PENDIENTE' && original) {
+      // El replay reclama el aviso tras una caída posterior al commit.
+      // La consulta nunca debe descartar la intención que permite recuperarlo.
+      this.solicitudesPendientes[original].operacionId = operacionId;
+      if (key !== original) this.guardarPendiente(key, true);
+      if (operacionId !== original) this.guardarPendiente(operacionId, true);
+      this.guardarPendiente(original);
+      return;
+    }
+    if (original) this.guardarPendiente(original, true);
+    this.guardarPendiente(key, true);
+    this.guardarPendiente(operacionId, true);
+    if (['FALLIDO', 'INCIERTO', 'ENVIANDO', 'PENDIENTE'].includes(estado))
+      this.guardarPendiente(operacionId);
   }
   async cargar() {
     const generacion = this.generacion;
@@ -657,15 +684,13 @@ export class GestionExternaComponent implements OnChanges {
           : respuesta;
       this.resultado = resultado;
       this.enlaceVisible = resultado.enlaceAcceso || '';
-      this.guardarPendiente(d.clave, true);
+      this.registrarEstadoPendiente(
+        d.clave,
+        resultado.operacionId,
+        resultado.avisoEstado,
+      );
       this.dialogo = null;
       this.incierta = false;
-      if (
-        ['FALLIDO', 'INCIERTO', 'ENVIANDO', 'PENDIENTE'].includes(
-          resultado.avisoEstado,
-        )
-      )
-        this.guardarPendiente(resultado.operacionId);
       await this.cargar();
       // La URL inicial permanece sólo en este diálogo; no se emite hacia el padre ni se persiste.
       if (!this.enlaceVisible)
@@ -706,14 +731,11 @@ export class GestionExternaComponent implements OnChanges {
           op.resultado?.mensaje ||
           'Operación recuperada. Si necesitas el enlace de acceso, genera uno nuevo.',
       };
-      this.guardarPendiente(key, true);
-      if (
-        op.avisoEstado &&
-        ['FALLIDO', 'INCIERTO', 'ENVIANDO', 'PENDIENTE'].includes(
-          op.avisoEstado,
-        )
-      )
-        this.guardarPendiente(op.id);
+      this.registrarEstadoPendiente(
+        key,
+        op.id,
+        op.avisoEstado || 'NO_SOLICITADO',
+      );
       this.dialogo = null;
       this.incierta = false;
       await this.cargar();

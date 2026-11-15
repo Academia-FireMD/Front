@@ -123,6 +123,16 @@ import {
           Cuenta local creada sin planes ni productos implícitos.
         </p>
         <p>{{ aviso(r.avisoEstado) }}</p>
+        <p *ngIf="error" role="alert" class="gestion-error">{{ error }}</p>
+        <button
+          *ngIf="incierta"
+          pButton
+          type="button"
+          (click)="guardar()"
+          [disabled]="ocupado"
+        >
+          Reintentar la misma alta
+        </button>
         <ng-container *ngIf="r.enlaceAcceso; else enlacePerdido">
           <label
             >Enlace de un uso, válido una hora<input
@@ -174,7 +184,7 @@ export class NuevoAlumnoExternoComponent {
     return `alta-externa-pendiente-${actor}`;
   }
   abrir() {
-    if (this.resultado) {
+    if (this.resultado && !this.incierta) {
       this.resultado = null;
       this.solicitud = null;
       this.clave = '';
@@ -226,8 +236,8 @@ export class NuevoAlumnoExternoComponent {
       this.resultado = await firstValueFrom(
         this.api.accionManual('externos', 'POST', this.solicitud, this.clave),
       );
-      this.incierta = false;
-      sessionStorage.removeItem(this.storageKey);
+      this.incierta = this.resultado.avisoEstado === 'PENDIENTE';
+      if (!this.incierta) sessionStorage.removeItem(this.storageKey);
     } catch (e: any) {
       this.error = mensajeErrorManual(e);
       this.incierta = !e.status || e.status >= 500;
@@ -252,8 +262,8 @@ export class NuevoAlumnoExternoComponent {
         operacionId: op.id,
         avisoEstado: op.avisoEstado || 'NO_SOLICITADO',
       };
-      this.incierta = false;
-      sessionStorage.removeItem(this.storageKey);
+      this.incierta = this.resultado.avisoEstado === 'PENDIENTE';
+      if (!this.incierta) sessionStorage.removeItem(this.storageKey);
     } catch (e) {
       this.error = mensajeErrorManual(e);
     } finally {
