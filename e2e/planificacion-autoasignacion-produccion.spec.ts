@@ -123,6 +123,20 @@ async function captura(page: Page, nombre: string) {
   await page.screenshot({ path: join(directorio, nombre), fullPage: true });
 }
 
+async function seleccionarFranja(page: Page) {
+  const control = page.locator('#wizardPreferenciasFranja');
+  // PrimeNG cierra el desplegable al desplazarse su contenedor. Completar
+  // primero el desplazamiento evita que la opción desaparezca durante el clic.
+  await control.scrollIntoViewIfNeeded();
+  await page.evaluate(
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+  );
+  await control.click();
+  await page.getByRole('option', { name: /4-6/ }).click();
+  await expect(control).toContainText('4-6 Horas');
+  await expect(page.getByRole('button', { name: 'Continuar' }).first()).toBeEnabled();
+}
+
 async function loginAlumnoConPlanificacion(page: Page) {
   await loginAsRoleMock(page, {
     rol: 'ALUMNO',
@@ -154,8 +168,7 @@ test('el alumno sustituye explícitamente su plan existente tras el cuestionario
   await expect(
     page.getByRole('button', { name: /Plan específico/ }),
   ).toBeVisible();
-  await page.locator('#wizardPreferenciasFranja').click();
-  await page.getByRole('option', { name: /4-6/ }).click();
+  await seleccionarFranja(page);
   await page.getByRole('button', { name: 'Continuar' }).first().click();
   await page.getByRole('button', { name: 'Hacer test de nivel' }).click();
   for (let i = 0; i < 5; i++) {
@@ -216,8 +229,7 @@ test('el asistente cabe en 375 px y no guarda al cancelar', async ({
   expect(api.guardado()).toBeNull();
 
   await page.getByRole('button', { name: 'Cambiar mi planificación' }).click();
-  await page.locator('#wizardPreferenciasFranja').click();
-  await page.getByRole('option', { name: /4-6/ }).click();
+  await seleccionarFranja(page);
   await page.getByRole('button', { name: 'Continuar' }).first().click();
   await page.locator('#wizardNivel').click();
   await page.getByRole('option', { name: 'Avanzado' }).click();
