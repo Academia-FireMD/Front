@@ -1,0 +1,613 @@
+<div *ngIf="cargando && !inventario" role="status">
+  Cargando gestión de accesos…
+</div>
+<div *ngIf="error" role="alert" class="gestion-error">
+  {{ error }}
+  <button pButton type="button" (click)="cargar()">Actualizar</button>
+</div>
+<div *ngFor="let key of pendientes" class="gestion-result" role="status">
+  {{
+    solicitudesPendientes[key]?.titulo || "Operación guardada para consulta"
+  }}.
+  <button pButton type="button" (click)="consultar(key)" [disabled]="ocupado">
+    Consultar resultado
+  </button>
+  <button
+    *ngIf="solicitudesPendientes[key]"
+    pButton
+    type="button"
+    (click)="reintentarPendiente(key)"
+    [disabled]="ocupado"
+  >
+    Reintentar la misma operación
+  </button>
+</div>
+<div
+  *ngIf="resultado as r"
+  class="gestion-result"
+  role="status"
+  aria-live="polite"
+>
+  <p>{{ r.mensaje }}</p>
+  <p>{{ aviso(r.avisoEstado) }}</p>
+  <button
+    pButton
+    type="button"
+    class="p-button-text"
+    (click)="consultar(r.operacionId)"
+    [disabled]="ocupado"
+  >
+    Consultar operación
+  </button>
+  <button
+    *ngIf="r.avisoEstado === 'FALLIDO' || r.avisoEstado === 'INCIERTO'"
+    pButton
+    type="button"
+    class="p-button-outlined"
+    (click)="abrir('ReintentarAviso')"
+    [disabled]="ocupado"
+  >
+    Reintentar solo el aviso
+  </button>
+</div>
+<ng-container *ngIf="inventario as inv">
+  <p *ngIf="inv.capacidades.motivo" role="status">
+    {{ inv.capacidades.motivo }}
+  </p>
+  <ng-container *ngIf="vista === 'productos'">
+    <article
+      class="alumno-card gestion-section"
+      *ngIf="inv.capacidades.enlaceLocal || inv.capacidades.habilitarLocal"
+    >
+      <div class="alumno-card-head"><h2>Acceso local</h2></div>
+      <div class="alumno-card-body gestion-actions">
+        <button
+          *ngIf="inv.capacidades.habilitarLocal"
+          pButton
+          type="button"
+          class="alumno-btn p-button-outlined"
+          (click)="abrir('Habilitar')"
+          [disabled]="ocupado"
+        >
+          Habilitar acceso local
+        </button>
+        <button
+          *ngIf="inv.capacidades.enlaceLocal"
+          pButton
+          type="button"
+          class="alumno-btn p-button-outlined"
+          (click)="abrir('Enlace')"
+          [disabled]="ocupado"
+        >
+          Generar enlace de acceso
+        </button>
+      </div>
+    </article>
+    <article
+      class="alumno-card gestion-section"
+      data-testid="gestion-productos"
+    >
+      <div class="alumno-card-head"><h2>Productos independientes</h2></div>
+      <p class="alumno-card-intro">
+        Concesiones manuales, compras e histórico de acceso.
+      </p>
+      <div class="alumno-card-body">
+        <div class="gestion-actions">
+          <button
+            pButton
+            type="button"
+            *ngIf="inv.capacidades.curso"
+            class="alumno-btn p-button-outlined"
+            (click)="abrir('CursoAlta')"
+            [disabled]="ocupado"
+          >
+            Añadir curso
+          </button>
+          <button
+            pButton
+            type="button"
+            *ngIf="inv.capacidades.simulacro"
+            class="alumno-btn p-button-outlined"
+            (click)="abrir('SimAlta')"
+            [disabled]="ocupado"
+          >
+            Añadir simulacro
+          </button>
+        </div>
+        <div
+          *ngFor="let c of inv.cursos"
+          class="gestion-row"
+          [attr.data-curso-id]="c.cursoId"
+        >
+          <div>
+            <h3>{{ c.curso.titulo }}</h3>
+            <p>
+              {{ c.efectivo ? "Con acceso" : "Sin acceso efectivo" }} ·
+              {{ c.curso.estado }}
+            </p>
+            <p>
+              <span *ngFor="let origen of c.origenes; let ultimo = last"
+                >{{ etiqueta(origen) }}{{ ultimo ? "" : " · " }}</span
+              >
+            </p>
+            <p *ngIf="c.manualConcedido">
+              Manual:
+              {{
+                c.manualExpiraEn
+                  ? fechaMadrid(c.manualExpiraEn)
+                  : "Sin caducidad"
+              }}
+            </p>
+            <p *ngIf="c.capacidades.motivo">{{ c.capacidades.motivo }}</p>
+          </div>
+          <p-menu
+            #menuCurso
+            [popup]="true"
+            [model]="accionesCurso(c)"
+            appendTo="body"
+          ></p-menu>
+          <button
+            pButton
+            type="button"
+            class="p-button-text p-button-rounded"
+            icon="pi pi-ellipsis-v"
+            (click)="menuCurso.toggle($event)"
+            [disabled]="ocupado"
+            [attr.aria-label]="'Acciones del curso ' + c.curso.titulo"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="menuCurso.visible || false"
+          ></button>
+        </div>
+        <div
+          *ngFor="let c of inv.simulacros"
+          class="gestion-row"
+          [attr.data-consumible-id]="c.id"
+        >
+          <div>
+            <h3>{{ c.examen?.titulo || "Simulacro pendiente de vincular" }}</h3>
+            <p>
+              {{ etiqueta(c.estadoEfectivo) }} · {{ etiqueta(c.origen) }} · Un
+              uso
+            </p>
+            <p>
+              {{
+                c.expiraEn
+                  ? "Hasta " + fechaMadrid(c.expiraEn)
+                  : "Sin caducidad"
+              }}
+            </p>
+            <p *ngIf="c.capacidades.motivo">{{ c.capacidades.motivo }}</p>
+          </div>
+          <p-menu
+            #menuSim
+            [popup]="true"
+            [model]="accionesSimulacro(c)"
+            appendTo="body"
+          ></p-menu>
+          <button
+            pButton
+            type="button"
+            class="p-button-text p-button-rounded"
+            icon="pi pi-ellipsis-v"
+            (click)="menuSim.toggle($event)"
+            [disabled]="ocupado"
+            [attr.aria-label]="
+              'Acciones del uso de ' + (c.examen?.titulo || 'simulacro')
+            "
+            aria-haspopup="menu"
+            [attr.aria-expanded]="menuSim.visible || false"
+          ></button>
+        </div>
+        <p
+          *ngIf="!inv.cursos.length && !inv.simulacros.length"
+          class="alumno-empty"
+        >
+          Sin productos independientes.
+        </p>
+      </div>
+    </article>
+  </ng-container>
+  <ng-container *ngIf="vista === 'tutorias'">
+    <article class="alumno-card gestion-section">
+      <div class="alumno-card-head">
+        <h2>Sesiones e invitaciones</h2>
+        <button
+          pButton
+          type="button"
+          *ngIf="inv.capacidades.invitacion"
+          class="alumno-btn p-button-outlined"
+          (click)="abrir('Invitar')"
+          [disabled]="ocupado"
+        >
+          Añadir invitación
+        </button>
+      </div>
+      <div class="alumno-card-body">
+        <div *ngFor="let t of inv.tutorias.invitaciones" class="gestion-row">
+          <div>
+            <h3>{{ t.titulo }}</h3>
+            <p>
+              {{ fechaMadrid(t.fechaSesion) }} · {{ etiqueta(t.origen) }} ·
+              {{ t.efectivo ? "Con acceso" : "Sin acceso" }}
+            </p>
+          </div>
+          <button
+            pButton
+            type="button"
+            *ngIf="t.invitado && t.capacidades.retirar"
+            class="p-button-text"
+            (click)="abrir('RetirarInvitacion', t)"
+            [disabled]="ocupado"
+          >
+            Retirar invitación
+          </button>
+        </div>
+        <p *ngIf="!inv.tutorias.invitaciones.length">
+          Sin sesiones disponibles.
+        </p>
+      </div>
+    </article>
+    <article class="alumno-card gestion-section" data-testid="gestion-creditos">
+      <div class="alumno-card-head">
+        <div>
+          <h2>Créditos de tutoría</h2>
+          <p>{{ disponibles }} sesiones disponibles ahora</p>
+        </div>
+        <button
+          pButton
+          type="button"
+          *ngIf="inv.capacidades.credito"
+          class="alumno-btn p-button-outlined"
+          (click)="abrir('CreditoAlta')"
+          [disabled]="ocupado"
+        >
+          Añadir una sesión
+        </button>
+      </div>
+      <div class="alumno-card-body">
+        <div
+          *ngFor="let c of inv.tutorias.creditos"
+          class="gestion-row"
+          [attr.data-credito-id]="c.id"
+        >
+          <div>
+            <h3>Crédito #{{ c.id }} · {{ etiqueta(c.origen) }}</h3>
+            <p>
+              {{ etiqueta(c.estadoEfectivo)
+              }}{{ c.disponible ? " · Disponible ahora" : "" }}
+            </p>
+            <p>
+              {{ fechaMadrid(c.validoDesde) }} —
+              {{ fechaMadrid(c.validoHasta) }}
+            </p>
+            <p *ngIf="c.capacidades.motivo">{{ c.capacidades.motivo }}</p>
+          </div>
+          <p-menu
+            #menuCredito
+            [popup]="true"
+            [model]="accionesCredito(c)"
+            appendTo="body"
+          ></p-menu>
+          <button
+            pButton
+            type="button"
+            class="p-button-text p-button-rounded"
+            icon="pi pi-ellipsis-v"
+            (click)="menuCredito.toggle($event)"
+            [disabled]="ocupado"
+            [attr.aria-label]="'Acciones del crédito ' + c.id"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="menuCredito.visible || false"
+          ></button>
+        </div>
+        <p *ngIf="!inv.tutorias.creditos.length">Sin créditos emitidos.</p>
+      </div>
+    </article>
+    <article class="alumno-card gestion-section" data-testid="gestion-reservas">
+      <div class="alumno-card-head">
+        <h2>Reservas</h2>
+        <button
+          pButton
+          type="button"
+          *ngIf="inv.capacidades.reserva"
+          class="alumno-btn p-button-outlined"
+          (click)="abrir('Reservar')"
+          [disabled]="ocupado"
+        >
+          Crear reserva
+        </button>
+      </div>
+      <div class="alumno-card-body">
+        <div
+          *ngFor="let r of inv.tutorias.reservas"
+          class="gestion-row"
+          [attr.data-reserva-id]="r.id"
+        >
+          <div>
+            <h3>
+              {{ fechaMadrid(r.horarioDisponible.horaInicio) }} ·
+              {{ etiqueta(r.estado) }}
+            </h3>
+            <p>
+              {{ r.horarioDisponible.admin.nombre }}
+              {{ r.horarioDisponible.admin.apellidos }}
+            </p>
+            <p>
+              {{
+                r.creditoTutoria
+                  ? "Crédito #" + r.creditoTutoria.id
+                  : r.comprasTutoria.length
+                    ? "Compra pagada #" + r.comprasTutoria[0].id
+                    : "Horario general"
+              }}
+            </p>
+          </div>
+          <p-menu
+            #menuReserva
+            [popup]="true"
+            [model]="accionesReserva(r)"
+            appendTo="body"
+          ></p-menu>
+          <button
+            pButton
+            type="button"
+            class="p-button-text p-button-rounded"
+            icon="pi pi-ellipsis-v"
+            (click)="menuReserva.toggle($event)"
+            [disabled]="ocupado"
+            [attr.aria-label]="'Acciones de la reserva ' + r.id"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="menuReserva.visible || false"
+          ></button>
+        </div>
+        <p *ngIf="!inv.tutorias.reservas.length">Sin reservas.</p>
+        <p *ngFor="let c of inv.tutorias.compras">
+          Compra pagada #{{ c.id }} · {{ etiqueta(c.estado) }}
+        </p>
+      </div>
+    </article>
+  </ng-container>
+</ng-container>
+<p-dialog
+  [header]="dialogo?.titulo || ''"
+  [visible]="!!dialogo"
+  (visibleChange)="!$event && cerrar()"
+  [modal]="true"
+  [closable]="!ocupado"
+  [closeOnEscape]="!ocupado"
+  [draggable]="false"
+  [style]="{ width: '36rem', maxWidth: '94vw' }"
+>
+  <form *ngIf="dialogo as d" (ngSubmit)="guardar()">
+    <fieldset class="gestion-form" [disabled]="ocupado || incierta">
+      <ng-container *ngIf="usaCatalogo">
+        <label
+          >Buscar en el catálogo<input
+            pInputText
+            name="busqueda"
+            [(ngModel)]="busqueda"
+            (keydown.enter)="$event.preventDefault(); cargarCatalogo()"
+        /></label>
+        <button
+          pButton
+          type="button"
+          class="p-button-outlined"
+          (click)="cargarCatalogo()"
+          [disabled]="cargandoCatalogo"
+        >
+          Buscar
+        </button>
+        <p *ngIf="cargandoCatalogo" role="status">Cargando catálogo…</p>
+        <label
+          >Selecciona
+          {{
+            d.tipo === "Reservar" || d.tipo === "Reprogramar"
+              ? "un horario"
+              : "el contenido"
+          }}
+          <select
+            pInputText
+            name="seleccion"
+            [(ngModel)]="seleccion"
+            [compareWith]="mismoItem"
+            (ngModelChange)="seleccionCambiada()"
+            [disabled]="cargandoCatalogo"
+          >
+            <option [ngValue]="null">Selecciona una opción</option>
+            <option
+              *ngFor="let item of opcionesCatalogo"
+              [ngValue]="item"
+              [disabled]="incompatible(item)"
+            >
+              {{ item.titulo
+              }}{{ item.horaInicio ? " · " + fechaMadrid(item.horaInicio) : ""
+              }}{{ item.motivo ? " · " + item.motivo : "" }}
+            </option>
+          </select>
+        </label>
+        <div class="gestion-page" *ngIf="catalogo as c">
+          <button
+            pButton
+            type="button"
+            class="p-button-text"
+            [disabled]="!c.skip || cargandoCatalogo"
+            (click)="cargarCatalogo(c.skip - c.take)"
+          >
+            Anterior</button
+          ><span>{{ c.total }} resultados</span
+          ><button
+            pButton
+            type="button"
+            class="p-button-text"
+            [disabled]="c.skip + c.take >= c.total || cargandoCatalogo"
+            (click)="cargarCatalogo(c.skip + c.take)"
+          >
+            Siguiente
+          </button>
+        </div>
+      </ng-container>
+      <label *ngIf="editaVigencia"
+        >Fin del acceso manual, hora de Madrid (opcional)<input
+          pInputText
+          type="datetime-local"
+          name="expiraEn"
+          [(ngModel)]="expiraEn"
+        /><small>Vacío: sin caducidad. El fin es exclusivo.</small></label
+      >
+      <ng-container *ngIf="editaCredito">
+        <p>
+          Un crédito equivale a una sesión. Por defecto: desde ahora hasta
+          dentro de un mes.
+        </p>
+        <label
+          >Válido desde, hora de Madrid<input
+            pInputText
+            type="datetime-local"
+            name="validoDesde"
+            [(ngModel)]="validoDesde"
+        /></label>
+        <label
+          >Válido hasta, hora de Madrid<input
+            pInputText
+            type="datetime-local"
+            name="validoHasta"
+            [(ngModel)]="validoHasta"
+        /></label>
+      </ng-container>
+      <ng-container *ngIf="d.tipo === 'Reservar'">
+        <label *ngIf="seleccion?.tipo === 'TUTORIA_MADRID'"
+          >Financiación de este alumno<select
+            pInputText
+            name="financiacion"
+            [(ngModel)]="financiacion"
+            [disabled]="!seleccion"
+          >
+            <option value="">Selecciona un crédito o compra pagada</option>
+            <option *ngFor="let f of financiaciones" [value]="f.value">
+              {{ f.label }}
+            </option>
+          </select></label
+        >
+        <p
+          *ngIf="seleccion?.tipo === 'TUTORIA_MADRID' && !financiaciones.length"
+        >
+          No hay crédito vigente ni compra pagada disponible. Concede un crédito
+          antes de reservar.
+        </p>
+        <p *ngIf="seleccion?.tipo === 'GENERAL'">
+          Este horario general no consume crédito ni compra.
+        </p>
+        <label
+          >Notas (opcional)<textarea
+            pInputTextarea
+            name="notas"
+            [(ngModel)]="notas"
+            maxlength="2000"
+          ></textarea>
+        </label>
+      </ng-container>
+      <p *ngIf="d.tipo === 'Reprogramar'">
+        Se trasladará únicamente esta reserva, conservando el crédito o compra
+        original. El nuevo horario debe ser del mismo tipo.
+      </p>
+      <ng-container *ngIf="d.tipo === 'EstadoReserva'"
+        ><label
+          >Nuevo estado<select pInputText name="estado" [(ngModel)]="estado">
+            <option *ngFor="let e of estados" [value]="e">
+              {{ etiqueta(e) }}
+            </option>
+          </select></label
+        ><label
+          >Motivo (opcional)<textarea
+            pInputTextarea
+            name="motivo"
+            [(ngModel)]="motivo"
+            maxlength="500"
+          ></textarea></label
+      ></ng-container>
+      <p *ngIf="d.tipo.endsWith('Retirar') || d.tipo === 'RetirarInvitacion'">
+        Se retirará únicamente la concesión manual seleccionada. Las compras,
+        los resultados y el progreso se conservan.
+      </p>
+      <p *ngIf="d.tipo === 'Habilitar'">
+        La cuenta local podrá iniciar sesión sin recibir una membresía
+        implícita.
+      </p>
+      <p *ngIf="d.tipo === 'Enlace'">
+        Se generará un enlace de un uso, válido una hora. El anterior quedará
+        invalidado.
+      </p>
+      <ng-container *ngIf="d.tipo !== 'ReintentarAviso'"
+        ><label class="gestion-check"
+          ><input type="checkbox" name="notificar" [(ngModel)]="notificar" />
+          Avisar al alumno por email</label
+        ><label class="gestion-check" *ngIf="esReserva"
+          ><input
+            type="checkbox"
+            name="notificarTutor"
+            [(ngModel)]="notificarTutor"
+          />
+          Avisar al tutor por email</label
+        ></ng-container
+      >
+      <ng-container *ngIf="d.tipo === 'ReintentarAviso'"
+        ><p>
+          Este reintento envía el aviso y conserva la gestión ya realizada.
+        </p>
+        <label
+          class="gestion-check"
+          *ngIf="resultado?.avisoEstado === 'INCIERTO'"
+          ><input
+            type="checkbox"
+            name="confirmarDuplicado"
+            [(ngModel)]="confirmarDuplicado"
+          />
+          Entiendo que el aviso anterior pudo haber sido aceptado y el reenvío
+          podría duplicarlo</label
+        ></ng-container
+      >
+    </fieldset>
+    <p *ngIf="errorDialogo" role="alert" class="gestion-error">
+      {{ errorDialogo }}
+    </p>
+    <p *ngIf="incierta" role="status">
+      El resultado está pendiente de comprobar. Se conserva la misma solicitud.
+    </p>
+    <div class="gestion-actions">
+      <button
+        pButton
+        type="button"
+        class="p-button-outlined"
+        (click)="cerrar()"
+        [disabled]="ocupado"
+      >
+        Cerrar</button
+      ><button
+        pButton
+        *ngIf="incierta"
+        type="button"
+        (click)="consultar(d.clave)"
+        [disabled]="ocupado"
+      >
+        Consultar resultado</button
+      ><button pButton type="submit" [disabled]="!puedeGuardar">
+        {{ incierta ? "Reintentar la misma solicitud" : "Confirmar" }}
+      </button>
+    </div>
+  </form>
+</p-dialog>
+<p-dialog
+  header="Enlace de acceso generado"
+  [visible]="!!enlaceVisible"
+  (visibleChange)="!$event && (enlaceVisible = '')"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '34rem', maxWidth: '94vw' }"
+  ><p>Enlace de un uso, válido una hora. Guárdalo antes de cerrar.</p>
+  <label class="gestion-form"
+    >Enlace de acceso<input
+      pInputText
+      [value]="enlaceVisible"
+      readonly
+      (focus)="$any($event.target).select()" /></label
+></p-dialog>

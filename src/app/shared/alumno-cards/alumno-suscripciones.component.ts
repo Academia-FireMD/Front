@@ -6,6 +6,7 @@ import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { oposiciones } from '../../utils/consts';
 import { GestionAlumno } from '../models/alumno-admin.model';
+import { esSuscripcionVigente } from '../utils/membresia-externa.util';
 import {
   getPlanLabel,
   getSubscriptionStatusLabel,
@@ -148,6 +149,7 @@ export class AlumnoSuscripcionesComponent {
   @Output() cancelar = new EventEmitter<Suscripcion>();
   @Output() gestionarWoo = new EventEmitter<Suscripcion>();
   @Output() eliminarPlan = new EventEmitter<Suscripcion>();
+  @Output() reactivarPlan = new EventEmitter<Suscripcion>();
   readonly catalogo = oposiciones;
   readonly planLabel = getPlanLabel;
   readonly estadoLabel = getSubscriptionStatusLabel;
@@ -160,10 +162,7 @@ export class AlumnoSuscripcionesComponent {
     );
   }
   vigente(s: Suscripcion) {
-    return (
-      ['ACTIVE', 'PENDING_CANCEL'].includes(s.status) &&
-      (!s.fechaFin || new Date(s.fechaFin).getTime() > Date.now())
-    );
+    return esSuscripcionVigente(s);
   }
   accionesAdmin(s: Suscripcion): MenuItem[] {
     if (!this.esExterna(s)) {
@@ -181,11 +180,14 @@ export class AlumnoSuscripcionesComponent {
     const items: MenuItem[] = [];
     if (this.gestion?.tipo === 'EXTERNA') {
       items.push({
-        label: 'Editar plan',
+        label: this.vigente(s) ? 'Editar plan' : 'Reactivar plan',
         icon: 'pi pi-pencil',
-        disabled: this.ocupado,
+        disabled: this.ocupado || s.status === 'PENDING_PAYMENT',
         command: () => {
-          if (!this.ocupado) this.editarPlan.emit(s);
+          if (!this.ocupado && s.status !== 'PENDING_PAYMENT') {
+            if (this.vigente(s)) this.editarPlan.emit(s);
+            else this.reactivarPlan.emit(s);
+          }
         },
       });
     }
@@ -202,9 +204,10 @@ export class AlumnoSuscripcionesComponent {
       {
         label: 'Eliminar registro',
         icon: 'pi pi-trash',
-        disabled: this.ocupado,
+        disabled: this.ocupado || s.status !== 'CANCELLED',
         command: () => {
-          if (!this.ocupado) this.eliminarPlan.emit(s);
+          if (!this.ocupado && s.status === 'CANCELLED')
+            this.eliminarPlan.emit(s);
         },
       },
     );

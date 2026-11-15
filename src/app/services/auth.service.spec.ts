@@ -1,14 +1,25 @@
-import { provideHttpClient } from '@angular/common/http';
+import {
+  HTTP_INTERCEPTORS,
+  provideHttpClient,
+  withInterceptorsFromDi,
+} from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Observable } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
 import { Router } from '@angular/router';
+import { provideEffects } from '@ngrx/effects';
+import { provideStore, Store } from '@ngrx/store';
 import { provideMockStore } from '@ngrx/store/testing';
 import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../environments/environment';
+import { AppState } from '../store/app.state';
+import * as UserActions from '../store/user/user.actions';
+import { UserEffects } from '../store/user/user.effects';
+import { userReducer } from '../store/user/user.reducer';
+import { AuthInterceptor } from './auth.interceptor';
 import { AuthService } from './auth.service';
 
 function token(payload: Record<string, unknown>): string {
@@ -322,5 +333,157 @@ describe('AuthService', () => {
       { sub: 52, isImpersonating: true },
       { sub: 1, isImpersonating: false },
     ]);
+  });
+});
+
+/**
+ * Regresión del arranque real con un token persistido.
+ *
+ * AuthService se construye al restaurar la sesión y su constructor despachaba
+ * `loadUser` antes de que Angular terminase la instancia. El efecto suscribe
+ * `/user/profile` de forma síncrona y AuthInterceptor vuelve a resolver
+ * AuthService a mitad del ciclo DI: en producción el placeholder no expone
+ * `sessionSnapshot` (TypeError) y el arranque muestra el toast genérico.
+ *
+ * Estos tests usan el AuthInterceptor, el Store y UserEffects reales; no
+ * mockean AuthService ni silencian el error.
+ */
+describe('AuthService — arranque con sesión persistida', () => {
+  function perfil(
+    id: number,
+    nombre: string,
+    apellidos: string,
+    email: string,
+  ) {
+    return { id, nombre, apellidos, email, rol: 'ALUMNO' };
+  }
+
+  function configurarArranque(toastError: jest.Mock): void {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
+        provideStore({ user: userReducer }),
+        provideEffects(UserEffects),
+        { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+        { provide: ToastrService, useValue: { error: toastError } },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+      ],
+    });
+  }
+
+  afterEach(() => {
+    sessionStorage.clear();
+  });
+
+  it('carga el perfil con el token persistido por AuthInterceptor y sin toast de arranque', async () => {
+    const tokenPersistido = token({
+      sub: 52,
+      email: 'alumno@test.com',
+      rol: 'ALUMNO',
+    });
+    sessionStorage.setItem('authToken', tokenPersistido);
+    sessionStorage.setItem('refreshToken', 'refresh-persistido');
+
+    const toastError = jest.fn();
+    configurarArranque(toastError);
+    const httpMock = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(Store<AppState>);
+
+    TestBed.inject(AuthService);
+
+    // Deja correr la microtarea que difiere la carga de perfil.
+    await Promise.resolve();
+
+    expect(toastError).not.toHaveBeenCalled();
+    const peticion = httpMock.expectOne(`${environment.apiUrl}/user/profile`);
+    expect(peticion.request.method).toBe('GET');
+    expect(peticion.request.headers.get('Authorization')).toBe(
+      `Bearer ${tokenPersistido}`,
+    );
+    peticion.flush(perfil(52, 'Alumno', 'Persistido', 'alumno@test.com'));
+
+    const cargado = await firstValueFrom(
+      store.select((state) => state.user.currentUser),
+    );
+    expect(cargado).toEqual(
+      expect.objectContaining({ id: 52, email: 'alumno@test.com' }),
+    );
+    expect(toastError).not.toHaveBeenCalled();
+    httpMock.verify();
+  });
+
+  it('no despacha la carga de perfil si la sesión se cierra antes de la microtarea', async () => {
+    sessionStorage.setItem(
+      'authToken',
+      token({ sub: 1, email: 'a@test.com', rol: 'ALUMNO' }),
+    );
+    sessionStorage.setItem('refreshToken', 'refresh-A');
+
+    const toastError = jest.fn();
+    configurarArranque(toastError);
+    const httpMock = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(Store<AppState>);
+    const dispatch = jest.spyOn(store, 'dispatch');
+
+    const service = TestBed.inject(AuthService);
+    service.logout$().subscribe();
+
+    await Promise.resolve();
+
+    expect(dispatch).not.toHaveBeenCalledWith(UserActions.loadUser());
+    httpMock.expectNone(`${environment.apiUrl}/user/profile`);
+    expect(service.getToken()).toBeNull();
+    expect(service.getRefreshToken()).toBeNull();
+    expect(toastError).not.toHaveBeenCalled();
+    httpMock.verify();
+  });
+
+  it('si cambia de cuenta antes de la microtarea solo carga el perfil de la cuenta nueva', async () => {
+    sessionStorage.setItem(
+      'authToken',
+      token({ sub: 1, email: 'a@test.com', rol: 'ALUMNO' }),
+    );
+    sessionStorage.setItem('refreshToken', 'refresh-A');
+    const tokenB = token({ sub: 2, email: 'b@test.com', rol: 'ALUMNO' });
+
+    const toastError = jest.fn();
+    configurarArranque(toastError);
+    const httpMock = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(Store<AppState>);
+    const dispatch = jest.spyOn(store, 'dispatch');
+
+    const service = TestBed.inject(AuthService);
+
+    service.login$('b@test.com', 'secret').subscribe();
+    httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
+      access_token: tokenB,
+      refresh_token: 'refresh-B',
+    });
+
+    await Promise.resolve();
+
+    const peticiones = httpMock.match(`${environment.apiUrl}/user/profile`);
+    expect(peticiones).toHaveLength(1);
+    expect(peticiones[0].request.headers.get('Authorization')).toBe(
+      `Bearer ${tokenB}`,
+    );
+    peticiones[0].flush(perfil(2, 'Bea', 'Nueva', 'b@test.com'));
+
+    const cargado = await firstValueFrom(
+      store.select((state) => state.user.currentUser),
+    );
+    expect(cargado).toEqual(
+      expect.objectContaining({ id: 2, email: 'b@test.com' }),
+    );
+    expect(
+      dispatch.mock.calls.filter(
+        ([accion]) =>
+          (accion as { type?: string }).type === UserActions.loadUser.type,
+      ),
+    ).toHaveLength(1);
+    expect(service.getToken()).toBe(tokenB);
+    expect(toastError).not.toHaveBeenCalled();
+    httpMock.verify();
   });
 });

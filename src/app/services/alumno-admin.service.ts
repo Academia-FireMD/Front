@@ -9,6 +9,11 @@ import {
   PaginaActividadAlumno,
 } from '../shared/models/alumno-admin.model';
 import { ApiBaseService } from './api-base.service';
+import {
+  CatalogoExterno,
+  InventarioExterno,
+  ResultadoManual,
+} from '../shared/models/alumno-externo.model';
 @Injectable({ providedIn: 'root' })
 export class AlumnoAdminService extends ApiBaseService {
   constructor(http: HttpClient) {
@@ -17,6 +22,39 @@ export class AlumnoAdminService extends ApiBaseService {
   }
   detalle(id: number): Observable<FichaAlumno> {
     return this.get(`/${id}`, true);
+  }
+  inventario(id: number): Observable<InventarioExterno> {
+    return this.get(`/${id}/accesos`, true);
+  }
+  consultarAlta(key: string): Observable<OperacionAlumno> {
+    return this.get(`/externos/operaciones/${key}`, true);
+  }
+  catalogo(
+    id: number,
+    tipo: string,
+    search = '',
+    skip = 0,
+  ): Observable<CatalogoExterno> {
+    return this.get(
+      `/${id}/catalogo?tipo=${tipo}&search=${encodeURIComponent(search)}&skip=${skip}&take=30`,
+      true,
+    );
+  }
+  accionManual(
+    ruta: string,
+    metodo: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+    body: object,
+    clave: string,
+  ): Observable<ResultadoManual> {
+    return this._http.request<ResultadoManual>(
+      metodo,
+      `${environment.apiUrl}/user/admin/${ruta}`,
+      {
+        body,
+        withCredentials: true,
+        headers: { 'Idempotency-Key': clave },
+      },
+    );
   }
   actividad(id: number, page = 1): Observable<PaginaActividadAlumno> {
     return this.get(`/${id}/actividad?page=${page}`, true);

@@ -1,4 +1,15 @@
+import { clavePendientesAlumno } from '../../../shared/utils/gestion-pendiente.util';
 import { OposicionIdentidadComponent } from '../../../shared/alumno-cards/oposicion-identidad.component';
+import { GestionExternaComponent } from '../../../shared/alumno-cards/gestion-externa.component';
+import {
+  etiquetaAviso,
+  mensajeErrorManual,
+} from '../../../shared/models/alumno-externo.model';
+import {
+  fechaLocalMadrid,
+  isoDesdeMadrid,
+  mostrarFechaMadrid,
+} from '../../../shared/utils/fecha-madrid.util';
 import { CommonModule } from '@angular/common';
 import {
   Component,
@@ -51,6 +62,7 @@ import {
   SuscripcionTipo,
   getPlanLabel,
   OPOSICION_LABELS,
+  CATALOGO_OPOSICION_LABELS,
 } from '../../../shared/models/subscription.model';
 import { Usuario } from '../../../shared/models/user.model';
 import {
@@ -63,7 +75,13 @@ import {
 import { PrimengModule } from '../../../shared/primeng.module';
 import { MenuItem } from 'primeng/api';
 
-type SeccionAlumno = 'info' | 'access' | 'woo' | 'planning' | 'activity';
+type SeccionAlumno =
+  | 'info'
+  | 'access'
+  | 'tutorias'
+  | 'woo'
+  | 'planning'
+  | 'activity';
 type DialogoAlumno = {
   tipo:
     | 'editar'
@@ -74,6 +92,8 @@ type DialogoAlumno = {
     | 'eliminar'
     | 'desvincular'
     | 'alta'
+    | 'editarPlan'
+    | 'reactivarPlan'
     | 'cancelarWoo'
     | 'reintentarWoo';
   usuarioId: number;
@@ -84,6 +104,7 @@ type DialogoAlumno = {
   wooSub?: SuscripcionWooAlumno;
   renovacion?: RenovacionAlumno;
   clave?: string;
+  solicitudPlan?: { ruta: string; metodo: 'POST' | 'PUT'; body: object };
 };
 type EtiquetaBorrador = {
   clientId: string;
@@ -102,6 +123,7 @@ type EtiquetaBorrador = {
     AlumnoInformacionComponent,
     AlumnoSuscripcionesComponent,
     AlumnoAccesosComponent,
+    GestionExternaComponent,
   ],
   templateUrl: './alumno-detailview.component.html',
   styleUrls: [
@@ -134,6 +156,7 @@ export class AlumnoDetailviewComponent {
   }[] = [
     { id: 'info', label: 'Información personal', icon: 'user' },
     { id: 'access', label: 'Acceso y suscripciones', icon: 'id-card' },
+    { id: 'tutorias', label: 'Tutorías', icon: 'comments' },
     { id: 'woo', label: 'WooCommerce', icon: 'credit-card' },
     { id: 'planning', label: 'Planificaciones y marcas', icon: 'calendar' },
     { id: 'activity', label: 'Actividad', icon: 'history' },
@@ -165,6 +188,7 @@ export class AlumnoDetailviewComponent {
       this.appConfig.estadoModulos()[ModuloApp.PLANIFICACION_FISICA] !== false,
   );
   ficha: FichaAlumno | null = null;
+  revisionAccesos = 0;
   id = 0;
   seccion: SeccionAlumno = 'access';
   cargando = true;
@@ -202,7 +226,15 @@ export class AlumnoDetailviewComponent {
   confirmaCobro = false;
   nuevaOposicion = '';
   nuevoTipo = '';
-  readonly oposiciones = Object.entries(OPOSICION_LABELS).filter(
+  nuevaFechaFin = '';
+  private fechaFinInicial = '';
+  notificarPlan = false;
+  planIncierto = false;
+  readonly fechaMadrid = mostrarFechaMadrid;
+  readonly describirSuscripcionVigente = describirSuscripcionVigente;
+  readonly mensajeCancelacionIndividual =
+    mensajeConfirmacionCancelacionIndividual;
+  readonly oposiciones = Object.entries(CATALOGO_OPOSICION_LABELS).filter(
     ([key]) => key !== 'GENERAL',
   );
   readonly tiposPlan = [
@@ -279,6 +311,7 @@ export class AlumnoDetailviewComponent {
         if (!ficha) return;
         this.error = '';
         this.ficha = ficha;
+        this.revisionAccesos++;
         this.normalizarSeccion();
         this.cargarSeccion();
       });
@@ -327,6 +360,8 @@ export class AlumnoDetailviewComponent {
           eliminar: 'Eliminar definitivamente al alumno',
           desvincular: 'Desvincular planificación',
           alta: 'Añadir plan externo',
+          editarPlan: 'Editar plan externo',
+          reactivarPlan: 'Reactivar plan externo',
           cancelarWoo: 'Cancelar suscripción WooCommerce',
           reintentarWoo: 'Reintentar esta renovación',
         } as Record<string, string>
@@ -338,7 +373,7 @@ export class AlumnoDetailviewComponent {
       !this.ocupado &&
       !!this.dialogo &&
       (this.dialogo.tipo !== 'reintentarWoo' || this.confirmaCobro) &&
-      (this.dialogo.tipo !== 'alta' ||
+      (!['alta', 'editarPlan'].includes(this.dialogo.tipo) ||
         (!!this.nuevaOposicion && !!this.nuevoTipo)) &&
       (this.dialogo.tipo !== 'eliminar' ||
         this.emailConfirmacion.trim() === this.dialogo.email)
@@ -400,11 +435,14 @@ export class AlumnoDetailviewComponent {
       nombre: this.nombre,
       email: this.ficha.usuario.email,
       ...extra,
+      clave: crypto.randomUUID(),
     };
     this.errorDialogo = '';
     this.motivo = '';
     this.emailConfirmacion = '';
     this.confirmaCobro = false;
+    this.notificarPlan = false;
+    this.planIncierto = false;
   }
   abrirEditar() {
     if (!this.ficha) return;
@@ -446,9 +484,6 @@ export class AlumnoDetailviewComponent {
     )
       this.abrir('eliminarPlan', { suscripcion });
   }
-  readonly describirSuscripcionVigente = describirSuscripcionVigente;
-  readonly mensajeCancelacionIndividual =
-    mensajeConfirmacionCancelacionIndividual;
   planLabel(s: Suscripcion) {
     return `${getPlanLabel(s.tipo)} · ${(OPOSICION_LABELS as Record<string, string>)[s.oposicion] || s.oposicion}`;
   }
@@ -457,15 +492,25 @@ export class AlumnoDetailviewComponent {
   }
   abrirEditarPlan(s: Suscripcion) {
     if (this.ficha?.gestion.tipo !== 'EXTERNA') return;
-    this.abrir('alta', { suscripcion: s });
+    this.abrir('editarPlan', { suscripcion: s });
     this.nuevaOposicion = s.oposicion;
     this.nuevoTipo = s.tipo;
+    this.nuevaFechaFin = fechaLocalMadrid(
+      s.fechaFin ? new Date(s.fechaFin).toISOString() : null,
+    );
+    this.fechaFinInicial = this.nuevaFechaFin;
+  }
+  abrirReactivarPlan(s: Suscripcion) {
+    if (this.ficha?.gestion.tipo !== 'EXTERNA') return;
+    this.abrir('reactivarPlan', { suscripcion: s });
+    this.nuevaFechaFin = '';
   }
   abrirAlta() {
     if (this.ficha?.gestion.tipo !== 'EXTERNA') return;
     this.abrir('alta');
     this.nuevaOposicion = '';
     this.nuevoTipo = '';
+    this.nuevaFechaFin = '';
   }
   oposicionYaActiva(op: string) {
     return this.planesVigentes.some((s) => s.oposicion === op);
@@ -565,7 +610,7 @@ export class AlumnoDetailviewComponent {
     } catch (error: any) {
       this.errorDialogo = errorMensaje
         ? errorMensaje(error)
-        : error?.message || 'No se ha podido completar la operación.';
+        : mensajeErrorManual(error);
     } finally {
       this.ocupado = false;
       this.resolverOperacion?.(true);
@@ -580,18 +625,8 @@ export class AlumnoDetailviewComponent {
       await this.confirmarWoo(d);
       return;
     }
-    if (d.tipo === 'alta') {
-      await this.ejecutar(
-        () =>
-          firstValueFrom(
-            this.users.createUserSubscription(
-              d.usuarioId,
-              this.nuevoTipo,
-              this.nuevaOposicion,
-            ),
-          ),
-        'Plan externo añadido.',
-      );
+    if (['alta', 'editarPlan', 'reactivarPlan'].includes(d.tipo)) {
+      await this.confirmarPlanManual(d);
       return;
     }
     if (d.tipo === 'editar') {
@@ -687,6 +722,133 @@ export class AlumnoDetailviewComponent {
         this.finOperacion = null;
         this.resolverOperacion = null;
       }
+    }
+  }
+  cambiarOcupadoGestion(ocupado: boolean) {
+    this.ocupado = ocupado;
+    if (ocupado)
+      this.finOperacion = new Promise(
+        (resolve) => (this.resolverOperacion = resolve),
+      );
+    else {
+      this.resolverOperacion?.(true);
+      this.resolverOperacion = null;
+      this.finOperacion = null;
+    }
+  }
+  private async confirmarPlanManual(d: DialogoAlumno) {
+    try {
+      if (!d.solicitudPlan) {
+        const fin = isoDesdeMadrid(this.nuevaFechaFin);
+        const moviendo =
+          d.tipo === 'editarPlan' &&
+          this.nuevaOposicion !== d.suscripcion!.oposicion;
+        d.solicitudPlan = {
+          ruta: `${d.usuarioId}/suscripciones${d.tipo === 'alta' ? '' : `/${d.suscripcion!.id}${d.tipo === 'reactivarPlan' ? '/reactivar' : ''}`}`,
+          metodo: d.tipo === 'editarPlan' ? 'PUT' : 'POST',
+          body: {
+            notificar: this.notificarPlan,
+            ...(d.tipo !== 'reactivarPlan'
+              ? {
+                  subscriptionType: this.nuevoTipo,
+                  oposicion: this.nuevaOposicion,
+                }
+              : {}),
+            ...(d.tipo === 'editarPlan'
+              ? { version: d.suscripcion!.version }
+              : {}),
+            ...(!moviendo &&
+            (d.tipo !== 'editarPlan' ||
+              this.nuevaFechaFin !== this.fechaFinInicial)
+              ? { fechaFin: fin }
+              : {}),
+          },
+        };
+      }
+    } catch {
+      this.errorDialogo = 'La fecha introducida no es válida en Madrid.';
+      return;
+    }
+    this.cambiarOcupadoGestion(true);
+    this.errorDialogo = '';
+    const storageKey = clavePendientesAlumno(d.usuarioId);
+    const solicitudesKey = storageKey + '-solicitudes';
+    const solicitudes = JSON.parse(
+      sessionStorage.getItem(solicitudesKey) || '{}',
+    );
+    solicitudes[d.clave!] = {
+      tipo: 'PlanPendiente',
+      titulo: 'Gestión del plan externo',
+      solicitud: d.solicitudPlan,
+    };
+    sessionStorage.setItem(solicitudesKey, JSON.stringify(solicitudes));
+    const retirarSolicitud = () => {
+      delete solicitudes[d.clave!];
+      if (Object.keys(solicitudes).length)
+        sessionStorage.setItem(solicitudesKey, JSON.stringify(solicitudes));
+      else sessionStorage.removeItem(solicitudesKey);
+    };
+    const pendientes = () =>
+      JSON.parse(sessionStorage.getItem(storageKey) || '[]') as string[];
+    sessionStorage.setItem(
+      storageKey,
+      JSON.stringify([...new Set([...pendientes(), d.clave!])]),
+    );
+    try {
+      const r = await firstValueFrom(
+        this.api.accionManual(
+          d.solicitudPlan.ruta,
+          d.solicitudPlan.metodo,
+          d.solicitudPlan.body,
+          d.clave!,
+        ),
+      );
+      retirarSolicitud();
+      this.resultadoOperacion = `${r.mensaje || 'Plan actualizado.'} ${etiquetaAviso(r.avisoEstado)}.`;
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify(pendientes().filter((k) => k !== d.clave)),
+      );
+      if (
+        ['FALLIDO', 'INCIERTO', 'PENDIENTE', 'ENVIANDO'].includes(r.avisoEstado)
+      )
+        sessionStorage.setItem(
+          storageKey,
+          JSON.stringify([...pendientes(), r.operacionId]),
+        );
+      this.dialogo = null;
+      this.actividad = null;
+      this.recargar.next();
+    } catch (e: any) {
+      this.errorDialogo = mensajeErrorManual(e);
+      this.planIncierto = !e.status || e.status >= 500;
+      if (!this.planIncierto) {
+        retirarSolicitud();
+        sessionStorage.setItem(
+          storageKey,
+          JSON.stringify(pendientes().filter((k) => k !== d.clave)),
+        );
+        d.solicitudPlan = undefined;
+        d.clave = crypto.randomUUID();
+      }
+    } finally {
+      this.cambiarOcupadoGestion(false);
+    }
+  }
+  async consultarPlanPendiente() {
+    if (!this.dialogo?.clave || this.ocupado) return;
+    this.cambiarOcupadoGestion(true);
+    try {
+      const op = await firstValueFrom(
+        this.api.operacion(this.id, this.dialogo.clave),
+      );
+      this.resultadoOperacion = `${op.resultado?.mensaje || 'Operación recuperada.'} ${op.avisoEstado ? etiquetaAviso(op.avisoEstado) : ''}`;
+      this.dialogo = null;
+      this.recargar.next();
+    } catch (e) {
+      this.errorDialogo = mensajeErrorManual(e);
+    } finally {
+      this.cambiarOcupadoGestion(false);
     }
   }
   private cargarSeccion() {

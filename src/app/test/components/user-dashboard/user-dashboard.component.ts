@@ -1,4 +1,6 @@
+import { esSuscripcionVigente } from '../../../shared/utils/membresia-externa.util';
 import { CommonModule } from '@angular/common';
+import { NuevoAlumnoExternoComponent } from '../../../shared/alumno-cards/nuevo-alumno-externo.component';
 import {
   Component,
   computed,
@@ -31,7 +33,6 @@ import { Label, UsuarioLabel } from '../../../shared/models/label.model';
 import {
   CancelarMembresiaExternaResultado,
   getSubscriptionStatusLabel,
-  isSubscriptionAccessible,
   Oposicion,
   OPOSICION_LABELS,
   Suscripcion,
@@ -69,6 +70,7 @@ import { SharedModule } from '../../../shared/shared.module';
     PrimengModule,
     SharedModule,
     GenericListComponent,
+    NuevoAlumnoExternoComponent,
   ],
   templateUrl: './user-dashboard.component.html',
   styleUrls: [
@@ -361,9 +363,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   getHighestSubscription(suscripciones?: Suscripcion[]): Suscripcion | null {
     if (!suscripciones || suscripciones.length === 0) return null;
 
-    const activeSubs = suscripciones.filter((s) =>
-      isSubscriptionAccessible(s.status),
-    );
+    const activeSubs = suscripciones.filter((s) => esSuscripcionVigente(s));
     if (activeSubs.length === 0) return null;
 
     const tierPriority: Record<SuscripcionTipo, number> = {
@@ -386,9 +386,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   }
 
   getActiveSuscripciones(user: Usuario): Suscripcion[] {
-    return (user.suscripciones || []).filter((s) =>
-      isSubscriptionAccessible(s.status),
-    );
+    return (user.suscripciones || []).filter((s) => esSuscripcionVigente(s));
   }
 
   /** Suscripciones que la baja total externa cancelaría AHORA (con fecha). */
@@ -419,7 +417,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
 
   getUserStatus(user: Usuario): 'active' | 'partial' | 'inactive' {
     const hasActiveSub = user.suscripciones?.some((s) =>
-      isSubscriptionAccessible(s.status),
+      esSuscripcionVigente(s),
     );
     if (hasActiveSub) return 'active';
 
@@ -473,7 +471,7 @@ export class UserDashboardComponent extends SharedGridComponent<Usuario> {
   hasSubscriptionForOposicion(oposicion: Oposicion): boolean {
     if (!this.selectedUser?.suscripciones) return false;
     return this.selectedUser.suscripciones.some(
-      (s) => s.oposicion === oposicion && isSubscriptionAccessible(s.status),
+      (s) => s.oposicion === oposicion && esSuscripcionVigente(s),
     );
   }
 

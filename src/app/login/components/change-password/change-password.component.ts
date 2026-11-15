@@ -19,10 +19,10 @@ export class ChangePasswordComponent {
     private route: ActivatedRoute,
     private authService: AuthService,
     private router: Router,
-    public toast: ToastrService
+    public toast: ToastrService,
   ) {
     this.formGroup = this.fb.group({
-      newPassword: ['', [Validators.required]],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
     });
   }
 
@@ -35,7 +35,7 @@ export class ChangePasswordComponent {
       const newPassword = this.formGroup.get('newPassword')?.value;
       try {
         await firstValueFrom(
-          this.authService.resetPassword(this.token, newPassword)
+          this.authService.resetPassword(this.token, newPassword),
         );
         this.toast.success('Contraseña restablecida exitosamente.');
         this.router.navigate(['/auth/login']);

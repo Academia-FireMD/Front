@@ -216,16 +216,33 @@
             <app-alumno-suscripciones
               [suscripciones]="data.usuario.suscripciones || []"
               [gestion]="data.gestion"
-              [ocupado]="ocupado"
+              [ocupado]="ocupado || cargando"
               (cancelar)="abrirCancelarPlan($event)"
               (editarPlan)="abrirEditarPlan($event)"
+              (reactivarPlan)="abrirReactivarPlan($event)"
               (eliminarPlan)="abrirEliminarPlan($event)"
               (gestionarWoo)="verWoo()"
-            ></app-alumno-suscripciones
-            ><app-alumno-accesos
-              [cursos]="data.cursos"
-              [consumibles]="data.usuario.consumibles || []"
-            ></app-alumno-accesos>
+              ><button
+                suscripciones-cabecera
+                *ngIf="data.gestion.tipo === 'EXTERNA'"
+                pButton
+                type="button"
+                class="alumno-btn p-button-outlined ficha-plan-alta"
+                icon="pi pi-plus"
+                (click)="abrirAlta()"
+                [disabled]="ocupado"
+                data-testid="anadir-plan-externo"
+              >
+                Añadir plan externo
+              </button></app-alumno-suscripciones
+            >
+            <app-gestion-externa
+              [alumnoId]="id"
+              [revision]="revisionAccesos"
+              vista="productos"
+              (ocupadoCambio)="cambiarOcupadoGestion($event)"
+              (actualizado)="resultadoOperacion = $event; actividad = null"
+            ></app-gestion-externa>
           </div>
           <div class="ficha-column">
             <article class="alumno-card">
@@ -309,6 +326,14 @@
           </div>
         </div>
       </ng-container>
+      <app-gestion-externa
+        *ngIf="seccion === 'tutorias'"
+        [alumnoId]="id"
+        [revision]="revisionAccesos"
+        vista="tutorias"
+        (ocupadoCambio)="cambiarOcupadoGestion($event)"
+        (actualizado)="resultadoOperacion = $event; actividad = null"
+      ></app-gestion-externa>
       <ng-container *ngIf="seccion === 'woo'">
         <div class="ficha-summary">
           <article>
@@ -689,7 +714,7 @@
         acceso conservando el registro del plan, utiliza Cancelar este plan.
       </p></ng-container
     >
-    <ng-container *ngIf="d.tipo === 'alta'"
+    <ng-container *ngIf="d.tipo === 'alta' || d.tipo === 'editarPlan'"
       ><p>
         El plan se gestionará de forma externa, sin iniciar cobros en
         WooCommerce.
@@ -698,8 +723,7 @@
         >Oposición<select
           pInputText
           [(ngModel)]="nuevaOposicion"
-          (ngModelChange)="nuevoTipo = ''"
-          [disabled]="ocupado"
+          [disabled]="ocupado || planIncierto"
         >
           <option value="">Selecciona una oposición</option>
           <option
@@ -717,7 +741,7 @@
         >Plan<select
           pInputText
           [(ngModel)]="nuevoTipo"
-          [disabled]="ocupado || !nuevaOposicion"
+          [disabled]="ocupado || planIncierto"
         >
           <option value="">Selecciona un plan</option>
           <option *ngFor="let tipo of tiposPlan" [value]="tipo">
@@ -725,10 +749,66 @@
           </option>
         </select></label
       >
-      <p *ngIf="!nuevaOposicion" class="ficha-helper">
-        Elige primero una oposición para seleccionar su plan.
+      <p
+        *ngIf="
+          d.tipo === 'editarPlan' && d.suscripcion?.oposicion !== nuevaOposicion
+        "
+        class="ficha-helper"
+      >
+        El cambio de oposición cerrará el plan anterior y conservará exactamente
+        su fecha de fin e historial.
       </p></ng-container
     >
+    <ng-container *ngIf="d.tipo === 'reactivarPlan'"
+      ><p>
+        Se creará una nueva etapa de
+        {{ d.suscripcion ? planLabel(d.suscripcion) : "" }}. El registro
+        anterior permanecerá en el historial.
+      </p></ng-container
+    >
+    <ng-container
+      *ngIf="
+        d.tipo === 'alta' ||
+        d.tipo === 'editarPlan' ||
+        d.tipo === 'reactivarPlan'
+      "
+    >
+      <label class="ficha-field"
+        >Fin del acceso, hora de Madrid (opcional)<input
+          pInputText
+          type="datetime-local"
+          [(ngModel)]="nuevaFechaFin"
+          [disabled]="
+            ocupado ||
+            planIncierto ||
+            (d.tipo === 'editarPlan' &&
+              d.suscripcion?.oposicion !== nuevaOposicion)
+          "
+        /><small>Vacío: sin fecha de fin. El fin es exclusivo.</small></label
+      >
+      <label class="ficha-field"
+        ><span
+          ><input
+            type="checkbox"
+            [(ngModel)]="notificarPlan"
+            [disabled]="ocupado || planIncierto"
+          />
+          Avisar al alumno por email</span
+        ></label
+      >
+      <p *ngIf="planIncierto" role="status">
+        El resultado está pendiente de comprobar. Se conserva la misma
+        intención.
+        <button
+          pButton
+          type="button"
+          (click)="consultarPlanPendiente()"
+          [disabled]="ocupado"
+        >
+          Consultar resultado
+        </button>
+      </p>
+    </ng-container>
     <ng-container *ngIf="d.tipo === 'cancelarWoo' && d.wooSub"
       ><p>Suscripción #{{ d.wooSub.id }} en WooCommerce.</p>
       <label class="ficha-field"
@@ -896,9 +976,8 @@
         </li>
       </ul>
       <div class="ficha-notice">
-        Los cursos comprados o concedidos de forma independiente, consumibles y
-        progreso se conservan. Esta acción no elimina al usuario ni bloquea su
-        cuenta.
+        Los cursos independientes, consumibles, créditos emitidos, reservas y
+        progreso se conservan. La cuenta mantiene su acceso local.
       </div>
       <label class="ficha-field"
         >Motivo (opcional)<textarea
@@ -932,6 +1011,11 @@
         <li>
           {{ ficha?.resumenEliminacion?.consumibles }} consumibles y
           {{ ficha?.resumenEliminacion?.invitaciones }} invitaciones.
+        </li>
+        <li>
+          {{ ficha?.resumenEliminacion?.reservas || 0 }} reservas y
+          {{ ficha?.resumenEliminacion?.creditos || 0 }} créditos. Las reservas
+          activas se cancelarán y sus plazas quedarán disponibles.
         </li>
       </ul>
       <p>

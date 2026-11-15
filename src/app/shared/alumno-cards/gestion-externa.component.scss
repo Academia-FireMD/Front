@@ -1,0 +1,86 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.gestion-form {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.gestion-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+.gestion-form input:not([type="checkbox"]),
+.gestion-form select,
+.gestion-form textarea {
+  width: 100%;
+  min-width: 0;
+}
+.gestion-check {
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem !important;
+  font-weight: 400 !important;
+}
+.gestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+.gestion-error {
+  color: var(--red-700, #b42318);
+  overflow-wrap: anywhere;
+}
+.gestion-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--surface-border, #e5e7eb);
+}
+.gestion-row:last-child {
+  border-bottom: 0;
+}
+.gestion-row h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+.gestion-row p {
+  margin: 0.3rem 0;
+  overflow-wrap: anywhere;
+}
+.gestion-row > div {
+  min-width: 0;
+}
+.gestion-section {
+  margin-bottom: 1rem;
+}
+.gestion-result {
+  padding: 1rem;
+  background: var(--surface-100, #f5f5f5);
+  border-radius: 0.6rem;
+  margin-bottom: 1rem;
+  overflow-wrap: anywhere;
+}
+.gestion-page {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+@media (max-width: 600px) {
+  .gestion-row {
+    gap: 0.4rem;
+  }
+  .gestion-actions button {
+    flex: 1 1 auto;
+  }
+}

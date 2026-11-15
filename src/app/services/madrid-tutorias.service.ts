@@ -7,18 +7,22 @@ export type EstadoCreditoTutoria =
   | 'DISPONIBLE'
   | 'RESERVADO'
   | 'CONSUMIDO'
-  | 'EXPIRADO';
+  | 'EXPIRADO'
+  | 'REVOCADO';
 
 export type TipoMovimientoCreditoTutoria =
   | 'EMISION'
   | 'RESERVA'
   | 'LIBERACION'
   | 'CONSUMO'
-  | 'EXPIRACION';
+  | 'EXPIRACION'
+  | 'REVOCACION'
+  | 'AJUSTE';
 
 export interface CreditoTutoriaHistoryItem {
   id: number;
-  ciclo: number;
+  ciclo: number | null;
+  origen?: 'SUSCRIPCION' | 'MANUAL_ADMIN';
   estado: EstadoCreditoTutoria;
   validoDesde: string | Date;
   validoHasta: string | Date;

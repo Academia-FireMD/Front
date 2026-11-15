@@ -11,6 +11,9 @@ function usuario(id: number, nombre: string, apellidos: string, email: string) {
 }
 
 async function stubPerfilAuxiliar(page: import('@playwright/test').Page) {
+  await page.route('**/user/me/planificaciones', (route) =>
+    route.fulfill({ json: [] }),
+  );
   await page.route('**/user/tutores', (route) =>
     route.fulfill({
       status: 200,
@@ -135,16 +138,21 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
 
     // B debe haber abierto su propia petición, no reutilizado la de A.
     await expect.poll(() => peticionesPerfil).toBeGreaterThanOrEqual(2);
-    await expect(page.locator('app-profile h1')).toHaveText('Bea Actual', {
-      timeout: 10_000,
-    });
+    await expect(page.locator('app-profile .profile-heading h1')).toHaveText(
+      'Bea Actual',
+      {
+        timeout: 10_000,
+      },
+    );
 
     liberarA();
 
     // La respuesta tardía de A no puede repintar el perfil ni restaurar sus
     // tokens: la sesión y el store siguen siendo de B.
     await page.waitForTimeout(500);
-    await expect(page.locator('app-profile h1')).toHaveText('Bea Actual');
+    await expect(page.locator('app-profile .profile-heading h1')).toHaveText(
+      'Bea Actual',
+    );
 
     const subActual = await page.evaluate(() => {
       const token = sessionStorage.getItem('authToken');
@@ -245,7 +253,7 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
     await page.locator('app-password-input input').fill('test1234');
     await page.locator('app-async-button button').first().click();
     await page.waitForURL('**/app/profile', { timeout: 15_000 });
-    await expect(page.locator('app-profile h1')).toHaveText(
+    await expect(page.locator('app-profile .profile-heading h1')).toHaveText(
       'Ana Anterior',
       { timeout: 10_000 },
     );
@@ -274,5 +282,98 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
     ).toBeNull();
     await expect(page).toHaveURL(/\/auth\/login/);
     await expect(page.locator('input[formControlName="email"]')).toBeVisible();
+  });
+
+  /**
+   * Arranque real con token persistido (recarga completa): AuthService se
+   * construye con el token, hidrata la sesión y debe cargar el perfil sin
+   * resolver su propia instancia a mitad del ciclo DI. El toast genérico puede
+   * durar pocos segundos, así que se registra desde antes de que arranque la
+   * app para no perderlo.
+   */
+  test('recargar una página autenticada restaura el perfil sin toast de arranque', async ({
+    page,
+  }) => {
+    await setupAppShellStubs(page);
+    await stubPerfilAuxiliar(page);
+    await page.route('**/planificaciones/configuracion', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: 'null',
+      }),
+    );
+    // El layout se suscribe a AuthService.currentUser$, que resuelve el perfil
+    // por email además del loadUser del store.
+    await page.route('**/user/get-by-email', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(usuario(1, 'Test', 'Alumno', 'alumno@test.com')),
+      }),
+    );
+
+    const tokenPersistido = jwt({
+      sub: 1,
+      email: 'alumno@test.com',
+      rol: 'ALUMNO',
+      exp: 9_999_999_999,
+    });
+
+    await page.addInitScript(() => {
+      const registro = window as unknown as { __toastErrors: string[] };
+      registro.__toastErrors = [];
+      setInterval(() => {
+        document.querySelectorAll('.toast-error').forEach((toast) => {
+          const texto = (toast.textContent ?? '').trim();
+          if (texto && !registro.__toastErrors.includes(texto)) {
+            registro.__toastErrors.push(texto);
+          }
+        });
+      }, 25);
+    });
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    // Primera visita solo para tener el origen y poder sembrar el token; la
+    // recarga posterior arranca la app desde cero con la sesión persistida.
+    await page.goto('/auth/login');
+    await page.evaluate(
+      (token) => sessionStorage.setItem('authToken', token),
+      tokenPersistido,
+    );
+
+    const autorizacionesPerfil: (string | null)[] = [];
+    page.on('request', (request) => {
+      if (/\/user\/profile\/?$/.test(request.url().split('?')[0])) {
+        autorizacionesPerfil.push(request.headers()['authorization'] ?? null);
+      }
+    });
+
+    await page.goto('/app/profile');
+    await expect(page.locator('app-profile .profile-heading h1')).toHaveText(
+      'Test Alumno',
+      {
+        timeout: 15_000,
+      },
+    );
+
+    // La petición protegida sale con el token persistido y el perfil cargado.
+    await expect
+      .poll(() => autorizacionesPerfil.length)
+      .toBeGreaterThanOrEqual(1);
+    expect(
+      autorizacionesPerfil.every(
+        (valor) => valor === `Bearer ${tokenPersistido}`,
+      ),
+    ).toBe(true);
+
+    await page.waitForTimeout(500);
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __toastErrors: string[] }).__toastErrors,
+      ),
+    ).toEqual([]);
+    expect(pageErrors).toEqual([]);
   });
 });

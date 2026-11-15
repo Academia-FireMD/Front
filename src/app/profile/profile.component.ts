@@ -1,3 +1,4 @@
+import { esSuscripcionVigente } from '../shared/utils/membresia-externa.util';
 import {
   Component,
   computed,
@@ -32,7 +33,6 @@ import { ModuloApp } from '../shared/models/modulo-app.enum';
 import {
   getPlanLabel,
   getPlanificacionOposicionLabel,
-  isSubscriptionAccessible,
   Oposicion,
   Suscripcion,
   SuscripcionStatus,
@@ -454,7 +454,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private getPrimarySuscripcion() {
     if (!this.user?.suscripciones?.length) return null;
     return (
-      this.user.suscripciones.find((s) => isSubscriptionAccessible(s.status)) ||
+      this.user.suscripciones.find((s) => esSuscripcionVigente(s)) ||
       this.user.suscripciones[0]
     );
   }
@@ -821,7 +821,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       // Buscar cualquier suscripción activa
       const activeSubscription = this.user.suscripciones.find((s) =>
-        isSubscriptionAccessible(s.status),
+        esSuscripcionVigente(s),
       );
       if (!activeSubscription) {
         return false;
@@ -909,9 +909,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     // Verificar si alguna está activa
-    return this.user.suscripciones.some((s) =>
-      isSubscriptionAccessible(s.status),
-    );
+    return this.user.suscripciones.some((s) => esSuscripcionVigente(s));
   }
 
   getMotivoLabel(motivo: MotivoBaja): string {
@@ -1170,10 +1168,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (this.isLinkedToWordPress()) {
       const menuItems: any[] = [];
 
-      if (
-        (suscripcion as any).isGeneric &&
-        isSubscriptionAccessible(suscripcion.status)
-      ) {
+      if ((suscripcion as any).isGeneric && esSuscripcionVigente(suscripcion)) {
         menuItems.push({
           label: 'Cambiar oposición',
           icon: 'pi pi-sync',
@@ -1181,7 +1176,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         });
       }
 
-      if (isSubscriptionAccessible(suscripcion.status)) {
+      if (esSuscripcionVigente(suscripcion)) {
         menuItems.push({
           label: 'Cambiar plan',
           icon: 'pi pi-refresh',
@@ -1221,7 +1216,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         icon: 'pi pi-undo',
         command: () => this.cancelarCancelacionProgramada(suscripcion.id),
       });
-    } else if (isSubscriptionAccessible(suscripcion.status)) {
+    } else if (esSuscripcionVigente(suscripcion)) {
       menuItems.push({
         label: 'Dar de baja',
         icon: 'pi pi-sign-out',
@@ -1261,7 +1256,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         subs
           .filter(
             (s) =>
-              isSubscriptionAccessible(s.status) &&
+              esSuscripcionVigente(s) &&
               s.oposicion !== Oposicion.GENERAL &&
               (!s.fechaFin || new Date(s.fechaFin).getTime() > Date.now()),
           )
@@ -1277,8 +1272,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
    */
   get suscripcionesVisibles(): Suscripcion[] {
     return (this.user?.suscripciones ?? []).filter(
-      (s) =>
-        isSubscriptionAccessible(s.status) && s.oposicion !== Oposicion.GENERAL,
+      (s) => esSuscripcionVigente(s) && s.oposicion !== Oposicion.GENERAL,
     );
   }
 
@@ -1317,7 +1311,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       estado = `📅 Baja programada (${fecha ? new Date(fecha).toLocaleDateString('es-ES') : ''})`;
     } else if (suscripcion.status === 'ACTIVE' && suscripcion.fechaFin) {
       estado = `⏳ Baja pendiente (${new Date(suscripcion.fechaFin).toLocaleDateString('es-ES')})`;
-    } else if (isSubscriptionAccessible(suscripcion.status)) {
+    } else if (esSuscripcionVigente(suscripcion)) {
       estado = '✅ Activo';
     } else {
       estado = '❌ Cancelado';
@@ -1341,7 +1335,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (!this.user?.consumibles) return [];
 
     // Ordenar: ACTIVADO primero, luego USADO, luego EXPIRADO
-    const orden = { ACTIVADO: 1, USADO: 2, EXPIRADO: 3 };
+    const orden = { ACTIVADO: 1, USADO: 2, EXPIRADO: 3, REVOCADO: 4 };
 
     return this.user.consumibles.slice().sort((a, b) => {
       const ordenA = orden[a.estado as keyof typeof orden] || 999;

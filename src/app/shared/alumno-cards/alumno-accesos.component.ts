@@ -84,7 +84,9 @@ import { Consumible } from '../models/user.model';
                     ? 'Disponible'
                     : c.estado === 'USADO'
                       ? 'Usado'
-                      : 'Caducado'
+                      : c.estado === 'REVOCADO'
+                        ? 'Revocado'
+                        : 'Caducado'
                 }}
               </p>
             </div>
@@ -94,7 +96,7 @@ import { Consumible } from '../models/user.model';
           </p>
           <button
             pButton
-            *ngIf="perfil && c.estado === 'ACTIVADO' && c.examen"
+            *ngIf="perfil && disponible(c) && c.examen"
             type="button"
             class="alumno-btn full p-button-outlined"
             (click)="usar.emit(c)"
@@ -147,6 +149,12 @@ export class AlumnoAccesosComponent {
   @Output() usar = new EventEmitter<Consumible>();
   @Output() resultados = new EventEmitter<Consumible>();
   @Output() reintentar = new EventEmitter<void>();
+  disponible(c: Consumible) {
+    return (
+      c.estado === 'ACTIVADO' &&
+      (!c.expiraEn || new Date(c.expiraEn).getTime() > Date.now())
+    );
+  }
   progreso(acceso: AccesoConCurso) {
     const lecciones = new Set(
       acceso.curso.secciones?.flatMap(

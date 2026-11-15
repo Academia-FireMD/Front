@@ -164,6 +164,7 @@ export function getPlanCssClass(tipo: string | null | undefined): string {
 }
 
 export interface Suscripcion {
+  version?: number;
   id: number;
   usuarioId: number;
   tipo: SuscripcionTipo;

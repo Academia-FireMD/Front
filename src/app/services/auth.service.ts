@@ -116,13 +116,31 @@ export class AuthService extends ApiBaseService {
   private initCurrentUser(): void {
     const decodedToken = this.decodeToken();
     if (decodedToken) {
-      this.sessions.start(this.identityFrom(decodedToken));
+      const session = this.sessions.start(this.identityFrom(decodedToken));
       this.currentDecodedUserSubject.next(decodedToken);
       // Solo cargar el perfil si el usuario tiene permisos
       if (decodedToken.rol !== 'SIN_APROBACION') {
-        this.store.dispatch(UserActions.loadUser());
+        this.deferInitialProfileLoad(session);
       }
     }
+  }
+
+  /**
+   * Diferir la carga inicial evita resolver este servicio a mitad de su propio
+   * constructor: el efecto suscribe la petición de perfil síncronamente y
+   * AuthInterceptor pide AuthService al inyector, que aún no ha completado la
+   * instancia (en producción el placeholder no expone `sessionSnapshot` y el
+   * arranque muestra el toast genérico). La instantánea impide que un logout o
+   * un login de otra cuenta ocurrido antes de la microtarea despache la carga
+   * de la sesión anterior.
+   */
+  private deferInitialProfileLoad(session: AuthSessionSnapshot): void {
+    queueMicrotask(() => {
+      if (!this.sessions.isCurrent(session)) {
+        return;
+      }
+      this.store.dispatch(UserActions.loadUser());
+    });
   }
 
   private identityFrom(decoded: any): AuthIdentity {

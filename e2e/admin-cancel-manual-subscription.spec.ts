@@ -52,32 +52,6 @@ const diegoMock = {
 
 test.describe('Admin — cancelar suscripción manual', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/user/admin/140', (route) =>
-      route.fulfill({
-        json: {
-          usuario: diegoMock,
-          cursos: [],
-          gestion: {
-            tipo: 'EXTERNA',
-            comprobadaEn: new Date().toISOString(),
-            motivo: null,
-            capacidades: {
-              puedeDarBajaExterna: true,
-              puedeEliminar: true,
-              puedeGestionarWoo: false,
-              suscripcionesExternas: [5001],
-            },
-          },
-          resumenEliminacion: {
-            suscripciones: 1,
-            cursos: 0,
-            progresos: 0,
-            consumibles: 0,
-            invitaciones: 0,
-          },
-        },
-      }),
-    );
     await page.route('**/user/all', (route) =>
       route.fulfill({
         status: 200,
@@ -118,26 +92,59 @@ test.describe('Admin — cancelar suscripción manual', () => {
       timeout: 15_000,
     });
 
-    await page
-      .locator('.item-container')
-      .filter({ hasText: 'Diego' })
-      .locator('.identifier')
-      .click();
-    const card = page.getByTestId('alumno-suscripciones');
-    await expect(card).toBeVisible();
-    await card.getByRole('button', { name: /Acciones del plan/ }).click();
+    // La gestión vigente se realiza desde la ficha, conservando el endpoint.
+    await page.route('**/user/admin/140', (route) =>
+      route.fulfill({
+        json: {
+          usuario: diegoMock,
+          cursos: [],
+          gestion: {
+            tipo: 'EXTERNA',
+            motivo: null,
+            comprobadaEn: new Date().toISOString(),
+            capacidades: {
+              puedeDarBajaExterna: true,
+              puedeEliminar: true,
+              puedeGestionarWoo: false,
+              suscripcionesExternas: [5001],
+            },
+          },
+          resumenEliminacion: {
+            suscripciones: 1,
+            cursos: 0,
+            progresos: 0,
+            consumibles: 0,
+            invitaciones: 0,
+          },
+          consultadoEn: new Date().toISOString(),
+        },
+      }),
+    );
+    await page.goto('/app/test/user/140?tab=access');
+    const acciones = page
+      .getByTestId('alumno-suscripciones')
+      .getByRole('button', { name: /Acciones del plan/ });
+    await acciones.scrollIntoViewIfNeeded();
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    await acciones.click();
     await page
       .getByRole('menuitem', { name: 'Cancelar este plan', exact: true })
       .click();
     const confirmacion = page.getByRole('dialog', {
       name: 'Cancelar solo este plan',
+      exact: true,
     });
     await expect(confirmacion).toContainText('Valencia Ayuntamiento');
-    await expect(confirmacion).toContainText('las demás suscripciones');
+    await expect(confirmacion).toContainText('Los demás planes');
     expect(cancelCalled).toBe(false);
     await page.getByTestId('admin-confirm-action').click();
     await expect(page.getByTestId('admin-operation-result')).toContainText(
-      'cancelado',
+      'Plan externo cancelado',
     );
 
     // Esperar el toast / verificar endpoint
