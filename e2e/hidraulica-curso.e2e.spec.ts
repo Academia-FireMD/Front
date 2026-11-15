@@ -326,9 +326,9 @@ async function practicar(
 }
 
 test.describe('Hidráulica · aula nativa', () => {
-  test.beforeEach(async ({ context }) => {
+  test.beforeEach(async ({ context, baseURL }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], {
-      origin: BASE,
+      origin: baseURL || BASE,
     });
   });
 

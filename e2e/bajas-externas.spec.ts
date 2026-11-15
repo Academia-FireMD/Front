@@ -110,51 +110,66 @@ function esXhr(request: Request): boolean {
 
 async function stubsAdminDashboard(
   page: Page,
-  usuarios: () => unknown[],
+  usuarios: () => any[],
 ): Promise<void> {
-  await page.route('**/user/all', (route) =>
+  await page.route('**/user/admin/*', (route) => {
+    const id = Number(new URL(route.request().url()).pathname.split('/').pop());
+    const usuario = usuarios().find((u) => u.id === id);
+    if (!usuario)
+      return route.fulfill({
+        status: 404,
+        json: { message: 'Alumno no encontrado' },
+      });
+    const externa =
+      usuario.authSource !== 'WORDPRESS' &&
+      !usuario.woocommerceCustomerId &&
+      usuario.suscripciones.every((s: any) => s.fuenteGestion === 'EXTERNA');
+    return route.fulfill({
+      json: {
+        usuario,
+        cursos: [],
+        gestion: {
+          tipo: externa ? 'EXTERNA' : 'MIXTA',
+          comprobadaEn: new Date().toISOString(),
+          motivo: null,
+          capacidades: {
+            puedeDarBajaExterna: externa,
+            puedeEliminar: externa,
+            puedeGestionarWoo: !externa,
+            suscripcionesExternas: usuario.suscripciones
+              .filter((s: any) => s.fuenteGestion === 'EXTERNA')
+              .map((s: any) => s.id),
+          },
+        },
+        resumenEliminacion: {
+          suscripciones: usuario.suscripciones.length,
+          cursos: 0,
+          progresos: 0,
+          consumibles: 0,
+          invitaciones: 0,
+        },
+        consultadoEn: new Date().toISOString(),
+      },
+    });
+  });
+  await page.route('**/user/admin/*/accesos', (route) =>
     route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: usuarios(),
-        pagination: { skip: 0, take: 10, count: usuarios().length },
-      }),
-    }),
-  );
-  await page.route('**/user/obtain-avaliable-subscriptions', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([]),
-    }),
-  );
-  await page.route('**/labels', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([]),
+      json: {
+        capacidades: {},
+        cursos: [],
+        simulacros: [],
+        tutorias: { invitaciones: [], creditos: [], reservas: [], compras: [] },
+      },
     }),
   );
 }
-
-async function abrirAccionDeFila(page: Page, nombre: string): Promise<void> {
-  const row = page.locator('.item-container').filter({ hasText: nombre });
-  await expect(row).toBeVisible({ timeout: 15_000 });
-  await row.locator('[data-testid="user-actions-btn"]').click();
-}
-
-async function abrirBajaDesdeDialogo(
-  page: Page,
-  nombre: string,
-): Promise<void> {
-  await abrirAccionDeFila(page, nombre);
-  await page.getByText('Suscripción', { exact: true }).first().click();
-  await expect(page.getByTestId('baja-externa-seccion')).toBeVisible();
-  await page.getByTestId('baja-externa-abrir').click();
+async function abrirBajaDesdeFicha(page: Page, id = 140): Promise<void> {
+  await page.goto(`/app/test/user/${id}?tab=access`);
+  await page.getByTestId('admin-baja-externa').click();
   await expect(
     page.getByRole('dialog', {
       name: 'Dar de baja la membresía externa',
+      exact: true,
     }),
   ).toBeVisible();
 }
@@ -163,95 +178,66 @@ test.describe('Admin — baja total de membresía externa', () => {
   test('confirma las 2 suscripciones vigentes, envía motivo y muestra el resultado del servidor', async ({
     page,
   }) => {
-    let cancelado = false;
-    let payload: unknown = null;
-    let llamadasCancelacion = 0;
-
+    let cancelado = false,
+      payload: unknown = null,
+      llamadas = 0;
     const usuarios = () => [
-      cancelado
-        ? {
-            ...usuarioExterno,
-            suscripciones: usuarioExterno.suscripciones.map((s) =>
-              s.id === 701 || s.id === 702 ? { ...s, status: 'CANCELLED' } : s,
-            ),
-          }
-        : usuarioExterno,
+      {
+        ...usuarioExterno,
+        suscripciones: usuarioExterno.suscripciones.map((s) =>
+          cancelado && [701, 702].includes(s.id)
+            ? { ...s, status: 'CANCELLED' }
+            : s,
+        ),
+      },
     ];
-
     await loginAsAdminMock(page, userAdminFixture);
     await stubsAdminDashboard(page, usuarios);
-    // Este route sustituye al del helper de login (se registra después).
-    await page.route('**/user/get-by-email', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(usuarios()[0]),
-      }),
-    );
     await page.route('**/user/cancel-all-subscriptions/140', (route) => {
-      llamadasCancelacion += 1;
+      llamadas++;
       payload = route.request().postDataJSON();
       cancelado = true;
       return route.fulfill({
         status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({
+        json: {
           usuarioId: 140,
           canceladas: [701, 702],
           totalCanceladas: 2,
           yaEstabaDeBaja: false,
           cursosConservados: 3,
-        }),
+        },
       });
     });
-
-    await page.goto('/app/test/user-dashboard');
-    await abrirAccionDeFila(page, 'Lucía');
-    await expect(
-      page.getByText('Dar de baja la membresía externa', { exact: true }),
-    ).toBeVisible();
-    await page.keyboard.press('Escape');
-
-    await abrirBajaDesdeDialogo(page, 'Lucía');
-
+    await abrirBajaDesdeFicha(page);
     const dialogo = page.getByRole('dialog', {
       name: 'Dar de baja la membresía externa',
+      exact: true,
     });
     await expect(dialogo).toContainText('Lucía Externa');
+    await expect(dialogo).toContainText('externa@test.com');
     await expect(dialogo).toContainText(
       'Se cancelarán 2 suscripciones vigentes',
     );
     await expect(dialogo).toContainText('Premium · Valencia Ayuntamiento');
     await expect(dialogo).toContainText('Baja programada');
     await expect(dialogo).toContainText('15/1/2030');
-    await expect(dialogo).toContainText(
-      'Los cursos comprados o concedidos de forma independiente',
-    );
     await expect(dialogo).not.toContainText('Madrid');
     await expect(dialogo).toContainText(
-      'Esta acción no elimina al usuario ni bloquea su cuenta',
+      'Los cursos independientes, consumibles, créditos emitidos, reservas y progreso se conservan',
     );
-
-    await page
-      .getByTestId('baja-externa-motivo')
+    await expect(dialogo).toContainText('La cuenta mantiene su acceso local');
+    await dialogo
+      .getByLabel('Motivo (opcional)')
       .fill('Solicitud telefónica del alumno');
-    await page.getByTestId('baja-externa-confirmar').click();
-
-    const resultado = page.getByTestId('baja-externa-resultado');
+    await page.getByTestId('admin-confirm-action').click();
+    const resultado = page.getByTestId('admin-operation-result');
     await expect(resultado).toContainText('Membresía externa dada de baja');
-    await expect(resultado).toContainText('Se cancelaron 2 suscripciones');
+    await expect(resultado).toContainText('2 suscripciones canceladas');
     await expect(resultado).toContainText('Se conservaron 3 cursos');
-    await expect.poll(() => llamadasCancelacion, { timeout: 5_000 }).toBe(1);
     expect(payload).toEqual({ motivo: 'Solicitud telefónica del alumno' });
-
-    await page.getByTestId('baja-externa-cerrar').click();
-    await expect(
-      page.getByRole('dialog', {
-        name: 'Dar de baja la membresía externa',
-      }),
-    ).toHaveCount(0);
+    expect(llamadas).toBe(1);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
-
   test('no ofrece la baja total en una cuenta WordPress/mixta', async ({
     page,
   }) => {
@@ -260,63 +246,42 @@ test.describe('Admin — baja total de membresía externa', () => {
       usuarioMixtoWordPress,
       usuarioExterno,
     ]);
-
-    await page.goto('/app/test/user-dashboard');
-    await abrirAccionDeFila(page, 'Marta');
-
+    await page.goto('/app/test/user/141?tab=access');
     await expect(
-      page.getByText('Dar de baja la membresía externa', { exact: true }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByText('Suscripción (WP)', { exact: true }),
+      page.getByRole('heading', { name: 'Marta Mixta', exact: true }),
     ).toBeVisible();
-    await page.keyboard.press('Escape');
-
-    await abrirAccionDeFila(page, 'Lucía');
-    await expect(
-      page.getByText('Dar de baja la membresía externa', { exact: true }),
-    ).toBeVisible();
+    await expect(page.getByTestId('admin-baja-externa')).toHaveCount(0);
+    await expect(page.getByTestId('ficha-tab-woo')).toBeVisible();
+    await page.goto('/app/test/user/140?tab=access');
+    await expect(page.getByTestId('admin-baja-externa')).toBeVisible();
   });
-
   test('no-op idempotente: informa que ya estaba de baja y conserva cursos', async ({
     page,
   }) => {
     await loginAsAdminMock(page, userAdminFixture);
     await stubsAdminDashboard(page, () => [usuarioExterno]);
-    await page.route('**/user/get-by-email', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          ...usuarioExterno,
-          suscripciones: [],
-        }),
-      }),
-    );
     await page.route('**/user/cancel-all-subscriptions/140', (route) =>
       route.fulfill({
         status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({
+        json: {
           usuarioId: 140,
           canceladas: [],
           totalCanceladas: 0,
           yaEstabaDeBaja: true,
           cursosConservados: 2,
-        }),
+        },
       }),
     );
-
-    await page.goto('/app/test/user-dashboard');
-    await abrirBajaDesdeDialogo(page, 'Lucía');
-    await page.getByTestId('baja-externa-confirmar').click();
-
-    const resultado = page.getByTestId('baja-externa-resultado');
-    await expect(resultado).toContainText('La membresía ya estaba de baja');
+    await abrirBajaDesdeFicha(page);
+    await page.getByTestId('admin-confirm-action').click();
+    const resultado = page.getByTestId('admin-operation-result');
+    await expect(resultado).toContainText(
+      'La membresía externa ya estaba de baja',
+    );
+    await expect(resultado).toContainText('No se canceló ninguna suscripción');
     await expect(resultado).toContainText('Se conservaron 2 cursos');
-    await expect(page.getByTestId('baja-externa-error')).toHaveCount(0);
+    await expect(page.locator('.ficha-form-error')).toHaveCount(0);
   });
-
   test('409 GESTION_EXTERNA_REQUERIDA: no muestra éxito y explica que no se modificó nada', async ({
     page,
   }) => {
@@ -325,36 +290,41 @@ test.describe('Admin — baja total de membresía externa', () => {
     await page.route('**/user/cancel-all-subscriptions/140', (route) =>
       route.fulfill({
         status: 409,
-        contentType: 'application/json',
-        body: JSON.stringify({
+        json: {
           reason: 'GESTION_EXTERNA_REQUERIDA',
           message: 'La cuenta no es exclusivamente externa',
-        }),
+        },
       }),
     );
-
-    await page.goto('/app/test/user-dashboard');
-    await abrirBajaDesdeDialogo(page, 'Lucía');
-    await page.getByTestId('baja-externa-confirmar').click();
-
-    const error = page.getByTestId('baja-externa-error');
+    await abrirBajaDesdeFicha(page);
+    await page.getByTestId('admin-confirm-action').click();
+    const error = page.getByRole('dialog').getByRole('alert');
     await expect(error).toContainText('exclusivamente externa');
     await expect(error).toContainText('No se ha modificado nada');
-    await expect(page.getByTestId('baja-externa-resultado')).toHaveCount(0);
+    await expect(page.getByTestId('admin-operation-result')).toHaveCount(0);
   });
-
   test('la cancelación individual avisa de que solo afecta a ese plan', async ({
     page,
   }) => {
     await loginAsAdminMock(page, userAdminFixture);
     await stubsAdminDashboard(page, () => [usuarioExterno]);
-
-    await page.goto('/app/test/user-dashboard');
-    await abrirAccionDeFila(page, 'Lucía');
-    await page.getByText('Suscripción', { exact: true }).first().click();
-    await page.locator('[data-testid="cancel-sub-btn"]').first().click();
-
-    const confirmacion = page.locator('.p-confirm-dialog');
+    await page.goto('/app/test/user/140?tab=access');
+    const acciones = page
+      .getByTestId('alumno-suscripciones')
+      .getByRole('button', { name: /Acciones del plan/ })
+      .first();
+    await acciones.scrollIntoViewIfNeeded();
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    await acciones.click();
+    await page
+      .getByRole('menuitem', { name: 'Cancelar este plan', exact: true })
+      .click();
+    const confirmacion = page.getByRole('dialog');
     await expect(confirmacion).toContainText('solo el plan');
     await expect(confirmacion).toContainText('las demás suscripciones');
     await expect(confirmacion).not.toContainText('perderá el acceso');

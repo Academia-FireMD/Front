@@ -185,6 +185,7 @@ test('administrador conserva formulario completo, tutor y selector de foto con t
     page.getByRole('dialog').getByLabel('Tutor asignado'),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   const avatar = page.getByRole('button', { name: 'Cambiar foto de perfil' });
   await avatar.focus();
   await expect(avatar).toBeFocused();

@@ -92,30 +92,53 @@ test.describe('Admin — cancelar suscripción manual', () => {
       timeout: 15_000,
     });
 
-    // Abrir el menú de acciones del usuario (botón ellipsis con test-id estable).
+    // La gestión vigente se realiza desde la ficha, conservando el endpoint.
+    await page.route('**/user/admin/140', (route) =>
+      route.fulfill({
+        json: {
+          usuario: diegoMock,
+          cursos: [],
+          gestion: {
+            tipo: 'EXTERNA',
+            motivo: null,
+            comprobadaEn: new Date().toISOString(),
+            capacidades: {
+              puedeDarBajaExterna: true,
+              puedeEliminar: true,
+              puedeGestionarWoo: false,
+              suscripcionesExternas: [5001],
+            },
+          },
+          resumenEliminacion: {
+            suscripciones: 1,
+            cursos: 0,
+            progresos: 0,
+            consumibles: 0,
+            invitaciones: 0,
+          },
+          consultadoEn: new Date().toISOString(),
+        },
+      }),
+    );
+    await page.goto('/app/test/user/140?tab=access');
+    const acciones = page
+      .getByTestId('alumno-suscripciones')
+      .getByRole('button', { name: /Acciones del plan/ });
+    await acciones.scrollIntoViewIfNeeded();
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    await acciones.click();
     await page
-      .locator('[data-testid="user-actions-btn"]')
-      .first()
-      .click({ timeout: 5_000 });
-
-    // Click el ítem "Suscripción" del menú PrimeNG (p-menu render a body).
-    await page
-      .locator('.p-menuitem-text')
-      .filter({ hasText: /^Suscripción$/ })
-      .first()
+      .getByRole('menuitem', { name: 'Cancelar este plan', exact: true })
       .click();
-
-    // Click botón "Cancelar suscripción" (icon ban) dentro del diálogo.
-    await page
-      .locator('[data-testid="cancel-sub-btn"]')
-      .first()
-      .click({ timeout: 5_000 });
-
-    // p-confirmDialog → click "Sí, cancelar"
-    await page
-      .locator('button.p-confirm-dialog-accept, button:has-text("Sí, cancelar")')
-      .first()
-      .click();
+    await page.getByTestId('admin-confirm-action').click();
+    await expect(page.getByTestId('admin-operation-result')).toContainText(
+      'Plan externo cancelado',
+    );
 
     // Esperar el toast / verificar endpoint
     await expect.poll(() => cancelCalled, { timeout: 10_000 }).toBe(true);

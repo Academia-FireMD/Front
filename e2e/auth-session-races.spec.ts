@@ -11,6 +11,9 @@ function usuario(id: number, nombre: string, apellidos: string, email: string) {
 }
 
 async function stubPerfilAuxiliar(page: import('@playwright/test').Page) {
+  await page.route('**/user/me/planificaciones', (route) =>
+    route.fulfill({ json: [] }),
+  );
   await page.route('**/user/tutores', (route) =>
     route.fulfill({
       status: 200,
@@ -135,16 +138,21 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
 
     // B debe haber abierto su propia petición, no reutilizado la de A.
     await expect.poll(() => peticionesPerfil).toBeGreaterThanOrEqual(2);
-    await expect(page.locator('.user-info-text h3')).toHaveText('Bea Actual', {
-      timeout: 10_000,
-    });
+    await expect(page.locator('app-profile .profile-heading h1')).toHaveText(
+      'Bea Actual',
+      {
+        timeout: 10_000,
+      },
+    );
 
     liberarA();
 
     // La respuesta tardía de A no puede repintar el perfil ni restaurar sus
     // tokens: la sesión y el store siguen siendo de B.
     await page.waitForTimeout(500);
-    await expect(page.locator('.user-info-text h3')).toHaveText('Bea Actual');
+    await expect(page.locator('app-profile .profile-heading h1')).toHaveText(
+      'Bea Actual',
+    );
 
     const subActual = await page.evaluate(() => {
       const token = sessionStorage.getItem('authToken');
@@ -245,7 +253,7 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
     await page.locator('app-password-input input').fill('test1234');
     await page.locator('app-async-button button').first().click();
     await page.waitForURL('**/app/profile', { timeout: 15_000 });
-    await expect(page.locator('.user-info-text h3')).toHaveText(
+    await expect(page.locator('app-profile .profile-heading h1')).toHaveText(
       'Ana Anterior',
       { timeout: 10_000 },
     );
@@ -343,9 +351,12 @@ test.describe('Sesión — aislamiento de perfil entre cuentas', () => {
     });
 
     await page.goto('/app/profile');
-    await expect(page.locator('.user-info-text h3')).toHaveText('Test Alumno', {
-      timeout: 15_000,
-    });
+    await expect(page.locator('app-profile .profile-heading h1')).toHaveText(
+      'Test Alumno',
+      {
+        timeout: 15_000,
+      },
+    );
 
     // La petición protegida sale con el token persistido y el perfil cargado.
     await expect
