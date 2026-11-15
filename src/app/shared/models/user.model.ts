@@ -81,9 +81,11 @@ export interface Usuario {
 export interface Consumible {
   id: number;
   tipo: 'SIMULACRO' | 'EXAMEN' | 'CURSO' | 'OTRO';
-  estado: 'ACTIVADO' | 'USADO' | 'EXPIRADO';
-  sku: string;
-  orderId: string;
+  estado: 'ACTIVADO' | 'USADO' | 'EXPIRADO' | 'REVOCADO';
+  origen?: 'WOOCOMMERCE' | 'MANUAL_ADMIN';
+  version?: number;
+  sku: string | null;
+  orderId: string | null;
   examenId?: number;
   activadoEn: Date;
   expiraEn?: Date;

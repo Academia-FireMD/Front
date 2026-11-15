@@ -458,6 +458,9 @@ test('administración recupera logos, fechas y eliminación de un registro exter
   page,
 }) => {
   await setup(page);
+  const data = ficha();
+  data.usuario.suscripciones[0].status = 'CANCELLED';
+  await page.route('**/user/admin/140', (r) => r.fulfill({ json: data }));
   let writes = 0;
   await page.route('**/user/subscription/140/11', (r) => {
     writes++;
@@ -1101,7 +1104,7 @@ test('menú conserva cancelación deshabilitada para un plan inactivo', async ({
     page.getByRole('menuitem', { name: 'Cancelar este plan', exact: true }),
   ).toHaveAttribute('aria-disabled', 'true');
   await expect(
-    page.getByRole('menuitem', { name: 'Editar plan', exact: true }),
+    page.getByRole('menuitem', { name: 'Reactivar plan', exact: true }),
   ).not.toHaveAttribute('aria-disabled', 'true');
   await expect(
     page.getByRole('menuitem', { name: 'Eliminar registro', exact: true }),

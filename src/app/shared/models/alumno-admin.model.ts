@@ -25,6 +25,9 @@ export interface FichaAlumno {
     cursos: number;
     progresos: number;
     invitaciones: number;
+    reservas?: number;
+    creditos?: number;
+    comprasTutoria?: number;
   };
   consultadoEn: string;
 }
@@ -58,6 +61,8 @@ export interface OperacionAlumno {
   createdAt: string;
   updatedAt: string;
   mensaje?: string;
+  avisoEstado?: import('./alumno-externo.model').EstadoAviso;
+  resultado?: { mensaje?: string; usuario?: { id: number }; caducaEn?: string };
 }
 export interface RenovacionAlumno {
   id: number;

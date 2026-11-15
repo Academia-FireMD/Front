@@ -3,12 +3,10 @@ import { ActivatedRouteSnapshot, CanActivate, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, filter, map, take } from 'rxjs';
-import {
-  SuscripcionTipo,
-  isSubscriptionAccessible,
-} from '../shared/models/subscription.model';
+import { SuscripcionTipo } from '../shared/models/subscription.model';
 import { esAdminOSuperior } from '../shared/utils/rol.utils';
 import { selectCurrentUser } from '../store/user/user.selectors';
+import { esSuscripcionVigente } from '../shared/utils/membresia-externa.util';
 
 @Injectable({
   providedIn: 'root',
@@ -32,7 +30,7 @@ export class SubscriptionGuard implements CanActivate {
         // Obtener el tipo de suscripción más alto de todas las suscripciones activas
         const subscriptionTypes =
           user?.suscripciones
-            ?.filter((s) => isSubscriptionAccessible(s.status))
+            ?.filter((s) => esSuscripcionVigente(s))
             ?.map((s) => s.tipo) || [];
         const hasAccess =
           this.hasAccess(subscriptionTypes, allowedSubscriptions) ||
