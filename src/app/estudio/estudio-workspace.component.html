@@ -1,0 +1,61 @@
+<header class="visor-header">
+  <button
+    #volverButton
+    type="button"
+    class="visor-accion visor-volver"
+    (click)="volver()"
+    [disabled]="saliendo()"
+    data-testid="estudio-volver"
+  >
+    <i class="pi pi-arrow-left" aria-hidden="true"></i> {{ etiquetaVolver() }}
+  </button>
+  <h1>
+    {{ titulo() }}
+    @if (edicion()) {
+      <span>{{ edicion() }}</span>
+    }
+  </h1>
+  @if (url()) {
+    <div class="visor-sync">
+      <span
+        role="status"
+        [attr.data-estado]="estado()"
+        data-testid="estudio-estado"
+        >{{ texto() }}</span
+      >
+      @if (reintentarVisible()) {
+        <button type="button" class="visor-accion" (click)="reintentar()">
+          {{ edicionCambiada() ? "Abrir edición" : "Reintentar" }}
+        </button>
+      }
+    </div>
+  }
+</header>
+<main class="visor-cuerpo">
+  @if (url(); as src) {
+    <iframe
+      #frame
+      [src]="src"
+      [title]="titulo()"
+      sandbox="allow-scripts allow-modals"
+      referrerpolicy="no-referrer"
+      allow="clipboard-write"
+      data-testid="estudio-iframe"
+    ></iframe>
+  } @else if (fallo()) {
+    <div class="visor-mensaje">
+      <p role="alert">{{ fallo() }}</p>
+      <button type="button" class="visor-accion" (click)="cargar()">
+        Reintentar
+      </button>
+    </div>
+  } @else {
+    <p class="visor-mensaje" role="status">Abriendo {{ titulo() }}…</p>
+  }
+</main>
+@if (borradorNoDisponible()) {
+  <p class="visor-aviso" role="alert">
+    El navegador no ha podido guardar el borrador. Mantén el visor abierto hasta
+    sincronizar.
+  </p>
+}

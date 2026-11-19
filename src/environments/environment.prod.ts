@@ -1,6 +1,7 @@
 export const environment = {
   name: 'production' as const,
   production: true,
+  librillosMenu: false,
   apiUrl: 'https://server-production-0727.up.railway.app',
   wordpressUrl: 'https://tecnikafire.com',
   wooCommerceUrl: 'https://tecnikafire.com/tienda',

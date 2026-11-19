@@ -24,7 +24,7 @@ export const moduloGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const toast = inject(ToastrService);
 
   const decoded = auth.decodeToken?.();
-  if (decoded?.rol === 'SUPERADMIN') return true;
+  if (decoded?.rol === 'SUPERADMIN' && !route.data['requiereFlag']) return true;
 
   if (appConfig.isModuloHabilitado(modulo)) return true;
 

@@ -9,6 +9,31 @@ import { ProfileComponent } from './profile/profile.component';
 import { LayoutComponent } from './shared/layout/layout.component';
 import { ModuloApp } from './shared/models/modulo-app.enum';
 import { SuscripcionTipo } from './shared/models/subscription.model';
+import { environment } from '../environments/environment';
+
+const librillosRoutes: Routes = environment.librillosMenu
+  ? [
+      {
+        path: 'librillos',
+        canActivate: [roleGuard, moduloGuard, SubscriptionGuard],
+        data: {
+          expectedRole: 'ALUMNO',
+          modulo: ModuloApp.LIBRILLOS,
+          requiereFlag: true,
+          allowedSubscriptions: [
+            SuscripcionTipo.BASIC,
+            SuscripcionTipo.ADVANCED,
+            SuscripcionTipo.PREMIUM,
+          ],
+        },
+        title: 'Librillos',
+        loadComponent: () =>
+          import('./documentacion/librillo-catalogo.component').then(
+            (m) => m.LibrilloCatalogoComponent,
+          ),
+      },
+    ]
+  : [];
 
 export const routes: Routes = [
   {
@@ -27,6 +52,7 @@ export const routes: Routes = [
     path: 'app',
     component: LayoutComponent,
     children: [
+      ...librillosRoutes,
       {
         path: 'profile',
         component: ProfileComponent,
@@ -66,6 +92,36 @@ export const routes: Routes = [
           ],
           modulo: ModuloApp.PLANIFICACION,
         },
+      },
+      {
+        path: 'psicotecnicos',
+        canActivate: [roleGuard, moduloGuard, SubscriptionGuard],
+        data: {
+          expectedRole: 'ALUMNO',
+          modulo: ModuloApp.PSICOTECNICOS,
+          requiereFlag: true,
+          cualquierSuscripcionVigente: true,
+          recurso: 'psico',
+        },
+        title: 'Psicotécnicos',
+        loadComponent: () =>
+          import('./estudio/estudio-workspace.component').then(
+            (m) => m.EstudioWorkspaceComponent,
+          ),
+      },
+      {
+        path: 'psicotecnicos/admin',
+        canActivate: [roleGuard, moduloGuard],
+        data: {
+          expectedRole: 'ADMIN',
+          modulo: ModuloApp.PSICOTECNICOS,
+          requiereFlag: true,
+        },
+        title: 'Gestión de Psicotécnicos',
+        loadComponent: () =>
+          import('./psicotecnicos/psico-admin.component').then(
+            (m) => m.PsicoAdminComponent,
+          ),
       },
       {
         path: 'documentacion',

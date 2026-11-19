@@ -17,3 +17,20 @@ export interface Documento {
   // visible para los alumnos? Lo calcula el backend en /documentos/publicos.
   isPublicado?: boolean;
 }
+
+export interface DocumentoTemario extends Documento {
+  isNew: boolean;
+  isDownloadable: boolean;
+  librillo?: { edicion: string; titulo: string } | null;
+}
+
+export interface ModuloTemario {
+  id: number;
+  nombre: string;
+  temas: {
+    id: number;
+    numero: number | string;
+    descripcion: string;
+    documentos: DocumentoTemario[];
+  }[];
+}

@@ -1,5 +1,8 @@
 import {
   Component,
+  DestroyRef,
+  Injector,
+  afterNextRender,
   computed,
   EventEmitter,
   inject,
@@ -13,12 +16,18 @@ import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { UserService } from '../../services/user.service';
+import { AppConfigService } from '../../services/app-config.service';
 import { buildDocumentDownloadFileName } from '../../shared/utils/document-download-file-name';
 import {
   FilterConfig,
   GenericListMode,
 } from '../../shared/generic-list/generic-list.component';
-import { Documento } from '../../shared/models/documentacion.model';
+import {
+  Documento,
+  DocumentoTemario,
+  ModuloTemario,
+} from '../../shared/models/documentacion.model';
+import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
 import { DocumentosService } from '../services/documentacion.service';
@@ -44,8 +53,15 @@ export class DocumentationOverviewComponent
   private notificationService = inject(ToastrService);
 
   // Para vista de alumno (acordeón)
-  public documentTree: any[] = [];
+  public documentTree: ModuloTemario[] = [];
   public loadingTree = false;
+  public moduloAbierto: number | null = null;
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly appConfig = inject(AppConfigService);
+  readonly librillosActivos = computed(() =>
+    this.appConfig.isModuloHabilitado(ModuloApp.LIBRILLOS),
+  );
 
   public uploadingFile = false;
   public mostrarSubirFichero = false;
@@ -439,6 +455,7 @@ export class DocumentationOverviewComponent
       next: (tree) => {
         this.documentTree = tree;
         this.loadingTree = false;
+        this.restaurarTema(tree);
       },
       error: (err) => {
         console.error('Error al cargar árbol de documentos:', err);
@@ -447,7 +464,50 @@ export class DocumentationOverviewComponent
     });
   }
 
-  async descargarDocumentoAlumno(documento: any) {
+  private restaurarTema(tree: ModuloTemario[]) {
+    const params = this.activatedRoute.snapshot?.queryParamMap;
+    if (!params) return;
+    const temaId = Number(params.get('tema'));
+    const docId = Number(params.get('doc'));
+    const modulo = tree.findIndex((m) =>
+      m.temas.some((t) =>
+        temaId ? t.id === temaId : t.documentos.some((d) => d.id === docId),
+      ),
+    );
+    if (modulo < 0) return;
+    this.moduloAbierto = modulo;
+    if (!docId) return;
+    afterNextRender(
+      () => {
+        // El acordeón aplica la apertura y su animación después del primer render.
+        let fotograma = 0;
+        const hasta = performance.now() + 1000;
+        const destruir = this.destroyRef.onDestroy(() =>
+          cancelAnimationFrame(fotograma),
+        );
+        const enfocar = () => {
+          const link = document.getElementById(`librillo-doc-${docId}`);
+          const destino =
+            link ?? document.getElementById(`temario-tema-${temaId}`);
+          if (destino?.getClientRects().length) {
+            destino.focus({ preventScroll: true });
+            if (document.activeElement === destino) {
+              destino.scrollIntoView({ block: 'nearest' });
+              destruir();
+              return;
+            }
+          }
+          if (performance.now() < hasta)
+            fotograma = requestAnimationFrame(enfocar);
+          else destruir();
+        };
+        fotograma = requestAnimationFrame(enfocar);
+      },
+      { injector: this.injector },
+    );
+  }
+
+  async descargarDocumentoAlumno(documento: DocumentoTemario) {
     if (!documento.isDownloadable) {
       this.toast.warning('No tienes permiso para descargar este documento');
       return;
@@ -507,7 +567,7 @@ export class DocumentationOverviewComponent
     }
   }
 
-  async verDocumentoAlumno(documento: any) {
+  async verDocumentoAlumno(documento: DocumentoTemario) {
     // Marcar como visto al hacer clic
     try {
       await firstValueFrom(this.service.markAsSeen$(documento.id));

@@ -4,11 +4,21 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
-import { Documento } from '../../shared/models/documentacion.model';
+import {
+  Documento,
+  DocumentoTemario,
+  ModuloTemario,
+} from '../../shared/models/documentacion.model';
 import {
   PaginatedResult,
   PaginationFilter,
 } from '../../shared/models/pagination.model';
+
+export interface EntradaLibrillo {
+  documento: DocumentoTemario;
+  tema: number;
+  contexto: string;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -66,9 +76,7 @@ export class DocumentosService extends ApiBaseService {
     return this.post('/update', payload) as Observable<Documento>;
   }
 
-  public publicarDocumento$(
-    id: number,
-  ): Observable<{
+  public publicarDocumento$(id: number): Observable<{
     id: number;
     isPublicado: boolean;
     alreadyPublished?: boolean;
@@ -89,14 +97,43 @@ export class DocumentosService extends ApiBaseService {
     }>;
   }
 
-  public getDocumentTree$(at?: string): Observable<any> {
+  public getDocumentTree$(at?: string): Observable<ModuloTemario[]> {
     const params: { [key: string]: string } = {};
     if (at) {
       params['at'] = at;
     }
-    return this.http.get(`${environment.apiUrl + this.controllerPrefix}/tree`, {
-      params,
-    });
+    return this.http.get<ModuloTemario[]>(
+      `${environment.apiUrl + this.controllerPrefix}/tree`,
+      {
+        params,
+      },
+    );
+  }
+
+  public getLibrillos$(): Observable<EntradaLibrillo[]> {
+    return this.getDocumentTree$().pipe(
+      map((arbol) => {
+        const entradas = new Map<number, EntradaLibrillo>();
+        for (const modulo of arbol) {
+          for (const tema of modulo.temas) {
+            for (const documento of tema.documentos) {
+              if (
+                documento.isDownloadable &&
+                documento.librillo &&
+                !entradas.has(documento.id)
+              ) {
+                entradas.set(documento.id, {
+                  documento,
+                  tema: tema.id,
+                  contexto: `${modulo.nombre} · ${tema.numero} - ${tema.descripcion}`,
+                });
+              }
+            }
+          }
+        }
+        return [...entradas.values()];
+      }),
+    );
   }
 
   public markAsSeen$(documentId: number): Observable<{ message: string }> {

@@ -1,0 +1,194 @@
+// Se ejecuta dentro del documento v5. El merge de los contadores y los mapas es el del material.
+function sincronizarProgresoPsico(puente, app) {
+  const net = app.net;
+  const local = puente.read("practice");
+  let base = local?.base ?? null;
+  let rev = local?.rev ?? 0;
+  let op = local?.op ?? null;
+  let timer;
+  let busy = false;
+  let loading = false;
+  let failures = 0;
+  let lastCheck = 0;
+  let sugerencia = "cv";
+  let status = "loading";
+  function valid(state) {
+    return !!state && !!state.st && typeof state.st === "object";
+  }
+  if (valid(local?.local)) app.set(Object.assign(app.crear(), local.local));
+  function api(path, method = "GET", body) {
+    return puente.request({ path, method, body });
+  }
+  function persist() {
+    return puente
+      .write("practice", { local: app.get(), base, rev, op })
+      .catch(() => undefined);
+  }
+  function ordered(value) {
+    return JSON.stringify(value, (_, item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      return Object.fromEntries(
+        Object.keys(item)
+          .sort()
+          .map((key) => [key, item[key]]),
+      );
+    });
+  }
+  function dirty() {
+    return op !== null || ordered(app.get()) !== ordered(base ?? app.crear());
+  }
+  function publish(value) {
+    status = value;
+    net.pend = dirty();
+    puente.status(value);
+  }
+  function schedule(ms = 2500) {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      void (net.on ? push() : refresh(true));
+    }, ms);
+  }
+  function changed() {
+    void persist();
+    publish(net.on && !failures ? "pending" : "offline");
+    schedule();
+  }
+  function reconcile(server) {
+    const current = app.get();
+    const remote = valid(server.state)
+      ? Object.assign(app.crear(), server.state)
+      : null;
+    if (remote) delete remote["_p"];
+    if (!remote && server.rev < rev) {
+      // El panel retiró todos los datos de la cuenta. La copia vieja no se vuelve a subir.
+      app.set(Object.assign(app.crear(), { perfil: sugerencia }));
+    } else if (remote && (server.rev !== rev || base === null)) {
+      let merged = remote;
+      if (dirty()) {
+        if (current._reset !== base?._reset) merged = current;
+        else if (remote._reset === base?._reset) {
+          merged = app.merge(base, current, remote);
+          if (remote._reset) merged._reset = remote._reset;
+          const { ts: _, ...newData } = merged;
+          const { ts: __, ...remoteData } = remote;
+          if (ordered(newData) === ordered(remoteData)) merged = remote;
+        }
+      }
+      app.set(merged);
+    } else if (!remote && !base && !current.ts) {
+      app.set(Object.assign(app.crear(), { perfil: sugerencia }));
+    }
+    rev = server.rev;
+    base = remote
+      ? structuredClone(remote)
+      : Object.assign(app.crear(), { perfil: sugerencia });
+    if (remote) net.at = server.updatedAt || Date.now();
+  }
+  function failure(error) {
+    failures++;
+    net.exp = error.status === 401;
+    net.msg = net.exp
+      ? "Tu sesión ha caducado."
+      : "Sin conexión con tu cuenta. Tu práctica queda pendiente en este dispositivo.";
+    const rechazada =
+      !!error.status &&
+      error.status >= 400 &&
+      error.status < 500 &&
+      error.status !== 429;
+    publish(error.status === 413 ? "limited" : rechazada ? "error" : "offline");
+    if (!rechazada)
+      schedule(Math.min(60000, 1500 * 2 ** Math.min(failures, 6)));
+  }
+  async function refresh(force = false) {
+    if (loading || busy || (!force && Date.now() - lastCheck < 8000)) return;
+    loading = true;
+    lastCheck = Date.now();
+    try {
+      const me = await api("/me");
+      net.user = me;
+      net.user.retos ??= me.reto ? { cv: me.reto } : {};
+      sugerencia = me.perfilSugerido === "cam" ? "cam" : "cv";
+      net.on = true;
+      net.msg = "";
+      net.exp = false;
+      failures = 0;
+      if (!op) reconcile(me);
+      void persist();
+      publish(dirty() ? "pending" : net.at ? "saved" : "ready");
+      app.repaint();
+    } catch (error) {
+      failure(error);
+    } finally {
+      loading = false;
+    }
+    if (net.on && !failures && dirty()) void push();
+  }
+  async function push() {
+    if (busy || loading || !net.on) return;
+    clearTimeout(timer);
+    if (!dirty()) {
+      publish(net.at ? "saved" : "ready");
+      return;
+    }
+    busy = true;
+    const retry = op !== null;
+    const sent = op ?? {
+      state: structuredClone(app.get()),
+      opId: puente.operationId(),
+      rev,
+      updatedAt: app.get().ts || Date.now(),
+    };
+    op = sent;
+    publish("saving");
+    await persist();
+    let fetchLatest = false;
+    try {
+      const saved = await api("/state", "PUT", sent);
+      base = sent.state;
+      rev = saved.rev;
+      op = null;
+      net.at = saved.updatedAt || Date.now();
+      net.exp = false;
+      failures = 0;
+      fetchLatest = retry;
+      await persist();
+      publish(dirty() || retry ? "pending" : "saved");
+    } catch (error) {
+      const problem = error;
+      if (problem.status === 409 && typeof problem.body?.rev === "number") {
+        op = null;
+        reconcile(problem.body);
+        void persist();
+        publish(dirty() ? "pending" : "saved");
+        if (dirty()) schedule(300);
+      } else {
+        if (problem.status === 413 || problem.status === 400) {
+          op = null;
+          void persist();
+        }
+        failure(problem);
+      }
+    } finally {
+      busy = false;
+      app.repaint();
+    }
+    if (fetchLatest) void refresh(true);
+    else if (status === "pending" && !failures) schedule();
+  }
+  function retry() {
+    void (op && net.on ? push() : refresh(true));
+  }
+  function flush() {
+    void persist();
+    if (net.on && dirty()) void push();
+  }
+  addEventListener("online", retry);
+  addEventListener("focus", () => {
+    void refresh();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) flush();
+    else void refresh();
+  });
+  return { api, changed, push, refresh, retry, flush, ordered };
+}

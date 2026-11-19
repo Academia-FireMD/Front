@@ -2,7 +2,7 @@
   text-align: center;
 }
 
-.container-accordion{
+.container-accordion {
   overflow: auto;
   max-height: 80vh;
 }
@@ -23,7 +23,8 @@
     color: #333;
   }
 
-  .loading-message, .no-docs {
+  .loading-message,
+  .no-docs {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -68,6 +69,18 @@
     background: white;
     transition: all 0.2s;
 
+    .doc-acciones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+
+      a {
+        min-height: 44px;
+        gap: 0.4rem;
+        justify-content: center;
+      }
+    }
+
     &:hover {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       border-color: #007bff;
@@ -75,7 +88,11 @@
 
     &.locked-document {
       border-left: 3px solid #f59e0b;
-      background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%);
+      background: linear-gradient(
+        90deg,
+        rgba(245, 158, 11, 0.05) 0%,
+        transparent 100%
+      );
     }
 
     .doc-info {
@@ -153,7 +170,8 @@
       align-items: flex-start;
       gap: 1rem;
 
-      button {
+      .doc-acciones,
+      .doc-acciones > * {
         width: 100%;
       }
     }

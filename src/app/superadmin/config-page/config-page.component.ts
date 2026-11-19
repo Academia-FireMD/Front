@@ -238,6 +238,7 @@ export class ConfigPageComponent {
   }
 
   private formatLabel(modulo: ModuloApp): string {
+    if (modulo === ModuloApp.PSICOTECNICOS) return 'Psicotécnicos';
     const lower = modulo.toLowerCase().replace(/_/g, ' ');
     return lower.charAt(0).toUpperCase() + lower.slice(1);
   }

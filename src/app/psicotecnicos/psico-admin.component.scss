@@ -1,0 +1,91 @@
+.psico-admin {
+  padding: clamp(0.75rem, 3vw, 2rem);
+  min-width: 0;
+}
+header,
+nav,
+.filtros,
+.acciones {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+header {
+  justify-content: space-between;
+}
+h1 {
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+h2 {
+  font-size: 1.18rem;
+  margin-top: 1.5rem;
+}
+nav,
+.filtros {
+  margin-bottom: 1rem;
+}
+button,
+select,
+a {
+  font: inherit;
+  min-height: 44px;
+}
+button,
+select {
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--surface-border, #d9dde2);
+  border-radius: 6px;
+  color: inherit;
+  padding: 0.3rem 0.7rem;
+}
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:hover:not(:disabled),
+button[aria-pressed="true"] {
+  background: var(--surface-100, #f2f3f5);
+  border-color: var(--primary-color, #bb292a);
+}
+:focus-visible {
+  outline: 2px solid var(--primary-color, #bb292a);
+  outline-offset: 2px;
+}
+a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+}
+label {
+  display: grid;
+  gap: 0.25rem;
+}
+.filtros {
+  align-items: end;
+}
+.tabla {
+  max-width: 100%;
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: start;
+}
+th,
+td {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--surface-border, #d9dde2);
+  text-align: start;
+  vertical-align: top;
+}
+thead th {
+  background: var(--surface-100, #f2f3f5);
+}
+.acciones {
+  min-width: max-content;
+}
+.aviso {
+  color: #ad2525;
+  font-weight: 600;
+}

@@ -1,0 +1,93 @@
+// Se serializa para ejecutarse dentro del iframe opaco. Todas sus dependencias son locales.
+function iniciarPuenteEstudio(config) {
+  let seq = 0;
+  const drafts = config.drafts;
+  const writes = new Set();
+  const requests = new Map();
+  let actions;
+  const send = (message) =>
+    parent.postMessage(
+      { instance: config.instance, ...message },
+      config.origin,
+    );
+  function call(type, args) {
+    return new Promise((resolve, reject) => {
+      const id = ++seq;
+      const timedOut = () => {
+        requests.delete(id);
+        reject(
+          Object.assign(new Error("El visor no recibió respuesta"), {
+            status: 0,
+          }),
+        );
+      };
+      const timer = setTimeout(timedOut, 20000);
+      requests.set(id, ({ status, result }) => {
+        clearTimeout(timer);
+        if (status >= 200 && status < 300) resolve(result);
+        else
+          reject(
+            Object.assign(new Error("No se pudo completar la operación"), {
+              status,
+              body: result,
+              auth: status === 401 || status === 403,
+            }),
+          );
+      });
+      send({ type, id, args });
+    });
+  }
+  addEventListener("message", (event) => {
+    if (
+      event.source !== parent ||
+      event.origin !== config.origin ||
+      event.data?.instance !== config.instance
+    )
+      return;
+    const message = event.data;
+    if (message.type === "reply") {
+      const resolve = requests.get(message.id);
+      requests.delete(message.id);
+      resolve?.(message);
+    } else if (message.type === "retry") {
+      actions?.retry();
+    } else if (message.type === "flush") {
+      actions?.flush();
+      void Promise.allSettled([...writes]).then(() =>
+        send({ type: "flushed" }),
+      );
+    }
+  });
+  return {
+    request: (args) => call("api", args),
+    read: (key) => {
+      try {
+        return JSON.parse(drafts[key] ?? "null");
+      } catch {
+        return null;
+      }
+    },
+    write: (key, value) => {
+      const serialized = value === null ? null : JSON.stringify(value);
+      if (serialized === null) delete drafts[key];
+      else drafts[key] = serialized;
+      const done = call("draft", { key, value: serialized });
+      writes.add(done);
+      void done.then(
+        () => writes.delete(done),
+        () => writes.delete(done),
+      );
+      return done;
+    },
+    status: (estado, canal = "progreso") =>
+      send({ type: "status", estado, canal }),
+    configure: (value) => {
+      actions = value;
+    },
+    operationId: () =>
+      Array.from(crypto.getRandomValues(new Uint8Array(16)), (n) =>
+        n.toString(16).padStart(2, "0"),
+      ).join(""),
+    edition: config.edition,
+  };
+}

@@ -9,13 +9,18 @@
     <p>Cargando documentos...</p>
   </div>
   <div class="container-accordion">
-    <p-accordion *ngIf="!loadingTree && documentTree.length > 0">
+    <p-accordion
+      *ngIf="!loadingTree && documentTree.length > 0"
+      [(activeIndex)]="moduloAbierto"
+    >
       <p-accordionTab
         *ngFor="let modulo of documentTree"
         [header]="modulo.nombre"
       >
         <div *ngFor="let tema of modulo.temas" class="tema-section">
-          <h4 class="tema-title">{{ tema.numero }} - {{ tema.descripcion }}</h4>
+          <h4 class="tema-title" [id]="'temario-tema-' + tema.id" tabindex="-1">
+            {{ tema.numero }} - {{ tema.descripcion }}
+          </h4>
           <div class="documentos-list">
             <div
               *ngFor="let doc of tema.documentos"
@@ -46,14 +51,30 @@
                   doc.descripcion
                 }}</span>
               </div>
-              <button
-                pButton
-                (click)="descargarDocumentoAlumno(doc)"
-                class="p-button-sm"
-                icon="pi pi-download"
-                label="Descargar"
-                [disabled]="!doc.isDownloadable"
-              ></button>
+              <div class="doc-acciones">
+                @if (librillosActivos() && doc.isDownloadable && doc.librillo) {
+                  <a
+                    [id]="'librillo-doc-' + doc.id"
+                    class="p-button p-button-sm p-button-outlined"
+                    [routerLink]="[
+                      '/app/documentacion/alumno/librillo',
+                      doc.id,
+                    ]"
+                    [queryParams]="{ tema: tema.id }"
+                  >
+                    <i class="pi pi-book" aria-hidden="true"></i>
+                    <span>Estudiar con librillo</span>
+                  </a>
+                }
+                <button
+                  pButton
+                  (click)="descargarDocumentoAlumno(doc)"
+                  class="p-button-sm"
+                  icon="pi pi-download"
+                  label="Descargar"
+                  [disabled]="!doc.isDownloadable"
+                ></button>
+              </div>
             </div>
           </div>
         </div>

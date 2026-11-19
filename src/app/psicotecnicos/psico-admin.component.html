@@ -1,0 +1,367 @@
+<section class="psico-admin" aria-labelledby="psico-admin-titulo">
+  <header>
+    <h1 id="psico-admin-titulo">Gestión de Psicotécnicos</h1>
+    <a routerLink="/app/psicotecnicos" [queryParams]="{ desde: 'admin' }"
+      >Abrir práctica</a
+    >
+  </header>
+
+  <nav aria-label="Gestión de Psicotécnicos">
+    @for (item of tabs; track item.id) {
+      <button
+        type="button"
+        (click)="seleccionar(item.id)"
+        [attr.aria-pressed]="tab() === item.id"
+      >
+        {{ item.label }}
+      </button>
+    }
+  </nav>
+
+  <div class="filtros">
+    @if (tab() !== "reportes") {
+      <label
+        >Oposición
+        <select [ngModel]="perfil()" (ngModelChange)="perfil.set($event)">
+          <option value="cv">Comunitat Valenciana</option>
+          <option value="cam">Comunidad de Madrid</option>
+        </select>
+      </label>
+    }
+    @if (tab() === "reto") {
+      <label
+        >Semana
+        <select [ngModel]="semana()" (ngModelChange)="semana.set($event)">
+          @for (item of semanas(); track item.week) {
+            <option [value]="item.week">
+              {{ item.week }} · {{ item.n[perfil()] ?? 0 }} participantes
+            </option>
+          }
+        </select>
+      </label>
+      <button
+        type="button"
+        [disabled]="!reto() || loading() || !!action()"
+        (click)="csv()"
+      >
+        Descargar CSV
+      </button>
+    }
+  </div>
+
+  @if (actionError()) {
+    <p role="alert">{{ actionError() }}</p>
+  }
+  @if (notice()) {
+    <p role="status">{{ notice() }}</p>
+  }
+  @if (loading()) {
+    <p role="status">Cargando datos…</p>
+  } @else if (error()) {
+    <p role="alert">{{ error() }}</p>
+    <button type="button" (click)="reintentar()">Reintentar</button>
+  } @else {
+    @switch (tab()) {
+      @case ("reto") {
+        @if (reto(); as datos) {
+          <p>
+            {{ datos.rows.length }} terminados · {{ datos.enCurso }} en curso ·
+            Nota media {{ (notaMedia() | number: "1.0-2") ?? "—" }}
+            @if (datos.modo === "apto") {
+              · {{ aptos() }} aptos
+            }
+          </p>
+          @if (datos.rows.length) {
+            <div
+              class="tabla"
+              tabindex="0"
+              role="region"
+              aria-label="Resultados del reto semanal"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Alumno</th>
+                    <th>Alias</th>
+                    <th>Nota</th>
+                    @if (datos.modo === "nota") {
+                      <th>Netas</th>
+                    }
+                    <th>Aciertos / fallos / blancos</th>
+                    <th>Tiempo</th>
+                    <th>
+                      {{ datos.modo === "apto" ? "Resultado" : "Reserva" }}
+                    </th>
+                    @for (ap of datos.aptitudes; track ap.id) {
+                      <th>{{ ap.n }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of datos.rows; track row.id) {
+                    <tr>
+                      <td>{{ row.pos }}</td>
+                      <th scope="row">{{ row.name }}</th>
+                      <td>{{ row.alias || "—" }}</td>
+                      <td>{{ row.nota | number: "1.0-2" }}</td>
+                      @if (datos.modo === "nota") {
+                        <td>{{ row.net | number: "1.0-2" }}</td>
+                      }
+                      <td>{{ row.ok }} / {{ row.ko }} / {{ row.bl }}</td>
+                      <td>{{ tiempo(row.secs) }}</td>
+                      <td>
+                        @if (datos.modo === "apto") {
+                          {{ row.apto ? "Apto" : "No apto" }} · {{ row.fp }}/{{
+                            datos.aptitudes.length
+                          }}
+                        } @else if (row.res) {
+                          {{ row.res.ok }}/{{ row.res.n }}
+                        } @else {
+                          —
+                        }
+                      </td>
+                      @for (ap of datos.aptitudes; track ap.id) {
+                        @if (datos.modo === "apto") {
+                          @let p = percentil(row, ap.id);
+                          <td [class.aviso]="p !== undefined && p < datos.cut">
+                            {{ p === undefined ? "—" : "P" + p }}
+                          </td>
+                        } @else {
+                          <td>{{ neto(row, ap.id) }}</td>
+                        }
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p>Todavía no hay intentos corregidos en esta semana.</p>
+          }
+          @if (datos.modo === "apto") {
+            <p>
+              El corte se fija en P{{ datos.cut }} en cada aptitud. La escala de
+              percentiles es orientativa.
+            </p>
+          } @else {
+            <p>Las preguntas de reserva quedan fuera de la nota.</p>
+          }
+        }
+      }
+      @case ("alumnos") {
+        @if (alumnos(); as datos) {
+          <p>
+            {{ datos.rows.length }} alumnos · {{ activos() }} activos en los
+            últimos 7 días · {{ inactivos() }} sin actividad en 7 días o más
+          </p>
+          @if (datos.rows.length) {
+            <div
+              class="tabla"
+              tabindex="0"
+              role="region"
+              aria-label="Actividad de alumnos"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>Alumno</th>
+                    <th>Alias</th>
+                    <th>Última actividad</th>
+                    <th>Preguntas en 7 días</th>
+                    <th>Total</th>
+                    <th>Acierto</th>
+                    <th>Fallos pendientes</th>
+                    <th>Aptitud más floja</th>
+                    <th>Nota del reto</th>
+                    @for (ap of datos.aptitudes; track ap.id) {
+                      <th>{{ ap.n }}</th>
+                    }
+                    <th>Datos del alumno</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of datos.rows; track row.id) {
+                    <tr>
+                      <th scope="row">{{ row.name || row.id }}</th>
+                      <td>{{ row.alias || "—" }}</td>
+                      <td>{{ (row.ultimo | date: "shortDate") ?? "—" }}</td>
+                      <td>{{ row.n7 }}</td>
+                      <td>{{ row.n }}</td>
+                      <td>{{ porcentaje(row.pct) }}</td>
+                      <td>{{ row.fallos }}</td>
+                      <td>{{ aptitud(row.floja, datos.aptitudes) }}</td>
+                      <td>{{ (row.reto | number: "1.0-2") ?? "—" }}</td>
+                      @for (ap of datos.aptitudes; track ap.id) {
+                        <td>{{ acierto(row, ap.id) }}</td>
+                      }
+                      <td class="acciones">
+                        <button
+                          type="button"
+                          [disabled]="!!action()"
+                          (click)="exportar(row)"
+                          [attr.aria-label]="
+                            'Exportar datos de ' + (row.name || row.id)
+                          "
+                        >
+                          Exportar
+                        </button>
+                        <button
+                          type="button"
+                          [disabled]="!!action()"
+                          (click)="borrar(row)"
+                          [attr.aria-label]="
+                            'Borrar datos de ' + (row.name || row.id)
+                          "
+                        >
+                          Borrar
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <h2>Media del grupo por aptitud</h2>
+            <div
+              class="tabla"
+              tabindex="0"
+              role="region"
+              aria-label="Media del grupo por aptitud"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>Aptitud</th>
+                    <th>Respuestas</th>
+                    <th>Acierto</th>
+                    <th>Segundos por pregunta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (g of datos.grupo; track g.id) {
+                    <tr>
+                      <th scope="row">{{ g.n }}</th>
+                      <td>{{ g.resp }}</td>
+                      <td>{{ porcentaje(g.pct) }}</td>
+                      <td>{{ g.seg ?? "—" }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      }
+      @case ("dificultad") {
+        <p>
+          {{ respuestas() }} respuestas analizadas · {{ tipos().length }} tipos
+          con datos · {{ porRevisar() }} tipos con niveles a revisar
+        </p>
+        @if (tipos().length) {
+          <div
+            class="tabla"
+            tabindex="0"
+            role="region"
+            aria-label="Dificultad real de los ejercicios"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>Aptitud</th>
+                  <th>Ejercicio</th>
+                  <th>Respuestas</th>
+                  <th>Acierto</th>
+                  <th>Segundos por pregunta</th>
+                  <th>Básico</th>
+                  <th>Medio</th>
+                  <th>Avanzado</th>
+                  <th>Aviso</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of tipos(); track row.g) {
+                  <tr>
+                    <td>{{ row.apt }}</td>
+                    <th scope="row">{{ row.tipo }}</th>
+                    <td>{{ row.resp }}</td>
+                    <td>{{ porcentaje(row.pct) }}</td>
+                    <td>{{ row.seg }}</td>
+                    @for (pct of row.niveles; track $index) {
+                      <td>{{ porcentaje(pct) }}</td>
+                    }
+                    <td [class.aviso]="row.invertido">
+                      {{ row.invertido ? "Revisar orden de dificultad" : "—" }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+      @case ("reportes") {
+        @if (reportes(); as datos) {
+          @if (datos.rows.length) {
+            <div
+              class="tabla"
+              tabindex="0"
+              role="region"
+              aria-label="Preguntas reportadas"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>Referencia</th>
+                    <th>Tipo</th>
+                    <th>Veces</th>
+                    <th>Motivos</th>
+                    <th>Comentarios</th>
+                    <th>Alumnos</th>
+                    <th>Último aviso</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of datos.rows; track row.ref) {
+                    <tr>
+                      <th scope="row">
+                        @if (referenciaValida(row.ref)) {
+                          <a
+                            routerLink="/app/psicotecnicos"
+                            [queryParams]="{ desde: 'admin' }"
+                            [fragment]="'q=' + row.ref"
+                            >{{ row.ref }}</a
+                          >
+                        } @else {
+                          {{ row.ref }}
+                        }
+                      </th>
+                      <td>{{ row.tipo }} · nivel {{ row.nivel }}</td>
+                      <td>{{ row.n }}</td>
+                      <td>{{ motivos(row.motivos) }}</td>
+                      <td>{{ row.notas.join(" · ") || "—" }}</td>
+                      <td>{{ row.alumnos.join(", ") }}</td>
+                      <td>{{ row.ultimo | date: "short" }}</td>
+                      <td>
+                        <button
+                          type="button"
+                          [disabled]="!!action()"
+                          (click)="revisar(row.ref)"
+                        >
+                          Marcar revisada
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p>No hay preguntas pendientes de revisión.</p>
+          }
+        }
+      }
+    }
+  }
+</section>

@@ -1,0 +1,171 @@
+function conectarRetoPsico(puente, app) {
+  const perfiles = ["cv", "cam"];
+  const queue = { cv: puente.read("week:cv"), cam: puente.read("week:cam") };
+  const active = new Set();
+  const timers = {};
+  const failed = new Set();
+  const api = (pid, path, body) =>
+    puente.request({ path: `/week/${path}?p=${pid}`, method: "POST", body });
+  const store = (pid) =>
+    puente.write(`week:${pid}`, queue[pid]).catch(() => undefined);
+  const matches = (a, b) => a?.attemptId === b.attemptId && a.week === b.week;
+  const pending = (value) =>
+    value && (value.finish || Object.keys(value.answers).length > 0);
+  const updateStatus = () =>
+    puente.status(
+      failed.size
+        ? "offline"
+        : active.size
+          ? "saving"
+          : perfiles.some((pid) => pending(queue[pid]))
+            ? "pending"
+            : "ready",
+      "reto",
+    );
+  async function drain(pid) {
+    const draft = queue[pid];
+    if (!draft || !pending(draft) || active.has(pid)) return;
+    active.add(pid);
+    clearTimeout(timers[pid]);
+    failed.delete(pid);
+    updateStatus();
+    const id = { week: draft.week, attemptId: draft.attemptId };
+    const sameSession = () => app.get()?.pid === pid && matches(app.get(), id);
+    const result = (data) => {
+      if (queue[pid] !== draft) return;
+      queue[pid] = null;
+      void store(pid);
+      app.outcome(data, sameSession());
+    };
+    let conflicts = 0;
+    try {
+      while (queue[pid] === draft) {
+        const i = Number(Object.keys(draft.answers)[0]);
+        const item = draft.answers[i];
+        if (!item) {
+          if (draft.finish) result(await api(pid, "finish", id));
+          break;
+        }
+        const sending = item.sending ?? {
+          i,
+          sel: item.sel,
+          base: draft.versions[i],
+          opId: puente.operationId(),
+        };
+        item.sending = sending;
+        await store(pid);
+        try {
+          const reply = await api(pid, "answer", { ...id, ...sending });
+          if (reply.status === "done") {
+            result(reply);
+            return;
+          }
+          draft.versions[i] =
+            reply.rev ??
+            (sending.base === undefined ? undefined : sending.base + 1);
+          if (sameSession()) app.get().gLeft = reply.leftSecs * 1000;
+          item.sending = undefined;
+          if (item.sel === sending.sel) delete draft.answers[i];
+          conflicts = 0;
+        } catch (error) {
+          const problem = error;
+          if (problem.status !== 409 || typeof problem.body?.rev !== "number")
+            throw error;
+          const current = problem.body;
+          draft.versions[i] = current.rev;
+          item.sending = undefined;
+          if (current.sel === item.sel) delete draft.answers[i];
+          if (sameSession() && typeof current.leftSecs === "number")
+            app.get().gLeft = current.leftSecs * 1000;
+          if (++conflicts >= 3) throw error;
+        }
+        await store(pid);
+      }
+      if (sameSession()) app.clearNotice();
+    } catch (error) {
+      if (queue[pid] !== draft) return;
+      const status = error.status;
+      if (status === 404 || (status === 409 && conflicts === 0)) {
+        // El servidor ya no admite operaciones para este intento.
+        queue[pid] = null;
+        await store(pid);
+        if (sameSession()) app.connectionLost(draft.finish);
+      } else {
+        failed.add(pid);
+        if (sameSession()) app.connectionLost(draft.finish);
+        if (status !== 401 && status !== 403)
+          timers[pid] = setTimeout(() => {
+            void drain(pid);
+          }, 3500);
+      }
+    } finally {
+      active.delete(pid);
+      updateStatus();
+    }
+  }
+  async function start() {
+    const pid = app.perfil();
+    try {
+      const data = await api(pid, "start", {});
+      failed.delete(pid);
+      if (data.status === "done") {
+        queue[pid] = null;
+        void store(pid);
+        updateStatus();
+        app.outcome(data, true);
+        return;
+      }
+      const held = queue[pid];
+      const draft =
+        held && matches(held, data)
+          ? held
+          : {
+              week: data.week,
+              attemptId: data.attemptId,
+              versions: data.answerRevs,
+              answers: {},
+              finish: false,
+            };
+      queue[pid] = draft;
+      draft.versions ??= data.answerRevs;
+      for (const [i, item] of Object.entries(draft.answers))
+        data.answers[Number(i)] = item.sel;
+      if (app.perfil() === pid) app.start(data, pid);
+      void store(pid);
+      if (draft.finish && app.get()?.pid === pid && matches(app.get(), draft))
+        app.sendingFinish();
+      void drain(pid);
+    } catch {
+      app.startingFailed();
+    }
+  }
+  function answer(i) {
+    const session = app.get();
+    if (!session || !session.remote) return;
+    const draft = queue[session.pid];
+    if (!draft || !matches(session, draft) || draft.finish) return;
+    const sel = session.res[i]?.sel ?? -1;
+    const item = (draft.answers[i] ??= { sel });
+    item.sel = sel;
+    void store(session.pid);
+    void drain(session.pid);
+  }
+  function finish() {
+    const session = app.get();
+    if (!session) return;
+    const draft = queue[session.pid];
+    if (!draft || !matches(session, draft)) return;
+    draft.finish = true;
+    app.sendingFinish();
+    void store(session.pid);
+    void drain(session.pid);
+  }
+  function retry() {
+    for (const pid of perfiles) void drain(pid);
+  }
+  function flush() {
+    for (const pid of perfiles) if (queue[pid]) void store(pid);
+  }
+  addEventListener("online", retry);
+  return { start, answer, finish, retry, flush };
+}

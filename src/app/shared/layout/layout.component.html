@@ -114,6 +114,25 @@
         <div
           class="menu-header gap-2"
           [class.locked-menu-item]="item.state?.locked"
+          [attr.role]="
+            item.routerLink && !item.items?.length && !item.state?.locked
+              ? 'link'
+              : null
+          "
+          [attr.tabindex]="
+            item.routerLink && !item.items?.length && !item.state?.locked
+              ? 0
+              : null
+          "
+          [attr.aria-label]="
+            item.routerLink && !item.items?.length ? item.label : null
+          "
+          (keydown.enter)="
+            item.routerLink &&
+              !item.items?.length &&
+              !item.state?.locked &&
+              navigateToPath(item.routerLink)
+          "
           [pTooltip]="
             item.state?.locked ? 'Mejora tu suscripción para acceder' : ''
           "

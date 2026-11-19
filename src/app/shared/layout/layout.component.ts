@@ -1,11 +1,25 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+  takeUntilDestroyed,
+  toObservable,
+  toSignal,
+} from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { MenuItem } from 'primeng/api';
-import { firstValueFrom, Observable } from 'rxjs';
+import {
+  catchError,
+  firstValueFrom,
+  map,
+  Observable,
+  of,
+  switchMap,
+} from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { DocumentosService } from '../../documentacion/services/documentacion.service';
 import { AppConfigService } from '../../services/app-config.service';
+import { AuthSessionService } from '../../services/auth-session.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
@@ -19,6 +33,7 @@ import {
   isSubscriptionAccessible,
 } from '../models/subscription.model';
 import { Rol, Usuario } from '../models/user.model';
+import { esSuscripcionVigente } from '../utils/membresia-externa.util';
 
 /**
  * MenuItem PrimeNG extendido con metadata `modulo` (D11, §6.1).
@@ -85,6 +100,39 @@ export class LayoutComponent {
   readonly fallbackLogo = FALLBACK_LOGO;
   /** Snapshot del usuario actual para el computed `items` (D11). */
   private readonly currentUserSignal = signal<Usuario | null>(null);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly documentos = inject(DocumentosService);
+  private readonly sesiones = inject(AuthSessionService);
+  private readonly cuentaLibrillos = computed(() => {
+    const user = this.currentUserSignal();
+    const flags = this.appConfigService.estadoModulos();
+    return environment.librillosMenu &&
+      flags[ModuloApp.DOCUMENTACION] === true &&
+      flags[ModuloApp.LIBRILLOS] === true &&
+      user?.rol === Rol.ALUMNO &&
+      user.suscripciones?.some(
+        (s) =>
+          Object.values(SuscripcionTipo).includes(s.tipo) &&
+          esSuscripcionVigente(s),
+      )
+      ? user
+      : null;
+  });
+  private readonly librillosDisponibles = toSignal(
+    toObservable(this.cuentaLibrillos).pipe(
+      switchMap((cuenta) => {
+        if (!cuenta) return of(null);
+        const sesion = this.sesiones.snapshot();
+        return this.documentos.getLibrillos$().pipe(
+          map((entradas) =>
+            entradas.length && this.sesiones.isCurrent(sesion) ? cuenta : null,
+          ),
+          catchError(() => of(null)),
+        );
+      }),
+    ),
+    { initialValue: null },
+  );
 
   /**
    * Menu filtrado por módulos habilitados + rol (computed §6.1). Reacciona
@@ -191,10 +239,11 @@ export class LayoutComponent {
   }
 
   ngOnInit(): void {
-    this.currentUser$.subscribe((user) => {
-      if (!user) return;
-      this.currentUserSignal.set(user);
-    });
+    this.currentUser$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((user) => {
+        this.currentUserSignal.set(user);
+      });
   }
 
   onLogoError(event: Event): void {
@@ -418,6 +467,16 @@ export class LayoutComponent {
       },
     ];
 
+    if (this.appConfigService.isModuloHabilitado(ModuloApp.PSICOTECNICOS)) {
+      const perfilIdx = items.findIndex((i) => i.label === 'Perfil');
+      items.splice(perfilIdx, 0, {
+        label: 'Psicotécnicos',
+        icon: 'pi pi-list-check',
+        routerLink: '/app/psicotecnicos/admin',
+        modulo: ModuloApp.PSICOTECNICOS,
+      });
+    }
+
     if (user.rol === Rol.SUPERADMIN) {
       const configuracion = {
         label: 'Configuración',
@@ -452,13 +511,25 @@ export class LayoutComponent {
     const menu: AppMenuItem[] = [];
 
     if (hasValidSubscription) {
+      menu.push({
+        label: 'Documentos',
+        icon: 'pi pi-file',
+        routerLink: '/app/documentacion/alumno',
+        modulo: ModuloApp.DOCUMENTACION,
+      });
+      if (
+        user &&
+        this.cuentaLibrillos() === user &&
+        this.librillosDisponibles() === user
+      ) {
+        menu.push({
+          label: 'Librillos',
+          icon: 'pi pi-book',
+          routerLink: '/app/librillos',
+          modulo: ModuloApp.LIBRILLOS,
+        });
+      }
       menu.push(
-        {
-          label: 'Documentos',
-          icon: 'pi pi-file',
-          routerLink: '/app/documentacion/alumno',
-          modulo: ModuloApp.DOCUMENTACION,
-        },
         {
           label: 'Test',
           modulo: ModuloApp.TEST,
@@ -491,24 +562,34 @@ export class LayoutComponent {
             },
           ],
         },
-        {
-          label: 'Crea tu propio contenido',
-          items: [
-            {
-              label: 'Test',
-              icon: 'pi pi-question',
-              routerLink: '/app/test/alumno/preguntas',
-              modulo: ModuloApp.TEST,
-            },
-            {
-              label: 'Flashcards',
-              icon: 'pi pi-id-card',
-              routerLink: '/app/test/alumno/flashcards',
-              modulo: ModuloApp.FLASHCARDS,
-            },
-          ],
-        },
       );
+    }
+    if (user?.suscripciones?.some((s) => esSuscripcionVigente(s))) {
+      menu.push({
+        label: 'Psicotécnicos',
+        icon: 'pi pi-list-check',
+        routerLink: '/app/psicotecnicos',
+        modulo: ModuloApp.PSICOTECNICOS,
+      });
+    }
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Crea tu propio contenido',
+        items: [
+          {
+            label: 'Test',
+            icon: 'pi pi-question',
+            routerLink: '/app/test/alumno/preguntas',
+            modulo: ModuloApp.TEST,
+          },
+          {
+            label: 'Flashcards',
+            icon: 'pi pi-id-card',
+            routerLink: '/app/test/alumno/flashcards',
+            modulo: ModuloApp.FLASHCARDS,
+          },
+        ],
+      });
     }
 
     // Planificación — agrupa estudio (mensual, ADVANCED/PREMIUM con candado

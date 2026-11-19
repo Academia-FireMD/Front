@@ -1,6 +1,7 @@
 export const environment = {
   name: 'local' as const,
   production: false,
+  librillosMenu: false,
   apiUrl: 'http://localhost:3000',
   wordpressUrl: 'https://staging2.tecnikafire.com',
   wooCommerceUrl: 'https://staging2.tecnikafire.com/tienda',

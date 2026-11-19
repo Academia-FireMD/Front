@@ -1,0 +1,104 @@
+// R07 dibuja con índices. Persistimos identidades de texto para que una nueva
+// catalogación no reutilice esos índices como si las hojas fueran las mismas.
+function anclasLibrillo(documento) {
+  function hash(text) {
+    let h = 14695981039346656037n;
+    for (let i = 0; i < text.length; i++)
+      h = BigInt.asUintN(64, (h ^ BigInt(text.charCodeAt(i))) * 1099511628211n);
+    return h.toString(10);
+  }
+  function indices(ids) {
+    const mapa = new Map();
+    for (const [indice, id] of ids.entries()) {
+      mapa.set(id, mapa.has(id) ? -1 : indice);
+    }
+    return mapa;
+  }
+  const hojas = documento.hojas.map((h) =>
+    hash(JSON.stringify([documento.id, h.tit, h.rango, h.bloques, h.txt])),
+  );
+  const numeros = indices(hojas);
+  const secciones = documento.hojas.map((h, hi) =>
+    h.tit && h.rango
+      ? hash(JSON.stringify([documento.id, h.tit, h.rango]))
+      : hojas[hi],
+  );
+  const grupos = indices(secciones);
+  const propias = secciones.map((id, hi) =>
+    grupos.get(id) === hi ? id : hojas[hi],
+  );
+  const catalogos = {
+    marks: { grupos: hojas, indices: numeros },
+    own: { grupos: propias, indices: indices(propias) },
+  };
+  for (const catalogo of Object.values(catalogos)) {
+    catalogo.pasajes = documento.hojas.map((h, hi) => {
+      const claves = h.txt.map((txt, bi) =>
+        hash(JSON.stringify([catalogo.grupos[hi], h.bloques[bi][0], txt])),
+      );
+      const unicos = indices(claves);
+      return claves.map((id, bi) =>
+        unicos.get(id) === bi ? id : hash(JSON.stringify([hojas[hi], id, bi])),
+      );
+    });
+  }
+  const huerfanos = { marks: Object.create(null), own: Object.create(null) };
+  function empaquetar(clase, mapas) {
+    const catalogo = catalogos[clase];
+    const out = { ...huerfanos[clase] };
+    for (const [hi, mapa] of Object.entries(mapas)) {
+      const indice = Number(hi);
+      const id = catalogo.grupos[indice];
+      if (!id || catalogo.indices.get(id) !== indice) continue;
+      const datos = { ...out[id] };
+      for (const bloque of catalogo.pasajes[indice]) delete datos[bloque];
+      for (const [bi, marcas] of Object.entries(mapa)) {
+        const bloque = catalogo.pasajes[indice][Number(bi)];
+        if (bloque) datos[bloque] = marcas;
+      }
+      out[id] = datos;
+    }
+    return out;
+  }
+  function desempaquetar(clase, mapas) {
+    const catalogo = catalogos[clase];
+    const out = {};
+    const archivados = Object.create(null);
+    for (const [id, mapa] of Object.entries(mapas ?? {})) {
+      const hi = catalogo.indices.get(id) ?? -1;
+      if (hi < 0) {
+        archivados[id] = mapa;
+        continue;
+      }
+      const texto = documento.hojas[hi].txt;
+      const notas = {};
+      const otras = {};
+      for (const [bloque, marcas] of Object.entries(mapa ?? {})) {
+        const bi = catalogo.pasajes[hi].indexOf(bloque);
+        if (bi < 0) {
+          otras[bloque] = marcas;
+          continue;
+        }
+        if (Array.isArray(marcas))
+          notas[bi] = marcas.filter(
+            (m) =>
+              Number.isInteger(m?.s) &&
+              Number.isInteger(m.e) &&
+              m.s >= 0 &&
+              m.e > m.s &&
+              m.e <= texto[bi].length,
+          );
+      }
+      out[hi] = notas;
+      if (Object.keys(otras).length) archivados[id] = otras;
+    }
+    huerfanos[clase] = archivados;
+    return out;
+  }
+  return {
+    hoja: (indice) => hojas[indice],
+    indice: (id) => numeros.get(id) ?? -1,
+    empaquetar,
+    desempaquetar,
+  };
+}

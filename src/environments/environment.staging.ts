@@ -1,6 +1,7 @@
 export const environment = {
   name: 'staging' as const,
   production: true,
+  librillosMenu: true,
   apiUrl: 'https://api-staging.tecnikafire.com',
   wordpressUrl: 'https://staging2.tecnikafire.com',
   wooCommerceUrl: 'https://staging2.tecnikafire.com/tienda',
