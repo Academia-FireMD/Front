@@ -197,18 +197,24 @@ test('Psicotécnicos prioriza navegación, formato y aptitudes a 390 px con sesi
     await mas.press('Enter');
     await expect(enlaces).toHaveText(['Fallos', 'Trucos', 'Progreso']);
     await expect(enlaces.last()).toBeInViewport();
+    await capturar(page, 'psico-mas');
     await enlaces.first().press('Escape');
     await expect(mas).toBeFocused();
     await expect(enlaces.first()).toBeHidden();
-    await mas.click();
-    await enlaces.first().click();
-    await expect(
-      frame.getByRole('heading', { name: 'Mis fallos' }),
-    ).toBeVisible();
-    await expect(mas).toBeFocused();
-    await mas.click();
-    await expect(enlaces.first()).toHaveAttribute('aria-current', 'page');
-    await nav(page, 'inicio').click();
+    for (const [seccion, titulo] of [
+      ['fallos', 'Mis fallos'],
+      ['trucos', /^Trucos y método/],
+      ['progreso', 'Mi progreso'],
+    ] as const) {
+      const enlace = frame.locator(`#psico-mas [data-nav="${seccion}"]`);
+      await mas.click();
+      await enlace.click();
+      await expect(frame.getByRole('heading', { name: titulo })).toBeVisible();
+      await expect(mas).toBeFocused();
+      await mas.click();
+      await expect(enlace).toHaveAttribute('aria-current', 'page');
+      await nav(page, 'inicio').click();
+    }
     const locks = await frame.locator('body').evaluate(() => {
       let parentBlocked = false;
       let storageBlocked = false;

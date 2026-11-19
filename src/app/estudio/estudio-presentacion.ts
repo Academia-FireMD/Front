@@ -85,7 +85,7 @@ export const PSICO_PRESENTACION = `
   .qcard .btn, .rev .btn { --campus-suave: #f4f6f8; }
   .qcard .lnk, .rev .lnk { color: var(--campus-accion); }
   @media (max-width: 760px) {
-    header.top { position: static; }
+    header.top { position: relative; }
     nav.tabs .p-menuitem-link { padding-inline: .5rem; }
     .hero.inicio .p-card-body { padding: .75rem; }
   }
