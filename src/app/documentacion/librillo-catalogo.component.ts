@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
 import {
   DocumentosService,
   EntradaLibrillo,
@@ -16,7 +17,7 @@ import {
 
 @Component({
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, ButtonModule],
   template: `
     <section class="catalogo" aria-labelledby="librillos-titulo">
       <h1 id="librillos-titulo">Librillos</h1>
@@ -26,7 +27,8 @@ import {
         <p role="alert">No se han podido cargar tus librillos.</p>
         <button
           type="button"
-          class="p-button p-button-outlined"
+          pButton
+          class="p-button-outlined"
           (click)="cargar()"
         >
           Reintentar
@@ -40,7 +42,8 @@ import {
                 <p>{{ item.contexto }}</p>
               </div>
               <a
-                class="p-button p-button-outlined"
+                pButton
+                class="p-button-outlined"
                 [id]="'catalogo-doc-' + item.documento.id"
                 [routerLink]="[
                   '/app/documentacion/alumno/librillo',

@@ -12,7 +12,45 @@ export function adaptarLibrillo(html: string): string {
   if (inicio < 0 || fin < 0)
     throw new Error('No se encuentra la interfaz del Librillo');
   let app = html.slice(fin);
-  const prefijo = html.slice(0, inicio);
+  const prefijo = html
+    .slice(0, inicio)
+    .replace(
+      /class="side (test|cards)"/g,
+      'class="side p-accordion p-component $1"',
+    )
+    .replace(
+      /<button (id="(?:prevH|nextH)")/g,
+      '<button class="p-button p-button-outlined p-component" $1',
+    )
+    .replace(
+      '<select id="hojaSel"',
+      '<select class="p-inputtext p-component" id="hojaSel"',
+    )
+    .replace('class="barbtn hot"', 'class="barbtn hot p-button p-component"')
+    .replace(
+      'class="barbtn"',
+      'class="barbtn p-button p-button-outlined p-component"',
+    );
+  app = sustituir(
+    app,
+    "'Ponte a prueba' : 'Memoriza y anota'",
+    "'Test y datos' : 'Tarjetas y notas'",
+  );
+  app = sustituir(
+    app,
+    'class="acc" data-k=',
+    'class="acc p-accordion-header" data-k=',
+  );
+  app = sustituir(
+    app,
+    'class="ah" data-act=',
+    'class="ah p-accordion-header-link" data-act=',
+  );
+  app = sustituir(
+    app,
+    "sec.classList.toggle('open', open);",
+    "sec.classList.toggle('open', open); sec.classList.toggle('p-highlight', open);",
+  );
   app = app.replaceAll('localStorage.', 'borrador.');
   app = sustituir(
     app,
@@ -247,7 +285,7 @@ const CFG={
 ${borradoJs}
 ` +
     app
-  );
+  ).replace(/class="btn(?=[\s"])/g, 'class="p-button p-component btn');
 }
 
 function adaptarBorrado(app: string): string {

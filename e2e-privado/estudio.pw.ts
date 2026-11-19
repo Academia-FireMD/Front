@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { contador, servidorEstudio, visor } from './estudio.fixture';
 
 const practica = '/app/psicotecnicos';
@@ -118,17 +119,41 @@ test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y
         .evaluate((hero) => hero.getBoundingClientRect().left),
     ).toBeGreaterThan(0);
     await expect(
-      frame.locator('.inicio-acciones [data-nav="practicar"]'),
+      frame.locator('nav [data-nav="practicar"]'),
     ).toBeInViewport();
     await expect(
-      frame.locator('.inicio-acciones [data-nav="reto"]'),
+      frame.locator('nav [data-nav="reto"]'),
     ).toBeInViewport();
-    await expect(frame.locator('header img, nav.bottom')).toHaveCount(0);
+    await expect(frame.locator('nav.bottom')).toHaveCount(0);
+    await expect(frame.locator('#pfp img')).toHaveAttribute(
+      'src',
+      /^data:image\/png;base64,/,
+    );
+    await expect(frame.locator('.opoT img')).toHaveCount(2);
+    await expect(frame.locator('.btn.red').first()).toHaveClass(/p-button/);
+    const colores = await page.evaluate(() =>
+      ['--primary-color', '--secondary-color'].map((name) =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue(name)
+          .trim(),
+      ),
+    );
+    const coloresFrame = await frame
+      .locator('html')
+      .evaluate((el) =>
+        ['--primary-color', '--secondary-color'].map((name) =>
+          getComputedStyle(el).getPropertyValue(name).trim(),
+        ),
+      );
+    expect(coloresFrame).toEqual(colores);
+    expect(await frame.locator('style').last().textContent()).toContain(
+      '.p-button',
+    );
     await expect(frame.locator('nav [aria-current="page"]')).toHaveText(
       'Inicio',
     );
     await capturar(page, 'psico-movil');
-    await expect(frame.locator('#pfp')).toHaveText('MAD');
+    await expect(frame.locator('#pfp')).toHaveAttribute('aria-label', /Madrid/);
     const locks = await frame.locator('body').evaluate(() => {
       let parentBlocked = false;
       let storageBlocked = false;
@@ -155,6 +180,31 @@ test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y
       storageBlocked: true,
       overflow: 0,
     });
+    const escudoCv = await frame
+      .locator('.opoT[data-p="cv"] img')
+      .getAttribute('src');
+    const escudoMadrid = await frame
+      .locator('.opoT[data-p="cam"] img')
+      .getAttribute('src');
+    expect(escudoCv).not.toBe(escudoMadrid);
+    expect(escudoCv).toBe(
+      `data:image/png;base64,${readFileSync('public/comunidades/VALENCIA.png').toString('base64')}`,
+    );
+    expect(escudoMadrid).toBe(
+      `data:image/png;base64,${readFileSync('public/oposiciones/madrid.png').toString('base64')}`,
+    );
+    await frame.locator('.opoT[data-p="cv"]').click();
+    await expect(frame.locator('.opoT[data-p="cv"]')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(frame.locator('#pfp img')).toHaveAttribute('src', escudoCv!);
+    await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
+    await page.reload();
+    await expect(frame.locator('.opoT[data-p="cv"]')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(page.getByTestId('estudio-volver')).toBeFocused();
     await page.getByTestId('estudio-volver').press('Enter');
     await expect(page).toHaveURL(/\/app\/profile$/);
@@ -438,7 +488,9 @@ test('El borrado offline persiste y un reintento conserva lo guardado después',
     await page.reload();
     await expect(estado(page)).toHaveAttribute('data-estado', 'offline');
     await f.getByRole('button', { name: 'Progreso', exact: true }).click();
-    await expect(f.getByText('Borrado pendiente de sincronizar.')).toBeVisible();
+    await expect(
+      f.getByText('Borrado pendiente de sincronizar.'),
+    ).toBeVisible();
     expect(borrados().every(({ body }) => body.borrado === 0)).toBe(true);
 
     backend.opciones.loseNextReset = true;
@@ -454,7 +506,9 @@ test('El borrado offline persiste y un reintento conserva lo guardado después',
     const nueva = 'Nota guardada después del borrado';
     await escribirNotaYTinta(otroDispositivo, nueva);
     const partesNuevas = [...cuenta.partes];
-    expect(partesNuevas.some(([, parte]) => parte.j.includes(nueva))).toBe(true);
+    expect(partesNuevas.some(([, parte]) => parte.j.includes(nueva))).toBe(
+      true,
+    );
 
     const reabierta = await backend.preparar(local);
     const inicial = await abrirLibrillo(reabierta, backend);
@@ -642,6 +696,10 @@ test('Los visores en escritorio conservan perfiles, tinta del Librillo y cuadern
     'background-image',
     'none',
   );
+  await expect(psico.locator('.p-card .inicio-acciones')).toBeVisible();
+  await expect(psico.locator('.p-tabmenuitem.p-highlight button')).toHaveText(
+    'Inicio',
+  );
   await expect(
     psico.getByRole('button', { name: /Comunidad de Madrid\. Cambiar/ }),
   ).toBeVisible();
@@ -660,12 +718,18 @@ test('Los visores en escritorio conservan perfiles, tinta del Librillo y cuadern
   await expect(librillo.locator('.bar .doc')).toBeHidden();
   await expect(librillo.locator('.bar #sync')).toBeHidden();
   await expect(librillo.locator('#paper h1')).toBeVisible();
+  await expect(librillo.locator('#hojaSel')).toHaveClass(/p-inputtext/);
+  await expect(
+    librillo.locator(
+      '#pTest .p-accordion-header.p-highlight > [data-act="acc"][data-k="t"]',
+    ),
+  ).toBeVisible();
   await expect(librillo.locator('#tools [data-act="ink"]')).toBeVisible();
   await capturar(page, 'librillo-escritorio');
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(librillo.locator('.bar')).toHaveCSS(
     'background-color',
-    'rgb(33, 31, 31)',
+    'rgb(255, 255, 255)',
   );
   await expect(
     librillo

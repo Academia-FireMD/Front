@@ -7,8 +7,6 @@
   --visor-texto: var(--text-color, #1f2429);
   --visor-secundario: var(--text-color-secondary, #5f6875);
   --visor-borde: var(--surface-border, #d9dde2);
-  --visor-resalte: var(--surface-100, #f2f3f5);
-  --visor-acento: var(--primary-700, #bb292a);
   background: var(--visor-superficie);
   color: var(--visor-texto);
   display: flex;
@@ -38,32 +36,9 @@ h1 span {
   font-weight: 500;
 }
 
-.visor-accion {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: center;
-  padding: 0.25rem 0.65rem;
-  border: 1px solid var(--visor-borde);
-  border-radius: 6px;
-  color: inherit;
-  background: var(--visor-superficie);
-  font: inherit;
-  cursor: pointer;
-}
-
 .visor-volver {
-  border-color: transparent;
-  color: var(--visor-acento);
-}
-
-.visor-accion:hover {
-  background: var(--visor-resalte);
-}
-.visor-accion:focus-visible {
-  outline: 2px solid var(--primary-color, #bb292a);
-  outline-offset: 1px;
+  min-height: 44px;
+  gap: 0.5rem;
 }
 
 .visor-sync {
@@ -111,17 +86,6 @@ iframe {
   background: #fff4d7;
   color: #2a2113;
   padding: 0.4rem 0.85rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  :host {
-    --visor-superficie: #22262e;
-    --visor-texto: #f0f2f5;
-    --visor-secundario: #bdc4cf;
-    --visor-borde: #494e58;
-    --visor-resalte: #30353e;
-    --visor-acento: var(--primary-200, #edaaaa);
-  }
 }
 
 @media (max-width: 640px) {

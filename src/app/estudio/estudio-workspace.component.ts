@@ -1,3 +1,5 @@
+import { ButtonModule } from 'primeng/button';
+import { imagenesPerfilEstudio } from './estudio-tema';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -81,6 +83,7 @@ const TEXTO: Record<EstadoEstudio, string> = {
 
 @Component({
   standalone: true,
+  imports: [ButtonModule],
   templateUrl: './estudio-workspace.component.html',
   styleUrl: './estudio-workspace.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -237,12 +240,20 @@ export class EstudioWorkspaceComponent {
         this.titulo.set(meta.titulo);
         this.edicion.set(meta.edicion);
       }
-      const page = prepararDocumentoEstudio(html, recurso, {
-        origin: window.location.origin,
-        instance: data.instance,
-        edition: meta?.edicion ?? '',
-        drafts,
-      });
+      const imagenes =
+        recurso.tipo === 'psico' ? await imagenesPerfilEstudio() : {};
+      if (!this.vigente(data)) return;
+      const page = prepararDocumentoEstudio(
+        html,
+        recurso,
+        {
+          origin: window.location.origin,
+          instance: data.instance,
+          edition: meta?.edicion ?? '',
+          drafts,
+        },
+        imagenes,
+      );
       const fragment = this.route.snapshot.fragment;
       const q =
         recurso.tipo === 'psico' &&

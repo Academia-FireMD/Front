@@ -34,32 +34,49 @@ export function adaptarPsico(html: string): string {
   const perfil =
     '<button class="pfp" id="pfp" data-act="toPerfil" title="Cambiar de oposición"></button>';
   motor = sustituir(motor, perfil, '');
-  motor = sustituir(
-    motor,
-    '</nav></div></header>',
-    `</nav>${perfil}</div></header>`,
+  motor = motor.replace(
+    /<nav class="tabs" aria-label="Secciones">([\s\S]*?)<\/nav>/,
+    (_nav, botones: string) => {
+      const items = botones.replace(
+        /<button (data-nav="[^"]+")>([^<]+)<\/button>/g,
+        '<li class="p-tabmenuitem"><button type="button" class="p-menuitem-link" $1>$2</button></li>',
+      );
+      return `<nav class="tabs p-tabmenu p-component" aria-label="Secciones"><ul class="p-tabmenu-nav">${items}</ul></nav>${perfil}`;
+    },
   );
   let interfaz = html.slice(inicio);
+  interfaz = sustituir(
+    interfaz,
+    "function pill(){const b=$('#pfp');if(b){b.textContent=P().tag;b.setAttribute('aria-label','Oposición: '+P().n+'. Cambiar')}}",
+    "function pill(){const b=$('#pfp');if(b){b.innerHTML=perfilImagen(PID(),P().tag);b.setAttribute('aria-label','Oposición: '+P().n+'. Cambiar')}}",
+  );
+  interfaz = sustituir(
+    interfaz,
+    '+p.tag+\'</span><span class="ot"><b>\'',
+    '+perfilImagen(k,p.tag)+\'</span><span class="ot"><b>\'',
+  );
+
   interfaz = seccion(
     interfaz,
     `  return '<section class="hero"><span class="tag">Psicotécnicos`,
     `  '<h2 class="h">Las `,
     `
-  return '<section class="hero inicio"><h1>Entrenamiento psicotécnico</h1>'+
-  '<div class="row inicio-acciones"><button class="btn red" data-act="warm">Calentamiento · 10 preguntas</button><button class="btn line" data-nav="practicar">Practicar</button><button class="btn line" data-nav="reto">Reto semanal</button></div>'+
-  '<div class="kpis"><div><b>'+st+'</b><span>día'+(st===1?'':'s')+' de racha</span></div><div><b>'+td+'</b><span>preguntas hoy</span></div><div><b>'+due+'</b><span>fallos para repasar hoy</span></div></div></section>'+opoSel()+
+  return '<section class="hero inicio p-card p-component"><div class="p-card-body"><h1 class="p-card-title">Entrenamiento psicotécnico</h1>'+
+  '<div class="inicio-acciones"><button class="btn red" data-act="warm">Calentamiento · 10 preguntas</button></div>'+
+  '<div class="kpis"><div><b>'+st+'</b><span>día'+(st===1?'':'s')+' de racha</span></div><div><b>'+td+'</b><span>preguntas hoy</span></div><div><b>'+due+'</b><span>fallos para repasar hoy</span></div></div></div></section>'+opoSel()+
 `,
   );
   interfaz = sustituir(
     interfaz,
     "document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===k))",
-    "document.querySelectorAll('.tabs [data-nav]').forEach(b=>{const activa=b.dataset.nav===k;b.classList.toggle('on',activa);if(activa)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')})",
+    "document.querySelectorAll('.tabs [data-nav]').forEach(b=>{const activa=b.dataset.nav===k;b.parentElement.classList.toggle('p-highlight',activa);if(activa)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')})",
   );
   interfaz = seccion(
     interfaz,
     "const KEY='tf_psico_v1'",
     'const def=',
-    "const $=s=>document.querySelector(s),LV=['','Básico','Medio','Avanzado'];",
+    `const $=s=>document.querySelector(s),LV=['','Básico','Medio','Avanzado'];
+function perfilImagen(k,texto){const src=window.TF_PERFILES_IMAGENES[k];return src?'<img src="'+src+'" alt="" onerror="this.replaceWith(document.createTextNode(&quot;'+texto+'&quot;))">':texto}`,
   );
   interfaz = seccion(
     interfaz,
@@ -175,5 +192,10 @@ render(decodeURIComponent(location.hash.replace('#',''))||'inicio');
 progreso.refresh(true).then(reto.retry);
 `,
   );
-  return motor + interfaz;
+  return (motor + interfaz)
+    .replace(
+      /class="btn (line|ghost)(?=[\s"])/g,
+      'class="btn p-button-outlined $1',
+    )
+    .replace(/class="btn(?=[\s"])/g, 'class="p-button p-component btn');
 }
