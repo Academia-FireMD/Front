@@ -2,6 +2,7 @@ import { alumnoNavigationGuard } from './guards/alumno-navigation.guard';
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from './guards/auth/role.guard';
+import type { EstudioWorkspaceComponent } from './estudio/estudio-workspace.component';
 import { moduloGuard } from './guards/modulo.guard';
 import { SubscriptionGuard } from './guards/subscription.guard';
 import { superadminGuard } from './guards/superadmin.guard';
@@ -96,6 +97,12 @@ export const routes: Routes = [
       {
         path: 'psicotecnicos',
         canActivate: [roleGuard, moduloGuard, SubscriptionGuard],
+        canDeactivate: [
+          async (visor: EstudioWorkspaceComponent) => {
+            await visor.guardarAntesDeSalir();
+            return true;
+          },
+        ],
         data: {
           expectedRole: 'ALUMNO',
           modulo: ModuloApp.PSICOTECNICOS,

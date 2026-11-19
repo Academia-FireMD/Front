@@ -88,6 +88,14 @@ export const PSICO_PRESENTACION = `
     nav.tabs .p-menuitem-link { padding-inline: .5rem; }
     .hero.inicio .p-card-body { padding: .75rem; }
   }
+  @media (max-width: 560px) {
+    nav.tabs .p-tabmenu-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    nav.tabs .p-tabmenuitem { min-width: 0; margin: 0; }
+    nav.tabs .p-menuitem-link {
+      justify-content: center; width: 100%; height: 100%;
+      text-align: center; white-space: normal; padding-inline: .2rem;
+    }
+  }
 `;
 
 export const LIBRILLO_PRESENTACION = `

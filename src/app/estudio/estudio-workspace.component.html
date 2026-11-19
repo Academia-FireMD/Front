@@ -1,46 +1,53 @@
-<header class="visor-header">
-  <button
-    #volverButton
-    type="button"
-    pButton
-    class="p-button-text visor-volver"
-    (click)="volver()"
-    [disabled]="saliendo()"
-    data-testid="estudio-volver"
-  >
-    <i class="pi pi-arrow-left" aria-hidden="true"></i> {{ etiquetaVolver() }}
-  </button>
-  <h1>
-    {{ titulo() }}
-    @if (edicion()) {
-      <span>{{ edicion() }}</span>
-    }
-  </h1>
-  @if (url()) {
-    <div class="visor-sync">
-      <span
-        role="status"
-        [attr.data-estado]="estado()"
-        data-testid="estudio-estado"
-        >{{ texto() }}</span
+@if (tipo === "librillo" || desdeGestion() || mostrarEstado()) {
+  <header class="visor-header">
+    @if (tipo === "librillo" || desdeGestion()) {
+      <button
+        #volverButton
+        type="button"
+        pButton
+        class="p-button-text visor-volver"
+        (click)="volver()"
+        [disabled]="saliendo()"
+        data-testid="estudio-volver"
       >
-      @if (reintentarVisible()) {
-        <button
-          type="button"
-          pButton
-          class="p-button-outlined"
-          (click)="reintentar()"
+        <i class="pi pi-arrow-left" aria-hidden="true"></i>
+        {{ etiquetaVolver() }}
+      </button>
+    }
+    @if (tipo === "librillo") {
+      <h1>
+        {{ titulo() }}
+        @if (edicion()) {
+          <span>{{ edicion() }}</span>
+        }
+      </h1>
+    }
+    @if (mostrarEstado()) {
+      <div class="visor-sync">
+        <span
+          role="status"
+          [attr.data-estado]="estado()"
+          data-testid="estudio-estado"
+          >{{ texto() }}</span
         >
-          @if (borradorReiniciado()) {
-            Volver a abrir
-          } @else {
-            {{ edicionCambiada() ? "Abrir edición" : "Reintentar" }}
-          }
-        </button>
-      }
-    </div>
-  }
-</header>
+        @if (reintentarVisible()) {
+          <button
+            type="button"
+            pButton
+            class="p-button-outlined"
+            (click)="reintentar()"
+          >
+            @if (borradorReiniciado()) {
+              Volver a abrir
+            } @else {
+              {{ edicionCambiada() ? "Abrir edición" : "Reintentar" }}
+            }
+          </button>
+        }
+      </div>
+    }
+  </header>
+}
 <main class="visor-cuerpo">
   @if (url(); as src) {
     <iframe

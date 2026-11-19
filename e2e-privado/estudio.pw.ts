@@ -5,7 +5,7 @@ import { contador, servidorEstudio, visor } from './estudio.fixture';
 
 const practica = '/app/psicotecnicos';
 const temario = '/app/documentacion/alumno';
-const estado = (page: Page) => page.getByTestId('estudio-estado');
+const estado = (page: Page) => page.getByTestId('estudio-workspace');
 async function capturar(page: Page, nombre: string) {
   const carpeta = process.env['ESTUDIO_QA_CAPTURAS'];
   if (carpeta) await page.screenshot({ path: join(carpeta, nombre + '.png') });
@@ -17,6 +17,13 @@ async function abrirPsico(page: Page) {
   await page.goto(practica);
   await expect(visor(page).locator('main h1')).toBeVisible();
   await expect(estado(page)).toHaveAttribute('data-estado', /ready|saved/);
+}
+
+async function salirPorMenu(page: Page) {
+  const menuMovil = page.locator('.bar button');
+  if (await menuMovil.isVisible()) await menuMovil.click();
+  await page.locator('.lateral-bar .perfil').click();
+  await expect(page).toHaveURL(/\/app\/profile$/);
 }
 
 async function practicar(page: Page, cantidad: number) {
@@ -109,6 +116,12 @@ test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y
   try {
     const page = await backend.preparar(ctx);
     await abrirPsico(page);
+    await expect(page.locator('.bar button')).toBeVisible();
+    await expect(
+      page.locator('.layout-content').getByTestId('estudio-workspace'),
+    ).toHaveCSS('position', 'static');
+    await expect(page.getByTestId('estudio-volver')).toHaveCount(0);
+    await expect(page.getByTestId('estudio-estado')).toHaveCount(0);
     const frame = visor(page);
     await expect(
       frame.getByRole('heading', { name: 'Entrenamiento psicotécnico' }),
@@ -118,12 +131,15 @@ test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y
         .locator('.hero.inicio')
         .evaluate((hero) => hero.getBoundingClientRect().left),
     ).toBeGreaterThan(0);
-    await expect(
-      frame.locator('nav [data-nav="practicar"]'),
-    ).toBeInViewport();
-    await expect(
-      frame.locator('nav [data-nav="reto"]'),
-    ).toBeInViewport();
+    await expect(frame.locator('nav [data-nav="practicar"]')).toBeInViewport();
+    await expect(frame.locator('nav [data-nav="reto"]')).toBeInViewport();
+    const filas = await frame
+      .locator('nav .p-menuitem-link')
+      .evaluateAll(
+        (botones) =>
+          new Set(botones.map((b) => b.getBoundingClientRect().top)).size,
+      );
+    expect(filas).toBe(2);
     await expect(frame.locator('nav.bottom')).toHaveCount(0);
     await expect(frame.locator('#pfp img')).toHaveAttribute(
       'src',
@@ -205,9 +221,7 @@ test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y
       'aria-pressed',
       'true',
     );
-    await expect(page.getByTestId('estudio-volver')).toBeFocused();
-    await page.getByTestId('estudio-volver').press('Enter');
-    await expect(page).toHaveURL(/\/app\/profile$/);
+    await salirPorMenu(page);
   } finally {
     await ctx.close();
   }
@@ -237,8 +251,7 @@ test('Práctica offline por cuenta y fusión 10+5+5 aunque se pierda la respuest
     await practicar(segunda, 5);
     await expect(estado(primera)).toHaveAttribute('data-estado', 'offline');
     await expect(estado(segunda)).toHaveAttribute('data-estado', 'offline');
-    await segunda.getByTestId('estudio-volver').click();
-    await expect(segunda).toHaveURL(/profile/);
+    await salirPorMenu(segunda);
     await b.unrouteAll();
     const otraCuenta = await backend.preparar(b, 2);
     await otraCuenta.goto(practica);
@@ -574,7 +587,7 @@ test('Superadmin carga cuatro vistas y puede exportar o borrar con confirmación
   await ref.click();
   await expect(page.getByTestId('estudio-iframe')).toBeVisible();
   await expect(visor(page).locator('#app')).not.toBeEmpty();
-  await page.getByTestId('estudio-volver').click();
+  await page.getByRole('button', { name: 'Volver a gestión' }).click();
   await page.getByRole('button', { name: 'Alumnos', exact: true }).click();
   const exportacion = page.waitForEvent('download');
   await page
@@ -688,6 +701,12 @@ test('Los visores en escritorio conservan perfiles, tinta del Librillo y cuadern
   const backend = servidorEstudio();
   const page = await backend.preparar(context);
   await abrirPsico(page);
+  await expect(page.locator('.lateral-bar')).toBeVisible();
+  await expect(page.locator('body')).not.toHaveClass(/aula-inmersiva-activa/);
+  await expect(page.getByTestId('estudio-workspace')).toHaveCSS(
+    'position',
+    'static',
+  );
   const psico = visor(page);
   await expect(
     psico.getByRole('heading', { name: 'Entrenamiento psicotécnico' }),
@@ -715,6 +734,10 @@ test('Los visores en escritorio conservan perfiles, tinta del Librillo y cuadern
   );
   await page.emulateMedia({ media: 'screen' });
   const librillo = await abrirLibrillo(page, backend);
+  await expect(page.getByTestId('estudio-workspace')).toHaveCSS(
+    'position',
+    'fixed',
+  );
   await expect(librillo.locator('.bar .doc')).toBeHidden();
   await expect(librillo.locator('.bar #sync')).toBeHidden();
   await expect(librillo.locator('#paper h1')).toBeVisible();

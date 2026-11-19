@@ -57,6 +57,7 @@ interface InstanciaEstudio {
   objectUrl?: string;
   lastRequest: number;
   flush?: () => void;
+  salida?: Promise<void>;
 }
 
 const ESTADOS: readonly EstadoEstudio[] = [
@@ -87,7 +88,12 @@ const TEXTO: Record<EstadoEstudio, string> = {
   templateUrl: './estudio-workspace.component.html',
   styleUrl: './estudio-workspace.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(window:message)': 'recibir($event)' },
+  host: {
+    'data-testid': 'estudio-workspace',
+    '[class.visor-inmersivo]': 'tipo === "librillo"',
+    '[attr.data-estado]': 'estado()',
+    '(window:message)': 'recibir($event)',
+  },
 })
 export class EstudioWorkspaceComponent {
   private readonly api = inject(EstudioApiService);
@@ -133,12 +139,19 @@ export class EstudioWorkspaceComponent {
       this.edicionCambiada() ||
       ['offline', 'error'].includes(this.estado()),
   );
+  readonly mostrarEstado = computed(
+    () =>
+      this.url() !== null &&
+      (this.tipo === 'librillo' ||
+        this.reintentarVisible() ||
+        this.estado() === 'limited'),
+  );
 
   constructor() {
-    this.aula.activar();
+    if (this.tipo === 'librillo') this.aula.activar();
     this.destroyRef.onDestroy(() => {
       this.dispose();
-      this.aula.desactivar();
+      if (this.tipo === 'librillo') this.aula.desactivar();
     });
     this.auth.currentIdentity$.pipe(takeUntilDestroyed()).subscribe(() => {
       if (this.active && !this.auth.isSessionCurrent(this.active.session))
@@ -442,37 +455,46 @@ export class EstudioWorkspaceComponent {
     else this.cargar();
   }
 
+  desdeGestion() {
+    return (
+      this.tipo === 'psico' &&
+      this.route.snapshot.queryParamMap.get('desde') === 'admin'
+    );
+  }
+
   etiquetaVolver() {
-    if (this.tipo === 'psico')
-      return this.route.snapshot.queryParamMap.get('desde') === 'admin'
-        ? 'Volver a gestión'
-        : 'Volver al aula';
+    if (this.tipo === 'psico') return 'Volver a gestión';
     return this.desdeCatalogo() ? 'Volver a Librillos' : 'Volver al tema';
+  }
+
+  async guardarAntesDeSalir() {
+    const data = this.active;
+    if (!data || !this.url()) return;
+    data.salida ??= new Promise<void>((resolve) => {
+      const finish = () => {
+        clearTimeout(timer);
+        data.flush = undefined;
+        resolve();
+      };
+      const timer = setTimeout(finish, 1000);
+      data.flush = finish;
+      this.enviar(data, 'flush');
+    }).finally(() => {
+      data.salida = undefined;
+    });
+    await data.salida;
   }
 
   async volver() {
     if (this.saliendo()) return;
     this.saliendo.set(true);
-    const data = this.active;
-    if (data && this.url())
-      await new Promise<void>((resolve) => {
-        const finish = () => {
-          clearTimeout(timer);
-          data.flush = undefined;
-          resolve();
-        };
-        const timer = setTimeout(finish, 1000);
-        data.flush = finish;
-        this.enviar(data, 'flush');
-      });
     try {
       if (this.tipo === 'psico') {
-        const admin =
-          this.route.snapshot.queryParamMap.get('desde') === 'admin';
-        await this.router.navigateByUrl(
-          admin ? '/app/psicotecnicos/admin' : '/app/profile',
-        );
-      } else if (this.desdeCatalogo()) {
+        await this.router.navigateByUrl('/app/psicotecnicos/admin');
+        return;
+      }
+      await this.guardarAntesDeSalir();
+      if (this.desdeCatalogo()) {
         await this.router.navigate(['/app/librillos'], {
           queryParams: { doc: this.route.snapshot.paramMap.get('documentoId') },
         });
