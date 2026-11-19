@@ -77,6 +77,7 @@ export function servidorEstudio() {
     loseNextReset: false,
     dinamica: 'R07',
     modulos: true,
+    asistente: false,
     tipoSuscripcion: 'BASIC',
     suscripcionVigente: true,
     piloto: 1 as number | number[],
@@ -149,7 +150,13 @@ export function servidorEstudio() {
     if (['/user/profile', '/user/me', '/user/get-by-email'].includes(endpoint))
       return json(alumno);
     if (endpoint === '/api/config') return json({ verifactuEnabled: false });
-    if (endpoint.startsWith('/ai-assistant/')) return json({}, 403);
+    if (endpoint.startsWith('/ai-assistant/'))
+      return json(
+        opciones.asistente && endpoint === '/ai-assistant/token'
+          ? { reason: 'TIER_TOO_LOW', requiredTier: 'PREMIUM' }
+          : {},
+        403,
+      );
     if (endpoint === '/documentos/tree') {
       peticiones.push({ account: id, endpoint, body });
       const temas = curso.temas.map((tema) => ({

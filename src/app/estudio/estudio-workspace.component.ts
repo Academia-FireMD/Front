@@ -91,6 +91,7 @@ const TEXTO: Record<EstadoEstudio, string> = {
   host: {
     'data-testid': 'estudio-workspace',
     '[class.visor-inmersivo]': 'tipo === "librillo"',
+    '[class.visor-psico]': 'tipo === "psico"',
     '[attr.data-estado]': 'estado()',
     '(window:message)': 'recibir($event)',
   },

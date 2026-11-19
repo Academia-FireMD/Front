@@ -105,10 +105,11 @@ async function borrarProgresoLibrillo(page: Page) {
   await f.getByRole('button', { name: 'Sí, borrar todo' }).click();
 }
 
-test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y visor a 390 px', async ({
+test('Psicotécnicos prioriza navegación, formato y aptitudes a 390 px con sesión aislada', async ({
   browser,
 }) => {
   const backend = servidorEstudio();
+  backend.opciones.asistente = true;
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 },
     baseURL: test.info().project.use.baseURL,
@@ -128,25 +129,47 @@ test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y
     ).toBeVisible();
     expect(
       await frame
-        .locator('.hero.inicio')
+        .locator('.inicio-resumen')
         .evaluate((hero) => hero.getBoundingClientRect().left),
     ).toBeGreaterThan(0);
-    await expect(frame.locator('nav [data-nav="practicar"]')).toBeInViewport();
-    await expect(frame.locator('nav [data-nav="reto"]')).toBeInViewport();
-    const filas = await frame
-      .locator('nav .p-menuitem-link')
-      .evaluateAll(
-        (botones) =>
-          new Set(botones.map((b) => b.getBoundingClientRect().top)).size,
-      );
-    expect(filas).toBe(2);
+    const navegacion = frame.locator('nav .p-tabmenu-nav > li:visible');
+    await expect(navegacion).toHaveCount(4);
+    for (const nombre of ['Inicio', 'Practicar', 'Reto']) {
+      await expect(
+        frame.getByRole('button', { name: nombre, exact: true }),
+      ).toBeInViewport();
+    }
+    const filas = await navegacion.evaluateAll(
+      (items) =>
+        new Set(items.map((el) => el.getBoundingClientRect().top)).size,
+    );
+    expect(filas).toBe(1);
     await expect(frame.locator('nav.bottom')).toHaveCount(0);
-    await expect(frame.locator('#pfp img')).toHaveAttribute(
+    await expect(frame.locator('#pfp')).toBeHidden();
+    const formato = frame.locator('#formato-movil');
+    await expect(formato.locator('img')).toHaveAttribute(
       'src',
       /^data:image\/png;base64,/,
     );
+    await expect(formato).toContainText('Comunidad de Madrid');
+    await expect(formato).toHaveAttribute('aria-expanded', 'false');
+    await expect(frame.locator('#psico-formatos')).toBeHidden();
     await expect(frame.locator('.opoT img')).toHaveCount(2);
     await expect(frame.locator('.btn.red').first()).toHaveClass(/p-button/);
+    await expect(frame.locator('.inicio .kpis .psico-movil')).toHaveText([
+      'Racha',
+      'Hoy',
+      'Para repasar',
+    ]);
+    await expect(
+      frame.locator('.cats').first().locator('.cat').last(),
+    ).toBeInViewport({ ratio: 1 });
+    const lanzador = page.locator('app-ai-assistant-widget .ai-pw-bubble');
+    await expect(lanzador).toBeVisible();
+    const area = (await page.getByTestId('estudio-iframe').boundingBox())!;
+    expect(area.y + area.height).toBeLessThan(
+      (await lanzador.boundingBox())!.y,
+    );
     const colores = await page.evaluate(() =>
       ['--primary-color', '--secondary-color'].map((name) =>
         getComputedStyle(document.documentElement)
@@ -169,7 +192,23 @@ test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y
       'Inicio',
     );
     await capturar(page, 'psico-movil');
-    await expect(frame.locator('#pfp')).toHaveAttribute('aria-label', /Madrid/);
+    const mas = frame.locator('#psico-mas summary');
+    const enlaces = frame.locator('#psico-mas [data-nav]');
+    await mas.press('Enter');
+    await expect(enlaces).toHaveText(['Fallos', 'Trucos', 'Progreso']);
+    await expect(enlaces.last()).toBeInViewport();
+    await enlaces.first().press('Escape');
+    await expect(mas).toBeFocused();
+    await expect(enlaces.first()).toBeHidden();
+    await mas.click();
+    await enlaces.first().click();
+    await expect(
+      frame.getByRole('heading', { name: 'Mis fallos' }),
+    ).toBeVisible();
+    await expect(mas).toBeFocused();
+    await mas.click();
+    await expect(enlaces.first()).toHaveAttribute('aria-current', 'page');
+    await nav(page, 'inicio').click();
     const locks = await frame.locator('body').evaluate(() => {
       let parentBlocked = false;
       let storageBlocked = false;
@@ -209,19 +248,88 @@ test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y
     expect(escudoMadrid).toBe(
       `data:image/png;base64,${readFileSync('public/oposiciones/madrid.png').toString('base64')}`,
     );
+    await formato.click();
+    await expect(frame.locator('.opoT:visible')).toHaveCount(2);
     await frame.locator('.opoT[data-p="cv"]').click();
     await expect(frame.locator('.opoT[data-p="cv"]')).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    await expect(frame.locator('#pfp img')).toHaveAttribute('src', escudoCv!);
+    await expect(formato.locator('img')).toHaveAttribute('src', escudoCv!);
+    await expect(formato).toHaveAttribute('aria-expanded', 'false');
+    await expect(formato).toBeFocused();
     await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
     await page.reload();
     await expect(frame.locator('.opoT[data-p="cv"]')).toHaveAttribute(
       'aria-pressed',
       'true',
     );
+    await nav(page, 'practicar').click();
+    await frame.getByRole('button', { name: 'Cambiar', exact: true }).click();
+    await expect(formato).toHaveAttribute('aria-expanded', 'true');
+    await expect(formato).toBeFocused();
+    await formato.press('Escape');
+    await expect(frame.locator('#psico-formatos')).toBeHidden();
     await salirPorMenu(page);
+  } finally {
+    await ctx.close();
+  }
+});
+
+test('Una pregunta larga a 360 px mantiene el reloj visible y permite corregir y avanzar', async ({
+  browser,
+}) => {
+  const backend = servidorEstudio();
+  backend.opciones.asistente = true;
+  const ctx = await browser.newContext({
+    viewport: { width: 360, height: 740 },
+    baseURL: test.info().project.use.baseURL,
+  });
+  try {
+    const page = await backend.preparar(ctx);
+    await abrirPsico(page);
+    const frame = visor(page);
+    await frame.locator('#formato-movil').click();
+    await frame.locator('.opoT[data-p="cv"]').click();
+    await nav(page, 'practicar').click();
+    await frame.locator('[data-k="cat"][data-v="general"]').click();
+    await frame.locator('[data-k="sub"][data-v="tx"]').click();
+    await frame.locator('[data-k="mode"][data-v="train"]').click();
+    await frame.locator('[data-k="time"][data-v="global"]').click();
+    await frame.locator('[data-act="start"]').click();
+
+    const texto = frame.locator('.qtext .txt');
+    await expect(texto).toBeVisible();
+    expect((await texto.innerText()).length).toBeGreaterThan(400);
+    expect(
+      await texto.evaluate(() => document.documentElement.scrollWidth),
+    ).toBe(await texto.evaluate(() => innerWidth));
+    const reloj = frame.locator('#clock');
+    const tiempo = await reloj.textContent();
+    await expect(reloj).toHaveText(/^\d+:\d{2}$/);
+    await capturar(page, 'psico-pregunta-larga-360');
+
+    const respuesta = frame.locator('.opts .opt').last();
+    await respuesta.scrollIntoViewIfNeeded();
+    expect(await respuesta.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(reloj).toBeInViewport({ ratio: 1 });
+    await expect(reloj).not.toHaveText(tiempo!);
+    await respuesta.click();
+    await expect(frame.locator('#fb .fb')).toBeVisible();
+    const siguiente = frame.getByRole('button', {
+      name: 'Siguiente',
+      exact: true,
+    });
+    await expect(siguiente).toBeInViewport({ ratio: 1 });
+    const boton = (await siguiente.boundingBox())!;
+    const lanzador = (await page
+      .locator('app-ai-assistant-widget .ai-pw-bubble')
+      .boundingBox())!;
+    expect(boton.height).toBeGreaterThanOrEqual(44);
+    expect(boton.y + boton.height).toBeLessThan(lanzador.y);
+    await capturar(page, 'psico-siguiente-360');
+    await siguiente.click();
+    await expect(frame.locator('.qmeta')).toContainText('Pregunta 2');
   } finally {
     await ctx.close();
   }

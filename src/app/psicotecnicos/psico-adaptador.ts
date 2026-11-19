@@ -37,11 +37,30 @@ export function adaptarPsico(html: string): string {
   motor = motor.replace(
     /<nav class="tabs" aria-label="Secciones">([\s\S]*?)<\/nav>/,
     (_nav, botones: string) => {
-      const items = botones.replace(
-        /<button (data-nav="[^"]+")>([^<]+)<\/button>/g,
-        '<li class="p-tabmenuitem"><button type="button" class="p-menuitem-link" $1>$2</button></li>',
-      );
-      return `<nav class="tabs p-tabmenu p-component" aria-label="Secciones"><ul class="p-tabmenu-nav">${items}</ul></nav>${perfil}`;
+      const secciones = [
+        ...botones.matchAll(/<button data-nav="([^"]+)">([^<]+)<\/button>/g),
+      ];
+      const secundarias = ['fallos', 'trucos', 'progreso'];
+      const item = (ruta: string, titulo: string, soloEscritorio = false) =>
+        `<li class="p-tabmenuitem${soloEscritorio ? ' psico-tab-secundaria' : ''}"><button type="button" class="p-menuitem-link" data-nav="${ruta}">${titulo}</button></li>`;
+      const items = secciones
+        .map(([, ruta, titulo]) =>
+          item(
+            ruta,
+            ruta === 'reto'
+              ? `<span class="psico-escritorio">${titulo}</span><span class="psico-movil">Reto</span>`
+              : titulo,
+            secundarias.includes(ruta),
+          ),
+        )
+        .join('');
+      const mas = secciones
+        .filter(([, ruta]) => secundarias.includes(ruta))
+        .map(([, ruta, titulo]) => item(ruta, titulo))
+        .join('');
+      return `<nav class="tabs p-tabmenu p-component" aria-label="Secciones"><ul class="p-tabmenu-nav">${items}
+        <li class="p-tabmenuitem psico-mas"><details id="psico-mas"><summary class="p-menuitem-link">Más <span class="psico-chevron" aria-hidden="true"></span></summary><ul class="psico-mas-opciones">${mas}</ul></details></li>
+      </ul></nav>${perfil}`;
     },
   );
   let interfaz = html.slice(inicio);
@@ -49,6 +68,11 @@ export function adaptarPsico(html: string): string {
     interfaz,
     "function pill(){const b=$('#pfp');if(b){b.textContent=P().tag;b.setAttribute('aria-label','Oposición: '+P().n+'. Cambiar')}}",
     "function pill(){const b=$('#pfp');if(b){b.innerHTML=perfilImagen(PID(),P().tag);b.setAttribute('aria-label','Oposición: '+P().n+'. Cambiar')}}",
+  );
+  interfaz = sustituir(
+    interfaz,
+    '<span class="lbl">¿Qué oposición preparas?</span><div class="opos">',
+    '<span class="lbl psico-escritorio">¿Qué oposición preparas?</span>\'+formatoCompacto()+\'<div class="opos" id="psico-formatos">',
   );
   interfaz = sustituir(
     interfaz,
@@ -61,22 +85,69 @@ export function adaptarPsico(html: string): string {
     `  return '<section class="hero"><span class="tag">Psicotécnicos`,
     `  '<h2 class="h">Las `,
     `
-  return '<section class="hero inicio p-card p-component"><div class="p-card-body"><h1 class="p-card-title">Entrenamiento psicotécnico</h1>'+
+  return '<div class="inicio-resumen"><section class="hero inicio p-card p-component"><div class="p-card-body"><h1 class="p-card-title">Entrenamiento psicotécnico</h1>'+
   '<div class="inicio-acciones"><button class="btn red" data-act="warm">Calentamiento · 10 preguntas</button></div>'+
-  '<div class="kpis"><div><b>'+st+'</b><span>día'+(st===1?'':'s')+' de racha</span></div><div><b>'+td+'</b><span>preguntas hoy</span></div><div><b>'+due+'</b><span>fallos para repasar hoy</span></div></div></div></section>'+opoSel()+
+  '<div class="kpis">'+indicadorInicio(st,'Racha','día'+(st===1?'':'s')+' de racha')+
+  indicadorInicio(td,'Hoy','preguntas hoy')+indicadorInicio(due,'Para repasar','fallos para repasar hoy')+
+  '</div></div></section>'+opoSel()+'</div>'+
 `,
   );
   interfaz = sustituir(
     interfaz,
     "document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===k))",
-    "document.querySelectorAll('.tabs [data-nav]').forEach(b=>{const activa=b.dataset.nav===k;b.parentElement.classList.toggle('p-highlight',activa);if(activa)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')})",
+    'actualizarNavegacion(k)',
+  );
+  interfaz = sustituir(
+    interfaz,
+    "if(!busy())render(decodeURIComponent(location.hash.replace('#',''))||'inicio')",
+    "const ruta=decodeURIComponent(location.hash.replace('#',''))||'inicio';if(!busy()&&(ruta!==here()||!VIEWS[CUR]))render(ruta)",
   );
   interfaz = seccion(
     interfaz,
     "const KEY='tf_psico_v1'",
     'const def=',
     `const $=s=>document.querySelector(s),LV=['','Básico','Medio','Avanzado'];
-function perfilImagen(k,texto){const src=window.TF_PERFILES_IMAGENES[k];return src?'<img src="'+src+'" alt="" onerror="this.replaceWith(document.createTextNode(&quot;'+texto+'&quot;))">':texto}`,
+function perfilImagen(k,texto){const src=window.TF_PERFILES_IMAGENES[k];return src?'<img src="'+src+'" alt="" onerror="this.replaceWith(document.createTextNode(&quot;'+texto+'&quot;))">':texto}
+function indicadorInicio(valor,corto,largo){
+  return '<div><b>'+valor+'</b><span class="psico-movil">'+corto+'</span><span class="psico-escritorio">'+largo+'</span></div>';
+}
+let formatoAbierto=false;
+function formatoCompacto(){
+  return '<button type="button" class="psico-formato" id="formato-movil" data-act="formato" aria-label="Formato de examen: '+P().n+'. Cambiar" aria-controls="psico-formatos" aria-expanded="'+formatoAbierto+'">'+
+    '<span class="mono2">'+perfilImagen(PID(),P().tag)+'</span><span>'+P().n+'</span><span class="psico-chevron" aria-hidden="true"></span></button>';
+}
+function mostrarFormatos(abierto,devolverFoco=false){
+  formatoAbierto=abierto;
+  const boton=$('#formato-movil');
+  if(!boton)return;
+  boton.setAttribute('aria-expanded',String(abierto));
+  if(devolverFoco)boton.focus({preventScroll:true});
+}
+function cerrarMas(devolverFoco=false){
+  const menu=$('#psico-mas');
+  if(!menu.open)return;
+  menu.open=false;
+  if(devolverFoco)menu.querySelector('summary').focus({preventScroll:true});
+}
+function actualizarNavegacion(ruta){
+  document.querySelectorAll('.tabs [data-nav]').forEach(b=>{
+    const activa=b.dataset.nav===ruta;
+    b.parentElement.classList.toggle('p-highlight',activa);
+    if(activa)b.setAttribute('aria-current','page');
+    else b.removeAttribute('aria-current');
+  });
+  $('.psico-mas').classList.toggle('p-highlight',!!$('#psico-mas [aria-current]'));
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#psico-mas'))cerrarMas();
+  else if(e.target.closest('[data-nav]'))cerrarMas(true);
+  if(formatoAbierto&&!e.target.closest('#oposel,[data-act="toPerfil"]'))mostrarFormatos(false);
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  if($('#psico-mas').open)cerrarMas(true);
+  else if(formatoAbierto)mostrarFormatos(false,true);
+});`,
   );
   interfaz = seccion(
     interfaz,
@@ -147,6 +218,30 @@ function loadRank(k){const perfil=PID(),key=wkKey(k,perfil);api('/week/'+k+'/ran
     'DB=def();DB._reset=puente.operationId();DB.perfil=pf;',
   );
   interfaz = sustituir(interfaz, 'location.hash=v', "location.replace('#'+v)");
+  interfaz = seccion(
+    interfaz,
+    '  perfil:d=>',
+    '  warm:',
+    `
+  formato:()=>mostrarFormatos(!formatoAbierto),
+  perfil:d=>{
+    if(!PERFILES[d.p])return;
+    const y=window.scrollY,devolverFoco=formatoAbierto;
+    mostrarFormatos(false);
+    if(d.p!==PID()){
+      DB.perfil=d.p;DB.cfg.cat='';DB.cfg.sub='*';save();NET.fresh=0;
+      render(here());window.scrollTo(0,y);
+    }
+    if(devolverFoco)mostrarFormatos(false,true);
+  },
+  toPerfil:()=>{
+    if(busy())return;
+    formatoAbierto=true;
+    go('inicio');
+    $('#oposel')?.scrollIntoView({block:'center'});
+    $('#formato-movil')?.focus({preventScroll:true});
+  },`,
+  );
   interfaz = seccion(
     interfaz,
     'function startRemote()',
