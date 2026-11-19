@@ -26,8 +26,10 @@ import { AuthSessionSnapshot } from '../services/auth-session.service';
 import { AuthService } from '../services/auth.service';
 import {
   ambitoBorrador,
+  BorradorReiniciado,
   escribirBorrador,
   leerBorradores,
+  reiniciarBorradoresLibrillo,
 } from './estudio-borradores';
 import { RecursoEstudio, EstudioApiService } from './estudio-api.service';
 import { prepararDocumentoEstudio } from './estudio-documento';
@@ -106,6 +108,7 @@ export class EstudioWorkspaceComponent {
   readonly url = signal<SafeResourceUrl | null>(null);
   readonly fallo = signal('');
   readonly borradorNoDisponible = signal(false);
+  readonly borradorReiniciado = signal(false);
   readonly saliendo = signal(false);
   private readonly progreso = signal<EstadoEstudio>('loading');
   private readonly reto = signal<EstadoEstudio>('ready');
@@ -115,14 +118,17 @@ export class EstudioWorkspaceComponent {
         (value) => value === this.progreso() || value === this.reto(),
       ) ?? 'loading',
   );
-  readonly texto = computed(() =>
-    this.edicionCambiada()
-      ? 'Hay una nueva edición. Tus anotaciones se conservan.'
-      : TEXTO[this.estado()],
-  );
+  readonly texto = computed(() => {
+    if (this.borradorReiniciado())
+      return 'Se ha reiniciado el Librillo en otra pestaña.';
+    if (this.edicionCambiada()) return 'Hay una nueva edición del Librillo.';
+    return TEXTO[this.estado()];
+  });
   readonly reintentarVisible = computed(
     () =>
-      this.edicionCambiada() || ['offline', 'error'].includes(this.estado()),
+      this.borradorReiniciado() ||
+      this.edicionCambiada() ||
+      ['offline', 'error'].includes(this.estado()),
   );
 
   constructor() {
@@ -166,6 +172,7 @@ export class EstudioWorkspaceComponent {
     this.progreso.set('loading');
     this.reto.set('ready');
     this.borradorNoDisponible.set(false);
+    this.borradorReiniciado.set(false);
     const session = this.auth.sessionSnapshot();
     const userId = usuarioIdDeSubject(session.sub);
     if (!session.authenticated || userId === null) {
@@ -298,7 +305,7 @@ export class EstudioWorkspaceComponent {
     }
     const id = msg['id'];
     if (
-      (type !== 'api' && type !== 'draft') ||
+      (type !== 'api' && type !== 'draft' && type !== 'draft-reset') ||
       typeof id !== 'number' ||
       !Number.isSafeInteger(id) ||
       id <= active.lastRequest
@@ -310,20 +317,34 @@ export class EstudioWorkspaceComponent {
 
   private async responder(
     data: InstanciaEstudio,
-    type: 'api' | 'draft',
+    type: 'api' | 'draft' | 'draft-reset',
     id: number,
     args: unknown,
   ) {
     let response: RespuestaPuente;
     try {
-      if (type === 'draft') {
+      if (type !== 'api') {
         if (!registro(args)) throw new Error('Borrador inválido');
-        await escribirBorrador(
-          data.scope,
-          data.recurso,
-          args['key'],
-          args['value'],
-        );
+        if (type === 'draft') {
+          await escribirBorrador(
+            data.scope,
+            data.recurso,
+            args['key'],
+            args['value'],
+            args['reinicio'],
+          );
+        } else if (data.recurso.tipo === 'librillo') {
+          await reiniciarBorradoresLibrillo(
+            data.scope,
+            args['anterior'],
+            args['borrado'],
+            args['pendiente'],
+            args['estado'],
+          );
+        } else {
+          this.enviar(data, 'reply', { id, status: 400, result: null });
+          return;
+        }
         response = { status: 204, result: null };
       } else {
         const op = operacionEstudio(data.recurso, args);
@@ -352,19 +373,40 @@ export class EstudioWorkspaceComponent {
       }
     } catch (error) {
       if (!this.vigente(data)) return;
-      if (type === 'draft') this.borradorNoDisponible.set(true);
+      if (error instanceof BorradorReiniciado) {
+        this.borradorReiniciado.set(true);
+        this.enviar(data, 'reply', { id, status: 409, result: null });
+        return;
+      }
+      if (type !== 'api') this.borradorNoDisponible.set(true);
       const status = error instanceof HttpErrorResponse ? error.status : 0;
-      if (status === 409 && data.recurso.tipo === 'librillo')
+      const conflicto =
+        status === 409 &&
+        error instanceof HttpErrorResponse &&
+        registro(error.error)
+          ? error.error
+          : null;
+      const nuevoBorrado =
+        conflicto?.['error'] === 'librillo_reiniciado' &&
+        typeof conflicto['borrado'] === 'number' &&
+        Number.isSafeInteger(conflicto['borrado']) &&
+        conflicto['borrado'] >= 0
+          ? conflicto['borrado']
+          : null;
+      if (
+        status === 409 &&
+        data.recurso.tipo === 'librillo' &&
+        nuevoBorrado === null
+      )
         this.edicionCambiada.set(true);
       response = {
         status,
         result:
-          status === 409 &&
-          data.recurso.tipo === 'psico' &&
-          error instanceof HttpErrorResponse &&
-          registro(error.error)
-            ? error.error
-            : null,
+          data.recurso.tipo === 'psico'
+            ? conflicto
+            : nuevoBorrado === null
+              ? null
+              : { error: 'librillo_reiniciado', borrado: nuevoBorrado },
       };
     }
     this.enviar(data, 'reply', { id, ...response });
@@ -379,7 +421,12 @@ export class EstudioWorkspaceComponent {
   }
 
   reintentar() {
-    if (this.active && this.url() && !this.edicionCambiada())
+    if (
+      this.active &&
+      this.url() &&
+      !this.edicionCambiada() &&
+      !this.borradorReiniciado()
+    )
       this.enviar(this.active, 'retry');
     else this.cargar();
   }

@@ -37,6 +37,14 @@ function iniciarPuenteEstudio(config) {
       send({ type, id, args });
     });
   }
+  function seguirEscritura(done) {
+    writes.add(done);
+    void done.then(
+      () => writes.delete(done),
+      () => writes.delete(done),
+    );
+    return done;
+  }
   addEventListener("message", (event) => {
     if (
       event.source !== parent ||
@@ -71,13 +79,29 @@ function iniciarPuenteEstudio(config) {
       const serialized = value === null ? null : JSON.stringify(value);
       if (serialized === null) delete drafts[key];
       else drafts[key] = serialized;
-      const done = call("draft", { key, value: serialized });
-      writes.add(done);
-      void done.then(
-        () => writes.delete(done),
-        () => writes.delete(done),
+      return seguirEscritura(
+        call("draft", { key, value: serialized, reinicio: drafts.reinicio ?? null }),
       );
-      return done;
+    },
+    reiniciarLibrillo: ({ borrado, pendiente }, estado) => {
+      const anterior = drafts.reinicio ?? null;
+      const args = { anterior, borrado, pendiente };
+      if (estado !== undefined) {
+        args.estado = JSON.stringify(estado);
+        for (const key of Object.keys(drafts)) delete drafts[key];
+        drafts.estado = args.estado;
+      }
+      drafts.reinicio = JSON.stringify({ borrado, pendiente });
+      let done;
+      const guardar = () => {
+        if (!done) {
+          done = seguirEscritura(call("draft-reset", args));
+          void done.catch(() => { done = undefined; });
+        }
+        return done;
+      };
+      guardar();
+      return guardar;
     },
     status: (estado, canal = "progreso") =>
       send({ type: "status", estado, canal }),

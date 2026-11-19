@@ -25,7 +25,11 @@
       >
       @if (reintentarVisible()) {
         <button type="button" class="visor-accion" (click)="reintentar()">
-          {{ edicionCambiada() ? "Abrir edición" : "Reintentar" }}
+          @if (borradorReiniciado()) {
+            Volver a abrir
+          } @else {
+            {{ edicionCambiada() ? "Abrir edición" : "Reintentar" }}
+          }
         </button>
       }
     </div>

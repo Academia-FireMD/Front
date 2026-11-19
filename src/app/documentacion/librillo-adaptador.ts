@@ -1,5 +1,6 @@
 import { sustituir } from '../estudio/estudio-documento.util';
 import anclasJs from './librillo-anclas.frame';
+import borradoJs from './librillo-borrado.frame';
 
 export function adaptarLibrillo(html: string): string {
   if (!html.includes('<!--TF_LIBRILLO_CONFIG:'))
@@ -26,8 +27,7 @@ export function adaptarLibrillo(html: string): string {
   app = sustituir(
     app,
     'borrador.setItem(KEY, JSON.stringify(S))',
-    `borrador.setItem(KEY, JSON.stringify({ ...S, hoja: anclas.hoja(S.hoja),
-    edicion: puente.edition, marks: anclas.empaquetar('marks', S.marks), own: anclas.empaquetar('own', S.own) }))`,
+    'borrador.setItem(KEY, serializarEstadoLibrillo())',
   );
   app = sustituir(
     app,
@@ -96,8 +96,22 @@ export function adaptarLibrillo(html: string): string {
   );
   app = sustituir(
     app,
-    'PARTOK.test(n) && idx[n] !== M.at[n]',
-    'parteDeEstaEdicion(n) && idx[n] !== M.at[n]',
+    `const M = SY.meta, idx = obj(await SY.ad.indice());
+  const want = Object.keys(idx).filter(n => PARTOK.test(n) && idx[n] !== M.at[n]);`,
+    `const M = SY.meta, respuesta = await SY.ad.indice();
+  if (M !== SY.meta) return;
+  const borrado = respuesta.borrado ?? 0;
+  if (borrado !== marcaBorrado.borrado) {
+    await aceptarBorradoRemoto(borrado);
+    return;
+  }
+  const idx = obj(respuesta.partes);
+  const want = Object.keys(idx).filter(n => parteDeEstaEdicion(n) && idx[n] !== M.at[n]);`,
+  );
+  app = sustituir(
+    app,
+    'const got = want.length ? obj(await SY.ad.leer(want)) : {};',
+    'const got = want.length ? obj(await SY.ad.leer(want)) : {};\n  if (M !== SY.meta) return;',
   );
   app = sustituir(
     app,
@@ -133,7 +147,7 @@ export function adaptarLibrillo(html: string): string {
   app = sustituir(
     app,
     'SY.meta.dirty.length > 0 || MAINP.some(partDirty)',
-    'SY.meta.dirty.some(enviable) || MAINP.some(enviable)',
+    'marcaBorrado.pendiente || guardarMarca || SY.meta.dirty.some(enviable) || MAINP.some(enviable)',
   );
   app = sustituir(
     app,
@@ -143,8 +157,8 @@ export function adaptarLibrillo(html: string): string {
   );
   app = sustituir(
     app,
-    'let conflict = false; SY.big = false;',
-    'let conflict = false;',
+    'const res = obj(await SY.ad.guardar(out));\n  let conflict = false; SY.big = false;',
+    'const res = obj(await SY.ad.guardar(out));\n  if (M !== SY.meta) return;\n  let conflict = false;',
   );
   app = sustituir(
     app,
@@ -173,8 +187,13 @@ export function adaptarLibrillo(html: string): string {
   );
   app = sustituir(
     app,
-    'HP.test(n) && !SY.meta.dirty.includes(n)',
-    'parteDeEstaEdicion(n) && HP.test(n) && !SY.meta.dirty.includes(n)',
+    'flushNote(); flushInk(); if (pull) await syncPull(ch); await syncPush(ch);',
+    'await syncLibrillo(pull, ch);',
+  );
+  app = sustituir(
+    app,
+    '${U.cReset ? `<span class="note">Se borran respuestas',
+    '${marcaBorrado.pendiente ? \'<span role="status">Borrado pendiente de sincronizar.</span>\' : U.cReset ? `<span class="note">Se borran respuestas',
   );
   app = sustituir(
     app,
@@ -193,19 +212,20 @@ export function adaptarLibrillo(html: string): string {
   app =
     app.slice(0, conexiones) +
     `
-const fnAdapter = c => ({ indice: () => c.indice(DOC.id), leer: n => c.leer(DOC.id, n), guardar: p => c.guardar(DOC.id, p) });
 function parteDeEstaEdicion(n) {
   const m = HP.exec(n);
   return PARTOK.test(n) && (!m || anclas.indice(m[2]) >= 0);
 }
 function syncStart() {
   loadMeta();
-  SY.ad = fnAdapter(CFG);
+  SY.ad = CFG;
   puente.configure({retry:()=>syncRun(true),flush:()=>{flushNote(); flushInk(); saveNow(); saveMeta(); void syncRun(false)}});
   syncRun(true);
 }
 ` +
     app.slice(visibilidad);
+
+  app = adaptarBorrado(app);
 
   return (
     prefijo +
@@ -219,9 +239,53 @@ const borrador={
   setItem:(key,value)=>{void puente.write(key,value).catch(()=>{})},
   removeItem:key=>{void puente.write(key,null).catch(()=>{})}
 };
-const perfil=async(op,payload)=>(await puente.request({op,payload})).partes;
-const CFG={indice:()=>perfil('indice'),leer:(_,n)=>perfil('leer',n),guardar:(_,p)=>perfil('guardar',p)};
+const CFG={
+  indice:()=>puente.request({op:'indice'}),
+  leer:async nombres=>(await puente.request({op:'leer',payload:nombres})).partes,
+  guardar:async partes=>(await puente.request({op:'guardar',payload:partes,borrado:marcaBorrado.borrado})).partes
+};
+${borradoJs}
 ` +
     app
+  );
+}
+
+function adaptarBorrado(app: string): string {
+  const inicio = app.indexOf('  resetYes: () => {');
+  const fin = app.indexOf('  simSet:', inicio);
+  const inicioSync = app.indexOf('function syncReset()');
+  const finSync = app.indexOf('/* Estado visible */', inicioSync);
+  if ([inicio, fin, inicioSync, finSync].some((posicion) => posicion < 0))
+    throw new Error('Falta la acción de borrado del Librillo');
+
+  // Mantener el vaciado del visor editorial, compartido con el borrado remoto.
+  let limpiar = app
+    .slice(inicio, fin)
+    .trim()
+    .replace(/^resetYes: \(\) => \{/, 'function limpiarProgreso(marca) {')
+    .replace(/},$/, '}');
+  limpiar = sustituir(
+    limpiar,
+    'try { borrador.removeItem(nkey(i)); borrador.removeItem(ikey(i)); } catch (e) {} ',
+    '',
+  );
+  limpiar = sustituir(
+    limpiar,
+    'syncMy(); syncMyc(); save(); closeOv(); applyHlMode(); renderAll(); syncReset();',
+    `pen = ipen = null;
+    anclas.desempaquetar('marks', {});
+    anclas.desempaquetar('own', {});
+    cambiarMarca(marca, serializarEstadoLibrillo());
+    loadMeta();
+    Object.assign(SY, {first: true, lastPull: 0, need: null, otra: null, big: false});
+    syncMy(); syncMyc(); closeOv(); applyHlMode(); renderAll();`,
+  );
+  return (
+    app.slice(0, inicioSync) +
+    limpiar +
+    '\n\n' +
+    app.slice(finSync, inicio) +
+    '  resetYes: syncReset,\n' +
+    app.slice(fin)
   );
 }

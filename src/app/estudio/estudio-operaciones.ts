@@ -143,7 +143,7 @@ function esPerfil(value: unknown): value is PerfilPsico {
 function operacionLibrillo(
   args: Record<string, unknown>,
 ): OperacionEstudio | null {
-  const { op, payload } = args;
+  const { op, payload, borrado } = args;
   if (op === 'indice') return { method: 'GET', path: '/indice' };
   if (
     op === 'leer' &&
@@ -157,7 +157,13 @@ function operacionLibrillo(
       body: { nombres: [...new Set(payload)] },
     };
   }
-  if (op !== 'guardar' || !registro(payload)) return null;
+  if (op === 'borrar')
+    return entero(borrado)
+      ? { method: 'POST', path: '/guardar', body: { borrar: true, borrado } }
+      : null;
+  const generacion = borrado === undefined ? 0 : borrado;
+  if (op !== 'guardar' || !registro(payload) || !entero(generacion))
+    return null;
   const entries = Object.entries(payload);
   if (!entries.length || entries.length > 64) return null;
   const partes: Record<string, { base: number; at: number; j: string | null }> =
@@ -174,5 +180,9 @@ function operacionLibrillo(
       return null;
     partes[key] = { base, at, j };
   }
-  return { method: 'POST', path: '/guardar', body: { partes } };
+  return {
+    method: 'POST',
+    path: '/guardar',
+    body: { partes, borrado: generacion },
+  };
 }

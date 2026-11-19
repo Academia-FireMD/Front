@@ -51,10 +51,30 @@ describe('operaciones del visor', () => {
     ).toEqual({
       method: 'POST',
       path: '/guardar',
-      body: { partes },
+      body: { partes, borrado: 0 },
     });
     expect(
       operacionEstudio(librillo, { op: 'leer', payload: ['other'] }),
     ).toBeNull();
+  });
+
+  it('envía la revisión del borrado sin aceptar un documento ni partes ajenos', () => {
+    expect(
+      operacionEstudio(librillo, {
+        op: 'borrar',
+        borrado: 2,
+        doc: 99,
+        payload: { estado: {} },
+      }),
+    ).toEqual({
+      method: 'POST',
+      path: '/guardar',
+      body: { borrar: true, borrado: 2 },
+    });
+    expect(operacionEstudio(librillo, { op: 'borrar' })).toBeNull();
+    expect(
+      operacionEstudio(librillo, { op: 'borrar', borrado: -1 }),
+    ).toBeNull();
+    expect(operacionEstudio(psico, { op: 'borrar', borrado: 2 })).toBeNull();
   });
 });

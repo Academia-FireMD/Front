@@ -64,6 +64,39 @@ async function abrirNotas(page: Page) {
   return f;
 }
 
+async function escribirNotaYTinta(page: Page, texto: string) {
+  const f = visor(page);
+  await f.locator('#hojaSel').selectOption('1');
+  await f.locator('#tools [data-act="ink"]').click();
+  const parrafo = f.locator('#paper .blk').first();
+  await parrafo.scrollIntoViewIfNeeded();
+  const { x, y, width, height } = (await parrafo.boundingBox())!;
+  await page.mouse.move(x + width / 4, y + height / 2);
+  await page.mouse.down();
+  await page.mouse.move(x + width / 2, y + height / 2 + 3, { steps: 4 });
+  await page.mouse.up();
+  await expect(f.locator('#ink path')).toHaveCount(1);
+  await f.getByRole('button', { name: 'Listo', exact: true }).click();
+  await escribirNota(page, texto);
+  await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
+}
+
+async function escribirNota(page: Page, texto: string) {
+  const f = visor(page);
+  await abrirNotas(page);
+  await f.locator('[data-act="tnadd"]').click();
+  const nota = f.locator('#ab-n textarea').last();
+  await nota.fill(texto);
+  await nota.blur();
+}
+
+async function borrarProgresoLibrillo(page: Page) {
+  const f = visor(page);
+  await f.getByRole('button', { name: 'Progreso', exact: true }).click();
+  await f.getByRole('button', { name: 'Borrar todo mi progreso' }).click();
+  await f.getByRole('button', { name: 'Sí, borrar todo' }).click();
+}
+
 test('Psicotécnicos monta la fuente completa, propone Madrid y separa sesión y visor a 390 px', async ({
   browser,
 }) => {
@@ -307,6 +340,136 @@ test('R07 muestra las 19 hojas, guarda notas y restaura tema, página y aislamie
   } finally {
     await a.close();
     await b.close();
+  }
+});
+
+test('El borrado total del Librillo alcanza notas y tinta de una edición incompatible', async ({
+  browser,
+}) => {
+  const backend = servidorEstudio();
+  backend.opciones.piloto = [1, 2];
+  const options = { baseURL: test.info().project.use.baseURL };
+  const local = await browser.newContext(options);
+  const ajena = await browser.newContext(options);
+  const nueva = await browser.newContext(options);
+  try {
+    const page = await backend.preparar(local);
+    const otraCuenta = await backend.preparar(ajena, 2);
+    const f = await abrirLibrillo(page, backend);
+    await abrirLibrillo(otraCuenta, backend);
+    const texto = 'Nota privada de la edición A';
+    const textoAjeno = 'Nota de otra cuenta en el mismo librillo';
+    await escribirNotaYTinta(page, texto);
+    await escribirNotaYTinta(otraCuenta, textoAjeno);
+    const partes = backend.cuenta(1).partes;
+    const claven = [...partes.keys()].find((n) => n.startsWith('notas'))!;
+    const clavei = [...partes.keys()].find((n) => n.startsWith('tinta'))!;
+    expect(partes.get(claven)?.j).toContain(texto);
+    expect(partes.get(clavei)?.j).toContain('"p":');
+    const remotoAjeno = [...backend.cuenta(2).partes];
+
+    backend.opciones.offline = true;
+    const borrador = 'Borrador sin sincronizar de la edición A';
+    await escribirNota(page, borrador);
+    await expect(estado(page)).toHaveAttribute('data-estado', 'offline');
+    expect(partes.get(claven)?.j).not.toContain(borrador);
+    backend.opciones.offline = false;
+    backend.opciones.dinamica = 'R08-QA';
+    await page.reload();
+    await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
+    await f.locator('#hojaSel').selectOption('1');
+    await abrirNotas(page);
+    await expect(f.locator('#ab-n textarea')).toHaveCount(0);
+    await expect(f.locator('#ink path')).toHaveCount(0);
+    await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
+    expect(partes.get(claven)?.j).toContain(texto);
+    expect(partes.get(clavei)?.j).toContain('"p":');
+
+    await borrarProgresoLibrillo(page);
+    await expect(f.getByText('Borrado sincronizado')).toBeVisible();
+    await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
+    expect(backend.cuenta(1).borrado).toBe(1);
+    expect(partes.size).toBe(0);
+    expect(partes.has(claven)).toBe(false);
+    expect(partes.has(clavei)).toBe(false);
+    expect([...backend.cuenta(2).partes]).toEqual(remotoAjeno);
+
+    backend.opciones.dinamica = 'R07';
+    const remota = await backend.preparar(nueva);
+    const a = await abrirLibrillo(remota, backend);
+    await a.locator('#hojaSel').selectOption('1');
+    await abrirNotas(remota);
+    await expect(a.locator('#ab-n textarea')).toHaveCount(0);
+    await expect(a.locator('#ink path')).toHaveCount(0);
+    await page.reload();
+    await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
+    await f.locator('#hojaSel').selectOption('1');
+    await abrirNotas(page);
+    await expect(f.locator('#ab-n textarea')).toHaveCount(0);
+    await expect(f.locator('#ink path')).toHaveCount(0);
+  } finally {
+    await local.close();
+    await ajena.close();
+    await nueva.close();
+  }
+});
+
+test('El borrado offline persiste y un reintento conserva lo guardado después', async ({
+  browser,
+}) => {
+  const backend = servidorEstudio();
+  const options = { baseURL: test.info().project.use.baseURL };
+  const local = await browser.newContext(options);
+  const remota = await browser.newContext(options);
+  try {
+    const page = await backend.preparar(local);
+    const f = await abrirLibrillo(page, backend);
+    await escribirNotaYTinta(page, 'Nota anterior al borrado');
+    const cuenta = backend.cuenta(1);
+    const borrados = () =>
+      backend.peticiones.filter(({ body }) => body.borrar === true);
+
+    backend.opciones.offline = true;
+    await borrarProgresoLibrillo(page);
+    await expect(estado(page)).toHaveAttribute('data-estado', 'offline');
+    expect(cuenta.borrado).toBe(0);
+    expect(cuenta.partes.size).toBeGreaterThan(0);
+
+    await page.reload();
+    await expect(estado(page)).toHaveAttribute('data-estado', 'offline');
+    await f.getByRole('button', { name: 'Progreso', exact: true }).click();
+    await expect(f.getByText('Borrado pendiente de sincronizar.')).toBeVisible();
+    expect(borrados().every(({ body }) => body.borrado === 0)).toBe(true);
+
+    backend.opciones.loseNextReset = true;
+    backend.opciones.offline = false;
+    await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
+    await expect.poll(() => cuenta.borrado).toBe(1);
+    await expect(estado(page)).toHaveAttribute('data-estado', 'offline');
+    expect(cuenta.partes.size).toBe(0);
+    await page.close();
+
+    const otroDispositivo = await backend.preparar(remota);
+    await abrirLibrillo(otroDispositivo, backend);
+    const nueva = 'Nota guardada después del borrado';
+    await escribirNotaYTinta(otroDispositivo, nueva);
+    const partesNuevas = [...cuenta.partes];
+    expect(partesNuevas.some(([, parte]) => parte.j.includes(nueva))).toBe(true);
+
+    const reabierta = await backend.preparar(local);
+    const inicial = await abrirLibrillo(reabierta, backend);
+    await expect(inicial.getByText('Borrado sincronizado')).toBeVisible();
+    await expect(inicial.locator('#hojaSel')).toHaveValue('1');
+    await abrirNotas(reabierta);
+    await expect(inicial.locator('#ab-n textarea')).toHaveValue(nueva);
+    await expect(inicial.locator('#ink path')).toHaveCount(1);
+    expect(cuenta.borrado).toBe(1);
+    expect([...cuenta.partes]).toEqual(partesNuevas);
+    expect(borrados().length).toBeGreaterThanOrEqual(3);
+    expect(borrados().every(({ body }) => body.borrado === 0)).toBe(true);
+  } finally {
+    await local.close();
+    await remota.close();
   }
 });
 

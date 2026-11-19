@@ -1,0 +1,67 @@
+let marcaBorrado = puente.read('reinicio') ?? {borrado: 0, pendiente: false};
+let guardarMarca;
+
+function serializarEstadoLibrillo() {
+  return JSON.stringify({
+    ...S, hoja: anclas.hoja(S.hoja), edicion: puente.edition,
+    marks: anclas.empaquetar('marks', S.marks), own: anclas.empaquetar('own', S.own),
+  });
+}
+
+function cambiarMarca(marca, estado) {
+  marcaBorrado = marca;
+  guardarMarca = puente.reiniciarLibrillo(marca, estado);
+}
+
+async function persistirMarca() {
+  if (!guardarMarca) return;
+  const guardar = guardarMarca;
+  await guardar();
+  if (guardarMarca === guardar) guardarMarca = undefined;
+}
+
+function syncReset() {
+  if (!SY.ad || marcaBorrado.pendiente || guardarMarca) return;
+  limpiarProgreso({borrado: marcaBorrado.borrado, pendiente: true});
+  setSt('pend');
+  void syncRun(true);
+}
+
+function comprobarBorrado(borrado) {
+  if (!Number.isSafeInteger(borrado) || borrado <= marcaBorrado.borrado)
+    throw new Error('El perfil no confirmó la revisión del borrado');
+}
+
+async function aceptarBorradoRemoto(borrado) {
+  comprobarBorrado(borrado);
+  limpiarProgreso({borrado, pendiente: false});
+  await persistirMarca();
+  SY.again = 2;
+}
+
+async function syncLibrillo(pull, ch) {
+  await persistirMarca();
+  if (marcaBorrado.pendiente) {
+    const base = marcaBorrado.borrado;
+    const respuesta = await puente.request({op: 'borrar', borrado: base});
+    comprobarBorrado(respuesta.borrado);
+    if (respuesta.borrado > base + 1) {
+      await aceptarBorradoRemoto(respuesta.borrado);
+    } else {
+      cambiarMarca({borrado: respuesta.borrado, pendiente: false});
+      await persistirMarca();
+    }
+    toast('Borrado sincronizado');
+    pull = true;
+  }
+  const meta = SY.meta;
+  try {
+    flushNote(); flushInk();
+    if (pull) await syncPull(ch);
+    if (meta === SY.meta) await syncPush(ch);
+  } catch (error) {
+    if (meta !== SY.meta) return;
+    if (error.body?.error !== 'librillo_reiniciado') throw error;
+    await aceptarBorradoRemoto(error.body.borrado);
+  }
+}

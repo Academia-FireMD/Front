@@ -63,6 +63,7 @@ interface Cuenta {
   alias: string | null;
   operaciones: Map<string, { body: string; reply: Json }>;
   partes: Map<string, Parte>;
+  borrado: number;
   examenes: Partial<Record<Perfil, Json>>;
 }
 
@@ -73,11 +74,12 @@ export function servidorEstudio() {
     offline: false,
     pause: false,
     loseNextSave: false,
+    loseNextReset: false,
     dinamica: 'R07',
     modulos: true,
     tipoSuscripcion: 'BASIC',
     suscripcionVigente: true,
-    piloto: 1,
+    piloto: 1 as number | number[],
   };
   const avisos: Json[] = [];
   const cuenta = (id: number) => {
@@ -89,6 +91,7 @@ export function servidorEstudio() {
         alias: null,
         operaciones: new Map(),
         partes: new Map(),
+        borrado: 0,
         examenes: {},
       });
     return cuentas.get(id)!;
@@ -108,6 +111,7 @@ export function servidorEstudio() {
     const endpoint = url.pathname;
     const p: Perfil = url.searchParams.get('p') === 'cam' ? 'cam' : 'cv';
     const body = request.postDataJSON() ?? {};
+    const tienePiloto = [opciones.piloto].flat().includes(id);
     const json = (value: unknown, status = 200) =>
       route.fulfill({ status, json: value });
     const alumno = {
@@ -152,7 +156,7 @@ export function servidorEstudio() {
         ...tema,
         documentos: tema.documentos.map((documento) => ({
           ...documento,
-          librillo: id === opciones.piloto ? documento.librillo : undefined,
+          librillo: tienePiloto ? documento.librillo : undefined,
         })),
       }));
       return json([{ ...curso, temas }]);
@@ -166,6 +170,7 @@ export function servidorEstudio() {
     if (endpoint.startsWith('/psico/admin') && rol === 'ALUMNO')
       return json({}, 403);
     if (!opciones.modulos) return json({}, 403);
+    if (endpoint.startsWith(EDU) && !tienePiloto) return json({}, 404);
     const state = cuenta(id);
     peticiones.push({ account: id, endpoint, body });
     if (endpoint === '/psico/app')
@@ -372,6 +377,7 @@ export function servidorEstudio() {
     if (endpoint === '/psico/admin/reports/done') return json({ removed: 1 });
     if (endpoint === EDU + '/indice')
       return json({
+        borrado: state.borrado,
         partes: Object.fromEntries(
           [...state.partes].map(([k, v]) => [k, v.at]),
         ),
@@ -383,6 +389,23 @@ export function servidorEstudio() {
         ),
       });
     if (endpoint === EDU + '/guardar') {
+      const borrado = body.borrado ?? 0;
+      if (body.borrar === true) {
+        if (borrado === state.borrado) {
+          state.partes.clear();
+          state.borrado++;
+          if (opciones.loseNextReset) {
+            opciones.loseNextReset = false;
+            return route.abort('failed');
+          }
+        }
+        return json({ partes: {}, borrado: state.borrado });
+      }
+      if (borrado !== state.borrado)
+        return json(
+          { error: 'librillo_reiniciado', borrado: state.borrado },
+          409,
+        );
       const partes = Object.fromEntries(
         Object.entries(body.partes).map(([nombre, incoming]) => {
           const { base, at, j } = incoming as Parte & { base: number };
@@ -397,7 +420,7 @@ export function servidorEstudio() {
           return [nombre, { ok: true, at }];
         }),
       );
-      return json({ partes });
+      return json({ partes, borrado: state.borrado });
     }
     return json({}, 404);
   }
