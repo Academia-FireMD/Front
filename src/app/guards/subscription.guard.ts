@@ -27,14 +27,15 @@ export class SubscriptionGuard implements CanActivate {
       filter((user) => !!user),
       take(1),
       map((user) => {
-        // Obtener el tipo de suscripción más alto de todas las suscripciones activas
-        const subscriptionTypes =
-          user?.suscripciones
-            ?.filter((s) => esSuscripcionVigente(s))
-            ?.map((s) => s.tipo) || [];
+        const vigentes =
+          user?.suscripciones?.filter((s) => esSuscripcionVigente(s)) ?? [];
         const hasAccess =
-          this.hasAccess(subscriptionTypes, allowedSubscriptions) ||
-          esAdminOSuperior(user?.rol);
+          (route.data['cualquierSuscripcionVigente']
+            ? vigentes.length > 0
+            : this.hasAccess(
+                vigentes.map((s) => s.tipo),
+                allowedSubscriptions,
+              )) || esAdminOSuperior(user?.rol);
 
         if (!hasAccess) {
           this.router.navigate(['/app/profile']);

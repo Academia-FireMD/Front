@@ -19,6 +19,7 @@ import {
   isSubscriptionAccessible,
 } from '../models/subscription.model';
 import { Rol, Usuario } from '../models/user.model';
+import { esSuscripcionVigente } from '../utils/membresia-externa.util';
 
 /**
  * MenuItem PrimeNG extendido con metadata `modulo` (D11, §6.1).
@@ -415,6 +416,16 @@ export class LayoutComponent {
       },
     ];
 
+    if (this.appConfigService.isModuloHabilitado(ModuloApp.PSICOTECNICOS)) {
+      const perfilIdx = items.findIndex((i) => i.label === 'Perfil');
+      items.splice(perfilIdx, 0, {
+        label: 'Psicotécnicos',
+        icon: 'pi pi-list-check',
+        routerLink: '/app/psicotecnicos/admin',
+        modulo: ModuloApp.PSICOTECNICOS,
+      });
+    }
+
     if (user.rol === Rol.SUPERADMIN) {
       const configuracion = {
         label: 'Configuración',
@@ -441,11 +452,17 @@ export class LayoutComponent {
     const isAdvanced = highestTier === SuscripcionTipo.ADVANCED;
     const isPremium = highestTier === SuscripcionTipo.PREMIUM;
     const hasValidSubscription = isBasic || isAdvanced || isPremium;
-    const hasPlanningAccess = user?.suscripciones?.some((subscription) =>
-      isSubscriptionAccessible(subscription.status) &&
-      [SuscripcionTipo.ADVANCED, SuscripcionTipo.PREMIUM,
-        SuscripcionTipo.NORMAL, SuscripcionTipo.PRO].includes(subscription.tipo),
-    ) ?? false;
+    const hasPlanningAccess =
+      user?.suscripciones?.some(
+        (subscription) =>
+          isSubscriptionAccessible(subscription.status) &&
+          [
+            SuscripcionTipo.ADVANCED,
+            SuscripcionTipo.PREMIUM,
+            SuscripcionTipo.NORMAL,
+            SuscripcionTipo.PRO,
+          ].includes(subscription.tipo),
+      ) ?? false;
 
     const menu: AppMenuItem[] = [];
 
@@ -489,24 +506,36 @@ export class LayoutComponent {
             },
           ],
         },
-        {
-          label: 'Crea tu propio contenido',
-          items: [
-            {
-              label: 'Test',
-              icon: 'pi pi-question',
-              routerLink: '/app/test/alumno/preguntas',
-              modulo: ModuloApp.TEST,
-            },
-            {
-              label: 'Flashcards',
-              icon: 'pi pi-id-card',
-              routerLink: '/app/test/alumno/flashcards',
-              modulo: ModuloApp.FLASHCARDS,
-            },
-          ],
-        },
       );
+    }
+
+    if (user?.suscripciones?.some((s) => esSuscripcionVigente(s))) {
+      menu.push({
+        label: 'Psicotécnicos',
+        icon: 'pi pi-list-check',
+        routerLink: '/app/psicotecnicos',
+        modulo: ModuloApp.PSICOTECNICOS,
+      });
+    }
+
+    if (hasValidSubscription) {
+      menu.push({
+        label: 'Crea tu propio contenido',
+        items: [
+          {
+            label: 'Test',
+            icon: 'pi pi-question',
+            routerLink: '/app/test/alumno/preguntas',
+            modulo: ModuloApp.TEST,
+          },
+          {
+            label: 'Flashcards',
+            icon: 'pi pi-id-card',
+            routerLink: '/app/test/alumno/flashcards',
+            modulo: ModuloApp.FLASHCARDS,
+          },
+        ],
+      });
     }
 
     // Planificación — agrupa estudio (mensual, ADVANCED/PREMIUM con candado
@@ -515,22 +544,21 @@ export class LayoutComponent {
     // apaga ambos, filterByModulo poda el grupo vacío. Feedback Sergio
     // 2026-07-24.
     if (hasPlanningAccess || hasValidSubscription) {
-      const hijoEstudio: AppMenuItem =
-        hasPlanningAccess
-          ? {
-              label: 'Planificación de estudio',
-              icon: 'pi pi-calendar-plus',
-              routerLink: '/app/planificacion/configuracion-alumno',
-              modulo: ModuloApp.PLANIFICACION,
-            }
-          : {
-              label: 'Planificación de estudio',
-              icon: 'pi pi-calendar-plus',
-              modulo: ModuloApp.PLANIFICACION,
-              styleClass: 'locked-menu-item',
-              state: { locked: true },
-              command: () => this.openUpgradePage(),
-            };
+      const hijoEstudio: AppMenuItem = hasPlanningAccess
+        ? {
+            label: 'Planificación de estudio',
+            icon: 'pi pi-calendar-plus',
+            routerLink: '/app/planificacion/configuracion-alumno',
+            modulo: ModuloApp.PLANIFICACION,
+          }
+        : {
+            label: 'Planificación de estudio',
+            icon: 'pi pi-calendar-plus',
+            modulo: ModuloApp.PLANIFICACION,
+            styleClass: 'locked-menu-item',
+            state: { locked: true },
+            command: () => this.openUpgradePage(),
+          };
       menu.push({
         label: 'Planificación',
         collapsed: true,

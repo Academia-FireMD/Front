@@ -34,6 +34,7 @@ const sampleModulos: EstadoModulos = {
   [ModuloApp.CALLEJERO]: true,
   [ModuloApp.PLANIFICACION_FISICA]: true,
   [ModuloApp.SIMULADOR_NOTA]: false,
+  [ModuloApp.PSICOTECNICOS]: false,
 };
 
 function mockAuth(rol: string | null) {
@@ -138,8 +139,20 @@ describe('AppConfigService', () => {
   });
 
   it('SIMULADOR_NOTA ausente falla cerrado hasta que el tenant lo habilita', () => {
-    expect(service.isModuloHabilitado('SIMULADOR_NOTA' as ModuloApp)).toBe(false);
+    expect(service.isModuloHabilitado('SIMULADOR_NOTA' as ModuloApp)).toBe(
+      false,
+    );
   });
+  it('Psicotécnicos queda cerrado hasta recibir el flag explícito', async () => {
+    const { PSICOTECNICOS, ...flagsAnteriores } = sampleModulos;
+    expect(service.isModuloHabilitado(ModuloApp.PSICOTECNICOS)).toBe(false);
+    const load = service.load();
+    httpMock.expectOne(CONFIG_URL).flush(sampleConfig);
+    httpMock.expectOne(MODULOS_URL).flush(flagsAnteriores);
+    await load;
+    expect(service.isModuloHabilitado(ModuloApp.PSICOTECNICOS)).toBe(false);
+  });
+
   it('updateConfig 409 dispara reload y devuelve STALE_CONFIG', async () => {
     // initial load
     const init = service.load();

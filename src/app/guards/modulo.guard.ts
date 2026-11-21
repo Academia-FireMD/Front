@@ -10,7 +10,7 @@ import { ModuloApp } from '../shared/models/modulo-app.enum';
  *
  * Lee `route.data.modulo: ModuloApp`. Si está OFF y el usuario NO es
  * SUPERADMIN, redirige a `/app/profile` con toast. SUPERADMIN bypassa
- * (puede entrar a un módulo apagado para diagnosticar).
+ * salvo cuando la ruta declara `requiereFlag`.
  *
  * Si la route NO declara `modulo`, no aplica (permite).
  */
@@ -24,7 +24,7 @@ export const moduloGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const toast = inject(ToastrService);
 
   const decoded = auth.decodeToken?.();
-  if (decoded?.rol === 'SUPERADMIN') return true;
+  if (decoded?.rol === 'SUPERADMIN' && !route.data['requiereFlag']) return true;
 
   if (appConfig.isModuloHabilitado(modulo)) return true;
 

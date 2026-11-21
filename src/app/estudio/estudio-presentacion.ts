@@ -1,0 +1,177 @@
+// Se inyecta en los documentos aislados. Las reglas del material para imprimir
+// y los colores de los ejercicios y las anotaciones siguen en sus hojas de estilo.
+export const PSICO_PRESENTACION = `
+  :root {
+    --bg: var(--campus-fondo);
+    --card: var(--campus-superficie);
+    --ink: var(--campus-texto);
+    --mut: var(--campus-secundario);
+    --line: var(--campus-borde);
+    --red: var(--campus-accion);
+  }
+  body { font-size: 15px; }
+  header.top { background: var(--card); border-bottom: 1px solid var(--line); }
+  header.top .in { justify-content: flex-start; gap: .4rem; padding-block: .25rem; }
+  nav.tabs { display: block; flex: 1; min-width: 0; margin: 0; }
+  nav.tabs .p-tabmenu-nav {
+    display: flex; flex-wrap: wrap; list-style: none;
+    margin: 0; padding: 0; border: 0;
+  }
+  nav.tabs .p-menuitem-link {
+    min-height: 44px; padding: .55rem .75rem;
+    font-family: var(--bd); font-size: .875rem;
+    letter-spacing: 0; text-transform: none;
+  }
+  .psico-movil, .psico-mas, .psico-formato { display: none; }
+  .pfp, .mono2 {
+    background: var(--campus-suave); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; transform: none; letter-spacing: 0;
+    font: 700 .875rem var(--bd);
+  }
+  .pfp { position: static; min-height: 44px; padding: .35rem .65rem; }
+  .pfp:hover { background: var(--campus-suave); border-color: var(--campus-acento); }
+  main { padding-bottom: 2rem; }
+  h1, h2, h3, h4 { text-transform: none; line-height: 1.25; }
+  .h { font-size: 1.25rem; }
+  h3 { font-size: 1.1rem; }
+  .lbl, .h small { color: var(--campus-acento); letter-spacing: 0; text-transform: none; }
+  .hero, .hero.sm {
+    background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    padding: 1rem; margin-inline: 0; border-radius: 8px;
+  }
+  .hero.inicio { padding: 0; }
+  .hero.inicio .p-card-body { padding: 1rem; }
+  .hero h1, .hero.sm h1 { font-size: clamp(1.28rem, 4vw, 1.7rem); font-weight: 650; }
+  .hero h1 em, .hero p { color: var(--mut); }
+  .hero .tag { background: transparent; color: var(--mut); transform: none; padding: 0; margin-bottom: .4rem; font: 600 .875rem var(--bd); letter-spacing: 0; text-transform: none; }
+  .kpis { gap: .5rem; margin: .9rem 0 0; }
+  .kpis div, .kpis.light div {
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: .6rem .7rem; min-width: 0;
+  }
+  .kpis b { font: 650 1.25rem/1.2 var(--bd); }
+  .kpis span, .kpis.light span { font-size: .8rem; color: var(--mut); }
+  .inicio .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .btn.p-button {
+    font-family: var(--bd); font-size: .9rem;
+    text-transform: none; letter-spacing: 0; min-height: 44px;
+  }
+  .btn.p-button:is(.line, .ghost) {
+    background: transparent; color: var(--primary-color); border-color: var(--primary-color);
+  }
+  .btn.p-button:is(.line, .ghost):not(:disabled):hover {
+    background: color-mix(in srgb, var(--primary-color) 8%, var(--card));
+  }
+  .card, .cat, .opoT, .tile { border-radius: 8px; background: var(--card); }
+  .cat { overflow: hidden; }
+  .cic, .cats.xt .cic { background: var(--campus-suave); color: var(--ink); border: 0; --acc: var(--campus-acento); }
+  .cic, .cats.n3 .cic { height: clamp(3rem, 14vw, 5rem); }
+  .cic svg, .cats.n3 .cic svg { width: clamp(2rem, 10vw, 3.25rem); height: auto; }
+  .cat b, .cats.n3 .cat b { font: 650 .9rem/1.25 var(--bd); text-transform: none; }
+  .opoT { min-height: 64px; gap: .6rem; }
+  .opoT b { font: 650 .96rem/1.25 var(--bd); text-transform: none; }
+  .opoT.on, .tile.on { border-color: var(--campus-acento); background: var(--campus-suave); }
+  .mono2 img, .pfp img { width: 100%; height: 100%; object-fit: contain; }
+  .pfp img { width: 2rem; height: 2rem; }
+  .opoT.on .mono2 { color: var(--ink); }
+  .mono2 { width: 2.8rem; height: 2.4rem; margin: 0; }
+  .lnk { color: var(--campus-acento); }
+
+  /* El arte del ejercicio usa el contraste del papel, también en modo oscuro. */
+  .qcard, .rev, .paper, .tgrid {
+    --ink: #1b1a1c; --mut: #605e64; --line: #d9dde2; --card: #fff;
+    color: var(--ink); background: var(--card); border-radius: 8px;
+  }
+  .qcard .btn, .rev .btn { --campus-suave: #f4f6f8; }
+  .qcard .lnk, .rev .lnk { color: var(--campus-accion); }
+  @media (max-width: 760px) {
+    header.top { position: relative; }
+    nav.tabs .p-menuitem-link { padding-inline: .5rem; }
+    .hero.inicio .p-card-body { padding: .75rem; }
+  }
+  @media (max-width: 560px) {
+    .psico-escritorio, .psico-tab-secundaria, .pfp { display: none; }
+    .psico-movil, .psico-mas { display: block; }
+    header.top .in { padding-inline: .5rem; }
+    nav.tabs .p-tabmenu-nav {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      overflow: visible;
+    }
+    nav.tabs .p-tabmenuitem { min-width: 0; margin: 0; }
+    nav.tabs .p-menuitem-link {
+      justify-content: center; width: 100%;
+      text-align: center; white-space: nowrap; padding-inline: .25rem;
+    }
+    .psico-mas { position: relative; }
+    .psico-mas summary { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
+    .psico-mas summary::-webkit-details-marker { display: none; }
+    .psico-chevron {
+      flex: none; width: .43rem; height: .43rem;
+      border: solid currentColor; border-width: 0 1.5px 1.5px 0;
+      transform: translateY(-20%) rotate(45deg);
+    }
+    [open] > summary .psico-chevron,
+    .psico-formato[aria-expanded="true"] .psico-chevron {
+      transform: translateY(20%) rotate(225deg);
+    }
+    .psico-mas-opciones {
+      position: absolute; inset-block-start: 100%; inset-inline-end: 0;
+      min-width: 9rem; margin: .25rem 0 0; padding: .25rem; list-style: none;
+      background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+      box-shadow: 0 .25rem .75rem #0002;
+    }
+    nav.tabs .psico-mas-opciones .p-menuitem-link {
+      justify-content: flex-start; text-align: start; padding-inline: .75rem;
+    }
+    nav.tabs .psico-mas.p-highlight summary,
+    nav.tabs .psico-mas-opciones [aria-current="page"] {
+      color: var(--campus-acento); background: var(--campus-suave);
+    }
+
+    main { padding-top: .75rem; }
+    .inicio-resumen {
+      display: grid; grid-template-areas: "titulo" "accion" "formato" "contadores";
+      gap: .55rem; padding: .75rem;
+      background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    }
+    .hero.inicio, .hero.inicio .p-card-body { display: contents; }
+    .hero.inicio .p-card-title { grid-area: titulo; margin: 0; }
+    .inicio-acciones { grid-area: accion; }
+    .inicio-acciones .btn { width: 100%; justify-content: center; }
+    .inicio-resumen .opo { grid-area: formato; margin: 0; }
+    .inicio .kpis { grid-area: contadores; margin: 0; gap: .4rem; }
+    .inicio .kpis div { padding: .35rem .15rem; text-align: center; }
+    .inicio .kpis span { font-size: .75rem; }
+    .inicio-resumen + .h { margin-top: 1rem; }
+    .psico-formato {
+      display: flex; align-items: center; gap: .5rem;
+      width: 100%; min-height: 44px; padding: .2rem .65rem;
+      background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+      text-align: start; font-weight: 600;
+    }
+    .psico-formato:hover { border-color: var(--campus-acento); }
+    .psico-formato .mono2 { width: 1.85rem; height: 1.85rem; padding: .15rem; }
+    .psico-formato .psico-chevron { margin-inline-start: auto; }
+    .psico-formato[aria-expanded="false"] + .opos { display: none; }
+    .psico-formato + .opos { margin-top: .4rem; }
+    .opos .opoT { padding: .45rem .65rem; }
+
+    .qtop { gap: .5rem; padding: .35rem .65rem; }
+    .qtop .x, .qtop .gridb { flex: none; min-height: 44px; }
+    .qtop .x { max-width: 7rem; padding: .25rem .45rem; letter-spacing: 0; }
+    .qmeta b { font: 650 .875rem/1.3 var(--bd); letter-spacing: 0; text-transform: none; }
+    .qmeta span { font-size: .75rem; }
+    .clock { min-width: auto; font: 750 1.35rem/1 var(--bd); font-variant-numeric: tabular-nums; }
+    .clock:empty { display: none; }
+    .qcard { padding: .75rem; margin-top: .65rem; }
+    .qtext { font-size: 1rem; }
+    .qtext .txt { margin-bottom: .65rem; }
+    .opts { margin-top: .65rem; }
+    .opt { min-height: 48px; padding: .4rem .55rem; font-size: .96rem; }
+    .qact.nv { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
+    .qact.nv .btn { justify-content: center; margin: 0; }
+    .qact #bnext:only-child {
+      width: 100%; justify-content: center; scroll-margin-block-end: .75rem;
+    }
+  }
+`;

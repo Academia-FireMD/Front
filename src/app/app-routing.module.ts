@@ -2,6 +2,7 @@ import { alumnoNavigationGuard } from './guards/alumno-navigation.guard';
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from './guards/auth/role.guard';
+import type { EstudioWorkspaceComponent } from './estudio/estudio-workspace.component';
 import { moduloGuard } from './guards/modulo.guard';
 import { SubscriptionGuard } from './guards/subscription.guard';
 import { superadminGuard } from './guards/superadmin.guard';
@@ -66,6 +67,41 @@ export const routes: Routes = [
           ],
           modulo: ModuloApp.PLANIFICACION,
         },
+      },
+      {
+        path: 'psicotecnicos',
+        canActivate: [roleGuard, moduloGuard, SubscriptionGuard],
+        canDeactivate: [
+          async (visor: EstudioWorkspaceComponent) => {
+            await visor.guardarAntesDeSalir();
+            return true;
+          },
+        ],
+        data: {
+          expectedRole: 'ALUMNO',
+          modulo: ModuloApp.PSICOTECNICOS,
+          requiereFlag: true,
+          cualquierSuscripcionVigente: true,
+        },
+        title: 'Psicotécnicos',
+        loadComponent: () =>
+          import('./estudio/estudio-workspace.component').then(
+            (m) => m.EstudioWorkspaceComponent,
+          ),
+      },
+      {
+        path: 'psicotecnicos/admin',
+        canActivate: [roleGuard, moduloGuard],
+        data: {
+          expectedRole: 'ADMIN',
+          modulo: ModuloApp.PSICOTECNICOS,
+          requiereFlag: true,
+        },
+        title: 'Gestión de Psicotécnicos',
+        loadComponent: () =>
+          import('./psicotecnicos/psico-admin.component').then(
+            (m) => m.PsicoAdminComponent,
+          ),
       },
       {
         path: 'documentacion',

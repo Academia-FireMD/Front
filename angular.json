@@ -33,6 +33,7 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "loader": { ".frame": "text" },
             "assets": [
               {
                 "glob": "**/*",

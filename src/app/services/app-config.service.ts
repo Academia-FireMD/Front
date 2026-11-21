@@ -27,12 +27,16 @@ const APP_CONFIG_ENDPOINT = '/api/app-config';
 const MODULOS_ENDPOINT = '/api/app-config/modulos';
 const RETRY_DELAY_MS = 1000;
 const REQUEST_TIMEOUT_MS = 3000;
+const MODULOS_OPT_IN = new Set([
+  ModuloApp.SIMULADOR_NOTA,
+  ModuloApp.PSICOTECNICOS,
+]);
 
 /** Construye un mapa todos-true / todos-false (helper interno fail-safe). */
 function buildModulosMap(value: boolean): EstadoModulos {
   return Object.values(ModuloApp).reduce((acc, key) => {
     // Módulo nuevo: cerrado hasta que el tenant confirme explícitamente su alta.
-    acc[key] = value && key !== ModuloApp.SIMULADOR_NOTA;
+    acc[key] = value && !MODULOS_OPT_IN.has(key);
     return acc;
   }, {} as EstadoModulos);
 }
@@ -364,12 +368,12 @@ export class AppConfigService {
 
   /**
    * Convenience getter: lee del signal. Si el módulo no está en el map
-   * (caso bug), fail-open → true (consistente con backend default).
+   * los módulos existentes mantienen su fallback y los opt-in quedan cerrados.
    */
   isModuloHabilitado(modulo: ModuloApp): boolean {
     const map = this._estadoModulos();
     if (!(modulo in map)) {
-      return modulo === ModuloApp.SIMULADOR_NOTA ? false : true;
+      return !MODULOS_OPT_IN.has(modulo);
     }
     return map[modulo] === true;
   }

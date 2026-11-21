@@ -24,6 +24,14 @@ body.aula-inmersiva-activa .layout-content {
   width: 100% !important;
 }
 
+// El visor desplaza su propio contenido. Deja el lanzador fuera de ese área.
+@media (max-width: 575.98px) {
+  body:has(#ai-widget-btn, app-ai-assistant-widget .ai-pw-bubble) .visor-psico {
+    box-sizing: border-box;
+    padding-block-end: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .truncate-flex-content {
   flex: 1 1 auto;
   min-width: 0;
