@@ -48,6 +48,20 @@ export class PreguntasDashboardAdminComponent extends SharedGridComponent<Pregun
   public selectedFile: File | null = null;
   public expectedRole: Rol = Rol.ALUMNO;
   public exportando = false;
+  readonly tamanosPagina = [10, 25, 50];
+  readonly obtenerIdsEliminacion = (
+    filtro: Pick<PaginationFilter, 'searchTerm' | 'where'>,
+  ) => this.preguntasService.obtenerIdsEliminacionMasiva(filtro);
+  readonly revisarEliminacion = (ids: number[], primeraEntrada = 0) =>
+    this.preguntasService.revisarEliminacionMasiva(ids, primeraEntrada);
+  readonly eliminarMasivamente = (ids: number[]) =>
+    this.preguntasService.eliminarMasivamente(ids);
+  readonly etiquetaSeleccion = (item: Pregunta) =>
+    `Seleccionar ${item.identificador}`;
+
+  recargarTrasEliminacionMasiva() {
+    this.updatePaginationSafe({ skip: 0 });
+  }
 
   // Configuración de filtros para el GenericListComponent
   public filters: FilterConfig[] = [

@@ -12,6 +12,7 @@ import {
   PaginationFilter,
 } from '../shared/models/pagination.model';
 import { Dificultad } from '../shared/models/pregunta.model';
+import type { RevisionEliminacionMasiva } from '../shared/models/eliminacion-masiva.model';
 import { ApiBaseService } from './api-base.service';
 import { DateRangeDto } from './test.service';
 export interface RegistrarFlashcardRespuestaDto {
@@ -105,6 +106,27 @@ export class FlashcardDataService extends ApiBaseService {
 
   public prevFlashcardForward(id: string) {
     return this.get('/prev-forward/' + id) as Observable<FlashcardData>;
+  }
+
+  public obtenerIdsEliminacionMasiva(
+    filtro: Pick<PaginationFilter, 'searchTerm' | 'where'>,
+  ) {
+    return this.post('/eliminacion-masiva/seleccion', filtro) as Observable<{
+      ids: number[];
+    }>;
+  }
+
+  public revisarEliminacionMasiva(ids: number[], primeraEntrada = 0) {
+    return this.post('/eliminacion-masiva/revision', {
+      ids,
+      primeraEntrada,
+    }) as Observable<RevisionEliminacionMasiva>;
+  }
+
+  public eliminarMasivamente(ids: number[]) {
+    return this.post('/eliminacion-masiva', { ids }) as Observable<{
+      eliminadas: number;
+    }>;
   }
 
   public deleteFlashcard$(id: number) {

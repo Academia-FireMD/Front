@@ -7,6 +7,7 @@ import {
   PaginationFilter,
 } from '../shared/models/pagination.model';
 import { Dificultad, Pregunta } from '../shared/models/pregunta.model';
+import type { RevisionEliminacionMasiva } from '../shared/models/eliminacion-masiva.model';
 import { ApiBaseService } from './api-base.service';
 import { GenerarTestDto } from './test.service';
 
@@ -61,6 +62,27 @@ export class PreguntasService extends ApiBaseService {
     return this.post('/importar-excel', file);
   }
 
+  public obtenerIdsEliminacionMasiva(
+    filtro: Pick<PaginationFilter, 'searchTerm' | 'where'>,
+  ) {
+    return this.post('/eliminacion-masiva/seleccion', filtro) as Observable<{
+      ids: number[];
+    }>;
+  }
+
+  public revisarEliminacionMasiva(ids: number[], primeraEntrada = 0) {
+    return this.post('/eliminacion-masiva/revision', {
+      ids,
+      primeraEntrada,
+    }) as Observable<RevisionEliminacionMasiva>;
+  }
+
+  public eliminarMasivamente(ids: number[]) {
+    return this.post('/eliminacion-masiva', { ids }) as Observable<{
+      eliminadas: number;
+    }>;
+  }
+
   public deletePregunta$(id: number) {
     return this.delete('/' + id);
   }
@@ -68,10 +90,10 @@ export class PreguntasService extends ApiBaseService {
   public getAllPreguntasCreadosPorAlumnos() {
     return this._http.post(
       environment.apiUrl +
-      this.controllerPrefix +
-      '/preguntas-creadas-por-alumnos',
+        this.controllerPrefix +
+        '/preguntas-creadas-por-alumnos',
       {},
-      { responseType: 'blob' }
+      { responseType: 'blob' },
     );
   }
 
@@ -84,11 +106,15 @@ export class PreguntasService extends ApiBaseService {
   public descargarPlantillaImportacion() {
     return this._http.get(
       environment.apiUrl + this.controllerPrefix + '/plantilla-importacion',
-      { responseType: 'blob' }
+      { responseType: 'blob' },
     );
   }
 
-  public exportarPreguntasExcel(temaIds?: number[], soloAlumnos?: boolean, dificultad?: Dificultad): Observable<Blob> {
+  public exportarPreguntasExcel(
+    temaIds?: number[],
+    soloAlumnos?: boolean,
+    dificultad?: Dificultad,
+  ): Observable<Blob> {
     let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/excel`;
     const params: string[] = [];
 
@@ -110,7 +136,11 @@ export class PreguntasService extends ApiBaseService {
     return this._http.get(url, { responseType: 'blob' });
   }
 
-  public exportarPreguntasWord(temaIds?: number[], soloAlumnos?: boolean, dificultad?: Dificultad): Observable<Blob> {
+  public exportarPreguntasWord(
+    temaIds?: number[],
+    soloAlumnos?: boolean,
+    dificultad?: Dificultad,
+  ): Observable<Blob> {
     let url = `${environment.apiUrl}${this.controllerPrefix}/exportar/word`;
     const params: string[] = [];
 

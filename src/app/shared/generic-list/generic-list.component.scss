@@ -18,6 +18,14 @@
   flex-shrink: 0; // Evita que los botones se encojan
 }
 
+.filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 // Estilos para el badge del botón de filtros en PrimeNG v17
 .filter-button-wrapper {
   position: relative;
@@ -80,6 +88,36 @@
 
     .right-actions {
       flex: 0;
+    }
+  }
+
+  .top-action-bar.mobile-stack-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .left-actions,
+    .right-actions {
+      flex: none;
+      width: 100%;
+    }
+  }
+
+  .top-action-bar.selection-mode {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+
+    .left-actions {
+      flex: 0 0 100%;
+      width: 100%;
+    }
+
+    .select-page-control {
+      min-height: 44px;
+    }
+
+    .filter-actions {
+      margin-left: auto;
     }
   }
 }

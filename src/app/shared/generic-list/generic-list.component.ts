@@ -58,22 +58,37 @@ export type GenericListMode = 'overview' | 'selection';
     <div class="shared-grid grid">
       <!-- Top Action Bar -->
       <div class="col-12">
-        <div class="top-action-bar">
+        <div
+          class="top-action-bar"
+          [class.mobile-stack-actions]="stackActionsOnMobile"
+          [class.selection-mode]="stackActionsOnMobile && mode === 'selection'"
+        >
           <!-- Left Actions - Siempre visible -->
           <div class="left-actions">
             <ng-content select="[left-actions]"></ng-content>
           </div>
           <div
             *ngIf="mode === 'selection' && !singleSelection"
-            class="flex align-items-center gap-2 ml-2"
+            class="select-page-control flex align-items-center gap-2 ml-2"
           >
             <p-checkbox
               [binary]="true"
+              ariaLabel="Seleccionar todos los elementos de esta página"
               [ngModel]="isAllSelected()"
+              [disabled]="
+                selectionDisabled || !(lastLoadedPagination?.data ?? []).length
+              "
               (ngModelChange)="toggleSelectAll()"
               styleClass="select-all-checkbox"
             />
-            <label class="text-sm" *ngIf="viewportService.screenWidth != 'xs'"
+            <span *ngIf="stackActionsOnMobile" class="text-sm"
+              >Seleccionar página</span
+            >
+            <label
+              *ngIf="
+                !stackActionsOnMobile && viewportService.screenWidth != 'xs'
+              "
+              class="text-sm"
               >Seleccionar todo</label
             >
           </div>
@@ -83,29 +98,31 @@ export type GenericListMode = 'overview' | 'selection';
           </div>
 
           <!-- Botón de filtros - Siempre visible si hay filtros -->
-          <div
-            *ngIf="filters && filters.length > 0"
-            class="filter-button-wrapper"
-          >
-            <p-button
-              icon="pi pi-filter"
-              styleClass="p-button-outlined"
-              [tooltipPosition]="'left'"
-              pTooltip="Filtros"
-              (click)="showFiltersDialog = true"
-            ></p-button>
-            <p-badge
-              *ngIf="getActiveFiltersCount() > 0"
-              [value]="getActiveFiltersCount()"
-              severity="primary"
-              class="filter-count-badge"
-            ></p-badge>
+          <div *ngIf="filters?.length" class="filter-actions">
+            <div class="filter-button-wrapper">
+              <p-button
+                icon="pi pi-filter"
+                styleClass="p-button-outlined"
+                ariaLabel="Filtros"
+                [tooltipPosition]="'left'"
+                pTooltip="Filtros"
+                (click)="showFiltersDialog = true"
+              ></p-button>
+              <p-badge
+                *ngIf="getActiveFiltersCount() > 0"
+                [value]="getActiveFiltersCount()"
+                severity="primary"
+                class="filter-count-badge"
+              ></p-badge>
+            </div>
+            <ng-content select="[filter-actions]"></ng-content>
           </div>
         </div>
       </div>
 
       <!-- List Content -->
       <div class="col-12 list-generic">
+        <ng-content select="[list-notice]"></ng-content>
         <p-dataView #dv [value]="(internalFetch$() | async)?.data ?? []">
           <ng-template pTemplate="list" let-data>
             <div class="grid grid-nogutter">
@@ -126,7 +143,9 @@ export type GenericListMode = 'overview' | 'selection';
                 >
                   <p-checkbox
                     [binary]="true"
+                    [ariaLabel]="getSelectionLabel(item)"
                     [ngModel]="isItemSelected(item)"
+                    [disabled]="selectionDisabled"
                     (ngModelChange)="toggleItemSelection(item)"
                     (click)="$event.stopPropagation()"
                     styleClass="item-selection-checkbox"
@@ -163,6 +182,7 @@ export type GenericListMode = 'overview' | 'selection';
             (onPageChange)="onPageChange($event)"
             [first]="pagination().skip"
             [rows]="pagination().take"
+            [rowsPerPageOptions]="rowsPerPageOptions"
             [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
             [showPageLinks]="true"
           >
@@ -313,8 +333,16 @@ export class GenericListComponent<T>
   @Input() filters?: FilterConfig[];
   @Input() mode: GenericListMode = 'overview';
   @Input() singleSelection = false;
+  @Input() stackActionsOnMobile = false;
+  @Input() selectionDisabled = false;
+  @Input() rowsPerPageOptions?: number[];
   @Input() selectedItemIds: (string | number)[] = [];
   @Input() getItemId: (item: T) => string | number = (item: any) => item.id;
+  @Input() getSelectionLabel: (item: T) => string = (item) =>
+    `Seleccionar elemento ${this.getItemId(item)}`;
+  @Input() set sharedPagination(value: typeof this.pagination) {
+    this.pagination = value;
+  }
   @Output() onItemClick = new EventEmitter<T>();
   @Output() filtersChanged = new EventEmitter<any>();
   @Output() selectionChange = new EventEmitter<(string | number)[]>();
@@ -726,6 +754,7 @@ export class GenericListComponent<T>
   }
 
   toggleItemSelection(item: T) {
+    if (this.selectionDisabled) return;
     const itemId = this.getItemId(item);
     const currentSelection = [...this.selectedItemIds];
     const index = currentSelection.indexOf(itemId);
@@ -756,6 +785,7 @@ export class GenericListComponent<T>
   }
 
   toggleSelectAll() {
+    if (this.selectionDisabled) return;
     const currentData = this.lastLoadedPagination?.data || [];
     const allSelected = this.isAllSelected();
 

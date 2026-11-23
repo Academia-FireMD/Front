@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
+import { EliminacionMasivaBancoComponent } from '../shared/eliminacion-masiva-banco/eliminacion-masiva-banco.component';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
@@ -80,6 +81,7 @@ import { TestRoutingModule } from './test-routing.module';
     ModuloDetailviewComponent,
   ],
   imports: [
+    EliminacionMasivaBancoComponent,
     CommonModule,
     MarkdownModule,
     TestRoutingModule,

@@ -5,6 +5,7 @@ export interface PaginatedResult<T> {
     skip: number;
     searchTerm: string;
     count: number;
+    where?: PaginationFilter['where'];
   };
 }
 

@@ -1,0 +1,138 @@
+<ng-template #activador>
+  <button
+    *ngIf="habilitado"
+    pButton
+    type="button"
+    class="p-button-outlined"
+    [icon]="activo ? 'pi pi-times' : 'pi pi-check-square'"
+    [label]="activo ? 'Salir de selección' : 'Eliminación masiva'"
+    [attr.aria-expanded]="activo"
+    [disabled]="ocupado"
+    (click)="alternarModo()"
+  ></button>
+</ng-template>
+
+<ng-template #barra>
+  <div *ngIf="activo" class="seleccion" [class.con-marcas]="ids.length">
+    <div class="seleccion-resumen" role="status">
+      <strong *ngIf="ids.length; else sinSeleccion">
+        {{ ids.length }} {{ nombre(ids.length) }}
+        {{ ids.length === 1 ? "seleccionada" : "seleccionadas" }}
+      </strong>
+      <span *ngIf="ids.length && paginaVigente">
+        {{ enPagina }} en esta página<ng-container
+          *ngIf="ids.length > enPagina"
+        >
+          · {{ ids.length - enPagina }} fuera de esta página</ng-container
+        >
+      </span>
+      <ng-template #sinSeleccion>
+        <strong>Eliminación masiva</strong>
+        <span>Marca las entradas que quieres eliminar.</span>
+      </ng-template>
+    </div>
+    <div class="seleccion-acciones">
+      <p-button
+        *ngIf="ids.length"
+        label="Limpiar selección"
+        [text]="true"
+        [disabled]="ocupado"
+        (onClick)="limpiar()"
+      />
+      <p-button
+        label="Eliminar selección"
+        ariaLabel="Eliminar selección"
+        icon="pi pi-trash"
+        severity="danger"
+        [disabled]="ocupado || !ids.length"
+        (onClick)="abrirRevision()"
+      />
+    </div>
+    <button
+      *ngIf="mostrarSeleccionResultados && total <= limite"
+      pButton
+      type="button"
+      class="p-button-text seleccionar-resultados"
+      [disabled]="ocupado"
+      [label]="'Seleccionar los ' + total + ' resultados del listado'"
+      (click)="seleccionarResultados()"
+    ></button>
+    <span
+      *ngIf="mostrarSeleccionResultados && total > limite"
+      class="limite-seleccion"
+    >
+      Acota los filtros para seleccionar hasta 5.000 entradas.
+    </span>
+  </div>
+</ng-template>
+
+<p-dialog
+  *ngIf="revision"
+  [(visible)]="mostrandoRevision"
+  [header]="'¿Eliminar ' + ids.length + ' ' + nombre(ids.length) + '?'"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!eliminando"
+  [closeOnEscape]="!eliminando"
+  [style]="{ width: 'min(36rem, 94vw)' }"
+>
+  <p class="mt-0">Se eliminarán únicamente las entradas de esta selección.</p>
+  <div class="revision-temas">
+    <section *ngFor="let tema of revision.temas" class="revision-tema">
+      <strong
+        >Tema {{ tema.numero
+        }}<ng-container *ngIf="tema.descripcion">
+          · {{ tema.descripcion }}</ng-container
+        ></strong
+      >
+      <span
+        >{{ tema.seleccionadas }} de
+        {{ tema.restantes + tema.seleccionadas }} para eliminar</span
+      >
+      <span
+        >El tema tendrá {{ tema.restantes }} {{ nombre(tema.restantes) }}.</span
+      >
+    </section>
+  </div>
+  <ul
+    #listaRevision
+    class="revision-entradas"
+    [attr.aria-busy]="cargando"
+    tabindex="0"
+    aria-label="Entradas seleccionadas"
+  >
+    <li *ngFor="let entrada of revision.entradas">
+      <strong>{{ entrada.identificador }}</strong>
+      <span
+        >{{ entrada.descripcion
+        }}<small *ngIf="revision.temas.length > 1">
+          · Tema {{ entrada.temaNumero }}</small
+        ></span
+      >
+    </li>
+  </ul>
+  <p-paginator
+    *ngIf="ids.length > revision.tamanoPagina"
+    [first]="primeraEntrada"
+    [rows]="revision.tamanoPagina"
+    [totalRecords]="ids.length"
+    [showFirstLastIcon]="false"
+    (onPageChange)="cambiarPaginaRevision($event.first ?? 0)"
+  />
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      [outlined]="true"
+      [disabled]="eliminando"
+      (onClick)="mostrandoRevision = false"
+    />
+    <p-button
+      [label]="'Eliminar ' + ids.length + ' ' + nombre(ids.length)"
+      severity="danger"
+      [loading]="eliminando"
+      [disabled]="cargando"
+      (onClick)="confirmarEliminacion()"
+    />
+  </ng-template>
+</p-dialog>

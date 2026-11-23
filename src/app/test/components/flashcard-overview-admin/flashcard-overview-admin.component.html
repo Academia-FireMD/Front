@@ -1,9 +1,31 @@
 <p-confirmDialog></p-confirmDialog>
 
+<app-eliminacion-masiva-banco
+  #masiva
+  banco="flashcards"
+  [habilitado]="expectedRole === Rol.ADMIN"
+  [filtro]="pagination()"
+  [resultado]="lastLoadedPagination"
+  [obtenerIds]="obtenerIdsEliminacion"
+  [revisar]="revisarEliminacion"
+  [borrar]="eliminarMasivamente"
+  (actualizarListado)="recargarTrasEliminacionMasiva()"
+/>
+
 <app-generic-list
   [fetchItems$]="fetchItems$"
   [itemTemplate]="flashcardItemTemplate"
   [filters]="filters"
+  [sharedPagination]="pagination"
+  [stackActionsOnMobile]="expectedRole === Rol.ADMIN"
+  [rowsPerPageOptions]="expectedRole === Rol.ADMIN ? tamanosPagina : undefined"
+  [mode]="masiva.activo ? 'selection' : 'overview'"
+  [selectedItemIds]="masiva.ids"
+  [getSelectionLabel]="etiquetaSeleccion"
+  [selectionDisabled]="
+    masiva.activo && (masiva.ocupado || !masiva.paginaVigente)
+  "
+  (selectionChange)="masiva.cambiarSeleccion($event)"
   (onItemClick)="navigateToDetailview($any($event).id)"
   (filtersChanged)="onFiltersChanged($event)"
 >
@@ -15,7 +37,6 @@
         class="w-full"
         pInputText
         placeholder="Buscar flashcards"
-        style="min-width: 30vw"
         [value]="pagination().searchTerm"
         (input)="valueChanged($event)"
       />
@@ -53,6 +74,13 @@
       ></p-button>
     </div>
   </div>
+
+  <ng-container filter-actions>
+    <ng-container *ngTemplateOutlet="masiva.activador"></ng-container>
+  </ng-container>
+  <ng-container list-notice>
+    <ng-container *ngTemplateOutlet="masiva.barra"></ng-container>
+  </ng-container>
 
   <div empty-template>
     <div class="text-center p-4">No hay flashcards disponibles</div>
@@ -239,7 +267,7 @@
 </p-dialog>
 
 <!-- Template para el item de flashcard -->
-<ng-template #flashcardItemTemplate let-item>
+<ng-template #flashcardItemTemplate let-item let-mode="mode">
   <div class="flex flex-row align-items-between">
     <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
       <div class="text-lg font-medium flex gap-2 align-items-center">
@@ -306,12 +334,14 @@
           {{ item.createdAt | date: "short" }}</span
         >
         <p-button
+          *ngIf="mode === 'overview'"
           (click)="
             $event.stopPropagation();
             $event.preventDefault();
             eliminarFlashcard(item.id, $event)
           "
           icon="pi pi-trash"
+          ariaLabel="Eliminar flashcard"
           pTooltip="Eliminar flashcard"
           styleClass="p-button-danger"
         ></p-button>
