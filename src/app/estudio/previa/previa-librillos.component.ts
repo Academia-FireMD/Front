@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   computed,
   inject,
   viewChild,
@@ -22,7 +21,6 @@ import {
   switchMap,
   timeout,
 } from 'rxjs';
-import { AulaInmersivaService } from '../../cursos/ui/aula-inmersiva.service';
 import { DocumentosService } from '../../documentacion/services/documentacion.service';
 import { AppConfigService } from '../../services/app-config.service';
 import { AuthService } from '../../services/auth.service';
@@ -107,12 +105,6 @@ export class PreviaLibrillosComponent {
     this.config.isModuloHabilitado(ModuloApp.FLASHCARDS),
   );
   readonly esPdf = esPdfDeLibrillo;
-
-  constructor() {
-    const aula = inject(AulaInmersivaService);
-    aula.activar();
-    inject(DestroyRef).onDestroy(() => aula.desactivar());
-  }
 
   private cargarTemario() {
     return forkJoin({

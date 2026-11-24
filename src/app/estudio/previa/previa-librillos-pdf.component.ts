@@ -29,9 +29,23 @@ import { DocumentoTemario } from '../../shared/models/documentacion.model';
 
 type Rectangulo = { x: number; y: number; ancho: number; alto: number };
 
+const COLORES = ['azul', 'rosa', 'violeta', 'turquesa', 'naranja'] as const;
+type ColorSubrayado = (typeof COLORES)[number];
+// Cada marca sigue siendo una lista de rectángulos. Los anteriores se muestran en amarillo.
+type Trazo = Rectangulo & { color?: ColorSubrayado; fragmento?: string };
+
+interface SeleccionPdf {
+  rectangulos: Rectangulo[];
+  fragmento: string;
+  izquierda: number;
+  arriba: boolean;
+  superior: number;
+  pagina: number;
+}
+
 interface PaginaAnotada {
   nota: string;
-  subrayados: Rectangulo[][];
+  subrayados: Trazo[][];
 }
 
 interface Cuaderno {
@@ -64,6 +78,8 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   private readonly imagen =
     viewChild.required<ElementRef<HTMLCanvasElement>>('imagen');
   private readonly texto = viewChild<ElementRef<HTMLDivElement>>('texto');
+  private readonly visor = viewChild.required<ElementRef<HTMLElement>>('visor');
+  private readonly paleta = viewChild<ElementRef<HTMLDivElement>>('paleta');
   private libreria?: typeof import('pdfjs-dist');
   private worker?: Worker;
   private procesador?: PDFWorker;
@@ -81,27 +97,43 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   readonly falloGuardado = signal(false);
   readonly total = signal(0);
   readonly lectura = signal(true);
-  readonly seleccion = signal<Rectangulo[]>([]);
+  readonly colores = COLORES;
+  readonly seleccion = signal<SeleccionPdf | null>(null);
   readonly cuaderno = signal<Cuaderno>({ pagina: 1, anotaciones: {} });
   readonly pagina = computed(() => this.cuaderno().pagina);
   readonly anotacion = computed(
     () => this.cuaderno().anotaciones[this.pagina()] ?? PAGINA_VACIA,
   );
   readonly marcas = computed(() => this.anotacion().subrayados.flat());
+  readonly subrayados = computed(() =>
+    Object.entries(this.cuaderno().anotaciones).flatMap(
+      ([pagina, { subrayados }]) =>
+        subrayados.map((trazos, indice) => ({
+          pagina: Number(pagina),
+          indice,
+          trazos,
+          color: trazos[0]?.color ?? 'amarillo',
+          fragmento: trazos[0]?.fragmento ?? 'Subrayado ' + (indice + 1),
+        })),
+    ),
+  );
 
   ngAfterViewInit() {
+    let esperarAncho: ReturnType<typeof setTimeout> | undefined;
     const observarAncho = new ResizeObserver(() => {
       const ancho = this.espacio().nativeElement.clientWidth;
-      if (ancho > 0 && ancho !== this.anchoAnterior) {
-        this.anchoAnterior = ancho;
-        void this.mostrarPagina();
-      }
+      if (ancho === this.anchoAnterior) return;
+      this.anchoAnterior = ancho;
+      clearTimeout(esperarAncho);
+      if (ancho > 0)
+        esperarAncho = setTimeout(() => void this.mostrarPagina(), 120);
     });
     observarAncho.observe(this.espacio().nativeElement);
 
     this.destruir.onDestroy(() => {
       this.cerrada = true;
       observarAncho.disconnect();
+      clearTimeout(esperarAncho);
       this.cerrar();
     });
     this.auth.currentIdentity$
@@ -109,6 +141,8 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
       .subscribe(() => {
         if (!this.sesionVigente()) {
           this.cerrar();
+          this.cuaderno.set({ pagina: 1, anotaciones: {} });
+          this.clave = undefined;
           this.fallo.set('Vuelve a abrir el Librillo desde tu cuenta.');
           this.cargando.set(false);
         }
@@ -199,8 +233,14 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   }
 
   cambiarPagina(salto: number) {
-    const destino = this.pagina() + salto;
+    this.irAPagina(this.pagina() + salto);
+  }
+
+  irAPagina(destino: number) {
     if (destino < 1 || destino > this.total()) return;
+    this.lectura.set(true);
+    if (destino === this.pagina()) return;
+    this.cerrarPaleta();
     this.cuaderno.update((datos) => ({ ...datos, pagina: destino }));
     this.espacio().nativeElement.scrollTop = 0;
     this.guardar();
@@ -208,58 +248,125 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   }
 
   editarNota(nota: string) {
-    this.actualizarPagina({ ...this.anotacion(), nota });
+    this.actualizarPagina(this.pagina(), { ...this.anotacion(), nota });
+  }
+
+  mostrarAnotaciones() {
+    this.cerrarPaleta();
+    this.lectura.set(false);
   }
 
   @HostListener('document:selectionchange')
   captarSeleccion() {
     const seleccion = document.getSelection();
-    if (!seleccion || seleccion.isCollapsed || !seleccion.rangeCount) return;
-
     const capa = this.texto()?.nativeElement;
-    if (!capa) return;
+    if (!capa || !this.capa || this.cargando() || this.fallo()) return;
+    if (!seleccion || seleccion.isCollapsed || !seleccion.rangeCount) {
+      if (!this.paleta()?.nativeElement.contains(document.activeElement)) {
+        this.seleccion.set(null);
+      }
+      return;
+    }
     const rango = seleccion.getRangeAt(0);
-    if (!capa.contains(rango.commonAncestorContainer)) {
-      this.seleccion.set([]);
+    const fragmento = seleccion
+      .toString()
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 160);
+    if (!capa.contains(rango.commonAncestorContainer) || !fragmento) {
+      this.seleccion.set(null);
       return;
     }
     const limites = this.hoja().nativeElement.getBoundingClientRect();
     if (limites.width === 0 || limites.height === 0) return;
 
-    this.seleccion.set(
-      Array.from(rango.getClientRects())
-        .filter(({ width, height }) => width > 0 && height > 0)
-        .map(({ left, top, width, height }) => ({
-          x: (left - limites.left) / limites.width,
-          y: (top - limites.top) / limites.height,
-          ancho: width / limites.width,
-          alto: height / limites.height,
-        })),
+    const rectangulos = Array.from(rango.getClientRects()).filter(
+      ({ width, height }) => width > 0 && height > 0,
     );
+    const ventana = this.espacio().nativeElement.getBoundingClientRect();
+    const ancla = rectangulos.find(
+      ({ top, bottom }) => bottom > ventana.top && top < ventana.bottom,
+    );
+    if (!ancla) {
+      this.seleccion.set(null);
+      return;
+    }
+
+    const visor = this.visor().nativeElement.getBoundingClientRect();
+    const margen = Math.min(164, visor.width / 2);
+    const arriba = ancla.top - visor.top >= 64;
+    this.seleccion.set({
+      rectangulos: rectangulos.map(({ left, top, width, height }) => ({
+        x: (left - limites.left) / limites.width,
+        y: (top - limites.top) / limites.height,
+        ancho: width / limites.width,
+        alto: height / limites.height,
+      })),
+      fragmento,
+      izquierda: Math.max(
+        margen,
+        Math.min(
+          ancla.left + ancla.width / 2 - visor.left,
+          visor.width - margen,
+        ),
+      ),
+      arriba,
+      superior: arriba
+        ? ancla.top - visor.top - 8
+        : Math.min(ancla.bottom - visor.top + 8, visor.height - 60),
+      pagina: this.pagina(),
+    });
   }
 
-  subrayar() {
-    const rectangulos = this.seleccion();
-    if (!rectangulos.length) return;
-    this.actualizarPagina({
+  subrayar(color: ColorSubrayado) {
+    const seleccion = this.seleccion();
+    if (
+      !seleccion ||
+      seleccion.pagina !== this.pagina() ||
+      !this.sesionVigente()
+    )
+      return;
+    const trazos = seleccion.rectangulos.map((rectangulo, indice) => ({
+      ...rectangulo,
+      color,
+      ...(indice === 0 ? { fragmento: seleccion.fragmento } : {}),
+    }));
+    this.actualizarPagina(seleccion.pagina, {
       ...this.anotacion(),
-      subrayados: [...this.anotacion().subrayados, rectangulos],
+      subrayados: [...this.anotacion().subrayados, trazos],
     });
+    this.cerrarPaleta();
+  }
+
+  @HostListener('document:keydown.escape')
+  cerrarPaleta() {
+    if (!this.seleccion()) return;
+    if (
+      !this.cerrada &&
+      this.paleta()?.nativeElement.contains(document.activeElement)
+    ) {
+      this.visor().nativeElement.focus({ preventScroll: true });
+    }
+    this.seleccion.set(null);
     document.getSelection()?.removeAllRanges();
-    this.seleccion.set([]);
   }
 
-  quitarUltimoSubrayado() {
-    this.actualizarPagina({
-      ...this.anotacion(),
-      subrayados: this.anotacion().subrayados.slice(0, -1),
+  quitarSubrayado(pagina: number, indice: number) {
+    const anotacion = this.cuaderno().anotaciones[pagina];
+    if (!anotacion) return;
+    this.actualizarPagina(pagina, {
+      ...anotacion,
+      subrayados: anotacion.subrayados.filter(
+        (_, posicion) => posicion !== indice,
+      ),
     });
   }
 
-  private actualizarPagina(anotacion: PaginaAnotada) {
+  private actualizarPagina(pagina: number, anotacion: PaginaAnotada) {
+    if (!this.sesionVigente()) return;
     this.cuaderno.update((estado) => ({
       ...estado,
-      anotaciones: { ...estado.anotaciones, [estado.pagina]: anotacion },
+      anotaciones: { ...estado.anotaciones, [pagina]: anotacion },
     }));
     this.guardar();
   }
@@ -281,7 +388,7 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
     if (!pdf || !libreria || ancho < 100 || !this.sesionVigente()) return;
 
     this.cancelarDibujo();
-    this.seleccion.set([]);
+    this.cerrarPaleta();
     const id = this.renderId;
 
     try {
@@ -331,6 +438,7 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
 
   private cerrar() {
     this.cancelarDibujo();
+    this.cerrarPaleta();
     const carga = this.carga;
     const procesador = this.procesador;
     const worker = this.worker;

@@ -92,7 +92,7 @@ const TEXTO: Record<EstadoEstudio, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'data-testid': 'estudio-workspace',
-    '[class.visor-inmersivo]': 'tipo === "librillo" && !enPrevia',
+    '[class.visor-inmersivo]': 'visorInmersivo',
     '[class.visor-en-previa]': 'enPrevia',
     '[class.visor-psico]': 'tipo === "psico"',
     '[attr.data-estado]': 'estado()',
@@ -118,6 +118,11 @@ export class EstudioWorkspaceComponent {
   }
   get enPrevia() {
     return this.documentoPrevia() !== undefined;
+  }
+  get visorInmersivo() {
+    return (
+      this.tipo === 'librillo' && !this.enPrevia && !environment.librillosMenu
+    );
   }
   readonly titulo = signal(
     this.tipo === 'psico' ? 'Psicotécnicos' : 'Librillo',
@@ -158,7 +163,7 @@ export class EstudioWorkspaceComponent {
   );
 
   ngOnInit() {
-    const inmersivo = this.tipo === 'librillo' && !this.enPrevia;
+    const inmersivo = this.visorInmersivo;
     if (inmersivo) this.aula.activar();
     this.destroyRef.onDestroy(() => {
       this.dispose();

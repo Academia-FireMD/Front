@@ -10,14 +10,16 @@
     <button
       type="button"
       [attr.aria-pressed]="!lectura()"
-      (click)="lectura.set(false)"
+      (click)="mostrarAnotaciones()"
     >
-      Notas
+      Anotaciones
     </button>
   </nav>
 
   <section
+    #visor
     class="lectura-pdf"
+    tabindex="-1"
     [attr.aria-label]="'PDF de ' + documento().identificador"
   >
     <div class="barra-pdf">
@@ -32,7 +34,7 @@
         <i class="pi pi-chevron-left" aria-hidden="true"></i>
       </button>
       @if (total()) {
-        <span data-testid="pagina-librillo"
+        <span data-testid="pagina-librillo" aria-live="polite"
           >Página {{ pagina() }} de {{ total() }}</span
         >
       }
@@ -46,17 +48,13 @@
       >
         <i class="pi pi-chevron-right" aria-hidden="true"></i>
       </button>
-      <button
-        pButton
-        type="button"
-        class="p-button-outlined"
-        [disabled]="!seleccion().length || cargando()"
-        (click)="subrayar()"
-      >
-        Subrayar
-      </button>
     </div>
-    <div #espacio class="espacio-pdf" data-testid="visor-librillo">
+    <div
+      #espacio
+      class="espacio-pdf"
+      data-testid="visor-librillo"
+      (scroll)="cerrarPaleta()"
+    >
       @if (fallo()) {
         <div class="aviso-pdf" role="alert">
           <p>{{ fallo() }}</p>
@@ -70,6 +68,7 @@
         <div class="marcas-pdf" aria-hidden="true">
           @for (rectangulo of marcas(); track $index) {
             <span
+              [attr.data-color]="rectangulo.color ?? 'amarillo'"
               [style.left.%]="rectangulo.x * 100"
               [style.top.%]="rectangulo.y * 100"
               [style.width.%]="rectangulo.ancho * 100"
@@ -84,34 +83,110 @@
         ></div>
       </div>
     </div>
+    @if (seleccion(); as seleccionActual) {
+      <div
+        #paleta
+        class="paleta-pdf"
+        [class.encima]="seleccionActual.arriba"
+        [style.--paleta-x]="seleccionActual.izquierda + 'px'"
+        [style.--paleta-y]="seleccionActual.superior + 'px'"
+        role="group"
+        aria-label="Subrayar la selección"
+        (pointerdown)="$event.preventDefault()"
+      >
+        <span class="paleta-etiqueta">Subrayar</span>
+        @for (color of colores; track color) {
+          <button
+            type="button"
+            class="color-pdf"
+            [attr.data-color]="color"
+            [attr.title]="'Subrayar en ' + color"
+            [attr.aria-label]="'Subrayar en ' + color"
+            (click)="subrayar(color)"
+          >
+            <span aria-hidden="true"></span>
+          </button>
+        }
+        <button
+          type="button"
+          class="cerrar-paleta-pdf"
+          aria-label="Cerrar colores"
+          (click)="cerrarPaleta()"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
   </section>
 
-  <aside class="notas-pdf">
-    <h2>Notas de la página {{ pagina() }}</h2>
-    <label class="sr-only" for="nota-librillo">Tu nota para esta página</label>
-    <textarea
-      id="nota-librillo"
-      [value]="anotacion().nota"
-      [disabled]="cargando() || !!fallo()"
-      (input)="editarNota($any($event.target).value)"
-      placeholder="Anota algo que quieras repasar"
-    ></textarea>
-    <p role="status">
+  <aside class="notas-pdf" aria-label="Anotaciones del documento">
+    <section aria-labelledby="titulo-notas-librillo">
+      <div class="anotaciones-titulo">
+        <h2 id="titulo-notas-librillo">Notas</h2>
+        @if (total()) {
+          <span>Página {{ pagina() }}</span>
+        }
+      </div>
+      <label class="sr-only" for="nota-librillo"
+        >Tu nota para esta página</label
+      >
+      <textarea
+        id="nota-librillo"
+        [value]="anotacion().nota"
+        [disabled]="cargando() || !!fallo()"
+        (input)="editarNota($any($event.target).value)"
+        placeholder="Escribe una nota sobre esta página"
+      ></textarea>
+    </section>
+    <section
+      class="subrayados-pdf"
+      aria-labelledby="titulo-subrayados-librillo"
+    >
+      <div class="anotaciones-titulo">
+        <h2 id="titulo-subrayados-librillo">Mis subrayados</h2>
+        @if (subrayados().length) {
+          <span>{{ subrayados().length }}</span>
+        }
+      </div>
+      @if (subrayados().length) {
+        <ul>
+          @for (marca of subrayados(); track marca.trazos) {
+            <li [attr.data-color]="marca.color">
+              <button
+                type="button"
+                class="abrir-marca"
+                (click)="irAPagina(marca.pagina)"
+                [attr.aria-label]="
+                  'Ir a la página ' + marca.pagina + ' de ' + marca.fragmento
+                "
+              >
+                <span class="muestra-marca" aria-hidden="true"></span>
+                <span
+                  >{{ marca.fragmento
+                  }}<small>Página {{ marca.pagina }}</small></span
+                >
+              </button>
+              <button
+                type="button"
+                class="quitar-marca"
+                (click)="quitarSubrayado(marca.pagina, marca.indice)"
+                [attr.aria-label]="'Quitar subrayado ' + marca.fragmento"
+              >
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else if (!cargando() && !fallo()) {
+        <p>Selecciona texto y elige un color para subrayarlo.</p>
+      }
+    </section>
+    <p class="estado-anotaciones" role="status">
       {{
         falloGuardado()
           ? "El navegador no pudo guardar los cambios."
-          : "Las notas y los subrayados se guardan en este navegador."
+          : "Las anotaciones se guardan en este navegador."
       }}
     </p>
-    @if (anotacion().subrayados.length) {
-      <button
-        pButton
-        type="button"
-        class="p-button-text"
-        (click)="quitarUltimoSubrayado()"
-      >
-        Quitar último subrayado
-      </button>
-    }
   </aside>
 </div>

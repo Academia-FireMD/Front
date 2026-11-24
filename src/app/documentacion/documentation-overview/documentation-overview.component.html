@@ -18,9 +18,7 @@
         [header]="modulo.nombre"
       >
         <div *ngFor="let tema of modulo.temas" class="tema-section">
-          <div
-            class="flex flex-wrap align-items-center justify-content-between gap-2"
-          >
+          <div class="tema-cabecera">
             <h4
               class="tema-title"
               [id]="'temario-tema-' + tema.id"
@@ -30,11 +28,12 @@
             </h4>
             @if (librilloTemarioActivo()) {
               <a
-                class="p-button p-button-sm p-button-outlined"
+                pButton
+                class="tema-librillo p-button-sm p-button-outlined"
                 [routerLink]="rutaLibrillo"
                 [queryParams]="{ tema: tema.id }"
               >
-                <i class="pi pi-book mr-2" aria-hidden="true"></i>
+                <i class="pi pi-book" aria-hidden="true"></i>
                 <span>Abrir tema en el Librillo</span>
               </a>
             }

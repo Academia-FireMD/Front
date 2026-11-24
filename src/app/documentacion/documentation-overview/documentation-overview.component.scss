@@ -42,13 +42,30 @@
   .tema-section {
     margin-bottom: 2rem;
 
+    .tema-cabecera {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem 1rem;
+      padding: 0.25rem 0 0.65rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
     .tema-title {
-      margin: 0 0 1rem 0;
-      padding: 0.75rem 1rem;
-      background: #f8f9fa;
-      border-left: 4px solid #007bff;
-      font-size: 1.1rem;
+      margin: 0;
+      color: var(--text-color);
+      font-size: 1.05rem;
       font-weight: 600;
+    }
+
+    .tema-librillo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      min-height: 44px;
+      text-decoration: none;
     }
   }
 
@@ -56,7 +73,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding-left: 1rem;
   }
 
   .documento-item {
