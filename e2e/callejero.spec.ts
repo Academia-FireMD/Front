@@ -2490,16 +2490,27 @@ test.describe('Módulo Callejero (alumno)', () => {
     });
     fallarOsm = false;
     fallarTodo = false;
+    const solicitudesAntesDeReintentar = solicitudes.length;
     await frame.locator('.tf-mapa-error:visible .tf-mapa-reintentar').click();
     await expect(frame.locator('.tf-mapa-error:visible')).toHaveCount(0, {
       timeout: 15_000,
     });
+    // La ficha de zona puede abrirse sobre los controles al recuperar el mapa.
+    const cerrarFicha = frame.locator('#card.show #cardCerrar');
+    if (await cerrarFicha.isVisible()) await cerrarFicha.click();
+
     // El proveedor OSM queda restaurado después del reintento.
     await subirZoomAlMaximo(frame, page);
     await expect
       .poll(
         () =>
-          Math.max(0, ...peticionesA(solicitudes, 'tile.openstreetmap.org').map(zoomDe)),
+          Math.max(
+            0,
+            ...peticionesA(
+              solicitudes.slice(solicitudesAntesDeReintentar),
+              'tile.openstreetmap.org',
+            ).map(zoomDe),
+          ),
         { timeout: 15_000 },
       )
       .toBe(19);
