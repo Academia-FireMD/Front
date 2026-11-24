@@ -12,7 +12,7 @@
         'reserva-block': pregunta?.deReserva,
         'candidatas-block': tieneCandidatasMarcadas(i),
         respondida:
-          !!isModoExamen() &&
+          corrigeAlCerrar() &&
           !!preguntaRespondida(i) &&
           preguntaRespondida(i)?.estado == 'RESPONDIDA',
         omitida:
@@ -20,7 +20,15 @@
       }"
       class="pointer p-3"
       *ngFor="let pregunta of lastLoadedTest?.preguntas ?? []; let i = index"
+      [attr.role]="origenLibrillo ? 'button' : null"
+      [attr.tabindex]="origenLibrillo ? 0 : null"
+      [attr.aria-label]="origenLibrillo ? 'Pregunta ' + (i + 1) : null"
       (click)="clickedPreguntaFromNavegador(i)"
+      (keydown.enter)="origenLibrillo && clickedPreguntaFromNavegador(i)"
+      (keydown.space)="
+        origenLibrillo && $event.preventDefault();
+        origenLibrillo && clickedPreguntaFromNavegador(i)
+      "
     >
       <div class="content flex align-items-center justify-content-center">
         @if (
@@ -230,7 +238,7 @@
   </div>
 </ng-template>
 
-<div class="grid">
+<div class="grid" [class.test-librillo]="!!origenLibrillo">
   <ng-container *ngIf="lastLoadedTest as testCargado; else testNoCargado">
     <!-- Añadir mensaje informativo para modo ver respuestas -->
     <p-messages
@@ -328,7 +336,9 @@
                   </div>
                   <span
                     *ngIf="
-                      !!testCargado.duration &&
+                      !!testCargado.endsAt &&
+                      (!!testCargado.duration ||
+                        origenLibrillo?.modo === 'simulacro') &&
                       !vistaPrevia &&
                       !modoVerRespuestas
                     "
@@ -338,11 +348,16 @@
                   <div class="actions" data-testid="acciones-pregunta">
                     <p-button
                       label="{{
-                        viewportService.screenWidth == 'xs' ? '' : 'Navegador'
+                        origenLibrillo || viewportService.screenWidth == 'xs'
+                          ? ''
+                          : 'Navegador'
                       }}"
                       [link]="true"
                       icon="pi pi-compass"
-                      *ngIf="viewportService.screenWidth == 'xs'"
+                      *ngIf="
+                        origenLibrillo || viewportService.screenWidth == 'xs'
+                      "
+                      ariaLabel="Navegador de preguntas"
                       (click)="displayNavegadorFn()"
                       data-testid="navegador-btn"
                     />
@@ -354,6 +369,7 @@
                       }}"
                       [link]="true"
                       icon="pi pi-exclamation-triangle"
+                      ariaLabel="Reportar fallo"
                       (click)="displayFalloDialog = true"
                       *ngIf="!vistaPrevia && !modoVerRespuestas"
                       data-testid="reportar-fallo-btn"
@@ -370,6 +386,7 @@
                       *ngIf="
                         !vistaPrevia &&
                         !modoVerRespuestas &&
+                        !origenLibrillo &&
                         isModoExamen() &&
                         expectedRole === 'ALUMNO'
                       "
@@ -383,7 +400,10 @@
                       icon="pi pi-clone"
                       (click)="displayClonacion = true"
                       *ngIf="
-                        !vistaPrevia && !modoVerRespuestas && !modoSimulacro
+                        !origenLibrillo &&
+                        !vistaPrevia &&
+                        !modoVerRespuestas &&
+                        !modoSimulacro
                       "
                       data-testid="clonar-pregunta-btn"
                     />
@@ -394,7 +414,9 @@
               <div class="grid">
                 <div
                   class="{{
-                    viewportService.screenWidth == 'xs' ? 'col-12' : 'col-9'
+                    origenLibrillo || viewportService.screenWidth == 'xs'
+                      ? 'col-12'
+                      : 'col-9'
                   }}  "
                 >
                   <p data-testid="enunciado-pregunta">
@@ -492,7 +514,7 @@
                           indiceRespuesta ||
                           (preguntaRespondida()?.respuestaDada ==
                             indiceRespuesta &&
-                            isModoExamen())),
+                            corrigeAlCerrar())),
                       'respuesta-descartada':
                         maxCandidatas() > 0 &&
                         candidatasPorPregunta().length > 0 &&
@@ -504,7 +526,30 @@
                         !modoVerRespuestas,
                       'fue-candidata': fueCandidata(pregunta, indiceRespuesta),
                     }"
+                    [attr.role]="origenLibrillo ? 'button' : null"
+                    [attr.tabindex]="
+                      origenLibrillo && puedeElegirLibrillo() ? 0 : null
+                    "
+                    [attr.aria-disabled]="
+                      origenLibrillo ? !puedeElegirLibrillo() : null
+                    "
+                    [attr.aria-pressed]="
+                      origenLibrillo && puedeElegirLibrillo()
+                        ? modoSeleccionCandidatas()
+                          ? esCandidata(indiceRespuesta)
+                          : indiceSeleccionado.getValue() === indiceRespuesta ||
+                            preguntaRespondida()?.respuestaDada ===
+                              indiceRespuesta
+                        : null
+                    "
                     (click)="handleRespuestaClick(indiceRespuesta)"
+                    (keydown.enter)="
+                      origenLibrillo && handleRespuestaClick(indiceRespuesta)
+                    "
+                    (keydown.space)="
+                      origenLibrillo && $event.preventDefault();
+                      origenLibrillo && handleRespuestaClick(indiceRespuesta)
+                    "
                     data-testid="opcion-respuesta"
                     [attr.data-respuesta-index]="indiceRespuesta"
                   >
@@ -518,7 +563,10 @@
                     </p-inputGroup>
                   </div>
                 </div>
-                <div class="col-3" *ngIf="viewportService.screenWidth != 'xs'">
+                <div
+                  class="col-3"
+                  *ngIf="!origenLibrillo && viewportService.screenWidth != 'xs'"
+                >
                   <div
                     class="lateral-navegador"
                     data-testid="navegador-lateral"
@@ -541,7 +589,7 @@
               >
                 <div
                   class="solution col-12 align-items-center flex flex-column"
-                  *ngIf="!isModoExamen() || modoVerRespuestas"
+                  *ngIf="!corrigeAlCerrar() || modoVerRespuestas"
                   data-testid="solucion-container"
                 >
                   <strong>Solución:</strong>
@@ -557,9 +605,25 @@
                   </p>
                 </div>
 
+                @if (referenciaPregunta(pregunta.id); as referencia) {
+                  <button
+                    pButton
+                    type="button"
+                    class="p-button-sm p-button-outlined"
+                    (click)="verReferenciaLibrillo.emit(referencia)"
+                  >
+                    Ver en el texto · pág. {{ referencia.pagina }}
+                  </button>
+                }
+
                 <div
                   class="next-button col-12 w-full"
-                  *ngIf="!vistaPrevia && !modoVerRespuestas"
+                  *ngIf="
+                    !vistaPrevia &&
+                    !modoVerRespuestas &&
+                    (!origenLibrillo ||
+                      indicePregunta() < testCargado.preguntas.length - 1)
+                  "
                 >
                   <button
                     pButton
@@ -575,8 +639,9 @@
             <div
               class="col-12 bottom-bar-no-content"
               *ngIf="
-                (!answeredCurrentQuestion() ||
-                  (answeredCurrentQuestion() && isModoExamen())) &&
+                (origenLibrillo ||
+                  !answeredCurrentQuestion() ||
+                  (answeredCurrentQuestion() && corrigeAlCerrar())) &&
                 !vistaPrevia &&
                 !modoVerRespuestas
               "
@@ -588,7 +653,15 @@
                     <div
                       class="flex justify-content-between align-items-center w-full"
                     >
-                      <span>Confianza al responder</span>
+                      @if (tiempoAgotadoLibrillo()) {
+                        <span role="status">Tiempo agotado</span>
+                      } @else if (
+                        !origenLibrillo ||
+                        corrigeAlCerrar() ||
+                        !answeredCurrentQuestion()
+                      ) {
+                        <span>Confianza al responder</span>
+                      }
                       <div class="actions" data-testid="acciones-navegacion">
                         <p-button
                           label="{{
@@ -597,7 +670,10 @@
                           [link]="true"
                           icon="pi pi-angle-double-left"
                           (click)="processAnswer(undefined, 'before')"
-                          [disabled]="indicePregunta() == 0"
+                          [disabled]="
+                            indicePregunta() == 0 || tiempoAgotadoLibrillo()
+                          "
+                          ariaLabel="Pregunta anterior"
                           data-testid="anterior-pregunta-btn"
                         />
                         <p-button
@@ -608,9 +684,11 @@
                           icon="pi pi-forward"
                           (click)="processAnswer(undefined, 'omitir')"
                           [disabled]="
-                            (!isModoExamen() && !!preguntaRespondida()) ||
-                            comunicating
+                            (!corrigeAlCerrar() && !!preguntaRespondida()) ||
+                            comunicating ||
+                            tiempoAgotadoLibrillo()
                           "
+                          ariaLabel="Omitir pregunta"
                           data-testid="omitir-pregunta-btn"
                         />
                         <p-button
@@ -623,19 +701,34 @@
                           icon="pi pi-angle-double-right"
                           (click)="processAnswer(undefined, 'next')"
                           [disabled]="
-                            indicePregunta() == testCargado.preguntas.length - 1
+                            indicePregunta() ==
+                              testCargado.preguntas.length - 1 ||
+                            tiempoAgotadoLibrillo()
                           "
+                          ariaLabel="Pregunta siguiente"
                           data-testid="siguiente-pregunta-btn"
                         />
 
                         <p-button
                           label="{{
-                            viewportService.screenWidth == 'xs'
-                              ? ''
-                              : 'Finalizar'
+                            origenLibrillo ||
+                            viewportService.screenWidth != 'xs'
+                              ? origenLibrillo?.modo === 'simulacro'
+                                ? 'Corregir simulacro'
+                                : 'Finalizar'
+                              : ''
                           }}"
                           [link]="true"
-                          [disabled]="lastLoadedTest.status == 'FINALIZADO'"
+                          [disabled]="
+                            comunicating ||
+                            (!origenLibrillo &&
+                              lastLoadedTest.status == 'FINALIZADO')
+                          "
+                          [ariaLabel]="
+                            origenLibrillo?.modo === 'simulacro'
+                              ? 'Corregir simulacro'
+                              : 'Finalizar test'
+                          "
                           icon="pi pi-flag"
                           (click)="finalizarTest()"
                           data-testid="finalizar-test-btn"
@@ -643,14 +736,21 @@
                       </div>
                     </div>
 
-                    <ng-container
-                      *ngTemplateOutlet="
-                        seguridadPicker;
-                        context: {
-                          control: seguroDeLaPregunta,
-                        }
-                      "
-                    ></ng-container>
+                    @if (
+                      !tiempoAgotadoLibrillo() &&
+                      (!origenLibrillo ||
+                        corrigeAlCerrar() ||
+                        !answeredCurrentQuestion())
+                    ) {
+                      <ng-container
+                        *ngTemplateOutlet="
+                          seguridadPicker;
+                          context: {
+                            control: seguroDeLaPregunta,
+                          }
+                        "
+                      ></ng-container>
+                    }
                     <div
                       class="candidatas-contador text-sm mt-1"
                       *ngIf="
@@ -686,6 +786,7 @@
                         }}"
                         [link]="true"
                         icon="pi pi-arrow-left"
+                        *ngIf="!origenLibrillo"
                         (click)="location.back()"
                         data-testid="volver-btn"
                       />
@@ -697,6 +798,7 @@
                         icon="pi pi-angle-double-left"
                         (click)="atras()"
                         [disabled]="indicePregunta() == 0"
+                        ariaLabel="Pregunta anterior"
                         data-testid="atras-vista-previa-btn"
                       />
                       <p-button
@@ -709,10 +811,11 @@
                         [disabled]="
                           indicePregunta() == testCargado.preguntas.length - 1
                         "
+                        ariaLabel="Pregunta siguiente"
                         data-testid="adelante-vista-previa-btn"
                       />
                       <button
-                        *ngIf="modoVerRespuestas"
+                        *ngIf="modoVerRespuestas && !origenLibrillo"
                         type="button"
                         class="ai-regla-btn"
                         data-testid="crear-regla-pregunta"
@@ -752,30 +855,48 @@
     }
   </ng-container>
   <ng-template #testNoCargado>
-    <div class="col-12">
-      <p-card data-testid="test-no-cargado">
-        <div class="info">
-          <div class="flex gap-2 info-card">
-            <div class="icon">
-              <i class="pi pi-info-circle"></i>
-            </div>
-            <div class="content">
-              <div class="body">
-                El test no existe o no se ha podido cargar. Prueba con otro.
-              </div>
-              <a
-                [routerLink]="['/app/test/alumno/realizar-test']"
-                class="link-text flex align-items-center"
-                style="text-decoration: none"
-                data-testid="probar-otro-test-link"
-              >
-                <span>Prueba con otro</span> <i class="pi pi-angle-right"></i>
-              </a>
-            </div>
-          </div>
-          <br />
+    @if (origenLibrillo) {
+      @if (estadoCarga() === "error") {
+        <div class="col-12">
+          <p role="alert">No se pudo cargar el test.</p>
+          <button
+            pButton
+            type="button"
+            class="p-button-outlined"
+            (click)="cargar()"
+          >
+            Reintentar
+          </button>
         </div>
-      </p-card>
-    </div>
+      } @else {
+        <p class="col-12" role="status">Cargando el test…</p>
+      }
+    } @else {
+      <div class="col-12">
+        <p-card data-testid="test-no-cargado">
+          <div class="info">
+            <div class="flex gap-2 info-card">
+              <div class="icon">
+                <i class="pi pi-info-circle"></i>
+              </div>
+              <div class="content">
+                <div class="body">
+                  El test no existe o no se ha podido cargar. Prueba con otro.
+                </div>
+                <a
+                  [routerLink]="['/app/test/alumno/realizar-test']"
+                  class="link-text flex align-items-center"
+                  style="text-decoration: none"
+                  data-testid="probar-otro-test-link"
+                >
+                  <span>Prueba con otro</span> <i class="pi pi-angle-right"></i>
+                </a>
+              </div>
+            </div>
+            <br />
+          </div>
+        </p-card>
+      </div>
+    }
   </ng-template>
 </div>

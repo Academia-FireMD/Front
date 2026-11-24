@@ -115,6 +115,9 @@ import { TestRoutingModule } from './test-routing.module';
   ],
   providers: [ConfirmationService],
   exports: [
+    PreguntasDashboardAdminDetailviewComponent,
+    FlashcardDetailviewAdminComponent,
+    CompletarFlashCardTestComponent,
     CompletarTestComponent,
     TemaOverviewComponent,
     TemaDetailviewComponent,

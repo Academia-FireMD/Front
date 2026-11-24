@@ -1,6 +1,8 @@
 import { Location } from '@angular/common';
 import {
   Component,
+  DestroyRef,
+  ElementRef,
   EventEmitter,
   inject,
   Input,
@@ -21,6 +23,7 @@ import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, Observable, tap } from 'rxjs';
 import { ExamenesService } from '../../../examen/servicios/examen.service';
+import { LibrilloPdfApiService } from '../../../estudio/previa/librillo-pdf-api.service';
 import { PreguntasService } from '../../../services/preguntas.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
@@ -58,6 +61,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
   examenesService = inject(ExamenesService);
   confirmationService = inject(ConfirmationService);
   private store = inject(Store<AppState>);
+  private readonly librillo = inject(LibrilloPdfApiService);
+  private readonly elemento = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destruir = inject(DestroyRef);
+  private cerrado = false;
+  temaLibrillo?: number;
   @Input() expectedRole: Rol = Rol.ADMIN;
   crearOtroControl = new FormControl(false);
   editorSolucion!: any;
@@ -72,6 +80,21 @@ export class PreguntasDashboardAdminDetailviewComponent {
     this.setLoadedPregunta(cloned);
   }
   @Output() preguntaCreada = new EventEmitter<Pregunta>();
+  @Input() set desdeTextoLibrillo(datos: { temaId: number; texto: string }) {
+    this.temaLibrillo = datos.temaId;
+    this.mode = 'injected';
+    this.expectedRole = Rol.ALUMNO;
+    this.formGroup.patchValue({
+      temaId: datos.temaId,
+      descripcion: '',
+      solucion: datos.texto,
+      respuestas: [datos.texto, '', '', ''],
+      respuestaCorrectaIndex: 0,
+      dificultad: Dificultad.PRIVADAS,
+    });
+    this.respuestas.enable();
+    this.initEditor(datos.texto, '');
+  }
 
   public checked = {};
 
@@ -196,6 +219,11 @@ export class PreguntasDashboardAdminDetailviewComponent {
   private esReserva = false;
 
   ngOnInit(): void {
+    this.destruir.onDestroy(() => {
+      this.cerrado = true;
+      this.editorSolucion?.destroy();
+      this.editorEnunciado?.destroy();
+    });
     if (this.mode == 'edit') {
       this.loadPregunta();
       firstValueFrom(this.getRole());
@@ -213,7 +241,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
     }
 
     // Cargar exámenes colaborativos activos
-    this.cargarExamenesColaborativos();
+    if (!this.temaLibrillo) this.cargarExamenesColaborativos();
 
     // Suscribirse a cambios en la dificultad
     this.formGroup.get('dificultad')?.valueChanges.subscribe((dificultad) => {
@@ -330,6 +358,23 @@ export class PreguntasDashboardAdminDetailviewComponent {
   }
 
   private async updatePregunta() {
+    if (this.temaLibrillo) {
+      const { descripcion, solucion, respuestas, respuestaCorrectaIndex } =
+        this.formGroup.getRawValue();
+      try {
+        return await firstValueFrom(
+          this.librillo.crearMaterial<Pregunta>(this.temaLibrillo, 'test', {
+            descripcion: descripcion ?? '',
+            solucion: solucion ?? '',
+            respuestas: respuestas.map((respuesta) => respuesta ?? ''),
+            respuestaCorrectaIndex: respuestaCorrectaIndex ?? 0,
+          }),
+        );
+      } catch (error) {
+        this.toast.error('Revisa el enunciado, la solución y las opciones.');
+        throw error;
+      }
+    }
     const merged = {
       ...this.lastLoadedPregunta(),
       ...this.formGroup.getRawValue(),
@@ -377,6 +422,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
 
   private initEditor(initialValue: string, initialEnunciadoValue: string) {
     setTimeout(() => {
+      if (this.cerrado) return;
       if (this.editorSolucion) {
         this.editorSolucion.destroy();
         this.editorSolucion = null;
@@ -387,7 +433,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
       }
 
       this.editorSolucion = new Editor({
-        el: document.querySelector('#editor')!,
+        el: this.elemento.nativeElement.querySelector('#editor')!,
         ...universalEditorConfig,
         initialValue: initialValue || '',
         events: {
@@ -400,7 +446,7 @@ export class PreguntasDashboardAdminDetailviewComponent {
       });
 
       this.editorEnunciado = new Editor({
-        el: document.querySelector('#editor-enunciado')!,
+        el: this.elemento.nativeElement.querySelector('#editor-enunciado')!,
         ...universalEditorConfig,
         initialValue: initialEnunciadoValue || '',
         events: {

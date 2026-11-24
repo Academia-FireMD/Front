@@ -74,7 +74,7 @@
                   (click)="siguienteForwardPregunta()"
                 />
               </div>
-              <div class="relevancia">
+              <div class="relevancia" *ngIf="!temaLibrillo">
                 <app-oposicion-picker
                   context="catalogo"
                   [allowAdd]="true"
@@ -92,6 +92,7 @@
               </div>
             </div>
             <div
+              *ngIf="!temaLibrillo"
               [ngClass]="
                 formGroup.get('dificultad')?.value === Dificultad.COLABORATIVA
                   ? 'col-4'
@@ -104,6 +105,7 @@
               ></app-tema-select>
             </div>
             <div
+              *ngIf="!temaLibrillo"
               [ngClass]="
                 formGroup.get('dificultad')?.value === Dificultad.COLABORATIVA
                   ? 'col-4'
@@ -144,11 +146,25 @@
               }"
             >
               <p-inputGroup>
-                <p-inputGroupAddon>{{ getLetter(i) }}) </p-inputGroupAddon>
+                <p-inputGroupAddon>
+                  @if (temaLibrillo) {
+                    <input
+                      type="radio"
+                      name="correcta-librillo"
+                      [attr.aria-label]="'Opción ' + getLetter(i) + ' correcta'"
+                      [checked]="formGroup.value.respuestaCorrectaIndex === i"
+                      (change)="
+                        formGroup.patchValue({ respuestaCorrectaIndex: i })
+                      "
+                    />
+                  }
+                  {{ getLetter(i) }})
+                </p-inputGroupAddon>
                 @if (control.enabled) {
                   <input
                     type="text"
                     pInputText
+                    [attr.aria-label]="'Opción ' + getLetter(i)"
                     (click)="$event.preventDefault(); $event.stopPropagation()"
                     [formControl]="parseControl(control)"
                   />

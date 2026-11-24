@@ -37,6 +37,7 @@ const sampleModulos: EstadoModulos = {
   [ModuloApp.SIMULADOR_NOTA]: false,
   [ModuloApp.PSICOTECNICOS]: false,
   [ModuloApp.LIBRILLOS]: false,
+  [ModuloApp.LIBRILLO_PDF_INTERACTIVO]: false,
 };
 
 function mockAuth(rol: string | null) {
@@ -160,16 +161,27 @@ describe('AppConfigService', () => {
     );
   });
 
-  it('Psicotécnicos y Librillos requieren flags explícitos también con una API anterior', async () => {
-    const { PSICOTECNICOS, LIBRILLOS, ...flagsAnteriores } = sampleModulos;
+  it('los módulos opt-in requieren flags explícitos también con una API anterior', async () => {
+    const {
+      PSICOTECNICOS,
+      LIBRILLOS,
+      LIBRILLO_PDF_INTERACTIVO,
+      ...flagsAnteriores
+    } = sampleModulos;
     expect(service.isModuloHabilitado(ModuloApp.PSICOTECNICOS)).toBe(false);
     expect(service.isModuloHabilitado(ModuloApp.LIBRILLOS)).toBe(false);
+    expect(service.isModuloHabilitado(ModuloApp.LIBRILLO_PDF_INTERACTIVO)).toBe(
+      false,
+    );
     const load = service.load();
     httpMock.expectOne(CONFIG_URL).flush(sampleConfig);
     httpMock.expectOne(MODULOS_URL).flush(flagsAnteriores);
     await load;
     expect(service.isModuloHabilitado(ModuloApp.PSICOTECNICOS)).toBe(false);
     expect(service.isModuloHabilitado(ModuloApp.LIBRILLOS)).toBe(false);
+    expect(service.isModuloHabilitado(ModuloApp.LIBRILLO_PDF_INTERACTIVO)).toBe(
+      false,
+    );
   });
 
   it('updateConfig 409 dispara reload y devuelve STALE_CONFIG', async () => {

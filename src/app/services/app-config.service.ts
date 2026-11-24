@@ -31,6 +31,7 @@ const MODULOS_OPT_IN = new Set([
   ModuloApp.SIMULADOR_NOTA,
   ModuloApp.PSICOTECNICOS,
   ModuloApp.LIBRILLOS,
+  ModuloApp.LIBRILLO_PDF_INTERACTIVO,
 ]);
 
 /** Construye un mapa todos-true / todos-false (helper interno fail-safe). */

@@ -1,4 +1,5 @@
 @let vista = seleccion();
+@let tema = vista.tema;
 
 <header class="cabecera">
   <div class="identidad">
@@ -34,7 +35,20 @@
     </div>
   }
 
-  @if (parametrosPractica(); as parametros) {
+  @if (
+    pdfInteractivo() &&
+    vista.documento?.librillo &&
+    vista.documento?.isDownloadable
+  ) {
+    <a
+      pButton
+      class="p-button-sm p-button-outlined"
+      [routerLink]="['/app/documentacion/alumno/librillo', vista.documento?.id]"
+      >Abrir Librillo interactivo</a
+    >
+  }
+
+  @if (!practicaDisponible() && parametrosPractica(); as parametros) {
     <div class="practica" aria-label="Práctica del tema en el campus">
       @if (testActivo()) {
         <a
@@ -62,7 +76,7 @@
   }
 </header>
 
-@if (vista.tema; as tema) {
+@if (tema) {
   @if (tema.documentos.length > 1 || vista.documentoInaccesible) {
     <div class="selector-documento">
       <label for="documento-librillo">Documento</label>
@@ -109,40 +123,104 @@
       <p class="aviso" role="alert">
         Este tema o documento no está disponible en tu temario.
       </p>
-    } @else if (vista.documentoInaccesible) {
-      <p class="aviso" role="alert">
-        Este documento no está disponible en el tema seleccionado.
-      </p>
-    } @else if (vista.documento) {
-      @for (documento of [vista.documento]; track documento.id) {
-        @if (!documento.isDownloadable) {
-          <p class="aviso">
-            Tu suscripción permite consultar el tema. Este documento está
-            bloqueado.
-          </p>
-        } @else if (documento.librillo) {
-          <app-estudio-workspace [documentoPrevia]="documento.id" />
-        } @else if (esPdf(documento)) {
-          <app-previa-librillos-pdf [documento]="documento" />
-        } @else {
-          <div class="aviso">
-            <p>
-              {{ documento.identificador }} se puede abrir desde Documentación.
-            </p>
-            <a
-              pButton
-              class="p-button-outlined"
-              routerLink="/app/documentacion/alumno"
-              [queryParams]="{ tema: vista.tema?.id, doc: documento.id }"
-              >Ir al documento</a
-            >
-          </div>
-        }
+    } @else if (tema) {
+      @if (practicaDisponible() && lectorPdfActivo()) {
+        <nav class="pestanas-librillo" aria-label="Vista del Librillo">
+          <button
+            type="button"
+            class="pestana-movil"
+            [attr.aria-pressed]="pestana() === 'lectura'"
+            aria-controls="librillo-lectura"
+            (click)="pestana.set('lectura')"
+          >
+            Lectura
+          </button>
+          <button
+            type="button"
+            class="pestana-movil"
+            [attr.aria-pressed]="pestana() === 'practica'"
+            aria-controls="librillo-practica"
+            (click)="pestana.set('practica')"
+          >
+            Práctica
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="pestana() === 'anotaciones'"
+            aria-controls="librillo-lectura"
+            (click)="
+              pestana.set(
+                pestana() === 'anotaciones' ? 'lectura' : 'anotaciones'
+              )
+            "
+          >
+            Anotaciones
+          </button>
+        </nav>
       }
-    } @else if (vista.tema) {
-      <p class="aviso" role="status">
-        Este tema todavía no tiene documentos disponibles.
-      </p>
+
+      <div
+        class="contenido-librillo"
+        [class.con-pdf-y-practica]="practicaDisponible() && lectorPdfActivo()"
+        [class.con-practica]="practicaDisponible()"
+        [class.pestana-practica]="pestana() === 'practica'"
+        [class.pestana-anotaciones]="pestana() === 'anotaciones'"
+      >
+        <div id="librillo-lectura" class="lectura-librillo">
+          @if (vista.documentoInaccesible) {
+            <p class="aviso" role="alert">
+              Este documento no está disponible en el tema seleccionado.
+            </p>
+          } @else if (vista.documento) {
+            @for (documento of [vista.documento]; track documento.id) {
+              @if (!documento.isDownloadable) {
+                <p class="aviso">
+                  Tu suscripción permite consultar el tema. Este documento está
+                  bloqueado.
+                </p>
+              } @else if (lectorPdfActivo()) {
+                <app-previa-librillos-pdf
+                  [documento]="documento"
+                  [attr.data-practica-disponible]="
+                    practicaDisponible() ? true : null
+                  "
+                />
+              } @else if (documento.librillo) {
+                <app-estudio-workspace [documentoPrevia]="documento.id" />
+              } @else {
+                <div class="aviso">
+                  <p>
+                    {{ documento.identificador }} se puede abrir desde
+                    Documentación.
+                  </p>
+                  <a
+                    pButton
+                    class="p-button-outlined"
+                    routerLink="/app/documentacion/alumno"
+                    [queryParams]="{ tema: tema.id, doc: documento.id }"
+                    >Ir al documento</a
+                  >
+                </div>
+              }
+            }
+          } @else {
+            <p class="aviso" role="status">
+              Este tema todavía no tiene documentos disponibles.
+            </p>
+          }
+        </div>
+        @if (practicaDisponible()) {
+          <app-librillo-practica
+            id="librillo-practica"
+            [temaId]="tema.id"
+            [documentoId]="vista.documento?.id"
+            [pdf]="contextoPractica()"
+            [testActivo]="testActivo()"
+            [flashcardsActivas]="flashcardsActivas()"
+            (verEnTexto)="verEnTexto($event)"
+          />
+        }
+      </div>
     } @else if (temas().length) {
       <p class="aviso" role="status">
         Elige un tema para leer sus documentos o practicar.

@@ -6,10 +6,20 @@ import {
   tick,
   flushMicrotasks,
 } from '@angular/core/testing';
-import { of, switchMap, throwError, timer } from 'rxjs';
-import { TestService } from '../../../services/test.service';
+import {
+  Observable,
+  firstValueFrom,
+  of,
+  switchMap,
+  throwError,
+  timer,
+} from 'rxjs';
+import {
+  RegistrarRespuestaDto,
+  TestService,
+} from '../../../services/test.service';
 import { SeguridadAlResponder } from '../../../shared/models/pregunta.model';
-import { EstadoPregunta } from '../../../shared/models/test.model';
+import { EstadoPregunta, Respuesta } from '../../../shared/models/test.model';
 import {
   COMMON_TEST_PROVIDERS,
   createMockRespuesta,
@@ -22,7 +32,10 @@ function buildTestServiceMock(
 ) {
   return {
     getTestById: jest.fn(() => of(createMockTest())),
-    actualizarProgresoTest: jest.fn(() =>
+    actualizarProgresoTest: jest.fn<
+      Observable<Respuesta>,
+      [RegistrarRespuestaDto]
+    >(() =>
       of({ ...createMockRespuesta(), pregunta: { respuestaCorrectaIndex: 0 } }),
     ),
     finalizarTest: jest.fn(() => of({})),
@@ -54,6 +67,76 @@ describe('CompletarTestComponent — integration', () => {
 
   it('debería crearse correctamente', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('Simulacro del Librillo', () => {
+    beforeEach(() => {
+      component.embedded = true;
+      component.testId = 123;
+      component.origenLibrillo = {
+        temaId: 47,
+        modo: 'simulacro',
+        alcance: 'tema',
+      };
+    });
+
+    it('permite cambiar la respuesta y oculta corrección y referencia sin cronómetro', async () => {
+      const test = createMockTest();
+      const pregunta = test.preguntas[0];
+      testServiceMock.getTestById.mockReturnValue(of(test));
+      testServiceMock.actualizarProgresoTest.mockImplementation(
+        ({ respuestaDada }) =>
+          of({
+            ...createMockRespuesta(),
+            preguntaId: pregunta.id,
+            respuestaDada: respuestaDada ?? -1,
+            estado:
+              respuestaDada == null
+                ? EstadoPregunta.NO_RESPONDIDA
+                : EstadoPregunta.RESPONDIDA,
+          }),
+      );
+      component.referenciasLibrillo = [
+        { id: 9, pagina: 3, preguntaId: pregunta.id },
+      ];
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      component.updateSecurity(SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO);
+      component.toggleCandidata(1);
+      await component.processAnswer(1);
+      await component.processAnswer(2);
+
+      expect(testServiceMock.actualizarProgresoTest).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          respuestaDada: 2,
+          seguridad: SeguridadAlResponder.SETENTA_Y_CINCO_POR_CIENTO,
+          respuestasCandidatas: [1],
+        }),
+      );
+      expect(component.showSolution()).toBe(false);
+      expect(
+        component.respuestaCorrecta(pregunta, pregunta.respuestaCorrectaIndex),
+      ).toBe(false);
+      expect(component.referenciaPregunta(pregunta.id)).toBeUndefined();
+    });
+
+    it('cierra una sola vez al vencer el plazo y emite el resultado embebido', async () => {
+      const terminado = firstValueFrom(component.finalizado);
+      testServiceMock.getTestById.mockReturnValue(
+        of({
+          ...createMockTest(),
+          duration: 1,
+          endsAt: new Date(Date.now() + 250),
+        }),
+      );
+      fixture.detectChanges();
+      expect(testServiceMock.finalizarTest).not.toHaveBeenCalled();
+      await expect(terminado).resolves.toEqual({ testId: 123 });
+      await component.finalizarTest();
+      expect(testServiceMock.finalizarTest).toHaveBeenCalledTimes(1);
+      expect(component.router.navigate).not.toHaveBeenCalled();
+    });
   });
 
   describe('Carga del test', () => {

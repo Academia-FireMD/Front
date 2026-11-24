@@ -33,6 +33,20 @@ const rutasPrevia: Routes = environment.librillosMenu
 const routes: Routes = [
   ...rutasPrevia,
   {
+    path: 'librillo/editor/:documentoId',
+    title: 'Editar referencias del Librillo',
+    canActivate: [roleGuard, moduloGuard],
+    data: {
+      expectedRole: 'ADMIN',
+      modulo: ModuloApp.LIBRILLO_PDF_INTERACTIVO,
+      requiereFlag: true,
+    },
+    loadComponent: () =>
+      import('./librillo-editor.component').then(
+        (m) => m.LibrilloEditorComponent,
+      ),
+  },
+  {
     path: 'alumno/librillo/:documentoId',
     canActivate: [roleGuard, moduloGuard],
     title: 'Estudiar con librillo',

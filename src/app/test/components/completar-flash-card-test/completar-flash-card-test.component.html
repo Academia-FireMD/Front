@@ -21,7 +21,7 @@
   </div>
 </p-dialog>
 
-<div class="grid">
+<div class="grid" [class.flashcard-librillo]="embedded">
   <ng-container *ngIf="testCargado$ | async as testCargado; else testNoCargado">
     @if (lastLoadedTest.flashcards[indicePregunta]) {
       <p-card
@@ -45,7 +45,9 @@
               <button
                 pButton
                 class="nav-button left"
-                [disabled]="indicePregunta === 0"
+                type="button"
+                aria-label="Tarjeta anterior"
+                [disabled]="indicePregunta === 0 || (embedded && comunicating)"
                 (click)="navigateFlashcard(-1)"
               >
                 <i class="pi pi-chevron-left"></i>
@@ -55,7 +57,12 @@
               <button
                 pButton
                 class="nav-button right"
-                [disabled]="indicePregunta >= testCargado.flashcards.length - 1"
+                type="button"
+                aria-label="Tarjeta siguiente"
+                [disabled]="
+                  indicePregunta >= testCargado.flashcards.length - 1 ||
+                  (embedded && comunicating)
+                "
                 (click)="navigateFlashcard(1)"
               >
                 <i class="pi pi-chevron-right"></i>
@@ -79,9 +86,11 @@
                       }}"
                       [link]="true"
                       icon="pi pi-exclamation-triangle"
+                      ariaLabel="Reportar fallo"
                       (click)="displayFalloDialog = true"
                     />
                     <p-button
+                      *ngIf="!embedded"
                       label="{{ viewport.screenWidth == 'xs' ? '' : 'Clonar' }}"
                       [link]="true"
                       icon="pi pi-clone"
@@ -91,7 +100,7 @@
                 </div>
               </ng-template>
               <div class="flashcard-container flex">
-                @if (viewport.screenWidth != "xs") {
+                @if (!embedded && viewport.screenWidth != "xs") {
                   <ng-container *ngTemplateOutlet="leftButton"></ng-container>
                 }
 
@@ -145,17 +154,32 @@
                           >Mostrar solución
                           <app-key
                             keyName="␣"
-                            *ngIf="viewport.screenWidth != 'xs'"
+                            *ngIf="!embedded && viewport.screenWidth != 'xs'"
                           ></app-key
                         ></span>
                       </button>
                     </div>
 
                     <div
-                      class="flex flex-column"
+                      class="flex flex-column gap-2"
                       *ngIf="!!pregunta.mostrarSolucion"
                     >
-                      <div class="flex gap-2">
+                      @if (embedded) {
+                        @if (
+                          referenciaTarjeta(pregunta.flashcard.id);
+                          as referencia
+                        ) {
+                          <button
+                            pButton
+                            type="button"
+                            class="p-button-sm p-button-outlined"
+                            (click)="verReferenciaLibrillo.emit(referencia)"
+                          >
+                            Ver en el texto · pág. {{ referencia.pagina }}
+                          </button>
+                        }
+                      }
+                      <div class="calificar-tarjeta">
                         <button
                           pButton
                           data-testid="btn-mal"
@@ -168,7 +192,7 @@
                             >MAL
                             <app-key
                               keyName="←"
-                              *ngIf="viewport.screenWidth != 'xs'"
+                              *ngIf="!embedded && viewport.screenWidth != 'xs'"
                             ></app-key
                           ></span>
                         </button>
@@ -184,7 +208,7 @@
                             >REPASAR
                             <app-key
                               keyName="↓"
-                              *ngIf="viewport.screenWidth != 'xs'"
+                              *ngIf="!embedded && viewport.screenWidth != 'xs'"
                             ></app-key
                           ></span>
                         </button>
@@ -200,7 +224,7 @@
                             >BIEN
                             <app-key
                               keyName="→"
-                              *ngIf="viewport.screenWidth != 'xs'"
+                              *ngIf="!embedded && viewport.screenWidth != 'xs'"
                             ></app-key
                           ></span>
                         </button>
@@ -209,25 +233,37 @@
                   </div>
                 </div>
 
-                @if (viewport.screenWidth != "xs") {
+                @if (!embedded && viewport.screenWidth != "xs") {
                   <ng-container *ngTemplateOutlet="rightButton"></ng-container>
                 }
               </div>
             </p-panel>
+            @if (embedded && errorGuardado()) {
+              <p role="alert">{{ errorGuardado() }}</p>
+            }
             <p-panel class="footer">
               <ng-template pTemplate="header">
                 <div class="seguridad w-full">
                   <div
                     class="flex justify-content-end align-items-center w-full"
                   >
-                    <div class="actions">
+                    <div class="actions flex align-items-center gap-1">
+                      @if (embedded) {
+                        <ng-container *ngTemplateOutlet="leftButton" />
+                        <ng-container *ngTemplateOutlet="rightButton" />
+                      }
                       <p-button
                         label="{{
-                          viewport.screenWidth == 'xs' ? '' : 'Finalizar'
+                          embedded || viewport.screenWidth != 'xs'
+                            ? 'Finalizar'
+                            : ''
                         }}"
                         (click)="finalizarTestFlashcard()"
                         [link]="true"
-                        [disabled]="lastLoadedTest.status == 'FINALIZADO'"
+                        ariaLabel="Finalizar repaso"
+                        [disabled]="
+                          comunicating || lastLoadedTest.status == 'FINALIZADO'
+                        "
                         icon="pi pi-flag"
                       />
                     </div>
@@ -257,29 +293,47 @@
     }
   </ng-container>
   <ng-template #testNoCargado>
-    <div class="col-12">
-      <p-card>
-        <div class="info">
-          <div class="flex gap-2 info-card">
-            <div class="icon">
-              <i class="pi pi-info-circle"></i>
-            </div>
-            <div class="content">
-              <div class="body">
-                El test no existe o no se ha podido cargar. Prueba con otro.
+    @if (embedded) {
+      <div class="col-12">
+        @if (errorCarga()) {
+          <p role="alert">No se pudo cargar el repaso.</p>
+          <button
+            pButton
+            type="button"
+            class="p-button-outlined"
+            (click)="reintentarCarga()"
+          >
+            Reintentar
+          </button>
+        } @else {
+          <p role="status">Cargando las tarjetas…</p>
+        }
+      </div>
+    } @else {
+      <div class="col-12">
+        <p-card>
+          <div class="info">
+            <div class="flex gap-2 info-card">
+              <div class="icon">
+                <i class="pi pi-info-circle"></i>
               </div>
-              <a
-                [routerLink]="['/app/test/alumno/realizar-flash-cards-test']"
-                class="link-text flex align-items-center"
-                style="text-decoration: none"
-              >
-                <span>Prueba con otro</span> <i class="pi pi-angle-right"></i>
-              </a>
+              <div class="content">
+                <div class="body">
+                  El test no existe o no se ha podido cargar. Prueba con otro.
+                </div>
+                <a
+                  [routerLink]="['/app/test/alumno/realizar-flash-cards-test']"
+                  class="link-text flex align-items-center"
+                  style="text-decoration: none"
+                >
+                  <span>Prueba con otro</span> <i class="pi pi-angle-right"></i>
+                </a>
+              </div>
             </div>
+            <br />
           </div>
-          <br />
-        </div>
-      </p-card>
-    </div>
+        </p-card>
+      </div>
+    }
   </ng-template>
 </div>

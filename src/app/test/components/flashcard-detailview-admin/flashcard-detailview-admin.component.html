@@ -67,7 +67,7 @@
                   (click)="siguienteForwardFlashcard()"
                 />
               </div>
-              <div class="relevancia">
+              <div class="relevancia" *ngIf="!temaLibrillo">
                 <app-oposicion-picker
                   context="catalogo"
                   [allowAdd]="true"
@@ -77,13 +77,13 @@
               </div>
             </div>
 
-            <div class="col-6">
+            <div class="col-6" *ngIf="!temaLibrillo">
               <app-tema-select
                 [multiple]="false"
                 [formControl]="formGroup.controls['temaId']"
               ></app-tema-select>
             </div>
-            <div class="col-6">
+            <div class="col-6" *ngIf="!temaLibrillo">
               <app-dificultad-dropdown
                 [formControlDificultad]="formGroup.get('dificultad')"
                 [isFlashcards]="true"

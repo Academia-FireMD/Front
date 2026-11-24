@@ -2,12 +2,15 @@ import {
   parametrosPracticaLibrillo,
   temaDePracticaLibrillo,
 } from '../../../estudio/previa/previa-librillos';
+import type {
+  OrigenPracticaLibrillo,
+  ReferenciaPracticaLibrillo,
+} from '../../../estudio/previa/librillo-practica.service';
 import { Location } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
   DestroyRef,
-  effect,
   ElementRef,
   EventEmitter,
   inject,
@@ -33,6 +36,7 @@ import {
   Subject,
   switchMap,
   tap,
+  timer,
 } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
@@ -91,6 +95,14 @@ export class CompletarTestComponent {
   // pulsar "Listo" explícitamente o al navegar a otra pregunta.
   public modoSeleccionCandidatas = signal(false);
   private candidatasTrigger$ = new Subject<CandidatasSnapshot>();
+  private candidatasLibrilloEnCurso = Promise.resolve();
+  private destruido = false;
+  private finalizando = false;
+  private resultadoEmitido = false;
+  readonly estadoCarga = signal<'cargando' | 'disponible' | 'error'>(
+    'cargando',
+  );
+  readonly tiempoAgotadoLibrillo = signal(false);
 
   // Nota: la sincronización del estado derivado de indicePregunta
   // (seguridad, candidatas, modo) NO se hace con un effect() — Angular 18
@@ -124,7 +136,7 @@ export class CompletarTestComponent {
   public indicePreguntaCorrecta = -1;
   public answeredQuestion = -1;
 
-  public lastLoadedTest!: Test & { endsAt: Date };
+  public lastLoadedTest!: Test;
   private lastAnsweredQuestion!: { preguntaId: number };
   public vistaPrevia = false;
   public modoVerRespuestas = false;
@@ -147,9 +159,42 @@ export class CompletarTestComponent {
    */
   @Input() embedded = false;
   @Output() finalizado = new EventEmitter<{ testId: number }>();
+  @Input() origenLibrillo?: OrigenPracticaLibrillo;
+  @Input() revisarLibrillo = false;
+  @Input() referenciasLibrillo: ReferenciaPracticaLibrillo[] = [];
+  @Output() verReferenciaLibrillo =
+    new EventEmitter<ReferenciaPracticaLibrillo>();
 
   public isModoExamen() {
-    return !!this.lastLoadedTest.duration && !!this.lastLoadedTest.endsAt;
+    return !!this.lastLoadedTest?.duration && !!this.lastLoadedTest?.endsAt;
+  }
+
+  public corrigeAlCerrar() {
+    return this.origenLibrillo?.modo === 'simulacro' || this.isModoExamen();
+  }
+
+  public referenciaPregunta(preguntaId: number) {
+    if (
+      !this.origenLibrillo ||
+      (!this.modoVerRespuestas && !this.showSolution())
+    ) {
+      return undefined;
+    }
+    return this.referenciasLibrillo.find(
+      (referencia) => referencia.preguntaId === preguntaId,
+    );
+  }
+
+  public puedeElegirLibrillo() {
+    return (
+      !this.vistaPrevia &&
+      !this.modoVerRespuestas &&
+      !this.comunicating &&
+      !this.tiempoAgotadoLibrillo() &&
+      (this.corrigeAlCerrar() ||
+        !this.preguntaRespondida() ||
+        this.modoSeleccionCandidatas())
+    );
   }
 
   public respuestaCorrecta(pregunta: Pregunta, indiceRespuesta: number) {
@@ -157,7 +202,7 @@ export class CompletarTestComponent {
       ? this.preguntaRespondidaPorId(pregunta.id)
       : this.preguntaRespondida();
     return (
-      (!this.isModoExamen() || this.modoVerRespuestas || this.vistaPrevia) &&
+      (!this.corrigeAlCerrar() || this.modoVerRespuestas || this.vistaPrevia) &&
       (!!respuesta || this.vistaPrevia) &&
       (respuesta?.estado != 'OMITIDA' ||
         this.vistaPrevia ||
@@ -171,9 +216,10 @@ export class CompletarTestComponent {
       ? this.preguntaRespondidaPorId(pregunta.id)
       : this.preguntaRespondida();
     return (
-      (!this.isModoExamen() || this.modoVerRespuestas) &&
+      (!this.corrigeAlCerrar() || this.modoVerRespuestas) &&
       !!respuesta &&
       respuesta?.estado != 'OMITIDA' &&
+      Number.isInteger(pregunta.respuestaCorrectaIndex) &&
       pregunta.respuestaCorrectaIndex != indiceRespuesta &&
       respuesta?.respuestaDada == indiceRespuesta
     );
@@ -187,7 +233,7 @@ export class CompletarTestComponent {
 
   public respuestaIncorrectaBlock(indiceRespuesta: number) {
     return (
-      (!this.isModoExamen() || this.modoVerRespuestas) &&
+      (!this.corrigeAlCerrar() || this.modoVerRespuestas) &&
       this.preguntaRespondida(indiceRespuesta)?.estado == 'RESPONDIDA' &&
       !this.preguntaRespondida(indiceRespuesta)?.esCorrecta
     );
@@ -195,7 +241,7 @@ export class CompletarTestComponent {
 
   public respuestaCorrectaBlock(indiceRespuesta: number) {
     return (
-      (!this.isModoExamen() || this.modoVerRespuestas) &&
+      (!this.corrigeAlCerrar() || this.modoVerRespuestas) &&
       this.preguntaRespondida(indiceRespuesta)?.estado == 'RESPONDIDA' &&
       !!this.preguntaRespondida(indiceRespuesta)?.esCorrecta
     );
@@ -248,7 +294,7 @@ export class CompletarTestComponent {
   }
 
   private scrollToActiveBlock(): void {
-    const activeElement = this.activeBlocks.toArray()[this.indicePregunta()];
+    const activeElement = this.activeBlocks?.toArray()[this.indicePregunta()];
     if (activeElement) {
       (activeElement as any).el.nativeElement.scrollIntoView({
         behavior: 'smooth',
@@ -259,6 +305,9 @@ export class CompletarTestComponent {
   }
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.destruido = true;
+    });
     this.loadRouteData();
   }
 
@@ -270,7 +319,7 @@ export class CompletarTestComponent {
       this.vistaPrevia = false;
     }
 
-    if (data['modoVerRespuestas']) {
+    if (this.revisarLibrillo || data['modoVerRespuestas']) {
       this.modoVerRespuestas = true;
     } else {
       this.modoVerRespuestas = false;
@@ -285,17 +334,23 @@ export class CompletarTestComponent {
   }
 
   public clickedAnswer(indice: number) {
-    if (this.vistaPrevia || this.modoVerRespuestas || this.isProcessingAnswer)
+    if (
+      this.vistaPrevia ||
+      this.modoVerRespuestas ||
+      this.isProcessingAnswer ||
+      this.finalizando ||
+      this.tiempoAgotadoLibrillo()
+    )
       return;
 
     const respuesta = this.preguntaRespondida();
-    if (!!respuesta && !this.isModoExamen()) {
+    if (!!respuesta && !this.corrigeAlCerrar()) {
       return;
     }
     if (
       !!respuesta &&
       respuesta.respuestaDada == indice &&
-      this.isModoExamen()
+      this.corrigeAlCerrar()
     ) {
       this.processAnswer(-1);
     } else {
@@ -304,6 +359,7 @@ export class CompletarTestComponent {
   }
 
   public clickedPreguntaFromNavegador(indicePregunta: number) {
+    if (this.origenLibrillo && this.comunicating) return;
     // Los resets de UI (seguridad/indiceSeleccionado/answeredQuestion/
     // indicePreguntaCorrecta) los hace sincronizarEstadoPregunta.
     this.indicePregunta.set(indicePregunta);
@@ -313,18 +369,21 @@ export class CompletarTestComponent {
 
   ngOnInit(): void {
     if (this.testId) {
-      firstValueFrom(this.loadTest(this.testId.toString()));
+      this.cargar(this.testId.toString());
     } else {
-      this.activedRoute.params.subscribe((params) => {
-        const id = params['id'];
-        if (id) {
-          firstValueFrom(this.loadTest(id));
-        }
-      });
+      this.activedRoute.params
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((params) => {
+          const id = params['id'];
+          if (id) this.cargar(id);
+        });
     }
 
     this.indiceSeleccionado
-      .pipe(filter((e) => e >= 0))
+      .pipe(
+        filter((e) => e >= 0),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe(async (data) => {
         this.processAnswer(data);
       });
@@ -334,9 +393,14 @@ export class CompletarTestComponent {
 
   public updateSecurity(value: SeguridadAlResponder) {
     if (this.vistaPrevia || this.modoVerRespuestas) return;
+    if (
+      this.origenLibrillo &&
+      (this.comunicating || this.tiempoAgotadoLibrillo())
+    )
+      return;
 
     const respuesta = this.preguntaRespondida();
-    if (!!respuesta && !this.isModoExamen()) {
+    if (!!respuesta && !this.corrigeAlCerrar()) {
       return;
     }
     this.seguroDeLaPregunta.patchValue(value);
@@ -383,6 +447,7 @@ export class CompletarTestComponent {
    */
   public handleRespuestaClick(indice: number) {
     if (this.vistaPrevia || this.modoVerRespuestas) return;
+    if (this.origenLibrillo && !this.puedeElegirLibrillo()) return;
     if (this.modoSeleccionCandidatas()) {
       // En modo, los clicks togglean candidatas. El modo permanece
       // abierto hasta que el alumno pulse "Listo" explícitamente —
@@ -399,7 +464,7 @@ export class CompletarTestComponent {
    * las respuestas togglean candidatas sin registrar respuesta final.
    */
   public abrirSeleccionCandidatas() {
-    if (this.maxCandidatas() === 0) return;
+    if (this.maxCandidatas() === 0 || this.tiempoAgotadoLibrillo()) return;
     this.modoSeleccionCandidatas.set(true);
   }
 
@@ -438,6 +503,11 @@ export class CompletarTestComponent {
       event.stopPropagation();
     }
     if (this.vistaPrevia || this.modoVerRespuestas) return;
+    if (
+      this.origenLibrillo &&
+      (this.comunicating || this.tiempoAgotadoLibrillo())
+    )
+      return;
     const max = this.maxCandidatas();
     if (max === 0) return;
     const actuales = this.candidatasPorPregunta();
@@ -473,14 +543,29 @@ export class CompletarTestComponent {
       this.seguroDeLaPregunta.value ?? SeguridadAlResponder.CIEN_POR_CIENTO;
     const candidatas = [...this.candidatasPorPregunta()];
 
-    this.candidatasTrigger$.next({
+    const snapshot: CandidatasSnapshot = {
       testId: this.lastLoadedTest.id,
       preguntaId: pregunta.id,
       indicePregunta: indice,
       respuestaDada: respuesta?.respuestaDada,
       seguridad,
       respuestasCandidatas: candidatas,
-    });
+    };
+    if (this.origenLibrillo) {
+      this.candidatasLibrilloEnCurso = this.candidatasLibrilloEnCurso.then(
+        async () => {
+          if (this.destruido) return;
+          await firstValueFrom(
+            this.guardarCandidatas(snapshot).pipe(
+              takeUntilDestroyed(this.destroyRef),
+            ),
+            { defaultValue: undefined },
+          );
+        },
+      );
+    } else {
+      this.candidatasTrigger$.next(snapshot);
+    }
   }
 
   /**
@@ -526,45 +611,42 @@ export class CompletarTestComponent {
       .pipe(
         debounceTime(300),
         takeUntilDestroyed(this.destroyRef),
-        switchMap((snap) => {
-          // Persistimos SIEMPRE — el backend acepta drafts (respuestaDada
-          // null con estado='NO_RESPONDIDA') para guardar candidatas
-          // antes de elegir respuesta final. Esto permite cross-device y
-          // sobrevivir a recargas sin localStorage.
-          return this.testService
-            .actualizarProgresoTest({
-              testId: snap.testId,
-              preguntaId: snap.preguntaId,
-              respuestaDada: snap.respuestaDada ?? undefined,
-              indicePregunta: snap.indicePregunta,
-              seguridad: snap.seguridad,
-              respuestasCandidatas: snap.respuestasCandidatas,
-            })
-            .pipe(
-              tap((res) => {
-                const idx = this.lastLoadedTest.respuestas.findIndex(
-                  (r) =>
-                    r.preguntaId === res.preguntaId &&
-                    r.indicePregunta === res.indicePregunta,
-                );
-                if (idx >= 0) {
-                  this.lastLoadedTest.respuestas[idx] = res as any;
-                } else {
-                  this.lastLoadedTest.respuestas.push(res as any);
-                }
-              }),
-              catchError((err) => {
-                console.error('Error al persistir candidatas:', err);
-                this.toast.error(
-                  'No se pudieron guardar las respuestas candidatas. Se reintentará con el próximo cambio.',
-                );
-                // NO re-throw: el stream debe sobrevivir para futuros triggers
-                return EMPTY;
-              }),
-            );
-        }),
+        switchMap((snap) => this.guardarCandidatas(snap)),
       )
       .subscribe();
+  }
+
+  private guardarCandidatas(snap: CandidatasSnapshot) {
+    return this.testService
+      .actualizarProgresoTest({
+        testId: snap.testId,
+        preguntaId: snap.preguntaId,
+        respuestaDada: snap.respuestaDada ?? undefined,
+        indicePregunta: snap.indicePregunta,
+        seguridad: snap.seguridad,
+        respuestasCandidatas: snap.respuestasCandidatas,
+      })
+      .pipe(
+        tap((res: Respuesta) => {
+          if (this.lastLoadedTest.id !== snap.testId) return;
+          const respuestas = this.lastLoadedTest.respuestas;
+          const idx = respuestas.findIndex(
+            (r) =>
+              r.preguntaId === res.preguntaId &&
+              r.indicePregunta === res.indicePregunta,
+          );
+          if (idx >= 0) respuestas[idx] = res;
+          else respuestas.push(res);
+          this.cdr.markForCheck();
+        }),
+        catchError((err) => {
+          console.error('Error al persistir candidatas:', err);
+          this.toast.error(
+            'No se pudieron guardar las respuestas candidatas. Se reintentará con el próximo cambio.',
+          );
+          return EMPTY;
+        }),
+      );
   }
 
   public async processAnswer(
@@ -577,6 +659,7 @@ export class CompletarTestComponent {
       return;
     }
 
+    if (this.finalizando || this.tiempoAgotadoLibrillo()) return;
     if (this.isProcessingAnswer) {
       console.warn(
         'Ya se está procesando una respuesta, ignorando nueva llamada',
@@ -609,6 +692,8 @@ export class CompletarTestComponent {
     this.comunicating = true;
 
     try {
+      if (this.origenLibrillo) await this.candidatasLibrilloEnCurso;
+      if (this.destruido) return;
       const isAnswered =
         existingAnswer?.respuestaDada != null &&
         existingAnswer.respuestaDada !== -1;
@@ -627,35 +712,35 @@ export class CompletarTestComponent {
           !isAnswered &&
           !tieneIntencionDeDudar);
 
-      const res: Respuesta & { pregunta: { respuestaCorrectaIndex: number } } =
-        await firstValueFrom(
-          this.testService
-            .actualizarProgresoTest({
-              testId: this.lastLoadedTest.id,
-              preguntaId:
-                this.lastLoadedTest.preguntas[this.indicePregunta()].id,
-              respuestaDada,
-              omitida: isOmitida,
-              indicePregunta: this.indicePregunta(),
-              seguridad:
-                this.seguroDeLaPregunta.value ??
-                SeguridadAlResponder.CIEN_POR_CIENTO,
-              respuestasCandidatas: this.candidatasPorPregunta(),
-            })
-            .pipe(
-              catchError((err) => {
-                console.error('Error al procesar respuesta:', err);
-                this.toast.error(
-                  'Error al procesar la respuesta. Intenta de nuevo.',
-                );
-                throw err;
-              }),
-              tap((res) => {
-                this.lastAnsweredQuestion = res as any;
-                if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
-              }),
-            ),
-        );
+      const res: Respuesta & {
+        pregunta?: { respuestaCorrectaIndex?: number };
+      } = await firstValueFrom(
+        this.testService
+          .actualizarProgresoTest({
+            testId: this.lastLoadedTest.id,
+            preguntaId: this.lastLoadedTest.preguntas[this.indicePregunta()].id,
+            respuestaDada,
+            omitida: isOmitida,
+            indicePregunta: this.indicePregunta(),
+            seguridad:
+              this.seguroDeLaPregunta.value ??
+              SeguridadAlResponder.CIEN_POR_CIENTO,
+            respuestasCandidatas: this.candidatasPorPregunta(),
+          })
+          .pipe(
+            catchError((err) => {
+              console.error('Error al procesar respuesta:', err);
+              this.toast.error(
+                'Error al procesar la respuesta. Intenta de nuevo.',
+              );
+              throw err;
+            }),
+            tap((res) => {
+              this.lastAnsweredQuestion = res as any;
+              if (res.respuestaDada == -1) this.indiceSeleccionado.next(-1);
+            }),
+          ),
+      );
 
       // Actualizar respuesta localmente sin hacer GET
       const idx = this.lastLoadedTest.respuestas.findIndex(
@@ -677,6 +762,9 @@ export class CompletarTestComponent {
     } finally {
       this.comunicating = false;
       this.isProcessingAnswer = false;
+      if (!this.destruido) this.cdr.markForCheck();
+      if (!this.destruido && this.tiempoAgotadoLibrillo())
+        void this.finalizarTest();
     }
   }
 
@@ -784,6 +872,7 @@ export class CompletarTestComponent {
 
   public siguiente() {
     if (this.indicePregunta() == this.lastLoadedTest.preguntas.length - 1) {
+      if (this.origenLibrillo) return;
       //completado
       // Contar solo respuestas REALES (excluir drafts con estado='NO_RESPONDIDA',
       // que son borradores de candidatas sin respuesta final). Si los
@@ -827,7 +916,7 @@ export class CompletarTestComponent {
   }
 
   public showSolution() {
-    if (this.isModoExamen() && !this.modoVerRespuestas) {
+    if (this.corrigeAlCerrar() && !this.modoVerRespuestas) {
       return false;
     }
     const respuesta = this.preguntaRespondida();
@@ -857,6 +946,8 @@ export class CompletarTestComponent {
   private navegarAResultados(salaDueloCodigo: string | null = null) {
     // Embebido en el aula: no navegamos fuera; avisamos al host.
     if (this.embedded) {
+      if (this.resultadoEmitido) return;
+      this.resultadoEmitido = true;
       this.finalizado.emit({ testId: this.lastLoadedTest.id });
       return;
     }
@@ -899,15 +990,82 @@ export class CompletarTestComponent {
   }
 
   public async finalizarTest() {
-    // Capturamos la respuesta de finalizar (trae `salaDueloCodigo` si es un
-    // desafío) antes de recargar el test. En tests normales/examen es null y el
-    // flujo de navegación se mantiene intacto.
-    const finalizarResponse = await firstValueFrom(
-      this.testService.finalizarTest(this.lastLoadedTest.id),
-    );
-    await firstValueFrom(this.loadTest());
+    if (this.isProcessingAnswer || this.finalizando || this.resultadoEmitido)
+      return;
+    this.finalizando = true;
+    this.comunicating = true;
+    const id = this.lastLoadedTest.id;
+    try {
+      if (this.origenLibrillo) await this.candidatasLibrilloEnCurso;
+      if (this.destruido) return;
+      const respuesta = await firstValueFrom(
+        this.testService.finalizarTest(id),
+      );
+      if (!this.origenLibrillo) await firstValueFrom(this.loadTest());
+      if (!this.destruido)
+        this.navegarAResultados(respuesta?.salaDueloCodigo ?? null);
+    } catch {
+      if (this.origenLibrillo && !this.destruido) {
+        // El servidor puede haber cerrado el intento al vencer el plazo o al
+        // guardar la última respuesta, incluso si se perdió la respuesta HTTP.
+        const test = await firstValueFrom(
+          this.testService.getTestById(id).pipe(catchError(() => EMPTY)),
+          { defaultValue: null },
+        );
+        if (test?.status === 'FINALIZADO' && !this.destruido) {
+          this.navegarAResultados();
+          return;
+        }
+      }
+      if (!this.destruido)
+        this.toast.error('No se pudo finalizar el test. Inténtalo de nuevo.');
+    } finally {
+      this.finalizando = false;
+      this.comunicating = false;
+      if (!this.destruido) this.cdr.markForCheck();
+    }
+  }
 
-    this.navegarAResultados(finalizarResponse?.salaDueloCodigo ?? null);
+  public cargar(id = this.getId()) {
+    this.estadoCarga.set('cargando');
+    this.loadTest(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (test) => {
+          this.estadoCarga.set('disponible');
+          if (!this.origenLibrillo || this.revisarLibrillo) return;
+          if (test.status === 'FINALIZADO') {
+            this.navegarAResultados();
+          } else if (this.origenLibrillo.modo === 'simulacro' && test.endsAt) {
+            const plazo = new Date(test.endsAt).getTime();
+            if (!Number.isFinite(plazo)) return;
+            timer(Math.max(0, plazo - Date.now()))
+              .pipe(takeUntilDestroyed(this.destroyRef))
+              .subscribe(() => {
+                this.tiempoAgotadoLibrillo.set(true);
+                void this.finalizarTest();
+              });
+          }
+        },
+        error: () => this.estadoCarga.set('error'),
+      });
+  }
+
+  private indiceInicial(test: Test & { respuestasCount: number }) {
+    if (this.modoVerRespuestas || this.vistaPrevia) return 0;
+    if (!this.origenLibrillo) return test.respuestasCount;
+
+    const resueltas = new Set(
+      test.respuestas
+        .filter((respuesta) => respuesta.estado !== 'NO_RESPONDIDA')
+        .map((respuesta) => respuesta.indicePregunta),
+    );
+    const pendiente = test.preguntas.findIndex(
+      (_, indice) => !resueltas.has(indice),
+    );
+    return pendiente === -1
+      ? Math.max(0, test.preguntas.length - 1)
+      : pendiente;
   }
 
   private loadTest(id: string = this.getId()) {
@@ -915,16 +1073,10 @@ export class CompletarTestComponent {
       tap(async (entry: any) => {
         await this.loadRouteData();
         const parsedTest: Test & { respuestasCount: number } = entry;
-        const initialIndex =
-          this.modoVerRespuestas || this.vistaPrevia
-            ? 0
-            : parsedTest.respuestasCount;
-        if (this.lastLoadedTest) {
-          this.lastLoadedTest.respuestas = entry.respuestas;
-        } else {
-          this.lastLoadedTest = entry;
+        const initialIndex = this.indiceInicial(parsedTest);
+        if (this.lastLoadedTest?.id !== parsedTest.id)
           this.indicePregunta.set(initialIndex);
-        }
+        this.lastLoadedTest = parsedTest;
         // Sincronizar estado (seguridad + candidatas) tras la carga.
         // Se llama explícitamente porque no hay effect reactivo
         // (ver nota en el signal indicePregunta).

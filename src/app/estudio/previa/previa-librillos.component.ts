@@ -27,6 +27,11 @@ import { AuthService } from '../../services/auth.service';
 import { TemaService } from '../../services/tema.service';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { EstudioWorkspaceComponent } from '../estudio-workspace.component';
+import {
+  ContextoPdfLibrillo,
+  LibrilloContextoPdfService,
+} from './librillo-contexto-pdf.service';
+import { LibrilloPracticaComponent } from './librillo-practica.component';
 import { PreviaLibrillosPdfComponent } from './previa-librillos-pdf.component';
 import { parametrosPracticaLibrillo } from './previa-librillos';
 import {
@@ -49,7 +54,9 @@ type EstadoTemario =
     DropdownModule,
     EstudioWorkspaceComponent,
     PreviaLibrillosPdfComponent,
+    LibrilloPracticaComponent,
   ],
+  providers: [LibrilloContextoPdfService],
   templateUrl: './previa-librillos.component.html',
   styleUrl: './previa-librillos.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,9 +68,11 @@ export class PreviaLibrillosComponent {
   private readonly documentos = inject(DocumentosService);
   private readonly banco = inject(TemaService);
   private readonly config = inject(AppConfigService);
+  private readonly contextoPdf = inject(LibrilloContextoPdfService);
   private readonly sesion = this.auth.sessionSnapshot();
   private readonly actualizar = new Subject<void>();
   private readonly visorInteractivo = viewChild(EstudioWorkspaceComponent);
+  private readonly visorPdf = viewChild(PreviaLibrillosPdfComponent);
   private readonly params = toSignal(this.ruta.queryParamMap, {
     initialValue: this.ruta.snapshot.queryParamMap,
   });
@@ -104,7 +113,28 @@ export class PreviaLibrillosComponent {
   readonly flashcardsActivas = computed(() =>
     this.config.isModuloHabilitado(ModuloApp.FLASHCARDS),
   );
-  readonly esPdf = esPdfDeLibrillo;
+  readonly pdfInteractivo = computed(() =>
+    this.config.isModuloHabilitado(ModuloApp.LIBRILLO_PDF_INTERACTIVO),
+  );
+  readonly practicaDisponible = computed(
+    () =>
+      this.pdfInteractivo() && (this.testActivo() || this.flashcardsActivas()),
+  );
+  readonly lectorPdfActivo = computed(() => {
+    const { documento } = this.seleccion();
+    return (
+      !!documento?.isDownloadable &&
+      ((this.pdfInteractivo() && !!documento.librillo) ||
+        (!documento.librillo && esPdfDeLibrillo(documento)))
+    );
+  });
+  readonly contextoPractica = computed(() => {
+    const pdf = this.contextoPdf.contexto();
+    return this.lectorPdfActivo() && pdf?.doc === this.seleccion().documento?.id
+      ? pdf
+      : null;
+  });
+  readonly pestana = this.contextoPdf.pestana;
 
   private cargarTemario() {
     return forkJoin({
@@ -123,19 +153,41 @@ export class PreviaLibrillosComponent {
     );
   }
 
-  seleccionarTema(id: number) {
+  async seleccionarTema(id: number) {
+    await this.visorPdf()?.guardarAntesDeSalir();
+    this.pestana.set('lectura');
     void this.router.navigate([], {
       relativeTo: this.ruta,
-      queryParams: { tema: id },
+      queryParamsHandling: 'merge',
+      queryParams: { tema: id, doc: null, pagina: null, referencia: null },
     });
   }
 
-  seleccionarDocumento(id: number) {
+  async seleccionarDocumento(id: number) {
     const tema = this.seleccion().tema;
     if (!tema) return;
+    await this.visorPdf()?.guardarAntesDeSalir();
+    this.pestana.set('lectura');
     void this.router.navigate([], {
       relativeTo: this.ruta,
-      queryParams: { tema: tema.id, doc: id },
+      queryParamsHandling: 'merge',
+      queryParams: { tema: tema.id, doc: id, pagina: null, referencia: null },
+    });
+  }
+
+  async verEnTexto(referencia: ContextoPdfLibrillo & { referencia: number }) {
+    const { tema, documento } = this.seleccion();
+    if (!tema || documento?.id !== referencia.doc) return;
+    this.pestana.set('lectura');
+    await this.router.navigate([], {
+      relativeTo: this.ruta,
+      queryParamsHandling: 'merge',
+      queryParams: {
+        tema: tema.id,
+        doc: referencia.doc,
+        pagina: referencia.pagina,
+        referencia: referencia.referencia,
+      },
     });
   }
 
@@ -144,7 +196,10 @@ export class PreviaLibrillosComponent {
   }
 
   async guardarAntesDeSalir() {
-    await this.visorInteractivo()?.guardarAntesDeSalir();
+    await Promise.all([
+      this.visorInteractivo()?.guardarAntesDeSalir(),
+      this.visorPdf()?.guardarAntesDeSalir(),
+    ]);
     return true;
   }
 }

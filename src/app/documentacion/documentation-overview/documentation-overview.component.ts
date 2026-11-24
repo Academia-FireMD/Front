@@ -85,6 +85,14 @@ export class DocumentationOverviewComponent
 
   public mostrarEditarDocumento = false;
   public documentoEditando: Documento | null = null;
+  puedeEditarReferencias(documento: Documento) {
+    return (
+      this.librilloTemarioActivo() &&
+      this.appConfig.isModuloHabilitado(ModuloApp.LIBRILLO_PDF_INTERACTIVO) &&
+      !!documento.temaId &&
+      /\.pdf(?:$|[?#])/i.test(documento.fileName || documento.url)
+    );
+  }
   public editarDocumentoForm = this.fb.group({
     identificador: ['', Validators.required],
     descripcion: [''],

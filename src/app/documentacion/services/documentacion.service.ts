@@ -110,6 +110,12 @@ export class DocumentosService extends ApiBaseService {
   }
 
   public downloadWithWatermark$(id: number): Observable<Blob> {
+    return this.descargarConRevision$(id).pipe(map(({ archivo }) => archivo));
+  }
+
+  public descargarConRevision$(
+    id: number,
+  ): Observable<{ archivo: Blob; revision: string | null }> {
     return this.http
       .post(
         `${environment.apiUrl + this.controllerPrefix}/${id}/download`,
@@ -124,7 +130,10 @@ export class DocumentosService extends ApiBaseService {
           if (!response.body) {
             throw new Error('No se pudo descargar el archivo');
           }
-          return response.body;
+          return {
+            archivo: response.body,
+            revision: response.headers.get('X-Librillo-Revision'),
+          };
         }),
       );
   }

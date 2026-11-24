@@ -93,3 +93,115 @@
     min-width: 0;
   }
 }
+
+.contenido-librillo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+}
+
+.lectura-librillo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.con-practica:not(.con-pdf-y-practica) {
+  .lectura-librillo {
+    flex: 0;
+    flex-shrink: 0;
+  }
+
+  app-librillo-practica {
+    align-self: center;
+    width: min(100%, 42rem);
+  }
+}
+
+.con-pdf-y-practica {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 36%);
+  overflow: hidden;
+
+  app-librillo-practica {
+    min-height: 0;
+    overflow: auto;
+    background: var(--surface-card);
+    border-left: 1px solid var(--surface-border);
+  }
+
+  &.pestana-anotaciones {
+    grid-template-columns: minmax(0, 1fr);
+
+    app-librillo-practica {
+      display: none;
+    }
+  }
+}
+
+.pestanas-librillo {
+  display: flex;
+  justify-content: flex-end;
+  padding-inline: 0.85rem;
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-card);
+
+  button {
+    min-height: 44px;
+    padding-inline: 0.75rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--text-color);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  button[aria-pressed="true"] {
+    border-bottom-color: var(--primary-color);
+    font-weight: 700;
+  }
+
+  .pestana-movil {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .pestanas-librillo {
+    justify-content: stretch;
+    padding-inline: 0;
+
+    button {
+      flex: 1;
+    }
+
+    .pestana-movil {
+      display: block;
+    }
+  }
+
+  .con-pdf-y-practica {
+    grid-template-columns: minmax(0, 1fr);
+
+    app-librillo-practica {
+      display: none;
+      border-left: 0;
+    }
+
+    &.pestana-practica {
+      .lectura-librillo {
+        display: none;
+      }
+
+      app-librillo-practica {
+        display: block;
+      }
+    }
+  }
+}

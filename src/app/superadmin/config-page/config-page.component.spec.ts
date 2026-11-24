@@ -32,6 +32,7 @@ function makeMockAppConfigService() {
     [ModuloApp.SIMULADOR_NOTA]: false,
     [ModuloApp.PSICOTECNICOS]: false,
     [ModuloApp.LIBRILLOS]: false,
+    [ModuloApp.LIBRILLO_PDF_INTERACTIVO]: false,
   });
 
   const updateConfig: jest.Mock<Promise<any>, any[]> = jest.fn(async () => ({

@@ -69,3 +69,34 @@ p {
   background-color: rgba(0, 0, 0, 0.4);
   cursor: not-allowed;
 }
+
+.calificar-tarjeta {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.flashcard-librillo {
+  min-width: 0;
+  margin-inline: 0;
+
+  .header {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .nav-button {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+  }
+
+  .calificar-tarjeta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    button {
+      min-height: 44px;
+      padding-inline: 0.25rem;
+    }
+  }
+}

@@ -49,6 +49,28 @@ describe('CompletarFlashCardTestComponent — integration', () => {
     expect(component).toBeTruthy();
   });
 
+  it('embebido carga por ID y finaliza sin navegar al calificar la última tarjeta', async () => {
+    component.embedded = true;
+    component.testId = 70;
+    const test = { ...createMockFlashcardTest(1), id: 70 };
+    flashcardServiceMock.getTestById.mockReturnValue(of(test));
+    const finalizado = jest.fn();
+    component.finalizado.subscribe(finalizado);
+    fixture.detectChanges();
+    expect(flashcardServiceMock.getTestById).toHaveBeenCalledWith(70);
+
+    await component.selectedEstado(EstadoFlashcard.BIEN);
+    expect(flashcardServiceMock.actualizarProgresoTest).not.toHaveBeenCalled();
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+    expect(component.lastLoadedTest.flashcards[0].mostrarSolucion).toBeFalsy();
+
+    component.lastLoadedTest.flashcards[0].mostrarSolucion = true;
+    await component.selectedEstado(EstadoFlashcard.BIEN);
+    expect(flashcardServiceMock.finalizarTest).toHaveBeenCalledWith(70);
+    expect(finalizado).toHaveBeenCalledWith({ testId: 70 });
+    expect(component.router.navigate).not.toHaveBeenCalled();
+  });
+
   describe('Carga de flashcards', () => {
     it('carga el test de flashcards en la inicialización', (done) => {
       fixture.detectChanges();

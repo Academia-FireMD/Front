@@ -1,6 +1,8 @@
 import { Location } from '@angular/common';
 import {
   Component,
+  DestroyRef,
+  ElementRef,
   EventEmitter,
   inject,
   Input,
@@ -15,6 +17,7 @@ import { cloneDeep } from 'lodash';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, Observable, tap } from 'rxjs';
+import { LibrilloPdfApiService } from '../../../estudio/previa/librillo-pdf-api.service';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { ReportesFalloService } from '../../../services/reporte-fallo.service';
 import { TemaService } from '../../../services/tema.service';
@@ -49,6 +52,11 @@ export class FlashcardDetailviewAdminComponent {
   flashCardService = inject(FlashcardDataService);
   confirmationService = inject(ConfirmationService);
   private store = inject(Store<AppState>);
+  private readonly librillo = inject(LibrilloPdfApiService);
+  private readonly elemento = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destruir = inject(DestroyRef);
+  private cerrado = false;
+  temaLibrillo?: number;
   public expectedRole: Rol = Rol.ADMIN;
   editor!: any;
   editorEnunciado!: any;
@@ -63,6 +71,18 @@ export class FlashcardDetailviewAdminComponent {
     this.setFlashcard(cloned);
   }
   @Output() flashcardCreada = new EventEmitter<FlashcardData>();
+  @Input() set desdeTextoLibrillo(datos: { temaId: number; texto: string }) {
+    this.temaLibrillo = datos.temaId;
+    this.mode = 'injected';
+    this.expectedRole = Rol.ALUMNO;
+    this.formGroup.patchValue({
+      temaId: datos.temaId,
+      descripcion: '',
+      solucion: datos.texto,
+      dificultad: Dificultad.PRIVADAS,
+    });
+    this.initEditor(datos.texto, '');
+  }
   private processFlashcardRequest(
     requestFn: (identificador: string) => Observable<FlashcardData>,
   ): void {
@@ -102,6 +122,7 @@ export class FlashcardDetailviewAdminComponent {
 
   private initEditor(initialValue: string, initialEnunciadoValue: string) {
     setTimeout(() => {
+      if (this.cerrado) return;
       if (this.editor) {
         this.editor.destroy();
         this.editor = null;
@@ -111,7 +132,7 @@ export class FlashcardDetailviewAdminComponent {
         this.editorEnunciado = null;
       }
       this.editor = new Editor({
-        el: document.querySelector('#editor')!,
+        el: this.elemento.nativeElement.querySelector('#editor')!,
         ...universalEditorConfig,
         initialValue: initialValue || '',
         events: {
@@ -124,7 +145,7 @@ export class FlashcardDetailviewAdminComponent {
       });
 
       this.editorEnunciado = new Editor({
-        el: document.querySelector('#editor-enunciado')!,
+        el: this.elemento.nativeElement.querySelector('#editor-enunciado')!,
         ...universalEditorConfig,
         initialValue: initialEnunciadoValue || '',
         events: {
@@ -155,6 +176,11 @@ export class FlashcardDetailviewAdminComponent {
   public getAllDifficultades = getAllDifficultades;
 
   ngOnInit(): void {
+    this.destruir.onDestroy(() => {
+      this.cerrado = true;
+      this.editor?.destroy();
+      this.editorEnunciado?.destroy();
+    });
     if (this.mode == 'edit') {
       this.loadFlashcard();
       firstValueFrom(this.getRole());
@@ -256,6 +282,21 @@ export class FlashcardDetailviewAdminComponent {
   }
 
   private async updateFlashcard() {
+    if (this.temaLibrillo) {
+      const { descripcion, solucion } = this.formGroup.getRawValue();
+      try {
+        return await firstValueFrom(
+          this.librillo.crearMaterial<FlashcardData>(
+            this.temaLibrillo,
+            'flashcards',
+            { descripcion: descripcion ?? '', solucion: solucion ?? '' },
+          ),
+        );
+      } catch (error) {
+        this.toast.error('Revisa el enunciado y la solución de la tarjeta.');
+        throw error;
+      }
+    }
     const merged = {
       ...this.lastLoadedFlashcard(),
       ...this.formGroup.getRawValue(),
