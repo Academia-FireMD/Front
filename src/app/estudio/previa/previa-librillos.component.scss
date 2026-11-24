@@ -1,0 +1,91 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-ground);
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.identidad,
+.temas,
+.practica {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.identidad h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  white-space: nowrap;
+
+  span {
+    margin-left: 0.25rem;
+    color: var(--text-color-secondary);
+    font-weight: 400;
+    font-size: 0.8rem;
+  }
+}
+
+.temas {
+  flex: 1;
+  flex-wrap: wrap;
+
+  a {
+    padding: 0.55rem 0.7rem;
+    color: var(--text-color);
+
+    &[aria-current="page"] {
+      background: var(--surface-100);
+      color: var(--primary-color);
+      font-weight: 700;
+      border-radius: 0.35rem;
+    }
+  }
+}
+
+.cabecera a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+router-outlet {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .cabecera {
+    gap: 0.25rem;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .identidad {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .temas,
+  .practica {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

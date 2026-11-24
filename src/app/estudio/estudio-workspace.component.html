@@ -1,6 +1,6 @@
 @if (tipo === "librillo" || desdeGestion() || mostrarEstado()) {
   <header class="visor-header">
-    @if (tipo === "librillo" || desdeGestion()) {
+    @if ((tipo === "librillo" && !enPrevia) || desdeGestion()) {
       <button
         #volverButton
         type="button"

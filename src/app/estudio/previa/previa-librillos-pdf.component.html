@@ -1,0 +1,114 @@
+<div class="fotograma-pdf" [class.ver-notas]="!lectura()">
+  <nav class="pestanas-pdf" aria-label="Vista del documento">
+    <button
+      type="button"
+      [attr.aria-pressed]="lectura()"
+      (click)="lectura.set(true)"
+    >
+      Lectura
+    </button>
+    <button
+      type="button"
+      [attr.aria-pressed]="!lectura()"
+      (click)="lectura.set(false)"
+    >
+      Notas
+    </button>
+  </nav>
+
+  <section class="lectura-pdf" aria-label="PDF de Trabajos en altura">
+    <div class="barra-pdf">
+      <button
+        pButton
+        type="button"
+        class="p-button-text"
+        aria-label="Página anterior"
+        [disabled]="pagina() <= 1 || cargando()"
+        (click)="cambiarPagina(-1)"
+      >
+        <i class="pi pi-chevron-left" aria-hidden="true"></i>
+      </button>
+      @if (total()) {
+        <span data-testid="pagina-altura"
+          >Página {{ pagina() }} de {{ total() }}</span
+        >
+      }
+      <button
+        pButton
+        type="button"
+        class="p-button-text"
+        aria-label="Página siguiente"
+        [disabled]="pagina() >= total() || cargando()"
+        (click)="cambiarPagina(1)"
+      >
+        <i class="pi pi-chevron-right" aria-hidden="true"></i>
+      </button>
+      <button
+        pButton
+        type="button"
+        class="p-button-outlined"
+        [disabled]="!seleccion().length || cargando()"
+        (click)="subrayar()"
+      >
+        Subrayar
+      </button>
+    </div>
+    <div #espacio class="espacio-pdf" data-testid="visor-altura">
+      @if (fallo()) {
+        <div class="aviso-pdf" role="alert">
+          <p>{{ fallo() }}</p>
+          <button pButton type="button" (click)="abrir()">Reintentar</button>
+        </div>
+      } @else if (cargando()) {
+        <p class="aviso-pdf" role="status">Abriendo el PDF de Documentación…</p>
+      }
+      <div #hoja class="hoja-pdf" [hidden]="cargando() || !!fallo()">
+        <canvas #imagen aria-hidden="true"></canvas>
+        <div class="marcas-pdf" aria-hidden="true">
+          @for (rectangulo of marcas(); track $index) {
+            <span
+              [style.left.%]="rectangulo.x * 100"
+              [style.top.%]="rectangulo.y * 100"
+              [style.width.%]="rectangulo.ancho * 100"
+              [style.height.%]="rectangulo.alto * 100"
+            ></span>
+          }
+        </div>
+        <div
+          #texto
+          class="texto-pdf"
+          [attr.aria-label]="'Texto de la página ' + pagina()"
+        ></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="notas-pdf">
+    <h2>Notas de la página {{ pagina() }}</h2>
+    <label class="sr-only" for="nota-altura">Tu nota para esta página</label>
+    <textarea
+      id="nota-altura"
+      [value]="anotacion().nota"
+      [disabled]="cargando() || !!fallo()"
+      (input)="editarNota($any($event.target).value)"
+      placeholder="Anota algo que quieras repasar"
+    ></textarea>
+    <p role="status">
+      {{
+        falloGuardado()
+          ? "El navegador no pudo guardar los cambios."
+          : "Las notas y los subrayados se guardan en este navegador."
+      }}
+    </p>
+    @if (anotacion().subrayados.length) {
+      <button
+        pButton
+        type="button"
+        class="p-button-text"
+        (click)="quitarUltimoSubrayado()"
+      >
+        Quitar último subrayado
+      </button>
+    }
+  </aside>
+</div>

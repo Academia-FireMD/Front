@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
@@ -12,6 +13,10 @@ import { TemaService } from '../../../services/tema.service';
 
 import { Dificultad } from '../../../shared/models/pregunta.model';
 import {
+  parametrosPracticaLibrillo,
+  temaDePracticaLibrillo,
+} from '../../../estudio/previa/previa-librillos';
+import {
   getAllDifficultades,
   getNumeroDePreguntas,
 } from '../../../utils/utils';
@@ -22,6 +27,11 @@ import {
   styleUrl: './realizar-flash-card-test.component.scss',
 })
 export class RealizarFlashCardTestComponent {
+  private readonly ruta = inject(ActivatedRoute);
+  readonly temaLibrillo = temaDePracticaLibrillo(
+    this.ruta.snapshot?.queryParamMap,
+  );
+  readonly paramsLibrillo = parametrosPracticaLibrillo(this.temaLibrillo);
   fb = inject(FormBuilder);
   toast = inject(ToastrService);
   preguntaService = inject(PreguntasService);
@@ -29,12 +39,15 @@ export class RealizarFlashCardTestComponent {
   confirmationService = inject(ConfirmationService);
   flashcardService = inject(FlashcardDataService);
   formGroup = this.fb.group({
-    numPreguntas: [60, Validators.required],
+    numPreguntas: [this.temaLibrillo ? 20 : 60, Validators.required],
     dificultad: [
       [Dificultad.BASICO, Dificultad.INTERMEDIO, Dificultad.DIFICIL],
       Validators.required,
     ],
-    temas: [[], Validators.required],
+    temas: [
+      this.temaLibrillo ? [this.temaLibrillo.id] : ([] as number[]),
+      Validators.required,
+    ],
     generarTestDeRepaso: [false],
     aleatorio: [true],
   });

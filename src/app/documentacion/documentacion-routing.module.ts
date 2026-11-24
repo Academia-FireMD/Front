@@ -7,8 +7,62 @@ import { moduloGuard } from '../guards/modulo.guard';
 import { ModuloApp } from '../shared/models/modulo-app.enum';
 import { DocumentationOverviewComponent } from './documentation-overview/documentation-overview.component';
 import { ReleaseManagementComponent } from './release-management/release-management.component';
+import { environment } from '../../environments/environment';
+import type { EstudioWorkspaceComponent } from '../estudio/estudio-workspace.component';
+import { previaLibrillosGuard } from '../estudio/previa/previa-librillos.guard';
+import { TEMAS_PREVIA_LIBRILLOS } from '../estudio/previa/previa-librillos';
+
+const rutasPrevia: Routes = environment.librillosMenu
+  ? [
+      {
+        path: 'alumno/previa-librillos',
+        canActivate: [roleGuard, SubscriptionGuard, previaLibrillosGuard],
+        data: {
+          expectedRole: 'ALUMNO',
+          allowedSubscriptions: [
+            SuscripcionTipo.BASIC,
+            SuscripcionTipo.ADVANCED,
+            SuscripcionTipo.PREMIUM,
+          ],
+        },
+        title: 'Vista previa del Librillo',
+        loadComponent: () =>
+          import('../estudio/previa/previa-librillos.component').then(
+            (m) => m.PreviaLibrillosComponent,
+          ),
+        children: [
+          { path: '', redirectTo: 'estatutos', pathMatch: 'full' },
+          {
+            path: 'estatutos',
+            data: {
+              recurso: 'librillo',
+              documentoIdPrevia: TEMAS_PREVIA_LIBRILLOS[0].documentoId,
+            },
+            canDeactivate: [
+              async (visor: EstudioWorkspaceComponent) => {
+                await visor.guardarAntesDeSalir();
+                return true;
+              },
+            ],
+            loadComponent: () =>
+              import('../estudio/estudio-workspace.component').then(
+                (m) => m.EstudioWorkspaceComponent,
+              ),
+          },
+          {
+            path: 'altura',
+            loadComponent: () =>
+              import('../estudio/previa/previa-librillos-pdf.component').then(
+                (m) => m.PreviaLibrillosPdfComponent,
+              ),
+          },
+        ],
+      },
+    ]
+  : [];
 
 const routes: Routes = [
+  ...rutasPrevia,
   {
     path: 'alumno/librillo/:documentoId',
     canActivate: [roleGuard, moduloGuard],

@@ -4,20 +4,26 @@ import {
   toObservable,
   toSignal,
 } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { MenuItem } from 'primeng/api';
 import {
   catchError,
+  filter,
   firstValueFrom,
   map,
   Observable,
   of,
+  startWith,
   switchMap,
 } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { DocumentosService } from '../../documentacion/services/documentacion.service';
+import {
+  retornoDePracticaLibrillo,
+  RUTA_PREVIA_LIBRILLOS,
+} from '../../estudio/previa/previa-librillos';
 import { AppConfigService } from '../../services/app-config.service';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { AuthService } from '../../services/auth.service';
@@ -96,6 +102,19 @@ export class LayoutComponent {
   toast = inject(ToastrService);
   store = inject(Store);
   aulaInmersiva = inject(AulaInmersivaService);
+
+  readonly rutaPreviaLibrillo = RUTA_PREVIA_LIBRILLOS;
+  readonly retornoLibrillo = environment.librillosMenu
+    ? toSignal(
+        this.router.events.pipe(
+          filter((evento) => evento instanceof NavigationEnd),
+          startWith(null),
+          map(() =>
+            retornoDePracticaLibrillo(this.router.parseUrl(this.router.url)),
+          ),
+        ),
+      )
+    : signal(undefined);
 
   readonly fallbackLogo = FALLBACK_LOGO;
   /** Snapshot del usuario actual para el computed `items` (D11). */

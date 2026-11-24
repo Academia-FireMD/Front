@@ -1,3 +1,7 @@
+import {
+  parametrosPracticaLibrillo,
+  temaDePracticaLibrillo,
+} from '../../../estudio/previa/previa-librillos';
 import { Component, HostListener, inject } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -73,9 +77,18 @@ export class CompletarFlashCardTestComponent {
         .finalizarTest(this.lastLoadedTest.id)
         .pipe(switchMap(() => this.cargarTest$())),
     );
-    this.router.navigate([
-      'app/test/alumno/stats-test-flashcard/' + this.lastLoadedTest.id,
-    ]);
+    this.navegarAResultados();
+  }
+
+  private navegarAResultados() {
+    this.router.navigate(
+      ['app/test/alumno/stats-test-flashcard/' + this.lastLoadedTest.id],
+      {
+        queryParams: parametrosPracticaLibrillo(
+          temaDePracticaLibrillo(this.activedRoute.snapshot?.queryParamMap),
+        ),
+      },
+    );
   }
 
   public testCargado$ = this.cargarTest$();
@@ -112,9 +125,7 @@ export class CompletarFlashCardTestComponent {
     this.indicePregunta++;
     this.comunicating = false;
     if (this.indicePregunta == this.lastLoadedTest.flashcards.length) {
-      this.router.navigate([
-        'app/test/alumno/stats-test-flashcard/' + this.lastLoadedTest.id,
-      ]);
+      this.navegarAResultados();
     }
   }
 

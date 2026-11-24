@@ -5,8 +5,8 @@ import { of, throwError } from 'rxjs';
 import { FlashcardDataService } from '../../../services/flashcards.service';
 import { EstadoFlashcard } from '../../../shared/models/flashcard.model';
 import {
-    COMMON_TEST_PROVIDERS,
-    createMockFlashcardTest
+  COMMON_TEST_PROVIDERS,
+  createMockFlashcardTest,
 } from '../../../testing';
 import { CompletarFlashCardTestComponent } from './completar-flash-card-test.component';
 
@@ -79,14 +79,21 @@ describe('CompletarFlashCardTestComponent — integration', () => {
       component.testCargado$.subscribe(() => {
         // Simulate: first card answered (truthy respuesta), remaining unanswered (null)
         (component.lastLoadedTest.flashcards[0] as any).respuesta = [
-          { id: 1, estado: EstadoFlashcard.BIEN, flashcardId: component.lastLoadedTest.flashcards[0].flashcardId,
-            testItemId: component.lastLoadedTest.flashcards[0].id, createdAt: new Date() },
+          {
+            id: 1,
+            estado: EstadoFlashcard.BIEN,
+            flashcardId: component.lastLoadedTest.flashcards[0].flashcardId,
+            testItemId: component.lastLoadedTest.flashcards[0].id,
+            createdAt: new Date(),
+          },
         ];
         (component.lastLoadedTest.flashcards[1] as any).respuesta = null;
         (component.lastLoadedTest.flashcards[2] as any).respuesta = null;
 
         // Re-apply the same findIndex logic the component uses in cargarTest$()
-        const idx = component.lastLoadedTest.flashcards.findIndex((fc) => !(fc as any).respuesta);
+        const idx = component.lastLoadedTest.flashcards.findIndex(
+          (fc) => !(fc as any).respuesta,
+        );
         component.indicePregunta = idx >= 0 ? idx : 0;
 
         expect(component.indicePregunta).toBe(1);
@@ -105,7 +112,7 @@ describe('CompletarFlashCardTestComponent — integration', () => {
       await component.selectedEstado(EstadoFlashcard.BIEN);
 
       expect(flashcardServiceMock.actualizarProgresoTest).toHaveBeenCalledWith(
-        expect.objectContaining({ estado: EstadoFlashcard.BIEN })
+        expect.objectContaining({ estado: EstadoFlashcard.BIEN }),
       );
     });
 
@@ -113,7 +120,7 @@ describe('CompletarFlashCardTestComponent — integration', () => {
       await component.selectedEstado(EstadoFlashcard.MAL);
 
       expect(flashcardServiceMock.actualizarProgresoTest).toHaveBeenCalledWith(
-        expect.objectContaining({ estado: EstadoFlashcard.MAL })
+        expect.objectContaining({ estado: EstadoFlashcard.MAL }),
       );
     });
 
@@ -121,7 +128,7 @@ describe('CompletarFlashCardTestComponent — integration', () => {
       await component.selectedEstado(EstadoFlashcard.REVISAR);
 
       expect(flashcardServiceMock.actualizarProgresoTest).toHaveBeenCalledWith(
-        expect.objectContaining({ estado: EstadoFlashcard.REVISAR })
+        expect.objectContaining({ estado: EstadoFlashcard.REVISAR }),
       );
     });
 
@@ -146,7 +153,7 @@ describe('CompletarFlashCardTestComponent — integration', () => {
 
     it('error de servicio: comunicating vuelve a false (no se bloquea la UI)', async () => {
       flashcardServiceMock.actualizarProgresoTest.mockReturnValue(
-        throwError(() => new Error('Network error'))
+        throwError(() => new Error('Network error')),
       );
 
       await component.selectedEstado(EstadoFlashcard.BIEN);
@@ -171,7 +178,9 @@ describe('CompletarFlashCardTestComponent — integration', () => {
     it('ArrowRight cuando mostrarSolucion=true llama a selectedEstado(BIEN)', async () => {
       component.lastLoadedTest.flashcards[0].mostrarSolucion = true;
 
-      const selectedEstadoSpy = jest.spyOn(component, 'selectedEstado').mockResolvedValue();
+      const selectedEstadoSpy = jest
+        .spyOn(component, 'selectedEstado')
+        .mockResolvedValue();
       const event = new KeyboardEvent('keydown', { key: 'ArrowRight' });
       component.handleKeyDown(event);
 
@@ -181,7 +190,9 @@ describe('CompletarFlashCardTestComponent — integration', () => {
     it('ArrowLeft cuando mostrarSolucion=true llama a selectedEstado(MAL)', () => {
       component.lastLoadedTest.flashcards[0].mostrarSolucion = true;
 
-      const selectedEstadoSpy = jest.spyOn(component, 'selectedEstado').mockResolvedValue();
+      const selectedEstadoSpy = jest
+        .spyOn(component, 'selectedEstado')
+        .mockResolvedValue();
       const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
       component.handleKeyDown(event);
 
@@ -191,7 +202,9 @@ describe('CompletarFlashCardTestComponent — integration', () => {
     it('ArrowRight antes de revelar solución no actúa', () => {
       component.lastLoadedTest.flashcards[0].mostrarSolucion = false;
 
-      const selectedEstadoSpy = jest.spyOn(component, 'selectedEstado').mockResolvedValue();
+      const selectedEstadoSpy = jest
+        .spyOn(component, 'selectedEstado')
+        .mockResolvedValue();
       const event = new KeyboardEvent('keydown', { key: 'ArrowRight' });
       component.handleKeyDown(event);
 
@@ -208,7 +221,9 @@ describe('CompletarFlashCardTestComponent — integration', () => {
     it('al superar la última tarjeta navega a stats', async () => {
       // NOTE: testCargado$ is pre-baked at instantiation; trimming flashcards
       // directly is the reliable way to set up a 1-card scenario.
-      component.lastLoadedTest.flashcards = [component.lastLoadedTest.flashcards[0]];
+      component.lastLoadedTest.flashcards = [
+        component.lastLoadedTest.flashcards[0],
+      ];
       component.indicePregunta = 0; // positioned at the only (last) card
 
       const routerSpy = (component as any).router;
@@ -216,7 +231,10 @@ describe('CompletarFlashCardTestComponent — integration', () => {
 
       // indicePregunta becomes 1 === flashcards.length → should navigate
       expect(routerSpy.navigate).toHaveBeenCalledWith(
-        expect.arrayContaining([expect.stringContaining('stats-test-flashcard')])
+        expect.arrayContaining([
+          expect.stringContaining('stats-test-flashcard'),
+        ]),
+        { queryParams: undefined },
       );
     });
   });

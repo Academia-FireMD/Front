@@ -178,6 +178,7 @@ describe('CompletarTestComponent — integration', () => {
       expect(testServiceMock.finalizarTest).toHaveBeenCalledWith(123);
       expect(routerSpy.navigate).toHaveBeenCalledWith(
         expect.arrayContaining([expect.stringContaining('stats-test')]),
+        { queryParams: undefined },
       );
     });
 

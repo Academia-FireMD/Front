@@ -90,7 +90,8 @@ const TEXTO: Record<EstadoEstudio, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'data-testid': 'estudio-workspace',
-    '[class.visor-inmersivo]': 'tipo === "librillo"',
+    '[class.visor-inmersivo]': 'tipo === "librillo" && !enPrevia',
+    '[class.visor-en-previa]': 'enPrevia',
     '[class.visor-psico]': 'tipo === "psico"',
     '[attr.data-estado]': 'estado()',
     '(window:message)': 'recibir($event)',
@@ -110,6 +111,8 @@ export class EstudioWorkspaceComponent {
   private active?: InstanciaEstudio;
 
   readonly tipo = this.route.snapshot.data['recurso'] as RecursoEstudio['tipo'];
+  readonly enPrevia =
+    this.route.snapshot.data['documentoIdPrevia'] !== undefined;
   readonly titulo = signal(
     this.tipo === 'psico' ? 'Psicotécnicos' : 'Librillo',
   );
@@ -149,10 +152,10 @@ export class EstudioWorkspaceComponent {
   );
 
   constructor() {
-    if (this.tipo === 'librillo') this.aula.activar();
+    if (this.tipo === 'librillo' && !this.enPrevia) this.aula.activar();
     this.destroyRef.onDestroy(() => {
       this.dispose();
-      if (this.tipo === 'librillo') this.aula.desactivar();
+      if (this.tipo === 'librillo' && !this.enPrevia) this.aula.desactivar();
     });
     this.auth.currentIdentity$.pipe(takeUntilDestroyed()).subscribe(() => {
       if (this.active && !this.auth.isSessionCurrent(this.active.session))
@@ -197,7 +200,8 @@ export class EstudioWorkspaceComponent {
       return;
     }
     const documentoId = usuarioIdDeSubject(
-      this.route.snapshot.paramMap.get('documentoId'),
+      this.route.snapshot.data['documentoIdPrevia'] ??
+        this.route.snapshot.paramMap.get('documentoId'),
     );
     if (this.tipo === 'librillo' && documentoId === null) {
       this.fallo.set('El documento no está disponible.');

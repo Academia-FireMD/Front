@@ -18,6 +18,12 @@
   height: 100dvh;
 }
 
+:host(.visor-en-previa) {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
 .visor-header {
   display: flex;
   align-items: center;

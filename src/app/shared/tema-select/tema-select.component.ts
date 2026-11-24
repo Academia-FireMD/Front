@@ -23,6 +23,10 @@ import { groupedTemas } from '../../utils/utils';
 })
 export class TemaSelectComponent implements OnInit, OnChanges, OnDestroy {
   @Input() formControl!: FormControl;
+  // Las vistas con ReactiveForms pueden pasar el control sin instalar su directiva.
+  @Input() set controlTemas(control: FormControl) {
+    this.formControl = control;
+  }
   @Input() multiple: boolean = true;
   /**
    * Refactor 2026-05-25 (T11.1 / D6): filtra los temas a los que aparecen en

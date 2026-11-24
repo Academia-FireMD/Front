@@ -10,6 +10,10 @@ import { TemaService } from '../../services/tema.service';
 import { GenerarTestDto, TestService } from '../../services/test.service';
 import { getAllDifficultades, getNumeroDePreguntas } from '../../utils/utils';
 import { Dificultad } from '../models/pregunta.model';
+import {
+  parametrosPracticaLibrillo,
+  temaDePracticaLibrillo,
+} from '../../estudio/previa/previa-librillos';
 
 @Component({
   selector: 'app-realizar-test',
@@ -27,11 +31,18 @@ export class RealizarTestComponent {
   router = inject(Router);
   activatedRoute = inject(ActivatedRoute);
   @Input() mode: 'injected' | 'default' = 'default';
+  get paramsLibrillo() {
+    return this.mode === 'default'
+      ? parametrosPracticaLibrillo(
+          temaDePracticaLibrillo(this.activatedRoute.snapshot?.queryParamMap),
+        )
+      : undefined;
+  }
 
   formGroup = this.fb.group({
     numPreguntas: [60, Validators.required],
     dificultad: [[Dificultad.INTERMEDIO]],
-    temas: [[], Validators.required],
+    temas: [[] as number[], Validators.required],
     generarTestDeRepaso: [false],
     generarTestDeExamen: [false],
     generarTestDesafio: [false],
@@ -130,7 +141,21 @@ export class RealizarTestComponent {
     // Deep-link: /app/test/alumno/realizar-test?codigo=XXXX abre el popup de
     // unirse con el código autorrellenado.
     if (this.mode === 'default') {
-      const codigo = this.activatedRoute.snapshot.queryParamMap?.get('codigo');
+      const tema = temaDePracticaLibrillo(
+        this.activatedRoute.snapshot?.queryParamMap,
+      );
+      if (tema) {
+        this.formGroup.patchValue({
+          temas: [tema.id],
+          numPreguntas: 20,
+          dificultad: [
+            Dificultad.BASICO,
+            Dificultad.INTERMEDIO,
+            Dificultad.DIFICIL,
+          ],
+        });
+      }
+      const codigo = this.activatedRoute.snapshot?.queryParamMap?.get('codigo');
       if (codigo) {
         this.codigoDesafioControl.setValue(codigo);
         this.abrirPopupUnirse();
@@ -264,7 +289,9 @@ export class RealizarTestComponent {
       this.getAllTestsComenzados$ = this.testService.getAllTest();
       this.generandoTest = false;
       if (!!autoRedirect)
-        this.router.navigate(['/app/test/alumno/realizar-test/' + res.id]);
+        this.router.navigate(['/app/test/alumno/realizar-test/' + res.id], {
+          queryParams: this.paramsLibrillo,
+        });
     } catch (error: any) {
       this.generandoTest = false;
       const mensaje = error?.error?.message || '';

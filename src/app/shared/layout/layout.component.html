@@ -225,6 +225,18 @@
       aulaInmersiva.activa() ? '100%' : getResponsiveWidth(isMenuExpanded)
     "
   >
+    @if (retornoLibrillo(); as tema) {
+      <div class="px-3 pt-2">
+        <a
+          pButton
+          class="p-button-text"
+          [routerLink]="[rutaPreviaLibrillo, tema.clave]"
+        >
+          <i class="pi pi-arrow-left mr-2" aria-hidden="true"></i>
+          <span>Volver al librillo</span>
+        </a>
+      </div>
+    }
     <router-outlet></router-outlet>
   </div>
 </div>

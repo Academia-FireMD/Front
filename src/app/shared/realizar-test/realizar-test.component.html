@@ -202,7 +202,7 @@
         </div>
         <div class="col-12 md:col-4">
           <app-tema-select
-            [formControl]="formGroup.controls.temas"
+            [controlTemas]="formGroup.controls.temas"
             data-testid="temas-select"
           ></app-tema-select>
         </div>
@@ -425,6 +425,7 @@
                     [routerLink]="[
                       '/app/test/alumno/realizar-test/' + testComenzado.id,
                     ]"
+                    [queryParams]="paramsLibrillo"
                     class="link-text flex align-items-center p-button p-button-raised"
                     style="text-decoration: none"
                     data-testid="continuar-test-btn"

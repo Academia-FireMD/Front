@@ -1,3 +1,7 @@
+import {
+  parametrosPracticaLibrillo,
+  temaDePracticaLibrillo,
+} from '../../../estudio/previa/previa-librillos';
 import { Location } from '@angular/common';
 import {
   ChangeDetectorRef,
@@ -883,9 +887,14 @@ export class CompletarTestComponent {
         ]);
       }
     } else {
-      this.router.navigate([
-        'app/test/alumno/stats-test/' + this.lastLoadedTest.id,
-      ]);
+      this.router.navigate(
+        ['app/test/alumno/stats-test/' + this.lastLoadedTest.id],
+        {
+          queryParams: parametrosPracticaLibrillo(
+            temaDePracticaLibrillo(this.activedRoute.snapshot?.queryParamMap),
+          ),
+        },
+      );
     }
   }
 
