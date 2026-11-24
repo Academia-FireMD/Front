@@ -631,7 +631,8 @@ async function responderPregunta(frame: FrameLocator, correcta: boolean): Promis
         mapa.setView([target.poi.lat, target.poi.lng], target.correcta ? 15 : 12.5, {
           animate: false,
         });
-        const lat = target.correcta ? target.poi.lat : target.poi.lat + 0.02;
+        // El panel de la pregunta cubre la parte norte del mapa.
+        const lat = target.correcta ? target.poi.lat : target.poi.lat - 0.02;
         const lng = target.correcta ? target.poi.lng : target.poi.lng + 0.02;
         const point = mapa.latLngToContainerPoint([lat, lng]);
         const rect = element.getBoundingClientRect();
@@ -702,6 +703,10 @@ test.describe('Módulo Callejero (alumno)', () => {
     });
     await setupAppConfigStubs(page);
     await setupCallejeroInterceptors(page, currentState);
+    await instalarTeselas(page, new Set(), []);
+    await page.route('https://fonts.googleapis.com/**', (route) =>
+      route.fulfill({ contentType: 'text/css', body: '' }),
+    );
   });
 
   test.afterEach(() => {
@@ -921,7 +926,10 @@ test.describe('Módulo Callejero (alumno)', () => {
     }, history);
 
     const frame = await irACallejero(page);
-    await expect(page.getByRole('status')).toContainText('Guardado en tu cuenta.');
+    await expect(page.getByRole('status')).toContainText(
+      'Guardado en tu cuenta.',
+      { timeout: 15_000 },
+    );
     await expect(frame.locator('#btnEmpezar + .nota')).not.toContainText(
       'se guarda en tu navegador',
     );
@@ -1132,6 +1140,10 @@ test.describe('Módulo Callejero (alumno)', () => {
     }, historialLegado);
 
     const frame = await irACallejero(page);
+    await expect(page.getByRole('status')).toContainText(
+      'Guardado en tu cuenta.',
+      { timeout: 15_000 },
+    );
     await frame.locator('#tabExamen').click();
     await expect(frame.locator('#btnRepasarFallos')).toHaveText(
       'Repasar fallos (40)',

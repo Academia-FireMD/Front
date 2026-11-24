@@ -866,6 +866,7 @@ test.describe('Callejero Alicante — recuperación cartográfica', () => {
     escriturasProgreso = [];
     await instalarSondaAuth(page);
     await instalarMockProgresoAlicante(page, escriturasProgreso);
+    await instalarTeselasAlicante(page, new Set(), []);
     await login(page, ['ALICANTE_CPBA']);
   });
 
