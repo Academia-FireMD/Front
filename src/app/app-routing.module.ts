@@ -3,6 +3,8 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { roleGuard } from './guards/auth/role.guard';
 import type { EstudioWorkspaceComponent } from './estudio/estudio-workspace.component';
+import type { PreviaLibrillosComponent } from './estudio/previa/previa-librillos.component';
+import { previaLibrillosGuard } from './estudio/previa/previa-librillos.guard';
 import { moduloGuard } from './guards/modulo.guard';
 import { SubscriptionGuard } from './guards/subscription.guard';
 import { superadminGuard } from './guards/superadmin.guard';
@@ -16,7 +18,16 @@ const librillosRoutes: Routes = environment.librillosMenu
   ? [
       {
         path: 'librillos',
-        canActivate: [roleGuard, moduloGuard, SubscriptionGuard],
+        canActivate: [
+          roleGuard,
+          moduloGuard,
+          SubscriptionGuard,
+          previaLibrillosGuard,
+        ],
+        canDeactivate: [
+          (visor: PreviaLibrillosComponent) => visor.guardarAntesDeSalir(),
+        ],
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
         data: {
           expectedRole: 'ALUMNO',
           modulo: ModuloApp.LIBRILLOS,
@@ -29,8 +40,8 @@ const librillosRoutes: Routes = environment.librillosMenu
         },
         title: 'Librillos',
         loadComponent: () =>
-          import('./documentacion/librillo-catalogo.component').then(
-            (m) => m.LibrilloCatalogoComponent,
+          import('./estudio/previa/previa-librillos.component').then(
+            (m) => m.PreviaLibrillosComponent,
           ),
       },
     ]

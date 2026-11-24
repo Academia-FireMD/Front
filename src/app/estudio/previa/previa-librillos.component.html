@@ -1,47 +1,156 @@
+@let vista = seleccion();
+
 <header class="cabecera">
   <div class="identidad">
     <a
       pButton
       class="p-button-text p-button-sm"
       routerLink="/app/documentacion/alumno"
-      [queryParams]="{ tema: tema().id, doc: tema().documentoId }"
+      [queryParams]="{ tema: vista.tema?.id, doc: vista.documento?.id }"
     >
       <i class="pi pi-arrow-left" aria-hidden="true"></i>
-      <span>Volver al tema</span>
+      <span>Documentación</span>
     </a>
-    <h1>Librillo <span>Vista previa</span></h1>
+    <h1>Librillo</h1>
   </div>
 
-  <nav class="temas" aria-label="Tema de estudio">
-    @for (opcion of temas; track opcion.id) {
-      <a
-        [routerLink]="[opcion.clave]"
-        [attr.aria-current]="tema().id === opcion.id ? 'page' : null"
-      >
-        {{ opcion.titulo }}
-      </a>
-    }
-  </nav>
+  @if (temas().length) {
+    <div class="selector-tema">
+      <label for="tema-librillo">Tema</label>
+      <p-dropdown
+        inputId="tema-librillo"
+        [options]="temas()"
+        optionLabel="etiqueta"
+        optionValue="id"
+        [ngModel]="vista.tema?.id ?? null"
+        (onChange)="seleccionarTema($event.value)"
+        [filter]="true"
+        filterBy="etiqueta"
+        filterPlaceholder="Buscar en el temario"
+        placeholder="Selecciona un tema"
+        styleClass="w-full"
+        data-testid="librillo-selector-tema"
+      />
+    </div>
+  }
 
-  <div class="practica" aria-label="Práctica del tema en el campus">
-    <a
-      pButton
-      class="p-button-sm p-button-outlined"
-      routerLink="/app/test/alumno/realizar-test"
-      [queryParams]="parametrosPractica(tema())"
-    >
-      <i class="pi pi-list" aria-hidden="true"></i>
-      <span>Hacer test</span>
-    </a>
-    <a
-      pButton
-      class="p-button-sm"
-      routerLink="/app/test/alumno/realizar-flash-cards-test"
-      [queryParams]="parametrosPractica(tema())"
-    >
-      <i class="pi pi-clone" aria-hidden="true"></i>
-      <span>Repasar flashcards</span>
-    </a>
-  </div>
+  @if (parametrosPractica(); as parametros) {
+    <div class="practica" aria-label="Práctica del tema en el campus">
+      @if (testActivo()) {
+        <a
+          pButton
+          class="p-button-sm p-button-outlined"
+          routerLink="/app/test/alumno/realizar-test"
+          [queryParams]="parametros"
+        >
+          <i class="pi pi-list" aria-hidden="true"></i>
+          <span>Hacer test</span>
+        </a>
+      }
+      @if (flashcardsActivas()) {
+        <a
+          pButton
+          class="p-button-sm"
+          routerLink="/app/test/alumno/realizar-flash-cards-test"
+          [queryParams]="parametros"
+        >
+          <i class="pi pi-clone" aria-hidden="true"></i>
+          <span>Repasar flashcards</span>
+        </a>
+      }
+    </div>
+  }
 </header>
-<router-outlet />
+
+@if (vista.tema; as tema) {
+  @if (tema.documentos.length > 1 || vista.documentoInaccesible) {
+    <div class="selector-documento">
+      <label for="documento-librillo">Documento</label>
+      <select
+        id="documento-librillo"
+        [ngModel]="vista.documento?.id ?? null"
+        (ngModelChange)="seleccionarDocumento($event)"
+      >
+        <option [ngValue]="null" disabled>Selecciona un documento</option>
+        @for (documento of tema.documentos; track documento.id) {
+          <option [ngValue]="documento.id">
+            {{ documento.identificador }}
+          </option>
+        }
+      </select>
+    </div>
+  }
+}
+
+@switch (estado().tipo) {
+  @case ("cargando") {
+    <p class="aviso" role="status">Cargando tu temario…</p>
+  }
+  @case ("error") {
+    <div class="aviso">
+      <p role="alert">No se pudo cargar tu temario.</p>
+      <button
+        pButton
+        type="button"
+        class="p-button-outlined"
+        (click)="recargar()"
+      >
+        Reintentar
+      </button>
+    </div>
+  }
+  @case ("sesion") {
+    <p class="aviso" role="alert">
+      Tu sesión ha cambiado. Vuelve a abrir el Librillo desde tu cuenta.
+    </p>
+  }
+  @default {
+    @if (vista.temaInaccesible) {
+      <p class="aviso" role="alert">
+        Este tema o documento no está disponible en tu temario.
+      </p>
+    } @else if (vista.documentoInaccesible) {
+      <p class="aviso" role="alert">
+        Este documento no está disponible en el tema seleccionado.
+      </p>
+    } @else if (vista.documento) {
+      @for (documento of [vista.documento]; track documento.id) {
+        @if (!documento.isDownloadable) {
+          <p class="aviso">
+            Tu suscripción permite consultar el tema. Este documento está
+            bloqueado.
+          </p>
+        } @else if (documento.librillo) {
+          <app-estudio-workspace [documentoPrevia]="documento.id" />
+        } @else if (esPdf(documento)) {
+          <app-previa-librillos-pdf [documento]="documento" />
+        } @else {
+          <div class="aviso">
+            <p>
+              {{ documento.identificador }} se puede abrir desde Documentación.
+            </p>
+            <a
+              pButton
+              class="p-button-outlined"
+              routerLink="/app/documentacion/alumno"
+              [queryParams]="{ tema: vista.tema?.id, doc: documento.id }"
+              >Ir al documento</a
+            >
+          </div>
+        }
+      }
+    } @else if (vista.tema) {
+      <p class="aviso" role="status">
+        Este tema todavía no tiene documentos disponibles.
+      </p>
+    } @else if (temas().length) {
+      <p class="aviso" role="status">
+        Elige un tema para leer sus documentos o practicar.
+      </p>
+    } @else {
+      <p class="aviso" role="status">
+        Tu cuenta aún no tiene temas disponibles.
+      </p>
+    }
+  }
+}

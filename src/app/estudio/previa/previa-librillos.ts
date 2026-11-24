@@ -1,47 +1,51 @@
 import { ParamMap, UrlTree } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { usuarioIdDeSubject } from '../../cursos/services/hidraulica-interactivo.service';
 
-export const RUTA_PREVIA_LIBRILLOS =
-  '/app/documentacion/alumno/previa-librillos';
+export const RUTA_PREVIA_LIBRILLOS = '/app/librillos';
 
-export const TEMAS_PREVIA_LIBRILLOS = [
-  {
-    clave: 'estatutos',
-    id: 47,
-    documentoId: 145,
-    titulo: 'Estatutos del CPBA',
-  },
-  {
-    clave: 'altura',
-    id: 49,
-    documentoId: 148,
-    titulo: 'Trabajos en altura',
-  },
-] as const;
+const PREVIA_ANTERIOR = new Map<string, ContextoLibrillo>([
+  ['estatutos', { id: 47, documentoId: 145 }],
+  ['altura', { id: 49, documentoId: 148 }],
+]);
 
-type TemaPreviaLibrillos = (typeof TEMAS_PREVIA_LIBRILLOS)[number];
+export interface ContextoLibrillo {
+  id: number;
+  documentoId?: number;
+}
 
 export function temaDePracticaLibrillo(
   params: ParamMap | undefined,
   habilitada = environment.librillosMenu,
-): TemaPreviaLibrillos | undefined {
-  if (!habilitada) return undefined;
+): ContextoLibrillo | undefined {
+  const origen = params?.get('desdeLibrillo');
+  if (!habilitada || !origen) return undefined;
+  const anterior = PREVIA_ANTERIOR.get(origen);
+  if (anterior) return anterior;
 
-  return TEMAS_PREVIA_LIBRILLOS.find(
-    ({ clave }) => clave === params?.get('desdeLibrillo'),
-  );
+  const id = usuarioIdDeSubject(origen);
+  if (id === null) return undefined;
+  const documentoId = usuarioIdDeSubject(params?.get('documentoLibrillo'));
+  return documentoId === null ? { id } : { id, documentoId };
 }
 
 export function parametrosPracticaLibrillo(
-  tema?: TemaPreviaLibrillos,
-): { desdeLibrillo: string } | undefined {
-  return tema ? { desdeLibrillo: tema.clave } : undefined;
+  tema?: ContextoLibrillo,
+): { desdeLibrillo: number; documentoLibrillo?: number } | undefined {
+  if (!tema) return undefined;
+  return tema.documentoId === undefined
+    ? { desdeLibrillo: tema.id }
+    : { desdeLibrillo: tema.id, documentoLibrillo: tema.documentoId };
+}
+
+export function parametrosVistaLibrillo(tema: ContextoLibrillo) {
+  return { tema: tema.id, doc: tema.documentoId };
 }
 
 export function retornoDePracticaLibrillo(
   url: UrlTree,
   habilitada = environment.librillosMenu,
-): TemaPreviaLibrillos | undefined {
+): ContextoLibrillo | undefined {
   const ruta = url.root.children['primary']?.segments
     .map(({ path }) => path)
     .join('/');

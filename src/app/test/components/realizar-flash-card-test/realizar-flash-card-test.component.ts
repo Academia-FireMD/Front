@@ -11,7 +11,7 @@ import {
 import { PreguntasService } from '../../../services/preguntas.service';
 import { TemaService } from '../../../services/tema.service';
 
-import { Dificultad } from '../../../shared/models/pregunta.model';
+import { Dificultad, Tema } from '../../../shared/models/pregunta.model';
 import {
   parametrosPracticaLibrillo,
   temaDePracticaLibrillo,
@@ -39,15 +39,12 @@ export class RealizarFlashCardTestComponent {
   confirmationService = inject(ConfirmationService);
   flashcardService = inject(FlashcardDataService);
   formGroup = this.fb.group({
-    numPreguntas: [this.temaLibrillo ? 20 : 60, Validators.required],
+    numPreguntas: [60, Validators.required],
     dificultad: [
       [Dificultad.BASICO, Dificultad.INTERMEDIO, Dificultad.DIFICIL],
       Validators.required,
     ],
-    temas: [
-      this.temaLibrillo ? [this.temaLibrillo.id] : ([] as number[]),
-      Validators.required,
-    ],
+    temas: [[] as number[], Validators.required],
     generarTestDeRepaso: [false],
     aleatorio: [true],
   });
@@ -56,6 +53,13 @@ export class RealizarFlashCardTestComponent {
   public preguntas = getNumeroDePreguntas();
   public getAllDifficultades = getAllDifficultades(true, true);
   public generandoTest = false;
+
+  preseleccionarLibrillo(temas: readonly Tema[]) {
+    const tema = this.temaLibrillo;
+    if (!tema || !temas.some(({ id }) => id === tema.id)) return;
+
+    this.formGroup.patchValue({ temas: [tema.id], numPreguntas: 20 });
+  }
 
   private buildPayload(sobreescribir = false): GenerarFlashcardTestDto {
     return {

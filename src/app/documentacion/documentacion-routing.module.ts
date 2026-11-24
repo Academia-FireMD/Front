@@ -8,55 +8,24 @@ import { ModuloApp } from '../shared/models/modulo-app.enum';
 import { DocumentationOverviewComponent } from './documentation-overview/documentation-overview.component';
 import { ReleaseManagementComponent } from './release-management/release-management.component';
 import { environment } from '../../environments/environment';
-import type { EstudioWorkspaceComponent } from '../estudio/estudio-workspace.component';
-import { previaLibrillosGuard } from '../estudio/previa/previa-librillos.guard';
-import { TEMAS_PREVIA_LIBRILLOS } from '../estudio/previa/previa-librillos';
+import { RUTA_PREVIA_LIBRILLOS } from '../estudio/previa/previa-librillos';
 
 const rutasPrevia: Routes = environment.librillosMenu
   ? [
       {
+        path: 'alumno/previa-librillos/estatutos',
+        redirectTo: RUTA_PREVIA_LIBRILLOS + '?tema=47&doc=145',
+        pathMatch: 'full',
+      },
+      {
+        path: 'alumno/previa-librillos/altura',
+        redirectTo: RUTA_PREVIA_LIBRILLOS + '?tema=49&doc=148',
+        pathMatch: 'full',
+      },
+      {
         path: 'alumno/previa-librillos',
-        canActivate: [roleGuard, SubscriptionGuard, previaLibrillosGuard],
-        data: {
-          expectedRole: 'ALUMNO',
-          allowedSubscriptions: [
-            SuscripcionTipo.BASIC,
-            SuscripcionTipo.ADVANCED,
-            SuscripcionTipo.PREMIUM,
-          ],
-        },
-        title: 'Vista previa del Librillo',
-        loadComponent: () =>
-          import('../estudio/previa/previa-librillos.component').then(
-            (m) => m.PreviaLibrillosComponent,
-          ),
-        children: [
-          { path: '', redirectTo: 'estatutos', pathMatch: 'full' },
-          {
-            path: 'estatutos',
-            data: {
-              recurso: 'librillo',
-              documentoIdPrevia: TEMAS_PREVIA_LIBRILLOS[0].documentoId,
-            },
-            canDeactivate: [
-              async (visor: EstudioWorkspaceComponent) => {
-                await visor.guardarAntesDeSalir();
-                return true;
-              },
-            ],
-            loadComponent: () =>
-              import('../estudio/estudio-workspace.component').then(
-                (m) => m.EstudioWorkspaceComponent,
-              ),
-          },
-          {
-            path: 'altura',
-            loadComponent: () =>
-              import('../estudio/previa/previa-librillos-pdf.component').then(
-                (m) => m.PreviaLibrillosPdfComponent,
-              ),
-          },
-        ],
+        redirectTo: RUTA_PREVIA_LIBRILLOS,
+        pathMatch: 'full',
       },
     ]
   : [];

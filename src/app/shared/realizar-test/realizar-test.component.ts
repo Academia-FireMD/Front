@@ -9,7 +9,7 @@ import { PreguntasService } from '../../services/preguntas.service';
 import { TemaService } from '../../services/tema.service';
 import { GenerarTestDto, TestService } from '../../services/test.service';
 import { getAllDifficultades, getNumeroDePreguntas } from '../../utils/utils';
-import { Dificultad } from '../models/pregunta.model';
+import { Dificultad, Tema } from '../models/pregunta.model';
 import {
   parametrosPracticaLibrillo,
   temaDePracticaLibrillo,
@@ -31,12 +31,13 @@ export class RealizarTestComponent {
   router = inject(Router);
   activatedRoute = inject(ActivatedRoute);
   @Input() mode: 'injected' | 'default' = 'default';
-  get paramsLibrillo() {
+  private get temaLibrillo() {
     return this.mode === 'default'
-      ? parametrosPracticaLibrillo(
-          temaDePracticaLibrillo(this.activatedRoute.snapshot?.queryParamMap),
-        )
+      ? temaDePracticaLibrillo(this.activatedRoute.snapshot?.queryParamMap)
       : undefined;
+  }
+  get paramsLibrillo() {
+    return parametrosPracticaLibrillo(this.temaLibrillo);
   }
 
   formGroup = this.fb.group({
@@ -141,26 +142,27 @@ export class RealizarTestComponent {
     // Deep-link: /app/test/alumno/realizar-test?codigo=XXXX abre el popup de
     // unirse con el código autorrellenado.
     if (this.mode === 'default') {
-      const tema = temaDePracticaLibrillo(
-        this.activatedRoute.snapshot?.queryParamMap,
-      );
-      if (tema) {
-        this.formGroup.patchValue({
-          temas: [tema.id],
-          numPreguntas: 20,
-          dificultad: [
-            Dificultad.BASICO,
-            Dificultad.INTERMEDIO,
-            Dificultad.DIFICIL,
-          ],
-        });
-      }
       const codigo = this.activatedRoute.snapshot?.queryParamMap?.get('codigo');
       if (codigo) {
         this.codigoDesafioControl.setValue(codigo);
         this.abrirPopupUnirse();
       }
     }
+  }
+
+  preseleccionarLibrillo(temas: readonly Tema[]) {
+    const tema = this.temaLibrillo;
+    if (!tema || !temas.some(({ id }) => id === tema.id)) return;
+
+    this.formGroup.patchValue({
+      temas: [tema.id],
+      numPreguntas: 20,
+      dificultad: [
+        Dificultad.BASICO,
+        Dificultad.INTERMEDIO,
+        Dificultad.DIFICIL,
+      ],
+    });
   }
 
   // --- Modo desafío: popup explicativo -------------------------------------

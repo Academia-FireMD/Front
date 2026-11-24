@@ -8,6 +8,7 @@ import {
   ViewEncapsulation,
   computed,
   inject,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
@@ -24,7 +25,7 @@ import { firstValueFrom, timeout } from 'rxjs';
 import { usuarioIdDeSubject } from '../../cursos/services/hidraulica-interactivo.service';
 import { DocumentosService } from '../../documentacion/services/documentacion.service';
 import { AuthService } from '../../services/auth.service';
-import { TEMAS_PREVIA_LIBRILLOS } from './previa-librillos';
+import { DocumentoTemario } from '../../shared/models/documentacion.model';
 
 type Rectangulo = { x: number; y: number; ancho: number; alto: number };
 
@@ -39,7 +40,6 @@ interface Cuaderno {
 }
 
 const PAGINA_VACIA: PaginaAnotada = { nota: '', subrayados: [] };
-const DOCUMENTO_ALTURA = TEMAS_PREVIA_LIBRILLOS[1].documentoId;
 
 @Component({
   selector: 'app-previa-librillos-pdf',
@@ -51,6 +51,7 @@ const DOCUMENTO_ALTURA = TEMAS_PREVIA_LIBRILLOS[1].documentoId;
   encapsulation: ViewEncapsulation.None,
 })
 export class PreviaLibrillosPdfComponent implements AfterViewInit {
+  readonly documento = input.required<DocumentoTemario>();
   private readonly documentos = inject(DocumentosService);
   private readonly auth = inject(AuthService);
   private readonly destruir = inject(DestroyRef);
@@ -128,25 +129,7 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
     this.fallo.set('');
     this.cargando.set(true);
     try {
-      const arbol = await firstValueFrom(
-        this.documentos
-          .getDocumentTree$()
-          .pipe(timeout(15000), takeUntilDestroyed(this.destruir)),
-      );
-      const documento = arbol
-        .flatMap((modulo) => modulo.temas)
-        .find(({ id }) => id === TEMAS_PREVIA_LIBRILLOS[1].id)
-        ?.documentos.find(
-          ({ id, isDownloadable }) => id === DOCUMENTO_ALTURA && isDownloadable,
-        );
-      if (!documento) {
-        this.fallo.set(
-          'El PDF de este tema no está disponible para tu cuenta.',
-        );
-        return;
-      }
-      if (!this.sesionVigente()) return;
-
+      const documento = this.documento();
       const [blob, libreria] = await Promise.all([
         firstValueFrom(
           this.documentos
@@ -158,12 +141,15 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
         >,
       ]);
       const datos = await blob.arrayBuffer();
-      const huella = await crypto.subtle.digest('SHA-256', datos);
+      // La marca de agua puede cambiar los bytes entre dos descargas de la misma edición.
+      const edicion =
+        documento.requireWatermark && documento.updatedAt
+          ? documento.updatedAt
+          : Array.from(
+              new Uint8Array(await crypto.subtle.digest('SHA-256', datos)),
+              (n) => n.toString(16).padStart(2, '0'),
+            ).join('');
       if (!this.sesionVigente()) return;
-
-      const edicion = Array.from(new Uint8Array(huella), (n) =>
-        n.toString(16).padStart(2, '0'),
-      ).join('');
       this.clave = `previa-librillo:${usuario}:${documento.id}:${edicion}`;
       this.libreria = libreria;
       this.worker = new Worker(

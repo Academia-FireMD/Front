@@ -59,6 +59,7 @@
         <div class="col-12 md:col-4">
           <app-tema-select
             [controlTemas]="formGroup.controls.temas"
+            (temasCargados)="preseleccionarLibrillo($event)"
             data-testid="temas-select"
           ></app-tema-select>
         </div>

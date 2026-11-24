@@ -230,7 +230,8 @@
         <a
           pButton
           class="p-button-text"
-          [routerLink]="[rutaPreviaLibrillo, tema.clave]"
+          [routerLink]="rutaPreviaLibrillo"
+          [queryParams]="parametrosVistaLibrillo(tema)"
         >
           <i class="pi pi-arrow-left mr-2" aria-hidden="true"></i>
           <span>Volver al librillo</span>

@@ -15,6 +15,8 @@ import { ActivatedRoute } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { RUTA_PREVIA_LIBRILLOS } from '../../estudio/previa/previa-librillos';
 import { UserService } from '../../services/user.service';
 import { AppConfigService } from '../../services/app-config.service';
 import { buildDocumentDownloadFileName } from '../../shared/utils/document-download-file-name';
@@ -62,6 +64,10 @@ export class DocumentationOverviewComponent
   readonly librillosActivos = computed(() =>
     this.appConfig.isModuloHabilitado(ModuloApp.LIBRILLOS),
   );
+  readonly librilloTemarioActivo = computed(
+    () => environment.librillosMenu && this.librillosActivos(),
+  );
+  readonly rutaLibrillo = RUTA_PREVIA_LIBRILLOS;
 
   public uploadingFile = false;
   public mostrarSubirFichero = false;

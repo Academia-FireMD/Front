@@ -7,7 +7,8 @@
   background: var(--surface-ground);
 }
 
-.cabecera {
+.cabecera,
+.selector-documento {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -18,74 +19,78 @@
 }
 
 .identidad,
-.temas,
+.selector-tema,
 .practica {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .identidad h1 {
   margin: 0;
   font-size: 1.05rem;
-  white-space: nowrap;
+}
 
-  span {
-    margin-left: 0.25rem;
-    color: var(--text-color-secondary);
-    font-weight: 400;
-    font-size: 0.8rem;
+.selector-tema {
+  flex: 1 1 18rem;
+  min-width: 0;
+
+  p-dropdown {
+    flex: 1;
+    min-width: 0;
   }
 }
 
-.temas {
-  flex: 1;
-  flex-wrap: wrap;
-
-  a {
-    padding: 0.55rem 0.7rem;
-    color: var(--text-color);
-
-    &[aria-current="page"] {
-      background: var(--surface-100);
-      color: var(--primary-color);
-      font-weight: 700;
-      border-radius: 0.35rem;
-    }
-  }
+.selector-documento select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--text-color);
 }
 
-.cabecera a {
+.cabecera a,
+.aviso a,
+.aviso button {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   min-height: 44px;
   text-decoration: none;
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
 }
 
-router-outlet {
-  display: none;
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.aviso {
+  padding: 1rem 0.85rem;
+  text-align: center;
 }
 
 @media (max-width: 720px) {
-  .cabecera {
-    gap: 0.25rem;
+  .cabecera,
+  .selector-documento {
+    gap: 0.35rem;
     padding: 0.3rem 0.45rem;
   }
 
-  .identidad {
+  .identidad,
+  .selector-tema,
+  .practica {
     width: 100%;
+  }
+
+  .identidad,
+  .practica {
     justify-content: space-between;
   }
 
-  .temas,
-  .practica {
-    width: 100%;
-    justify-content: space-between;
+  .selector-documento select {
+    flex: 1;
+    min-width: 0;
   }
 }

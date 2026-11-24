@@ -1,31 +1,17 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import {
-  takeUntilDestroyed,
-  toObservable,
-  toSignal,
-} from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { MenuItem } from 'primeng/api';
-import {
-  catchError,
-  filter,
-  firstValueFrom,
-  map,
-  Observable,
-  of,
-  startWith,
-  switchMap,
-} from 'rxjs';
+import { filter, firstValueFrom, map, Observable, startWith } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { DocumentosService } from '../../documentacion/services/documentacion.service';
 import {
+  parametrosVistaLibrillo,
   retornoDePracticaLibrillo,
   RUTA_PREVIA_LIBRILLOS,
 } from '../../estudio/previa/previa-librillos';
 import { AppConfigService } from '../../services/app-config.service';
-import { AuthSessionService } from '../../services/auth-session.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { ViewportService } from '../../services/viewport.service';
@@ -104,6 +90,7 @@ export class LayoutComponent {
   aulaInmersiva = inject(AulaInmersivaService);
 
   readonly rutaPreviaLibrillo = RUTA_PREVIA_LIBRILLOS;
+  readonly parametrosVistaLibrillo = parametrosVistaLibrillo;
   readonly retornoLibrillo = environment.librillosMenu
     ? toSignal(
         this.router.events.pipe(
@@ -120,8 +107,6 @@ export class LayoutComponent {
   /** Snapshot del usuario actual para el computed `items` (D11). */
   private readonly currentUserSignal = signal<Usuario | null>(null);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly documentos = inject(DocumentosService);
-  private readonly sesiones = inject(AuthSessionService);
   private readonly cuentaLibrillos = computed(() => {
     const user = this.currentUserSignal();
     const flags = this.appConfigService.estadoModulos();
@@ -137,22 +122,6 @@ export class LayoutComponent {
       ? user
       : null;
   });
-  private readonly librillosDisponibles = toSignal(
-    toObservable(this.cuentaLibrillos).pipe(
-      switchMap((cuenta) => {
-        if (!cuenta) return of(null);
-        const sesion = this.sesiones.snapshot();
-        return this.documentos.getLibrillos$().pipe(
-          map((entradas) =>
-            entradas.length && this.sesiones.isCurrent(sesion) ? cuenta : null,
-          ),
-          catchError(() => of(null)),
-        );
-      }),
-    ),
-    { initialValue: null },
-  );
-
   /**
    * Menu filtrado por módulos habilitados + rol (computed §6.1). Reacciona
    * a cambios en `estadoModulos` y al snapshot de usuario.
@@ -536,15 +505,11 @@ export class LayoutComponent {
         routerLink: '/app/documentacion/alumno',
         modulo: ModuloApp.DOCUMENTACION,
       });
-      if (
-        user &&
-        this.cuentaLibrillos() === user &&
-        this.librillosDisponibles() === user
-      ) {
+      if (user && this.cuentaLibrillos() === user) {
         menu.push({
           label: 'Librillos',
           icon: 'pi pi-book',
-          routerLink: '/app/librillos',
+          routerLink: RUTA_PREVIA_LIBRILLOS,
           modulo: ModuloApp.LIBRILLOS,
         });
       }

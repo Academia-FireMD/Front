@@ -1,10 +1,12 @@
 import {
   Component,
+  EventEmitter,
   inject,
   Input,
   OnChanges,
   OnDestroy,
   OnInit,
+  Output,
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
@@ -36,6 +38,7 @@ export class TemaSelectComponent implements OnInit, OnChanges, OnDestroy {
    * endpoint backend).
    */
   @Input() oposicion: Oposicion | null = null;
+  @Output() readonly temasCargados = new EventEmitter<readonly Tema[]>();
   @ViewChild('op') overlayPanel!: OverlayPanel;
   private subs = new Subscription();
 
@@ -53,6 +56,7 @@ export class TemaSelectComponent implements OnInit, OnChanges, OnDestroy {
     const s = this.temaService.getAllTemas$().subscribe((temas) => {
       this.temasOriginales = temas;
       this.rebuildGroups();
+      this.temasCargados.emit(temas);
     });
     this.subs.add(s);
   }

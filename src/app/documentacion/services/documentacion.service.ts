@@ -6,19 +6,12 @@ import { environment } from '../../../environments/environment';
 import { ApiBaseService } from '../../services/api-base.service';
 import {
   Documento,
-  DocumentoTemario,
   ModuloTemario,
 } from '../../shared/models/documentacion.model';
 import {
   PaginatedResult,
   PaginationFilter,
 } from '../../shared/models/pagination.model';
-
-export interface EntradaLibrillo {
-  documento: DocumentoTemario;
-  tema: number;
-  contexto: string;
-}
 
 @Injectable({
   providedIn: 'root',
@@ -107,32 +100,6 @@ export class DocumentosService extends ApiBaseService {
       {
         params,
       },
-    );
-  }
-
-  public getLibrillos$(): Observable<EntradaLibrillo[]> {
-    return this.getDocumentTree$().pipe(
-      map((arbol) => {
-        const entradas = new Map<number, EntradaLibrillo>();
-        for (const modulo of arbol) {
-          for (const tema of modulo.temas) {
-            for (const documento of tema.documentos) {
-              if (
-                documento.isDownloadable &&
-                documento.librillo &&
-                !entradas.has(documento.id)
-              ) {
-                entradas.set(documento.id, {
-                  documento,
-                  tema: tema.id,
-                  contexto: `${modulo.nombre} · ${tema.numero} - ${tema.descripcion}`,
-                });
-              }
-            }
-          }
-        }
-        return [...entradas.values()];
-      }),
     );
   }
 

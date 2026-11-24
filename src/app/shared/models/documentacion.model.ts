@@ -19,6 +19,7 @@ export interface Documento {
 }
 
 export interface DocumentoTemario extends Documento {
+  updatedAt?: string;
   isNew: boolean;
   isDownloadable: boolean;
   librillo?: { edicion: string; titulo: string } | null;

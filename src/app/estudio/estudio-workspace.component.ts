@@ -8,6 +8,7 @@ import {
   ElementRef,
   computed,
   inject,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
@@ -83,6 +84,7 @@ const TEXTO: Record<EstadoEstudio, string> = {
 };
 
 @Component({
+  selector: 'app-estudio-workspace',
   standalone: true,
   imports: [ButtonModule],
   templateUrl: './estudio-workspace.component.html',
@@ -110,9 +112,13 @@ export class EstudioWorkspaceComponent {
     viewChild<ElementRef<HTMLButtonElement>>('volverButton');
   private active?: InstanciaEstudio;
 
-  readonly tipo = this.route.snapshot.data['recurso'] as RecursoEstudio['tipo'];
-  readonly enPrevia =
-    this.route.snapshot.data['documentoIdPrevia'] !== undefined;
+  readonly documentoPrevia = input<number>();
+  get tipo(): RecursoEstudio['tipo'] {
+    return this.enPrevia ? 'librillo' : this.route.snapshot.data['recurso'];
+  }
+  get enPrevia() {
+    return this.documentoPrevia() !== undefined;
+  }
   readonly titulo = signal(
     this.tipo === 'psico' ? 'Psicotécnicos' : 'Librillo',
   );
@@ -151,19 +157,26 @@ export class EstudioWorkspaceComponent {
         this.estado() === 'limited'),
   );
 
-  constructor() {
-    if (this.tipo === 'librillo' && !this.enPrevia) this.aula.activar();
+  ngOnInit() {
+    const inmersivo = this.tipo === 'librillo' && !this.enPrevia;
+    if (inmersivo) this.aula.activar();
     this.destroyRef.onDestroy(() => {
       this.dispose();
-      if (this.tipo === 'librillo' && !this.enPrevia) this.aula.desactivar();
+      if (inmersivo) this.aula.desactivar();
     });
-    this.auth.currentIdentity$.pipe(takeUntilDestroyed()).subscribe(() => {
-      if (this.active && !this.auth.isSessionCurrent(this.active.session))
-        this.sesionCambiada();
-    });
-    combineLatest([this.route.paramMap, this.route.fragment])
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.cargar());
+    this.auth.currentIdentity$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.active && !this.auth.isSessionCurrent(this.active.session))
+          this.sesionCambiada();
+      });
+    if (this.enPrevia) {
+      this.cargar();
+    } else {
+      combineLatest([this.route.paramMap, this.route.fragment])
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.cargar());
+    }
     setTimeout(() => this.volverButton()?.nativeElement.focus());
   }
 
@@ -200,8 +213,7 @@ export class EstudioWorkspaceComponent {
       return;
     }
     const documentoId = usuarioIdDeSubject(
-      this.route.snapshot.data['documentoIdPrevia'] ??
-        this.route.snapshot.paramMap.get('documentoId'),
+      this.documentoPrevia() ?? this.route.snapshot.paramMap.get('documentoId'),
     );
     if (this.tipo === 'librillo' && documentoId === null) {
       this.fallo.set('El documento no está disponible.');
