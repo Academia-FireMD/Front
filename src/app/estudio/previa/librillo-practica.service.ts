@@ -34,6 +34,13 @@ export interface IntentoPracticaLibrillo extends IntentoPendienteLibrillo {
   origenLibrillo: OrigenPracticaLibrillo;
 }
 
+export interface ConflictoPracticaLibrillo extends IntentoPendienteLibrillo {
+  codigo: 'intento_pendiente';
+  temas: number[];
+  coincide: boolean;
+  reemplazable: boolean;
+}
+
 interface ProgresoPracticaLibrillo {
   preguntas: { total: number; vistas: number; acertadas: number };
   tarjetas: { total: number; vistas: number; dominadas: number };
@@ -44,7 +51,7 @@ export interface ResumenPracticaLibrillo {
   flashcards: number;
   testPagina: number;
   flashcardsPagina: number;
-  pendientes: Record<TipoPracticaLibrillo, IntentoPendienteLibrillo | null>;
+  pendientes?: Record<TipoPracticaLibrillo, IntentoPendienteLibrillo | null>;
   progreso: ProgresoPracticaLibrillo;
   progresoPagina: ProgresoPracticaLibrillo | null;
   referencias: ReferenciaPracticaLibrillo[];
@@ -57,14 +64,33 @@ export interface ConfiguracionPracticaLibrillo extends Partial<ContextoPdfLibril
   cantidad: number;
   segundosPorPregunta?: SegundosPorPreguntaLibrillo;
   penalizacion?: PenalizacionLibrillo;
+  reemplazarPendienteId?: number;
 }
 
-export interface ResultadoPracticaLibrillo {
-  total: number;
+export interface ConteoTestLibrillo {
   aciertos: number;
   fallos: number;
   blancas: number;
-  nota: number;
+}
+
+export interface ResultadoPracticaLibrillo extends ConteoTestLibrillo {
+  total: number;
+  nota: number | null;
+}
+
+export type SesionHistorialLibrillo = {
+  id: number;
+  fecha: string;
+  mixto: boolean;
+  total: number;
+} & (
+  | ConteoTestLibrillo
+  | { aprendidas: number; paraRepasar: number; dificultad: number }
+);
+
+export interface HistorialPracticaLibrillo {
+  items: SesionHistorialLibrillo[];
+  siguienteCursor: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -103,6 +129,15 @@ export class LibrilloPracticaService {
         this.url(temaId) + '/test/' + id + '/resultado',
         { withCredentials: true },
       )
+      .pipe(timeout(15000));
+  }
+
+  historial(temaId: number, tipo: TipoPracticaLibrillo, cursor: number | null) {
+    return this.http
+      .get<HistorialPracticaLibrillo>(this.url(temaId) + '/historial', {
+        withCredentials: true,
+        params: cursor === null ? { tipo } : { tipo, cursor },
+      })
       .pipe(timeout(15000));
   }
 

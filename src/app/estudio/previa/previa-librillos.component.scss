@@ -7,7 +7,8 @@
 }
 
 .cabecera,
-.selector-documento {
+.selector-documento,
+.regreso-practica {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -15,6 +16,11 @@
   padding: 0.5rem 0.85rem;
   background: var(--surface-card);
   border-bottom: 1px solid var(--surface-border);
+}
+
+.regreso-practica button {
+  gap: 0.5rem;
+  min-height: 44px;
 }
 
 .identidad,

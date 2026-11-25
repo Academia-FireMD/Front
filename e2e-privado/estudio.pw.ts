@@ -728,13 +728,23 @@ test('El atajo lateral aparece solo en la variante staging y abre el mismo lecto
 }) => {
   const backend = servidorEstudio();
   const page = await backend.preparar(context);
+  await page.route('**/tema/get-temas', (route) =>
+    route.fulfill({
+      json: [
+        { id: backend.TEMA, numero: 4, descripcion: 'Estatutos de prueba' },
+      ],
+    }),
+  );
   await page.goto(temario);
   await page.locator('.lateral-bar').hover();
   const antesDeCurso = page.locator('.menu-header').filter({
     hasText:
-      /Documentos|Librillos|^(?:\s*Test\s*|\s*Flashcards\s*|\s*Psicotécnicos\s*)$/,
+      /Documentos|Cuaderno de estudio|^(?:\s*Test\s*|\s*Flashcards\s*|\s*Psicotécnicos\s*)$/,
   });
-  const link = page.getByRole('link', { name: 'Librillos', exact: true });
+  const link = page.getByRole('link', {
+    name: 'Cuaderno de estudio',
+    exact: true,
+  });
   if (!backend.staging) {
     await expect(antesDeCurso).toHaveText([
       'Documentos',
@@ -747,42 +757,48 @@ test('El atajo lateral aparece solo en la variante staging y abre el mismo lecto
     ).toHaveLength(1);
     await expect(link).toHaveCount(0);
     await page.goto('/app/librillos');
-    await expect(page.getByRole('heading', { name: 'Librillos' })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole('heading', { name: 'Librillo', exact: true }),
+    ).toHaveCount(0);
     return;
   }
   await expect(link).toBeVisible();
   await expect(antesDeCurso).toHaveText([
     'Documentos',
-    'Librillos',
+    'Cuaderno de estudio',
     'Test',
     'Flashcards',
     'Psicotécnicos',
   ]);
   await link.press('Enter');
   await expect(
-    page.getByRole('heading', { name: 'Librillos', exact: true }),
+    page.getByRole('heading', { name: 'Librillo', exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Estudiar con librillo' }),
-  ).toHaveCount(1);
-  await page.getByRole('link', { name: 'Estudiar con librillo' }).click();
+  await expect(page).toHaveURL(/\/app\/librillos$/);
+  await page
+    .getByTestId('librillo-selector-tema')
+    .getByRole('combobox')
+    .press('Space');
+  await page.getByRole('option', { name: '4 · Estatutos de prueba' }).click();
   await expect(visor(page).locator('#hojaSel option')).toHaveCount(19);
-  await page.getByRole('button', { name: 'Volver a Librillos' }).click();
-  await expect(
-    page.getByRole('link', { name: 'Estudiar con librillo' }),
-  ).toBeFocused();
+  await expect(page).toHaveURL(
+    new RegExp(`/app/librillos\\?tema=${backend.TEMA}$`),
+  );
 
   backend.opciones.piloto = 2;
+  await page.goto(`/app/librillos?tema=${backend.TEMA}`);
+  await expect(
+    page.getByRole('combobox', { name: '4 · Estatutos de prueba' }),
+  ).toBeVisible();
+  await page.locator('.lateral-bar').hover();
+  await expect(link).toBeVisible();
+
+  const consultasDeTemario = () =>
+    backend.peticiones.filter((p) => p.endpoint === '/documentos/tree').length;
+  const consultasAnteriores = consultasDeTemario();
+  backend.opciones.modulos = false;
   await page.goto(temario);
-  await expect
-    .poll(
-      () =>
-        backend.peticiones.filter((p) => p.endpoint === '/documentos/tree')
-          .length,
-    )
-    .toBeGreaterThan(4);
+  await expect.poll(consultasDeTemario).toBeGreaterThan(consultasAnteriores);
   await expect(page.getByRole('button', { name: 'Normativa' })).toBeVisible();
   await expect(
     page.getByRole('link', { name: 'Documentos', exact: true }),

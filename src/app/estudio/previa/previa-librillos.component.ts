@@ -1,8 +1,10 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -73,6 +75,15 @@ export class PreviaLibrillosComponent {
   private readonly actualizar = new Subject<void>();
   private readonly visorInteractivo = viewChild(EstudioWorkspaceComponent);
   private readonly visorPdf = viewChild(PreviaLibrillosPdfComponent);
+  readonly panelPractica = viewChild(LibrilloPracticaComponent);
+  private readonly botonRegreso =
+    viewChild<ElementRef<HTMLButtonElement>>('botonRegreso');
+  private readonly tabLectura =
+    viewChild<ElementRef<HTMLButtonElement>>('tabLectura');
+  private referenciaEnCurso:
+    | (ContextoPdfLibrillo & { referencia: number })
+    | null = null;
+  readonly errorReferencia = signal(false);
   private readonly params = toSignal(this.ruta.queryParamMap, {
     initialValue: this.ruta.snapshot.queryParamMap,
   });
@@ -101,6 +112,12 @@ export class PreviaLibrillosComponent {
   readonly seleccion = computed(() =>
     seleccionLibrillo(this.temas(), this.params()),
   );
+  readonly seleccionesPractica = computed(() => {
+    const { tema, documento } = this.seleccion();
+    return tema
+      ? [{ tema, documento, clave: `${tema.id}:${documento?.id ?? ''}` }]
+      : [];
+  });
   readonly parametrosPractica = computed(() => {
     const { tema, documento } = this.seleccion();
     return tema
@@ -155,6 +172,7 @@ export class PreviaLibrillosComponent {
 
   async seleccionarTema(id: number) {
     await this.visorPdf()?.guardarAntesDeSalir();
+    this.errorReferencia.set(false);
     this.pestana.set('lectura');
     void this.router.navigate([], {
       relativeTo: this.ruta,
@@ -167,6 +185,7 @@ export class PreviaLibrillosComponent {
     const tema = this.seleccion().tema;
     if (!tema) return;
     await this.visorPdf()?.guardarAntesDeSalir();
+    this.errorReferencia.set(false);
     this.pestana.set('lectura');
     void this.router.navigate([], {
       relativeTo: this.ruta,
@@ -177,17 +196,48 @@ export class PreviaLibrillosComponent {
 
   async verEnTexto(referencia: ContextoPdfLibrillo & { referencia: number }) {
     const { tema, documento } = this.seleccion();
+    const panel = this.panelPractica();
     if (!tema || documento?.id !== referencia.doc) return;
+    this.referenciaEnCurso = referencia;
+    this.errorReferencia.set(false);
     this.pestana.set('lectura');
-    await this.router.navigate([], {
-      relativeTo: this.ruta,
-      queryParamsHandling: 'merge',
-      queryParams: {
-        tema: tema.id,
-        doc: referencia.doc,
-        pagina: referencia.pagina,
-        referencia: referencia.referencia,
-      },
+    const params = this.params();
+    if (
+      params.get('pagina') === String(referencia.pagina) &&
+      params.get('referencia') === String(referencia.referencia)
+    )
+      return;
+
+    const abierta = await this.router
+      .navigate([], {
+        relativeTo: this.ruta,
+        queryParamsHandling: 'merge',
+        queryParams: {
+          tema: tema.id,
+          doc: referencia.doc,
+          pagina: referencia.pagina,
+          referencia: referencia.referencia,
+        },
+      })
+      .catch(() => false);
+    if (
+      referencia === this.referenciaEnCurso &&
+      panel === this.panelPractica() &&
+      panel?.regreso()
+    ) {
+      this.errorReferencia.set(!abierta);
+    }
+  }
+
+  volverAPractica() {
+    this.referenciaEnCurso = null;
+    this.errorReferencia.set(false);
+    this.panelPractica()?.volverAlIntento();
+  }
+
+  enfocarLectura() {
+    (this.botonRegreso() ?? this.tabLectura())?.nativeElement.focus({
+      preventScroll: true,
     });
   }
 

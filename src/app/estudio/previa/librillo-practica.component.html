@@ -1,373 +1,505 @@
 <section class="practica-librillo" aria-labelledby="titulo-practica-librillo">
   <h2 id="titulo-practica-librillo">Práctica</h2>
 
-  @if (resumen(); as datos) {
-    @let progreso = datos.progreso;
-    <dl class="progreso-librillo" aria-label="Progreso del tema">
-      @if (testActivo()) {
-        <div>
-          <dt>Preguntas</dt>
-          <dd>
-            {{ progreso.preguntas.vistas }}/{{
-              progreso.preguntas.total
-            }}
-            vistas · {{ progreso.preguntas.acertadas }} acertadas
-          </dd>
-        </div>
-      }
-      @if (flashcardsActivas()) {
-        <div>
-          <dt>Tarjetas</dt>
-          <dd>
-            {{ progreso.tarjetas.vistas }}/{{ progreso.tarjetas.total }} vistas
-            · {{ progreso.tarjetas.dominadas }} dominadas
-          </dd>
-        </div>
-      }
-    </dl>
+  @if (progreso(); as progresoTema) {
+    <ng-container
+      *ngTemplateOutlet="
+        indicadores;
+        context: { $implicit: progresoTema, etiqueta: 'Progreso del tema' }
+      "
+    />
+  }
+
+  @if (resumen()?.progresoPagina; as progresoPagina) {
     @if (pdf()?.pagina; as pagina) {
-      @if (datos.progresoPagina; as progresoPagina) {
-        <details>
-          <summary>Progreso de la página {{ pagina }}</summary>
-          <dl
-            class="progreso-librillo"
-            [attr.aria-label]="'Progreso de la página ' + pagina"
-          >
-            @if (testActivo()) {
-              <div>
-                <dt>Preguntas</dt>
-                <dd>
-                  {{ progresoPagina.preguntas.vistas }}/{{
-                    progresoPagina.preguntas.total
-                  }}
-                  vistas · {{ progresoPagina.preguntas.acertadas }} acertadas
-                </dd>
-              </div>
+      <details>
+        <summary>Progreso de la página {{ pagina }}</summary>
+        <ng-container
+          *ngTemplateOutlet="
+            indicadores;
+            context: {
+              $implicit: progresoPagina,
+              etiqueta: 'Progreso de la página ' + pagina,
             }
-            @if (flashcardsActivas()) {
-              <div>
-                <dt>Tarjetas</dt>
-                <dd>
-                  {{ progresoPagina.tarjetas.vistas }}/{{
-                    progresoPagina.tarjetas.total
-                  }}
-                  vistas · {{ progresoPagina.tarjetas.dominadas }} dominadas
-                </dd>
-              </div>
-            }
-          </dl>
-        </details>
-      }
+          "
+        />
+      </details>
     }
   }
 
   @if (errorAccion()) {
-    <p class="mensaje" role="alert">{{ errorAccion() }}</p>
+    <p role="alert">{{ errorAccion() }}</p>
   }
 
-  @if (intentoActual(); as intento) {
-    <div class="cabecera-intento">
-      <h3>
-        @if (intento.tipo === "test") {
-          {{
-            intento.origenLibrillo.modo === "simulacro"
-              ? "Simulacro"
-              : "Test de práctica"
-          }}
-        } @else {
-          Repaso de tarjetas
-        }
-        @if (intento.origenLibrillo.alcance === "pagina") {
-          <small>Página {{ intento.origenLibrillo.pagina }}</small>
-        }
-      </h3>
-      <button
-        pButton
-        type="button"
-        class="p-button-sm p-button-text"
-        (click)="cerrarIntento()"
-      >
-        Volver a práctica
-      </button>
-    </div>
+  @if (resumen(); as datos) {
+    @if (
+      (testActivo() && datos.test) || (flashcardsActivas() && datos.flashcards)
+    ) {
+      <form class="opciones-practica" (ngSubmit)="iniciar()">
+        <label for="tipo-practica">Actividad</label>
+        <select
+          id="tipo-practica"
+          name="tipo"
+          [ngModel]="tipo()"
+          (ngModelChange)="tipoElegido.set($event)"
+        >
+          @if (testActivo()) {
+            <option value="test">Test ({{ datos.test }})</option>
+          }
+          @if (flashcardsActivas()) {
+            <option value="flashcards">
+              Flashcards ({{ datos.flashcards }})
+            </option>
+          }
+        </select>
 
-    @if (intento.tipo === "test") {
-      @if (resultado(); as estadoResultado) {
-        @switch (estadoResultado.tipo) {
-          @case ("cargando") {
-            <p role="status">Cargando la corrección…</p>
-          }
-          @case ("error") {
-            <p role="alert">No se pudo cargar el resultado.</p>
-            <button
-              pButton
-              type="button"
-              class="p-button-outlined"
-              (click)="cargarResultado(intento)"
-            >
-              Reintentar
-            </button>
-          }
-          @case ("disponible") {
-            @let datos = estadoResultado.datos;
-            <div class="resultado-librillo" aria-live="polite">
-              <strong>Nota {{ datos.nota }} / 10</strong>
-              <p>
-                {{ datos.aciertos }} aciertos · {{ datos.fallos }} fallos ·
-                {{ datos.blancas }} en blanco
-              </p>
-            </div>
-            <button
-              pButton
-              type="button"
-              class="p-button-sm p-button-outlined"
-              [attr.aria-expanded]="correccion()"
-              (click)="correccion.set(!correccion())"
-            >
-              {{ correccion() ? "Ocultar corrección" : "Ver corrección" }}
-            </button>
-            @if (correccion()) {
-              <app-completar-test
-                [embedded]="true"
-                [testId]="intento.id"
-                [origenLibrillo]="intento.origenLibrillo"
-                [revisarLibrillo]="true"
-                [referenciasLibrillo]="referencias()"
-                (verReferenciaLibrillo)="abrirReferencia($event)"
-              />
-            }
-          }
-        }
-      } @else {
-        <app-completar-test
-          [embedded]="true"
-          [testId]="intento.id"
-          [origenLibrillo]="intento.origenLibrillo"
-          [referenciasLibrillo]="referencias()"
-          (verReferenciaLibrillo)="abrirReferencia($event)"
-          (finalizado)="cargarResultado(intento)"
-        />
-      }
-    } @else {
-      @if (tarjetasFinalizadas()) {
-        <p class="resultado-librillo" role="status">
-          Repaso de tarjetas finalizado.
-        </p>
-      } @else {
-        <app-completar-flash-card-test
-          [embedded]="true"
-          [testId]="intento.id"
-          [referenciasLibrillo]="referencias()"
-          (verReferenciaLibrillo)="abrirReferencia($event)"
-          (finalizado)="finalizarTarjetas()"
-        />
-      }
-    }
-  } @else {
-    @for (tipoPendiente of tipos(); track tipoPendiente) {
-      @if (pendiente(tipoPendiente); as intentoPendiente) {
-        <div class="pendiente-librillo">
-          <p>
-            {{
-              tipoPendiente === "test"
-                ? "Tienes un test pendiente"
-                : "Tienes un repaso de tarjetas pendiente"
-            }}.
-          </p>
-          <ng-container
-            *ngTemplateOutlet="
-              accionRetomar;
-              context: { tipo: tipoPendiente, intento: intentoPendiente }
-            "
-          />
-        </div>
-      }
-    }
-
-    @if (resumen(); as datos) {
-      @if (
-        (testActivo() && datos.test) ||
-        (flashcardsActivas() && datos.flashcards)
-      ) {
-        <form class="opciones-practica" (ngSubmit)="iniciar()">
-          <label for="tipo-practica">Actividad</label>
+        @if (tipo() === "test") {
+          <label for="modo-practica">Modo</label>
           <select
-            id="tipo-practica"
-            name="tipo"
-            [ngModel]="tipo()"
-            (ngModelChange)="tipoElegido.set($event)"
+            id="modo-practica"
+            name="modo"
+            [ngModel]="modo()"
+            (ngModelChange)="modo.set($event)"
           >
-            @if (testActivo()) {
-              <option value="test">Test ({{ datos.test }})</option>
-            }
-            @if (flashcardsActivas()) {
-              <option value="flashcards">
-                Tarjetas ({{ datos.flashcards }})
-              </option>
-            }
+            <option value="practica">Práctica</option>
+            <option value="simulacro">Simulacro</option>
           </select>
+        }
 
+        @if (pdf()) {
+          <label for="alcance-practica">Alcance</label>
+          <select
+            id="alcance-practica"
+            name="alcance"
+            [ngModel]="alcanceActual()"
+            (ngModelChange)="alcance.set($event)"
+          >
+            <option value="tema">Todo el tema ({{ disponiblesTema() }})</option>
+            <option value="pagina">
+              Página {{ pdf()?.pagina }} ({{ disponiblesPagina() }})
+            </option>
+          </select>
+        }
+
+        <label for="repaso-practica">Selección</label>
+        <select
+          id="repaso-practica"
+          name="repaso"
+          [ngModel]="repasoActual()"
+          (ngModelChange)="repaso.set($event)"
+        >
+          <option value="todo">Todas</option>
+          <option value="fallos">Fallos</option>
           @if (tipo() === "test") {
-            <label for="modo-practica">Modo</label>
-            <select
-              id="modo-practica"
-              name="modo"
-              [ngModel]="modo()"
-              (ngModelChange)="modo.set($event)"
-            >
-              <option value="practica">Práctica</option>
-              <option value="simulacro">Simulacro</option>
-            </select>
+            <option value="dudas">Dudas</option>
           }
+        </select>
 
-          @if (pdf()) {
-            <label for="alcance-practica">Alcance</label>
-            <select
-              id="alcance-practica"
-              name="alcance"
-              [ngModel]="alcanceActual()"
-              (ngModelChange)="alcance.set($event)"
-            >
-              <option value="tema">
-                Todo el tema ({{ disponiblesTema() }})
-              </option>
-              <option value="pagina">
-                Página {{ pdf()?.pagina }} ({{ disponiblesPagina() }})
-              </option>
-            </select>
-          }
+        <label for="cantidad-practica">Cantidad</label>
+        <select
+          id="cantidad-practica"
+          name="cantidad"
+          [ngModel]="cantidad()"
+          (ngModelChange)="cantidad.set($event)"
+        >
+          <option [ngValue]="5">Hasta 5</option>
+          <option [ngValue]="10">Hasta 10</option>
+          <option [ngValue]="20">Hasta 20</option>
+          <option [ngValue]="0">Todas</option>
+        </select>
 
-          <label for="repaso-practica">Selección</label>
+        @if (tipo() === "test" && modo() === "simulacro") {
+          <label for="tiempo-practica">Tiempo por pregunta</label>
           <select
-            id="repaso-practica"
-            name="repaso"
-            [ngModel]="repasoActual()"
-            (ngModelChange)="repaso.set($event)"
+            id="tiempo-practica"
+            name="tiempo"
+            [ngModel]="segundosPorPregunta()"
+            (ngModelChange)="segundosPorPregunta.set($event)"
           >
-            <option value="todo">Todas</option>
-            <option value="fallos">Fallos</option>
-            @if (tipo() === "test") {
-              <option value="dudas">Dudas</option>
-            }
+            <option [ngValue]="0">Sin límite</option>
+            <option [ngValue]="45">45 segundos</option>
+            <option [ngValue]="60">60 segundos</option>
           </select>
-
-          <label for="cantidad-practica">Cantidad</label>
+          <label for="penalizacion-practica">Penalización por fallo</label>
           <select
-            id="cantidad-practica"
-            name="cantidad"
-            [ngModel]="cantidad()"
-            (ngModelChange)="cantidad.set($event)"
+            id="penalizacion-practica"
+            name="penalizacion"
+            [ngModel]="penalizacion()"
+            (ngModelChange)="penalizacion.set($event)"
           >
-            <option [ngValue]="5">Hasta 5</option>
-            <option [ngValue]="10">Hasta 10</option>
-            <option [ngValue]="20">Hasta 20</option>
-            <option [ngValue]="0">Todas</option>
+            <option [ngValue]="0">Sin penalización</option>
+            <option [ngValue]="2">½ de un acierto</option>
+            <option [ngValue]="3">⅓ de un acierto</option>
+            <option [ngValue]="4">¼ de un acierto</option>
           </select>
+        }
 
-          @if (tipo() === "test" && modo() === "simulacro") {
-            <label for="tiempo-practica">Tiempo por pregunta</label>
-            <select
-              id="tiempo-practica"
-              name="tiempo"
-              [ngModel]="segundosPorPregunta()"
-              (ngModelChange)="segundosPorPregunta.set($event)"
-            >
-              <option [ngValue]="0">Sin límite</option>
-              <option [ngValue]="45">45 segundos</option>
-              <option [ngValue]="60">60 segundos</option>
-            </select>
-            <label for="penalizacion-practica">Penalización por fallo</label>
-            <select
-              id="penalizacion-practica"
-              name="penalizacion"
-              [ngModel]="penalizacion()"
-              (ngModelChange)="penalizacion.set($event)"
-            >
-              <option [ngValue]="0">Sin penalización</option>
-              <option [ngValue]="2">½ de un acierto</option>
-              <option [ngValue]="3">⅓ de un acierto</option>
-              <option [ngValue]="4">¼ de un acierto</option>
-            </select>
-          }
-
-          @if (!disponibles()) {
-            <p class="mensaje" role="status">
-              Esta selección no tiene actividad disponible.
-            </p>
-          }
-          <button
-            pButton
-            type="submit"
-            [disabled]="ocupado() || !disponibles() || !!pendiente(tipo())"
-          >
-            {{ ocupado() ? "Abriendo…" : "Iniciar sesión de práctica" }}
-          </button>
-        </form>
-      } @else {
-        <p class="mensaje" role="status">
-          Este tema aún no tiene actividad disponible.
-        </p>
-      }
-    } @else if (estado().tipo === "error") {
-      <p class="mensaje" role="alert">
-        No se pudo cargar la práctica del tema.
-      </p>
-      <button
-        pButton
-        type="button"
-        class="p-button-outlined"
-        (click)="recargar()"
-      >
-        Reintentar
-      </button>
+        @if (!disponibles()) {
+          <p class="mensaje" role="status">
+            Esta selección no tiene actividad disponible.
+          </p>
+        }
+        <button
+          #botonInicio
+          pButton
+          type="submit"
+          [disabled]="ocupado() || !disponibles()"
+        >
+          {{ ocupado() ? "Abriendo…" : accion() }}
+        </button>
+      </form>
     } @else {
-      <p class="mensaje" role="status">Cargando la práctica…</p>
+      <p role="status">Este tema aún no tiene actividad disponible.</p>
     }
   }
-</section>
 
-<ng-template #accionRetomar let-tipo="tipo" let-intento="intento">
-  @if (intento.origenLibrillo) {
+  @if (estado().tipo === "error") {
+    <p role="alert">No se pudo cargar la práctica del tema.</p>
     <button
       pButton
       type="button"
-      class="p-button-sm p-button-outlined"
-      [disabled]="ocupado()"
-      (click)="retomar(tipo, intento)"
+      class="p-button-outlined"
+      (click)="recargar()"
     >
-      {{ tipo === "test" ? "Retomar test" : "Retomar tarjetas" }}
+      Reintentar
     </button>
-  } @else {
-    <a
-      pButton
-      class="p-button-sm p-button-outlined"
-      [routerLink]="rutaAnterior(tipo, intento.id)"
-      [queryParams]="parametrosRegreso()"
-    >
-      {{ tipo === "test" ? "Retomar test" : "Retomar tarjetas" }}
-    </a>
+  } @else if (!resumen()) {
+    <p role="status">Cargando la práctica…</p>
   }
+
+  <button
+    #botonHistorial
+    pButton
+    type="button"
+    class="p-button-outlined"
+    [disabled]="ocupado()"
+    (click)="abrirHistorial()"
+  >
+    Ver historial del tema
+  </button>
+</section>
+
+<ng-template #indicadores let-progreso let-etiqueta="etiqueta">
+  <dl class="progreso-librillo" [attr.aria-label]="etiqueta">
+    @if (testActivo()) {
+      <div>
+        <dt>Preguntas</dt>
+        <dd>
+          {{ progreso.preguntas.vistas }}/{{ progreso.preguntas.total }} vistas
+          · {{ progreso.preguntas.acertadas }} acertadas
+        </dd>
+      </div>
+    }
+    @if (flashcardsActivas()) {
+      <div>
+        <dt>Tarjetas</dt>
+        <dd>
+          {{ progreso.tarjetas.vistas }}/{{ progreso.tarjetas.total }} vistas ·
+          {{ progreso.tarjetas.dominadas }} dominadas
+        </dd>
+      </div>
+    }
+  </dl>
 </ng-template>
 
-@if (conflictoActual(); as conflicto) {
-  <p-dialog
-    [visible]="mostrarConflicto()"
-    (visibleChange)="mostrarConflicto.set($event)"
-    [modal]="true"
-    [style]="{ width: 'min(90vw, 24rem)' }"
-    header="Sesión pendiente"
-  >
-    <p class="mensaje mb-3">
-      Ya tienes una sesión de esta actividad. Puedes retomarla donde la dejaste.
-    </p>
-    <ng-container
-      *ngTemplateOutlet="
-        accionRetomar;
-        context: { tipo: conflicto.tipo, intento: conflicto.intento }
-      "
-    />
-    @if (errorAccion()) {
-      <p class="mensaje mt-2" role="alert">{{ errorAccion() }}</p>
-    }
-  </p-dialog>
-}
+<p-dialog
+  appendTo="body"
+  [visible]="dialogoVisible()"
+  (visibleChange)="!$event && cerrarDialogo()"
+  (onShow)="enfocarDialogo()"
+  (onHide)="enfocarAlCerrar()"
+  [header]="tituloDialogo()"
+  [styleClass]="
+    conflictoActual()
+      ? 'dialogo-conflicto-librillo'
+      : 'dialogo-practica-librillo'
+  "
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closeOnEscape]="false"
+  [focusOnShow]="false"
+  closeAriaLabel="Cerrar"
+>
+  @if (conflictoActual(); as conflicto) {
+    <div class="conflicto-librillo" [attr.aria-busy]="ocupado()">
+      <p>
+        <strong>{{ temaPendiente() }}</strong>
+      </p>
+      @if (conflicto.pendiente.reemplazable) {
+        <p>
+          Si cancelas la sesión pendiente, perderás lo que hayas hecho en ella.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            pButton
+            type="button"
+            class="p-button-outlined"
+            data-foco-conflicto
+            [disabled]="ocupado()"
+            (click)="cerrarDialogo()"
+          >
+            Conservar pendiente
+          </button>
+          <button
+            pButton
+            type="button"
+            severity="danger"
+            [disabled]="ocupado()"
+            (click)="confirmarReemplazo()"
+          >
+            {{ ocupado() ? "Empezando…" : "Cancelar y empezar" }}
+          </button>
+        </div>
+      } @else {
+        <p>Puedes gestionar las sesiones pendientes desde el campus.</p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            pButton
+            type="button"
+            class="p-button-outlined"
+            data-foco-conflicto
+            (click)="cerrarDialogo()"
+          >
+            Volver
+          </button>
+          <a
+            pButton
+            [routerLink]="campus()"
+            [queryParams]="parametrosRegreso()"
+          >
+            Ver pendientes en el campus
+          </a>
+        </div>
+      }
+    </div>
+  }
+
+  @if (vista(); as vistaActual) {
+    <div [hidden]="!!conflictoActual()">
+      @if (intentoActual(); as intento) {
+        @if (intento.origenLibrillo.alcance === "pagina") {
+          <p class="alcance-intento">
+            Página {{ intento.origenLibrillo.pagina }}
+          </p>
+        }
+
+        @if (resultado(); as estadoResultado) {
+          <nav
+            class="vistas-dialogo flex flex-wrap gap-2 mb-3 border-bottom-1 surface-border"
+            aria-label="Vistas de la sesión"
+          >
+            <button
+              pButton
+              type="button"
+              class="p-button-text"
+              [attr.aria-pressed]="vistaActual === 'resultado'"
+              (click)="vista.set('resultado')"
+            >
+              Resultado
+            </button>
+            <button
+              pButton
+              type="button"
+              class="p-button-text"
+              [attr.aria-pressed]="vistaActual === 'historial'"
+              (click)="mostrarHistorial()"
+            >
+              Historial del tema
+            </button>
+          </nav>
+          <div
+            class="resultado-librillo"
+            [hidden]="vistaActual !== 'resultado'"
+          >
+            @switch (estadoResultado.tipo) {
+              @case ("cargando") {
+                <p role="status">Cargando el resultado…</p>
+              }
+              @case ("error") {
+                <p role="alert">No se pudo cargar el resultado.</p>
+                <button
+                  pButton
+                  type="button"
+                  class="p-button-outlined"
+                  (click)="cargarResultado(intento)"
+                >
+                  Reintentar
+                </button>
+              }
+              @case ("disponible") {
+                @if (intento.tipo === "test") {
+                  <h3>
+                    {{
+                      estadoResultado.nota == null
+                        ? "Sin nota"
+                        : "Nota " + estadoResultado.nota + " / 10"
+                    }}
+                  </h3>
+                }
+                <app-kpi-stats-cards [stats]="estadoResultado.estadisticas" />
+                @if (intento.tipo === "test") {
+                  <button
+                    pButton
+                    type="button"
+                    class="p-button-outlined"
+                    [attr.aria-expanded]="correccion()"
+                    (click)="correccion.set(!correccion())"
+                  >
+                    {{ correccion() ? "Ocultar corrección" : "Ver corrección" }}
+                  </button>
+                  @if (correccion()) {
+                    <app-completar-test
+                      [embedded]="true"
+                      [testId]="intento.id"
+                      [origenLibrillo]="intento.origenLibrillo"
+                      [revisarLibrillo]="true"
+                      [referenciasLibrillo]="referencias()"
+                      (verReferenciaLibrillo)="abrirReferencia($event)"
+                    />
+                  }
+                }
+              }
+            }
+          </div>
+        } @else if (intento.tipo === "test") {
+          <app-completar-test
+            [embedded]="true"
+            [testId]="intento.id"
+            [origenLibrillo]="intento.origenLibrillo"
+            [referenciasLibrillo]="referencias()"
+            (verReferenciaLibrillo)="abrirReferencia($event)"
+            (finalizado)="finalizar(intento, $event.testId)"
+          />
+        } @else {
+          <app-completar-flash-card-test
+            [embedded]="true"
+            [testId]="intento.id"
+            [referenciasLibrillo]="referencias()"
+            (verReferenciaLibrillo)="abrirReferencia($event)"
+            (finalizado)="finalizar(intento, $event.testId)"
+          />
+        }
+      }
+
+      @if (vistaActual === "historial") {
+        <div class="historial-librillo">
+          @if (progreso(); as progresoTema) {
+            <h3>Progreso del tema</h3>
+            <ng-container
+              *ngTemplateOutlet="
+                indicadores;
+                context: {
+                  $implicit: progresoTema,
+                  etiqueta: 'Progreso del tema',
+                }
+              "
+            />
+          }
+
+          @if (historial(); as historial) {
+            <div
+              class="vistas-dialogo flex flex-wrap gap-2"
+              role="group"
+              aria-label="Actividad del historial"
+            >
+              @for (filtro of tipos(); track filtro) {
+                <button
+                  pButton
+                  type="button"
+                  class="p-button-text"
+                  [attr.aria-pressed]="historial.filtro === filtro"
+                  (click)="cambiarFiltro(filtro)"
+                >
+                  {{ filtro === "test" ? "Tests" : "Flashcards" }}
+                </button>
+              }
+            </div>
+
+            @if (historial.items.length) {
+              <ul
+                class="list-none p-0 m-0 w-full border-top-1 surface-border"
+                aria-label="Sesiones finalizadas"
+              >
+                @for (item of historial.items; track item.id) {
+                  <li
+                    class="flex flex-column gap-1 py-2 border-bottom-1 surface-border"
+                  >
+                    <div>
+                      <time
+                        class="font-semibold"
+                        [attr.datetime]="item.fecha"
+                        >{{ item.fecha | date: "d MMM y, HH:mm" }}</time
+                      >
+                      @if (item.mixto) {
+                        <span class="ml-2 text-sm text-color-secondary"
+                          >Varios temas</span
+                        >
+                      }
+                    </div>
+                    <p>
+                      @if (esTest(item)) {
+                        {{ item.total }}
+                        {{ item.total === 1 ? "pregunta" : "preguntas" }} ·
+                        {{ item.aciertos }} aciertos · {{ item.fallos }} fallos
+                        · {{ item.blancas }} en blanco
+                      } @else {
+                        {{ item.total }}
+                        {{ item.total === 1 ? "tarjeta" : "tarjetas" }} ·
+                        {{ item.aprendidas }} aprendidas ·
+                        {{ item.paraRepasar }} para repasar ·
+                        {{ item.dificultad }} con dificultad
+                      }
+                    </p>
+                  </li>
+                }
+              </ul>
+            }
+
+            @switch (historial.tipo) {
+              @case ("cargando") {
+                <p role="status">Cargando el historial…</p>
+              }
+              @case ("error") {
+                <p role="alert">No se pudo cargar el historial.</p>
+                <button
+                  pButton
+                  type="button"
+                  class="p-button-outlined"
+                  (click)="
+                    cargarHistorial(historial.filtro, historial.siguienteCursor)
+                  "
+                >
+                  Reintentar
+                </button>
+              }
+              @case ("disponible") {
+                @if (!historial.items.length) {
+                  <p role="status">
+                    Aún no hay sesiones finalizadas de esta actividad en el
+                    tema.
+                  </p>
+                }
+                @if (historial.siguienteCursor !== null) {
+                  <button
+                    pButton
+                    type="button"
+                    class="p-button-outlined"
+                    (click)="
+                      cargarHistorial(
+                        historial.filtro,
+                        historial.siguienteCursor
+                      )
+                    "
+                  >
+                    Ver más
+                  </button>
+                }
+              }
+            }
+          }
+        </div>
+      }
+    </div>
+  }
+</p-dialog>

@@ -127,6 +127,7 @@
       @if (practicaDisponible() && lectorPdfActivo()) {
         <nav class="pestanas-librillo" aria-label="Vista del Librillo">
           <button
+            #tabLectura
             type="button"
             class="pestana-movil"
             [attr.aria-pressed]="pestana() === 'lectura'"
@@ -157,6 +158,24 @@
             Anotaciones
           </button>
         </nav>
+      }
+
+      @if (panelPractica()?.regreso(); as regreso) {
+        <div class="regreso-practica">
+          <button
+            #botonRegreso
+            pButton
+            type="button"
+            class="p-button-outlined p-button-sm"
+            (click)="volverAPractica()"
+          >
+            <i class="pi pi-arrow-left" aria-hidden="true"></i>
+            {{ regreso }}
+          </button>
+          @if (errorReferencia()) {
+            <span role="alert">No se pudo abrir el fragmento.</span>
+          }
+        </div>
       }
 
       <div
@@ -210,15 +229,22 @@
           }
         </div>
         @if (practicaDisponible()) {
-          <app-librillo-practica
-            id="librillo-practica"
-            [temaId]="tema.id"
-            [documentoId]="vista.documento?.id"
-            [pdf]="contextoPractica()"
-            [testActivo]="testActivo()"
-            [flashcardsActivas]="flashcardsActivas()"
-            (verEnTexto)="verEnTexto($event)"
-          />
+          @for (
+            seleccionPractica of seleccionesPractica();
+            track seleccionPractica.clave
+          ) {
+            <app-librillo-practica
+              id="librillo-practica"
+              [temaId]="seleccionPractica.tema.id"
+              [temas]="temas()"
+              [documentoId]="seleccionPractica.documento?.id"
+              [pdf]="contextoPractica()"
+              [testActivo]="testActivo()"
+              [flashcardsActivas]="flashcardsActivas()"
+              (verEnTexto)="verEnTexto($event)"
+              (enfocarLectura)="enfocarLectura()"
+            />
+          }
         }
       </div>
     } @else if (temas().length) {

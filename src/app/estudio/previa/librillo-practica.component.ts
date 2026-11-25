@@ -1,14 +1,20 @@
+import { DatePipe, DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
+  HostListener,
+  Injector,
+  afterNextRender,
   computed,
+  effect,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import {
   takeUntilDestroyed,
@@ -16,63 +22,89 @@ import {
   toSignal,
 } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { Dialog, DialogModule } from 'primeng/dialog';
 import {
   Subject,
   catchError,
   firstValueFrom,
   map,
   of,
+  scan,
   startWith,
   switchMap,
+  timeout,
 } from 'rxjs';
+import { FlashcardDataService } from '../../services/flashcards.service';
+import { KpiStat } from '../../shared/components/kpi-stats-cards/kpi-stats-cards.component';
+import { SharedModule } from '../../shared/shared.module';
 import { TestModule } from '../../test/test.module';
-import {
-  ContextoPdfLibrillo,
-  LibrilloContextoPdfService,
-} from './librillo-contexto-pdf.service';
+import { ContextoPdfLibrillo } from './librillo-contexto-pdf.service';
 import {
   AlcancePracticaLibrillo,
   ConfiguracionPracticaLibrillo,
-  IntentoPendienteLibrillo,
+  ConflictoPracticaLibrillo,
+  ConteoTestLibrillo,
+  HistorialPracticaLibrillo,
   IntentoPracticaLibrillo,
   LibrilloPracticaService,
   ModoPracticaLibrillo,
-  OrigenPracticaLibrillo,
   PenalizacionLibrillo,
   ReferenciaPracticaLibrillo,
   RepasoLibrillo,
-  ResultadoPracticaLibrillo,
   ResumenPracticaLibrillo,
   SegundosPorPreguntaLibrillo,
+  SesionHistorialLibrillo,
   TipoPracticaLibrillo,
 } from './librillo-practica.service';
 import { parametrosPracticaLibrillo } from './previa-librillos';
+import type { TemaLibrillo } from './temario-librillo';
 
 type IntentoActivo = IntentoPracticaLibrillo & { tipo: TipoPracticaLibrillo };
+type SolicitudInicio = {
+  temaId: number;
+  documentoId: number | undefined;
+  tipo: TipoPracticaLibrillo;
+  configuracion: ConfiguracionPracticaLibrillo;
+};
 type Resumen = {
   temaId: number;
   pdf: ContextoPdfLibrillo | null;
   datos: ResumenPracticaLibrillo;
 };
-type EstadoResumen =
-  | { tipo: 'cargando' | 'error' }
-  | { tipo: 'disponible'; resumen: Resumen };
+type EstadoCarga = 'cargando' | 'error' | 'disponible';
+type EstadoResumen = { tipo: EstadoCarga; resumen: Resumen | null };
 type EstadoResultado =
   | { tipo: 'cargando' | 'error' }
-  | { tipo: 'disponible'; datos: ResultadoPracticaLibrillo };
+  | { tipo: 'disponible'; estadisticas: KpiStat[]; nota?: number | null };
+type EstadoHistorial = HistorialPracticaLibrillo & {
+  filtro: TipoPracticaLibrillo;
+  tipo: EstadoCarga;
+};
+
+function mismaPagina(
+  anterior: Partial<ContextoPdfLibrillo> | null,
+  actual: ContextoPdfLibrillo | null,
+) {
+  return (
+    anterior?.doc === actual?.doc &&
+    anterior?.revision === actual?.revision &&
+    anterior?.pagina === actual?.pagina
+  );
+}
 
 @Component({
   selector: 'app-librillo-practica',
   standalone: true,
   imports: [
+    DatePipe,
     FormsModule,
     RouterLink,
     ButtonModule,
     DialogModule,
     NgTemplateOutlet,
+    SharedModule,
     TestModule,
   ],
   templateUrl: './librillo-practica.component.html',
@@ -82,23 +114,37 @@ type EstadoResultado =
 export class LibrilloPracticaComponent {
   readonly temaId = input.required<number>();
   readonly documentoId = input<number>();
+  readonly temas = input<readonly Pick<TemaLibrillo, 'id' | 'etiqueta'>[]>([]);
   readonly pdf = input<ContextoPdfLibrillo | null>(null);
   readonly testActivo = input.required<boolean>();
   readonly flashcardsActivas = input.required<boolean>();
   readonly verEnTexto = output<ContextoPdfLibrillo & { referencia: number }>();
+  readonly enfocarLectura = output<void>();
 
   private readonly api = inject(LibrilloPracticaService);
-  private readonly router = inject(Router);
-  private readonly ruta = inject(ActivatedRoute);
-  private readonly contexto = inject(LibrilloContextoPdfService);
+  private readonly flashcards = inject(FlashcardDataService);
+  private readonly documento = inject(DOCUMENT);
   private readonly destruir = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly dialogo = viewChild(Dialog);
+  private readonly botonInicio =
+    viewChild<ElementRef<HTMLButtonElement>>('botonInicio');
+  private readonly botonHistorial =
+    viewChild<ElementRef<HTMLButtonElement>>('botonHistorial');
   private readonly refrescar = new Subject<void>();
   private readonly intento = signal<IntentoActivo | null>(null);
+  private readonly solicitud = signal<SolicitudInicio | null>(null);
   private readonly conflicto = signal<{
-    temaId: number;
-    tipo: TipoPracticaLibrillo;
-    intento: IntentoPendienteLibrillo;
+    solicitud: SolicitudInicio;
+    pendiente: ConflictoPracticaLibrillo;
   } | null>(null);
+  private readonly suspendida = signal(false);
+  private regresoReferencia: {
+    foco: HTMLElement | null;
+    scroll: number;
+  } | null = null;
+  private focoAlCerrar: 'inicio' | 'historial' = 'inicio';
+
   private readonly consulta = computed(() => ({
     temaId: this.temaId(),
     pdf: this.pdf(),
@@ -117,47 +163,109 @@ export class LibrilloPracticaComponent {
                   resumen: { temaId, pdf, datos },
                 }),
               ),
-              catchError(() => of({ tipo: 'error' } as const)),
-              startWith({ tipo: 'cargando' } as const),
+              catchError(() => of({ tipo: 'error', resumen: null } as const)),
+              startWith({ tipo: 'cargando', resumen: null } as const),
             ),
           ),
         ),
       ),
+      scan(
+        (anterior, actual): EstadoResumen => ({
+          tipo: actual.tipo,
+          resumen: actual.resumen ?? anterior.resumen,
+        }),
+      ),
     ),
-    { initialValue: { tipo: 'cargando' } as const },
+    { initialValue: { tipo: 'cargando', resumen: null } as const },
   );
+  private readonly resumenDelTema = computed(() => {
+    const resumen = this.estado().resumen;
+    return resumen?.temaId === this.temaId() ? resumen : null;
+  });
   readonly resumen = computed(() => {
-    const estado = this.estado();
-    if (estado.tipo !== 'disponible') return null;
-    const { temaId, pdf } = this.consulta();
-    const anterior = estado.resumen;
-    return temaId === anterior.temaId &&
-      pdf?.doc === anterior.pdf?.doc &&
-      pdf?.revision === anterior.pdf?.revision &&
-      pdf?.pagina === anterior.pdf?.pagina
-      ? anterior.datos
+    const resumen = this.resumenDelTema();
+    return resumen && mismaPagina(resumen.pdf, this.pdf())
+      ? resumen.datos
       : null;
   });
+  readonly progreso = computed(() => this.resumenDelTema()?.datos.progreso);
+  readonly referencias = computed(() => {
+    const pdf = this.pdf();
+    const resumen = this.resumenDelTema();
+    return pdf &&
+      resumen?.pdf?.doc === pdf.doc &&
+      resumen.pdf.revision === pdf.revision
+      ? resumen.datos.referencias
+      : [];
+  });
+
   readonly intentoActual = computed(() => {
     const intento = this.intento();
     return intento?.origenLibrillo.temaId === this.temaId() &&
-      (intento.tipo === 'test' ? this.testActivo() : this.flashcardsActivas())
+      this.tipos().includes(intento.tipo)
       ? intento
       : null;
   });
-  readonly ocupado = signal(false);
-  readonly mostrarConflicto = signal(false);
   readonly conflictoActual = computed(() => {
     const conflicto = this.conflicto();
-    return conflicto?.temaId === this.temaId() &&
-      this.tipos().includes(conflicto.tipo)
+    return conflicto && this.solicitudVigente(conflicto.solicitud)
       ? conflicto
       : null;
   });
+  readonly temaPendiente = computed(() => {
+    const temas = this.conflictoActual()?.pendiente.temas ?? [];
+    if (temas.length > 1) return 'Varios temas';
+    return (
+      this.temas().find(({ id }) => id === temas[0])?.etiqueta ??
+      'Tema no disponible'
+    );
+  });
+  readonly ocupado = computed(() => {
+    const solicitud = this.solicitud();
+    return !!solicitud && this.solicitudVigente(solicitud);
+  });
   readonly errorAccion = signal('');
+  readonly vista = signal<'actividad' | 'resultado' | 'historial' | null>(null);
   readonly resultado = signal<EstadoResultado | null>(null);
   readonly correccion = signal(false);
-  readonly tarjetasFinalizadas = signal(false);
+  readonly historial = signal<EstadoHistorial | null>(null);
+  readonly dialogoVisible = computed(
+    () =>
+      !!this.conflictoActual() ||
+      (!this.suspendida() &&
+        (!!this.intentoActual() || this.vista() === 'historial')),
+  );
+  readonly tituloDialogo = computed(() => {
+    if (this.conflictoActual()) return 'Sesión pendiente';
+    if (!this.intentoActual()) return 'Historial del tema';
+    if (this.intentoActual()?.tipo === 'flashcards')
+      return 'Repaso de flashcards';
+    return this.intentoActual()?.origenLibrillo.modo === 'simulacro'
+      ? 'Simulacro'
+      : 'Test de práctica';
+  });
+  readonly regreso = computed(() => {
+    const intento = this.intentoActual();
+    if (!this.suspendida() || !intento) return '';
+    if (this.correccion()) return 'Volver a la corrección';
+    if (this.resultado()) return 'Volver al resultado';
+    if (intento.tipo === 'flashcards') return 'Volver a las flashcards';
+    return intento.origenLibrillo.modo === 'simulacro'
+      ? 'Volver al simulacro'
+      : 'Volver al test';
+  });
+  readonly campus = computed(() =>
+    this.conflictoActual()?.solicitud.tipo === 'test'
+      ? '/app/test/alumno/realizar-test'
+      : '/app/test/alumno/realizar-flash-cards-test',
+  );
+  readonly parametrosRegreso = computed(() =>
+    parametrosPracticaLibrillo({
+      id: this.temaId(),
+      documentoId: this.documentoId(),
+    }),
+  );
+
   readonly tipoElegido = signal<TipoPracticaLibrillo>('test');
   readonly modo = signal<ModoPracticaLibrillo>('practica');
   readonly alcance = signal<AlcancePracticaLibrillo>('tema');
@@ -181,6 +289,10 @@ export class LibrilloPracticaComponent {
     const elegido = this.tipoElegido();
     return tipos.includes(elegido) ? elegido : tipos[0];
   });
+  readonly accion = computed(() => {
+    if (this.tipo() === 'flashcards') return 'Repasar flashcards';
+    return this.modo() === 'simulacro' ? 'Hacer simulacro' : 'Hacer test';
+  });
   readonly disponiblesTema = computed(() => this.resumen()?.[this.tipo()] ?? 0);
   readonly disponiblesPagina = computed(() => {
     const resumen = this.resumen();
@@ -198,175 +310,334 @@ export class LibrilloPracticaComponent {
       ? this.disponiblesPagina()
       : this.disponiblesTema(),
   );
-  readonly referencias = computed(() => this.resumen()?.referencias ?? []);
 
-  pendiente(tipo: TipoPracticaLibrillo) {
-    const conflicto = this.conflicto();
-    return conflicto?.temaId === this.temaId() && conflicto.tipo === tipo
-      ? conflicto.intento
-      : this.resumen()?.pendientes[tipo];
-  }
-
-  rutaAnterior(tipo: TipoPracticaLibrillo, id: number) {
-    return [
-      '/app/test/alumno',
-      tipo === 'test' ? 'realizar-test' : 'realizar-flash-cards-test',
-      id,
-    ];
-  }
-
-  parametrosRegreso() {
-    return parametrosPracticaLibrillo({
-      id: this.temaId(),
-      documentoId: this.documentoId(),
-    });
-  }
-
-  async iniciar() {
-    const tipo = this.tipo();
-    if (this.ocupado() || !this.disponibles() || this.pendiente(tipo)) return;
-
-    const temaId = this.temaId();
-    const alcance = this.alcanceActual();
-    const pdf = this.pdf();
-    const modo = tipo === 'test' ? this.modo() : 'practica';
-    const cantidad = this.cantidad();
-    const configuracion: ConfiguracionPracticaLibrillo = {
-      modo,
-      alcance,
-      repaso: this.repasoActual(),
-      cantidad: cantidad === 0 ? 0 : Math.min(cantidad, this.disponibles()),
-      ...(pdf && alcance === 'pagina' ? pdf : {}),
-      ...(modo === 'simulacro'
-        ? {
-            segundosPorPregunta: this.segundosPorPregunta(),
-            penalizacion: this.penalizacion(),
-          }
-        : {}),
-    };
-
-    this.errorAccion.set('');
-    this.ocupado.set(true);
-    try {
-      const intento = await firstValueFrom(
-        this.api
-          .iniciar(temaId, tipo, configuracion)
-          .pipe(takeUntilDestroyed(this.destruir)),
-      );
-      if (temaId === this.temaId()) this.abrirIntento({ ...intento, tipo });
-    } catch (error) {
-      if (temaId !== this.temaId()) return;
-      if (
-        error instanceof HttpErrorResponse &&
-        error.status === 409 &&
-        error.error?.codigo === 'intento_pendiente' &&
-        Number.isSafeInteger(error.error.id) &&
-        error.error.id > 0
-      ) {
-        this.conflicto.set({
-          temaId,
-          tipo,
-          intento: {
-            id: error.error.id,
-            origenLibrillo: error.error.origenLibrillo,
-          },
-        });
-        this.mostrarConflicto.set(true);
-      } else {
-        this.errorAccion.set(
-          'No se pudo iniciar la sesión. Revisa la selección o inténtalo de nuevo.',
-        );
-      }
-    } finally {
-      this.ocupado.set(false);
-    }
-  }
-
-  async retomar(
-    tipo: TipoPracticaLibrillo,
-    pendiente: IntentoPendienteLibrillo,
-  ) {
-    const origen = pendiente.origenLibrillo;
-    if (this.ocupado() || !origen) return;
-
-    this.errorAccion.set('');
-    this.ocupado.set(true);
-    try {
-      const params = this.ruta.snapshot.queryParamMap;
-      const irAlOrigen =
-        origen.temaId !== this.temaId() ||
-        (origen.doc != null &&
-          (params.get('doc') !== String(origen.doc) ||
-            params.get('pagina') !==
-              (origen.pagina == null ? null : String(origen.pagina)) ||
-            params.has('referencia')));
-      if (
-        irAlOrigen &&
-        !(await this.router.navigate([], {
-          relativeTo: this.ruta,
-          queryParamsHandling: 'merge',
-          queryParams: {
-            tema: origen.temaId,
-            doc: origen.doc ?? null,
-            pagina: origen.pagina ?? null,
-            referencia: null,
-          },
-        }))
-      ) {
-        throw new Error('Origen inaccesible');
-      }
-      this.contexto.pestana.set('practica');
-      this.mostrarConflicto.set(false);
-      this.abrirIntento({ id: pendiente.id, tipo, origenLibrillo: origen });
-    } catch {
-      this.errorAccion.set(
-        'No se pudo abrir el origen de la sesión pendiente.',
-      );
-    } finally {
-      this.ocupado.set(false);
-    }
+  constructor() {
+    effect(
+      () => {
+        const solicitud = this.solicitud();
+        if (solicitud && !this.solicitudVigente(solicitud))
+          this.solicitud.set(null);
+        const conflicto = this.conflicto();
+        if (conflicto && !this.solicitudVigente(conflicto.solicitud))
+          this.conflicto.set(null);
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   recargar() {
     this.refrescar.next();
   }
 
-  cerrarIntento() {
-    this.intento.set(null);
-    this.resultado.set(null);
-    this.correccion.set(false);
-    this.tarjetasFinalizadas.set(false);
-    this.conflicto.set(null);
-    this.errorAccion.set('');
-    this.recargar();
+  iniciar() {
+    if (this.ocupado() || !this.disponibles() || this.dialogoVisible()) return;
+
+    const tipo = this.tipo();
+    const alcance = this.alcanceActual();
+    const pdf = this.pdf();
+    const modo = tipo === 'test' ? this.modo() : 'practica';
+    const cantidad = this.cantidad();
+    this.focoAlCerrar = 'inicio';
+    return this.enviarInicio({
+      temaId: this.temaId(),
+      documentoId: this.documentoId(),
+      tipo,
+      configuracion: {
+        modo,
+        alcance,
+        repaso: this.repasoActual(),
+        cantidad: cantidad === 0 ? 0 : Math.min(cantidad, this.disponibles()),
+        ...(pdf && alcance === 'pagina' ? pdf : {}),
+        ...(modo === 'simulacro'
+          ? {
+              segundosPorPregunta: this.segundosPorPregunta(),
+              penalizacion: this.penalizacion(),
+            }
+          : {}),
+      },
+    });
   }
 
-  async cargarResultado(intento: IntentoActivo) {
-    this.resultado.set({ tipo: 'cargando' });
-    this.conflicto.set(null);
-    this.recargar();
+  confirmarReemplazo() {
+    const conflicto = this.conflictoActual();
+    if (!conflicto?.pendiente.reemplazable || this.ocupado()) return;
+    return this.enviarInicio(conflicto.solicitud, conflicto.pendiente.id);
+  }
+
+  private solicitudVigente({
+    temaId,
+    documentoId,
+    tipo,
+    configuracion,
+  }: SolicitudInicio) {
+    return (
+      temaId === this.temaId() &&
+      documentoId === this.documentoId() &&
+      this.tipos().includes(tipo) &&
+      (configuracion.alcance === 'tema' ||
+        mismaPagina(configuracion, this.pdf()))
+    );
+  }
+
+  private async enviarInicio(
+    solicitud: SolicitudInicio,
+    reemplazarPendienteId?: number,
+  ) {
+    const { temaId, tipo, configuracion } = solicitud;
+    const vigente = () =>
+      this.solicitud() === solicitud && this.solicitudVigente(solicitud);
+    this.errorAccion.set('');
+    this.solicitud.set(solicitud);
     try {
-      const datos = await firstValueFrom(
+      const intento = await firstValueFrom(
         this.api
-          .resultado(intento.origenLibrillo.temaId, intento.id)
+          .iniciar(
+            temaId,
+            tipo,
+            reemplazarPendienteId === undefined
+              ? configuracion
+              : { ...configuracion, reemplazarPendienteId },
+          )
           .pipe(takeUntilDestroyed(this.destruir)),
       );
-      if (this.intento() === intento)
-        this.resultado.set({ tipo: 'disponible', datos });
-    } catch {
-      if (this.intento() === intento) this.resultado.set({ tipo: 'error' });
+      if (vigente()) this.abrirIntento({ ...intento, tipo });
+    } catch (error) {
+      if (!vigente()) return;
+      const respuesta =
+        error instanceof HttpErrorResponse && error.status === 409
+          ? error.error
+          : null;
+      if (
+        respuesta?.codigo === 'intento_pendiente' &&
+        Number.isSafeInteger(respuesta.id) &&
+        respuesta.id > 0
+      ) {
+        const pendiente: ConflictoPracticaLibrillo = respuesta;
+        if (
+          reemplazarPendienteId === undefined &&
+          pendiente.coincide &&
+          pendiente.reemplazable &&
+          pendiente.origenLibrillo?.temaId === temaId
+        ) {
+          this.abrirIntento({
+            id: pendiente.id,
+            origenLibrillo: pendiente.origenLibrillo,
+            tipo,
+          });
+        } else {
+          const estabaAbierto = this.dialogoVisible();
+          this.conflicto.set({ solicitud, pendiente });
+          if (estabaAbierto) this.enfocarTrasRender();
+        }
+      } else {
+        this.conflicto.set(null);
+        this.errorAccion.set(
+          respuesta?.codigo === 'pendiente_cambiado'
+            ? 'La sesión pendiente ha cambiado. Vuelve a pulsar el botón de la actividad.'
+            : 'No se pudo iniciar la sesión. Revisa la selección o inténtalo de nuevo.',
+        );
+      }
+    } finally {
+      if (this.solicitud() === solicitud) this.solicitud.set(null);
     }
   }
 
-  finalizarTarjetas() {
-    this.tarjetasFinalizadas.set(true);
+  private abrirIntento(intento: IntentoActivo) {
+    const estabaAbierto = this.dialogoVisible();
     this.conflicto.set(null);
+    if (
+      !this.suspendida() ||
+      this.intentoActual()?.id !== intento.id ||
+      this.intentoActual()?.tipo !== intento.tipo
+    ) {
+      this.limpiarVentana();
+      this.intento.set(intento);
+      this.vista.set('actividad');
+    }
+    this.suspendida.set(false);
+    if (estabaAbierto) this.enfocarTrasRender();
+  }
+
+  cerrarDialogo() {
+    if (this.conflictoActual()) {
+      if (!this.ocupado()) this.conflicto.set(null);
+      return;
+    }
+    this.limpiarVentana();
+  }
+
+  private limpiarVentana() {
+    this.intento.set(null);
+    this.vista.set(null);
+    this.resultado.set(null);
+    this.correccion.set(false);
+    this.historial.set(null);
+    this.suspendida.set(false);
+    this.regresoReferencia = null;
+  }
+
+  finalizar(intento: IntentoActivo, id: number) {
+    if (
+      id !== intento.id ||
+      this.intentoActual() !== intento ||
+      this.resultado()
+    )
+      return;
+    this.vista.set('resultado');
     this.recargar();
+    if (this.dialogoVisible()) this.enfocarTrasRender();
+    return this.cargarResultado(intento);
+  }
+
+  async cargarResultado(intento: IntentoActivo) {
+    if (this.intentoActual() !== intento) return;
+    const carga: EstadoResultado = { tipo: 'cargando' };
+    this.resultado.set(carga);
+    const vigente = () =>
+      this.intentoActual() === intento && this.resultado() === carga;
+    const consulta =
+      intento.tipo === 'test'
+        ? this.api.resultado(intento.origenLibrillo.temaId, intento.id).pipe(
+            map(
+              (datos): EstadoResultado => ({
+                tipo: 'disponible',
+                nota: datos.nota,
+                estadisticas: [
+                  {
+                    value: datos.aciertos,
+                    label: 'Aciertos',
+                    type: 'correctas',
+                    icon: 'pi-check',
+                  },
+                  {
+                    value: datos.fallos,
+                    label: 'Fallos',
+                    type: 'incorrectas',
+                    icon: 'pi-times',
+                  },
+                  {
+                    value: datos.blancas,
+                    label: 'En blanco',
+                    type: 'no-contestadas',
+                    icon: 'pi-minus',
+                  },
+                ],
+              }),
+            ),
+          )
+        : this.flashcards.getStats(intento.id, true).pipe(
+            timeout(15000),
+            map(
+              ({ estado }): EstadoResultado => ({
+                tipo: 'disponible',
+                estadisticas: [
+                  {
+                    value: estado.BIEN.count,
+                    label: 'Aprendidas',
+                    type: 'correctas',
+                    icon: 'pi-check',
+                  },
+                  {
+                    value: estado.REVISAR.count,
+                    label: 'Para repasar',
+                    type: 'repasar',
+                    icon: 'pi-refresh',
+                  },
+                  {
+                    value: estado.MAL.count,
+                    label: 'Con dificultad',
+                    type: 'incorrectas',
+                    icon: 'pi-times',
+                  },
+                ],
+              }),
+            ),
+          );
+    try {
+      const datos = await firstValueFrom(
+        consulta.pipe(takeUntilDestroyed(this.destruir)),
+      );
+      if (vigente()) this.resultado.set(datos);
+    } catch {
+      if (vigente()) this.resultado.set({ tipo: 'error' });
+    }
+  }
+
+  abrirHistorial() {
+    if (this.ocupado() || this.dialogoVisible()) return;
+    this.limpiarVentana();
+    this.focoAlCerrar = 'historial';
+    this.errorAccion.set('');
+    return this.mostrarHistorial();
+  }
+
+  mostrarHistorial() {
+    this.vista.set('historial');
+    if (this.historial()) return;
+    return this.cargarHistorial(this.intentoActual()?.tipo ?? this.tipo());
+  }
+
+  cambiarFiltro(tipo: TipoPracticaLibrillo) {
+    if (this.historial()?.filtro === tipo) return;
+    return this.cargarHistorial(tipo);
+  }
+
+  async cargarHistorial(
+    filtro: TipoPracticaLibrillo,
+    cursor: number | null = null,
+  ) {
+    if (this.vista() !== 'historial' || !this.tipos().includes(filtro)) return;
+    const temaId = this.temaId();
+    const anterior = this.historial();
+    const carga: EstadoHistorial = {
+      filtro,
+      tipo: 'cargando',
+      items:
+        cursor !== null && anterior?.filtro === filtro ? anterior.items : [],
+      siguienteCursor: cursor,
+    };
+    this.historial.set(carga);
+    const vigente = () =>
+      this.temaId() === temaId && this.historial() === carga;
+    try {
+      const pagina = await firstValueFrom(
+        this.api
+          .historial(temaId, filtro, cursor)
+          .pipe(takeUntilDestroyed(this.destruir)),
+      );
+      if (vigente())
+        this.historial.set({
+          ...carga,
+          tipo: 'disponible',
+          items: [...carga.items, ...pagina.items],
+          siguienteCursor: pagina.siguienteCursor,
+        });
+    } catch {
+      if (vigente()) this.historial.set({ ...carga, tipo: 'error' });
+    }
+  }
+
+  esTest(
+    item: SesionHistorialLibrillo,
+  ): item is SesionHistorialLibrillo & ConteoTestLibrillo {
+    return 'aciertos' in item;
   }
 
   abrirReferencia(referencia: ReferenciaPracticaLibrillo) {
     const pdf = this.pdf();
-    if (!pdf || !this.referencias().includes(referencia)) return;
+    if (
+      !this.intentoActual() ||
+      !pdf ||
+      !this.referencias().includes(referencia)
+    )
+      return;
+    const foco = this.documento.activeElement;
+    const ventana = this.dialogo()?.container as HTMLElement | undefined;
+    this.regresoReferencia = {
+      foco: foco instanceof HTMLElement ? foco : null,
+      scroll: ventana?.querySelector('.p-dialog-content')?.scrollTop ?? 0,
+    };
+    this.suspendida.set(true);
     this.verEnTexto.emit({
       ...pdf,
       pagina: referencia.pagina,
@@ -374,10 +645,69 @@ export class LibrilloPracticaComponent {
     });
   }
 
-  private abrirIntento(intento: IntentoActivo) {
-    this.resultado.set(null);
-    this.correccion.set(false);
-    this.tarjetasFinalizadas.set(false);
-    this.intento.set(intento);
+  volverAlIntento() {
+    if (this.regreso() && !this.dialogoVisible()) this.suspendida.set(false);
+  }
+
+  enfocarDialogo() {
+    const contenedor = this.dialogo()?.container as HTMLElement | undefined;
+    let objetivo = contenedor?.querySelector<HTMLElement>(
+      '[data-foco-conflicto]',
+    );
+    const regreso = this.regresoReferencia;
+    if (!this.conflictoActual() && regreso) {
+      this.regresoReferencia = null;
+      const contenido = contenedor?.querySelector('.p-dialog-content');
+      if (contenido) contenido.scrollTop = regreso.scroll;
+      if (regreso.foco && contenedor?.contains(regreso.foco))
+        objetivo = regreso.foco;
+    }
+    (
+      objetivo ??
+      contenedor?.querySelector<HTMLElement>('.p-dialog-header-close')
+    )?.focus({ preventScroll: true });
+  }
+
+  private enfocarTrasRender() {
+    afterNextRender(
+      () => {
+        if (this.dialogoVisible()) this.enfocarDialogo();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  enfocarAlCerrar() {
+    const boton = (
+      this.focoAlCerrar === 'historial'
+        ? this.botonHistorial()
+        : this.botonInicio()
+    )?.nativeElement;
+    if (!this.regreso() && boton?.getClientRects().length) {
+      boton.focus({ preventScroll: true });
+    } else {
+      this.enfocarLectura.emit();
+    }
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  cerrarConEscape(evento: KeyboardEvent) {
+    const ventana = this.dialogo()?.container as HTMLElement | undefined;
+    if (!this.dialogoVisible() || !ventana || evento.defaultPrevented) return;
+    const dialogoConFoco = (evento.target as Element | null)?.closest?.(
+      '[role="dialog"]',
+    );
+    if (dialogoConFoco && dialogoConFoco !== ventana) return;
+    const dialogos = this.documento.querySelectorAll<HTMLElement>(
+      '.p-dialog[role="dialog"]',
+    );
+    if (
+      Array.from(dialogos).some(
+        (otro) => Number(otro.style.zIndex) > Number(ventana.style.zIndex),
+      )
+    )
+      return;
+    evento.preventDefault();
+    this.cerrarDialogo();
   }
 }

@@ -507,7 +507,7 @@ export class LayoutComponent {
       });
       if (user && this.cuentaLibrillos() === user) {
         menu.push({
-          label: 'Librillos',
+          label: 'Cuaderno de estudio',
           icon: 'pi pi-book',
           routerLink: RUTA_PREVIA_LIBRILLOS,
           modulo: ModuloApp.LIBRILLOS,

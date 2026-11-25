@@ -29,6 +29,11 @@ export interface GenerarFlashcardTestDto {
   aleatorio?: boolean;
   ordenSecuencial?: boolean;
 }
+
+export interface EstadisticasTestFlashcards {
+  estado: Record<EstadoFlashcard, { count: number }>;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -131,8 +136,11 @@ export class FlashcardDataService extends ApiBaseService {
     return this.post('/start-test', dto);
   }
 
-  public getStats(idTest: number) {
-    return this.get('/test-stats/' + idTest);
+  public getStats(
+    idTest: number,
+    ignorarError = false,
+  ): Observable<EstadisticasTestFlashcards> {
+    return this.get('/test-stats/' + idTest, ignorarError);
   }
 
   public getAllFinishedTest() {
