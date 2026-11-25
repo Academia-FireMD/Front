@@ -259,7 +259,14 @@ async function abrir(
       },
     }),
   );
-  return { page, tema, sinPdf, sesiones, referencia };
+  return {
+    page,
+    tema,
+    sinPdf,
+    sesiones,
+    referencia,
+    documentoBloqueado: backend.DOC + 2,
+  };
 }
 
 async function irAlTema(page: Page, temaId: number) {
@@ -270,10 +277,13 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   context,
 }) => {
   test.skip(process.env['ESTUDIO_QA_VARIANTE'] !== 'staging');
-  const { page, tema, sinPdf, sesiones } = await abrir(context, {
-    width: 1440,
-    height: 950,
-  });
+  const { page, tema, sinPdf, sesiones, documentoBloqueado } = await abrir(
+    context,
+    {
+      width: 1440,
+      height: 950,
+    },
+  );
   await irAlTema(page, tema.id);
 
   const panel = page.getByRole('region', { name: 'Práctica', exact: true });
@@ -281,8 +291,26 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   await expect(panel).toBeVisible();
   await expect(lector).toBeVisible();
   await expect(page.getByTestId('pagina-librillo')).toHaveText('Página 1 de 2');
+  const cabecera = page.getByRole('banner', { name: 'Temario', exact: true });
   await expect(
-    page.locator('app-previa-librillos .cabecera').getByRole('link', {
+    cabecera.getByRole('heading', { name: 'Temario', exact: true }),
+  ).toBeVisible();
+  const selectorTema = cabecera.getByRole('combobox', {
+    name: 'Tema',
+    exact: true,
+  });
+  const selectorDocumento = cabecera.getByRole('combobox', {
+    name: 'Documento',
+    exact: true,
+  });
+  await expect(selectorTema).toBeVisible();
+  await expect(selectorDocumento).toBeVisible();
+  expect((await selectorTema.boundingBox())!.y).toBeCloseTo(
+    (await selectorDocumento.boundingBox())!.y,
+    0,
+  );
+  await expect(
+    cabecera.getByRole('link', {
       name: 'Documentación',
       exact: true,
     }),
@@ -306,12 +334,43 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   await girar.focus();
   await expect(page.getByRole('tooltip')).toHaveText('Girar la página 90°');
   await girar.blur();
+  const lapiz = lector.getByRole('button', { name: 'Escribir en la hoja' });
+  const fondoNormal = await lapiz.evaluate(
+    (boton) => getComputedStyle(boton).backgroundColor,
+  );
+  await lapiz.click();
+  await page.mouse.move(0, 0);
+  await expect(lapiz).toHaveAttribute('aria-pressed', 'true');
+  await expect(lapiz).toHaveCSS('box-shadow', 'none');
+  await expect(lapiz).not.toHaveCSS('background-color', fondoNormal);
+  const area = lector.getByRole('button', { name: 'Marcar un área' });
+  await page.keyboard.press('Shift+Tab');
+  await expect(area).toBeFocused();
+  await expect(area).toHaveCSS('outline-style', 'solid');
+  await area.press('Space');
+  await expect(area).toHaveAttribute('aria-pressed', 'true');
+  await expect(lapiz).toHaveAttribute('aria-pressed', 'false');
+  await expect(area).not.toHaveCSS('box-shadow', /inset/);
   const rectLector = (await lector.boundingBox())!;
   const rectPanel = (await panel.boundingBox())!;
   expect(rectLector.x + rectLector.width).toBeLessThanOrEqual(rectPanel.x + 1);
   await expect(
-    page.getByRole('link', { name: 'Abrir Librillo interactivo' }),
+    page.getByRole('link', { name: 'Abrir edición interactiva' }),
   ).toBeVisible();
+  await selectorDocumento.press('Space');
+  await page
+    .getByRole('option', { name: 'Resumen bloqueado', exact: true })
+    .click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('doc'))
+    .toBe(String(documentoBloqueado));
+  await expect(page.getByText(/Este documento está bloqueado/)).toBeVisible();
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await selectorDocumento.press('Space');
+  await page
+    .getByRole('option', { name: 'Original · Estatutos', exact: true })
+    .click();
+  await expect(lector).toBeVisible();
 
   await irAlTema(page, sinPdf.id);
   await expect(
@@ -350,7 +409,7 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
   });
   await irAlTema(page, tema.id);
 
-  const pestanas = page.getByRole('navigation', { name: 'Vista del Librillo' });
+  const pestanas = page.getByRole('navigation', { name: 'Vista del Temario' });
   const panel = page.getByRole('region', { name: 'Práctica', exact: true });
   const lector = page.locator('app-previa-librillos-pdf');
   await page.evaluate(() => {
@@ -376,6 +435,9 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
   await expect(
     pestanas.getByRole('button', { name: 'Anotaciones', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    pestanas.getByRole('button', { name: 'Anotaciones', exact: true }),
+  ).toHaveCSS('border-bottom-width', '0px');
   const nota = lector.getByRole('textbox', {
     name: 'Tu nota para esta página',
   });

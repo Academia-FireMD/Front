@@ -295,7 +295,7 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
           this.cerrar();
           this.local.set({});
           this.clave = undefined;
-          this.fallo.set('Vuelve a abrir el Librillo desde tu cuenta.');
+          this.fallo.set('Vuelve a abrir el Temario desde tu cuenta.');
           this.cargando.set(false);
         }
       });

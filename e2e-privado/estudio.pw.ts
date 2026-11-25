@@ -51,7 +51,7 @@ async function abrirLibrillo(
   data: ReturnType<typeof servidorEstudio>,
 ) {
   await page.goto(`${temario}?tema=${data.TEMA}`);
-  await page.getByRole('link', { name: 'Estudiar con librillo' }).click();
+  await page.getByRole('link', { name: 'Abrir edición interactiva' }).click();
   const f = visor(page);
   await expect(f.locator('#hojaSel option')).toHaveCount(19);
   await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
@@ -492,7 +492,7 @@ test('R07 muestra las 19 hojas, guarda notas y restaura tema, página y aislamie
       ),
     );
     await expect(
-      page.getByRole('link', { name: 'Estudiar con librillo' }),
+      page.getByRole('link', { name: 'Abrir edición interactiva' }),
     ).toBeFocused();
     const otroDispositivo = await backend.preparar(b);
     const remoto = await abrirLibrillo(otroDispositivo, backend);
@@ -739,10 +739,10 @@ test('El atajo lateral aparece solo en la variante staging y abre el mismo lecto
   await page.locator('.lateral-bar').hover();
   const antesDeCurso = page.locator('.menu-header').filter({
     hasText:
-      /Documentos|Cuaderno de estudio|^(?:\s*Test\s*|\s*Flashcards\s*|\s*Psicotécnicos\s*)$/,
+      /Documentos|Temario|^(?:\s*Test\s*|\s*Flashcards\s*|\s*Psicotécnicos\s*)$/,
   });
   const link = page.getByRole('link', {
-    name: 'Cuaderno de estudio',
+    name: 'Temario',
     exact: true,
   });
   if (!backend.staging) {
@@ -758,21 +758,21 @@ test('El atajo lateral aparece solo en la variante staging y abre el mismo lecto
     await expect(link).toHaveCount(0);
     await page.goto('/app/librillos');
     await expect(
-      page.getByRole('heading', { name: 'Librillo', exact: true }),
+      page.getByRole('heading', { name: 'Temario', exact: true }),
     ).toHaveCount(0);
     return;
   }
   await expect(link).toBeVisible();
   await expect(antesDeCurso).toHaveText([
     'Documentos',
-    'Cuaderno de estudio',
+    'Temario',
     'Test',
     'Flashcards',
     'Psicotécnicos',
   ]);
   await link.press('Enter');
   await expect(
-    page.getByRole('heading', { name: 'Librillo', exact: true }),
+    page.getByRole('heading', { name: 'Temario', exact: true }),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/app\/librillos$/);
   await page
@@ -788,7 +788,7 @@ test('El atajo lateral aparece solo en la variante staging y abre el mismo lecto
   backend.opciones.piloto = 2;
   await page.goto(`/app/librillos?tema=${backend.TEMA}`);
   await expect(
-    page.getByRole('combobox', { name: '4 · Estatutos de prueba' }),
+    page.getByRole('combobox', { name: 'Tema', exact: true }),
   ).toBeVisible();
   await page.locator('.lateral-bar').hover();
   await expect(link).toBeVisible();

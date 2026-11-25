@@ -1,26 +1,52 @@
 @let vista = seleccion();
 @let tema = vista.tema;
+@let muestraDocumento =
+  tema && (tema.documentos.length > 1 || vista.documentoInaccesible);
 
-<header class="cabecera">
-  <h1>Librillo</h1>
+<header class="cabecera" aria-labelledby="titulo-temario">
+  <h1 id="titulo-temario" class="titulo-temario">
+    <i class="pi pi-book" aria-hidden="true"></i>
+    Temario
+  </h1>
 
   @if (temas().length) {
-    <div class="selector-tema">
-      <label for="tema-librillo">Tema</label>
-      <p-dropdown
-        inputId="tema-librillo"
-        [options]="temas()"
-        optionLabel="etiqueta"
-        optionValue="id"
-        [ngModel]="vista.tema?.id ?? null"
-        (onChange)="seleccionarTema($event.value)"
-        [filter]="true"
-        filterBy="etiqueta"
-        filterPlaceholder="Buscar en el temario"
-        placeholder="Selecciona un tema"
-        styleClass="w-full"
-        data-testid="librillo-selector-tema"
-      />
+    <div class="selectores-temario" [class.con-documento]="muestraDocumento">
+      <div class="campo-temario">
+        <label id="etiqueta-tema-librillo" for="tema-librillo">Tema</label>
+        <p-dropdown
+          inputId="tema-librillo"
+          ariaLabelledBy="etiqueta-tema-librillo"
+          [options]="temas()"
+          optionLabel="etiqueta"
+          optionValue="id"
+          [ngModel]="vista.tema?.id ?? null"
+          (onChange)="seleccionarTema($event.value)"
+          [filter]="true"
+          filterBy="etiqueta"
+          filterPlaceholder="Buscar en el temario"
+          placeholder="Selecciona un tema"
+          styleClass="w-full"
+          data-testid="librillo-selector-tema"
+        />
+      </div>
+      @if (tema && muestraDocumento) {
+        <div class="campo-temario">
+          <label id="etiqueta-documento-librillo" for="documento-librillo">
+            Documento
+          </label>
+          <p-dropdown
+            inputId="documento-librillo"
+            ariaLabelledBy="etiqueta-documento-librillo"
+            [options]="tema.documentos"
+            optionLabel="identificador"
+            optionValue="id"
+            [ngModel]="vista.documento?.id ?? null"
+            (onChange)="seleccionarDocumento($event.value)"
+            placeholder="Selecciona un documento"
+            styleClass="w-full"
+          />
+        </div>
+      }
     </div>
   }
 
@@ -33,7 +59,7 @@
       pButton
       class="p-button-sm p-button-outlined"
       [routerLink]="['/app/documentacion/alumno/librillo', vista.documento?.id]"
-      >Abrir Librillo interactivo</a
+      >Abrir edición interactiva</a
     >
   }
 
@@ -65,26 +91,6 @@
   }
 </header>
 
-@if (tema) {
-  @if (tema.documentos.length > 1 || vista.documentoInaccesible) {
-    <div class="selector-documento">
-      <label for="documento-librillo">Documento</label>
-      <select
-        id="documento-librillo"
-        [ngModel]="vista.documento?.id ?? null"
-        (ngModelChange)="seleccionarDocumento($event)"
-      >
-        <option [ngValue]="null" disabled>Selecciona un documento</option>
-        @for (documento of tema.documentos; track documento.id) {
-          <option [ngValue]="documento.id">
-            {{ documento.identificador }}
-          </option>
-        }
-      </select>
-    </div>
-  }
-}
-
 @switch (estado().tipo) {
   @case ("cargando") {
     <p class="aviso" role="status">Cargando tu temario…</p>
@@ -104,7 +110,7 @@
   }
   @case ("sesion") {
     <p class="aviso" role="alert">
-      Tu sesión ha cambiado. Vuelve a abrir el Librillo desde tu cuenta.
+      Tu sesión ha cambiado. Vuelve a abrir el Temario desde tu cuenta.
     </p>
   }
   @default {
@@ -114,7 +120,7 @@
       </p>
     } @else if (tema) {
       @if (practicaDisponible() && lectorPdfActivo()) {
-        <nav class="pestanas-librillo" aria-label="Vista del Librillo">
+        <nav class="pestanas-librillo" aria-label="Vista del Temario">
           <button
             #tabLectura
             type="button"

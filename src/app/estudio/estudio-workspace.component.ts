@@ -486,7 +486,7 @@ export class EstudioWorkspaceComponent {
 
   etiquetaVolver() {
     if (this.tipo === 'psico') return 'Volver a gestión';
-    return this.desdeCatalogo() ? 'Volver a Librillos' : 'Volver al tema';
+    return this.desdeCatalogo() ? 'Volver al Temario' : 'Volver al tema';
   }
 
   async guardarAntesDeSalir() {

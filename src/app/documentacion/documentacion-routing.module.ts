@@ -49,7 +49,7 @@ const routes: Routes = [
   {
     path: 'alumno/librillo/:documentoId',
     canActivate: [roleGuard, moduloGuard],
-    title: 'Estudiar con librillo',
+    title: 'Edición interactiva del Temario',
     data: {
       expectedRole: 'ALUMNO',
       modulo: ModuloApp.LIBRILLOS,

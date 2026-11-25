@@ -38,7 +38,7 @@ const librillosRoutes: Routes = environment.librillosMenu
             SuscripcionTipo.PREMIUM,
           ],
         },
-        title: 'Librillos',
+        title: 'Temario',
         loadComponent: () =>
           import('./estudio/previa/previa-librillos.component').then(
             (m) => m.PreviaLibrillosComponent,
