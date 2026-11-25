@@ -59,6 +59,9 @@
             type="button"
             class="p-button-text"
             aria-label="Reducir zoom"
+            pTooltip="Alejar el documento"
+            tooltipEvent="both"
+            tooltipPosition="bottom"
             [disabled]="zoom() <= 0.8"
             (click)="cambiarZoom(-0.2)"
           >
@@ -69,6 +72,9 @@
             type="button"
             class="p-button-text"
             aria-label="Ampliar zoom"
+            pTooltip="Acercar el documento"
+            tooltipEvent="both"
+            tooltipPosition="bottom"
             [disabled]="zoom() >= 2"
             (click)="cambiarZoom(0.2)"
           >
@@ -79,6 +85,9 @@
             type="button"
             class="p-button-text"
             aria-label="Girar página"
+            pTooltip="Girar la página 90°"
+            tooltipEvent="both"
+            tooltipPosition="bottom"
             (click)="girarPagina()"
           >
             <i class="pi pi-refresh" aria-hidden="true"></i>
@@ -89,6 +98,13 @@
             class="p-button-text"
             [attr.aria-pressed]="herramienta() === 'area'"
             aria-label="Marcar un área"
+            [pTooltip]="
+              editor()
+                ? 'Seleccionar una zona del PDF para vincular contenido'
+                : 'Seleccionar una zona del PDF para resaltarla'
+            "
+            tooltipEvent="both"
+            tooltipPosition="bottom"
             (click)="activarHerramienta('area')"
           >
             <i class="pi pi-stop" aria-hidden="true"></i>
@@ -100,6 +116,9 @@
               class="p-button-text"
               [attr.aria-pressed]="herramienta() === 'escribir'"
               aria-label="Escribir en la hoja"
+              pTooltip="Dibujar o escribir a mano sobre el PDF"
+              tooltipEvent="both"
+              tooltipPosition="bottom"
               (click)="activarHerramienta('escribir')"
             >
               <i class="pi pi-pencil" aria-hidden="true"></i>
@@ -118,6 +137,9 @@
                 type="button"
                 class="p-button-text"
                 aria-label="Deshacer último trazo en la hoja"
+                pTooltip="Deshacer el último trazo"
+                tooltipEvent="both"
+                tooltipPosition="bottom"
                 [disabled]="!anotacion().trazos.length"
                 (click)="deshacerTrazo(false)"
               >

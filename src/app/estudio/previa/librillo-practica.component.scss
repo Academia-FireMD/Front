@@ -56,7 +56,8 @@ details summary {
   font-weight: 600;
 }
 
-.opciones-practica select {
+.opciones-practica select,
+.filtro-historial select {
   min-width: 0;
   min-height: 44px;
   padding: 0.35rem 0.55rem;
@@ -72,28 +73,332 @@ details summary {
 }
 
 .conflicto-librillo,
-.resultado-librillo:not([hidden]),
+.resultado-librillo,
 .historial-librillo {
   display: grid;
   justify-items: start;
   gap: 0.85rem;
 }
 
-.resultado-librillo > app-kpi-stats-cards,
 .resultado-librillo > app-completar-test,
-.historial-librillo > dl {
+.resumen-resultado,
+.historial-librillo > section {
   width: 100%;
+}
+
+.resumen-resultado {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.indicador-resultado,
+.detalle-resultado,
+.metrica-tema,
+.sesion-historial {
+  min-width: 0;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.75rem;
+  background: var(--surface-card);
+}
+
+.indicador-resultado {
+  --acento-resultado: var(--primary-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 1rem;
+  background: var(--surface-ground);
+}
+
+.indicador-tarjetas {
+  --acento-resultado: #268457;
+}
+
+.anillo-resultado {
+  display: grid;
+  place-items: center;
+  width: 6.5rem;
+  aspect-ratio: 1;
+  padding: 0.43rem;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--acento-resultado) var(--avance, 0%),
+    var(--surface-border) 0
+  );
+}
+
+.centro-anillo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  align-content: center;
+  justify-content: center;
+  gap: 0.2rem;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--surface-card);
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.centro-anillo strong {
+  color: var(--text-color);
+  font-size: clamp(1.18rem, 3vw, 1.9rem);
+  letter-spacing: -0.045em;
+}
+
+.etiqueta-indicador {
+  font-weight: 650;
+}
+
+.detalle-resultado {
+  display: grid;
+  align-content: center;
+  gap: 0.85rem;
+  padding: 1.15rem;
+}
+
+.detalle-resultado h3 {
+  font-size: 1.1rem;
+}
+
+.resumen-resultado + button {
+  justify-self: end;
+}
+
+.distribucion-practica {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+}
+
+[data-tono="bien"] {
+  --tono-grafico: #268457;
+}
+
+[data-tono="fallo"] {
+  --tono-grafico: #b3353c;
+}
+
+[data-tono="repaso"] {
+  --tono-grafico: #9d5f08;
+}
+
+[data-tono="blanca"] {
+  --tono-grafico: #6d7888;
+}
+
+.barra-distribucion,
+.medidor-tema {
+  display: flex;
+  min-width: 0;
+  height: 0.65rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-ground);
+}
+
+.barra-distribucion > span,
+.medidor-tema > span {
+  flex: 0 0 auto;
+  background: var(--tono-grafico, var(--primary-color));
+}
+
+.leyenda-distribucion {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.valor-distribucion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.65rem;
+  border-radius: 0.5rem;
+  background: var(--surface-ground);
+}
+
+.valor-distribucion dt {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.valor-distribucion i {
+  flex: none;
+  color: var(--tono-grafico);
+  font-size: 0.8rem;
+}
+
+.valor-distribucion dd {
+  order: -1;
+  color: var(--text-color);
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.historial-librillo {
+  gap: 1.25rem;
+}
+
+.progreso-historial,
+.sesiones-historial {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.metricas-tema {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 0.65rem;
+}
+
+.metrica-tema {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+}
+
+.nombre-metrica,
+.cifras-metrica,
+.cabecera-sesiones,
+.filtro-historial,
+.datos-sesion,
+.alcance-sesion,
+.estado-historial {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.nombre-metrica,
+.fecha-sesion time {
+  font-weight: 650;
+}
+
+.nombre-metrica i {
+  color: var(--primary-color);
+}
+
+.cifras-metrica,
+.cabecera-sesiones {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.vistas-metrica {
+  color: var(--text-color-secondary);
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vistas-metrica strong {
+  margin-right: 0.15rem;
+  color: var(--text-color);
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+}
+
+.logradas-metrica,
+.varios-temas {
+  padding: 0.22rem 0.48rem;
+  border-radius: 0.4rem;
+  background: var(--surface-ground);
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+}
+
+.medidor-tema {
+  height: 0.4rem;
+}
+
+.filtro-historial {
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
+
+.lista-sesiones {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sesion-historial {
+  display: grid;
+  grid-template-columns: minmax(13rem, 0.6fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.icono-sesion {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.55rem;
+  background: var(--surface-ground);
+  color: var(--primary-color);
+}
+
+.fecha-sesion {
+  display: grid;
+  gap: 0.24rem;
+}
+
+.alcance-sesion {
+  flex-wrap: wrap;
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
+
+.sesion-historial .barra-distribucion {
+  height: 0.45rem;
+}
+
+.sesion-historial .leyenda-distribucion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+}
+
+.sesion-historial .valor-distribucion {
+  flex-direction: row;
+  align-items: baseline;
+  padding: 0;
+  background: transparent;
+}
+
+.sesion-historial .valor-distribucion dd {
+  order: 0;
+  font-size: 0.9rem;
+}
+
+.estado-historial {
+  flex-wrap: wrap;
+  min-height: 3rem;
+  color: var(--text-color-secondary);
 }
 
 .alcance-intento {
   margin-bottom: 0.75rem;
   color: var(--text-color-secondary);
-}
-
-.vistas-dialogo button[aria-pressed="true"] {
-  background: var(--surface-ground);
-  box-shadow: inset 0 -2px var(--primary-color);
-  font-weight: 700;
 }
 
 a,
@@ -124,11 +429,104 @@ button {
   width: min(calc(100vw - 2rem), 29rem);
 }
 
+::ng-deep .pestanas-sesion-librillo {
+  .p-tabview-nav {
+    width: max-content;
+    max-width: 100%;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border: 0;
+    border-radius: 0.75rem;
+    background: var(--surface-ground);
+  }
+
+  .p-tabview-nav li .p-tabview-nav-link {
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    margin: 0;
+    padding: 0.55rem 1rem;
+    border: 0;
+    border-radius: 0.55rem;
+    background: transparent;
+    color: var(--text-color-secondary);
+    text-align: center;
+  }
+
+  .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+    background: var(--surface-card);
+    color: var(--text-color);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+  }
+
+  .p-highlight .p-tabview-nav-link > i {
+    color: var(--primary-color);
+  }
+
+  .p-tabview-nav li .p-tabview-nav-link:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+
+  .p-tabview-nav .p-tabview-ink-bar {
+    display: none;
+  }
+
+  .p-tabview-panels {
+    padding: 1rem 0 0;
+  }
+}
+
 ::ng-deep
   :is(.dialogo-practica-librillo, .dialogo-conflicto-librillo)
   .p-dialog-header-close {
   width: 44px;
   height: 44px;
+}
+
+@media (max-width: 640px) {
+  .resumen-resultado,
+  .sesion-historial {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .indicador-resultado {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+
+  .anillo-resultado {
+    width: 5rem;
+    padding: 0.35rem;
+  }
+
+  .detalle-resultado {
+    padding: 0.75rem;
+  }
+
+  .valor-distribucion {
+    padding: 0.5rem;
+  }
+
+  .valor-distribucion dt {
+    flex-wrap: wrap;
+  }
+
+  ::ng-deep .pestanas-sesion-librillo .p-tabview-nav {
+    width: 100%;
+
+    li:not(.p-tabview-ink-bar) {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    li .p-tabview-nav-link {
+      height: 100%;
+      padding-inline: 0.45rem;
+      font-size: 0.9rem;
+      white-space: normal;
+    }
+  }
 }
 
 @media (max-width: 1024px) {

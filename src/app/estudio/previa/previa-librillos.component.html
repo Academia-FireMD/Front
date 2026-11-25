@@ -2,18 +2,7 @@
 @let tema = vista.tema;
 
 <header class="cabecera">
-  <div class="identidad">
-    <a
-      pButton
-      class="p-button-text p-button-sm"
-      routerLink="/app/documentacion/alumno"
-      [queryParams]="{ tema: vista.tema?.id, doc: vista.documento?.id }"
-    >
-      <i class="pi pi-arrow-left" aria-hidden="true"></i>
-      <span>Documentación</span>
-    </a>
-    <h1>Librillo</h1>
-  </div>
+  <h1>Librillo</h1>
 
   @if (temas().length) {
     <div class="selector-tema">

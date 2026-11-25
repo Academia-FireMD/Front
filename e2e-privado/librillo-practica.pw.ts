@@ -281,6 +281,31 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   await expect(panel).toBeVisible();
   await expect(lector).toBeVisible();
   await expect(page.getByTestId('pagina-librillo')).toHaveText('Página 1 de 2');
+  await expect(
+    page.locator('app-previa-librillos .cabecera').getByRole('link', {
+      name: 'Documentación',
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  const ayudas = [
+    ['Reducir zoom', 'Alejar el documento'],
+    ['Ampliar zoom', 'Acercar el documento'],
+    ['Girar página', 'Girar la página 90°'],
+    ['Marcar un área', 'Seleccionar una zona del PDF para resaltarla'],
+    ['Escribir en la hoja', 'Dibujar o escribir a mano sobre el PDF'],
+  ];
+  for (const [accion, texto] of ayudas) {
+    await lector.getByRole('button', { name: accion, exact: true }).hover();
+    await expect(page.getByRole('tooltip')).toHaveText(texto);
+  }
+  await page.mouse.move(0, 0);
+  const girar = lector.getByRole('button', {
+    name: 'Girar página',
+    exact: true,
+  });
+  await girar.focus();
+  await expect(page.getByRole('tooltip')).toHaveText('Girar la página 90°');
+  await girar.blur();
   const rectLector = (await lector.boundingBox())!;
   const rectPanel = (await panel.boundingBox())!;
   expect(rectLector.x + rectLector.width).toBeLessThanOrEqual(rectPanel.x + 1);
@@ -301,6 +326,13 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   await expect(
     dialogo.getByText('Aún no hay sesiones finalizadas', { exact: false }),
   ).toBeVisible();
+  const cambioFiltro = page.waitForRequest(
+    (request) =>
+      request.url().includes('/practica/historial') &&
+      new URL(request.url()).searchParams.get('tipo') === 'flashcards',
+  );
+  await dialogo.getByLabel('Actividad').selectOption({ label: 'Flashcards' });
+  await cambioFiltro;
   expect((await dialogo.boundingBox())?.width).toBeLessThanOrEqual(1100);
   await dialogo.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await expect(historial).toBeFocused();
@@ -389,10 +421,27 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
   await expect(opcion).toHaveAttribute('aria-pressed', 'true');
   expect(sesiones.inicios).toBe(2);
   await dialogo.getByRole('button', { name: 'Corregir simulacro' }).click();
-  await expect(dialogo.getByText('Nota 10 / 10')).toBeVisible();
-  await dialogo.getByRole('button', { name: 'Historial del tema' }).click();
+  await expect(
+    dialogo.getByTestId('indicador-resultado').locator('strong'),
+  ).toHaveText('10');
+  const tabResultado = dialogo.getByRole('tab', {
+    name: 'Resultado',
+    exact: true,
+  });
+  const tabHistorial = dialogo.getByRole('tab', {
+    name: 'Historial del tema',
+    exact: true,
+  });
+  await tabResultado.press('ArrowRight');
+  await expect(tabHistorial).toHaveAttribute('aria-selected', 'true');
   await expect(dialogo.getByText('Varios temas')).toBeVisible();
-  await dialogo.getByRole('button', { name: 'Resultado', exact: true }).click();
+  await expect(
+    dialogo
+      .getByRole('list', { name: 'Sesiones finalizadas' })
+      .getByTestId('distribucion-practica'),
+  ).toBeVisible();
+  await tabHistorial.press('ArrowLeft');
+  await expect(tabResultado).toHaveAttribute('aria-selected', 'true');
   await dialogo.getByRole('button', { name: 'Ver corrección' }).click();
   await expect(dialogo.getByTestId('solucion-texto')).toContainText(
     'Esta es la solución.',
@@ -450,7 +499,7 @@ test('el tiempo del simulacro vence mientras su ventana está cerrada', async ({
 
   await empezar.click();
   await expect(
-    dialogo.getByRole('button', { name: 'Resultado', exact: true }),
+    dialogo.getByRole('tab', { name: 'Resultado', exact: true }),
   ).toBeVisible();
   expect(sesiones.inicios).toBe(2);
   expect(sesiones.finalizaciones).toBe(1);

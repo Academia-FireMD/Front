@@ -26,6 +26,7 @@ import type {
 } from 'pdfjs-dist';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { firstValueFrom, timeout } from 'rxjs';
 import { usuarioIdDeSubject } from '../../cursos/services/hidraulica-interactivo.service';
 import { DocumentosService } from '../../documentacion/services/documentacion.service';
@@ -92,7 +93,7 @@ interface CuadernoAnterior {
 @Component({
   selector: 'app-previa-librillos-pdf',
   standalone: true,
-  imports: [ButtonModule, DialogModule, TestModule],
+  imports: [ButtonModule, DialogModule, TooltipModule, TestModule],
   providers: [LibrilloCuadernoService],
   templateUrl: './previa-librillos-pdf.component.html',
   styleUrl: './previa-librillos-pdf.component.scss',

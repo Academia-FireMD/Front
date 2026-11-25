@@ -156,8 +156,16 @@ describe('Práctica del Librillo', () => {
     expect(dialogo()?.textContent).toContain('Sin nota');
     expect(dialogo()?.textContent).toContain('Aciertos');
     expect(
-      dialogo()?.querySelector('[aria-pressed="true"]')?.textContent,
+      dialogo()?.querySelector('[role="tab"][aria-selected="true"]')
+        ?.textContent,
     ).toContain('Resultado');
+    const segmentos = dialogo()!.querySelectorAll<HTMLElement>(
+      '.barra-distribucion > span',
+    );
+    expect(Array.from(segmentos, (segmento) => segmento.style.width)).toEqual([
+      '50%',
+      '50%',
+    ]);
   });
 
   it('ignora los pendientes heredados del resumen y abre un conflicto coincidente con el origen guardado', async () => {
@@ -351,12 +359,12 @@ describe('Práctica del Librillo', () => {
     });
     await resultado;
     fixture.detectChanges();
-    const tarjetas = Array.from(dialogo()!.querySelectorAll('p-card')).map(
-      (tarjeta) => [
-        tarjeta.querySelector('.stats-number')?.textContent,
-        tarjeta.querySelector('.stats-label')?.textContent,
-      ],
-    );
+    const tarjetas = Array.from(
+      dialogo()!.querySelectorAll('.valor-distribucion'),
+    ).map((tarjeta) => [
+      tarjeta.querySelector('dd')?.textContent?.trim(),
+      tarjeta.querySelector('dt')?.textContent?.trim(),
+    ]);
     expect(tarjetas).toEqual([
       ['2', 'Aprendidas'],
       ['3', 'Para repasar'],
@@ -381,7 +389,7 @@ describe('Práctica del Librillo', () => {
     await carga;
     fixture.detectChanges();
     expect(dialogo()?.textContent).toContain('Varios temas');
-    expect(dialogo()?.textContent).toContain('2 preguntas');
+    expect(dialogo()?.textContent).toMatch(/2\s+preguntas/);
     expect(dialogo()?.textContent).toContain('Ver más');
     expect(dialogo()?.textContent).toContain('2/6 vistas');
 
@@ -416,8 +424,9 @@ describe('Práctica del Librillo', () => {
     anterior.flush({ items: [], siguienteCursor: 70 });
     await primera;
     fixture.detectChanges();
+    await fixture.whenStable();
     expect(
-      dialogo()?.querySelector('[aria-pressed="true"]')?.textContent,
+      dialogo()?.querySelector('select')?.selectedOptions[0]?.textContent,
     ).toContain('Flashcards');
     expect(dialogo()?.textContent).toContain('Aún no hay sesiones finalizadas');
     expect(dialogo()?.textContent).not.toContain('Ver más');

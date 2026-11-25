@@ -285,83 +285,134 @@
         }
 
         @if (resultado(); as estadoResultado) {
-          <nav
-            class="vistas-dialogo flex flex-wrap gap-2 mb-3 border-bottom-1 surface-border"
-            aria-label="Vistas de la sesión"
+          <p-tabView
+            styleClass="pestanas-sesion-librillo"
+            [activeIndex]="vistaActual === 'historial' ? 1 : 0"
+            [selectOnFocus]="true"
+            [autoHideButtons]="false"
+            (activeIndexChange)="
+              $event === 1 ? mostrarHistorial() : vista.set('resultado')
+            "
           >
-            <button
-              pButton
-              type="button"
-              class="p-button-text"
-              [attr.aria-pressed]="vistaActual === 'resultado'"
-              (click)="vista.set('resultado')"
-            >
-              Resultado
-            </button>
-            <button
-              pButton
-              type="button"
-              class="p-button-text"
-              [attr.aria-pressed]="vistaActual === 'historial'"
-              (click)="mostrarHistorial()"
-            >
-              Historial del tema
-            </button>
-          </nav>
-          <div
-            class="resultado-librillo"
-            [hidden]="vistaActual !== 'resultado'"
-          >
-            @switch (estadoResultado.tipo) {
-              @case ("cargando") {
-                <p role="status">Cargando el resultado…</p>
-              }
-              @case ("error") {
-                <p role="alert">No se pudo cargar el resultado.</p>
-                <button
-                  pButton
-                  type="button"
-                  class="p-button-outlined"
-                  (click)="cargarResultado(intento)"
-                >
-                  Reintentar
-                </button>
-              }
-              @case ("disponible") {
-                @if (intento.tipo === "test") {
-                  <h3>
-                    {{
-                      estadoResultado.nota == null
-                        ? "Sin nota"
-                        : "Nota " + estadoResultado.nota + " / 10"
-                    }}
-                  </h3>
-                }
-                <app-kpi-stats-cards [stats]="estadoResultado.estadisticas" />
-                @if (intento.tipo === "test") {
-                  <button
-                    pButton
-                    type="button"
-                    class="p-button-outlined"
-                    [attr.aria-expanded]="correccion()"
-                    (click)="correccion.set(!correccion())"
-                  >
-                    {{ correccion() ? "Ocultar corrección" : "Ver corrección" }}
-                  </button>
-                  @if (correccion()) {
-                    <app-completar-test
-                      [embedded]="true"
-                      [testId]="intento.id"
-                      [origenLibrillo]="intento.origenLibrillo"
-                      [revisarLibrillo]="true"
-                      [referenciasLibrillo]="referencias()"
-                      (verReferenciaLibrillo)="abrirReferencia($event)"
-                    />
+            <p-tabPanel>
+              <ng-template pTemplate="header">
+                <i class="pi pi-chart-pie" aria-hidden="true"></i>
+                <span>Resultado</span>
+              </ng-template>
+              <div class="resultado-librillo">
+                @switch (estadoResultado.tipo) {
+                  @case ("cargando") {
+                    <p role="status">Cargando el resultado…</p>
+                  }
+                  @case ("error") {
+                    <p role="alert">No se pudo cargar el resultado.</p>
+                    <button
+                      pButton
+                      type="button"
+                      class="p-button-outlined"
+                      (click)="cargarResultado(intento)"
+                    >
+                      Reintentar
+                    </button>
+                  }
+                  @case ("disponible") {
+                    @let indicador = estadoResultado.indicador;
+                    <div class="resumen-resultado">
+                      <div
+                        class="indicador-resultado"
+                        [class.indicador-tarjetas]="
+                          intento.tipo === 'flashcards'
+                        "
+                        data-testid="indicador-resultado"
+                      >
+                        <div
+                          class="anillo-resultado"
+                          [style.--avance]="
+                            porcentaje(indicador.valor ?? 0, indicador.maximo) +
+                            '%'
+                          "
+                        >
+                          <div class="centro-anillo">
+                            @if (indicador.valor === null) {
+                              <span>Sin nota</span>
+                            } @else {
+                              <strong>{{
+                                indicador.valor | number: "1.0-2"
+                              }}</strong>
+                              <span>/ {{ indicador.maximo }}</span>
+                            }
+                          </div>
+                        </div>
+                        @if (indicador.valor !== null) {
+                          <span class="etiqueta-indicador">
+                            {{ indicador.etiqueta }}
+                          </span>
+                        }
+                      </div>
+                      <section class="detalle-resultado">
+                        <h3>
+                          {{ estadoResultado.total }}
+                          @if (intento.tipo === "test") {
+                            {{
+                              estadoResultado.total === 1
+                                ? "pregunta"
+                                : "preguntas"
+                            }}
+                          } @else {
+                            {{
+                              estadoResultado.total === 1
+                                ? "tarjeta"
+                                : "tarjetas"
+                            }}
+                          }
+                        </h3>
+                        <ng-container
+                          *ngTemplateOutlet="
+                            desglose;
+                            context: {
+                              segmentos: estadoResultado.segmentos,
+                              total: estadoResultado.total,
+                            }
+                          "
+                        />
+                      </section>
+                    </div>
+                    @if (intento.tipo === "test") {
+                      <button
+                        pButton
+                        type="button"
+                        class="p-button-outlined flex gap-2"
+                        [attr.aria-expanded]="correccion()"
+                        (click)="correccion.set(!correccion())"
+                      >
+                        <i class="pi pi-list-check" aria-hidden="true"></i>
+                        {{
+                          correccion() ? "Ocultar corrección" : "Ver corrección"
+                        }}
+                      </button>
+                      @if (correccion()) {
+                        <app-completar-test
+                          [embedded]="true"
+                          [testId]="intento.id"
+                          [origenLibrillo]="intento.origenLibrillo"
+                          [revisarLibrillo]="true"
+                          [referenciasLibrillo]="referencias()"
+                          (verReferenciaLibrillo)="abrirReferencia($event)"
+                        />
+                      }
+                    }
                   }
                 }
-              }
-            }
-          </div>
+              </div>
+            </p-tabPanel>
+            <p-tabPanel>
+              <ng-template pTemplate="header">
+                <i class="pi pi-history" aria-hidden="true"></i>
+                <span>Historial del tema</span>
+              </ng-template>
+              <ng-container *ngTemplateOutlet="panelHistorial" />
+            </p-tabPanel>
+          </p-tabView>
         } @else if (intento.tipo === "test") {
           <app-completar-test
             [embedded]="true"
@@ -382,124 +433,181 @@
         }
       }
 
-      @if (vistaActual === "historial") {
-        <div class="historial-librillo">
-          @if (progreso(); as progresoTema) {
-            <h3>Progreso del tema</h3>
-            <ng-container
-              *ngTemplateOutlet="
-                indicadores;
-                context: {
-                  $implicit: progresoTema,
-                  etiqueta: 'Progreso del tema',
-                }
-              "
-            />
-          }
-
-          @if (historial(); as historial) {
-            <div
-              class="vistas-dialogo flex flex-wrap gap-2"
-              role="group"
-              aria-label="Actividad del historial"
-            >
-              @for (filtro of tipos(); track filtro) {
-                <button
-                  pButton
-                  type="button"
-                  class="p-button-text"
-                  [attr.aria-pressed]="historial.filtro === filtro"
-                  (click)="cambiarFiltro(filtro)"
-                >
-                  {{ filtro === "test" ? "Tests" : "Flashcards" }}
-                </button>
-              }
-            </div>
-
-            @if (historial.items.length) {
-              <ul
-                class="list-none p-0 m-0 w-full border-top-1 surface-border"
-                aria-label="Sesiones finalizadas"
-              >
-                @for (item of historial.items; track item.id) {
-                  <li
-                    class="flex flex-column gap-1 py-2 border-bottom-1 surface-border"
-                  >
-                    <div>
-                      <time
-                        class="font-semibold"
-                        [attr.datetime]="item.fecha"
-                        >{{ item.fecha | date: "d MMM y, HH:mm" }}</time
-                      >
-                      @if (item.mixto) {
-                        <span class="ml-2 text-sm text-color-secondary"
-                          >Varios temas</span
-                        >
-                      }
-                    </div>
-                    <p>
-                      @if (esTest(item)) {
-                        {{ item.total }}
-                        {{ item.total === 1 ? "pregunta" : "preguntas" }} ·
-                        {{ item.aciertos }} aciertos · {{ item.fallos }} fallos
-                        · {{ item.blancas }} en blanco
-                      } @else {
-                        {{ item.total }}
-                        {{ item.total === 1 ? "tarjeta" : "tarjetas" }} ·
-                        {{ item.aprendidas }} aprendidas ·
-                        {{ item.paraRepasar }} para repasar ·
-                        {{ item.dificultad }} con dificultad
-                      }
-                    </p>
-                  </li>
-                }
-              </ul>
-            }
-
-            @switch (historial.tipo) {
-              @case ("cargando") {
-                <p role="status">Cargando el historial…</p>
-              }
-              @case ("error") {
-                <p role="alert">No se pudo cargar el historial.</p>
-                <button
-                  pButton
-                  type="button"
-                  class="p-button-outlined"
-                  (click)="
-                    cargarHistorial(historial.filtro, historial.siguienteCursor)
-                  "
-                >
-                  Reintentar
-                </button>
-              }
-              @case ("disponible") {
-                @if (!historial.items.length) {
-                  <p role="status">
-                    Aún no hay sesiones finalizadas de esta actividad en el
-                    tema.
-                  </p>
-                }
-                @if (historial.siguienteCursor !== null) {
-                  <button
-                    pButton
-                    type="button"
-                    class="p-button-outlined"
-                    (click)="
-                      cargarHistorial(
-                        historial.filtro,
-                        historial.siguienteCursor
-                      )
-                    "
-                  >
-                    Ver más
-                  </button>
-                }
-              }
-            }
-          }
-        </div>
+      @if (!intentoActual() && vistaActual === "historial") {
+        <ng-container *ngTemplateOutlet="panelHistorial" />
       }
     </div>
   }
 </p-dialog>
+
+<ng-template #desglose let-segmentos="segmentos" let-total="total">
+  <div class="distribucion-practica">
+    <div
+      class="barra-distribucion"
+      data-testid="distribucion-practica"
+      aria-hidden="true"
+    >
+      @for (segmento of segmentos; track segmento.tono) {
+        @if (segmento.cantidad > 0) {
+          <span
+            [attr.data-tono]="segmento.tono"
+            [style.width.%]="porcentaje(segmento.cantidad, total)"
+          ></span>
+        }
+      }
+    </div>
+    <dl class="leyenda-distribucion">
+      @for (segmento of segmentos; track segmento.tono) {
+        <div class="valor-distribucion" [attr.data-tono]="segmento.tono">
+          <dt>
+            <i class="pi" [class]="segmento.icono" aria-hidden="true"></i>
+            {{ segmento.etiqueta }}
+          </dt>
+          <dd>{{ segmento.cantidad }}</dd>
+        </div>
+      }
+    </dl>
+  </div>
+</ng-template>
+
+<ng-template #panelHistorial>
+  <div class="historial-librillo">
+    @if (progresoHistorial().length) {
+      <section class="progreso-historial">
+        <h3>Progreso del tema</h3>
+        <div class="metricas-tema">
+          @for (metrica of progresoHistorial(); track metrica.tipo) {
+            <div class="metrica-tema">
+              <div class="nombre-metrica">
+                <i class="pi" [class]="metrica.icono" aria-hidden="true"></i>
+                <span>{{ metrica.nombre }}</span>
+              </div>
+              <div class="cifras-metrica">
+                <span class="vistas-metrica">
+                  <strong>{{ metrica.vistas }}</strong
+                  ><span>/{{ metrica.total }} vistas</span>
+                </span>
+                <span class="logradas-metrica">
+                  {{ metrica.logradas }} {{ metrica.etiquetaLogradas }}
+                </span>
+              </div>
+              <div class="medidor-tema" aria-hidden="true">
+                <span
+                  [style.width.%]="porcentaje(metrica.vistas, metrica.total)"
+                ></span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+    @if (historial(); as historial) {
+      <section class="sesiones-historial">
+        <div class="cabecera-sesiones">
+          <h3>Sesiones</h3>
+          @if (tipos().length > 1) {
+            <label class="filtro-historial">
+              <span>Actividad</span>
+              <select
+                [ngModel]="historial.filtro"
+                (ngModelChange)="cambiarFiltro($event)"
+              >
+                @for (filtro of tipos(); track filtro) {
+                  <option [ngValue]="filtro">
+                    {{ filtro === "test" ? "Tests" : "Flashcards" }}
+                  </option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+        @if (filasHistorial().length) {
+          <ul class="lista-sesiones" aria-label="Sesiones finalizadas">
+            @for (fila of filasHistorial(); track fila.item.id) {
+              <li class="sesion-historial">
+                <div class="datos-sesion">
+                  <i
+                    class="pi icono-sesion"
+                    [class.pi-list]="fila.tipo === 'test'"
+                    [class.pi-clone]="fila.tipo === 'flashcards'"
+                    aria-hidden="true"
+                  ></i>
+                  <div class="fecha-sesion">
+                    <time [attr.datetime]="fila.item.fecha">
+                      {{ fila.item.fecha | date: "d MMM y, HH:mm" }}
+                    </time>
+                    <div class="alcance-sesion">
+                      <span>
+                        {{ fila.item.total }}
+                        @if (fila.tipo === "test") {
+                          {{ fila.item.total === 1 ? "pregunta" : "preguntas" }}
+                        } @else {
+                          {{ fila.item.total === 1 ? "tarjeta" : "tarjetas" }}
+                        }
+                      </span>
+                      @if (fila.item.mixto) {
+                        <span class="varios-temas">Varios temas</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <ng-container
+                  *ngTemplateOutlet="
+                    desglose;
+                    context: {
+                      segmentos: fila.segmentos,
+                      total: fila.item.total,
+                    }
+                  "
+                />
+              </li>
+            }
+          </ul>
+        }
+        @switch (historial.tipo) {
+          @case ("cargando") {
+            <p class="estado-historial" role="status">
+              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              Cargando el historial…
+            </p>
+          }
+          @case ("error") {
+            <div class="estado-historial">
+              <p role="alert">No se pudo cargar el historial.</p>
+              <button
+                pButton
+                type="button"
+                class="p-button-outlined"
+                (click)="
+                  cargarHistorial(historial.filtro, historial.siguienteCursor)
+                "
+              >
+                Reintentar
+              </button>
+            </div>
+          }
+          @case ("disponible") {
+            @if (!historial.items.length) {
+              <p class="estado-historial" role="status">
+                <i class="pi pi-history" aria-hidden="true"></i>
+                Aún no hay sesiones finalizadas de esta actividad en el tema.
+              </p>
+            }
+            @if (historial.siguienteCursor !== null) {
+              <button
+                pButton
+                type="button"
+                class="p-button-outlined"
+                (click)="
+                  cargarHistorial(historial.filtro, historial.siguienteCursor)
+                "
+              >
+                Ver más
+              </button>
+            }
+          }
+        }
+      </section>
+    }
+  </div>
+</ng-template>

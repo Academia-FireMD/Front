@@ -1,4 +1,9 @@
-import { DatePipe, DOCUMENT, NgTemplateOutlet } from '@angular/common';
+import {
+  DatePipe,
+  DecimalPipe,
+  DOCUMENT,
+  NgTemplateOutlet,
+} from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -25,6 +30,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { Dialog, DialogModule } from 'primeng/dialog';
+import { TabViewModule } from 'primeng/tabview';
 import {
   Subject,
   catchError,
@@ -37,8 +43,6 @@ import {
   timeout,
 } from 'rxjs';
 import { FlashcardDataService } from '../../services/flashcards.service';
-import { KpiStat } from '../../shared/components/kpi-stats-cards/kpi-stats-cards.component';
-import { SharedModule } from '../../shared/shared.module';
 import { TestModule } from '../../test/test.module';
 import { ContextoPdfLibrillo } from './librillo-contexto-pdf.service';
 import {
@@ -55,7 +59,6 @@ import {
   RepasoLibrillo,
   ResumenPracticaLibrillo,
   SegundosPorPreguntaLibrillo,
-  SesionHistorialLibrillo,
   TipoPracticaLibrillo,
 } from './librillo-practica.service';
 import { parametrosPracticaLibrillo } from './previa-librillos';
@@ -75,13 +78,73 @@ type Resumen = {
 };
 type EstadoCarga = 'cargando' | 'error' | 'disponible';
 type EstadoResumen = { tipo: EstadoCarga; resumen: Resumen | null };
+type SegmentoPractica = {
+  tono: 'bien' | 'fallo' | 'repaso' | 'blanca';
+  etiqueta: string;
+  cantidad: number;
+  icono: string;
+};
 type EstadoResultado =
   | { tipo: 'cargando' | 'error' }
-  | { tipo: 'disponible'; estadisticas: KpiStat[]; nota?: number | null };
+  | {
+      tipo: 'disponible';
+      total: number;
+      segmentos: SegmentoPractica[];
+      indicador: { etiqueta: string; valor: number | null; maximo: number };
+    };
 type EstadoHistorial = HistorialPracticaLibrillo & {
   filtro: TipoPracticaLibrillo;
   tipo: EstadoCarga;
 };
+
+function segmentosTest({
+  aciertos,
+  fallos,
+  blancas,
+}: ConteoTestLibrillo): SegmentoPractica[] {
+  return [
+    {
+      tono: 'bien',
+      etiqueta: 'Aciertos',
+      cantidad: aciertos,
+      icono: 'pi-check',
+    },
+    { tono: 'fallo', etiqueta: 'Fallos', cantidad: fallos, icono: 'pi-times' },
+    {
+      tono: 'blanca',
+      etiqueta: 'En blanco',
+      cantidad: blancas,
+      icono: 'pi-minus',
+    },
+  ];
+}
+
+function segmentosTarjetas(
+  aprendidas: number,
+  paraRepasar: number,
+  dificultad: number,
+): SegmentoPractica[] {
+  return [
+    {
+      tono: 'bien',
+      etiqueta: 'Aprendidas',
+      cantidad: aprendidas,
+      icono: 'pi-check',
+    },
+    {
+      tono: 'repaso',
+      etiqueta: 'Para repasar',
+      cantidad: paraRepasar,
+      icono: 'pi-refresh',
+    },
+    {
+      tono: 'fallo',
+      etiqueta: 'Con dificultad',
+      cantidad: dificultad,
+      icono: 'pi-times',
+    },
+  ];
+}
 
 function mismaPagina(
   anterior: Partial<ContextoPdfLibrillo> | null,
@@ -99,12 +162,13 @@ function mismaPagina(
   standalone: true,
   imports: [
     DatePipe,
+    DecimalPipe,
     FormsModule,
     RouterLink,
     ButtonModule,
     DialogModule,
     NgTemplateOutlet,
-    SharedModule,
+    TabViewModule,
     TestModule,
   ],
   templateUrl: './librillo-practica.component.html',
@@ -229,6 +293,45 @@ export class LibrilloPracticaComponent {
   readonly resultado = signal<EstadoResultado | null>(null);
   readonly correccion = signal(false);
   readonly historial = signal<EstadoHistorial | null>(null);
+  readonly filasHistorial = computed(() =>
+    (this.historial()?.items ?? []).map((item) => ({
+      item,
+      tipo: 'aciertos' in item ? 'test' : 'flashcards',
+      segmentos:
+        'aciertos' in item
+          ? segmentosTest(item)
+          : segmentosTarjetas(
+              item.aprendidas,
+              item.paraRepasar,
+              item.dificultad,
+            ),
+    })),
+  );
+  readonly progresoHistorial = computed(() => {
+    const progreso = this.progreso();
+    if (!progreso) return [];
+    return this.tipos().map((tipo) =>
+      tipo === 'test'
+        ? {
+            tipo,
+            nombre: 'Preguntas',
+            icono: 'pi-list',
+            total: progreso.preguntas.total,
+            vistas: progreso.preguntas.vistas,
+            logradas: progreso.preguntas.acertadas,
+            etiquetaLogradas: 'acertadas',
+          }
+        : {
+            tipo,
+            nombre: 'Flashcards',
+            icono: 'pi-clone',
+            total: progreso.tarjetas.total,
+            vistas: progreso.tarjetas.vistas,
+            logradas: progreso.tarjetas.dominadas,
+            etiquetaLogradas: 'dominadas',
+          },
+    );
+  });
   readonly dialogoVisible = computed(
     () =>
       !!this.conflictoActual() ||
@@ -501,57 +604,33 @@ export class LibrilloPracticaComponent {
             map(
               (datos): EstadoResultado => ({
                 tipo: 'disponible',
-                nota: datos.nota,
-                estadisticas: [
-                  {
-                    value: datos.aciertos,
-                    label: 'Aciertos',
-                    type: 'correctas',
-                    icon: 'pi-check',
-                  },
-                  {
-                    value: datos.fallos,
-                    label: 'Fallos',
-                    type: 'incorrectas',
-                    icon: 'pi-times',
-                  },
-                  {
-                    value: datos.blancas,
-                    label: 'En blanco',
-                    type: 'no-contestadas',
-                    icon: 'pi-minus',
-                  },
-                ],
+                total: datos.total,
+                segmentos: segmentosTest(datos),
+                indicador: { etiqueta: 'Nota', valor: datos.nota, maximo: 10 },
               }),
             ),
           )
         : this.flashcards.getStats(intento.id, true).pipe(
             timeout(15000),
-            map(
-              ({ estado }): EstadoResultado => ({
+            map(({ estado }): EstadoResultado => {
+              const aprendidas = estado.BIEN.count;
+              const total =
+                aprendidas + estado.REVISAR.count + estado.MAL.count;
+              return {
                 tipo: 'disponible',
-                estadisticas: [
-                  {
-                    value: estado.BIEN.count,
-                    label: 'Aprendidas',
-                    type: 'correctas',
-                    icon: 'pi-check',
-                  },
-                  {
-                    value: estado.REVISAR.count,
-                    label: 'Para repasar',
-                    type: 'repasar',
-                    icon: 'pi-refresh',
-                  },
-                  {
-                    value: estado.MAL.count,
-                    label: 'Con dificultad',
-                    type: 'incorrectas',
-                    icon: 'pi-times',
-                  },
-                ],
-              }),
-            ),
+                total,
+                segmentos: segmentosTarjetas(
+                  aprendidas,
+                  estado.REVISAR.count,
+                  estado.MAL.count,
+                ),
+                indicador: {
+                  etiqueta: 'Aprendidas',
+                  valor: aprendidas,
+                  maximo: total,
+                },
+              };
+            }),
           );
     try {
       const datos = await firstValueFrom(
@@ -617,10 +696,8 @@ export class LibrilloPracticaComponent {
     }
   }
 
-  esTest(
-    item: SesionHistorialLibrillo,
-  ): item is SesionHistorialLibrillo & ConteoTestLibrillo {
-    return 'aciertos' in item;
+  porcentaje(cantidad: number, total: number) {
+    return total > 0 ? Math.min(100, Math.max(0, (100 * cantidad) / total)) : 0;
   }
 
   abrirReferencia(referencia: ReferenciaPracticaLibrillo) {

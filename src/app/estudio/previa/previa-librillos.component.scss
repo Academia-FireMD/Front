@@ -23,7 +23,6 @@
   min-height: 44px;
 }
 
-.identidad,
 .selector-tema,
 .practica {
   display: flex;
@@ -31,7 +30,7 @@
   gap: 0.5rem;
 }
 
-.identidad h1 {
+.cabecera h1 {
   margin: 0;
   font-size: 1.05rem;
 }
@@ -83,13 +82,11 @@
     padding: 0.3rem 0.45rem;
   }
 
-  .identidad,
   .selector-tema,
   .practica {
     width: 100%;
   }
 
-  .identidad,
   .practica {
     justify-content: space-between;
   }
