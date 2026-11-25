@@ -403,6 +403,13 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
   });
   const ayuda = page.locator('#ai-widget-btn');
   await expect(ayuda).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator('#etiqueta-documento-librillo')
+        .evaluate((etiqueta) => etiqueta.scrollWidth <= etiqueta.clientWidth),
+    )
+    .toBe(true);
   await expect(lector).toBeVisible();
   await expect(panel).toBeHidden();
   await pestanas
