@@ -33,6 +33,17 @@ body.aula-inmersiva-activa .layout-content {
   }
 }
 
+// El asistente flotante se inyecta por encima de las ventanas de PrimeNG.
+body:has(.dialogo-practica-librillo, .dialogo-conflicto-librillo)
+  :is(
+    #ai-widget-btn,
+    #ai-widget-panel,
+    #ai-widget-backdrop,
+    app-ai-assistant-widget
+  ) {
+  display: none !important;
+}
+
 .truncate-flex-content {
   flex: 1 1 auto;
   min-width: 0;

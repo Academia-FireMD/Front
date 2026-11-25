@@ -321,6 +321,21 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
   const pestanas = page.getByRole('navigation', { name: 'Vista del Librillo' });
   const panel = page.getByRole('region', { name: 'Práctica', exact: true });
   const lector = page.locator('app-previa-librillos-pdf');
+  await page.evaluate(() => {
+    const ayuda = document.createElement('button');
+    ayuda.id = 'ai-widget-btn';
+    ayuda.textContent = 'Asistente de Estudio';
+    Object.assign(ayuda.style, {
+      position: 'fixed',
+      bottom: '0',
+      right: '0',
+      zIndex: '9999',
+      display: 'block',
+    });
+    document.body.append(ayuda);
+  });
+  const ayuda = page.locator('#ai-widget-btn');
+  await expect(ayuda).toBeVisible();
   await expect(lector).toBeVisible();
   await expect(panel).toBeHidden();
   await pestanas
@@ -344,6 +359,7 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
   const dialogo = page.getByRole('dialog', { name: 'Simulacro', exact: true });
   const cerrar = dialogo.getByRole('button', { name: 'Cerrar', exact: true });
   await expect(cerrar).toBeFocused();
+  await expect(ayuda).toBeHidden();
   await expect
     .poll(() => dialogo.boundingBox())
     .toEqual({ x: 0, y: 0, width: 390, height: 844 });
@@ -358,6 +374,7 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
   await expect(dialogo.getByTestId('cronometro')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(dialogo).toHaveCount(0);
+  await expect(ayuda).toBeVisible();
   await expect(empezar).toBeFocused();
   await expect(page).toHaveURL(urlAntes);
   expect(sesiones.finalizaciones).toBe(0);
