@@ -6,6 +6,7 @@ import {
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -26,7 +27,11 @@ import { FlashcardDataService } from '../services/flashcards.service';
 import { PreguntasService } from '../services/preguntas.service';
 import { DocumentoTemario } from '../shared/models/documentacion.model';
 import { Dificultad } from '../shared/models/pregunta.model';
+import { parametrosListaDocumentacion } from './documentation-list-state';
 import { DocumentosService } from './services/documentacion.service';
+
+const REFERENCIAS_NO_DISPONIBLES =
+  'Comprueba la publicación y la audiencia de este PDF para acceder a sus referencias.';
 
 const TIPOS: Array<{ tipo: TipoReferenciaPdf; nombre: string }> = [
   { tipo: 'PREGUNTA', nombre: 'Pregunta' },
@@ -53,6 +58,21 @@ export class LibrilloEditorComponent {
   private readonly ruta = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destruir = inject(DestroyRef);
+  private readonly visor = viewChild(PreviaLibrillosPdfComponent);
+  readonly parametrosLista = parametrosListaDocumentacion(
+    this.ruta.snapshot.queryParamMap,
+  );
+  readonly vistaPrevia = signal(false);
+  readonly cargandoVistaPrevia = signal(false);
+  readonly falloVistaPrevia = signal('');
+  readonly referenciasVistaPrevia = signal<ReferenciaPdf[]>([]);
+  readonly revisionCaducada = signal(false);
+  readonly cargandoEdicion = signal(false);
+  readonly edicionValidada = signal(false);
+  readonly accionesSuspendidas = computed(
+    () =>
+      this.vistaPrevia() || this.revisionCaducada() || !this.edicionValidada(),
+  );
   readonly documento = signal<DocumentoTemario | null>(null);
   readonly edicion = signal<EdicionPdf | null>(null);
   readonly referencias = signal<ReferenciaPdf[]>([]);
@@ -106,23 +126,110 @@ export class LibrilloEditorComponent {
   }
 
   async abrirEdicion(edicion: EdicionPdf) {
+    const anterior = this.edicion();
     this.edicion.set(edicion);
+    this.cargandoEdicion.set(true);
+    this.edicionValidada.set(false);
+    this.fallo.set('');
+    if (anterior && anterior.revision !== edicion.revision) {
+      this.referencias.set([]);
+      this.limpiar();
+      this.aviso.set('Se cargó otra revisión del PDF.');
+    }
     try {
       const resultado = await this.pedir(this.api.editor(edicion));
-      if (this.edicion() === edicion)
-        this.referencias.set(resultado.referencias);
+      if (this.edicion() !== edicion) return;
+      if (resultado.revision !== edicion.revision) {
+        this.suspenderRevision();
+        return;
+      }
+      this.referencias.set(resultado.referencias);
+      this.edicionValidada.set(true);
+      this.revisionCaducada.set(false);
     } catch (error) {
-      this.reportar(error, 'No se pudieron cargar las referencias.');
+      if (this.edicion() !== edicion) return;
+      if (error instanceof HttpErrorResponse && error.status === 404) {
+        this.fallo.set(REFERENCIAS_NO_DISPONIBLES);
+      } else {
+        this.reportar(error, 'No se pudieron cargar las referencias.');
+      }
+    } finally {
+      if (this.edicion() === edicion) this.cargandoEdicion.set(false);
     }
   }
 
+  async abrirVistaPrevia() {
+    const edicion = this.edicion();
+    if (!edicion || this.accionesSuspendidas() || this.ocupado()) return;
+    this.vistaPrevia.set(true);
+    this.cargandoVistaPrevia.set(true);
+    this.falloVistaPrevia.set('');
+    this.referenciasVistaPrevia.set([]);
+    try {
+      const { revision, referencias } = await this.pedir(
+        this.api.abrir(edicion),
+      );
+      if (this.edicion() !== edicion) return;
+      if (revision !== edicion.revision) {
+        this.suspenderRevision();
+        return;
+      }
+      this.referenciasVistaPrevia.set(
+        referencias.filter(
+          (ref) => ref.estado === 'publicada' && ref.revision === revision,
+        ),
+      );
+    } catch (error) {
+      if (this.edicion() !== edicion) return;
+      if (error instanceof HttpErrorResponse && error.status === 404) {
+        this.falloVistaPrevia.set(REFERENCIAS_NO_DISPONIBLES);
+      } else if (error instanceof HttpErrorResponse && error.status === 409) {
+        this.suspenderRevision();
+      } else {
+        this.falloVistaPrevia.set(
+          'No se pudo cargar la vista previa del Librillo.',
+        );
+      }
+    } finally {
+      this.cargandoVistaPrevia.set(false);
+    }
+  }
+
+  volverAEdicion() {
+    this.vistaPrevia.set(false);
+    this.falloVistaPrevia.set('');
+    this.referenciasVistaPrevia.set([]);
+  }
+
+  async recargarRevision() {
+    const visor = this.visor();
+    if (!visor || this.cargandoEdicion()) return;
+    this.volverAEdicion();
+    this.cargandoEdicion.set(true);
+    try {
+      await visor.abrir();
+    } finally {
+      if (!visor.edicion()) this.cargandoEdicion.set(false);
+    }
+  }
+
+  private suspenderRevision() {
+    this.revisionCaducada.set(true);
+    this.edicionValidada.set(false);
+    this.fallo.set(
+      'La revisión del PDF cambió. Recarga y valida la revisión antes de continuar.',
+    );
+  }
+
   seleccionar(fragmento: FragmentoPdf) {
+    if (this.accionesSuspendidas()) return;
     this.limpiar();
     this.seleccion.set(fragmento);
     this.texto.set(fragmento.fragmento);
   }
 
   async seleccionarTipo(tipo: TipoReferenciaPdf) {
+    if (this.accionesSuspendidas()) return;
     this.tipo.set(tipo);
     this.materialId.set(null);
     this.opciones.set([]);
@@ -133,7 +240,7 @@ export class LibrilloEditorComponent {
     const temaId = this.documento()?.temaId;
     const tipo = this.tipo();
     const consulta = this.buscar().trim();
-    if (!temaId || !this.usaBanco()) return;
+    if (this.accionesSuspendidas() || !temaId || !this.usaBanco()) return;
     const filtro = {
       take: 25,
       skip: 0,
@@ -172,6 +279,12 @@ export class LibrilloEditorComponent {
   }
 
   async editar(ref: ReferenciaPdf) {
+    if (this.accionesSuspendidas() || this.ocupado()) return;
+    this.abrirFormularioReferencia(ref);
+    await this.buscarMaterial();
+  }
+
+  private abrirFormularioReferencia(ref: ReferenciaPdf) {
     this.seleccion.set({
       pagina: ref.pagina,
       rectangulos: ref.rectangulos,
@@ -187,7 +300,6 @@ export class LibrilloEditorComponent {
       queryParams: { pagina: ref.pagina, referencia: ref.id },
       queryParamsHandling: 'merge',
     });
-    await this.buscarMaterial();
   }
 
   async guardar(estado: ReferenciaPdf['estado']) {
@@ -196,7 +308,9 @@ export class LibrilloEditorComponent {
     if (
       !edicion ||
       !seleccion ||
+      this.accionesSuspendidas() ||
       this.ocupado() ||
+      (estado === 'publicada' && this.tipo() === 'SUGERIDO') ||
       (this.usaBanco() && !this.materialId())
     )
       return;
@@ -240,7 +354,13 @@ export class LibrilloEditorComponent {
   async sugerir() {
     const edicion = this.edicion();
     const seleccion = this.seleccion();
-    if (!edicion || !seleccion?.fragmento || this.ocupado()) return;
+    if (
+      !edicion ||
+      !seleccion?.fragmento ||
+      this.accionesSuspendidas() ||
+      this.ocupado()
+    )
+      return;
     this.ocupado.set(true);
     this.fallo.set('');
     try {
@@ -253,7 +373,7 @@ export class LibrilloEditorComponent {
         ),
       );
       this.actualizar(ref);
-      await this.editar(ref);
+      this.abrirFormularioReferencia(ref);
       this.aviso.set('Coincidencia guardada como borrador.');
     } catch (error) {
       this.reportar(
@@ -267,7 +387,7 @@ export class LibrilloEditorComponent {
 
   async retirar(ref: ReferenciaPdf) {
     const edicion = this.edicion();
-    if (!edicion || this.ocupado()) return;
+    if (!edicion || this.accionesSuspendidas() || this.ocupado()) return;
     this.ocupado.set(true);
     this.fallo.set('');
     try {
@@ -313,6 +433,14 @@ export class LibrilloEditorComponent {
   }
 
   private reportar(error: unknown, alternativa: string) {
+    if (
+      error instanceof HttpErrorResponse &&
+      error.status === 409 &&
+      this.edicion()
+    ) {
+      this.suspenderRevision();
+      return;
+    }
     const mensaje =
       error instanceof HttpErrorResponse ? error.error?.message : null;
     this.fallo.set(typeof mensaje === 'string' ? mensaje : alternativa);

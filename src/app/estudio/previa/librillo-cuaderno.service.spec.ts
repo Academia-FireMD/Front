@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { LibrilloCuadernoService } from './librillo-cuaderno.service';
 import {
   LibrilloPdfApiService,
@@ -76,5 +76,62 @@ describe('LibrilloCuadernoService', () => {
     await servicio.guardarAhora();
     expect(api.guardar).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(clave)).toContain('Anterior');
+  });
+  it('permite salir en solo lectura aunque el perfil no responda', async () => {
+    api.abrir.mockReturnValue(throwError(() => new Error('sin conexión')));
+    await servicio.abrir(edicion, clave);
+    expect(await servicio.guardarAntesDeSalir()).toBe('guardado');
+    expect(api.guardar).not.toHaveBeenCalled();
+  });
+
+  it('espera también un cambio hecho durante el guardado', async () => {
+    await servicio.abrir(edicion, clave);
+    const pendiente = new Subject<{
+      generacion: number;
+      partes: Array<{
+        pagina: number;
+        version: number;
+        valor: typeof PAGINA_PDF_VACIA;
+      }>;
+    }>();
+    api.guardar.mockReturnValueOnce(pendiente).mockReturnValueOnce(
+      of({
+        generacion: 0,
+        partes: [{ pagina: 1, version: 2, valor: nota('Última') }],
+      }),
+    );
+    servicio.editar(1, nota('Primera'));
+    const salida = servicio.guardarAntesDeSalir();
+    servicio.editar(1, nota('Última'));
+    pendiente.next({
+      generacion: 0,
+      partes: [{ pagina: 1, version: 1, valor: nota('Primera') }],
+    });
+    expect(await salida).toBe('guardado');
+    expect(api.guardar.mock.calls[1][2]).toEqual([
+      { pagina: 1, base: 1, valor: nota('Última') },
+    ]);
+    expect(localStorage.getItem(clave)).toBeNull();
+  });
+
+  it('permite salir con copia vigente y bloquea cuando solo queda una copia anterior', async () => {
+    await servicio.abrir(edicion, clave);
+    api.guardar.mockReturnValue(throwError(() => new Error('sin conexión')));
+    servicio.editar(1, nota('Copia local'));
+    const escritura = jest
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('sin espacio');
+      });
+    try {
+      expect(await servicio.guardarAntesDeSalir()).toBe('local');
+      servicio.editar(1, nota('Más reciente'));
+      expect(await servicio.guardarAntesDeSalir()).toBe('fallo');
+      expect(localStorage.getItem(clave)).toContain('Copia local');
+    } finally {
+      escritura.mockRestore();
+    }
+    expect(await servicio.guardarAntesDeSalir()).toBe('local');
+    expect(localStorage.getItem(clave)).toContain('Más reciente');
   });
 });

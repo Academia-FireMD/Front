@@ -42,17 +42,42 @@
   font-size: 1.1rem;
 }
 
-.selectores-temario {
-  display: grid;
-  flex: 1 1 29rem;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.85rem;
-  min-width: 0;
-  max-width: 72rem;
+.selector-temas {
+  flex: 1 1 22rem;
+  max-width: 50rem;
 }
 
-.selectores-temario.con-documento {
-  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+.boton-temas,
+.tema-movil {
+  display: none;
+}
+
+.panel-lectura {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.panel-documentos {
+  padding: 1rem;
+  overflow: auto;
+}
+
+.panel-documentos[hidden],
+.panel-lectura[hidden] {
+  display: none;
+}
+
+.selector-pdf {
+  width: min(100%, 30rem);
+  padding: 0.5rem 0.85rem;
+}
+
+.accion-edicion {
+  align-self: flex-start;
+  margin: 0.5rem 0.85rem;
+  min-height: 44px;
 }
 
 .campo-temario {
@@ -82,6 +107,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
 }
 
 .cabecera a,
@@ -104,21 +130,53 @@
   text-align: center;
 }
 
+.aviso-con-accion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding-block: 0.5rem;
+
+  p {
+    margin: 0;
+  }
+}
+
 @media (max-width: 720px) {
   .cabecera {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.65rem;
-    padding: 0.65rem 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
   }
 
-  .selectores-temario.con-documento {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem;
+  .boton-temas {
+    display: inline-flex;
+    gap: 0.35rem;
+    min-height: 44px;
+  }
+
+  .selector-temas {
+    display: none;
+
+    &.abierto {
+      display: grid;
+      grid-column: 1 / -1;
+    }
+  }
+
+  .tema-movil {
+    display: block;
+    grid-column: 1 / -1;
+    color: var(--text-color-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .campo-temario {
-    grid-template-columns: 5rem minmax(0, 1fr);
+    grid-template-columns: 3rem minmax(0, 1fr);
     align-items: center;
   }
 
@@ -196,7 +254,8 @@
     cursor: pointer;
   }
 
-  button[aria-pressed="true"] {
+  button[aria-pressed="true"],
+  button[aria-selected="true"] {
     color: var(--primary-color);
     background: color-mix(
       in srgb,
@@ -242,5 +301,13 @@
         display: block;
       }
     }
+  }
+}
+
+.vistas-temario {
+  justify-content: flex-start;
+
+  button {
+    flex: 0 1 auto;
   }
 }

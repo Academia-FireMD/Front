@@ -1,0 +1,87 @@
+@if (!modoTemario() && librilloTemarioActivo()) {
+  <a
+    pButton
+    class="tema-librillo p-button-sm p-button-outlined"
+    [routerLink]="rutaTemario"
+    [queryParams]="{ tema: temaId() }"
+  >
+    <i class="pi pi-book" aria-hidden="true"></i>
+    <span>Abrir en el Temario</span>
+  </a>
+}
+
+<div class="documentos-list">
+  @for (doc of documentos(); track doc.id) {
+    <div class="documento-item" [class.locked-document]="doc.isLocked">
+      <button type="button" class="doc-info" (click)="verDocumentoAlumno(doc)">
+        <span class="doc-name">
+          @if (doc.isLocked) {
+            <i
+              class="pi pi-lock"
+              [class.text-orange-500]="doc.isDownloadable"
+              [class.text-red-500]="!doc.isDownloadable"
+              [pTooltip]="
+                doc.isDownloadable
+                  ? 'Documento premium - Puedes descargarlo'
+                  : 'Documento premium - Requiere suscripción PREMIUM o ADVANCED'
+              "
+            ></i>
+          }
+          {{ doc.identificador }}
+          @if (doc.isNew) {
+            <span class="badge-new">NEW</span>
+          }
+          @if (doc.isLocked) {
+            <span class="badge-premium">PREMIUM</span>
+          }
+        </span>
+        @if (doc.descripcion) {
+          <span class="doc-desc">{{ doc.descripcion }}</span>
+        }
+        @if (doc.isLocked && !doc.isDownloadable) {
+          <span class="doc-desc">Requiere suscripción Premium o Advanced</span>
+        }
+      </button>
+      <div class="doc-acciones">
+        @if (modoTemario() && pdfDisponible(doc)) {
+          <button
+            pButton
+            type="button"
+            class="p-button-sm p-button-outlined"
+            icon="pi pi-file-pdf"
+            label="Abrir en Librillo"
+            (click)="abrir(doc)"
+          ></button>
+        }
+        @if (librillosActivos() && doc.isDownloadable && doc.librillo) {
+          <a
+            [id]="'librillo-doc-' + doc.id"
+            class="p-button p-button-sm p-button-outlined"
+            [routerLink]="['/app/documentacion/alumno/librillo', doc.id]"
+            [queryParams]="{
+              tema: temaId(),
+              desde: modoTemario() ? 'librillos' : null,
+              vista: modoTemario() ? vistaOrigen() : null,
+            }"
+          >
+            <i class="pi pi-book" aria-hidden="true"></i>
+            <span>Abrir edición interactiva</span>
+          </a>
+        }
+        <button
+          pButton
+          type="button"
+          (click)="descargarDocumentoAlumno(doc)"
+          class="p-button-sm"
+          icon="pi pi-download"
+          label="Descargar"
+          [disabled]="!doc.isDownloadable"
+        ></button>
+      </div>
+    </div>
+  } @empty {
+    @if (modoTemario()) {
+      <p role="status">Este tema todavía no tiene documentos disponibles.</p>
+    }
+  }
+</div>

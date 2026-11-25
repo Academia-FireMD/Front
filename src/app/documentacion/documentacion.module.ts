@@ -12,6 +12,7 @@ import { PrimengModule } from '../shared/primeng.module';
 import { SharedModule } from '../shared/shared.module';
 import { DocumentacionRoutingModule } from './documentacion-routing.module';
 import { DocumentationOverviewComponent } from './documentation-overview/documentation-overview.component';
+import { DocumentosDelTemaComponent } from './documentos-del-tema/documentos-del-tema.component';
 import { ReleaseManagementComponent } from './release-management/release-management.component';
 registerLocaleData(localeEs);
 @NgModule({
@@ -27,7 +28,8 @@ registerLocaleData(localeEs);
     DocumentacionRoutingModule,
     AsyncButtonComponent,
     GenericListComponent,
+    DocumentosDelTemaComponent,
   ],
   providers: [ConfirmationService, { provide: LOCALE_ID, useValue: 'es' }],
 })
-export class DocumentacionModule { }
+export class DocumentacionModule {}

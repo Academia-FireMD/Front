@@ -1,6 +1,11 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import {
+  ActivatedRoute,
+  IsActiveMatchOptions,
+  NavigationEnd,
+  Router,
+} from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { MenuItem } from 'primeng/api';
@@ -90,6 +95,12 @@ export class LayoutComponent {
   aulaInmersiva = inject(AulaInmersivaService);
 
   readonly rutaPreviaLibrillo = RUTA_PREVIA_LIBRILLOS;
+  readonly opcionesTemarioActivo: IsActiveMatchOptions = {
+    paths: 'exact',
+    queryParams: 'ignored',
+    fragment: 'ignored',
+    matrixParams: 'ignored',
+  };
   readonly parametrosVistaLibrillo = parametrosVistaLibrillo;
   readonly retornoLibrillo = environment.librillosMenu
     ? toSignal(
@@ -170,6 +181,12 @@ export class LayoutComponent {
   }
 
   handleMenuItemClick(event: Event, item: MenuItem): void {
+    if (item.routerLink === RUTA_PREVIA_LIBRILLOS) {
+      // RouterLink ya navega y ejecuta la guarda de salida.
+      this.isMenuVisible = false;
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
 
@@ -221,8 +238,8 @@ export class LayoutComponent {
       });
   }
 
-  public navigateToPath(path: string) {
-    this.router.navigate([path]);
+  public navigateToPath(path: string, queryParams?: MenuItem['queryParams']) {
+    void this.router.navigate([path], { queryParams });
     this.isMenuVisible = false;
   }
 
@@ -499,20 +516,22 @@ export class LayoutComponent {
     const menu: AppMenuItem[] = [];
 
     if (hasValidSubscription) {
-      menu.push({
-        label: 'Documentos',
-        icon: 'pi pi-file',
-        routerLink: '/app/documentacion/alumno',
-        modulo: ModuloApp.DOCUMENTACION,
-      });
-      if (user && this.cuentaLibrillos() === user) {
-        menu.push({
-          label: 'Temario',
-          icon: 'pi pi-book',
-          routerLink: RUTA_PREVIA_LIBRILLOS,
-          modulo: ModuloApp.LIBRILLOS,
-        });
-      }
+      menu.push(
+        user && this.cuentaLibrillos() === user
+          ? {
+              label: 'Temario',
+              icon: 'pi pi-book',
+              routerLink: RUTA_PREVIA_LIBRILLOS,
+              queryParams: { vista: 'documentos' },
+              modulo: ModuloApp.LIBRILLOS,
+            }
+          : {
+              label: 'Documentos',
+              icon: 'pi pi-file',
+              routerLink: '/app/documentacion/alumno',
+              modulo: ModuloApp.DOCUMENTACION,
+            },
+      );
       menu.push(
         {
           label: 'Test',

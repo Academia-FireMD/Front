@@ -1,5 +1,10 @@
 <header class="cabecera-editor">
-  <a routerLink="/app/documentacion" pButton class="p-button-text">
+  <a
+    routerLink="/app/documentacion"
+    [queryParams]="parametrosLista"
+    pButton
+    class="p-button-text"
+  >
     <i class="pi pi-arrow-left" aria-hidden="true"></i
     ><span>Documentación</span>
   </a>
@@ -7,6 +12,18 @@
   @if (documento(); as archivo) {
     <span>{{ archivo.identificador }}</span>
   }
+  <button
+    pButton
+    type="button"
+    class="p-button-outlined"
+    [attr.aria-pressed]="vistaPrevia()"
+    [disabled]="
+      vistaPrevia() ? cargandoVistaPrevia() : accionesSuspendidas() || ocupado()
+    "
+    (click)="vistaPrevia() ? volverAEdicion() : abrirVistaPrevia()"
+  >
+    Vista previa del Librillo
+  </button>
 </header>
 @if (cargando()) {
   <p class="mensaje-editor" role="status">Abriendo el PDF…</p>
@@ -14,164 +31,204 @@
 @if (fallo()) {
   <p class="mensaje-editor error-editor" role="alert">{{ fallo() }}</p>
 }
+@if (cargandoVistaPrevia()) {
+  <p class="mensaje-editor" role="status">Cargando referencias publicadas…</p>
+}
+@if (falloVistaPrevia()) {
+  <p class="mensaje-editor error-editor" role="alert">
+    {{ falloVistaPrevia() }}
+  </p>
+}
+@if (revisionCaducada()) {
+  <div class="mensaje-editor">
+    <button
+      pButton
+      type="button"
+      [disabled]="cargandoEdicion()"
+      (click)="recargarRevision()"
+    >
+      Recargar revisión
+    </button>
+  </div>
+}
+@if (!revisionCaducada() && !edicionValidada() && !cargandoEdicion()) {
+  @if (edicion(); as actual) {
+    <div class="mensaje-editor">
+      <button pButton type="button" (click)="abrirEdicion(actual)">
+        Reintentar carga de referencias
+      </button>
+    </div>
+  }
+}
 @if (documento(); as archivo) {
-  <div class="editor-librillo">
+  <div class="editor-librillo" [class.sin-formulario]="accionesSuspendidas()">
     <app-previa-librillos-pdf
       [documento]="archivo"
       [editor]="true"
       [referenciasEditor]="referencias()"
+      [referenciasVistaPrevia]="referenciasVistaPrevia()"
+      [vistaPreviaEditorial]="vistaPrevia()"
+      [edicionSuspendida]="!edicionValidada()"
       (edicionCargada)="abrirEdicion($event)"
       (fragmentoEditorial)="seleccionar($event)"
     />
-    <aside aria-label="Referencias del PDF">
-      <section class="formulario-editor">
-        @if (seleccion(); as fragmento) {
-          <h2>{{ editando() ? "Editar referencia" : "Nueva referencia" }}</h2>
-          <p>Página {{ fragmento.pagina }}</p>
-          <label for="tipo-ref">Tipo</label>
-          <select
-            id="tipo-ref"
-            [ngModel]="tipo()"
-            (ngModelChange)="seleccionarTipo($event)"
-          >
-            @for (opcion of tipos; track opcion.tipo) {
-              <option [value]="opcion.tipo">{{ opcion.nombre }}</option>
-            }
-          </select>
-          @if (usaBanco()) {
-            <label for="buscar-ref">Buscar en el banco de este tema</label>
-            <div class="busqueda-editor">
-              <input
-                id="buscar-ref"
-                type="search"
-                [ngModel]="buscar()"
-                (ngModelChange)="buscar.set($event)"
-                (keydown.enter)="buscarMaterial()"
-              />
-              <button
-                pButton
-                type="button"
-                class="p-button-text"
-                (click)="buscarMaterial()"
-              >
-                Buscar
-              </button>
-            </div>
-            <label for="item-ref">{{
-              tipo() === "PREGUNTA" ? "Pregunta" : "Flashcard"
-            }}</label>
+    @if (!accionesSuspendidas()) {
+      <aside aria-label="Referencias del PDF">
+        <section class="formulario-editor">
+          @if (seleccion(); as fragmento) {
+            <h2>{{ editando() ? "Editar referencia" : "Nueva referencia" }}</h2>
+            <p>Página {{ fragmento.pagina }}</p>
+            <label for="tipo-ref">Tipo</label>
             <select
-              id="item-ref"
-              [ngModel]="materialId()"
-              (ngModelChange)="materialId.set($event)"
+              id="tipo-ref"
+              [ngModel]="tipo()"
+              (ngModelChange)="seleccionarTipo($event)"
             >
-              <option [ngValue]="null">Elige del banco</option>
-              @if (materialId() && !opciones().length) {
-                <option [ngValue]="materialId()">Material vinculado</option>
-              }
-              @for (item of opciones(); track item.id) {
-                <option [ngValue]="item.id">{{ item.nombre }}</option>
+              @for (opcion of tipos; track opcion.tipo) {
+                <option [value]="opcion.tipo">{{ opcion.nombre }}</option>
               }
             </select>
-          }
-          <label for="texto-ref">Texto de la referencia</label>
-          <textarea
-            id="texto-ref"
-            rows="3"
-            maxlength="4000"
-            [ngModel]="texto()"
-            (ngModelChange)="texto.set($event)"
-          ></textarea>
-          <label for="color-ref">Color</label>
-          <input
-            id="color-ref"
-            type="color"
-            [ngModel]="color()"
-            (ngModelChange)="color.set($event)"
-          />
-          <div class="acciones-editor">
-            @if (fragmento.fragmento && !editando()) {
-              <button
-                pButton
-                type="button"
-                class="p-button-text"
-                [disabled]="ocupado()"
-                (click)="sugerir()"
+            @if (usaBanco()) {
+              <label for="buscar-ref">Buscar en el banco de este tema</label>
+              <div class="busqueda-editor">
+                <input
+                  id="buscar-ref"
+                  type="search"
+                  [ngModel]="buscar()"
+                  (ngModelChange)="buscar.set($event)"
+                  (keydown.enter)="buscarMaterial()"
+                />
+                <button
+                  pButton
+                  type="button"
+                  class="p-button-text"
+                  (click)="buscarMaterial()"
+                >
+                  Buscar
+                </button>
+              </div>
+              <label for="item-ref">{{
+                tipo() === "PREGUNTA" ? "Pregunta" : "Flashcard"
+              }}</label>
+              <select
+                id="item-ref"
+                [ngModel]="materialId()"
+                (ngModelChange)="materialId.set($event)"
               >
-                Buscar coincidencia
-              </button>
-            }
-            <button
-              pButton
-              type="button"
-              class="p-button-outlined"
-              [disabled]="ocupado() || (usaBanco() && !materialId())"
-              (click)="guardar('borrador')"
-            >
-              Guardar borrador
-            </button>
-            <button
-              pButton
-              type="button"
-              [disabled]="ocupado() || (usaBanco() && !materialId())"
-              (click)="guardar('publicada')"
-            >
-              Publicar
-            </button>
-            <button
-              pButton
-              type="button"
-              class="p-button-text"
-              (click)="limpiar()"
-            >
-              Cancelar
-            </button>
-          </div>
-        } @else {
-          <p>
-            Selecciona texto o marca un área del PDF para crear una referencia.
-          </p>
-        }
-        @if (aviso()) {
-          <p role="status">{{ aviso() }}</p>
-        }
-      </section>
-      <section>
-        <h2>Referencias</h2>
-        @if (!referencias().length) {
-          <p>Todavía no hay referencias para esta versión.</p>
-        }
-        <ul class="lista-editor">
-          @for (ref of referencias(); track ref.id) {
-            <li>
-              <button
-                pButton
-                type="button"
-                class="p-button-text goto-ref"
-                (click)="editar(ref)"
-              >
-                <strong>{{ nombre(ref.tipo) }}</strong>
-                <small>Página {{ ref.pagina }} · {{ ref.estado }}</small>
-                @if (ref.texto) {
-                  <span>{{ ref.texto }}</span>
+                <option [ngValue]="null">Elige del banco</option>
+                @if (materialId() && !opciones().length) {
+                  <option [ngValue]="materialId()">Material vinculado</option>
                 }
+                @for (item of opciones(); track item.id) {
+                  <option [ngValue]="item.id">{{ item.nombre }}</option>
+                }
+              </select>
+            }
+            <label for="texto-ref">Texto de la referencia</label>
+            <textarea
+              id="texto-ref"
+              rows="3"
+              maxlength="4000"
+              [ngModel]="texto()"
+              (ngModelChange)="texto.set($event)"
+            ></textarea>
+            <label for="color-ref">Color</label>
+            <input
+              id="color-ref"
+              type="color"
+              [ngModel]="color()"
+              (ngModelChange)="color.set($event)"
+            />
+            <div class="acciones-editor">
+              @if (fragmento.fragmento && !editando()) {
+                <button
+                  pButton
+                  type="button"
+                  class="p-button-text"
+                  [disabled]="ocupado()"
+                  (click)="sugerir()"
+                >
+                  Buscar coincidencia
+                </button>
+              }
+              <button
+                pButton
+                type="button"
+                class="p-button-outlined"
+                [disabled]="ocupado() || (usaBanco() && !materialId())"
+                (click)="guardar('borrador')"
+              >
+                Guardar borrador
               </button>
+              @if (tipo() !== "SUGERIDO") {
+                <button
+                  pButton
+                  type="button"
+                  [disabled]="ocupado() || (usaBanco() && !materialId())"
+                  (click)="guardar('publicada')"
+                >
+                  Publicar
+                </button>
+              }
               <button
                 pButton
                 type="button"
                 class="p-button-text"
-                [disabled]="ocupado()"
-                [attr.aria-label]="
-                  'Retirar ' + nombre(ref.tipo) + ' de la página ' + ref.pagina
-                "
-                (click)="retirar(ref)"
+                (click)="limpiar()"
               >
-                <i class="pi pi-times" aria-hidden="true"></i>
+                Cancelar
               </button>
-            </li>
+            </div>
+          } @else {
+            <p>
+              Selecciona texto o marca un área del PDF para crear una
+              referencia.
+            </p>
           }
-        </ul>
-      </section>
-    </aside>
+          @if (aviso()) {
+            <p role="status">{{ aviso() }}</p>
+          }
+        </section>
+        <section>
+          <h2>Referencias</h2>
+          @if (!referencias().length) {
+            <p>Todavía no hay referencias para esta versión.</p>
+          }
+          <ul class="lista-editor">
+            @for (ref of referencias(); track ref.id) {
+              <li>
+                <button
+                  pButton
+                  type="button"
+                  class="p-button-text goto-ref"
+                  (click)="editar(ref)"
+                >
+                  <strong>{{ nombre(ref.tipo) }}</strong>
+                  <small>Página {{ ref.pagina }} · {{ ref.estado }}</small>
+                  @if (ref.texto) {
+                    <span>{{ ref.texto }}</span>
+                  }
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  class="p-button-text"
+                  [disabled]="ocupado()"
+                  [attr.aria-label]="
+                    'Retirar ' +
+                    nombre(ref.tipo) +
+                    ' de la página ' +
+                    ref.pagina
+                  "
+                  (click)="retirar(ref)"
+                >
+                  <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      </aside>
+    }
   </div>
 }

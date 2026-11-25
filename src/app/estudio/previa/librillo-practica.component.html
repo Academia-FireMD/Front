@@ -205,7 +205,7 @@
 <p-dialog
   appendTo="body"
   [visible]="dialogoVisible()"
-  (visibleChange)="!$event && cerrarDialogo()"
+  (visibleChange)="activa() && !$event && cerrarDialogo()"
   (onShow)="enfocarDialogo()"
   (onHide)="enfocarAlCerrar()"
   [header]="tituloDialogo()"

@@ -76,12 +76,13 @@ async function escribirNotaYTinta(page: Page, texto: string) {
   const f = visor(page);
   await f.locator('#hojaSel').selectOption('1');
   await f.locator('#tools [data-act="ink"]').click();
-  const parrafo = f.locator('#paper .blk').first();
+  const parrafo = f.locator('#sheet.inking #paper .blk').first();
   await parrafo.scrollIntoViewIfNeeded();
-  const { x, y, width, height } = (await parrafo.boundingBox())!;
-  await page.mouse.move(x + width / 4, y + height / 2);
+  const punto = { x: 12, y: 12 };
+  await parrafo.hover({ position: punto });
+  const { x, y } = (await parrafo.boundingBox())!;
   await page.mouse.down();
-  await page.mouse.move(x + width / 2, y + height / 2 + 3, { steps: 4 });
+  await page.mouse.move(x + punto.x + 35, y + punto.y + 3, { steps: 4 });
   await page.mouse.up();
   await expect(f.locator('#ink path')).toHaveCount(1);
   await f.getByRole('button', { name: 'Listo', exact: true }).click();
@@ -723,7 +724,7 @@ test('Superadmin carga cuatro vistas y puede exportar o borrar con confirmación
   ).toEqual({ confirmar: '1' });
 });
 
-test('El atajo lateral aparece solo en la variante staging y abre el mismo lector', async ({
+test('El atajo lateral unifica el Temario en staging y vuelve desde la edición interactiva', async ({
   context,
 }) => {
   const backend = servidorEstudio();
@@ -764,7 +765,6 @@ test('El atajo lateral aparece solo en la variante staging y abre el mismo lecto
   }
   await expect(link).toBeVisible();
   await expect(antesDeCurso).toHaveText([
-    'Documentos',
     'Temario',
     'Test',
     'Flashcards',
@@ -774,16 +774,24 @@ test('El atajo lateral aparece solo en la variante staging y abre el mismo lecto
   await expect(
     page.getByRole('heading', { name: 'Temario', exact: true }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/\/app\/librillos$/);
+  const parametros = () => new URL(page.url()).searchParams;
+  await expect.poll(() => parametros().get('vista')).toBe('documentos');
   await page
     .getByTestId('librillo-selector-tema')
     .getByRole('combobox')
     .press('Space');
-  await page.getByRole('option', { name: '4 · Estatutos de prueba' }).click();
-  await expect(visor(page).locator('#hojaSel option')).toHaveCount(19);
-  await expect(page).toHaveURL(
-    new RegExp(`/app/librillos\\?tema=${backend.TEMA}$`),
+  await page.getByRole('option', { name: /Estatutos de prueba/ }).click();
+  await expect.poll(() => parametros().get('tema')).toBe(String(backend.TEMA));
+  await expect(page.getByRole('tab', { name: 'Documentos' })).toHaveAttribute(
+    'aria-selected',
+    'true',
   );
+  await page.getByRole('link', { name: 'Abrir edición interactiva' }).click();
+  await expect(visor(page).locator('#hojaSel option')).toHaveCount(19);
+  await page.getByRole('button', { name: 'Volver al Temario' }).click();
+  await expect.poll(() => parametros().get('tema')).toBe(String(backend.TEMA));
+  await expect.poll(() => parametros().get('doc')).toBe(String(backend.DOC));
+  await expect.poll(() => parametros().get('vista')).toBe('documentos');
 
   backend.opciones.piloto = 2;
   await page.goto(`/app/librillos?tema=${backend.TEMA}`);
@@ -866,8 +874,9 @@ test('Los visores en escritorio conservan perfiles, tinta del Librillo y cuadern
   const librillo = await abrirLibrillo(page, backend);
   await expect(page.getByTestId('estudio-workspace')).toHaveCSS(
     'position',
-    'fixed',
+    backend.staging ? 'static' : 'fixed',
   );
+  if (backend.staging) await expect(page.locator('.lateral-bar')).toBeVisible();
   await expect(librillo.locator('.bar .doc')).toBeHidden();
   await expect(librillo.locator('.bar #sync')).toBeHidden();
   await expect(librillo.locator('#paper h1')).toBeVisible();

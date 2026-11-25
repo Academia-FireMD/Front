@@ -10,14 +10,15 @@ import {
   OnInit,
   Output,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { isEqual } from 'lodash';
+import { Debounce } from 'lodash-decorators';
 import { ToastrService } from 'ngx-toastr';
 import { ConfirmationService } from 'primeng/api';
 import { combineLatest, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { RUTA_PREVIA_LIBRILLOS } from '../../estudio/previa/previa-librillos';
-import { UserService } from '../../services/user.service';
 import { AppConfigService } from '../../services/app-config.service';
 import { buildDocumentDownloadFileName } from '../../shared/utils/document-download-file-name';
 import {
@@ -26,12 +27,16 @@ import {
 } from '../../shared/generic-list/generic-list.component';
 import {
   Documento,
-  DocumentoTemario,
   ModuloTemario,
 } from '../../shared/models/documentacion.model';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { PaginationFilter } from '../../shared/models/pagination.model';
 import { SharedGridComponent } from '../../shared/shared-grid/shared-grid.component';
+import {
+  filtrosDocumentacion,
+  paginacionDocumentacion,
+  parametrosListaDocumentacion,
+} from '../documentation-list-state';
 import { DocumentosService } from '../services/documentacion.service';
 
 @Component({
@@ -50,7 +55,6 @@ export class DocumentationOverviewComponent
   public expectedRole: 'ADMIN' | 'ALUMNO' = 'ALUMNO';
   activatedRoute = inject(ActivatedRoute);
   service = inject(DocumentosService);
-  userService = inject(UserService);
   confirmationService = inject(ConfirmationService);
   private notificationService = inject(ToastrService);
 
@@ -67,7 +71,6 @@ export class DocumentationOverviewComponent
   readonly librilloTemarioActivo = computed(
     () => environment.librillosMenu && this.librillosActivos(),
   );
-  readonly rutaLibrillo = RUTA_PREVIA_LIBRILLOS;
 
   public uploadingFile = false;
   public mostrarSubirFichero = false;
@@ -117,23 +120,39 @@ export class DocumentationOverviewComponent
       key: 'temaId',
       label: 'Temas',
       type: 'tema-select',
-      filterInterpolation: (value: number[]) => ({ temaId: { in: value } }),
+      filterInterpolation: (value: number[]) =>
+        value.length ? { temaId: { in: value } } : {},
     },
     {
       key: 'isLocked',
       label: 'Solo documentos premium (isLocked)',
       type: 'toggle',
       filterInterpolation: (value: boolean) =>
-        value ? { isLocked: true } : {},
+        value === true ? { isLocked: true } : {},
     },
     {
       key: 'requireWatermark',
       label: 'Solo documentos con marca de agua',
       type: 'toggle',
       filterInterpolation: (value: boolean) =>
-        value ? { requireWatermark: true } : {},
+        value === true ? { requireWatermark: true } : {},
     },
   ];
+
+  get listaAdmin() {
+    return this.mode === 'overview' && this.expectedRole === 'ADMIN';
+  }
+
+  parametrosLista() {
+    return {
+      ...parametrosListaDocumentacion(
+        this.activatedRoute.snapshot.queryParamMap,
+      ),
+      skip: this.pagination().skip,
+      take: this.pagination().take,
+      searchTerm: this.pagination().searchTerm,
+    };
+  }
 
   constructor() {
     super();
@@ -145,6 +164,20 @@ export class DocumentationOverviewComponent
   }
 
   override ngOnInit() {
+    if (
+      this.mode === 'overview' &&
+      this.activatedRoute.snapshot?.data?.['expectedRole'] === 'ADMIN'
+    ) {
+      this.expectedRole = 'ADMIN';
+      this.activatedRoute.queryParamMap
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((params) => {
+          const siguiente = paginacionDocumentacion(params);
+          if (!isEqual(this.pagination(), siguiente))
+            this.pagination.set(siguiente);
+        });
+      return;
+    }
     super.ngOnInit();
 
     // Si mode es 'overview' y viene de la ruta, detectar rol
@@ -221,6 +254,7 @@ export class DocumentationOverviewComponent
   }
 
   private getDocumentacion(pagination: PaginationFilter) {
+    if (this.listaAdmin) return this.service.getDocumentosPublicos$(pagination);
     return combineLatest([
       this.activatedRoute.data,
       this.activatedRoute.queryParams,
@@ -235,7 +269,29 @@ export class DocumentationOverviewComponent
     );
   }
 
-  public onFiltersChanged(where: any) {
+  @Debounce(200)
+  override valueChanged(event: Event) {
+    this.updatePaginationSafe({
+      searchTerm: (event.target as HTMLInputElement).value,
+      ...(this.listaAdmin ? { skip: 0 } : {}),
+    });
+  }
+
+  public onFiltersChanged(where: PaginationFilter['where']) {
+    if (this.listaAdmin) {
+      const filtros = filtrosDocumentacion(where);
+      const siguiente = paginacionDocumentacion(
+        convertToParamMap({ ...this.parametrosLista(), ...filtros, skip: '0' }),
+      );
+      this.pagination.set(siguiente);
+      void this.router.navigate([], {
+        relativeTo: this.activatedRoute,
+        queryParams: { ...filtros, skip: 0 },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+      return;
+    }
     // Actualizar la paginación con los nuevos filtros usando el método seguro
     this.updatePaginationSafe({
       where: where,
@@ -519,75 +575,5 @@ export class DocumentationOverviewComponent
       },
       { injector: this.injector },
     );
-  }
-
-  async descargarDocumentoAlumno(documento: DocumentoTemario) {
-    if (!documento.isDownloadable) {
-      this.toast.warning('No tienes permiso para descargar este documento');
-      return;
-    }
-
-    // Si el documento requiere watermark, validar datos del usuario
-    if (documento.requireWatermark) {
-      try {
-        const usuario = await firstValueFrom(
-          this.userService.getCurrentUser$(),
-        );
-
-        if (!usuario.nombre || !usuario.apellidos || !usuario.dni) {
-          this.toast.error(
-            'Para descargar este documento debes completar tu perfil con nombre, apellidos y DNI/NIE',
-            'Datos incompletos',
-          );
-          return;
-        }
-      } catch (err) {
-        console.error('Error al validar usuario:', err);
-        return;
-      }
-    }
-
-    // Marcar como visto
-    try {
-      await firstValueFrom(this.service.markAsSeen$(documento.id));
-    } catch (err) {
-      console.warn('Error al marcar como visto:', err);
-    }
-
-    // Descargar con watermark si aplica
-    try {
-      this.toast.info('Descargando documento...');
-      const blob = await firstValueFrom(
-        this.service.downloadWithWatermark$(documento.id),
-      );
-      const url = window.URL.createObjectURL(blob);
-      const a = window.document.createElement('a');
-      a.href = url;
-      a.download = buildDocumentDownloadFileName(
-        documento.identificador,
-        documento.fileName,
-      );
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-      this.toast.success('Documento descargado correctamente');
-
-      // Actualizar badge NEW localmente sin recargar el árbol
-      documento.isNew = false;
-    } catch (error) {
-      console.error('Error al descargar:', error);
-    }
-  }
-
-  async verDocumentoAlumno(documento: DocumentoTemario) {
-    // Marcar como visto al hacer clic
-    try {
-      await firstValueFrom(this.service.markAsSeen$(documento.id));
-      documento.isNew = false; // Actualizar localmente
-    } catch (err) {
-      console.warn('Error al marcar como visto:', err);
-    }
   }
 }

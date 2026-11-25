@@ -1,6 +1,31 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { of } from 'rxjs';
+import { CommonModule, Location } from '@angular/common';
+import { provideLocationMocks } from '@angular/common/testing';
+import { Component, NO_ERRORS_SCHEMA } from '@angular/core';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { By } from '@angular/platform-browser';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import {
+  ActivatedRoute,
+  Router,
+  RouterLink,
+  provideRouter,
+} from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { ConfirmationService, PrimeNGConfig } from 'primeng/api';
+import { Paginator } from 'primeng/paginator';
+import { environment } from '../../../environments/environment';
+import { AppConfigService } from '../../services/app-config.service';
+import { TemaService } from '../../services/tema.service';
+import { GenericListComponent } from '../../shared/generic-list/generic-list.component';
+import {
+  PaginatedResult,
+  PaginationFilter,
+} from '../../shared/models/pagination.model';
+import { Documento } from '../../shared/models/documentacion.model';
+import { PrimengModule } from '../../shared/primeng.module';
+import { DocumentosService } from '../services/documentacion.service';
+import { of, Subject } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 
 import { DocumentationOverviewComponent } from './documentation-overview.component';
@@ -124,5 +149,178 @@ describe('DocumentationOverviewComponent', () => {
     // puede acumular llamadas previas; validamos la última (la de este test).
     const lastCall = confirmSpy.mock.calls[confirmSpy.mock.calls.length - 1];
     expect(lastCall[0].header).toBe('Confirmar despublicación');
+  });
+});
+
+@Component({ standalone: true, template: '' })
+class DestinoLibrilloFixture {}
+
+describe('Documentación administrativa con paginación compartida', () => {
+  const librillosMenu = environment.librillosMenu;
+
+  beforeEach(() => {
+    environment.librillosMenu = true;
+  });
+
+  afterEach(() => {
+    environment.librillosMenu = librillosMenu;
+  });
+
+  it('restaura filtros y página real, y navega de forma independiente desde la fila', async () => {
+    const inicial = new Subject<PaginatedResult<Documento>>();
+    const documento = {
+      id: 19,
+      identificador: 'Tema 9',
+      fileName: 'tema.pdf',
+      temaId: 9,
+      tema: { id: 9, numero: 9 },
+      esPublico: true,
+    } as Documento;
+    const respuesta = (paginacion: PaginationFilter) => ({
+      data: [documento, { ...documento, id: 20, fileName: 'programa.docx' }],
+      pagination: { ...paginacion, count: 39 },
+    });
+    const listar = jest
+      .fn((paginacion: PaginationFilter) => of(respuesta(paginacion)))
+      .mockReturnValueOnce(inicial);
+    await TestBed.configureTestingModule({
+      declarations: [DocumentationOverviewComponent],
+      imports: [
+        CommonModule,
+        FormsModule,
+        ReactiveFormsModule,
+        GenericListComponent,
+        NoopAnimationsModule,
+        PrimengModule,
+        RouterLink,
+      ],
+      providers: [
+        ...COMMON_TEST_PROVIDERS.filter(
+          (provider) =>
+            !(
+              'provide' in provider &&
+              [
+                ActivatedRoute,
+                Router,
+                Location,
+                PrimeNGConfig,
+                ConfirmationService,
+              ].includes(provider.provide)
+            ),
+        ),
+        provideRouter([
+          {
+            path: 'app/documentacion',
+            component: DocumentationOverviewComponent,
+            data: { expectedRole: 'ADMIN' },
+          },
+          {
+            path: 'app/documentacion/librillo/editor/:documentoId',
+            component: DestinoLibrilloFixture,
+          },
+        ]),
+        provideLocationMocks(),
+        ConfirmationService,
+        {
+          provide: DocumentosService,
+          useValue: { getDocumentosPublicos$: listar },
+        },
+        {
+          provide: AppConfigService,
+          useValue: { isModuloHabilitado: () => true },
+        },
+        { provide: TemaService, useValue: { getAllTemas$: () => of([]) } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const harness = await RouterTestingHarness.create(
+      '/app/documentacion?searchTerm=tema&skip=20&take=10&createdAt=1700000000000,1700100000000&temaId=9,12&isLocked=false&requireWatermark=true&pagina=5&referencia=8',
+    );
+    const vista = harness.routeDebugElement!;
+    const overview = vista.componentInstance as DocumentationOverviewComponent;
+    const lista = vista.query(By.directive(GenericListComponent))
+      .componentInstance as GenericListComponent<Documento>;
+    const esperada = {
+      skip: 20,
+      take: 10,
+      searchTerm: 'tema',
+      where: {
+        createdAt: {
+          gte: new Date(1700000000000),
+          lte: new Date(1700100000000),
+        },
+        temaId: { in: [9, 12] },
+        requireWatermark: true,
+      },
+    };
+    expect(listar.mock.calls).toEqual([[esperada]]);
+    expect(lista.pagination).toBe(overview.pagination);
+    expect(lista.getFilterControl('isLocked').value).toBe(false);
+    expect(lista.getFilterControl('requireWatermark').value).toBe(true);
+    expect(lista.getFilterControl('temaId').value).toEqual([9, 12]);
+    expect(vista.query(By.directive(Paginator))).toBeNull();
+
+    inicial.next(respuesta(esperada));
+    inicial.complete();
+    harness.detectChanges();
+    const pagina = vista.query(By.directive(Paginator));
+    expect(pagina.componentInstance.first).toBe(20);
+    expect(pagina.componentInstance.totalRecords).toBe(39);
+    pagina.nativeElement.querySelector('button.p-paginator-next').click();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(listar.mock.calls).toEqual([
+      [esperada],
+      [{ ...esperada, skip: 30 }],
+    ]);
+
+    const router = TestBed.inject(Router);
+    const enlaces = vista.nativeElement.querySelectorAll('a.enlace-librillo');
+    expect(enlaces).toHaveLength(1);
+    const enlace = enlaces[0] as HTMLAnchorElement;
+    const destino = router.parseUrl(enlace.getAttribute('href')!);
+    expect(destino.queryParams).toEqual({
+      skip: '30',
+      take: '10',
+      searchTerm: 'tema',
+      createdAt: '1700000000000,1700100000000',
+      temaId: '9,12',
+      isLocked: 'false',
+      requireWatermark: 'true',
+    });
+
+    overview.abrirEditarDocumento(documento);
+    harness.detectChanges();
+    const enlaceModal = vista.nativeElement.querySelector(
+      'p-dialog a[href*="/librillo/editor/"]',
+    );
+    expect(enlaceModal?.getAttribute('href')).toBe(enlace.getAttribute('href'));
+    overview.mostrarEditarDocumento = false;
+    harness.detectChanges();
+
+    lista.clearFilters();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(listar.mock.calls).toEqual([
+      [esperada],
+      [{ ...esperada, skip: 30 }],
+      [{ skip: 0, take: 10, searchTerm: 'tema', where: undefined }],
+    ]);
+
+    const descarga = jest
+      .spyOn(overview, 'descargarDocumento')
+      .mockResolvedValue(undefined);
+    const editar = jest
+      .spyOn(overview, 'abrirEditarDocumento')
+      .mockImplementation(() => {});
+    const enlaceActivo = vista.nativeElement.querySelector(
+      'a.enlace-librillo',
+    ) as HTMLAnchorElement;
+    enlaceActivo.click();
+    await harness.fixture.whenStable();
+    expect(router.url).toMatch(/^\/app\/documentacion\/librillo\/editor\/19\?/);
+    expect(descarga).not.toHaveBeenCalled();
+    expect(editar).not.toHaveBeenCalled();
   });
 });

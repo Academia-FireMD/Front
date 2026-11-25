@@ -59,114 +59,6 @@
       font-size: 1.05rem;
       font-weight: 600;
     }
-
-    .tema-librillo {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      min-height: 44px;
-      text-decoration: none;
-    }
-  }
-
-  .documentos-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .documento-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background: white;
-    transition: all 0.2s;
-
-    .doc-acciones {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-
-      a {
-        min-height: 44px;
-        gap: 0.4rem;
-        justify-content: center;
-      }
-    }
-
-    &:hover {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border-color: #007bff;
-    }
-
-    &.locked-document {
-      border-left: 3px solid #f59e0b;
-      background: linear-gradient(
-        90deg,
-        rgba(245, 158, 11, 0.05) 0%,
-        transparent 100%
-      );
-    }
-
-    .doc-info {
-      flex: 1;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-
-      .doc-name {
-        font-weight: 600;
-        font-size: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-
-        i.pi-lock {
-          font-size: 0.9rem;
-        }
-
-        .badge-new {
-          display: inline-block;
-          background: #28a745;
-          color: white;
-          padding: 0.15rem 0.5rem;
-          border-radius: 12px;
-          font-size: 0.7rem;
-          font-weight: bold;
-          margin-left: 0.5rem;
-        }
-
-        .badge-premium {
-          display: inline-block;
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-          color: white;
-          padding: 0.15rem 0.5rem;
-          border-radius: 12px;
-          font-size: 0.7rem;
-          font-weight: bold;
-          margin-left: 0.5rem;
-          box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
-        }
-      }
-
-      .doc-desc {
-        color: #666;
-        font-size: 0.9rem;
-      }
-    }
-
-    button {
-      white-space: nowrap;
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
   }
 }
 
@@ -180,16 +72,55 @@
 @media (max-width: 768px) {
   .alumno-documentos {
     padding: 1rem;
+  }
+}
 
-    .documento-item {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
+.acciones-documentacion {
+  justify-content: flex-end;
+}
 
-      .doc-acciones,
-      .doc-acciones > * {
-        width: 100%;
-      }
+.fila-documentacion-admin {
+  align-items: center;
+
+  > .left-side {
+    width: auto;
+    min-width: 0;
+    white-space: normal;
+  }
+
+  > .right-side {
+    flex: 0 1 auto;
+    width: auto;
+  }
+
+  .descargar-documento {
+    border: 0;
+    background: none;
+    font: inherit;
+    padding: 0.25rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+
+  .descargar-documento,
+  .enlace-librillo {
+    min-height: 44px;
+  }
+
+  .enlace-librillo {
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 767px) {
+  .fila-documentacion-admin {
+    flex-direction: column;
+    align-items: stretch;
+
+    .acciones-documentacion {
+      justify-content: flex-start;
     }
   }
 }

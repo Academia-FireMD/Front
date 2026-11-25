@@ -2,6 +2,7 @@ import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
+import { environment } from '../../../environments/environment';
 
 import { AppConfigService } from '../../services/app-config.service';
 import { AuthService } from '../../services/auth.service';
@@ -206,6 +207,31 @@ describe('LayoutComponent', () => {
     } as any;
   }
 
+  it('ofrece una sola entrada al Temario y vuelve a Documentos al desactivar Librillos', () => {
+    const flag = jest.replaceProperty(environment, 'librillosMenu', true);
+    try {
+      (component as any).currentUserSignal.set(
+        makeAlumnoConSub(SuscripcionTipo.BASIC),
+      );
+      expect(findItemByLabel(component.items(), 'Temario')).toMatchObject({
+        routerLink: '/app/librillos',
+        queryParams: { vista: 'documentos' },
+      });
+      expect(findItemByLabel(component.items(), 'Documentos')).toBeUndefined();
+
+      appConfigService.setEstado({
+        ...appConfigService.estadoModulos(),
+        [ModuloApp.LIBRILLOS]: false,
+      });
+      expect(findItemByLabel(component.items(), 'Temario')).toBeUndefined();
+      expect(findItemByLabel(component.items(), 'Documentos')?.routerLink).toBe(
+        '/app/documentacion/alumno',
+      );
+    } finally {
+      flag.restore();
+    }
+  });
+
   it('ALUMNO con suscripción ve "Mis marcas" en el menú, enlazando al histórico de física', () => {
     (component as any).currentUserSignal.set(makeAlumnoConSub());
     const items = component.items();
@@ -267,11 +293,14 @@ describe('LayoutComponent', () => {
     });
     (component as any).currentUserSignal.set(makeUser(Rol.ALUMNO));
 
-    expect(findItemByLabel(component.items(), 'Simulador de nota')).toBeUndefined();
     expect(
-      component.items().find((item) => item.label === 'Perfil')?.items?.map(
-        (item) => item.label,
-      ),
+      findItemByLabel(component.items(), 'Simulador de nota'),
+    ).toBeUndefined();
+    expect(
+      component
+        .items()
+        .find((item) => item.label === 'Perfil')
+        ?.items?.map((item) => item.label),
     ).toEqual(['Mi Perfil', 'Desconectarse']);
   });
 
@@ -293,7 +322,9 @@ describe('LayoutComponent', () => {
         conSuscripcion ? makeAlumnoConSub() : makeUser(Rol.ALUMNO),
       );
       const cursos = component.items().find((item) => item.label === 'Cursos')!;
-      const misCursos = cursos.items!.find((item) => item.label === 'Mis cursos')!;
+      const misCursos = cursos.items!.find(
+        (item) => item.label === 'Mis cursos',
+      )!;
 
       expect(component.isParentCollapsed(misCursos)).toBe(false);
       component.toggleCollapse(cursos);

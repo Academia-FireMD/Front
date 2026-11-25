@@ -24,6 +24,8 @@ type EstadoCuaderno =
   | 'conflicto'
   | 'reiniciado';
 
+export type EstadoGuardadoAlSalir = 'guardado' | 'local' | 'fallo';
+
 @Injectable()
 export class LibrilloCuadernoService {
   private readonly api = inject(LibrilloPdfApiService);
@@ -46,12 +48,27 @@ export class LibrilloCuadernoService {
     this.destruir.onDestroy(() => this.cerrar());
   }
 
-  async abrir(edicion: EdicionPdf, clave: string, descartarBorradores = false) {
+  abrir(edicion: EdicionPdf, clave: string, descartarBorradores = false) {
+    return this.cargar(edicion, clave, descartarBorradores);
+  }
+
+  private async cargar(
+    edicion: EdicionPdf,
+    clave: string,
+    descartarBorradores: boolean,
+    reanudar = false,
+  ) {
+    const respaldo =
+      reanudar && this.borradores.size
+        ? { generacion: this.generacion, partes: [...this.borradores.values()] }
+        : undefined;
     this.cerrar();
     this.edicion = edicion;
     this.clave = clave;
     this.estado.set('cargando');
-    const guardado = descartarBorradores ? undefined : this.recuperar();
+    const guardado = descartarBorradores
+      ? undefined
+      : (respaldo ?? this.recuperar());
     this.generacion = guardado?.generacion ?? 0;
     for (const parte of guardado?.partes ?? []) {
       this.borradores.set(parte.pagina, parte);
@@ -119,13 +136,21 @@ export class LibrilloCuadernoService {
     }
   }
 
+  async guardarAntesDeSalir(): Promise<EstadoGuardadoAlSalir> {
+    if (!this.borradores.size) return 'guardado';
+    await this.guardarAhora();
+    if (!this.borradores.size) return 'guardado';
+    return this.persistirBorradores() ? 'local' : 'fallo';
+  }
+
   async reintentar() {
     if (!this.edicion || !this.clave) return;
     if (this.listo) return this.guardarAhora();
-    await this.abrir(
+    await this.cargar(
       { ...this.edicion },
       this.clave,
       this.estado() === 'reiniciado',
+      true,
     );
   }
 
@@ -296,23 +321,25 @@ export class LibrilloCuadernoService {
   }
 
   private persistirBorradores() {
-    if (!this.clave) return;
+    if (!this.clave) return false;
     try {
       if (this.borradores.size) {
-        localStorage.setItem(
-          this.clave,
-          JSON.stringify({
-            generacion: this.generacion,
-            partes: [...this.borradores.values()],
-          }),
-        );
+        const copia = JSON.stringify({
+          generacion: this.generacion,
+          partes: [...this.borradores.values()],
+        });
+        if (localStorage.getItem(this.clave) !== copia) {
+          localStorage.setItem(this.clave, copia);
+        }
       } else {
         localStorage.removeItem(this.clave);
       }
+      return true;
     } catch {
       this.aviso.set(
         'El navegador no pudo guardar una copia de los cambios pendientes.',
       );
+      return false;
     }
   }
 

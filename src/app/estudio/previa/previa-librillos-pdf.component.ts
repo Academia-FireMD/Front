@@ -5,6 +5,7 @@ import {
   DestroyRef,
   ElementRef,
   HostListener,
+  Injector,
   ViewEncapsulation,
   computed,
   effect,
@@ -36,7 +37,10 @@ import { DocumentoTemario } from '../../shared/models/documentacion.model';
 import { ModuloApp } from '../../shared/models/modulo-app.enum';
 import { TestModule } from '../../test/test.module';
 import { LibrilloContextoPdfService } from './librillo-contexto-pdf.service';
-import { LibrilloCuadernoService } from './librillo-cuaderno.service';
+import {
+  EstadoGuardadoAlSalir,
+  LibrilloCuadernoService,
+} from './librillo-cuaderno.service';
 import {
   EdicionPdf,
   PAGINA_PDF_VACIA,
@@ -44,12 +48,15 @@ import {
   PuntoPdf,
   RectanguloPdf,
   ReferenciaPdf,
+  TipoReferenciaPdf,
   TrazoPdf,
 } from './librillo-pdf-api.service';
 import {
   coordenadasPdf,
   transformarRectangulo,
 } from './librillo-pdf-coordenadas';
+
+import { crearWorkerPdf } from './previa-librillos-pdf.component-worker';
 
 const COLORES = ['azul', 'rosa', 'violeta', 'turquesa', 'naranja'] as const;
 type ColorSubrayado = (typeof COLORES)[number];
@@ -65,7 +72,7 @@ type MarcaAnterior = RectanguloPdf & {
   color?: ColorSubrayado;
   fragmento?: string;
 };
-type CapaPdf = 'SUGERIDO' | 'HUECO' | 'DATO' | 'TRAMPA';
+type CapaPdf = TipoReferenciaPdf;
 const capasDisponibles: Array<{ tipo: CapaPdf; etiqueta: string }> = [
   { tipo: 'SUGERIDO', etiqueta: 'Sugeridos' },
   { tipo: 'HUECO', etiqueta: 'Huecos' },
@@ -104,6 +111,12 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   readonly documento = input.required<DocumentoTemario>();
   readonly editor = input(false);
   readonly referenciasEditor = input<ReferenciaPdf[]>([]);
+  readonly referenciasVistaPrevia = input<ReferenciaPdf[]>([]);
+  readonly vistaPreviaEditorial = input(false);
+  readonly edicionSuspendida = input(false);
+  readonly soloLecturaEditorial = computed(
+    () => this.vistaPreviaEditorial() || this.edicionSuspendida(),
+  );
   readonly edicionCargada = output<EdicionPdf>();
   readonly fragmentoEditorial = output<FragmentoPdf>();
   readonly materialPersonal = signal<{
@@ -121,7 +134,10 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   private readonly router = inject(Router, { optional: true });
   private readonly destruir = inject(DestroyRef);
   private readonly sesion = this.auth.sessionSnapshot();
-  readonly perfil = inject(LibrilloCuadernoService);
+  private readonly injector = inject(Injector);
+  get perfil() {
+    return this.injector.get(LibrilloCuadernoService);
+  }
   private readonly params =
     this.ruta &&
     toSignal(this.ruta.queryParamMap, {
@@ -145,6 +161,8 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   private pintura?: RenderTask;
   private capa?: TextLayer;
   private clave?: string;
+  private cambiosLegado = false;
+  private copiaLegado = false;
   private renderId = 0;
   private anchoAnterior = 0;
   private cerrada = false;
@@ -191,7 +209,15 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   } | null>(null);
   readonly area = signal<RectanguloPdf | null>(null);
   readonly capas = signal<CapaPdf[]>(['SUGERIDO']);
-  readonly capasDisponibles = capasDisponibles;
+  readonly capasDisponibles = computed(() =>
+    this.vistaPreviaEditorial()
+      ? [
+          ...capasDisponibles,
+          { tipo: 'PREGUNTA', etiqueta: 'Preguntas' } as const,
+          { tipo: 'TARJETA', etiqueta: 'Flashcards' } as const,
+        ]
+      : capasDisponibles,
+  );
   readonly datosRevelados = signal<number[]>([]);
   readonly legado = signal<{
     lote: string;
@@ -202,6 +228,8 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   readonly cargando = signal(true);
   readonly fallo = signal('');
   readonly falloGuardado = signal(false);
+  private readonly guardadoAlSalir = signal<EstadoGuardadoAlSalir>('guardado');
+  readonly estadoGuardadoAlSalir = this.guardadoAlSalir.asReadonly();
   readonly total = signal(0);
   readonly lectura = signal(true);
   readonly colores = COLORES;
@@ -233,17 +261,20 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   readonly referenciaActiva = computed(
     () => Number(this.params?.()?.get('referencia')) || null,
   );
-  readonly referencias = computed(() =>
-    this.editor() ? this.referenciasEditor() : this.perfil.referencias(),
-  );
+  readonly referencias = computed(() => {
+    if (this.vistaPreviaEditorial()) return this.referenciasVistaPrevia();
+    if (this.edicionSuspendida()) return [];
+    return this.editor() ? this.referenciasEditor() : this.perfil.referencias();
+  });
   readonly capasPagina = computed(() =>
     this.referencias()
       .filter(
         (ref) =>
           ref.pagina === this.pagina() &&
-          (ref.id === this.referenciaActiva() ||
-            this.editor() ||
-            this.capas().includes(ref.tipo as CapaPdf)),
+          ((!this.vistaPreviaEditorial() &&
+            ref.id === this.referenciaActiva()) ||
+            (this.editor() && !this.vistaPreviaEditorial()) ||
+            this.capas().includes(ref.tipo)),
       )
       .flatMap((ref) =>
         ref.rectangulos.map((rectangulo) => ({
@@ -254,6 +285,18 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   );
 
   constructor() {
+    effect(
+      () => {
+        if (!this.soloLecturaEditorial()) return;
+        untracked(() => {
+          this.cancelarTrazo();
+          this.cerrarPaleta();
+          this.herramienta.set('leer');
+          this.datosRevelados.set([]);
+        });
+      },
+      { allowSignalWrites: true },
+    );
     effect(
       () => {
         const numero = Number(this.params?.()?.get('pagina'));
@@ -337,12 +380,11 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
               (n) => n.toString(16).padStart(2, '0'),
             ).join('');
       if (!this.sesionVigente() || cargaId !== this.cargaId) return;
-      this.clave = `previa-librillo:${usuario}:${documento.id}:${edicion}`;
+      this.clave = this.editor()
+        ? undefined
+        : `previa-librillo:${usuario}:${documento.id}:${edicion}`;
       this.libreria = libreria;
-      this.worker = new Worker(
-        new URL('./previa-librillos-pdf.worker', import.meta.url),
-        { type: 'module' },
-      );
+      this.worker = crearWorkerPdf();
       this.procesador = libreria.PDFWorker.create({ port: this.worker });
       this.carga = libreria.getDocument({
         data: new Uint8Array(datos),
@@ -353,10 +395,17 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
       if (!this.sesionVigente() || cargaId !== this.cargaId) return;
       this.pdf = pdf;
       this.total.set(pdf.numPages);
-      const previo = this.recuperarCuaderno(this.clave);
-      const paginaGuardada = this.avance()
-        ? Number(localStorage.getItem(this.clave + ':pagina')) || previo?.pagina
-        : previo?.pagina;
+      const previo = this.clave ? this.recuperarCuaderno(this.clave) : null;
+      let paginaGuardada = previo?.pagina;
+      if (this.clave && this.avance()) {
+        try {
+          paginaGuardada =
+            Number(localStorage.getItem(this.clave + ':pagina')) ||
+            paginaGuardada;
+        } catch {
+          this.falloGuardado.set(true);
+        }
+      }
       const paginaUrl = Number(this.params?.()?.get('pagina'));
       this.pagina.set(
         Math.min(pdf.numPages, Math.max(1, paginaUrl || paginaGuardada || 1)),
@@ -536,6 +585,7 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   }
 
   activarHerramienta(herramienta: 'leer' | 'escribir' | 'area') {
+    if (this.soloLecturaEditorial()) return;
     this.cerrarPaleta();
     this.cancelarTrazo();
     this.herramienta.update((actual) =>
@@ -775,17 +825,26 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
 
   private publicarContexto() {
     const edicion = this.edicion();
-    if (edicion)
+    if (edicion && !this.editor())
       this.contexto?.contexto.set({ ...edicion, pagina: this.pagina() });
   }
 
-  async guardarAntesDeSalir() {
-    await this.perfil.guardarAhora();
-    return true;
+  async guardarAntesDeSalir(): Promise<boolean> {
+    let estado: EstadoGuardadoAlSalir = 'guardado';
+    if (!this.editor() && this.edicion()) {
+      estado = await this.perfil.guardarAntesDeSalir();
+    } else {
+      if (this.cambiosLegado) this.guardar();
+      if (this.cambiosLegado) estado = 'fallo';
+      else if (this.copiaLegado) estado = 'local';
+    }
+    this.guardadoAlSalir.set(estado);
+    return estado !== 'fallo';
   }
 
   @HostListener('window:online')
   async reintentarPerfil() {
+    if (this.editor()) return;
     await this.perfil.reintentar();
     if (this.perfil.estado() === 'guardado') this.publicarContexto();
   }
@@ -795,6 +854,7 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
     const seleccion = document.getSelection();
     const capa = this.texto()?.nativeElement;
     if (
+      this.soloLecturaEditorial() ||
       !capa ||
       !this.capa ||
       this.cargando() ||
@@ -911,10 +971,13 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
   }
 
   private actualizarPagina(pagina: number, anotacion: PaginaPdf) {
-    if (!this.sesionVigente()) return;
-    if (this.edicion()) this.perfil.editar(pagina, anotacion);
-    else
+    if (!this.sesionVigente() || this.editor()) return;
+    if (this.edicion()) {
+      this.perfil.editar(pagina, anotacion);
+    } else {
       this.local.update((actuales) => ({ ...actuales, [pagina]: anotacion }));
+      this.cambiosLegado = true;
+    }
     this.guardar();
   }
 
@@ -945,6 +1008,8 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
           this.clave,
           JSON.stringify({ pagina: this.pagina(), anotaciones }),
         );
+        if (this.cambiosLegado) this.copiaLegado = true;
+        this.cambiosLegado = false;
       }
       this.falloGuardado.set(false);
     } catch {
@@ -1013,7 +1078,9 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
 
   private cerrar() {
     this.cargaId++;
-    this.perfil.cerrar();
+    if (!this.editor()) this.perfil.cerrar();
+    this.cambiosLegado = false;
+    this.copiaLegado = false;
     this.edicion.set(null);
     this.legado.set(null);
     if (this.contexto?.contexto()?.doc === this.documento().id)

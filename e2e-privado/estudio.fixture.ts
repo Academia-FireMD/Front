@@ -41,6 +41,7 @@ const curso = {
         {
           id: DOC,
           identificador: 'Original · Estatutos',
+          fileName: 'estatutos-qa.pdf',
           isDownloadable: true,
           librillo: { edicion: 'R07', titulo: 'Estatutos del Consorcio' },
         },

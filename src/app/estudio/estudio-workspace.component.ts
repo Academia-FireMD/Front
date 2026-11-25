@@ -46,6 +46,10 @@ import {
   operacionEstudio,
   registro,
 } from './estudio-operaciones';
+import {
+  RUTA_PREVIA_LIBRILLOS,
+  retornoDeEdicionInteractiva,
+} from './previa/previa-librillos';
 
 interface InstanciaEstudio {
   session: AuthSessionSnapshot;
@@ -486,7 +490,9 @@ export class EstudioWorkspaceComponent {
 
   etiquetaVolver() {
     if (this.tipo === 'psico') return 'Volver a gestión';
-    return this.desdeCatalogo() ? 'Volver al Temario' : 'Volver al tema';
+    return this.retornoLibrillo().ruta === RUTA_PREVIA_LIBRILLOS
+      ? 'Volver al Temario'
+      : 'Volver al tema';
   }
 
   async guardarAntesDeSalir() {
@@ -516,30 +522,18 @@ export class EstudioWorkspaceComponent {
         return;
       }
       await this.guardarAntesDeSalir();
-      if (this.desdeCatalogo()) {
-        await this.router.navigate(['/app/librillos'], {
-          queryParams: { doc: this.route.snapshot.paramMap.get('documentoId') },
-        });
-      } else {
-        const tema = usuarioIdDeSubject(
-          this.route.snapshot.queryParamMap.get('tema'),
-        );
-        await this.router.navigate(['/app/documentacion/alumno'], {
-          queryParams: {
-            tema,
-            doc: this.route.snapshot.paramMap.get('documentoId'),
-          },
-        });
-      }
+      const { ruta, parametros } = this.retornoLibrillo();
+      await this.router.navigate([ruta], { queryParams: parametros });
     } finally {
       this.saliendo.set(false);
     }
   }
 
-  private desdeCatalogo() {
-    return (
-      environment.librillosMenu &&
-      this.route.snapshot.queryParamMap.get('desde') === 'librillos'
+  private retornoLibrillo() {
+    return retornoDeEdicionInteractiva(
+      this.route.snapshot.queryParamMap,
+      this.route.snapshot.paramMap.get('documentoId'),
+      environment.librillosMenu,
     );
   }
 }

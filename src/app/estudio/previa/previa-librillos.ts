@@ -60,3 +60,25 @@ export function retornoDePracticaLibrillo(
 
   return temaDePracticaLibrillo(url.queryParamMap, habilitada);
 }
+
+export type VistaTemario = 'documentos' | 'librillo';
+
+export function vistaDeTemario(valor: string | null): VistaTemario | undefined {
+  return valor === 'documentos' || valor === 'librillo' ? valor : undefined;
+}
+
+export function retornoDeEdicionInteractiva(
+  params: ParamMap,
+  documento: string | null,
+  habilitado: boolean,
+) {
+  const tema = usuarioIdDeSubject(params.get('tema'));
+  const doc = usuarioIdDeSubject(documento);
+  const vista = vistaDeTemario(params.get('vista'));
+  const desdeTemario = habilitado && params.get('desde') === 'librillos';
+
+  return {
+    ruta: desdeTemario ? RUTA_PREVIA_LIBRILLOS : '/app/documentacion/alumno',
+    parametros: { tema, doc, vista: desdeTemario ? vista : undefined },
+  };
+}

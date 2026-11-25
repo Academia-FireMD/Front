@@ -3,22 +3,24 @@
   [class.ver-notas]="vistaAnotaciones()"
   [class.editor-pdf]="editor()"
 >
-  <nav class="pestanas-pdf" aria-label="Vista del documento">
-    <button
-      type="button"
-      [attr.aria-pressed]="lectura()"
-      (click)="lectura.set(true)"
-    >
-      Lectura
-    </button>
-    <button
-      type="button"
-      [attr.aria-pressed]="!lectura()"
-      (click)="mostrarAnotaciones()"
-    >
-      Anotaciones
-    </button>
-  </nav>
+  @if (!editor()) {
+    <nav class="pestanas-pdf" aria-label="Vista del documento">
+      <button
+        type="button"
+        [attr.aria-pressed]="lectura()"
+        (click)="lectura.set(true)"
+      >
+        Lectura
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="!lectura()"
+        (click)="mostrarAnotaciones()"
+      >
+        Anotaciones
+      </button>
+    </nav>
+  }
 
   <section
     #visor
@@ -92,23 +94,25 @@
           >
             <i class="pi pi-refresh" aria-hidden="true"></i>
           </button>
-          <button
-            pButton
-            type="button"
-            class="p-button-text"
-            [attr.aria-pressed]="herramienta() === 'area'"
-            aria-label="Marcar un área"
-            [pTooltip]="
-              editor()
-                ? 'Seleccionar una zona del PDF para vincular contenido'
-                : 'Seleccionar una zona del PDF para resaltarla'
-            "
-            tooltipEvent="both"
-            tooltipPosition="bottom"
-            (click)="activarHerramienta('area')"
-          >
-            <i class="pi pi-stop" aria-hidden="true"></i>
-          </button>
+          @if (!soloLecturaEditorial()) {
+            <button
+              pButton
+              type="button"
+              class="p-button-text"
+              [attr.aria-pressed]="herramienta() === 'area'"
+              aria-label="Marcar un área"
+              [pTooltip]="
+                editor()
+                  ? 'Seleccionar una zona del PDF para vincular contenido'
+                  : 'Seleccionar una zona del PDF para resaltarla'
+              "
+              tooltipEvent="both"
+              tooltipPosition="bottom"
+              (click)="activarHerramienta('area')"
+            >
+              <i class="pi pi-stop" aria-hidden="true"></i>
+            </button>
+          }
           @if (!editor()) {
             <button
               pButton
@@ -150,9 +154,9 @@
         </div>
       }
     </div>
-    @if (!editor() && referencias().length) {
+    @if ((!editor() || vistaPreviaEditorial()) && referencias().length) {
       <nav class="capas-pdf" aria-label="Capas de lectura">
-        @for (capa of capasDisponibles; track capa.tipo) {
+        @for (capa of capasDisponibles(); track capa.tipo) {
           @if (hayCapa(capa.tipo)) {
             <button
               type="button"
@@ -201,7 +205,10 @@
         @if (edicion()) {
           <div class="referencias-pdf">
             @for (ref of capasPagina(); track $index) {
-              @if (!editor() && (ref.tipo === "HUECO" || ref.tipo === "DATO")) {
+              @if (
+                (!editor() || vistaPreviaEditorial()) &&
+                (ref.tipo === "HUECO" || ref.tipo === "DATO")
+              ) {
                 <button
                   type="button"
                   class="referencia-pdf hueco-pdf"
@@ -222,7 +229,9 @@
               } @else {
                 <span
                   class="referencia-pdf"
-                  [class.referencia-activa]="ref.id === referenciaActiva()"
+                  [class.referencia-activa]="
+                    !vistaPreviaEditorial() && ref.id === referenciaActiva()
+                  "
                   [class.trampa-pdf]="ref.tipo === 'TRAMPA'"
                   [attr.title]="ref.texto"
                   [style.--marca-color]="ref.color"
@@ -234,48 +243,50 @@
               }
             }
           </div>
-          <svg
-            class="tinta-hoja-pdf"
-            [class.herramienta-activa]="herramienta() !== 'leer'"
-            viewBox="0 0 1000 1000"
-            preserveAspectRatio="none"
-            aria-label="Superficie para dibujar en la página"
-            (pointerdown)="iniciarTrazo($event)"
-            (pointermove)="continuarTrazo($event)"
-            (pointerup)="terminarTrazo($event)"
-            (pointercancel)="cancelarTrazo()"
-          >
-            @for (trazo of anotacion().trazos; track trazo.id) {
-              <polyline
-                [attr.points]="puntosParaDibujar(trazo.puntos, true)"
-                [attr.stroke]="trazo.color"
-                [attr.stroke-width]="trazo.grosor"
-              />
-            }
-            @if (area(); as seleccionArea) {
-              <rect
-                class="area-pdf"
-                [attr.x]="seleccionArea.x * 1000"
-                [attr.y]="seleccionArea.y * 1000"
-                [attr.width]="seleccionArea.ancho * 1000"
-                [attr.height]="seleccionArea.alto * 1000"
-              />
-            } @else {
-              @if (borradorTrazo(); as trazo) {
-                @if (!trazo.aparte && herramienta() === "escribir") {
-                  <polyline
-                    [attr.points]="puntosParaDibujar(trazo.puntos)"
-                    [attr.stroke]="tinta()"
-                    stroke-width="2"
-                  />
+          @if (!soloLecturaEditorial()) {
+            <svg
+              class="tinta-hoja-pdf"
+              [class.herramienta-activa]="herramienta() !== 'leer'"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+              aria-label="Superficie para dibujar en la página"
+              (pointerdown)="iniciarTrazo($event)"
+              (pointermove)="continuarTrazo($event)"
+              (pointerup)="terminarTrazo($event)"
+              (pointercancel)="cancelarTrazo()"
+            >
+              @for (trazo of anotacion().trazos; track trazo.id) {
+                <polyline
+                  [attr.points]="puntosParaDibujar(trazo.puntos, true)"
+                  [attr.stroke]="trazo.color"
+                  [attr.stroke-width]="trazo.grosor"
+                />
+              }
+              @if (area(); as seleccionArea) {
+                <rect
+                  class="area-pdf"
+                  [attr.x]="seleccionArea.x * 1000"
+                  [attr.y]="seleccionArea.y * 1000"
+                  [attr.width]="seleccionArea.ancho * 1000"
+                  [attr.height]="seleccionArea.alto * 1000"
+                />
+              } @else {
+                @if (borradorTrazo(); as trazo) {
+                  @if (!trazo.aparte && herramienta() === "escribir") {
+                    <polyline
+                      [attr.points]="puntosParaDibujar(trazo.puntos)"
+                      [attr.stroke]="tinta()"
+                      stroke-width="2"
+                    />
+                  }
                 }
               }
-            }
-          </svg>
+            </svg>
+          }
         }
       </div>
     </div>
-    @if (seleccion(); as seleccionActual) {
+    @if (soloLecturaEditorial() ? null : seleccion(); as seleccionActual) {
       <div
         #paleta
         class="paleta-pdf"

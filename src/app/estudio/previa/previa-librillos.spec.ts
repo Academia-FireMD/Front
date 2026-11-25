@@ -1,7 +1,28 @@
-import { convertToParamMap, DefaultUrlSerializer } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { ToastrService } from 'ngx-toastr';
+import { of, throwError } from 'rxjs';
+import { DocumentosService } from '../../documentacion/services/documentacion.service';
+import { AppConfigService } from '../../services/app-config.service';
+import { AuthService } from '../../services/auth.service';
+import { TemaService } from '../../services/tema.service';
+import { UserService } from '../../services/user.service';
+import { DocumentoTemario } from '../../shared/models/documentacion.model';
+import { PreviaLibrillosPdfComponent } from './previa-librillos-pdf.component';
+import { PreviaLibrillosComponent } from './previa-librillos.component';
+import {
+  CanDeactivateFn,
+  convertToParamMap,
+  DefaultUrlSerializer,
+  provideRouter,
+  Router,
+} from '@angular/router';
 import {
   parametrosPracticaLibrillo,
   parametrosVistaLibrillo,
+  retornoDeEdicionInteractiva,
   retornoDePracticaLibrillo,
   temaDePracticaLibrillo,
 } from './previa-librillos';
@@ -57,5 +78,221 @@ describe('Navegación de práctica desde el Librillo', () => {
     expect(
       temaDePracticaLibrillo(convertToParamMap({ desdeLibrillo: '0' }), true),
     ).toBeUndefined();
+  });
+});
+
+describe('Retorno de la edición interactiva R07', () => {
+  it.each(['documentos', 'librillo'])(
+    'vuelve a la vista %s con el mismo tema y edición',
+    (vista) => {
+      const params = convertToParamMap({
+        desde: 'librillos',
+        tema: '47',
+        vista,
+        doc: '999',
+      });
+      expect(retornoDeEdicionInteractiva(params, '145', true)).toEqual({
+        ruta: '/app/librillos',
+        parametros: { tema: 47, doc: 145, vista },
+      });
+    },
+  );
+
+  it('mantiene la vuelta al acordeón y los enlaces antiguos del lector', () => {
+    const legacy = convertToParamMap({ tema: '47', vista: 'librillo' });
+    expect(retornoDeEdicionInteractiva(legacy, '145', true)).toEqual({
+      ruta: '/app/documentacion/alumno',
+      parametros: { tema: 47, doc: 145, vista: undefined },
+    });
+    const lector = convertToParamMap({
+      desde: 'librillos',
+      vista: '/ruta-ajena',
+    });
+    expect(retornoDeEdicionInteractiva(lector, '145', true)).toEqual({
+      ruta: '/app/librillos',
+      parametros: { tema: null, doc: 145, vista: undefined },
+    });
+  });
+});
+
+jest.mock('./previa-librillos-pdf.component', () => {
+  const { Component, Input } = jest.requireActual('@angular/core');
+
+  @Component({
+    selector: 'app-previa-librillos-pdf',
+    standalone: true,
+    template: 'Lector PDF',
+  })
+  class PdfPrueba {
+    @Input() documento!: DocumentoTemario;
+    readonly guardarAntesDeSalir = jest.fn(async () => true);
+    readonly estadoGuardadoAlSalir = jest.fn(() => 'guardado');
+  }
+
+  return { PreviaLibrillosPdfComponent: PdfPrueba };
+});
+
+describe('Navegación del Temario', () => {
+  const tema = { id: 9, numero: 9, descripcion: 'Reglamento' };
+  const doc: DocumentoTemario = {
+    id: 21,
+    identificador: 'Material de prueba',
+    fileName: 'material.pdf',
+    url: '',
+    esPublico: true,
+    creadoPorId: 1,
+    creadoEn: new Date(0),
+    actualizadoEn: new Date(0),
+    isNew: false,
+    isDownloadable: true,
+  };
+  const otro = { ...doc, id: 22 };
+  const arbol = [
+    {
+      id: 1,
+      nombre: 'Normativa',
+      temas: [{ ...tema, documentos: [doc, otro] }],
+    },
+  ];
+  const getAllTemas$ = jest.fn(() => of([tema]));
+  const getDocumentTree$ = jest.fn(() => of(arbol));
+  const warning = jest.fn();
+  const ruta = '/app/librillos';
+
+  function visor(harness: RouterTestingHarness) {
+    return harness.routeDebugElement?.query(
+      By.directive(PreviaLibrillosPdfComponent),
+    )?.componentInstance;
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    const guardar: CanDeactivateFn<PreviaLibrillosComponent> = (
+      componente,
+      _ruta,
+      _actual,
+      siguiente,
+    ) => componente.guardarAntesDeSalir(siguiente.url);
+    TestBed.configureTestingModule({
+      providers: [
+        provideNoopAnimations(),
+        provideRouter([
+          {
+            path: 'app/librillos',
+            component: PreviaLibrillosComponent,
+            canDeactivate: [guardar],
+            runGuardsAndResolvers: 'paramsOrQueryParamsChange',
+          },
+        ]),
+        { provide: TemaService, useValue: { getAllTemas$ } },
+        { provide: DocumentosService, useValue: { getDocumentTree$ } },
+        {
+          provide: AuthService,
+          useValue: {
+            currentIdentity$: of(null),
+            sessionSnapshot: () => ({}),
+            isSessionCurrent: () => true,
+          },
+        },
+        { provide: UserService, useValue: {} },
+        {
+          provide: AppConfigService,
+          useValue: { isModuloHabilitado: () => false },
+        },
+        { provide: ToastrService, useValue: { warning } },
+      ],
+    });
+  });
+
+  it('monta el PDF al entrar en Librillo y conserva instancia y posición al alternar vistas', async () => {
+    const harness = await RouterTestingHarness.create(
+      ruta + '?tema=9&vista=documentos',
+    );
+    expect(visor(harness)).toBeUndefined();
+
+    const lectura =
+      ruta + '?tema=9&doc=21&pagina=3&referencia=8&vista=librillo';
+    const componente = await harness.navigateByUrl(
+      lectura,
+      PreviaLibrillosComponent,
+    );
+    const lector = visor(harness);
+    expect(lector.documento).toBe(doc);
+
+    await componente.seleccionarVista('documentos');
+    harness.detectChanges();
+    expect(visor(harness)).toBe(lector);
+    expect(lector.guardarAntesDeSalir).not.toHaveBeenCalled();
+    expect(
+      harness.routeNativeElement
+        ?.querySelector('#panel-temario-librillo')
+        ?.hasAttribute('hidden'),
+    ).toBe(true);
+
+    await componente.seleccionarVista('librillo');
+    harness.detectChanges();
+    expect(visor(harness)).toBe(lector);
+    expect(TestBed.inject(Router).url).toBe(lectura);
+  });
+
+  it('bloquea el cambio de documento si falla el guardado y reintenta una vez por navegación', async () => {
+    const inicio = ruta + '?tema=9&doc=21&pagina=3&referencia=8';
+    const harness = await RouterTestingHarness.create(inicio);
+    const lector = visor(harness);
+    const componente = harness.routeDebugElement!
+      .componentInstance as PreviaLibrillosComponent;
+    const router = TestBed.inject(Router);
+    lector.guardarAntesDeSalir.mockResolvedValueOnce(false);
+
+    await componente.seleccionarDocumento(22);
+    harness.detectChanges();
+    expect(router.url).toBe(inicio);
+    expect(visor(harness)).toBe(lector);
+    expect(componente.salidaPendiente()).toContain('doc=22');
+    expect(lector.guardarAntesDeSalir).toHaveBeenCalledTimes(1);
+
+    lector.estadoGuardadoAlSalir.mockReturnValue('local');
+    componente.reintentarSalida();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(lector.guardarAntesDeSalir).toHaveBeenCalledTimes(2);
+    expect(visor(harness).documento).toBe(otro);
+    expect(router.parseUrl(router.url).queryParams).toEqual({
+      tema: '9',
+      doc: '22',
+      vista: 'librillo',
+    });
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining('Sincronización pendiente'),
+    );
+  });
+
+  it('recupera solamente el banco fallido y resuelve el PDF desde el árbol disponible', async () => {
+    getAllTemas$.mockReturnValueOnce(throwError(() => new Error('Sin banco')));
+    const harness = await RouterTestingHarness.create(ruta + '?doc=21');
+    const componente = harness.routeDebugElement!
+      .componentInstance as PreviaLibrillosComponent;
+    const lector = visor(harness);
+    expect(lector.documento).toBe(doc);
+    expect(componente.fallos()).toEqual(['banco']);
+    expect(componente.temasDePractica()).toEqual([]);
+
+    componente.recargar('banco');
+    harness.detectChanges();
+    expect(componente.fallos()).toEqual([]);
+    expect(componente.temasDePractica().map((tema) => tema.id)).toEqual([9]);
+    expect(visor(harness)).toBe(lector);
+    expect(getDocumentTree$).toHaveBeenCalledTimes(1);
+  });
+
+  it('no monta un PDF si el documento pertenece a otro tema', async () => {
+    getAllTemas$.mockReturnValueOnce(
+      of([tema, { id: 10, numero: 10, descripcion: 'Anexos' }]),
+    );
+    const harness = await RouterTestingHarness.create(ruta + '?tema=10&doc=21');
+    expect(visor(harness)).toBeUndefined();
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Este documento no está disponible en el tema seleccionado.',
+    );
   });
 });

@@ -5,11 +5,14 @@ import {
   computed,
   EventEmitter,
   Input,
+  inject,
+  DestroyRef,
   OnDestroy,
   OnInit,
   Output,
   TemplateRef,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, tap } from 'rxjs';
@@ -116,13 +119,17 @@ export type GenericListMode = 'overview' | 'selection';
               <div
                 class="col-12 item-container"
                 [ngClass]="{
-                  pointer: mode === 'overview',
+                  pointer: mode === 'overview' && interactiveRows,
                   'selection-mode': mode === 'selection',
                   'auto-item-height': autoItemHeight,
                 }"
                 *ngFor="let item of data"
-                [attr.role]="mode === 'overview' ? 'button' : null"
-                [attr.tabindex]="mode === 'overview' ? 0 : null"
+                [attr.role]="
+                  mode === 'overview' && interactiveRows ? 'button' : null
+                "
+                [attr.tabindex]="
+                  mode === 'overview' && interactiveRows ? 0 : null
+                "
                 (click)="handleItemClick(item, $event)"
                 (keydown)="handleItemKeydown(item, $event)"
               >
@@ -165,13 +172,19 @@ export type GenericListMode = 'overview' | 'selection';
       </div>
 
       <!-- Pagination -->
-      <div class="col-12" *ngIf="showPagination">
+      <div
+        class="col-12"
+        *ngIf="showPagination && (!restoreListState || lastLoadedPagination)"
+      >
         <div class="card flex justify-content-end">
           <p-paginator
             (onPageChange)="onPageChange($event)"
             [first]="pagination().skip"
             [rows]="pagination().take"
-            [totalRecords]="lastLoadedPagination?.pagination?.count ?? 10"
+            [totalRecords]="
+              lastLoadedPagination?.pagination?.count ??
+              (restoreListState ? 0 : 10)
+            "
             [showPageLinks]="true"
           >
           </p-paginator>
@@ -237,7 +250,7 @@ export type GenericListMode = 'overview' | 'selection';
               filter.type === 'tema-select' &&
               getFilterControl(filter.key) as control
             "
-            [formControl]="control"
+            [controlTemas]="control"
           ></app-tema-select>
 
           <!-- Dificultad Dropdown Filter -->
@@ -319,6 +332,9 @@ export class GenericListComponent<T>
   @Input() itemTemplate!: TemplateRef<any>;
   @Input() showPagination: boolean = true;
   @Input() autoItemHeight = false;
+  @Input() interactiveRows = true;
+  // El padre restaura y actualiza la paginación y los filtros de la URL.
+  @Input() restoreListState = false;
   @Input() stackActionsOnMobile = false;
   @Input() filters?: FilterConfig[];
   @Input() mode: GenericListMode = 'overview';
@@ -336,6 +352,7 @@ export class GenericListComponent<T>
 
   public showFiltersDialog = false;
   private fb = new FormBuilder();
+  private readonly destroyRef = inject(DestroyRef);
   filterControls: Map<string, FormControl> = new Map();
   public Rol = Rol;
 
@@ -360,8 +377,26 @@ export class GenericListComponent<T>
   }
 
   override ngOnInit() {
-    super.ngOnInit();
     this.initializeFilters();
+    if (this.restoreListState) {
+      if (this.routeSyncEnabled) {
+        this.route.queryParamMap
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe((params) => {
+            for (const filter of this.filters ?? []) {
+              const value = params.get(filter.key);
+              this.getFilterControl(filter.key).setValue(
+                value === null
+                  ? (filter.defaultValue ?? null)
+                  : this.decodeFilterValue(filter, value),
+                { emitEvent: false },
+              );
+            }
+          });
+      }
+      return;
+    }
+    super.ngOnInit();
     if (!this.routeSyncEnabled) return;
 
     // Suscribirse a cambios en queryParams para recargar filtros automáticamente
@@ -514,6 +549,8 @@ export class GenericListComponent<T>
         .filter((v) => v !== null);
     }
 
+    if (filter.type === 'toggle') return encodedValue === 'true';
+
     // Dropdown simple - devolver valor único
     if (filter.type === 'dropdown') {
       if (encodedValue === 'null' || encodedValue === '') return null;
@@ -627,6 +664,7 @@ export class GenericListComponent<T>
     // Primero actualizar los filtros internos
     this.updateFilters();
     this.showFiltersDialog = false;
+    if (this.restoreListState) return;
 
     const where: any = {};
     this.filterControls.forEach((control, key) => {
@@ -669,31 +707,40 @@ export class GenericListComponent<T>
     // Aplicar los cambios (esto emitirá filtros vacíos)
     this.updateFilters();
 
-    // Limpiar TODOS los queryParams relacionados con filtros
-    const queryParams: any = { ...this.route.snapshot.queryParams };
-    this.filterControls.forEach((_, key) => {
-      delete queryParams[key];
-    });
-
-    this.updateQueryParamsFilters(queryParams);
+    if (!this.restoreListState) {
+      const queryParams: any = { ...this.route.snapshot.queryParams };
+      this.filterControls.forEach((_, key) => {
+        delete queryParams[key];
+      });
+      this.updateQueryParamsFilters(queryParams);
+    }
 
     // Cerrar el diálogo
     this.showFiltersDialog = false;
   }
 
   getActiveFiltersCount(): number {
-    return Array.from(this.filterControls.values()).filter((control) => {
-      const value = control.value;
-      if (value === null || value === undefined || value === '') {
-        return false;
-      }
-      // Si es un array, verificar que tenga elementos
-      if (Array.isArray(value)) {
-        return value.length > 0;
-      }
-      // Para otros tipos, considerar válido si no está vacío
-      return true;
-    }).length;
+    return Array.from(this.filterControls.entries()).filter(
+      ([key, control]) => {
+        const value = control.value;
+        if (
+          value === false &&
+          this.filters?.some(
+            (filter) => filter.key === key && filter.type === 'toggle',
+          )
+        )
+          return false;
+        if (value === null || value === undefined || value === '') {
+          return false;
+        }
+        // Si es un array, verificar que tenga elementos
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        // Para otros tipos, considerar válido si no está vacío
+        return true;
+      },
+    ).length;
   }
 
   hasActiveFilters(): boolean {
@@ -734,6 +781,7 @@ export class GenericListComponent<T>
   handleItemKeydown(item: T, event: KeyboardEvent): void {
     if (
       this.mode !== 'overview' ||
+      !this.interactiveRows ||
       event.target !== event.currentTarget ||
       (event.key !== 'Enter' && event.key !== ' ')
     ) {
@@ -749,7 +797,7 @@ export class GenericListComponent<T>
 
     if (this.mode === 'selection') {
       this.toggleItemSelection(item);
-    } else {
+    } else if (this.interactiveRows) {
       this.onItemClick.emit(item);
     }
   }

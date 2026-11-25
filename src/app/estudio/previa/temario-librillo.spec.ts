@@ -3,7 +3,11 @@ import {
   DocumentoTemario,
   ModuloTemario,
 } from '../../shared/models/documentacion.model';
-import { crearTemarioLibrillo, seleccionLibrillo } from './temario-librillo';
+import {
+  crearTemarioLibrillo,
+  pdfDisponible,
+  seleccionLibrillo,
+} from './temario-librillo';
 
 function recurso(
   id: number,
@@ -51,7 +55,7 @@ describe('Temario del Librillo', () => {
         {
           id: 999,
           numero: 3,
-          descripcion: 'Ajeno',
+          descripcion: 'Anexos del temario',
           documentos: [recurso(900)],
         },
       ],
@@ -67,7 +71,7 @@ describe('Temario del Librillo', () => {
   );
 
   it('incluye todos los temas del banco, aunque todavía no tengan documentos', () => {
-    expect(temas.map(({ id }) => id)).toEqual([101, 102, 103]);
+    expect(temas.map(({ id }) => id)).toEqual([101, 102, 103, 999]);
     expect(
       seleccionLibrillo(temas, convertToParamMap({ tema: '103' })),
     ).toMatchObject({
@@ -90,9 +94,22 @@ describe('Temario del Librillo', () => {
     ).toBe(bloqueado);
   });
 
+  it('conserva temas del árbol aunque no estén habilitados en el banco de práctica', () => {
+    const seleccion = seleccionLibrillo(
+      temas,
+      convertToParamMap({ doc: '900' }),
+    );
+    expect(seleccion.tema).toMatchObject({
+      id: 999,
+      enBanco: false,
+      modulo: 'Específico',
+    });
+    expect(seleccion.documento?.id).toBe(900);
+  });
+
   it('rechaza temas ajenos y documentos que no pertenecen al tema seleccionado', () => {
     expect(
-      seleccionLibrillo(temas, convertToParamMap({ tema: '999', doc: '900' })),
+      seleccionLibrillo(temas, convertToParamMap({ tema: '888', doc: '900' })),
     ).toMatchObject({
       temaInaccesible: true,
       documento: undefined,
@@ -103,5 +120,23 @@ describe('Temario del Librillo', () => {
       documentoInaccesible: true,
       documento: undefined,
     });
+  });
+
+  it('distingue PDF de Word y aplica el permiso del árbol', () => {
+    expect(
+      pdfDisponible(
+        recurso(1, { fileName: 'cuaderno.DOCX', url: 'legacy.pdf' }),
+      ),
+    ).toBe(false);
+    expect(
+      pdfDisponible(
+        recurso(1, { fileName: 'cuaderno.pdf', isDownloadable: false }),
+      ),
+    ).toBe(false);
+    expect(
+      pdfDisponible(
+        recurso(1, { fileName: null, url: 'legacy.PDF?version=2' }),
+      ),
+    ).toBe(true);
   });
 });

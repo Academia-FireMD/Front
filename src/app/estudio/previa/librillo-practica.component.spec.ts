@@ -432,6 +432,33 @@ describe('Práctica del Librillo', () => {
     expect(dialogo()?.textContent).not.toContain('Ver más');
   });
 
+  it('oculta el diálogo en Documentos y recupera el mismo intento al volver', async () => {
+    cargar();
+    await abrir();
+    await fixture.whenStable();
+    const ejercicio = dialogo()?.querySelector('app-completar-test');
+    const intento = panel.intentoActual();
+    expect(ejercicio).toBeTruthy();
+    const boton = document.createElement('button');
+    ejercicio?.append(boton);
+    boton.focus();
+
+    fixture.componentRef.setInput('activa', false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(dialogo()).toBeNull();
+    expect(panel.intentoActual()).toBe(intento);
+
+    fixture.componentRef.setInput('activa', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(dialogo()?.querySelector('app-completar-test')).toBe(ejercicio);
+    expect(document.activeElement).toBe(boton);
+    expect(panel.intentoActual()).toBe(intento);
+    http.expectNone(url + '/test');
+  });
+
   it('suspende solo al navegar a una referencia del PDF actual y recupera el mismo intento', async () => {
     cargar();
     await abrir();

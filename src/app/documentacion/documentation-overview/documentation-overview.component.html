@@ -26,74 +26,13 @@
             >
               {{ tema.numero }} - {{ tema.descripcion }}
             </h4>
-            @if (librilloTemarioActivo()) {
-              <a
-                pButton
-                class="tema-librillo p-button-sm p-button-outlined"
-                [routerLink]="rutaLibrillo"
-                [queryParams]="{ tema: tema.id }"
-              >
-                <i class="pi pi-book" aria-hidden="true"></i>
-                <span>Abrir en el Temario</span>
-              </a>
-            }
           </div>
-          <div class="documentos-list">
-            <div
-              *ngFor="let doc of tema.documentos"
-              class="documento-item"
-              [ngClass]="{ 'locked-document': doc.isLocked }"
-            >
-              <div class="doc-info" (click)="verDocumentoAlumno(doc)">
-                <span class="doc-name">
-                  <i
-                    *ngIf="doc.isLocked"
-                    class="pi pi-lock"
-                    [ngClass]="
-                      doc.isDownloadable ? 'text-orange-500' : 'text-red-500'
-                    "
-                    [pTooltip]="
-                      doc.isDownloadable
-                        ? 'Documento premium - Puedes descargarlo'
-                        : 'Documento premium - Requiere suscripción PREMIUM o ADVANCED'
-                    "
-                  ></i>
-                  {{ doc.identificador }}
-                  <span *ngIf="doc.isNew" class="badge-new">NEW</span>
-                  <span *ngIf="doc.isLocked" class="badge-premium"
-                    >PREMIUM</span
-                  >
-                </span>
-                <span class="doc-desc" *ngIf="doc.descripcion">{{
-                  doc.descripcion
-                }}</span>
-              </div>
-              <div class="doc-acciones">
-                @if (librillosActivos() && doc.isDownloadable && doc.librillo) {
-                  <a
-                    [id]="'librillo-doc-' + doc.id"
-                    class="p-button p-button-sm p-button-outlined"
-                    [routerLink]="[
-                      '/app/documentacion/alumno/librillo',
-                      doc.id,
-                    ]"
-                    [queryParams]="{ tema: tema.id }"
-                  >
-                    <i class="pi pi-book" aria-hidden="true"></i>
-                    <span>Abrir edición interactiva</span>
-                  </a>
-                }
-                <button
-                  pButton
-                  (click)="descargarDocumentoAlumno(doc)"
-                  class="p-button-sm"
-                  icon="pi pi-download"
-                  label="Descargar"
-                  [disabled]="!doc.isDownloadable"
-                ></button>
-              </div>
-            </div>
-          </div>
+          <app-documentos-del-tema
+            [documentos]="tema.documentos"
+            [temaId]="tema.id"
+            [librillosActivos]="librillosActivos()"
+            [librilloTemarioActivo]="librilloTemarioActivo()"
+          />
         </div>
       </p-accordionTab>
     </p-accordion>
@@ -156,7 +95,7 @@
           <div>
             <label class="block mb-2">Tema</label>
             <app-tema-select
-              [formControl]="uploadingFileFormGroup.controls['temaIds']"
+              [controlTemas]="uploadingFileFormGroup.controls['temaIds']"
             ></app-tema-select>
           </div>
           <div class="flex flex-column gap-3">
@@ -247,7 +186,7 @@
       <div>
         <label class="block mb-2">Tema</label>
         <app-tema-select
-          [formControl]="editarDocumentoForm.controls['temaIds']"
+          [controlTemas]="editarDocumentoForm.controls['temaIds']"
         ></app-tema-select>
       </div>
       <div class="flex flex-column gap-3">
@@ -297,6 +236,7 @@
                 '/app/documentacion/librillo/editor',
                 documento.id,
               ]"
+              [queryParams]="parametrosLista()"
             >
               <span>Editar referencias del Librillo</span>
             </a>
@@ -319,6 +259,10 @@
   <app-generic-list
     [fetchItems$]="fetchItems$"
     [itemTemplate]="documentItemTemplate"
+    [sharedPagination]="pagination"
+    [restoreListState]="listaAdmin"
+    [interactiveRows]="!listaAdmin"
+    [autoItemHeight]="listaAdmin"
     [filters]="filters"
     [mode]="mode"
     [selectedItemIds]="selectedDocumentIds"
@@ -366,26 +310,31 @@
   >
     <div
       class="flex flex-row align-items-between"
+      [class.fila-documentacion-admin]="listaAdmin"
       [ngClass]="{ 'selected-item': mode === 'selection' && isSelected }"
-      (click)="
-        mode === 'overview'
-          ? descargarDocumento(
-              document.id,
-              document.identificador,
-              document.fileName
-            )
-          : null
-      "
     >
       <div class="flex flex-column py-2 col-9 left-side truncate-flex-content">
-        <div class="text-lg font-medium flex gap-2 align-items-center">
-          <span
-            class="identifier"
-            pTooltip="Identificador del documento"
-            tooltipPosition="top"
-          >
-            {{ document.identificador }}
-          </span>
+        <div
+          class="text-lg font-medium flex flex-wrap gap-2 align-items-center"
+        >
+          @if (listaAdmin) {
+            <button
+              type="button"
+              class="identifier descargar-documento"
+              [attr.aria-label]="'Descargar ' + document.identificador"
+              (click)="
+                descargarDocumento(
+                  document.id,
+                  document.identificador,
+                  document.fileName
+                )
+              "
+            >
+              {{ document.identificador }}
+            </button>
+          } @else {
+            <span class="identifier">{{ document.identificador }}</span>
+          }
           <!-- En la gestión admin (overview) todos los documentos son públicos y
                se muestra el estado "Publicado/Sin publicar"; el badge "Público"
                sería redundante ahí, así que solo se muestra fuera de esa vista. -->
@@ -463,7 +412,21 @@
       </div>
 
       <div class="right-side col-3 flex align-items-center justify-content-end">
-        <div class="flex flex-row align-items-center justify-content-end gap-2">
+        <div
+          class="acciones-documentacion flex flex-row flex-wrap align-items-center gap-2"
+        >
+          @if (listaAdmin && puedeEditarReferencias(document)) {
+            <a
+              pButton
+              class="p-button-outlined enlace-librillo"
+              [routerLink]="['/app/documentacion/librillo/editor', document.id]"
+              [queryParams]="parametrosLista()"
+              [attr.aria-label]="'Librillo de ' + document.identificador"
+            >
+              <i class="pi pi-book" aria-hidden="true"></i>
+              <span>Librillo</span>
+            </a>
+          }
           <span
             class="text-xs hidden md:block unbreakable-text"
             pTooltip="Fecha de creación: {{
@@ -480,6 +443,7 @@
               !document.isPublicado
             "
             icon="pi pi-cloud-upload"
+            ariaLabel="Publicar documento"
             styleClass="p-button-success"
             pTooltip="Publicar documento (hacerlo visible para los alumnos)"
             (click)="
@@ -495,6 +459,7 @@
               document.isPublicado
             "
             icon="pi pi-eye-slash"
+            ariaLabel="Despublicar documento"
             styleClass="p-button-secondary"
             pTooltip="Despublicar documento (ocultarlo a los alumnos)"
             (click)="
@@ -507,6 +472,7 @@
             *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
             icon="pi pi-pencil"
             styleClass="p-button-warning"
+            ariaLabel="Editar documento"
             pTooltip="Editar documento"
             (click)="
               $event.stopPropagation();
@@ -518,6 +484,7 @@
             *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
             icon="pi pi-trash"
             styleClass="p-button-danger"
+            ariaLabel="Eliminar documento"
             pTooltip="Eliminar documento"
             (click)="
               $event.stopPropagation();

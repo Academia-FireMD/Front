@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { documentoPdf } from './documento-pdf.fixture';
 import { servidorEstudio } from './estudio.fixture';
 
 const intentoId = 402;
@@ -8,42 +9,6 @@ const pregunta = {
   descripcion: 'Pregunta de prueba sobre el temario',
   respuestas: ['Primera opción', 'Segunda opción'],
 };
-
-function documentoPdf() {
-  const contenidos = [1, 2].map(
-    (pagina) =>
-      `BT /F1 18 Tf 45 760 Td (Documento de prueba R07, hoja ${pagina}) Tj ET`,
-  );
-  const objetos = [
-    '<< /Type /Catalog /Pages 2 0 R >>',
-    '<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>',
-    ...[5, 6].map(
-      (contenido) =>
-        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents ${contenido} 0 R /Resources << /Font << /F1 7 0 R >> >> >>`,
-    ),
-    ...contenidos.map(
-      (contenido) =>
-        `<< /Length ${contenido.length} >>\nstream\n${contenido}\nendstream`,
-    ),
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-  ];
-  let pdf = '%PDF-1.4\n';
-  const posiciones = objetos.map((objeto, indice) => {
-    const posicion = pdf.length;
-    pdf += indice + 1 + ' 0 obj\n' + objeto + '\nendobj\n';
-    return posicion;
-  });
-  const xref = pdf.length;
-  const total = objetos.length + 1;
-  pdf += `xref\n0 ${total}\n0000000000 65535 f \n`;
-  for (const posicion of posiciones) {
-    pdf += String(posicion).padStart(10, '0') + ' 00000 n \n';
-  }
-  return Buffer.from(
-    pdf +
-      `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`,
-  );
-}
 
 async function abrir(
   context: BrowserContext,
@@ -138,7 +103,16 @@ async function abrir(
               version: 1,
               valor: {
                 nota: 'Nota de la primera hoja',
-                subrayados: [],
+                subrayados: [
+                  {
+                    id: 'marca-qa',
+                    fragmento: 'Fragmento de estudio',
+                    color: '#ffd646',
+                    rectangulos: [
+                      { x: 0.075, y: 0.09, ancho: 0.45, alto: 0.035 },
+                    ],
+                  },
+                ],
                 trazos: [],
                 aparte: [],
               },
@@ -299,15 +273,15 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
     name: 'Tema',
     exact: true,
   });
-  const selectorDocumento = cabecera.getByRole('combobox', {
+  const vistaLibrillo = page.getByRole('tabpanel', { name: 'Librillo' });
+  const selectorDocumento = vistaLibrillo.getByRole('combobox', {
     name: 'Documento',
     exact: true,
   });
   await expect(selectorTema).toBeVisible();
   await expect(selectorDocumento).toBeVisible();
-  expect((await selectorTema.boundingBox())!.y).toBeCloseTo(
-    (await selectorDocumento.boundingBox())!.y,
-    0,
+  expect((await selectorDocumento.boundingBox())!.y).toBeLessThan(
+    (await lector.boundingBox())!.y,
   );
   await expect(
     cabecera.getByRole('link', {
@@ -374,7 +348,9 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
 
   await irAlTema(page, sinPdf.id);
   await expect(
-    page.getByText('Este tema todavía no tiene documentos disponibles.'),
+    vistaLibrillo.getByText(
+      'Este tema todavía no tiene documentos disponibles.',
+    ),
   ).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Hacer test' })).toBeEnabled();
   const historial = panel.getByRole('button', {
@@ -442,6 +418,28 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
     name: 'Tu nota para esta página',
   });
   await expect(nota).toHaveValue('Nota de la primera hoja');
+  const marca = lector.getByRole('button', {
+    name: 'Quitar subrayado Fragmento de estudio',
+  });
+  await expect(marca).toBeVisible();
+  const secciones = page.getByRole('tablist', {
+    name: 'Secciones del Temario',
+  });
+  const documentos = secciones.getByRole('tab', { name: 'Documentos' });
+  const librillo = secciones.getByRole('tab', { name: 'Librillo' });
+  await documentos.click();
+  await expect(documentos).toHaveAttribute('aria-selected', 'true');
+  await expect(
+    page.getByRole('button', { name: /Original · Estatutos/ }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(librillo).toHaveAttribute('aria-selected', 'true');
+  await page.goForward();
+  await expect(documentos).toHaveAttribute('aria-selected', 'true');
+  await librillo.click();
+  await expect(nota).toHaveValue('Nota de la primera hoja');
+  await expect(marca).toHaveCount(1);
+  expect(sesiones.descargasPdf).toBe(1);
 
   await pestanas.getByRole('button', { name: 'Práctica', exact: true }).click();
   await expect(lector).toBeHidden();
@@ -565,4 +563,58 @@ test('el tiempo del simulacro vence mientras su ventana está cerrada', async ({
   ).toBeVisible();
   expect(sesiones.inicios).toBe(2);
   expect(sesiones.finalizaciones).toBe(1);
+});
+
+test('mantiene el lector abierto si fallan el guardado remoto y la copia local', async ({
+  context,
+}) => {
+  test.skip(process.env['ESTUDIO_QA_VARIANTE'] !== 'staging');
+  const { page, tema } = await abrir(context, { width: 1440, height: 950 });
+  await page.addInitScript(() => {
+    const guardar = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (clave, valor) {
+      if (clave.startsWith('librillo-pdf:') && clave.endsWith(':borradores')) {
+        throw new DOMException(
+          'Almacenamiento bloqueado en QA',
+          'QuotaExceededError',
+        );
+      }
+      guardar.call(this, clave, valor);
+    };
+  });
+  let falloRemoto = true;
+  let intentos = 0;
+  await page.route('**/librillo/pdf/anotaciones', (route) => {
+    intentos++;
+    if (falloRemoto) return route.fulfill({ status: 503, json: {} });
+    const { partes } = route.request().postDataJSON();
+    return route.fulfill({
+      json: {
+        generacion: 0,
+        partes: partes.map(
+          ({ pagina, valor }: { pagina: number; valor: unknown }) => ({
+            pagina,
+            version: 2,
+            valor,
+          }),
+        ),
+      },
+    });
+  });
+  await irAlTema(page, tema.id);
+  await page.getByRole('button', { name: 'Anotaciones', exact: true }).click();
+  const nota = page.getByRole('textbox', { name: 'Tu nota para esta página' });
+  await expect(nota).toHaveValue('Nota de la primera hoja');
+  await nota.fill('Cambios que deben seguir visibles');
+  const perfil = page.locator('.lateral-bar .perfil');
+  await perfil.click();
+  await expect.poll(() => intentos).toBeGreaterThan(0);
+  await expect(
+    page.getByRole('button', { name: /Reintentar guardado/ }).first(),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/librillos/);
+  await expect(nota).toHaveValue('Cambios que deben seguir visibles');
+  falloRemoto = false;
+  await perfil.click();
+  await expect(page).toHaveURL(/\/app\/profile$/);
 });

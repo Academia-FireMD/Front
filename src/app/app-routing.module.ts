@@ -1,6 +1,6 @@
 import { alumnoNavigationGuard } from './guards/alumno-navigation.guard';
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { CanDeactivateFn, RouterModule, Routes } from '@angular/router';
 import { roleGuard } from './guards/auth/role.guard';
 import type { EstudioWorkspaceComponent } from './estudio/estudio-workspace.component';
 import type { PreviaLibrillosComponent } from './estudio/previa/previa-librillos.component';
@@ -14,6 +14,13 @@ import { ModuloApp } from './shared/models/modulo-app.enum';
 import { SuscripcionTipo } from './shared/models/subscription.model';
 import { environment } from '../environments/environment';
 
+const guardarSalidaTemario: CanDeactivateFn<PreviaLibrillosComponent> = (
+  visor,
+  _ruta,
+  _actual,
+  siguiente,
+) => visor.guardarAntesDeSalir(siguiente.url);
+
 const librillosRoutes: Routes = environment.librillosMenu
   ? [
       {
@@ -24,9 +31,7 @@ const librillosRoutes: Routes = environment.librillosMenu
           SubscriptionGuard,
           previaLibrillosGuard,
         ],
-        canDeactivate: [
-          (visor: PreviaLibrillosComponent) => visor.guardarAntesDeSalir(),
-        ],
+        canDeactivate: [guardarSalidaTemario],
         runGuardsAndResolvers: 'paramsOrQueryParamsChange',
         data: {
           expectedRole: 'ALUMNO',
