@@ -3,6 +3,7 @@ import { environment } from '../../../environments/environment';
 import { usuarioIdDeSubject } from '../../cursos/services/hidraulica-interactivo.service';
 
 export const RUTA_PREVIA_LIBRILLOS = '/app/librillos';
+export const ORIGEN_BIBLIOTECA = 'mis-documentos';
 
 const PREVIA_ANTERIOR = new Map<string, ContextoLibrillo>([
   ['estatutos', { id: 47, documentoId: 145 }],
@@ -72,6 +73,13 @@ export function retornoDeEdicionInteractiva(
   documento: string | null,
   habilitado: boolean,
 ) {
+  if (habilitado && params.get('desde') === ORIGEN_BIBLIOTECA) {
+    return {
+      ruta: RUTA_PREVIA_LIBRILLOS,
+      parametros: { tema: null, doc: null, vista: 'documentos' as const },
+    };
+  }
+
   const tema = usuarioIdDeSubject(params.get('tema'));
   const doc = usuarioIdDeSubject(documento);
   const vista = vistaDeTemario(params.get('vista'));

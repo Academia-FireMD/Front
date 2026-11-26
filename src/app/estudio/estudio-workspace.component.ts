@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { imagenesPerfilEstudio } from './estudio-tema';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -47,6 +48,7 @@ import {
   registro,
 } from './estudio-operaciones';
 import {
+  ORIGEN_BIBLIOTECA,
   RUTA_PREVIA_LIBRILLOS,
   retornoDeEdicionInteractiva,
 } from './previa/previa-librillos';
@@ -108,6 +110,7 @@ export class EstudioWorkspaceComponent {
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly destroyRef = inject(DestroyRef);
   private readonly aula = inject(AulaInmersivaService);
@@ -490,6 +493,7 @@ export class EstudioWorkspaceComponent {
 
   etiquetaVolver() {
     if (this.tipo === 'psico') return 'Volver a gestión';
+    if (this.desdeBiblioteca()) return 'Volver a Mis documentos';
     return this.retornoLibrillo().ruta === RUTA_PREVIA_LIBRILLOS
       ? 'Volver al Temario'
       : 'Volver al tema';
@@ -522,11 +526,25 @@ export class EstudioWorkspaceComponent {
         return;
       }
       await this.guardarAntesDeSalir();
+      const estado = this.location.getState() as {
+        volverAMisDocumentos?: boolean;
+      } | null;
+      if (this.desdeBiblioteca() && estado?.volverAMisDocumentos) {
+        this.location.back();
+        return;
+      }
       const { ruta, parametros } = this.retornoLibrillo();
       await this.router.navigate([ruta], { queryParams: parametros });
     } finally {
       this.saliendo.set(false);
     }
+  }
+
+  private desdeBiblioteca() {
+    return (
+      environment.librillosMenu &&
+      this.route.snapshot.queryParamMap.get('desde') === ORIGEN_BIBLIOTECA
+    );
   }
 
   private retornoLibrillo() {

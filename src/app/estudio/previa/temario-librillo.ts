@@ -5,14 +5,94 @@ import {
   ModuloTemario,
 } from '../../shared/models/documentacion.model';
 import { Tema } from '../../shared/models/pregunta.model';
+import { slugify } from '../../shared/utils/slugify.util';
 
 export interface TemaLibrillo {
   id: number;
   etiqueta: string;
   titulo: string;
+  descripcion?: string;
   modulo: string;
   enBanco: boolean;
   documentos: DocumentoTemario[];
+}
+
+export interface DocumentoBiblioteca {
+  documento: DocumentoTemario;
+  tema: TemaLibrillo;
+  titulo: string;
+  textoBusqueda: string;
+}
+
+function normalizarBusqueda(texto: string) {
+  return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
+}
+
+export function crearBibliotecaDocumentos(arbol: ModuloTemario[]) {
+  const biblioteca = new Map<number, DocumentoBiblioteca>();
+  for (const tema of crearTemarioLibrillo([], arbol)) {
+    for (const documento of tema.documentos) {
+      if (biblioteca.has(documento.id)) continue;
+      biblioteca.set(documento.id, {
+        documento,
+        tema,
+        titulo: tituloDeBiblioteca(documento, tema.descripcion),
+        textoBusqueda: normalizarBusqueda(
+          [
+            documento.identificador,
+            documento.descripcion,
+            documento.fileName,
+            documento.librillo?.titulo,
+            tema.titulo,
+            tema.modulo,
+          ].join(' '),
+        ),
+      });
+    }
+  }
+  return biblioteca;
+}
+
+export function filtrarBibliotecaDocumentos(
+  biblioteca: ReadonlyMap<number, DocumentoBiblioteca>,
+  busqueda: string,
+  temaId: number | null,
+) {
+  const palabras = normalizarBusqueda(busqueda).match(/\S+/g) ?? [];
+  const documentos: DocumentoTemario[] = [];
+  let disponibles = 0;
+  for (const { documento, tema, textoBusqueda } of biblioteca.values()) {
+    if (temaId !== null && temaId !== tema.id) continue;
+    if (!palabras.every((palabra) => textoBusqueda.includes(palabra))) continue;
+    documentos.push(documento);
+    if (documento.isDownloadable) disponibles++;
+  }
+  return {
+    documentos,
+    disponibles,
+    bloqueados: documentos.length - disponibles,
+  };
+}
+
+export function tituloDeBiblioteca(
+  documento: DocumentoTemario,
+  descripcionTema?: string,
+) {
+  const nombre = documento.identificador?.trim();
+  const descripcion = documento.descripcion?.trim();
+  if (nombre && !/^tema\s+\d+(?:[.-]\d+)*$/i.test(nombre)) {
+    const tema = slugify(descripcionTema ?? '');
+    const repiteTema =
+      tema && ('-' + slugify(nombre) + '-').includes('-' + tema + '-');
+    return repiteTema && descripcion ? descripcion : nombre;
+  }
+  return (
+    descripcion ||
+    documento.librillo?.titulo?.trim() ||
+    documento.fileName?.trim() ||
+    nombre ||
+    'Documento'
+  );
 }
 
 export function crearTemarioLibrillo(
@@ -30,6 +110,7 @@ export function crearTemarioLibrillo(
       id,
       etiqueta: modulo?.nombre ? `${nombre} / ${titulo}` : titulo,
       titulo,
+      descripcion,
       modulo: nombre,
       enBanco: true,
       documentos: [],
@@ -48,6 +129,7 @@ export function crearTemarioLibrillo(
         id,
         etiqueta: `${modulo.nombre} / ${titulo}`,
         titulo,
+        descripcion,
         modulo: modulo.nombre,
         enBanco: anterior?.enBanco ?? false,
         documentos: [...porId.values()],

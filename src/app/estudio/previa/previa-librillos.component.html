@@ -2,13 +2,28 @@
 @let tema = vista.tema;
 @let vistaActual = vistaDeTemario();
 
-<header class="cabecera" aria-labelledby="titulo-temario">
-  <h1 id="titulo-temario" class="titulo-temario">
+<header
+  class="cabecera"
+  [class.cabecera-biblioteca]="esBiblioteca()"
+  aria-labelledby="titulo-temario"
+>
+  <h1 #tituloTemario id="titulo-temario" class="titulo-temario" tabindex="-1">
     <i class="pi pi-book" aria-hidden="true"></i>
-    {{ tema?.titulo || "Temario" }}
+    {{ esBiblioteca() ? "Mis documentos" : tema?.titulo || "Temario" }}
   </h1>
 
-  @if (temas().length) {
+  @if (esBiblioteca()) {
+    <a
+      pButton
+      id="temas-y-practica"
+      class="p-button-outlined p-button-sm"
+      [routerLink]="[]"
+      [queryParams]="{ vista: 'librillo' }"
+      (click)="conservarBiblioteca('temas-y-practica')"
+    >
+      Temas y práctica
+    </a>
+  } @else if (temas().length) {
     <button
       #botonTemas
       pButton
@@ -53,97 +68,230 @@
   }
 </header>
 
-<nav
-  class="pestanas-librillo vistas-temario"
-  role="tablist"
-  aria-label="Secciones del Temario"
-  (keydown)="navegarPestanas($event)"
->
-  <button
-    #tabDocumentos
-    type="button"
-    role="tab"
-    id="tab-temario-documentos"
-    aria-controls="panel-temario-documentos"
-    [attr.aria-selected]="vistaActual === 'documentos'"
-    [attr.tabindex]="vistaActual === 'documentos' ? 0 : -1"
-    (click)="seleccionarVista('documentos')"
-  >
-    Documentos
-  </button>
-  <button
-    #tabLibrillo
-    type="button"
-    role="tab"
-    id="tab-temario-librillo"
-    aria-controls="panel-temario-librillo"
-    [attr.aria-selected]="vistaActual === 'librillo'"
-    [attr.tabindex]="vistaActual === 'librillo' ? 0 : -1"
-    (click)="seleccionarVista('librillo')"
-  >
-    Librillo
-  </button>
-</nav>
-
-@for (fuente of fallos(); track fuente) {
-  <div class="aviso aviso-con-accion">
-    <p role="alert">
-      {{
-        fuente === "arbol"
-          ? "No se pudieron cargar los documentos del temario."
-          : "No se pudo cargar el banco de temas para practicar."
-      }}
-    </p>
+@if (esBiblioteca()) {
+  <section class="biblioteca-documentos" aria-labelledby="titulo-temario">
+    @if (estado() === "sesion") {
+      <p class="aviso" role="alert">
+        Tu sesión ha cambiado. Vuelve a abrir Mis documentos desde tu cuenta.
+      </p>
+    } @else if (arbolCargando()) {
+      <p class="aviso" role="status">Cargando tus documentos…</p>
+    } @else if (!arbolDisponible()) {
+      <div class="aviso aviso-con-accion">
+        <p role="alert">No se pudieron cargar tus documentos.</p>
+        <button
+          pButton
+          type="button"
+          class="p-button-outlined p-button-sm"
+          (click)="recargar('arbol')"
+        >
+          Reintentar documentos
+        </button>
+      </div>
+    } @else if (!biblioteca().size) {
+      <p class="aviso" role="status">
+        Todavía no hay documentos publicados para tu cuenta.
+      </p>
+    } @else {
+      <div class="filtros-biblioteca">
+        <input
+          pInputText
+          #buscar
+          type="search"
+          aria-label="Buscar documentos"
+          aria-controls="biblioteca-resultados"
+          placeholder="Buscar documentos"
+          [value]="busquedaBiblioteca()"
+          (input)="buscarEnBiblioteca(buscar.value)"
+        />
+        <button
+          pButton
+          type="button"
+          class="p-button-outlined p-button-sm filtros-biblioteca-movil"
+          aria-controls="filtro-tema-biblioteca"
+          [attr.aria-expanded]="filtrosBibliotecaAbiertos()"
+          (click)="filtrosBibliotecaAbiertos.set(!filtrosBibliotecaAbiertos())"
+        >
+          <i class="pi pi-filter" aria-hidden="true"></i>
+          Filtros{{ temaBiblioteca() !== null ? " (1 activo)" : "" }}
+        </button>
+        <div
+          class="filtro-tema-biblioteca"
+          [class.filtro-abierto]="filtrosBibliotecaAbiertos()"
+        >
+          <select
+            id="filtro-tema-biblioteca"
+            class="p-inputtext"
+            aria-label="Tema"
+            aria-controls="biblioteca-resultados"
+            [ngModel]="temaBiblioteca()"
+            (ngModelChange)="filtrarTemaBiblioteca($event)"
+          >
+            <option [ngValue]="null">Todos los temas</option>
+            @for (opcion of temasBiblioteca(); track opcion.id) {
+              <option [ngValue]="opcion.id">{{ opcion.etiqueta }}</option>
+            }
+          </select>
+          <i class="pi pi-chevron-down" aria-hidden="true"></i>
+        </div>
+        <div class="resumen-biblioteca">
+          <p role="status">
+            @let disponibles = bibliotecaFiltrada().disponibles;
+            @let bloqueados = bibliotecaFiltrada().bloqueados;
+            {{ disponibles }}
+            {{
+              disponibles === 1
+                ? "documento disponible"
+                : "documentos disponibles"
+            }}
+            @if (bloqueados > 0) {
+              · {{ bloqueados }}
+              {{ bloqueados === 1 ? "bloqueado" : "bloqueados" }}
+            }
+          </p>
+          @if (filtrosBibliotecaActivos()) {
+            <button
+              pButton
+              type="button"
+              class="p-button-text p-button-sm"
+              (click)="limpiarFiltrosBiblioteca(); buscar.focus()"
+            >
+              Limpiar filtros
+            </button>
+          }
+        </div>
+      </div>
+      <div
+        #resultadosBiblioteca
+        id="biblioteca-resultados"
+        class="biblioteca-resultados"
+      >
+        @if (bibliotecaFiltrada().documentos.length) {
+          <app-documentos-del-tema
+            [documentos]="bibliotecaFiltrada().documentos"
+            [biblioteca]="biblioteca()"
+            [modoTemario]="true"
+            [librillosActivos]="librillosActivos()"
+            (abrirPdf)="abrirPdf($event)"
+            (abrirEdicionDesdeBiblioteca)="
+              conservarBiblioteca('librillo-doc-' + $event)
+            "
+          />
+        } @else {
+          <p class="aviso" role="status">
+            No hay documentos que coincidan con los filtros.
+          </p>
+        }
+      </div>
+    }
+  </section>
+} @else {
+  <div class="navegacion-temario">
+    <nav
+      class="pestanas-librillo vistas-temario"
+      role="tablist"
+      aria-label="Secciones del Temario"
+      (keydown)="navegarPestanas($event)"
+    >
+      <button
+        #tabDocumentos
+        type="button"
+        role="tab"
+        id="tab-temario-documentos"
+        aria-controls="panel-temario-documentos"
+        [attr.aria-selected]="vistaActual === 'documentos'"
+        [attr.tabindex]="vistaActual === 'documentos' ? 0 : -1"
+        (click)="seleccionarVista('documentos')"
+      >
+        Documentos
+      </button>
+      <button
+        #tabLibrillo
+        type="button"
+        role="tab"
+        id="tab-temario-librillo"
+        aria-controls="panel-temario-librillo"
+        [attr.aria-selected]="vistaActual === 'librillo'"
+        [attr.tabindex]="vistaActual === 'librillo' ? 0 : -1"
+        (click)="seleccionarVista('librillo')"
+      >
+        Librillo
+      </button>
+    </nav>
     <button
       pButton
       type="button"
-      class="p-button-outlined p-button-sm"
-      (click)="recargar(fuente)"
+      class="p-button-text volver-biblioteca"
+      aria-label="Volver a Mis documentos"
+      (click)="volverABiblioteca()"
     >
-      {{
-        fuente === "arbol"
-          ? "Reintentar documentos"
-          : "Reintentar banco de temas"
-      }}
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>
+      Mis documentos
     </button>
   </div>
-}
 
-@if (salidaPendiente()) {
-  <div class="aviso aviso-con-accion">
-    <p role="alert">
-      No se pudieron guardar los cambios. Reintenta antes de salir del PDF.
-    </p>
-    <button
-      pButton
-      type="button"
-      class="p-button-outlined p-button-sm"
-      (click)="reintentarSalida()"
-    >
-      Reintentar guardado
-    </button>
-  </div>
-}
+  @for (fuente of fallos(); track fuente) {
+    <div class="aviso aviso-con-accion">
+      <p role="alert">
+        {{
+          fuente === "arbol"
+            ? "No se pudieron cargar los documentos del temario."
+            : "No se pudo cargar el banco de temas para practicar."
+        }}
+      </p>
+      <button
+        pButton
+        type="button"
+        class="p-button-outlined p-button-sm"
+        (click)="recargar(fuente)"
+      >
+        {{
+          fuente === "arbol"
+            ? "Reintentar documentos"
+            : "Reintentar banco de temas"
+        }}
+      </button>
+    </div>
+  }
 
-@if (estado() === "sesion") {
-  <p class="aviso" role="alert">
-    Tu sesión ha cambiado. Vuelve a abrir el Temario desde tu cuenta.
-  </p>
-} @else if (estado() === "cargando") {
-  <p class="aviso" role="status">Cargando tu temario…</p>
-} @else if (estado() === "disponible" && !tema) {
-  @if (arbolCargando() && vista.temaInaccesible) {
-    <p class="aviso" role="status">Cargando documentos…</p>
-  } @else if (vista.temaInaccesible) {
+  @if (salidaPendiente()) {
+    <div class="aviso aviso-con-accion">
+      <p role="alert">
+        No se pudieron guardar los cambios. Reintenta antes de salir del PDF.
+      </p>
+      <button
+        pButton
+        type="button"
+        class="p-button-outlined p-button-sm"
+        (click)="reintentarSalida()"
+      >
+        Reintentar guardado
+      </button>
+    </div>
+  }
+
+  @if (estado() === "sesion") {
     <p class="aviso" role="alert">
-      Este tema o documento no está disponible en tu temario.
+      Tu sesión ha cambiado. Vuelve a abrir el Temario desde tu cuenta.
     </p>
-  } @else if (temas().length) {
-    <p class="aviso" role="status">
-      Elige un tema para consultar sus documentos o practicar.
-    </p>
-  } @else {
-    <p class="aviso" role="status">Tu cuenta aún no tiene temas disponibles.</p>
+  } @else if (estado() === "cargando") {
+    <p class="aviso" role="status">Cargando tu temario…</p>
+  } @else if (estado() === "disponible" && !tema) {
+    @if (arbolCargando() && vista.temaInaccesible) {
+      <p class="aviso" role="status">Cargando documentos…</p>
+    } @else if (vista.temaInaccesible) {
+      <p class="aviso" role="alert">
+        Este tema o documento no está disponible en tu temario.
+      </p>
+    } @else if (temas().length) {
+      <p class="aviso" role="status">
+        Elige un tema para consultar sus documentos o practicar.
+      </p>
+    } @else {
+      <p class="aviso" role="status">
+        Tu cuenta aún no tiene temas disponibles.
+      </p>
+    }
   }
 }
 
@@ -153,7 +301,7 @@
   id="panel-temario-documentos"
   role="tabpanel"
   aria-labelledby="tab-temario-documentos"
-  [hidden]="vistaActual !== 'documentos'"
+  [hidden]="esBiblioteca() || vistaActual !== 'documentos'"
   (focusin)="registrarFoco($event, 'documentos')"
 >
   @if (tema) {

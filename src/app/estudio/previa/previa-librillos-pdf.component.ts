@@ -573,6 +573,7 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
         queryParams: { pagina: destino, referencia: null },
         queryParamsHandling: 'merge',
         replaceUrl: true,
+        state: this.router.lastSuccessfulNavigation?.extras.state,
       });
     }
     this.espacio().nativeElement.scrollTop = 0;

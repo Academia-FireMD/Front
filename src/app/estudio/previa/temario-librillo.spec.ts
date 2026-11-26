@@ -4,9 +4,12 @@ import {
   ModuloTemario,
 } from '../../shared/models/documentacion.model';
 import {
+  crearBibliotecaDocumentos,
   crearTemarioLibrillo,
+  filtrarBibliotecaDocumentos,
   pdfDisponible,
   seleccionLibrillo,
+  tituloDeBiblioteca,
 } from './temario-librillo';
 
 function recurso(
@@ -138,5 +141,77 @@ describe('Temario del Librillo', () => {
         recurso(1, { fileName: null, url: 'legacy.PDF?version=2' }),
       ),
     ).toBe(true);
+  });
+});
+
+describe('Mis documentos', () => {
+  it('prefiere la descripción si el identificador repite el tema y conserva el nombre de los demás', () => {
+    const tema = 'Término municipal de VLC';
+    const pdf = recurso(21, {
+      identificador: '01.5_Ayto. VLC_ TERMINO MUNICIPAL DE VLC',
+      descripcion: '01.5_Puentes',
+    });
+    const otroPdf = recurso(22, {
+      identificador: 'Mapa de zonas inundables',
+      descripcion: 'Versión ampliada',
+    });
+
+    expect(tituloDeBiblioteca(pdf, tema)).toBe('01.5_Puentes');
+    expect(tituloDeBiblioteca(otroPdf, tema)).toBe('Mapa de zonas inundables');
+  });
+
+  it('indexa documentos del árbol por módulo, tema, título, descripción y nombre de archivo', () => {
+    const guia = recurso(21, {
+      identificador: 'Tema 4',
+      descripcion: 'Guía de actuación',
+      fileName: 'incendios-urbanos.DOCX',
+      isLocked: true,
+    });
+    const bloqueado = recurso(23, {
+      identificador: 'Otro documento',
+      isDownloadable: false,
+      isLocked: true,
+    });
+    const biblioteca = crearBibliotecaDocumentos([
+      {
+        id: 1,
+        nombre: 'Intervención',
+        temas: [
+          {
+            id: 4,
+            numero: 4,
+            descripcion: 'Evacuación',
+            documentos: [guia],
+          },
+        ],
+      },
+      {
+        id: 2,
+        nombre: 'Anexos',
+        temas: [{ id: 9, numero: 9, descripcion: '', documentos: [bloqueado] }],
+      },
+    ]);
+
+    expect(tituloDeBiblioteca(guia)).toBe('Guía de actuación');
+    expect(filtrarBibliotecaDocumentos(biblioteca, '', null)).toEqual({
+      documentos: [guia, bloqueado],
+      disponibles: 1,
+      bloqueados: 1,
+    });
+    expect(
+      filtrarBibliotecaDocumentos(
+        biblioteca,
+        'EVACUACION intervención tema 4 guia DOCX',
+        4,
+      ).documentos,
+    ).toEqual([guia]);
+    expect(
+      filtrarBibliotecaDocumentos(biblioteca, 'GUIA', 9).documentos,
+    ).toEqual([]);
+    expect(filtrarBibliotecaDocumentos(biblioteca, 'anexos', null)).toEqual({
+      documentos: [bloqueado],
+      disponibles: 0,
+      bloqueados: 1,
+    });
   });
 });

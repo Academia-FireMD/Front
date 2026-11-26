@@ -64,6 +64,110 @@
   overflow: auto;
 }
 
+.cabecera-biblioteca {
+  justify-content: space-between;
+}
+
+.biblioteca-documentos {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.filtros-biblioteca {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-card);
+
+  input,
+  select,
+  button {
+    min-height: 44px;
+  }
+
+  input,
+  select {
+    min-width: 0;
+    width: 100%;
+    font-size: 1rem;
+  }
+}
+
+.resumen-biblioteca {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 0.65rem;
+  color: var(--text-color-secondary);
+
+  p {
+    margin: 0;
+  }
+}
+
+.filtro-tema-biblioteca {
+  position: relative;
+  min-width: 0;
+
+  select {
+    appearance: none;
+    padding-inline-end: 2rem;
+  }
+
+  i {
+    position: absolute;
+    inset-inline-end: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+    pointer-events: none;
+  }
+}
+
+.filtros-biblioteca-movil {
+  display: none;
+}
+
+.biblioteca-resultados {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem 1rem 1rem;
+}
+
+.navegacion-temario {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-card);
+
+  .vistas-temario {
+    border: 0;
+    padding: 0;
+  }
+
+  .volver-biblioteca {
+    gap: 0.5rem;
+    margin-inline-start: auto;
+    min-height: 44px;
+  }
+}
+
+.cabecera,
+.navegacion-temario {
+  flex-shrink: 0;
+}
+
 .panel-documentos[hidden],
 .panel-lectura[hidden] {
   display: none;
@@ -182,6 +286,41 @@
 
   .practica {
     flex-wrap: wrap;
+  }
+
+  .filtros-biblioteca {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .filtros-biblioteca-movil {
+    grid-column: 2;
+    grid-row: 1;
+    display: inline-flex;
+    gap: 0.35rem;
+  }
+
+  .filtro-tema-biblioteca {
+    display: none;
+    grid-column: 1 / -1;
+
+    &.filtro-abierto {
+      display: block;
+    }
+  }
+
+  .resumen-biblioteca {
+    grid-column: 1 / -1;
+    font-size: 0.875rem;
+  }
+
+  .biblioteca-resultados {
+    padding-inline: 0.75rem;
+  }
+
+  .navegacion-temario .volver-biblioteca {
+    padding-inline: 0.6rem;
+    font-size: 0.875rem;
   }
 }
 

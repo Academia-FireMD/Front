@@ -772,26 +772,21 @@ test('El atajo lateral unifica el Temario en staging y vuelve desde la edición 
   ]);
   await link.press('Enter');
   await expect(
-    page.getByRole('heading', { name: 'Temario', exact: true }),
+    page.getByRole('heading', { name: 'Mis documentos', exact: true }),
   ).toBeVisible();
   const parametros = () => new URL(page.url()).searchParams;
   await expect.poll(() => parametros().get('vista')).toBe('documentos');
-  await page
-    .getByTestId('librillo-selector-tema')
-    .getByRole('combobox')
-    .press('Space');
-  await page.getByRole('option', { name: /Estatutos de prueba/ }).click();
-  await expect.poll(() => parametros().get('tema')).toBe(String(backend.TEMA));
-  await expect(page.getByRole('tab', { name: 'Documentos' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  await page.getByRole('link', { name: 'Abrir edición interactiva' }).click();
+  const buscar = page.getByRole('searchbox', { name: 'Buscar documentos' });
+  await buscar.fill('estatutos de prueba');
+  const edicion = page.getByRole('link', { name: 'Abrir edición interactiva' });
+  await edicion.click();
   await expect(visor(page).locator('#hojaSel option')).toHaveCount(19);
-  await page.getByRole('button', { name: 'Volver al Temario' }).click();
-  await expect.poll(() => parametros().get('tema')).toBe(String(backend.TEMA));
-  await expect.poll(() => parametros().get('doc')).toBe(String(backend.DOC));
+  await page.getByRole('button', { name: 'Volver a Mis documentos' }).click();
+  await expect.poll(() => parametros().get('tema')).toBeNull();
+  await expect.poll(() => parametros().get('doc')).toBeNull();
   await expect.poll(() => parametros().get('vista')).toBe('documentos');
+  await expect(buscar).toHaveValue('estatutos de prueba');
+  await expect(edicion).toBeFocused();
 
   backend.opciones.piloto = 2;
   await page.goto(`/app/librillos?tema=${backend.TEMA}`);

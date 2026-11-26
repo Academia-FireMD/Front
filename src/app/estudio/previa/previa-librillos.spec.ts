@@ -113,6 +113,15 @@ describe('Retorno de la edición interactiva R07', () => {
       ruta: '/app/librillos',
       parametros: { tema: null, doc: 145, vista: undefined },
     });
+    const biblioteca = convertToParamMap({
+      desde: 'mis-documentos',
+      tema: '47',
+      vista: 'documentos',
+    });
+    expect(retornoDeEdicionInteractiva(biblioteca, '145', true)).toEqual({
+      ruta: '/app/librillos',
+      parametros: { tema: null, doc: null, vista: 'documentos' },
+    });
   });
 });
 
@@ -307,6 +316,62 @@ describe('Navegación del Temario', () => {
     expect(visor(harness)).toBeUndefined();
     expect(harness.routeNativeElement?.textContent).toContain(
       'Este documento no está disponible en el tema seleccionado.',
+    );
+  });
+
+  it('vuelve a la biblioteca con sus filtros tras un fallo de guardado del lector', async () => {
+    const inicio = ruta + '?vista=documentos';
+    const harness = await RouterTestingHarness.create(inicio);
+    const componente = harness.routeDebugElement!
+      .componentInstance as PreviaLibrillosComponent;
+    const router = TestBed.inject(Router);
+    expect(
+      harness.routeNativeElement?.querySelector('h1')?.textContent,
+    ).toContain('Mis documentos');
+    expect(
+      harness.routeNativeElement?.querySelector('.selector-temas'),
+    ).toBeNull();
+
+    componente.buscarEnBiblioteca('NORMÁTIVA');
+    componente.filtrarTemaBiblioteca(9);
+    componente.abrirPdf(21);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(router.parseUrl(router.url).queryParams).toEqual({
+      tema: '9',
+      doc: '21',
+      vista: 'librillo',
+    });
+    const lector = visor(harness);
+    expect(lector.documento).toBe(doc);
+    lector.guardarAntesDeSalir.mockResolvedValueOnce(false);
+    expect(await componente.volverABiblioteca()).toBe(false);
+    expect(componente.salidaPendiente()).toBe(inicio);
+
+    componente.reintentarSalida();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(router.url).toBe(inicio);
+    expect(lector.guardarAntesDeSalir).toHaveBeenCalledTimes(2);
+    expect(componente.busquedaBiblioteca()).toBe('NORMÁTIVA');
+    expect(componente.temaBiblioteca()).toBe(9);
+    expect(visor(harness)).toBeUndefined();
+  });
+
+  it('distingue la biblioteca sin publicaciones de un enlace ajeno al catálogo', async () => {
+    getDocumentTree$.mockReturnValueOnce(of([]));
+    const harness = await RouterTestingHarness.create(
+      ruta + '?vista=documentos',
+    );
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Todavía no hay documentos publicados',
+    );
+    await harness.navigateByUrl(ruta + '?vista=documentos&doc=9999');
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Este tema o documento no está disponible',
+    );
+    expect(harness.routeNativeElement?.textContent).not.toContain(
+      'Todavía no hay documentos publicados',
     );
   });
 });

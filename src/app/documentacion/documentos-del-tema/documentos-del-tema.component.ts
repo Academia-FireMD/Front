@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -12,10 +13,14 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { firstValueFrom } from 'rxjs';
 import {
+  ORIGEN_BIBLIOTECA,
   RUTA_PREVIA_LIBRILLOS,
   VistaTemario,
 } from '../../estudio/previa/previa-librillos';
-import { pdfDisponible } from '../../estudio/previa/temario-librillo';
+import {
+  DocumentoBiblioteca,
+  pdfDisponible,
+} from '../../estudio/previa/temario-librillo';
 import { UserService } from '../../services/user.service';
 import { DocumentoTemario } from '../../shared/models/documentacion.model';
 import { buildDocumentDownloadFileName } from '../../shared/utils/document-download-file-name';
@@ -24,20 +29,23 @@ import { DocumentosService } from '../services/documentacion.service';
 @Component({
   selector: 'app-documentos-del-tema',
   standalone: true,
-  imports: [RouterLink, ButtonModule, TooltipModule],
+  imports: [RouterLink, NgTemplateOutlet, ButtonModule, TooltipModule],
   templateUrl: './documentos-del-tema.component.html',
   styleUrl: './documentos-del-tema.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DocumentosDelTemaComponent {
   readonly documentos = input.required<readonly DocumentoTemario[]>();
-  readonly temaId = input.required<number>();
+  readonly temaId = input<number>();
+  readonly biblioteca = input<ReadonlyMap<number, DocumentoBiblioteca>>();
   readonly modoTemario = input(false);
   readonly librillosActivos = input(false);
   readonly librilloTemarioActivo = input(false);
   readonly vistaOrigen = input<VistaTemario>('documentos');
   readonly abrirPdf = output<number>();
+  readonly abrirEdicionDesdeBiblioteca = output<number>();
 
+  readonly origenBiblioteca = ORIGEN_BIBLIOTECA;
   readonly rutaTemario = RUTA_PREVIA_LIBRILLOS;
   readonly pdfDisponible = pdfDisponible;
   private readonly service = inject(DocumentosService);
@@ -55,6 +63,19 @@ export class DocumentosDelTemaComponent {
     }
     this.abrirPdf.emit(documento.id);
     await this.verDocumentoAlumno(documento);
+  }
+
+  registrarAperturaEdicion(evento: MouseEvent, documento: DocumentoTemario) {
+    if (
+      this.biblioteca() &&
+      evento.button === 0 &&
+      !evento.ctrlKey &&
+      !evento.shiftKey &&
+      !evento.altKey &&
+      !evento.metaKey
+    ) {
+      this.abrirEdicionDesdeBiblioteca.emit(documento.id);
+    }
   }
 
   async descargarDocumentoAlumno(documento: DocumentoTemario) {
