@@ -158,6 +158,9 @@ describe('Mis documentos', () => {
 
     expect(tituloDeBiblioteca(pdf, tema)).toBe('01.5_Puentes');
     expect(tituloDeBiblioteca(otroPdf, tema)).toBe('Mapa de zonas inundables');
+    expect(tituloDeBiblioteca(otroPdf, 'Zonas inundables')).toBe(
+      'Mapa de zonas inundables',
+    );
   });
 
   it('indexa documentos del árbol por módulo, tema, título, descripción y nombre de archivo', () => {

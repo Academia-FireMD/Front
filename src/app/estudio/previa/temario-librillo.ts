@@ -82,9 +82,10 @@ export function tituloDeBiblioteca(
   const descripcion = documento.descripcion?.trim();
   if (nombre && !/^tema\s+\d+(?:[.-]\d+)*$/i.test(nombre)) {
     const tema = slugify(descripcionTema ?? '');
-    const repiteTema =
-      tema && ('-' + slugify(nombre) + '-').includes('-' + tema + '-');
-    return repiteTema && descripcion ? descripcion : nombre;
+    const ultimoSegmento = nombre.split(/[_/|·]|\s[-–—]\s/).pop() ?? nombre;
+    return tema && descripcion && slugify(ultimoSegmento) === tema
+      ? descripcion
+      : nombre;
   }
   return (
     descripcion ||
