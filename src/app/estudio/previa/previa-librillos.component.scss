@@ -312,34 +312,10 @@
   }
 }
 
-.barra-lector {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  background: var(--surface-card);
-}
-.anotaciones-escritorio {
-  min-height: 44px;
-  padding: 0 0.85rem;
-  border: 0;
-  border-radius: 0.45rem;
-  background: transparent;
-  color: var(--text-color);
-  font: inherit;
-  cursor: pointer;
-}
-.anotaciones-escritorio[aria-pressed="true"] {
-  color: var(--primary-color);
-  background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-card));
-}
 .navegacion-movil {
   display: none;
 }
 @media (max-width: 1024px) {
-  .anotaciones-escritorio {
-    display: none;
-  }
   .navegacion-movil {
     display: flex;
   }

@@ -33,8 +33,10 @@ app-previa-librillos-pdf {
     }
   }
 
-  &[data-practica-disponible] .anotaciones-pdf-escritorio {
-    display: none;
+  @media (max-width: 1024px) {
+    &[data-practica-disponible] .anotaciones-pdf-escritorio {
+      display: none;
+    }
   }
   @media (max-width: 720px) {
     .anotaciones-pdf-escritorio {

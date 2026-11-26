@@ -817,6 +817,11 @@ export class PreviaLibrillosPdfComponent implements AfterViewInit {
     this.espacio().nativeElement.scrollTop = Math.max(0, superior - 80);
   }
 
+  mostrarLectura() {
+    this.lectura.set(true);
+    this.contexto?.pestana.set('lectura');
+  }
+
   mostrarAnotaciones() {
     this.cerrarPaleta();
     this.lectura.set(false);

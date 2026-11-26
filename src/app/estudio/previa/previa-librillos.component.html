@@ -187,53 +187,25 @@
 >
   @if (tema) {
     @for (recurso of recursosMontados(); track recurso) {
-      <div class="barra-lector">
-        @if (tema.documentos.length > 1 || vista.documentoInaccesible) {
-          <div class="campo-temario selector-pdf">
-            <label id="etiqueta-documento-librillo" for="documento-librillo"
-              >Documento</label
-            >
-            <p-dropdown
-              #selectorPdf
-              inputId="documento-librillo"
-              ariaLabelledBy="etiqueta-documento-librillo"
-              [options]="tema.documentos"
-              optionLabel="descripcion"
-              optionValue="id"
-              [ngModel]="vista.documento?.id ?? null"
-              (onChange)="seleccionarDocumento($event.value)"
-              placeholder="Selecciona un documento"
-              styleClass="w-full"
-            >
-              <ng-template pTemplate="selectedItem" let-documento>{{
-                documento.descripcion ||
-                  documento.identificador ||
-                  documento.fileName
-              }}</ng-template>
-              <ng-template pTemplate="item" let-documento>{{
-                documento.descripcion ||
-                  documento.identificador ||
-                  documento.fileName
-              }}</ng-template>
-            </p-dropdown>
-          </div>
-        }
-        @if (practicaDisponible() && lectorPdfActivo()) {
-          <button
-            type="button"
-            class="anotaciones-escritorio"
-            [attr.aria-pressed]="pestana() === 'anotaciones'"
-            aria-controls="librillo-lectura"
-            (click)="
-              pestana.set(
-                pestana() === 'anotaciones' ? 'lectura' : 'anotaciones'
-              )
-            "
+      @if (tema.documentos.length > 1 || vista.documentoInaccesible) {
+        <div class="campo-temario selector-pdf">
+          <label id="etiqueta-documento-librillo" for="documento-librillo"
+            >Documento</label
           >
-            Anotaciones
-          </button>
-        }
-      </div>
+          <p-dropdown
+            #selectorPdf
+            inputId="documento-librillo"
+            ariaLabelledBy="etiqueta-documento-librillo"
+            [options]="documentosDelSelector()"
+            optionLabel="nombre"
+            optionValue="id"
+            [ngModel]="vista.documento?.id ?? null"
+            (onChange)="seleccionarDocumento($event.value)"
+            placeholder="Selecciona un documento"
+            styleClass="w-full"
+          />
+        </div>
+      }
       @if (
         librillosActivos() &&
         vista.documento?.isDownloadable &&

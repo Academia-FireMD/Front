@@ -204,6 +204,15 @@ export class PreviaLibrillosComponent {
   readonly seleccion = computed(() =>
     seleccionLibrillo(this.temas(), this.params()),
   );
+  readonly documentosDelSelector = computed(() =>
+    (this.seleccion().tema?.documentos ?? []).map((documento) => ({
+      id: documento.id,
+      nombre:
+        documento.descripcion?.trim() ||
+        documento.identificador ||
+        documento.fileName,
+    })),
+  );
   readonly vistaDeTemario = computed<VistaTemario>(() =>
     this.salidaPendiente()
       ? 'librillo'

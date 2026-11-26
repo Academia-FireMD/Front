@@ -265,10 +265,23 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   await expect(panel).toBeVisible();
   await expect(lector).toBeVisible();
   await expect(page.getByTestId('pagina-librillo')).toHaveText('Página 1 de 2');
-  const cabecera = page.getByRole('banner', { name: 'Temario', exact: true });
+  const titulo = tema.numero + ' · ' + tema.descripcion;
+  const cabecera = page.getByRole('banner', { name: titulo, exact: true });
   await expect(
-    cabecera.getByRole('heading', { name: 'Temario', exact: true }),
+    cabecera.getByRole('heading', { name: titulo, exact: true }),
   ).toBeVisible();
+  const notas = lector.getByRole('button', {
+    name: 'Anotaciones',
+    exact: true,
+  });
+  await expect(notas).toHaveCount(1);
+  await expect(lector.locator('.barra-pdf')).toContainText('Anotaciones');
+  await notas.click();
+  await expect(
+    lector.getByPlaceholder('Escribe una nota sobre esta página'),
+  ).toHaveValue('Nota de la primera hoja');
+  await notas.click();
+  await expect(notas).toHaveAttribute('aria-pressed', 'false');
   const selectorTema = cabecera.getByRole('combobox', {
     name: 'Tema',
     exact: true,

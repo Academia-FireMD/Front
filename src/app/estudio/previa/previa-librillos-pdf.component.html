@@ -8,7 +8,7 @@
       <button
         type="button"
         [attr.aria-pressed]="lectura()"
-        (click)="lectura.set(true)"
+        (click)="mostrarLectura()"
       >
         Lectura
       </button>
@@ -35,7 +35,8 @@
           type="button"
           class="p-button-text anotaciones-pdf-escritorio"
           [attr.aria-pressed]="vistaAnotaciones()"
-          (click)="lectura.set(!lectura())"
+          aria-controls="anotaciones-del-pdf"
+          (click)="vistaAnotaciones() ? mostrarLectura() : mostrarAnotaciones()"
         >
           Anotaciones
         </button>
@@ -366,7 +367,11 @@
   </section>
 
   @if (!editor()) {
-    <aside class="notas-pdf" aria-label="Anotaciones del documento">
+    <aside
+      id="anotaciones-del-pdf"
+      class="notas-pdf"
+      aria-label="Anotaciones del documento"
+    >
       <section aria-labelledby="titulo-notas-librillo">
         <div class="anotaciones-titulo">
           <h2 id="titulo-notas-librillo">Notas</h2>
