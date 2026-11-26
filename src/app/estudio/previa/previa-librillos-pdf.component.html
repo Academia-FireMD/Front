@@ -29,6 +29,17 @@
     [attr.aria-label]="'PDF de ' + documento().identificador"
   >
     <div class="barra-pdf">
+      @if (!editor()) {
+        <button
+          pButton
+          type="button"
+          class="p-button-text anotaciones-pdf-escritorio"
+          [attr.aria-pressed]="vistaAnotaciones()"
+          (click)="lectura.set(!lectura())"
+        >
+          Anotaciones
+        </button>
+      }
       <button
         pButton
         type="button"

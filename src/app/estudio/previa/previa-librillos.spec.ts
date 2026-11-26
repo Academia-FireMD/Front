@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ToastrService } from 'ngx-toastr';
+import { Dropdown } from 'primeng/dropdown';
 import { of, throwError } from 'rxjs';
 import { DocumentosService } from '../../documentacion/services/documentacion.service';
 import { AppConfigService } from '../../services/app-config.service';
@@ -202,6 +203,19 @@ describe('Navegación del Temario', () => {
         { provide: ToastrService, useValue: { warning } },
       ],
     });
+  });
+
+  it('muestra el título del tema y abre el catálogo con un clic', async () => {
+    const harness = await RouterTestingHarness.create(ruta + '?tema=9');
+    const root = harness.routeNativeElement!;
+    expect(root.querySelector('h1')?.textContent).toContain('9 · Reglamento');
+    const dropdown = harness.routeDebugElement!.query(By.directive(Dropdown))
+      .componentInstance as Dropdown;
+    const mostrar = jest.spyOn(dropdown, 'show');
+    (root.querySelector('.boton-temas') as HTMLButtonElement).click();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    expect(mostrar).toHaveBeenCalledTimes(1);
   });
 
   it('monta el PDF al entrar en Librillo y conserva instancia y posición al alternar vistas', async () => {

@@ -113,7 +113,8 @@
   }
 
   button {
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
 
     &:disabled {
       opacity: 0.5;

@@ -90,13 +90,22 @@
               style="width: 100%"
               formControlName="descripcion"
             ></textarea>
-            <label for="descripcion">Descripcion</label>
+            <label for="descripcion">Descripción</label>
           </p-floatLabel>
           <div>
             <label class="block mb-2">Tema</label>
             <app-tema-select
-              [controlTemas]="uploadingFileFormGroup.controls['temaIds']"
+              [multiple]="false"
+              [controlTemas]="uploadingFileFormGroup.controls['temaId']"
             ></app-tema-select>
+            <button
+              pButton
+              type="button"
+              class="p-button-text"
+              label="Quitar tema"
+              *ngIf="uploadingFileFormGroup.controls.temaId.value != null"
+              (click)="uploadingFileFormGroup.controls.temaId.setValue(null)"
+            ></button>
           </div>
           <div class="flex flex-column gap-3">
             <div class="flex flex-column gap-2">
@@ -124,9 +133,7 @@
                   [binary]="true"
                   inputId="requireWatermark"
                 ></p-checkbox>
-                <label for="requireWatermark" class="ml-2"
-                  >Aplicar marca de agua</label
-                >
+                <label for="requireWatermark" class="ml-2">Marca de agua</label>
               </div>
               <small class="text-color-secondary ml-4">
                 <i class="pi pi-info-circle"></i>
@@ -138,11 +145,7 @@
           </div>
           <div class="flex justify-content-end">
             <app-async-button
-              label="{{
-                viewportService.screenWidth == 'xs'
-                  ? undefined
-                  : 'Subir Documento'
-              }}"
+              label="Subir documento"
               icon="pi pi-upload"
               [action]="subirDocumento.bind(this)"
               [disabled]="
@@ -181,13 +184,22 @@
           style="width: 100%"
           formControlName="descripcion"
         ></textarea>
-        <label for="descripcion">Descripcion</label>
+        <label for="descripcion">Descripción</label>
       </p-floatLabel>
       <div>
         <label class="block mb-2">Tema</label>
         <app-tema-select
-          [controlTemas]="editarDocumentoForm.controls['temaIds']"
+          [multiple]="false"
+          [controlTemas]="editarDocumentoForm.controls['temaId']"
         ></app-tema-select>
+        <button
+          pButton
+          type="button"
+          class="p-button-text"
+          label="Quitar tema"
+          *ngIf="editarDocumentoForm.controls.temaId.value != null"
+          (click)="editarDocumentoForm.controls.temaId.setValue(null)"
+        ></button>
       </div>
       <div class="flex flex-column gap-3">
         <div class="flex flex-column gap-2">
@@ -215,9 +227,7 @@
               [binary]="true"
               inputId="editRequireWatermark"
             ></p-checkbox>
-            <label for="editRequireWatermark" class="ml-2"
-              >Aplicar marca de agua</label
-            >
+            <label for="editRequireWatermark" class="ml-2">Marca de agua</label>
           </div>
           <small class="text-color-secondary ml-4">
             <i class="pi pi-info-circle"></i>
@@ -287,9 +297,7 @@
     <div right-actions>
       <p-button
         *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
-        label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Subir Documento'
-        }}"
+        label="Subir documento"
         icon="pi pi-upload"
         [link]="true"
         (click)="mostrarSubirFichero = true"
@@ -395,7 +403,7 @@
             pTooltip="Aplica marca de agua al descargar"
             tooltipPosition="top"
           >
-            <i class="pi pi-shield"></i> WATERMARK
+            <i class="pi pi-shield"></i> Marca de agua
           </span>
         </div>
         <span

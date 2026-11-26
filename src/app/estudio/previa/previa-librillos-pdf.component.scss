@@ -26,6 +26,22 @@ app-previa-librillos-pdf {
     height: 100%;
   }
 
+  .fotograma-pdf:not(.ver-notas):not(.editor-pdf) {
+    grid-template-columns: minmax(0, 1fr);
+    .notas-pdf {
+      display: none;
+    }
+  }
+
+  &[data-practica-disponible] .anotaciones-pdf-escritorio {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    .anotaciones-pdf-escritorio {
+      display: none;
+    }
+  }
+
   .pestanas-pdf {
     display: none;
   }

@@ -81,7 +81,7 @@ export class DocumentationOverviewComponent
     // ya no lo introduce a mano en la creación (evita basura tipo "0").
     identificador: [''],
     descripcion: [''],
-    temaIds: [[] as number[]],
+    temaId: [null as number | null],
     isLocked: [false],
     requireWatermark: [false],
   });
@@ -99,7 +99,7 @@ export class DocumentationOverviewComponent
   public editarDocumentoForm = this.fb.group({
     identificador: ['', Validators.required],
     descripcion: [''],
-    temaIds: [[] as number[]],
+    temaId: [null as number | null],
     isLocked: [false],
     requireWatermark: [false],
   });
@@ -125,7 +125,7 @@ export class DocumentationOverviewComponent
     },
     {
       key: 'isLocked',
-      label: 'Solo documentos premium (isLocked)',
+      label: 'Solo documentos premium',
       type: 'toggle',
       filterInterpolation: (value: boolean) =>
         value === true ? { isLocked: true } : {},
@@ -330,8 +330,8 @@ export class DocumentationOverviewComponent
       String(this.uploadingFileFormGroup.value.requireWatermark ?? false),
     );
 
-    const temaId = (this.uploadingFileFormGroup.value.temaIds ?? [])[0];
-    if (temaId !== undefined) {
+    const temaId = this.uploadingFileFormGroup.value.temaId;
+    if (temaId != null) {
       formData.append('temaId', String(temaId));
     }
 
@@ -360,7 +360,7 @@ export class DocumentationOverviewComponent
     this.editarDocumentoForm.patchValue({
       identificador: document.identificador,
       descripcion: document.descripcion ?? '',
-      temaIds: document.temaId ? [document.temaId] : [],
+      temaId: document.temaId ?? null,
       isLocked: (document as any).isLocked ?? false,
       requireWatermark: (document as any).requireWatermark ?? false,
     });
@@ -372,8 +372,7 @@ export class DocumentationOverviewComponent
     const id = this.documentoEditando.id;
     const identificador = this.editarDocumentoForm.value.identificador ?? '';
     const descripcion = this.editarDocumentoForm.value.descripcion ?? '';
-    const temaIds = this.editarDocumentoForm.value.temaIds ?? [];
-    const temaId = temaIds.length > 0 ? temaIds[0] : null;
+    const temaId = this.editarDocumentoForm.value.temaId ?? null;
     const isLocked = this.editarDocumentoForm.value.isLocked ?? false;
     const requireWatermark =
       this.editarDocumentoForm.value.requireWatermark ?? false;
