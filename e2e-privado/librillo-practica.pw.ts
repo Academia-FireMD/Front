@@ -359,12 +359,15 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
     .click();
   await expect(lector).toBeVisible();
 
+  await page.setViewportSize({ width: 390, height: 844 });
   await irAlTema(page, sinPdf.id);
-  await expect(
-    vistaLibrillo.getByText(
-      'Este tema todavía no tiene documentos disponibles.',
-    ),
-  ).toBeVisible();
+  const avisoSinDocumento = vistaLibrillo.getByText(
+    'Este tema todavía no tiene documentos disponibles.',
+  );
+  await expect(avisoSinDocumento).toBeVisible();
+  const aviso = (await avisoSinDocumento.boundingBox())!;
+  const practica = (await panel.boundingBox())!;
+  expect(aviso.y + aviso.height).toBeLessThanOrEqual(practica.y);
   await expect(panel.getByRole('button', { name: 'Hacer test' })).toBeEnabled();
   const historial = panel.getByRole('button', {
     name: 'Ver historial del tema',

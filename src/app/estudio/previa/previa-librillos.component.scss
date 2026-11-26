@@ -204,8 +204,7 @@
 
 .con-practica:not(.con-pdf-y-practica) {
   .lectura-librillo {
-    flex: 0;
-    flex-shrink: 0;
+    flex: none;
   }
 
   app-librillo-practica {
