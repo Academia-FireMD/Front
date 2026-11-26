@@ -202,16 +202,21 @@ async function marcarFragmento(page: Page) {
   const fragmento = page
     .locator('.texto-pdf')
     .getByText('Documento de prueba R07, hoja 2');
-  await fragmento.scrollIntoViewIfNeeded();
-  await fragmento.evaluate((el) => {
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    const seleccion = window.getSelection();
-    seleccion?.removeAllRanges();
-    seleccion?.addRange(range);
-    document.dispatchEvent(new Event('selectionchange'));
-  });
-  await page.getByRole('button', { name: 'Vincular fragmento' }).click();
+  const vincular = page.getByRole('button', { name: 'Vincular fragmento' });
+  // PDF.js puede volver a montar la capa de texto al ajustar el ancho del editor.
+  await expect(async () => {
+    await fragmento.evaluate((el) => {
+      el.scrollIntoView({ block: 'nearest' });
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const seleccion = window.getSelection();
+      seleccion?.removeAllRanges();
+      seleccion?.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+    await expect(vincular).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 10000 });
+  await vincular.click();
 }
 
 test.describe('Documentación y Temario integrados', () => {
