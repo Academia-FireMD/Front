@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
   convertToParamMap,
@@ -35,6 +36,7 @@ describe('Vista previa en el editor del Librillo', () => {
     abrir: jest.fn(),
     editor: jest.fn(),
     guardarReferencia: jest.fn(),
+    sugerir: jest.fn(),
     importar: jest.fn(),
     guardar: jest.fn(),
   };
@@ -42,7 +44,7 @@ describe('Vista previa en el editor del Librillo', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    api.editor.mockReturnValue(of({ ...edicion, referencias: [] }));
+    api.editor.mockReset().mockReturnValue(of({ ...edicion, referencias: [] }));
     const params = convertToParamMap({
       skip: '20',
       isLocked: 'false',
@@ -54,6 +56,7 @@ describe('Vista previa en el editor del Librillo', () => {
       providers: [
         ...COMMON_TEST_PROVIDERS,
         provideRouter([]),
+        provideNoopAnimations(),
         {
           provide: ActivatedRoute,
           useValue: {
@@ -61,6 +64,7 @@ describe('Vista previa en el editor del Librillo', () => {
               paramMap: convertToParamMap({ documentoId: '19' }),
               queryParamMap: params,
             },
+            paramMap: of(convertToParamMap({ documentoId: '19' })),
             queryParamMap: of(params),
           },
         },
@@ -81,6 +85,8 @@ describe('Vista previa en el editor del Librillo', () => {
                     identificador: 'Documento',
                     temaId: 9,
                     fileName: 'tema.pdf',
+                    esPublico: true,
+                    isPublicado: false,
                   },
                 ],
               }),
@@ -105,6 +111,7 @@ describe('Vista previa en el editor del Librillo', () => {
     visor.edicionCargada.emit(edicion);
     await fixture.whenStable();
     visor.fragmentoEditorial.emit(seleccion);
+    await fixture.whenStable();
     fixture.detectChanges();
   });
 
@@ -119,16 +126,24 @@ describe('Vista previa en el editor del Librillo', () => {
       tipo: 'DATO',
       estado: 'publicada',
     };
-    api.abrir.mockReturnValue(
+    api.editor.mockReturnValueOnce(
       of({
         revision: edicion.revision,
-        referencias: [ref, { ...ref, id: 5, estado: 'borrador' }],
+        referencias: [
+          ref,
+          { ...ref, id: 5, estado: 'borrador' },
+          { ...ref, id: 6, tipo: 'SUGERIDO' },
+        ],
         partes: [{ pagina: 3, valor: { nota: 'Anotación privada' } }],
       }),
     );
     await editor.abrirVistaPrevia();
     fixture.detectChanges();
-    expect(api.abrir).toHaveBeenCalledWith(edicion);
+    expect(api.editor).toHaveBeenLastCalledWith(edicion, 'alumno');
+    expect(api.abrir).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Vista previa privada');
+    expect(fixture.nativeElement.textContent).toContain('Sin publicar');
+    expect(fixture.nativeElement.textContent).toContain('Volver a edición');
     expect(visor.referencias()).toEqual([ref]);
     expect(visor.anotaciones()).toEqual({});
     expect(fixture.nativeElement.querySelector('aside')).toBeNull();
@@ -148,7 +163,7 @@ describe('Vista previa en el editor del Librillo', () => {
     expect(api.guardar).not.toHaveBeenCalled();
   });
 
-  it('explica la publicación y audiencia al abrir un PDF sin acceso editorial', async () => {
+  it('explica un PDF que ya no se puede gestionar desde Documentación', async () => {
     api.editor.mockReturnValue(
       throwError(
         () =>
@@ -161,20 +176,22 @@ describe('Vista previa en el editor del Librillo', () => {
 
     await editor.abrirEdicion(edicion);
 
-    expect(editor.fallo()).toMatch(/publicación y la audiencia/);
+    expect(editor.fallo()).toMatch(
+      /disponible para edición desde Documentación/,
+    );
     expect(editor.accionesSuspendidas()).toBe(true);
     expect(api.abrir).not.toHaveBeenCalled();
   });
 
   it('explica el 404 y recupera el borrador al volver a edición', async () => {
-    api.abrir.mockReturnValue(
+    api.editor.mockReturnValueOnce(
       throwError(() => new HttpErrorResponse({ status: 404 })),
     );
     await editor.abrirVistaPrevia();
     fixture.detectChanges();
     expect(
       fixture.nativeElement.querySelector('[role="alert"]').textContent,
-    ).toContain('publicación y la audiencia');
+    ).toContain('disponible para edición desde Documentación');
     expect(editor.accionesSuspendidas()).toBe(true);
     editor.volverAEdicion();
     fixture.detectChanges();
@@ -183,12 +200,11 @@ describe('Vista previa en el editor del Librillo', () => {
     expect(fixture.nativeElement.querySelector('textarea').value).toBe(
       seleccion.fragmento,
     );
-    await editor.guardar('publicada');
     expect(api.guardarReferencia).not.toHaveBeenCalled();
   });
 
   it('un 409 mantiene la edición suspendida hasta revalidar la revisión', async () => {
-    api.abrir.mockReturnValue(
+    api.editor.mockReturnValueOnce(
       throwError(() => new HttpErrorResponse({ status: 409 })),
     );
     await editor.abrirVistaPrevia();
@@ -201,8 +217,126 @@ describe('Vista previa en el editor del Librillo', () => {
       .mockImplementation(async () => visor.edicionCargada.emit(edicion));
     await editor.recargarRevision();
     await fixture.whenStable();
-    expect(api.editor).toHaveBeenCalledTimes(2);
+    expect(api.editor).toHaveBeenCalledTimes(3);
     expect(editor.accionesSuspendidas()).toBe(false);
+    expect(editor.seleccion()).toEqual(seleccion);
+  });
+
+  it('protege el texto y área al sustituir una selección y solo continúa si guarda el borrador', async () => {
+    editor.texto.set('Texto editado');
+    const nueva = { ...seleccion, pagina: 2 };
+    const seguir = editor.seleccionar(nueva);
+    expect(editor.confirmarCambios()).toBe(true);
+    editor.resolverCambios(false);
+    await seguir;
+    expect(editor.seleccion()).toEqual(seleccion);
+    expect(editor.texto()).toBe('Texto editado');
+
+    api.guardarReferencia.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({ status: 503 })),
+    );
+    const fallo = editor.seleccionar(nueva);
+    await editor.guardarYContinuar();
+    await fallo;
+    expect(editor.seleccion()).toEqual(seleccion);
+    expect(editor.texto()).toBe('Texto editado');
+
+    api.guardarReferencia.mockReturnValueOnce(
+      of({ ...edicion, id: 6, estado: 'borrador', tipo: 'DATO', ...seleccion }),
+    );
+    const guardada = editor.seleccionar(nueva);
+    await editor.guardarYContinuar();
+    await guardada;
+    expect(api.guardarReferencia).toHaveBeenLastCalledWith(
+      edicion,
+      expect.objectContaining({
+        estado: 'borrador',
+        texto: 'Texto editado',
+        pagina: 3,
+      }),
+    );
+    expect(editor.seleccion()).toEqual(nueva);
+  });
+
+  it('solo pregunta por cambios reales en una referencia publicada y actualiza con consentimiento explícito', async () => {
+    const ref: ReferenciaPdf = {
+      id: 13,
+      revision: edicion.revision,
+      pagina: 3,
+      rectangulos: [],
+      tipo: 'DATO',
+      estado: 'publicada',
+      texto: 'Versión publicada',
+    };
+    const editar = editor.editar(ref);
+    editor.resolverCambios(true);
+    await editar;
+    editor.buscar.set('filtro');
+    editor.texto.set('Versión publicada ');
+    expect(await editor.confirmarSalida()).toBe(true);
+    expect(editor.confirmarCambios()).toBe(false);
+
+    editor.texto.set('Cambio editorial');
+    const salida = editor.confirmarSalida();
+    expect(editor.confirmarSalida()).toBe(salida);
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]');
+    expect(dialog.textContent).toContain('Actualizar referencia publicada');
+    expect(dialog.textContent).not.toContain('Guardar borrador');
+    expect(await editor.guardar('borrador')).toBe(false);
+    expect(api.guardarReferencia).not.toHaveBeenCalled();
+
+    api.guardarReferencia.mockReturnValueOnce(
+      of({ ...ref, texto: 'Cambio editorial' }),
+    );
+    await editor.guardarYContinuar();
+    expect(await salida).toBe(true);
+    expect(api.guardarReferencia).toHaveBeenCalledWith(
+      edicion,
+      expect.objectContaining({
+        id: ref.id,
+        texto: 'Cambio editorial',
+        estado: 'publicada',
+      }),
+    );
+  });
+
+  it('retiene los cambios y bloquea su guardado si el visor carga otra revisión', async () => {
+    editor.texto.set('Texto de la revisión anterior');
+    const nueva = { ...edicion, revision: '2'.repeat(64) };
+    api.editor.mockReturnValueOnce(of({ ...nueva, referencias: [] }));
+    await editor.abrirEdicion(nueva);
+    expect(editor.edicionValidada()).toBe(true);
+    expect(editor.formularioVigente()).toBe(false);
+    expect(editor.texto()).toBe('Texto de la revisión anterior');
+    expect(editor.seleccion()).toEqual(seleccion);
+    expect(await editor.guardar('borrador')).toBe(false);
+    expect(api.guardarReferencia).not.toHaveBeenCalled();
+
+    const siguiente = { ...seleccion, pagina: 1 };
+    const reemplazo = editor.seleccionar(siguiente);
+    expect(editor.confirmarCambios()).toBe(true);
+    editor.resolverCambios(true);
+    await reemplazo;
+    expect(editor.formularioVigente()).toBe(true);
+    expect(editor.seleccion()).toEqual(siguiente);
+  });
+
+  it('una coincidencia ambigua conserva la selección y la revisión editables', async () => {
+    api.sugerir.mockReturnValueOnce(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: {
+              message: 'El fragmento coincide con varios ítems del banco',
+            },
+          }),
+      ),
+    );
+    await editor.sugerir();
+    expect(editor.revisionCaducada()).toBe(false);
+    expect(editor.fallo()).toContain('varios ítems');
     expect(editor.seleccion()).toEqual(seleccion);
   });
 });

@@ -46,11 +46,19 @@ async function prepararAdmin(context: BrowserContext) {
     documento(100 + indice, backend.TEMA, tituloPdf(indice)),
   );
   const idDoc = 110;
-  const acciones = { pdf: 0, descargasDeFila: 0, personales: 0 };
+  catalogo[10].isPublicado = false;
+  const acciones = {
+    pdf: 0,
+    descargasDeFila: 0,
+    vistasPrevias: 0,
+    personales: 0,
+  };
+  const fallos = { guardar: false };
   const consultas: Array<{ skip: number; searchTerm: string; where?: object }> =
     [];
   const guardados: EstadoReferencia[] = [];
-  let referencia: Record<string, unknown> | undefined;
+  const referencias = new Map<number, Record<string, unknown>>();
+  let siguienteReferenciaId = 197;
   let subida: { isLocked: boolean; requireWatermark: boolean } | undefined;
 
   await page.route('**/api/app-config/modulos', (route) =>
@@ -104,34 +112,47 @@ async function prepararAdmin(context: BrowserContext) {
   await page.route(
     '**/documentos/' + idDoc + '/librillo/pdf/editor**',
     (route) => {
-      if (route.request().method() === 'POST') {
-        const ref = route.request().postDataJSON();
+      const peticion = route.request();
+      const url = new URL(peticion.url());
+      if (peticion.method() === 'POST') {
+        const ref = peticion.postDataJSON();
+        expect(ref.revision).toBe(revision);
+        if (fallos.guardar) {
+          return route.fulfill({
+            status: 503,
+            json: { message: 'Guardado no disponible en QA' },
+          });
+        }
         guardados.push(ref.estado);
-        referencia = { ...ref, id: 197 };
-        return route.fulfill({ json: referencia });
+        const id = ref.id ?? siguienteReferenciaId++;
+        const guardada = { ...ref, id };
+        referencias.set(id, guardada);
+        return route.fulfill({ json: guardada });
       }
+      expect(url.searchParams.get('revision')).toBe(revision);
+      const alumno = url.searchParams.get('vista') === 'alumno';
+      if (alumno) acciones.vistasPrevias++;
+      const filas = [...referencias.values()];
       return route.fulfill({
         json: {
           revision,
           paginas: 2,
-          referencias: referencia ? [referencia] : [],
+          referencias: alumno
+            ? filas.filter(
+                (ref) =>
+                  ref['estado'] === 'publicada' && ref['tipo'] !== 'SUGERIDO',
+              )
+            : filas,
         },
       });
     },
   );
   await page.route(
     '**/documentos/' + idDoc + '/librillo/pdf?revision=*',
-    (route) =>
-      route.fulfill({
-        json: {
-          revision,
-          paginas: 2,
-          generacion: 0,
-          partes: [],
-          referencias:
-            referencia?.['estado'] === 'publicada' ? [referencia] : [],
-        },
-      }),
+    (route) => {
+      acciones.personales++;
+      return route.fulfill({ status: 404, json: {} });
+    },
   );
   await page.route(
     /\/librillo\/pdf\/(anotaciones|importar|reiniciar)(?:\?|$)/,
@@ -172,6 +193,7 @@ async function prepararAdmin(context: BrowserContext) {
     acciones,
     consultas,
     guardados,
+    fallos,
     subida: () => subida,
   };
 }
@@ -253,13 +275,18 @@ test.describe('Documentación y Temario integrados', () => {
     });
     await previa.click();
     await expect(
+      page.getByText('Vista previa privada · Sin publicar'),
+    ).toBeVisible();
+    await expect.poll(() => acciones.vistasPrevias).toBe(1);
+    await expect(
       page.getByRole('button', { name: 'Huecos', exact: true }),
     ).toHaveCount(0);
     await expect(page.getByTestId('pagina-librillo')).toHaveText(
       'Página 2 de 2',
     );
-    await expect(previa).toHaveAttribute('aria-pressed', 'true');
-    await previa.click();
+    const volver = page.getByRole('button', { name: 'Volver a edición' });
+    await expect(volver).toHaveAttribute('aria-pressed', 'true');
+    await volver.click();
     await expect(previa).toHaveAttribute('aria-pressed', 'false');
 
     await formulario.getByRole('button', { name: /Hueco.*Página 2/s }).click();
@@ -273,7 +300,12 @@ test.describe('Documentación y Temario integrados', () => {
       page.getByRole('button', { name: /Mostrar dato|Mostrar hueco/i }),
     ).toBeVisible();
     expect(guardados).toEqual(['borrador', 'publicada']);
-    expect(acciones).toEqual({ pdf: 1, descargasDeFila: 0, personales: 0 });
+    expect(acciones).toEqual({
+      pdf: 1,
+      descargasDeFila: 0,
+      vistasPrevias: 2,
+      personales: 0,
+    });
 
     await page
       .getByRole('link', { name: /Documentación/ })
@@ -288,6 +320,59 @@ test.describe('Documentación y Temario integrados', () => {
     expect(vuelta.get('temaId')).toBe(String(temaId));
     expect(vuelta.get('pagina')).toBeNull();
     expect(vuelta.get('referencia')).toBeNull();
+  });
+
+  test('los cambios de una referencia sobreviven a volver y a un guardado fallido', async ({
+    context,
+  }) => {
+    const { page, fallos, guardados } = await prepararAdmin(context);
+    await page.goto(rutaAdmin + '?skip=10&take=10');
+    const librillo = page.getByRole('link', {
+      name: new RegExp(tituloPdf(10)),
+    });
+    await librillo.click();
+    await page.getByRole('button', { name: 'Página siguiente' }).click();
+    await expect(page.getByTestId('pagina-librillo')).toHaveText(
+      'Página 2 de 2',
+    );
+    await marcarFragmento(page);
+
+    const texto = page.getByLabel('Texto de la referencia');
+    const cambios = page.getByRole('dialog', { name: 'Cambios sin guardar' });
+    await texto.fill('Un borrador que aún no se ha guardado');
+    await page.evaluate(() => window.history.back());
+    await expect(cambios).toBeVisible();
+    await cambios.getByRole('button', { name: 'Seguir editando' }).click();
+    await expect(texto).toHaveValue('Un borrador que aún no se ha guardado');
+    await expect(texto).toBeFocused();
+
+    await page.locator('.p-menuitem-link[href="/app/documentacion"]').click();
+    await expect(cambios).toBeVisible();
+    await cambios.getByRole('button', { name: 'Seguir editando' }).click();
+    await expect(texto).toBeFocused();
+
+    const salir = page
+      .locator('app-librillo-editor')
+      .getByRole('link', { name: 'Documentación' });
+    await salir.click();
+    await expect(cambios).toBeVisible();
+    fallos.guardar = true;
+    await cambios.getByRole('button', { name: 'Guardar borrador' }).click();
+    await expect(page.getByRole('alert')).toContainText(
+      'Guardado no disponible en QA',
+    );
+    await expect(texto).toHaveValue('Un borrador que aún no se ha guardado');
+    await expect(page.getByTestId('pagina-librillo')).toHaveText(
+      'Página 2 de 2',
+    );
+    expect(guardados).toEqual([]);
+
+    fallos.guardar = false;
+    await salir.click();
+    await cambios.getByRole('button', { name: 'Guardar borrador' }).click();
+    await expect(librillo).toBeVisible();
+    expect(guardados).toEqual(['borrador']);
+    expect(new URL(page.url()).searchParams.get('skip')).toBe('10');
   });
 
   test('sube y edita un PDF con Premium y marca de agua desde los formularios existentes', async ({
@@ -307,12 +392,12 @@ test.describe('Documentación y Temario integrados', () => {
       buffer: documentoPdf(),
     });
     await alta
-      .getByLabel('Descripcion', { exact: true })
+      .getByLabel('Descripción', { exact: true })
       .fill('Alta con protección');
     await alta.getByText(/Selecciona (los temas|un tema)/).click();
     await page.getByText(tituloTema, { exact: true }).last().click();
     await page.getByText(new RegExp(descripcionTema)).last().click();
-    await alta.getByLabel('Descripcion', { exact: true }).click();
+    await alta.getByLabel('Descripción', { exact: true }).click();
     const premium = 'Requiere suscripción PREMIUM o ADVANCED';
     const marca = 'Aplicar marca de agua';
     await alta.getByText(premium, { exact: true }).click();
@@ -325,7 +410,9 @@ test.describe('Documentación y Temario integrados', () => {
       has: page.getByText('PDF subido de QA', { exact: true }),
     });
     await expect(fila.getByText('PREMIUM', { exact: true })).toBeVisible();
-    await expect(fila.getByText('WATERMARK', { exact: true })).toBeVisible();
+    await expect(
+      fila.getByText('Marca de agua', { exact: true }),
+    ).toBeVisible();
     await fila.locator('.p-button-warning').click();
     const edicion = page.getByRole('dialog', { name: 'Editar documento' });
     await expect(
@@ -337,7 +424,9 @@ test.describe('Documentación y Temario integrados', () => {
     await edicion.getByRole('button', { name: /Guardar/i }).click();
     await expect(edicion).toBeHidden();
     await expect(fila.getByText('PREMIUM', { exact: true })).toHaveCount(0);
-    await expect(fila.getByText('WATERMARK', { exact: true })).toHaveCount(0);
+    await expect(fila.getByText('Marca de agua', { exact: true })).toHaveCount(
+      0,
+    );
   });
 
   test('Publicaciones conserva su selector y añade solo el documento seleccionado', async ({

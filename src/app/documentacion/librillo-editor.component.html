@@ -11,10 +11,23 @@
   <h1>Editar referencias del Librillo</h1>
   @if (documento(); as archivo) {
     <span>{{ archivo.identificador }}</span>
+    @if (vistaPrevia()) {
+      <span class="estado-vista-previa">
+        Vista previa privada ·
+        {{
+          archivo.isPublicado === undefined
+            ? "Estado de publicación no disponible"
+            : archivo.isPublicado
+              ? "Publicado"
+              : "Sin publicar"
+        }}
+      </span>
+    }
   }
   <button
     pButton
     type="button"
+    #botonVistaPrevia
     class="p-button-outlined"
     [attr.aria-pressed]="vistaPrevia()"
     [disabled]="
@@ -22,7 +35,7 @@
     "
     (click)="vistaPrevia() ? volverAEdicion() : abrirVistaPrevia()"
   >
-    Vista previa del Librillo
+    {{ vistaPrevia() ? "Volver a edición" : "Vista previa del Librillo" }}
   </button>
 </header>
 @if (cargando()) {
@@ -44,7 +57,7 @@
     <button
       pButton
       type="button"
-      [disabled]="cargandoEdicion()"
+      [disabled]="cargandoEdicion() || ocupado()"
       (click)="recargarRevision()"
     >
       Recargar revisión
@@ -61,31 +74,45 @@
   }
 }
 @if (documento(); as archivo) {
-  <div class="editor-librillo" [class.sin-formulario]="accionesSuspendidas()">
+  <div
+    class="editor-librillo"
+    [class.sin-formulario]="
+      vistaPrevia() || (!edicionValidada() && !seleccion())
+    "
+  >
     <app-previa-librillos-pdf
       [documento]="archivo"
       [editor]="true"
       [referenciasEditor]="referencias()"
       [referenciasVistaPrevia]="referenciasVistaPrevia()"
       [vistaPreviaEditorial]="vistaPrevia()"
-      [edicionSuspendida]="!edicionValidada()"
+      [edicionSuspendida]="!edicionValidada() || ocupado()"
       (edicionCargada)="abrirEdicion($event)"
       (fragmentoEditorial)="seleccionar($event)"
     />
-    @if (!accionesSuspendidas()) {
+    @if (!vistaPrevia() && (edicionValidada() || seleccion())) {
       <aside aria-label="Referencias del PDF">
         <section class="formulario-editor">
           @if (seleccion(); as fragmento) {
             <h2>{{ editando() ? "Editar referencia" : "Nueva referencia" }}</h2>
             <p>Página {{ fragmento.pagina }}</p>
+            @if (!formularioVigente()) {
+              <p role="status">
+                Estos cambios corresponden a la revisión anterior. Puedes copiar
+                el texto antes de seleccionar un área del PDF actual.
+              </p>
+            }
             <label for="tipo-ref">Tipo</label>
             <select
               id="tipo-ref"
+              [disabled]="ocupado()"
               [ngModel]="tipo()"
               (ngModelChange)="seleccionarTipo($event)"
             >
               @for (opcion of tipos; track opcion.tipo) {
-                <option [value]="opcion.tipo">{{ opcion.nombre }}</option>
+                @if (opcion.tipo !== "SUGERIDO" || puedeEditarSugerencia()) {
+                  <option [value]="opcion.tipo">{{ opcion.nombre }}</option>
+                }
               }
             </select>
             @if (usaBanco()) {
@@ -94,6 +121,9 @@
                 <input
                   id="buscar-ref"
                   type="search"
+                  [disabled]="
+                    ocupado() || !formularioVigente() || !edicionValidada()
+                  "
                   [ngModel]="buscar()"
                   (ngModelChange)="buscar.set($event)"
                   (keydown.enter)="buscarMaterial()"
@@ -102,6 +132,9 @@
                   pButton
                   type="button"
                   class="p-button-text"
+                  [disabled]="
+                    ocupado() || !formularioVigente() || !edicionValidada()
+                  "
                   (click)="buscarMaterial()"
                 >
                   Buscar
@@ -112,12 +145,17 @@
               }}</label>
               <select
                 id="item-ref"
+                [disabled]="
+                  ocupado() || !formularioVigente() || !edicionValidada()
+                "
                 [ngModel]="materialId()"
                 (ngModelChange)="materialId.set($event)"
               >
                 <option [ngValue]="null">Elige del banco</option>
-                @if (materialId() && !opciones().length) {
-                  <option [ngValue]="materialId()">Material vinculado</option>
+                @if (materialId(); as id) {
+                  @if (!materialVinculadoEnOpciones()) {
+                    <option [ngValue]="id">Material vinculado</option>
+                  }
                 }
                 @for (item of opciones(); track item.id) {
                   <option [ngValue]="item.id">{{ item.nombre }}</option>
@@ -126,9 +164,11 @@
             }
             <label for="texto-ref">Texto de la referencia</label>
             <textarea
+              #campoTexto
               id="texto-ref"
               rows="3"
               maxlength="4000"
+              [disabled]="ocupado()"
               [ngModel]="texto()"
               (ngModelChange)="texto.set($event)"
             ></textarea>
@@ -136,6 +176,7 @@
             <input
               id="color-ref"
               type="color"
+              [disabled]="ocupado()"
               [ngModel]="color()"
               (ngModelChange)="color.set($event)"
             />
@@ -145,36 +186,47 @@
                   pButton
                   type="button"
                   class="p-button-text"
-                  [disabled]="ocupado()"
+                  [disabled]="
+                    ocupado() || !formularioVigente() || !edicionValidada()
+                  "
                   (click)="sugerir()"
                 >
                   Buscar coincidencia
                 </button>
               }
-              <button
-                pButton
-                type="button"
-                class="p-button-outlined"
-                [disabled]="ocupado() || (usaBanco() && !materialId())"
-                (click)="guardar('borrador')"
-              >
-                Guardar borrador
-              </button>
+              @if (!publicada()) {
+                <button
+                  pButton
+                  type="button"
+                  class="p-button-outlined"
+                  [disabled]="ocupado() || !puedeGuardar()"
+                  (click)="guardar('borrador')"
+                >
+                  Guardar borrador
+                </button>
+              }
               @if (tipo() !== "SUGERIDO") {
                 <button
                   pButton
                   type="button"
-                  [disabled]="ocupado() || (usaBanco() && !materialId())"
+                  [disabled]="
+                    ocupado() ||
+                    !puedeGuardar() ||
+                    (publicada() && !hayCambios())
+                  "
                   (click)="guardar('publicada')"
                 >
-                  Publicar
+                  {{
+                    publicada() ? "Actualizar referencia publicada" : "Publicar"
+                  }}
                 </button>
               }
               <button
                 pButton
                 type="button"
                 class="p-button-text"
-                (click)="limpiar()"
+                [disabled]="ocupado()"
+                (click)="cancelarEdicion()"
               >
                 Cancelar
               </button>
@@ -191,7 +243,7 @@
         </section>
         <section>
           <h2>Referencias</h2>
-          @if (!referencias().length) {
+          @if (edicionValidada() && !referencias().length) {
             <p>Todavía no hay referencias para esta versión.</p>
           }
           <ul class="lista-editor">
@@ -201,6 +253,7 @@
                   pButton
                   type="button"
                   class="p-button-text goto-ref"
+                  [disabled]="ocupado() || !edicionValidada()"
                   (click)="editar(ref)"
                 >
                   <strong>{{ nombre(ref.tipo) }}</strong>
@@ -213,7 +266,7 @@
                   pButton
                   type="button"
                   class="p-button-text"
-                  [disabled]="ocupado()"
+                  [disabled]="ocupado() || !edicionValidada()"
                   [attr.aria-label]="
                     'Retirar ' +
                     nombre(ref.tipo) +
@@ -232,3 +285,50 @@
     }
   </div>
 }
+
+<p-dialog
+  header="Cambios sin guardar"
+  [visible]="confirmarCambios()"
+  [modal]="true"
+  [closable]="false"
+  [closeOnEscape]="false"
+  (keydown.escape)="!ocupado() && resolverCambios(false)"
+  (onHide)="enfocarEdicion()"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '29rem', maxWidth: 'calc(100vw - 2rem)' }"
+>
+  <p>¿Qué quieres hacer con los cambios de esta referencia?</p>
+  <div class="acciones-editor">
+    <button
+      pButton
+      type="button"
+      class="p-button-text"
+      [disabled]="ocupado()"
+      (click)="resolverCambios(false)"
+    >
+      Seguir editando
+    </button>
+    <button
+      pButton
+      type="button"
+      class="p-button-outlined"
+      [disabled]="ocupado()"
+      (click)="resolverCambios(true)"
+    >
+      Descartar cambios
+    </button>
+    @if (puedeGuardar()) {
+      <button
+        pButton
+        type="button"
+        [disabled]="ocupado()"
+        (click)="guardarYContinuar()"
+      >
+        {{
+          publicada() ? "Actualizar referencia publicada" : "Guardar borrador"
+        }}
+      </button>
+    }
+  </div>
+</p-dialog>

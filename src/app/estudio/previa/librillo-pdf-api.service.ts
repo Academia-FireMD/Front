@@ -128,13 +128,13 @@ export class LibrilloPdfApiService {
     );
   }
 
-  editor(edicion: EdicionPdf) {
+  editor(edicion: EdicionPdf, vista?: 'alumno') {
     return this.http.get<{
       revision: string;
       paginas: number;
       referencias: ReferenciaPdf[];
     }>(this.url(edicion.doc) + '/editor', {
-      params: { revision: edicion.revision },
+      params: { revision: edicion.revision, ...(vista ? { vista } : {}) },
     });
   }
 

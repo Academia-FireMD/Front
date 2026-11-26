@@ -3,6 +3,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
+  HostListener,
   computed,
   inject,
   signal,
@@ -12,7 +14,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { Observable, firstValueFrom, timeout } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
+import {
+  Observable,
+  distinctUntilChanged,
+  firstValueFrom,
+  map,
+  timeout,
+} from 'rxjs';
 import {
   EdicionPdf,
   LibrilloPdfApiService,
@@ -31,7 +40,9 @@ import { parametrosListaDocumentacion } from './documentation-list-state';
 import { DocumentosService } from './services/documentacion.service';
 
 const REFERENCIAS_NO_DISPONIBLES =
-  'Comprueba la publicación y la audiencia de este PDF para acceder a sus referencias.';
+  'Este PDF ya no está disponible para edición desde Documentación.';
+const COLOR_INICIAL = '#ffd646';
+const TIPO_INICIAL: TipoReferenciaPdf = 'DATO';
 
 const TIPOS: Array<{ tipo: TipoReferenciaPdf; nombre: string }> = [
   { tipo: 'PREGUNTA', nombre: 'Pregunta' },
@@ -45,7 +56,13 @@ const TIPOS: Array<{ tipo: TipoReferenciaPdf; nombre: string }> = [
 @Component({
   selector: 'app-librillo-editor',
   standalone: true,
-  imports: [FormsModule, RouterLink, ButtonModule, PreviaLibrillosPdfComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    ButtonModule,
+    DialogModule,
+    PreviaLibrillosPdfComponent,
+  ],
   templateUrl: './librillo-editor.component.html',
   styleUrl: './librillo-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,9 +76,20 @@ export class LibrilloEditorComponent {
   private readonly router = inject(Router);
   private readonly destruir = inject(DestroyRef);
   private readonly visor = viewChild(PreviaLibrillosPdfComponent);
+  private readonly campoTexto =
+    viewChild<ElementRef<HTMLTextAreaElement>>('campoTexto');
+  private readonly botonVistaPrevia =
+    viewChild<ElementRef<HTMLButtonElement>>('botonVistaPrevia');
   readonly parametrosLista = parametrosListaDocumentacion(
     this.ruta.snapshot.queryParamMap,
   );
+  private cargaDocumento = 0;
+  private readonly edicionFormulario = signal<EdicionPdf | null>(null);
+  private readonly referenciaEditada = signal<ReferenciaPdf | null>(null);
+  private resolverConfirmacion?: (continuar: boolean) => void;
+  private salidaPendiente?: Promise<boolean>;
+  private restaurarFoco = false;
+  readonly confirmarCambios = signal(false);
   readonly vistaPrevia = signal(false);
   readonly cargandoVistaPrevia = signal(false);
   readonly falloVistaPrevia = signal('');
@@ -81,27 +109,76 @@ export class LibrilloEditorComponent {
   readonly ocupado = signal(false);
   readonly aviso = signal('');
   readonly fallo = signal('');
-  readonly tipo = signal<TipoReferenciaPdf>('SUGERIDO');
+  readonly tipo = signal<TipoReferenciaPdf>(TIPO_INICIAL);
   readonly texto = signal('');
-  readonly color = signal('#ffd646');
-  readonly editando = signal<number | undefined>(undefined);
+  readonly color = signal(COLOR_INICIAL);
+  readonly editando = computed(() => this.referenciaEditada()?.id);
+  readonly publicada = computed(
+    () => this.referenciaEditada()?.estado === 'publicada',
+  );
+  readonly puedeEditarSugerencia = computed(
+    () => this.referenciaEditada()?.tipo === 'SUGERIDO',
+  );
+  readonly formularioVigente = computed(() => {
+    const origen = this.edicionFormulario();
+    const actual = this.edicion();
+    return origen?.doc === actual?.doc && origen?.revision === actual?.revision;
+  });
+  readonly hayCambios = computed(() => {
+    if (!this.seleccion()) return false;
+    const ref = this.referenciaEditada();
+    return (
+      !ref ||
+      ref.tipo !== this.tipo() ||
+      (ref.texto ?? '').trim() !== this.texto().trim() ||
+      (ref.color ?? COLOR_INICIAL) !== this.color() ||
+      (this.usaBanco() &&
+        (ref.preguntaId ?? ref.flashcardId ?? null) !== this.materialId())
+    );
+  });
   readonly materialId = signal<number | null>(null);
   readonly buscar = signal('');
   readonly opciones = signal<Array<{ id: number; nombre: string }>>([]);
   readonly usaBanco = computed(
     () => this.tipo() === 'PREGUNTA' || this.tipo() === 'TARJETA',
   );
+  readonly materialVinculadoEnOpciones = computed(() =>
+    this.opciones().some(({ id }) => id === this.materialId()),
+  );
+  readonly puedeGuardar = computed(
+    () =>
+      !!this.seleccion() &&
+      this.formularioVigente() &&
+      this.edicionValidada() &&
+      (!this.usaBanco() || !!this.materialId()) &&
+      (this.tipo() !== 'SUGERIDO' || this.puedeEditarSugerencia()),
+  );
   readonly tipos = TIPOS;
 
   constructor() {
-    void this.cargarDocumento();
+    this.ruta.paramMap
+      .pipe(
+        map((params) => Number(params.get('documentoId'))),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destruir),
+      )
+      .subscribe((id) => void this.cargarDocumento(id));
+    this.destruir.onDestroy(() => this.resolverCambios(false));
   }
 
-  async cargarDocumento() {
+  private async cargarDocumento(id: number) {
+    const carga = ++this.cargaDocumento;
+    this.documento.set(null);
+    this.edicion.set(null);
+    this.edicionValidada.set(false);
+    this.revisionCaducada.set(false);
+    this.referencias.set([]);
+    this.aviso.set('');
+    this.limpiar();
+    this.volverAEdicion();
     this.cargando.set(true);
     this.fallo.set('');
     try {
-      const id = Number(this.ruta.snapshot.paramMap.get('documentoId'));
       const { data } = await this.pedir(
         this.documentos.getDocumentosPublicos$({
           take: 1,
@@ -110,6 +187,7 @@ export class LibrilloEditorComponent {
           where: { id },
         }),
       );
+      if (this.cargaDocumento !== carga) return;
       const doc = data.find((resultado) => resultado.id === id);
       if (!doc?.temaId || !/\.pdf(?:$|[?#])/i.test(doc.fileName || doc.url)) {
         this.fallo.set(
@@ -119,13 +197,15 @@ export class LibrilloEditorComponent {
       }
       this.documento.set({ ...doc, isDownloadable: true, isNew: false });
     } catch (error) {
-      this.reportar(error, 'No se pudo abrir el documento.');
+      if (this.cargaDocumento === carga)
+        this.reportar(error, 'No se pudo abrir el documento.');
     } finally {
-      this.cargando.set(false);
+      if (this.cargaDocumento === carga) this.cargando.set(false);
     }
   }
 
   async abrirEdicion(edicion: EdicionPdf) {
+    if (edicion.doc !== this.documento()?.id) return;
     const anterior = this.edicion();
     this.edicion.set(edicion);
     this.cargandoEdicion.set(true);
@@ -133,7 +213,7 @@ export class LibrilloEditorComponent {
     this.fallo.set('');
     if (anterior && anterior.revision !== edicion.revision) {
       this.referencias.set([]);
-      this.limpiar();
+      if (!this.hayCambios()) this.limpiar();
       this.aviso.set('Se cargó otra revisión del PDF.');
     }
     try {
@@ -167,20 +247,23 @@ export class LibrilloEditorComponent {
     this.referenciasVistaPrevia.set([]);
     try {
       const { revision, referencias } = await this.pedir(
-        this.api.abrir(edicion),
+        this.api.editor(edicion, 'alumno'),
       );
-      if (this.edicion() !== edicion) return;
+      if (this.edicion() !== edicion || !this.vistaPrevia()) return;
       if (revision !== edicion.revision) {
         this.suspenderRevision();
         return;
       }
       this.referenciasVistaPrevia.set(
         referencias.filter(
-          (ref) => ref.estado === 'publicada' && ref.revision === revision,
+          (ref) =>
+            ref.estado === 'publicada' &&
+            ref.tipo !== 'SUGERIDO' &&
+            ref.revision === revision,
         ),
       );
     } catch (error) {
-      if (this.edicion() !== edicion) return;
+      if (this.edicion() !== edicion || !this.vistaPrevia()) return;
       if (error instanceof HttpErrorResponse && error.status === 404) {
         this.falloVistaPrevia.set(REFERENCIAS_NO_DISPONIBLES);
       } else if (error instanceof HttpErrorResponse && error.status === 409) {
@@ -191,19 +274,20 @@ export class LibrilloEditorComponent {
         );
       }
     } finally {
-      this.cargandoVistaPrevia.set(false);
+      if (this.edicion() === edicion) this.cargandoVistaPrevia.set(false);
     }
   }
 
   volverAEdicion() {
     this.vistaPrevia.set(false);
+    this.cargandoVistaPrevia.set(false);
     this.falloVistaPrevia.set('');
     this.referenciasVistaPrevia.set([]);
   }
 
   async recargarRevision() {
     const visor = this.visor();
-    if (!visor || this.cargandoEdicion()) return;
+    if (!visor || this.cargandoEdicion() || this.ocupado()) return;
     this.volverAEdicion();
     this.cargandoEdicion.set(true);
     try {
@@ -221,15 +305,72 @@ export class LibrilloEditorComponent {
     );
   }
 
-  seleccionar(fragmento: FragmentoPdf) {
-    if (this.accionesSuspendidas()) return;
+  async seleccionar(fragmento: FragmentoPdf) {
+    const edicion = this.edicion();
+    if (this.accionesSuspendidas() || !(await this.confirmarAccion())) return;
+    if (this.edicion() !== edicion || this.accionesSuspendidas()) return;
     this.limpiar();
+    this.edicionFormulario.set(edicion);
     this.seleccion.set(fragmento);
     this.texto.set(fragmento.fragmento);
+    this.enfocarReferencia(fragmento.pagina, null);
+  }
+
+  confirmarSalida() {
+    // El enlace del menú lateral puede emitir dos navegaciones por clic.
+    return (this.salidaPendiente ??= this.confirmarAccion().finally(() => {
+      this.salidaPendiente = undefined;
+    }));
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  confirmarCierre(evento: BeforeUnloadEvent) {
+    if (this.hayCambios() || this.ocupado()) {
+      evento.preventDefault();
+      evento.returnValue = '';
+    }
+  }
+
+  private confirmarAccion(cambios = this.hayCambios()): Promise<boolean> {
+    if (this.ocupado() || this.confirmarCambios())
+      return Promise.resolve(false);
+    if (!cambios) return Promise.resolve(true);
+    return new Promise((resolver) => {
+      this.resolverConfirmacion = resolver;
+      this.confirmarCambios.set(true);
+    });
+  }
+
+  resolverCambios(continuar: boolean) {
+    const resolver = this.resolverConfirmacion;
+    if (!resolver) return;
+    this.restaurarFoco = !continuar;
+    this.resolverConfirmacion = undefined;
+    this.confirmarCambios.set(false);
+    resolver(continuar);
+  }
+
+  enfocarEdicion() {
+    if (!this.restaurarFoco || this.confirmarCambios()) return;
+    this.restaurarFoco = false;
+    const control = this.campoTexto() ?? this.botonVistaPrevia();
+    control?.nativeElement.focus({ preventScroll: true });
+  }
+
+  async guardarYContinuar() {
+    if (this.ocupado() || !this.confirmarCambios()) return;
+    const guardada = await this.guardar(
+      this.publicada() ? 'publicada' : 'borrador',
+    );
+    this.resolverCambios(guardada);
+  }
+
+  async cancelarEdicion() {
+    if (await this.confirmarAccion()) this.limpiar();
   }
 
   async seleccionarTipo(tipo: TipoReferenciaPdf) {
-    if (this.accionesSuspendidas()) return;
+    if (this.ocupado()) return;
     this.tipo.set(tipo);
     this.materialId.set(null);
     this.opciones.set([]);
@@ -240,7 +381,13 @@ export class LibrilloEditorComponent {
     const temaId = this.documento()?.temaId;
     const tipo = this.tipo();
     const consulta = this.buscar().trim();
-    if (this.accionesSuspendidas() || !temaId || !this.usaBanco()) return;
+    if (
+      this.accionesSuspendidas() ||
+      !this.formularioVigente() ||
+      !temaId ||
+      !this.usaBanco()
+    )
+      return;
     const filtro = {
       take: 25,
       skip: 0,
@@ -255,7 +402,12 @@ export class LibrilloEditorComponent {
         tipo === 'PREGUNTA'
           ? await this.pedir(this.preguntas.getPreguntas$(filtro))
           : await this.pedir(this.tarjetas.getFlashcards$(filtro));
-      if (this.tipo() !== tipo || this.buscar().trim() !== consulta) return;
+      if (
+        this.documento()?.temaId !== temaId ||
+        this.tipo() !== tipo ||
+        this.buscar().trim() !== consulta
+      )
+        return;
       this.opciones.set(
         data
           .filter(
@@ -280,25 +432,39 @@ export class LibrilloEditorComponent {
 
   async editar(ref: ReferenciaPdf) {
     if (this.accionesSuspendidas() || this.ocupado()) return;
+    if (this.editando() === ref.id) {
+      this.enfocarReferencia(ref.pagina, ref.id);
+      return;
+    }
+    if (!(await this.confirmarAccion())) return;
+    if (this.edicion()?.revision !== ref.revision || this.accionesSuspendidas())
+      return;
     this.abrirFormularioReferencia(ref);
     await this.buscarMaterial();
   }
 
   private abrirFormularioReferencia(ref: ReferenciaPdf) {
+    this.edicionFormulario.set(this.edicion());
+    this.referenciaEditada.set(ref);
+    this.opciones.set([]);
     this.seleccion.set({
       pagina: ref.pagina,
       rectangulos: ref.rectangulos,
       fragmento: ref.texto ?? '',
     });
-    this.editando.set(ref.id);
     this.tipo.set(ref.tipo);
     this.texto.set(ref.texto ?? '');
-    this.color.set(ref.color ?? '#ffd646');
+    this.color.set(ref.color ?? COLOR_INICIAL);
     this.materialId.set(ref.preguntaId ?? ref.flashcardId ?? null);
+    this.enfocarReferencia(ref.pagina, ref.id);
+  }
+
+  private enfocarReferencia(pagina: number, referencia: number | null) {
     void this.router.navigate([], {
       relativeTo: this.ruta,
-      queryParams: { pagina: ref.pagina, referencia: ref.id },
+      queryParams: { pagina, referencia },
       queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 
@@ -308,22 +474,19 @@ export class LibrilloEditorComponent {
     if (
       !edicion ||
       !seleccion ||
-      this.accionesSuspendidas() ||
+      !this.puedeGuardar() ||
       this.ocupado() ||
       (estado === 'publicada' && this.tipo() === 'SUGERIDO') ||
-      (this.usaBanco() && !this.materialId())
+      (estado === 'borrador' && this.publicada())
     )
-      return;
+      return false;
+    const yaPublicada = this.publicada();
     this.ocupado.set(true);
     this.fallo.set('');
     try {
       const tipo = this.tipo();
       const sugerencia =
-        tipo === 'SUGERIDO'
-          ? this.referencias().find(
-              (ref) => ref.id === this.editando() && ref.tipo === 'SUGERIDO',
-            )
-          : undefined;
+        tipo === 'SUGERIDO' ? this.referenciaEditada() : undefined;
       const ref = await this.pedir(
         this.api.guardarReferencia(edicion, {
           id: this.editando(),
@@ -339,13 +502,20 @@ export class LibrilloEditorComponent {
             tipo === 'TARJETA' ? this.materialId()! : sugerencia?.flashcardId,
         }),
       );
+      if (this.edicion() !== edicion) return false;
       this.actualizar(ref);
       this.aviso.set(
-        estado === 'publicada' ? 'Referencia publicada.' : 'Borrador guardado.',
+        yaPublicada
+          ? 'Referencia publicada actualizada.'
+          : estado === 'publicada'
+            ? 'Referencia publicada.'
+            : 'Borrador guardado.',
       );
       this.limpiar();
+      return true;
     } catch (error) {
       this.reportar(error, 'No se pudo guardar la referencia.');
+      return false;
     } finally {
       this.ocupado.set(false);
     }
@@ -358,9 +528,16 @@ export class LibrilloEditorComponent {
       !edicion ||
       !seleccion?.fragmento ||
       this.accionesSuspendidas() ||
-      this.ocupado()
+      !this.formularioVigente() ||
+      this.editando()
     )
       return;
+    const sustituyeCambios =
+      this.tipo() !== TIPO_INICIAL ||
+      this.color() !== COLOR_INICIAL ||
+      this.texto().trim() !== seleccion.fragmento.trim();
+    if (!(await this.confirmarAccion(sustituyeCambios))) return;
+    if (this.edicion() !== edicion || this.accionesSuspendidas()) return;
     this.ocupado.set(true);
     this.fallo.set('');
     try {
@@ -372,6 +549,7 @@ export class LibrilloEditorComponent {
           seleccion.rectangulos,
         ),
       );
+      if (this.edicion() !== edicion) return;
       this.actualizar(ref);
       this.abrirFormularioReferencia(ref);
       this.aviso.set('Coincidencia guardada como borrador.');
@@ -387,11 +565,19 @@ export class LibrilloEditorComponent {
 
   async retirar(ref: ReferenciaPdf) {
     const edicion = this.edicion();
-    if (!edicion || this.accionesSuspendidas() || this.ocupado()) return;
+    if (!edicion || this.accionesSuspendidas()) return;
+    if (
+      !(await this.confirmarAccion(
+        this.editando() === ref.id && this.hayCambios(),
+      ))
+    )
+      return;
+    if (this.edicion() !== edicion || this.accionesSuspendidas()) return;
     this.ocupado.set(true);
     this.fallo.set('');
     try {
       await this.pedir(this.api.quitarReferencia(edicion, ref.id));
+      if (this.edicion() !== edicion) return;
       this.referencias.update((actuales) =>
         actuales.filter(({ id }) => id !== ref.id),
       );
@@ -404,11 +590,13 @@ export class LibrilloEditorComponent {
     }
   }
 
-  limpiar() {
+  private limpiar() {
+    this.edicionFormulario.set(null);
+    this.referenciaEditada.set(null);
     this.seleccion.set(null);
-    this.editando.set(undefined);
-    this.tipo.set('SUGERIDO');
+    this.tipo.set(TIPO_INICIAL);
     this.texto.set('');
+    this.color.set(COLOR_INICIAL);
     this.materialId.set(null);
     this.opciones.set([]);
     this.buscar.set('');
@@ -436,7 +624,7 @@ export class LibrilloEditorComponent {
     if (
       error instanceof HttpErrorResponse &&
       error.status === 409 &&
-      this.edicion()
+      error.error?.code === 'LIBRILLO_PDF_REVISION_CAMBIADA'
     ) {
       this.suspenderRevision();
       return;

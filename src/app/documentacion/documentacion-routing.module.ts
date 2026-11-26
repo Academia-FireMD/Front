@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { CanDeactivateFn, RouterModule, Routes } from '@angular/router';
 import { roleGuard } from '../guards/auth/role.guard';
 import { SubscriptionGuard } from '../guards/subscription.guard';
 import { SuscripcionTipo } from '../shared/models/subscription.model';
@@ -9,6 +9,11 @@ import { DocumentationOverviewComponent } from './documentation-overview/documen
 import { ReleaseManagementComponent } from './release-management/release-management.component';
 import { environment } from '../../environments/environment';
 import { RUTA_PREVIA_LIBRILLOS } from '../estudio/previa/previa-librillos';
+import type { LibrilloEditorComponent } from './librillo-editor.component';
+
+const confirmarSalidaEditor: CanDeactivateFn<LibrilloEditorComponent> = (
+  editor,
+) => editor.confirmarSalida();
 
 const rutasPrevia: Routes = environment.librillosMenu
   ? [
@@ -36,6 +41,7 @@ const routes: Routes = [
     path: 'librillo/editor/:documentoId',
     title: 'Editar referencias del Librillo',
     canActivate: [roleGuard, moduloGuard],
+    canDeactivate: [confirmarSalidaEditor],
     data: {
       expectedRole: 'ADMIN',
       modulo: ModuloApp.LIBRILLO_PDF_INTERACTIVO,
