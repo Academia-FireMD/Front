@@ -93,6 +93,23 @@ describe('Documentos del tema', () => {
     expect(documento.isNew).toBe(false);
   });
 
+  it('abre el PDF pulsando su título y registra la lectura; Word conserva el comportamiento anterior', async () => {
+    const word = { ...documento, id: 146, fileName: 'ficha.docx' };
+    fixture.componentRef.setInput('documentos', [documento, word]);
+    fixture.componentRef.setInput('modoTemario', true);
+    fixture.detectChanges();
+    const abrir = jest.fn();
+    fixture.componentInstance.abrirPdf.subscribe(abrir);
+    const titulos = fixture.nativeElement.querySelectorAll('.doc-info');
+    titulos[0].click();
+    await fixture.whenStable();
+    expect(abrir).toHaveBeenCalledWith(145);
+    expect(documentos.markAsSeen$).toHaveBeenCalledWith(145);
+    titulos[1].click();
+    expect(abrir).toHaveBeenCalledTimes(1);
+    expect(documentos.markAsSeen$).toHaveBeenCalledWith(146);
+  });
+
   it('descarga el blob autorizado con el nombre del tema y actualiza el acuse', async () => {
     documento.fileName = 'original.docx';
     const crear = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');

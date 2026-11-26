@@ -5,7 +5,7 @@
 <header class="cabecera" aria-labelledby="titulo-temario">
   <h1 id="titulo-temario" class="titulo-temario">
     <i class="pi pi-book" aria-hidden="true"></i>
-    Temario
+    {{ tema?.titulo || "Temario" }}
   </h1>
 
   @if (temas().length) {
@@ -16,7 +16,7 @@
       class="p-button-outlined boton-temas"
       aria-controls="catalogo-temario"
       [attr.aria-expanded]="selectorMovilAbierto()"
-      (click)="selectorMovilAbierto.set(!selectorMovilAbierto())"
+      (click)="abrirCatalogoMovil()"
     >
       <i class="pi pi-list" aria-hidden="true"></i>
       Ver temas
@@ -38,6 +38,8 @@
         [ngModel]="tema?.id ?? null"
         (onChange)="seleccionarTema($event.value)"
         [filter]="true"
+        [autofocusFilter]="true"
+        (onHide)="cerrarCatalogoMovil()"
         filterBy="etiqueta"
         filterPlaceholder="Buscar por tema o módulo"
         placeholder="Selecciona un tema"
@@ -46,7 +48,7 @@
       />
     </div>
     @if (tema && !selectorMovilAbierto()) {
-      <span class="tema-movil">{{ tema.etiqueta }}</span>
+      <span class="tema-movil">{{ tema.modulo }}</span>
     }
   }
 </header>
@@ -185,25 +187,53 @@
 >
   @if (tema) {
     @for (recurso of recursosMontados(); track recurso) {
-      @if (tema.documentos.length > 1 || vista.documentoInaccesible) {
-        <div class="campo-temario selector-pdf">
-          <label id="etiqueta-documento-librillo" for="documento-librillo"
-            >Documento</label
+      <div class="barra-lector">
+        @if (tema.documentos.length > 1 || vista.documentoInaccesible) {
+          <div class="campo-temario selector-pdf">
+            <label id="etiqueta-documento-librillo" for="documento-librillo"
+              >Documento</label
+            >
+            <p-dropdown
+              #selectorPdf
+              inputId="documento-librillo"
+              ariaLabelledBy="etiqueta-documento-librillo"
+              [options]="tema.documentos"
+              optionLabel="descripcion"
+              optionValue="id"
+              [ngModel]="vista.documento?.id ?? null"
+              (onChange)="seleccionarDocumento($event.value)"
+              placeholder="Selecciona un documento"
+              styleClass="w-full"
+            >
+              <ng-template pTemplate="selectedItem" let-documento>{{
+                documento.descripcion ||
+                  documento.identificador ||
+                  documento.fileName
+              }}</ng-template>
+              <ng-template pTemplate="item" let-documento>{{
+                documento.descripcion ||
+                  documento.identificador ||
+                  documento.fileName
+              }}</ng-template>
+            </p-dropdown>
+          </div>
+        }
+        @if (practicaDisponible() && lectorPdfActivo()) {
+          <button
+            type="button"
+            class="anotaciones-escritorio"
+            [attr.aria-pressed]="pestana() === 'anotaciones'"
+            aria-controls="librillo-lectura"
+            (click)="
+              pestana.set(
+                pestana() === 'anotaciones' ? 'lectura' : 'anotaciones'
+              )
+            "
           >
-          <p-dropdown
-            #selectorPdf
-            inputId="documento-librillo"
-            ariaLabelledBy="etiqueta-documento-librillo"
-            [options]="tema.documentos"
-            optionLabel="identificador"
-            optionValue="id"
-            [ngModel]="vista.documento?.id ?? null"
-            (onChange)="seleccionarDocumento($event.value)"
-            placeholder="Selecciona un documento"
-            styleClass="w-full"
-          />
-        </div>
-      }
+            Anotaciones
+          </button>
+        }
+      </div>
       @if (
         librillosActivos() &&
         vista.documento?.isDownloadable &&
@@ -252,7 +282,10 @@
         </div>
       }
       @if (practicaDisponible() && lectorPdfActivo()) {
-        <nav class="pestanas-librillo" aria-label="Vista del Temario">
+        <nav
+          class="pestanas-librillo navegacion-movil"
+          aria-label="Vista del Temario"
+        >
           <button
             #tabLectura
             type="button"

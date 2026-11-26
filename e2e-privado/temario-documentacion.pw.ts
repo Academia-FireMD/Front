@@ -399,7 +399,7 @@ test.describe('Documentación y Temario integrados', () => {
     await page.getByText(new RegExp(descripcionTema)).last().click();
     await alta.getByLabel('Descripción', { exact: true }).click();
     const premium = 'Requiere suscripción PREMIUM o ADVANCED';
-    const marca = 'Aplicar marca de agua';
+    const marca = 'Marca de agua';
     await alta.getByText(premium, { exact: true }).click();
     await alta.getByText(marca, { exact: true }).click();
     await alta.getByRole('button', { name: /Subir Documento$/i }).click();

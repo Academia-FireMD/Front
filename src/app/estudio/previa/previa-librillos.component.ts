@@ -333,6 +333,20 @@ export class PreviaLibrillosComponent {
     );
   }
 
+  abrirCatalogoMovil() {
+    this.selectorMovilAbierto.set(true);
+    afterNextRender(() => this.selectorTema()?.show(), {
+      injector: this.injector,
+    });
+  }
+
+  cerrarCatalogoMovil() {
+    if (!this.selectorMovilAbierto()) return;
+    this.selectorMovilAbierto.set(false);
+    const boton = this.botonTemas()?.nativeElement;
+    if (boton) this.enfocarTrasRender(boton);
+  }
+
   private enfocarTrasRender(destino: HTMLElement) {
     afterNextRender(
       () => {

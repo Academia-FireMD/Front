@@ -13,7 +13,15 @@
 <div class="documentos-list">
   @for (doc of documentos(); track doc.id) {
     <div class="documento-item" [class.locked-document]="doc.isLocked">
-      <button type="button" class="doc-info" (click)="verDocumentoAlumno(doc)">
+      <button
+        type="button"
+        class="doc-info"
+        (click)="
+          modoTemario() && pdfDisponible(doc)
+            ? abrir(doc)
+            : verDocumentoAlumno(doc)
+        "
+      >
         <span class="doc-name">
           @if (doc.isLocked) {
             <i
@@ -29,7 +37,7 @@
           }
           {{ doc.identificador }}
           @if (doc.isNew) {
-            <span class="badge-new">NEW</span>
+            <span class="badge-new">Nuevo</span>
           }
           @if (doc.isLocked) {
             <span class="badge-premium">PREMIUM</span>

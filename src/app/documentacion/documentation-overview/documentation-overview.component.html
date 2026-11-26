@@ -59,12 +59,14 @@
     [resizable]="false"
   >
     <p-fileUpload
-      name="demo[]"
-      url="https://www.primefaces.org/cdn/api/upload.php"
+      name="file"
+      [customUpload]="true"
       [multiple]="false"
       accept=".pdf,.doc,.docx"
       maxFileSize="1000000000"
-      (onSelect)="onSelect($event)"
+      (onSelect)="seleccionarArchivos($event.currentFiles)"
+      (onRemove)="seleccionarArchivos([])"
+      (onClear)="seleccionarArchivos([])"
       chooseLabel="Seleccionar archivo"
       cancelStyleClass="hidden"
       [uploadStyleClass]="'hidden'"
@@ -74,15 +76,6 @@
           [formGroup]="uploadingFileFormGroup"
           class="flex flex-column gap-3"
         >
-          <div
-            class="flex align-items-center gap-2 p-2 border-round surface-100 text-color-secondary"
-          >
-            <i class="pi pi-info-circle"></i>
-            <small
-              >El identificador se generará automáticamente a partir del tema
-              seleccionado.</small
-            >
-          </div>
           <p-floatLabel>
             <textarea
               id="descripcion"
@@ -90,14 +83,40 @@
               style="width: 100%"
               formControlName="descripcion"
             ></textarea>
-            <label for="descripcion">Descripcion</label>
+            <label for="descripcion">Descripción</label>
           </p-floatLabel>
           <div>
             <label class="block mb-2">Tema</label>
             <app-tema-select
-              [controlTemas]="uploadingFileFormGroup.controls['temaIds']"
+              [multiple]="false"
+              [controlTemas]="uploadingFileFormGroup.controls['temaId']"
             ></app-tema-select>
+            <button
+              pButton
+              type="button"
+              class="p-button-text"
+              label="Quitar tema"
+              *ngIf="uploadingFileFormGroup.controls.temaId.value != null"
+              (click)="uploadingFileFormGroup.controls.temaId.setValue(null)"
+            ></button>
           </div>
+          @if (uploadingFileFormGroup.controls.temaId.value != null) {
+            <small class="text-color-secondary"
+              >El tema determina el identificador del documento.</small
+            >
+          } @else if (uploadedFiles.length) {
+            <div>
+              <label class="block mb-2" for="identificador-sin-tema"
+                >Identificador del documento</label
+              >
+              <input
+                id="identificador-sin-tema"
+                class="w-full"
+                pInputText
+                formControlName="identificador"
+              />
+            </div>
+          }
           <div class="flex flex-column gap-3">
             <div class="flex flex-column gap-2">
               <div class="flex align-items-center">
@@ -124,9 +143,7 @@
                   [binary]="true"
                   inputId="requireWatermark"
                 ></p-checkbox>
-                <label for="requireWatermark" class="ml-2"
-                  >Aplicar marca de agua</label
-                >
+                <label for="requireWatermark" class="ml-2">Marca de agua</label>
               </div>
               <small class="text-color-secondary ml-4">
                 <i class="pi pi-info-circle"></i>
@@ -136,17 +153,19 @@
               </small>
             </div>
           </div>
+          @if (errorSubida) {
+            <p role="alert" class="text-red-700">{{ errorSubida }}</p>
+          }
           <div class="flex justify-content-end">
             <app-async-button
-              label="{{
-                viewportService.screenWidth == 'xs'
-                  ? undefined
-                  : 'Subir Documento'
-              }}"
+              label="Subir documento"
               icon="pi pi-upload"
               [action]="subirDocumento.bind(this)"
               [disabled]="
-                uploadedFiles.length == 0 || uploadingFileFormGroup.invalid
+                !uploadedFiles.length ||
+                uploadingFileFormGroup.invalid ||
+                (uploadingFileFormGroup.controls.temaId.value == null &&
+                  !uploadingFileFormGroup.controls.identificador.value?.trim())
               "
             ></app-async-button>
           </div>
@@ -181,13 +200,22 @@
           style="width: 100%"
           formControlName="descripcion"
         ></textarea>
-        <label for="descripcion">Descripcion</label>
+        <label for="descripcion">Descripción</label>
       </p-floatLabel>
       <div>
         <label class="block mb-2">Tema</label>
         <app-tema-select
-          [controlTemas]="editarDocumentoForm.controls['temaIds']"
+          [multiple]="false"
+          [controlTemas]="editarDocumentoForm.controls['temaId']"
         ></app-tema-select>
+        <button
+          pButton
+          type="button"
+          class="p-button-text"
+          label="Quitar tema"
+          *ngIf="editarDocumentoForm.controls.temaId.value != null"
+          (click)="editarDocumentoForm.controls.temaId.setValue(null)"
+        ></button>
       </div>
       <div class="flex flex-column gap-3">
         <div class="flex flex-column gap-2">
@@ -215,9 +243,7 @@
               [binary]="true"
               inputId="editRequireWatermark"
             ></p-checkbox>
-            <label for="editRequireWatermark" class="ml-2"
-              >Aplicar marca de agua</label
-            >
+            <label for="editRequireWatermark" class="ml-2">Marca de agua</label>
           </div>
           <small class="text-color-secondary ml-4">
             <i class="pi pi-info-circle"></i>
@@ -287,9 +313,7 @@
     <div right-actions>
       <p-button
         *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
-        label="{{
-          viewportService.screenWidth == 'xs' ? undefined : 'Subir Documento'
-        }}"
+        label="Subir documento"
         icon="pi pi-upload"
         [link]="true"
         (click)="mostrarSubirFichero = true"
@@ -395,7 +419,7 @@
             pTooltip="Aplica marca de agua al descargar"
             tooltipPosition="top"
           >
-            <i class="pi pi-shield"></i> WATERMARK
+            <i class="pi pi-shield"></i> Marca de agua
           </span>
         </div>
         <span
@@ -421,10 +445,12 @@
               class="p-button-outlined enlace-librillo"
               [routerLink]="['/app/documentacion/librillo/editor', document.id]"
               [queryParams]="parametrosLista()"
-              [attr.aria-label]="'Librillo de ' + document.identificador"
+              [attr.aria-label]="
+                'Editar referencias del Librillo de ' + document.identificador
+              "
             >
               <i class="pi pi-book" aria-hidden="true"></i>
-              <span>Librillo</span>
+              <span>Editar referencias</span>
             </a>
           }
           <span

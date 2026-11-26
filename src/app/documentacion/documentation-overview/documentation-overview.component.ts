@@ -75,13 +75,12 @@ export class DocumentationOverviewComponent
   public uploadingFile = false;
   public mostrarSubirFichero = false;
   public uploadedFiles: File[] = [];
+  public errorSubida = '';
   private fb = inject(FormBuilder);
   public uploadingFileFormGroup = this.fb.group({
-    // El identificador se autogenera en el backend a partir del tema; el admin
-    // ya no lo introduce a mano en la creación (evita basura tipo "0").
     identificador: [''],
     descripcion: [''],
-    temaIds: [[] as number[]],
+    temaId: [null as number | null],
     isLocked: [false],
     requireWatermark: [false],
   });
@@ -99,7 +98,7 @@ export class DocumentationOverviewComponent
   public editarDocumentoForm = this.fb.group({
     identificador: ['', Validators.required],
     descripcion: [''],
-    temaIds: [[] as number[]],
+    temaId: [null as number | null],
     isLocked: [false],
     requireWatermark: [false],
   });
@@ -125,7 +124,7 @@ export class DocumentationOverviewComponent
     },
     {
       key: 'isLocked',
-      label: 'Solo documentos premium (isLocked)',
+      label: 'Solo documentos premium',
       type: 'toggle',
       filterInterpolation: (value: boolean) =>
         value === true ? { isLocked: true } : {},
@@ -299,8 +298,14 @@ export class DocumentationOverviewComponent
     });
   }
 
-  onSelect(event: any) {
-    this.uploadedFiles = event.currentFiles;
+  seleccionarArchivos(archivos: File[]) {
+    this.uploadedFiles = archivos;
+    this.errorSubida = '';
+    const identificador = this.uploadingFileFormGroup.controls.identificador;
+    if (!identificador.dirty || !identificador.value?.trim()) {
+      const nombre = archivos[0]?.name.trim() ?? '';
+      identificador.setValue(nombre.replace(/\.[^.]+$/, '').trim() || nombre);
+    }
   }
 
   async subirDocumento() {
@@ -310,47 +315,42 @@ export class DocumentationOverviewComponent
       return;
     }
 
+    const { temaId, identificador, descripcion, isLocked, requireWatermark } =
+      this.uploadingFileFormGroup.getRawValue();
+    const identificadorSinTema = identificador?.trim() ?? '';
+    if (temaId == null && !identificadorSinTema) {
+      this.errorSubida = 'Indica un identificador para el documento sin tema.';
+      return;
+    }
     const formData = new FormData();
     formData.append('file', selectedFile);
-    formData.append(
-      'identificador',
-      this.uploadingFileFormGroup.value.identificador ?? '',
-    );
-    formData.append(
-      'descripcion',
-      this.uploadingFileFormGroup.value.descripcion ?? '',
-    );
-    formData.append('esPublico', true + '');
-    formData.append(
-      'isLocked',
-      String(this.uploadingFileFormGroup.value.isLocked ?? false),
-    );
-    formData.append(
-      'requireWatermark',
-      String(this.uploadingFileFormGroup.value.requireWatermark ?? false),
-    );
-
-    const temaId = (this.uploadingFileFormGroup.value.temaIds ?? [])[0];
-    if (temaId !== undefined) {
+    formData.append('descripcion', descripcion ?? '');
+    formData.append('esPublico', 'true');
+    formData.append('isLocked', String(isLocked ?? false));
+    formData.append('requireWatermark', String(requireWatermark ?? false));
+    if (temaId != null) {
       formData.append('temaId', String(temaId));
+    } else {
+      formData.append('identificador', identificadorSinTema);
     }
 
+    this.errorSubida = '';
     this.uploadingFile = true;
     try {
-      const response = await firstValueFrom(
-        this.service.uploadDocumento$(formData),
-      );
-      this.toast.success(`Archivo subido exitosamente`);
-      this.uploadingFile = false;
+      await firstValueFrom(this.service.uploadDocumento$(formData));
+      this.toast.success('Documento subido');
       this.uploadingFileFormGroup.reset();
       this.mostrarSubirFichero = false;
       this.uploadedFiles = [];
       this.refresh();
     } catch (error) {
+      this.errorSubida =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo subir el documento.';
+    } finally {
       this.uploadingFile = false;
     }
-
-    this.refresh();
   }
 
   abrirEditarDocumento(document: Documento) {
@@ -360,7 +360,7 @@ export class DocumentationOverviewComponent
     this.editarDocumentoForm.patchValue({
       identificador: document.identificador,
       descripcion: document.descripcion ?? '',
-      temaIds: document.temaId ? [document.temaId] : [],
+      temaId: document.temaId ?? null,
       isLocked: (document as any).isLocked ?? false,
       requireWatermark: (document as any).requireWatermark ?? false,
     });
@@ -372,8 +372,7 @@ export class DocumentationOverviewComponent
     const id = this.documentoEditando.id;
     const identificador = this.editarDocumentoForm.value.identificador ?? '';
     const descripcion = this.editarDocumentoForm.value.descripcion ?? '';
-    const temaIds = this.editarDocumentoForm.value.temaIds ?? [];
-    const temaId = temaIds.length > 0 ? temaIds[0] : null;
+    const temaId = this.editarDocumentoForm.value.temaId ?? null;
     const isLocked = this.editarDocumentoForm.value.isLocked ?? false;
     const requireWatermark =
       this.editarDocumentoForm.value.requireWatermark ?? false;

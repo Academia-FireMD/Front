@@ -25,7 +25,7 @@ import {
 import { Documento } from '../../shared/models/documentacion.model';
 import { PrimengModule } from '../../shared/primeng.module';
 import { DocumentosService } from '../services/documentacion.service';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { COMMON_TEST_PROVIDERS } from '../../testing';
 
 import { DocumentationOverviewComponent } from './documentation-overview.component';
@@ -54,6 +54,69 @@ describe('DocumentationOverviewComponent', () => {
     control.setValue('');
     control.updateValueAndValidity();
     expect(control.valid).toBe(true);
+  });
+
+  it('envía un único tema en el alta y permite eliminarlo al editar', async () => {
+    const upload = jest.fn().mockReturnValue(of({}));
+    const update = jest.fn().mockReturnValue(of({}));
+    (component as any).service = {
+      uploadDocumento$: upload,
+      updateDocumento$: update,
+    };
+    jest.spyOn(component as any, 'refresh').mockImplementation(() => {});
+    component.uploadedFiles = [new File(['pdf'], 'tema.pdf')];
+    component.uploadingFileFormGroup.patchValue({
+      temaId: 9,
+      isLocked: true,
+      requireWatermark: true,
+    });
+    await component.subirDocumento();
+    const data = upload.mock.calls[0][0] as FormData;
+    expect(data.get('temaId')).toBe('9');
+    expect(data.has('identificador')).toBe(false);
+    expect(data.get('isLocked')).toBe('true');
+    expect(data.get('requireWatermark')).toBe('true');
+    component.abrirEditarDocumento({
+      id: 19,
+      identificador: 'Tema',
+      temaId: 9,
+    } as Documento);
+    expect(component.editarDocumentoForm.controls.temaId.value).toBe(9);
+    component.editarDocumentoForm.controls.temaId.setValue(null);
+    await component.guardarCambiosDocumento();
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 19, temaId: null }),
+    );
+  });
+
+  it('propone el nombre sin tema y permite corregir un identificador repetido conservando el archivo', async () => {
+    const subida = jest
+      .fn()
+      .mockReturnValueOnce(
+        throwError(() => new Error('El identificador ya está en uso.')),
+      )
+      .mockReturnValueOnce(of({ id: 19 } as Documento));
+    component.service = {
+      uploadDocumento$: subida,
+    } as unknown as DocumentosService;
+    jest.spyOn(component as any, 'refresh').mockImplementation(() => {});
+    const archivo = new File(['pdf'], 'Plano del término.pdf');
+    component.seleccionarArchivos([archivo]);
+    component.uploadingFileFormGroup.controls.isLocked.setValue(true);
+    await component.subirDocumento();
+    expect(component.errorSubida).toContain('ya está en uso');
+    expect(component.uploadedFiles).toEqual([archivo]);
+    expect(subida.mock.calls[0][0].get('identificador')).toBe(
+      'Plano del término',
+    );
+    component.uploadingFileFormGroup.controls.identificador.setValue(
+      'Plano revisado',
+    );
+    await component.subirDocumento();
+    const datos = subida.mock.calls[1][0];
+    expect(datos.get('identificador')).toBe('Plano revisado');
+    expect(datos.has('temaId')).toBe(false);
+    expect(datos.get('isLocked')).toBe('true');
   });
 
   it('publicarDocumento llama al servicio, marca isPublicado y refresca', async () => {
