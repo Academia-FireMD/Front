@@ -314,6 +314,7 @@
       <p-button
         *ngIf="expectedRole == 'ADMIN' && mode === 'overview'"
         label="Subir documento"
+        ariaLabel="Subir documento"
         icon="pi pi-upload"
         [link]="true"
         (click)="mostrarSubirFichero = true"

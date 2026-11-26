@@ -92,8 +92,13 @@ test('subida móvil conserva nombre y área táctil en la lista y el diálogo', 
     }),
   );
   await page.goto('/app/documentacion');
+  // La fuente de iconos de staging aporta contenido generado al botón de subida.
+  await page.addStyleTag({
+    content: '.pi-upload::before { content: "\\e934"; }',
+  });
   const entrada = page.getByRole('button', { name: 'Subir documento' });
   await expect(entrada).toBeVisible();
+  await expect(entrada).toHaveAccessibleName('Subir documento');
   const caja = await entrada.boundingBox();
   expect(caja!.width).toBeGreaterThanOrEqual(44);
   expect(caja!.height).toBeGreaterThanOrEqual(44);
@@ -101,6 +106,7 @@ test('subida móvil conserva nombre y área táctil en la lista y el diálogo', 
   const dialogo = page.getByRole('dialog', { name: 'Subir nuevo documento' });
   const accion = dialogo.getByRole('button', { name: 'Subir documento' });
   await expect(accion).toBeVisible();
+  await expect(accion).toHaveAccessibleName('Subir documento');
   await expect
     .poll(async () => (await accion.boundingBox())?.height ?? 0)
     .toBeGreaterThanOrEqual(44);
