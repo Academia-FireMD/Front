@@ -4,6 +4,7 @@ import {
   ModuloTemario,
 } from '../../shared/models/documentacion.model';
 import {
+  agruparBibliotecaDocumentos,
   crearBibliotecaDocumentos,
   crearTemarioLibrillo,
   filtrarBibliotecaDocumentos,
@@ -145,6 +146,63 @@ describe('Temario del Librillo', () => {
 });
 
 describe('Mis documentos', () => {
+  it('conserva el orden del árbol incluso con nombres repetidos y conserva los documentos originales', () => {
+    const guia = recurso(21);
+    const anexo = recurso(12, { isLocked: true, isDownloadable: false });
+    const resumen = recurso(10);
+    const arbol = [
+      {
+        id: 8,
+        nombre: 'Anexos',
+        temas: [
+          {
+            id: 32,
+            numero: 9,
+            descripcion: 'Guías',
+            documentos: [guia, anexo],
+          },
+          {
+            id: 16,
+            numero: 3,
+            descripcion: 'Resúmenes',
+            documentos: [resumen],
+          },
+        ],
+      },
+      {
+        id: 2,
+        nombre: 'Anexos',
+        temas: [
+          {
+            id: 44,
+            numero: 9,
+            descripcion: 'Guías',
+            documentos: [recurso(42)],
+          },
+        ],
+      },
+    ];
+    const biblioteca = crearBibliotecaDocumentos(arbol);
+    const grupos = agruparBibliotecaDocumentos(
+      arbol,
+      filtrarBibliotecaDocumentos(biblioteca, '', null).documentos,
+    );
+    expect(grupos.map(({ id, cantidad }) => [id, cantidad])).toEqual([
+      [8, 3],
+      [2, 1],
+    ]);
+    expect(grupos[0].temas.map(({ id }) => id)).toEqual([32, 16]);
+    expect(grupos[0].temas[0].documentos.map(({ id }) => id)).toEqual([21, 12]);
+    expect(grupos[0].temas[0].documentos[1]).toBe(anexo);
+    const filtrados = agruparBibliotecaDocumentos(
+      arbol,
+      filtrarBibliotecaDocumentos(biblioteca, 'Anexos', 44).documentos,
+    );
+    expect(filtrados.map(({ id, temas }) => [id, temas[0].id])).toEqual([
+      [2, 44],
+    ]);
+  });
+
   it('prefiere la descripción si el identificador repite el tema y conserva el nombre de los demás', () => {
     const tema = 'Término municipal de VLC';
     const pdf = recurso(21, {

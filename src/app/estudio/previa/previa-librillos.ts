@@ -1,9 +1,31 @@
 import { ParamMap, UrlTree } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { usuarioIdDeSubject } from '../../cursos/services/hidraulica-interactivo.service';
+import { EstadoModulos } from '../../shared/models/app-config.model';
+import { ModuloApp } from '../../shared/models/modulo-app.enum';
+import { SuscripcionTipo } from '../../shared/models/subscription.model';
+import { Rol, Usuario } from '../../shared/models/user.model';
+import { esSuscripcionVigente } from '../../shared/utils/membresia-externa.util';
 
 export const RUTA_PREVIA_LIBRILLOS = '/app/librillos';
 export const ORIGEN_BIBLIOTECA = 'mis-documentos';
+
+export function puedeAbrirTemario(
+  usuario: Usuario | null,
+  flags: EstadoModulos,
+) {
+  return (
+    environment.librillosMenu &&
+    flags[ModuloApp.DOCUMENTACION] === true &&
+    flags[ModuloApp.LIBRILLOS] === true &&
+    usuario?.rol === Rol.ALUMNO &&
+    !!usuario.suscripciones?.some(
+      (suscripcion) =>
+        Object.values(SuscripcionTipo).includes(suscripcion.tipo) &&
+        esSuscripcionVigente(suscripcion),
+    )
+  );
+}
 
 const PREVIA_ANTERIOR = new Map<string, ContextoLibrillo>([
   ['estatutos', { id: 47, documentoId: 145 }],

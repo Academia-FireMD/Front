@@ -10,17 +10,30 @@
   </a>
 }
 
-<div class="documentos-list" [class.biblioteca]="biblioteca()">
+<div class="documentos-list" [class.biblioteca]="modoTemario()">
   @for (doc of documentos(); track doc.id) {
     @let contexto = biblioteca()?.get(doc.id);
-    @let titulo = contexto?.titulo ?? doc.identificador;
+    @let titulo =
+      contexto?.titulo ??
+      (modoTemario()
+        ? tituloDeBiblioteca(doc, descripcionTema())
+        : doc.identificador);
+    @let edicionDisponible = tieneEdicion(doc);
+    @let puedeLeer = pdfDisponible(doc);
+    @let identificador = "temario-doc-" + doc.id;
     @let mostrarDescripcion =
       doc.descripcion && (!contexto || doc.descripcion.trim() !== titulo);
     <div class="documento-item" [class.locked-document]="doc.isLocked">
       <ng-template #info>
         <span class="doc-name">
-          @if (contexto && pdfDisponible(doc)) {
-            <i class="pi pi-file-pdf doc-icono" aria-hidden="true"></i>
+          @if (modoTemario() && doc.isDownloadable) {
+            <i
+              class="pi doc-icono"
+              [class.pi-book]="edicionDisponible"
+              [class.pi-file-pdf]="!edicionDisponible && puedeLeer"
+              [class.pi-download]="!edicionDisponible && !puedeLeer"
+              aria-hidden="true"
+            ></i>
           }
           @if (doc.isLocked) {
             <i
@@ -59,103 +72,98 @@
           >
         }
         @if (contexto) {
-          <span class="doc-desc" [id]="'biblioteca-contexto-' + doc.id">{{
+          <span class="sr-only" [id]="'biblioteca-contexto-' + doc.id">{{
             contexto.tema.etiqueta
           }}</span>
         }
         @if (doc.isLocked && !doc.isDownloadable) {
           <span class="doc-desc">Requiere suscripción Premium o Advanced</span>
-        } @else if (contexto && !doc.isDownloadable) {
+        } @else if (modoTemario() && !doc.isDownloadable) {
           <span class="doc-desc">Documento bloqueado</span>
         }
       </ng-template>
-      @if (contexto && !doc.isDownloadable) {
-        <div class="doc-info">
+      @let descripcion =
+        contexto
+          ? "biblioteca-contexto-" +
+            doc.id +
+            (mostrarDescripcion ? " biblioteca-descripcion-" + doc.id : "") +
+            (doc.isNew ? " biblioteca-nuevo-" + doc.id : "") +
+            (doc.isLocked ? " biblioteca-premium-" + doc.id : "")
+          : null;
+      @if (modoTemario() && !doc.isDownloadable) {
+        <div class="doc-info" [id]="identificador" tabindex="-1">
           <ng-container [ngTemplateOutlet]="info" />
         </div>
+      } @else if (modoTemario() && edicionDisponible) {
+        @let destino = enlaceEdicion(doc);
+        <a
+          class="doc-info"
+          [id]="identificador"
+          [href]="hrefEdicion(destino)"
+          [attr.aria-label]="titulo"
+          [attr.aria-describedby]="descripcion"
+          (click)="abrirEdicionInteractiva($event, doc, destino)"
+        >
+          <ng-container [ngTemplateOutlet]="info" />
+        </a>
       } @else {
         <button
           type="button"
           class="doc-info"
-          [attr.id]="contexto ? 'biblioteca-doc-' + doc.id : null"
-          [attr.aria-label]="contexto ? titulo : null"
-          [attr.aria-describedby]="
-            contexto
-              ? 'biblioteca-contexto-' +
-                doc.id +
-                (mostrarDescripcion
-                  ? ' biblioteca-descripcion-' + doc.id
-                  : '') +
-                (doc.isNew ? ' biblioteca-nuevo-' + doc.id : '') +
-                (doc.isLocked ? ' biblioteca-premium-' + doc.id : '')
-              : null
-          "
+          [attr.id]="modoTemario() ? identificador : null"
+          [attr.aria-label]="modoTemario() ? titulo : null"
+          [attr.aria-describedby]="descripcion"
           (click)="
-            modoTemario() && pdfDisponible(doc)
-              ? abrir(doc)
-              : verDocumentoAlumno(doc)
+            !modoTemario()
+              ? verDocumentoAlumno(doc)
+              : puedeLeer
+                ? abrir(doc)
+                : descargarDocumentoAlumno(doc)
           "
         >
           <ng-container [ngTemplateOutlet]="info" />
         </button>
       }
-      <div class="doc-acciones">
-        @if (!contexto && modoTemario() && pdfDisponible(doc)) {
-          <button
-            pButton
-            type="button"
-            class="p-button-sm p-button-outlined"
-            icon="pi pi-file-pdf"
-            label="Abrir en Librillo"
-            (click)="abrir(doc)"
-          ></button>
-        }
-        @if (librillosActivos() && doc.isDownloadable && doc.librillo) {
-          <a
-            [id]="'librillo-doc-' + doc.id"
-            class="p-button p-button-sm p-button-outlined"
-            [routerLink]="['/app/documentacion/alumno/librillo', doc.id]"
-            [queryParams]="{
-              tema: contexto ? null : temaId(),
-              desde: contexto
-                ? origenBiblioteca
-                : modoTemario()
-                  ? 'librillos'
-                  : null,
-              vista: modoTemario() ? vistaOrigen() : null,
-            }"
-            [state]="contexto ? { volverAMisDocumentos: true } : undefined"
-            (click)="registrarAperturaEdicion($event, doc)"
-          >
-            <i class="pi pi-book" aria-hidden="true"></i>
-            <span>Abrir edición interactiva</span>
-          </a>
-        }
-        @if (contexto) {
-          <button
-            pButton
-            type="button"
-            class="p-button-sm p-button-outlined descarga-biblioteca"
-            aria-label="Descargar"
-            pTooltip="Descargar"
-            [disabled]="!doc.isDownloadable"
-            (click)="descargarDocumentoAlumno(doc)"
-          >
-            <i class="pi pi-download" aria-hidden="true"></i>
-            <span class="etiqueta-descarga">Descargar</span>
-          </button>
-        } @else {
-          <button
-            pButton
-            type="button"
-            (click)="descargarDocumentoAlumno(doc)"
-            class="p-button-sm"
-            icon="pi pi-download"
-            label="Descargar"
-            [disabled]="!doc.isDownloadable"
-          ></button>
-        }
-      </div>
+      @if (
+        !modoTemario() || puedeLeer || edicionDisponible || !doc.isDownloadable
+      ) {
+        <div class="doc-acciones">
+          @if (!modoTemario() && edicionDisponible) {
+            <a
+              [id]="'librillo-doc-' + doc.id"
+              class="p-button p-button-sm p-button-outlined"
+              [routerLink]="enlaceEdicion(doc)"
+            >
+              <i class="pi pi-book" aria-hidden="true"></i>
+              <span>Abrir edición interactiva</span>
+            </a>
+          }
+          @if (modoTemario()) {
+            <button
+              pButton
+              type="button"
+              class="p-button-sm p-button-outlined descarga-biblioteca"
+              aria-label="Descargar"
+              pTooltip="Descargar"
+              [disabled]="!doc.isDownloadable"
+              (click)="descargarDocumentoAlumno(doc)"
+            >
+              <i class="pi pi-download" aria-hidden="true"></i>
+              <span class="etiqueta-descarga">Descargar</span>
+            </button>
+          } @else {
+            <button
+              pButton
+              type="button"
+              (click)="descargarDocumentoAlumno(doc)"
+              class="p-button-sm"
+              icon="pi pi-download"
+              label="Descargar"
+              [disabled]="!doc.isDownloadable"
+            ></button>
+          }
+        </div>
+      }
     </div>
   } @empty {
     @if (modoTemario()) {

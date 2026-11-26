@@ -9,6 +9,7 @@ import { DocumentationOverviewComponent } from './documentation-overview/documen
 import { ReleaseManagementComponent } from './release-management/release-management.component';
 import { environment } from '../../environments/environment';
 import { RUTA_PREVIA_LIBRILLOS } from '../estudio/previa/previa-librillos';
+import { documentacionAlumnoGuard } from '../estudio/previa/previa-librillos.guard';
 import type { LibrilloEditorComponent } from './librillo-editor.component';
 
 const confirmarSalidaEditor: CanDeactivateFn<LibrilloEditorComponent> = (
@@ -77,7 +78,7 @@ const routes: Routes = [
   {
     path: 'alumno',
     component: DocumentationOverviewComponent,
-    canActivate: [roleGuard, SubscriptionGuard],
+    canActivate: [roleGuard, SubscriptionGuard, documentacionAlumnoGuard],
     title: 'Documentación',
     data: {
       expectedRole: 'ALUMNO',

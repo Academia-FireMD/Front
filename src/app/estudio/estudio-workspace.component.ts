@@ -132,7 +132,7 @@ export class EstudioWorkspaceComponent {
     );
   }
   readonly titulo = signal(
-    this.tipo === 'psico' ? 'Psicotécnicos' : 'Librillo',
+    this.tipo === 'psico' ? 'Psicotécnicos' : 'Edición interactiva',
   );
   readonly edicion = signal('');
   readonly edicionCambiada = signal(false);
@@ -151,8 +151,8 @@ export class EstudioWorkspaceComponent {
   );
   readonly texto = computed(() => {
     if (this.borradorReiniciado())
-      return 'Se ha reiniciado el Librillo en otra pestaña.';
-    if (this.edicionCambiada()) return 'Hay una nueva edición del Librillo.';
+      return 'Se ha reiniciado el progreso en otra pestaña.';
+    if (this.edicionCambiada()) return 'Hay una nueva edición del documento.';
     return TEXTO[this.estado()];
   });
   readonly reintentarVisible = computed(
@@ -266,7 +266,7 @@ export class EstudioWorkspaceComponent {
           !meta.edicion ||
           !meta.titulo)
       )
-        throw new Error('Librillo no disponible');
+        throw new Error('Edición interactiva no disponible');
       data.edition = meta?.edicion;
       const html = await firstValueFrom(
         this.api
@@ -499,6 +499,29 @@ export class EstudioWorkspaceComponent {
       : 'Volver al tema';
   }
 
+  get parametrosPdfOriginal() {
+    const params = this.route.snapshot.queryParamMap;
+    const doc = this.route.snapshot.paramMap.get('documentoId');
+    if (!environment.librillosMenu || params.get('original') !== 'pdf' || !doc)
+      return undefined;
+    return { doc, tema: params.get('tema'), vista: 'librillo' };
+  }
+
+  async abrirPdfOriginal() {
+    const queryParams = this.parametrosPdfOriginal;
+    if (!queryParams || this.saliendo()) return;
+    this.saliendo.set(true);
+    try {
+      await this.guardarAntesDeSalir();
+      await this.router.navigate([RUTA_PREVIA_LIBRILLOS], {
+        queryParams,
+        state: { misDocumentos: this.estadoDelVisor()?.misDocumentos },
+      });
+    } finally {
+      this.saliendo.set(false);
+    }
+  }
+
   async guardarAntesDeSalir() {
     const data = this.active;
     if (!data || !this.url()) return;
@@ -526,18 +549,26 @@ export class EstudioWorkspaceComponent {
         return;
       }
       await this.guardarAntesDeSalir();
-      const estado = this.location.getState() as {
-        volverAMisDocumentos?: boolean;
-      } | null;
+      const estado = this.estadoDelVisor();
       if (this.desdeBiblioteca() && estado?.volverAMisDocumentos) {
         this.location.back();
         return;
       }
       const { ruta, parametros } = this.retornoLibrillo();
-      await this.router.navigate([ruta], { queryParams: parametros });
+      await this.router.navigate([ruta], {
+        queryParams: parametros,
+        state: { misDocumentos: estado?.misDocumentos },
+      });
     } finally {
       this.saliendo.set(false);
     }
+  }
+
+  private estadoDelVisor() {
+    return this.location.getState() as {
+      volverAMisDocumentos?: boolean;
+      misDocumentos?: unknown;
+    } | null;
   }
 
   private desdeBiblioteca() {

@@ -531,7 +531,7 @@ test.describe('Documentación y Temario integrados', () => {
       page.getByRole('button', { name: /PDF permitido/ }),
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: /Resumen bloqueado/ }),
+      page.getByText('Resumen bloqueado', { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole('button', { name: /Reintentar/ }),
@@ -546,7 +546,7 @@ test.describe('Documentación y Temario integrados', () => {
     );
     await expect(
       page
-        .getByRole('tabpanel', { name: 'Librillo' })
+        .getByRole('tabpanel', { name: 'Estudio' })
         .getByText(/Este documento no está disponible/i),
     ).toBeVisible();
     expect(peticionesPdf).toBe(0);

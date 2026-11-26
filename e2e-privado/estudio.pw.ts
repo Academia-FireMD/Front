@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { contador, servidorEstudio, visor } from './estudio.fixture';
+import { documentoPdf } from './documento-pdf.fixture';
 
 const practica = '/app/psicotecnicos';
 const temario = '/app/documentacion/alumno';
@@ -51,7 +52,11 @@ async function abrirLibrillo(
   data: ReturnType<typeof servidorEstudio>,
 ) {
   await page.goto(`${temario}?tema=${data.TEMA}`);
-  await page.getByRole('link', { name: 'Abrir edición interactiva' }).click();
+  await page
+    .getByRole('link', {
+      name: data.staging ? 'Original · Estatutos' : 'Abrir edición interactiva',
+    })
+    .click();
   const f = visor(page);
   await expect(f.locator('#hojaSel option')).toHaveCount(19);
   await expect(estado(page)).toHaveAttribute('data-estado', 'saved');
@@ -448,9 +453,11 @@ test('R07 muestra las 19 hojas, guarda notas y restaura tema, página y aislamie
   try {
     const page = await backend.preparar(a);
     const f = await abrirLibrillo(page, backend);
-    await expect(
-      page.getByRole('button', { name: 'Volver al tema', exact: true }),
-    ).toBeVisible();
+    const volver = page.getByRole('button', {
+      name: backend.staging ? 'Volver al Temario' : 'Volver al tema',
+      exact: true,
+    });
+    await expect(volver).toBeVisible();
     await expect(f.locator('.bar .logo')).toBeHidden();
     await expect(f.locator('.bar #sync')).toBeHidden();
     await expect(
@@ -484,16 +491,17 @@ test('R07 muestra las 19 hojas, guarda notas y restaura tema, página y aislamie
         .locator('body')
         .evaluate(() => document.documentElement.scrollWidth - innerWidth),
     ).toBe(0);
-    await page
-      .getByRole('button', { name: 'Volver al tema', exact: true })
-      .press('Enter');
+    await volver.press('Enter');
+    const rutaRetorno = backend.staging ? 'librillos' : 'documentacion/alumno';
     await expect(page).toHaveURL(
-      new RegExp(
-        `documentacion/alumno\\?tema=${backend.TEMA}&doc=${backend.DOC}`,
-      ),
+      new RegExp(`${rutaRetorno}\\?tema=${backend.TEMA}&doc=${backend.DOC}`),
     );
     await expect(
-      page.getByRole('link', { name: 'Abrir edición interactiva' }),
+      page.getByRole('link', {
+        name: backend.staging
+          ? 'Original · Estatutos'
+          : 'Abrir edición interactiva',
+      }),
     ).toBeFocused();
     const otroDispositivo = await backend.preparar(b);
     const remoto = await abrirLibrillo(otroDispositivo, backend);
@@ -736,6 +744,12 @@ test('El atajo lateral unifica el Temario en staging y vuelve desde la edición 
       ],
     }),
   );
+  await page.route('**/documentos/*/ack', (route) =>
+    route.fulfill({ json: {} }),
+  );
+  await page.route('**/documentos/*/download', (route) =>
+    route.fulfill({ contentType: 'application/pdf', body: documentoPdf() }),
+  );
   await page.goto(temario);
   await page.locator('.lateral-bar').hover();
   const antesDeCurso = page.locator('.menu-header').filter({
@@ -763,6 +777,7 @@ test('El atajo lateral unifica el Temario en staging y vuelve desde la edición 
     ).toHaveCount(0);
     return;
   }
+  await expect(page).toHaveURL(/\/app\/librillos\?vista=documentos$/);
   await expect(link).toBeVisible();
   await expect(antesDeCurso).toHaveText([
     'Temario',
@@ -778,13 +793,31 @@ test('El atajo lateral unifica el Temario en staging y vuelve desde la edición 
   await expect.poll(() => parametros().get('vista')).toBe('documentos');
   const buscar = page.getByRole('searchbox', { name: 'Buscar documentos' });
   await buscar.fill('estatutos de prueba');
-  const edicion = page.getByRole('link', { name: 'Abrir edición interactiva' });
+  const edicion = page.getByRole('link', {
+    name: 'Original · Estatutos',
+    exact: true,
+  });
+  await expect(
+    page.getByRole('button', { name: 'Original · Estatutos' }),
+  ).toHaveCount(0);
   await edicion.click();
   await expect(visor(page).locator('#hojaSel option')).toHaveCount(19);
   await page.getByRole('button', { name: 'Volver a Mis documentos' }).click();
   await expect.poll(() => parametros().get('tema')).toBeNull();
   await expect.poll(() => parametros().get('doc')).toBeNull();
   await expect.poll(() => parametros().get('vista')).toBe('documentos');
+  await expect(buscar).toHaveValue('estatutos de prueba');
+  await expect(edicion).toBeFocused();
+  await edicion.press('Enter');
+  await expect(visor(page).locator('#hojaSel option')).toHaveCount(19);
+  await page.goBack();
+  await expect(edicion).toBeFocused();
+
+  await edicion.click();
+  await expect(visor(page).locator('#hojaSel option')).toHaveCount(19);
+  await page.getByRole('button', { name: 'Abrir PDF original' }).click();
+  await expect(page.getByTestId('pagina-librillo')).toHaveText('Página 1 de 2');
+  await page.getByRole('button', { name: 'Volver a Mis documentos' }).click();
   await expect(buscar).toHaveValue('estatutos de prueba');
   await expect(edicion).toBeFocused();
 

@@ -109,7 +109,8 @@ for (const width of [390, 1440]) {
   }) => {
     const { page, descargas } = await prepararBiblioteca(context);
     await page.setViewportSize({ width, height: 844 });
-    await page.goto(biblioteca);
+    await page.goto(width === 390 ? '/app/documentacion/alumno' : biblioteca);
+    await expect(page).toHaveURL(/\/app\/librillos\?vista=documentos$/);
 
     await expect(
       page.getByRole('heading', { name: 'Mis documentos' }),
@@ -123,13 +124,41 @@ for (const width of [390, 1440]) {
       name: 'Técnica de rescate',
       exact: true,
     });
+    const normativa = page.getByRole('button', {
+      name: 'Normativa',
+      exact: true,
+    });
+    const intervencion = page.getByRole('button', {
+      name: 'Intervención',
+      exact: true,
+    });
+    const forestal = page.getByRole('button', {
+      name: '4 · Legislación forestal',
+      exact: true,
+    });
+    const temaDeRescate = page.getByRole('button', {
+      name: '9 · Rescate',
+      exact: true,
+    });
+    await expect(normativa).toHaveAttribute('aria-expanded', 'false');
+    await expect(intervencion).toHaveAttribute('aria-expanded', 'false');
+    await expect(primero).toHaveCount(0);
+    await expect(rescate).toHaveCount(0);
+    await normativa.press('Enter');
+    await expect(normativa).toHaveAttribute('aria-expanded', 'true');
+    await expect(forestal).toHaveAttribute('aria-expanded', 'false');
+    const caja = await forestal.boundingBox();
+    expect(caja!.height).toBeGreaterThanOrEqual(44);
+    await forestal.press('Space');
     await expect(primero).toBeVisible();
-    await expect(rescate).toBeVisible();
-    await expect(primero.locator('..')).toContainText(
-      'Normativa / 4 · Legislación forestal',
+    await expect(primero).toHaveAccessibleDescription(
+      /Normativa \/ 4 · Legislación forestal/,
     );
-    await expect(rescate.locator('..')).toContainText(
-      'Intervención / 9 · Rescate',
+    await intervencion.click();
+    await temaDeRescate.click();
+    await expect(rescate).toBeVisible();
+    await expect(rescate).toHaveAccessibleDescription(
+      /Intervención \/ 9 · Rescate/,
     );
     const bloqueado = page
       .locator('.documento-item')
@@ -141,6 +170,8 @@ for (const width of [390, 1440]) {
       bloqueado.getByRole('button', { name: 'Guía reservada' }),
     ).toHaveCount(0);
     expect(descargas).toEqual([]);
+    await intervencion.click();
+    await expect(temaDeRescate).toHaveCount(0);
 
     const buscar = page.getByRole('searchbox', { name: 'Buscar documentos' });
     const filtroTema = page.getByRole('combobox', {
@@ -148,6 +179,8 @@ for (const width of [390, 1440]) {
       exact: true,
     });
     await buscar.fill('tecnica');
+    await expect(intervencion).toHaveAttribute('aria-expanded', 'true');
+    await expect(temaDeRescate).toHaveAttribute('aria-expanded', 'true');
     await expect(primero).toBeVisible();
     await expect(rescate).toBeVisible();
     await expect(page.getByText('Guía reservada')).toHaveCount(0);
@@ -196,6 +229,13 @@ for (const width of [390, 1440]) {
     }
     await expect(filtroTema.locator('option:checked')).toHaveText(etiquetaTema);
 
+    await ultimo.press('Enter');
+    await expect(page.getByTestId('pagina-librillo')).toBeVisible();
+    await page.goBack();
+    await expect(ultimo).toBeFocused();
+    await expect(buscar).toHaveValue('tecnica');
+    await expect(filtroTema.locator('option:checked')).toHaveText(etiquetaTema);
+
     await buscar.fill('sin coincidencias 123');
     await expect(
       page.getByText('No hay documentos que coincidan con los filtros.'),
@@ -207,6 +247,10 @@ for (const width of [390, 1440]) {
       'Todos los temas',
     );
     await expect(primero).toBeVisible();
+    await expect(intervencion).toHaveAttribute('aria-expanded', 'false');
+    await expect(rescate).toHaveCount(0);
+    await intervencion.press('Enter');
+    await expect(temaDeRescate).toHaveAttribute('aria-expanded', 'true');
     await expect(rescate).toBeVisible();
     expect(
       await page
@@ -242,7 +286,7 @@ for (const width of [390, 1440]) {
     );
     await expect(
       page
-        .getByRole('tabpanel', { name: 'Librillo' })
+        .getByRole('tabpanel', { name: 'Estudio' })
         .getByRole('alert')
         .filter({
           hasText: /Este documento no está disponible en el tema seleccionado/i,

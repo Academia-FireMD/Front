@@ -142,6 +142,105 @@
   padding: 0.75rem 1rem 1rem;
 }
 
+.modulo-biblioteca {
+  margin-block-end: 0.75rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.75rem;
+  background: var(--surface-card);
+}
+
+.cabecera-rama {
+  margin: 0;
+  font: inherit;
+}
+
+.rama-biblioteca {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.3rem 0.65rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  font-weight: 650;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+
+  &:hover,
+  &[aria-expanded="true"] {
+    background: color-mix(
+      in srgb,
+      var(--primary-color) 8%,
+      var(--surface-card)
+    );
+  }
+
+  i:first-child {
+    color: var(--primary-color);
+  }
+
+  small,
+  i:last-child {
+    color: var(--text-color-secondary);
+  }
+
+  small {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+
+.temas-biblioteca {
+  margin: 0.15rem 0.6rem 0.65rem 1rem;
+  padding-inline-start: 0.65rem;
+  border-inline-start: 1px solid var(--surface-border);
+
+  > section + section {
+    margin-block-start: 0.25rem;
+  }
+}
+
+.rama-tema {
+  font-size: 0.95rem;
+}
+
+.documentos-biblioteca {
+  padding-block: 0.35rem 0.55rem;
+  padding-inline-start: 0.6rem;
+}
+
+@media (max-width: 640px) {
+  .rama-biblioteca {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.15rem 0.5rem;
+
+    small {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    i:last-child {
+      grid-column: 3;
+      grid-row: 1 / 3;
+    }
+  }
+
+  .temas-biblioteca {
+    margin-inline-start: 0.65rem;
+    padding-inline-start: 0.4rem;
+  }
+
+  .documentos-biblioteca {
+    padding-inline-start: 0.25rem;
+  }
+}
+
 .navegacion-temario {
   display: flex;
   align-items: center;

@@ -52,7 +52,7 @@ describe('Documentos del tema', () => {
     fixture.componentRef.setInput('librillosActivos', true);
   });
 
-  it('mantiene el enlace al acordeón legacy y añade el origen solo desde Temario', () => {
+  it('mantiene el enlace al acordeón legacy y abre y acusa la edición al pulsar el título en Temario', async () => {
     fixture.detectChanges();
     const enlace = fixture.nativeElement.querySelector(
       '#librillo-doc-145',
@@ -63,9 +63,22 @@ describe('Documentos del tema', () => {
 
     fixture.componentRef.setInput('modoTemario', true);
     fixture.detectChanges();
-    expect(enlace.getAttribute('href')).toBe(
-      '/app/documentacion/alumno/librillo/145?tema=47&desde=librillos&vista=documentos',
+    const titulo = fixture.nativeElement.querySelector('a.doc-info');
+    expect(titulo.getAttribute('href')).toBe(
+      '/app/documentacion/alumno/librillo/145?tema=47&desde=librillos&vista=documentos&original=pdf',
     );
+    expect(titulo.getAttribute('aria-label')).toBe('Título del módulo');
+    expect(
+      fixture.nativeElement.querySelectorAll('button.doc-info'),
+    ).toHaveLength(0);
+    const abrir = jest.fn();
+    fixture.componentInstance.abrirEdicion.subscribe(abrir);
+    titulo.click();
+    expect(abrir).toHaveBeenCalledWith(expect.objectContaining({ id: 145 }));
+    await fixture.whenStable();
+    expect(documentos.markAsSeen$).toHaveBeenCalledTimes(1);
+    expect(documentos.markAsSeen$).toHaveBeenCalledWith(145);
+    expect(documento.isNew).toBe(false);
   });
 
   it('solo abre PDF del tema con permiso y actualiza NEW tras el acuse', async () => {
@@ -74,13 +87,16 @@ describe('Documentos del tema', () => {
     const bloqueado = { ...documento, id: 147, isDownloadable: false };
     fixture.componentRef.setInput('documentos', [documento, word, bloqueado]);
     fixture.componentRef.setInput('modoTemario', true);
+    fixture.componentRef.setInput('librillosActivos', false);
     fixture.detectChanges();
     const accion = jest.fn();
     fixture.componentInstance.abrirPdf.subscribe(accion);
-    const botones = fixture.nativeElement.querySelectorAll(
-      'button[aria-label="Abrir en Librillo"], button[label="Abrir en Librillo"]',
-    );
-    expect(botones).toHaveLength(1);
+    expect(
+      fixture.nativeElement.querySelector('button#temario-doc-145'),
+    ).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('button#temario-doc-147'),
+    ).toBeNull();
 
     await fixture.componentInstance.abrir(word);
     await fixture.componentInstance.abrir(bloqueado);
@@ -93,11 +109,15 @@ describe('Documentos del tema', () => {
     expect(documento.isNew).toBe(false);
   });
 
-  it('abre el PDF pulsando su título y registra la lectura; Word conserva el comportamiento anterior', async () => {
+  it('abre el PDF pulsando su título y registra la lectura; Word se descarga desde su título', async () => {
     const word = { ...documento, id: 146, fileName: 'ficha.docx' };
     fixture.componentRef.setInput('documentos', [documento, word]);
     fixture.componentRef.setInput('modoTemario', true);
+    fixture.componentRef.setInput('librillosActivos', false);
     fixture.detectChanges();
+    const descargar = jest
+      .spyOn(fixture.componentInstance, 'descargarDocumentoAlumno')
+      .mockResolvedValue();
     const abrir = jest.fn();
     fixture.componentInstance.abrirPdf.subscribe(abrir);
     const titulos = fixture.nativeElement.querySelectorAll('.doc-info');
@@ -107,7 +127,7 @@ describe('Documentos del tema', () => {
     expect(documentos.markAsSeen$).toHaveBeenCalledWith(145);
     titulos[1].click();
     expect(abrir).toHaveBeenCalledTimes(1);
-    expect(documentos.markAsSeen$).toHaveBeenCalledWith(146);
+    expect(descargar).toHaveBeenCalledWith(word);
   });
 
   it('descarga el blob autorizado con el nombre del tema y actualiza el acuse', async () => {

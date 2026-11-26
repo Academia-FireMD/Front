@@ -141,8 +141,9 @@
     cursor: auto;
   }
 
-  button.doc-info {
+  :is(button, a).doc-info {
     cursor: pointer;
+    text-decoration: none;
 
     &:is(:hover, :focus-visible) .doc-name > span:first-of-type {
       text-decoration: underline;
@@ -191,11 +192,8 @@
       display: contents;
     }
 
-    .doc-acciones a {
+    .doc-info:only-child {
       grid-column: 1 / -1;
-      justify-self: start;
-      width: auto;
-      max-width: 100%;
     }
 
     .descarga-biblioteca {
@@ -210,4 +208,13 @@
       display: none;
     }
   }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

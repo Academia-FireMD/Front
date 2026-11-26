@@ -286,7 +286,7 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
     name: 'Tema',
     exact: true,
   });
-  const vistaLibrillo = page.getByRole('tabpanel', { name: 'Librillo' });
+  const vistaLibrillo = page.getByRole('tabpanel', { name: 'Estudio' });
   const selectorDocumento = vistaLibrillo.getByRole('combobox', {
     name: 'Documento',
     exact: true,
@@ -449,11 +449,11 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
     name: 'Secciones del Temario',
   });
   const documentos = secciones.getByRole('tab', { name: 'Documentos' });
-  const librillo = secciones.getByRole('tab', { name: 'Librillo' });
+  const librillo = secciones.getByRole('tab', { name: 'Estudio' });
   await documentos.click();
   await expect(documentos).toHaveAttribute('aria-selected', 'true');
   await expect(
-    page.getByRole('button', { name: /Original · Estatutos/ }),
+    page.getByRole('link', { name: 'Original · Estatutos' }),
   ).toBeVisible();
   await page.goBack();
   await expect(librillo).toHaveAttribute('aria-selected', 'true');

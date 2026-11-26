@@ -1,4 +1,4 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { Location, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -7,7 +7,7 @@ import {
   input,
   output,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink, UrlTree } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
@@ -20,6 +20,7 @@ import {
 import {
   DocumentoBiblioteca,
   pdfDisponible,
+  tituloDeBiblioteca,
 } from '../../estudio/previa/temario-librillo';
 import { UserService } from '../../services/user.service';
 import { DocumentoTemario } from '../../shared/models/documentacion.model';
@@ -37,26 +38,58 @@ import { DocumentosService } from '../services/documentacion.service';
 export class DocumentosDelTemaComponent {
   readonly documentos = input.required<readonly DocumentoTemario[]>();
   readonly temaId = input<number>();
+  readonly descripcionTema = input<string>();
   readonly biblioteca = input<ReadonlyMap<number, DocumentoBiblioteca>>();
   readonly modoTemario = input(false);
   readonly librillosActivos = input(false);
   readonly librilloTemarioActivo = input(false);
   readonly vistaOrigen = input<VistaTemario>('documentos');
   readonly abrirPdf = output<number>();
-  readonly abrirEdicionDesdeBiblioteca = output<number>();
+  readonly abrirEdicion = output<{ id: number; url: UrlTree }>();
 
-  readonly origenBiblioteca = ORIGEN_BIBLIOTECA;
   readonly rutaTemario = RUTA_PREVIA_LIBRILLOS;
   readonly pdfDisponible = pdfDisponible;
+  readonly tituloDeBiblioteca = tituloDeBiblioteca;
   private readonly service = inject(DocumentosService);
   private readonly userService = inject(UserService);
   private readonly toast = inject(ToastrService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+
+  tieneEdicion(documento: DocumentoTemario) {
+    return (
+      this.librillosActivos() &&
+      documento.isDownloadable &&
+      !!documento.librillo
+    );
+  }
+
+  enlaceEdicion(documento: DocumentoTemario) {
+    const biblioteca = !!this.biblioteca();
+    const temario = this.modoTemario();
+    return this.router.createUrlTree(
+      ['/app/documentacion/alumno/librillo', documento.id],
+      {
+        queryParams: {
+          tema: this.temaId(),
+          desde: biblioteca ? ORIGEN_BIBLIOTECA : temario ? 'librillos' : null,
+          vista: temario ? this.vistaOrigen() : null,
+          original: temario && pdfDisponible(documento) ? 'pdf' : null,
+        },
+      },
+    );
+  }
+
+  hrefEdicion(url: UrlTree) {
+    return this.location.prepareExternalUrl(this.router.serializeUrl(url));
+  }
 
   async abrir(documento: DocumentoTemario) {
     if (
       !this.modoTemario() ||
       !this.documentos().includes(documento) ||
+      this.tieneEdicion(documento) ||
       !pdfDisponible(documento)
     ) {
       return;
@@ -65,17 +98,24 @@ export class DocumentosDelTemaComponent {
     await this.verDocumentoAlumno(documento);
   }
 
-  registrarAperturaEdicion(evento: MouseEvent, documento: DocumentoTemario) {
+  abrirEdicionInteractiva(
+    evento: MouseEvent,
+    documento: DocumentoTemario,
+    url: UrlTree,
+  ) {
     if (
-      this.biblioteca() &&
-      evento.button === 0 &&
-      !evento.ctrlKey &&
-      !evento.shiftKey &&
-      !evento.altKey &&
-      !evento.metaKey
-    ) {
-      this.abrirEdicionDesdeBiblioteca.emit(documento.id);
-    }
+      evento.button !== 0 ||
+      evento.ctrlKey ||
+      evento.shiftKey ||
+      evento.altKey ||
+      evento.metaKey
+    )
+      return;
+    evento.preventDefault();
+    if (!this.documentos().includes(documento) || !this.tieneEdicion(documento))
+      return;
+    this.abrirEdicion.emit({ id: documento.id, url });
+    void this.verDocumentoAlumno(documento);
   }
 
   async descargarDocumentoAlumno(documento: DocumentoTemario) {

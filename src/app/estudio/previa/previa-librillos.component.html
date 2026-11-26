@@ -166,18 +166,97 @@
         id="biblioteca-resultados"
         class="biblioteca-resultados"
       >
-        @if (bibliotecaFiltrada().documentos.length) {
-          <app-documentos-del-tema
-            [documentos]="bibliotecaFiltrada().documentos"
-            [biblioteca]="biblioteca()"
-            [modoTemario]="true"
-            [librillosActivos]="librillosActivos()"
-            (abrirPdf)="abrirPdf($event)"
-            (abrirEdicionDesdeBiblioteca)="
-              conservarBiblioteca('librillo-doc-' + $event)
-            "
-          />
-        } @else {
+        @for (modulo of gruposBiblioteca(); track modulo.id) {
+          @let claveModulo = "modulo-" + modulo.id;
+          @let moduloAbierto = ramaAbierta(claveModulo);
+          <section class="modulo-biblioteca">
+            <h2 class="cabecera-rama">
+              <button
+                type="button"
+                class="rama-biblioteca"
+                [attr.aria-label]="modulo.nombre"
+                [attr.aria-describedby]="'total-' + claveModulo"
+                [attr.aria-expanded]="moduloAbierto"
+                [attr.aria-controls]="'biblioteca-' + claveModulo"
+                (click)="alternarRama(claveModulo)"
+              >
+                <i class="pi pi-folder" aria-hidden="true"></i>
+                <span>{{ modulo.nombre }}</span>
+                <small [id]="'total-' + claveModulo">
+                  {{ modulo.temas.length }}
+                  {{ modulo.temas.length === 1 ? "tema" : "temas" }}
+                  ·
+                  {{ modulo.cantidad }}
+                  {{ modulo.cantidad === 1 ? "documento" : "documentos" }}
+                </small>
+                <i
+                  class="pi"
+                  [class.pi-chevron-down]="moduloAbierto"
+                  [class.pi-chevron-right]="!moduloAbierto"
+                  aria-hidden="true"
+                ></i>
+              </button>
+            </h2>
+            <div
+              class="temas-biblioteca"
+              [id]="'biblioteca-' + claveModulo"
+              [hidden]="!moduloAbierto"
+            >
+              @if (moduloAbierto) {
+                @for (tema of modulo.temas; track tema.id) {
+                  @let claveTema = "tema-" + modulo.id + "-" + tema.id;
+                  @let temaAbierto = ramaAbierta(claveTema);
+                  <section>
+                    <h3 class="cabecera-rama">
+                      <button
+                        type="button"
+                        class="rama-biblioteca rama-tema"
+                        [attr.aria-label]="tema.titulo"
+                        [attr.aria-describedby]="'total-' + claveTema"
+                        [attr.aria-expanded]="temaAbierto"
+                        [attr.aria-controls]="'biblioteca-' + claveTema"
+                        (click)="alternarRama(claveTema)"
+                      >
+                        <i class="pi pi-list" aria-hidden="true"></i>
+                        <span>{{ tema.titulo }}</span>
+                        <small [id]="'total-' + claveTema"
+                          >{{ tema.documentos.length }}
+                          {{
+                            tema.documentos.length === 1
+                              ? "documento"
+                              : "documentos"
+                          }}</small
+                        >
+                        <i
+                          class="pi"
+                          [class.pi-chevron-down]="temaAbierto"
+                          [class.pi-chevron-right]="!temaAbierto"
+                          aria-hidden="true"
+                        ></i>
+                      </button>
+                    </h3>
+                    <div
+                      class="documentos-biblioteca"
+                      [id]="'biblioteca-' + claveTema"
+                      [hidden]="!temaAbierto"
+                    >
+                      @if (temaAbierto) {
+                        <app-documentos-del-tema
+                          [documentos]="tema.documentos"
+                          [biblioteca]="biblioteca()"
+                          [modoTemario]="true"
+                          [librillosActivos]="librillosActivos()"
+                          (abrirPdf)="abrirPdf($event)"
+                          (abrirEdicion)="abrirEdicion($event)"
+                        />
+                      }
+                    </div>
+                  </section>
+                }
+              }
+            </div>
+          </section>
+        } @empty {
           <p class="aviso" role="status">
             No hay documentos que coincidan con los filtros.
           </p>
@@ -215,7 +294,7 @@
         [attr.tabindex]="vistaActual === 'librillo' ? 0 : -1"
         (click)="seleccionarVista('librillo')"
       >
-        Librillo
+        Estudio
       </button>
     </nav>
     <button
@@ -316,9 +395,11 @@
       <app-documentos-del-tema
         [documentos]="tema.documentos"
         [temaId]="tema.id"
+        [descripcionTema]="tema.descripcion"
         [modoTemario]="true"
         [librillosActivos]="librillosActivos()"
         (abrirPdf)="abrirPdf($event)"
+        (abrirEdicion)="abrirEdicion($event)"
       />
     }
   }
@@ -369,9 +450,11 @@
           ]"
           [queryParams]="{
             tema: tema.id,
-            desde: 'librillos',
+            desde: origenEdicionDesdeLector,
             vista: 'librillo',
+            original: lectorPdfActivo() ? 'pdf' : null,
           }"
+          [state]="estadoEdicionDesdeLector"
           >Abrir edición interactiva</a
         >
       }

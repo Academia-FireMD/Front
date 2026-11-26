@@ -13,6 +13,7 @@ import { filter, firstValueFrom, map, Observable, startWith } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   parametrosVistaLibrillo,
+  puedeAbrirTemario,
   retornoDePracticaLibrillo,
   RUTA_PREVIA_LIBRILLOS,
 } from '../../estudio/previa/previa-librillos';
@@ -118,21 +119,6 @@ export class LayoutComponent {
   /** Snapshot del usuario actual para el computed `items` (D11). */
   private readonly currentUserSignal = signal<Usuario | null>(null);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly cuentaLibrillos = computed(() => {
-    const user = this.currentUserSignal();
-    const flags = this.appConfigService.estadoModulos();
-    return environment.librillosMenu &&
-      flags[ModuloApp.DOCUMENTACION] === true &&
-      flags[ModuloApp.LIBRILLOS] === true &&
-      user?.rol === Rol.ALUMNO &&
-      user.suscripciones?.some(
-        (s) =>
-          Object.values(SuscripcionTipo).includes(s.tipo) &&
-          esSuscripcionVigente(s),
-      )
-      ? user
-      : null;
-  });
   /**
    * Menu filtrado por módulos habilitados + rol (computed §6.1). Reacciona
    * a cambios en `estadoModulos` y al snapshot de usuario.
@@ -517,7 +503,7 @@ export class LayoutComponent {
 
     if (hasValidSubscription) {
       menu.push(
-        user && this.cuentaLibrillos() === user
+        puedeAbrirTemario(user, this.appConfigService.estadoModulos())
           ? {
               label: 'Temario',
               icon: 'pi pi-book',

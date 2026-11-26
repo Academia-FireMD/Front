@@ -41,12 +41,8 @@ for (const width of [360, 390]) {
     );
     await page.goto(`/app/librillos?tema=${backend.TEMA}&vista=documentos`);
     await expect(page.locator('h1')).toContainText('Estatutos de prueba');
-    await expect(
-      page.getByRole('button', { name: /Tema 4.*Puentes/ }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: /Tema 4.*Saler/ }),
-    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Puentes' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Saler' })).toBeVisible();
     await page.getByRole('button', { name: 'Ver temas' }).click();
     const buscar = page.getByPlaceholder('Buscar por tema o módulo');
     await expect(buscar).toBeVisible();
@@ -56,7 +52,7 @@ for (const width of [360, 390]) {
     const ack = page.waitForRequest((req) =>
       req.url().endsWith(`/documentos/${backend.DOC + 1}/ack`),
     );
-    await page.getByRole('button', { name: /Tema 4.*Saler/ }).click();
+    await page.getByRole('button', { name: 'Saler' }).click();
     await ack;
     await expect(page).toHaveURL(new RegExp(`doc=${backend.DOC + 1}`));
     await expect(

@@ -19,7 +19,7 @@ export interface TemaLibrillo {
 
 export interface DocumentoBiblioteca {
   documento: DocumentoTemario;
-  tema: TemaLibrillo;
+  tema: Pick<TemaLibrillo, 'id' | 'titulo' | 'etiqueta'>;
   titulo: string;
   textoBusqueda: string;
 }
@@ -30,27 +30,66 @@ function normalizarBusqueda(texto: string) {
 
 export function crearBibliotecaDocumentos(arbol: ModuloTemario[]) {
   const biblioteca = new Map<number, DocumentoBiblioteca>();
-  for (const tema of crearTemarioLibrillo([], arbol)) {
-    for (const documento of tema.documentos) {
-      if (biblioteca.has(documento.id)) continue;
-      biblioteca.set(documento.id, {
-        documento,
-        tema,
-        titulo: tituloDeBiblioteca(documento, tema.descripcion),
-        textoBusqueda: normalizarBusqueda(
-          [
-            documento.identificador,
-            documento.descripcion,
-            documento.fileName,
-            documento.librillo?.titulo,
-            tema.titulo,
-            tema.modulo,
-          ].join(' '),
-        ),
-      });
+  for (const modulo of arbol) {
+    for (const { id, numero, descripcion, documentos } of modulo.temas) {
+      const titulo = tituloTema(numero, descripcion);
+      const tema = { id, titulo, etiqueta: `${modulo.nombre} / ${titulo}` };
+      for (const documento of documentos) {
+        if (biblioteca.has(documento.id)) continue;
+        biblioteca.set(documento.id, {
+          documento,
+          tema,
+          titulo: tituloDeBiblioteca(documento, descripcion),
+          textoBusqueda: normalizarBusqueda(
+            [
+              documento.identificador,
+              documento.descripcion,
+              documento.fileName,
+              documento.librillo?.titulo,
+              titulo,
+              modulo.nombre,
+            ].join(' '),
+          ),
+        });
+      }
     }
   }
   return biblioteca;
+}
+
+export function agruparBibliotecaDocumentos(
+  arbol: readonly ModuloTemario[],
+  documentos: readonly DocumentoTemario[],
+) {
+  const coincidencias = new Set(documentos.map(({ id }) => id));
+  return arbol.flatMap((modulo) => {
+    const temas = modulo.temas.flatMap((tema) => {
+      const visibles = tema.documentos.filter(({ id }) =>
+        coincidencias.has(id),
+      );
+      return visibles.length
+        ? [
+            {
+              ...tema,
+              titulo: tituloTema(tema.numero, tema.descripcion),
+              documentos: visibles,
+            },
+          ]
+        : [];
+    });
+    return temas.length
+      ? [
+          {
+            ...modulo,
+            temas,
+            cantidad: temas.reduce(
+              (total, tema) => total + tema.documentos.length,
+              0,
+            ),
+          },
+        ]
+      : [];
+  });
 }
 
 export function filtrarBibliotecaDocumentos(
@@ -103,9 +142,7 @@ export function crearTemarioLibrillo(
   const catalogo = new Map<number, TemaLibrillo>();
 
   for (const { id, numero, descripcion, modulo } of temas) {
-    const titulo = descripcion
-      ? `${numero} · ${descripcion}`
-      : `Tema ${numero}`;
+    const titulo = tituloTema(numero, descripcion);
     const nombre = modulo?.nombre || 'Otros temas';
     catalogo.set(id, {
       id,
@@ -120,9 +157,7 @@ export function crearTemarioLibrillo(
 
   for (const modulo of arbolDocumental) {
     for (const { id, numero, descripcion, documentos } of modulo.temas) {
-      const titulo = descripcion
-        ? `${numero} · ${descripcion}`
-        : `Tema ${numero}`;
+      const titulo = tituloTema(numero, descripcion);
       const anterior = catalogo.get(id);
       const porId = new Map(anterior?.documentos.map((doc) => [doc.id, doc]));
       for (const doc of documentos) porId.set(doc.id, doc);
@@ -139,6 +174,10 @@ export function crearTemarioLibrillo(
   }
 
   return [...catalogo.values()];
+}
+
+function tituloTema(numero: number | string, descripcion?: string) {
+  return descripcion ? `${numero} · ${descripcion}` : `Tema ${numero}`;
 }
 
 export function seleccionLibrillo(temas: TemaLibrillo[], params: ParamMap) {
@@ -169,5 +208,5 @@ export function pdfDisponible(documento: DocumentoTemario): boolean {
   // La extensión de la URL se conserva como metadato de archivos antiguos.
   // Las descargas y la lectura siempre usan el ID autorizado del árbol.
   const nombre = documento.fileName?.trim() || documento.url;
-  return documento.isDownloadable && /\.pdf(?:$|[?#])/i.test(nombre);
+  return documento.isDownloadable && /\.pdf(?:$|[?#])/i.test(nombre ?? '');
 }
