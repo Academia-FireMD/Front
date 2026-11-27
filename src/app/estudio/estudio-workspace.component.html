@@ -6,14 +6,23 @@
         type="button"
         pButton
         class="p-button-text visor-volver"
+        [attr.aria-label]="etiquetaVolver()"
         (click)="volver()"
         [disabled]="saliendo()"
         data-testid="estudio-volver"
       >
         <i class="pi pi-arrow-left" aria-hidden="true"></i>
-        {{ etiquetaVolver() }}
+        {{ desdeBiblioteca() ? "Mis documentos" : etiquetaVolver() }}
       </button>
-      @if (tipo === "librillo" && parametrosPdfOriginal) {
+    }
+    @if (tipo === "librillo") {
+      <h1>
+        {{ titulo() }}
+        @if (edicion()) {
+          <span>{{ edicion() }}</span>
+        }
+      </h1>
+      @if (!enPrevia && parametrosPdfOriginal) {
         <button
           type="button"
           pButton
@@ -25,14 +34,6 @@
           Abrir PDF original
         </button>
       }
-    }
-    @if (tipo === "librillo") {
-      <h1>
-        {{ titulo() }}
-        @if (edicion()) {
-          <span>{{ edicion() }}</span>
-        }
-      </h1>
     }
     @if (mostrarEstado()) {
       <div class="visor-sync">

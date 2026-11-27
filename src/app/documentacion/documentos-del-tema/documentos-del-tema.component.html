@@ -15,9 +15,7 @@
     @let contexto = biblioteca()?.get(doc.id);
     @let titulo =
       contexto?.titulo ??
-      (modoTemario()
-        ? tituloDeBiblioteca(doc, descripcionTema())
-        : doc.identificador);
+      (modoTemario() ? tituloDeBiblioteca(doc) : doc.identificador);
     @let edicionDisponible = tieneEdicion(doc);
     @let puedeLeer = pdfDisponible(doc);
     @let identificador = "temario-doc-" + doc.id;

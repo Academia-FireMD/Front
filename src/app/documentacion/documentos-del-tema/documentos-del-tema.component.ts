@@ -15,7 +15,6 @@ import { firstValueFrom } from 'rxjs';
 import {
   ORIGEN_BIBLIOTECA,
   RUTA_PREVIA_LIBRILLOS,
-  VistaTemario,
 } from '../../estudio/previa/previa-librillos';
 import {
   DocumentoBiblioteca,
@@ -38,12 +37,10 @@ import { DocumentosService } from '../services/documentacion.service';
 export class DocumentosDelTemaComponent {
   readonly documentos = input.required<readonly DocumentoTemario[]>();
   readonly temaId = input<number>();
-  readonly descripcionTema = input<string>();
   readonly biblioteca = input<ReadonlyMap<number, DocumentoBiblioteca>>();
   readonly modoTemario = input(false);
   readonly librillosActivos = input(false);
   readonly librilloTemarioActivo = input(false);
-  readonly vistaOrigen = input<VistaTemario>('documentos');
   readonly abrirPdf = output<number>();
   readonly abrirEdicion = output<{ id: number; url: UrlTree }>();
 
@@ -72,9 +69,9 @@ export class DocumentosDelTemaComponent {
       ['/app/documentacion/alumno/librillo', documento.id],
       {
         queryParams: {
-          tema: this.temaId(),
+          tema: this.biblioteca()?.get(documento.id)?.tema.id ?? this.temaId(),
           desde: biblioteca ? ORIGEN_BIBLIOTECA : temario ? 'librillos' : null,
-          vista: temario ? this.vistaOrigen() : null,
+          vista: temario ? 'documentos' : null,
           original: temario && pdfDisponible(documento) ? 'pdf' : null,
         },
       },

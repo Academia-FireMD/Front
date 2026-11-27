@@ -3,7 +3,6 @@ import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ToastrService } from 'ngx-toastr';
-import { Dropdown } from 'primeng/dropdown';
 import { of, throwError } from 'rxjs';
 import { DocumentosService } from '../../documentacion/services/documentacion.service';
 import { AppConfigService } from '../../services/app-config.service';
@@ -83,44 +82,27 @@ describe('Navegación de práctica desde el Librillo', () => {
 });
 
 describe('Retorno de la edición interactiva R07', () => {
-  it.each(['documentos', 'librillo'])(
-    'vuelve a la vista %s con el mismo tema y edición',
-    (vista) => {
+  it.each([undefined, 'librillos', 'mis-documentos'])(
+    'vuelve a Mis documentos en staging desde el origen %s',
+    (desde) => {
       const params = convertToParamMap({
-        desde: 'librillos',
+        desde,
         tema: '47',
-        vista,
+        vista: 'librillo',
         doc: '999',
       });
       expect(retornoDeEdicionInteractiva(params, '145', true)).toEqual({
         ruta: '/app/librillos',
-        parametros: { tema: 47, doc: 145, vista },
+        parametros: { tema: null, doc: null, vista: 'documentos' },
       });
     },
   );
 
-  it('mantiene la vuelta al acordeón y los enlaces antiguos del lector', () => {
+  it('mantiene la vuelta al acordeón fuera de staging', () => {
     const legacy = convertToParamMap({ tema: '47', vista: 'librillo' });
-    expect(retornoDeEdicionInteractiva(legacy, '145', true)).toEqual({
+    expect(retornoDeEdicionInteractiva(legacy, '145', false)).toEqual({
       ruta: '/app/documentacion/alumno',
-      parametros: { tema: 47, doc: 145, vista: undefined },
-    });
-    const lector = convertToParamMap({
-      desde: 'librillos',
-      vista: '/ruta-ajena',
-    });
-    expect(retornoDeEdicionInteractiva(lector, '145', true)).toEqual({
-      ruta: '/app/librillos',
-      parametros: { tema: null, doc: 145, vista: undefined },
-    });
-    const biblioteca = convertToParamMap({
-      desde: 'mis-documentos',
-      tema: '47',
-      vista: 'documentos',
-    });
-    expect(retornoDeEdicionInteractiva(biblioteca, '145', true)).toEqual({
-      ruta: '/app/librillos',
-      parametros: { tema: null, doc: null, vista: 'documentos' },
+      parametros: { tema: 47, doc: 145 },
     });
   });
 });
@@ -156,7 +138,7 @@ describe('Navegación del Temario', () => {
     isNew: false,
     isDownloadable: true,
   };
-  const otro = { ...doc, id: 22 };
+  const otro = { ...doc, id: 22, identificador: 'Otro material' };
   const arbol = [
     {
       id: 1,
@@ -195,7 +177,10 @@ describe('Navegación del Temario', () => {
           },
         ]),
         { provide: TemaService, useValue: { getAllTemas$ } },
-        { provide: DocumentosService, useValue: { getDocumentTree$ } },
+        {
+          provide: DocumentosService,
+          useValue: { getDocumentTree$, markAsSeen$: () => of(null) },
+        },
         {
           provide: AuthService,
           useValue: {
@@ -214,48 +199,54 @@ describe('Navegación del Temario', () => {
     });
   });
 
-  it('muestra el título del tema y abre el catálogo con un clic', async () => {
-    const harness = await RouterTestingHarness.create(ruta + '?tema=9');
+  it('abre el árbol sin selección incluso con una vista antigua', async () => {
+    const harness = await RouterTestingHarness.create(ruta + '?vista=librillo');
     const root = harness.routeNativeElement!;
-    expect(root.querySelector('h1')?.textContent).toContain('9 · Reglamento');
-    const dropdown = harness.routeDebugElement!.query(By.directive(Dropdown))
-      .componentInstance as Dropdown;
-    const mostrar = jest.spyOn(dropdown, 'show');
-    (root.querySelector('.boton-temas') as HTMLButtonElement).click();
-    harness.detectChanges();
-    await harness.fixture.whenStable();
-    expect(mostrar).toHaveBeenCalledTimes(1);
+    expect(root.querySelector('h1')?.textContent).toContain('Mis documentos');
+    expect(
+      root.querySelector('[aria-label="Buscar documentos"]'),
+    ).not.toBeNull();
+    expect(
+      root
+        .querySelector('[aria-label="Normativa"]')
+        ?.getAttribute('aria-expanded'),
+    ).toBe('false');
+    expect(visor(harness)).toBeUndefined();
   });
 
-  it('monta el PDF al entrar en Librillo y conserva instancia y posición al alternar vistas', async () => {
+  it('abre el PDF y muestra el título del documento al entrar por un tema', async () => {
+    const harness = await RouterTestingHarness.create(ruta + '?tema=9');
+    const root = harness.routeNativeElement!;
+    expect(root.querySelector('h1')?.textContent?.trim()).toBe(
+      doc.identificador,
+    );
+    expect(
+      root.querySelector('[aria-label="Volver a Mis documentos"]'),
+    ).not.toBeNull();
+    expect(root.querySelector('p-dropdown, [role="tablist"]')).toBeNull();
+    expect(visor(harness).documento).toBe(doc);
+  });
+
+  it('abre la rama del tema en el enlace antiguo de documentos y da prioridad a un documento explícito', async () => {
     const harness = await RouterTestingHarness.create(
       ruta + '?tema=9&vista=documentos',
     );
+    await harness.fixture.whenStable();
+    harness.detectChanges();
     expect(visor(harness)).toBeUndefined();
-
+    expect(
+      harness.routeNativeElement?.querySelector('#temario-doc-21'),
+    ).not.toBeNull();
     const lectura =
-      ruta + '?tema=9&doc=21&pagina=3&referencia=8&vista=librillo';
-    const componente = await harness.navigateByUrl(
-      lectura,
-      PreviaLibrillosComponent,
-    );
+      ruta + '?tema=9&doc=21&pagina=3&referencia=8&vista=documentos';
+    await harness.navigateByUrl(lectura);
     const lector = visor(harness);
     expect(lector.documento).toBe(doc);
-
-    await componente.seleccionarVista('documentos');
-    harness.detectChanges();
-    expect(visor(harness)).toBe(lector);
-    expect(lector.guardarAntesDeSalir).not.toHaveBeenCalled();
-    expect(
-      harness.routeNativeElement
-        ?.querySelector('#panel-temario-librillo')
-        ?.hasAttribute('hidden'),
-    ).toBe(true);
-
-    await componente.seleccionarVista('librillo');
-    harness.detectChanges();
-    expect(visor(harness)).toBe(lector);
     expect(TestBed.inject(Router).url).toBe(lectura);
+
+    await harness.navigateByUrl(lectura.replace('pagina=3', 'pagina=4'));
+    expect(lector.guardarAntesDeSalir).not.toHaveBeenCalled();
+    expect(visor(harness)).toBe(lector);
   });
 
   it('bloquea el cambio de documento si falla el guardado y reintenta una vez por navegación', async () => {
@@ -267,7 +258,8 @@ describe('Navegación del Temario', () => {
     const router = TestBed.inject(Router);
     lector.guardarAntesDeSalir.mockResolvedValueOnce(false);
 
-    await componente.seleccionarDocumento(22);
+    const destino = ruta + '?tema=9&doc=22&vista=librillo';
+    expect(await router.navigateByUrl(destino)).toBe(false);
     harness.detectChanges();
     expect(router.url).toBe(inicio);
     expect(visor(harness)).toBe(lector);
@@ -319,8 +311,8 @@ describe('Navegación del Temario', () => {
     );
   });
 
-  it('vuelve a la biblioteca con sus filtros tras un fallo de guardado del lector', async () => {
-    const inicio = ruta + '?vista=documentos';
+  it('vuelve a la biblioteca con la búsqueda y ramas tras un fallo de guardado del lector', async () => {
+    const inicio = ruta + '?vista=documentos&tema=9';
     const harness = await RouterTestingHarness.create(inicio);
     const componente = harness.routeDebugElement!
       .componentInstance as PreviaLibrillosComponent;
@@ -333,8 +325,10 @@ describe('Navegación del Temario', () => {
     ).toBeNull();
 
     componente.buscarEnBiblioteca('NORMÁTIVA');
-    componente.filtrarTemaBiblioteca(9);
-    componente.abrirPdf(21);
+    harness.detectChanges();
+    harness.routeNativeElement
+      ?.querySelector<HTMLButtonElement>('#temario-doc-21')
+      ?.click();
     await harness.fixture.whenStable();
     harness.detectChanges();
     expect(router.parseUrl(router.url).queryParams).toEqual({
@@ -354,8 +348,47 @@ describe('Navegación del Temario', () => {
     expect(router.url).toBe(inicio);
     expect(lector.guardarAntesDeSalir).toHaveBeenCalledTimes(2);
     expect(componente.busquedaBiblioteca()).toBe('NORMÁTIVA');
-    expect(componente.temaBiblioteca()).toBe(9);
+    expect(
+      harness.routeNativeElement?.querySelector('#temario-doc-21'),
+    ).not.toBeNull();
     expect(visor(harness)).toBeUndefined();
+  });
+
+  it('abre la rama real al volver de un documento sin historial del árbol', async () => {
+    const harness = await RouterTestingHarness.create(ruta + '?doc=22');
+    const componente = harness.routeDebugElement!
+      .componentInstance as PreviaLibrillosComponent;
+    expect(await componente.volverABiblioteca()).toBe(true);
+    harness.detectChanges();
+    expect(
+      harness.routeNativeElement?.querySelector('#temario-doc-22'),
+    ).not.toBeNull();
+    expect(visor(harness)).toBeUndefined();
+  });
+
+  it('recupera el documento de una entrada de historial anterior sin URL ni ramas', async () => {
+    const harness = await RouterTestingHarness.create();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl(ruta + '?doc=22', {
+      state: {
+        misDocumentos: {
+          tema: 9,
+          busqueda: '',
+          scroll: 0,
+          foco: 'temario-doc-22',
+          ramasAbiertas: [],
+          ramasCerradasConFiltro: [],
+        },
+      },
+    });
+    harness.detectChanges();
+    const componente = harness.routeDebugElement!
+      .componentInstance as PreviaLibrillosComponent;
+    expect(await componente.volverABiblioteca()).toBe(true);
+    harness.detectChanges();
+    expect(
+      harness.routeNativeElement?.querySelector('#temario-doc-22'),
+    ).not.toBeNull();
   });
 
   it('distingue la biblioteca sin publicaciones de un enlace ajeno al catálogo', async () => {

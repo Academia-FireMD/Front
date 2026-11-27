@@ -13,12 +13,17 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationBehaviorOptions,
+  ParamMap,
+  Router,
+  RouterLink,
+  UrlTree,
+} from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastrService } from 'ngx-toastr';
-import { Dropdown, DropdownModule } from 'primeng/dropdown';
 import {
   Observable,
   Subject,
@@ -32,6 +37,7 @@ import {
   switchMap,
   timeout,
 } from 'rxjs';
+import { usuarioIdDeSubject } from '../../cursos/services/hidraulica-interactivo.service';
 import { DocumentosDelTemaComponent } from '../../documentacion/documentos-del-tema/documentos-del-tema.component';
 import { DocumentosService } from '../../documentacion/services/documentacion.service';
 import { AppConfigService } from '../../services/app-config.service';
@@ -47,18 +53,19 @@ import { PreviaLibrillosPdfComponent } from './previa-librillos-pdf.component';
 import {
   RUTA_PREVIA_LIBRILLOS,
   ORIGEN_BIBLIOTECA,
-  VistaTemario,
+  EstadoBiblioteca,
+  RetornoBiblioteca,
+  esVistaBiblioteca,
   parametrosPracticaLibrillo,
-  vistaDeTemario,
 } from './previa-librillos';
 import {
-  TemaLibrillo,
   agruparBibliotecaDocumentos,
   crearBibliotecaDocumentos,
   crearTemarioLibrillo,
   filtrarBibliotecaDocumentos,
   pdfDisponible,
   seleccionLibrillo,
+  tituloDeBiblioteca,
 } from './temario-librillo';
 
 type FuenteTemario = 'banco' | 'arbol';
@@ -69,29 +76,12 @@ type Carga<T> = {
 
 const cargando = { estado: 'cargando', datos: [] as never[] } as const;
 
-interface GrupoTemas {
-  label: string;
-  items: TemaLibrillo[];
-}
-
-interface EstadoBiblioteca {
-  busqueda: string;
-  tema: number | null;
-  scroll: number;
-  foco: string;
-  filtrosAbiertos: boolean;
-  ramasAbiertas: readonly string[];
-  ramasCerradasConFiltro: readonly string[];
-}
-
 @Component({
   standalone: true,
   imports: [
-    FormsModule,
     RouterLink,
     ButtonModule,
     InputTextModule,
-    DropdownModule,
     DocumentosDelTemaComponent,
     PreviaLibrillosPdfComponent,
     LibrilloPracticaComponent,
@@ -116,23 +106,8 @@ export class PreviaLibrillosComponent {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private guardando: Promise<boolean> | null = null;
-  private readonly recursoMontado = signal<string | null>(null);
   readonly salidaPendiente = signal<string | null>(null);
-  readonly selectorMovilAbierto = signal(false);
-  private readonly selectorTema = viewChild<Dropdown>('selectorTema');
-  private readonly selectorPdf = viewChild<Dropdown>('selectorPdf');
-  private readonly botonTemas =
-    viewChild<ElementRef<HTMLButtonElement>>('botonTemas');
-  private readonly tabDocumentos =
-    viewChild<ElementRef<HTMLButtonElement>>('tabDocumentos');
-  private readonly tabLibrillo =
-    viewChild<ElementRef<HTMLButtonElement>>('tabLibrillo');
-  private readonly panelLectura =
-    viewChild<ElementRef<HTMLElement>>('panelLectura');
-  private readonly panelDocumentos =
-    viewChild<ElementRef<HTMLElement>>('panelDocumentos');
-  private focoLectura?: HTMLElement;
-  private focoDocumentos?: HTMLElement;
+  private opcionesSalidaPendiente?: NavigationBehaviorOptions;
   private readonly visorPdf = viewChild(PreviaLibrillosPdfComponent);
   readonly panelPractica = viewChild(LibrilloPracticaComponent);
   private readonly botonRegreso =
@@ -143,8 +118,6 @@ export class PreviaLibrillosComponent {
     | (ContextoPdfLibrillo & { referencia: number })
     | null = null;
   readonly errorReferencia = signal(false);
-  private readonly enfocarDocumentoAlEntrar =
-    this.ruta.snapshot.queryParamMap.has('doc');
   private readonly params = toSignal(this.ruta.queryParamMap, {
     initialValue: this.ruta.snapshot.queryParamMap,
   });
@@ -154,12 +127,9 @@ export class PreviaLibrillosComponent {
   private readonly cabecera =
     viewChild<ElementRef<HTMLHeadingElement>>('tituloTemario');
   readonly busquedaBiblioteca = signal('');
-  readonly temaBiblioteca = signal<number | null>(null);
-  readonly filtrosBibliotecaAbiertos = signal(false);
+  readonly origenBiblioteca = ORIGEN_BIBLIOTECA;
   private readonly ramasAbiertas = signal<readonly string[]>([]);
-  private readonly ramasCerradasConFiltro = signal<readonly string[]>([]);
-  private regresoBiblioteca = this.estadoBibliotecaEnHistorial();
-  private focoBibliotecaPendiente = false;
+  private readonly ramasCerradasConBusqueda = signal<readonly string[]>([]);
 
   private readonly fuentes = toSignal(
     this.auth.currentIdentity$.pipe(
@@ -210,43 +180,21 @@ export class PreviaLibrillosComponent {
   readonly arbolCargando = computed(
     () => this.fuentes()?.arbol.estado === 'cargando',
   );
-  readonly esBiblioteca = computed(() => {
-    const params = this.params();
-    return (
-      this.vistaDeTemario() === 'documentos' &&
-      !params.has('tema') &&
-      !params.has('doc')
-    );
-  });
+  readonly esBiblioteca = computed(() => esVistaBiblioteca(this.params()));
   private readonly arbolBiblioteca = computed(
     () => this.fuentes()?.arbol.datos,
   );
   readonly biblioteca = computed(() =>
     crearBibliotecaDocumentos(this.arbolBiblioteca() ?? []),
   );
-  readonly temasBiblioteca = computed(() => {
-    const temas = new Map<
-      number,
-      Pick<TemaLibrillo, 'id' | 'titulo' | 'etiqueta'>
-    >();
-    for (const { tema } of this.biblioteca().values()) temas.set(tema.id, tema);
-    return [...temas.values()];
-  });
-  readonly bibliotecaFiltrada = computed(() =>
-    filtrarBibliotecaDocumentos(
-      this.biblioteca(),
-      this.busquedaBiblioteca(),
-      this.temaBiblioteca(),
-    ),
-  );
   readonly gruposBiblioteca = computed(() =>
     agruparBibliotecaDocumentos(
       this.arbolBiblioteca() ?? [],
-      this.bibliotecaFiltrada().documentos,
+      filtrarBibliotecaDocumentos(this.biblioteca(), this.busquedaBiblioteca()),
     ),
   );
-  readonly filtrosBibliotecaActivos = computed(
-    () => !!this.busquedaBiblioteca().trim() || this.temaBiblioteca() !== null,
+  private readonly busquedaActiva = computed(
+    () => !!this.busquedaBiblioteca().trim(),
   );
   readonly temas = computed(() => {
     const fuentes = this.fuentes();
@@ -257,45 +205,22 @@ export class PreviaLibrillosComponent {
   readonly temasDePractica = computed(() =>
     this.temas().filter((tema) => tema.enBanco),
   );
-  readonly gruposTemas = computed(() => {
-    const grupos = new Map<string, GrupoTemas>();
-    for (const tema of this.temas()) {
-      const grupo = grupos.get(tema.modulo) ?? {
-        label: tema.modulo,
-        items: [],
-      };
-      grupo.items.push(tema);
-      grupos.set(tema.modulo, grupo);
-    }
-    return [...grupos.values()];
-  });
   readonly seleccion = computed(() =>
     seleccionLibrillo(this.temas(), this.params()),
   );
-  readonly documentosDelSelector = computed(() =>
-    (this.seleccion().tema?.documentos ?? []).map((documento) => ({
-      id: documento.id,
-      nombre:
-        documento.descripcion?.trim() ||
-        documento.identificador ||
-        documento.fileName,
-    })),
-  );
-  readonly vistaDeTemario = computed<VistaTemario>(() =>
-    this.salidaPendiente()
-      ? 'librillo'
-      : (vistaDeTemario(this.params().get('vista')) ?? 'librillo'),
-  );
+  readonly tituloLectura = computed(() => {
+    const { tema, documento } = this.seleccion();
+    return documento
+      ? tituloDeBiblioteca(documento, tema?.descripcion)
+      : (tema?.titulo ?? 'Temario');
+  });
   private readonly claveSeleccion = computed(() => {
     const { tema, documento } = this.seleccion();
     return tema ? `${tema.id}:${documento?.id ?? ''}` : null;
   });
   readonly recursosMontados = computed(() => {
     const clave = this.claveSeleccion();
-    return clave &&
-      (this.vistaDeTemario() === 'librillo' || this.recursoMontado() === clave)
-      ? [clave]
-      : [];
+    return clave ? [clave] : [];
   });
   readonly parametrosPractica = computed(() => {
     const { tema, documento } = this.seleccion();
@@ -337,90 +262,21 @@ export class PreviaLibrillosComponent {
   readonly pestana = this.contextoPdf.pestana;
 
   constructor() {
-    let anterior: string | null = null;
-    let vistaAnterior: VistaTemario | undefined;
-    let restaurarFoco = this.enfocarDocumentoAlEntrar;
     effect(
       () => {
-        const clave = this.claveSeleccion();
-        const vista = this.vistaDeTemario();
-        const id = this.seleccion().documento?.id;
-
-        if (clave !== anterior) {
-          anterior = clave;
-          this.recursoMontado.set(null);
-          this.focoLectura = undefined;
-          this.focoDocumentos = undefined;
-          this.referenciaEnCurso = null;
-          this.errorReferencia.set(false);
-          this.pestana.set('lectura');
-        }
-        if (vista === 'librillo') this.recursoMontado.set(clave);
-
-        if (vista !== vistaAnterior) {
-          vistaAnterior = vista;
-          const destino =
-            vista === 'librillo' ? this.focoLectura : this.focoDocumentos;
-          if (destino) this.enfocarTrasRender(destino);
-        }
-
-        if (id && restaurarFoco) {
-          restaurarFoco = false;
-          afterNextRender(
-            () => {
-              if (document.activeElement !== document.body) return;
-              const panel =
-                vista === 'documentos'
-                  ? this.panelDocumentos()
-                  : this.panelLectura();
-              const selector =
-                vista === 'documentos' ? '#temario-doc-' : '#librillo-edicion-';
-              const enlace = panel?.nativeElement.querySelector<HTMLElement>(
-                selector + id,
-              );
-              enlace?.focus({ preventScroll: true });
-              enlace?.scrollIntoView?.({ block: 'nearest' });
-            },
-            { injector: this.injector },
-          );
-        }
+        // Las referencias y páginas del mismo documento conservan su panel de práctica.
+        this.claveSeleccion();
+        this.referenciaEnCurso = null;
+        this.errorReferencia.set(false);
+        this.pestana.set('lectura');
       },
       { allowSignalWrites: true },
     );
-    let restaurarBiblioteca = true;
     effect(
       () => {
-        if (!this.esBiblioteca()) {
-          restaurarBiblioteca = true;
-          return;
-        }
-        if (!this.arbolDisponible() || !restaurarBiblioteca) return;
-
-        restaurarBiblioteca = false;
-        const estado = this.estadoBibliotecaEnHistorial();
-        const tema = estado?.tema ?? null;
-        this.regresoBiblioteca = estado;
-        this.busquedaBiblioteca.set(estado?.busqueda ?? '');
-        this.filtrosBibliotecaAbiertos.set(estado?.filtrosAbiertos ?? false);
-        this.ramasAbiertas.set(estado?.ramasAbiertas ?? []);
-        this.ramasCerradasConFiltro.set(estado?.ramasCerradasConFiltro ?? []);
-        this.temaBiblioteca.set(
-          this.temasBiblioteca().some(({ id }) => id === tema) ? tema : null,
-        );
-        if (estado || this.focoBibliotecaPendiente) {
-          this.focoBibliotecaPendiente = false;
-          afterNextRender(
-            () => {
-              if (!this.esBiblioteca()) return;
-              const lista = this.resultadosBiblioteca()?.nativeElement;
-              if (lista && estado) lista.scrollTop = estado.scroll;
-              const destino =
-                (estado && document.getElementById(estado.foco)) ??
-                this.cabecera()?.nativeElement;
-              destino?.focus({ preventScroll: true });
-            },
-            { injector: this.injector },
-          );
+        const params = this.params();
+        if (esVistaBiblioteca(params) && this.arbolDisponible()) {
+          this.restaurarBiblioteca(params);
         }
       },
       { allowSignalWrites: true },
@@ -446,163 +302,61 @@ export class PreviaLibrillosComponent {
     );
   }
 
-  abrirCatalogoMovil() {
-    this.selectorMovilAbierto.set(true);
-    afterNextRender(() => this.selectorTema()?.show(), {
-      injector: this.injector,
-    });
-  }
-
-  cerrarCatalogoMovil() {
-    if (!this.selectorMovilAbierto()) return;
-    this.selectorMovilAbierto.set(false);
-    const boton = this.botonTemas()?.nativeElement;
-    if (boton) this.enfocarTrasRender(boton);
-  }
-
-  private enfocarTrasRender(destino: HTMLElement) {
-    afterNextRender(
-      () => {
-        if (destino.isConnected) destino.focus({ preventScroll: true });
-      },
-      { injector: this.injector },
-    );
-  }
-
-  registrarFoco(evento: FocusEvent, vista: VistaTemario) {
-    if (!(evento.target instanceof HTMLElement)) return;
-    if (vista === 'librillo') this.focoLectura = evento.target;
-    else this.focoDocumentos = evento.target;
-  }
-
-  async seleccionarTema(id: number) {
-    const { tema } = this.seleccion();
-    if (id !== tema?.id && this.temas().some((actual) => actual.id === id)) {
-      const cambio = await this.navegarTemario({
-        tema: id,
-        doc: null,
-        pagina: null,
-        referencia: null,
-      });
-      if (!cambio)
-        this.selectorTema()?.writeValue(this.seleccion().tema?.id ?? null);
-    }
-    if (this.selectorMovilAbierto()) {
-      this.selectorMovilAbierto.set(false);
-      const boton = this.botonTemas()?.nativeElement;
-      if (boton) this.enfocarTrasRender(boton);
-    }
-  }
-
   abrirPdf(id: number) {
-    if (this.esBiblioteca()) {
-      const recurso = this.biblioteca().get(id);
-      if (!recurso || !pdfDisponible(recurso.documento)) return;
-      this.conservarBiblioteca('temario-doc-' + id);
-      void this.navegarTemario({
-        tema: recurso.tema.id,
-        doc: id,
-        vista: 'librillo',
-        pagina: null,
-        referencia: null,
-      }).then((cambio) => {
+    const recurso = this.biblioteca().get(id);
+    if (!this.esBiblioteca() || !recurso || !pdfDisponible(recurso.documento))
+      return;
+    const estado = this.conservarBiblioteca(id);
+    void this.router
+      .navigate([], {
+        relativeTo: this.ruta,
+        queryParamsHandling: 'merge',
+        queryParams: {
+          tema: recurso.tema.id,
+          doc: id,
+          vista: 'librillo',
+          pagina: null,
+          referencia: null,
+        },
+        preserveFragment: true,
+        state: { misDocumentos: estado },
+      })
+      .then((cambio) => {
         if (cambio && !this.esBiblioteca()) {
           this.cabecera()?.nativeElement.focus({ preventScroll: true });
         }
       });
-      return;
-    }
-
-    const permitido = this.seleccion().tema?.documentos.some(
-      (doc) => doc.id === id && pdfDisponible(doc),
-    );
-    if (permitido) void this.seleccionarDocumento(id);
   }
 
   abrirEdicion({ id, url }: { id: number; url: UrlTree }) {
-    const desdeBiblioteca = this.esBiblioteca();
-    if (desdeBiblioteca) this.conservarBiblioteca('temario-doc-' + id);
+    if (!this.esBiblioteca()) return;
+    const estado = this.conservarBiblioteca(id);
     void this.router.navigateByUrl(url, {
-      state: {
-        ...this.estadoRetornoBiblioteca,
-        volverAMisDocumentos: desdeBiblioteca,
-      },
+      state: { misDocumentos: estado, volverAMisDocumentos: true },
     });
   }
 
-  get estadoEdicionDesdeLector() {
-    return this.estadoRetornoBiblioteca;
-  }
-
-  get origenEdicionDesdeLector() {
-    return this.regresoBiblioteca ? ORIGEN_BIBLIOTECA : 'librillos';
-  }
-
-  async seleccionarDocumento(id: number) {
-    const { tema, documento } = this.seleccion();
-    if (!tema?.documentos.some((actual) => actual.id === id)) return;
-    const cambio = await this.navegarTemario({
-      tema: tema.id,
-      doc: id,
-      vista: 'librillo',
-      ...(documento?.id === id ? {} : { pagina: null, referencia: null }),
-    });
-    if (!cambio)
-      this.selectorPdf()?.writeValue(this.seleccion().documento?.id ?? null);
-  }
-
-  navegarPestanas(evento: KeyboardEvent) {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(evento.key))
-      return;
-    evento.preventDefault();
-    const documentos =
-      evento.key === 'Home' ||
-      (evento.key !== 'End' && this.vistaDeTemario() === 'librillo');
-    (documentos
-      ? this.tabDocumentos()
-      : this.tabLibrillo()
-    )?.nativeElement.focus();
-    void this.seleccionarVista(documentos ? 'documentos' : 'librillo');
-  }
-
-  seleccionarVista(vista: VistaTemario) {
-    return this.navegarTemario({ vista });
-  }
-
-  private navegarTemario(queryParams: Record<string, string | number | null>) {
-    return this.router.navigate([], {
-      relativeTo: this.ruta,
-      queryParamsHandling: 'merge',
-      queryParams,
-      preserveFragment: true,
-      state: this.estadoRetornoBiblioteca,
-    });
-  }
+  readonly estadoRetornoBiblioteca = computed((): RetornoBiblioteca => {
+    this.params();
+    return { misDocumentos: this.estadoBibliotecaEnHistorial()?.misDocumentos };
+  });
 
   buscarEnBiblioteca(busqueda: string) {
     this.busquedaBiblioteca.set(busqueda);
-    this.reiniciarScrollBiblioteca();
-  }
-
-  filtrarTemaBiblioteca(tema: number | null) {
-    this.temaBiblioteca.set(tema);
-    this.reiniciarScrollBiblioteca();
-  }
-
-  limpiarFiltrosBiblioteca() {
-    this.busquedaBiblioteca.set('');
-    this.filtrarTemaBiblioteca(null);
+    this.ramasCerradasConBusqueda.set([]);
+    const lista = this.resultadosBiblioteca()?.nativeElement;
+    if (lista) lista.scrollTop = 0;
   }
 
   ramaAbierta(clave: string) {
-    return this.filtrosBibliotecaActivos()
-      ? !this.ramasCerradasConFiltro().includes(clave)
+    return this.busquedaActiva()
+      ? !this.ramasCerradasConBusqueda().includes(clave)
       : this.ramasAbiertas().includes(clave);
   }
 
   alternarRama(clave: string) {
-    const ramas = this.filtrosBibliotecaActivos()
-      ? this.ramasCerradasConFiltro
+    const ramas = this.busquedaActiva()
+      ? this.ramasCerradasConBusqueda
       : this.ramasAbiertas;
     ramas.update((actuales) =>
       actuales.includes(clave)
@@ -611,49 +365,91 @@ export class PreviaLibrillosComponent {
     );
   }
 
-  private reiniciarScrollBiblioteca() {
-    this.ramasCerradasConFiltro.set([]);
-    const lista = this.resultadosBiblioteca()?.nativeElement;
-    if (lista) lista.scrollTop = 0;
-  }
-
   private estadoBibliotecaEnHistorial() {
-    const estado = this.location.getState() as {
-      misDocumentos?: EstadoBiblioteca;
-    } | null;
-    return estado?.misDocumentos;
+    return this.location.getState() as RetornoBiblioteca | null;
   }
 
-  private get estadoRetornoBiblioteca() {
-    return this.regresoBiblioteca && { misDocumentos: this.regresoBiblioteca };
-  }
-
-  conservarBiblioteca(foco: string) {
-    if (!this.esBiblioteca()) return;
+  private conservarBiblioteca(id: number): EstadoBiblioteca {
     const estado: EstadoBiblioteca = {
+      url: this.router.url,
       busqueda: this.busquedaBiblioteca(),
-      tema: this.temaBiblioteca(),
       scroll: this.resultadosBiblioteca()?.nativeElement.scrollTop ?? 0,
-      foco,
-      filtrosAbiertos: this.filtrosBibliotecaAbiertos(),
+      foco: 'temario-doc-' + id,
       ramasAbiertas: this.ramasAbiertas(),
-      ramasCerradasConFiltro: this.ramasCerradasConFiltro(),
+      ramasCerradasConBusqueda: this.ramasCerradasConBusqueda(),
     };
-    this.regresoBiblioteca = estado;
     this.location.replaceState(this.location.path(true), '', {
       ...(this.location.getState() as Record<string, unknown>),
       misDocumentos: estado,
     });
+    return estado;
+  }
+
+  private restaurarBiblioteca(params: ParamMap) {
+    const historial = this.estadoBibliotecaEnHistorial();
+    const estado = historial?.misDocumentos;
+    const id =
+      historial?.enfocarDocumentoBiblioteca ??
+      usuarioIdDeSubject(estado?.foco?.match(/^temario-doc-(\d+)$/)?.[1]);
+    const temaId = usuarioIdDeSubject(params.get('tema'));
+    const ramas = new Set(estado?.ramasAbiertas);
+    let foco: string | undefined;
+
+    if (!estado?.url) {
+      for (const modulo of this.arbolBiblioteca() ?? []) {
+        for (const tema of modulo.temas) {
+          const documento = tema.documentos.find((doc) => doc.id === id);
+          if (!documento && (tema.id !== temaId || !tema.documentos.length)) {
+            continue;
+          }
+          const claveTema = `tema-${modulo.id}-${tema.id}`;
+          ramas.add('modulo-' + modulo.id);
+          ramas.add(claveTema);
+          foco = documento
+            ? 'temario-doc-' + documento.id
+            : 'rama-' + claveTema;
+        }
+      }
+    }
+
+    this.busquedaBiblioteca.set(estado?.busqueda ?? '');
+    this.ramasAbiertas.set([...ramas]);
+    this.ramasCerradasConBusqueda.set(
+      estado?.ramasCerradasConBusqueda ?? estado?.ramasCerradasConFiltro ?? [],
+    );
+
+    afterNextRender(
+      () => {
+        if (this.params() !== params) return;
+        const lista = this.resultadosBiblioteca()?.nativeElement;
+        if (lista) lista.scrollTop = estado?.scroll ?? 0;
+        const focoId = estado?.foco ?? foco;
+        const destino =
+          (focoId && document.getElementById(focoId)) ||
+          this.cabecera()?.nativeElement;
+        destino?.focus({ preventScroll: true });
+        if (!estado?.url && focoId) {
+          destino?.scrollIntoView?.({ block: 'nearest' });
+        }
+      },
+      { injector: this.injector },
+    );
   }
 
   volverABiblioteca() {
-    this.regresoBiblioteca =
-      this.estadoBibliotecaEnHistorial() ?? this.regresoBiblioteca;
-    this.focoBibliotecaPendiente = true;
+    const estado = this.estadoRetornoBiblioteca();
+    if (estado.misDocumentos) {
+      return this.router.navigateByUrl(
+        estado.misDocumentos.url ?? RUTA_PREVIA_LIBRILLOS + '?vista=documentos',
+        { state: estado },
+      );
+    }
+
+    const { tema, documento } = this.seleccion();
     return this.router.navigate([], {
       relativeTo: this.ruta,
-      queryParams: { vista: 'documentos' },
-      state: this.estadoRetornoBiblioteca,
+      queryParams: { vista: 'documentos', tema: tema?.id },
+      state: { enfocarDocumentoBiblioteca: documento?.id },
     });
   }
 
@@ -667,19 +463,27 @@ export class PreviaLibrillosComponent {
     this.pestana.set('lectura');
     const params = this.params();
     if (
-      this.vistaDeTemario() === 'librillo' &&
       params.get('pagina') === String(referencia.pagina) &&
       params.get('referencia') === String(referencia.referencia)
     )
       return;
 
-    const abierta = await this.navegarTemario({
-      tema: tema.id,
-      doc: referencia.doc,
-      vista: 'librillo',
-      pagina: referencia.pagina,
-      referencia: referencia.referencia,
-    }).catch(() => false);
+    const abierta = await this.router
+      .navigate([], {
+        relativeTo: this.ruta,
+        queryParamsHandling: 'merge',
+        queryParams: {
+          tema: tema.id,
+          doc: referencia.doc,
+          vista: 'librillo',
+          pagina: referencia.pagina,
+          referencia: referencia.referencia,
+        },
+        preserveFragment: true,
+        replaceUrl: true,
+        state: this.estadoRetornoBiblioteca(),
+      })
+      .catch(() => false);
     if (
       referencia === this.referenciaEnCurso &&
       panel === this.panelPractica() &&
@@ -708,9 +512,7 @@ export class PreviaLibrillosComponent {
   reintentarSalida() {
     const destino = this.salidaPendiente();
     if (destino) {
-      void this.router.navigateByUrl(destino, {
-        state: this.estadoRetornoBiblioteca,
-      });
+      void this.router.navigateByUrl(destino, this.opcionesSalidaPendiente);
     }
   }
 
@@ -718,12 +520,16 @@ export class PreviaLibrillosComponent {
     const visor = this.visorPdf();
     if (!visor) return true;
 
+    const opciones = this.router.getCurrentNavigation()?.extras;
     if (destino) {
       const url = this.router.parseUrl(destino);
       const ruta = url.root.children['primary']?.segments
         .map(({ path }) => path)
         .join('/');
-      if (`/${ruta}` === RUTA_PREVIA_LIBRILLOS) {
+      if (
+        `/${ruta}` === RUTA_PREVIA_LIBRILLOS &&
+        !esVistaBiblioteca(url.queryParamMap)
+      ) {
         const actual = this.seleccion();
         const siguiente = seleccionLibrillo(this.temas(), url.queryParamMap);
         if (
@@ -742,6 +548,7 @@ export class PreviaLibrillosComponent {
         this.guardando = null;
       });
     const guardado = await this.guardando;
+    this.opcionesSalidaPendiente = guardado ? undefined : opciones;
     this.salidaPendiente.set(guardado ? null : (destino ?? null));
     const estado = visor.estadoGuardadoAlSalir();
     if (guardado && estado === 'local') {

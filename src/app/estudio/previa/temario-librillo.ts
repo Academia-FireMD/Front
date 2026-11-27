@@ -95,22 +95,13 @@ export function agruparBibliotecaDocumentos(
 export function filtrarBibliotecaDocumentos(
   biblioteca: ReadonlyMap<number, DocumentoBiblioteca>,
   busqueda: string,
-  temaId: number | null,
 ) {
   const palabras = normalizarBusqueda(busqueda).match(/\S+/g) ?? [];
-  const documentos: DocumentoTemario[] = [];
-  let disponibles = 0;
-  for (const { documento, tema, textoBusqueda } of biblioteca.values()) {
-    if (temaId !== null && temaId !== tema.id) continue;
-    if (!palabras.every((palabra) => textoBusqueda.includes(palabra))) continue;
-    documentos.push(documento);
-    if (documento.isDownloadable) disponibles++;
-  }
-  return {
-    documentos,
-    disponibles,
-    bloqueados: documentos.length - disponibles,
-  };
+  return [...biblioteca.values()]
+    .filter(({ textoBusqueda }) =>
+      palabras.every((palabra) => textoBusqueda.includes(palabra)),
+    )
+    .map(({ documento }) => documento);
 }
 
 export function tituloDeBiblioteca(
@@ -192,9 +183,7 @@ export function seleccionLibrillo(temas: TemaLibrillo[], params: ParamMap) {
   const documento = params.has('doc')
     ? documentos.find(({ id }) => id === documentoId)
     : (documentos.find((doc) => pdfDisponible(doc) && doc.librillo) ??
-      documentos.find(pdfDisponible) ??
-      documentos.find((doc) => doc.isDownloadable) ??
-      documentos[0]);
+      documentos.find(pdfDisponible));
 
   return {
     tema,

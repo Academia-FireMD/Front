@@ -185,7 +185,7 @@ describe('Mis documentos', () => {
     const biblioteca = crearBibliotecaDocumentos(arbol);
     const grupos = agruparBibliotecaDocumentos(
       arbol,
-      filtrarBibliotecaDocumentos(biblioteca, '', null).documentos,
+      filtrarBibliotecaDocumentos(biblioteca, ''),
     );
     expect(grupos.map(({ id, cantidad }) => [id, cantidad])).toEqual([
       [8, 3],
@@ -196,7 +196,7 @@ describe('Mis documentos', () => {
     expect(grupos[0].temas[0].documentos[1]).toBe(anexo);
     const filtrados = agruparBibliotecaDocumentos(
       arbol,
-      filtrarBibliotecaDocumentos(biblioteca, 'Anexos', 44).documentos,
+      filtrarBibliotecaDocumentos(biblioteca, 'Anexos guías 42'),
     );
     expect(filtrados.map(({ id, temas }) => [id, temas[0].id])).toEqual([
       [2, 44],
@@ -254,25 +254,19 @@ describe('Mis documentos', () => {
     ]);
 
     expect(tituloDeBiblioteca(guia)).toBe('Guía de actuación');
-    expect(filtrarBibliotecaDocumentos(biblioteca, '', null)).toEqual({
-      documentos: [guia, bloqueado],
-      disponibles: 1,
-      bloqueados: 1,
-    });
+    expect(filtrarBibliotecaDocumentos(biblioteca, '')).toEqual([
+      guia,
+      bloqueado,
+    ]);
     expect(
       filtrarBibliotecaDocumentos(
         biblioteca,
         'EVACUACION intervención tema 4 guia DOCX',
-        4,
-      ).documentos,
+      ),
     ).toEqual([guia]);
-    expect(
-      filtrarBibliotecaDocumentos(biblioteca, 'GUIA', 9).documentos,
-    ).toEqual([]);
-    expect(filtrarBibliotecaDocumentos(biblioteca, 'anexos', null)).toEqual({
-      documentos: [bloqueado],
-      disponibles: 0,
-      bloqueados: 1,
-    });
+    expect(filtrarBibliotecaDocumentos(biblioteca, 'GUIA anexos')).toEqual([]);
+    expect(filtrarBibliotecaDocumentos(biblioteca, 'anexos')).toEqual([
+      bloqueado,
+    ]);
   });
 });

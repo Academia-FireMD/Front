@@ -454,7 +454,7 @@ test('R07 muestra las 19 hojas, guarda notas y restaura tema, página y aislamie
     const page = await backend.preparar(a);
     const f = await abrirLibrillo(page, backend);
     const volver = page.getByRole('button', {
-      name: backend.staging ? 'Volver al Temario' : 'Volver al tema',
+      name: backend.staging ? 'Volver a Mis documentos' : 'Volver al tema',
       exact: true,
     });
     await expect(volver).toBeVisible();
@@ -492,10 +492,17 @@ test('R07 muestra las 19 hojas, guarda notas y restaura tema, página y aislamie
         .evaluate(() => document.documentElement.scrollWidth - innerWidth),
     ).toBe(0);
     await volver.press('Enter');
-    const rutaRetorno = backend.staging ? 'librillos' : 'documentacion/alumno';
-    await expect(page).toHaveURL(
-      new RegExp(`${rutaRetorno}\\?tema=${backend.TEMA}&doc=${backend.DOC}`),
-    );
+    if (backend.staging) {
+      await expect(
+        page.getByRole('heading', { name: 'Mis documentos' }),
+      ).toBeVisible();
+    } else {
+      await expect(page).toHaveURL(
+        new RegExp(
+          `documentacion/alumno\\?tema=${backend.TEMA}&doc=${backend.DOC}`,
+        ),
+      );
+    }
     await expect(
       page.getByRole('link', {
         name: backend.staging
@@ -825,7 +832,7 @@ test('El atajo lateral unifica el Temario en staging y vuelve desde la edición 
   await page.goto(`/app/librillos?tema=${backend.TEMA}`);
   await expect(
     page.getByRole('combobox', { name: 'Tema', exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await page.locator('.lateral-bar').hover();
   await expect(link).toBeVisible();
 

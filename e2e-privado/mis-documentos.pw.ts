@@ -174,22 +174,18 @@ for (const width of [390, 1440]) {
     await expect(temaDeRescate).toHaveCount(0);
 
     const buscar = page.getByRole('searchbox', { name: 'Buscar documentos' });
-    const filtroTema = page.getByRole('combobox', {
-      name: 'Tema',
-      exact: true,
-    });
+    await expect(
+      page.getByRole('combobox', { name: 'Tema', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Filtros', exact: true }),
+    ).toHaveCount(0);
     await buscar.fill('tecnica');
     await expect(intervencion).toHaveAttribute('aria-expanded', 'true');
     await expect(temaDeRescate).toHaveAttribute('aria-expanded', 'true');
     await expect(primero).toBeVisible();
     await expect(rescate).toBeVisible();
     await expect(page.getByText('Guía reservada')).toHaveCount(0);
-    const etiquetaTema = 'Normativa / 4 · Legislación forestal';
-    if (width === 390) {
-      await page.getByRole('button', { name: 'Filtros', exact: true }).click();
-    }
-    await filtroTema.selectOption({ label: etiquetaTema });
-    await expect(rescate).toHaveCount(0);
     const ultimo = page.getByRole('button', {
       name: 'Técnica forestal 24',
       exact: true,
@@ -223,29 +219,19 @@ for (const width of [390, 1440]) {
         ),
       )
       .toBeLessThanOrEqual(8);
-    await expect(rescate).toHaveCount(0);
-    if (width === 390 && !(await filtroTema.isVisible())) {
-      await page.getByRole('button', { name: /^Filtros/ }).click();
-    }
-    await expect(filtroTema.locator('option:checked')).toHaveText(etiquetaTema);
-
     await ultimo.press('Enter');
     await expect(page.getByTestId('pagina-librillo')).toBeVisible();
     await page.goBack();
     await expect(ultimo).toBeFocused();
     await expect(buscar).toHaveValue('tecnica');
-    await expect(filtroTema.locator('option:checked')).toHaveText(etiquetaTema);
 
     await buscar.fill('sin coincidencias 123');
     await expect(
-      page.getByText('No hay documentos que coincidan con los filtros.'),
+      page.getByText('No hay documentos que coincidan con la búsqueda.'),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Limpiar filtros' }).click();
+    await buscar.fill('');
     await expect(buscar).toBeFocused();
     await expect(buscar).toHaveValue('');
-    await expect(filtroTema.locator('option:checked')).toHaveText(
-      'Todos los temas',
-    );
     await expect(primero).toBeVisible();
     await expect(intervencion).toHaveAttribute('aria-expanded', 'false');
     await expect(rescate).toHaveCount(0);
@@ -272,6 +258,19 @@ for (const width of [390, 1440]) {
       page.getByRole('region', { name: 'PDF de Técnica de rescate' }),
     ).toBeVisible();
     expect(descargas).toContain(documentoRescate);
+    await expect(
+      page.getByRole('button', { name: 'Volver a Mis documentos' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Volver a Mis documentos' }).click();
+    await expect(
+      page.getByRole('button', { name: 'Intervención', exact: true }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    await expect(
+      page.getByRole('button', { name: '9 · Rescate', exact: true }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    await expect(
+      page.getByRole('button', { name: 'Técnica de rescate', exact: true }),
+    ).toBeVisible();
 
     await page.goto(
       `/app/librillos?tema=${temaRescate}&doc=${documentoBloqueado}&vista=librillo`,
@@ -285,12 +284,9 @@ for (const width of [390, 1440]) {
       `/app/librillos?tema=${temaNormativa}&doc=${documentoRescate}&vista=librillo`,
     );
     await expect(
-      page
-        .getByRole('tabpanel', { name: 'Estudio' })
-        .getByRole('alert')
-        .filter({
-          hasText: /Este documento no está disponible en el tema seleccionado/i,
-        }),
+      page.getByRole('alert').filter({
+        hasText: /Este documento no está disponible en el tema seleccionado/i,
+      }),
     ).toBeVisible();
     expect(descargas.filter((id) => id === documentoRescate)).toHaveLength(1);
 

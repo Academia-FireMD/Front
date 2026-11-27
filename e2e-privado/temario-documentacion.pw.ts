@@ -533,9 +533,6 @@ test.describe('Documentación y Temario integrados', () => {
     await expect(
       page.getByText('Resumen bloqueado', { exact: true }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: /Reintentar/ }),
-    ).toBeVisible();
     expect(
       await page.locator('html').evaluate((el) => el.scrollWidth),
     ).toBeLessThanOrEqual(391);
@@ -545,9 +542,10 @@ test.describe('Documentación y Temario integrados', () => {
       rutaTemario + '?tema=' + backend.TEMA + '&doc=' + (backend.DOC + 299),
     );
     await expect(
-      page
-        .getByRole('tabpanel', { name: 'Estudio' })
-        .getByText(/Este documento no está disponible/i),
+      page.getByRole('button', { name: /Reintentar/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Este documento no está disponible/i),
     ).toBeVisible();
     expect(peticionesPdf).toBe(0);
   });

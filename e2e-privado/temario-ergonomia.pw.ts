@@ -40,24 +40,24 @@ for (const width of [360, 390]) {
       route.fulfill({ contentType: 'application/pdf', body: documentoPdf() }),
     );
     await page.goto(`/app/librillos?tema=${backend.TEMA}&vista=documentos`);
-    await expect(page.locator('h1')).toContainText('Estatutos de prueba');
+    await expect(
+      page.getByRole('heading', { name: 'Mis documentos' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Normativa' }),
+    ).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByRole('button', { name: 'Puentes' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Saler' })).toBeVisible();
-    await page.getByRole('button', { name: 'Ver temas' }).click();
-    const buscar = page.getByPlaceholder('Buscar por tema o módulo');
-    await expect(buscar).toBeVisible();
-    await expect(buscar).toBeFocused();
-    await buscar.press('Escape');
-    await expect(page.getByRole('button', { name: 'Ver temas' })).toBeFocused();
+    await expect(
+      page.getByRole('combobox', { name: 'Tema', exact: true }),
+    ).toHaveCount(0);
     const ack = page.waitForRequest((req) =>
       req.url().endsWith(`/documentos/${backend.DOC + 1}/ack`),
     );
     await page.getByRole('button', { name: 'Saler' }).click();
     await ack;
     await expect(page).toHaveURL(new RegExp(`doc=${backend.DOC + 1}`));
-    await expect(
-      page.getByRole('combobox', { name: 'Documento' }),
-    ).toContainText('Saler');
+    await expect(page.getByRole('heading', { name: 'Saler' })).toBeVisible();
   });
 }
 

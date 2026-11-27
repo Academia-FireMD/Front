@@ -1,71 +1,27 @@
 @let vista = seleccion();
 @let tema = vista.tema;
-@let vistaActual = vistaDeTemario();
 
-<header
-  class="cabecera"
-  [class.cabecera-biblioteca]="esBiblioteca()"
-  aria-labelledby="titulo-temario"
->
-  <h1 #tituloTemario id="titulo-temario" class="titulo-temario" tabindex="-1">
-    <i class="pi pi-book" aria-hidden="true"></i>
-    {{ esBiblioteca() ? "Mis documentos" : tema?.titulo || "Temario" }}
-  </h1>
-
-  @if (esBiblioteca()) {
-    <a
-      pButton
-      id="temas-y-practica"
-      class="p-button-outlined p-button-sm"
-      [routerLink]="[]"
-      [queryParams]="{ vista: 'librillo' }"
-      (click)="conservarBiblioteca('temas-y-practica')"
-    >
-      Temas y práctica
-    </a>
-  } @else if (temas().length) {
+<header class="cabecera" aria-labelledby="titulo-temario">
+  @if (!esBiblioteca()) {
     <button
-      #botonTemas
       pButton
       type="button"
-      class="p-button-outlined boton-temas"
-      aria-controls="catalogo-temario"
-      [attr.aria-expanded]="selectorMovilAbierto()"
-      (click)="abrirCatalogoMovil()"
+      class="p-button-text volver-biblioteca"
+      aria-label="Volver a Mis documentos"
+      (click)="volverABiblioteca()"
     >
-      <i class="pi pi-list" aria-hidden="true"></i>
-      Ver temas
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>
+      Mis documentos
     </button>
-    <div
-      id="catalogo-temario"
-      class="campo-temario selector-temas"
-      [class.abierto]="selectorMovilAbierto()"
-    >
-      <label id="etiqueta-tema-librillo" for="tema-librillo">Tema</label>
-      <p-dropdown
-        #selectorTema
-        inputId="tema-librillo"
-        ariaLabelledBy="etiqueta-tema-librillo"
-        [options]="gruposTemas()"
-        [group]="true"
-        optionLabel="titulo"
-        optionValue="id"
-        [ngModel]="tema?.id ?? null"
-        (onChange)="seleccionarTema($event.value)"
-        [filter]="true"
-        [autofocusFilter]="true"
-        (onHide)="cerrarCatalogoMovil()"
-        filterBy="etiqueta"
-        filterPlaceholder="Buscar por tema o módulo"
-        placeholder="Selecciona un tema"
-        styleClass="w-full"
-        data-testid="librillo-selector-tema"
-      />
-    </div>
-    @if (tema && !selectorMovilAbierto()) {
-      <span class="tema-movil">{{ tema.modulo }}</span>
-    }
   }
+  <h1 #tituloTemario id="titulo-temario" class="titulo-temario" tabindex="-1">
+    @if (esBiblioteca()) {
+      <i class="pi pi-book" aria-hidden="true"></i>
+      Mis documentos
+    } @else {
+      {{ tituloLectura() }}
+    }
+  </h1>
 </header>
 
 @if (esBiblioteca()) {
@@ -93,7 +49,7 @@
         Todavía no hay documentos publicados para tu cuenta.
       </p>
     } @else {
-      <div class="filtros-biblioteca">
+      <div class="busqueda-biblioteca">
         <input
           pInputText
           #buscar
@@ -104,62 +60,6 @@
           [value]="busquedaBiblioteca()"
           (input)="buscarEnBiblioteca(buscar.value)"
         />
-        <button
-          pButton
-          type="button"
-          class="p-button-outlined p-button-sm filtros-biblioteca-movil"
-          aria-controls="filtro-tema-biblioteca"
-          [attr.aria-expanded]="filtrosBibliotecaAbiertos()"
-          (click)="filtrosBibliotecaAbiertos.set(!filtrosBibliotecaAbiertos())"
-        >
-          <i class="pi pi-filter" aria-hidden="true"></i>
-          Filtros{{ temaBiblioteca() !== null ? " (1 activo)" : "" }}
-        </button>
-        <div
-          class="filtro-tema-biblioteca"
-          [class.filtro-abierto]="filtrosBibliotecaAbiertos()"
-        >
-          <select
-            id="filtro-tema-biblioteca"
-            class="p-inputtext"
-            aria-label="Tema"
-            aria-controls="biblioteca-resultados"
-            [ngModel]="temaBiblioteca()"
-            (ngModelChange)="filtrarTemaBiblioteca($event)"
-          >
-            <option [ngValue]="null">Todos los temas</option>
-            @for (opcion of temasBiblioteca(); track opcion.id) {
-              <option [ngValue]="opcion.id">{{ opcion.etiqueta }}</option>
-            }
-          </select>
-          <i class="pi pi-chevron-down" aria-hidden="true"></i>
-        </div>
-        <div class="resumen-biblioteca">
-          <p role="status">
-            @let disponibles = bibliotecaFiltrada().disponibles;
-            @let bloqueados = bibliotecaFiltrada().bloqueados;
-            {{ disponibles }}
-            {{
-              disponibles === 1
-                ? "documento disponible"
-                : "documentos disponibles"
-            }}
-            @if (bloqueados > 0) {
-              · {{ bloqueados }}
-              {{ bloqueados === 1 ? "bloqueado" : "bloqueados" }}
-            }
-          </p>
-          @if (filtrosBibliotecaActivos()) {
-            <button
-              pButton
-              type="button"
-              class="p-button-text p-button-sm"
-              (click)="limpiarFiltrosBiblioteca(); buscar.focus()"
-            >
-              Limpiar filtros
-            </button>
-          }
-        </div>
       </div>
       <div
         #resultadosBiblioteca
@@ -180,7 +80,12 @@
                 [attr.aria-controls]="'biblioteca-' + claveModulo"
                 (click)="alternarRama(claveModulo)"
               >
-                <i class="pi pi-folder" aria-hidden="true"></i>
+                <i
+                  class="pi"
+                  [class.pi-folder-open]="moduloAbierto"
+                  [class.pi-folder]="!moduloAbierto"
+                  aria-hidden="true"
+                ></i>
                 <span>{{ modulo.nombre }}</span>
                 <small [id]="'total-' + claveModulo">
                   {{ modulo.temas.length }}
@@ -211,13 +116,19 @@
                       <button
                         type="button"
                         class="rama-biblioteca rama-tema"
+                        [id]="'rama-' + claveTema"
                         [attr.aria-label]="tema.titulo"
                         [attr.aria-describedby]="'total-' + claveTema"
                         [attr.aria-expanded]="temaAbierto"
                         [attr.aria-controls]="'biblioteca-' + claveTema"
                         (click)="alternarRama(claveTema)"
                       >
-                        <i class="pi pi-list" aria-hidden="true"></i>
+                        <i
+                          class="pi"
+                          [class.pi-folder-open]="temaAbierto"
+                          [class.pi-folder]="!temaAbierto"
+                          aria-hidden="true"
+                        ></i>
                         <span>{{ tema.titulo }}</span>
                         <small [id]="'total-' + claveTema"
                           >{{ tema.documentos.length }}
@@ -258,57 +169,13 @@
           </section>
         } @empty {
           <p class="aviso" role="status">
-            No hay documentos que coincidan con los filtros.
+            No hay documentos que coincidan con la búsqueda.
           </p>
         }
       </div>
     }
   </section>
 } @else {
-  <div class="navegacion-temario">
-    <nav
-      class="pestanas-librillo vistas-temario"
-      role="tablist"
-      aria-label="Secciones del Temario"
-      (keydown)="navegarPestanas($event)"
-    >
-      <button
-        #tabDocumentos
-        type="button"
-        role="tab"
-        id="tab-temario-documentos"
-        aria-controls="panel-temario-documentos"
-        [attr.aria-selected]="vistaActual === 'documentos'"
-        [attr.tabindex]="vistaActual === 'documentos' ? 0 : -1"
-        (click)="seleccionarVista('documentos')"
-      >
-        Documentos
-      </button>
-      <button
-        #tabLibrillo
-        type="button"
-        role="tab"
-        id="tab-temario-librillo"
-        aria-controls="panel-temario-librillo"
-        [attr.aria-selected]="vistaActual === 'librillo'"
-        [attr.tabindex]="vistaActual === 'librillo' ? 0 : -1"
-        (click)="seleccionarVista('librillo')"
-      >
-        Estudio
-      </button>
-    </nav>
-    <button
-      pButton
-      type="button"
-      class="p-button-text volver-biblioteca"
-      aria-label="Volver a Mis documentos"
-      (click)="volverABiblioteca()"
-    >
-      <i class="pi pi-arrow-left" aria-hidden="true"></i>
-      Mis documentos
-    </button>
-  </div>
-
   @for (fuente of fallos(); track fuente) {
     <div class="aviso aviso-con-accion">
       <p role="alert">
@@ -362,253 +229,180 @@
       <p class="aviso" role="alert">
         Este tema o documento no está disponible en tu temario.
       </p>
-    } @else if (temas().length) {
-      <p class="aviso" role="status">
-        Elige un tema para consultar sus documentos o practicar.
-      </p>
-    } @else {
-      <p class="aviso" role="status">
-        Tu cuenta aún no tiene temas disponibles.
-      </p>
     }
   }
-}
 
-<section
-  #panelDocumentos
-  class="panel-documentos"
-  id="panel-temario-documentos"
-  role="tabpanel"
-  aria-labelledby="tab-temario-documentos"
-  [hidden]="esBiblioteca() || vistaActual !== 'documentos'"
-  (focusin)="registrarFoco($event, 'documentos')"
->
-  @if (tema) {
-    @if (vista.documentoInaccesible && arbolDisponible()) {
-      <p class="aviso" role="alert">
-        Este documento no está disponible en el tema seleccionado.
-      </p>
-    }
-    @if (arbolCargando()) {
-      <p class="aviso" role="status">Cargando documentos…</p>
-    } @else if (arbolDisponible()) {
-      <app-documentos-del-tema
-        [documentos]="tema.documentos"
-        [temaId]="tema.id"
-        [descripcionTema]="tema.descripcion"
-        [modoTemario]="true"
-        [librillosActivos]="librillosActivos()"
-        (abrirPdf)="abrirPdf($event)"
-        (abrirEdicion)="abrirEdicion($event)"
-      />
-    }
-  }
-</section>
-
-<section
-  #panelLectura
-  class="panel-lectura"
-  id="panel-temario-librillo"
-  role="tabpanel"
-  aria-labelledby="tab-temario-librillo"
-  [hidden]="vistaActual !== 'librillo'"
-  (focusin)="registrarFoco($event, 'librillo')"
->
-  @if (tema) {
-    @for (recurso of recursosMontados(); track recurso) {
-      @if (tema.documentos.length > 1 || vista.documentoInaccesible) {
-        <div class="campo-temario selector-pdf">
-          <label id="etiqueta-documento-librillo" for="documento-librillo"
-            >Documento</label
-          >
-          <p-dropdown
-            #selectorPdf
-            inputId="documento-librillo"
-            ariaLabelledBy="etiqueta-documento-librillo"
-            [options]="documentosDelSelector()"
-            optionLabel="nombre"
-            optionValue="id"
-            [ngModel]="vista.documento?.id ?? null"
-            (onChange)="seleccionarDocumento($event.value)"
-            placeholder="Selecciona un documento"
-            styleClass="w-full"
-          />
-        </div>
-      }
-      @if (
-        librillosActivos() &&
-        vista.documento?.isDownloadable &&
-        vista.documento?.librillo
-      ) {
-        <a
-          pButton
-          [id]="'librillo-edicion-' + vista.documento?.id"
-          class="p-button-sm p-button-outlined accion-edicion"
-          [routerLink]="[
-            '/app/documentacion/alumno/librillo',
-            vista.documento?.id,
-          ]"
-          [queryParams]="{
-            tema: tema.id,
-            desde: origenEdicionDesdeLector,
-            vista: 'librillo',
-            original: lectorPdfActivo() ? 'pdf' : null,
-          }"
-          [state]="estadoEdicionDesdeLector"
-          >Abrir edición interactiva</a
-        >
-      }
-      @if (!practicaDisponible() && parametrosPractica(); as parametros) {
-        <div class="practica" aria-label="Práctica del tema en el campus">
-          @if (testActivo()) {
-            <a
-              pButton
-              class="p-button-sm p-button-outlined"
-              routerLink="/app/test/alumno/realizar-test"
-              [queryParams]="parametros"
-            >
-              <i class="pi pi-list" aria-hidden="true"></i>
-              <span>Hacer test</span>
-            </a>
-          }
-          @if (flashcardsActivas()) {
-            <a
-              pButton
-              class="p-button-sm"
-              routerLink="/app/test/alumno/realizar-flash-cards-test"
-              [queryParams]="parametros"
-            >
-              <i class="pi pi-clone" aria-hidden="true"></i>
-              <span>Repasar flashcards</span>
-            </a>
-          }
-        </div>
-      }
-      @if (practicaDisponible() && lectorPdfActivo()) {
-        <nav
-          class="pestanas-librillo navegacion-movil"
-          aria-label="Vista del Temario"
-        >
-          <button
-            #tabLectura
-            type="button"
-            class="pestana-movil"
-            [attr.aria-pressed]="pestana() === 'lectura'"
-            aria-controls="librillo-lectura"
-            (click)="pestana.set('lectura')"
-          >
-            Lectura
-          </button>
-          <button
-            type="button"
-            class="pestana-movil"
-            [attr.aria-pressed]="pestana() === 'practica'"
-            aria-controls="librillo-practica"
-            (click)="pestana.set('practica')"
-          >
-            Práctica
-          </button>
-          <button
-            type="button"
-            [attr.aria-pressed]="pestana() === 'anotaciones'"
-            aria-controls="librillo-lectura"
-            (click)="
-              pestana.set(
-                pestana() === 'anotaciones' ? 'lectura' : 'anotaciones'
-              )
-            "
-          >
-            Anotaciones
-          </button>
-        </nav>
-      }
-
-      @if (panelPractica()?.regreso(); as regreso) {
-        <div class="regreso-practica">
-          <button
-            #botonRegreso
+  <section class="panel-lectura" aria-labelledby="titulo-temario">
+    @if (tema) {
+      @for (recurso of recursosMontados(); track recurso) {
+        @if (
+          librillosActivos() &&
+          vista.documento?.isDownloadable &&
+          vista.documento?.librillo
+        ) {
+          <a
             pButton
-            type="button"
-            class="p-button-outlined p-button-sm"
-            (click)="volverAPractica()"
+            [id]="'librillo-edicion-' + vista.documento?.id"
+            class="p-button-sm p-button-outlined accion-edicion"
+            [routerLink]="[
+              '/app/documentacion/alumno/librillo',
+              vista.documento?.id,
+            ]"
+            [queryParams]="{
+              tema: tema.id,
+              desde: origenBiblioteca,
+              vista: 'librillo',
+              original: lectorPdfActivo() ? 'pdf' : null,
+            }"
+            [state]="estadoRetornoBiblioteca()"
+            >Abrir edición interactiva</a
           >
-            <i class="pi pi-arrow-left" aria-hidden="true"></i>
-            {{ regreso }}
-          </button>
-          @if (errorReferencia()) {
-            <span role="alert">No se pudo abrir el fragmento.</span>
+        }
+        @if (!practicaDisponible() && parametrosPractica(); as parametros) {
+          <div class="practica" aria-label="Práctica del tema en el campus">
+            @if (testActivo()) {
+              <a
+                pButton
+                class="p-button-sm p-button-outlined"
+                routerLink="/app/test/alumno/realizar-test"
+                [queryParams]="parametros"
+              >
+                <i class="pi pi-list" aria-hidden="true"></i>
+                <span>Hacer test</span>
+              </a>
+            }
+            @if (flashcardsActivas()) {
+              <a
+                pButton
+                class="p-button-sm"
+                routerLink="/app/test/alumno/realizar-flash-cards-test"
+                [queryParams]="parametros"
+              >
+                <i class="pi pi-clone" aria-hidden="true"></i>
+                <span>Repasar flashcards</span>
+              </a>
+            }
+          </div>
+        }
+        @if (practicaDisponible() && lectorPdfActivo()) {
+          <nav
+            class="pestanas-librillo navegacion-movil"
+            aria-label="Vista del Temario"
+          >
+            <button
+              #tabLectura
+              type="button"
+              class="pestana-movil"
+              [attr.aria-pressed]="pestana() === 'lectura'"
+              aria-controls="librillo-lectura"
+              (click)="pestana.set('lectura')"
+            >
+              Lectura
+            </button>
+            <button
+              type="button"
+              class="pestana-movil"
+              [attr.aria-pressed]="pestana() === 'practica'"
+              aria-controls="librillo-practica"
+              (click)="pestana.set('practica')"
+            >
+              Práctica
+            </button>
+            <button
+              type="button"
+              [attr.aria-pressed]="pestana() === 'anotaciones'"
+              aria-controls="librillo-lectura"
+              (click)="
+                pestana.set(
+                  pestana() === 'anotaciones' ? 'lectura' : 'anotaciones'
+                )
+              "
+            >
+              Anotaciones
+            </button>
+          </nav>
+        }
+
+        @if (panelPractica()?.regreso(); as regreso) {
+          <div class="regreso-practica">
+            <button
+              #botonRegreso
+              pButton
+              type="button"
+              class="p-button-outlined p-button-sm"
+              (click)="volverAPractica()"
+            >
+              <i class="pi pi-arrow-left" aria-hidden="true"></i>
+              {{ regreso }}
+            </button>
+            @if (errorReferencia()) {
+              <span role="alert">No se pudo abrir el fragmento.</span>
+            }
+          </div>
+        }
+
+        <div
+          class="contenido-librillo"
+          [class.con-pdf-y-practica]="practicaDisponible() && lectorPdfActivo()"
+          [class.con-practica]="practicaDisponible()"
+          [class.pestana-practica]="pestana() === 'practica'"
+          [class.pestana-anotaciones]="pestana() === 'anotaciones'"
+        >
+          <div id="librillo-lectura" class="lectura-librillo">
+            @if (arbolCargando()) {
+              <p class="aviso" role="status">Cargando documentos…</p>
+            } @else if (vista.documentoInaccesible && arbolDisponible()) {
+              <p class="aviso" role="alert">
+                Este documento no está disponible en el tema seleccionado.
+              </p>
+            } @else if (vista.documento) {
+              @for (documento of [vista.documento]; track documento.id) {
+                @if (!documento.isDownloadable) {
+                  <p class="aviso">
+                    Tu suscripción permite consultar el tema. Este documento
+                    está bloqueado.
+                  </p>
+                } @else if (lectorPdfActivo()) {
+                  <app-previa-librillos-pdf
+                    [documento]="documento"
+                    [attr.data-practica-disponible]="
+                      practicaDisponible() ? true : null
+                    "
+                  />
+                } @else {
+                  <div class="aviso">
+                    <p>
+                      {{ documento.identificador }} está disponible para
+                      descargar.
+                    </p>
+                  </div>
+                }
+              }
+            } @else if (arbolDisponible()) {
+              <p class="aviso" role="status">
+                Este tema todavía no tiene un PDF disponible.
+              </p>
+            }
+          </div>
+          @if (practicaDisponible()) {
+            <app-librillo-practica
+              id="librillo-practica"
+              [temaId]="tema.id"
+              [temas]="temasDePractica()"
+              [documentoId]="
+                vista.documento?.isDownloadable
+                  ? vista.documento?.id
+                  : undefined
+              "
+              [pdf]="contextoPractica()"
+              [testActivo]="testActivo()"
+              [flashcardsActivas]="flashcardsActivas()"
+              (verEnTexto)="verEnTexto($event)"
+              (enfocarLectura)="enfocarLectura()"
+            />
           }
         </div>
       }
-
-      <div
-        class="contenido-librillo"
-        [class.con-pdf-y-practica]="practicaDisponible() && lectorPdfActivo()"
-        [class.con-practica]="practicaDisponible()"
-        [class.pestana-practica]="pestana() === 'practica'"
-        [class.pestana-anotaciones]="pestana() === 'anotaciones'"
-      >
-        <div id="librillo-lectura" class="lectura-librillo">
-          @if (arbolCargando()) {
-            <p class="aviso" role="status">Cargando documentos…</p>
-          } @else if (vista.documentoInaccesible && arbolDisponible()) {
-            <p class="aviso" role="alert">
-              Este documento no está disponible en el tema seleccionado.
-            </p>
-          } @else if (vista.documento) {
-            @for (documento of [vista.documento]; track documento.id) {
-              @if (!documento.isDownloadable) {
-                <p class="aviso">
-                  Tu suscripción permite consultar el tema. Este documento está
-                  bloqueado.
-                </p>
-              } @else if (lectorPdfActivo()) {
-                <app-previa-librillos-pdf
-                  [documento]="documento"
-                  [attr.data-practica-disponible]="
-                    practicaDisponible() ? true : null
-                  "
-                />
-              } @else {
-                <div class="aviso">
-                  <p>
-                    {{ documento.identificador }} está disponible para
-                    descargar.
-                  </p>
-                  <button
-                    pButton
-                    type="button"
-                    class="p-button-outlined"
-                    (click)="seleccionarVista('documentos')"
-                  >
-                    Volver a Documentos
-                  </button>
-                </div>
-              }
-            }
-          } @else if (arbolDisponible()) {
-            <p class="aviso" role="status">
-              Este tema todavía no tiene documentos disponibles.
-            </p>
-          }
-        </div>
-        @if (practicaDisponible()) {
-          <app-librillo-practica
-            id="librillo-practica"
-            [temaId]="tema.id"
-            [temas]="temasDePractica()"
-            [documentoId]="
-              vista.documento?.isDownloadable ? vista.documento?.id : undefined
-            "
-            [activa]="vistaActual === 'librillo'"
-            [pdf]="contextoPractica()"
-            [testActivo]="testActivo()"
-            [flashcardsActivas]="flashcardsActivas()"
-            (verEnTexto)="verEnTexto($event)"
-            (enfocarLectura)="enfocarLectura()"
-          />
-        }
-      </div>
     }
-  }
-</section>
+  </section>
+}

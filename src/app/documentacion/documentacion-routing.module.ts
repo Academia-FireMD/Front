@@ -11,10 +11,18 @@ import { environment } from '../../environments/environment';
 import { RUTA_PREVIA_LIBRILLOS } from '../estudio/previa/previa-librillos';
 import { documentacionAlumnoGuard } from '../estudio/previa/previa-librillos.guard';
 import type { LibrilloEditorComponent } from './librillo-editor.component';
+import type { EstudioWorkspaceComponent } from '../estudio/estudio-workspace.component';
 
 const confirmarSalidaEditor: CanDeactivateFn<LibrilloEditorComponent> = (
   editor,
 ) => editor.confirmarSalida();
+
+const guardarSalidaEdicion: CanDeactivateFn<EstudioWorkspaceComponent> = async (
+  visor,
+) => {
+  await visor.guardarAntesDeSalir();
+  return true;
+};
 
 const rutasPrevia: Routes = environment.librillosMenu
   ? [
@@ -56,6 +64,7 @@ const routes: Routes = [
   {
     path: 'alumno/librillo/:documentoId',
     canActivate: [roleGuard, moduloGuard],
+    canDeactivate: environment.librillosMenu ? [guardarSalidaEdicion] : [],
     title: 'Edición interactiva del Temario',
     data: {
       expectedRole: 'ALUMNO',

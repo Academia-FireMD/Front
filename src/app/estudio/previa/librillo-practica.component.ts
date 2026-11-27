@@ -176,7 +176,6 @@ function mismaPagina(
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LibrilloPracticaComponent {
-  readonly activa = input(true);
   readonly temaId = input.required<number>();
   readonly documentoId = input<number>();
   readonly temas = input<readonly Pick<TemaLibrillo, 'id' | 'etiqueta'>[]>([]);
@@ -208,7 +207,6 @@ export class LibrilloPracticaComponent {
     foco: HTMLElement | null;
     scroll: number;
   } | null = null;
-  private regresoVista: typeof this.regresoReferencia = null;
   private focoAlCerrar: 'inicio' | 'historial' = 'inicio';
 
   private readonly consulta = computed(() => ({
@@ -336,10 +334,9 @@ export class LibrilloPracticaComponent {
   });
   readonly dialogoVisible = computed(
     () =>
-      this.activa() &&
-      (!!this.conflictoActual() ||
-        (!this.suspendida() &&
-          (!!this.intentoActual() || this.vista() === 'historial'))),
+      !!this.conflictoActual() ||
+      (!this.suspendida() &&
+        (!!this.intentoActual() || this.vista() === 'historial')),
   );
   readonly tituloDialogo = computed(() => {
     if (this.conflictoActual()) return 'Sesión pendiente';
@@ -418,17 +415,6 @@ export class LibrilloPracticaComponent {
   );
 
   constructor() {
-    effect(() => {
-      if (this.activa()) return;
-      const ventana = this.dialogo()?.container as HTMLElement | undefined;
-      if (!ventana) return;
-      const foco = this.documento.activeElement;
-      this.regresoVista = {
-        foco:
-          foco instanceof HTMLElement && ventana.contains(foco) ? foco : null,
-        scroll: ventana.querySelector('.p-dialog-content')?.scrollTop ?? 0,
-      };
-    });
     effect(
       () => {
         const solicitud = this.solicitud();
@@ -745,12 +731,9 @@ export class LibrilloPracticaComponent {
     let objetivo = contenedor?.querySelector<HTMLElement>(
       '[data-foco-conflicto]',
     );
-    const regreso =
-      this.regresoVista ??
-      (!this.conflictoActual() ? this.regresoReferencia : null);
+    const regreso = !this.conflictoActual() ? this.regresoReferencia : null;
     if (regreso) {
-      if (this.regresoVista) this.regresoVista = null;
-      else this.regresoReferencia = null;
+      this.regresoReferencia = null;
       const contenido = contenedor?.querySelector('.p-dialog-content');
       if (contenido) contenido.scrollTop = regreso.scroll;
       if (regreso.foco && contenedor?.contains(regreso.foco))
@@ -772,7 +755,6 @@ export class LibrilloPracticaComponent {
   }
 
   enfocarAlCerrar() {
-    if (!this.activa()) return;
     const boton = (
       this.focoAlCerrar === 'historial'
         ? this.botonHistorial()

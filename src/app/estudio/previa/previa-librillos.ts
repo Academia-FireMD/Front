@@ -10,6 +10,30 @@ import { esSuscripcionVigente } from '../../shared/utils/membresia-externa.util'
 export const RUTA_PREVIA_LIBRILLOS = '/app/librillos';
 export const ORIGEN_BIBLIOTECA = 'mis-documentos';
 
+export interface EstadoBiblioteca {
+  url?: string;
+  busqueda: string;
+  scroll: number;
+  foco: string;
+  ramasAbiertas: readonly string[];
+  ramasCerradasConBusqueda?: readonly string[];
+  // Las entradas de historial anteriores al cambio usaban este campo.
+  ramasCerradasConFiltro?: readonly string[];
+}
+
+export interface RetornoBiblioteca {
+  misDocumentos?: EstadoBiblioteca;
+  enfocarDocumentoBiblioteca?: number;
+  volverAMisDocumentos?: boolean;
+}
+
+export function esVistaBiblioteca(params: ParamMap) {
+  return (
+    !params.has('doc') &&
+    (!params.has('tema') || params.get('vista') === 'documentos')
+  );
+}
+
 export function puedeAbrirTemario(
   usuario: Usuario | null,
   flags: EstadoModulos,
@@ -84,31 +108,23 @@ export function retornoDePracticaLibrillo(
   return temaDePracticaLibrillo(url.queryParamMap, habilitada);
 }
 
-export type VistaTemario = 'documentos' | 'librillo';
-
-export function vistaDeTemario(valor: string | null): VistaTemario | undefined {
-  return valor === 'documentos' || valor === 'librillo' ? valor : undefined;
-}
-
 export function retornoDeEdicionInteractiva(
   params: ParamMap,
   documento: string | null,
   habilitado: boolean,
 ) {
-  if (habilitado && params.get('desde') === ORIGEN_BIBLIOTECA) {
+  if (habilitado) {
     return {
       ruta: RUTA_PREVIA_LIBRILLOS,
       parametros: { tema: null, doc: null, vista: 'documentos' as const },
     };
   }
 
-  const tema = usuarioIdDeSubject(params.get('tema'));
-  const doc = usuarioIdDeSubject(documento);
-  const vista = vistaDeTemario(params.get('vista'));
-  const desdeTemario = habilitado && params.get('desde') === 'librillos';
-
   return {
-    ruta: desdeTemario ? RUTA_PREVIA_LIBRILLOS : '/app/documentacion/alumno',
-    parametros: { tema, doc, vista: desdeTemario ? vista : undefined },
+    ruta: '/app/documentacion/alumno',
+    parametros: {
+      tema: usuarioIdDeSubject(params.get('tema')),
+      doc: usuarioIdDeSubject(documento),
+    },
   };
 }

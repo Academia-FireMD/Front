@@ -48,8 +48,8 @@ import {
   registro,
 } from './estudio-operaciones';
 import {
-  ORIGEN_BIBLIOTECA,
   RUTA_PREVIA_LIBRILLOS,
+  RetornoBiblioteca,
   retornoDeEdicionInteractiva,
 } from './previa/previa-librillos';
 
@@ -494,9 +494,7 @@ export class EstudioWorkspaceComponent {
   etiquetaVolver() {
     if (this.tipo === 'psico') return 'Volver a gestión';
     if (this.desdeBiblioteca()) return 'Volver a Mis documentos';
-    return this.retornoLibrillo().ruta === RUTA_PREVIA_LIBRILLOS
-      ? 'Volver al Temario'
-      : 'Volver al tema';
+    return 'Volver al tema';
   }
 
   get parametrosPdfOriginal() {
@@ -512,7 +510,6 @@ export class EstudioWorkspaceComponent {
     if (!queryParams || this.saliendo()) return;
     this.saliendo.set(true);
     try {
-      await this.guardarAntesDeSalir();
       await this.router.navigate([RUTA_PREVIA_LIBRILLOS], {
         queryParams,
         state: { misDocumentos: this.estadoDelVisor()?.misDocumentos },
@@ -548,16 +545,30 @@ export class EstudioWorkspaceComponent {
         await this.router.navigateByUrl('/app/psicotecnicos/admin');
         return;
       }
-      await this.guardarAntesDeSalir();
+      if (!this.desdeBiblioteca()) await this.guardarAntesDeSalir();
       const estado = this.estadoDelVisor();
-      if (this.desdeBiblioteca() && estado?.volverAMisDocumentos) {
-        this.location.back();
-        return;
+      if (this.desdeBiblioteca()) {
+        if (estado?.volverAMisDocumentos) {
+          this.location.back();
+          return;
+        }
+        if (estado?.misDocumentos?.url) {
+          await this.router.navigateByUrl(estado.misDocumentos.url, {
+            state: { misDocumentos: estado.misDocumentos },
+          });
+          return;
+        }
       }
       const { ruta, parametros } = this.retornoLibrillo();
+      const documentoId = this.route.snapshot.paramMap.get('documentoId');
       await this.router.navigate([ruta], {
         queryParams: parametros,
-        state: { misDocumentos: estado?.misDocumentos },
+        state: {
+          misDocumentos: estado?.misDocumentos,
+          enfocarDocumentoBiblioteca: this.desdeBiblioteca()
+            ? (usuarioIdDeSubject(documentoId) ?? undefined)
+            : undefined,
+        },
       });
     } finally {
       this.saliendo.set(false);
@@ -565,17 +576,11 @@ export class EstudioWorkspaceComponent {
   }
 
   private estadoDelVisor() {
-    return this.location.getState() as {
-      volverAMisDocumentos?: boolean;
-      misDocumentos?: unknown;
-    } | null;
+    return this.location.getState() as RetornoBiblioteca | null;
   }
 
-  private desdeBiblioteca() {
-    return (
-      environment.librillosMenu &&
-      this.route.snapshot.queryParamMap.get('desde') === ORIGEN_BIBLIOTECA
-    );
+  desdeBiblioteca() {
+    return this.tipo === 'librillo' && environment.librillosMenu;
   }
 
   private retornoLibrillo() {

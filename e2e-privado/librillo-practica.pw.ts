@@ -265,10 +265,11 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   await expect(panel).toBeVisible();
   await expect(lector).toBeVisible();
   await expect(page.getByTestId('pagina-librillo')).toHaveText('Página 1 de 2');
-  const titulo = tema.numero + ' · ' + tema.descripcion;
-  const cabecera = page.getByRole('banner', { name: titulo, exact: true });
   await expect(
-    cabecera.getByRole('heading', { name: titulo, exact: true }),
+    page.getByRole('button', { name: 'Volver a Mis documentos' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Original · Estatutos' }),
   ).toBeVisible();
   const notas = lector.getByRole('button', {
     name: 'Anotaciones',
@@ -282,25 +283,11 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   ).toHaveValue('Nota de la primera hoja');
   await notas.click();
   await expect(notas).toHaveAttribute('aria-pressed', 'false');
-  const selectorTema = cabecera.getByRole('combobox', {
-    name: 'Tema',
-    exact: true,
-  });
-  const vistaLibrillo = page.getByRole('tabpanel', { name: 'Estudio' });
-  const selectorDocumento = vistaLibrillo.getByRole('combobox', {
-    name: 'Documento',
-    exact: true,
-  });
-  await expect(selectorTema).toBeVisible();
-  await expect(selectorDocumento).toBeVisible();
-  expect((await selectorDocumento.boundingBox())!.y).toBeLessThan(
-    (await lector.boundingBox())!.y,
-  );
   await expect(
-    cabecera.getByRole('link', {
-      name: 'Documentación',
-      exact: true,
-    }),
+    page.getByRole('combobox', { name: 'Tema', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('combobox', { name: 'Documento', exact: true }),
   ).toHaveCount(0);
   const ayudas = [
     ['Reducir zoom', 'Alejar el documento'],
@@ -344,25 +331,14 @@ test('ofrece práctica junto al PDF y también en temas sin documento', async ({
   await expect(
     page.getByRole('link', { name: 'Abrir edición interactiva' }),
   ).toBeVisible();
-  await selectorDocumento.press('Space');
-  await page
-    .getByRole('option', { name: 'Resumen bloqueado', exact: true })
-    .click();
-  await expect
-    .poll(() => new URL(page.url()).searchParams.get('doc'))
-    .toBe(String(documentoBloqueado));
+  await page.goto(
+    '/app/librillos?tema=' + tema.id + '&doc=' + documentoBloqueado,
+  );
   await expect(page.getByText(/Este documento está bloqueado/)).toBeVisible();
-  await expect(page.getByRole('listbox')).toHaveCount(0);
-  await selectorDocumento.press('Space');
-  await page
-    .getByRole('option', { name: 'Original · Estatutos', exact: true })
-    .click();
-  await expect(lector).toBeVisible();
-
   await page.setViewportSize({ width: 390, height: 844 });
   await irAlTema(page, sinPdf.id);
-  const avisoSinDocumento = vistaLibrillo.getByText(
-    'Este tema todavía no tiene documentos disponibles.',
+  const avisoSinDocumento = page.getByText(
+    'Este tema todavía no tiene un PDF disponible.',
   );
   await expect(avisoSinDocumento).toBeVisible();
   const aviso = (await avisoSinDocumento.boundingBox())!;
@@ -419,13 +395,6 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
   });
   const ayuda = page.locator('#ai-widget-btn');
   await expect(ayuda).toBeVisible();
-  await expect
-    .poll(() =>
-      page
-        .locator('#etiqueta-documento-librillo')
-        .evaluate((etiqueta) => etiqueta.scrollWidth <= etiqueta.clientWidth),
-    )
-    .toBe(true);
   await expect(lector).toBeVisible();
   await expect(panel).toBeHidden();
   await pestanas
@@ -445,25 +414,15 @@ test('en móvil cierra sin perder el intento ni el PDF y vuelve desde una refere
     name: 'Quitar subrayado Fragmento de estudio',
   });
   await expect(marca).toBeVisible();
-  const secciones = page.getByRole('tablist', {
-    name: 'Secciones del Temario',
-  });
-  const documentos = secciones.getByRole('tab', { name: 'Documentos' });
-  const librillo = secciones.getByRole('tab', { name: 'Estudio' });
-  await documentos.click();
-  await expect(documentos).toHaveAttribute('aria-selected', 'true');
   await expect(
-    page.getByRole('link', { name: 'Original · Estatutos' }),
-  ).toBeVisible();
-  await page.goBack();
-  await expect(librillo).toHaveAttribute('aria-selected', 'true');
-  await page.goForward();
-  await expect(documentos).toHaveAttribute('aria-selected', 'true');
-  await librillo.click();
+    page.getByRole('tablist', { name: 'Secciones del Temario' }),
+  ).toHaveCount(0);
+  await pestanas.getByRole('button', { name: 'Lectura', exact: true }).click();
+  await pestanas
+    .getByRole('button', { name: 'Anotaciones', exact: true })
+    .click();
   await expect(nota).toHaveValue('Nota de la primera hoja');
   await expect(marca).toHaveCount(1);
-  expect(sesiones.descargasPdf).toBe(1);
-
   await pestanas.getByRole('button', { name: 'Práctica', exact: true }).click();
   await expect(lector).toBeHidden();
   await expect(panel).toBeVisible();
@@ -636,6 +595,11 @@ test('mantiene el lector abierto si fallan el guardado remoto y la copia local',
     page.getByRole('button', { name: /Reintentar guardado/ }).first(),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/app\/librillos/);
+  await expect(nota).toHaveValue('Cambios que deben seguir visibles');
+  await page.getByRole('button', { name: 'Volver a Mis documentos' }).click();
+  await expect(
+    page.getByText(/No se pudieron guardar los cambios/),
+  ).toBeVisible();
   await expect(nota).toHaveValue('Cambios que deben seguir visibles');
   falloRemoto = false;
   await perfil.click();
